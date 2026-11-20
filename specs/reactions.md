@@ -27,7 +27,7 @@ templates), `items/todo.html` and the comment template, the CLI.
   is one line.
 - **Short text:** besides the quick ones, a text field for anything
   else (any emoji, "Thanks!", "Nice work"), at most 16 characters
-  (Basecamp's limit; proposed, change it here if wrong). Plain text,
+  (Basecamp's limit, confirmed 2026-11-20). Plain text,
   never Markdown, no mentions.
 - **Notifying:** the author of the thing reacted to is told, nobody
   else; reactions never mail subscribers. They're collected: a new
