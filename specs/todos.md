@@ -108,6 +108,11 @@ All proposed by the building agent, 2026-11-20; change them here if wrong.
   previous one isn't (moved since), for staff too: the API doesn't know
   who asks. The CLI has `--repeat` only; end date and count are
   API-only for now.
+- **Form and rules for another weekday (fixed 2026-11-20):** the form
+  shows a preset only when it gives exactly the stored rule counted from
+  the due date (`schedules.preset_for`), else "custom", so saving the
+  form with only the title changed keeps a rule set through the API or
+  the CLI for another weekday or day (it became `BYDAY=FR` before).
 
 ### Done when (stage 1)
 
