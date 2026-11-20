@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from biwak import cursors
+from biwak.accounts.models import APIToken
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
@@ -406,3 +407,95 @@ class PersonFeedLinksTest(FeedBase):
         self.client.force_login(loner)
         response = self.client.get("/feed/")
         self.assertNotContains(response, "My activity")
+
+
+class EventsBeforeVisibleTest(TestCase):
+    """Clients only see events of the time an item was visible to them:
+    events store the title at the time, assignees and people mentioned
+    (decided 2026-11-20, specs/access.md)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.bob, self.cleo])
+        internal = ops.create_list(
+            project=self.project, title="Internal", creator=self.ada
+        )
+        self.shared = ops.create_list(
+            project=self.project, title="Shared", creator=self.ada, visible=True
+        )
+        # Created internally, renamed, moved into a visible list
+        self.todo = ops.create_todo(
+            todolist=internal, title="Raise the rate for Cleo", creator=self.ada
+        )
+        ops.assign(self.todo, [self.bob], actor=self.ada)
+        ops.update_todo(self.todo, actor=self.ada, title="Plan the next phase")
+        ops.move_todo(self.todo, todolist=self.shared, actor=self.ada)
+        # A visible list made internal and visible again
+        self.other = ops.create_list(
+            project=self.project, title="Later", creator=self.ada, visible=True
+        )
+        ops.set_visibility(self.other, visible=False, actor=self.ada)
+        ops.update_list(self.other, actor=self.ada, title="Codename Falcon")
+        ops.update_list(self.other, actor=self.bob, title="Later still")
+        ops.set_visibility(self.other, visible=True, actor=self.ada)
+
+    def test_events_store_whether_clients_saw_the_item(self):
+        self.assertEqual(
+            [
+                (e.item.pk, e.action, e.is_client_visible)
+                for e in Event.objects.filter(
+                    item__in=[self.todo, self.other]
+                ).order_by("pk")
+            ],
+            [
+                (self.todo.pk, Action.CREATED, False),
+                (self.todo.pk, Action.ASSIGNED, False),
+                (self.todo.pk, Action.EDITED, False),
+                (self.todo.pk, Action.MOVED, True),
+                (self.other.pk, Action.CREATED, True),
+                (self.other.pk, Action.VISIBILITY_CHANGED, False),
+                (self.other.pk, Action.EDITED, False),
+                (self.other.pk, Action.EDITED, False),
+                (self.other.pk, Action.VISIBILITY_CHANGED, True),
+            ],
+        )
+
+    def test_pages(self):
+        self.client.force_login(self.cleo)
+        for url in [
+            "/feed/",
+            f"/projects/{self.project.pk}/feed/",
+            f"/people/{self.ada.pk}/feed/",
+            self.project.get_absolute_url(),
+        ]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, "Plan the next phase")
+                self.assertNotContains(response, "Raise the rate")
+                self.assertNotContains(response, "Falcon")
+        # Staff see everything
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/")
+        self.assertContains(response, "Raise the rate")
+        self.assertContains(response, "Falcon")
+
+    def test_api(self):
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="read")
+        headers = {"authorization": f"Bearer {secret}"}
+        for path in [
+            "feed/",
+            f"projects/{self.project.pk}/feed/",
+            f"people/{self.ada.pk}/feed/",
+        ]:
+            with self.subTest(path=path):
+                results = self.client.get(f"/api/v1/{path}", headers=headers).json()[
+                    "results"
+                ]
+                self.assertNotIn("Raise the rate", str(results))
+                self.assertNotIn("Falcon", str(results))
+                self.assertNotIn(
+                    "assigned", [e["action"] for e in results]
+                )  # Bob's ID while internal
+                self.assertTrue(results)

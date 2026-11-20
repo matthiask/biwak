@@ -55,6 +55,19 @@ and review, no recursive query on the hot path.
   whenever a switch changes, an item moves, or an item is created, in the
   same transaction.
 - Comments, files attached to texts and events follow their item.
+- **Events also store whether their item was visible to clients when
+  they happened** (decided 2026-11-20, after the visibility review):
+  events keep the title at the time, assignees and people mentioned, so
+  a to-do created internally ("Raise the rate for Cleo"), renamed and
+  moved into a visible list mustn't show clients its internal past.
+  Clients see an event only if it was visible then and its item is
+  visible now. `record()` sets `Event.is_client_visible` from the item's
+  stored visibility; an edit merges only into an event of the same
+  visibility, so a visible event never takes in internal edits (title,
+  people mentioned) and stays visible once it was. Events from before
+  this change are not visible to clients (a safe default). The feed's
+  "visible to clients" filter, the API's `visible_to_clients` of an
+  event and the badge on feed entries mean the same.
 - Drift is the risk: tests compare the stored value with the value
   computed from the tree after every kind of change, and a management
   command (`check_visibility`) does the same on real data, also run

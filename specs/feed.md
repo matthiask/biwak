@@ -27,7 +27,10 @@ From the events (`biwak/activity/`, `notifications.md`):
 - **Filters** as query parameters: kind of item, person, action, visible
   to clients.
 - **Visibility:** every entry through `Event.objects.visible_to()`; a
-  client's feed only shows what they can see now. Events of trashed
+  client's feed only shows what they can see now, and only events of the
+  time the item was visible to clients (decided 2026-11-20,
+  `access.md`): not the creation, renaming or assigning of a to-do while
+  it was in an internal list. Events of trashed
   items are hidden; of items deleted for good, gone.
 - **Paginated** by time with a cursor (`?before=<timestamp,id>`), 50
   events a page, fast on hundreds of thousands of events: check the

@@ -12,6 +12,7 @@ from biwak.activity.models import (
     Subscription,
     Unsubscription,
 )
+from biwak.items.models import Item
 from biwak.projects.models import Project
 
 
@@ -22,9 +23,14 @@ EDIT_SESSION = dt.timedelta(minutes=10)
 
 def record(*, actor, action, project, item=None, **data):
     """Writes the event; after the commit, ``notify()`` decides who's told
-    (project events notify nobody)"""
+    (project events notify nobody). The event stores whether the item is
+    visible to clients now (read from the database, not the instance);
+    edits only merge into an event of the same visibility, so an event
+    clients see never takes in what happened while the item was internal."""
+    visible = False
     if item is not None:
         data.setdefault("title", item.title)
+        visible = Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
     now = timezone.now()
     event = None
     if action == Action.EDITED and item is not None:
@@ -34,6 +40,7 @@ def record(*, actor, action, project, item=None, **data):
                 item=item,
                 actor=actor,
                 action=Action.EDITED,
+                is_client_visible=visible,
                 created_at__gte=now - EDIT_SESSION,
             )
             .order_by("-created_at", "-pk")
@@ -45,12 +52,17 @@ def record(*, actor, action, project, item=None, **data):
         event.save(update_fields=["created_at", "data"])
     else:
         event = Event.objects.create(
-            project=project, item=item, actor=actor, action=action, data=data
+            project=project,
+            item=item,
+            actor=actor,
+            action=action,
+            data=data,
+            is_client_visible=visible,
         )
     if action != Action.REACTED:
         # A reaction isn't activity of the project (decided by the building
         # agent, 2026-11-20)
-        _touch_project(event, item)
+        _touch_project(event)
     if item is not None:
         from biwak.activity.notify import notify
 
@@ -58,13 +70,13 @@ def record(*, actor, action, project, item=None, **data):
     return event
 
 
-def _touch_project(event, item):
+def _touch_project(event):
     """The stored activity times (specs/projects-overview.md), one UPDATE:
-    every event counts for staff, only events of items visible to clients
-    now for clients (not project events, not internal items)"""
+    every event counts for staff, only events visible to clients for
+    clients (not project events, not internal items)"""
     when = event.created_at
     changes = {"last_activity_at": Greatest("last_activity_at", when)}
-    if item is not None and item.is_client_visible:
+    if event.is_client_visible:
         changes["last_client_activity_at"] = Greatest("last_client_activity_at", when)
     Project.objects.filter(pk=event.project_id).update(**changes)
 

@@ -2,7 +2,9 @@
 
 Every change worth telling anybody about writes an event; the activity
 feed and the notifications come from them. Events respect visibility like
-their item: they're filtered through ``Item.objects.visible_to()``.
+their item: they're filtered through ``Item.objects.visible_to()``, and
+clients only see events of the time the item was visible to them
+(``Event.is_client_visible``, specs/access.md).
 """
 
 from django.conf import settings
@@ -40,11 +42,13 @@ class Action(models.TextChoices):
 
 class EventQuerySet(models.QuerySet):
     def visible_to(self, user):
-        """Events of items the person can see; project events (joining)
-        only for staff with access"""
+        """Events of items the person can see; for clients only those of
+        the time the item was visible to them (they store the title at the
+        time, assignees, people mentioned); project events (joining) only
+        for staff with access"""
         items = Item.objects.visible_to(user)
         if user.is_client:
-            return self.filter(item__in=items)
+            return self.filter(item__in=items, is_client_visible=True)
         return self.filter(
             models.Q(item__in=items)
             | models.Q(
@@ -77,6 +81,9 @@ class Event(models.Model):
     action = models.CharField(_("action"), max_length=30, choices=Action)
     # The item's title at the time, and what changed (e.g. assignees)
     data = models.JSONField(_("data"), default=dict, blank=True)
+    # Whether the item was visible to clients when it happened; clients
+    # only see these (decided 2026-11-20, specs/access.md)
+    is_client_visible = models.BooleanField(_("visible to clients"), default=False)
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
 
     objects = EventQuerySet.as_manager()

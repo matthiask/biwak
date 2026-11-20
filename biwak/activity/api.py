@@ -71,7 +71,10 @@ def event_out(event, user):
         },
         "data": data,
         "created_at": event.created_at,
-        "visible_to_clients": item is not None and item.is_client_visible,
+        # Clients see the event (the item now, and the event's own time)
+        "visible_to_clients": event.is_client_visible
+        and item is not None
+        and item.is_client_visible,
         "excerpt": event.excerpt,
     }
 
