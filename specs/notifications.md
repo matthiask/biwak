@@ -122,7 +122,7 @@ override is set through the API (built 2026-11-20).
 
 ### Notified by default or only when tagged
 
-**Status:** built (2026-11-20, branch `tagged`, CLI 0.15.0):
+**Status:** built (2026-11-20, CLI 0.15.0; the API shapes and the choices below confirmed 2026-11-20):
 `add_member()`, `invite()`, `set_notify_choice()` and `notify_choice()`
 in `biwak/projects/operations.py`, the people page with
 `/projects/<pk>/people/<user>/notify/`, `POST projects/ID/members/`,
