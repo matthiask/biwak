@@ -258,10 +258,9 @@ def _send(message, pks):
 
 
 def _deliverable(notifications, user):
-    """Those the person may still get: active, the item visible to them now,
-    their level not "nothing" (it may have changed since)"""
-    if not user.is_active:
-        return []
+    """Those the person may still get: the item visible to them now (which
+    excludes the inactive), their level not "nothing" (it may have changed
+    since)"""
     result = []
     for notification in notifications:
         item = notification.event.item
