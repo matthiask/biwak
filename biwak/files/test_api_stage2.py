@@ -548,12 +548,33 @@ class DocAPITest(APIFixture, TestCase):
             self.call(self.bob, "patch", f"docs/{did}/", {"content": "Five"})
         self.assertEqual(self.shared_doc.doc.versions.count(), 4)
 
-    def test_a_client_edits_a_visible_doc(self):
+    def test_clients_cannot_edit_or_lock_docs_staff_created(self):
+        """Clients change only what they created (specs/access.md)"""
+        did = self.shared_doc.pk
+        for method, path, data in [
+            ("patch", f"docs/{did}/", {"content": "Scope doubled, same price"}),
+            ("put", f"docs/{did}/lock/", None),
+            ("delete", f"docs/{did}/lock/", None),
+        ]:
+            with self.subTest(method=method, path=path):
+                response = self.call(self.cleo, method, path, data)
+                self.assertEqual(response.status_code, 403)
+        self.shared_doc.doc.refresh_from_db()
+        self.assertEqual(self.shared_doc.doc.content, "One")
+        self.assertIsNone(operations.lock_holder(self.shared_doc.doc))
+
+    def test_a_client_edits_a_doc_it_created(self):
+        doc = ops.create_doc(
+            project=self.project, title="Ours", creator=self.cleo, visible=True
+        )
         response = self.call(
-            self.cleo, "patch", f"docs/{self.shared_doc.pk}/", {"content": "By Cleo"}
+            self.cleo, "patch", f"docs/{doc.pk}/", {"content": "By Cleo"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["content"], "By Cleo")
+        self.assertEqual(
+            self.call(self.cleo, "put", f"docs/{doc.pk}/lock/").status_code, 200
+        )
 
     def test_refusing_to_overwrite_a_newer_version(self):
         did = self.shared_doc.pk
@@ -580,22 +601,22 @@ class DocAPITest(APIFixture, TestCase):
             self.call(self.ada, "put", f"docs/{did}/lock/").status_code, 200
         )
         self.assertEqual(
-            self.call(self.cleo, "put", f"docs/{did}/lock/").status_code, 409
+            self.call(self.bob, "put", f"docs/{did}/lock/").status_code, 409
         )
-        response = self.call(self.cleo, "patch", f"docs/{did}/", {"content": "x"})
+        response = self.call(self.bob, "patch", f"docs/{did}/", {"content": "x"})
         self.assertEqual(response.status_code, 409)
         self.assertEqual(
-            self.call(self.cleo, "get", f"docs/{did}/").json()["locked_by"][
+            self.call(self.bob, "get", f"docs/{did}/").json()["locked_by"][
                 "short_name"
             ],
             "Ada",
         )
         with time_machine.travel(timezone.now() + dt.timedelta(minutes=6)):
             self.assertEqual(
-                self.call(self.cleo, "put", f"docs/{did}/lock/").status_code, 200
+                self.call(self.bob, "put", f"docs/{did}/lock/").status_code, 200
             )
         self.assertEqual(
-            self.call(self.cleo, "delete", f"docs/{did}/lock/").json()["locked_by"],
+            self.call(self.bob, "delete", f"docs/{did}/lock/").json()["locked_by"],
             None,
         )
 

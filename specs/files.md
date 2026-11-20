@@ -239,7 +239,10 @@ Marked **?** are questions the spec didn't answer, built the safe way.
 - **Older versions are for staff (?)**: the doc versions' pages and API,
   the older versions of files and their downloads. Like the history,
   they can hold what was internal before the item was shown to clients.
-  Clients see and edit the current doc, and download the current file.
+  Clients see the current doc and download the current file; they edit
+  and lock only docs they created (`can_change()`, 403 otherwise, decided
+  2026-11-20 after the visibility review: a client could rewrite an
+  agreed brief or hold its lock and keep staff out).
   A client's refused save over a newer version names who saved it but
   has no link to compare.
 - **Doc versions:** the newest version always equals the doc. Saving

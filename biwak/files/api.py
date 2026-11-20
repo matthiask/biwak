@@ -506,13 +506,21 @@ class DocPatch(Schema):
     base_version: int | None = None
 
 
+def _changeable_doc(request, doc_id):
+    item = item_for(request, doc_id, Kind.DOC)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change docs you created."))
+    return item
+
+
 @router.patch("docs/{doc_id}/", response=DocOut)
 def doc_update(request, doc_id: int, data: DocPatch):
     """Saves the fields given, with the version rules of the web
     interface: a version when the last one is older than 10 minutes or by
     someone else, or ``new_version``. 409 while somebody else is editing,
-    and when ``base_version`` was overtaken by somebody else's save."""
-    item = item_for(request, doc_id, Kind.DOC)
+    and when ``base_version`` was overtaken by somebody else's save.
+    Clients only change docs they created (403)."""
+    item = _changeable_doc(request, doc_id)
     given = data.model_fields_set
     changes = {}
     if "title" in given:
@@ -544,7 +552,7 @@ def doc_update(request, doc_id: int, data: DocPatch):
 def doc_lock(request, doc_id: int):
     """Takes or renews the lock (it expires 5 minutes after the last
     renewal); 409 while somebody else holds it"""
-    item = item_for(request, doc_id, Kind.DOC)
+    item = _changeable_doc(request, doc_id)
     try:
         operations.lock_doc(item, request.user)
     except operations.DocLocked as exc:
@@ -556,7 +564,7 @@ def doc_lock(request, doc_id: int):
 
 @router.delete("docs/{doc_id}/lock/", response=DocOut)
 def doc_unlock(request, doc_id: int):
-    item = item_for(request, doc_id, Kind.DOC)
+    item = _changeable_doc(request, doc_id)
     operations.unlock_doc(item, request.user)
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
