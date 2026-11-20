@@ -309,6 +309,11 @@ class UploadPageTest(Fixture, TestCase):
         url = reverse("file_new", args=[self.project.pk])
         return f"{url}?folder={folder.pk}" if folder else url
 
+    def test_everybody_is_preselected(self):
+        self.client.force_login(self.ada)
+        form = self.client.get(self.url()).context["form"]
+        self.assertEqual(form["notify"].value(), "everybody")
+
     def send(self, user, folder=None, **data):
         self.client.force_login(user)
         data = {

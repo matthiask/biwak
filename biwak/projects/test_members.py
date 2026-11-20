@@ -21,7 +21,9 @@ class MembersTest(TestCase):
         self.client.force_login(self.ada)
         response = self.client.get(self.url)
         self.assertContains(response, "Bob Example")  # offered
-        self.client.post(self.url, {"form": "add", "user": self.bob.pk})
+        self.client.post(
+            self.url, {"form": "add", "notify": "default", "user": self.bob.pk}
+        )
         self.assertTrue(self.project.is_member(self.bob))
         event = Event.objects.get(action=Action.ADDED)
         self.assertEqual(event.data["name"], "Bob Example")
@@ -37,6 +39,7 @@ class MembersTest(TestCase):
                 self.url,
                 {
                     "form": "invite",
+                    "notify": "default",
                     "email": "Dora@Example.org",
                     "full_name": "Dora Example",
                     "organization": "Example Client Ltd",
@@ -50,7 +53,10 @@ class MembersTest(TestCase):
         self.assertEqual(mail.outbox[0].to, [dora.email])
         # Inviting again adds nothing and mails nobody
         with self.captureOnCommitCallbacks(execute=True):
-            self.client.post(self.url, {"form": "invite", "email": "dora@example.org"})
+            self.client.post(
+                self.url,
+                {"form": "invite", "notify": "default", "email": "dora@example.org"},
+            )
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(
             User.objects.filter(email__iexact="dora@example.org").count(), 1
@@ -61,13 +67,25 @@ class MembersTest(TestCase):
         # Staff can't even choose: the field isn't there, new people are clients
         self.assertNotContains(self.client.get(self.url), 'name="is_client"')
         self.client.post(
-            self.url, {"form": "invite", "email": "eve@example.org", "is_client": ""}
+            self.url,
+            {
+                "form": "invite",
+                "notify": "default",
+                "email": "eve@example.org",
+                "is_client": "",
+            },
         )
         self.assertTrue(User.objects.get(email="eve@example.org").is_client)
 
         self.client.force_login(self.root)
         self.client.post(
-            self.url, {"form": "invite", "email": "finn@example.org", "is_client": ""}
+            self.url,
+            {
+                "form": "invite",
+                "notify": "default",
+                "email": "finn@example.org",
+                "is_client": "",
+            },
         )
         self.assertFalse(User.objects.get(email="finn@example.org").is_client)
 
@@ -77,8 +95,12 @@ class MembersTest(TestCase):
         self.assertContains(response, "Ada Example")
         self.assertNotContains(response, "ada@example.org")
         self.assertNotContains(response, 'value="invite"')
-        self.client.post(self.url, {"form": "add", "user": self.bob.pk})
-        self.client.post(self.url, {"form": "invite", "email": "x@example.org"})
+        self.client.post(
+            self.url, {"form": "add", "notify": "default", "user": self.bob.pk}
+        )
+        self.client.post(
+            self.url, {"form": "invite", "notify": "default", "email": "x@example.org"}
+        )
         self.assertFalse(self.project.is_member(self.bob))
         self.assertFalse(User.objects.filter(email="x@example.org").exists())
         response = self.client.post(f"{self.url}{self.ada.pk}/remove/")
@@ -121,6 +143,6 @@ class MembersTest(TestCase):
         url = f"/projects/{limited.pk}/people/"
         self.assertEqual(self.client.get(url).status_code, 404)
         self.client.force_login(self.ada)
-        self.client.post(url, {"form": "add", "user": self.bob.pk})
+        self.client.post(url, {"form": "add", "notify": "default", "user": self.bob.pk})
         self.client.force_login(self.bob)
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 200)

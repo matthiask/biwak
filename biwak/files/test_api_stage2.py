@@ -147,11 +147,19 @@ class MessageAPITest(APIFixture, TestCase):
         self.assertEqual(Item.objects.get(pk=mid).title, "Secret")
         self.assertFalse(Item.objects.get(pk=mid).is_client_visible)
 
-    def test_create_needs_whom_to_notify(self):
-        response = self.call(
-            self.ada, "post", f"projects/{self.project.pk}/messages/", {"title": "Hi"}
+    def test_notify_defaults_to_everybody(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.call(
+                self.ada,
+                "post",
+                f"projects/{self.project.pk}/messages/",
+                {"title": "Hi", "visible_to_clients": True},
+            )
+        self.assertEqual(response.status_code, 201)
+        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
+        self.assertEqual(
+            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
         )
-        self.assertEqual(response.status_code, 422)
 
     def test_create(self):
         with self.captureOnCommitCallbacks(execute=True):
@@ -516,10 +524,11 @@ class DocAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertTrue(response.json()["visible_to_clients"])
+        # Without notify, everybody is told
         response = self.call(
             self.ada, "post", f"projects/{self.project.pk}/docs/", {"title": "x"}
         )
-        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.status_code, 201)
 
     def test_update_with_the_version_rules(self):
         did = self.shared_doc.pk
@@ -622,7 +631,7 @@ class DocAPITest(APIFixture, TestCase):
 
 class FileAPITest(APIFixture, TestCase):
     def post_file(self, user, name="new.txt", content=b"New", **data):
-        data = {"notify": "nobody"} | data
+        data = ({} if data.pop("no_notify", False) else {"notify": "nobody"}) | data
         return self.client.post(
             f"/api/v1/projects/{self.project.pk}/files/",
             {"file": SimpleUploadedFile(name, content)} | data,
@@ -659,6 +668,16 @@ class FileAPITest(APIFixture, TestCase):
             )
         event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
         self.assertEqual({n.user for n in event.notifications.all()}, {self.bob})
+
+    def test_upload_notifies_everybody_by_default(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post_file(
+                self.ada, parent_id=self.public.pk, no_notify=True
+            )
+        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
+        self.assertEqual(
+            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
+        )
 
     def test_bad_notify(self):
         self.assertEqual(self.post_file(self.ada, notify="some").status_code, 400)

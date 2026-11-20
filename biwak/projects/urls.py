@@ -15,6 +15,11 @@ urlpatterns = [
     path("projects/<int:pk>/lists/order/", views.list_order, name="list_order"),
     path("projects/<int:pk>/trash/", views.project_trash, name="project_trash"),
     path(
+        "projects/<int:pk>/people/<int:user_pk>/notify/",
+        views.member_notify,
+        name="member_notify",
+    ),
+    path(
         "projects/<int:pk>/people/<int:user_pk>/remove/",
         views.member_remove,
         name="member_remove",

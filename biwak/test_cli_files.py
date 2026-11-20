@@ -12,6 +12,7 @@ import click
 
 from biwak import test_cli
 from biwak.accounts.models import APIToken
+from biwak.activity.models import Action, Event
 from biwak.files import operations
 from biwak.items import operations as ops
 from biwak.items.models import Doc, Item, MessageCategory
@@ -89,10 +90,18 @@ class FilesCLITest(test_cli.CLITest):
             Item.objects.get(title="Piped").message.content, "From stdin\n"
         )
 
-    def test_post_needs_whom_to_notify_and_a_known_category(self):
-        result = self.biwak("message", "post", self.project.pk, "No", "Text")
-        self.assertEqual(result.exit_code, 2)
-        self.assertIn("--notify", result.output)
+    def test_post_notifies_everybody_by_default(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            result = self.biwak(
+                "message", "post", self.project.pk, "All", "Text", "--visible"
+            )
+        self.assertEqual(result.exit_code, 0, result.output)
+        event = Event.objects.get(item__title="All", action=Action.CREATED)
+        self.assertEqual(
+            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
+        )
+
+    def test_post_needs_a_known_category(self):
         result = self.biwak(
             "message", "post", self.project.pk, "No", "Text", "--notify", "nobody",
             "--category", "Nope",

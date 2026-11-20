@@ -15,7 +15,8 @@ from biwak.items.views import CommentForm
 class NotifyForm(Form):
     """ "Whom to notify" when posting (``notify_people()``,
     specs/notifications.md): everybody in the project, chosen people or
-    nobody. No default: posting asks every time."""
+    nobody. Everybody is preselected (decided 2026-11-20): the levels keep
+    mails away from those who want them only when tagged."""
 
     EVERYBODY, CHOSEN, NOBODY = "everybody", "chosen", "nobody"
 
@@ -26,6 +27,7 @@ class NotifyForm(Form):
             (CHOSEN, _("Only these people")),
             (NOBODY, _("Nobody")),
         ],
+        initial=EVERYBODY,
         widget=forms.RadioSelect,
     )
     people = forms.ModelMultipleChoiceField(

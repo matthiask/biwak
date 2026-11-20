@@ -137,6 +137,11 @@ class MessageNewTest(Fixture, TestCase):
     def url(self):
         return reverse("message_new", args=[self.project.pk])
 
+    def test_everybody_is_preselected(self):
+        self.client.force_login(self.ada)
+        form = self.client.get(self.url()).context["form"]
+        self.assertEqual(form["notify"].value(), "everybody")
+
     def post_form(self, user, **data):
         self.client.force_login(user)
         data = {"title": "Hello", "content": "Text", "notify": "nobody"} | data

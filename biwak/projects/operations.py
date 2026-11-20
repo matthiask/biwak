@@ -9,9 +9,10 @@ from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
-from biwak.accounts.models import User
-from biwak.activity.models import Action, Subscription
-from biwak.activity.operations import record
+from biwak.accounts.models import NotificationLevel, User
+from biwak.activity.models import Action, LevelOverride, Subscription
+from biwak.activity.notify import effective_level
+from biwak.activity.operations import record, set_level_override
 from biwak.projects.models import Membership
 
 
@@ -25,12 +26,54 @@ def addable_people(project):
     return User.objects.active().exclude(memberships__project=project)
 
 
+# How people are in a project (specs/notifications.md, "Notified by default
+# or only when tagged"): not a setting of its own, the person's level for
+# the project
+NOTIFY_DEFAULT, NOTIFY_TAGGED = "default", "tagged"
+NOTIFY_CHOICES = {
+    NOTIFY_DEFAULT: NotificationLevel.EVERYTHING,
+    NOTIFY_TAGGED: NotificationLevel.CONCERNS_ME,
+}
+
+
+def notify_choice(user, project):
+    """``default``, ``tagged`` or ``nothing``, from the person's effective
+    level for the project"""
+    level = effective_level(user, project=project)
+    for choice, choice_level in NOTIFY_CHOICES.items():
+        if level == choice_level:
+            return choice
+    return "nothing"
+
+
+def can_change_notify_choice(actor, user):
+    """Staff change everybody's, clients only their own"""
+    return actor.is_authenticated and (not actor.is_client or actor == user)
+
+
 @transaction.atomic
-def add_member(project, user, *, actor):
-    """Returns whether the person was added (False if already a member)"""
+def set_notify_choice(project, user, notify, *, actor):
+    """Stores the choice as the person's override for the project"""
+    if notify not in NOTIFY_CHOICES:
+        raise ValueError(f"Unknown choice {notify!r}")
+    if not can_change_notify_choice(actor, user):
+        raise PermissionError("Clients change only their own choice.")
+    set_level_override(user, NOTIFY_CHOICES[notify], project=project)
+
+
+@transaction.atomic
+def add_member(project, user, *, actor, notify=NOTIFY_DEFAULT):
+    """Returns whether the person was added (False if already a member).
+    ``notify`` is stored as the person's override for the project, unless
+    they have one already: adding again never changes it."""
     if not user.is_active:
         raise ValueError("Inactive people can't be added.")
+    if notify not in NOTIFY_CHOICES:
+        raise ValueError(f"Unknown choice {notify!r}")
     _membership, created = Membership.objects.get_or_create(project=project, user=user)
+    LevelOverride.objects.get_or_create(
+        user=user, project=project, defaults={"level": NOTIFY_CHOICES[notify]}
+    )
     if created:
         if actor == user:
             record(actor=actor, action=Action.JOINED, project=project)
@@ -71,7 +114,16 @@ class InvitationError(ValueError):
 
 
 @transaction.atomic
-def invite(project, *, email, actor, full_name="", is_client=True, organization=""):
+def invite(
+    project,
+    *,
+    email,
+    actor,
+    full_name="",
+    is_client=True,
+    organization="",
+    notify=NOTIFY_DEFAULT,
+):
     """Adds a person by email address, creating them if they don't exist
     yet and mailing them how to log in. Only admins create staff
     (specs/access.md: staff or client is set by admins). Returns the
@@ -91,7 +143,7 @@ def invite(project, *, email, actor, full_name="", is_client=True, organization=
         created = True
     elif not user.is_active:
         raise InvitationError(_("This person has been deactivated."))
-    added = add_member(project, user, actor=actor)
+    added = add_member(project, user, actor=actor, notify=notify)
     if created:
         transaction.on_commit(lambda: send_invitation(project, user, actor=actor))
     return user, created or added

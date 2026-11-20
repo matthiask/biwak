@@ -259,8 +259,8 @@ class MessageIn(Schema):
     content: str = ""
     category_id: int | None = None
     visible_to_clients: bool = False
-    # Required: everybody, nobody or the IDs of members (notify_people())
-    notify: Notify
+    # everybody (the default), nobody or the IDs of members (notify_people())
+    notify: Notify = "everybody"
 
 
 def _category(category_id):
@@ -470,7 +470,7 @@ class DocIn(Schema):
     content: str = ""
     parent_id: int | None = None
     visible_to_clients: bool = False
-    notify: Notify
+    notify: Notify = "everybody"
 
 
 @router.post("projects/{project_id}/docs/", response={201: DocOut})
@@ -700,8 +700,8 @@ class FileIn(Schema):
     description: str = ""
     parent_id: int | None = None
     visible_to_clients: bool = False
-    # everybody, nobody or IDs separated by commas
-    notify: str
+    # everybody (the default), nobody or IDs separated by commas
+    notify: str = "everybody"
 
 
 @router.post("projects/{project_id}/files/", response={201: FileOut})
