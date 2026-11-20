@@ -5,6 +5,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.activity.test_feed import FeedBase, event_at
+from biwak.projects.operations import archive_project
 from biwak.test_utils import person, project
 
 
@@ -15,6 +16,12 @@ class FeedAPITest(FeedBase):
 
     def get(self, user, path, **params):
         return self.client.get(f"/api/v1/{path}", params, headers=self.api(user))
+
+    def test_archived_projects_are_out_of_the_feed(self):
+        archive_project(self.project, actor=self.ada)
+        self.assertEqual(self.get(self.ada, "feed/").json()["results"], [])
+        self.client.force_login(self.ada)
+        self.assertNotContains(self.client.get("/feed/"), "Open point")
 
     def test_feed_as_staff_and_as_client(self):
         record(

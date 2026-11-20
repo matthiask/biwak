@@ -10,6 +10,7 @@ from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.items import operations as ops
+from biwak.projects.operations import archive_project
 from biwak.test_utils import person, project
 
 
@@ -50,6 +51,15 @@ class FeedBase(TestCase):
         ]
         Event.objects.all().delete()
         return todos
+
+
+class ArchivedProjectTest(FeedBase):
+    def test_archived_projects_are_out_of_the_feed(self):
+        ops.create_todo(todolist=self.shared, title="Zebra crossing", creator=self.ada)
+        archive_project(self.project, actor=self.ada)
+        self.assertFalse(feed.feed_events(self.ada).exists())
+        # A project's own feed stays readable
+        self.assertTrue(feed.feed_events(self.ada, project=self.project).exists())
 
 
 class MergeTest(FeedBase):

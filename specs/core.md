@@ -16,8 +16,9 @@ in parallel. See `SPEC.md` for the model overview.
 - A project has one message board, one root folder and any number of
   lists. Project page: the lists, the latest messages, docs and files,
   links, and the project's activity.
-- Archiving a project hides it from lists and the feed; everything stays
-  readable.
+- Archiving a project hides it from lists and the feed across projects
+  (web and API); everything stays readable, including the project's own
+  activity.
 
 ## Items
 

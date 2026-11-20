@@ -43,6 +43,9 @@ def feed_events(
     )
     if project is not None:
         events = events.filter(project=project)
+    else:
+        # Archived projects are out of the feeds across projects
+        events = events.filter(project__archived_at__isnull=True)
     if person is not None:
         events = events.filter(actor=person)
     if kind:
