@@ -180,6 +180,7 @@ and `specs/access.md`).
 - 2026-11-20: Projects are all-access (all staff) or limited (members
   only); clients only ever see projects they're members of. Joining a
   project late subscribes to nothing that exists already.
+- 2026-11-20: Texts are stored as Markdown.
 - 2026-11-20: Items as delegated types (shared `Item` plus detail models);
   groups are a foreign key on to-dos, not tree nodes; django-tree-queries
   for subtree operations; effective visibility stored per item, so the

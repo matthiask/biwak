@@ -111,7 +111,10 @@ class Item(TreeNode):
         return self.title
 
     def get_absolute_url(self):
-        return reverse(f"{self.kind}", kwargs={"pk": self.pk})
+        if self.kind in {Kind.LIST, Kind.TODO}:
+            return reverse(self.kind, kwargs={"pk": self.pk})
+        # Messages, folders and docs get their pages with specs/files.md
+        return self.project.get_absolute_url()
 
     @property
     def has_switch(self):

@@ -6,9 +6,18 @@ and the build order; `specs/` has one spec per part. Read `SPEC.md` and
 the spec of the part you're working on before anything else, and update
 them when a decision changes (dated: "decided 2026-11-20").
 
-Nothing is built yet. Until there is code, this file holds only what is
-already decided; extend it with how to run tests, the development server
-and deployment as they come into being.
+# Running it
+
+- `./runtests.sh` runs all tests (needs the local PostgreSQL container:
+  `podman start local_postgres_1`), `./runtests.sh biwak.items` some.
+- `fl dev` runs Django and the rspack dev server; `uv run ./manage.py
+  check_visibility` compares the stored visibility with the tree.
+- `.env` (not committed): `DATABASE_URL=postgres://localhost:5432/biwak`,
+  `SECRET_KEY`, `DEBUG=True`.
+
+Tests are Django tests. Browser end-to-end tests (Playwright) only where
+nothing else can test something, and not while we're still exploring
+(decided 2026-11-20): they slow us down.
 
 # Code and conventions
 

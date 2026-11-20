@@ -1,0 +1,13 @@
+{% load i18n %}
+<ul class="list-unstyled wb-events">
+  {% for event in events %}
+    <li class="mb-2">
+      <span class="fw-semibold">{{ event.actor.get_short_name }}</span>
+      {{ event.get_action_display }}
+      {% if event.item %}<a href="{{ event.item.get_absolute_url }}">{{ event.data.title }}</a>{% endif %}
+      <div class="small text-body-secondary">{{ event.created_at|timesince }}</div>
+    </li>
+  {% empty %}
+    <li class="text-body-secondary">{% translate "Nothing yet." %}</li>
+  {% endfor %}
+</ul>

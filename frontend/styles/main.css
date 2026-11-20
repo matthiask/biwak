@@ -511,3 +511,116 @@ a.wb-row-title:hover {
   --wb-tone-bg: var(--wb-core-bg);
   --wb-tone-ink: var(--wb-core-ink);
 }
+
+/* Visible to clients (specs/access.md): bright yellow, impossible to miss */
+:root,
+[data-bs-theme="light"] {
+  --wb-client-bg: #ffe14d;
+  --wb-client-ink: #3d3000;
+}
+
+[data-bs-theme="dark"] {
+  --wb-client-bg: #ffd60a;
+  --wb-client-ink: #1f1800;
+}
+
+.wb-client-badge {
+  background: var(--wb-client-bg);
+  color: var(--wb-client-ink);
+  font-weight: 600;
+}
+
+.wb-client-banner {
+  background: var(--wb-client-bg);
+  color: var(--wb-client-ink);
+  font-weight: 600;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--bs-border-radius);
+  margin-bottom: 1rem;
+}
+
+/* To-do lists: groups below each other, or as columns on the board */
+.wb-todolist {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wb-todolist.is-board {
+  flex-direction: row;
+  align-items: flex-start;
+  overflow-x: auto;
+}
+
+.wb-todolist.is-board .wb-group {
+  flex: 0 0 18rem;
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
+  border-radius: var(--bs-border-radius);
+  padding: 0.5rem;
+}
+
+.wb-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.wb-todos {
+  min-height: 1.5rem;
+}
+
+.wb-todo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+}
+
+.wb-handle {
+  cursor: grab;
+  color: var(--bs-secondary-color);
+  opacity: 0.5;
+}
+
+.wb-todo:hover .wb-handle,
+.wb-group-title:hover .wb-handle {
+  opacity: 1;
+}
+
+.wb-check {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--bs-secondary-color);
+  border-radius: 0.25rem;
+  background: var(--wb-field-bg);
+  color: var(--bs-body-color);
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.wb-check.is-done {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
+}
+
+.wb-todo-title {
+  color: var(--bs-body-color);
+}
+
+.wb-person {
+  background: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+  font-weight: 500;
+}
+
+.wb-add-todo {
+  max-width: 28rem;
+  margin-top: 0.25rem;
+}

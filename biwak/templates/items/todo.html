@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{{ item }} – Biwak{% endblock %}
+{% block content %}
+  <nav class="small mb-2">
+    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
+    <a href="{{ item.parent.get_absolute_url }}">{{ item.parent }}</a>
+  </nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
+      {{ item }} {% client_badge item %}
+    </h1>
+    <div class="wb-page-actions">
+      <form method="post" action="{% url 'todo_toggle' item.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
+        <button type="submit" class="btn btn-sm btn-quiet">{% if todo.is_completed %}{% translate "Reopen" %}{% else %}{% icon "check-lg" %}<span>{% translate "Complete" %}</span>{% endif %}</button>
+      </form>
+    </div>
+  </div>
+  {% include "items/_client_banner.html" %}
+  {% if todo.is_completed %}
+    <p class="text-body-secondary">{% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}</p>
+  {% endif %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="form" value="todo">
+            {{ form }}
+            <button type="submit" class="btn btn-primary btn-sm">{% translate "Save" %}</button>
+          </form>
+        </div>
+      </div>
+      <h2 class="h5" id="comments">{% translate "Comments" %}</h2>
+      {% for comment in comments %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <div class="small text-body-secondary mb-1"><strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}</div>
+            <div class="wb-markdown">{{ comment.content|markdown }}</div>
+          </div>
+        </div>
+      {% endfor %}
+      {% include "items/_client_banner.html" %}
+      <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="comment">
+        {{ comment_form }}
+        <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
+      </form>
+    </div>
+    <div class="col-lg-4">
+      <h2 class="h6">{% translate "Subscribers" %}</h2>
+      <p class="small">{% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% empty %}–{% endfor %}</p>
+      <form method="post" action="{% url 'subscription' item.pk %}">
+        {% csrf_token %}
+        {% if is_subscribed %}
+          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Unsubscribe" %}</button>
+        {% else %}
+          <input type="hidden" name="subscribe" value="1">
+          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Subscribe" %}</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+{% endblock %}

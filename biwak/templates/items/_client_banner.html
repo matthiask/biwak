@@ -1,0 +1,4 @@
+{% load biwak i18n %}
+{% if item.is_client_visible %}
+  <div class="wb-client-banner" role="note">{% icon "eye" %} {% translate "Clients can see this." %}</div>
+{% endif %}

@@ -61,13 +61,14 @@ keep `with_tree_fields()` off by default.
 Trashing is soft and recoverable for 30 days; children follow their
 parent. Archiving keeps items readable but out of the way.
 
-## Rich text
+## Text
 
-One editor for to-dos' notes, messages, comments and docs: Markdown-ish
-shortcuts, links, lists, headings, code, images and file attachments,
-mentions. Stored as sanitized HTML (an allow-list), rendered as is; a
-plain text / Markdown version is derived for mails, search, the API and
-agents. The API accepts Markdown and converts it.
+To-dos' notes, messages, comments and docs are stored as **Markdown**
+(decided 2026-11-20): the same text in the app, in mails, in the API and
+for agents, nothing to convert. Rendered with markdown-it (CommonMark,
+HTML in the source disabled, links made clickable). Mentions get a
+Markdown syntax of their own (`notifications.md`). An editor with
+formatting buttons can come later, as long as it writes Markdown.
 
 ## Lists, groups and ordering
 

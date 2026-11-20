@@ -1,6 +1,6 @@
 /* Bootstrap Icons (npm's bootstrap-icons, MIT): the font, and only the
-   icons in use ({% icon "name" %}, governance/templatetags/governance.py;
-   governance/test_icons.py checks that each has its class here). The
+   icons in use ({% icon "name" %}, biwak/templatetags/biwak.py;
+   biwak/test_icons.py checks that each has its class here). The
    codepoints are in node_modules/bootstrap-icons/font/bootstrap-icons.json. */
 @font-face {
   font-display: block;
@@ -43,9 +43,14 @@
 .bi-arrow-up::before {
   content: "\f148";
 }
-
 .bi-box-arrow-up-right::before {
   content: "\f1c5";
+}
+.bi-calendar-event::before {
+  content: "\f1e8";
+}
+.bi-chat::before {
+  content: "\f268";
 }
 .bi-check-circle::before {
   content: "\f26b";
@@ -65,14 +70,26 @@
 .bi-envelope::before {
   content: "\f32f";
 }
+.bi-eye::before {
+  content: "\f341";
+}
+.bi-folder::before {
+  content: "\f3d7";
+}
 .bi-gear::before {
   content: "\f3e5";
+}
+.bi-globe::before {
+  content: "\f3ee";
 }
 .bi-grip-vertical::before {
   content: "\f3fe";
 }
-.bi-three-dots::before {
-  content: "\f5d4";
+.bi-list-check::before {
+  content: "\f473";
+}
+.bi-lock::before {
+  content: "\f47b";
 }
 .bi-pencil::before {
   content: "\f4cb";
@@ -94,6 +111,9 @@
 }
 .bi-stop-fill::before {
   content: "\f592";
+}
+.bi-three-dots::before {
+  content: "\f5d4";
 }
 .bi-trash::before {
   content: "\f5de";

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
         "allauth.mfa",
         "allauth.socialaccount",
         "allauth.socialaccount.providers.google",
+        "allauth.usersessions",
         "biwak.accounts",
         "biwak.projects",
         "biwak.items",
@@ -105,6 +106,7 @@ MIDDLEWARE = [
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "allauth.account.middleware.AccountMiddleware",
+        "allauth.usersessions.middleware.UserSessionsMiddleware",
         "biwak.accounts.middleware.language_middleware",
     ]
     if m

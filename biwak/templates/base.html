@@ -1,0 +1,67 @@
+{% load biwak i18n rspack_assets static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Biwak{% endblock %}</title>
+    <script>
+      // Set the theme immediately to prevent a flash of the wrong theme, see theme.js
+      (function () {
+        document.documentElement.classList.add("js")
+        const stored = window.localStorage.getItem("theme")
+        document.documentElement.dataset.bsTheme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      })()
+    </script>
+    <link rel="icon" href="{% static 'biwak/favicon.svg' %}" type="image/svg+xml">
+    {% rspack_assets "main" %}
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <nav class="navbar navbar-expand wb-navbar mb-4">
+      <div class="container-xl">
+        <a class="navbar-brand wb-brand" href="/" title="Biwak">
+          <img src="{% static 'biwak/favicon.svg' %}" width="28" height="28" alt="">
+          <span class="ms-2 fw-semibold">Biwak</span>
+        </a>
+        {% if request.user.is_authenticated %}
+          <ul class="navbar-nav me-auto wb-nav-links">
+            {% url 'projects' as projects_url %}
+            <li class="nav-item">
+              <a class="nav-link{% if request.path == projects_url %} active{% endif %}" href="{{ projects_url }}">{% translate "Projects" %}</a>
+            </li>
+          </ul>
+          <div class="wb-nav-user d-flex align-items-center gap-2">
+            {% include "_theme_toggle.html" %}
+            <details class="dropdown wb-menu">
+              <summary class="btn btn-sm btn-quiet">
+                {{ request.user.get_short_name }}
+                {% icon "chevron-down" %}
+              </summary>
+              <div class="dropdown-menu dropdown-menu-end">
+                <a class="dropdown-item" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
+                <a class="dropdown-item" href="{% url 'usersessions_list' %}">{% translate "Sessions" %}</a>
+                {% if request.user.is_staff %}
+                  <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
+                {% endif %}
+                <hr class="dropdown-divider">
+                <form method="post" action="{% url 'account_logout' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="dropdown-item">{% translate "Sign out" %}</button>
+                </form>
+              </div>
+            </details>
+          </div>
+        {% endif %}
+      </div>
+    </nav>
+    <main class="container-xl wb-main">
+      {% block messages %}{% include "_messages.html" %}{% endblock %}
+      {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

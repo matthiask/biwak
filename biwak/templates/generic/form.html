@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }} – Biwak{% endblock %}
+{% block content %}
+  <h1 class="mb-3">{{ title }}</h1>
+  <div class="card wb-form-card">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        <a href="{{ cancel }}" class="btn btn-quiet">{% translate "Cancel" %}</a>
+      </form>
+    </div>
+  </div>
+{% endblock %}

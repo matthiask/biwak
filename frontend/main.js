@@ -9,6 +9,6 @@ import "./menus.js"
 import "htmx.org"
 
 // The script is deferred, the page is parsed already
-if (document.querySelector("[data-sortable]")) {
-  import(/* webpackChunkName: "sortable" */ "./sortable.js")
+if (document.querySelector("[data-todos]")) {
+  import(/* webpackChunkName: "todos" */ "./todos.js")
 }

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Projects" %} – Biwak{% endblock %}
+{% block content %}
+  <div class="wb-page-header">
+    <h1>{% translate "Projects" %}</h1>
+    {% if not request.user.is_client %}
+      <div class="wb-page-actions">
+        <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span>{% translate "New project" %}</span></a>
+      </div>
+    {% endif %}
+  </div>
+  <div class="list-group mb-4">
+    {% for project in projects %}
+      <a class="list-group-item list-group-item-action" href="{{ project.get_absolute_url }}">
+        {{ project }}
+        {% if not project.is_all_access %}<span class="text-body-secondary ms-1" title="{% translate 'Limited: members only' %}">{% icon "lock" %}</span>{% endif %}
+      </a>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">{% translate "No projects yet." %}</div>
+    {% endfor %}
+  </div>
+  {% if others %}
+    <h2 class="h5">{% translate "Limited projects you're not a member of" %}</h2>
+    <p class="text-body-secondary">{% translate "As admin you can join them; joining is recorded in the project." %}</p>
+    <div class="list-group">
+      {% for project in others %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{% icon "lock" %} {{ project }}</span>
+          <form method="post" action="{% url 'project_join' project.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-elevated">{% translate "Join" %}</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

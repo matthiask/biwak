@@ -320,3 +320,23 @@ class SubscriptionTest(TestCase):
         unsubscribe(bob, todo)
         subscribe(bob, todo, added_by=ada)
         self.assertEqual(Subscription.objects.get(user=bob, item=todo).added_by, ada)
+
+
+class CheckCommandTest(TestCase):
+    def test_command(self):
+        from io import StringIO
+
+        from django.core import mail
+        from django.core.management import call_command
+
+        ada = person("Ada")
+        p = project(members=[ada])
+        todolist = ops.create_list(project=p, title="Launch", creator=ada)
+        out = StringIO()
+        call_command("check_visibility", "--mail", stdout=out)
+        self.assertIn("No differences", out.getvalue())
+        Item.objects.filter(pk=todolist.pk).update(is_client_visible=True)
+        with self.settings(ADMINS=[("Admin", "admin@example.org")]):
+            call_command("check_visibility", "--mail", stdout=out)
+        self.assertIn("stored True, expected False", out.getvalue())
+        self.assertEqual(len(mail.outbox), 1)
