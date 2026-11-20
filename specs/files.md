@@ -101,7 +101,6 @@ them here if wrong):
 - **Type:** the content type comes from the file name, never from what
   the browser sends. Inline (and shown as images in texts): PNG, JPEG,
   GIF, WebP, AVIF and PDF (inline only); everything else is a download.
-- **Unknown keys** (deleted attachments) render as links to `#`.
 - **Files are deleted** with their rows (a `post_delete` signal, after
   the transaction commits), so purging the trash, deleting unlinked
   attachments and deleting a project all remove the files.
