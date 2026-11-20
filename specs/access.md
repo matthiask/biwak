@@ -27,7 +27,10 @@ the first client gets a login.
     don't see a limited project's content without joining. The
     memberships are read-only in the Django admin, so that joining always
     goes through the app and its event (decided 2026-11-20 after the
-    visibility review).
+    visibility review). Joining, on the page and through the API, takes
+    the projects they can open plus the limited ones the list offers
+    (`projects_to_join()`), not archived limited ones (fixed 2026-11-20
+    after the second visibility review: the API took any project).
 - **Staff** with access to a project see everything in it.
 - **Clients** are never covered by all-access: they see a project only
   if they're members, and in it only what

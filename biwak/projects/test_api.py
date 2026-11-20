@@ -2,6 +2,7 @@
 does (specs/api-cli.md, "Closing the gaps to the web")"""
 
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
@@ -82,6 +83,14 @@ class ProjectGapsAPITest(TestCase):
         # Again: nothing changes
         self.api("post", f"projects/{self.limited.pk}/join/", self.root)
         self.assertEqual(Event.objects.filter(action=Action.JOINED).count(), 1)
+
+    def test_admins_dont_join_archived_limited(self):
+        """Like the web: only what ``joinable_projects()`` lists"""
+        self.limited.archived_at = timezone.now()
+        self.limited.save()
+        response = self.api("post", f"projects/{self.limited.pk}/join/", self.root)
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(self.limited.is_member(self.root))
 
     def test_staff_join_all_access_not_limited(self):
         self.assertEqual(

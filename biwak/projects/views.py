@@ -89,10 +89,7 @@ def project_join(request, pk):
     specs/access.md); joining subscribes to nothing that exists already"""
     if request.user.is_client:
         raise PermissionDenied
-    if request.user.is_admin:
-        project = get_object_or_404(Project, pk=pk)
-    else:
-        project = project_for(request, pk)
+    project = get_object_or_404(project_ops.projects_to_join(request.user), pk=pk)
     project_ops.add_member(project, request.user, actor=request.user)
     return redirect(project)
 

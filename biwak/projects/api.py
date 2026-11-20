@@ -139,10 +139,9 @@ def project_join(request, project_id: int):
     (recorded as ``joined``); joining twice changes nothing"""
     if request.user.is_client:
         raise HttpError(403, _("Only staff can join projects."))
-    if request.user.is_admin:
-        project = get_object_or_404(Project, pk=project_id)
-    else:
-        project = project_for(request, project_id)
+    project = get_object_or_404(
+        project_ops.projects_to_join(request.user), pk=project_id
+    )
     project_ops.add_member(project, request.user, actor=request.user)
     return project_out(project, request.user)
 
