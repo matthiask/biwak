@@ -1,6 +1,12 @@
 module.exports = (env, argv) => {
-  const { base, devServer, assetRule, postcssRule, sassRule, swcWithPreactRule } =
-    require("./rspack.library.js")(argv.mode === "production")
+  const {
+    base,
+    devServer,
+    assetRule,
+    postcssRule,
+    sassRule,
+    swcWithPreactRule,
+  } = require("./rspack.library.js")(argv.mode === "production")
 
   // No core-js: all browsers we support have what the scripts use
   const swcRule = swcWithPreactRule()

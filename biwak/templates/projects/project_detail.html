@@ -1,19 +1,27 @@
 {% extends "base.html" %}
 {% load biwak i18n %}
 {% block title %}{{ project }} – Biwak{% endblock %}
+
 {% block content %}
   <div class="wb-page-header">
     <div>
       <h1 class="wb-title">
         {{ project }}
-        {% if not project.is_all_access %}<span class="text-body-secondary fs-6" title="{% translate 'Limited: members only' %}">{% icon "lock" %}</span>{% endif %}
+        {% if not project.is_all_access %}<span
+            class="text-body-secondary fs-6"
+            title="{% translate 'Limited: members only' %}"
+          >{% icon "lock" %}</span>{% endif %}
       </h1>
-      {% if project.description %}<div class="wb-description text-body-secondary">{{ project.description|markdown }}</div>{% endif %}
+      {% if project.description %}<div class="wb-description text-body-secondary">
+          {{ project.description|markdown }}
+        </div>{% endif %}
     </div>
     {% if not is_member and not request.user.is_client %}
       <form method="post" action="{% url 'project_join' project.pk %}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-quiet">{% icon "person-plus" %}<span>{% translate "Join" %}</span></button>
+        <button type="submit" class="btn btn-sm btn-quiet">
+          {% icon "person-plus" %}<span>{% translate "Join" %}</span>
+        </button>
       </form>
     {% endif %}
   </div>
@@ -22,7 +30,10 @@
       <h2 class="h5">{% translate "To-do lists" %}</h2>
       <div class="list-group mb-3">
         {% for list in lists %}
-          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ list.get_absolute_url }}">
+          <a
+            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+            href="{{ list.get_absolute_url }}"
+          >
             <span>{% icon "list-check" %} {{ list }}</span>
             {% client_badge list %}
           </a>
@@ -32,9 +43,17 @@
       </div>
       <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
         {% csrf_token %}
-        <input type="text" name="title" class="form-control w-auto flex-grow-1" placeholder="{% translate 'New list' %}" required maxlength="500">
+        <input
+          type="text"
+          name="title"
+          class="form-control w-auto flex-grow-1"
+          placeholder="{% translate 'New list' %}"
+          required
+          maxlength="500"
+        >
         {% if not request.user.is_client %}
-          <label class="form-check mb-0"><input type="checkbox" name="visible" class="form-check-input"> {% translate "Visible to clients" %}</label>
+          <label class="form-check mb-0"><input type="checkbox" name="visible" class="form-check-input">
+            {% translate "Visible to clients" %}</label>
         {% endif %}
         <button type="submit" class="btn btn-quiet">{% icon "plus-lg" %}<span>{% translate "Add list" %}</span></button>
       </form>
@@ -48,4 +67,4 @@
       {% include "activity/_events.html" %}
     </div>
   </div>
-{% endblock %}
+{% endblock content %}

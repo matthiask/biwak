@@ -73,7 +73,7 @@ class Item(TreeNode):
         related_name="items",
         verbose_name=_("project"),
     )
-    kind = models.CharField(_("kind"), max_length=20, choices=Kind.choices)
+    kind = models.CharField(_("kind"), max_length=20, choices=Kind)
     # Within the parent; to-dos within their list and group
     position = models.PositiveIntegerField(_("position"), default=0)
     title = models.CharField(_("title"), max_length=500)
@@ -86,7 +86,7 @@ class Item(TreeNode):
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     updated_at = models.DateTimeField(_("updated at"), default=timezone.now)
     status = models.CharField(
-        _("status"), max_length=20, choices=Status.choices, default=Status.ACTIVE
+        _("status"), max_length=20, choices=Status, default=Status.ACTIVE
     )
     trashed_at = models.DateTimeField(_("trashed at"), null=True, blank=True)
     # The switch, only meaningful on SWITCHABLE kinds at the top level

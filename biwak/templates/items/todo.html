@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load biwak i18n %}
 {% block title %}{{ item }} – Biwak{% endblock %}
+
 {% block content %}
   <nav class="small mb-2">
     <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
@@ -9,19 +10,25 @@
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
-      {{ item }} {% client_badge item %}
+      {{ item }}
+      {% client_badge item %}
     </h1>
     <div class="wb-page-actions">
       <form method="post" action="{% url 'todo_toggle' item.pk %}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
-        <button type="submit" class="btn btn-sm btn-quiet">{% if todo.is_completed %}{% translate "Reopen" %}{% else %}{% icon "check-lg" %}<span>{% translate "Complete" %}</span>{% endif %}</button>
+        <button type="submit" class="btn btn-sm btn-quiet">
+          {% if todo.is_completed %}{% translate "Reopen" %}{% else %}{% icon "check-lg" %}<span
+            >{% translate "Complete" %}</span>{% endif %}
+        </button>
       </form>
     </div>
   </div>
   {% include "items/_client_banner.html" %}
   {% if todo.is_completed %}
-    <p class="text-body-secondary">{% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}</p>
+    <p class="text-body-secondary">
+      {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
+    </p>
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
@@ -39,7 +46,9 @@
       {% for comment in comments %}
         <div class="card mb-2">
           <div class="card-body">
-            <div class="small text-body-secondary mb-1"><strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}</div>
+            <div class="small text-body-secondary mb-1">
+              <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+            </div>
             <div class="wb-markdown">{{ comment.content|markdown }}</div>
           </div>
         </div>
@@ -54,7 +63,10 @@
     </div>
     <div class="col-lg-4">
       <h2 class="h6">{% translate "Subscribers" %}</h2>
-      <p class="small">{% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% empty %}–{% endfor %}</p>
+      <p class="small">
+        {% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %},
+          {% endif %}{% empty %}–{% endfor %}
+      </p>
       <form method="post" action="{% url 'subscription' item.pk %}">
         {% csrf_token %}
         {% if is_subscribed %}
@@ -66,4 +78,4 @@
       </form>
     </div>
   </div>
-{% endblock %}
+{% endblock content %}

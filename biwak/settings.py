@@ -142,7 +142,6 @@ DATABASES["default"] |= {
     "CONN_MAX_AGE": 300,
     "DISABLE_SERVER_SIDE_CURSORS": True,
 }
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LANGUAGE_CODE = "de"
 LANGUAGES = [("de", _("German")), ("en", _("English"))]

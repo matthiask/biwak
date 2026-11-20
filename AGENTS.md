@@ -58,6 +58,6 @@ projects, people and clients. The same in issues and commit messages.
 # Language
 
 Code, specs, commits and issues in English. The interface in German and
-English from the start; gender-neutral German or use the colon 
+English from the start; gender-neutral German or use the colon
 (Teilnehmer:innen). Do not use the asterisk because broken Markdown parsers
 do not like it.

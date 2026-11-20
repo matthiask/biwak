@@ -65,7 +65,7 @@ class Event(models.Model):
         related_name="+",
         verbose_name=_("actor"),
     )
-    action = models.CharField(_("action"), max_length=30, choices=Action.choices)
+    action = models.CharField(_("action"), max_length=30, choices=Action)
     # The item's title at the time, and what changed (e.g. assignees)
     data = models.JSONField(_("data"), default=dict, blank=True)
     created_at = models.DateTimeField(_("created at"), default=timezone.now)

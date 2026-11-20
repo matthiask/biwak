@@ -31,7 +31,10 @@
           <ul class="navbar-nav me-auto wb-nav-links">
             {% url 'projects' as projects_url %}
             <li class="nav-item">
-              <a class="nav-link{% if request.path == projects_url %} active{% endif %}" href="{{ projects_url }}">{% translate "Projects" %}</a>
+              <a
+                class="nav-link{% if request.path == projects_url %} active{% endif %}"
+                href="{{ projects_url }}"
+              >{% translate "Projects" %}</a>
             </li>
           </ul>
           <div class="wb-nav-user d-flex align-items-center gap-2">
