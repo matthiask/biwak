@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load biwak bookmarks i18n %}
+{% block title %}{{ item|item_title }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2">
+    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
+    <a href="{% url 'project_checkins' item.project.pk %}">{% translate "Check-ins" %}</a>
+  </nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {{ item|item_title }}
+      {% client_badge item %}
+      {% if is_paused %}<span class="badge text-bg-secondary">{% translate "paused" %}</span>{% endif %}
+    </h1>
+    <div class="wb-page-actions">
+      {% bookmark_button item %}
+      {% if can_answer and latest %}
+        <a
+          class="btn btn-sm btn-primary"
+          href="{% url 'question_answer' item.pk %}?occurrence={{ latest.pk }}"
+        >{% translate "Answer" %}</a>
+      {% endif %}
+      {% if can_manage %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'question_edit' item.pk %}">{% icon "pencil" %}<span
+          >{% translate "Edit" %}</span></a>
+        <form method="post" action="{% url 'question_pause' item.pk %}">
+          {% csrf_token %}
+          {% if is_paused %}
+            <button type="submit" name="resume" value="1" class="btn btn-sm btn-quiet">
+              {% icon "play-circle" %}<span>{% translate "Resume" %}</span>
+            </button>
+          {% else %}
+            <button type="submit" class="btn btn-sm btn-quiet">
+              {% icon "pause-circle" %}<span>{% translate "Pause" %}</span>
+            </button>
+          {% endif %}
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% include "items/_client_banner.html" %}
+  <p class="text-body-secondary">
+    {{ question.schedule_description|capfirst }},
+    {{ question.time_of_day|time:"H:i" }} {{ question.time_zone }}
+    {% if is_paused %}
+      · {% translate "paused, not asked" %}
+    {% elif question.next_local %}
+      · {% blocktranslate with when=question.next_local|date:"l, j. F Y, H:i" %}next: {{ when }}{% endblocktranslate %}
+    {% endif %}
+  </p>
+  <div class="row g-4">
+    <div class="col-lg-8">
+      {% for occurrence, answers in rows %}
+        <section class="mb-4" id="occurrence-{{ occurrence.pk }}">
+          <h2 class="h5">
+            {{ occurrence.date|date:"l, j. F Y" }}
+            {% if can_answer and occurrence.pk not in answered %}
+              <a
+                class="btn btn-sm btn-quiet"
+                href="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
+              >{% translate "Answer" %}</a>
+            {% endif %}
+          </h2>
+          {% if forloop.first and missing %}
+            <p class="small text-body-secondary">
+              {% translate "Hasn't answered yet:" %}
+              {% for person in missing %}<a
+                  href="{% url 'question_person' item.pk person.pk %}"
+                >{{ person.get_short_name }}</a>{% if not forloop.last %},
+                {% endif %}{% endfor %}
+            </p>
+          {% endif %}
+          {% for answer, comments in answers %}
+            <div class="card mb-2" id="answer-{{ answer.pk }}">
+              <div class="card-body">
+                <div class="small text-body-secondary mb-1">
+                  <a href="{% url 'question_person' item.pk answer.author_id %}"><strong
+                    >{{ answer.author.display_name }}</strong></a>
+                  · {{ answer.item.created_at|date:"j. M Y, H:i" }}
+                  {% if answer.author_id == request.user.pk %}
+                    ·
+                    <a
+                      href="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
+                    >{% translate "Edit" %}</a>
+                  {% endif %}
+                </div>
+                <div class="wb-markdown">{{ answer.content|markdown:answer.item }}</div>
+                {% for comment in comments %}
+                  <div class="border-top mt-2 pt-2">
+                    <div class="small text-body-secondary">
+                      <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+                    </div>
+                    <div class="wb-markdown">{{ comment.content|markdown:answer.item }}</div>
+                  </div>
+                {% endfor %}
+                <details class="mt-2">
+                  <summary class="small">{% translate "Comment" %}</summary>
+                  <form method="post" action="{% url 'answer_comment' answer.pk %}" class="mt-2">
+                    {% csrf_token %}
+                    {% include "items/_client_banner.html" with item=answer.item %}
+                    {{ comment_form }}
+                    <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
+                  </form>
+                </details>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-body-secondary">{% translate "No answers yet." %}</p>
+          {% endfor %}
+        </section>
+      {% empty %}
+        <p class="text-body-secondary">{% translate "Not asked yet." %}</p>
+      {% endfor %}
+      {% if more %}
+        <a class="btn btn-sm btn-quiet" href="?before={{ more }}">{% translate "Show older" %}</a>
+      {% endif %}
+    </div>
+    <div class="col-lg-4">
+      <h2 class="h6">{% translate "People asked" %}</h2>
+      <ul class="list-unstyled small">
+        {% for person in people %}
+          <li><a href="{% url 'question_person' item.pk person.pk %}">{{ person.display_name }}</a></li>
+        {% empty %}
+          <li>–</li>
+        {% endfor %}
+      </ul>
+      {% if question.remind_after %}
+        <p class="small text-body-secondary">
+          {% blocktranslate count hours=question.remind_after %}A reminder after {{ hours }} hour.{% plural %}A reminder after {{ hours }} hours.{% endblocktranslate %}
+        </p>
+      {% endif %}
+      <h2 class="h6 mt-4">{% translate "Mails about answers" %}</h2>
+      <form method="post" action="{% url 'question_mail' item.pk %}">
+        {% csrf_token %}
+        {% for value, label in modes %}
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="mode"
+              id="mode-{{ value }}"
+              value="{{ value }}"
+              {% if value == mode %}checked{% endif %}
+            >
+            <label class="form-check-label" for="mode-{{ value }}">{{ label }}</label>
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-sm btn-quiet mt-2">{% translate "Save" %}</button>
+      </form>
+      {% if can_manage %}
+        <p class="mt-4 mb-0">
+          <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
+            >{% translate "History" %}</span></a>
+        </p>
+      {% endif %}
+      {% if can_switch %}
+        <form method="post" action="{% url 'switch' item.pk %}" class="mt-3 small">
+          {% csrf_token %}
+          {% if item.is_client_visible %}
+            <button type="submit" class="btn btn-sm btn-quiet">
+              {% icon "lock" %}<span>{% translate "Hide from clients" %}</span>
+            </button>
+            <span
+              class="text-body-secondary"
+            >{% translate "Hides the check-in, its answers and their comments again." %}</span>
+          {% else %}
+            <input type="hidden" name="visible" value="1">
+            <button type="submit" class="btn btn-sm btn-quiet">
+              {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
+            </button>
+            <span
+              class="text-body-secondary"
+            >{% translate "Makes the check-in, its answers and their comments visible to the project's clients." %}</span>
+          {% endif %}
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock content %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Check-ins" %} – {{ project }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Check-ins" %}</h1>
+    <div class="wb-page-actions">
+      {% if can_manage %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'question_new' project.pk %}">{% icon "plus-lg" %}<span
+          >{% translate "New check-in" %}</span></a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="list-group">
+    {% for question, is_due in questions %}
+      <a class="list-group-item list-group-item-action" href="{{ question.get_absolute_url }}">
+        <div class="d-flex justify-content-between align-items-center">
+          <span>
+            {% icon "chat-square-text" %} {{ question|item_title }}
+            {% if is_due %}<span
+                class="badge text-bg-warning"
+              >{% translate "Waiting for your answer" %}</span>{% endif %}
+          </span>
+          {% client_badge question %}
+        </div>
+        <div class="small text-body-secondary">
+          {{ question.question.schedule_description|capfirst }},
+          {{ question.question.time_of_day|time:"H:i" }} {{ question.question.time_zone }}
+          {% if question.question.is_paused %}
+            · <strong>{% translate "paused" %}</strong>
+          {% elif question.question.next_local %}
+            ·
+            {% blocktranslate with when=question.question.next_local|date:"D j. M Y, H:i" %}next: {{ when }}{% endblocktranslate %}
+          {% endif %}
+        </div>
+      </a>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">{% translate "No check-ins yet." %}</div>
+    {% endfor %}
+  </div>
+{% endblock content %}

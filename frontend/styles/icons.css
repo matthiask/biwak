@@ -58,6 +58,9 @@
 .bi-chat-left-text::before {
   content: "\f252";
 }
+.bi-chat-square-text::before {
+  content: "\f264";
+}
 .bi-check-circle::before {
   content: "\f26b";
 }
@@ -100,14 +103,23 @@
 .bi-paperclip::before {
   content: "\f4b3";
 }
+.bi-pause-circle::before {
+  content: "\f4c2";
+}
 .bi-pencil::before {
   content: "\f4cb";
 }
 .bi-person-plus::before {
   content: "\f4dd";
 }
+.bi-play-circle::before {
+  content: "\f4f3";
+}
 .bi-plus-lg::before {
   content: "\f64d";
+}
+.bi-skip-forward::before {
+  content: "\f55e";
 }
 .bi-trash::before {
   content: "\f5de";

@@ -144,6 +144,10 @@ def _noun(kind, count):
         return ngettext("%(count)d folder", "%(count)d folders", count)
     if kind == Kind.DOC:
         return ngettext("%(count)d doc", "%(count)d docs", count)
+    if kind == Kind.QUESTION:
+        return ngettext("%(count)d check-in", "%(count)d check-ins", count)
+    if kind == Kind.ANSWER:
+        return ngettext("%(count)d answer", "%(count)d answers", count)
     return ngettext("%(count)d item", "%(count)d items", count)
 
 
