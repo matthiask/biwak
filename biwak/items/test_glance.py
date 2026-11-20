@@ -421,14 +421,14 @@ class FeedMessageExcerptsTest(Fixture):
                         self.client.get(url), "Hello everybody out there"
                     )
 
-    def test_other_actions_have_none(self):
+    def test_every_action_of_a_message_has_it(self):
         from biwak.files import operations as file_ops
 
         file_ops.pin_message(self.message, actor=self.ada)
         self.client.force_login(self.ada)
         response = self.client.get("/feed/?action=pinned")
         self.assertContains(response, "pinned")
-        self.assertNotContains(response, "wb-excerpt")
+        self.assertContains(response, "wb-excerpt")
 
     def test_api(self):
         _token, secret = APIToken.create_for(user=self.cleo, title="T", access="read")

@@ -136,11 +136,7 @@ def add_excerpts(events):
 
 
 def _is_message_text(event):
-    return (
-        event.action in {Action.CREATED, Action.EDITED}
-        and event.item is not None
-        and event.item.kind == Kind.MESSAGE
-    )
+    return event.item is not None and event.item.kind == Kind.MESSAGE
 
 
 def _noun(kind, count):

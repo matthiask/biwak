@@ -11,9 +11,8 @@ projects page), to-do indicators and the peek (`items/_signals.html`,
 counts, feed excerpts (also on the project page's short list and as
 `excerpt` on API feed events; CLI 0.9.0). Message excerpts added
 (2026-11-20): `feed.add_excerpts()` also
-gives the current text of a message to its `created` and `edited`
-events (web feed, project page, API); other actions of a message (pinned,
-moved, ...) show none (confirmed 2026-11-20). `add_excerpts()` loads comments and messages with
+gives the current text of a message to every event of it (web feed,
+project page, API; decided 2026-11-20: the simplest rule). `add_excerpts()` loads comments and messages with
 one query each for a page, the API feed included (`paginated(...,
 prepare=)`). Trashed messages are out of every feed, so no excerpt.
 Decisions, 2026-11-20:
