@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from biwak import schedules
+from biwak import cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
@@ -143,17 +143,14 @@ COMPLETED_MORE = 50
 
 def _completed_page(todos, *, size, before=None):
     """The next ``size`` completed to-dos, the latest first, after the cursor
-    ``before`` (``"<completed_at ISO>,<pk>"``, of the last one shown) and the
+    ``before`` (``biwak/cursors.py``, of the last one shown) and the
     cursor of the page after it, or ``None`` at the end."""
     todos = todos.filter(todo__completed_at__isnull=False)
     if before:
         try:
-            stamp, pk = before.rsplit(",", 1)
-            at, pk = dt.datetime.fromisoformat(stamp), int(pk)
+            at, pk = cursors.decode(before)
         except ValueError as error:
             raise Http404("Bad cursor") from error
-        if at.tzinfo is None:
-            raise Http404("Bad cursor")
         todos = todos.filter(
             Q(todo__completed_at__lt=at) | Q(todo__completed_at=at, pk__lt=pk)
         )
@@ -163,7 +160,7 @@ def _completed_page(todos, *, size, before=None):
     cursor = None
     if more:
         last = rows[-1]
-        cursor = f"{last.todo.completed_at.isoformat()},{last.pk}"
+        cursor = cursors.encode(last.todo.completed_at, last.pk)
     return rows, cursor
 
 

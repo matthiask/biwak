@@ -13,6 +13,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext, ngettext
 
+from biwak import cursors
 from biwak.accounts.models import User
 from biwak.activity.models import Action, Event
 from biwak.items.models import Kind
@@ -65,26 +66,14 @@ def people_visible_to(user, project=None):
 
 
 def cursor_for(event):
-    """``<microseconds since the epoch>,<id>`` of the event"""
-    delta = event.created_at - dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
-    micros = (delta.days * 86400 + delta.seconds) * 1_000_000 + delta.microseconds
-    return f"{micros},{event.pk}"
-
-
-def parse_cursor(value):
-    """The time and ID of a cursor; ``ValueError`` if it isn't one"""
-    micros, pk = value.split(",")
-    return (
-        dt.datetime(1970, 1, 1, tzinfo=dt.UTC) + dt.timedelta(microseconds=int(micros)),
-        int(pk),
-    )
+    return cursors.encode(event.created_at, event.pk)
 
 
 def page(events, before=None):
     """One page of events and the cursor of the next one (or None). With
     ``before`` only older events than the cursor's."""
     if before:
-        created_at, pk = parse_cursor(before)
+        created_at, pk = cursors.decode(before)
         events = events.filter(
             Q(created_at__lt=created_at) | Q(created_at=created_at, pk__lt=pk)
         )

@@ -106,7 +106,7 @@ class CompletedTest(TestCase):
     def test_bad_cursor(self):
         self.client.force_login(self.ada)
         url = reverse("list_completed", args=[self.list.pk])
-        for bad in ["x", "2026-01-01T00:00:00+00:00,x", "2026-01-01T00:00:00,3"]:
+        for bad in ["x", "1,x", "2026-01-01T00:00:00,3", "9" * 30 + ",1"]:
             self.assertEqual(self.client.get(url, {"before": bad}).status_code, 404)
 
     def test_trashed_not_counted(self):
