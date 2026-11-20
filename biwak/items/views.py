@@ -306,6 +306,9 @@ def todo_move(request, pk):
     if target_value := request.POST.get("target"):
         list_id, _sep, group_id = target_value.partition(":")
     target = item_for(request, list_id, Kind.LIST)
+    if target.project_id != item.project_id:
+        # To-dos stay in their project
+        return HttpResponse(status=400)
     group = None
     if group_id:
         group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)

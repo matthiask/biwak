@@ -525,6 +525,8 @@ def todo_move(request, todo_id: int, data: MoveIn):
     don't see."""
     item = item_for(request, todo_id, Kind.TODO)
     target = item_for(request, data.list_id or item.parent_id, Kind.LIST)
+    if target.project_id != item.project_id:
+        bad_request(_("To-dos can't move to another project."))
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)

@@ -173,6 +173,26 @@ class ManageTest(TestCase):
         response = self.client.get(f"/todos/{self.todo.pk}/")
         self.assertNotContains(response, f'value="{self.internal.pk}"')
 
+    def test_move_to_another_project_is_refused(self):
+        self.client.force_login(self.ada)
+        there = ops.create_list(
+            project=project("Other", members=[self.ada]),
+            title="There",
+            creator=self.ada,
+        )
+        response = self.client.post(f"/todos/{self.todo.pk}/move/", {"list": there.pk})
+        self.assertEqual(response.status_code, 400)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        response = self.client.post(
+            f"/api/v1/todos/{self.todo.pk}/move/",
+            {"list_id": there.pk},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.todo.refresh_from_db()
+        self.assertEqual(self.todo.parent, self.shared)
+
     def test_move_several(self):
         a, b, c = (
             ops.create_todo(todolist=self.shared, title=t, creator=self.ada)

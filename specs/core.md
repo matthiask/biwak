@@ -90,7 +90,8 @@ formatting buttons can come later, as long as it writes Markdown.
   position changes. Clicking several to-dos' grips selects them, dragging
   one moves them together (built 2026-11-20, `move_todos()`). Dragging a to-do across a heading sets its group and
   position. Dragging a to-do to another list moves it there, ungrouped
-  unless dropped into a group. Keyboard alternatives for all of it.
+  unless dropped into a group. Lists of other projects are refused (web and
+  API answer 400). Keyboard alternatives for all of it.
 - Deleting a group keeps its to-dos, ungrouped at the end.
 - Groups are changed like their list (`can_change()`): clients add,
   rename, move and remove groups only in lists they created, 403
