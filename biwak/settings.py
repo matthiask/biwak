@@ -8,6 +8,8 @@ from django.utils.translation import gettext_lazy as _
 from speckenv import env
 from speckenv_django import django_database_url, django_mailer_url
 
+from biwak.storage_url import storage_from_url
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -167,30 +169,17 @@ STORAGES = {
         else "django.contrib.staticfiles.storage.StaticFilesStorage"
     },
 }
-# Files (specs/files.md): on local disk, never served directly (only
-# through the download views), unless a bucket is configured; then an
+# Files (specs/files.md): STORAGE_URL, on local disk by default, never
+# served directly (only through the download views); an s3:// URL for an
 # S3-compatible bucket, private, downloads through presigned URLs
 MEDIA_ROOT = BASE_DIR / "media"
 if TESTING:
     MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="biwak-test-media-"))
     atexit.register(shutil.rmtree, MEDIA_ROOT, ignore_errors=True)
-if STORAGE_BUCKET := env("STORAGE_BUCKET", default=""):  # pragma: no cover
-    STORAGES["default"] = {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "bucket_name": STORAGE_BUCKET,
-            "endpoint_url": env("STORAGE_ENDPOINT", default=None),
-            "region_name": env("STORAGE_REGION", default=None),
-            "access_key": env("STORAGE_ACCESS_KEY", required=True),
-            "secret_key": env("STORAGE_SECRET_KEY", required=True),
-            # The bucket's own policy decides (private); some providers
-            # refuse ACLs
-            "default_acl": None,
-            "querystring_auth": True,
-            "file_overwrite": False,
-            "signature_version": "s3v4",
-        },
-    }
+else:
+    STORAGES["default"] = storage_from_url(
+        env("STORAGE_URL", default="file:./media/"), base_dir=BASE_DIR
+    )
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"

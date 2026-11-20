@@ -21,14 +21,17 @@ mentions in texts).
 Through Django's storage API (`django-storages`), chosen by settings
 (decided 2026-11-20):
 
-- **Local disk** (`FileSystemStorage` in `BASE_DIR / "media"`,
-  gitignored) when no bucket is configured: development, tests, small
-  installations. The folder is never served directly, only through the
-  download views below.
-- **An S3-compatible bucket** when `STORAGE_BUCKET` (plus
-  `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`,
-  optionally `STORAGE_REGION`) is set in the environment: `S3Storage`, private, presigned
-  URLs. The first deployment uses this. Same code, only settings differ.
+- **`STORAGE_URL`** in the environment, read with speckenv's
+  `django_storage_url` (decided 2026-11-20), translated for
+  django-storages by `biwak/storage_url.py`:
+  - `file:./media/` (the default): `FileSystemStorage` in
+    `BASE_DIR / "media"`, gitignored. Development, tests, small
+    installations. The folder is never served directly, only through
+    the download views below.
+  - `s3://KEY:SECRET@host/bucket/[prefix/]` for an S3-compatible bucket:
+    `S3Storage`, private, presigned URLs (always, whatever the URL's
+    `aws_s3_bucket_auth` says). The first deployment uses this. Options
+    without a translation are an error at startup.
 - Other backends (e.g. a Google Drive shared drive) are possible later;
   without presigned URLs, downloads go through the app.
 - Paths: `files/<project id>/<random 16 characters>/<file name>`, so
