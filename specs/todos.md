@@ -5,7 +5,7 @@ Builds on `core.md` and `access.md`.
 **Status:** assignees, the board view, moving several to-dos at once and
 adding to-dos inline are built (core, 2026-11-20). Stage 1 (schedules
 and recurrence) and stage 2 (the list by due date, the iCal feed) are
-open.
+built (2026-11-20).
 
 **Agent:** both stages suit a cheaper model following this spec and the
 checklist in `AGENTS.md`.
@@ -53,7 +53,9 @@ check-ins (`checkins.md`):
 - **Completing** a recurring to-do creates the next one in the same list
   and group, at the end, with the same title, notes, assignees and
   subscribers and the same rule, due on the rule's next date after
-  today (decided 2026-11-20). Never a stack of open copies. Through
+  today (decided 2026-11-20), or after the due date when it's completed
+  early (decided at the merge, 2026-11-20: a weekly to-do due Friday and
+  done on Wednesday is next due the Friday after, not the same Friday). Never a stack of open copies. Through
   `complete()`, in the same transaction, with its own `created` event.
 - Comments and attachments stay with the completed to-do; the new one
   links to it ("Previous: completed on 3 March by Ada").
@@ -69,6 +71,43 @@ check-ins (`checkins.md`):
 `recurrence_count` and `previous_id` on `TodoOut`, writable in
 create and patch. `biwak todo add|edit --repeat RULE` (a preset name or
 an RRULE).
+
+### Decisions made while building stage 1
+
+All proposed by the building agent, 2026-11-20; change them here if wrong.
+
+- **Presets count from the anchor date:** a to-do's due date, today when it
+  has none. "Every week" is the due date's weekday, "every month" its day
+  of the month, "the first/last weekday of the month" its weekday (the
+  first or last Monday, not the first working day; the last working day
+  is a custom rule, `FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1`).
+  The stored rule is the plain RRULE, it doesn't follow later changes of
+  the due date.
+- **Short months and leap days:** the 29th to 31st of the month and 29
+  February fall on the last day of shorter months instead of skipping
+  them (`BYMONTHDAY=28,29,30,31;BYSETPOS=-1`).
+- **Rules** have no `DTSTART`, `COUNT` or `UNTIL` (ends are the to-do's end
+  date and count), nothing shorter than daily, and must produce a date.
+  `next_date()` takes an optional `anchor` so "every two weeks" keeps its
+  phase.
+- **Count** is how many more to-dos get created after this one: 2 makes
+  two more, the last has 0. Both end options are optional and removed
+  together with the rule.
+- **One series:** completing a to-do that already has a next one (not in
+  the trash) creates none, so reopening and completing again never makes
+  a branch.
+- **Next to-do:** created by the original creator, with the "created"
+  event by whoever completed it; assignees who are inactive or can't see
+  it any more are left out.
+- **Form:** the "Repeat" select, a field for the custom rule, the end date
+  and "repeats left"; a missing "Repeat" field on a posted form removes
+  the rule.
+- **API:** `recurrence` accepts a preset name (counted from the due date
+  sent, or the stored one) or an RRULE; `null` or `""` removes it.
+  `previous_id` is hidden when the to-do is visible to clients and the
+  previous one isn't (moved since), for staff too: the API doesn't know
+  who asks. The CLI has `--repeat` only; end date and count are
+  API-only for now.
 
 ### Done when (stage 1)
 
@@ -107,6 +146,36 @@ today, this week (until Sunday), later and no date.
 `GET /api/v1/todos/?…` with the same filters and grouping key per to-do,
 cursor-paginated. `biwak todos --mine|--project ID|--due …` across
 projects (the existing `biwak todos LIST` stays).
+
+### Decisions made while building stage 2
+
+All proposed by the building agent, 2026-11-20; change them here if wrong.
+
+- **Left out of the list** (and the API and the feed): to-dos of archived
+  projects and of archived lists, besides trashed ones.
+- **This week** runs until Sunday, in the installation's time zone: on
+  a Sunday it's empty, everything after today is "later".
+- **Filters:** unknown values (a project the person can't open, a
+  non-existent person) show an error and no to-dos, never a silent
+  "everything". Assignee choices list people only for staff; clients get
+  "anybody", "me" and "nobody". The visibility filter is staff only.
+  `?state=completed` (latest first, 50 per page) replaces the sections.
+- **Completing in place** posts to the same toggle as the list's page and
+  comes back to the filtered list (`next`, same site only).
+- **Navigation:** "My to-dos" in the top bar; "Calendar" (the feed link)
+  in the person's menu; the project page links to its to-dos by due date.
+- **Feed:** a plain all-day event per open assigned to-do with a due
+  date: title, link, "project / list" as the description, no notes (the
+  URL travels through calendar servers); `UID` `todo-ID@biwak`; not
+  marked busy. Not in the audit log either: the token is a secret.
+  The link is created and renewed on the page with a POST.
+- **API:** `GET /api/v1/todos/` takes `project_id`, `list_id`, `assignee`
+  (`me`, `nobody`, an ID), `completed`, `visible_to_clients` (ignored for
+  clients), `due_group` and the cursor; each to-do carries `due_group`,
+  `project_name` and `list_title`. Open ones are ordered by due date (to-dos
+  without one last), completed ones latest first.
+- **CLI:** `biwak todos` without LIST takes `--mine`, `--project ID`,
+  `--due GROUP` and `--completed`; it shows the first 200.
 
 ### Done when (stage 2)
 

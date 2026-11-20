@@ -34,9 +34,11 @@ dependencies = [
     { name = "django-storages", extra = ["s3"] },
     { name = "django-tree-queries" },
     { name = "granian" },
+    { name = "icalendar" },
     { name = "markdown-it-py", extra = ["linkify"] },
     { name = "nh3" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "python-dateutil" },
     { name = "sentry-sdk" },
     { name = "speckenv" },
     { name = "time-machine" },
@@ -59,9 +61,11 @@ requires-dist = [
     { name = "django-storages", extras = ["s3"], specifier = ">=1.14.6" },
     { name = "django-tree-queries", specifier = ">=0.29" },
     { name = "granian", specifier = ">=2.8.8" },
+    { name = "icalendar", specifier = ">=7.3.2" },
     { name = "markdown-it-py", extras = ["linkify"], specifier = ">=4.3" },
     { name = "nh3", specifier = ">=0.3.8" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.9" },
+    { name = "python-dateutil", specifier = ">=2.9" },
     { name = "sentry-sdk", specifier = "<3" },
     { name = "speckenv", specifier = ">=6.5" },
     { name = "time-machine", specifier = ">=3.6" },
@@ -75,7 +79,7 @@ dev = [
 
 [[package]]
 name = "biwak-cli"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "cli" }
 dependencies = [
     { name = "click" },
@@ -475,6 +479,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/12/c8/66f92f7cd3fd40e3a6d4a8c963c67c2f2e5113dbd4f185957951560c149a/granian-2.8.8-cp315-cp315t-musllinux_1_1_armv7l.whl", hash = "sha256:6f37536041a695c3b4d95ca73bcf8fff2b9feef438819b9fb269cbfb16f6ed58", size = 5183697, upload-time = "2026-11-11T19:51:02.473Z" },
     { url = "https://files.pythonhosted.org/packages/63/32/3c7bc673240ba682ec5332c297b9ef9294341f2184e14266d9e0b785e45c/granian-2.8.8-cp315-cp315t-musllinux_1_1_x86_64.whl", hash = "sha256:dfe7e768e2e41d1f2d4480c65c4ce0c910171f7a48eba07990b8fc9502211503", size = 5356289, upload-time = "2026-11-11T19:51:04.312Z" },
     { url = "https://files.pythonhosted.org/packages/d7/dc/a0d79bf31947747ba14669c92e766cc213a8be33bbcd4c30b6a6d4060b8a/granian-2.8.8-cp315-cp315t-win_amd64.whl", hash = "sha256:a9b4203cb1cf22ac95c10d67e6b5dd87075918b7faf22ade1065a7e7e7584949", size = 3297683, upload-time = "2026-11-11T19:51:06.102Z" },
+]
+
+[[package]]
+name = "icalendar"
+version = "7.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "tzdata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9d/2d/db155eaa6ffe65b370b9899a69ac67cd439a33a9e9610327cef1ffaac86e/icalendar-7.3.2.tar.gz", hash = "sha256:f15380927aed4318860e001c03b543c48578c73aec46e2d384c5d0802082b808", size = 525771, upload-time = "2026-11-20T11:05:15.591Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/f9/ececbb7618626dd6f70603d2b8d6faa39d7c81631b434fa242288ede4719/icalendar-7.3.2-py3-none-any.whl", hash = "sha256:f95ce4ff8f41d8ad9ca253a676ef40c672abd3774458d197c215055a0d805cc4", size = 542537, upload-time = "2026-11-20T11:05:13.921Z" },
 ]
 
 [[package]]

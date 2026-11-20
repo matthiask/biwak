@@ -1,0 +1,32 @@
+{% load biwak i18n %}
+<div class="wb-todo">
+  <form method="post" action="{% url 'todo_toggle' todo.pk %}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button
+      type="submit"
+      class="wb-check{% if todo.todo.is_completed %} is-done{% endif %}"
+      title="{% if todo.todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
+    >
+      {% if todo.todo.is_completed %}{% icon "check-lg" %}{% endif %}
+    </button>
+  </form>
+  <a
+    href="{{ todo.get_absolute_url }}"
+    class="wb-todo-title{% if todo.todo.is_completed %} text-decoration-line-through text-body-secondary{% endif %}"
+  >{{ todo.title }}</a>
+  {% client_badge todo %}
+  {% for person in todo.todo.assignees.all %}<span
+      class="badge wb-person"
+    >{{ person.get_short_name }}</span>{% endfor %}
+  <span class="small text-body-secondary ms-auto">
+    {% if not project %}<a
+        href="{{ todo.project.get_absolute_url }}"
+        class="text-body-secondary"
+      >{{ todo.project }}</a> /{% endif %}
+    <a href="{{ todo.parent.get_absolute_url }}" class="text-body-secondary">{{ todo.parent }}</a>
+    {% if todo.todo.due_on %}· {% icon "calendar-event" %} {{ todo.todo.due_on|date:"D, j. M Y" }}{% endif %}
+    {% if todo.todo.is_completed %}·
+      {% blocktranslate with day=todo.todo.completed_at|date:"j. M Y" %}completed {{ day }}{% endblocktranslate %}{% endif %}
+  </span>
+</div>

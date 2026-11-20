@@ -3,12 +3,13 @@ import re
 from django.contrib import messages
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak import cli_version
-from biwak.accounts.models import API_TOKEN_LIFETIME, APIToken
+from biwak.accounts.models import API_TOKEN_LIFETIME, APIToken, CalendarToken
 
 
 @never_cache
@@ -85,5 +86,29 @@ def cli_login(request):
             "name": name,
             "days": API_TOKEN_LIFETIME.days,
             "access": APIToken.Access(access),
+        },
+    )
+
+
+@never_cache
+def calendar_link(request):
+    """The secret link to the iCal feed of the person's to-dos (specs/todos.md);
+    "Make a new link" replaces it, the old one stops working"""
+    if request.method == "POST":
+        CalendarToken.renew(request.user)
+        messages.success(
+            request, _("There's a new link. The old one doesn't work any more.")
+        )
+        return redirect("calendar_link")
+    link = CalendarToken.objects.filter(user=request.user).first()
+    return render(
+        request,
+        "accounts/calendar.html",
+        {
+            "url": request.build_absolute_uri(
+                reverse("calendar_feed", kwargs={"token": link.token})
+            )
+            if link
+            else None
         },
     )

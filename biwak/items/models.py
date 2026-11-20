@@ -15,6 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeQuerySet
 
+from biwak import schedules
 from biwak.projects.models import Project
 
 
@@ -236,6 +237,22 @@ class Todo(Detail):
         related_name="assigned_todos",
         verbose_name=_("assignees"),
     )
+    # Recurrence (specs/todos.md): an RRULE (biwak.schedules), empty for
+    # none; completing creates the next to-do
+    recurrence = models.CharField(_("repeats"), max_length=200, blank=True)
+    recurrence_ends_on = models.DateField(_("repeats until"), null=True, blank=True)
+    # How many more to-dos are created after this one, None: no limit
+    recurrence_count = models.PositiveIntegerField(
+        _("repeats left"), null=True, blank=True
+    )
+    previous = models.ForeignKey(
+        Item,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="following",
+        verbose_name=_("previous"),
+    )
 
     class Meta:
         verbose_name = _("to-do")
@@ -244,6 +261,10 @@ class Todo(Detail):
     @property
     def is_completed(self):
         return self.completed_at is not None
+
+    @property
+    def recurrence_description(self):
+        return schedules.describe(self.recurrence)
 
 
 class Message(Detail):

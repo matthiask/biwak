@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
+from biwak import schedules
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.api_conventions import (
     ItemOut,
@@ -21,7 +22,7 @@ from biwak.api_conventions import (
     paginated,
     person_out,
 )
-from biwak.items import operations as ops
+from biwak.items import due, operations as ops
 from biwak.items.models import Group, Item, Kind, Status as ItemStatus
 from biwak.items.views import assignable_people
 from biwak.projects.api import project_for
@@ -224,6 +225,22 @@ class TodoOut(ItemOut):
     completed_at: dt.datetime | None
     completed_by: PersonOut | None
     assignees: list[PersonOut]
+    recurrence: str
+    recurrence_description: str
+    recurrence_ends_on: dt.date | None
+    recurrence_count: int | None
+    previous_id: int | None
+
+
+def _previous_id(item, todo):
+    """The to-do this one was created from; not when it's internal and this
+    one visible (it was moved, clients mustn't learn its ID)"""
+    if todo.previous_id is None:
+        return None
+    previous = todo.previous
+    if item.is_client_visible and not previous.is_client_visible:
+        return None
+    return todo.previous_id
 
 
 def todo_out(item):
@@ -241,6 +258,11 @@ def todo_out(item):
         "completed_at": todo.completed_at,
         "completed_by": person_out(todo.completed_by),
         "assignees": [person_out(user) for user in todo.assignees.all()],
+        "recurrence": todo.recurrence,
+        "recurrence_description": todo.recurrence_description,
+        "recurrence_ends_on": todo.recurrence_ends_on,
+        "recurrence_count": todo.recurrence_count,
+        "previous_id": _previous_id(item, todo),
     }
 
 
@@ -249,7 +271,9 @@ def _todos(request, list_item):
         Item.objects
         .visible_to(request.user)
         .filter(parent=list_item, kind=Kind.TODO)
-        .select_related("creator", "todo__group", "todo__completed_by")
+        .select_related(
+            "creator", "todo__group", "todo__completed_by", "todo__previous"
+        )
         .prefetch_related("todo__assignees")
     )
 
@@ -308,6 +332,24 @@ class TodoIn(Schema):
     due_on: dt.date | None = None
     assignees: list[int] = []
     group_id: int | None = None
+    recurrence: str = ""
+    recurrence_ends_on: dt.date | None = None
+    recurrence_count: int | None = None
+
+
+def _rule(value, anchor):
+    """A preset name or an RRULE (counting from the due date, or today) as
+    a valid rule; 400 for anything else"""
+    try:
+        return schedules.resolve(value, anchor or schedules.today())
+    except schedules.InvalidRule as exc:
+        bad_request(str(exc))
+
+
+def _count(value):
+    if value is not None and value < 1:
+        bad_request(_("The number of repeats left must be 1 or more."))
+    return value
 
 
 @router.post("lists/{list_id}/todos/", response={201: TodoOut})
@@ -324,8 +366,69 @@ def todo_create(request, list_id: int, data: TodoIn):
         notes=data.notes,
         due_on=data.due_on,
         assignees=_assignees(item, data.assignees),
+        recurrence=_rule(data.recurrence, data.due_on),
+        recurrence_ends_on=data.recurrence_ends_on,
+        recurrence_count=_count(data.recurrence_count),
     )
     return Status(201, todo_out(Item.objects.get(pk=todo.pk)))
+
+
+class DueTodoOut(TodoOut):
+    due_group: Literal["overdue", "today", "this_week", "later", "none"]
+    project_name: str
+    list_title: str
+
+
+@router.get("todos/", response=page_of(DueTodoOut))
+def todo_overview(
+    request,
+    *,
+    project_id: int | None = None,
+    list_id: int | None = None,
+    assignee: str | None = None,
+    completed: bool = False,
+    visible_to_clients: bool | None = None,
+    due_group: Literal["overdue", "today", "this_week", "later", "none"] | None = None,
+    cursor: str | None = None,
+    page_size: int | None = None,
+):
+    """To-dos across all projects the person sees, by due date (to-dos
+    without one last); ``completed`` the completed ones, the latest first.
+    ``assignee`` is ``me``, ``nobody`` or a person's ID, ``due_group`` one
+    of the groups of the page. Archived projects and lists are left out.
+    Clients only ever get what is visible to them."""
+    project = project_for(request, project_id) if project_id is not None else None
+    todolist = item_for(request, list_id, Kind.LIST) if list_id is not None else None
+    if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
+        bad_request(_("assignee is me, nobody or a person's ID."))
+    qs = due.todos(
+        request.user,
+        project=project,
+        todolist=todolist,
+        assignee=assignee or None,
+        completed=completed,
+        visible_to_clients=visible_to_clients,
+        group=due_group,
+    )
+    today = schedules.today()
+    ordering = ("-completed_key", "-pk") if completed else ("due_key", "pk")
+    if completed:
+        qs = qs.annotate(completed_key=F("todo__completed_at"))
+    return paginated(
+        request,
+        qs,
+        lambda item: (
+            todo_out(item)
+            | {
+                "due_group": due.group_of(item.todo.due_on, today),
+                "project_name": item.project.name,
+                "list_title": item.parent.title,
+            }
+        ),
+        ordering=ordering,
+        cursor=cursor,
+        page_size=page_size,
+    )
 
 
 @router.get("todos/{todo_id}/", response=TodoOut)
@@ -338,12 +441,17 @@ class TodoPatch(Schema):
     notes: str | None = None
     due_on: dt.date | None = None
     assignees: list[int] | None = None
+    recurrence: str | None = None
+    recurrence_ends_on: dt.date | None = None
+    recurrence_count: int | None = None
 
 
 @router.patch("todos/{todo_id}/", response=TodoOut)
 def todo_update(request, todo_id: int, data: TodoPatch):
     """Changes the fields given; ``assignees`` is the complete new set,
-    ``"due_on": null`` removes the due date"""
+    ``"due_on": null`` removes the due date. ``recurrence`` is a preset name
+    (counting from the due date) or an RRULE; ``null`` or ``""`` removes it
+    and its end and count."""
     item = item_for(request, todo_id, Kind.TODO)
     given = data.model_fields_set
     changes = {
@@ -357,6 +465,13 @@ def todo_update(request, todo_id: int, data: TodoPatch):
         changes["notes"] = ""
     if "assignees" in given:
         changes["assignees"] = _assignees(item, data.assignees or [])
+    if "recurrence" in given:
+        anchor = changes.get("due_on", item.todo.due_on)
+        changes["recurrence"] = _rule(data.recurrence, anchor)
+    for field in ["recurrence_ends_on", "recurrence_count"]:
+        if field in given:
+            changes[field] = getattr(data, field)
+    _count(changes.get("recurrence_count"))
     ops.update_todo(item, actor=request.user, **changes)
     return todo_out(item_for(request, todo_id, Kind.TODO))
 

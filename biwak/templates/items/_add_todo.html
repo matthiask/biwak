@@ -56,6 +56,45 @@
         >
       </label>
     </div>
+    <div class="wb-add-todo-meta mb-2" data-repeat>
+      <label class="wb-due">
+        <span>{% translate "Repeat" %}</span>
+        <select name="repeat" class="form-select form-select-sm" data-repeat-select>
+          {% for value, label in form.fields.repeat.choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <input
+        type="text"
+        name="custom_rule"
+        class="form-control form-control-sm w-auto"
+        placeholder="FREQ=WEEKLY;BYDAY=MO,TH"
+        aria-label="{% translate 'Custom schedule' %}"
+        maxlength="200"
+        data-repeat-custom
+      >
+      <label class="wb-due" data-repeat-ends>
+        <span>{% translate "until" %}</span>
+        <input
+          type="date"
+          name="recurrence_ends_on"
+          class="form-control form-control-sm"
+          aria-label="{% translate 'Repeats until' %}"
+        >
+      </label>
+      <label class="wb-due" data-repeat-ends>
+        <span>{% translate "left" %}</span>
+        <input
+          type="number"
+          name="recurrence_count"
+          min="1"
+          class="form-control form-control-sm"
+          style="width: 5rem"
+          aria-label="{% translate 'Repeats left' %}"
+        >
+      </label>
+    </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
       <button type="submit" class="btn btn-sm btn-primary">{% translate "Add this to-do" %}</button>
       <button type="button" class="btn btn-sm btn-quiet" data-add-todo-close>{% translate "Close" %}</button>

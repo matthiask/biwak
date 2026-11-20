@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 import tempfile
 import urllib.parse
@@ -118,6 +119,57 @@ class CLITest(TestCase):
         self.assertIn(
             "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
         )
+
+    def test_repeat(self):
+        result = self.biwak(
+            "todo", "add", self.list.pk, "Pay rent", "--due", "2026-11-20",
+            "--repeat", "monthly", "--json",
+        )  # fmt: skip
+        data = json.loads(result.stdout)
+        self.assertEqual(data["recurrence"], "FREQ=MONTHLY;BYMONTHDAY=20")
+        self.assertIn(
+            "Repeats: the 20th of every month",
+            self.biwak("todo", "show", data["id"]).output,
+        )
+        self.biwak("todo", "edit", data["id"], "--repeat", "FREQ=WEEKLY;BYDAY=MO,TH")
+        self.assertEqual(
+            Item.objects.get(pk=data["id"]).todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH"
+        )
+        self.biwak("todo", "edit", data["id"], "--repeat", "none")
+        self.assertEqual(Item.objects.get(pk=data["id"]).todo.recurrence, "")
+        result = self.biwak("todo", "edit", data["id"], "--repeat", "sometimes")
+        self.assertEqual(result.exit_code, 1)
+
+    def test_todos_across_projects(self):
+        other = project("Other", members=[self.ada])
+        other_list = ops.create_list(project=other, title="Chores", creator=self.ada)
+        ops.create_todo(
+            todolist=self.list,
+            title="Mine",
+            creator=self.ada,
+            assignees=[self.ada],
+            due_on=dt.date(2020, 1, 1),
+        )
+        ops.create_todo(todolist=self.list, title="Nobodys", creator=self.ada)
+        ops.create_todo(todolist=other_list, title="Elsewhere", creator=self.ada)
+        output = self.biwak("todos").output
+        for title in ["Mine", "Nobodys", "Elsewhere", "Website / Launch", "2020-01-01"]:
+            self.assertIn(title, output)
+        output = self.biwak("todos", "--mine").output
+        self.assertIn("Mine", output)
+        self.assertNotIn("Nobodys", output)
+        output = self.biwak("todos", "--project", other.pk).output
+        self.assertIn("Elsewhere", output)
+        self.assertNotIn("Mine", output)
+        output = self.biwak("todos", "--due", "overdue").output
+        self.assertIn("Mine", output)
+        self.assertNotIn("Elsewhere", output)
+        data = json.loads(self.biwak("todos", "--due", "none", "--json").stdout)
+        self.assertEqual({t["title"] for t in data}, {"Nobodys", "Elsewhere"})
+        self.assertEqual(data[0]["due_group"], "none")
+        self.assertEqual(self.biwak("todos", self.list.pk, "--mine").exit_code, 1)
+        # The list's own to-dos stay
+        self.assertIn("Nobodys", self.biwak("todos", self.list.pk).output)
 
     def test_read_only_and_errors(self):
         result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")

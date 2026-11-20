@@ -154,23 +154,46 @@ def lists(project, as_json):
 
 
 @cli.command()
-@click.argument("list_id", metavar="LIST", type=int)
+@click.argument("list_id", metavar="LIST", type=int, required=False)
 @click.option("--completed", is_flag=True, help="Completed to-dos, latest first.")
+@click.option("--mine", is_flag=True, help="Only to-dos assigned to you.")
+@click.option("--project", "project_id", type=int, help="Only this project's ID.")
+@click.option(
+    "--due",
+    type=click.Choice(["overdue", "today", "this_week", "later", "none"]),
+    help="Only to-dos in this group by due date.",
+)
 @json_option
-def todos(list_id, completed, as_json):
-    """The open to-dos of LIST, by group"""
-    if completed:
+def todos(list_id, completed, mine, project_id, due, as_json):
+    """The open to-dos of LIST, by group; without LIST across all projects by
+    due date (--mine, --project, --due)"""
+    if list_id and (mine or project_id or due):
+        terminate("--mine, --project and --due go without LIST.")
+    if list_id and completed:
         data = request("GET", f"lists/{list_id}/todos/completed/")["results"]
-    else:
+    elif list_id:
         data = request("GET", f"lists/{list_id}/todos/")
+    else:
+        params = {"completed": completed, "page_size": 200}
+        if mine:
+            params["assignee"] = "me"
+        if project_id:
+            params["project_id"] = project_id
+        if due:
+            params["due_group"] = due
+        data = request("GET", "todos/", params=params)["results"]
     if as_json:
         return echo_json(data)
-    t = table("ID", "To-do", "Group", "Assignees", "Due", "")
+    t = table(
+        "ID", "To-do", "Project" if not list_id else "Group", "Assignees", "Due", ""
+    )
     for todo in data:
         t.add_row(
             str(todo["id"]),
             todo["title"],
-            (todo["group"] or {}).get("title", ""),
+            f"{todo['project_name']} / {todo['list_title']}"
+            if "project_name" in todo
+            else (todo["group"] or {}).get("title", ""),
             names(todo["assignees"]),
             todo["due_on"] or "",
             clients(todo),
@@ -180,6 +203,17 @@ def todos(list_id, completed, as_json):
 
 
 # One to-do ------------------------------------------------------------------
+
+
+repeat_option = click.option(
+    "--repeat",
+    metavar="RULE",
+    help=(
+        "Repeat when completed: weekdays, weekly, biweekly, monthly, "
+        "monthly-first, monthly-last, quarterly, yearly (counting from the "
+        "due date) or an RRULE like FREQ=WEEKLY;BYDAY=MO,TH; 'none' removes it."
+    ),
+)
 
 
 @cli.group()
@@ -195,6 +229,8 @@ def show_todo(data):
         ("Group", (data["group"] or {}).get("title")),
         ("Assignees", names(data["assignees"])),
         ("Due", data["due_on"]),
+        ("Repeats", data.get("recurrence_description")),
+        ("Repeats until", data.get("recurrence_ends_on")),
         ("URL", data["url"]),
     ]:
         if value:
@@ -229,8 +265,9 @@ def todo_show(todo_id, comments, as_json):
 @click.option("--assign", multiple=True, type=int, help="A person's ID, repeatable.")
 @click.option("--group", type=int, help="The group's ID.")
 @attach_option
+@repeat_option
 @json_option
-def todo_add(list_id, title, notes, due, assign, group, attach, as_json):
+def todo_add(list_id, title, notes, due, assign, group, attach, repeat, as_json):
     """Add a to-do titled TITLE to LIST"""
     if attach:
         project_id = request("GET", f"lists/{list_id}/")["project_id"]
@@ -244,6 +281,7 @@ def todo_add(list_id, title, notes, due, assign, group, attach, as_json):
             "due_on": due,
             "assignees": list(assign),
             "group_id": group,
+            **({"recurrence": repeat} if repeat else {}),
         },
     )
     if as_json:
@@ -264,8 +302,9 @@ def todo_add(list_id, title, notes, due, assign, group, attach, as_json):
     help="Replaces the assignees, repeatable; --assign 0 removes all.",
 )
 @attach_option
+@repeat_option
 @json_option
-def todo_edit(todo_id, title, notes, due, assign, attach, as_json):
+def todo_edit(todo_id, title, notes, due, assign, attach, repeat, as_json):
     """Change TODO; --attach appends to the notes (or to --notes)"""
     changes = {}
     if title is not None:
@@ -283,6 +322,8 @@ def todo_edit(todo_id, title, notes, due, assign, attach, as_json):
         changes["due_on"] = None if due == "none" else due
     if assign:
         changes["assignees"] = [pk for pk in assign if pk]
+    if repeat is not None:
+        changes["recurrence"] = "" if repeat == "none" else repeat
     if not changes:
         terminate("Nothing to change.")
     data = request("PATCH", f"todos/{todo_id}/", json=changes)

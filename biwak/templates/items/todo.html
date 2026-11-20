@@ -30,6 +30,22 @@
       {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
     </p>
   {% endif %}
+  {% if todo.recurrence %}
+    <p class="small text-body-secondary">
+      {% icon "calendar-event" %}
+      {% blocktranslate with rule=todo.recurrence_description %}Repeats: {{ rule }}.{% endblocktranslate %}
+      {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
+      {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
+    </p>
+  {% endif %}
+  {% if previous %}
+    <p class="small text-body-secondary">
+      {% translate "Previous:" %}
+      <a
+        href="{{ previous.get_absolute_url }}"
+      >{% if previous.todo.is_completed %}{% blocktranslate with who=previous.todo.completed_by.get_short_name when=previous.todo.completed_at|date:"j. F Y" %}completed on {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous.title }}{% endif %}</a>
+    </p>
+  {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
       {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown }}</div>{% endif %}

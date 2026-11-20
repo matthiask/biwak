@@ -177,3 +177,31 @@ def prune_api_tokens():
     return APIToken.objects.filter(
         expires_at__lte=timezone.now() - API_TOKEN_LIFETIME
     ).delete()
+
+
+class CalendarToken(models.Model):
+    """The secret in a person's iCal feed URL (specs/todos.md). Stored as is,
+    the page shows the link again; "Make a new link" replaces it and the old
+    one stops working. Not in the audit log, which would repeat the secret."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="calendar_token",
+        verbose_name=_("person"),
+    )
+    token = models.CharField(_("token"), max_length=64, unique=True, editable=False)
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+
+    class Meta:
+        verbose_name = _("calendar link")
+        verbose_name_plural = _("calendar links")
+
+    def __str__(self):
+        return f"{self.user}"
+
+    @classmethod
+    def renew(cls, user):
+        """A new link for the person; the old one stops working"""
+        cls.objects.filter(user=user).delete()
+        return cls.objects.create(user=user, token=secrets.token_urlsafe(32))
