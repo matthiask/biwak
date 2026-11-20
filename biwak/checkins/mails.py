@@ -17,6 +17,7 @@ from django.utils.translation import gettext as _
 
 from biwak.activity import mentions
 from biwak.activity.mails import absolute, host, plain_text, sender, unsubscribe_url
+from biwak.inbound.tokens import reply_to
 
 
 logger = logging.getLogger(__name__)
@@ -60,9 +61,9 @@ def thread(user, occurrence):
 
 
 def reply_headers(user, occurrence):
-    """Where replying by mail goes (``notifications.md``, stage 2 puts the
-    reply token's address into ``Reply-To`` here); nothing yet"""
-    return {}
+    """Replying answers the occurrence (``notifications.md``, stage 2): a
+    reply token's address in ``Reply-To``, nothing while replying is off"""
+    return reply_to(user, occurrence.question.item, occurrence=occurrence)
 
 
 def _context(user, occurrence):
@@ -92,9 +93,12 @@ def _build(user, occurrence, *, subject, context, name, first=False):
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         "Auto-Submitted": "auto-generated",
     }
-    if not first:
+    if first:
+        # Only the question takes replies: a reply to the summary isn't
+        # an answer
+        headers |= reply_headers(user, occurrence)
+    else:
         headers |= {"In-Reply-To": thread_id, "References": thread_id}
-    headers |= reply_headers(user, occurrence)
     message = EmailMultiAlternatives(
         subject,
         render_to_string(f"checkins/mails/{name}.txt", context),

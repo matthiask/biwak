@@ -24,6 +24,7 @@ from biwak.activity.models import Action, Notification
 from biwak.activity.notify import can_see, effective_level
 from biwak.activity.operations import is_subscribed
 from biwak.files.models import REFERENCE, Attachment
+from biwak.inbound.tokens import reply_to
 from biwak.items.models import Comment, Kind
 
 
@@ -294,7 +295,8 @@ def item_mail(user, item, notifications):
             "List-Unsubscribe": f"<{context['unsubscribe_url']}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             "Auto-Submitted": "auto-generated",
-        },
+        }
+        | (reply_to(user, item) if item.is_commentable else {}),
     )
     message.attach_alternative(
         render_to_string("mails/notification.html", context), "text/html"

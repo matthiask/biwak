@@ -5,7 +5,12 @@
 (2026-11-20, branch `notifications`): `mentions.py`, `notify.py`,
 `mails.py` and `./manage.py send_mails`, the settings pages, the API
 endpoints and `biwak notifications` (CLI 0.8.0). Stage 2 (replying by
-mail) is open.
+mail) is built (2026-11-20, branch `replies`): `biwak/inbound/`
+(`ReplyToken` and `InboundMessage`, `tokens.py` for the `Reply-To`,
+`providers.py` with Resend's adapter, `strip.py`, `receive.py`, the
+webhook `/inbound/resend/`, `./manage.py receive_mail`); decisions,
+differences from Resend's documentation and open questions under "Built
+in stage 2". No API or CLI changes.
 
 **Agent:** a strong model for both stages. Stage 1 decides who gets
 told about what, across visibility; stage 2 posts mail as people.
@@ -299,6 +304,101 @@ from the start (decided 2026-11-20).
   authentication, no access any more, expired token) get a short answer
   saying why, at most once per token (`error_sent_at`).
 - Check-in questions are answered the same way (`checkins.md`).
+
+### Built in stage 2
+
+Resend's documentation (checked 2026-11-20) and what that changed:
+
+- The webhook (`email.received`) carries metadata only: `data.email_id`,
+  `from` (the bare address of `From`), `to`, `cc`, `subject`,
+  `message_id`, attachment metadata. Signed by Svix (`svix-id`,
+  `svix-timestamp`, `svix-signature`: HMAC-SHA256 of
+  `id.timestamp.body` with the `whsec_` secret); we verify it ourselves
+  (no Svix package), within 5 minutes like Svix's libraries.
+- `GET /emails/receiving/{id}` returns `authentication: {spf, dkim,
+  dmarc}`, each `pass`, `fail`, `gray`, `processing_failed` or
+  `unknown`, computed by Resend's receiving servers, and
+  `raw.download_url` (a signed URL, valid about an hour) for the
+  original message. We parse that original message ourselves (one parser
+  for the webhook and `receive_mail`) instead of the API's `headers`,
+  `text`, `html` and the attachments API, whose shapes the documentation
+  doesn't fully describe.
+- **Differs from the spec above:** Resend doesn't report SPF alignment,
+  only SPF's result for the envelope sender. So the sender check accepts
+  DMARC `pass`, or DKIM `pass` (Resend: `gray` "means the message is
+  unsigned or the signing domain does not match the From domain", so
+  `pass` is aligned); SPF alone is never enough. A domain without DMARC
+  and without DKIM (rare) can't reply. If Resend's `from` differs from
+  the `From` address we parse, its results count as `unknown`.
+
+Decisions made while building (proposed by the building agent,
+2026-11-20; change them here if wrong):
+
+- **Which mails get a `Reply-To`:** notification mails about something
+  commentable (to-dos, messages, docs, files, answers; not lists), and
+  check-in question mails, whose reply answers that occurrence (not the
+  latest). Not digests (about many items) nor check-in summaries (a reply
+  isn't an answer).
+- **Order of checks:** each provider ID once; auto-replies and bounces
+  dropped; no known token (or another domain), dropped; more than 20
+  mails per token in the last hour (all mails to the token count,
+  rejected ones too), dropped without answer; then sender, authentication,
+  token valid, access. Only these four get the answer.
+- **Loops** also: `multipart/report` (delivery status notifications);
+  `Auto-Submitted: no` isn't automatic.
+- **The answer** to a rejected reply goes to the `From` address only when
+  the receiving server confirmed it; otherwise to the token's person
+  (never to an address that may be impersonated). It says nothing about
+  the item, carries `Auto-Submitted: auto-replied` and no `Reply-To`.
+- **Access** means now: active, the item in `Item.objects.visible_to()`
+  (so not trashed), commentable; for check-ins asked the question
+  (`can_answer()`). Replying to a question already answered changes the
+  answer, like answering again in the app.
+- **Stripping:** we cut at the first quote header ("On … wrote:", "Am …
+  schrieb …:", also quoted by iOS), Outlook's header block ("From:" with
+  "Sent:"/"To:" below, "Von:" with "Gesendet:"/"An:"), "-----Original
+  Message-----", forwarding markers and `-- `; phones' last lines ("Sent
+  from my iPhone", "Von meinem iPhone gesendet", "Get Outlook for …");
+  then `email-reply-parser`. Mails without a plain text part are turned
+  into text, cut where clients' HTML quotes start. Signatures without a
+  delimiter ("Best regards, Ada") stay.
+- **Attachments:** every part with a file name, inline images included;
+  larger than 25 MB left out (noted in `InboundMessage.error`), the text
+  posted anyway. Their Markdown is appended to the text.
+- **Nothing written** (only quotes, no attachments): nothing posted, no
+  answer.
+- **`receive_mail FILE.eml`** takes `--spf`, `--dkim`, `--dmarc` (default
+  `unknown`): never from the file's headers.
+- **Revoking:** an admin action on reply tokens in the Django admin.
+- `InboundMessage` keeps the sender and status, not the mail.
+
+Open (values and wording the spec doesn't fix):
+
+- How long `InboundMessage` rows and expired tokens are kept (nothing
+  deletes them yet; a daily job in `fairy_tasks` once decided).
+- Whether tokens are revoked automatically (a person deactivated or
+  removed from a project; access is checked anyway).
+- The wording of the answer to rejected replies (four reasons, in
+  `receive.py`), and whether notification and question mails should say
+  "Reply to this mail to comment/answer".
+- Oversized attachments silently left out: tell the person (in the
+  comment or by mail)?
+- Signature images (Outlook's logos) become attachments; leave out small
+  inline images?
+
+### Setting it up
+
+Outside the app:
+
+1. **DNS:** a receiving subdomain (e.g. `reply.example.org`) added to
+   Resend as a domain with receiving enabled; its MX record as Resend
+   shows it. The organization's own MX stays untouched.
+2. **Resend:** a webhook to `https://<host>/inbound/resend/` for the
+   event `email.received`; its signing secret. An API key that can read
+   received mails (full access; a sending-only key can't).
+3. **Environment:** `REPLY_DOMAIN` (the subdomain), `RESEND_API_KEY`,
+   `RESEND_WEBHOOK_SECRET` (`whsec_...`). Without all three replying is
+   off: no `Reply-To`, the webhook answers 404.
 
 ### Done when (stage 2)
 

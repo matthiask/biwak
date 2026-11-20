@@ -1,0 +1,27 @@
+Return-Path: <>
+From: Mail Delivery System <MAILER-DAEMON@mail.example.org>
+To: <r-replytoken0000000000@reply.example.org>
+Subject: Undelivered Mail Returned to Sender
+Date: Fri, 20 Nov 2026 10:03:00 +0100
+Message-Id: <bounce-1@mail.example.org>
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+	boundary="BOUNCE.1234/mail.example.org"
+
+--BOUNCE.1234/mail.example.org
+Content-Type: text/plain; charset=us-ascii
+
+This is the mail system at host mail.example.org.
+
+I'm sorry to have to inform you that your message could not
+be delivered to one or more recipients.
+
+--BOUNCE.1234/mail.example.org
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mail.example.org
+Final-Recipient: rfc822; nobody@example.org
+Action: failed
+Status: 5.1.1
+
+--BOUNCE.1234/mail.example.org--
