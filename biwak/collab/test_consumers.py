@@ -7,7 +7,7 @@ y-websocket provider.
 
 import asyncio
 import json
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
@@ -476,16 +476,18 @@ class ConsumerTest(TransactionTestCase):
         await ada.drain()
         (entries,) = ada.awareness
         ((client, clock, received),) = entries
-        self.assertEqual((client, clock), (cleo.doc.client_id, 1))
+        # Under an ID the server gave Cleo's editor
+        self.assertNotIn(client, {cleo.doc.client_id, ada.doc.client_id})
+        self.assertEqual(clock, 1)
         self.assertEqual(json.loads(received)["user"]["name"], "Cleo")
         # Cleo hears herself too (y-websocket reconnects after 30 silent
-        # seconds)
+        # seconds), under her own ID (her editor doesn't list itself)
         await cleo.drain()
-        self.assertEqual(len(cleo.awareness), 1)
+        self.assertEqual(cleo.awareness, [[(cleo.doc.client_id, 1, received)]])
         await cleo.communicator.disconnect()
         self.communicators.remove(cleo.communicator)
         await ada.drain()
-        self.assertEqual(ada.awareness[-1], [(cleo.doc.client_id, 2, "null")])
+        self.assertEqual(ada.awareness[-1], [(client, 2, "null")])
 
     def names(self, editor):
         return [
@@ -495,29 +497,65 @@ class ConsumerTest(TransactionTestCase):
             if state != "null"
         ]
 
-    async def announce(self, editor):
-        state = json.dumps({"cursor": None})
-        update = encode_awareness([(editor.doc.client_id, 1, state)])
+    async def announce(self, editor, client=None, state=None):
+        state = json.dumps(state or {"cursor": None})
+        update = encode_awareness([(client or editor.doc.client_id, 1, state)])
         await editor.communicator.send_to(bytes_data=create_awareness_message(update))
 
-    async def test_clients_see_only_the_members(self):
-        """specs/access.md: clients learn about the project's members only,
-        not about staff of an all-access project who aren't members"""
+    async def test_clients_see_who_is_here(self):
+        """Who is in the doc is shown to clients like the authors of
+        comments, members or not: staff of an all-access project who
+        aren't members too (decided 2026-11-20)"""
         cleo = await self.connect(self.cleo, self.shared)
         bob = await self.connect(self.bob, self.shared)
         ada = await self.connect(self.ada, self.shared)
         await self.announce(bob)
         await self.announce(ada)
         await cleo.drain()
-        await ada.drain()
-        self.assertEqual(self.names(cleo), ["Ada"])
-        self.assertEqual(self.names(ada), ["Bob", "Ada"])
-        # Nor that Bob leaves
+        self.assertEqual(self.names(cleo), ["Bob", "Ada"])
+        ((bobs, _clock, _state),) = cleo.awareness[0]
         await bob.communicator.disconnect()
         self.communicators.remove(bob.communicator)
         await cleo.drain()
-        clients = {client for entries in cleo.awareness for client, *_ in entries}
-        self.assertNotIn(bob.doc.client_id, clients)
+        self.assertEqual(cleo.awareness[-1], [(bobs, 2, "null")])
+
+    async def test_nobody_takes_over_somebody_elses_presence(self):
+        """Every editor's state goes out under an ID the server gave it,
+        with only the cursor and the server's name: nobody removes or
+        overwrites the state of somebody else's editor"""
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        await self.announce(ada)
+        await bob.drain()
+        ((adas, _clock, _state),) = bob.awareness[0]
+        cleo = await self.connect(self.cleo, self.shared)
+        # Cleo claims Ada's editor and the ID the others know it by, with
+        # a newer clock, and removes them
+        for client in [ada.doc.client_id, adas]:
+            await self.announce(
+                cleo,
+                client=client,
+                state={"cursor": None, "user": {"name": "Ada"}, "name": "Ada"},
+            )
+            await cleo.communicator.send_to(
+                bytes_data=create_awareness_message(
+                    encode_awareness([(client, 9, "null")])
+                )
+            )
+        await bob.drain()
+        await ada.drain()
+        received = [entry for entries in bob.awareness for entry in entries]
+        self.assertEqual([e for e in received if e[0] == adas], [bob.awareness[0][0]])
+        self.assertEqual(self.names(bob), ["Ada", "Cleo"])
+        self.assertEqual(
+            json.loads(received[1][2]),
+            {"cursor": None, "user": {"name": "Cleo", "color": ANY}},
+        )
+        self.assertEqual(
+            [e[0] for e in received[1:]], [received[1][0]] * (len(received) - 1)
+        )
+        # Ada heard the same
+        self.assertEqual(len(ada.awareness), len(bob.awareness))
 
     async def test_asking_for_the_others(self):
         ada = await self.connect(self.ada, self.shared)

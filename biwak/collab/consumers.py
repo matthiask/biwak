@@ -12,6 +12,7 @@ database, so any number of processes can serve the same doc.
 import asyncio
 import json
 import logging
+import secrets
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -89,12 +90,14 @@ class DocConsumer(AsyncWebsocketConsumer):
         self.session_key = session.session_key if session else None
         self.mode = None
         self.groups_joined = []
+        # The ID of the editor's Yjs client (the first it announces), and
+        # the one the server gives it for the others: nobody can change or
+        # remove the state of somebody else's editor
         self.client = None
+        self.public_client = secrets.randbits(32)
         self.clock = 0
         self.save_task = self.check_task = None
         self.dirty_since = None
-        # Whether the person (a client) may know the others, by user ID
-        self.known = {}
         await self.accept()
         found = await database_sync_to_async(self._found)()
         if found is None:
@@ -133,7 +136,7 @@ class DocConsumer(AsyncWebsocketConsumer):
         if self.client is not None:
             await self.group_send(
                 "doc.awareness",
-                update=encode_awareness([(self.client, self.clock + 1, "null")]),
+                update=encode_awareness([(self.public_client, self.clock + 1, "null")]),
             )
         for group in self.groups_joined:
             await self.channel_layer.group_discard(group, self.channel_name)
@@ -183,20 +186,24 @@ class DocConsumer(AsyncWebsocketConsumer):
         self.schedule_save()
 
     async def receive_awareness(self, update):
-        """Only the editor's own state (the first it announces), with the
-        name and color of the person: nobody passes for somebody else"""
+        """Only the editor's own state (the first it announces) under the
+        ID the server gave it, only the cursor, with the name and color of
+        the person: nobody passes for somebody else"""
         entries = []
         for client, clock, state in decode_awareness(update):
             if self.client is None:
                 self.client = client
             if client != self.client:
                 continue
-            self.clock = clock
             if state != "null":
                 data = json.loads(state)
-                data["user"] = self.user_state
-                state = json.dumps(data)  # noqa: PLW2901
-            entries.append((client, clock, state))
+                if not isinstance(data, dict):
+                    continue
+                state = json.dumps(  # noqa: PLW2901
+                    {"cursor": data.get("cursor"), "user": self.user_state}
+                )
+            self.clock = clock
+            entries.append((self.public_client, clock, state))
         if entries:
             await self.group_send("doc.awareness", update=encode_awareness(entries))
 
@@ -208,7 +215,6 @@ class DocConsumer(AsyncWebsocketConsumer):
             {
                 "type": kind,
                 "sender": self.channel_name,
-                "user": self.user.pk,
                 **data,
             },
         )
@@ -219,25 +225,15 @@ class DocConsumer(AsyncWebsocketConsumer):
 
     async def doc_awareness(self, event):
         # To the sender too: y-websocket reconnects when it hears nothing
-        # for 30 seconds, not even its own awareness. Clients hear only
-        # about the people they may know (specs/access.md).
-        if not await self.knows(event["user"]):
-            return
-        await self.send(bytes_data=create_awareness_message(event["update"]))
-
-    async def knows(self, pk):
-        if pk == self.user.pk or not self.user.is_client:
-            return True
-        if pk not in self.known:
-            self.known[pk] = await database_sync_to_async(self._knows)(pk)
-        return self.known[pk]
-
-    def _knows(self, pk):
-        from biwak.accounts.models import User
-        from biwak.projects.models import Project
-
-        project = Project.objects.get(pk=self.project_id)
-        return bool(project.people_known_to(self.user, User.objects.filter(pk=pk)))
+        # for 30 seconds, not even its own awareness. Its own state under
+        # its own ID: the editor doesn't show itself among the others.
+        update = event["update"]
+        if event["sender"] == self.channel_name:
+            update = encode_awareness([
+                (self.client, clock, state)
+                for _client, clock, state in decode_awareness(update)
+            ])
+        await self.send(bytes_data=create_awareness_message(update))
 
     async def doc_query_awareness(self, event):
         if event["sender"] != self.channel_name:
@@ -247,8 +243,6 @@ class DocConsumer(AsyncWebsocketConsumer):
         """Closes the session when the person can't see the doc anymore,
         tells the editor when it may type or not anymore"""
         mode = await database_sync_to_async(self._access)()
-        # Who the person may know changes with the project's members
-        self.known = {}
         if mode is None:
             await self.refuse()
         elif mode != self.mode:

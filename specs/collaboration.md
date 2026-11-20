@@ -95,11 +95,12 @@ browsers (Playwright) typing, a client watching, an internal doc
   asks the editor for what it has that the server doesn't. Awareness is
   passed on with the name and color set by the server (nobody passes for
   somebody else), only the editor's own state; leaving tells the others.
-  Clients hear only about the project's members, as elsewhere
-  (`Project.people_known_to()`, `specs/access.md`): staff of an
-  all-access project who aren't members edit without clients seeing
-  their names or cursors (decided 2026-11-20, after the visibility
-  review).
+  Everybody connected to the doc (who may see it) is shown to everybody
+  else there, clients included, members of the project or not: like the
+  authors of comments, people acting in a place clients see are shown to
+  them (decided 2026-11-20, after the visibility review). Each editor's
+  state goes out under an ID the server gives the connection and with
+  only the cursor, so nobody changes or removes somebody else's.
   Broken messages are logged and ignored. Any number of processes can
   serve a doc, the state lives in the database.
 - **Who** (`live.access()`): staff edit what they see, clients the docs
