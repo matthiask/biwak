@@ -344,6 +344,37 @@ class AskingTest(CheckinTestCase):
         self.run_at("2027-04-26 09:00")
         self.assertEqual(dates(item), [])
 
+    def test_a_first_date_on_another_weekday_or_day(self):
+        """Rules from the API or the CLI: the first date is a Friday.
+        Current behaviour, to be confirmed (specs/checkins.md): every two
+        weeks counts its phase from the first date's week, so the Monday
+        right after isn't asked"""
+        found = {}
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+            "FREQ=MONTHLY;BYMONTHDAY=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
+            "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+        ]:
+            item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 19))
+            found[rule] = next_at(item)[:10]
+        self.assertEqual(
+            found,
+            {
+                "FREQ=WEEKLY;BYDAY=MO": "2027-03-22",
+                "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO": "2027-03-29",
+                "FREQ=MONTHLY;BYMONTHDAY=1": "2027-04-01",
+                "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1": "2027-04-05",
+                "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1": "2028-01-01",
+            },
+        )
+        self.run_at("2027-03-29 09:00")
+        self.assertEqual(
+            next_at(Item.objects.get(title="FREQ=WEEKLY;INTERVAL=2;BYDAY=MO")),
+            "2027-04-12 09:00",
+        )
+
     # Downtime ----------------------------------------------------------------
 
     def test_after_downtime_the_latest_date_is_asked_once(self):
@@ -474,6 +505,66 @@ class AskingTest(CheckinTestCase):
             ),
             "2027-03-22 09:00",
         )
+
+    def test_a_new_rule_on_the_day_it_was_asked(self):
+        """Current behaviour, to be confirmed (specs/checkins.md)"""
+        self.run_at("2027-03-22 09:00")
+        ops.update_question(
+            self.item, actor=self.ada, rule="FREQ=DAILY",
+            now=at("2027-03-22 10:00"),
+        )  # fmt: skip
+        self.assertEqual(next_at(self.item), "2027-03-23 09:00")
+        self.assertEqual(self.run_at("2027-03-23 09:00")["asked"], 1)
+        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22), dt.date(2027, 3, 23)])
+
+    def test_a_new_time_zone_on_the_day_it_was_asked(self):
+        """Current behaviour, to be confirmed (specs/checkins.md): a zone
+        where it is still Monday asks Monday's date there, which was asked
+        already; one where Monday's time passed asks next Monday"""
+        new_york = schedule.zone("America/New_York")
+        self.run_at("2027-03-22 09:00")
+        ops.update_question(
+            self.item, actor=self.ada, time_zone="America/New_York",
+            now=at("2027-03-22 10:00"),
+        )  # fmt: skip
+        self.assertEqual(
+            local(Question.objects.get(item=self.item).next_at, new_york),
+            "2027-03-22 09:00",
+        )
+        self.assertEqual(self.run_at("2027-03-22 09:00", new_york)["asked"], 0)
+        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22)])
+        self.assertEqual(
+            local(Question.objects.get(item=self.item).next_at, new_york),
+            "2027-03-29 09:00",
+        )
+        ops.update_question(
+            self.item, actor=self.ada, time_zone="Asia/Tokyo",
+            now=at("2027-03-22 10:00", new_york),
+        )  # fmt: skip
+        self.assertEqual(
+            local(
+                Question.objects.get(item=self.item).next_at,
+                schedule.zone("Asia/Tokyo"),
+            ),
+            "2027-03-29 09:00",
+        )
+
+    def test_a_new_time_zone_on_the_day_before_it_was_asked(self):
+        """Current behaviour, to be confirmed: at 08:00 in Zurich, 09:00
+        in Tokyo has passed, so Monday isn't asked at all"""
+        ops.update_question(
+            self.item, actor=self.ada, time_zone="Asia/Tokyo",
+            now=at("2027-03-22 08:00"),
+        )  # fmt: skip
+        self.assertEqual(
+            local(
+                Question.objects.get(item=self.item).next_at,
+                schedule.zone("Asia/Tokyo"),
+            ),
+            "2027-03-29 09:00",
+        )
+        self.run_at("2027-03-22 09:00")
+        self.assertEqual(dates(self.item), [])
 
     def test_editing_a_paused_question_leaves_it_paused(self):
         ops.pause(self.item, actor=self.ada)

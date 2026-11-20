@@ -48,7 +48,16 @@ value or a product choice to the builder):
   rule as a preset only when the preset gives that rule from the first
   date; a rule for another weekday or day (from the API or the CLI) is
   shown as custom, so saving the form keeps it (fixed 2026-11-20: saving
-  rebuilt it from the first date's weekday or day).
+  rebuilt it from the first date's weekday or day). Open (tests assert
+  what happens now): a new rule or time zone on the day it was asked
+  counts from now in the new zone, so a zone where that date is still
+  ahead doesn't ask it again and one where its time has passed asks the
+  next date; changing the zone before the day's time can skip the day
+  (08:00 in Zurich to Asia/Tokyo, where 09:00 has passed).
+- **A first date which doesn't match the rule** (API and CLI rules, e.g.
+  Mondays from a Friday): the first date the rule gives on or after it.
+  Open: "every two weeks" counts its phase from the first date's week, so
+  the Monday right after a Friday isn't asked, the one after it is.
 - **People:** adding is from the next occurrence on (those added are
   subscribed and can answer the latest occurrence, but aren't in its
   `asked` and aren't "due" for it); removing unsubscribes
