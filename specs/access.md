@@ -1,7 +1,9 @@
 # Access: client visibility and login
 
 **Status:** built (2026-11-20). The separate review of the visibility
-checks is still due before the first client gets a login.
+checks (2026-11-20) found leaks and missing permission checks, fixed with
+the decisions marked "after the visibility review" here and in the specs
+of the parts.
 
 The most delicate part of the app: a bug here shows internal content to a
 client. One function decides visibility, everything uses it, and the
