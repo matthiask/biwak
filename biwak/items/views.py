@@ -386,6 +386,7 @@ def todo(request, pk):
     item = item_for(request, pk, Kind.TODO)
     todo = item.todo
     people = assignable_people(item)
+    preset = schedules.preset_for(todo.recurrence, todo.due_on or schedules.today())
     form = TodoDetailForm(
         request.POST if request.POST.get("form") == "todo" else None,
         initial={
@@ -393,10 +394,8 @@ def todo(request, pk):
             "notes": todo.notes,
             "due_on": todo.due_on,
             "assignees": list(todo.assignees.all()),
-            "repeat": schedules.preset_of(todo.recurrence),
-            "custom_rule": todo.recurrence
-            if schedules.preset_of(todo.recurrence) == schedules.CUSTOM
-            else "",
+            "repeat": preset,
+            "custom_rule": todo.recurrence if preset == schedules.CUSTOM else "",
             "recurrence_ends_on": todo.recurrence_ends_on,
             "recurrence_count": todo.recurrence_count,
         },

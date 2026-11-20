@@ -284,6 +284,26 @@ class PagesTest(RecurrenceTestCase):
         item.todo.refresh_from_db()
         self.assertEqual((item.todo.recurrence, item.todo.recurrence_count), ("", None))
 
+    def test_saving_keeps_a_rule_for_another_weekday_or_day(self):
+        """Rules from the API or the CLI (due on a Friday): saving the form
+        with a new title keeps them"""
+        self.client.force_login(self.ada)
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+            "FREQ=MONTHLY;BYMONTHDAY=1",
+            "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+        ]:
+            item = self.todo(rule, "2026-11-20")
+            url = item.get_absolute_url()
+            initial = self.client.get(url).context["form"].initial
+            data = {k: v for k, v in initial.items() if v is not None}
+            data["assignees"] = [u.pk for u in data["assignees"]]
+            data |= {"form": "todo", "title": "Renamed"}
+            self.assertRedirects(self.client.post(url, data), url)
+            item.todo.refresh_from_db()
+            self.assertEqual(item.todo.recurrence, rule)
+
     def test_the_inline_form(self):
         self.client.force_login(self.ada)
         url = self.list.get_absolute_url()

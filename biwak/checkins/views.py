@@ -169,13 +169,7 @@ def project_checkins(request, pk):
 
 def _form_initial(item):
     question = item.question
-    preset = schedules.preset_of(question.rule)
-    # A preset only when it gives the rule from the first date; else the
-    # form would rebuild it from another weekday or day when saved
-    if preset != schedules.CUSTOM and (
-        schedules.from_preset(preset, question.starts_on) != question.rule
-    ):
-        preset = schedules.CUSTOM
+    preset = schedules.preset_for(question.rule, question.starts_on)
     return {
         "title": item.title,
         "repeat": preset,
