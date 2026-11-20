@@ -101,7 +101,6 @@ them here if wrong):
 - **Type:** the content type comes from the file name, never from what
   the browser sends. Inline (and shown as images in texts): PNG, JPEG,
   GIF, WebP, AVIF and PDF (inline only); everything else is a download.
-- **Unknown keys** (deleted attachments) render as links to `#`.
 - **Files are deleted** with their rows (a `post_delete` signal, after
   the transaction commits), so purging the trash, deleting unlinked
   attachments and deleting a project all remove the files.
@@ -263,7 +262,9 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   restoring while someone else holds an unexpired lock is refused.
   Refusing a stale save: the form carries `base_version` (the newest
   version when it opened); a newer version by somebody else refuses the
-  save, newer ones by the same person don't. The API's `base_version` is
+  save (also one he saved again within ten minutes: that replaces the
+  version by a new one with a new key, the window keeps its start),
+  newer ones by the same person don't. The API's `base_version` is
   optional. The lock columns are left out of the audit log (renewed
   every minute).
 - **Files:** the title is the file's name when uploaded and stays when a
@@ -271,7 +272,8 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   Staff upload (clients don't, `access.md`); clients replace or rename
   only what they uploaded before that; staff everything. Replacing records `edited` (with the new
   version's name).
-- **Previews:** 400 pixels wide as specified, images already smaller are
+- **Previews:** stored as `preview/preview.webp` in the file's own
+  directory (a file can't be named like that, decided 2026-11-20); 400 pixels wide as specified, images already smaller are
   not enlarged (**?**); broken files have none (404, logged). Only the
   current version has a preview on the page.
 - **Folders:** staff create folders, docs and files; clients don't

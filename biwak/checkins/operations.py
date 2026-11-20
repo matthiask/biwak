@@ -67,8 +67,11 @@ def can_answer(user, item):
     )
 
 
-def _check_people(item, people):
+def _check_people(item, people, *, kept=()):
+    """``kept``: people already in the list, who stay when the question
+    turns internal (clients aren't asked then, but aren't removed)"""
     allowed = set(askable_people(item).filter(pk__in=[u.pk for u in people]))
+    allowed |= {u for u in kept if u.is_client}
     for user in people:
         if user not in allowed:
             raise ValueError(f"{user} can't see {item}")
@@ -138,8 +141,8 @@ def set_people(item, people, *, actor):
     subscription; they are asked from the next occurrence on."""
     question = Question.objects.select_for_update().get(item=item)
     people = list(people)
-    _check_people(item, people)
     old = set(question.people.all())
+    _check_people(item, people, kept=old)
     new = set(people)
     question.people.set(new)
     for user in new - old:

@@ -129,7 +129,11 @@ class QuestionForm(Form):
             if self.item is not None
             else data.get("visible", False)
         )
-        if not visible and any(u.is_client for u in data.get("people", [])):
+        # Clients already in the list stay when the question turned internal
+        kept = set(self.item.question.people.all()) if self.item else set()
+        if not visible and any(
+            u.is_client and u not in kept for u in data.get("people", [])
+        ):
             self.add_error(
                 "people", _("Clients can only be asked about check-ins they can see.")
             )
