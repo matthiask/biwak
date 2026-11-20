@@ -172,6 +172,20 @@ Before the first client gets a login, a separate review of the
 visibility checks (another person, or a fresh agent given only the code
 and `specs/access.md`).
 
+## Backlog
+
+Wanted, not specified in detail yet and not in the build order; give
+each a spec (or a section in one) before building it.
+
+- **Reactions** on messages, comments, to-dos and check-in answers (like
+  Basecamp's boosts; added 2026-11-20): a person adds an emoji to
+  something instead of writing a comment ("👍", "🎉"); shown under it
+  with who reacted. Visible wherever the item is, through the API too,
+  and in the feed at most as a merged line. Open: a fixed set of emoji
+  or any, whether a reaction notifies the author (probably only on the
+  "everything" level, merged into the next mail), and short text
+  reactions like Basecamp's.
+
 ## Decisions
 
 - 2026-11-20: Separate app, not part of Governance; copy its code and
