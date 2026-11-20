@@ -4,6 +4,7 @@ item once its newest notification is 2 minutes old, or a daily digest at
 
 import datetime as dt
 import logging
+import re
 from email.utils import formataddr, make_msgid, parseaddr
 from itertools import groupby
 from urllib.parse import urlsplit
@@ -79,19 +80,32 @@ def sender(name):
     return formataddr((name, parseaddr(settings.DEFAULT_FROM_EMAIL)[1]))
 
 
+# ``[name](attachment:KEY)`` and ``![name](attachment:KEY)`` as a whole
+LABELLED_REFERENCE = re.compile(rf"!?\[(?:\\.|[^\]\\])*\]\({REFERENCE.pattern}\)")
+
+
 def plain_text(text, item):
     """A text for the plain text part: mentions as ``@`` and the current
-    name, attachments (``attachment:KEY``) as their download URLs. The
-    download checks access, as on the pages."""
+    name, the item's attachments (``attachment:KEY``) as their download
+    URLs; the download checks access, as on the pages. References to other
+    items' attachments become a plain "attachment", without their names
+    (``render_markdown()``)."""
     text = mentions.plain(text, item)
     keys = set(REFERENCE.findall(text))
     if not keys:
         return text
     urls = {
         a.key: absolute(a.get_absolute_url())
-        for a in Attachment.objects.filter(key__in=keys)
+        for a in Attachment.objects.filter(key__in=keys, item=item)
     }
-    return REFERENCE.sub(lambda m: urls.get(m[1], m[0]), text)
+
+    def foreign(match):
+        if match[1] in urls:
+            return match[0]
+        return _("attachment")
+
+    text = LABELLED_REFERENCE.sub(foreign, text)
+    return REFERENCE.sub(lambda m: urls.get(m[1], _("attachment")), text)
 
 
 def _names(ids, user, item):

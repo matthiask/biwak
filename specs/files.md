@@ -72,7 +72,8 @@ They belong to their item and aren't shown in folders.
   Unlinked attachments are visible only to who uploaded them;
   `fairy_tasks` deletes those older than a day.
 - **Rendering:** the Markdown filter turns `attachment:KEY` into the
-  download URL; images show inline, scaled to the text's width.
+  download URL (only the rendered item's own attachments, see below);
+  images show inline, scaled to the text's width.
 - **Limit:** 100 MB per file (decided 2026-11-20; the ingress needs the
   same limit).
 
@@ -83,7 +84,11 @@ them here if wrong):
   item yet, in the item's project, uploaded by the person saving the
   text. Once linked, an attachment stays with its item, also when the
   text no longer references it; referencing it in another item's text
-  doesn't move it (people who see only the other item get a 404).
+  doesn't move it. Such a reference (or one to a missing attachment)
+  renders as a plain "attachment", without link or name, on pages, in
+  mails (HTML and plain text) and in the API's `*_html`: the URL holds
+  the file's name, which may be internal (decided 2026-11-20 after the
+  visibility review).
 - **Where:** linked when to-dos' notes are created or changed, comments
   added, messages and docs created (their edit operations come with
   stage 2 and call `attachments.link()` too). Lists' and projects'

@@ -12,6 +12,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from moto import mock_aws
 
+from biwak.accounts.models import APIToken
 from biwak.files import attachments
 from biwak.files.models import MAX_SIZE, Attachment
 from biwak.items import operations as ops
@@ -214,24 +215,68 @@ class OperationsTest(Fixture, TestCase):
     def test_markdown(self):
         image = upload(self.project, self.ada)
         pdf = upload(self.project, self.ada, name="plan.pdf", content=b"%PDF")
-        html = str(
-            markdown(
-                f"{image.markdown}\n\n{pdf.markdown}\n\n"
-                "[gone](attachment:aaaaaaaaaaaaaaaa) [web](https://example.org)"
-            )
+        notes = (
+            f"{image.markdown}\n\n{pdf.markdown}\n\n"
+            "[gone](attachment:aaaaaaaaaaaaaaaa) [web](https://example.org)"
         )
+        ops.update_todo(self.todo, actor=self.ada, notes=notes)
+        html = str(markdown(notes, self.todo))
         self.assertIn(
             f'<img src="/attachments/{image.key}/sketch.png" alt="sketch.png"'
             ' class="wb-attachment-image" loading="lazy"',
             html,
         )
         self.assertIn(f'<a href="/attachments/{pdf.key}/plan.pdf">plan.pdf</a>', html)
-        self.assertIn('<a href="#">gone</a>', html)
+        self.assertIn("<p>attachment <a", html)  # gone
         self.assertIn('<a href="https://example.org">web</a>', html)
         self.assertIn(
             f'src="http://127.0.0.1:8000/attachments/{image.key}/',
-            str(render_markdown(image.markdown, absolute=True)),
+            str(render_markdown(image.markdown, self.todo, absolute=True)),
         )
+
+
+class ForeignReferencesTest(Fixture, TestCase):
+    """A reference to an attachment of another item (copied from an
+    internal to-do into a visible one) shows neither its name nor its URL,
+    which has the name: a plain "attachment" (specs/files.md)"""
+
+    def setUp(self):
+        super().setUp()
+        self.salaries = upload(self.project, self.ada, name="Salaries 2027.pdf")
+        ops.update_todo(self.secret, actor=self.ada, notes=self.salaries.markdown)
+        self.own = upload(self.project, self.ada, name="sketch.png")
+        ops.update_todo(
+            self.todo,
+            actor=self.ada,
+            notes=f"{self.own.markdown} [the table](attachment:{self.salaries.key})"
+            f" ![chart](attachment:{self.salaries.key})",
+        )
+
+    def test_rendering(self):
+        html = str(markdown(self.todo.todo.notes, self.todo))
+        self.assertIn(f"/attachments/{self.own.key}/sketch.png", html)
+        self.assertNotIn("Salaries", html)
+        self.assertNotIn(self.salaries.key, html)
+        self.assertNotIn("the table", html)
+        self.assertIn(' loading="lazy" /> attachment attachment</p>', html)
+        # Still linked where it belongs
+        html = str(markdown(self.secret.todo.notes, self.secret))
+        self.assertIn(f"/attachments/{self.salaries.key}/Salaries%202027.pdf", html)
+
+    def test_page_and_api(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.todo.get_absolute_url())
+        self.assertContains(response, f"/attachments/{self.own.key}/sketch.png")
+        # (The key is in the to-do's form, without the name)
+        self.assertNotContains(response, "Salaries")
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="read")
+        data = self.client.get(
+            f"/api/v1/todos/{self.todo.pk}/",
+            headers={"authorization": f"Bearer {secret}"},
+        ).json()
+        self.assertIn(f"/attachments/{self.own.key}/sketch.png", data["notes_html"])
+        self.assertNotIn("Salaries", data["notes_html"])
+        self.assertNotIn(self.salaries.key, data["notes_html"])
 
 
 class ViewsTest(Fixture, TestCase):
