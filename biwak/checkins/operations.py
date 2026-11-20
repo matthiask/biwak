@@ -1,5 +1,5 @@
 """Check-ins (specs/checkins.md): creating and changing questions, asking
-them on schedule, summarizing, answering and skipping. There are no
+them on schedule, summarizing, answering. There are no
 reminders for missed check-ins (decided 2026-11-20).
 
 Every change goes through here. ``ask_due()`` and ``summarize_due()`` are
@@ -28,7 +28,6 @@ from biwak.checkins.models import (
     Occurrence,
     Question,
     QuestionMail,
-    Skip,
     mail_mode,
 )
 from biwak.files import attachments
@@ -242,17 +241,15 @@ def _recipients(question, occurrence=None):
 
 
 def _answered_ids(occurrence):
-    """People who answered (an answer in the trash doesn't count) or skipped"""
+    """People who answered (an answer in the trash doesn't count)"""
     answered = Answer.objects.filter(occurrence=occurrence).exclude(
         item__status=Status.TRASHED
     )
-    return set(answered.values_list("author", flat=True)) | set(
-        occurrence.skips.values_list("user", flat=True)
-    )
+    return set(answered.values_list("author", flat=True))
 
 
 def missing(occurrence):
-    """Those asked who neither answered nor skipped, still asked and still
+    """Those asked who haven't answered, still asked and still
     allowed to see the question"""
     done = _answered_ids(occurrence)
     return [u for u in _recipients(occurrence.question, occurrence) if u.pk not in done]
@@ -409,14 +406,13 @@ def _occurrence(item, occurrence):
 def answer(item, *, user, content, occurrence=None):
     """The person's answer to the occurrence (default: the latest): creates
     it, or changes the one they gave (``Answer`` is unique per occurrence
-    and person); answering takes back a skip, and brings an answer from the
-    trash back. ``NotAllowed`` unless they're asked and see the question."""
+    and person); answering brings an answer from the trash
+    back. ``NotAllowed`` unless they're asked and see the question."""
     if not can_answer(user, item):
         raise NotAllowed(f"{user} isn't asked {item}")
     occurrence = _occurrence(item, occurrence)
     # Serializes answers to one occurrence (the constraint would catch a race)
     Occurrence.objects.select_for_update().get(pk=occurrence.pk)
-    occurrence.skips.filter(user=user).delete()
     existing = (
         Answer.objects
         .select_related("item")
@@ -466,22 +462,6 @@ def _update_answer(answer, content, *, actor):
 
 
 @transaction.atomic
-def skip(item, *, user, occurrence=None):
-    """ "Skip this time": not due any more. Not once answered."""
-    if not can_answer(user, item):
-        raise NotAllowed(f"{user} isn't asked {item}")
-    occurrence = _occurrence(item, occurrence)
-    if user.pk in set(
-        Answer.objects
-        .filter(occurrence=occurrence)
-        .exclude(item__status=Status.TRASHED)
-        .values_list("author", flat=True)
-    ):
-        raise ValueError("You answered already.")
-    return Skip.objects.get_or_create(occurrence=occurrence, user=user)[0]
-
-
-@transaction.atomic
 def set_mail_mode(item, *, user, mode):
     """How the person hears about answers; choosing a mail subscribes
     them"""
@@ -496,7 +476,7 @@ def set_mail_mode(item, *, user, mode):
 
 def due(user, *, project=None):
     """The latest occurrences of questions the person was asked and
-    hasn't answered or skipped, newest first: "due"."""
+    hasn't answered, newest first: "due"."""
     visible = Item.objects.visible_to(user).filter(
         kind=Kind.QUESTION, status=Status.ACTIVE, project__archived_at__isnull=True
     )
@@ -517,9 +497,8 @@ def due(user, *, project=None):
                     item__status=Status.TRASHED
                 )
             ),
-            skipped=Exists(Skip.objects.filter(occurrence=OuterRef("pk"), user=user)),
         )
-        .filter(has_newer=False, answered=False, skipped=False)
+        .filter(has_newer=False, answered=False)
         .select_related("question__item__project")
         .order_by("-asked_at", "-pk")
     )

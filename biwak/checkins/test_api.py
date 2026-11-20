@@ -2,7 +2,7 @@ import datetime as dt
 
 from biwak.accounts.models import APIToken
 from biwak.checkins import operations as ops
-from biwak.checkins.models import Mode, Occurrence, QuestionMail, Skip
+from biwak.checkins.models import Mode, Occurrence, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
@@ -317,9 +317,6 @@ class AnswersAPITest(APITestCase):
             ).status_code,
             403,
         )
-        self.assertEqual(
-            self.post(dora, f"checkins/{self.item.pk}/skip/").status_code, 403
-        )
         # A client: the internal question doesn't exist for them
         self.assertEqual(
             self.post(
@@ -340,21 +337,6 @@ class AnswersAPITest(APITestCase):
             access="read",
         )
         self.assertEqual(response.status_code, 403)
-
-    def test_skip(self):
-        data = self.post(self.bob, f"checkins/{self.item.pk}/skip/").json()
-        self.assertEqual(data, {"occurrence_id": self.first.pk, "skipped": True})
-        self.assertEqual(Skip.objects.get().user, self.bob)
-        self.post(self.ada, f"checkins/{self.item.pk}/answer/", {"content": "x"})
-        self.assertEqual(
-            self.post(self.ada, f"checkins/{self.item.pk}/skip/").status_code, 400
-        )
-        self.assertEqual(
-            self.post(
-                self.bob, f"checkins/{self.item.pk}/skip/", {"occurrence_id": 99999}
-            ).status_code,
-            404,
-        )
 
     def test_occurrences_with_answers(self):
         ops.answer(self.item, user=self.ada, content="One")

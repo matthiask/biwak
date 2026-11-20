@@ -13,7 +13,6 @@ urlpatterns = [
     path("questions/<int:pk>/pause/", views.question_pause, name="question_pause"),
     path("questions/<int:pk>/mail/", views.question_mail, name="question_mail"),
     path("questions/<int:pk>/answer/", views.question_answer, name="question_answer"),
-    path("questions/<int:pk>/skip/", views.question_skip, name="question_skip"),
     path(
         "questions/<int:pk>/people/<int:user_pk>/",
         views.question_person,

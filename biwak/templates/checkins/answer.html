@@ -25,16 +25,4 @@
       </form>
     </div>
   </div>
-  {% if not existing %}
-    {% if skipped %}
-      <p class="small text-body-secondary">{% translate "You skipped this time." %}</p>
-    {% else %}
-      <form method="post" action="{% url 'question_skip' item.pk %}?occurrence={{ occurrence.pk }}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-quiet">
-          {% icon "skip-forward" %}<span>{% translate "Skip this time" %}</span>
-        </button>
-      </form>
-    {% endif %}
-  {% endif %}
 {% endblock content %}

@@ -142,9 +142,6 @@
 .bi-plus-lg::before {
   content: "\f64d";
 }
-.bi-skip-forward::before {
-  content: "\f55e";
-}
 .bi-trash::before {
   content: "\f5de";
 }
