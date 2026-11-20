@@ -49,3 +49,7 @@ this week, later and no date.
 Recurrence across month ends, leap years and time zones; completing the
 last occurrence; moves between groups in board and list view giving the
 same result.
+
+## Adding to dos from the list
+
+Adding to dos from the list should directly open the form inline which allows selecting assignees, a due date, and not just the title but also the body of the to do text. Ctrl-Enter submits the form and directly jumps to a new to do form for adding another one. Escape or clicking somewhere else closes the inline form.
