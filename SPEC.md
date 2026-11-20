@@ -8,7 +8,8 @@ and deliberately not more.
 
 This file describes what the app does and why, the shared model and the
 decisions. The parts are specified in `specs/`, one file each, small
-enough to hand to one agent. When a decision changes, update the spec in
+enough to hand to one agent; `specs/README.md` lists them with their
+status and dependencies and says how to hand one to an agent. When a decision changes, update the spec in
 the same commit and date the decision ("decided 2026-11-20"), so later
 sessions don't reopen it.
 
@@ -157,6 +158,10 @@ a cheaper model ("Agent").
    - `files.md`, stage 2: message board, folders, docs with versions,
      file pages, previews.
    - `feed.md`: activity feed, item history, bookmarks, links.
+   - `todos.md`, stage 3: long lists of completed to-dos.
+   - Once `feed.md` is merged: `projects-overview.md` (favorites,
+     ordering by activity, cards) and, after `notifications.md` stage 1
+     too, `glance.md` (more content without opening every page).
 4. `checkins.md` (needs schedules, mails and attachments).
 5. `notifications.md`, stage 2: replying by mail, to comments and to
    check-in questions (a strong model: sender checks and mail loops are
@@ -231,3 +236,11 @@ each a spec (or a section in one) before building it.
   the last renewal; check-in reminders after 24 hours; answers to
   check-ins as one summary mail by default; links internal by default;
   previews made on first request.
+- 2026-11-20: Favorites are bookmarked projects, first on the projects
+  page; projects ordered by activity (stored per project, a separate
+  time for clients) or by name, switchable and remembered per person;
+  projects as cards (`specs/projects-overview.md`).
+- 2026-11-20: Messages are pinned for everybody, by staff only, any
+  number (`specs/files.md`).
+- 2026-11-20: More content on overview pages as small signals, short
+  excerpts and a peek on demand, never settings (`specs/glance.md`).

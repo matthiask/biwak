@@ -150,7 +150,18 @@ top, with category, author, date and the number of comments.
   that moment), chosen people, or nobody (`notify_people()`,
   `notifications.md`).
 - Pages: the board, `/messages/<pk>/` with comments, new and edit forms.
-  The project page shows the three latest messages.
+  The project page shows the pinned messages and then the latest ones,
+  three in all unless more are pinned.
+- Board rows show the first two lines of the message (`|excerpt`,
+  `glance.md`; add the filter as described there if it isn't merged).
+- **Pinning** (decided 2026-11-20): pinned for everybody, by staff only
+  (like the visibility switch; clients see pins but can't set them).
+  Any number; pinned ones on top, the latest pinned first, then the
+  rest newest first. Operations `pin_message()` and `unpin_message()`
+  set `pinned_at` and record `pinned` and `unpinned` events (shown in
+  the feed and the history, notifying nobody). A pin button on the
+  message's page and in the board's row menu. Trashing keeps
+  `pinned_at`, so restoring brings the pin back.
 
 ### Folders, docs and files
 
@@ -195,3 +206,5 @@ rules, versions), files (upload, replace, versions, download URL).
   downloads, API and the board; moving a folder changes its contents'
   visibility; doc versions and locks (expiry, refusing to overwrite a
   newer version); file versions keep comments and URL.
+- Pinning: the board's and the project page's order, a client can't pin
+  (page and API), the events notify nobody.

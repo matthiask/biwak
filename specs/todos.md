@@ -182,3 +182,31 @@ All proposed by the building agent, 2026-11-20; change them here if wrong.
 Pages, filters, API, CLI, the feed. Tests: the grouping around midnight
 and week ends (time zone), filters, a client seeing only visible to-dos,
 the feed with a revoked token (404) and for a person who lost access.
+
+## Stage 3: long lists of completed to-dos
+
+Decided 2026-11-20, a worry rather than an observed problem: lists used
+for years collect hundreds of completed to-dos. Today the list page
+shows the latest 20 in a collapsed "Completed" section and nothing
+beyond.
+
+- The section stays collapsed and says how many there are ("Completed
+  (142)"), counted in the same query as the open ones.
+- Opening it shows the latest 20; "Show more" loads the next 50 with
+  htmx below them (cursor on `(completed_at, pk)`, like the feed's), as
+  long as there are more.
+- The board view never shows completed to-dos in its columns; the
+  section stays below the board.
+- The API's list of a list's to-dos already filters by completion; add
+  the cursor if it lacks one.
+
+**Agent:** a cheaper model. **Touches:** `todolist()` in
+`biwak/items/views.py`, `items/todolist.html`, a small view for the
+next page.
+
+### Done when (stage 3)
+
+The count, paging through 120 completed to-dos without gaps or
+duplicates (same `completed_at`), a client seeing only visible to-dos
+and counts (clients only see visible lists, so all of its to-dos; test
+it anyway).
