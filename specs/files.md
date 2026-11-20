@@ -15,9 +15,9 @@ of stage 2".
 
 Decided 2026-11-20 ("consistent with the rest"): the message board has 50
 messages per page; the project page lists the latest three docs and files;
-whom to notify has no default (the same in form, API and CLI); older doc
-and file versions are for staff only (like the item history); moving to
-the top level makes the item internal (like new top-level items).
+older doc and file versions are for staff only (like the item history);
+moving to the top level makes the item internal (like new top-level
+items). Whom to notify by default: see `notifications.md`.
 Reactions on messages, docs and files: see `reactions.md`.
 
 **Agent:** stage 1 with a strong model (downloads are an entry point for
