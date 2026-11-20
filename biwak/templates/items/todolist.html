@@ -40,58 +40,62 @@
     {% for group, todos in groups %}
       <section class="wb-group" data-group-item="{{ group.pk }}">
         <h2 class="h6 wb-group-title">
-          <span
-            class="wb-handle"
-            data-group-handle
-            title="{% translate 'Drag to move the group' %}"
-          >{% icon "grip-vertical" %}</span>
+          {% if can_change %}
+            <span
+              class="wb-handle"
+              data-group-handle
+              title="{% translate 'Drag to move the group' %}"
+            >{% icon "grip-vertical" %}</span>
+          {% endif %}
           <span class="wb-group-name">{{ group }}</span>
-          <span class="wb-group-tools ms-auto">
-            {% if not forloop.first %}
-              <form method="post" action="{% url 'group_move' group.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
-                <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group up' %}">
-                  {% icon "arrow-up" %}
-                </button>
-              </form>
-            {% endif %}
-            {% if not forloop.last %}
-              <form method="post" action="{% url 'group_move' group.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="index" value="{{ forloop.counter }}">
-                <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group down' %}">
-                  {% icon "arrow-down" %}
-                </button>
-              </form>
-            {% endif %}
-            <details class="dropdown wb-menu">
-              <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
-                {% icon "pencil" %}
-              </summary>
-              <div class="dropdown-menu dropdown-menu-end p-2 wb-group-menu">
-                <form method="post" action="{% url 'group_rename' group.pk %}" class="d-flex gap-2 mb-2">
+          {% if can_change %}
+            <span class="wb-group-tools ms-auto">
+              {% if not forloop.first %}
+                <form method="post" action="{% url 'group_move' group.pk %}">
                   {% csrf_token %}
-                  <input
-                    type="text"
-                    name="title"
-                    value="{{ group.title }}"
-                    class="form-control form-control-sm"
-                    aria-label="{% translate 'title' %}"
-                    required
-                    maxlength="200"
-                  >
-                  <button type="submit" class="btn btn-sm btn-primary">{% translate "Rename" %}</button>
-                </form>
-                <form method="post" action="{% url 'group_delete' group.pk %}">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-destructive w-100">
-                    {% translate "Remove the group; its to-dos stay" %}
+                  <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
+                  <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group up' %}">
+                    {% icon "arrow-up" %}
                   </button>
                 </form>
-              </div>
-            </details>
-          </span>
+              {% endif %}
+              {% if not forloop.last %}
+                <form method="post" action="{% url 'group_move' group.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="index" value="{{ forloop.counter }}">
+                  <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group down' %}">
+                    {% icon "arrow-down" %}
+                  </button>
+                </form>
+              {% endif %}
+              <details class="dropdown wb-menu">
+                <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
+                  {% icon "pencil" %}
+                </summary>
+                <div class="dropdown-menu dropdown-menu-end p-2 wb-group-menu">
+                  <form method="post" action="{% url 'group_rename' group.pk %}" class="d-flex gap-2 mb-2">
+                    {% csrf_token %}
+                    <input
+                      type="text"
+                      name="title"
+                      value="{{ group.title }}"
+                      class="form-control form-control-sm"
+                      aria-label="{% translate 'title' %}"
+                      required
+                      maxlength="200"
+                    >
+                    <button type="submit" class="btn btn-sm btn-primary">{% translate "Rename" %}</button>
+                  </form>
+                  <form method="post" action="{% url 'group_delete' group.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-destructive w-100">
+                      {% translate "Remove the group; its to-dos stay" %}
+                    </button>
+                  </form>
+                </div>
+              </details>
+            </span>
+          {% endif %}
         </h2>
         <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="{{ group.pk }}">
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
@@ -100,20 +104,22 @@
       </section>
     {% endfor %}
   </div>
-  <form method="post" action="{% url 'group_create' item.pk %}" class="d-flex gap-2 my-3 wb-add-group">
-    {% csrf_token %}
-    <input
-      type="text"
-      name="title"
-      class="form-control form-control-sm w-auto"
-      placeholder="{% translate 'New group' %}"
-      required
-      maxlength="200"
-    >
-    <button type="submit" class="btn btn-sm btn-quiet">
-      {% icon "plus-lg" %}<span>{% translate "Add group" %}</span>
-    </button>
-  </form>
+  {% if can_change %}
+    <form method="post" action="{% url 'group_create' item.pk %}" class="d-flex gap-2 my-3 wb-add-group">
+      {% csrf_token %}
+      <input
+        type="text"
+        name="title"
+        class="form-control form-control-sm w-auto"
+        placeholder="{% translate 'New group' %}"
+        required
+        maxlength="200"
+      >
+      <button type="submit" class="btn btn-sm btn-quiet">
+        {% icon "plus-lg" %}<span>{% translate "Add group" %}</span>
+      </button>
+    </form>
+  {% endif %}
   {% if completed_count %}
     <details class="mt-4 wb-completed">
       <summary class="text-body-secondary">

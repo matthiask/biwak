@@ -91,6 +91,57 @@ class ManageTest(TestCase):
         second.refresh_from_db()
         self.assertEqual(second.title, "Maybe")
 
+    def test_clients_dont_change_groups_of_lists_staff_created(self):
+        """Clients change only what they created (``can_change()``), the
+        groups of a list like the list"""
+        second = ops.create_group(todolist=self.shared.todolist, title="Someday")
+        self.client.force_login(self.cleo)
+        for url, data in [
+            (f"/groups/{second.pk}/rename/", {"title": "x"}),
+            (f"/groups/{second.pk}/move/", {"index": 0}),
+            (f"/groups/{second.pk}/delete/", {}),
+            (f"/lists/{self.shared.pk}/groups/", {"title": "New"}),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.post(url, data).status_code, 403)
+        self.assertEqual(
+            list(self.shared.todolist.groups.values_list("title", flat=True)),
+            ["Later", "Someday"],
+        )
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertNotContains(response, f"/groups/{second.pk}/")
+        self.assertNotContains(response, f"/lists/{self.shared.pk}/groups/")
+
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="write")
+        headers = {"authorization": f"Bearer {secret}"}
+        for method, path, data in [
+            ("patch", f"groups/{second.pk}/", {"title": "x", "index": 0}),
+            ("delete", f"groups/{second.pk}/", None),
+            ("post", f"lists/{self.shared.pk}/groups/", {"title": "New"}),
+        ]:
+            with self.subTest(method=method, path=path):
+                response = getattr(self.client, method)(
+                    f"/api/v1/{path}",
+                    data,
+                    content_type="application/json",
+                    headers=headers,
+                )
+                self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            list(self.shared.todolist.groups.values_list("title", flat=True)),
+            ["Later", "Someday"],
+        )
+
+    def test_clients_change_groups_of_their_lists(self):
+        own = ops.create_list(
+            project=self.project, title="Ours", creator=self.cleo, visible=True
+        )
+        group = ops.create_group(todolist=own.todolist, title="Now")
+        self.client.force_login(self.cleo)
+        self.client.post(f"/groups/{group.pk}/rename/", {"title": "Soon"})
+        group.refresh_from_db()
+        self.assertEqual(group.title, "Soon")
+
     def test_move_without_dragging(self):
         self.client.force_login(self.ada)
         other = ops.create_todo(todolist=self.shared, title="Other", creator=self.ada)
