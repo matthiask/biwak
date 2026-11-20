@@ -211,6 +211,21 @@ class ViewsTest(TestCase):
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 200)
 
+    def test_no_passwords(self):
+        # Login is by code and passkeys; allauth's password pages are off
+        self.client.force_login(self.ada)
+        for url in [
+            "/accounts/password/set/",
+            "/accounts/password/change/",
+            "/accounts/password/reset/",
+            "/accounts/password/reset/done/",
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+                self.assertEqual(self.client.post(url, {}).status_code, 404)
+        self.ada.refresh_from_db()
+        self.assertFalse(self.ada.has_usable_password())
+
     def test_add_todo_inline(self):
         self.client.force_login(self.ada)
         url = self.shared.get_absolute_url()

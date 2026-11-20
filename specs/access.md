@@ -122,7 +122,8 @@ Microsoft account (decided 2026-11-20).
   login, then the fastest way in, without a mail.
 - Staff can also use Google sign-in (allauth's Google provider), but it's
   never required.
-- No passwords at first; add them only if somebody really needs them.
+- No passwords at first; add them only if somebody really needs them
+  (allauth's password pages answer 404, `biwak/urls.py`).
 - Sessions last weeks; people can see their sessions and log out
   everywhere.
 - Links in notification mails lead to the item, through the login if
