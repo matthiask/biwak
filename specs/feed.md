@@ -70,7 +70,9 @@ The API (`biwak/activity/api.py`) returns single events, not merged
 entries: `GET /api/v1/feed/` with `project_id`, `person_id`, `kind`,
 `action`, `visible_to_clients`, `since` (a date) and ninja's cursor
 (`next` is the URL of the next page), and `projects/{id}/feed/`,
-`people/{id}/feed/` with the same filters. For clients `data` has no
+`people/{id}/feed/` with the same filters (the project's feed takes
+`person_id`, the person's feed `project_id`; a person who isn't in the
+project is a 404, as on `feed/`). For clients `data` has no
 `to`. `biwak feed [--project] [--person] [--kind] [--action] [--since]
 [--limit]` (50 by default, follows the cursor).
 

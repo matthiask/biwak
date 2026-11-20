@@ -293,7 +293,8 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   too.
 - **Mentions:** the edit forms and comments offer `@`; the new forms have
   no item to ask yet, so typed `@` completion is missing there (the
-  syntax still works), and the API's create endpoints take the syntax
-  only (plain `@names` are resolved on update).
+  syntax still works). The API resolves `@ada@example.org` and
+  unambiguous `@Ada` in messages and docs on create and on update, for
+  those who can see the item (as for to-dos and comments).
 - **Dependencies:** Pillow and pypdfium2 (pure wheels, no system
   packages).

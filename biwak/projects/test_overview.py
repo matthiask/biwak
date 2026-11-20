@@ -156,6 +156,16 @@ class RecomputeTest(OverviewTestCase):
         # Nothing to change the second time
         self.assertEqual(project_ops.recompute_activity(), 0)
 
+    def test_recompute_ignores_reactions(self):
+        # record() leaves reactions out, the recomputation agrees
+        self.event("2026-11-01 10:00")
+        self.event("2026-11-10 10:00", action=Action.REACTED)
+        Project.objects.update(last_activity_at=when("2026-11-01 10:00"))
+        project_ops.recompute_activity()
+        self.assertEqual(
+            reload(self.project).last_activity_at, when("2026-11-01 10:00")
+        )
+
     def test_drift_after_switching_to_internal(self):
         todo = ops.create_todo(todolist=self.shared, title="A", creator=self.ada)
         Event.objects.all().delete()
@@ -616,3 +626,9 @@ class ApiTest(OverviewTestCase):
         project_ops.archive_project(self.beta, actor=self.ada)
         self.assertEqual(self.names(archived="true"), ["Alpha", "Beta"])
         self.assertEqual(self.names(), ["Gamma"])
+
+    def test_archived_favorites_first(self):
+        project_ops.archive_project(self.alpha, actor=self.ada)
+        project_ops.archive_project(self.beta, actor=self.ada)
+        bookmarks.add_bookmark(self.ada, project=self.beta)
+        self.assertEqual(self.names(archived="true"), ["Beta", "Alpha"])

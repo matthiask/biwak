@@ -4,6 +4,7 @@ interface, and the same visibility: everything through
 ``Item.objects.visible_to()``."""
 
 import datetime as dt
+from types import SimpleNamespace
 from typing import Literal
 
 from django.db.models import Prefetch, Value
@@ -15,6 +16,7 @@ from ninja import File, Form, Router, Schema, Status, UploadedFile
 from ninja.errors import HttpError
 
 from biwak.accounts.models import User
+from biwak.activity.mentions import resolve as resolve_mentions
 from biwak.api_conventions import (
     ItemOut,
     PersonOut,
@@ -159,6 +161,13 @@ def _staff_creates(request, kind):
         raise HttpError(403, _("Only staff create folders, docs and files."))
 
 
+def resolve_for_new(project, visible, text):
+    """Resolves ``@ada@example.org`` and ``@Ada`` in the text of an item
+    which doesn't exist yet, for those who will see it"""
+    stand_in = SimpleNamespace(project=project, is_client_visible=bool(visible))
+    return resolve_mentions(stand_in, text)
+
+
 def switch(request, visible):
     """What clients create is visible to clients (specs/access.md)"""
     return visible or request.user.is_client
@@ -286,13 +295,14 @@ def message_create(request, project_id: int, data: MessageIn):
     project = project_for(request, project_id)
     if not data.title.strip():
         raise HttpError(400, _("The title can't be empty."))
+    visible = switch(request, data.visible_to_clients)
     item = ops.create_message(
         project=project,
         title=data.title,
-        content=data.content,
+        content=resolve_for_new(project, visible, data.content),
         category=_category(data.category_id),
         creator=request.user,
-        visible=switch(request, data.visible_to_clients),
+        visible=visible,
         whom=whom(project, data.notify),
     )
     return Status(201, message_out(_message(request, item.pk), request.user))
@@ -323,7 +333,7 @@ def message_update(request, message_id: int, data: MessagePatch):
             raise HttpError(400, _("The title can't be empty."))
         changes["title"] = data.title
     if "content" in given:
-        changes["content"] = data.content or ""
+        changes["content"] = resolve_mentions(item, data.content or "")
     if "category_id" in given:
         changes["category"] = _category(data.category_id)
     operations.update_message(item, actor=request.user, **changes)
@@ -493,7 +503,12 @@ def doc_create(request, project_id: int, data: DocIn):
     item = ops.create_doc(
         project=project,
         title=data.title,
-        content=data.content,
+        content=resolve_for_new(
+            project,
+            data.visible_to_clients
+            or (folder is not None and folder.is_client_visible),
+            data.content,
+        ),
         creator=request.user,
         parent=folder,
         visible=data.visible_to_clients,
@@ -539,7 +554,7 @@ def doc_update(request, doc_id: int, data: DocPatch):
             raise HttpError(400, _("The title can't be empty."))
         changes["title"] = data.title
     if "content" in given:
-        changes["content"] = data.content or ""
+        changes["content"] = resolve_mentions(item, data.content or "")
     try:
         operations.update_doc(
             item,

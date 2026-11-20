@@ -16,6 +16,10 @@
         class="btn btn-sm btn-quiet{% if view == 'board' %} active{% endif %}"
         href="?view=board"
       >{% translate "Board" %}</a>
+      {% if not request.user.is_client %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
+          >{% translate "History" %}</span></a>
+      {% endif %}
       {% if can_change %}
         <a class="btn btn-sm btn-quiet" href="{% url 'list_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>

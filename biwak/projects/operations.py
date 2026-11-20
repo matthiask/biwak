@@ -190,7 +190,7 @@ def unarchive_project(project, *, actor):
 # The stored activity times (specs/projects-overview.md). ``record()`` keeps
 # them current; this recomputes them from the events: events of trashed
 # items don't count, and the client column only counts items visible to
-# clients now. Used by ``fairy_tasks`` and the data migration.
+# clients now; reactions don't count, as in ``record()``. Used by ``fairy_tasks`` and the data migration.
 RECOMPUTE_ACTIVITY_SQL = """
 UPDATE projects_project p SET
   last_activity_at = a.last_activity,
@@ -199,11 +199,13 @@ FROM (
   SELECT p2.id,
     (SELECT max(e.created_at) FROM activity_event e
        LEFT JOIN items_item i ON i.id = e.item_id
-       WHERE e.project_id = p2.id AND (i.id IS NULL OR i.status <> 'trashed')
+       WHERE e.project_id = p2.id AND e.action <> 'reacted'
+         AND (i.id IS NULL OR i.status <> 'trashed')
     ) AS last_activity,
     (SELECT max(e.created_at) FROM activity_event e
        JOIN items_item i ON i.id = e.item_id
-       WHERE e.project_id = p2.id AND i.status <> 'trashed' AND i.is_client_visible
+       WHERE e.project_id = p2.id AND e.action <> 'reacted'
+         AND i.status <> 'trashed' AND i.is_client_visible
     ) AS last_client_activity
   FROM projects_project p2
 ) a
