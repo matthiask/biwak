@@ -3,6 +3,7 @@ the item through ``item_for()``."""
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Prefetch, prefetch_related_objects
 from django.utils.translation import gettext as _
 
 from biwak.activity.models import Action, Event
@@ -110,3 +111,12 @@ def summary(item, comment, user):
         entry["people"].append(reaction.user)
         entry["mine"] |= reaction.user_id == user.pk
     return list(found.values())
+
+
+def prefetch(*items):
+    """Loads the reactions of items (or of the item of its comments) with
+    one query, so ``reactions_out()`` doesn't query for each"""
+    prefetch_related_objects(
+        items,
+        Prefetch("reactions", queryset=Reaction.objects.select_related("user")),
+    )

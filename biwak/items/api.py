@@ -5,7 +5,7 @@ create the same events and subscriptions."""
 import datetime as dt
 from typing import Literal
 
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
@@ -27,6 +27,9 @@ from biwak.items import due, operations as ops
 from biwak.items.models import Group, Item, Kind, Status as ItemStatus
 from biwak.items.views import assignable_people
 from biwak.projects.api import project_for
+from biwak.reactions.models import Reaction
+from biwak.reactions.operations import prefetch
+from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
 router = Router(tags=["items"])
@@ -231,6 +234,7 @@ class TodoOut(ItemOut):
     recurrence_ends_on: dt.date | None
     recurrence_count: int | None
     previous_id: int | None
+    reactions: list[ReactionOut]
 
 
 def _previous_id(item, todo):
@@ -244,7 +248,7 @@ def _previous_id(item, todo):
     return todo.previous_id
 
 
-def todo_out(item):
+def todo_out(item, user):
     todo = item.todo
     group = todo.group
     return item_out(item) | {
@@ -264,6 +268,7 @@ def todo_out(item):
         "recurrence_ends_on": todo.recurrence_ends_on,
         "recurrence_count": todo.recurrence_count,
         "previous_id": _previous_id(item, todo),
+        "reactions": reactions_out(item, None, user),
     }
 
 
@@ -276,6 +281,9 @@ def _todos(request, list_item):
             "creator", "todo__group", "todo__completed_by", "todo__previous"
         )
         .prefetch_related("todo__assignees")
+        .prefetch_related(
+            Prefetch("reactions", queryset=Reaction.objects.select_related("user"))
+        )
     )
 
 
@@ -286,7 +294,7 @@ def todo_list(request, list_id: int):
     todos = _todos(request, item).filter(todo__completed_at__isnull=True)
     groups = {g.pk: g.position for g in item.todolist.groups.all()}
     return [
-        todo_out(todo)
+        todo_out(todo, request.user)
         for todo in sorted(
             todos,
             key=lambda t: (
@@ -310,7 +318,7 @@ def todo_list_completed(
         _todos(request, item)
         .filter(todo__completed_at__isnull=False)
         .annotate(completed=F("todo__completed_at")),
-        todo_out,
+        lambda item: todo_out(item, request.user),
         ordering=("-completed", "-pk"),
         cursor=cursor,
         page_size=page_size,
@@ -371,7 +379,7 @@ def todo_create(request, list_id: int, data: TodoIn):
         recurrence_ends_on=data.recurrence_ends_on,
         recurrence_count=_count(data.recurrence_count),
     )
-    return Status(201, todo_out(Item.objects.get(pk=todo.pk)))
+    return Status(201, todo_out(Item.objects.get(pk=todo.pk), request.user))
 
 
 class DueTodoOut(TodoOut):
@@ -419,7 +427,7 @@ def todo_overview(
         request,
         qs,
         lambda item: (
-            todo_out(item)
+            todo_out(item, request.user)
             | {
                 "due_group": due.group_of(item.todo.due_on, today),
                 "project_name": item.project.name,
@@ -434,7 +442,7 @@ def todo_overview(
 
 @router.get("todos/{todo_id}/", response=TodoOut)
 def todo_detail(request, todo_id: int):
-    return todo_out(item_for(request, todo_id, Kind.TODO))
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 
 class TodoPatch(Schema):
@@ -476,21 +484,21 @@ def todo_update(request, todo_id: int, data: TodoPatch):
             changes[field] = getattr(data, field)
     _count(changes.get("recurrence_count"))
     ops.update_todo(item, actor=request.user, **changes)
-    return todo_out(item_for(request, todo_id, Kind.TODO))
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 
 @router.post("todos/{todo_id}/complete/", response=TodoOut)
 def todo_complete(request, todo_id: int):
     item = item_for(request, todo_id, Kind.TODO)
     ops.complete(item, actor=request.user)
-    return todo_out(item_for(request, todo_id, Kind.TODO))
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 
 @router.post("todos/{todo_id}/reopen/", response=TodoOut)
 def todo_reopen(request, todo_id: int):
     item = item_for(request, todo_id, Kind.TODO)
     ops.reopen(item, actor=request.user)
-    return todo_out(item_for(request, todo_id, Kind.TODO))
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 
 class MoveIn(Schema):
@@ -512,7 +520,7 @@ def todo_move(request, todo_id: int, data: MoveIn):
     ops.move_todo(
         item, todolist=target, group=group, index=data.index, actor=request.user
     )
-    return todo_out(Item.objects.get(pk=todo_id))
+    return todo_out(Item.objects.get(pk=todo_id), request.user)
 
 
 class MoveManyIn(Schema):
@@ -545,7 +553,9 @@ def todos_move(request, list_id: int, data: MoveManyIn):
         index=data.index,
         actor=request.user,
     )
-    return [todo_out(item_for(request, pk, Kind.TODO)) for pk in data.todo_ids]
+    return [
+        todo_out(item_for(request, pk, Kind.TODO), request.user) for pk in data.todo_ids
+    ]
 
 
 # Comments and subscriptions -------------------------------------------------
@@ -559,6 +569,7 @@ class CommentOut(Schema):
     content_html: str
     created_at: dt.datetime
     visible_to_clients: bool
+    reactions: list[ReactionOut]
 
 
 @router.get("items/{item_id}/comments/", response=page_of(CommentOut))
@@ -567,17 +578,18 @@ def comment_list(
 ):
     """Oldest first, like on the page"""
     item = item_for(request, item_id)
+    prefetch(item)
     return paginated(
         request,
         item.comments.select_related("author"),
-        lambda comment: comment_out(comment, item),
+        lambda comment: comment_out(comment, item, request.user),
         ordering=("created_at", "pk"),
         cursor=cursor,
         page_size=page_size,
     )
 
 
-def comment_out(comment, item):
+def comment_out(comment, item, user):
     return {
         "id": comment.pk,
         "item_id": item.pk,
@@ -586,6 +598,7 @@ def comment_out(comment, item):
         "content_html": html(comment.content, item),
         "created_at": comment.created_at,
         "visible_to_clients": item.is_client_visible,
+        "reactions": reactions_out(item, comment, user),
     }
 
 
@@ -603,7 +616,7 @@ def comment_create(request, item_id: int, data: CommentIn):
     comment = ops.add_comment(
         item, author=request.user, content=resolve_mentions(item, data.content)
     )
-    return Status(201, comment_out(comment, item))
+    return Status(201, comment_out(comment, item, request.user))
 
 
 class SubscriptionOut(Schema):
