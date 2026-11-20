@@ -17,6 +17,7 @@ from biwak.forms import Form, next_url
 from biwak.items import glance, operations as ops, visibility
 from biwak.items.models import Group, Item, Kind, Status, TodoList
 from biwak.reactions.operations import prefetch
+from biwak.schedules_forms import KEEP, RuleField
 
 
 def item_for(request, pk, kind=None):
@@ -39,21 +40,13 @@ def assignable_people(item):
 
 class RepeatForm(Form):
     """The "Repeat" fields shared by the inline form and the to-do's page
-    (specs/todos.md); ``cleaned_data["recurrence"]`` is the rule. Presets
-    count from the due date (today without one); the form's due date is
-    ``due_on``."""
+    (specs/todos.md, specs/rule-widget.md); ``cleaned_data["recurrence"]``
+    is the rule. A rule the widget can't show stays as it is (``initial``).
+    The widget starts from the due date (today without one)."""
 
-    repeat = forms.ChoiceField(
+    recurrence = RuleField(
         label=_("Repeat"),
-        required=False,
-        choices=schedules.preset_choices(),
         help_text=_("The next to-do is created when this one is completed."),
-    )
-    custom_rule = forms.CharField(
-        label=_("Custom schedule"),
-        required=False,
-        max_length=200,
-        help_text=_("An RRULE, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
     )
     recurrence_ends_on = forms.DateField(
         label=_("Repeats until"),
@@ -67,25 +60,16 @@ class RepeatForm(Form):
         help_text=_("How many more to-dos to create; empty: no limit."),
     )
 
-    def _rule(self, data):
-        repeat = data["repeat"]
-        if repeat == schedules.CUSTOM:
-            if not data.get("custom_rule"):
-                raise schedules.InvalidRule(_("Enter the schedule."))
-            return schedules.validate(data["custom_rule"])
-        return schedules.from_preset(repeat, data.get("due_on") or schedules.today())
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["recurrence"].widget.anchor = (
+            self.initial.get("due_on") or schedules.today()
+        )
 
     def clean(self):
         data = super().clean()
-        data["recurrence"] = ""
-        if data.get("repeat"):
-            try:
-                data["recurrence"] = self._rule(data)
-            except schedules.InvalidRule as exc:
-                field = (
-                    "custom_rule" if data["repeat"] == schedules.CUSTOM else "repeat"
-                )
-                self.add_error(field, str(exc))
+        if data.get("recurrence") is KEEP:
+            data["recurrence"] = self.initial.get("recurrence", "")
         return data
 
     def recurrence_kwargs(self):
@@ -398,7 +382,6 @@ def todo(request, pk):
     item = item_for(request, pk, Kind.TODO)
     todo = item.todo
     people = assignable_people(item)
-    preset = schedules.preset_for(todo.recurrence, todo.due_on or schedules.today())
     form = TodoDetailForm(
         request.POST if request.POST.get("form") == "todo" else None,
         initial={
@@ -406,8 +389,7 @@ def todo(request, pk):
             "notes": todo.notes,
             "due_on": todo.due_on,
             "assignees": list(todo.assignees.all()),
-            "repeat": preset,
-            "custom_rule": todo.recurrence if preset == schedules.CUSTOM else "",
+            "recurrence": todo.recurrence,
             "recurrence_ends_on": todo.recurrence_ends_on,
             "recurrence_count": todo.recurrence_count,
         },

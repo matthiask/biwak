@@ -837,3 +837,162 @@ class ClientTest(E2ETestCase):
         self.assertGreaterEqual(page.locator(".wb-client-banner").count(), 1)
         self.assertEqual(page.get_by_role("button", name="Show to clients").count(), 0)
         self.assertEqual(self.errors, [])
+
+
+class RuleWidgetTest(E2ETestCase):
+    def widget(self, page, index=0):
+        add = page.locator("[data-add-todo]").nth(index)
+        add.locator("summary").click()
+        return add, add.locator("[data-rule-widget]")
+
+    def visible_parts(self, widget):
+        return {
+            part
+            for part in ["weekly", "monthly", "yearly"]
+            if widget.locator(f"[data-rule-part={part}]").first.is_visible()
+        }
+
+    def test_the_parts_and_the_description_follow_the_frequency(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        _add, widget = self.widget(page)
+        frequency = widget.locator("[data-rule-frequency]")
+        description = widget.locator("[data-rule-description]")
+        interval = widget.locator("[name=recurrence_interval]")
+        # Doesn't repeat: nothing but the choice
+        self.assertFalse(interval.is_visible())
+        self.assertEqual(self.visible_parts(widget), set())
+
+        frequency.select_option("daily")
+        expect(description).to_have_text("every day")
+        self.assertTrue(interval.is_visible())
+        self.assertEqual(self.visible_parts(widget), set())
+        interval.fill("3")
+        expect(description).to_have_text("every 3 days")
+
+        frequency.select_option("weekly")
+        self.assertEqual(self.visible_parts(widget), {"weekly"})
+        interval.fill("1")
+        # The anchor's weekday is on: today
+        widget.locator(".wb-chip", has_text="Mon").click()
+        widget.locator(".wb-chip", has_text="Wed").click()
+        expect(description).to_contain_text("Monday, Wednesday")
+        # No weekday at all: the validation message
+        while widget.locator(".wb-chip input:checked").count():
+            widget.locator(".wb-chip:has(input:checked)").first.click()
+        expect(description).to_have_text("Choose at least one weekday.")
+
+        frequency.select_option("monthly")
+        self.assertEqual(self.visible_parts(widget), {"monthly"})
+        widget.locator("[value=nth]").check()
+        widget.locator("[name=recurrence_ordinal]").select_option("2")
+        widget.locator("[name=recurrence_weekday]").select_option("TU")
+        expect(description).to_have_text("the second Tuesday of every month")
+        widget.locator("[name=recurrence_weekday]").select_option("WD")
+        widget.locator("[name=recurrence_ordinal]").select_option("-1")
+        expect(description).to_have_text("the last working day of every month")
+        widget.locator("[value=day]").check()
+        widget.locator("[name=recurrence_month_day]").fill("31")
+        expect(description).to_have_text("the 31st (or the last day) of every month")
+
+        frequency.select_option("yearly")
+        self.assertEqual(self.visible_parts(widget), {"yearly"})
+        widget.locator("[name=recurrence_year_month]").select_option("3")
+        widget.locator("[name=recurrence_year_day]").fill("5")
+        expect(description).to_have_text("every year on March 5")
+        widget.locator("[name=recurrence_year_month]").select_option("2")
+        widget.locator("[name=recurrence_year_day]").fill("30")
+        expect(description).to_have_text("This date doesn't exist.")
+
+        frequency.select_option("")
+        expect(description).to_have_text("")
+        self.assertEqual(self.visible_parts(widget), set())
+        self.assertEqual(self.errors, [])
+
+    def test_the_forms_of_groups_are_separate(self):
+        todolist = self.make_list(groups=["Soon"])
+        page = self.page
+        self.goto(page, todolist)
+        _add, first = self.widget(page, 0)
+        first.locator("[data-rule-frequency]").select_option("weekly")
+        _add, second = self.widget(page, 1)
+        expect(second.locator("[data-rule-frequency]")).to_have_value("")
+        second.locator("[data-rule-frequency]").select_option("daily")
+        expect(second.locator("[data-rule-description]")).to_have_text("every day")
+        expect(first.locator("[data-rule-frequency]")).to_have_value("weekly")
+
+    def test_a_second_tuesday_every_month(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add, widget = self.widget(page)
+        add.locator("[name=title]").fill("Team lunch")
+        add.locator("[name=due_on]").fill("2026-12-08")
+        widget.locator("[data-rule-frequency]").select_option("monthly")
+        widget.locator("[value=nth]").check()
+        widget.locator("[name=recurrence_ordinal]").select_option("2")
+        widget.locator("[name=recurrence_weekday]").select_option("TU")
+        expect(widget.locator("[data-rule-description]")).to_have_text(
+            "the second Tuesday of every month"
+        )
+        add.locator("[name=title]").press("Control+Enter")
+        page.locator("[data-todo]", has_text="Team lunch").wait_for()
+        # The form is ready for the next one
+        expect(widget.locator("[data-rule-frequency]")).to_have_value("")
+        item = Item.objects.get(title="Team lunch")
+        self.assertEqual(item.todo.recurrence, "FREQ=MONTHLY;BYDAY=TU;BYSETPOS=2")
+
+        # Completing it creates the next one
+        self.goto(page, item)
+        page.locator("button", has_text="Complete").click()
+        page.locator("text=Completed by").wait_for()
+        following = Item.objects.get(title="Team lunch", todo__completed_at=None)
+        self.assertEqual(str(following.todo.due_on), "2027-01-12")
+        self.assertEqual(following.todo.recurrence, item.todo.recurrence)
+
+    def test_the_todo_page_and_a_rule_set_elsewhere(self):
+        elsewhere = ops.create_todo(
+            todolist=self.make_list(todos=[]),
+            title="Elsewhere",
+            creator=self.ada,
+            recurrence="FREQ=MONTHLY;BYMONTHDAY=1,15",
+        )
+        page = self.page
+        self.goto(page, elsewhere)
+        widget = page.locator("[data-rule-widget]")
+        self.assertIn("can't be edited here", widget.inner_text())
+        self.assertFalse(widget.locator("[data-rule-frequency]").is_visible())
+        page.locator("form [name=title][maxlength='500']").fill("Renamed")
+        page.locator("form button[type=submit]", has_text="Save").first.click()
+        page.wait_for_url(f"**{elsewhere.get_absolute_url()}")
+        elsewhere.todo.refresh_from_db()
+        self.assertEqual(elsewhere.todo.recurrence, "FREQ=MONTHLY;BYMONTHDAY=1,15")
+        # Replace opens the widget
+        page.locator("[data-rule-replace]").check()
+        frequency = widget.locator("[data-rule-frequency]")
+        expect(frequency).to_be_visible()
+        frequency.select_option("daily")
+        expect(widget.locator("[data-rule-description]")).to_have_text("every day")
+        page.locator("form button[type=submit]", has_text="Save").first.click()
+        page.wait_for_url(f"**{elsewhere.get_absolute_url()}")
+        elsewhere.todo.refresh_from_db()
+        self.assertEqual(elsewhere.todo.recurrence, "FREQ=DAILY")
+
+    def test_the_question_form(self):
+        page = self.page
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/checkins/new/")
+        widget = page.locator("[data-rule-widget]")
+        frequency = widget.locator("[data-rule-frequency]")
+        # Check-ins always repeat
+        self.assertEqual(
+            frequency.locator("option").all_inner_texts(),
+            ["Daily", "Weekly", "Monthly", "Yearly"],
+        )
+        expect(frequency).to_have_value("weekly")
+        expect(widget.locator("[data-rule-description]")).not_to_have_text("")
+        frequency.select_option("monthly")
+        expect(widget.locator("[data-rule-description]")).to_contain_text(
+            "of every month"
+        )
+        self.assertEqual(self.errors, [])

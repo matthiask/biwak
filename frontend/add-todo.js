@@ -43,10 +43,10 @@ async function submit(form) {
   }
 }
 
-// "Repeat": the custom rule, the end and the count only when they matter
+// "Repeat": the end and the count only for rules that repeat (the rule
+// widget shows its own parts, rule-widget.js)
 function syncRepeat(form) {
-  const value = form.querySelector("[data-repeat-select]").value
-  form.querySelector("[data-repeat-custom]").hidden = value !== "custom"
+  const value = form.querySelector("[data-rule-frequency]").value
   for (const element of form.querySelectorAll("[data-repeat-ends]"))
     element.hidden = !value
 }

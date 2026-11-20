@@ -256,3 +256,16 @@ def item_notifications(context, item):
     return {"item": item, "csrf_token": context.get("csrf_token")} | (
         item_level_context(user, item)
     )
+
+
+@register.simple_tag
+def rule_widget(bound_field, uid):
+    """The rule widget of a form field with ids of its own (``uid``): the
+    list page has one inline form per group, all from the same form. Shows
+    the field's initial value, not what was posted to another one."""
+    widget = bound_field.field.widget
+    return widget.render(
+        bound_field.html_name,
+        bound_field.initial,
+        attrs={"id": f"{bound_field.auto_id}_{uid}"},
+    )

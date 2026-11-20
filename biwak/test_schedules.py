@@ -1,4 +1,5 @@
 import datetime as dt
+import itertools
 from zoneinfo import ZoneInfo
 
 from django.test import SimpleTestCase
@@ -154,3 +155,249 @@ class PresetsTest(SimpleTestCase):
             with self.subTest(rule=rule):
                 self.assertEqual(describe(rule), text)
         self.assertEqual(describe(""), "")
+
+
+def all_widget_fields():
+    """Every rule the widget can build, as its fields"""
+    for interval in [1, 2, 3, 12, 99]:
+        yield {"frequency": "daily", "interval": interval}
+        for size in range(1, 8):
+            for days in itertools.combinations(schedules.DAYS, size):
+                yield {
+                    "frequency": "weekly",
+                    "interval": interval,
+                    "weekdays": list(days),
+                }
+        for day in range(1, 32):
+            yield {
+                "frequency": "monthly",
+                "interval": interval,
+                "monthly": "day",
+                "month_day": day,
+            }
+        for ordinal in schedules.ORDINAL_VALUES:
+            for weekday in [*schedules.DAYS, schedules.WORKING_DAY]:
+                yield {
+                    "frequency": "monthly",
+                    "interval": interval,
+                    "monthly": "nth",
+                    "ordinal": ordinal,
+                    "weekday": weekday,
+                }
+    for interval in [1, 2]:
+        for offset in range(366):
+            day = d("2028-01-01") + dt.timedelta(days=offset)
+            yield {
+                "frequency": "yearly",
+                "interval": interval,
+                "year_month": day.month,
+                "year_day": day.day,
+            }
+
+
+class RuleFieldsTest(SimpleTestCase):
+    def test_every_rule_the_widget_builds_round_trips(self):
+        count = 0
+        for fields in all_widget_fields():
+            with self.subTest(fields=fields):
+                rule = schedules.build_rule(fields)
+                self.assertEqual(validate(rule), rule)
+                shown = schedules.rule_fields(rule)
+                self.assertIsNotNone(shown)
+                self.assertEqual(schedules.build_rule(shown), rule)
+                self.assertEqual({k: shown[k] for k in fields}, fields)
+                self.assertFalse(describe(rule).startswith("custom"), rule)
+            count += 1
+        self.assertGreater(count, 1700)
+
+    def test_every_preset_round_trips(self):
+        day = d("2028-01-01")
+        for offset in range(366):
+            for key in schedules.PRESETS:
+                rule = schedules.from_preset(key, day + dt.timedelta(days=offset))
+                with self.subTest(rule=rule):
+                    shown = schedules.rule_fields(rule)
+                    self.assertIsNotNone(shown, rule)
+                    self.assertEqual(schedules.build_rule(shown), rule)
+
+    def test_equivalent_spellings_show_and_normalize(self):
+        for rule, normal in [
+            ("FREQ=WEEKLY;BYDAY=FR,MO", "FREQ=WEEKLY;BYDAY=MO,FR"),
+            ("BYDAY=MO;FREQ=WEEKLY;INTERVAL=1", "FREQ=WEEKLY;BYDAY=MO"),
+            ("freq=weekly;byday=mo;wkst=mo", "FREQ=WEEKLY;BYDAY=MO"),
+        ]:
+            with self.subTest(rule=rule):
+                shown = schedules.rule_fields(rule)
+                self.assertEqual(schedules.build_rule(shown), normal)
+
+    def test_rules_the_widget_cant_show(self):
+        for rule in [
+            "FREQ=WEEKLY",  # the day comes from the first date
+            "FREQ=WEEKLY;WKST=SU;BYDAY=MO,TU",
+            "FREQ=DAILY;INTERVAL=100",
+            "FREQ=DAILY;BYDAY=MO",
+            "FREQ=MONTHLY;BYMONTHDAY=1,15",
+            "FREQ=MONTHLY;BYMONTHDAY=-1",
+            "FREQ=MONTHLY;BYMONTHDAY=5;BYSETPOS=1",
+            "FREQ=MONTHLY;BYDAY=MO,WE;BYSETPOS=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=5",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2;BYMONTH=3",
+            "FREQ=MONTHLY;BYDAY=MO",
+            "FREQ=MONTHLY",
+            "FREQ=YEARLY",
+            "FREQ=YEARLY;BYMONTH=1,7;BYMONTHDAY=1",
+            "FREQ=YEARLY;BYMONTH=3",
+            "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29",
+            "FREQ=WEEKLY;BYDAY=1MO",
+            "FREQ=HOURLY",
+            "nonsense",
+        ]:
+            with self.subTest(rule=rule):
+                self.assertIsNone(schedules.rule_fields(rule))
+
+    def test_no_rule(self):
+        self.assertEqual(schedules.rule_fields(""), {"frequency": ""})
+        self.assertEqual(schedules.build_rule({"frequency": ""}), "")
+        self.assertEqual(schedules.build_rule({}), "")
+
+    def test_clamped_days_and_leap_day(self):
+        self.assertEqual(
+            schedules.build_rule({
+                "frequency": "monthly",
+                "interval": 1,
+                "monthly": "day",
+                "month_day": 30,
+            }),
+            "FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1",
+        )
+        self.assertEqual(
+            schedules.build_rule({
+                "frequency": "yearly",
+                "interval": 1,
+                "year_month": 2,
+                "year_day": 29,
+            }),
+            "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1",
+        )
+
+    def test_values_as_posted(self):
+        self.assertEqual(
+            schedules.build_rule({
+                "frequency": "monthly",
+                "interval": " 2 ",
+                "monthly": "nth",
+                "ordinal": "-1",
+                "weekday": "WD",
+            }),
+            "FREQ=MONTHLY;INTERVAL=2;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1",
+        )
+
+    def errors(self, **fields):
+        with self.assertRaises(InvalidRule) as caught:
+            schedules.build_rule(fields)
+        return caught.exception.errors
+
+    def test_a_message_per_field(self):
+        ok = {"frequency": "weekly", "interval": 1, "weekdays": ["MO"]}
+        self.assertEqual(
+            self.errors(frequency="hourly"),
+            {"frequency": "Choose how often it repeats."} | {},
+        )
+        for interval in ["", "0", "100", "x", "-1", "1.5"]:
+            self.assertEqual(
+                list(self.errors(**ok | {"interval": interval})), ["interval"]
+            )
+        self.assertEqual(list(self.errors(**ok | {"weekdays": []})), ["weekdays"])
+        self.assertEqual(list(self.errors(**ok | {"weekdays": ["XX"]})), ["weekdays"])
+        monthly = {"frequency": "monthly", "interval": 1}
+        self.assertEqual(list(self.errors(**monthly)), ["monthly"])
+        self.assertEqual(
+            list(self.errors(**monthly | {"monthly": "day", "month_day": "32"})),
+            ["month_day"],
+        )
+        self.assertEqual(
+            list(
+                self.errors(
+                    **monthly | {"monthly": "nth", "ordinal": 5, "weekday": "XX"}
+                )
+            ),
+            ["ordinal", "weekday"],
+        )
+        yearly = {"frequency": "yearly", "interval": 1}
+        self.assertEqual(
+            list(self.errors(**yearly | {"year_month": "13", "year_day": "0"})),
+            ["year_month", "year_day"],
+        )
+        for month, day in [(2, 30), (2, 31), (4, 31)]:
+            self.assertEqual(
+                list(self.errors(**yearly | {"year_month": month, "year_day": day})),
+                ["year_day"],
+            )
+        # Several at once, and the message is readable
+        errors = self.errors(frequency="weekly", interval="x")
+        self.assertEqual(list(errors), ["interval", "weekdays"])
+
+    def test_defaults_from_the_anchor(self):
+        fields = schedules.default_fields(d("2026-11-20"), "weekly")
+        self.assertEqual(
+            (
+                fields["weekdays"],
+                fields["month_day"],
+                fields["ordinal"],
+                fields["weekday"],
+            ),
+            (["FR"], 20, 3, "FR"),
+        )
+        self.assertEqual((fields["year_month"], fields["year_day"]), (11, 20))
+        # The fifth Friday is the last
+        self.assertEqual(schedules.default_fields(d("2026-11-27"))["ordinal"], 4)
+        self.assertEqual(schedules.default_fields(d("2026-10-30"))["ordinal"], -1)
+        for anchor in [d("2028-01-01") + dt.timedelta(days=n) for n in range(366)]:
+            for frequency in schedules.FREQUENCY_FIELDS:
+                schedules.build_rule(schedules.default_fields(anchor, frequency))
+
+    def test_describing_what_the_widget_builds(self):
+        for fields, text in [
+            (
+                {"frequency": "weekly", "interval": 3, "weekdays": ["MO", "FR"]},
+                "every 3 weeks on Monday, Friday",
+            ),
+            (
+                {
+                    "frequency": "weekly",
+                    "interval": 2,
+                    "weekdays": ["MO", "TU", "WE", "TH", "FR"],
+                },
+                "every 2 weeks on weekdays",
+            ),
+            (
+                {"frequency": "weekly", "interval": 2, "weekdays": ["MO"]},
+                "every other Monday",
+            ),
+            (
+                {
+                    "frequency": "monthly",
+                    "interval": 1,
+                    "monthly": "nth",
+                    "ordinal": -1,
+                    "weekday": "WD",
+                },
+                "the last working day of every month",
+            ),
+            (
+                {
+                    "frequency": "monthly",
+                    "interval": 1,
+                    "monthly": "nth",
+                    "ordinal": 2,
+                    "weekday": "TU",
+                },
+                "the second Tuesday of every month",
+            ),
+            (
+                {"frequency": "yearly", "interval": 2, "year_month": 3, "year_day": 5},
+                "every 2 years on March 5",
+            ),
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(describe(schedules.build_rule(fields)), text)

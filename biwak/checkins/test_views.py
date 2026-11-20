@@ -11,7 +11,7 @@ from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
 from biwak.projects.models import Membership
-from biwak.test_utils import person, project
+from biwak.test_utils import person, project, rule_post
 
 
 class ViewsTestCase(CheckinTestCase):
@@ -280,8 +280,9 @@ class FormsTest(ViewsTestCase):
     def data(self, **kwargs):
         return {
             "title": "What did you read?",
-            "repeat": "weekly",
-            "custom_rule": "",
+            "rule_frequency": "weekly",
+            "rule_interval": "1",
+            "rule_weekdays": ["FR"],
             "starts_on": "2027-03-26",
             "time_of_day": "08:30",
             "time_zone": "Europe/Zurich",
@@ -295,7 +296,7 @@ class FormsTest(ViewsTestCase):
         item = Item.objects.get(title="What did you read?")
         self.assertRedirects(response, item.get_absolute_url())
         question = item.question
-        self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR", "from the first date")
+        self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR")
         self.assertEqual(question.time_of_day, dt.time(8, 30))
         self.assertEqual(set(question.people.all()), {self.ada, self.bob})
         self.assertFalse(item.is_client_visible)
@@ -329,8 +330,9 @@ class FormsTest(ViewsTestCase):
         item_ops.set_visibility(self.shared, visible=False, actor=self.ada)
         url = self.url("question_edit", self.shared)
         initial = self.get(self.ada, url).context["form"].initial
-        data = {k: v for k, v in initial.items() if v is not None}
+        data = {k: v for k, v in initial.items() if v is not None and k != "rule"}
         data["people"] = [u.pk for u in data["people"]]
+        data |= rule_post(initial["rule"], "rule")
         response = self.post(self.ada, url, data | {"title": "Renamed"})
         self.assertEqual(response.status_code, 302)
         self.shared.refresh_from_db()
@@ -346,19 +348,17 @@ class FormsTest(ViewsTestCase):
             response, "Clients can only be asked about check-ins they can see."
         )
 
-    def test_a_custom_schedule_and_mistakes(self):
+    def test_another_schedule_and_mistakes(self):
         url = reverse("question_new", args=[self.project.pk])
-        self.post(
-            self.ada, url,
-            self.data(repeat="custom", custom_rule="FREQ=WEEKLY;BYDAY=MO,TH"),
-        )  # fmt: skip
+        self.post(self.ada, url, self.data(rule_weekdays=["MO", "TH"]))
         self.assertEqual(
             Item.objects.get(title="What did you read?").question.rule,
             "FREQ=WEEKLY;BYDAY=MO,TH",
         )
         for data in [
-            {"repeat": "custom", "custom_rule": ""},
-            {"repeat": "custom", "custom_rule": "FREQ=HOURLY"},
+            {"rule_frequency": ""},
+            {"rule_weekdays": []},
+            {"rule_interval": "100"},
             {"time_zone": "Mars/Olympus"},
             {"time_of_day": ""},
             {"starts_on": ""},
@@ -390,14 +390,15 @@ class FormsTest(ViewsTestCase):
         url = self.url("question_edit", self.item)
         response = self.get(self.ada, url)
         form = response.context["form"]
-        self.assertEqual(form.initial["repeat"], "weekly")
+        self.assertEqual(form.initial["rule"], "FREQ=WEEKLY;BYDAY=MO")
         self.assertEqual(form.initial["time_of_day"], dt.time(9, 0))
         self.assertContains(response, "Edit the check-in")
         response = self.post(
             self.ada,
             url,
             self.data(
-                title="How is it going?", repeat="biweekly", starts_on="2027-03-22",
+                title="How is it going?", rule_interval="2", rule_weekdays=["MO"],
+                starts_on="2027-03-22",
                 time_of_day="10:00", people=[self.bob.pk],
             ),
         )  # fmt: skip
@@ -408,11 +409,23 @@ class FormsTest(ViewsTestCase):
         self.assertEqual(item.question.time_of_day, dt.time(10, 0))
         self.assertEqual(set(item.question.people.all()), {self.bob})
 
-    def test_editing_a_custom_schedule_shows_it(self):
-        ops.update_question(self.item, actor=self.ada, rule="FREQ=WEEKLY;BYDAY=MO,TH")
-        form = self.get(self.ada, self.url("question_edit", self.item)).context["form"]
-        self.assertEqual(form.initial["repeat"], "custom")
-        self.assertEqual(form.initial["custom_rule"], "FREQ=WEEKLY;BYDAY=MO,TH")
+    def test_a_schedule_the_widget_cant_show_stays_unless_replaced(self):
+        rule = "FREQ=WEEKLY;BYDAY=MO,TH;BYSETPOS=1"
+        ops.update_question(self.item, actor=self.ada, rule=rule)
+        url = self.url("question_edit", self.item)
+        response = self.get(self.ada, url)
+        self.assertEqual(response.context["form"].initial["rule"], rule)
+        self.assertContains(response, "can't be edited here")
+        response = self.post(self.ada, url, self.data(title="Same", rule_keep="1"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Question.objects.get(item=self.item).rule, rule)
+        response = self.post(
+            self.ada, url, self.data(title="Same", rule_keep="1", rule_replace="1")
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Question.objects.get(item=self.item).rule, "FREQ=WEEKLY;BYDAY=FR"
+        )
 
     def test_saving_keeps_a_rule_for_another_weekday_or_day(self):
         """Rules from the API or the CLI (first date a Friday): saving the
@@ -424,13 +437,15 @@ class FormsTest(ViewsTestCase):
             "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
             "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=-1",
             "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+            "FREQ=MONTHLY;BYMONTHDAY=1,15",
+            "FREQ=WEEKLY",
         ]:
             item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 19))
             url = self.url("question_edit", item)
-            initial = self.get(self.ada, url).context["form"].initial
-            data = {k: v for k, v in initial.items() if v is not None}
-            data["people"] = [u.pk for u in data["people"]]
-            response = self.post(self.ada, url, data | {"title": "Renamed"})
+            data = self.data(title="Renamed", people=[self.ada.pk])
+            data = {k: v for k, v in data.items() if not k.startswith("rule_")}
+            data |= rule_post(rule, "rule")
+            response = self.post(self.ada, url, data)
             self.assertEqual(response.status_code, 302, rule)
             self.assertEqual(Question.objects.get(item=item).rule, rule)
 

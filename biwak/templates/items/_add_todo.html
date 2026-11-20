@@ -58,25 +58,12 @@
         >
       </label>
     </div>
-    <div class="wb-add-todo-meta mb-2" data-repeat>
+    <div class="mb-2" data-repeat>
+      {% if group %}{% rule_widget form.recurrence group.pk %}{% else %}{% rule_widget form.recurrence "ungrouped" %}{% endif %}
+      {% for error in form.recurrence.errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="wb-add-todo-meta mb-2" data-repeat-ends>
       <label class="wb-due">
-        <span>{% translate "Repeat" %}</span>
-        <select name="repeat" class="form-select form-select-sm" data-repeat-select>
-          {% for value, label in form.fields.repeat.choices %}
-            <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <input
-        type="text"
-        name="custom_rule"
-        class="form-control form-control-sm w-auto"
-        placeholder="FREQ=WEEKLY;BYDAY=MO,TH"
-        aria-label="{% translate 'Custom schedule' %}"
-        maxlength="200"
-        data-repeat-custom
-      >
-      <label class="wb-due" data-repeat-ends>
         <span>{% translate "until" %}</span>
         <input
           type="date"
@@ -85,7 +72,7 @@
           aria-label="{% translate 'Repeats until' %}"
         >
       </label>
-      <label class="wb-due" data-repeat-ends>
+      <label class="wb-due">
         <span>{% translate "left" %}</span>
         <input
           type="number"

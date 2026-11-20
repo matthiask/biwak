@@ -10,6 +10,7 @@ import "./copy.js"
 import "./mentions.js"
 import "./peek.js"
 import "htmx.org"
+import "./rule-widget.js"
 
 // The script is deferred, the page is parsed already; dragging to-dos,
 // groups and lists
