@@ -6,7 +6,16 @@
   htmx fetches the description. Ids and names of the parts start with the
   widget's id and name, so several widgets can share a page.
 {% endcomment %}
-<fieldset class="wb-rule" data-rule-widget>
+<fieldset
+  class="wb-rule"
+  data-rule-widget
+  hx-get="{{ widget.describe_url }}"
+  hx-vals='{"name": "{{ widget.name }}"}'
+  hx-trigger="change, input delay:200ms"
+  hx-sync="this:replace"
+  hx-target="find [data-rule-description]"
+  hx-swap="innerHTML"
+>
   <legend class="form-label fs-6">{{ widget.label|default:_("Repeat") }}</legend>
   {% if widget.unshowable %}
     <div class="wb-rule-elsewhere" data-rule-elsewhere>
@@ -164,12 +173,6 @@
       class="small text-body-secondary mb-0 wb-rule-description"
       data-rule-description
       aria-live="polite"
-      hx-get="{{ widget.describe_url }}"
-      hx-vals='{"name": "{{ widget.name }}"}'
-      hx-include="closest [data-rule-widget]"
-      hx-trigger="change from:closest [data-rule-widget]"
-      hx-target="this"
-      hx-swap="innerHTML"
     >
       {% if not widget.unshowable %}{{ widget.description }}{% endif %}
     </p>

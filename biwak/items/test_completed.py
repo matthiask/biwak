@@ -72,7 +72,9 @@ class CompletedTest(TestCase):
         response = self.page(user)
         seen = self.titles(response)
         url = None
-        while match := re.search(r'hx-get="([^"]+)"', response.content.decode()):
+        while match := re.search(
+            r'hx-get="(/lists/[^"]+/completed/[^"]+)"', response.content.decode()
+        ):
             url = match.group(1).replace("&amp;", "&")
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)

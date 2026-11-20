@@ -83,7 +83,7 @@ class WidgetTest(SimpleTestCase):
     def test_the_description(self):
         html = self.render("FREQ=MONTHLY;BYDAY=FR;BYSETPOS=-1")
         self.assertIn("the last Friday of every month", html)
-        self.assertIn('<option value="-1" selected>', html)
+        self.assertRegex(html, r'<option\s+value="-1"\s+selected\s*>')
         self.assertNotIn("can't be edited here", html)
 
     def test_a_rule_set_elsewhere(self):

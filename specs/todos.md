@@ -99,7 +99,8 @@ All proposed by the building agent, 2026-11-20; change them here if wrong.
 - **Next to-do:** created by the original creator, with the "created"
   event by whoever completed it; assignees who are inactive or can't see
   it any more are left out.
-- **Form:** the "Repeat" select, a field for the custom rule, the end date
+- **Form:** the rule widget (`specs/rule-widget.md`, since 2026-11-20; it
+  replaced the preset select and the custom rule field), the end date
   and "repeats left"; a missing "Repeat" field on a posted form removes
   the rule.
 - **API:** `recurrence` accepts a preset name (counted from the due date
@@ -113,6 +114,8 @@ All proposed by the building agent, 2026-11-20; change them here if wrong.
   the due date (`schedules.preset_for`), else "custom", so saving the
   form with only the title changed keeps a rule set through the API or
   the CLI for another weekday or day (it became `BYDAY=FR` before).
+  Superseded by the widget: rules are explicit, and rules it can't show
+  stay unchanged unless "Replace" is pressed.
 
 ### Done when (stage 1)
 

@@ -6,7 +6,34 @@ It replaces the preset dropdown and the text field for a raw RRULE
 (decided 2026-11-20: widget only, no raw RRULE in the forms, the
 description instead of a preview of dates).
 
-**Status:** open.
+**Status:** built (2026-11-20): `rule_fields()`, `build_rule()` and
+`default_fields()` in `biwak/schedules.py`; `RuleField` and `RuleWidget`
+in `biwak/schedules_forms.py` with `forms/rule_widget.html`, the
+`{% rule_widget %}` tag for the inline forms and `GET
+/schedules/describe/`; `frontend/rule-widget.js`; tests in
+`test_schedules.py` (round trips of every rule the widget builds and of
+every preset), `test_schedules_forms.py`, the pages' tests and
+`RuleWidgetTest` in `test_e2e.py`. Decisions made on the way:
+
+- Posted names are `<field>_frequency`, `_interval`, `_weekdays`,
+  `_monthly`, `_month_day`, `_ordinal`, `_weekday`, `_year_month`,
+  `_year_day`, plus `_keep` and `_replace` for rules set elsewhere. The
+  inline forms of a list's groups are separate `<form>`s, so they share
+  names and differ only in ids (`id_recurrence_<group>_…`).
+- A rule is shown only if `build_rule(rule_fields(rule))` is the same rule
+  (parts compared normalized: order, `INTERVAL=1`, `WKST=MO`); so
+  `FREQ=WEEKLY` without `BYDAY` or `WKST=SU` are "set elsewhere".
+- The end date and count stay separate form fields right after the
+  fieldset, not inside it; the inline form hides them without a
+  frequency.
+- `describe()` says "working day" (not "weekday") for Monday to Friday in
+  the monthly rules and handles intervals and weekday sets of the widget
+  ("every 3 weeks on Monday, Friday"); "every other Monday" stays.
+- The defaults come from the anchor when the page is rendered (today on
+  the inline form, the due date on the to-do's page, the question's first
+  date); they don't follow a due date changed meanwhile.
+- `preset_for()` and `preset_choices()` are gone; `PRESETS`, `from_preset`
+  and `preset_of` stay for the API and CLI.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Have the rule round trips reviewed: a rule the widget

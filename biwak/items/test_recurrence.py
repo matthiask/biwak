@@ -399,6 +399,41 @@ class PagesTest(RecurrenceTestCase):
         self.assertContains(response, "Choose at least one weekday.")
         self.assertFalse(Item.objects.filter(title="Bad").exists())
 
+    def test_clients_use_the_widget_on_what_they_created(self):
+        self.client.force_login(self.cleo)
+        url = self.list.get_absolute_url()
+        response = self.client.post(
+            url,
+            {
+                "title": "Client's chore",
+                "recurrence_frequency": "daily",
+                "recurrence_interval": "2",
+            },
+            headers={"X-Biwak-Fragment": "1"},
+        )
+        self.assertEqual(response.status_code, 201)
+        item = Item.objects.get(title="Client's chore")
+        self.assertEqual(item.todo.recurrence, "FREQ=DAILY;INTERVAL=2")
+        page = item.get_absolute_url()
+        self.assertContains(self.client.get(page), "every 2 days")
+        data = {
+            "form": "todo",
+            "title": "Client's chore",
+            "recurrence_frequency": "monthly",
+            "recurrence_interval": "1",
+            "recurrence_monthly": "nth",
+            "recurrence_ordinal": "2",
+            "recurrence_weekday": "TU",
+        }
+        self.assertRedirects(self.client.post(page, data), page)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "FREQ=MONTHLY;BYDAY=TU;BYSETPOS=2")
+        # Internal ones are not there
+        internal = ops.create_todo(
+            todolist=self.internal, title="Secret", creator=self.ada
+        )
+        self.assertEqual(self.client.get(internal.get_absolute_url()).status_code, 404)
+
     def test_the_inline_forms_of_groups_dont_share_ids(self):
         group = ops.create_group(todolist=self.list.todolist, title="Later")
         self.client.force_login(self.ada)

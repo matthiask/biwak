@@ -49,11 +49,9 @@ value or a product choice to the builder):
   occurrences aren't asked. Questions which can't be asked (paused,
   trashed, archived or in an archived project) move on without asking.
 - **Editing the schedule** counts from now: today's time only if still
-  ahead, and a date already asked isn't asked again. The edit form shows a
-  rule as a preset only when the preset gives that rule from the first
-  date; a rule for another weekday or day (from the API or the CLI) is
-  shown as custom, so saving the form keeps it (fixed 2026-11-20: saving
-  rebuilt it from the first date's weekday or day). A new rule or time
+  ahead, and a date already asked isn't asked again. The edit form
+  uses the rule widget (`specs/rule-widget.md`): a rule it can't show
+  (from the API or the CLI) stays unchanged unless "Replace" is pressed. A new rule or time
   zone on the day it was asked counts from now in the new zone, so a zone
   where that date is still ahead doesn't ask it again and one where its
   time has passed asks the next date. Decided 2026-11-20: changing the
