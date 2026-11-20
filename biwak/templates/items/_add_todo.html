@@ -1,4 +1,4 @@
-{% load biwak i18n %}
+{% load attachments biwak i18n %}
 {% comment %}
   Adding a to-do inline (specs/todos.md): opens in place with title, notes,
   assignees and due date. frontend/add-todo.js submits it without leaving
@@ -7,8 +7,15 @@
 {% endcomment %}
 <details class="wb-add-todo" data-add-todo>
   <summary class="btn btn-sm btn-quiet">{% icon "plus-lg" %}<span>{% translate "Add a to-do" %}</span></summary>
-  <form method="post" action="{{ item.get_absolute_url }}" class="wb-add-todo-form" data-add-todo-form>
+  <form
+    method="post"
+    action="{{ item.get_absolute_url }}"
+    class="wb-add-todo-form"
+    data-add-todo-form
+    {% attachments_attrs item.project %}
+  >
     {% csrf_token %}
+    {% include "files/_attach_button.html" %}
     {% if group %}<input type="hidden" name="group" value="{{ group.pk }}">{% endif %}
     <input
       type="text"

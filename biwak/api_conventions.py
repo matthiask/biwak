@@ -18,7 +18,7 @@ from django.conf import settings
 from ninja import Schema
 from ninja.pagination import CursorPagination
 
-from biwak.templatetags.biwak import markdown
+from biwak.templatetags.biwak import render_markdown
 
 
 def absolute(url):
@@ -26,7 +26,7 @@ def absolute(url):
 
 
 def html(text):
-    return str(markdown(text))
+    return str(render_markdown(text, absolute=True))
 
 
 class PersonOut(Schema):

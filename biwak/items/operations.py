@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from biwak.activity.models import Action
 from biwak.activity.operations import record, subscribe
+from biwak.files import attachments
 from biwak.items import visibility
 from biwak.items.models import (
     Comment,
@@ -103,6 +104,7 @@ def create_todo(
     item.save()
     visibility.recompute(item)
     Todo.objects.create(item=item, group=group, notes=notes, due_on=due_on)
+    attachments.link(item, notes, actor=creator)
     _created(item, creator)
     if assignees:
         assign(item, assignees, actor=creator)
@@ -119,6 +121,7 @@ def create_message(*, project, title, creator, content="", visible=False):
         visible=visible,
     )
     Message.objects.create(item=item, content=content)
+    attachments.link(item, content, actor=creator)
     _created(item, creator)
     return item
 
@@ -149,6 +152,7 @@ def create_doc(*, project, title, creator, parent=None, content="", visible=Fals
         visible=visible and parent is None,
     )
     Doc.objects.create(item=item, content=content)
+    attachments.link(item, content, actor=creator)
     _created(item, creator)
     return item
 
@@ -156,6 +160,7 @@ def create_doc(*, project, title, creator, parent=None, content="", visible=Fals
 @transaction.atomic
 def add_comment(item, *, author, content):
     comment = Comment.objects.create(item=item, author=author, content=content)
+    attachments.link(item, content, actor=author)
     subscribe(author, item, explicit=False)
     record(
         actor=author,
@@ -223,6 +228,7 @@ def update_todo(
     if notes is not _UNCHANGED:
         todo.notes = notes
         fields.append("notes")
+        attachments.link(item, notes, actor=actor)
     if due_on is not _UNCHANGED:
         todo.due_on = due_on
         fields.append("due_on")

@@ -10,6 +10,7 @@ biwak projects
 biwak lists PROJECT
 biwak todos LIST
 biwak todo add LIST "Order the tent" --due 2026-12-01 --assign 3
+biwak todo comment TODO "The plan" --attach plan.pdf   # --attach is repeatable
 biwak todo done TODO
 ```
 

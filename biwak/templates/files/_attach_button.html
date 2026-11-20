@@ -1,0 +1,11 @@
+{% load biwak i18n %}
+{% comment %}
+  The button frontend/attachments.js puts below each text field of a form
+  with {% attachments_attrs project %}; dropping and pasting files works
+  too (specs/files.md).
+{% endcomment %}
+<template data-attach-template>
+  <button type="button" class="btn btn-sm btn-quiet">
+    {% icon "paperclip" %}<span>{% translate "Attach files" %}</span>
+  </button>
+</template>
