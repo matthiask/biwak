@@ -10,6 +10,7 @@ from click.testing import CliRunner
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 
+from biwak import cli_version
 from biwak.accounts.models import APIToken
 from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
@@ -104,6 +105,29 @@ class CLITest(TestCase):
         if result.exception and not isinstance(result.exception, SystemExit):
             raise result.exception
         return result
+
+    def test_version_warnings(self):
+        for version, warning in [
+            ("0.14.0", "available"),  # older than the server's
+            ("99.0.0", "This Biwak is older than your biwak"),
+            (cli_version.LATEST, None),
+        ]:
+            with self.subTest(version=version):
+                biwak_cli.core._check_version.cache_clear()
+                with patch.object(biwak_cli.core, "VERSION", version):
+                    result = self.biwak("me")
+                self.assertEqual(result.exit_code, 0, result.output)
+                if warning is None:
+                    self.assertNotIn("older than", result.output)
+                    self.assertNotIn("is available", result.output)
+                else:
+                    self.assertIn(warning, result.output)
+                    self.assertEqual(result.output.count(warning), 1)
+        biwak_cli.core._check_version.cache_clear()
+        with patch.object(biwak_cli.core, "VERSION", "0.14.0"):
+            result = self.biwak("me")
+        self.assertIn(f"biwak {cli_version.LATEST} is available", result.output)
+        self.assertIn(cli_version.UPGRADE, result.output)
 
     def test_workflow(self):
         self.assertIn("Ada Example", self.biwak("me").output)
