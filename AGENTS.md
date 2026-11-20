@@ -80,6 +80,8 @@ What every part does the same way. Look at how the core does it
    the spec says. Things that aren't items (bookmarks, links, mail
    tokens) get a foreign key to `Item` or `Project`. Texts are Markdown
    in a `TextField`, never HTML.
+   Texts people search for get an expression index in a migration and an
+   entry in `TEXTS` in `biwak/search/queries.py` (`specs/search.md`).
 2. **Operations.** Every change goes through a function in the app's
    `operations.py`, `@transaction.atomic`, which also records the event
    (`biwak.activity.operations.record`) and subscriptions. Views, the

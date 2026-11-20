@@ -30,7 +30,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `notifications.md` | 1b: notified by default or only when tagged | built | notifications 1, files 2 | cheaper |
 | `checkins.md` | | built | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | built | notifications 1, check-ins | strong |
-| `search.md` | | next | every kind of item | cheaper |
+| `search.md` | | built | every kind of item | cheaper |
 | `api-cli.md` | gaps to the web, passkey offer, Google for staff | next | | cheaper |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
