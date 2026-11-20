@@ -147,8 +147,41 @@ def describe(event, user):
     return text % {"actor": actor, "to": mentions.plain(data.get("to", ""))}
 
 
+def _reactions(notifications, user):
+    """Reactions collected into one entry per thing reacted to (the item or
+    a comment), oldest first: "Bea: 👍 🎉, Carl: Thanks!" (specs/reactions.md)"""
+    by_target = {}
+    for notification in sorted(notifications, key=lambda n: n.event.created_at):
+        event = notification.event
+        by_target.setdefault(event.data.get("comment"), []).append(event)
+    comments = Comment.objects.in_bulk([pk for pk in by_target if pk])
+    entries = []
+    for comment_id, events in by_target.items():
+        comment = comments.get(comment_id)
+        if comment_id and comment is None:
+            continue
+        item = events[0].item
+        people = {}
+        for event in events:
+            people.setdefault(event.actor, []).append(event.data["content"])
+        reactions = ", ".join(
+            f"{person}: {' '.join(contents)}" for person, contents in people.items()
+        )
+        entries.append({
+            "event": events[-1],
+            "line": _("Reactions to your comment:") if comment else _("Reactions:"),
+            "reactions": reactions,
+            "comment": comment,
+            "comment_text": plain_text(comment.content, item) if comment else "",
+        })
+    return entries
+
+
 def _entries(notifications, user):
-    """What happened, oldest first, comments with their text"""
+    """What happened, oldest first, comments with their text; the reactions
+    at the end, one entry per thing reacted to"""
+    reacted = [n for n in notifications if n.event.action == Action.REACTED]
+    notifications = [n for n in notifications if n.event.action != Action.REACTED]
     comment_ids = [
         n.event.data.get("comment")
         for n in notifications
@@ -165,7 +198,7 @@ def _entries(notifications, user):
             "comment": comment,
             "comment_text": plain_text(comment.content, event.item) if comment else "",
         })
-    return entries
+    return entries + _reactions(reacted, user)
 
 
 def _item(item, user):

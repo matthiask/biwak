@@ -4,7 +4,42 @@ A person reacts to something with an emoji or a few words instead of
 writing a comment ("👍", "🎉", "Thanks!"), like Basecamp's boosts.
 Shown under the thing with who reacted.
 
-**Status:** open.
+**Status:** built (2026-11-20, branch `reactions`): `biwak/reactions/`
+(model, operations, views, API, template tag `{% reactions item %}` and
+`{% reactions item comment %}`), the `reacted` action in the feed, the
+mails and the digest, `biwak react` and the reactions in `biwak todo show`
+(CLI 0.11.0). Decisions made on the way (proposed by the building agent,
+2026-11-20):
+
+- A reaction is one `reacted` event each, with `content` and, for
+  comments, `comment` in `data`. Removing a reaction deletes its events
+  and their unsent notifications (a mail already sent stays sent), so the
+  feed doesn't show reactions that are gone. Toggling again later is a
+  new event.
+- Only the author is a candidate for `notify()` (the comment's author, or
+  the item's creator); it passes the levels "everything" and "what
+  concerns me", and the usual checks (visible now, active, not "nothing").
+- The mail and the digest merge every reaction of a thing into one entry
+  after the comment or to-do ("Reactions to your comment:" or
+  "Reactions:", then "Bea: 👍 🎉, Carl: Thanks!"), through `_entries()`
+  of `biwak/activity/mails.py`; no second mail path.
+- The feed merges reactions per person and item (within the feed's
+  hour and day), not per list.
+- Reactions don't count as project activity (`last_activity_at`,
+  projects page ordering) and aren't on the project page.
+- Pills toggle on click (the same as picking it again); the people
+  are in the pill's tooltip and in a "Who?" list, not behind a click on
+  the pill itself. Whitespace in a reaction collapses to single spaces.
+- `REACTABLE` is in `biwak/reactions/models.py`; `can_react(item,
+  comment)` also allows comments on any commentable item. The API
+  returns `reactions` on to-dos and comments only (`todo_out(item,
+  user)`, `comment_out(comment, item, user)`), loaded with
+  `biwak.reactions.operations.prefetch()`; new kinds do the same.
+- `biwak react` needs the to-do's ID even with `--comment` (the comment
+  ID decides); it first reads the reactions to know whether to add or
+  remove.
+- Migration `activity/0007` changes the choices of `Event.action`:
+  parts adding actions in parallel need to merge their migrations.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Reactions are content on items: visibility tests

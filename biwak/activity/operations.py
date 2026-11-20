@@ -47,7 +47,10 @@ def record(*, actor, action, project, item=None, **data):
         event = Event.objects.create(
             project=project, item=item, actor=actor, action=action, data=data
         )
-    _touch_project(event, item)
+    if action != Action.REACTED:
+        # A reaction isn't activity of the project (decided by the building
+        # agent, 2026-11-20)
+        _touch_project(event, item)
     if item is not None:
         from biwak.activity.notify import notify
 

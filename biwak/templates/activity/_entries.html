@@ -9,7 +9,7 @@
         {% if entry.is_merged %}
           <details>
             <summary>
-              {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where %}
+              {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents %}
               <span class="small text-body-secondary">· {{ entry.latest.created_at|date:"H:i" }}</span>
             </summary>
             <ul class="list-unstyled ms-3 small">

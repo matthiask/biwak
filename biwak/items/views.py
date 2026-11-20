@@ -16,6 +16,7 @@ from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
 from biwak.items import glance, operations as ops, visibility
 from biwak.items.models import Group, Item, Kind, Status, TodoList
+from biwak.reactions.operations import prefetch
 
 
 def item_for(request, pk, kind=None):
@@ -416,6 +417,7 @@ def todo(request, pk):
             **form.recurrence_kwargs(),
         )
         return redirect(item)
+    prefetch(item)
     comment_form = CommentForm(
         request.POST if request.POST.get("form") == "comment" else None
     )

@@ -6,4 +6,5 @@
       {{ entry.comment.content|mail_markdown:item_obj }}
     </div>
   {% endif %}
+  {% if entry.reactions %}<p style="margin: 4px 0 12px 8px">{{ entry.reactions }}</p>{% endif %}
 {% endfor %}

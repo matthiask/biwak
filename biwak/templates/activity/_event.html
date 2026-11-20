@@ -16,6 +16,13 @@
     {% include "activity/_subject.html" %}{% endif %}
 {% elif event.action == "commented" %}
   {% translate "commented on" %} {% include "activity/_subject.html" %}
+{% elif event.action == "reacted" %}
+  {% translate "reacted to" %}
+  {% if event.data.comment %}{% translate "a comment on" %}{% endif %}
+  {% include "activity/_subject.html" with what="" %}
+  <span
+    class="wb-reaction-contents"
+  >{% if contents %}{{ contents|join:" " }}{% else %}{{ event.data.content }}{% endif %}</span>
 {% elif event.action == "moved" %}
   {% translate "moved" %}
   {% include "activity/_subject.html" %}

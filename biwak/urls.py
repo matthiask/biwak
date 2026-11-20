@@ -21,6 +21,7 @@ urlpatterns = [
     path("", include("biwak.files.urls")),
     path("", include("biwak.activity.urls")),
     path("", include("biwak.bookmarks.urls")),
+    path("", include("biwak.reactions.urls")),
     path("api/v1/", api.urls),
     path("accounts/", include("biwak.accounts.urls")),
     path("accounts/", include("allauth.urls")),

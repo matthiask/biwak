@@ -6,7 +6,8 @@
 
 {% endif %}{% for entry in item.entries %}{{ entry.line }}{% if entry.comment_text %}
 
-{{ entry.comment_text }}{% endif %}
+{{ entry.comment_text }}{% endif %}{% if entry.reactions %}
+{{ entry.reactions }}{% endif %}
 
 {% endfor %}{% include "mails/_item.txt" %}
 {% translate "Unsubscribe from this" %}: {{ item.unsubscribe_url }}

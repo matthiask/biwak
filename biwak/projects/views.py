@@ -291,6 +291,7 @@ def project_detail(request, pk):
         Event.objects
         .visible_to(request.user)
         .filter(project=project)
+        .exclude(action=Action.REACTED)
         .select_related("actor", "item")[:20]
     )
     feed.attach(events)

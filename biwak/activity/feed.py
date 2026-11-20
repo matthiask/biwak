@@ -174,6 +174,17 @@ class Entry:
         return _noun(kind, self.count) % {"count": self.count}
 
     @property
+    def contents(self):
+        """What a person reacted with, oldest first, each once"""
+        return list(
+            dict.fromkeys(
+                e.data.get("content", "")
+                for e in reversed(self.events)
+                if e.action == Action.REACTED
+            )
+        )
+
+    @property
     def where(self):
         """The list or project the events happened in"""
         key = container(self.latest)
@@ -197,10 +208,19 @@ def local_day(event):
     return timezone.localtime(event.created_at).date()
 
 
+def same_place(last, event):
+    """Reactions merge per item ("Ada reacted to Order the tent: 👍 🎉",
+    specs/reactions.md), the rest per list or project"""
+    if last.action == Action.REACTED:
+        return last.item_id == event.item_id
+    return container(last)[:2] == container(event)[:2]
+
+
 def merge(events):
     """Entries from events newest first: consecutive events of the same
-    person with the same action in the same list or project, each within
-    an hour of the one before and on the same day, become one entry"""
+    person with the same action in the same list or project (reactions: on
+    the same item), each within an hour of the one before and on the same
+    day, become one entry"""
     entries = []
     for event in events:
         if entries:
@@ -208,7 +228,7 @@ def merge(events):
             if (
                 last.actor_id == event.actor_id
                 and last.action == event.action
-                and container(last)[:2] == container(event)[:2]
+                and same_place(last, event)
                 and local_day(last) == local_day(event)
                 and last.created_at - event.created_at <= MERGE_WINDOW
             ):

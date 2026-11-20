@@ -1,0 +1,70 @@
+{% load i18n %}
+{% if not hidden %}
+  <div
+    class="wb-reactions"
+    id="{{ dom_id }}"
+    hx-target="this"
+    hx-swap="outerHTML"
+  >
+    {% for reaction in reactions %}
+      <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="content" value="{{ reaction.content }}">
+        <button
+          type="submit"
+          class="btn btn-sm wb-reaction{% if reaction.mine %} is-mine{% endif %}"
+          title="{% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+          aria-pressed="{% if reaction.mine %}true{% else %}false{% endif %}"
+        >
+          {{ reaction.content }} <span class="wb-reaction-count">{{ reaction.count }}</span>
+        </button>
+      </form>
+    {% endfor %}
+    <details class="d-inline wb-reaction-add">
+      <summary class="btn btn-sm btn-quiet" title="{% translate 'React' %}">
+        +<span class="visually-hidden"> {% translate "React" %}</span>
+      </summary>
+      <div class="wb-reaction-picker card card-body p-2">
+        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="wb-reaction-quick">
+          {% csrf_token %}
+          {% for emoji in quick %}<button
+              type="submit"
+              name="content"
+              value="{{ emoji }}"
+              class="btn btn-sm btn-quiet"
+            >
+              {{ emoji }}
+            </button>{% endfor %}
+        </form>
+        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-flex gap-1 mt-2">
+          {% csrf_token %}
+          <input
+            type="text"
+            name="content"
+            maxlength="{{ max_length }}"
+            required
+            class="form-control form-control-sm"
+            placeholder="{% translate 'Or a few words' %}"
+            aria-label="{% translate 'A few words' %}"
+          >
+          <button type="submit" class="btn btn-sm btn-primary">{% translate "React" %}</button>
+        </form>
+      </div>
+    </details>
+    {% if reactions %}
+      <details class="d-inline small wb-reaction-people">
+        <summary class="d-inline text-body-secondary">{% translate "Who?" %}</summary>
+        <ul class="list-unstyled mb-0">
+          {% for reaction in reactions %}
+            <li>
+              {{ reaction.content }}
+              {% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %},
+                {% endif %}{% endfor %}
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+    {% if error %}<div class="small text-danger" role="alert">{{ error }}</div>{% endif %}
+  </div>
+{% endif %}
