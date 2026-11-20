@@ -125,11 +125,6 @@
           <li>–</li>
         {% endfor %}
       </ul>
-      {% if question.remind_after %}
-        <p class="small text-body-secondary">
-          {% blocktranslate count hours=question.remind_after %}A reminder after {{ hours }} hour.{% plural %}A reminder after {{ hours }} hours.{% endblocktranslate %}
-        </p>
-      {% endif %}
       <h2 class="h6 mt-4">{% translate "Mails about answers" %}</h2>
       <form method="post" action="{% url 'question_mail' item.pk %}">
         {% csrf_token %}

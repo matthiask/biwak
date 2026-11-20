@@ -72,7 +72,6 @@ class QuestionOut(ItemOut):
     starts_on: dt.date
     time_of_day: dt.time
     time_zone: str
-    remind_after: int | None
     people: list[PersonOut]
     paused: bool
     next_at: dt.datetime | None
@@ -89,7 +88,6 @@ def question_out(request, item):
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
         "time_zone": question.time_zone,
-        "remind_after": question.remind_after,
         "people": [person_out(user) for user in question.people.all()],
         "paused": question.is_paused,
         "next_at": question.next_at,
@@ -118,8 +116,6 @@ class QuestionIn(Schema):
     time_of_day: dt.time
     starts_on: dt.date | None = None
     time_zone: str | None = None
-    # Left out: the default; null: no reminder
-    remind_after: int | None = ops.DEFAULT_REMIND_AFTER
     people: list[int] = []
     visible_to_clients: bool = False
 
@@ -149,7 +145,6 @@ def question_create(request, project_id: int, data: QuestionIn):
             starts_on=starts_on,
             time_of_day=data.time_of_day,
             time_zone=_zone(data.time_zone) if data.time_zone else None,
-            remind_after=data.remind_after,
             people=_people(data.people),
             visible=data.visible_to_clients,
         )
@@ -169,16 +164,14 @@ class QuestionPatch(Schema):
     starts_on: dt.date | None = None
     time_of_day: dt.time | None = None
     time_zone: str | None = None
-    remind_after: int | None = None
     people: list[int] | None = None
     paused: bool | None = None
 
 
 @router.patch("checkins/{question_id}/", response=QuestionOut)
 def question_update(request, question_id: int, data: QuestionPatch):
-    """Staff only. Changes the fields given (``remind_after`` null: no
-    reminder); ``people`` is the complete new set; ``paused`` pauses or
-    resumes. A new schedule counts from now."""
+    """Staff only. Changes the fields given; ``people`` is the complete new
+    set; ``paused`` pauses or resumes. A new schedule counts from now."""
     staff_only(request)
     item = question_for(request, question_id)
     given = data.model_fields_set
@@ -193,8 +186,6 @@ def question_update(request, question_id: int, data: QuestionPatch):
         changes["rule"] = _rule(changes.pop("schedule"), anchor)
     if "time_zone" in changes:
         changes["time_zone"] = _zone(changes["time_zone"])
-    if "remind_after" in given:
-        changes["remind_after"] = data.remind_after
     if "people" in given:
         changes["people"] = _people(data.people or [])
     try:
@@ -334,7 +325,7 @@ class SkipOut(Schema):
 
 @router.post("checkins/{question_id}/skip/", response=SkipOut)
 def skip(request, question_id: int, data: SkipIn):
-    """ "Skip this time": no reminder. Not once you answered."""
+    """ "Skip this time": not due any more. Not once you answered."""
     item = question_for(request, question_id)
     if not ops.can_answer(request.user, item):
         raise HttpError(403, _("You aren't asked this question."))

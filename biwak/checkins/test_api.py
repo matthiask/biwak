@@ -52,7 +52,7 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(question["schedule_description"], "every Monday")
         self.assertEqual(question["time_of_day"], "09:00:00")
         self.assertEqual(question["time_zone"], "Europe/Zurich")
-        self.assertEqual(question["remind_after"], 24)
+        self.assertNotIn("remind_after", question, "no reminders")
         self.assertEqual(
             sorted(p["short_name"] for p in question["people"]), ["Ada", "Bob"]
         )
@@ -101,38 +101,33 @@ class QuestionsAPITest(APITestCase):
                 "starts_on": "2027-03-26",
                 "time_of_day": "08:30",
                 "time_zone": "Europe/Zurich",
-                "remind_after": 12,
                 "people": [self.ada.pk, self.bob.pk],
             },
         )
         self.assertEqual(response.status_code, 201, response.content)
         data = response.json()
         self.assertEqual(data["rule"], "FREQ=WEEKLY;BYDAY=FR")
-        self.assertEqual(data["remind_after"], 12)
         self.assertEqual(len(data["people"]), 2)
         self.assertEqual(data["creator"]["short_name"], "Ada")
         self.assertIsNotNone(data["next_at"])
 
-    def test_create_defaults_and_no_reminder(self):
+    def test_create_defaults(self):
         data = self.post(
             self.ada,
             f"projects/{self.project.pk}/checkins/",
             {"title": "Defaults", "schedule": "FREQ=DAILY", "time_of_day": "09:00"},
         ).json()
-        self.assertEqual(data["remind_after"], 24)
         self.assertEqual(data["time_zone"], "Europe/Zurich")
         self.assertEqual(data["starts_on"], dt.date.today().isoformat())
         data = self.post(
             self.ada,
             f"projects/{self.project.pk}/checkins/",
             {
-                "title": "No reminder",
+                "title": "Weekdays",
                 "schedule": "weekdays",
                 "time_of_day": "09:00",
-                "remind_after": None,
             },
         ).json()
-        self.assertIsNone(data["remind_after"])
         self.assertEqual(data["rule"], "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR")
 
     def test_create_mistakes(self):
@@ -141,7 +136,6 @@ class QuestionsAPITest(APITestCase):
             {"schedule": "sometimes"},
             {"schedule": "FREQ=HOURLY"},
             {"time_zone": "Mars/Olympus"},
-            {"remind_after": 0},
             {"people": [999999]},
             {"people": [self.cleo.pk]},  # internal
             {"time_of_day": "late"},
@@ -186,8 +180,7 @@ class QuestionsAPITest(APITestCase):
             {
                 "title": "How is it going?", "schedule": "biweekly",
                 "starts_on": "2027-03-22", "time_of_day": "10:00",
-                "time_zone": "Asia/Tokyo", "remind_after": None,
-                "people": [self.bob.pk],
+                "time_zone": "Asia/Tokyo", "people": [self.bob.pk],
             },
         )  # fmt: skip
         self.assertEqual(response.status_code, 200, response.content)
@@ -196,7 +189,6 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(data["rule"], "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO")
         self.assertEqual(data["time_of_day"], "10:00:00")
         self.assertEqual(data["time_zone"], "Asia/Tokyo")
-        self.assertIsNone(data["remind_after"])
         self.assertEqual([p["short_name"] for p in data["people"]], ["Bob"])
 
     def test_update_leaves_out_what_doesnt_change(self):
@@ -204,7 +196,6 @@ class QuestionsAPITest(APITestCase):
             self.ada, f"checkins/{self.item.pk}/", {"title": "New"}
         ).json()
         self.assertEqual(data["rule"], "FREQ=WEEKLY;BYDAY=MO")
-        self.assertEqual(data["remind_after"], 24)
         self.assertEqual(len(data["people"]), 2)
         for body in [
             {"title": None},
@@ -219,7 +210,6 @@ class QuestionsAPITest(APITestCase):
         for body in [
             {"schedule": "FREQ=SECONDLY"},
             {"time_zone": "x/y"},
-            {"remind_after": 0},
         ]:
             self.assertEqual(
                 self.patch(self.ada, f"checkins/{self.item.pk}/", body).status_code,

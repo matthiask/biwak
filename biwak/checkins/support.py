@@ -67,11 +67,6 @@ class CheckinTestCase(TestCase):
             mail.outbox.clear()
         return messages
 
-    def reminders(self):
-        """The reminders sent since (the summary of an answered occurrence
-        goes out the next morning, also at these times)"""
-        return [m for m in self.sent() if m.subject.startswith("Reminder: ")]
-
     def recipients(self):
         """Who got mail since, sorted by address"""
         return sorted(address for m in self.sent() for address in m.to)

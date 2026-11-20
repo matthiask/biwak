@@ -493,7 +493,6 @@ def checkin_show(question_id, limit, as_json):
         ("Asked", f"{data['schedule_description']}, {data['time_of_day'][:5]}"),
         ("Time zone", data["time_zone"]),
         ("People", names(data["people"])),
-        ("Reminder after (hours)", data["remind_after"]),
         ("Mails about answers", data["mail"]),
         ("Paused", "yes" if data["paused"] else ""),
         ("URL", data["url"]),
@@ -540,7 +539,7 @@ def checkin_answer(question_id, text, occurrence, attach, as_json):
 )
 @json_option
 def checkin_skip(question_id, occurrence, as_json):
-    """Skip this time: no reminder"""
+    """Skip this time: not due any more"""
     data = request(
         "POST", f"checkins/{question_id}/skip/", json={"occurrence_id": occurrence}
     )
@@ -591,11 +590,6 @@ def checkin_due(project, as_json):
 @click.option(
     "--from", "starts_on", help="YYYY-MM-DD, the first date (default: today)."
 )
-@click.option(
-    "--remind",
-    metavar="HOURS",
-    help="Remind those who haven't answered after this many hours; 'none': never.",
-)
 @click.option("--people", multiple=True, type=int, help="A person's ID, repeatable.")
 @click.option(
     "--clients", is_flag=True, help="Visible to clients (internal otherwise)."
@@ -608,7 +602,6 @@ def checkin_add(
     time_of_day,
     zone,
     starts_on,
-    remind,
     people,
     clients,
     as_json,
@@ -625,8 +618,6 @@ def checkin_add(
         body["time_zone"] = zone
     if starts_on:
         body["starts_on"] = starts_on
-    if remind:
-        body["remind_after"] = None if remind == "none" else int(remind)
     data = request("POST", f"projects/{project}/checkins/", json=body)
     if as_json:
         return echo_json(data)

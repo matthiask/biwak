@@ -28,7 +28,7 @@ class AskingTest(CheckinTestCase):
     def test_created_between_occurrences_asks_next_monday(self):
         self.assertEqual(next_at(self.item), "2027-03-22 09:00")
         self.assertEqual(self.run_at("2027-03-22 08:59"), {
-            "asked": 0, "reminded": 0, "summarized": 0,
+            "asked": 0, "summarized": 0,
         })  # fmt: skip
         self.assertFalse(Occurrence.objects.exists())
         self.assertEqual(self.run_at("2027-03-22 09:00")["asked"], 1)
@@ -480,12 +480,10 @@ class AskingTest(CheckinTestCase):
         self.assertIsNone(Question.objects.get(item=self.item).next_at)
         self.assertEqual(Item.objects.get(pk=self.item.pk).title, "Better")
 
-    def test_invalid_rules_and_reminders(self):
+    def test_invalid_rules(self):
         for rule in ["", "FREQ=HOURLY", "FREQ=DAILY;COUNT=3", "nonsense"]:
             with self.assertRaises(ValueError):
                 self.question("Bad", rule=rule)
-        with self.assertRaises(ValueError):
-            self.question("Bad", remind_after=0)
         with self.assertRaises(ValueError):
             ops.update_question(self.item, actor=self.ada, rule="FREQ=SECONDLY")
 

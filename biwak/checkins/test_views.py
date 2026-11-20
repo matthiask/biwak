@@ -86,7 +86,7 @@ class PagesTest(ViewsTestCase):
         self.assertContains(response, "Every Monday,\n    09:00 Europe/Zurich")
         self.assertContains(response, "Show to clients")
         self.assertNotContains(response, "Clients can see this")
-        self.assertContains(response, "A reminder after 24 hours.")
+        self.assertNotContains(response, "reminder")
 
     def test_the_page_lists_those_who_didnt_answer(self):
         ops.answer(self.item, user=self.ada, content="Fine")
@@ -262,7 +262,6 @@ class FormsTest(ViewsTestCase):
             "starts_on": "2027-03-26",
             "time_of_day": "08:30",
             "time_zone": "Europe/Zurich",
-            "remind_after": "12",
             "people": [self.ada.pk, self.bob.pk],
         } | kwargs
 
@@ -275,7 +274,6 @@ class FormsTest(ViewsTestCase):
         question = item.question
         self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR", "from the first date")
         self.assertEqual(question.time_of_day, dt.time(8, 30))
-        self.assertEqual(question.remind_after, 12)
         self.assertEqual(set(question.people.all()), {self.ada, self.bob})
         self.assertFalse(item.is_client_visible)
         self.assertEqual(item.creator, self.ada)
@@ -290,12 +288,10 @@ class FormsTest(ViewsTestCase):
                 title="Shared too",
                 visible="on",
                 people=[self.ada.pk, self.cleo.pk],
-                remind_after="",
             ),
         )
         item = Item.objects.get(title="Shared too")
         self.assertTrue(item.is_client_visible)
-        self.assertIsNone(item.question.remind_after)
         self.assertIn(self.cleo, item.question.people.all())
 
     def test_a_client_cant_be_asked_on_an_internal_question(self):
@@ -321,7 +317,6 @@ class FormsTest(ViewsTestCase):
             {"repeat": "custom", "custom_rule": "FREQ=HOURLY"},
             {"time_zone": "Mars/Olympus"},
             {"time_of_day": ""},
-            {"remind_after": "0"},
             {"starts_on": ""},
             {"title": ""},
         ]:

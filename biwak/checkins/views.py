@@ -81,13 +81,6 @@ class QuestionForm(Form):
         choices=[(name, name) for name in TIME_ZONES],
         initial=settings.TIME_ZONE,
     )
-    remind_after = forms.IntegerField(
-        label=_("Remind after (hours)"),
-        required=False,
-        min_value=1,
-        initial=ops.DEFAULT_REMIND_AFTER,
-        help_text=_("Those who haven't answered get one reminder; empty: none."),
-    )
     people = forms.ModelMultipleChoiceField(
         label=_("People asked"),
         queryset=User.objects.none(),
@@ -102,7 +95,6 @@ class QuestionForm(Form):
         "starts_on",
         "time_of_day",
         "time_zone",
-        "remind_after",
         "people",
         "visible",
     ]
@@ -191,7 +183,6 @@ def _form_initial(item):
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
         "time_zone": question.time_zone,
-        "remind_after": question.remind_after,
         "people": list(question.people.all()),
     }
 
@@ -214,7 +205,6 @@ def question_new(request, pk):
             starts_on=data["starts_on"],
             time_of_day=data["time_of_day"],
             time_zone=data["time_zone"],
-            remind_after=data["remind_after"],
             people=list(data["people"]),
             visible=data["visible"],
         )
@@ -245,7 +235,6 @@ def question_edit(request, pk):
             starts_on=data["starts_on"],
             time_of_day=data["time_of_day"],
             time_zone=data["time_zone"],
-            remind_after=data["remind_after"],
             people=list(data["people"]),
         )
         return redirect(item)
@@ -470,7 +459,7 @@ def question_skip(request, pk):
     except ValueError:
         messages.error(request, _("You answered already."))
         return redirect(item)
-    messages.success(request, _("Skipped. You won't be reminded this time."))
+    messages.success(request, _("Skipped this time."))
     return redirect(item)
 
 
