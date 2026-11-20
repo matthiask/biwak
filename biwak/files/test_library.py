@@ -182,6 +182,7 @@ class LibraryTest(Fixture, TestCase):
         response = self.client.get(self.private.get_absolute_url())
         self.assertContains(response, "Show to clients")
         self.assertContains(response, "items below it")
+        self.assertContains(response, "visible to 1 client.")
         self.client.post(url, {"visible": "1"})
         self.private.refresh_from_db()
         self.secret_file.refresh_from_db()

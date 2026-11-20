@@ -126,7 +126,8 @@ Microsoft account (decided 2026-11-20).
   never required. Only staff (decided 2026-11-20): clients can't sign in
   with Google even with a matching address; to be built with the API
   gaps of `api-cli.md`.
-- No passwords at first; add them only if somebody really needs them.
+- No passwords at first; add them only if somebody really needs them
+  (allauth's password pages answer 404, `biwak/urls.py`).
 - Sessions last weeks; people can see their sessions and log out
   everywhere.
 - Links in notification mails lead to the item, through the login if

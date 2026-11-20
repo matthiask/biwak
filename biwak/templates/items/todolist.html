@@ -144,7 +144,8 @@
           {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
         </button>
         <span class="text-body-secondary">
-          {% blocktranslate count counter=affected.items with comments=affected.comments %}Makes this list, {{ counter }} to-do and {{ comments }} comments visible to the project's clients.{% plural %}Makes this list, {{ counter }} to-dos and {{ comments }} comments visible to the project's clients.{% endblocktranslate %}
+          {% blocktranslate asvar to_clients count counter=affected.clients %}{{ counter }} client{% plural %}{{ counter }} clients{% endblocktranslate %}
+          {% blocktranslate count counter=affected.items with comments=affected.comments clients=to_clients %}Makes this list, {{ counter }} to-do and {{ comments }} comments visible to {{ clients }}.{% plural %}Makes this list, {{ counter }} to-dos and {{ comments }} comments visible to {{ clients }}.{% endblocktranslate %}
         </span>
       {% endif %}
     </form>

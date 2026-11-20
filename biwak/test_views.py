@@ -1,3 +1,6 @@
+import re
+
+from django.core import mail
 from django.test import TestCase
 
 from biwak.activity.models import Action, Event, Subscription
@@ -148,8 +151,19 @@ class ViewsTest(TestCase):
         ops.add_comment(self.secret_todo, author=self.ada, content="Internal note")
         response = self.client.get(self.internal.get_absolute_url())
         self.assertContains(response, "1 to-do and 1 comments")
+        self.assertContains(response, "visible to 1 client.")
+        Membership.objects.create(
+            project=self.project, user=person("Dora", client=True)
+        )
+        response = self.client.get(self.internal.get_absolute_url())
+        self.assertContains(response, "visible to 2 clients.")
         self.client.post(f"/items/{self.internal.pk}/switch/", {"visible": "1"})
         self.assertIn(self.secret_todo, Item.objects.visible_to(self.cleo))
+
+    def test_switch_only_where_there_is_one(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(f"/items/{self.todo.pk}/switch/", {"visible": "1"})
+        self.assertEqual(response.status_code, 400)
 
     def test_subscribe_without_participating(self):
         Membership.objects.create(project=self.project, user=self.bob)
@@ -210,6 +224,32 @@ class ViewsTest(TestCase):
         for url in ["/accounts/2fa/", "/accounts/sessions/"]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_login_code_leads_back_to_the_item(self):
+        # The link in a notification mail: through the login, back to the item
+        url = self.todo.get_absolute_url()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        response = self.client.post(response["Location"], {"email": "ada@example.org"})
+        code = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", mail.outbox[-1].body)[1]
+        response = self.client.post(response["Location"], {"code": code})
+        self.assertRedirects(response, url, fetch_redirect_response=False)
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_no_passwords(self):
+        # Login is by code and passkeys; allauth's password pages are off
+        self.client.force_login(self.ada)
+        for url in [
+            "/accounts/password/set/",
+            "/accounts/password/change/",
+            "/accounts/password/reset/",
+            "/accounts/password/reset/done/",
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+                self.assertEqual(self.client.post(url, {}).status_code, 404)
+        self.ada.refresh_from_db()
+        self.assertFalse(self.ada.has_usable_password())
 
     def test_add_todo_inline(self):
         self.client.force_login(self.ada)
