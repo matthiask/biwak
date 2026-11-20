@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Sign in faster" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "Sign in faster with a passkey" %}</h1>
+  <div class="row">
+    <div class="col-lg-8">
+      <p>
+        {% blocktranslate trimmed %}
+          A passkey lets you sign in with your fingerprint, face or device PIN, without waiting for a code by mail. You
+          can add one now and remove it later under Passkeys.
+        {% endblocktranslate %}
+      </p>
+      <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <a class="btn btn-primary" href="{% url 'mfa_add_webauthn' %}">{% translate "Add a passkey" %}</a>
+        <button type="submit" class="btn btn-quiet">{% translate "Not now, don't ask again" %}</button>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

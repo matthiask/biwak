@@ -118,14 +118,21 @@ Microsoft account (decided 2026-11-20).
   (allauth's login by code), short-lived and single-use. A code works
   when the mail is read on the phone and the app is open on the laptop,
   which a link doesn't. Invitations work the same way.
-- **Passkeys** (WebAuthn, allauth's MFA module; the offer after the
-  first login is to be built with the API gaps of `api-cli.md`, decided
-  2026-11-20: once, dismissable): offered after the first
-  login, then the fastest way in, without a mail.
+- **Passkeys** (WebAuthn, allauth's MFA module): offered after the first
+  login, then the fastest way in, without a mail. The offer (decided
+  2026-11-20: once, dismissable; built 2026-11-20, `biwak/accounts/passkeys.py`):
+  the first page somebody opens after a login by code leads to
+  `/accounts/passkey-offer/` (and on to where they wanted to go), unless
+  they have a passkey or dismissed it. "Not now, don't ask again" and
+  adding a passkey set `User.passkey_offer_done`, which ends the offer for
+  good; leaving the page any other way means it comes back with the next
+  login by code. Not for passkey or Google logins, API and htmx requests.
 - Staff can also use Google sign-in (allauth's Google provider), but it's
-  never required. Only staff (decided 2026-11-20): clients can't sign in
-  with Google even with a matching address; to be built with the API
-  gaps of `api-cli.md`.
+  never required. Only staff (decided 2026-11-20, built 2026-11-20 in
+  `SocialAccountAdapter.pre_social_login`): clients can't sign in with
+  Google, neither with a matching address nor with a connected account;
+  they're sent back to the login page with a message pointing to codes and
+  passkeys.
 - No passwords at first; add them only if somebody really needs them
   (allauth's password pages answer 404, `biwak/urls.py`).
 - Sessions last weeks; people can see their sessions and log out

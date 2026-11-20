@@ -95,6 +95,58 @@ def project_list(
     return [project_out(project, request.user) for project in projects]
 
 
+class JoinableOut(Schema):
+    id: int
+    name: str
+
+
+@router.get("projects/joinable/", response=list[JoinableOut])
+def project_joinable(request):
+    """Limited projects the person isn't in, which only admins see exist and
+    can join, as on the projects page; empty for everybody else"""
+    return [
+        {"id": p.pk, "name": p.name}
+        for p in project_ops.joinable_projects(request.user).order_by(Lower("name"))
+    ]
+
+
+class ProjectIn(Schema):
+    name: str
+    description: str = ""
+    is_all_access: bool = True
+
+
+@router.post("projects/", response={201: ProjectOut})
+def project_create(request, data: ProjectIn):
+    """Creates the project (staff); the creator becomes a member"""
+    if not project_ops.can_manage_project(request.user):
+        raise HttpError(403, _("Only staff can create projects."))
+    try:
+        project = project_ops.create_project(
+            name=data.name,
+            description=data.description,
+            is_all_access=data.is_all_access,
+            actor=request.user,
+        )
+    except ValidationError as exc:
+        raise HttpError(400, " ".join(exc.messages)) from exc
+    return Status(201, project_out(project, request.user))
+
+
+@router.post("projects/{project_id}/join/", response=ProjectOut)
+def project_join(request, project_id: int):
+    """Staff join the projects they can open, admins also limited ones
+    (recorded as ``joined``); joining twice changes nothing"""
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff can join projects."))
+    if request.user.is_admin:
+        project = get_object_or_404(Project, pk=project_id)
+    else:
+        project = project_for(request, project_id)
+    project_ops.add_member(project, request.user, actor=request.user)
+    return project_out(project, request.user)
+
+
 @router.get("projects/{project_id}/", response=ProjectOut)
 def project_detail(request, project_id: int):
     return project_out(project_for(request, project_id), request.user)
@@ -189,6 +241,19 @@ def member_invite(request, project_id: int, data: InviteIn):
     except project_ops.InvitationError as exc:
         raise HttpError(400, str(exc)) from exc
     return Status(201, member_out(project, user, request.user))
+
+
+@router.delete("projects/{project_id}/members/{person_id}/", response=MemberOut)
+def member_remove(request, project_id: int, person_id: int):
+    """Staff remove anybody, everybody can leave (403 otherwise); returns
+    the person removed"""
+    project = project_for(request, project_id)
+    user = get_object_or_404(User, pk=person_id, memberships__project=project)
+    if user != request.user and not project_ops.can_manage_members(request.user):
+        raise HttpError(403, _("Only staff can remove people."))
+    out = member_out(project, user, request.user)
+    project_ops.remove_member(project, user, actor=request.user)
+    return out
 
 
 class MemberPatch(Schema):

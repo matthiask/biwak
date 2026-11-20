@@ -11,5 +11,6 @@ urlpatterns = [
         name="api_token_delete",
     ),
     path("calendar/", views.calendar_link, name="calendar_link"),
+    path("passkey-offer/", views.passkey_offer, name="passkey_offer"),
     path("cli-login/", views.cli_login, name="cli_login"),
 ]

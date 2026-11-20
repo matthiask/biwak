@@ -13,7 +13,7 @@ from biwak.accounts.models import NotificationLevel, User
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import record, set_level_override
-from biwak.projects.models import Membership
+from biwak.projects.models import Membership, Project
 
 
 def can_manage_members(user):
@@ -170,6 +170,28 @@ def send_invitation(project, user, *, actor):
 def can_manage_project(user):
     """Staff edit and archive projects; clients don't"""
     return user.is_authenticated and not user.is_client
+
+
+@transaction.atomic
+def create_project(*, name, description="", is_all_access=True, actor):
+    """The creator becomes a member (staff only, ``can_manage_project``)"""
+    if not can_manage_project(actor):
+        raise PermissionError("Only staff create projects.")
+    project = Project(
+        name=name.strip(), description=description, is_all_access=is_all_access
+    )
+    project.full_clean()
+    project.save()
+    Membership.objects.create(project=project, user=actor)
+    return project
+
+
+def joinable_projects(user):
+    """Limited projects an admin isn't in: they see that they exist and can
+    join them (specs/access.md); nobody else does"""
+    if not (user.is_authenticated and user.is_admin):
+        return Project.objects.none()
+    return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))
 
 
 @transaction.atomic

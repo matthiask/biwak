@@ -42,8 +42,15 @@ client could see. Not built yet: their own part after the importer
 
 ## Closing the gaps to the web (decided 2026-11-20)
 
-The verification round found what the web does but the API and CLI
-can't; one small part closes it:
+**Built (2026-11-20, CLI 0.17.0; the passkey offer and Google for
+staff only are in `access.md`).** The verification round found what the
+web does but the API and CLI can't; one small part closes it. Built on
+`create_project()` and `joinable_projects()` in `biwak/projects/operations.py`,
+which the web views use too. Choices made on the way: admins list the
+projects they can join with `GET /api/v1/projects/joinable/` (id and name
+only, empty for everybody else) and `biwak projects --joinable`; joining
+twice changes nothing; the DELETE answers with the removed person and 404
+when they aren't a member; creating records no event (as on the web).
 
 - `POST /api/v1/projects/` (staff; the creator becomes a member),
   `biwak project add NAME [--limited]`.

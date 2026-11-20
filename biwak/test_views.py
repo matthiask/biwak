@@ -234,6 +234,16 @@ class ViewsTest(TestCase):
         code = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", mail.outbox[-1].body)[1]
         response = self.client.post(response["Location"], {"code": code})
         self.assertRedirects(response, url, fetch_redirect_response=False)
+        # The passkey offer comes first (biwak/accounts/passkeys.py), then on
+        # to the item
+        response = self.client.get(url)
+        self.assertRedirects(
+            response,
+            f"/accounts/passkey-offer/?next={url}",
+            fetch_redirect_response=False,
+        )
+        response = self.client.post(response["Location"])
+        self.assertRedirects(response, url, fetch_redirect_response=False)
         self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_no_passwords(self):

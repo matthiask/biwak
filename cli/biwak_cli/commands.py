@@ -129,13 +129,27 @@ def me(as_json):
 @json_option
 @click.option("--archived", is_flag=True, help="Archived projects instead.")
 @click.option(
+    "--joinable",
+    is_flag=True,
+    help="Limited projects you're not in instead, which admins can join.",
+)
+@click.option(
     "--order",
     type=click.Choice(["activity", "name"]),
     help="Latest activity first or by name (default: your setting on the web).",
 )
-def projects(as_json, archived, order):
+def projects(as_json, archived, joinable, order):
     """The projects you can open, bookmarked ones (*) first, with the latest
     activity (for clients: of what they see)"""
+    if joinable:
+        data = request("GET", "projects/joinable/")
+        if as_json:
+            return echo_json(data)
+        t = table("ID", "Project")
+        for p in data:
+            t.add_row(str(p["id"]), p["name"])
+        console.print(t)
+        return None
     params = {"archived": archived}
     if order:
         params["order"] = order
@@ -152,6 +166,49 @@ def projects(as_json, archived, order):
             "" if p["is_all_access"] else "limited",
         )
     console.print(t)
+    return None
+
+
+@cli.group()
+def project():
+    """Create and join projects"""
+
+
+@project.command("add")
+@click.argument("name")
+@click.option("--description", default="", help="Markdown.")
+@click.option(
+    "--limited",
+    is_flag=True,
+    help="Only members see it (default: all staff can see it).",
+)
+@json_option
+def project_add(name, description, limited, as_json):
+    """Create the project NAME (staff); you become a member"""
+    data = request(
+        "POST",
+        "projects/",
+        json={"name": name, "description": description, "is_all_access": not limited},
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo(
+        f"Created #{data['id']} {data['name']}"
+        f"{'' if data['is_all_access'] else ' (limited)'}."
+    )
+    return None
+
+
+@project.command("join")
+@click.argument("project_id", metavar="ID", type=int)
+@json_option
+def project_join(project_id, as_json):
+    """Join the project ID: staff all-access ones, admins also limited ones
+    (see `biwak projects --joinable`); recorded in the project"""
+    data = request("POST", f"projects/{project_id}/join/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Joined #{data['id']} {data['name']}.")
     return None
 
 
@@ -200,7 +257,7 @@ def members(project, as_json):
 
 @cli.group()
 def member():
-    """Add and invite people to a project (staff)"""
+    """Add, invite and remove people in a project"""
 
 
 @member.command("add")
@@ -248,6 +305,20 @@ def member_invite(project, email, name, organization, staff, only_tagged, as_jso
         return echo_json(data)
     click.echo("Invited: ", nl=False)
     show_member(data)
+    return None
+
+
+@member.command("remove")
+@click.argument("project", type=int)
+@click.argument("person", type=int)
+@json_option
+def member_remove(project, person, as_json):
+    """Remove the person with ID PERSON from PROJECT; staff remove anybody,
+    everybody can remove themselves (leave)"""
+    data = request("DELETE", f"projects/{project}/members/{person}/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Removed {data['name']} ({data['id']}).")
     return None
 
 
@@ -454,6 +525,47 @@ def todo_edit(todo_id, title, notes, due, assign, attach, repeat, as_json):
     if as_json:
         return echo_json(data)
     show_todo(data)
+    return None
+
+
+@todo.command("move")
+@click.argument("todo_id", metavar="TODO", type=int, required=False)
+@click.option(
+    "--todos",
+    "todo_ids",
+    help="Several to-dos' IDs, comma separated, instead of TODO; they end up"
+    " next to each other in this order.",
+)
+@click.option("--list", "list_id", type=int, required=True, help="The list's ID.")
+@click.option("--group", type=int, help="The group's ID (default: ungrouped).")
+@json_option
+def todo_move(todo_id, todo_ids, list_id, group, as_json):
+    """Move TODO (or --todos) to the end of a list of the same project, into
+    a group or ungrouped"""
+    if bool(todo_id) == bool(todo_ids):
+        terminate("Give either TODO or --todos.")
+    if todo_id:
+        data = [
+            request(
+                "POST",
+                f"todos/{todo_id}/move/",
+                json={"list_id": list_id, "group_id": group},
+            )
+        ]
+    else:
+        try:
+            ids = [int(part) for part in todo_ids.split(",")]
+        except ValueError:
+            terminate("--todos takes IDs separated by commas.")
+        data = request(
+            "POST",
+            f"lists/{list_id}/todos/move/",
+            json={"todo_ids": ids, "group_id": group},
+        )
+    if as_json:
+        return echo_json(data[0] if todo_id else data)
+    for moved in data:
+        click.echo(f"Moved #{moved['id']} {moved['title']}.")
     return None
 
 
