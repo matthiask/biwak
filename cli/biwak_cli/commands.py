@@ -1,5 +1,7 @@
 """The commands; output for people by default, --json for scripts"""
 
+import os
+
 import click
 from rich.console import Console
 from rich.table import Table
@@ -31,6 +33,32 @@ def clients(item):
 
 def names(people):
     return ", ".join(p["short_name"] for p in people)
+
+
+attach_option = click.option(
+    "--attach",
+    "attach",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="A file to attach (at most 100 MB), repeatable; appended to the text.",
+)
+
+
+def with_attachments(project_id, text, paths):
+    """Uploads the files to the project and appends their Markdown to the
+    text; saving the text links them to the item"""
+    if not paths:
+        return text
+    inserted = []
+    for path in paths:
+        with click.open_file(path, "rb") as file:
+            data = request(
+                "POST",
+                f"projects/{project_id}/attachments/",
+                files={"file": (os.path.basename(path), file)},
+            )
+        inserted.append(data["markdown"])
+    return "\n\n".join(part for part in [text.rstrip(), *inserted] if part)
 
 
 def table(*columns):
@@ -200,9 +228,13 @@ def todo_show(todo_id, comments, as_json):
 @click.option("--due", help="YYYY-MM-DD.")
 @click.option("--assign", multiple=True, type=int, help="A person's ID, repeatable.")
 @click.option("--group", type=int, help="The group's ID.")
+@attach_option
 @json_option
-def todo_add(list_id, title, notes, due, assign, group, as_json):
+def todo_add(list_id, title, notes, due, assign, group, attach, as_json):
     """Add a to-do titled TITLE to LIST"""
+    if attach:
+        project_id = request("GET", f"lists/{list_id}/")["project_id"]
+        notes = with_attachments(project_id, notes, attach)
     data = request(
         "POST",
         f"lists/{list_id}/todos/",
@@ -231,14 +263,22 @@ def todo_add(list_id, title, notes, due, assign, group, as_json):
     type=int,
     help="Replaces the assignees, repeatable; --assign 0 removes all.",
 )
+@attach_option
 @json_option
-def todo_edit(todo_id, title, notes, due, assign, as_json):
-    """Change TODO"""
+def todo_edit(todo_id, title, notes, due, assign, attach, as_json):
+    """Change TODO; --attach appends to the notes (or to --notes)"""
     changes = {}
     if title is not None:
         changes["title"] = title
     if notes is not None:
         changes["notes"] = notes
+    if attach:
+        current = request("GET", f"todos/{todo_id}/")
+        changes["notes"] = with_attachments(
+            current["project_id"],
+            current["notes"] if notes is None else notes,
+            attach,
+        )
     if due is not None:
         changes["due_on"] = None if due == "none" else due
     if assign:
@@ -279,14 +319,16 @@ def todo_reopen(todo_id, as_json):
 @todo.command("comment")
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.argument("text", required=False)
+@attach_option
 @json_option
-def todo_comment(todo_id, text, as_json):
+def todo_comment(todo_id, text, attach, as_json):
     """Comment on TODO; TEXT (Markdown) or standard input"""
     if text is None:
         text = click.get_text_stream("stdin").read()
     item = request("GET", f"todos/{todo_id}/")
     if item["visible_to_clients"]:
         click.secho("Clients can see this comment.", fg="yellow", err=True)
+    text = with_attachments(item["project_id"], text, attach)
     data = request("POST", f"items/{todo_id}/comments/", json={"content": text})
     if as_json:
         return echo_json(data)

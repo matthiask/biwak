@@ -6,11 +6,13 @@ from unittest.mock import patch
 
 import biwak_cli
 from click.testing import CliRunner
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 
 from biwak.accounts.models import APIToken
+from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Item
+from biwak.items.models import Comment, Item
 from biwak.test_utils import person, project
 
 
@@ -49,10 +51,21 @@ class CLITest(TestCase):
             project=self.project, title="Launch", creator=self.ada, visible=True
         )
 
-    def request(self, method, url, *, headers, timeout, params=None, json=None):
+    def request(
+        self, method, url, *, headers, timeout, params=None, json=None, files=None
+    ):
         path = urllib.parse.urlsplit(url).path
         if method == "GET":
             response = self.api_client.get(path, params, headers=headers)
+        elif files:
+            response = self.api_client.post(
+                path,
+                {
+                    field: SimpleUploadedFile(name, file.read())
+                    for field, (name, file) in files.items()
+                },
+                headers=headers,
+            )
         else:
             response = getattr(self.api_client, method.lower())(
                 path, json, content_type="application/json", headers=headers
@@ -117,3 +130,31 @@ class CLITest(TestCase):
     def test_logout(self):
         self.biwak("logout")
         self.assertFalse(APIToken.objects.exists())
+
+    def test_attach(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        plan = Path(directory.name) / "plan.pdf"
+        plan.write_bytes(b"%PDF-1.7")
+        sketch = Path(directory.name) / "sketch.png"
+        sketch.write_bytes(b"\x89PNG\r\n")
+
+        result = self.biwak(
+            "todo", "add", self.list.pk, "Pitch the tent", "--attach", plan, "--json"
+        )
+        data = json.loads(result.stdout)
+        attachment = Attachment.objects.get()
+        self.assertEqual(attachment.item_id, data["id"])
+        self.assertEqual(data["notes"], f"[plan.pdf](attachment:{attachment.key})")
+
+        self.biwak("todo", "edit", data["id"], "--attach", sketch)
+        notes = Item.objects.get(pk=data["id"]).todo.notes
+        self.assertIn("[plan.pdf]", notes)
+        self.assertIn("![sketch.png]", notes)
+
+        self.biwak(
+            "todo", "comment", data["id"], "Both", "--attach", plan, "--attach", sketch
+        )
+        comment = Comment.objects.get()
+        self.assertTrue(comment.content.startswith("Both\n\n[plan.pdf](attachment:"))
+        self.assertEqual(Attachment.objects.filter(item_id=data["id"]).count(), 4)
