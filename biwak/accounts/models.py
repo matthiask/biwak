@@ -14,12 +14,12 @@ def verify_email(user):
     """The person's address as allauth's verified primary address: codes
     and invitations go there, so it's proven, and allauth only confirms
     who someone is (before adding a passkey) by codes to verified
-    addresses; without one it answers 403 (no passwords here)"""
+    addresses; without one it answers 403 (no passwords here). A changed
+    address replaces the old one: it doesn't log in anymore and can be
+    given to somebody else"""
     from allauth.account.models import EmailAddress
 
-    EmailAddress.objects.filter(user=user).exclude(email__iexact=user.email).update(
-        primary=False
-    )
+    EmailAddress.objects.filter(user=user).exclude(email__iexact=user.email).delete()
     EmailAddress.objects.update_or_create(
         user=user,
         email__iexact=user.email,

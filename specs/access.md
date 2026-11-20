@@ -134,7 +134,11 @@ Microsoft account (decided 2026-11-20).
   is before adding a passkey, and without passwords that's a code by mail,
   which it only sends to verified addresses; without one, adding a
   passkey later than five minutes after logging in answered 403 (fixed
-  2026-11-20).
+  2026-11-20). A changed address replaces the old one (decided 2026-11-20
+  after the second visibility review): the old one doesn't log in by code
+  anymore and can be given to somebody else; before, it stayed verified,
+  logged in, and inviting somebody with it answered 500. Migration
+  `accounts.0008` deletes old addresses left behind.
 - Staff can also use Google sign-in (allauth's Google provider), but it's
   never required. Only staff (decided 2026-11-20, built 2026-11-20 in
   `SocialAccountAdapter.pre_social_login`): clients can't sign in with
