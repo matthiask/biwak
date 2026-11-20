@@ -31,3 +31,8 @@ if (document.querySelector("[data-doc-lock]")) {
 if (document.querySelector("[data-sortable-links]")) {
   import(/* webpackChunkName: "links" */ "./links.js")
 }
+
+// SPIKE: docs edited together
+if (document.querySelector("[data-collab]")) {
+  import(/* webpackChunkName: "collab" */ "./collab.js")
+}

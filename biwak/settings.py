@@ -34,6 +34,7 @@ DEBUG_TOOLBAR = DEBUG and not TESTING
 INSTALLED_APPS = [
     a
     for a in [
+        "daphne" if DEBUG and not TESTING else "",
         "biwak",
         "django.contrib.admin",
         "django.contrib.auth",
@@ -62,6 +63,8 @@ INSTALLED_APPS = [
         "biwak.search",
         "biwak.inbound",
         "biwak.audit",
+        "channels",
+        "biwak.collab",
         "debug_toolbar" if DEBUG_TOOLBAR else "",
     ]
     if a
@@ -129,6 +132,8 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "biwak.urls"
 WSGI_APPLICATION = "wsgi.application"
+ASGI_APPLICATION = "asgi.application"
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 TEMPLATES = [
     {

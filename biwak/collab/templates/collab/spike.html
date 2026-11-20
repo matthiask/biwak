@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>{{ item.title }}</h1>
+  <div
+    data-collab="{{ item.pk }}"
+    data-name="{{ request.user.get_short_name }}"
+    {% if hocuspocus %}data-hocuspocus="ws://127.0.0.1:1234"{% endif %}
+    data-readonly="{{ readonly|yesno:'1,0' }}"
+  >
+  </div>
+{% endblock content %}

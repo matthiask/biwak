@@ -33,6 +33,15 @@ urlpatterns = [
     path("", include("biwak.checkins.urls")),
     path("", include("biwak.search.urls")),
     path("", include("biwak.inbound.urls")),
+    path("docs/<int:pk>/spike/", __import__("biwak.collab.views").collab.views.spike),
+    path(
+        "collab/hp/<int:pk>/auth/",
+        __import__("biwak.collab.views").collab.views.hp_auth,
+    ),
+    path(
+        "collab/hp/<int:pk>/content/",
+        __import__("biwak.collab.views").collab.views.hp_content,
+    ),
     path("api/v1/", api.urls),
     path("accounts/", include("biwak.accounts.urls")),
     re_path(r"^accounts/password/", no_passwords),
