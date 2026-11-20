@@ -43,7 +43,7 @@ In scope:
 4. A chronological list of to-dos by due date, filterable, per project
    and across projects ("my to-dos").
 5. Message boards with comments.
-6. Docs (rich text) and uploaded files in folders; later, docs edited
+6. Docs (Markdown) and uploaded files in folders; later, docs edited
    together in real time.
 7. Check-ins: questions asked on a schedule, answers collected with
    comments.
@@ -80,8 +80,10 @@ htmx, sortable lists, mentions, modals, daily and hourly tasks, one
 frontend bundle (rspack). English first, German at the end of the build
 (texts are marked for translation from the start).
 
-Files go through Django's storage API: S3-compatible object storage by
-default, other backends possible (`specs/files.md`).
+Files go through Django's storage API: local disk in development, an
+S3-compatible bucket when deployed, chosen by settings
+(`specs/files.md`). Mail goes out and comes in through Resend
+(`specs/notifications.md`).
 
 No real data in this repository: tests and examples use made-up projects,
 people and clients.
@@ -133,30 +135,38 @@ containers, checked in one place (`specs/access.md`).
 
 ## Build order
 
-The core has to exist before parts can be built in parallel; everything
-depends on items, visibility, events and subscriptions.
+The core has to exist before anything else; some parts need pieces of
+others, so the order below is fixed. Each step is one branch, merged
+before the steps that depend on it. `AGENTS.md` has the checklist every
+part follows; each spec has a "Done when" list and says whether it suits
+a cheaper model ("Agent").
 
-1. **Core, one agent, in order:** `specs/core.md` (projects, items,
-   lists, groups, to-dos, ordering), `specs/access.md` (visibility and
-   login), events and subscriptions from `specs/notifications.md` (without
-   mails yet).
-2. **Then in parallel**, each in its own worktree and branch, merged one
-   at a time:
-   - `specs/todos.md`: assignees, recurrence, board view, the
-     chronological list
-   - `specs/notifications.md`: mails, levels, digests, replying by mail
-   - `specs/checkins.md`
-   - `specs/files.md`: messages' attachments, docs, uploads, folders,
-     storage
-   - `specs/feed.md`: activity feed, bookmarks, links
-   - `specs/api-cli.md`: grows with each part, but its foundations
-     (auth, conventions) come early
-   - `specs/import-basecamp.md`
-3. **Last and separately:** `specs/collaboration.md` (real-time editing,
-   brings websockets and ASGI).
+1. **Core** (done 2026-11-20): `core.md`, `access.md`, events and
+   subscriptions from `notifications.md`, the API foundations from
+   `api-cli.md`.
+2. **Shared foundations, one after another**, because later parts build
+   on them:
+   1. `notifications.md`, stage 1: mentions, levels, outgoing mails,
+      digests.
+   2. `files.md`, stage 1: storage, uploads, attachments in texts,
+      downloads.
+   3. `todos.md`, stage 1: schedules (`biwak/schedules.py`) and
+      recurring to-dos.
+3. **In parallel:**
+   - `todos.md`, stage 2: the list by due date, the iCal feed.
+   - `files.md`, stage 2: message board, folders, docs with versions,
+     file pages, previews.
+   - `feed.md`: activity feed, item history, bookmarks, links.
+4. `checkins.md` (needs schedules, mails and attachments).
+5. `notifications.md`, stage 2: replying by mail, to comments and to
+   check-in questions (a strong model: sender checks and mail loops are
+   easy to get subtly wrong).
+6. `import-basecamp.md` (needs every kind of item).
+7. **Last and separately:** `collaboration.md` (real-time editing,
+   brings websockets and ASGI), then the German translation.
 
-German translations come last, after the parallel parts: the texts
-change too much while exploring.
+Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
+same branch.
 
 Before the first client gets a login, a separate review of the
 visibility checks (another person, or a fresh agent given only the code
@@ -191,3 +201,19 @@ and `specs/access.md`).
   visibility check needs no recursive query.
 - 2026-11-20: Translations postponed to the end; texts are marked with
   `gettext` but there's no German catalog until then.
+- 2026-11-20: Resend sends and receives mail: it reports SPF, DKIM and
+  DMARC results for incoming mail, which the sender check of replies
+  needs; Brevo's inbound parsing doesn't. Providers stay behind one
+  interface.
+- 2026-11-20: Files on local disk by default, an S3-compatible bucket
+  through settings; the first deployment uses the bucket.
+- 2026-11-20: One list of message categories for the installation,
+  edited by admins.
+- 2026-11-20: Notification mails about 2 minutes after the last change
+  to an item (merging quick edits), digests at 07:00.
+- 2026-11-20 (proposed when tightening the specs, change them there if
+  wrong): reply tokens valid 6 months; files up to 100 MB; a doc
+  version per 10 minutes or author; doc locks expire 5 minutes after
+  the last renewal; check-in reminders after 24 hours; answers to
+  check-ins as one summary mail by default; links internal by default;
+  previews made on first request.

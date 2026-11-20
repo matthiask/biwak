@@ -1,5 +1,8 @@
 # API, CLI and agent skills
 
+**Status:** the foundations are built (2026-11-20, see "Order" below);
+each part adds its endpoints and commands.
+
 API first: everything the web interface does is possible through the API
 (decided 2026-11-20). Conventions copied from Governance and Workbench.
 

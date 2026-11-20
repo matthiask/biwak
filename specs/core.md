@@ -1,5 +1,8 @@
 # Core: projects, items, lists, groups, to-dos
 
+**Status:** built (2026-11-20), including editing, archiving, the
+trash, moving without dragging and several to-dos at once.
+
 Everything else builds on this. Built first, by one agent, before any part
 in parallel. See `SPEC.md` for the model overview.
 
@@ -28,7 +31,7 @@ Delegated types, like Basecamp's recordings and recordables (decided
 - **One detail model per kind**, one-to-one with its item (primary key =
   the item's): `List` (description, view), `Todo` (notes, group,
   position in group, due and start date, completion, assignees,
-  recurrence), `Message`, `Folder`, `Doc` (rich text), `Upload` (blob,
+  recurrence), `Message`, `Folder`, `Doc` (Markdown), `Upload` (blob,
   size, content type, versions), `Question`, `Answer`. Creating and
   deleting go through one function per kind that writes both rows.
 - Comments, events, subscriptions, bookmarks and links have a foreign key
@@ -98,7 +101,7 @@ formatting buttons can come later, as long as it writes Markdown.
 
 ## To-dos
 
-Title, notes (rich text), assignees, due date (optional start date),
+Title, notes (Markdown), assignees, due date (optional start date),
 completed (when, by whom), comments, attachments. Assignees, recurrence,
 the board view and the chronological list are in `todos.md`; the core
 only needs the fields.

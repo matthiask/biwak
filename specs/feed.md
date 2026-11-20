@@ -1,34 +1,65 @@
-# Activity feed, bookmarks, links
+# Activity feed, item history, bookmarks, links
+
+**Status:** open. The project page shows its latest 20 events
+(`activity/_events.html`), nothing more.
+
+**Agent:** suits a cheaper model following this spec and the checklist
+in `AGENTS.md`.
+
+**Depends on:** the core only. Items of later parts (messages, files,
+check-ins) show up in the feed as soon as they record events.
 
 ## Activity feed
 
-From the events (`notifications.md`):
+From the events (`biwak/activity/`, `notifications.md`):
 
-- **Per project**, **per person** (what someone did) and **across
-  everything** a person can see.
-- Grouped by day, consecutive events on the same item merged ("Ada
-  completed 5 to-dos in Website relaunch").
-- Filters: type of item, person, visible to clients.
-- Visibility applies to every entry (`access.md`); a client's feed only
-  shows what they can see now.
-- Paginated by time, fast on hundreds of thousands of events.
+- **Pages:** `/feed/` (everything the person can see, in the
+  navigation), `/projects/<pk>/feed/` (the project page keeps its short
+  version with a link), `/people/<pk>/feed/` (what someone did, within
+  what the viewer can see).
+- **Grouped by day** (in `TIME_ZONE`), newest first. Consecutive events
+  by the same person with the same action in the same list or project
+  within an hour are merged into one entry ("Ada completed 5 to-dos in
+  Website relaunch", expandable to the single to-dos).
+- **Filters** as query parameters: kind of item, person, action, visible
+  to clients.
+- **Visibility:** every entry through `Event.objects.visible_to()`; a
+  client's feed only shows what they can see now. Events of trashed
+  items are hidden; of items deleted for good, gone.
+- **Paginated** by time with a cursor (`?before=<timestamp,id>`), 50
+  events a page, fast on hundreds of thousands of events: check the
+  query plan uses the `(project, -created_at)` index, add one on
+  `(-created_at)` if needed.
+- Rendering per action in one template (`activity/_event.html`) with the
+  event's `data` (title at the time, assignees, where it moved), so
+  later parts only add their actions there.
 
 ## Item history
 
 The audit log (`biwak/audit/`, a database trigger on the main tables,
 copied from Governance) records every change with who made it. Like
-Governance's history (`governance/history/`), a page per item condenses
-it into something readable: who changed the title, the notes, the
-assignees, the due date or the visibility, and when, with the old and new
-values. Events say what happened; the history shows the details. Only
-what the person could see at the time: the history goes through the same
-visibility check as everything else.
+Governance's history (`~/projects/sites/governance/governance/history/`,
+read its `audit.py` first), a page per item condenses it into something
+readable:
+
+- `/items/<pk>/history/`, linked from the to-do's (and later every
+  item's) page: who changed the title, the notes, the assignees, the due
+  date, the group or list and the visibility, and when, with the old and
+  new values (texts as a diff, `difflib`).
+- Read from `LoggedAction` rows of the item's tables (`items_item`, its
+  detail table, `items_todo_assignees`) by primary key; people from the
+  audit's user name (`audit_user_id()`).
+- Events say what happened; the history shows the details. Only for
+  people who can see the item now (the item through `item_for()`).
 
 ## Bookmarks
 
-Any item or project, per person, private. A list of one's bookmarks,
-newest first, with the item's current title and project. Bookmarked items
-show a marker.
+- `Bookmark(user, item null, project null, created_at)`, one of the two
+  set, unique per person and target; private.
+- A bookmark button (an icon, `bookmark` and `bookmark-fill`) on every
+  item's and project's page; `/bookmarks/`, newest first, with the
+  item's current title, kind and project. Bookmarks of items the person
+  can't see any more are hidden, not deleted.
 
 ## Links
 
@@ -36,10 +67,33 @@ Links to outside tools on a project or on any item: Figma files,
 repositories and issues, Google Drive documents, staging and production
 sites, a project in a time tracking or accounting tool.
 
-- URL, title, kind. The kind is recognised from the URL for an icon
-  (a small table of known hosts, everything else "link").
-- Shown prominently on the project page, in order, editable by staff.
-- Internal by default; can be made visible to clients.
+- `Link(project, item null, url, title, kind, position,
+  visible_to_clients, created_by, created_at)`.
+- **Kind** from the URL's host by a small table in `biwak/links.py`
+  (figma.com: Figma, github.com: GitHub, gitlab.com: GitLab,
+  docs.google.com and drive.google.com: Google Drive, everything else:
+  link), each with an icon.
+- **Shown** prominently at the top of the project page, in order
+  (draggable for staff), and on items under their title. Staff add,
+  edit, reorder and delete links; clients see those visible to clients
+  (default: internal, decided 2026-11-20; a link on a visible item is
+  still internal unless switched).
 - Later and only where useful: integrations per kind fetching live data
-  (title and preview by oEmbed, an issue's state, a budget). No tool is
+  (title and preview by oEmbed, an issue's state). No tool is
   hard-coded into the core.
+
+## API and CLI
+
+`GET /api/v1/feed/` (with the filters, cursor-paginated; also per
+project and person), `GET /api/v1/items/{id}/history/`, bookmarks (list,
+add, remove), links (list, create, update, delete, reorder). `biwak feed
+[--project ID] [--since DATE]`, `biwak bookmarks`, `biwak links PROJECT`.
+
+## Done when
+
+Pages, API and CLI for all of the above. Tests: merging (and not merging
+across lists, people or hours), the day grouping around midnight,
+filters, a client's feed without internal events, events of trashed
+items hidden, the history of a to-do with title, notes, assignee and
+visibility changes, bookmarks of items that became invisible, links'
+visibility.

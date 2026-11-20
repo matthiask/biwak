@@ -2,54 +2,114 @@
 
 Builds on `core.md` and `access.md`.
 
-## Assignees
+**Status:** assignees, the board view, moving several to-dos at once and
+adding to-dos inline are built (core, 2026-11-20). Stage 1 (schedules
+and recurrence) and stage 2 (the list by due date, the iCal feed) are
+open.
 
-- Any number of people, staff and clients (clients only on visible
-  to-dos).
-- Completing a to-do completes it for all assignees; who completed it is
-  recorded (decided 2026-11-20).
-- Assigning subscribes the assignee and notifies them.
+**Agent:** both stages suit a cheaper model following this spec and the
+checklist in `AGENTS.md`.
 
-## Recurrence
+## Built
 
-- A rule (RRULE, `python-dateutil`): "every Monday", "first Monday of the
-  month", "every 3 months", "the 15th of every quarter". A small set of
-  presets in the interface plus a custom rule.
-- When the to-do is completed, the next one is created in the same place
-  with the same title, notes, assignees and subscribers, due on the next
-  date of the rule after today (decided 2026-11-20). Never a stack of
-  open copies.
+- **Assignees:** any number, staff and clients (clients only on visible
+  to-dos, `assignable_people()`); completing completes for everybody and
+  records who did it; assigning subscribes the assignee. Notifying them
+  is `notifications.md`.
+- **Board view:** a list's groups as columns, ungrouped to-dos in a first
+  column shown only when there are any; a per-list setting (list or
+  board) with `?view=` to switch; dragging between columns is the same
+  operation as in the list (`move_todos()`).
+- **Adding inline:** "Add a to-do" opens a form in place with title,
+  notes, assignees and due date; Ctrl+Enter adds and starts the next
+  one, Escape or a click elsewhere closes (`frontend/add-todo.js`).
+- **Moving several at once:** clicking grips selects to-dos, dragging one
+  moves them all; "Move to…" on the to-do's page for the keyboard.
+
+## Stage 1: schedules and recurring to-dos
+
+### Schedules
+
+A small module of its own, `biwak/schedules.py`, used here and by
+check-ins (`checkins.md`):
+
+- A rule as an RRULE string (`python-dateutil`), validated on save.
+- `next_date(rule, after, tz)`: the next date of the rule after a date,
+  in the installation's time zone (`TIME_ZONE`); check-ins add a time of
+  day.
+- Presets for the forms, each with a human description: every weekday,
+  every week on a chosen day, every two weeks, every month on the same
+  day, the first (or last) weekday of the month, every three months,
+  every year. Plus "custom": the RRULE typed in, for agents and power
+  users.
+- `describe(rule)`: a short English text ("every Monday", "the first
+  Monday of every month") for pages and the API.
+
+### Recurring to-dos
+
+- **Model:** `Todo.recurrence` (the RRULE, empty for none),
+  `recurrence_ends_on` (date, optional), `recurrence_count` (how many are
+  left, optional), `previous` (the to-do it was created from).
+- **Completing** a recurring to-do creates the next one in the same list
+  and group, at the end, with the same title, notes, assignees and
+  subscribers and the same rule, due on the rule's next date after
+  today (decided 2026-11-20). Never a stack of open copies. Through
+  `complete()`, in the same transaction, with its own `created` event.
 - Comments and attachments stay with the completed to-do; the new one
-  links to the previous one.
-- Ending the recurrence: an end date, a count, or removing the rule.
+  links to it ("Previous: completed on 3 March by Ada").
+- **Ending:** an end date (no next one after it), a count (each next one
+  has one less; none at zero), or removing the rule. Reopening the
+  completed to-do doesn't remove the next one already created.
+- **Form:** on the to-do's page and in the inline form, a "Repeat"
+  select with the presets, "custom", and the end options.
 
-## Board view
+### API and CLI
 
-- A list can be shown as a board: its groups as columns, to-dos as cards,
-  ungrouped to-dos in a first column (decided 2026-11-20: no separate
-  boards, no deeper structure).
-- Dragging a card to another column moves the to-do into that group, the
-  same operation as in the list view.
-- The view is a per-list setting (list or board), with a toggle for each
-  person.
+`recurrence`, `recurrence_description`, `recurrence_ends_on`,
+`recurrence_count` and `previous_id` on `TodoOut`, writable in
+create and patch. `biwak todo add|edit --repeat RULE` (a preset name or
+an RRULE).
 
-## Chronological list
+### Done when (stage 1)
 
-Instead of a calendar: to-dos by due date, grouped into overdue, today,
-this week, later and no date.
+Tests: month ends (31st, every month), leap years (29 February every
+year), the last weekday of the month, time zone and daylight saving
+changes around midnight, completing the last occurrence (count and end
+date), reopening, the next one's assignees and subscribers, a client
+completing a recurring visible to-do.
 
-- Per project and across all projects; "my to-dos" is the same list
-  filtered by assignee.
-- Filters: project, assignee, list, completed or not, visible to clients.
-- An iCal feed per person of their to-dos' due dates (a secret URL,
-  revocable).
+## Stage 2: the list by due date
 
-## Tests
+Instead of a calendar: open to-dos by due date, grouped into overdue,
+today, this week (until Sunday), later and no date.
 
-Recurrence across month ends, leap years and time zones; completing the
-last occurrence; moves between groups in board and list view giving the
-same result.
+- `/todos/` across all projects the person can see, `/projects/<pk>/todos/`
+  per project; "My to-dos" (`/todos/?assignee=me`) in the navigation.
+- Filters as query parameters, the form submitting with GET: project,
+  assignee (anybody, me, a person, nobody), list, open or completed
+  (completed: the latest first, paginated), visible to clients or not.
+- Each row: the to-do with its checkbox (completing works here too),
+  project, list, assignees, due date, the client badge.
+- Through `Item.objects.visible_to()` like everything else.
 
-## Adding to dos from the list
+### iCal feed
 
-Adding to dos from the list should directly open the form inline which allows selecting assignees, a due date, and not just the title but also the body of the to do text. Ctrl-Enter submits the form and directly jumps to a new to do form for adding another one. Escape or clicking somewhere else closes the inline form.
+- Per person, their assigned open to-dos with a due date as all-day
+  events (`icalendar` package), at `/calendar/<token>.ics`.
+- The token is secret, shown on `/accounts/calendar/` with "Copy" and
+  "Make a new link" (the old one stops working). Model:
+  `CalendarToken(user, token unique, created_at)`.
+- No login needed for the feed URL; it shows only what the person can
+  see now. Inactive people's feeds are empty.
+
+### API and CLI
+
+`GET /api/v1/todos/?…` with the same filters and grouping key per to-do,
+cursor-paginated. `biwak todos --mine|--project ID|--due …` across
+projects (the existing `biwak todos LIST` stays).
+
+### Done when (stage 2)
+
+Pages, filters, API, CLI, the feed. Tests: the grouping around midnight
+and week ends (time zone), filters, a client seeing only visible to-dos,
+the feed with a revoked token (404) and for a person who lost access.

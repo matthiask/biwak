@@ -1,5 +1,7 @@
 # Real-time collaborative editing
 
+**Status:** open, last (`SPEC.md`). **Agent:** a strong model.
+
 Several people writing in the same doc at the same time, above all for
 meeting notes. No office suite. Built last and separately: it brings
 websockets and ASGI into an otherwise plain Django app.
@@ -8,15 +10,17 @@ websockets and ASGI into an otherwise plain Django app.
 
 Use an existing CRDT library, nothing homegrown:
 
-- **Yjs** in the browser, with the editor's binding (ProseMirror/Tiptap or
-  whichever editor `core.md` chose), cursors and names of the others
-  (awareness), offline edits merged on reconnect.
+- **Yjs** in the browser, bound to a plain-text Markdown editor
+  (CodeMirror 6 with `y-codemirror.next`): docs are Markdown
+  (decided 2026-11-20), so the shared document is the Markdown text
+  itself. Cursors and names of the others (awareness), offline edits
+  merged on reconnect.
 - Server side either **`pycrdt` / `pycrdt-websocket`** (Yjs-compatible,
   Python) with Django Channels, or a small **Hocuspocus** (Node) service
   that only syncs and stores through the API. Decide with a spike; write
   the choice here.
-- Store the Yjs state, and on a debounce the derived HTML and Markdown for
-  search, mails, the API and agents. Agents edit through the API, which
+- Store the Yjs state, and on a debounce the Markdown in `Doc.content`
+  for search, mails, the API and agents. Agents edit through the API, which
   applies their change as a Yjs update.
 - Versions as snapshots (`files.md`), not keystrokes; one event per
   editing session ("Ada edited the notes").

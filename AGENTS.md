@@ -46,14 +46,68 @@ from Workbench directly (GPLv3).
 
 # Working on a part
 
-- One part per branch and worktree (`specs/<part>.md`); the core
-  (`core.md`, `access.md`, events and subscriptions) is done first and in
-  order, see "Build order" in `SPEC.md`.
+- One part per branch and worktree (`specs/<part>.md`), in the order of
+  "Build order" in `SPEC.md`; a part's spec says what it depends on.
 - Small commits, each with tests, docs and spec changes together.
 - Questions the spec doesn't answer go to the user; write the answer into
-  the spec.
+  the spec. Don't invent product decisions: values the spec doesn't fix
+  (durations, limits, wording of states) are questions too.
 - Anything touching visibility (`specs/access.md`) needs tests through
   every entry point: views, feed, search, mails, mail replies, API.
+
+## Building a part: the checklist
+
+What every part does the same way. Look at how the core does it
+(`biwak/items/`, `biwak/projects/`) and copy the pattern.
+
+1. **Models.** New kinds of items are an `Item` kind plus a detail model
+   sharing its primary key (`Detail` in `biwak/items/models.py`); add the
+   kind to `Kind`, `ALLOWED_PARENTS`, `SWITCHABLE` and `COMMENTABLE` as
+   the spec says. Things that aren't items (bookmarks, links, mail
+   tokens) get a foreign key to `Item` or `Project`. Texts are Markdown
+   in a `TextField`, never HTML.
+2. **Operations.** Every change goes through a function in the app's
+   `operations.py`, `@transaction.atomic`, which also records the event
+   (`biwak.activity.operations.record`) and subscriptions. Views, the
+   API, mail replies and the importer call these functions; they never
+   save items themselves.
+3. **Visibility.** Every query for items goes through
+   `Item.objects.visible_to(user)` (views: `item_for()` in
+   `biwak/items/views.py`, API: `item_for()` in `biwak/items/api.py`);
+   projects through `Project.objects.accessible_to(user)`. Something
+   pointing at an item is visible exactly when its item is. New items
+   get their stored visibility with `visibility.recompute(item)` in the
+   creating operation.
+4. **Who may change what.** Staff change everything they see; clients
+   create where they can see and change only what they created
+   (`ops.can_change()`). Visibility switches are staff only.
+5. **Pages.** Server-rendered templates extending `base.html`, the
+   client badge (`{% client_badge item %}`) on everything visible to
+   clients and the banner (`items/_client_banner.html`) above forms on
+   visible items. Icons with `{% icon %}`; a new icon goes into
+   `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
+   only for interaction, in `frontend/`, loaded from `main.js`.
+6. **API.** Endpoints in the app's `api.py`, registered in
+   `biwak/api.py`, following `biwak/api_conventions.py`
+   (`visible_to_clients` on every item, Markdown plus `*_html`, cursor
+   pagination for lists that grow). Same operations as the pages.
+7. **CLI.** Commands in `cli/biwak_cli/commands.py` with `--json`; mark
+   what clients can see with `[clients]`. Bump `cli/pyproject.toml`'s
+   version.
+8. **Audit log.** New tables people change get `audit_tables()` in a
+   migration (`biwak/audit/migrations/0002_audited_tables.py` shows how).
+9. **Daily or hourly work** goes into `fairy_tasks` (daily) or an
+   `hourly_tasks` command; nothing runs in threads or on requests.
+10. **Mails** go out after the transaction commits
+    (`transaction.on_commit`), never inside it.
+11. **Tests.** Django tests next to the code (`test_*.py`): the
+    operations, every page and endpoint as staff and as a client
+    (including a client getting 404 for internal items), the CLI
+    commands (`biwak/test_cli.py`). Made-up data from
+    `biwak/test_utils.py`. No browser tests.
+12. **Done** means: the spec's "Done when" list is true, `./runtests.sh`
+    passes, `uvx prek run --all-files` is clean, and the spec says what
+    was built (a "Status" line) and any decisions made on the way.
 
 # Fixing bugs
 

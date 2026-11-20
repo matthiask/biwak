@@ -1,5 +1,8 @@
 # Access: client visibility and login
 
+**Status:** built (2026-11-20). The separate review of the visibility
+checks is still due before the first client gets a login.
+
 The most delicate part of the app: a bug here shows internal content to a
 client. One function decides visibility, everything uses it, and the
 tests are thorough. Built in the core phase; reviewed separately before
@@ -51,7 +54,7 @@ and review, no recursive query on the hot path.
 - It's recomputed for the subtree (django-tree-queries, `core.md`)
   whenever a switch changes, an item moves, or an item is created, in the
   same transaction.
-- Comments, files attached to rich text and events follow their item.
+- Comments, files attached to texts and events follow their item.
 - Drift is the risk: tests compare the stored value with the value
   computed from the tree after every kind of change, and a management
   command (`check_visibility`) does the same on real data, also run
