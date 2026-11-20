@@ -20,7 +20,10 @@ the first client gets a login.
     finances, some client projects).
   - Admins see the list of all projects, including limited ones, and can
     add themselves; that's recorded as an event in the project. They
-    don't see a limited project's content without joining.
+    don't see a limited project's content without joining. The
+    memberships are read-only in the Django admin, so that joining always
+    goes through the app and its event (decided 2026-11-20 after the
+    visibility review).
 - **Staff** with access to a project see everything in it.
 - **Clients** are never covered by all-access: they see a project only
   if they're members, and in it only what
