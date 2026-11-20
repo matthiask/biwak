@@ -12,6 +12,7 @@ biwak todos LIST
 biwak todos --mine --due overdue
 biwak todo add LIST "Order the tent" --due 2026-12-01 --assign 3
 biwak todo comment TODO "The plan" --attach plan.pdf   # --attach is repeatable
+biwak react TODO 👍                    # again removes it; --comment ID for a comment
 biwak todo done TODO
 biwak notifications --level concerns_me --delivery digest
 ```

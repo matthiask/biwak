@@ -237,6 +237,14 @@ def todo():
     """Show, add, change, complete and comment on to-dos"""
 
 
+def show_reactions(reactions):
+    """``👍 2 (Ada, Bob), Thanks! 1 (Cleo)``, yours marked with *"""
+    return ", ".join(
+        f"{r['content']} {r['count']}{'*' if r['mine'] else ''} ({names(r['people'])})"
+        for r in reactions
+    )
+
+
 def show_todo(data):
     marker = " [clients]" if data["visible_to_clients"] else ""
     done = " (completed)" if data["completed_at"] else ""
@@ -247,6 +255,7 @@ def show_todo(data):
         ("Due", data["due_on"]),
         ("Repeats", data.get("recurrence_description")),
         ("Repeats until", data.get("recurrence_ends_on")),
+        ("Reactions", show_reactions(data.get("reactions", []))),
         ("URL", data["url"]),
     ]:
         if value:
@@ -270,6 +279,8 @@ def todo_show(todo_id, comments, as_json):
     for comment in data.get("comments", []):
         click.echo(f"\n{comment['author']['name']}, {comment['created_at'][:16]}:")
         click.echo(comment["content"])
+        if comment.get("reactions"):
+            click.echo(f"Reactions: {show_reactions(comment['reactions'])}")
     return None
 
 
@@ -390,6 +401,33 @@ def todo_comment(todo_id, text, attach, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Commented on #{todo_id}.")
+    return None
+
+
+@cli.command()
+@click.argument("todo_id", metavar="TODO", type=int)
+@click.argument("content")
+@click.option(
+    "--comment", "comment_id", type=int, help="React to this comment ID instead."
+)
+@json_option
+def react(todo_id, content, comment_id, as_json):
+    """React to TODO (or a comment) with CONTENT: an emoji or at most 40
+    characters. The same again removes your reaction."""
+    path = (
+        f"comments/{comment_id}/reactions/"
+        if comment_id
+        else f"items/{todo_id}/reactions/"
+    )
+    mine = any(r["mine"] and r["content"] == content for r in request("GET", path))
+    method = "DELETE" if mine else "POST"
+    reactions = request(method, path, json={"content": content})
+    if as_json:
+        return echo_json(reactions)
+    click.echo(
+        f"{'Removed your' if mine else 'Reacted with'} {content}"
+        f"{' on comment ' + str(comment_id) if comment_id else f' on #{todo_id}'}."
+    )
     return None
 
 
