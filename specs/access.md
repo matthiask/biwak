@@ -118,10 +118,14 @@ Microsoft account (decided 2026-11-20).
   (allauth's login by code), short-lived and single-use. A code works
   when the mail is read on the phone and the app is open on the laptop,
   which a link doesn't. Invitations work the same way.
-- **Passkeys** (WebAuthn, allauth's MFA module): offered after the first
+- **Passkeys** (WebAuthn, allauth's MFA module; the offer after the
+  first login is to be built with the API gaps of `api-cli.md`, decided
+  2026-11-20: once, dismissable): offered after the first
   login, then the fastest way in, without a mail.
 - Staff can also use Google sign-in (allauth's Google provider), but it's
-  never required.
+  never required. Only staff (decided 2026-11-20): clients can't sign in
+  with Google even with a matching address; to be built with the API
+  gaps of `api-cli.md`.
 - No passwords at first; add them only if somebody really needs them.
 - Sessions last weeks; people can see their sessions and log out
   everywhere.

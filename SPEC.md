@@ -168,15 +168,19 @@ a cheaper model ("Agent").
 5. `notifications.md`, stage 2: replying by mail, to comments and to
    check-in questions (a strong model: sender checks and mail loops are
    easy to get subtly wrong).
-6. `import-basecamp.md` (needs every kind of item).
-7. **Last and separately:** `collaboration.md` (real-time editing,
+6. `search.md` (decided 2026-11-20), and the gaps to the web from
+   `api-cli.md` (API and CLI for projects and members, moving to-dos,
+   the passkey offer, Google sign-in for staff only).
+7. `import-basecamp.md` (needs every kind of item), then the agent skills
+   (`api-cli.md`).
+8. **Last and separately:** `collaboration.md` (real-time editing,
    brings websockets and ASGI), then the German translation.
 
 Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
 same branch.
 
 Before the first client gets a login, a separate review of the
-visibility checks (another person, or a fresh agent given only the code
+visibility checks (done 2026-11-20, its findings fixed) (another person, or a fresh agent given only the code
 and `specs/access.md`).
 
 ## Backlog

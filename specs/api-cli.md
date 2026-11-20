@@ -37,7 +37,24 @@ a name this short):
 Skills in the CLI package for common work: triaging what changed,
 turning a mail into a to-do or message, writing a weekly summary of a
 project. They tell agents to check visibility before writing anything a
-client could see.
+client could see. Not built yet: their own part after the importer
+(decided 2026-11-20), specified before building.
+
+## Closing the gaps to the web (decided 2026-11-20)
+
+The verification round found what the web does but the API and CLI
+can't; one small part closes it:
+
+- `POST /api/v1/projects/` (staff; the creator becomes a member),
+  `biwak project add NAME [--limited]`.
+- Joining: admins see limited projects they're not in (as the projects
+  page does) and `POST /api/v1/projects/{id}/join/` records `joined`;
+  `biwak project join ID`.
+- Removing a member and leaving: `DELETE
+  /api/v1/projects/{id}/members/{person_id}/` with the web's rules,
+  `biwak member remove PROJECT PERSON`.
+- `biwak todo move TODO --list ID [--group ID]` and moving several
+  (`--todos 1,2,3`) through the existing move endpoints.
 
 ## Order
 
