@@ -10,7 +10,7 @@ people and items.
 | --- | --- |
 | Project | Project, members with staff/client from Basecamp |
 | To-do set, to-do list | List |
-| To-do list group | Group |
+| To-do list group | Group of the list |
 | To-do | To-do (assignees, due dates, completion, notes) |
 | Card table | List with its columns as groups, shown as board |
 | Card | To-do in the group of its column |

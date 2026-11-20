@@ -91,15 +91,20 @@ recordings. A few generic building blocks then cover most of the scope;
 `specs/core.md` has the details.
 
 - **Project**: name, description, members (staff and clients), archived.
-- **Item**: project, parent item, type, position, title, content,
-  created by/at, archived/trashed. Types: list, group, to-do, message,
-  folder, doc, file, check-in question, check-in answer.
+- **Item** (delegated types): one table with the shared fields
+  (project, parent, kind, position, effective visibility, status,
+  creator, timestamps), and a one-to-one detail model per kind for the
+  rest (`Todo`, `Message`, `Doc`, `Upload`, …). Kinds: list, to-do,
+  message, folder, doc, file, check-in question, check-in answer.
+  Everything other features point at is an item; comments, events,
+  subscriptions, bookmarks and links point at items but aren't items.
+- **Tree**: items form a shallow forest per project. Only folders nest
+  without limit; everything else has a fixed parent kind (a to-do's
+  parent is its list, an answer's its question).
+- **Group**: not an item and not a parent. A to-do has a nullable group
+  (a heading within its list) and a position within it.
 - **Containers**: lists and folders. Their children inherit visibility
-  from them.
-- **Allowed parents** are fixed per type: a to-do's parent is a list or a
-  group; a group's parent is a list (one level, no nesting); docs, files
-  and folders live in folders or the project's root folder; messages on
-  the project's message board.
+  from them; the effective visibility is stored on each item.
 - **Comment** on to-dos, messages, docs, files and check-in answers only.
 - **Subscription** (person, item): to the item and, for containers, to
   new children. Automatic for the author, assignees and people mentioned;
@@ -120,7 +125,8 @@ containers, checked in one place (`specs/access.md`).
 - **Visible to clients**: the switch on containers and some items; shown
   with a bright badge and banner everywhere.
 - **Container**: a list or a folder.
-- **Group**: a heading inside a list, grouping the to-dos below it.
+- **Group**: a heading inside a list; to-dos point at it, ordered within
+  it. Shown as columns in the board view.
 
 ## Build order
 
@@ -168,3 +174,7 @@ and `specs/access.md`).
 - 2026-11-20: Replying to notification mails posts a comment, from the
   start.
 - 2026-11-20: Check-ins are in scope, the project schedule isn't.
+- 2026-11-20: Items as delegated types (shared `Item` plus detail models);
+  groups are a foreign key on to-dos, not tree nodes; django-tree-queries
+  for subtree operations; effective visibility stored per item, so the
+  visibility check needs no recursive query.

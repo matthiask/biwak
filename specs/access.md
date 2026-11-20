@@ -31,6 +31,20 @@ through every entry point with a client and a staff member and assert
 what each sees, including items moved between visible and internal
 containers.
 
+**Stored, not computed on read** (decided 2026-11-20): each item stores
+its effective visibility, so the check is a plain filter on a column
+(plus project membership), easy to read and review, no recursive query
+on the hot path.
+
+- It's recomputed for the subtree (django-tree-queries, `core.md`)
+  whenever a switch changes, an item moves, or an item is created, in the
+  same transaction.
+- Comments, files attached to rich text and events follow their item.
+- Drift is the risk: tests compare the stored value with the value
+  computed from the tree after every kind of change, and a management
+  command (`check_visibility`) does the same on real data, also run
+  daily, mailing admins on any difference.
+
 ## Making it obvious
 
 Like Basecamp's bright yellow:
