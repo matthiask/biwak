@@ -14,6 +14,13 @@ biwak todo add LIST "Order the tent" --due 2026-12-01 --assign 3
 biwak todo comment TODO "The plan" --attach plan.pdf   # --attach is repeatable
 biwak todo done TODO
 biwak notifications --level concerns_me --delivery digest
+biwak messages PROJECT
+biwak message post PROJECT "Kick-off" "We start Monday" --notify everybody
+biwak files PROJECT [FOLDER]
+biwak file upload PROJECT plan.pdf --folder 12 --notify nobody
+biwak file download FILE
+biwak doc show DOC
+biwak doc edit DOC                                     # in $EDITOR
 ```
 
 Every command takes `--json` for scripts and agents. Items visible to

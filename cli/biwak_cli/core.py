@@ -205,6 +205,21 @@ def request(method, path, **kwargs):
     return response.json()
 
 
+def download(path, target):
+    """Saves the API's file download (``path``, following the redirect to
+    a presigned URL with a bucket) to ``target``"""
+    url, token = current()
+    response = _send("GET", url, path, token, stream=True, timeout=300)
+    _check_version(
+        response.headers.get("x-biwak-cli-latest"),
+        response.headers.get("x-biwak-cli-upgrade"),
+    )
+    if not response.ok:
+        terminate(f"{response.status_code}: couldn't download the file.")
+    with open(target, "wb") as file:
+        file.writelines(response.iter_content(64 * 1024))
+
+
 def echo_json(data):
     click.echo(json.dumps(data, indent=2, ensure_ascii=False))
 
