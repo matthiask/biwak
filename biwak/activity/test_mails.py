@@ -3,6 +3,7 @@ import zoneinfo
 from unittest.mock import patch
 
 from django.core import mail
+from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -10,8 +11,9 @@ from django.utils import timezone
 from biwak.accounts.models import MailDelivery, NotificationLevel
 from biwak.activity import mentions
 from biwak.activity.mails import send_mails, unsubscribe_token
-from biwak.activity.models import Notification, Subscription
-from biwak.activity.operations import subscribe
+from biwak.activity.models import Action, Notification, Subscription
+from biwak.activity.operations import record, subscribe
+from biwak.files import attachments
 from biwak.items import operations as ops
 from biwak.test_utils import person, project
 
@@ -153,6 +155,50 @@ class MailsTest(TestCase):
         self.assertNotIn("List-Unsubscribe-Post", message.extra_headers)
         self.assertEqual(Notification.objects.filter(sent_at=None).count(), 1)
         self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 1, tzinfo=ZURICH)), 0)
+
+    def test_sent_after_the_commit(self):
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        with self.captureOnCommitCallbacks() as callbacks:
+            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            self.assertEqual(mail.outbox, [])
+        self.assertEqual(len(callbacks), 1)
+        callbacks[0]()
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_moves_and_attachments(self):
+        """Clients don't learn where it moved (the name may be internal);
+        attachments are links with BASE_URL"""
+        subscribe(self.cleo, self.todo)
+        attachment = attachments.upload(
+            project=self.project,
+            file=ContentFile(b"%PDF-", name="plan.pdf"),
+            uploaded_by=self.ada,
+        )
+        self.act(
+            lambda: record(
+                actor=self.ada,
+                action=Action.MOVED,
+                project=self.project,
+                item=self.todo,
+                to="Internal plans",
+            )
+        )
+        self.act(
+            lambda: ops.add_comment(
+                self.todo,
+                author=self.ada,
+                content=f"The [plan](attachment:{attachment.key})",
+            )
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        by = {m.to[0]: m for m in mail.outbox}
+        url = f"https://biwak.example.org{attachment.get_absolute_url()}"
+        bob, cleo = by[self.bob.email], by[self.cleo.email]
+        self.assertIn("moved it to Internal plans.", bob.body)
+        self.assertIn("Ada Example moved it.", cleo.body)
+        self.assertNotIn("Internal plans", cleo.body + cleo.alternatives[0].content)
+        self.assertIn(f"The [plan]({url})", bob.body)
+        self.assertIn(f'href="{url}"', bob.alternatives[0].content)
 
     def test_command(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
