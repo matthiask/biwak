@@ -67,7 +67,9 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   same as the Basecamp CLI's, so agents know it. The label is only a
   fallback: pages and mails always show the person's current name, so
   renaming someone updates every mention. In mails and plain text:
-  `@Ada Lovelace`.
+  `@Ada Lovelace`. Clients read the label for people who aren't members
+  of the project (`access.md`, decided 2026-11-20 after the second
+  visibility review).
 - **Where:** a to-do's title and notes, comments, messages, docs,
   check-in answers: every Markdown text of an item, and comments.
 - **Typing `@`** in a text field with `data-mentions="URL"` opens a list
@@ -106,7 +108,8 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   after unsubscribing unless the person is mentioned again.
 - **Mail replies and the API** may write `@ada@example.org` or the
   syntax above; plain `@Ada` is resolved only when exactly one person
-  who can see the item matches (stage 2 and `api-cli.md`).
+  who can see the item matches (stage 2 and `api-cli.md`). What clients
+  write resolves and notifies the project's members only (`access.md`).
 
 ### Levels
 

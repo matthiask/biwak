@@ -14,8 +14,10 @@ def set_user_name(user):
 
 
 def user_middleware(get_response):
-    """The person's language, if they chose one, and their name for the
-    audit log"""
+    """The person's language, if they chose one, their name for the audit
+    log, and who reads the mentions' names (``biwak.activity.mentions``;
+    late, the API's token authentication sets ``request.user`` itself)"""
+    from biwak.activity.mentions import reading_as
 
     def middleware(request):
         if request.user.is_authenticated:
@@ -24,7 +26,8 @@ def user_middleware(get_response):
                 activate(request.user.language)
         else:
             set_user_name("user-0-anonymous")
-        return get_response(request)
+        with reading_as(lambda: request.user):
+            return get_response(request)
 
     return middleware
 

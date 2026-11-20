@@ -2,6 +2,7 @@ import re
 
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.activity.models import Action, Event, Subscription
 from biwak.activity.operations import subscribe
@@ -87,6 +88,14 @@ class ViewsTest(TestCase):
         self.client.force_login(admin)
         self.assertContains(self.client.get("/"), "Salaries")
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 404)
+        # Not archived ones, which the list leaves out
+        limited.archived_at = timezone.now()
+        limited.save()
+        self.assertEqual(
+            self.client.post(f"/projects/{limited.pk}/join/").status_code, 404
+        )
+        limited.archived_at = None
+        limited.save()
         self.client.post(f"/projects/{limited.pk}/join/")
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 200)
         self.assertTrue(

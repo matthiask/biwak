@@ -1,8 +1,14 @@
-from django.test import TestCase
+import datetime as dt
 
+from django.core import mail
+from django.test import TestCase
+from django.utils import timezone
+
+from biwak.accounts.models import APIToken
 from biwak.activity import mentions
+from biwak.activity.mails import send_mails, unsubscribe_url
 from biwak.activity.models import Action, Event, Mention, Subscription
-from biwak.activity.operations import unsubscribe
+from biwak.activity.operations import subscribe, unsubscribe
 from biwak.api_conventions import html
 from biwak.items import operations as ops
 from biwak.items.models import Item
@@ -108,16 +114,21 @@ class MentionsTest(TestCase):
         text = f"Hi [@Old Name](person:{self.bob.pk})"
         self.bob.full_name = "Bob Renamed"
         self.bob.save()
-        rendered = markdown(text, self.todo)
-        self.assertIn('<span class="wb-mention">@Bob Renamed</span>', rendered)
-        # Without the item, the label, never a link to person:
-        self.assertIn("@Old Name", markdown(text))
-        self.assertNotIn("person:", markdown(text))
-        self.assertIn("@Bob Renamed", html(text, self.todo))
-        self.assertEqual(mentions.plain(text, self.todo), "Hi @Bob Renamed")
-        self.assertEqual(mentions.plain(text), "Hi @Old Name")
-        # Inside code it stays code
-        self.assertIn("person:", markdown(f"`{text}`", self.todo))
+        with mentions.reading_as(self.ada):
+            rendered = markdown(text, self.todo)
+            self.assertIn('<span class="wb-mention">@Bob Renamed</span>', rendered)
+            # Without the item, the label, never a link to person:
+            self.assertIn("@Old Name", markdown(text))
+            self.assertNotIn("person:", markdown(text))
+            self.assertIn("@Bob Renamed", html(text, self.todo))
+            self.assertEqual(mentions.plain(text, self.todo), "Hi @Bob Renamed")
+            self.assertEqual(mentions.plain(text), "Hi @Old Name")
+            # Inside code it stays code
+            self.assertIn("person:", markdown(f"`{text}`", self.todo))
+        # Bob isn't a member: clients, and nobody in particular, read the label
+        with mentions.reading_as(self.cleo):
+            self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
+        self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
 
     def test_titles(self):
         todo = ops.create_todo(
@@ -138,15 +149,17 @@ class MentionsTest(TestCase):
             f" mail@example.org, {mentions.syntax(self.bob)}"
         )
         self.assertEqual(
-            mentions.resolve(self.todo, text),
+            mentions.resolve(self.todo, text, author=self.ada),
             f"{mentions.syntax(self.ada)} and {mentions.syntax(self.cleo)},"
             f" {mentions.syntax(self.cleo)}, not @Nobody, mail@example.org,"
             f" {mentions.syntax(self.bob)}",
         )
         # Cleo can't see internal items; ambiguous names stay
-        self.assertEqual(mentions.resolve(self.secret, "@Cleo"), "@Cleo")
+        self.assertEqual(
+            mentions.resolve(self.secret, "@Cleo", author=self.ada), "@Cleo"
+        )
         person("Adele", short_name="Ada")
-        self.assertEqual(mentions.resolve(self.todo, "@Ada"), "@Ada")
+        self.assertEqual(mentions.resolve(self.todo, "@Ada", author=self.ada), "@Ada")
 
     def test_candidates(self):
         limited = project("Salaries", members=[self.ada, self.cleo], all_access=False)
@@ -258,3 +271,158 @@ class NewItemMentionsTest(TestCase):
         self.assertContains(
             response, f'data-mentions="{self.url}?folder={self.shared.pk}"'
         )
+
+
+class ClientsKnowMembersTest(TestCase):
+    """Clients learn about the project's members only (specs/access.md):
+    their mentions of other staff stay text and notify nobody, and they
+    read the label as written for those, never the current name. Ada is a
+    member, Bob staff who isn't (all-access), Cleo a client member."""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.cleo])
+        self.shared = ops.create_list(
+            project=self.project, title="Shared", creator=self.ada, visible=True
+        )
+        self.todo = ops.create_todo(
+            todolist=self.shared, title="Visible", creator=self.ada
+        )
+        self.text = f"@Bob, @bob@example.org, [@x](person:{self.bob.pk}) and @Ada"
+
+    def api(self, user, method, path, data):
+        _token, secret = APIToken.create_for(user=user, title="T", access="write")
+        response = getattr(self.client, method)(
+            f"/api/v1/{path}",
+            data,
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertLess(response.status_code, 300, response.content)
+        return response.json()
+
+    def assertOnlyAda(self, item, content):
+        self.assertNotIn("Bob Example", content)
+        self.assertIn(mentions.syntax(self.ada), content)
+        self.assertEqual(
+            set(Mention.objects.filter(item=item).values_list("user", flat=True)),
+            {self.ada.pk},
+        )
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
+
+    def test_api_texts_written_by_clients(self):
+        comment = self.api(
+            self.cleo, "post", f"items/{self.todo.pk}/comments/", {"content": self.text}
+        )
+        self.assertOnlyAda(self.todo, comment["content"])
+        self.assertNotIn("Bob Example", comment["content_html"])
+
+        Mention.objects.all().delete()
+        todo = self.api(
+            self.cleo,
+            "post",
+            f"lists/{self.shared.pk}/todos/",
+            {"title": "Call @Bob", "notes": self.text},
+        )
+        self.assertEqual(todo["title"], "Call @Bob")
+        self.assertOnlyAda(Item.objects.get(pk=todo["id"]), todo["notes"])
+        todo = self.api(
+            self.cleo, "patch", f"todos/{todo['id']}/", {"notes": f"{self.text}!"}
+        )
+        self.assertOnlyAda(Item.objects.get(pk=todo["id"]), todo["notes"])
+
+        message = self.api(
+            self.cleo,
+            "post",
+            f"projects/{self.project.pk}/messages/",
+            {"title": "Hello", "content": self.text},
+        )
+        self.assertOnlyAda(Item.objects.get(pk=message["id"]), message["content"])
+        message = self.api(
+            self.cleo,
+            "patch",
+            f"messages/{message['id']}/",
+            {"content": f"{self.text}!"},
+        )
+        self.assertOnlyAda(Item.objects.get(pk=message["id"]), message["content"])
+
+    def test_staff_still_mention_everybody(self):
+        comment = self.api(
+            self.ada, "post", f"items/{self.todo.pk}/comments/", {"content": "@Bob"}
+        )
+        self.assertEqual(comment["content"], mentions.syntax(self.bob))
+        self.assertTrue(Subscription.objects.filter(user=self.bob).exists())
+
+    def test_guessed_ids_on_the_page(self):
+        self.client.force_login(self.cleo)
+        self.client.post(
+            self.todo.get_absolute_url(),
+            {"form": "comment", "content": f"[@x](person:{self.bob.pk})"},
+        )
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
+        self.assertFalse(Mention.objects.filter(user=self.bob).exists())
+        page = self.client.get(self.todo.get_absolute_url())
+        self.assertContains(page, "@x")
+        self.assertNotContains(page, "Bob Example")
+
+    def test_clients_read_the_label(self):
+        """Wherever names show: pages, the API's ``*_html``, search,
+        unsubscribing. Staff read the current name (their forms have the
+        text as written, label included)."""
+        ops.add_comment(
+            self.todo,
+            author=self.ada,
+            content=f"Ask [@Bob Old](person:{self.bob.pk}) about tents",
+        )
+        todo = ops.create_todo(
+            todolist=self.shared,
+            title=f"Tents for [@Bob Old](person:{self.bob.pk})",
+            creator=self.ada,
+        )
+        self.bob.full_name = "Bob Renamed"
+        self.bob.save()
+        for user, name in [(self.cleo, "Bob Old"), (self.ada, "Bob Renamed")]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                pages = [
+                    self.client.get(self.todo.get_absolute_url()),
+                    self.client.get(todo.get_absolute_url()),
+                    self.client.get("/search/", {"q": "tents"}),
+                    self.client.get(unsubscribe_url(user, todo)),
+                ]
+                data = self.api(user, "get", f"items/{self.todo.pk}/comments/", {})
+                html = data["results"][0]["content_html"]
+                self.assertIn(f"@{name}", html)
+                for page in pages:
+                    self.assertContains(page, f"@{name}")
+                if user.is_client:
+                    self.assertNotIn("Bob Renamed", html)
+                    for page in pages:
+                        self.assertNotContains(page, "Bob Renamed")
+
+    def test_mails(self):
+        subscribe(self.cleo, self.todo)
+        subscribe(self.bob, self.todo)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.add_comment(
+                self.todo,
+                author=self.ada,
+                content=f"Ask [@Bob Old](person:{self.bob.pk})",
+            )
+        self.bob.full_name = "Bob Renamed"
+        self.bob.save()
+        mail.outbox.clear()
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+        messages = {message.to[0]: message for message in mail.outbox}
+        for user, name, other in [
+            (self.cleo, "Bob Old", "Bob Renamed"),
+            (self.bob, "Bob Renamed", "Bob Old"),
+        ]:
+            with self.subTest(user=user):
+                message = messages[user.email]
+                for body in [message.body, message.alternatives[0][0]]:
+                    self.assertIn(f"@{name}", body)
+                    self.assertNotIn(other, body)

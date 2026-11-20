@@ -41,7 +41,10 @@ def _send_all(build, occurrence, pks):
         if not can_see(user, item):
             continue
         try:
-            with translation.override(user.language or settings.LANGUAGE_CODE):
+            with (
+                translation.override(user.language or settings.LANGUAGE_CODE),
+                mentions.reading_as(user),
+            ):
                 message = build(user, occurrence)
             message.send()
         except Exception:

@@ -27,7 +27,10 @@ the first client gets a login.
     don't see a limited project's content without joining. The
     memberships are read-only in the Django admin, so that joining always
     goes through the app and its event (decided 2026-11-20 after the
-    visibility review).
+    visibility review). Joining, on the page and through the API, takes
+    the projects they can open plus the limited ones the list offers
+    (`projects_to_join()`), not archived limited ones (fixed 2026-11-20
+    after the second visibility review: the API took any project).
 - **Staff** with access to a project see everything in it.
 - **Clients** are never covered by all-access: they see a project only
   if they're members, and in it only what
@@ -52,6 +55,25 @@ the first client gets a login.
   see the project because it's all-access (decided 2026-11-20 after the
   visibility review): subscribers on item pages, the people asked by a
   check-in and who hasn't answered (`Project.people_known_to()`).
+  Both halves of the rule (decided 2026-11-20 after the second visibility
+  review):
+  - **People who act in a visible place are shown by name**, like
+    members, whether they're members or not: comment authors, reactions,
+    presence in the live editor. That only happens in all-access
+    projects, where every staff member may take part; limited projects
+    only have members.
+  - **Clients can't look up people who haven't acted**: the `@` list
+    offers members only, and mentions follow the same rule. When a client
+    writes (pages, API texts, check-in answers, mail replies),
+    `mentions.resolve()` and `mentions.update()` resolve, subscribe and
+    notify members only; `@Bob`, `@bob@example.org` or a guessed
+    `[@x](person:N)` of anybody else stays plain text and notifies nobody.
+    When a client reads (pages, titles, search, `*_html`, mails), names of
+    people who aren't members show as the label written, never the current
+    name, so guessing ids lists nobody. Who reads is the request's person
+    (the middleware, also for API tokens) or the mail's recipient
+    (`mentions.reading_as()`); without one, texts render as for a client.
+    Staff write and read as before.
 - Turning visibility off later hides the content again, including
   comments clients wrote; the switch says so.
 
@@ -134,7 +156,11 @@ Microsoft account (decided 2026-11-20).
   is before adding a passkey, and without passwords that's a code by mail,
   which it only sends to verified addresses; without one, adding a
   passkey later than five minutes after logging in answered 403 (fixed
-  2026-11-20).
+  2026-11-20). A changed address replaces the old one (decided 2026-11-20
+  after the second visibility review): the old one doesn't log in by code
+  anymore and can be given to somebody else; before, it stayed verified,
+  logged in, and inviting somebody with it answered 500. Migration
+  `accounts.0008` deletes old addresses left behind.
 - Staff can also use Google sign-in (allauth's Google provider), but it's
   never required. Only staff (decided 2026-11-20, built 2026-11-20 in
   `SocialAccountAdapter.pre_social_login`): clients can't sign in with

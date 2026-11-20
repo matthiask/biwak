@@ -5,6 +5,7 @@ already (specs/notifications.md)."""
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import connection, transaction
+from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
@@ -192,6 +193,15 @@ def joinable_projects(user):
     if not (user.is_authenticated and user.is_admin):
         return Project.objects.none()
     return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))
+
+
+def projects_to_join(user):
+    """What somebody can join: the projects they can open, and for admins
+    the limited ones ``joinable_projects()`` lists (not archived ones)"""
+    return Project.objects.filter(
+        Q(pk__in=Project.objects.accessible_to(user).values("pk"))
+        | Q(pk__in=joinable_projects(user).values("pk"))
+    )
 
 
 @transaction.atomic
