@@ -1,8 +1,10 @@
 # Activity feed, item history, bookmarks, links
 
-**Status:** in progress. Built: the activity feed (pages, API, CLI), the
-item history, bookmarks and links (pages, API, CLI). The project page keeps its short list of the latest 20
-events (`activity/_events.html`) with a link to the feed.
+**Status:** built (2026-11-20): the activity feed (pages, API, CLI), the
+item history, bookmarks and links (pages, API, CLI), with the decisions
+below (proposed by the building agent, to be confirmed). The project page keeps
+its short list of the latest 20 events (`activity/_events.html`) with a
+link to the feed. CLI 0.4.0.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.
