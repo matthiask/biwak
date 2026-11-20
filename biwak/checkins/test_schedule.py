@@ -51,6 +51,28 @@ class FireAtTest(SimpleTestCase):
             utc("2027-11-01 08:00"),
         )
 
+    def test_other_zones_change_on_their_own_dates(self):
+        """09:00 stays 09:00 in New York (clocks forward on 14 March, back on
+        7 November 2027) and in Sydney (back on 4 April, forward on 3
+        October: the southern summer)"""
+        nine = dt.time(9, 0)
+        for zone, day, offset in [
+            ("America/New_York", dt.date(2027, 3, 13), 5),
+            ("America/New_York", dt.date(2027, 3, 15), 4),
+            ("America/New_York", dt.date(2027, 11, 6), 4),
+            ("America/New_York", dt.date(2027, 11, 8), 5),
+            ("Australia/Sydney", dt.date(2027, 4, 3), -11),
+            ("Australia/Sydney", dt.date(2027, 4, 5), -10),
+            ("Australia/Sydney", dt.date(2027, 10, 2), -10),
+            ("Australia/Sydney", dt.date(2027, 10, 4), -11),
+        ]:
+            moment = schedule.fire_at(day, nine, zone)
+            expected = dt.datetime.combine(day, nine, tzinfo=UTC) + dt.timedelta(
+                hours=offset
+            )
+            self.assertEqual(moment, expected, (zone, day))
+            self.assertEqual(local(moment, ZoneInfo(zone)), f"{day} 09:00:00")
+
     def test_time_zones(self):
         nine = dt.time(9, 0)
         day = dt.date(2027, 1, 15)
