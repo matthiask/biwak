@@ -8,8 +8,10 @@ something is going on.
 Decisions made while building, to be confirmed:
 
 - The `|excerpt` filter did not exist yet; added as `glance.md`
-  describes (`biwak/templatetags/biwak.py`). Mentions aren't rendered
-  by `|markdown` yet, so the excerpt shows none either.
+  describes (`biwak/templatetags/biwak.py`). Since `glance.md` the
+  excerpt renders mentions: the label as written, or the current name
+  when Python passes the item, so a mention in a description shows on
+  its card as `@Label`.
 - The columns are ignored by the audit trigger on `projects_project`
   (they change with every event; migration `projects.0002`).
 - `record()` uses `GREATEST(column, event time)`, so an older event
@@ -68,7 +70,7 @@ alphabetical, remembered per person.
   `last_activity_at`.
 - **Drift:** an item switched to internal later keeps having counted for
   clients. `fairy_tasks` recomputes both columns from the events every
-  night (events of trashed items and, for the client column, of items
+  night (reactions, events of trashed items and, for the client column, of items
   not visible to clients now don't count). A data migration fills them
   once the same way. Projects without events sort last, by name.
 - **The switch:** "Activity" and "A–Z" as two buttons in the page

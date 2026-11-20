@@ -6,6 +6,7 @@ from typing import Literal
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import Exists, OuterRef
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
@@ -78,7 +79,8 @@ def project_list(
 ):
     """The projects the person can open, active ones unless ``archived``:
     bookmarked ones first, then by ``order`` (the person's setting by
-    default), the latest activity first or by name. Archived ones by name."""
+    default), the latest activity first or by name. Archived ones by name,
+    bookmarked ones first."""
     if archived:
         projects = Project.objects.accessible_to(request.user).filter(
             archived_at__isnull=False
@@ -87,7 +89,7 @@ def project_list(
             is_bookmarked=Exists(
                 Bookmark.objects.filter(user=request.user, project=OuterRef("pk"))
             )
-        )
+        ).order_by("-is_bookmarked", Lower("name"), "pk")
     else:
         projects = overview(request.user, order)
     return [project_out(project, request.user) for project in projects]
