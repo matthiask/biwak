@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Version" %} – {{ item|item_title }} – Biwak{% endblock %}
+
+{% block content %}
+  {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {{ version.title }}
+      <span class="text-body-secondary fs-6">{{ version.created_at|date:"j. M Y, H:i" }} ·
+        {{ version.created_by.get_short_name }}</span>
+    </h1>
+    <div class="wb-page-actions">
+      <a class="btn btn-sm btn-quiet" href="{% url 'doc_versions' item.pk %}">{% translate "All versions" %}</a>
+      {% if not is_latest %}
+        <form method="post" action="{% url 'doc_version_restore' item.pk version.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Restore this version" %}</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% include "items/_client_banner.html" %}
+  <h2 class="h6">
+    {% if before %}{% translate "What changed in this version" %}{% else %}{% translate "The first version" %}{% endif %}
+  </h2>
+  <div class="font-monospace small mb-4">
+    {% for sign, line in diff %}
+      <div class="text-break{% if sign == '+' %} bg-success-subtle{% elif sign == '-' %} bg-danger-subtle{% endif %}">
+        {% if sign == "…" %}…{% else %}{{ sign }} {{ line }}{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <h2 class="h6">{% translate "Content" %}</h2>
+  <div class="wb-markdown">{{ version.content|markdown:item }}</div>
+{% endblock content %}

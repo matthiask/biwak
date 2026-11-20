@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load attachments biwak i18n %}
+{% block title %}{% if item %}{% translate "Edit the file" %}{% else %}{% translate "Upload a file" %}{% endif %} –
+  Biwak{% endblock title %}
+
+{% block content %}
+  {% include "files/_crumbs.html" %}
+  <h1 class="mb-3">{% if item %}{% translate "Edit the file" %}{% else %}{% translate "Upload a file" %}{% endif %}</h1>
+  {% include "items/_client_banner.html" %}
+  <div class="card wb-form-card mb-4">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" {% attachments_attrs project %}>
+        {% csrf_token %}
+        {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
+        {% include "files/_attach_button.html" %}
+        {{ form }}
+        <button type="submit" class="btn btn-primary">
+          {% if item %}{% translate "Save" %}{% else %}{% translate "Upload" %}{% endif %}
+        </button>
+        <a
+          href="{% if item %}{{ item.get_absolute_url }}{% elif folder %}{{ folder.get_absolute_url }}{% else %}{% url 'project_files' project.pk %}{% endif %}"
+          class="btn btn-quiet"
+        >{% translate "Cancel" %}</a>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

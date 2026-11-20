@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load biwak bookmarks i18n %}
+{% block title %}{{ item|item_title }} – Biwak{% endblock %}
+
+{% block content %}
+  {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {% icon "file-earmark" %}
+      {{ item|item_title }}
+      {% client_badge item %}
+    </h1>
+    <div class="wb-page-actions">
+      {% bookmark_button item %}
+      <a class="btn btn-sm btn-primary" href="{% url 'file_download' item.pk %}">{% icon "download" %}<span
+        >{% translate "Download" %}</span></a>
+      {% if can_change %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'file_edit' item.pk %}">{% icon "pencil" %}<span
+          >{% translate "Edit" %}</span></a>
+      {% endif %}
+    </div>
+  </div>
+  {% show_links item %}
+  {% include "items/_client_banner.html" %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      {% if version.has_preview %}
+        <p>
+          <a href="{% url 'file_download' item.pk %}">
+            <img
+              src="{% url 'file_preview' item.pk %}"
+              alt="{{ version.name }}"
+              class="img-fluid border rounded wb-file-preview"
+              loading="lazy"
+            >
+          </a>
+        </p>
+      {% endif %}
+      <p class="small text-body-secondary">
+        {{ version.name }} · {{ version.size|filesizeformat }} · {{ version.uploaded_by.get_short_name }},
+        {{ version.uploaded_at|date:"j. M Y, H:i" }}
+      </p>
+      {% if upload.description %}<div class="wb-markdown mb-4">{{ upload.description|markdown:item }}</div>{% endif %}
+      {% include "files/_comments.html" %}
+    </div>
+    <div class="col-lg-4">
+      {% if can_change %}
+        <h2 class="h6">{% translate "Replace" %}</h2>
+        <form method="post" action="{% url 'file_replace' item.pk %}" enctype="multipart/form-data" class="mb-2">
+          {% csrf_token %}
+          <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+          <button type="submit" class="btn btn-sm btn-quiet">
+            {% icon "upload" %}<span>{% translate "Upload a new version" %}</span>
+          </button>
+          <div class="form-text">{% translate "The link, the comments and the earlier versions stay." %}</div>
+        </form>
+      {% endif %}
+      {% if older_versions %}
+        <h2 class="h6 mt-4">{% translate "Earlier versions" %}</h2>
+        <ul class="list-unstyled small">
+          {% for old in older_versions %}
+            <li>
+              <a href="{% url 'file_version_download' item.pk old.pk %}">{{ old.name }}</a>
+              · {{ old.size|filesizeformat }} · {{ old.uploaded_by.get_short_name }},
+              {{ old.uploaded_at|date:"j. M Y" }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <div class="mt-4">{% include "files/_sidebar.html" %}</div>
+      {% include "files/_move.html" %}
+    </div>
+  </div>
+{% endblock content %}

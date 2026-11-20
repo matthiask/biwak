@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load biwak bookmarks i18n %}
+{% block title %}{{ item|item_title }} – Biwak{% endblock %}
+
+{% block content %}
+  {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {% icon "file-earmark-text" %}
+      {{ item|item_title }}
+      {% client_badge item %}
+    </h1>
+    <div class="wb-page-actions">
+      {% bookmark_button item %}
+      {% if is_staff %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'doc_versions' item.pk %}">{% icon "clock-history" %}<span
+          >{% translate "Versions" %}</span></a>
+      {% endif %}
+      {% if not locked_by %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "pencil" %}<span
+          >{% translate "Edit" %}</span></a>
+      {% endif %}
+    </div>
+  </div>
+  {% show_links item %}
+  {% include "items/_client_banner.html" %}
+  {% if locked_by %}
+    <div class="alert alert-warning">
+      {% blocktranslate with name=locked_by.get_short_name %}{{ name }} is editing. You can read the doc and edit it once they are done.{% endblocktranslate %}
+    </div>
+  {% endif %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="wb-markdown mb-4">{{ doc.content|markdown:item }}</div>
+      {% include "files/_comments.html" %}
+    </div>
+    <div class="col-lg-4">
+      {% include "files/_sidebar.html" %}
+      {% include "files/_move.html" %}
+    </div>
+  </div>
+{% endblock content %}

@@ -131,6 +131,17 @@
           <div class="list-group-item text-body-secondary">{% translate "No messages yet." %}</div>
         {% endfor %}
       </div>
+      <h2 class="h5 mt-4">
+        <a
+          class="text-reset text-decoration-none"
+          href="{% url 'project_files' project.pk %}"
+        >{% translate "Docs and files" %}</a>
+      </h2>
+      <p>
+        <a
+          href="{% url 'project_files' project.pk %}"
+        >{% blocktranslate with folders=root_counts.folders docs=root_counts.docs files=root_counts.files %}{{ folders }} folders, {{ docs }} docs, {{ files }} files{% endblocktranslate %}</a>
+      </p>
     </div>
     <div class="col-lg-4">
       <h2 class="h5 d-flex justify-content-between align-items-center">

@@ -1,0 +1,6 @@
+{% load biwak i18n %}
+<nav class="small mb-2">
+  <a href="{{ project.get_absolute_url }}">{{ project }}</a> /
+  <a href="{% url 'project_files' project.pk %}">{% translate "Docs and files" %}</a>
+  {% for crumb in breadcrumbs %}/ <a href="{{ crumb.get_absolute_url }}">{{ crumb|item_title }}</a>{% endfor %}
+</nav>
