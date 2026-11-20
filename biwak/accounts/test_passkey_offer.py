@@ -103,3 +103,31 @@ class PasskeyOfferTest(TestCase):
         self.login_by_code()
         response = self.client.post(f"{OFFER}?next=https://evil.example/")
         self.assertRedirects(response, "/", fetch_redirect_response=False)
+
+
+class AddingAPasskeyLaterTest(TestCase):
+    """Adding a passkey asks to confirm who you are when the login is older
+    than allauth's five minutes; without passwords that's a code by mail"""
+
+    def setUp(self):
+        cache.clear()
+        self.ada = person("Ada")
+
+    def test_confirming_by_code_instead_of_403(self):
+        self.client.force_login(self.ada)
+        response = self.client.get("/accounts/2fa/webauthn/add/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/reauthenticate/code/", response["Location"])
+
+    def test_everybody_has_a_verified_address(self):
+        from allauth.account.models import EmailAddress
+
+        address = EmailAddress.objects.get(user=self.ada)
+        self.assertTrue(address.verified)
+        self.assertTrue(address.primary)
+        # Changing the address (the admin) moves the verified one along
+        self.ada.email = "ada.new@example.org"
+        self.ada.save()
+        address = EmailAddress.objects.get(user=self.ada, primary=True)
+        self.assertEqual(address.email, "ada.new@example.org")
+        self.assertTrue(address.verified)
