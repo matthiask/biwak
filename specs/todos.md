@@ -204,6 +204,22 @@ beyond.
 `biwak/items/views.py`, `items/todolist.html`, a small view for the
 next page.
 
+**Status:** built 2026-11-20.
+
+Decisions made while building (proposed by the building agent; change
+them here if wrong):
+
+- The cursor is `?before=<completed_at ISO>,<pk>` on
+  `/lists/<pk>/completed/`, which returns an HTML fragment (the next 50
+  and a new "Show more" button, or none at the end); a malformed cursor
+  is a 404. The same fragment renders the first 20.
+- The count is its own `COUNT` query, not folded into the open ones'
+  query; trashed to-dos aren't counted.
+- The completed section sits below the board and the list alike; the
+  board's columns only ever had open to-dos.
+- The API (`lists/{id}/todos/completed/`) already had a cursor; API and
+  CLI are unchanged.
+
 ### Done when (stage 3)
 
 The count, paging through 120 completed to-dos without gaps or

@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 from django.test import TestCase
 from django.utils import timezone
 
+from biwak import cursors
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
@@ -315,12 +316,17 @@ class FeedViewsTest(FeedBase):
         self.assertTrue(seen)
         self.assertEqual(self.client.get("/feed/?before=x").status_code, 400)
 
+    def test_cursor_out_of_range(self):
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/", {"before": "9" * 30 + ",1"})
+        self.assertEqual(response.status_code, 400)
+
     def test_cursor_roundtrip(self):
         event = event_at(
             self.ada, Action.EDITED, self.todo, NOW + dt.timedelta(microseconds=7)
         )
         self.assertEqual(
-            feed.parse_cursor(feed.cursor_for(event)), (event.created_at, event.pk)
+            cursors.decode(feed.cursor_for(event)), (event.created_at, event.pk)
         )
 
     def test_login_required(self):

@@ -1,0 +1,15 @@
+{% load i18n %}
+{% for todo in completed %}{% include "items/_todo.html" %}{% endfor %}
+{% if cursor %}
+  <div class="my-2">
+    <button
+      type="button"
+      class="btn btn-sm btn-quiet"
+      hx-get="{% url 'list_completed' item.pk %}?before={{ cursor|urlencode }}"
+      hx-target="closest div"
+      hx-swap="outerHTML"
+    >
+      {% translate "Show more" %}
+    </button>
+  </div>
+{% endif %}

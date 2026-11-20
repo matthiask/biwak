@@ -3,12 +3,13 @@ import datetime as dt
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
+from django.db.models import Q
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from biwak import schedules
+from biwak import cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
@@ -136,6 +137,46 @@ def _todos(todolist_item):
     )
 
 
+COMPLETED_FIRST = 20
+COMPLETED_MORE = 50
+
+
+def _completed_page(todos, *, size, before=None):
+    """The next ``size`` completed to-dos, the latest first, after the cursor
+    ``before`` (``biwak/cursors.py``, of the last one shown) and the
+    cursor of the page after it, or ``None`` at the end."""
+    todos = todos.filter(todo__completed_at__isnull=False)
+    if before:
+        try:
+            at, pk = cursors.decode(before)
+        except ValueError as error:
+            raise Http404("Bad cursor") from error
+        todos = todos.filter(
+            Q(todo__completed_at__lt=at) | Q(todo__completed_at=at, pk__lt=pk)
+        )
+    rows = list(todos.order_by("-todo__completed_at", "-pk")[: size + 1])
+    more = len(rows) > size
+    rows = rows[:size]
+    cursor = None
+    if more:
+        last = rows[-1]
+        cursor = cursors.encode(last.todo.completed_at, last.pk)
+    return rows, cursor
+
+
+def completed_todos(request, pk):
+    """The next page of a list's completed to-dos, for "Show more" (htmx)"""
+    item = item_for(request, pk, Kind.LIST)
+    rows, cursor = _completed_page(
+        _todos(item), size=COMPLETED_MORE, before=request.GET.get("before")
+    )
+    return render(
+        request,
+        "items/_completed.html",
+        {"item": item, "completed": rows, "cursor": cursor},
+    )
+
+
 def todolist(request, pk):
     item = item_for(request, pk, Kind.LIST)
     todolist = item.todolist
@@ -143,6 +184,7 @@ def todolist(request, pk):
     open_todos = todos.filter(todo__completed_at__isnull=True).order_by(
         "position", "pk"
     )
+    completed_count = todos.filter(todo__completed_at__isnull=False).count()
     groups = list(todolist.groups.all())
     by_group = {None: []} | {g.pk: [] for g in groups}
     for todo in open_todos:
@@ -175,6 +217,7 @@ def todolist(request, pk):
                 return render(request, "items/_todo.html", {"todo": todo}, status=201)
             return redirect(item)
     view = request.GET.get("view") or todolist.view
+    completed, completed_cursor = _completed_page(todos, size=COMPLETED_FIRST)
     return render(
         request,
         "items/todolist.html",
@@ -183,9 +226,9 @@ def todolist(request, pk):
             "todolist": todolist,
             "ungrouped": by_group[None],
             "groups": [(g, by_group[g.pk]) for g in groups],
-            "completed": todos.filter(todo__completed_at__isnull=False).order_by(
-                "-todo__completed_at"
-            )[:20],
+            "completed": completed,
+            "completed_cursor": completed_cursor,
+            "completed_count": completed_count,
             "form": form,
             "people": form.fields["assignees"].queryset,
             "view": view,
