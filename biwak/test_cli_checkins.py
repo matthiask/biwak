@@ -1,0 +1,162 @@
+"""The commands of checkins.md; the CLI test case is the one of test_cli.py"""
+
+import datetime as dt
+import json
+import tempfile
+from pathlib import Path
+
+from biwak import test_cli
+from biwak.checkins import operations as ops
+from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail, Skip
+from biwak.checkins.support import at
+from biwak.files.models import Attachment
+from biwak.items.models import Item
+from biwak.test_utils import person
+
+
+class CheckinCLITest(test_cli.CLITest):
+    def setUp(self):
+        super().setUp()
+        self.bob = person("Bob")
+        self.item = ops.create_question(
+            project=self.project,
+            title="How are you?",
+            creator=self.ada,
+            rule="FREQ=WEEKLY;BYDAY=MO",
+            starts_on=dt.date(2027, 3, 15),
+            time_of_day=dt.time(9, 0),
+            people=[self.ada, self.bob],
+            visible=True,
+            now=at("2027-03-19 12:00"),
+        )
+        ops.ask_due(now=at("2027-03-22 09:00"))
+        self.occurrence = Occurrence.objects.get()
+
+    def test_checkins(self):
+        output = self.biwak("checkins", self.project.pk).output
+        for text in ["How are you?", "every Monday, 09:00 Europe/Zurich", "[clients]"]:
+            self.assertIn(text, output)
+        data = json.loads(self.biwak("checkins", self.project.pk, "--json").stdout)
+        self.assertEqual(data[0]["id"], self.item.pk)
+        ops.pause(self.item, actor=self.ada)
+        self.assertIn("paused", self.biwak("checkins", self.project.pk).output)
+
+    def test_answer_show_and_skip(self):
+        result = self.biwak(
+            "checkin", "answer", self.item.pk, input="Busy with the **launch**\n"
+        )
+        self.assertIn("Clients can see this answer.", result.output)
+        self.assertIn(f"occurrence #{self.occurrence.pk}", result.output)
+        output = self.biwak("checkin", "show", self.item.pk).output
+        for text in [
+            "How are you?",
+            "Asked: every Monday, 09:00",
+            "Time zone: Europe/Zurich",
+            "Busy with the **launch**",
+            "Ada Example:",
+            "Hasn't answered yet: Bob",
+            "Mails about answers: summary",
+        ]:
+            self.assertIn(text, output)
+        data = json.loads(self.biwak("checkin", "show", self.item.pk, "--json").stdout)
+        self.assertEqual(
+            data["occurrences"][0]["answers"][0]["author"]["short_name"], "Ada"
+        )
+        # Changing it
+        self.biwak("checkin", "answer", self.item.pk, "Better")
+        self.assertEqual(Item.objects.get(kind="answer").answer.content, "Better")
+
+    def test_answer_an_older_occurrence_with_attachments(self):
+        ops.ask_due(now=at("2027-03-29 09:00"))
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        photo = Path(directory.name) / "photo.png"
+        photo.write_bytes(b"\x89PNG\r\n")
+        self.biwak(
+            "checkin", "answer", self.item.pk, "Back then",
+            "--occurrence", self.occurrence.pk, "--attach", photo,
+        )  # fmt: skip
+        answer = Item.objects.get(kind="answer")
+        self.assertEqual(answer.answer.occurrence, self.occurrence)
+        self.assertTrue(answer.answer.content.startswith("Back then\n\n![photo.png]("))
+        self.assertEqual(Attachment.objects.get().item_id, answer.pk)
+
+    def test_skip(self):
+        self.biwak("checkin", "skip", self.item.pk)
+        self.assertEqual(Skip.objects.get().user, self.ada)
+        data = json.loads(self.biwak("checkin", "skip", self.item.pk, "--json").stdout)
+        self.assertTrue(data["skipped"])
+
+    def test_due(self):
+        output = self.biwak("checkin", "due").output
+        for text in ["How are you?", "Website", "2027-03-22", "[clients]"]:
+            self.assertIn(text, output)
+        data = json.loads(self.biwak("checkin", "due", "--json").stdout)
+        self.assertEqual(data[0]["occurrence_id"], self.occurrence.pk)
+        self.biwak("checkin", "answer", self.item.pk, "Fine")
+        self.assertNotIn("How are you?", self.biwak("checkin", "due").output)
+        self.assertEqual(
+            json.loads(
+                self.biwak(
+                    "checkin", "due", "--json", "--project", self.project.pk
+                ).stdout
+            ),
+            [],
+        )
+
+    def test_add_pause_resume_and_mail(self):
+        result = self.biwak(
+            "checkin", "add", self.project.pk, "What did you read?",
+            "--schedule", "weekly", "--time", "08:30", "--from", "2027-03-26",
+            "--remind", "none", "--people", self.ada.pk, "--zone", "Asia/Tokyo",
+            "--json",
+        )  # fmt: skip
+        data = json.loads(result.stdout)
+        question = Question.objects.get(item=data["id"])
+        self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR")
+        self.assertIsNone(question.remind_after)
+        self.assertEqual(question.time_zone, "Asia/Tokyo")
+        self.assertFalse(data["visible_to_clients"])
+        self.assertIn("Added #", self.biwak(
+            "checkin", "add", self.project.pk, "Daily", "--schedule", "FREQ=DAILY",
+            "--time", "09:00", "--remind", "6", "--clients",
+        ).output)  # fmt: skip
+        self.assertEqual(Question.objects.get(item__title="Daily").remind_after, 6)
+        self.assertEqual(
+            self.biwak(
+                "checkin",
+                "add",
+                self.project.pk,
+                "Bad",
+                "--schedule",
+                "sometimes",
+                "--time",
+                "09:00",
+            ).exit_code,
+            1,
+        )
+
+        self.assertIn("Paused", self.biwak("checkin", "pause", self.item.pk).output)
+        self.assertTrue(Question.objects.get(item=self.item).is_paused)
+        self.assertIn("Resumed", self.biwak("checkin", "resume", self.item.pk).output)
+        self.assertFalse(Question.objects.get(item=self.item).is_paused)
+
+        self.assertIn("summary", self.biwak("checkin", "mail", self.item.pk).output)
+        self.biwak("checkin", "mail", self.item.pk, "each")
+        self.assertEqual(QuestionMail.objects.get().mode, Mode.EACH)
+        self.assertEqual(
+            self.biwak("checkin", "mail", self.item.pk, "sometimes").exit_code, 2
+        )
+
+    def test_read_only_and_errors(self):
+        result = self.biwak("checkin", "answer", self.item.pk, "Hi", access="read")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("only allows reading", result.output)
+        result = self.biwak("checkin", "show", 999999)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("404", result.output)
+        # Bob answers, not asked? He is. A staff member who isn't asked:
+        ops.set_people(self.item, [self.bob], actor=self.ada)
+        result = self.biwak("checkin", "answer", self.item.pk, "Hi")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("403", result.output)
