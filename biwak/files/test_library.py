@@ -157,13 +157,24 @@ class LibraryTest(Fixture, TestCase):
         self.assertTrue(folders["Shown"].is_client_visible)
         self.assertEqual(folders["Nested"].parent, self.private)
 
-    def test_clients_create_visible_folders_where_they_can_see(self):
+    def test_clients_dont_create_folders_docs_or_files(self):
+        """Clients create to-dos, comments and messages, not folders, docs
+        or files (specs/access.md)"""
         self.client.force_login(self.cleo)
-        self.client.post(self.root(), {"title": "Client folder"})
-        self.client.post(self.public.get_absolute_url(), {"title": "Client inner"})
-        for title in ["Client folder", "Client inner"]:
-            self.assertTrue(Item.objects.get(title=title).is_client_visible)
-        self.assertFalse(self.root_shared.creator == self.cleo)
+        for url in [self.root(), self.public.get_absolute_url()]:
+            with self.subTest(url=url):
+                response = self.client.post(url, {"title": "Client folder"})
+                self.assertEqual(response.status_code, 403)
+                response = self.client.get(url)
+                self.assertNotContains(response, "Add folder")
+                self.assertNotContains(response, "New doc")
+                self.assertNotContains(response, "Upload a file")
+        self.assertFalse(Item.objects.filter(title="Client folder").exists())
+        self.client.force_login(self.ada)
+        response = self.client.get(self.root())
+        self.assertContains(response, "Add folder")
+        self.assertContains(response, "New doc")
+        self.assertContains(response, "Upload a file")
 
     def test_the_switch(self):
         self.client.force_login(self.ada)
@@ -340,12 +351,11 @@ class UploadPageTest(Fixture, TestCase):
         self.assertEqual(item.parent, self.private)
         self.assertFalse(item.is_client_visible)
 
-    def test_a_client_uploads_visible_files_into_visible_folders(self):
-        self.send(self.cleo, folder=self.public)
-        item = Item.objects.get(title="new.txt")
-        self.assertTrue(item.is_client_visible)
-        self.send(self.cleo, file=SimpleUploadedFile("root.txt", b"x"))
-        self.assertTrue(Item.objects.get(title="root.txt").is_client_visible)
+    def test_clients_dont_upload_files(self):
+        self.assertEqual(self.send(self.cleo, folder=self.public).status_code, 403)
+        self.assertEqual(self.send(self.cleo).status_code, 403)
+        self.assertEqual(self.get(self.cleo, self.url()).status_code, 403)
+        self.assertFalse(Item.objects.filter(title="new.txt").exists())
 
     def test_a_client_cannot_upload_into_an_internal_folder(self):
         response = self.send(self.cleo, folder=self.private)
@@ -382,8 +392,7 @@ class UploadPageTest(Fixture, TestCase):
             self.client.post(self.url(), {"notify": "nobody"}).status_code, 200
         )
 
-    def test_no_switch_for_clients(self):
-        self.assertNotContains(self.get(self.cleo, self.url()), "Visible to clients")
+    def test_the_switch(self):
         self.assertContains(self.get(self.ada, self.url()), "Visible to clients")
 
 

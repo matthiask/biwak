@@ -406,8 +406,9 @@ class FolderAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.json()["parent_id"], self.private.pk)
         self.assertFalse(response.json()["visible_to_clients"])
+        # Clients create to-dos, comments and messages (specs/access.md)
         response = self.call(self.cleo, "post", url, {"title": "Client folder"})
-        self.assertTrue(response.json()["visible_to_clients"])
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(
             self.call(self.ada, "post", url, {"title": " "}).status_code, 400
         )
@@ -529,6 +530,17 @@ class DocAPITest(APIFixture, TestCase):
             self.ada, "post", f"projects/{self.project.pk}/docs/", {"title": "x"}
         )
         self.assertEqual(response.status_code, 201)
+
+    def test_clients_dont_create_docs(self):
+        """Clients create to-dos, comments and messages (specs/access.md)"""
+        response = self.call(
+            self.cleo,
+            "post",
+            f"projects/{self.project.pk}/docs/",
+            {"title": "Ours", "parent_id": self.public.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Item.objects.filter(title="Ours").exists())
 
     def test_update_with_the_version_rules(self):
         did = self.shared_doc.pk
@@ -707,13 +719,15 @@ class FileAPITest(APIFixture, TestCase):
             self.post_file(self.ada, notify=str(outsider.pk)).status_code, 400
         )
 
-    def test_clients_upload_where_they_can_see(self):
+    def test_clients_dont_upload(self):
+        """Clients create to-dos, comments and messages (specs/access.md)"""
         response = self.post_file(self.cleo, parent_id=self.public.pk)
-        self.assertEqual(response.status_code, 201)
-        self.assertTrue(response.json()["visible_to_clients"])
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.post_file(self.cleo).status_code, 403)
         self.assertEqual(
             self.post_file(self.cleo, parent_id=self.private.pk).status_code, 404
         )
+        self.assertFalse(Item.objects.filter(title="new.txt").exists())
 
     def test_too_large(self):
 

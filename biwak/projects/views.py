@@ -335,14 +335,16 @@ def project_detail(request, pk):
     items = Item.objects.visible_to(request.user).filter(project=project)
     all_lists = items.filter(kind=Kind.LIST, parent=None)
     lists = all_lists.filter(status=Status.ACTIVE).select_related("project")
+    can_create = ops.can_create(request.user, Kind.LIST)
+    if request.method == "POST" and not can_create:
+        raise PermissionDenied
     form = ListForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         item = ops.create_list(
             project=project,
             title=form.cleaned_data["title"],
             creator=request.user,
-            # What clients create is visible to clients (specs/access.md)
-            visible=form.cleaned_data["visible"] or request.user.is_client,
+            visible=form.cleaned_data["visible"],
         )
         return redirect(item)
     lists = list(lists)
@@ -366,6 +368,7 @@ def project_detail(request, pk):
             "archived_lists": all_lists.filter(status=Status.ARCHIVED),
             "can_manage": project_ops.can_manage_project(request.user),
             "form": form,
+            "can_create_lists": can_create,
             "members": project.memberships.select_related("user"),
             "front_messages": file_queries.front_messages(project, request.user),
             "front_files": file_queries.front_files(project, request.user),

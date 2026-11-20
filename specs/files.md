@@ -263,14 +263,14 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   every minute).
 - **Files:** the title is the file's name when uploaded and stays when a
   new version is uploaded (**?**), the version has its own name.
-  Clients upload where they see and replace or rename only what they
-  uploaded; staff everything. Replacing records `edited` (with the new
+  Staff upload (clients don't, `access.md`); clients replace or rename
+  only what they uploaded before that; staff everything. Replacing records `edited` (with the new
   version's name).
 - **Previews:** 400 pixels wide as specified, images already smaller are
   not enlarged (**?**); broken files have none (404, logged). Only the
   current version has a preview on the page.
-- **Folders:** anyone who sees where creates folders, docs and files
-  (what clients create is visible). Moving: `can_change()` (clients only
+- **Folders:** staff create folders, docs and files; clients don't
+  (decided 2026-11-20 after the visibility review, `access.md`). Moving: `can_change()` (clients only
   what they created), into folders the person sees, a folder never into
   itself or below itself. A client's item moved to the root gets the
   root's default (internal), as the switch is off there (decided

@@ -168,10 +168,17 @@ class ViewsTest(TestCase):
         self.assertTrue(self.project.is_member(self.bob))
         self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
 
-    def test_client_creates_visible_list(self):
+    def test_clients_dont_create_lists(self):
+        """Clients create to-dos, comments and messages, not lists
+        (specs/access.md)"""
         self.client.force_login(self.cleo)
-        self.client.post(self.project.get_absolute_url(), {"title": "Our wishes"})
-        self.assertTrue(Item.objects.get(title="Our wishes").is_client_visible)
+        url = self.project.get_absolute_url()
+        response = self.client.post(url, {"title": "Our wishes"})
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Item.objects.filter(title="Our wishes").exists())
+        self.assertNotContains(self.client.get(url), "Add list")
+        self.client.force_login(self.ada)
+        self.assertContains(self.client.get(url), "Add list")
 
     def test_allauth_pages(self):
         # Rendered with our elements (biwak/templates/allauth/)

@@ -89,6 +89,10 @@ class FolderForm(Form):
 
 
 def library(request, project, folder=None):
+    # Folders, docs and files are created by staff (specs/access.md)
+    can_create = ops.can_create(request.user, Kind.FOLDER)
+    if request.method == "POST" and not can_create:
+        raise PermissionDenied
     form = FolderForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         item = ops.create_folder(
@@ -96,7 +100,7 @@ def library(request, project, folder=None):
             title=form.cleaned_data["title"],
             creator=request.user,
             parent=folder,
-            visible=bool(request.POST.get("visible")) or request.user.is_client,
+            visible=bool(request.POST.get("visible")),
         )
         return redirect(item)
     rows = list(contents(request.user, project, folder))
@@ -114,7 +118,8 @@ def library(request, project, folder=None):
         "breadcrumbs": breadcrumbs(folder) + ([folder] if folder else []),
         "rows": rows,
         "form": form,
-        "can_create_switch": folder is None and not request.user.is_client,
+        "can_create": can_create,
+        "can_create_switch": folder is None and can_create,
     }
     if folder is not None:
         context |= {"item": folder} | sidebar_context(request, folder)
@@ -188,18 +193,13 @@ class NewFileForm(NotifyForm, Form):
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
     field_order = ["file", "description", "visible", "notify", "people"]
 
-    def __init__(self, *args, user, **kwargs):
-        super().__init__(*args, **kwargs)
-        if user.is_client:
-            del self.fields["visible"]
-
 
 def file_new(request, pk):
     project = project_for(request, pk)
     folder = folder_param(request, project)
-    form = NewFileForm(
-        request.POST or None, request.FILES or None, project=project, user=request.user
-    )
+    if not ops.can_create(request.user, Kind.FILE):
+        raise PermissionDenied
+    form = NewFileForm(request.POST or None, request.FILES or None, project=project)
     if form.is_valid():
         data = form.cleaned_data
         try:
@@ -209,7 +209,7 @@ def file_new(request, pk):
                 description=data["description"],
                 creator=request.user,
                 parent=folder,
-                visible=data.get("visible", False) or request.user.is_client,
+                visible=data["visible"],
                 whom=form.whom(),
             )
         except attachments.UploadError as exc:

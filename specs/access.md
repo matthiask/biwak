@@ -31,8 +31,15 @@ the first client gets a login.
   their own. Off by default: better to show too little once.
 - Comments on a visible item are visible. There are no internal comments
   on visible items (decided 2026-11-20: too easy to get wrong).
-- Clients can create to-dos, comments and messages where they can see;
-  what they create is visible by definition.
+- Clients can create to-dos, comments and messages where they can see,
+  and answer check-ins they're asked; what they create is visible by
+  definition. Nothing else: lists, groups (in lists they didn't create),
+  folders, docs and files are staff only, through the pages and the API
+  (403; 404 first where the place itself is hidden), and clients don't
+  get the forms (decided 2026-11-20 after the visibility review, which
+  found clients creating lists, folders, docs and files;
+  `ops.can_create()`). What clients created before stays theirs to change
+  (`can_change()`).
 - Assigning a client to a to-do requires the to-do to be visible.
 - Turning visibility off later hides the content again, including
   comments clients wrote; the switch says so.

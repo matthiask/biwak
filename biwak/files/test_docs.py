@@ -170,9 +170,14 @@ class NewDocTest(Fixture, TestCase):
         self.send(self.ada, title="Top", visible="on")
         self.assertTrue(Item.objects.get(title="Top").is_client_visible)
 
-    def test_a_client_creates_visible_docs_where_it_can_see(self):
-        self.send(self.cleo, folder=self.public)
-        self.assertTrue(Item.objects.get(title="Minutes").is_client_visible)
+    def test_clients_dont_create_docs(self):
+        """Clients create to-dos, comments and messages (specs/access.md)"""
+        self.assertEqual(self.send(self.cleo, folder=self.public).status_code, 403)
+        self.assertEqual(self.send(self.cleo).status_code, 403)
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.client.get(self.url()).status_code, 403)
+        self.assertFalse(Item.objects.filter(title="Minutes").exists())
+        # Internal folders stay 404
         self.assertEqual(self.send(self.cleo, folder=self.private).status_code, 404)
 
     def test_whom_to_notify(self):

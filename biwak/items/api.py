@@ -101,14 +101,16 @@ class ListIn(Schema):
 
 @router.post("projects/{project_id}/lists/", response={201: ListOut})
 def list_create(request, project_id: int, data: ListIn):
-    """What clients create is visible to clients (specs/access.md)"""
+    """Staff only (specs/access.md)"""
     project = project_for(request, project_id)
+    if not ops.can_create(request.user, Kind.LIST):
+        raise HttpError(403, _("Only staff create lists."))
     item = ops.create_list(
         project=project,
         title=data.title,
         description=data.description,
         creator=request.user,
-        visible=data.visible_to_clients or request.user.is_client,
+        visible=data.visible_to_clients,
     )
     return Status(201, list_out(item))
 

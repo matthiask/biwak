@@ -42,16 +42,13 @@ class NewDocForm(NotifyForm, DocForm):
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
     field_order = ["title", "content", "visible", "notify", "people"]
 
-    def __init__(self, *args, user, **kwargs):
-        super().__init__(*args, **kwargs)
-        if user.is_client:
-            del self.fields["visible"]
-
 
 def doc_new(request, pk):
     project = project_for(request, pk)
     folder = folder_param(request, project)
-    form = NewDocForm(request.POST or None, project=project, user=request.user)
+    if not ops.can_create(request.user, Kind.DOC):
+        raise PermissionDenied
+    form = NewDocForm(request.POST or None, project=project)
     if form.is_valid():
         data = form.cleaned_data
         item = ops.create_doc(
@@ -60,7 +57,7 @@ def doc_new(request, pk):
             content=data["content"],
             creator=request.user,
             parent=folder,
-            visible=data.get("visible", False) or request.user.is_client,
+            visible=data["visible"],
             whom=form.whom(),
         )
         return redirect(item)
