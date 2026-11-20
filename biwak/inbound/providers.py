@@ -83,7 +83,8 @@ def _envelope_sender(message):
     values = message.get_all("Return-Path")
     if not values:
         return None
-    value = str(values[-1]).strip()
+    # The receiving server's is the topmost
+    value = str(values[0]).strip()
     return "" if value in {"", "<>"} else _address(value)
 
 

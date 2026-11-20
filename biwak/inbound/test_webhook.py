@@ -200,6 +200,19 @@ class WebhookTest(ReplyTestCase):
         self.assertEqual(self.post(body).status_code, 204)
         self.assertEqual(len(self.comments()), 1)
 
+    def test_no_original_message(self):
+        original = self.api
+
+        def api(url, *, auth=True):
+            data = json.loads(original(url, auth=auth))
+            data["raw"] = None
+            return json.dumps(data).encode()
+
+        self.api = api
+        with self.assertLogs("biwak.inbound.views", "ERROR"):
+            self.assertEqual(self.post(event()).status_code, 502)
+        self.assertFalse(InboundMessage.objects.exists())
+
     def test_get_not_allowed(self):
         self.assertEqual(self.client.get("/inbound/resend/").status_code, 405)
 

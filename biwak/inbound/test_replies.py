@@ -227,6 +227,27 @@ class SenderTest(ReceiveMixin, ReplyTestCase):
         self.assertEqual(message.status, InboundStatus.WRONG_SENDER)
         self.assertEqual(self.comments(), [])
 
+    def test_unconfirmed_and_deactivated_not_answered(self):
+        self.ada.is_active = False
+        self.ada.save()
+        failed = {"spf": "fail", "dkim": "fail", "dmarc": "fail"}
+        message = self.receive(sample("spoofed.eml", self.token(), auth=failed))
+        self.assertEqual(message.status, InboundStatus.UNAUTHENTICATED)
+        self.assertEqual(mail.outbox, [])
+
+    def test_unknown_charset(self):
+        message = self.receive(
+            sample(
+                "spoofed.eml",
+                self.token(),
+                replace=[('charset="UTF-8"', 'charset="x-made-up"')],
+            )
+        )
+        self.assertEqual(message.status, InboundStatus.POSTED)
+        self.assertEqual(
+            message.comment.content, "Please send the invoice to the new address."
+        )
+
     def test_answered_once_per_token(self):
         token = self.token()
         self.receive(sample("forwarded_en.eml", token))
@@ -419,6 +440,19 @@ class LoopTest(ReceiveMixin, ReplyTestCase):
             )
         )
         self.assertEqual(message.status, InboundStatus.LOOP)
+
+    def test_the_receiving_servers_return_path_counts(self):
+        """The topmost; one further down was written by the sender"""
+        message = self.receive(
+            sample(
+                "gmail_en.eml",
+                self.token(),
+                replace=[
+                    ("MIME-Version: 1.0\n", "MIME-Version: 1.0\nReturn-Path: <>\n")
+                ],
+            )
+        )
+        self.assertEqual(message.status, InboundStatus.POSTED)
 
     def test_wrong_sender_auto_reply_not_answered(self):
         message = self.receive(
