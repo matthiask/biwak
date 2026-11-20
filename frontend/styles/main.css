@@ -99,12 +99,12 @@ h3,
   --bs-navbar-active-color: #fff;
   --bs-navbar-brand-color: #fff;
   --bs-navbar-brand-hover-color: #fff;
-  background: #1f3d2f;
+  background: #2f7d52;
   border-bottom: 3px solid #e8a33d;
 }
 
 [data-bs-theme="dark"] .wb-navbar {
-  background: #142a20;
+  background: #1f5a3b;
 }
 
 .wb-navbar .nav-link.active {
