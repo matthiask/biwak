@@ -25,6 +25,8 @@ class Kind(models.TextChoices):
     MESSAGE = "message", _("message")
     FOLDER = "folder", _("folder")
     DOC = "doc", _("doc")
+    QUESTION = "question", _("check-in question")
+    ANSWER = "answer", _("check-in answer")
 
 
 # Allowed parents per kind; None is the project's top level (lists, the
@@ -35,14 +37,16 @@ ALLOWED_PARENTS = {
     Kind.MESSAGE: {None},
     Kind.FOLDER: {None, Kind.FOLDER},
     Kind.DOC: {None, Kind.FOLDER},
+    Kind.QUESTION: {None},
+    Kind.ANSWER: {Kind.QUESTION},
 }
 
 # Kinds with a "visible to clients" switch when at the top level; their
 # descendants inherit it (specs/access.md)
-SWITCHABLE = {Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC}
+SWITCHABLE = {Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.QUESTION}
 
 # Kinds people can comment on (no comments on lists and folders)
-COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC}
+COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.ANSWER}
 
 
 class Status(models.TextChoices):
@@ -114,6 +118,14 @@ class Item(TreeNode):
     def get_absolute_url(self):
         if self.kind in {Kind.LIST, Kind.TODO}:
             return reverse(self.kind, kwargs={"pk": self.pk})
+        if self.kind == Kind.QUESTION:
+            return reverse("question", kwargs={"pk": self.pk})
+        if self.kind == Kind.ANSWER:
+            # The occurrence's page, at the answer (specs/checkins.md)
+            return (
+                reverse("question", kwargs={"pk": self.parent_id})
+                + f"?occurrence={self.answer.occurrence_id}#answer-{self.pk}"
+            )
         # Messages, folders and docs get their pages with specs/files.md
         return self.project.get_absolute_url()
 
