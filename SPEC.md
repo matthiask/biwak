@@ -228,9 +228,10 @@ Nothing at the moment.
 - 2026-11-20 (proposed when tightening the specs, change them there if
   wrong): reply tokens valid 6 months; files up to 100 MB; a doc
   version per 10 minutes or author; doc locks expire 5 minutes after
-  the last renewal; check-in reminders after 24 hours; answers to
-  check-ins as one summary mail by default; links internal by default;
-  previews made on first request.
+  the last renewal; answers to check-ins as one summary mail by
+  default; links internal by default; previews made on first request.
+- 2026-11-20: No reminders for missed check-ins (replaces the reminder
+  after 24 hours proposed above).
 - 2026-11-20: Favorites are bookmarked projects, first on the projects
   page; projects ordered by activity (stored per project, a separate
   time for clients) or by name, switchable and remembered per person;

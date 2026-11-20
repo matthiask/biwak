@@ -1,9 +1,12 @@
 """Asking on schedule: the risky part (specs/checkins.md)"""
 
 import datetime as dt
+import threading
 from unittest.mock import patch
 
 from django.core.management import call_command
+from django.db import close_old_connections, connection
+from django.test import TransactionTestCase, override_settings
 
 from biwak.checkins import operations as ops, schedule
 from biwak.checkins.models import Occurrence, Question
@@ -11,7 +14,7 @@ from biwak.checkins.support import MONDAY_9, CheckinTestCase, at, local
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
 from biwak.projects import operations as project_ops
-from biwak.test_utils import person
+from biwak.test_utils import person, project
 
 
 def next_at(item):
@@ -28,7 +31,7 @@ class AskingTest(CheckinTestCase):
     def test_created_between_occurrences_asks_next_monday(self):
         self.assertEqual(next_at(self.item), "2027-03-22 09:00")
         self.assertEqual(self.run_at("2027-03-22 08:59"), {
-            "asked": 0, "reminded": 0, "summarized": 0,
+            "asked": 0, "summarized": 0,
         })  # fmt: skip
         self.assertFalse(Occurrence.objects.exists())
         self.assertEqual(self.run_at("2027-03-22 09:00")["asked"], 1)
@@ -56,8 +59,8 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(Occurrence.objects.count(), 1)
         self.assertEqual(self.sent(), [])
 
-    def test_two_runs_at_once(self):
-        """The second finds the question locked or already asked"""
+    def test_running_twice_asks_once(self):
+        """Two runs one after the other (at once: ``TwoRunsAtOnceTest``)"""
         with self.captureOnCommitCallbacks(execute=True):
             first = ops.ask_due(now=at("2027-03-22 09:00"))
             second = ops.ask_due(now=at("2027-03-22 09:00"))
@@ -190,6 +193,20 @@ class AskingTest(CheckinTestCase):
             )
         self.assertEqual(dates(item), [dt.date(2027, 10, 31)])
         self.assertEqual(next_at(item), "2027-11-01 02:30")
+
+    def test_a_time_in_a_skipped_hour_before_midnight_keeps_its_date(self):
+        """America/Nuuk goes from Saturday 27 March 2027 23:00 (-02) to
+        Sunday 00:00 (-01): Saturday's 23:30 is asked at Sunday 00:30, and
+        Sunday's 23:30 is still asked"""
+        nuuk = schedule.zone("America/Nuuk")
+        item = self.question(
+            "Nuuk", rule="FREQ=DAILY", starts_on=dt.date(2027, 3, 1),
+            time_of_day=dt.time(23, 30), time_zone="America/Nuuk",
+            now=at("2027-03-27 12:00", nuuk),
+        )  # fmt: skip
+        self.run_at("2027-03-28 00:30", nuuk)
+        self.run_at("2027-03-28 23:30", nuuk)
+        self.assertEqual(dates(item), [dt.date(2027, 3, 27), dt.date(2027, 3, 28)])
 
     # Time zones --------------------------------------------------------------
 
@@ -327,6 +344,37 @@ class AskingTest(CheckinTestCase):
         self.run_at("2027-04-26 09:00")
         self.assertEqual(dates(item), [])
 
+    def test_a_first_date_on_another_weekday_or_day(self):
+        """Rules from the API or the CLI: the first date is a Friday.
+        Current behaviour, to be confirmed (specs/checkins.md): every two
+        weeks counts its phase from the first date's week, so the Monday
+        right after isn't asked"""
+        found = {}
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+            "FREQ=MONTHLY;BYMONTHDAY=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
+            "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+        ]:
+            item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 19))
+            found[rule] = next_at(item)[:10]
+        self.assertEqual(
+            found,
+            {
+                "FREQ=WEEKLY;BYDAY=MO": "2027-03-22",
+                "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO": "2027-03-29",
+                "FREQ=MONTHLY;BYMONTHDAY=1": "2027-04-01",
+                "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1": "2027-04-05",
+                "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1": "2028-01-01",
+            },
+        )
+        self.run_at("2027-03-29 09:00")
+        self.assertEqual(
+            next_at(Item.objects.get(title="FREQ=WEEKLY;INTERVAL=2;BYDAY=MO")),
+            "2027-04-12 09:00",
+        )
+
     # Downtime ----------------------------------------------------------------
 
     def test_after_downtime_the_latest_date_is_asked_once(self):
@@ -458,6 +506,66 @@ class AskingTest(CheckinTestCase):
             "2027-03-22 09:00",
         )
 
+    def test_a_new_rule_on_the_day_it_was_asked(self):
+        """Current behaviour, to be confirmed (specs/checkins.md)"""
+        self.run_at("2027-03-22 09:00")
+        ops.update_question(
+            self.item, actor=self.ada, rule="FREQ=DAILY",
+            now=at("2027-03-22 10:00"),
+        )  # fmt: skip
+        self.assertEqual(next_at(self.item), "2027-03-23 09:00")
+        self.assertEqual(self.run_at("2027-03-23 09:00")["asked"], 1)
+        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22), dt.date(2027, 3, 23)])
+
+    def test_a_new_time_zone_on_the_day_it_was_asked(self):
+        """Current behaviour, to be confirmed (specs/checkins.md): a zone
+        where it is still Monday asks Monday's date there, which was asked
+        already; one where Monday's time passed asks next Monday"""
+        new_york = schedule.zone("America/New_York")
+        self.run_at("2027-03-22 09:00")
+        ops.update_question(
+            self.item, actor=self.ada, time_zone="America/New_York",
+            now=at("2027-03-22 10:00"),
+        )  # fmt: skip
+        self.assertEqual(
+            local(Question.objects.get(item=self.item).next_at, new_york),
+            "2027-03-22 09:00",
+        )
+        self.assertEqual(self.run_at("2027-03-22 09:00", new_york)["asked"], 0)
+        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22)])
+        self.assertEqual(
+            local(Question.objects.get(item=self.item).next_at, new_york),
+            "2027-03-29 09:00",
+        )
+        ops.update_question(
+            self.item, actor=self.ada, time_zone="Asia/Tokyo",
+            now=at("2027-03-22 10:00", new_york),
+        )  # fmt: skip
+        self.assertEqual(
+            local(
+                Question.objects.get(item=self.item).next_at,
+                schedule.zone("Asia/Tokyo"),
+            ),
+            "2027-03-29 09:00",
+        )
+
+    def test_a_new_time_zone_on_the_day_before_it_was_asked(self):
+        """Current behaviour, to be confirmed: at 08:00 in Zurich, 09:00
+        in Tokyo has passed, so Monday isn't asked at all"""
+        ops.update_question(
+            self.item, actor=self.ada, time_zone="Asia/Tokyo",
+            now=at("2027-03-22 08:00"),
+        )  # fmt: skip
+        self.assertEqual(
+            local(
+                Question.objects.get(item=self.item).next_at,
+                schedule.zone("Asia/Tokyo"),
+            ),
+            "2027-03-29 09:00",
+        )
+        self.run_at("2027-03-22 09:00")
+        self.assertEqual(dates(self.item), [])
+
     def test_editing_a_paused_question_leaves_it_paused(self):
         ops.pause(self.item, actor=self.ada)
         ops.update_question(
@@ -466,12 +574,10 @@ class AskingTest(CheckinTestCase):
         self.assertIsNone(Question.objects.get(item=self.item).next_at)
         self.assertEqual(Item.objects.get(pk=self.item.pk).title, "Better")
 
-    def test_invalid_rules_and_reminders(self):
+    def test_invalid_rules(self):
         for rule in ["", "FREQ=HOURLY", "FREQ=DAILY;COUNT=3", "nonsense"]:
             with self.assertRaises(ValueError):
                 self.question("Bad", rule=rule)
-        with self.assertRaises(ValueError):
-            self.question("Bad", remind_after=0)
         with self.assertRaises(ValueError):
             ops.update_question(self.item, actor=self.ada, rule="FREQ=SECONDLY")
 
@@ -588,3 +694,49 @@ class AskingTest(CheckinTestCase):
             self.run_at("2027-03-22 09:00")
         self.assertEqual(len(calls), 2)
         self.assertEqual(len(self.sent()), 1)
+
+
+@override_settings(
+    BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
+)
+class TwoRunsAtOnceTest(TransactionTestCase):
+    def test_the_second_run_skips_the_question_the_first_is_asking(self):
+        """While the first run holds the question's lock, the second skips
+        it at once (``skip_locked``) instead of waiting or asking too"""
+        ada = person("Ada")
+        ops.create_question(
+            project=project(members=[ada]), title="How are you?", creator=ada,
+            people=[ada], now=at("2027-03-19 12:00"), **MONDAY_9,
+        )  # fmt: skip
+        locked, release = threading.Event(), threading.Event()
+        latest_occurrence = schedule.latest_occurrence
+
+        def first_waits(question, **kwargs):
+            if not locked.is_set():
+                locked.set()
+                release.wait(10)
+            return latest_occurrence(question, **kwargs)
+
+        results = {}
+
+        def run(name):
+            try:
+                results[name] = len(ops.ask_due(now=at("2027-03-22 09:00")))
+            finally:
+                close_old_connections()
+                connection.close()
+
+        with patch.object(schedule, "latest_occurrence", first_waits):
+            first = threading.Thread(target=run, args=["first"])
+            first.start()
+            self.assertTrue(locked.wait(10))
+            second = threading.Thread(target=run, args=["second"])
+            second.start()
+            second.join(5)
+            waited = second.is_alive()
+            release.set()
+            first.join()
+            second.join()
+        self.assertFalse(waited, "the second run waited for the first")
+        self.assertEqual(results, {"first": 1, "second": 0})
+        self.assertEqual(Occurrence.objects.count(), 1)

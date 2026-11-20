@@ -1,7 +1,5 @@
 {% load i18n %}{% autoescape off %}{% if item.is_client_visible %}{% translate "Clients can see this." %}
 
-{% endif %}{% if reminder %}{% translate "A reminder: you haven't answered yet." %}
-
 {% endif %}{{ title }}
 
 {% translate "Answer" %}: {{ url }}

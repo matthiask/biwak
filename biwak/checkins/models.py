@@ -18,10 +18,6 @@ def default_time_zone():
     return settings.TIME_ZONE
 
 
-# Hours after asking (decided 2026-11-20), None: no reminder
-DEFAULT_REMIND_AFTER = 24
-
-
 class Question(Detail):
     """The question itself is the item's title"""
 
@@ -41,13 +37,6 @@ class Question(Detail):
         verbose_name=_("people"),
     )
     paused_at = models.DateTimeField(_("paused at"), null=True, blank=True)
-    remind_after = models.PositiveIntegerField(
-        _("remind after (hours)"),
-        null=True,
-        blank=True,
-        default=DEFAULT_REMIND_AFTER,
-        help_text=_("Empty: no reminder."),
-    )
     # When the question is asked next: derived from the rule, the time of
     # day and the time zone whenever one of them changes, or after asking;
     # empty while paused (``biwak.checkins.schedule``)
@@ -108,7 +97,6 @@ class Occurrence(models.Model):
     )
     date = models.DateField(_("date"))
     asked_at = models.DateTimeField(_("asked at"), default=timezone.now)
-    reminded_at = models.DateTimeField(_("reminded at"), null=True, blank=True)
     # When the summary mail went out (or was found to be of no use)
     summarized_at = models.DateTimeField(_("summarized at"), null=True, blank=True)
     # Whom it was asked: who is still missing is judged against these, not
@@ -158,7 +146,7 @@ class Answer(Detail):
 
 
 class Skip(models.Model):
-    """Somebody skipped an occurrence: no reminder"""
+    """Somebody skipped an occurrence: it isn't due for them any more"""
 
     occurrence = models.ForeignKey(
         Occurrence,

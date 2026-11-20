@@ -1,9 +1,10 @@
 """Check-ins (specs/checkins.md): creating and changing questions, asking
-them on schedule, reminding, summarizing, answering and skipping
+them on schedule, summarizing, answering and skipping. There are no
+reminders for missed check-ins (decided 2026-11-20).
 
-Every change goes through here. ``ask_due()``, ``remind_due()`` and
-``summarize_due()`` are what ``./manage.py send_mails`` runs every minute
-(see ``run()``): nothing runs in threads or on requests.
+Every change goes through here. ``ask_due()`` and ``summarize_due()`` are
+what ``./manage.py send_mails`` runs every minute (see ``run()``): nothing
+runs in threads or on requests.
 """
 
 import datetime as dt
@@ -11,14 +12,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import (
-    DurationField,
-    Exists,
-    ExpressionWrapper,
-    F,
-    OuterRef,
-    Value,
-)
+from django.db.models import Exists, OuterRef
 from django.utils import timezone
 
 from biwak import schedules
@@ -29,7 +23,6 @@ from biwak.activity.notify import can_see, effective_level
 from biwak.activity.operations import record, subscribe
 from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
-    DEFAULT_REMIND_AFTER,
     Answer,
     Mode,
     Occurrence,
@@ -82,12 +75,6 @@ def _check_people(item, people):
             raise ValueError(f"{user} can't see {item}")
 
 
-def _remind_after(value):
-    if value is not None and value < 1:
-        raise ValueError("Remind after at least one hour, or not at all.")
-    return value
-
-
 def _clean_schedule(rule, time_zone):
     return schedules.validate(rule), schedule.zone(time_zone).key
 
@@ -113,14 +100,12 @@ def create_question(
     time_of_day,
     time_zone=None,
     people=(),
-    remind_after=DEFAULT_REMIND_AFTER,
     visible=False,
     now=None,
 ):
     """Asks the first time on or after ``starts_on`` at ``time_of_day``
     (later than ``now``)"""
     rule, time_zone = _clean_schedule(rule, time_zone or settings.TIME_ZONE)
-    remind_after = _remind_after(remind_after)
     item = Item(
         project=project,
         kind=Kind.QUESTION,
@@ -138,7 +123,6 @@ def create_question(
         starts_on=starts_on,
         time_of_day=time_of_day,
         time_zone=time_zone,
-        remind_after=remind_after,
     )
     question.next_at = schedule.next_fire_of(question, after=now or timezone.now())
     question.save(update_fields=["next_at"])
@@ -176,11 +160,10 @@ def update_question(
     starts_on=_UNCHANGED,
     time_of_day=_UNCHANGED,
     time_zone=_UNCHANGED,
-    remind_after=_UNCHANGED,
     people=_UNCHANGED,
     now=None,
 ):
-    """Changes what's given (``remind_after`` None: no reminder). A new
+    """Changes what's given. A new
     schedule counts from now: today's time of day only if it's still ahead,
     and a date already asked isn't asked again."""
     question = (
@@ -208,11 +191,6 @@ def update_question(
             setattr(question, name, value)
             changed.append(name)
             schedule_changed = True
-    if remind_after is not _UNCHANGED:
-        remind_after = _remind_after(remind_after)
-        if question.remind_after != remind_after:
-            question.remind_after = remind_after
-            changed.append("remind_after")
     if schedule_changed and question.paused_at is None:
         question.next_at = schedule.next_fire_of(question, after=now or timezone.now())
         changed.append("next_at")
@@ -228,7 +206,7 @@ def update_question(
 
 @transaction.atomic
 def pause(item, *, actor):
-    """A paused question isn't asked, nor reminded"""
+    """A paused question isn't asked"""
     question = Question.objects.select_for_update().get(item=item)
     if question.paused_at is not None:
         return
@@ -251,7 +229,7 @@ def resume(item, *, actor, now=None):
     record(actor=actor, action=Action.EDITED, project=item.project, item=item)
 
 
-# Asking, reminding, summarizing -----------------------------------------------
+# Asking and summarizing ------------------------------------------------------
 
 
 def _recipients(question, occurrence=None):
@@ -305,9 +283,11 @@ def ask_due(*, now=None):
             )
             if question is None:
                 continue
-            fire = schedule.latest_fire(question, first=question.next_at, now=now)
+            date, _fire = schedule.latest_occurrence(
+                question, first=question.next_at, now=now
+            )
             if question.is_askable:
-                occurrence = _ask(question, fire, now)
+                occurrence = _ask(question, date, now)
                 if occurrence is not None:
                     created.append(occurrence)
             question.next_at = schedule.next_fire_of(question, after=now)
@@ -315,10 +295,9 @@ def ask_due(*, now=None):
     return created
 
 
-def _ask(question, fire, now):
-    """The occurrence of the date of ``fire``, unless it was asked already
+def _ask(question, date, now):
+    """The occurrence of the rule's ``date``, unless it was asked already
     (the schedule was edited on the day)"""
-    date = schedule.local_date(fire, question.time_zone)
     occurrence, was_created = Occurrence.objects.get_or_create(
         question=question, date=date, defaults={"asked_at": now}
     )
@@ -330,60 +309,13 @@ def _ask(question, fire, now):
     return occurrence
 
 
-def remind_due(*, now=None):
-    """Reminds once, ``remind_after`` hours after asking, those who neither
-    answered nor skipped. Only the latest occurrence is reminded: when the
-    next one has been asked, the older one is history. A reminder which
-    comes due while the question can't be asked (paused, trashed,
-    archived) is dropped, not sent late when it comes back. Returns the
-    occurrences reminded."""
-    now = now or timezone.now()
-    candidates = (
-        Occurrence.objects
-        .filter(reminded_at__isnull=True, question__remind_after__isnull=False)
-        .annotate(has_newer=Exists(_newer()))
-        .filter(has_newer=False)
-        .annotate(
-            remind_at=F("asked_at")
-            + ExpressionWrapper(
-                F("question__remind_after") * Value(dt.timedelta(hours=1)),
-                output_field=DurationField(),
-            )
-        )
-        .filter(remind_at__lte=now)
-        .order_by("remind_at", "pk")
-        .values_list("pk", flat=True)
-    )
-    reminded = []
-    for pk in list(candidates):
-        with transaction.atomic():
-            occurrence = (
-                Occurrence.objects
-                .select_for_update(skip_locked=True, of=("self",))
-                .select_related("question__item__project")
-                .filter(pk=pk, reminded_at__isnull=True)
-                .first()
-            )
-            if occurrence is None:
-                continue
-            occurrence.reminded_at = now
-            occurrence.save(update_fields=["reminded_at"])
-            if not occurrence.question.is_askable:
-                continue
-            if people := missing(occurrence):
-                mails.after_commit(mails.reminder_mail, occurrence, people)
-            reminded.append(occurrence)
-    return reminded
-
-
 def summary_due_at(occurrence):
     """07:00 on the day after the occurrence's date, in the question's time
-    zone"""
-    return schedule.fire_at(
-        occurrence.date + dt.timedelta(days=1),
-        SUMMARY_AT,
-        occurrence.question.time_zone,
-    )
+    zone; after downtime, the day after it was really asked (people can
+    answer first)"""
+    time_zone = occurrence.question.time_zone
+    day = max(occurrence.date, schedule.local_date(occurrence.asked_at, time_zone))
+    return schedule.fire_at(day + dt.timedelta(days=1), SUMMARY_AT, time_zone)
 
 
 def summary_recipients(question):
@@ -438,7 +370,6 @@ def run(*, now=None):
     now = now or timezone.now()
     return {
         "asked": len(ask_due(now=now)),
-        "reminded": len(remind_due(now=now)),
         "summarized": len(summarize_due(now=now)),
     }
 
@@ -536,7 +467,7 @@ def _update_answer(answer, content, *, actor):
 
 @transaction.atomic
 def skip(item, *, user, occurrence=None):
-    """ "Skip this time": no reminder. Not once answered."""
+    """ "Skip this time": not due any more. Not once answered."""
     if not can_answer(user, item):
         raise NotAllowed(f"{user} isn't asked {item}")
     occurrence = _occurrence(item, occurrence)

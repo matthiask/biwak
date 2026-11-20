@@ -86,7 +86,7 @@ class PagesTest(ViewsTestCase):
         self.assertContains(response, "Every Monday,\n    09:00 Europe/Zurich")
         self.assertContains(response, "Show to clients")
         self.assertNotContains(response, "Clients can see this")
-        self.assertContains(response, "A reminder after 24 hours.")
+        self.assertNotContains(response, "reminder")
 
     def test_the_page_lists_those_who_didnt_answer(self):
         ops.answer(self.item, user=self.ada, content="Fine")
@@ -262,7 +262,6 @@ class FormsTest(ViewsTestCase):
             "starts_on": "2027-03-26",
             "time_of_day": "08:30",
             "time_zone": "Europe/Zurich",
-            "remind_after": "12",
             "people": [self.ada.pk, self.bob.pk],
         } | kwargs
 
@@ -275,7 +274,6 @@ class FormsTest(ViewsTestCase):
         question = item.question
         self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR", "from the first date")
         self.assertEqual(question.time_of_day, dt.time(8, 30))
-        self.assertEqual(question.remind_after, 12)
         self.assertEqual(set(question.people.all()), {self.ada, self.bob})
         self.assertFalse(item.is_client_visible)
         self.assertEqual(item.creator, self.ada)
@@ -290,12 +288,10 @@ class FormsTest(ViewsTestCase):
                 title="Shared too",
                 visible="on",
                 people=[self.ada.pk, self.cleo.pk],
-                remind_after="",
             ),
         )
         item = Item.objects.get(title="Shared too")
         self.assertTrue(item.is_client_visible)
-        self.assertIsNone(item.question.remind_after)
         self.assertIn(self.cleo, item.question.people.all())
 
     def test_a_client_cant_be_asked_on_an_internal_question(self):
@@ -321,7 +317,6 @@ class FormsTest(ViewsTestCase):
             {"repeat": "custom", "custom_rule": "FREQ=HOURLY"},
             {"time_zone": "Mars/Olympus"},
             {"time_of_day": ""},
-            {"remind_after": "0"},
             {"starts_on": ""},
             {"title": ""},
         ]:
@@ -374,6 +369,26 @@ class FormsTest(ViewsTestCase):
         form = self.get(self.ada, self.url("question_edit", self.item)).context["form"]
         self.assertEqual(form.initial["repeat"], "custom")
         self.assertEqual(form.initial["custom_rule"], "FREQ=WEEKLY;BYDAY=MO,TH")
+
+    def test_saving_keeps_a_rule_for_another_weekday_or_day(self):
+        """Rules from the API or the CLI (first date a Friday): saving the
+        form with a new title keeps them"""
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+            "FREQ=MONTHLY;BYMONTHDAY=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=-1",
+            "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+        ]:
+            item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 19))
+            url = self.url("question_edit", item)
+            initial = self.get(self.ada, url).context["form"].initial
+            data = {k: v for k, v in initial.items() if v is not None}
+            data["people"] = [u.pk for u in data["people"]]
+            response = self.post(self.ada, url, data | {"title": "Renamed"})
+            self.assertEqual(response.status_code, 302, rule)
+            self.assertEqual(Question.objects.get(item=item).rule, rule)
 
     def test_editing_a_visible_question_keeps_the_clients(self):
         response = self.post(

@@ -10,7 +10,9 @@ from django.utils.translation import gettext as _
 
 
 # Raise this when the API changes in ways older CLIs can't handle
-MINIMUM = (0, 1, 0)
+# (0.14.0: check-ins without reminders; older CLIs show a question's
+# reminder and fail)
+MINIMUM = (0, 14, 0)
 INSTALL = "git+https://github.com/matthiask/biwak#subdirectory=cli"
 _PROJECT = tomllib.loads((settings.BASE_DIR / "cli" / "pyproject.toml").read_text())[
     "project"

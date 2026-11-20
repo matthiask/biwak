@@ -223,3 +223,17 @@ class SummaryTest(CheckinTestCase):
         ops.answer(self.item, user=self.ada, content="One")
         self.assertEqual(self.summarize("2027-03-25 12:00"), 1)
         self.assertEqual(len(self.summaries()), 2)
+
+
+class SummaryAfterDowntimeTest(CheckinTestCase):
+    def test_the_morning_after_it_was_really_asked(self):
+        """Down from Monday 08:00 to Tuesday 08:00: Monday's question is
+        asked on Tuesday, its summary goes out on Wednesday"""
+        self.run_at("2027-03-23 08:00")
+        self.sent()
+        ops.answer(self.item, user=self.ada, content="Fine")
+        self.assertEqual(self.run_at("2027-03-24 06:59")["summarized"], 0)
+        self.assertEqual(self.run_at("2027-03-24 07:00")["summarized"], 1)
+        self.assertEqual(
+            len([m for m in self.sent() if ": answers of 22. March" in m.subject]), 2
+        )

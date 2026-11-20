@@ -1,5 +1,5 @@
-"""Mails of check-ins (specs/checkins.md): the question, the reminder and the
-summary of the answers. Everything goes out after the transaction commits
+"""Mails of check-ins (specs/checkins.md): the question and the summary of
+the answers. Everything goes out after the transaction commits
 (``after_commit``); the mails of single answers are the normal
 notifications (``biwak.activity``)."""
 
@@ -52,8 +52,8 @@ def question_url(occurrence):
 
 
 def thread(user, occurrence):
-    """One thread per person and occurrence: the question (its message ID),
-    the reminder and the summary"""
+    """One thread per person and occurrence: the question (its message ID)
+    and the summary"""
     return (
         f"<question-{occurrence.question.item_id}-{occurrence.pk}-{user.pk}@{host()}>"
     )
@@ -115,12 +115,6 @@ def question_mail(user, occurrence):
     return _build(
         user, occurrence, subject=subject, context=context, name="question", first=True
     )
-
-
-def reminder_mail(user, occurrence):
-    context = _context(user, occurrence) | {"reminder": True}
-    subject = _("Reminder: [%(project)s] %(title)s") % context
-    return _build(user, occurrence, subject=subject, context=context, name="question")
 
 
 def summary_mail(user, occurrence):

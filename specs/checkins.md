@@ -6,11 +6,17 @@ on this week?", "Read any good books lately?". Used heavily for the team
 itself, less for client projects.
 
 **Status:** built (2026-11-20): models, `biwak/checkins/` (`schedule.py`
-the time arithmetic, `operations.py` asking, reminding, summaries and
-answering, `mails.py`), pages, API (`checkins/`), CLI 0.12.0. Decisions
+the time arithmetic, `operations.py` asking, summaries and answering,
+`mails.py`), pages, API (`checkins/`), CLI 0.12.0; reminders removed
+again (CLI 0.14.0). Decisions
 made while building, to be confirmed (marked "Open" where the spec left a
 value or a product choice to the builder):
 
+- **No reminders for missed check-ins (decided 2026-11-20).** The
+  question mail is the only one asking; who hasn't answered shows on the
+  question's page and in "due". Removed what was built: `remind_after`,
+  `Occurrence.reminded_at`, the reminder mail, the form, API and CLI
+  fields (`--remind`).
 - **Added to the model:** `Question.starts_on` (the date the rule counts
   from: first date and phase of "every two weeks"; the forms say "first
   asked on"), `Question.next_at` (stored: when it is asked next, computed
@@ -26,35 +32,47 @@ value or a product choice to the builder):
   zone, so in UTC it moves by an hour at the changes. A time which doesn't
   exist (02:30 when the clocks go forward) is asked an hour later (03:30);
   one which happens twice (02:30 when they go back) once, the first time.
-  A date is the calendar date in the question's zone.
+  A date is the calendar date in the question's zone. An occurrence's date
+  is the rule's date, not the date of the moment it is asked: a time in a
+  gap just before midnight (23:30 when America/Nuuk goes from 23:00 to
+  00:00) is asked at 00:30 the next day, for the day before (fixed
+  2026-11-20: it was stored under the next day, which then wasn't asked).
 - **After downtime** (or a late run) a question is asked once, for the
   latest date due, not for every missed date; `asked_at` is when it was
   really asked.
 - **Pausing** clears `next_at`; resuming computes it from now, so missed
-  occurrences aren't asked. A reminder which comes due while the question
-  can't be asked (paused, trashed, archived or in an archived project) is
-  dropped, not sent when it comes back; such questions also move on
-  without asking.
+  occurrences aren't asked. Questions which can't be asked (paused,
+  trashed, archived or in an archived project) move on without asking.
 - **Editing the schedule** counts from now: today's time only if still
-  ahead, and a date already asked isn't asked again.
+  ahead, and a date already asked isn't asked again. The edit form shows a
+  rule as a preset only when the preset gives that rule from the first
+  date; a rule for another weekday or day (from the API or the CLI) is
+  shown as custom, so saving the form keeps it (fixed 2026-11-20: saving
+  rebuilt it from the first date's weekday or day). Open (tests assert
+  what happens now): a new rule or time zone on the day it was asked
+  counts from now in the new zone, so a zone where that date is still
+  ahead doesn't ask it again and one where its time has passed asks the
+  next date; changing the zone before the day's time can skip the day
+  (08:00 in Zurich to Asia/Tokyo, where 09:00 has passed).
+- **A first date which doesn't match the rule** (API and CLI rules, e.g.
+  Mondays from a Friday): the first date the rule gives on or after it.
+  Open: "every two weeks" counts its phase from the first date's week, so
+  the Monday right after a Friday isn't asked, the one after it is.
 - **People:** adding is from the next occurrence on (those added are
   subscribed and can answer the latest occurrence, but aren't in its
-  `asked`, aren't reminded and aren't "due" for it); removing unsubscribes
+  `asked` and aren't "due" for it); removing unsubscribes
   and keeps their answers. Clients only when the question is visible to
   clients; if it turns internal they aren't asked or mailed (they stay in
   the list). Only people in the list answer or skip (staff who aren't asked
   don't), the author edits their own answer (answering again changes it,
   also from the trash), answering takes back a skip, skipping after
   answering is refused.
-- **Reminder:** `remind_after` hours (elapsed hours, not wall clock) after
-  `asked_at`, once, only for the latest occurrence of the question (when
-  the next is asked first, as for a daily question reminded after 24 hours,
-  the older one is history) and only for people asked then who still are in
-  the list.
 - **Summary:** 07:00 on the day after the occurrence's date in the
-  question's time zone (Open: or the installation's, like the digest), to
-  subscribers whose mode is `summary` (the default) who see the question and
-  whose level isn't "nothing"; no mail for an occurrence without answers;
+  question's time zone (Open: or the installation's, like the digest), or,
+  when it was asked later than its date (after downtime), on the day after
+  it was asked (fixed 2026-11-20: a late run used the summary up before
+  anyone could answer), to subscribers whose mode is `summary` (the
+  default) who see the question and whose level isn't "nothing"; no mail for an occurrence without answers;
   answers after it are not sent; choosing a mode other than `none`
   subscribes.
 - **Answers' mails** (`each`) go through the normal notifications:
@@ -62,16 +80,16 @@ value or a product choice to the builder):
   the level "concerns me".
 - **Not asked:** trashed and archived questions, questions of archived
   projects.
-- **Mails** (question, reminder, summary) go out after the commit, one per
+- **Mails** (question, summary) go out after the commit, one per
   person, in their language; a mail which can't be sent is logged and not
   retried. Replying by mail (`notifications.md`, stage 2) goes into
   `biwak/checkins/mails.py`: `reply_headers()` returns the `Reply-To` and
   `thread()` the thread of a person and occurrence; `Occurrence` is what a
   reply points at.
 - **Open (values the spec doesn't fix):** how many occurrences a page shows
-  (5, `OCCURRENCES_PER_PAGE`); the wording of the three mails and the
+  (5, `OCCURRENCES_PER_PAGE`); the wording of the two mails and the
   pages; no default time of day (the form asks); asking people with the
-  level "nothing" (they are asked and reminded regardless).
+  level "nothing" (they are asked regardless).
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`; have the scheduling tests reviewed.
@@ -86,11 +104,9 @@ this part.
 - **Kind `question`** (parent: none), switchable, not commentable:
   `Question(Detail)` with the question as the item's title, `rule` (an
   RRULE, `biwak/schedules.py`), `time_of_day`, `time_zone` (default
-  `TIME_ZONE`), `people` (many-to-many: who is asked), `paused_at`,
-  `remind_after` (hours, default 24, decided 2026-11-20; empty for no
-  reminder).
-- **`Occurrence(question, asked_at, reminded_at)`**: one per time the
-  question is asked.
+  `TIME_ZONE`), `people` (many-to-many: who is asked), `paused_at`.
+- **`Occurrence(question, asked_at)`**: one per time the question is
+  asked.
 - **Kind `answer`** (parent: its question), commentable:
   `Answer(Detail)` with `content` (Markdown) and `occurrence`; one per
   person and occurrence (unique on occurrence and creator), editable by
@@ -116,8 +132,6 @@ this part.
   mentions and attachments. Everybody asked is subscribed to the
   question.
 - **Skipping:** a "Skip this time" button next to the form.
-- **Reminder:** once, `remind_after` hours after asking, to the people
-  who neither answered nor skipped.
 - **Answers' mails** per `QuestionMail`: `each` through `notify()`;
   `summary` at 07:00 the morning after the occurrence (in `send_mails`),
   one mail with all answers.
@@ -150,6 +164,5 @@ Pages, API and CLI for all of the above. Tests: schedules across
 daylight saving time changes and time zones (a question at 09:00
 Europe/Zurich stays at 09:00 local time in March and October), pausing
 and resuming, answering an older occurrence, one answer per person and
-occurrence, reminders only to those who neither answered nor skipped,
-the summary mail, a client asked on a visible question and not seeing
+occurrence, skipping takes the occurrence off "due", the summary mail, a client asked on a visible question and not seeing
 internal questions.

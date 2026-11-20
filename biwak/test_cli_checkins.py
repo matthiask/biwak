@@ -108,20 +108,19 @@ class CheckinCLITest(test_cli.CLITest):
         result = self.biwak(
             "checkin", "add", self.project.pk, "What did you read?",
             "--schedule", "weekly", "--time", "08:30", "--from", "2027-03-26",
-            "--remind", "none", "--people", self.ada.pk, "--zone", "Asia/Tokyo",
+            "--people", self.ada.pk, "--zone", "Asia/Tokyo",
             "--json",
         )  # fmt: skip
         data = json.loads(result.stdout)
         question = Question.objects.get(item=data["id"])
         self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR")
-        self.assertIsNone(question.remind_after)
         self.assertEqual(question.time_zone, "Asia/Tokyo")
         self.assertFalse(data["visible_to_clients"])
         self.assertIn("Added #", self.biwak(
             "checkin", "add", self.project.pk, "Daily", "--schedule", "FREQ=DAILY",
-            "--time", "09:00", "--remind", "6", "--clients",
+            "--time", "09:00", "--clients",
         ).output)  # fmt: skip
-        self.assertEqual(Question.objects.get(item__title="Daily").remind_after, 6)
+        self.assertTrue(Question.objects.filter(item__title="Daily").exists())
         self.assertEqual(
             self.biwak(
                 "checkin",
