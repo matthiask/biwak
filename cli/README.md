@@ -9,6 +9,7 @@ biwak login https://biwak.example.org --write   # or --read
 biwak projects
 biwak lists PROJECT
 biwak todos LIST
+biwak todos --mine --due overdue
 biwak todo add LIST "Order the tent" --due 2026-12-01 --assign 3
 biwak todo done TODO
 ```

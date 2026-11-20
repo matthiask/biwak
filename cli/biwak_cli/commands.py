@@ -126,23 +126,46 @@ def lists(project, as_json):
 
 
 @cli.command()
-@click.argument("list_id", metavar="LIST", type=int)
+@click.argument("list_id", metavar="LIST", type=int, required=False)
 @click.option("--completed", is_flag=True, help="Completed to-dos, latest first.")
+@click.option("--mine", is_flag=True, help="Only to-dos assigned to you.")
+@click.option("--project", "project_id", type=int, help="Only this project's ID.")
+@click.option(
+    "--due",
+    type=click.Choice(["overdue", "today", "this_week", "later", "none"]),
+    help="Only to-dos in this group by due date.",
+)
 @json_option
-def todos(list_id, completed, as_json):
-    """The open to-dos of LIST, by group"""
-    if completed:
+def todos(list_id, completed, mine, project_id, due, as_json):
+    """The open to-dos of LIST, by group; without LIST across all projects by
+    due date (--mine, --project, --due)"""
+    if list_id and (mine or project_id or due):
+        terminate("--mine, --project and --due go without LIST.")
+    if list_id and completed:
         data = request("GET", f"lists/{list_id}/todos/completed/")["results"]
-    else:
+    elif list_id:
         data = request("GET", f"lists/{list_id}/todos/")
+    else:
+        params = {"completed": completed, "page_size": 200}
+        if mine:
+            params["assignee"] = "me"
+        if project_id:
+            params["project_id"] = project_id
+        if due:
+            params["due_group"] = due
+        data = request("GET", "todos/", params=params)["results"]
     if as_json:
         return echo_json(data)
-    t = table("ID", "To-do", "Group", "Assignees", "Due", "")
+    t = table(
+        "ID", "To-do", "Project" if not list_id else "Group", "Assignees", "Due", ""
+    )
     for todo in data:
         t.add_row(
             str(todo["id"]),
             todo["title"],
-            (todo["group"] or {}).get("title", ""),
+            f"{todo['project_name']} / {todo['list_title']}"
+            if "project_name" in todo
+            else (todo["group"] or {}).get("title", ""),
             names(todo["assignees"]),
             todo["due_on"] or "",
             clients(todo),

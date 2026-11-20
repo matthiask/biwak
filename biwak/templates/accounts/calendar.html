@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Calendar" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "Calendar" %}</h1>
+  <div class="row">
+    <div class="col-lg-8">
+      <p>
+        {% blocktranslate trimmed %}
+          Your open to-dos with a due date as a calendar feed (iCal): add the link to your calendar app as a
+          subscription. It shows what you can see in Biwak and doesn't need a login, so keep it to yourself.
+        {% endblocktranslate %}
+      </p>
+      {% if url %}
+        <div class="input-group mb-3">
+          <input
+            type="text"
+            readonly
+            class="form-control user-select-all"
+            id="calendar-url"
+            value="{{ url }}"
+            aria-label="{% translate 'Calendar link' %}"
+          >
+          <button type="button" class="btn btn-quiet" data-copy="#calendar-url">{% translate "Copy" %}</button>
+        </div>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm {% if url %}btn-quiet{% else %}btn-primary{% endif %}">
+          {% if url %}{% translate "Make a new link" %}{% else %}{% translate "Create the link" %}{% endif %}
+        </button>
+        {% if url %}
+          <span class="small text-body-secondary ms-2">{% translate "The old link stops working." %}</span>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+{% endblock content %}

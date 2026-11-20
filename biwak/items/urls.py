@@ -1,9 +1,12 @@
 from django.urls import path
 
-from biwak.items import views
+from biwak.items import by_due, views
 
 
 urlpatterns = [
+    path("todos/", by_due.todos_by_due, name="todos"),
+    path("projects/<int:pk>/todos/", by_due.project_todos, name="project_todos"),
+    path("calendar/<str:token>.ics", by_due.calendar_feed, name="calendar_feed"),
     path("lists/<int:pk>/", views.todolist, name="list"),
     path("lists/<int:pk>/groups/", views.group_create, name="group_create"),
     path("groups/<int:pk>/delete/", views.group_delete, name="group_delete"),

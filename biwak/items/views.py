@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from biwak import schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
-from biwak.forms import Form
+from biwak.forms import Form, next_url
 from biwak.items import operations as ops, visibility
 from biwak.items.models import Group, Item, Kind, Status, TodoList
 
@@ -306,7 +306,7 @@ def todo_toggle(request, pk):
         ops.reopen(item, actor=request.user)
     else:
         ops.complete(item, actor=request.user)
-    return redirect(request.POST.get("next") or item.parent)
+    return redirect(next_url(request) or item.parent)
 
 
 class TodoDetailForm(RepeatForm):

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{{ title }} – Biwak{% endblock %}
+
+{% block content %}
+  {% if project %}<nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>{% endif %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{{ title }}</h1>
+  </div>
+  <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-4" data-filters>
+    {% for field in form %}
+      <div>
+        <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-sm btn-primary">{% translate "Filter" %}</button>
+    <a class="btn btn-sm btn-quiet" href="{{ request.path }}">{% translate "Reset" %}</a>
+  </form>
+  {% if completed %}
+    {% for todo in page %}
+      {% include "items/_due_row.html" %}
+    {% empty %}
+      <p class="text-body-secondary">{% translate "Nothing completed." %}</p>
+    {% endfor %}
+    {% if page.has_other_pages %}
+      <nav class="d-flex gap-3 mt-3 small">
+        {% if page.has_previous %}<a
+            href="?{{ querystring }}&page={{ page.previous_page_number }}"
+          >{% translate "Newer" %}</a>{% endif %}
+        {% if page.has_next %}<a
+            href="?{{ querystring }}&page={{ page.next_page_number }}"
+          >{% translate "Older" %}</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    {% for key, label, todos in sections %}
+      <section class="mb-4" data-section="{{ key }}">
+        <h2 class="h6{% if key == 'overdue' %} text-danger{% endif %}">{{ label }}</h2>
+        {% for todo in todos %}{% include "items/_due_row.html" %}{% endfor %}
+      </section>
+    {% empty %}
+      <p class="text-body-secondary">{% translate "Nothing to do." %}</p>
+    {% endfor %}
+  {% endif %}
+{% endblock content %}

@@ -4,8 +4,8 @@ Builds on `core.md` and `access.md`.
 
 **Status:** assignees, the board view, moving several to-dos at once and
 adding to-dos inline are built (core, 2026-11-20). Stage 1 (schedules
-and recurrence) is built (2026-11-20); stage 2 (the list by due date, the
-iCal feed) is open.
+and recurrence) and stage 2 (the list by due date, the iCal feed) are
+built (2026-11-20).
 
 **Agent:** both stages suit a cheaper model following this spec and the
 checklist in `AGENTS.md`.
@@ -144,6 +144,36 @@ today, this week (until Sunday), later and no date.
 `GET /api/v1/todos/?…` with the same filters and grouping key per to-do,
 cursor-paginated. `biwak todos --mine|--project ID|--due …` across
 projects (the existing `biwak todos LIST` stays).
+
+### Decisions made while building stage 2
+
+All proposed by the building agent, 2026-11-20; change them here if wrong.
+
+- **Left out of the list** (and the API and the feed): to-dos of archived
+  projects and of archived lists, besides trashed ones.
+- **This week** runs until Sunday, in the installation's time zone: on
+  a Sunday it's empty, everything after today is "later".
+- **Filters:** unknown values (a project the person can't open, a
+  non-existent person) show an error and no to-dos, never a silent
+  "everything". Assignee choices list people only for staff; clients get
+  "anybody", "me" and "nobody". The visibility filter is staff only.
+  `?state=completed` (latest first, 50 per page) replaces the sections.
+- **Completing in place** posts to the same toggle as the list's page and
+  comes back to the filtered list (`next`, same site only).
+- **Navigation:** "My to-dos" in the top bar; "Calendar" (the feed link)
+  in the person's menu; the project page links to its to-dos by due date.
+- **Feed:** a plain all-day event per open assigned to-do with a due
+  date: title, link, "project / list" as the description, no notes (the
+  URL travels through calendar servers); `UID` `todo-ID@biwak`; not
+  marked busy. Not in the audit log either: the token is a secret.
+  The link is created and renewed on the page with a POST.
+- **API:** `GET /api/v1/todos/` takes `project_id`, `list_id`, `assignee`
+  (`me`, `nobody`, an ID), `completed`, `visible_to_clients` (ignored for
+  clients), `due_group` and the cursor; each to-do carries `due_group`,
+  `project_name` and `list_title`. Open ones are ordered by due date (to-dos
+  without one last), completed ones latest first.
+- **CLI:** `biwak todos` without LIST takes `--mine`, `--project ID`,
+  `--due GROUP` and `--completed`; it shows the first 200.
 
 ### Done when (stage 2)
 

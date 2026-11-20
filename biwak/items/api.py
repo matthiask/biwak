@@ -22,7 +22,7 @@ from biwak.api_conventions import (
     paginated,
     person_out,
 )
-from biwak.items import operations as ops
+from biwak.items import due, operations as ops
 from biwak.items.models import Group, Item, Kind, Status as ItemStatus
 from biwak.items.views import assignable_people
 from biwak.projects.api import project_for
@@ -371,6 +371,64 @@ def todo_create(request, list_id: int, data: TodoIn):
         recurrence_count=_count(data.recurrence_count),
     )
     return Status(201, todo_out(Item.objects.get(pk=todo.pk)))
+
+
+class DueTodoOut(TodoOut):
+    due_group: Literal["overdue", "today", "this_week", "later", "none"]
+    project_name: str
+    list_title: str
+
+
+@router.get("todos/", response=page_of(DueTodoOut))
+def todo_overview(
+    request,
+    *,
+    project_id: int | None = None,
+    list_id: int | None = None,
+    assignee: str | None = None,
+    completed: bool = False,
+    visible_to_clients: bool | None = None,
+    due_group: Literal["overdue", "today", "this_week", "later", "none"] | None = None,
+    cursor: str | None = None,
+    page_size: int | None = None,
+):
+    """To-dos across all projects the person sees, by due date (to-dos
+    without one last); ``completed`` the completed ones, the latest first.
+    ``assignee`` is ``me``, ``nobody`` or a person's ID, ``due_group`` one
+    of the groups of the page. Archived projects and lists are left out.
+    Clients only ever get what is visible to them."""
+    project = project_for(request, project_id) if project_id is not None else None
+    todolist = item_for(request, list_id, Kind.LIST) if list_id is not None else None
+    if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
+        bad_request(_("assignee is me, nobody or a person's ID."))
+    qs = due.todos(
+        request.user,
+        project=project,
+        todolist=todolist,
+        assignee=assignee or None,
+        completed=completed,
+        visible_to_clients=visible_to_clients,
+        group=due_group,
+    )
+    today = schedules.today()
+    ordering = ("-completed_key", "-pk") if completed else ("due_key", "pk")
+    if completed:
+        qs = qs.annotate(completed_key=F("todo__completed_at"))
+    return paginated(
+        request,
+        qs,
+        lambda item: (
+            todo_out(item)
+            | {
+                "due_group": due.group_of(item.todo.due_on, today),
+                "project_name": item.project.name,
+                "list_title": item.parent.title,
+            }
+        ),
+        ordering=ordering,
+        cursor=cursor,
+        page_size=page_size,
+    )
 
 
 @router.get("todos/{todo_id}/", response=TodoOut)

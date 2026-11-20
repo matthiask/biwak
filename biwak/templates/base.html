@@ -36,6 +36,13 @@
                 href="{{ projects_url }}"
               >{% translate "Projects" %}</a>
             </li>
+            {% url 'todos' as todos_url %}
+            <li class="nav-item">
+              <a
+                class="nav-link{% if request.path == todos_url and request.GET.assignee == 'me' %} active{% endif %}"
+                href="{{ todos_url }}?assignee=me"
+              >{% translate "My to-dos" %}</a>
+            </li>
           </ul>
           <div class="wb-nav-user d-flex align-items-center gap-2">
             {% include "_theme_toggle.html" %}
@@ -47,6 +54,7 @@
               <div class="dropdown-menu dropdown-menu-end">
                 <a class="dropdown-item" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
                 <a class="dropdown-item" href="{% url 'usersessions_list' %}">{% translate "Sessions" %}</a>
+                <a class="dropdown-item" href="{% url 'calendar_link' %}">{% translate "Calendar" %}</a>
                 <a class="dropdown-item" href="{% url 'api_tokens' %}">{% translate "API tokens" %}</a>
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
