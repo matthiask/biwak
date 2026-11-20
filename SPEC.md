@@ -247,6 +247,10 @@ Nothing at the moment.
 - 2026-11-20: Replies by mail are posted when the receiving server
   reports DMARC or (aligned) DKIM as passed; SPF alone isn't enough,
   since Resend doesn't report its alignment (`specs/notifications.md`).
+- 2026-11-20: Repeat rules are edited with one widget (frequency,
+  interval, weekdays, monthly by day or nth weekday, yearly), no presets
+  or raw RRULE in the forms, the description instead of a preview
+  (`specs/rule-widget.md`); the API and CLI keep RRULEs and presets.
 - 2026-11-20: Reactions: 24 quick emoji and short texts (40
   characters), telling only the author, collected into the next mail
   or the digest (`specs/reactions.md`).
