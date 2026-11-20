@@ -33,8 +33,34 @@ def assignable_people(item):
 
 
 class TodoForm(Form):
+    """Adding a to-do from the list: inline, with everything a to-do has
+    at first (specs/todos.md); without JavaScript a plain form"""
+
     title = forms.CharField(label=_("title"), max_length=500)
+    notes = forms.CharField(
+        label=_("notes"), required=False, widget=forms.Textarea(attrs={"rows": 3})
+    )
+    assignees = forms.ModelMultipleChoiceField(
+        label=_("assignees"),
+        queryset=User.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    due_on = forms.DateField(
+        label=_("due on"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
     group = forms.IntegerField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, item, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["assignees"].queryset = assignable_people(item)
+
+
+def wants_fragment(request):
+    """The inline form (frontend/add-todo.js) wants the new row only"""
+    return request.headers.get("X-Biwak-Fragment") == "1"
 
 
 def _todos(todolist_item):
@@ -58,18 +84,32 @@ def todolist(request, pk):
     by_group = {None: []} | {g.pk: [] for g in groups}
     for todo in open_todos:
         by_group[todo.todo.group_id].append(todo)
-    form = TodoForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        group = None
-        if group_id := form.cleaned_data["group"]:
-            group = get_object_or_404(Group, pk=group_id, todolist=todolist)
-        ops.create_todo(
-            todolist=item,
-            title=form.cleaned_data["title"],
-            creator=request.user,
-            group=group,
-        )
-        return redirect(item)
+    form = TodoForm(request.POST or None, item=item)
+    if request.method == "POST":
+        if not form.is_valid():
+            if wants_fragment(request):
+                return HttpResponse(
+                    " ".join(e for errors in form.errors.values() for e in errors),
+                    status=422,
+                    content_type="text/plain; charset=utf-8",
+                )
+        else:
+            data = form.cleaned_data
+            group = None
+            if group_id := data["group"]:
+                group = get_object_or_404(Group, pk=group_id, todolist=todolist)
+            todo = ops.create_todo(
+                todolist=item,
+                title=data["title"],
+                creator=request.user,
+                group=group,
+                notes=data["notes"],
+                due_on=data["due_on"],
+                assignees=list(data["assignees"]),
+            )
+            if wants_fragment(request):
+                return render(request, "items/_todo.html", {"todo": todo}, status=201)
+            return redirect(item)
     view = request.GET.get("view") or todolist.view
     return render(
         request,
@@ -83,6 +123,7 @@ def todolist(request, pk):
                 "-todo__completed_at"
             )[:20],
             "form": form,
+            "people": form.fields["assignees"].queryset,
             "view": view,
             "can_switch": item.has_switch and not request.user.is_client,
             "affected": visibility.affected(item)

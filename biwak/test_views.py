@@ -182,3 +182,46 @@ class ViewsTest(TestCase):
         for url in ["/accounts/2fa/", "/accounts/sessions/"]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_add_todo_inline(self):
+        self.client.force_login(self.ada)
+        url = self.shared.get_absolute_url()
+        response = self.client.get(url)
+        self.assertContains(response, "data-add-todo-form", count=1)
+        self.assertContains(response, f'name="assignees" value="{self.cleo.pk}"')
+        response = self.client.post(
+            url,
+            {
+                "title": "Inline",
+                "notes": "With *notes*",
+                "assignees": [self.cleo.pk],
+                "due_on": "2026-12-24",
+            },
+            headers={"X-Biwak-Fragment": "1"},
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertContains(response, "Inline", status_code=201)
+        self.assertNotContains(response, "<html", status_code=201)
+        new = Item.objects.get(title="Inline")
+        self.assertEqual(new.todo.notes, "With *notes*")
+        self.assertEqual(list(new.todo.assignees.all()), [self.cleo])
+        self.assertEqual(str(new.todo.due_on), "2026-12-24")
+        # Errors as text for the form
+        response = self.client.post(
+            url, {"title": ""}, headers={"X-Biwak-Fragment": "1"}
+        )
+        self.assertEqual(response.status_code, 422)
+
+    def test_add_todo_no_clients_on_internal_lists(self):
+        self.client.force_login(self.ada)
+        url = self.internal.get_absolute_url()
+        self.assertNotContains(
+            self.client.get(url), f'name="assignees" value="{self.cleo.pk}"'
+        )
+        response = self.client.post(
+            url,
+            {"title": "Sneaky", "assignees": [self.cleo.pk]},
+            headers={"X-Biwak-Fragment": "1"},
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertFalse(Item.objects.filter(title="Sneaky").exists())

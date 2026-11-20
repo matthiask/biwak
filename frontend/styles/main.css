@@ -655,8 +655,83 @@ a.wb-row-title:hover {
 }
 
 .wb-add-todo {
-  max-width: 28rem;
   margin-top: 0.25rem;
+}
+
+.wb-add-todo > summary {
+  list-style: none;
+}
+
+.wb-add-todo > summary::-webkit-details-marker {
+  display: none;
+}
+
+.wb-add-todo[open] > summary {
+  display: none;
+}
+
+.wb-add-todo-form {
+  max-width: 36rem;
+  padding: 0.75rem;
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-field-border);
+  border-radius: var(--bs-border-radius);
+  box-shadow: var(--wb-shadow);
+}
+
+.wb-add-todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.wb-assignees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+/* Assignees as chips: the checkbox is the chip */
+.wb-chip input {
+  position: absolute;
+  opacity: 0;
+}
+
+.wb-chip span {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--wb-field-border);
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.wb-chip input:checked + span {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
+}
+
+.wb-chip input:focus-visible + span {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 1px;
+}
+
+.wb-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--bs-secondary-color);
+}
+
+.wb-due input {
+  width: auto;
+}
+
+.wb-todolist.is-board .wb-hint {
+  display: none;
 }
 
 /* allauth's pages for logging in (allauth/layouts/entrance.html): a

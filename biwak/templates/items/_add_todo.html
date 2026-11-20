@@ -1,0 +1,67 @@
+{% load biwak i18n %}
+{% comment %}
+  Adding a to-do inline (specs/todos.md): opens in place with title, notes,
+  assignees and due date. frontend/add-todo.js submits it without leaving
+  the page, Ctrl+Enter saves and starts the next one, Escape or a click
+  elsewhere closes it. Without JavaScript it's a plain form.
+{% endcomment %}
+<details class="wb-add-todo" data-add-todo>
+  <summary class="btn btn-sm btn-quiet">{% icon "plus-lg" %}<span>{% translate "Add a to-do" %}</span></summary>
+  <form method="post" action="{{ item.get_absolute_url }}" class="wb-add-todo-form" data-add-todo-form>
+    {% csrf_token %}
+    {% if group %}<input type="hidden" name="group" value="{{ group.pk }}">{% endif %}
+    <input
+      type="text"
+      name="title"
+      class="form-control mb-2"
+      placeholder="{% translate 'Describe this to-do…' %}"
+      aria-label="{% translate 'title' %}"
+      required
+      maxlength="500"
+      autocomplete="off"
+    >
+    <textarea
+      name="notes"
+      class="form-control form-control-sm mb-2"
+      rows="2"
+      placeholder="{% translate 'Notes (Markdown)' %}"
+      aria-label="{% translate 'notes' %}"
+    ></textarea>
+    <div class="wb-add-todo-meta mb-2">
+      {% if people %}
+        <fieldset class="wb-assignees">
+          <legend class="visually-hidden">{% translate "assignees" %}</legend>
+          {% for person in people %}
+            <label class="wb-chip">
+              <input type="checkbox" name="assignees" value="{{ person.pk }}">
+              <span>{{ person.get_short_name }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+      {% endif %}
+      <label class="wb-due">
+        {% icon "calendar-event" %}
+        <input
+          type="date"
+          name="due_on"
+          class="form-control form-control-sm"
+          aria-label="{% translate 'due on' %}"
+        >
+      </label>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button type="submit" class="btn btn-sm btn-primary">{% translate "Add this to-do" %}</button>
+      <button type="button" class="btn btn-sm btn-quiet" data-add-todo-close>{% translate "Close" %}</button>
+      <span
+        class="small text-body-secondary ms-auto wb-hint"
+      >{% translate "Ctrl+Enter adds and starts the next one, Esc closes" %}</span>
+    </div>
+    <div
+      class="small text-danger mt-2"
+      data-add-todo-error
+      data-offline="{% translate 'Not saved, please try again.' %}"
+      hidden
+    >
+    </div>
+  </form>
+</details>

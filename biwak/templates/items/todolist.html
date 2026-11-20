@@ -25,17 +25,7 @@
       <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="">
         {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
       </div>
-      <form method="post" class="wb-add-todo">
-        {% csrf_token %}
-        <input
-          type="text"
-          name="title"
-          class="form-control form-control-sm"
-          placeholder="{% translate 'Add a to-do' %}"
-          required
-          maxlength="500"
-        >
-      </form>
+      {% include "items/_add_todo.html" with group=None %}
     </section>
     {% for group, todos in groups %}
       <section class="wb-group" data-group-item="{{ group.pk }}">
@@ -60,18 +50,7 @@
         <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="{{ group.pk }}">
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
         </div>
-        <form method="post" class="wb-add-todo">
-          {% csrf_token %}
-          <input type="hidden" name="group" value="{{ group.pk }}">
-          <input
-            type="text"
-            name="title"
-            class="form-control form-control-sm"
-            placeholder="{% translate 'Add a to-do' %}"
-            required
-            maxlength="500"
-          >
-        </form>
+        {% include "items/_add_todo.html" %}
       </section>
     {% endfor %}
   </div>

@@ -3,6 +3,8 @@
 // stays as it is. SortableJS is a chunk of its own (main.js).
 import Sortable from "sortablejs"
 
+import "./add-todo.js"
+
 function csrfToken() {
   return document.querySelector("[name=csrfmiddlewaretoken]")?.value
 }
