@@ -78,7 +78,8 @@ Never a notification about one's own actions.
   with project and item, stable per item so mail clients thread them and
   filters work.
 - First line says when the item is visible to clients (`access.md`).
-- Plain text and HTML; German or English per recipient.
+- Plain text and HTML; in the recipient's language once there's a
+  German translation (at the end, `SPEC.md`).
 - Sent after the transaction commits.
 
 ## Replying by mail

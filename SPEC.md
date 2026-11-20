@@ -77,7 +77,8 @@ A separate project built from the code and conventions of
 depending on it: Django, PostgreSQL, a reduced `User`, django-ninja for
 the API, the audit log trigger, the page layout (light and dark mode),
 htmx, sortable lists, mentions, modals, daily and hourly tasks, one
-frontend bundle (rspack). German and English from the start.
+frontend bundle (rspack). English first, German at the end of the build
+(texts are marked for translation from the start).
 
 Files go through Django's storage API: S3-compatible object storage by
 default, other backends possible (`specs/files.md`).
@@ -154,6 +155,9 @@ depends on items, visibility, events and subscriptions.
 3. **Last and separately:** `specs/collaboration.md` (real-time editing,
    brings websockets and ASGI).
 
+German translations come last, after the parallel parts: the texts
+change too much while exploring.
+
 Before the first client gets a login, a separate review of the
 visibility checks (another person, or a fresh agent given only the code
 and `specs/access.md`).
@@ -185,3 +189,5 @@ and `specs/access.md`).
   groups are a foreign key on to-dos, not tree nodes; django-tree-queries
   for subtree operations; effective visibility stored per item, so the
   visibility check needs no recursive query.
+- 2026-11-20: Translations postponed to the end; texts are marked with
+  `gettext` but there's no German catalog until then.

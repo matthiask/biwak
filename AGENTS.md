@@ -57,7 +57,9 @@ projects, people and clients. The same in issues and commit messages.
 
 # Language
 
-Code, specs, commits and issues in English. The interface in German and
-English from the start; gender-neutral German or use the colon
+Code, specs, commits and issues in English. The interface is English for
+now, with texts marked for translation (`gettext`) but no catalog; the
+German translation comes at the end (decided 2026-11-20: churn while
+exploring). Then gender-neutral German or use the colon
 (Teilnehmer:innen). Do not use the asterisk because broken Markdown parsers
 do not like it.

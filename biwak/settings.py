@@ -144,7 +144,9 @@ DATABASES["default"] |= {
     "DISABLE_SERVER_SIDE_CURSORS": True,
 }
 
-LANGUAGE_CODE = "de"
+# English until the German translation at the end (SPEC.md); otherwise
+# allauth and Django speak German beside our English texts
+LANGUAGE_CODE = "en"
 LANGUAGES = [("de", _("German")), ("en", _("English"))]
 TIME_ZONE = "Europe/Zurich"
 USE_I18N = True
@@ -184,7 +186,3 @@ if SENTRY_DSN := env("SENTRY_DSN"):  # pragma: no cover
     from sentry_sdk.integrations.django import DjangoIntegration
 
     sentry_sdk.init(dsn=SENTRY_DSN, integrations=[DjangoIntegration()])
-
-if TESTING:
-    # Tests check the English texts
-    LANGUAGE_CODE = "en"
