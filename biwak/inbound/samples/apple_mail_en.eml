@@ -1,0 +1,40 @@
+Return-Path: <ada@example.org>
+From: Ada Example <ada@example.org>
+Content-Type: multipart/mixed;
+	boundary="Apple-Mail=_5B1E3A1C-7F0D-4C55-9E21-0A1B2C3D4E5F"
+Mime-Version: 1.0 (Mac OS X Mail 16.0 \(3826.400.131.1.6\))
+Subject: Re: [Website] Update the copy on the landing page
+Date: Fri, 20 Nov 2026 10:25:31 +0100
+References: <item-42@biwak.example.org>
+To: "Bea Example (Biwak)" <r-replytoken0000000000@reply.example.org>
+In-Reply-To: <item-42@biwak.example.org>
+Message-Id: <8F3C1E2A-1B2C-4D5E-8F90-ABCDEF123456@example.org>
+X-Mailer: Apple Mail (2.3826.400.131.1.6)
+
+
+--Apple-Mail=_5B1E3A1C-7F0D-4C55-9E21-0A1B2C3D4E5F
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain;
+	charset=utf-8
+
+Here=E2=80=99s the brief with the new copy.
+
+On 20 Nov 2026, at 10:02, Bea Example (Biwak) <biwak@example.org> =
+wrote:
+
+> Bea Example commented:
+>=20
+> The headline is too long on phones.
+>=20
+
+--Apple-Mail=_5B1E3A1C-7F0D-4C55-9E21-0A1B2C3D4E5F
+Content-Disposition: attachment;
+	filename="Brief v2.pdf"
+Content-Type: application/pdf;
+	x-unix-mode=0644;
+	name="Brief v2.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nPj4KZW5kb2JqCnRyYWls
+ZXIKPDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==
+--Apple-Mail=_5B1E3A1C-7F0D-4C55-9E21-0A1B2C3D4E5F--

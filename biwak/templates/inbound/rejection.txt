@@ -1,0 +1,6 @@
+{% load i18n %}{% autoescape off %}{% translate "Your reply couldn't be posted." %}
+
+{{ reason }}
+{% if subject %}
+{% translate "Your mail:" %} {{ subject }}
+{% endif %}{% endautoescape %}

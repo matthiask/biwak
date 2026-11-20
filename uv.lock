@@ -33,6 +33,7 @@ dependencies = [
     { name = "django-ninja" },
     { name = "django-storages", extra = ["s3"] },
     { name = "django-tree-queries" },
+    { name = "email-reply-parser" },
     { name = "granian" },
     { name = "icalendar" },
     { name = "markdown-it-py", extra = ["linkify"] },
@@ -62,6 +63,7 @@ requires-dist = [
     { name = "django-ninja", specifier = ">=1.8" },
     { name = "django-storages", extras = ["s3"], specifier = ">=1.14.6" },
     { name = "django-tree-queries", specifier = ">=0.29" },
+    { name = "email-reply-parser", specifier = ">=0.5.12" },
     { name = "granian", specifier = ">=2.8.8" },
     { name = "icalendar", specifier = ">=7.3.2" },
     { name = "markdown-it-py", extras = ["linkify"], specifier = ">=4.3" },
@@ -440,6 +442,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/af/99/c6dee1dbca3b4938a599cb3c0c7c36086abeb09d6d109f6eb7164c06ae49/django_tree_queries-0.29.0.tar.gz", hash = "sha256:0dbdf1b94e3b782c1a081ed92bc479e0bcac1e99b9e5b5639e88c0f2122bba17", size = 46993, upload-time = "2026-11-19T15:10:52.423Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/94/a0/b5d04f31819b85ae834638eae0afb28d0e7747476eec0fa2df997b06b98e/django_tree_queries-0.29.0-py3-none-any.whl", hash = "sha256:4e24e174660c7d55b953c308bfc2f72d3a1fb0fd625783cc5c35aa5437d2e0e7", size = 40804, upload-time = "2026-11-19T15:10:50.783Z" },
+]
+
+[[package]]
+name = "email-reply-parser"
+version = "0.5.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ed/f9/3fbd22530467a831a0506267477c5005d24661d07abf776678ab42d51b35/email_reply_parser-0.5.12.tar.gz", hash = "sha256:9dbf3eca69990932234f09e7f50aa73756574fc1f88e88c324fec1a741ee6a74", size = 4694, upload-time = "2020-10-07T17:26:34.734Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/8d/11696d31eafc68ceea8108f635d30aefc6df9cb27640949f45aec963d637/email_reply_parser-0.5.12-py3-none-any.whl", hash = "sha256:3499c02284679e020acf8aa30ef9e43c62f9ab5ccee0a35bfac85a0c1fa685fd", size = 4139, upload-time = "2020-10-07T17:26:46.835Z" },
 ]
 
 [[package]]
