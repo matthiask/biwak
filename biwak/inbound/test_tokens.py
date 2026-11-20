@@ -2,8 +2,10 @@
 mails (specs/notifications.md, stage 2)"""
 
 import datetime as dt
+import io
 
 from django.core import mail
+from django.core.management import call_command
 from django.utils import timezone
 
 from biwak.accounts.models import MailDelivery
@@ -12,8 +14,14 @@ from biwak.activity.models import Notification
 from biwak.checkins import operations as checkin_ops
 from biwak.checkins.models import Occurrence
 from biwak.checkins.support import CheckinTestCase
-from biwak.inbound.models import ReplyToken
+from biwak.inbound.models import (
+    RETENTION_DAYS,
+    InboundMessage,
+    InboundStatus,
+    ReplyToken,
+)
 from biwak.inbound.support import ReplyTestCase, replying
+from biwak.inbound.tokens import prune
 from biwak.items import operations as ops
 
 
@@ -46,12 +54,24 @@ class ReplyToTest(ReplyTestCase):
                 delta=dt.timedelta(days=2),
             )
 
+    def test_notification_says_so(self):
+        message = self.notify()[self.ada.email]
+        html = message.alternatives[0][0]
+        self.assertIn("Reply to this mail to comment.", message.body)
+        self.assertIn("Reply to this mail to comment.", html)
+        self.assertLess(
+            message.body.index("Reply to this mail"), message.body.index("--\nUnsub")
+        )
+
     def test_off_without_settings(self):
         for name in ("REPLY_DOMAIN", "RESEND_API_KEY", "RESEND_WEBHOOK_SECRET"):
             with self.subTest(name), self.settings(**{name: ""}):
                 mail.outbox.clear()
                 messages = self.notify()
-                self.assertNotIn("Reply-To", messages[self.ada.email].extra_headers)
+                message = messages[self.ada.email]
+                self.assertNotIn("Reply-To", message.extra_headers)
+                self.assertNotIn("Reply to this mail", message.body)
+                self.assertNotIn("Reply to this mail", message.alternatives[0][0])
                 self.assertFalse(ReplyToken.objects.exists())
 
     def test_digests_have_no_reply_to(self):
@@ -66,6 +86,8 @@ class ReplyToTest(ReplyTestCase):
             send_mails(now=tomorrow.replace(hour=7, minute=5))
         digest = next(m for m in mail.outbox if m.to == [self.ada.email])
         self.assertNotIn("Reply-To", digest.extra_headers)
+        self.assertNotIn("Reply to this mail", digest.body)
+        self.assertNotIn("Reply to this mail", digest.alternatives[0][0])
         self.assertFalse(ReplyToken.objects.filter(user=self.ada).exists())
 
 
@@ -85,6 +107,11 @@ class QuestionMailTest(CheckinTestCase):
             f"r-{token.token}@reply.example.org",
         )
 
+    def test_question_says_so(self):
+        message = self.mails[self.ada.email]
+        self.assertIn("Reply to this mail to answer.", message.body)
+        self.assertIn("Reply to this mail to answer.", message.alternatives[0][0])
+
     def test_summary_has_no_reply_to(self):
         """Replying to the summary isn't an answer"""
         checkin_ops.answer(self.item, user=self.bob, content="Fine")
@@ -93,3 +120,59 @@ class QuestionMailTest(CheckinTestCase):
         [summary] = self.sent(self.ada)
         self.assertIn("answers of", summary.subject)
         self.assertNotIn("Reply-To", summary.extra_headers)
+        self.assertNotIn("Reply to this mail", summary.body)
+
+
+class RetentionTest(ReplyTestCase):
+    def test_boundary(self):
+        now = timezone.now()
+        day = dt.timedelta(days=1)
+        old = now - dt.timedelta(days=RETENTION_DAYS)
+        for name, received in (
+            ("old", old - day),
+            ("recent", old + day),
+        ):
+            InboundMessage.objects.create(
+                provider="resend", provider_id=name, received_at=received
+            )
+        prune(now=now)
+        self.assertEqual(
+            list(InboundMessage.objects.values_list("provider_id", flat=True)),
+            ["recent"],
+        )
+
+    def test_tokens(self):
+        now = timezone.now()
+        day = dt.timedelta(days=1)
+        old = now - dt.timedelta(days=RETENTION_DAYS)
+        gone = [
+            self.token(expires_at=old - day),
+            self.token(expires_at=now + day, revoked_at=old - day),
+        ]
+        stay = [
+            self.token(),
+            self.token(expires_at=old + day),
+            self.token(expires_at=now + day, revoked_at=old + day),
+        ]
+        self.assertEqual(prune(now=now), (0, 2))
+        self.assertEqual(
+            set(ReplyToken.objects.values_list("pk", flat=True)),
+            {t.pk for t in stay},
+        )
+        self.assertFalse(ReplyToken.objects.filter(pk__in=[t.pk for t in gone]))
+
+    def test_comments_posted_from_replies_stay(self):
+        token = self.token(expires_at=timezone.now() - dt.timedelta(days=200))
+        comment = ops.add_comment(self.todo, author=self.ada, content="By mail")
+        InboundMessage.objects.create(
+            provider="resend",
+            provider_id="x",
+            received_at=timezone.now() - dt.timedelta(days=200),
+            token=token,
+            comment=comment,
+            status=InboundStatus.POSTED,
+        )
+        call_command("fairy_tasks", stdout=io.StringIO())
+        self.assertFalse(InboundMessage.objects.exists())
+        self.assertFalse(ReplyToken.objects.exists())
+        self.assertEqual(self.comments(), [comment])

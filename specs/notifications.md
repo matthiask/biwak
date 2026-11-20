@@ -10,7 +10,10 @@ mail) is built (2026-11-20, branch `replies`): `biwak/inbound/`
 `providers.py` with Resend's adapter, `strip.py`, `receive.py`, the
 webhook `/inbound/resend/`, `./manage.py receive_mail`); decisions,
 differences from Resend's documentation and open questions under "Built
-in stage 2". No API or CLI changes.
+in stage 2". No API or CLI changes. Retention (`prune()` in
+`biwak/inbound/tokens.py`, `RETENTION_DAYS = 90`, run by `fairy_tasks`) and
+the "Reply to this mail to comment/answer." line (`can_reply` in the
+mail templates) built 2026-11-20, branch `reply-extras`.
 
 **Agent:** a strong model for both stages. Stage 1 decides who gets
 told about what, across visibility; stage 2 posts mail as people.
@@ -381,13 +384,10 @@ confirmed 2026-11-20):
 
 Open (values and wording the spec doesn't fix):
 
-- How long `InboundMessage` rows and expired tokens are kept (nothing
-  deletes them yet; a daily job in `fairy_tasks` once decided).
 - Whether tokens are revoked automatically (a person deactivated or
   removed from a project; access is checked anyway).
 - The wording of the answer to rejected replies (four reasons, in
-  `receive.py`), and whether notification and question mails should say
-  "Reply to this mail to comment/answer".
+  `receive.py`).
 - Oversized attachments silently left out: tell the person (in the
   comment or by mail)?
 - Signature images (Outlook's logos) become attachments; leave out small
