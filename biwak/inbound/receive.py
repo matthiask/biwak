@@ -180,7 +180,7 @@ def _post(message, mail, token):
     content = "\n\n".join(
         part
         for part in [
-            mentions.resolve(item, text),
+            mentions.resolve(item, text, author=user),
             "\n".join(upload.markdown for upload in uploaded),
         ]
         if part

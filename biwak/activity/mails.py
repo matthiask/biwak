@@ -374,7 +374,10 @@ def _mail(user, pks, now, build):
         ).delete()
         if not deliverable:
             return False
-        with translation.override(user.language or settings.LANGUAGE_CODE):
+        with (
+            translation.override(user.language or settings.LANGUAGE_CODE),
+            mentions.reading_as(user),
+        ):
             message = build(deliverable)
         sent = [n.pk for n in deliverable]
         transaction.on_commit(lambda: _send(message, sent))

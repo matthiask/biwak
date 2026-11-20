@@ -380,10 +380,10 @@ def todo_create(request, list_id: int, data: TodoIn):
         group = get_object_or_404(Group, pk=data.group_id, todolist=item.todolist)
     todo = ops.create_todo(
         todolist=item,
-        title=resolve_mentions(item, data.title),
+        title=resolve_mentions(item, data.title, author=request.user),
         creator=request.user,
         group=group,
-        notes=resolve_mentions(item, data.notes),
+        notes=resolve_mentions(item, data.notes, author=request.user),
         due_on=data.due_on,
         assignees=_assignees(item, data.assignees),
         recurrence=_rule(data.recurrence, data.due_on),
@@ -484,7 +484,7 @@ def todo_update(request, todo_id: int, data: TodoPatch):
     if "notes" in changes and changes["notes"] is None:
         changes["notes"] = ""
     for field in {"title", "notes"} & changes.keys():
-        changes[field] = resolve_mentions(item, changes[field])
+        changes[field] = resolve_mentions(item, changes[field], author=request.user)
     if "assignees" in given:
         changes["assignees"] = _assignees(item, data.assignees or [])
     if "recurrence" in given:
@@ -627,7 +627,9 @@ def comment_create(request, item_id: int, data: CommentIn):
     if not data.content.strip():
         bad_request(_("The comment is empty."))
     comment = ops.add_comment(
-        item, author=request.user, content=resolve_mentions(item, data.content)
+        item,
+        author=request.user,
+        content=resolve_mentions(item, data.content, author=request.user),
     )
     return Status(201, comment_out(comment, item, request.user))
 

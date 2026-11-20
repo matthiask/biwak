@@ -323,13 +323,18 @@ def unsubscribe(request, token):
     if request.method == "POST":
         unsubscribe_from(user, item)
         done = True
+    title = ""
+    # Only who may still see it learns the title, with the names the
+    # mail's recipient may know (not who's logged in, if anybody)
+    if can_see(user, item):
+        with mentions.reading_as(user):
+            title = mentions.plain(item.title, item)
     return render(
         request,
         "activity/unsubscribe.html",
         {
             "done": done,
-            # Only who may still see it learns the title
-            "title": mentions.plain(item.title, item) if can_see(user, item) else "",
+            "title": title,
             "item": item,
         },
     )

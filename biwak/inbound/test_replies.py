@@ -15,6 +15,7 @@ from biwak.inbound.support_mails import ReceiveMixin, sample
 from biwak.items import operations as ops
 from biwak.items.models import Comment
 from biwak.projects import operations as project_ops
+from biwak.test_utils import person
 
 
 class EndToEndTest(ReceiveMixin, ReplyTestCase):
@@ -84,6 +85,25 @@ class MailClientsTest(ReceiveMixin, ReplyTestCase):
             ).exists()
         )
         self.assertTrue(Notification.objects.filter(user=self.bea).exists())
+
+    def test_clients_mention_members_only(self):
+        """Not staff who see the project because it's all-access
+        (specs/access.md)"""
+        dora = person("Dora")
+        mail = sample(
+            "iphone_de.eml",
+            self.token(self.cleo),
+            replace=[("F=C3=BCr uns", "@Dora @dora@example.org @Ada: f=C3=BCr uns")],
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            message = self.receive(mail)
+        self.assertTrue(
+            message.comment.content.startswith("@Dora @dora@example.org [@Ada"),
+            message.comment.content,
+        )
+        self.assertFalse(Mention.objects.filter(user=dora).exists())
+        self.assertFalse(Notification.objects.filter(user=dora).exists())
+        self.assertTrue(Mention.objects.filter(user=self.ada).exists())
 
     def test_attachments(self):
         message = self.receive(sample("apple_mail_en.eml", self.token()))

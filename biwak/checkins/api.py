@@ -326,7 +326,7 @@ def answer_create(request, question_id: int, data: AnswerIn):
         answer = ops.answer(
             item,
             user=request.user,
-            content=resolve_mentions(item, data.content),
+            content=resolve_mentions(item, data.content, author=request.user),
             occurrence=occurrence,
         )
     except ValueError as exc:

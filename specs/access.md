@@ -52,6 +52,25 @@ the first client gets a login.
   see the project because it's all-access (decided 2026-11-20 after the
   visibility review): subscribers on item pages, the people asked by a
   check-in and who hasn't answered (`Project.people_known_to()`).
+  Both halves of the rule (decided 2026-11-20 after the second visibility
+  review):
+  - **People who act in a visible place are shown by name**, like
+    members, whether they're members or not: comment authors, reactions,
+    presence in the live editor. That only happens in all-access
+    projects, where every staff member may take part; limited projects
+    only have members.
+  - **Clients can't look up people who haven't acted**: the `@` list
+    offers members only, and mentions follow the same rule. When a client
+    writes (pages, API texts, check-in answers, mail replies),
+    `mentions.resolve()` and `mentions.update()` resolve, subscribe and
+    notify members only; `@Bob`, `@bob@example.org` or a guessed
+    `[@x](person:N)` of anybody else stays plain text and notifies nobody.
+    When a client reads (pages, titles, search, `*_html`, mails), names of
+    people who aren't members show as the label written, never the current
+    name, so guessing ids lists nobody. Who reads is the request's person
+    (the middleware, also for API tokens) or the mail's recipient
+    (`mentions.reading_as()`); without one, texts render as for a client.
+    Staff write and read as before.
 - Turning visibility off later hides the content again, including
   comments clients wrote; the switch says so.
 

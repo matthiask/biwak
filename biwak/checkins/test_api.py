@@ -1,6 +1,7 @@
 import datetime as dt
 
 from biwak.accounts.models import APIToken
+from biwak.activity.models import Mention
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Mode, Occurrence, QuestionMail
 from biwak.checkins.support import CheckinTestCase
@@ -284,6 +285,22 @@ class AnswersAPITest(APITestCase):
         ).json()
         self.assertEqual(data["occurrence_id"], self.first.pk)
         self.assertIn(f"(person:{self.bob.pk})", data["content"])
+
+    def test_clients_mention_members_only(self):
+        """Not staff who see the project because it's all-access
+        (specs/access.md)"""
+        dora = person("Dora")
+        data = self.post(
+            self.cleo,
+            f"checkins/{self.shared.pk}/answer/",
+            {"content": f"@Dora, [@x](person:{dora.pk}) and @Ada"},
+        ).json()
+        self.assertTrue(data["content"].startswith("@Dora, "), data["content"])
+        self.assertIn(f"(person:{self.ada.pk})", data["content"])
+        self.assertNotIn("Dora Example", data["content_html"])
+        answer = Item.objects.get(pk=data["id"])
+        self.assertFalse(Mention.objects.filter(item=answer, user=dora).exists())
+        self.assertTrue(Mention.objects.filter(item=answer, user=self.ada).exists())
 
     def test_mistakes(self):
         path = f"checkins/{self.item.pk}/answer/"

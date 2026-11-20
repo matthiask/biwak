@@ -161,11 +161,11 @@ def _staff_creates(request, kind):
         raise HttpError(403, _("Only staff create folders, docs and files."))
 
 
-def resolve_for_new(project, visible, text):
+def resolve_for_new(project, visible, text, *, author):
     """Resolves ``@ada@example.org`` and ``@Ada`` in the text of an item
     which doesn't exist yet, for those who will see it"""
     stand_in = SimpleNamespace(project=project, is_client_visible=bool(visible))
-    return resolve_mentions(stand_in, text)
+    return resolve_mentions(stand_in, text, author=author)
 
 
 def switch(request, visible):
@@ -299,7 +299,7 @@ def message_create(request, project_id: int, data: MessageIn):
     item = ops.create_message(
         project=project,
         title=data.title,
-        content=resolve_for_new(project, visible, data.content),
+        content=resolve_for_new(project, visible, data.content, author=request.user),
         category=_category(data.category_id),
         creator=request.user,
         visible=visible,
@@ -333,7 +333,9 @@ def message_update(request, message_id: int, data: MessagePatch):
             raise HttpError(400, _("The title can't be empty."))
         changes["title"] = data.title
     if "content" in given:
-        changes["content"] = resolve_mentions(item, data.content or "")
+        changes["content"] = resolve_mentions(
+            item, data.content or "", author=request.user
+        )
     if "category_id" in given:
         changes["category"] = _category(data.category_id)
     operations.update_message(item, actor=request.user, **changes)
@@ -508,6 +510,7 @@ def doc_create(request, project_id: int, data: DocIn):
             data.visible_to_clients
             or (folder is not None and folder.is_client_visible),
             data.content,
+            author=request.user,
         ),
         creator=request.user,
         parent=folder,
@@ -554,7 +557,9 @@ def doc_update(request, doc_id: int, data: DocPatch):
             raise HttpError(400, _("The title can't be empty."))
         changes["title"] = data.title
     if "content" in given:
-        changes["content"] = resolve_mentions(item, data.content or "")
+        changes["content"] = resolve_mentions(
+            item, data.content or "", author=request.user
+        )
     try:
         operations.update_doc(
             item,
