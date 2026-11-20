@@ -13,3 +13,8 @@ import "htmx.org"
 if (document.querySelector("[data-todos], [data-sortable-lists]")) {
   import(/* webpackChunkName: "todos" */ "./todos.js")
 }
+
+// Attaching files to texts (specs/files.md)
+if (document.querySelector("[data-attachments]")) {
+  import(/* webpackChunkName: "attachments" */ "./attachments.js")
+}

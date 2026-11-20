@@ -1,4 +1,5 @@
 from django import template
+from django.conf import settings
 from django.utils.html import format_html, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext
@@ -14,7 +15,43 @@ _markdown.enable(["linkify", "strikethrough", "table"])
 
 @register.filter
 def markdown(text):
-    return mark_safe(_markdown.render(str(text or "")))
+    return render_markdown(text)
+
+
+def render_markdown(text, *, absolute=False):
+    """``absolute`` for the API and mails: attachment URLs with BASE_URL"""
+    tokens = _markdown.parse(str(text or ""))
+    _attachment_urls(tokens, absolute=absolute)
+    return mark_safe(_markdown.renderer.render(tokens, _markdown.options, {}))
+
+
+def _attachment_urls(tokens, *, absolute):
+    """``attachment:KEY`` (specs/files.md) becomes the download URL; images
+    show inline, scaled to the text's width. Whoever reads the text may
+    not see the attachment: the download checks."""
+    from biwak.files.models import REFERENCE, Attachment
+
+    references = []
+    for token in tokens:
+        for child in token.children or ():
+            attr = {"link_open": "href", "image": "src"}.get(child.type)
+            if attr and (match := REFERENCE.fullmatch(child.attrGet(attr) or "")):
+                references.append((child, attr, match[1]))
+    if not references:
+        return
+    found = {
+        a.key: a
+        for a in Attachment.objects.filter(key__in={key for *_, key in references})
+    }
+    for token, attr, key in references:
+        if attachment := found.get(key):
+            url = attachment.get_absolute_url()
+            token.attrSet(attr, settings.BASE_URL + url if absolute else url)
+        else:
+            token.attrSet(attr, "#")
+        if attr == "src":
+            token.attrJoin("class", "wb-attachment-image")
+            token.attrSet("loading", "lazy")
 
 
 @register.filter

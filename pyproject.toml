@@ -14,6 +14,7 @@ dependencies = [
   "django-canonical-domain>=0.11",
   "django-debug-toolbar>=8",
   "django-ninja>=1.8",
+  "django-storages[s3]>=1.14.6",
   "django-tree-queries>=0.29",
   "granian>=2.8.8",
   "markdown-it-py[linkify]>=4.3",
@@ -28,6 +29,7 @@ dependencies = [
 # The CLI tests run the CLI, the deployment doesn't need it (UV_NO_DEV)
 dev = [
   "biwak-cli",
+  "moto>=5.2.5",
 ]
 
 [tool.uv]

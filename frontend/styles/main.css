@@ -795,3 +795,19 @@ a.wb-row-title:hover {
   font-weight: 600;
   text-align: start;
 }
+
+/* Attachments in texts (specs/files.md, frontend/attachments.js) */
+.wb-attach {
+  margin-top: 0.25rem;
+}
+
+.wb-drop-target {
+  outline: 2px dashed var(--bs-primary);
+  outline-offset: 2px;
+}
+
+/* Scaled to the text's width */
+img.wb-attachment-image {
+  max-width: 100%;
+  height: auto;
+}

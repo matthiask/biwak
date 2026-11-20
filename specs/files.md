@@ -1,7 +1,11 @@
 # Messages, docs and files
 
-**Status:** open. The item kinds `message`, `folder` and `doc` and their
-detail models exist (core), without pages.
+**Status:** stage 1 built (2026-11-20): `biwak/files/` (the
+`Attachment` model, `attachments.py` with the operations, upload and
+download views, `api.py`), storage settings, `frontend/attachments.js`,
+`--attach` on `biwak todo add|edit|comment`. Stage 2 is open; the item
+kinds `message`, `folder` and `doc` and their detail models exist (core),
+without pages.
 
 **Agent:** stage 1 with a strong model (downloads are an entry point for
 visibility); stage 2 suits a cheaper model following this spec and the
@@ -21,8 +25,9 @@ Through Django's storage API (`django-storages`), chosen by settings
   gitignored) when no bucket is configured: development, tests, small
   installations. The folder is never served directly, only through the
   download views below.
-- **An S3-compatible bucket** when `STORAGE_BUCKET` (plus endpoint, key
-  and secret) is set in the environment: `S3Storage`, private, presigned
+- **An S3-compatible bucket** when `STORAGE_BUCKET` (plus
+  `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`,
+  optionally `STORAGE_REGION`) is set in the environment: `S3Storage`, private, presigned
   URLs. The first deployment uses this. Same code, only settings differ.
 - Other backends (e.g. a Google Drive shared drive) are possible later;
   without presigned URLs, downloads go through the app.
@@ -55,6 +60,38 @@ They belong to their item and aren't shown in folders.
 - **Limit:** 100 MB per file (decided 2026-11-20; the ingress needs the
   same limit).
 
+Details of stage 1 (proposed by the building agent, 2026-11-20; change
+them here if wrong):
+
+- **Who links what:** saving a text links only attachments without an
+  item yet, in the item's project, uploaded by the person saving the
+  text. Once linked, an attachment stays with its item, also when the
+  text no longer references it; referencing it in another item's text
+  doesn't move it (people who see only the other item get a 404).
+- **Where:** linked when to-dos' notes are created or changed, comments
+  added, messages and docs created (their edit operations come with
+  stage 2 and call `attachments.link()` too). Lists' and projects'
+  descriptions take no attachments. The "Attach files" button is on the
+  to-do page (notes and comments) and the inline form adding to-dos; the
+  to-do page now shows the rendered notes above the form.
+- **Trash:** attachments of trashed items can't be downloaded (they
+  follow `Item.objects.visible_to()`, which leaves out trashed items)
+  until the item is restored.
+- **Type:** the content type comes from the file name, never from what
+  the browser sends. Inline (and shown as images in texts): PNG, JPEG,
+  GIF, WebP, AVIF and PDF (inline only); everything else is a download.
+- **Unknown keys** (deleted attachments) render as links to `#`.
+- **Files are deleted** with their rows (a `post_delete` signal, after
+  the transaction commits), so purging the trash, deleting unlinked
+  attachments and deleting a project all remove the files.
+- **API:** besides the two endpoints below, `GET
+  /api/v1/attachments/{key}/download/` serves the file to API tokens
+  (with a bucket a redirect to a presigned URL), since the web download
+  needs a session. `--attach` appends the Markdown at the end of the
+  text; `biwak todo edit --attach` appends to the current notes.
+- **Bucket:** no ACLs are set on objects (`default_acl` None, some
+  providers refuse them): the bucket itself has to be private.
+
 ### Downloads
 
 - `GET /attachments/<key>/<name>` and, in stage 2, `GET
@@ -69,9 +106,9 @@ They belong to their item and aren't shown in folders.
 
 ### API
 
-`POST /api/v1/projects/{id}/attachments/` (multipart, returns key and
-the Markdown to insert), `GET /api/v1/attachments/{key}/` (metadata and
-a download URL). The CLI's commands that write texts take `--attach
+`POST /api/v1/projects/{id}/attachments/` (multipart, field `file`,
+returns key and the Markdown to insert), `GET /api/v1/attachments/{key}/`
+(metadata and a download URL). The CLI's commands that write texts take `--attach
 FILE` (repeatable).
 
 ### Done when (stage 1)
