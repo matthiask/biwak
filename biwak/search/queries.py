@@ -181,8 +181,6 @@ def to_text(marked):
 def headlines(texts, text):
     """``ts_headline`` of every text with the query, in one query. Characters
     in the texts that are markers are taken out first."""
-    if not texts:
-        return []
     clean = [text.replace(START, "").replace(STOP, "") for text in texts]
     options = f"StartSel={START}, StopSel={STOP}, MaxWords=35, MinWords=15"
     with connection.cursor() as cursor:
