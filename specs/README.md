@@ -17,7 +17,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | Part | Stage | Status (2026-11-20) | Depends on | Agent |
 |---|---|---|---|---|
 | `core.md`, `access.md`, `api-cli.md` | | built | | |
-| `notifications.md` | 1: mentions, levels, mails, digests | in progress (branch `notifications`) | core | strong |
+| `notifications.md` | 1: mentions, levels, mails, digests | built (branch `notifications`, not merged) | core | strong |
 | `files.md` | 1: storage, attachments, downloads | built | core | strong |
 | `todos.md` | 1: schedules, recurrence | built | core | cheaper |
 | `todos.md` | 2: by due date, iCal | built | stage 1 | cheaper |

@@ -1,8 +1,11 @@
 # Notifications: events, subscriptions, mentions, mails, replies
 
 **Status:** events and subscriptions are built (core, 2026-11-20:
-`biwak/activity/`). Stage 1 (mentions, levels, mails, digests) and
-stage 2 (replying by mail) are open.
+`biwak/activity/`). Stage 1 (mentions, levels, mails, digests) is built
+(2026-11-20, branch `notifications`): `mentions.py`, `notify.py`,
+`mails.py` and `./manage.py send_mails`, the settings pages, the API
+endpoints and `biwak notifications` (CLI 0.5.0). Stage 2 (replying by
+mail) is open.
 
 **Agent:** a strong model for both stages. Stage 1 decides who gets
 told about what, across visibility; stage 2 posts mail as people.
@@ -112,7 +115,10 @@ Never a notification about one's own actions.
 
 Pages: the person's level and delivery on `/accounts/notifications/`
 (linked from the user menu); a project's override in the project page's
-"More" menu; an item's override next to its subscribe button.
+"More" menu; an item's override next to its subscribe button. The
+settings page also lists the person's overrides, items only while they
+can see them. For now only to-dos have a subscribe button, so a list's
+override is set through the API (built 2026-11-20).
 
 ### Who gets told
 
@@ -159,13 +165,38 @@ Project events (joined, added, removed) notify nobody.
   in production, decided 2026-11-20; the console in development). After
   the commit, never inside a transaction.
 
+Built in stage 1 (proposed by the building agent, 2026-11-20):
+
+- `send_mails` checks again when sending: inactive people, people who
+  can't see the item any more and people whose level is now "nothing"
+  get nothing, and those notifications are deleted. A mail that fails to
+  send leaves its notifications unsent for the next run.
+- Clients aren't told where an item moved ("Ada moved it."), like the
+  feed: the name may be internal.
+- Attachments are links with `BASE_URL` in the HTML part and their
+  download URLs in the plain text part; the download checks access.
+- The unsubscribe link of a new item a person hears about through its
+  container unsubscribes from the container. A `GET` of the link only
+  asks (link checkers follow links), the `POST` unsubscribes; only who
+  can still see the item is shown its title.
+- Digests have no one-click unsubscribing (they're about many items):
+  their `List-Unsubscribe` is the settings page, without
+  `List-Unsubscribe-Post`. Their subject: `[Biwak] What happened on
+  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`.
+- Mails carry `Auto-Submitted: auto-generated`.
+- The `@` list for clients finds only the project's members, not by
+  email, and shows no addresses.
+
 ### API and CLI
 
 - `GET/PUT /api/v1/me/notifications/` (level, delivery),
-  `PUT/DELETE /api/v1/projects/{id}/notifications/` and
-  `/api/v1/items/{id}/notifications/` (overrides),
-  `GET /api/v1/items/{id}/mentionable/?q=`.
-- `biwak notifications` shows and sets the level and delivery.
+  `GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and
+  `/api/v1/items/{id}/notifications/` (overrides; `level` null without
+  one), `GET /api/v1/items/{id}/mentionable/?q=`. Texts written through
+  the API (to-dos, comments) resolve `@email` and an unambiguous `@Name`.
+- `biwak notifications` shows and sets the level and delivery;
+  `--project` and `--item` the overrides (`--level default` removes
+  one).
 
 ### Done when (stage 1)
 
