@@ -5,6 +5,7 @@ web interface."""
 import datetime as dt
 from typing import Literal
 
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -29,6 +30,8 @@ from biwak.checkins.models import Answer, Occurrence, mail_mode
 from biwak.items.api import item_for as any_item_for
 from biwak.items.models import Item, Kind
 from biwak.projects.api import project_for
+from biwak.reactions.models import Reaction
+from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
 router = Router(tags=["check-ins"])
@@ -214,15 +217,17 @@ class AnswerOut(ItemOut):
     author: PersonOut
     content: str
     content_html: str
+    reactions: list[ReactionOut]
 
 
-def answer_out(answer):
+def answer_out(answer, user):
     item = answer.item
     return item_out(item) | {
         "occurrence_id": answer.occurrence_id,
         "author": person_out(answer.author),
         "content": answer.content,
         "content_html": html(answer.content, item),
+        "reactions": reactions_out(item, None, user),
     }
 
 
@@ -262,6 +267,12 @@ def occurrence_list(
             answers
             .filter(occurrence=occurrence)
             .select_related("item__creator", "author")
+            .prefetch_related(
+                Prefetch(
+                    "item__reactions",
+                    queryset=Reaction.objects.select_related("user"),
+                )
+            )
             .order_by("-item__created_at", "-pk")
         )
         return {
@@ -269,7 +280,7 @@ def occurrence_list(
             "question_id": item.pk,
             "date": occurrence.date,
             "asked_at": occurrence.asked_at,
-            "answers": [answer_out(a) for a in found],
+            "answers": [answer_out(a, request.user) for a in found],
             "missing": (
                 [person_out(u) for u in ops.missing(occurrence)]
                 if occurrence == latest
@@ -319,7 +330,8 @@ def answer_create(request, question_id: int, data: AnswerIn):
     except ValueError as exc:
         bad_request(str(exc))
     return answer_out(
-        Answer.objects.select_related("item__creator", "author").get(item=answer)
+        Answer.objects.select_related("item__creator", "author").get(item=answer),
+        request.user,
     )
 
 

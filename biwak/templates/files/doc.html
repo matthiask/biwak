@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak bookmarks i18n %}
+{% load biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
@@ -32,6 +32,7 @@
   <div class="row g-4">
     <div class="col-lg-8">
       <div class="wb-markdown mb-4">{{ doc.content|markdown:item }}</div>
+      {% reactions item %}
       {% include "files/_comments.html" %}
     </div>
     <div class="col-lg-4">
