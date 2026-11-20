@@ -16,7 +16,7 @@ from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.projects import operations as project_ops
-from biwak.projects.models import Membership, Project
+from biwak.projects.models import Project
 from biwak.projects.overview import overview
 
 
@@ -38,9 +38,7 @@ def project_list(request):
         projects = overview(request.user)
         if request.user.is_admin:
             # Admins see that limited projects exist and can join them
-            others = Project.objects.active().exclude(
-                pk__in=Project.objects.accessible_to(request.user)
-            )
+            others = project_ops.joinable_projects(request.user)
     return render(
         request,
         "projects/project_list.html",
@@ -76,8 +74,7 @@ def project_create(request):
         raise PermissionDenied
     form = ProjectForm(request.POST or None)
     if form.is_valid():
-        project = form.save()
-        Membership.objects.create(project=project, user=request.user)
+        project = project_ops.create_project(actor=request.user, **form.cleaned_data)
         return redirect(project)
     return render(
         request,
