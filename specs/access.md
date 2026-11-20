@@ -41,6 +41,10 @@ the first client gets a login.
   `ops.can_create()`). What clients created before stays theirs to change
   (`can_change()`).
 - Assigning a client to a to-do requires the to-do to be visible.
+- Clients learn about the project's members only, not about staff who
+  see the project because it's all-access (decided 2026-11-20 after the
+  visibility review): subscribers on item pages, the people asked by a
+  check-in and who hasn't answered (`Project.people_known_to()`).
 - Turning visibility off later hides the content again, including
   comments clients wrote; the switch says so.
 

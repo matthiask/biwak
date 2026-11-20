@@ -444,7 +444,11 @@ def todo(request, pk):
             "form": form,
             "comment_form": comment_form,
             "comments": item.comments.select_related("author"),
-            "subscribers": [s.user for s in item.subscriptions.select_related("user")],
+            # Clients only learn about the project's members
+            "subscribers": item.project.people_known_to(
+                request.user,
+                [s.user for s in item.subscriptions.select_related("user")],
+            ),
             "is_subscribed": is_subscribed(request.user, item),
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),
