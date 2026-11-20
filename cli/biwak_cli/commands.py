@@ -127,14 +127,29 @@ def me(as_json):
 @cli.command()
 @json_option
 @click.option("--archived", is_flag=True, help="Archived projects instead.")
-def projects(as_json, archived):
-    """The projects you can open"""
-    data = request("GET", "projects/", params={"archived": archived})
+@click.option(
+    "--order",
+    type=click.Choice(["activity", "name"]),
+    help="Latest activity first or by name (default: your setting on the web).",
+)
+def projects(as_json, archived, order):
+    """The projects you can open, bookmarked ones (*) first, with the latest
+    activity (for clients: of what they see)"""
+    params = {"archived": archived}
+    if order:
+        params["order"] = order
+    data = request("GET", "projects/", params=params)
     if as_json:
         return echo_json(data)
-    t = table("ID", "Project", "")
+    t = table("", "ID", "Project", "Last activity", "")
     for p in data:
-        t.add_row(str(p["id"]), p["name"], "" if p["is_all_access"] else "limited")
+        t.add_row(
+            "*" if p["is_bookmarked"] else "",
+            str(p["id"]),
+            p["name"],
+            (p["last_activity_at"] or "")[:16].replace("T", " "),
+            "" if p["is_all_access"] else "limited",
+        )
     console.print(t)
     return None
 
