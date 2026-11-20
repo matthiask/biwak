@@ -7,8 +7,20 @@ the first client gets a login.
 
 ## Who sees what
 
-- **Staff** members of a project see everything in it.
-- **Clients** see a project only if they're members, and in it only what
+- **Projects are all-access or limited** (decided 2026-11-20, like
+  Basecamp):
+  - **All-access**: every staff member can open the project and see
+    everything in it, and join it with one click. Typical for team-wide
+    projects.
+  - **Limited**: only members see it at all; staff join by invitation.
+    For projects not everybody in the organization should see (HR,
+    finances, some client projects).
+  - Admins see the list of all projects, including limited ones, and can
+    add themselves; that's recorded as an event in the project. They
+    don't see a limited project's content without joining.
+- **Staff** with access to a project see everything in it.
+- **Clients** are never covered by all-access: they see a project only
+  if they're members, and in it only what
   is visible to clients.
 - Visible to clients is a switch on **containers** (lists, folders) and
   on **messages, docs and files in the root folder**, and check-in
@@ -33,8 +45,8 @@ containers.
 
 **Stored, not computed on read** (decided 2026-11-20): each item stores
 its effective visibility, so the check is a plain filter on a column
-(plus project membership), easy to read and review, no recursive query
-on the hot path.
+(plus project access: membership, or all-access for staff), easy to read
+and review, no recursive query on the hot path.
 
 - It's recomputed for the subtree (django-tree-queries, `core.md`)
   whenever a switch changes, an item moves, or an item is created, in the

@@ -18,6 +18,14 @@ visibility like the item.
   in them later (subscribing to a list means hearing about new to-dos
   even when not assigned).
 - Automatic: author, assignees, people mentioned, people commenting.
+- Posting a message, doc or file lets the author choose whom to notify:
+  everybody in the project (the members at that moment), chosen people,
+  or nobody. Those chosen are subscribed to that item.
+- **Joining a project subscribes to nothing that exists already**
+  (decided 2026-11-20). New members see everything in the project and its
+  feed, but get mails only for what concerns them from then on and for
+  new items they're notified about. Basecamp subscribes late joiners to
+  every message, which floods them.
 - Everybody can unsubscribe from anything, also from mail with one
   click, and subscribe others (who see who did it).
 - Subscribers are shown on the item.

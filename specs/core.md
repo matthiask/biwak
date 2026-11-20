@@ -5,9 +5,11 @@ in parallel. See `SPEC.md` for the model overview.
 
 ## Projects
 
-- Name, description, archived. Members: people with a role in the project
-  (staff or client). Staff can be members of any project they're added to;
-  admins see all projects.
+- Name, description, archived, all-access or limited (`access.md`).
+  Members: staff and clients who joined or were invited. In all-access
+  projects, staff who aren't members can still read and write; being a
+  member means being listed, mentionable by default and included when
+  someone notifies "everybody in the project".
 - A project has one message board, one root folder and any number of
   lists. Project page: the lists, the latest messages, docs and files,
   links, and the project's activity.

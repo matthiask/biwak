@@ -35,7 +35,8 @@ sessions don't reopen it.
 
 In scope:
 
-1. Projects with members: staff and clients.
+1. Projects with members: staff and clients. All-access projects (every
+   staff member can see them) or limited ones (members only).
 2. To-do lists with groups, reorderable, to-dos with several assignees,
    due dates, recurrence, comments. Lists can be subscribed to.
 3. A board view: a list shown with its groups as columns.
@@ -90,7 +91,8 @@ Almost everything is an **item** in a project, like Basecamp's
 recordings. A few generic building blocks then cover most of the scope;
 `specs/core.md` has the details.
 
-- **Project**: name, description, members (staff and clients), archived.
+- **Project**: name, description, members (staff and clients),
+  all-access or limited, archived.
 - **Item** (delegated types): one table with the shared fields
   (project, parent, kind, position, effective visibility, status,
   creator, timestamps), and a one-to-one detail model per kind for the
@@ -174,6 +176,9 @@ and `specs/access.md`).
 - 2026-11-20: Replying to notification mails posts a comment, from the
   start.
 - 2026-11-20: Check-ins are in scope, the project schedule isn't.
+- 2026-11-20: Projects are all-access (all staff) or limited (members
+  only); clients only ever see projects they're members of. Joining a
+  project late subscribes to nothing that exists already.
 - 2026-11-20: Items as delegated types (shared `Item` plus detail models);
   groups are a foreign key on to-dos, not tree nodes; django-tree-queries
   for subtree operations; effective visibility stored per item, so the
