@@ -20,7 +20,8 @@ API first: everything the web interface does is possible through the API
 
 ## CLI
 
-A Python package (`biwak`, entry point `bw`?) in `cli/`:
+A Python package in `cli/`, the command is `biwak` (no abbreviation for
+a name this short):
 
 - Login, projects, lists, to-dos (create, complete, assign, move),
   comments, messages, docs, files (upload and download), check-in answers,
