@@ -44,6 +44,16 @@ def project_bookmark(request, pk):
         ops.add_bookmark(request.user, project=project)
     else:
         ops.remove_bookmark(request.user, project=project)
+    if request.headers.get("HX-Request") and request.POST.get("card"):
+        # The button on a card of the projects page swaps itself
+        return render(
+            request,
+            "projects/_card_bookmark.html",
+            {
+                "project": project,
+                "is_bookmarked": ops.is_bookmarked(request.user, project=project),
+            },
+        )
     return _back(request, project.get_absolute_url())
 
 

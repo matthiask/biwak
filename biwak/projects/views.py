@@ -14,6 +14,7 @@ from biwak.items import operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
+from biwak.projects.overview import overview
 
 
 def project_for(request, pk):
@@ -24,21 +25,40 @@ def project_for(request, pk):
 
 def project_list(request):
     archived = bool(request.GET.get("archived"))
-    projects = Project.objects.accessible_to(request.user)
-    projects = (
-        projects.filter(archived_at__isnull=False) if archived else projects.active()
-    )
     others = Project.objects.none()
-    if request.user.is_admin and not archived:
-        # Admins see that limited projects exist and can join them
-        others = Project.objects.active().exclude(
-            pk__in=Project.objects.accessible_to(request.user)
+    if archived:
+        # A plain alphabetical list, without cards
+        projects = Project.objects.accessible_to(request.user).filter(
+            archived_at__isnull=False
         )
+    else:
+        projects = overview(request.user)
+        if request.user.is_admin:
+            # Admins see that limited projects exist and can join them
+            others = Project.objects.active().exclude(
+                pk__in=Project.objects.accessible_to(request.user)
+            )
     return render(
         request,
         "projects/project_list.html",
-        {"projects": projects, "others": others, "archived": archived},
+        {
+            "projects": projects,
+            "others": others,
+            "archived": archived,
+            "order": request.user.project_order,
+            "orders": User.ProjectOrder.choices,
+        },
     )
+
+
+@require_POST
+def project_order(request):
+    """The switch on the projects page, remembered per person"""
+    try:
+        project_ops.set_project_order(request.user, request.POST.get("order"))
+    except ValueError:
+        return HttpResponse(status=400)
+    return redirect("projects")
 
 
 class ProjectForm(ModelForm):
