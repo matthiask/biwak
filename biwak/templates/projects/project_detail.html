@@ -122,6 +122,7 @@
       </ul>
       <h2 class="h5">{% translate "Activity" %}</h2>
       {% include "activity/_events.html" %}
+      <p class="small"><a href="{% url 'project_feed' project.pk %}">{% translate "All activity" %}</a></p>
     </div>
   </div>
 {% endblock content %}

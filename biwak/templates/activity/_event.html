@@ -1,0 +1,54 @@
+{% load biwak i18n %}
+{# One event, or a merged entry: pass `what` ("5 to-dos") and `where` (the list or project) with its latest event. Later parts add their actions here. #}
+<span class="fw-semibold">{{ event.actor.get_short_name }}</span>
+{% if event.action == "created" %}
+  {% translate "created" %} {% include "activity/_subject.html" %}
+{% elif event.action == "edited" %}
+  {% translate "edited" %} {% include "activity/_subject.html" %}
+{% elif event.action == "completed" %}
+  {% translate "completed" %} {% include "activity/_subject.html" %}
+{% elif event.action == "reopened" %}
+  {% translate "reopened" %} {% include "activity/_subject.html" %}
+{% elif event.action == "assigned" %}
+  {% translate "assigned" %}
+  {% if what %}{{ what }}{% else %}{{ event.assignee_names|join:", " }}
+    {% translate "to" %}
+    {% include "activity/_subject.html" %}{% endif %}
+{% elif event.action == "commented" %}
+  {% translate "commented on" %} {% include "activity/_subject.html" %}
+{% elif event.action == "moved" %}
+  {% translate "moved" %}
+  {% include "activity/_subject.html" %}
+  {# Only staff: the list's name may be internal #}
+  {% if event.data.to and not what and not request.user.is_client %}{% translate "to" %} {{ event.data.to }}{% endif %}
+{% elif event.action == "visibility_changed" %}
+  {% if what %}
+    {% translate "changed the visibility of" %} {{ what }}
+  {% elif event.data.visible %}
+    {% translate "made" %} {% include "activity/_subject.html" %} {% translate "visible to clients" %}
+  {% else %}
+    {% translate "hid" %} {% include "activity/_subject.html" %} {% translate "from clients" %}
+  {% endif %}
+{% elif event.action == "archived" %}
+  {% translate "archived" %} {% include "activity/_subject.html" %}
+{% elif event.action == "unarchived" %}
+  {% translate "brought back from the archive" %} {% include "activity/_subject.html" %}
+{% elif event.action == "trashed" %}
+  {% translate "trashed" %} {% include "activity/_subject.html" %}
+{% elif event.action == "restored" %}
+  {% translate "restored" %} {% include "activity/_subject.html" %}
+{% elif event.action == "edited_project" %}
+  {% translate "edited the project" %}
+{% elif event.action == "joined" %}
+  {% translate "joined the project" %}
+{% elif event.action == "left" %}
+  {% translate "left the project" %}
+{% elif event.action == "added" %}
+  {% translate "added" %} {{ event.data.name }}
+{% elif event.action == "removed" %}
+  {% translate "removed" %} {{ event.data.name }}
+{% else %}
+  {{ event.get_action_display }} {% include "activity/_subject.html" %}
+{% endif %}
+{% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
+{% if event.item %}{% client_badge event.item %}{% endif %}

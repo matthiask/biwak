@@ -1,7 +1,8 @@
 # Activity feed, item history, bookmarks, links
 
-**Status:** open. The project page shows its latest 20 events
-(`activity/_events.html`), nothing more.
+**Status:** in progress. Built: the activity feed (pages; the API and the
+CLI follow). The project page keeps its short list of the latest 20
+events (`activity/_events.html`) with a link to the feed.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.
@@ -33,6 +34,26 @@ From the events (`biwak/activity/`, `notifications.md`):
 - Rendering per action in one template (`activity/_event.html`) with the
   event's `data` (title at the time, assignees, where it moved), so
   later parts only add their actions there.
+
+Built (`biwak/activity/feed.py`, `views.py`): the cursor is
+`<microseconds since the epoch>,<id>` of the last event of a page
+(`?before=`, 400 if malformed); merging works within a page, so an entry
+can be split by a page boundary; there is a new index `(-created_at,
+-id)`, checked with `EXPLAIN` on 240,000 events: the first page takes
+about 1 ms for staff, for clients and per project.
+
+Decisions (proposed by the building agent, 2026-11-20):
+
+- A person's feed (`/people/<pk>/feed/`) exists for people who are a
+  member of a project the viewer can access, else 404, so that it
+  doesn't tell whether a person exists. The person filter lists the same
+  people.
+- "Within an hour" means each event is at most an hour after the next
+  older one of the entry (chains merge), and never across midnight.
+- A moved to-do's target list is not shown to clients (its name may be
+  internal even when the to-do is visible now).
+- Merging applies to every action; the entry says "completed 5 to-dos in
+  Launch", with "items" for mixed kinds.
 
 ## Item history
 
