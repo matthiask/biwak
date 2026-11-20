@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Search" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Search" %}</h1>
+  </div>
+  <form method="get" action="{% url 'search' %}" class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    {% for field in form %}
+      <div {% if field.name == "q" %}class="flex-grow-1"{% endif %}>
+        {% if field.field.widget.input_type == "checkbox" %}
+          <label class="form-check mb-2">{{ field }} {{ field.label }}</label>
+        {% else %}
+          <label class="form-label small mb-0" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+        {% endif %}
+        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">{% translate "Search" %}</button>
+    {% if filtered %}<a
+        href="{% url 'search' %}?q={{ terms|urlencode }}"
+        class="btn btn-quiet"
+      >{% translate "Clear filters" %}</a>{% endif %}
+  </form>
+  {% if terms %}
+    <div class="list-group">
+      {% for result in results %}
+        {% with item=result.item hit=result.hit %}
+          <a class="list-group-item list-group-item-action" href="{{ item.get_absolute_url }}">
+            {% icon result.icon %}
+            {% if hit.title %}{{ hit.title }}{% else %}{{ item|item_title }}{% endif %}
+            {% client_badge item %}
+            {% if item.project.archived_at %}<span
+                class="badge text-bg-secondary"
+              >{% translate "Archived" %}</span>{% endif %}
+            {% if hit.excerpt_html %}
+              <div class="small">
+                {% if hit.in_comment %}<span class="text-body-secondary">{% translate "Comment:" %}</span>{% endif %}
+                {{ hit.excerpt_html }}
+              </div>
+            {% endif %}
+            <div class="small text-body-secondary">
+              {{ item.get_kind_display }} · {{ item.project }} · {{ item.updated_at|date:"j. F Y" }}
+            </div>
+          </a>
+        {% endwith %}
+      {% empty %}
+        <div class="list-group-item text-body-secondary">{% translate "Nothing found." %}</div>
+      {% endfor %}
+    </div>
+    {% if older %}
+      <p class="mt-4"><a class="btn btn-quiet" href="{{ older }}">{% translate "Older" %}</a></p>
+    {% endif %}
+  {% endif %}
+{% endblock content %}

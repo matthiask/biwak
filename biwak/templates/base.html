@@ -58,7 +58,17 @@
               >{% translate "Bookmarks" %}</a>
             </li>
           </ul>
-          <div class="wb-nav-user d-flex align-items-center gap-2">
+          <form class="wb-nav-search" role="search" action="{% url 'search' %}">
+            <input
+              type="search"
+              name="q"
+              class="form-control form-control-sm"
+              value="{% if request.resolver_match.url_name == 'search' %}{{ request.GET.q }}{% endif %}"
+              placeholder="{% translate 'Search' %}"
+              aria-label="{% translate 'Search' %}"
+            >
+          </form>
+          <div class="wb-nav-user d-flex align-items-center gap-2 ms-2">
             {% include "_theme_toggle.html" %}
             <details class="dropdown wb-menu">
               <summary class="btn btn-sm btn-quiet">

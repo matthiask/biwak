@@ -16,6 +16,7 @@ from biwak.files.api import router as files_router
 from biwak.items.api import router as items_router
 from biwak.projects.api import router as projects_router
 from biwak.reactions.api import router as reactions_router
+from biwak.search.api import router as search_router
 
 
 api = NinjaAPI(
@@ -34,3 +35,4 @@ api.add_router("/", notifications_router)
 api.add_router("/", bookmarks_router)
 api.add_router("/", reactions_router)
 api.add_router("/", checkins_router)
+api.add_router("/", search_router)
