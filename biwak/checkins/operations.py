@@ -379,12 +379,11 @@ def remind_due(*, now=None):
 
 def summary_due_at(occurrence):
     """07:00 on the day after the occurrence's date, in the question's time
-    zone"""
-    return schedule.fire_at(
-        occurrence.date + dt.timedelta(days=1),
-        SUMMARY_AT,
-        occurrence.question.time_zone,
-    )
+    zone; after downtime, the day after it was really asked (people can
+    answer first)"""
+    time_zone = occurrence.question.time_zone
+    day = max(occurrence.date, schedule.local_date(occurrence.asked_at, time_zone))
+    return schedule.fire_at(day + dt.timedelta(days=1), SUMMARY_AT, time_zone)
 
 
 def summary_recipients(question):

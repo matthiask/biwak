@@ -56,7 +56,10 @@ value or a product choice to the builder):
   the older one is history) and only for people asked then who still are in
   the list.
 - **Summary:** 07:00 on the day after the occurrence's date in the
-  question's time zone (Open: or the installation's, like the digest), to
+  question's time zone (Open: or the installation's, like the digest), or,
+  when it was asked later than its date (after downtime), on the day after
+  it was asked (fixed 2026-11-20: a late run used the summary up before
+  anyone could answer), to
   subscribers whose mode is `summary` (the default) who see the question and
   whose level isn't "nothing"; no mail for an occurrence without answers;
   answers after it are not sent; choosing a mode other than `none`
