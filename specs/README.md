@@ -12,6 +12,9 @@ One spec per part. Every spec starts with the same header, so an agent
 
 ## Index
 
+Open questions and decisions waiting for confirmation, across all
+parts: `questions.md`.
+
 Stages are separate hand-offs. "Next" means it can start now.
 
 | Part | Stage | Status (2026-11-20) | Depends on | Agent |
