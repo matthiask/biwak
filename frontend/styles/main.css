@@ -111,17 +111,6 @@ h3,
   box-shadow: inset 0 -2px 0 #e8a33d;
 }
 
-.wb-navbar .btn-quiet {
-  --bs-btn-color: rgba(255, 255, 255, 0.85);
-  --bs-btn-bg: transparent;
-  --bs-btn-border-color: rgba(255, 255, 255, 0.25);
-  --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: rgba(255, 255, 255, 0.1);
-  --bs-btn-hover-border-color: rgba(255, 255, 255, 0.4);
-  --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: rgba(255, 255, 255, 0.15);
-}
-
 /* Small screens without Bootstrap's JavaScript: the brand and the user's
    links on the first row, the navigation as a swipeable row, the search */
 @media (max-width: 991.98px) {
@@ -169,6 +158,17 @@ h3,
   --bs-btn-hover-bg: var(--bs-tertiary-bg);
   --bs-btn-hover-border-color: var(--bs-border-color);
   --bs-btn-active-bg: var(--bs-secondary-bg);
+}
+
+.wb-navbar .btn-quiet {
+  --bs-btn-color: rgba(255, 255, 255, 0.85);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: rgba(255, 255, 255, 0.25);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --bs-btn-hover-border-color: rgba(255, 255, 255, 0.4);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: rgba(255, 255, 255, 0.15);
 }
 
 /* Buttons destroying or ending something (deleting, removing somebody,
