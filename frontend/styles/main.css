@@ -11,12 +11,12 @@
   --bs-body-color: #22251f;
   --bs-border-color: #e2ddd2;
   --bs-secondary-color: rgba(34, 37, 31, 0.62);
-  --bs-primary: #2d6a4f;
-  --bs-primary-rgb: 45, 106, 79;
-  --bs-link-color: #2d6a4f;
-  --bs-link-color-rgb: 45, 106, 79;
-  --bs-link-hover-color: #1f4d39;
-  --bs-link-hover-color-rgb: 31, 77, 57;
+  --bs-primary: #6741c4;
+  --bs-primary-rgb: 103, 65, 196;
+  --bs-link-color: #6741c4;
+  --bs-link-color-rgb: 103, 65, 196;
+  --bs-link-hover-color: #4e2f9c;
+  --bs-link-hover-color-rgb: 78, 47, 156;
   --bs-border-radius: 0.5rem;
   --wb-surface: #fff;
   /* Fields on the page's background, e.g. filters */
@@ -28,20 +28,20 @@
 }
 
 [data-bs-theme="dark"] {
-  --bs-body-bg: #0d0f0d;
+  --bs-body-bg: #0e0d11;
   --bs-body-color: #e2e3dc;
-  --bs-border-color: #2d322c;
+  --bs-border-color: #2f2c36;
   --bs-secondary-color: rgba(226, 227, 220, 0.62);
-  --bs-link-color: #7fcca4;
-  --bs-link-color-rgb: 127, 204, 164;
-  --bs-link-hover-color: #a8e0c2;
-  --bs-link-hover-color-rgb: 168, 224, 194;
-  --wb-surface: #171a16;
+  --bs-link-color: #b9a3f0;
+  --bs-link-color-rgb: 185, 163, 240;
+  --bs-link-hover-color: #d3c6f7;
+  --bs-link-hover-color-rgb: 211, 198, 247;
+  --wb-surface: #18161d;
   --wb-field-bg: #000;
-  --wb-field-border: #434a41;
-  --wb-surface-border: #2d322c;
-  --bs-primary: #3a8562;
-  --bs-primary-rgb: 58, 133, 98;
+  --wb-field-border: #474352;
+  --wb-surface-border: #2f2c36;
+  --bs-primary: #7a56d6;
+  --bs-primary-rgb: 122, 86, 214;
   --wb-shadow: none;
 }
 
@@ -76,8 +76,8 @@ h3,
 .btn-primary {
   --bs-btn-bg: var(--bs-primary);
   --bs-btn-border-color: var(--bs-primary);
-  --bs-btn-hover-bg: #24583f;
-  --bs-btn-hover-border-color: #24583f;
+  --bs-btn-hover-bg: #5433a8;
+  --bs-btn-hover-border-color: #5433a8;
 }
 
 .card {
@@ -92,19 +92,19 @@ h3,
   --bs-list-group-border-color: var(--wb-surface-border);
 }
 
-/* The pine bar with the amber tent: Biwak at a glance, in both modes */
+/* The violet bar with the amber tent: Biwak at a glance, in both modes */
 .wb-navbar {
   --bs-navbar-color: rgba(255, 255, 255, 0.78);
   --bs-navbar-hover-color: #fff;
   --bs-navbar-active-color: #fff;
   --bs-navbar-brand-color: #fff;
   --bs-navbar-brand-hover-color: #fff;
-  background: #2f7d52;
+  background: #5b37b0;
   border-bottom: 3px solid #e8a33d;
 }
 
 [data-bs-theme="dark"] .wb-navbar {
-  background: #1f5a3b;
+  background: #3a2378;
 }
 
 .wb-navbar .nav-link.active {
@@ -473,8 +473,8 @@ a.wb-row-title:hover {
 [data-bs-theme="light"] {
   --wb-neutral-bg: #ebe7df;
   --wb-neutral-ink: #514c42;
-  --wb-primary-bg: #dcefe4;
-  --wb-primary-ink: #1f4d39;
+  --wb-primary-bg: #ece6fb;
+  --wb-primary-ink: #4e2f9c;
   --wb-circle-bg: #e1edfb;
   --wb-circle-ink: #1a58a6;
   --wb-info-bg: #d9f1f4;
@@ -490,10 +490,10 @@ a.wb-row-title:hover {
 }
 
 [data-bs-theme="dark"] {
-  --wb-neutral-bg: #292c27;
+  --wb-neutral-bg: #2a2830;
   --wb-neutral-ink: #c9cbc2;
-  --wb-primary-bg: #16352a;
-  --wb-primary-ink: #9fdcbc;
+  --wb-primary-bg: #2a1f4a;
+  --wb-primary-ink: #c7b7f5;
   --wb-circle-bg: #132a46;
   --wb-circle-ink: #8fbcf2;
   --wb-info-bg: #0e3338;
