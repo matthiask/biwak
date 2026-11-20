@@ -1,0 +1,42 @@
+# API, CLI and agent skills
+
+API first: everything the web interface does is possible through the API
+(decided 2026-11-20). Conventions copied from Governance and Workbench.
+
+## API
+
+- django-ninja under `/api/v1/`, OpenAPI schema published.
+- Authentication: personal API keys (created and revoked by the person,
+  read-only or read-write), and a browser-based login for the CLI that
+  creates such a key.
+- The same visibility rules as the web interface (`access.md`): a client's
+  key sees what the client sees. Every item in a response carries its
+  visibility.
+- Rich text accepted as Markdown, returned as HTML and Markdown.
+- Cursor pagination; filters matching the web interface's.
+- Writes create the same events and notifications as the web interface.
+- Webhooks for events (later): signed, retried, per project or
+  installation.
+
+## CLI
+
+A Python package (`biwak`, entry point `bw`?) in `cli/`:
+
+- Login, projects, lists, to-dos (create, complete, assign, move),
+  comments, messages, docs, files (upload and download), check-in answers,
+  the chronological list ("my to-dos"), the feed, search, bookmarks.
+- Human-readable output by default, `--json` for scripts and agents.
+- Versioned with the server; warns when they don't match.
+
+## Agent skills
+
+Skills in the CLI package for common work: triaging what changed,
+turning a mail into a to-do or message, writing a weekly summary of a
+project. They tell agents to check visibility before writing anything a
+client could see.
+
+## Order
+
+The foundations (keys, conventions, visibility in responses) come with
+the core; each part adds its endpoints and CLI commands in the same
+branch.
