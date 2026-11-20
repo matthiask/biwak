@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "API tokens" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "API tokens" %}</h1>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      {% if secret %}
+        <div class="alert alert-success">
+          <p class="mb-2">{% translate "Your new token. Copy it now, it won't be shown again:" %}</p>
+          <code class="user-select-all">{{ secret }}</code>
+        </div>
+      {% endif %}
+      <div class="card mb-3">
+        <table class="wb-table">
+          <thead>
+            <tr>
+              <th>{% translate "title" %}</th>
+              <th>{% translate "access" %}</th>
+              <th>{% translate "last used at" %}</th>
+              <th>{% translate "expires at" %}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for token in tokens %}
+              <tr>
+                <td>{{ token }}</td>
+                <td>{{ token.get_access_display }}</td>
+                <td>{{ token.last_used_at|date:"j. M Y H:i"|default:"–" }}</td>
+                <td>{{ token.expires_at|date:"j. M Y" }}</td>
+                <td class="text-end">
+                  <form method="post" action="{% url 'api_token_delete' token.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-destructive">{% translate "Revoke" %}</button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-body-secondary">{% translate "No API tokens yet." %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="small text-body-secondary">
+        {% blocktranslate trimmed %}
+          Tokens expire {{ days }} days after their last use. A token sees what you see, clients' tokens only what is
+          visible to clients.
+        {% endblocktranslate %}
+      </p>
+    </div>
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h2 class="h6">{% translate "New token" %}</h2>
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label" for="id_title">{% translate "title" %}</label>
+              <input id="id_title" class="form-control" name="title" required maxlength="100">
+            </div>
+            <div class="mb-3">
+              {% for value, label in access_choices %}
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="access"
+                    id="access_{{ value }}"
+                    value="{{ value }}"
+                    required
+                  >
+                  <label class="form-check-label" for="access_{{ value }}">{{ label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">{% translate "Create token" %}</button>
+          </form>
+        </div>
+      </div>
+      <h2 class="h6">{% translate "The biwak command line interface" %}</h2>
+      <p class="small">{% translate "Install it with uv, then log in through the browser:" %}</p>
+      <pre class="small"><code>{{ cli_install }}
+biwak login {{ base_url }} --write</code></pre>
+      <p class="small">
+        {% translate "The API:" %} <a href="{{ api_url }}docs">{{ api_url }}</a>
+      </p>
+    </div>
+  </div>
+{% endblock content %}

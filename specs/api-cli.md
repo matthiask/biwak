@@ -41,3 +41,14 @@ client could see.
 The foundations (keys, conventions, visibility in responses) come with
 the core; each part adds its endpoints and CLI commands in the same
 branch.
+
+Built with the core (2026-11-20): tokens (`biwak/accounts/models.py`,
+page at `/accounts/api-tokens/`, `/accounts/cli-login/`), the conventions
+in `biwak/api_conventions.py` (every item carries `visible_to_clients`;
+Markdown plus `*_html`; cursor pagination for lists that grow, complete
+responses for short ones; absolute URLs), the CLI version check
+(`biwak/cli_version.py`, header `X-Biwak-CLI`), endpoints for me, tokens,
+projects, members, lists, groups, to-dos, comments, subscriptions and the
+visibility switch, and `biwak login/logout/me/projects/lists/todos/todo`.
+Webhooks, the feed, search and the chronological list come with their
+parts.

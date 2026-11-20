@@ -5,6 +5,8 @@ from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import include, path
 
+from biwak.api import api
+
 
 @login_not_required
 def favicon(request):
@@ -16,6 +18,8 @@ urlpatterns = [
     path("favicon.ico", favicon),
     path("", include("biwak.projects.urls")),
     path("", include("biwak.items.urls")),
+    path("api/v1/", api.urls),
+    path("accounts/", include("biwak.accounts.urls")),
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
 ]

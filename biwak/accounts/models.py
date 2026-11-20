@@ -1,7 +1,12 @@
+import datetime as dt
+import hashlib
+import secrets
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -80,3 +85,88 @@ class User(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return self.is_active and self.is_admin
+
+
+# Created on the API tokens page or by `biwak login` (/cli-login/), which
+# asks for a new one through the browser when the old one expired. Each use
+# extends it: a token in use stays valid, one nobody uses expires.
+API_TOKEN_LIFETIME = dt.timedelta(days=30)
+
+
+def _api_token_expiry():
+    return timezone.now() + API_TOKEN_LIFETIME
+
+
+def _hash_api_token(secret):
+    return hashlib.sha256(secret.encode()).hexdigest()
+
+
+class APITokenQuerySet(models.QuerySet):
+    def for_secret(self, secret):
+        """The valid token of an active person, or None"""
+        return (
+            self
+            .filter(
+                key_hash=_hash_api_token(secret),
+                expires_at__gt=timezone.now(),
+                user__is_active=True,
+            )
+            .select_related("user")
+            .first()
+        )
+
+    def extend(self, token):
+        """Each use extends the token"""
+        now = timezone.now()
+        self.filter(pk=token.pk).update(
+            last_used_at=now, expires_at=now + API_TOKEN_LIFETIME
+        )
+
+
+class APIToken(models.Model):
+    """Personal API tokens (specs/api-cli.md), only their hash is stored. A
+    client's token sees what the client sees."""
+
+    class Access(models.TextChoices):
+        READ = "read", _("read only")
+        WRITE = "write", _("read and write")
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="api_tokens",
+        verbose_name=_("person"),
+    )
+    title = models.CharField(_("title"), max_length=100)
+    # No default: people decide which access their tools get
+    access = models.CharField(_("access"), max_length=10, choices=Access)
+    key_hash = models.CharField(
+        _("key hash"), max_length=64, unique=True, editable=False
+    )
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+    last_used_at = models.DateTimeField(_("last used at"), blank=True, null=True)
+    expires_at = models.DateTimeField(_("expires at"), default=_api_token_expiry)
+
+    objects = APITokenQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = _("API token")
+        verbose_name_plural = _("API tokens")
+
+    def __str__(self):
+        return self.title
+
+    @classmethod
+    def create_for(cls, *, user, title, access):
+        """Creates a token and returns it with its secret, which can't be
+        shown again. Expired tokens of the person are removed."""
+        cls.objects.filter(user=user, expires_at__lte=timezone.now()).delete()
+        secret = f"biwak_{secrets.token_urlsafe(32)}"
+        token = cls.objects.create(
+            user=user,
+            title=title,
+            access=cls.Access(access),
+            key_hash=_hash_api_token(secret),
+        )
+        return token, secret

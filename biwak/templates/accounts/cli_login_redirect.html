@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Authorize biwak" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-entrance">
+    {# Posted, not redirected: the token doesn't end up in the browser's history #}
+    <form method="post" action="{{ action }}" id="cli-login">
+      <input type="hidden" name="token" value="{{ token }}">
+      <input type="hidden" name="state" value="{{ state }}">
+      <p>{% translate "Handing the access over to biwak…" %}</p>
+      <button type="submit" class="btn btn-primary">{% translate "Continue" %}</button>
+    </form>
+    <script>
+      document.getElementById("cli-login").submit()
+    </script>
+  </div>
+{% endblock content %}

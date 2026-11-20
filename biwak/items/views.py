@@ -230,15 +230,14 @@ def todo(request, pk):
     form.fields["assignees"].queryset = people
     if form.is_valid():
         data = form.cleaned_data
-        item.title = data["title"]
-        item.save(update_fields=["title"])
-        todo.notes = data["notes"]
-        todo.due_on = data["due_on"]
-        todo.save(update_fields=["notes", "due_on"])
-        new = set(data["assignees"])
-        old = set(todo.assignees.all())
-        ops.assign(item, list(new - old), actor=request.user)
-        ops.unassign(item, list(old - new), actor=request.user)
+        ops.update_todo(
+            item,
+            actor=request.user,
+            title=data["title"],
+            notes=data["notes"],
+            due_on=data["due_on"],
+            assignees=data["assignees"],
+        )
         return redirect(item)
     comment_form = CommentForm(
         request.POST if request.POST.get("form") == "comment" else None

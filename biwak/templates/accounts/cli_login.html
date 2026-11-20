@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Authorize biwak" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-entrance">
+    <h1 class="mb-3">{% translate "Authorize biwak" %}</h1>
+    <p>
+      {% if name %}
+        {% blocktranslate trimmed %}
+          The <code>biwak</code> command line interface on <strong>{{ name }}</strong> wants to access Biwak in your
+          name.
+        {% endblocktranslate %}
+      {% else %}
+        {% blocktranslate trimmed %}
+          The <code>biwak</code> command line interface wants to access Biwak in your name.
+        {% endblocktranslate %}
+      {% endif %}
+      {% blocktranslate trimmed %}
+        The access expires {{ days }} days after its last use; <code>biwak</code> asks you again then.
+      {% endblocktranslate %}
+    </p>
+    <p>{% translate "access"|capfirst %}: <strong>{{ access.label }}</strong></p>
+    <p class="text-body-secondary">{% translate "Only continue if you just started biwak yourself." %}</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">{% translate "Authorize" %}</button>
+    </form>
+  </div>
+{% endblock content %}

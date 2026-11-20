@@ -47,6 +47,7 @@
               <div class="dropdown-menu dropdown-menu-end">
                 <a class="dropdown-item" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
                 <a class="dropdown-item" href="{% url 'usersessions_list' %}">{% translate "Sessions" %}</a>
+                <a class="dropdown-item" href="{% url 'api_tokens' %}">{% translate "API tokens" %}</a>
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
                 {% endif %}

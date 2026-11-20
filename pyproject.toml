@@ -24,6 +24,15 @@ dependencies = [
   "time-machine>=3.6",
 ]
 
+[dependency-groups]
+# The CLI tests run the CLI, the deployment doesn't need it (UV_NO_DEV)
+dev = [
+  "biwak-cli",
+]
+
+[tool.uv]
+sources.biwak-cli = { path = "cli", editable = true }
+
 [tool.ruff]
 target-version = "py315"
 preview = true

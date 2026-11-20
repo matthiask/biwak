@@ -15,7 +15,12 @@ them when a decision changes (dated: "decided 2026-11-20").
 - `.env` (not committed): `DATABASE_URL=postgres://localhost:5432/biwak`,
   `SECRET_KEY`, `DEBUG=True`.
 
-Tests are Django tests. Browser end-to-end tests (Playwright) only where
+Tests are Django tests. The CLI (`cli/`, package `biwak_cli`, installed
+editable as a dev dependency) is tested by running it against the API
+through the test client (`biwak/test_cli.py`). Each part adds its API
+endpoints (`<app>/api.py`, conventions in `biwak/api_conventions.py`) and
+CLI commands with its pages; bump `cli/pyproject.toml`'s version with new
+commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break. Browser end-to-end tests (Playwright) only where
 nothing else can test something, and not while we're still exploring
 (decided 2026-11-20): they slow us down.
 

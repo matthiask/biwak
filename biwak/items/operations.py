@@ -196,6 +196,42 @@ def unassign(item, users, *, actor):
     item.todo.assignees.remove(*users)
 
 
+_UNCHANGED = object()
+
+
+@transaction.atomic
+def update_todo(
+    item,
+    *,
+    actor,
+    title=_UNCHANGED,
+    notes=_UNCHANGED,
+    due_on=_UNCHANGED,
+    assignees=_UNCHANGED,
+):
+    """Changes what's given (the to-do's page and the API); assignees are
+    the complete new set"""
+    todo = item.todo
+    if title is not _UNCHANGED and title != item.title:
+        item.title = title
+        item.updated_at = timezone.now()
+        item.save(update_fields=["title", "updated_at"])
+    fields = []
+    if notes is not _UNCHANGED:
+        todo.notes = notes
+        fields.append("notes")
+    if due_on is not _UNCHANGED:
+        todo.due_on = due_on
+        fields.append("due_on")
+    if fields:
+        todo.save(update_fields=fields)
+    if assignees is not _UNCHANGED:
+        new, old = set(assignees), set(todo.assignees.all())
+        assign(item, list(new - old), actor=actor)
+        unassign(item, list(old - new), actor=actor)
+    return item
+
+
 @transaction.atomic
 def complete(item, *, actor):
     """Completes the to-do for all its assignees"""
