@@ -157,6 +157,11 @@ class ViewsTest(TestCase):
         self.client.post(f"/items/{self.internal.pk}/switch/", {"visible": "1"})
         self.assertIn(self.secret_todo, Item.objects.visible_to(self.cleo))
 
+    def test_switch_only_where_there_is_one(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(f"/items/{self.todo.pk}/switch/", {"visible": "1"})
+        self.assertEqual(response.status_code, 400)
+
     def test_subscribe_without_participating(self):
         Membership.objects.create(project=self.project, user=self.bob)
         self.client.force_login(self.bob)

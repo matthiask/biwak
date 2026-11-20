@@ -520,6 +520,8 @@ def switch(request, pk):
     if request.user.is_client:
         raise PermissionDenied
     item = item_for(request, pk)
+    if not item.has_switch:
+        return HttpResponse(status=400)
     ops.set_visibility(
         item, visible=bool(request.POST.get("visible")), actor=request.user
     )
