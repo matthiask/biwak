@@ -2,7 +2,8 @@
 
 {% endif %}{% for entry in entries %}{{ entry.line }}{% if entry.comment_text %}
 
-{{ entry.comment_text }}{% endif %}
+{{ entry.comment_text }}{% endif %}{% if entry.reactions %}
+{{ entry.reactions }}{% endif %}
 
 {% endfor %}---
 
