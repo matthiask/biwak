@@ -1,9 +1,12 @@
 """Asking on schedule: the risky part (specs/checkins.md)"""
 
 import datetime as dt
+import threading
 from unittest.mock import patch
 
 from django.core.management import call_command
+from django.db import close_old_connections, connection
+from django.test import TransactionTestCase, override_settings
 
 from biwak.checkins import operations as ops, schedule
 from biwak.checkins.models import Occurrence, Question
@@ -11,7 +14,7 @@ from biwak.checkins.support import MONDAY_9, CheckinTestCase, at, local
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
 from biwak.projects import operations as project_ops
-from biwak.test_utils import person
+from biwak.test_utils import person, project
 
 
 def next_at(item):
@@ -56,8 +59,8 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(Occurrence.objects.count(), 1)
         self.assertEqual(self.sent(), [])
 
-    def test_two_runs_at_once(self):
-        """The second finds the question locked or already asked"""
+    def test_running_twice_asks_once(self):
+        """Two runs one after the other (at once: ``TwoRunsAtOnceTest``)"""
         with self.captureOnCommitCallbacks(execute=True):
             first = ops.ask_due(now=at("2027-03-22 09:00"))
             second = ops.ask_due(now=at("2027-03-22 09:00"))
@@ -600,3 +603,49 @@ class AskingTest(CheckinTestCase):
             self.run_at("2027-03-22 09:00")
         self.assertEqual(len(calls), 2)
         self.assertEqual(len(self.sent()), 1)
+
+
+@override_settings(
+    BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
+)
+class TwoRunsAtOnceTest(TransactionTestCase):
+    def test_the_second_run_skips_the_question_the_first_is_asking(self):
+        """While the first run holds the question's lock, the second skips
+        it at once (``skip_locked``) instead of waiting or asking too"""
+        ada = person("Ada")
+        ops.create_question(
+            project=project(members=[ada]), title="How are you?", creator=ada,
+            people=[ada], now=at("2027-03-19 12:00"), **MONDAY_9,
+        )  # fmt: skip
+        locked, release = threading.Event(), threading.Event()
+        latest_occurrence = schedule.latest_occurrence
+
+        def first_waits(question, **kwargs):
+            if not locked.is_set():
+                locked.set()
+                release.wait(10)
+            return latest_occurrence(question, **kwargs)
+
+        results = {}
+
+        def run(name):
+            try:
+                results[name] = len(ops.ask_due(now=at("2027-03-22 09:00")))
+            finally:
+                close_old_connections()
+                connection.close()
+
+        with patch.object(schedule, "latest_occurrence", first_waits):
+            first = threading.Thread(target=run, args=["first"])
+            first.start()
+            self.assertTrue(locked.wait(10))
+            second = threading.Thread(target=run, args=["second"])
+            second.start()
+            second.join(5)
+            waited = second.is_alive()
+            release.set()
+            first.join()
+            second.join()
+        self.assertFalse(waited, "the second run waited for the first")
+        self.assertEqual(results, {"first": 1, "second": 0})
+        self.assertEqual(Occurrence.objects.count(), 1)
