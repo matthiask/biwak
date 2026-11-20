@@ -240,6 +240,9 @@ Nothing at the moment.
   number (`specs/files.md`).
 - 2026-11-20: More content on overview pages as small signals, short
   excerpts and a peek on demand, never settings (`specs/glance.md`).
+- 2026-11-20: Replies by mail are posted when the receiving server
+  reports DMARC or (aligned) DKIM as passed; SPF alone isn't enough,
+  since Resend doesn't report its alignment (`specs/notifications.md`).
 - 2026-11-20: Reactions: 24 quick emoji and short texts (40
   characters), telling only the author, collected into the next mail
   or the digest (`specs/reactions.md`).

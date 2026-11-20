@@ -82,10 +82,11 @@ value or a product choice to the builder):
   projects.
 - **Mails** (question, summary) go out after the commit, one per
   person, in their language; a mail which can't be sent is logged and not
-  retried. Replying by mail (`notifications.md`, stage 2) goes into
-  `biwak/checkins/mails.py`: `reply_headers()` returns the `Reply-To` and
-  `thread()` the thread of a person and occurrence; `Occurrence` is what a
-  reply points at.
+  retried. Replying by mail (`notifications.md`, stage 2, built
+  2026-11-20): `reply_headers()` in `biwak/checkins/mails.py` gives the
+  question mail a `Reply-To` whose token points at the occurrence;
+  replying answers that occurrence (changing an answer given already).
+  The summary has no `Reply-To`.
 - **Open (values the spec doesn't fix):** how many occurrences a page shows
   (5, `OCCURRENCES_PER_PAGE`); the wording of the two mails and the
   pages; no default time of day (the form asks); asking people with the

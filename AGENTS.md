@@ -18,6 +18,10 @@ them when a decision changes (dated: "decided 2026-11-20").
   `./manage.py send_mails` sends the notification mails and digests that
   are due; cron runs it every minute. Once deployed, the cron jobs live
   in the argocd repository.
+- Replies by mail come in through Resend's webhook (`/inbound/resend/`);
+  `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by
+  hand. Off unless `REPLY_DOMAIN`, `RESEND_API_KEY` and
+  `RESEND_WEBHOOK_SECRET` are set (`specs/notifications.md`).
 - The audit log (`biwak/audit/`) is a trigger on the main tables; new
   tables people change get `audit_tables()` in a migration. Requests,
   API tokens and `fairy_tasks` set who changes things (`set_user_name()`).
