@@ -4,7 +4,7 @@
 `biwak/activity/`). Stage 1 (mentions, levels, mails, digests) is built
 (2026-11-20, branch `notifications`): `mentions.py`, `notify.py`,
 `mails.py` and `./manage.py send_mails`, the settings pages, the API
-endpoints and `biwak notifications` (CLI 0.5.0). Stage 2 (replying by
+endpoints and `biwak notifications` (CLI 0.8.0). Stage 2 (replying by
 mail) is open.
 
 **Agent:** a strong model for both stages. Stage 1 decides who gets

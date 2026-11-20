@@ -17,16 +17,16 @@ Stages are separate hand-offs. "Next" means it can start now.
 | Part | Stage | Status (2026-11-20) | Depends on | Agent |
 |---|---|---|---|---|
 | `core.md`, `access.md`, `api-cli.md` | | built | | |
-| `notifications.md` | 1: mentions, levels, mails, digests | built (branch `notifications`, not merged) | core | strong |
+| `notifications.md` | 1: mentions, levels, mails, digests | built | core | strong |
 | `files.md` | 1: storage, attachments, downloads | built | core | strong |
 | `todos.md` | 1: schedules, recurrence | built | core | cheaper |
 | `todos.md` | 2: by due date, iCal | built | stage 1 | cheaper |
 | `feed.md` | feed, history, bookmarks, links | built | core | cheaper |
-| `files.md` | 2: messages (with pinning), folders, docs | next once notifications 1 is merged | notifications 1 | cheaper |
+| `files.md` | 2: messages (with pinning), folders, docs | next | notifications 1 | cheaper |
 | `todos.md` | 3: long lists of completed to-dos | built | stage 2 | cheaper |
 | `projects-overview.md` | favorites, activity order, cards | built | `feed.md` (bookmarks) | cheaper, review the client column |
-| `glance.md` | excerpts (the filter is built), to-do indicators and peek, counts | after `feed.md`, notifications 1 | `feed.md`, notifications 1 | cheaper |
-| `reactions.md` | to-dos and comments first | after notifications 1 | notifications 1 | cheaper |
+| `glance.md` | excerpts (the filter is built), to-do indicators and peek, counts | next | `feed.md`, notifications 1 | cheaper |
+| `reactions.md` | to-dos and comments first | next | notifications 1 | cheaper |
 | `checkins.md` | | open | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | open | notifications 1, check-ins | strong |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
