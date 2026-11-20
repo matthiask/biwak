@@ -62,6 +62,9 @@ def concerns(user, event):
                 .exclude(pk=event.data.get("comment"))
                 .exists()
             )
+        case Action.REACTED:
+            # Only the author is a candidate, and it's their text
+            return True
         case Action.COMPLETED:
             return (
                 item.creator_id == user.pk
@@ -81,10 +84,26 @@ def wants(user, event):
     return True
 
 
+def reacted_author(event):
+    """The ID of the author of the thing reacted to: of the comment, or the
+    item's creator"""
+    if comment := event.data.get("comment"):
+        return (
+            Comment.objects.filter(pk=comment).values_list("author", flat=True).first()
+        )
+    return event.item.creator_id
+
+
 def candidates(event):
     """Subscribers of the item (for new items also of its container) and the
     people this event assigned or mentioned"""
     item = event.item
+    if event.action == Action.REACTED:
+        # Nobody else, never the subscribers (specs/reactions.md)
+        author = reacted_author(event)
+        if author is None or author == event.actor_id:
+            return User.objects.none()
+        return User.objects.active().filter(pk=author)
     items = [item.pk]
     if event.action == Action.CREATED and item.parent_id:
         items.append(item.parent_id)

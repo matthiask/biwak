@@ -22,6 +22,7 @@ class Action(models.TextChoices):
     REOPENED = "reopened", _("reopened")
     ASSIGNED = "assigned", _("assigned")
     COMMENTED = "commented", _("commented")
+    REACTED = "reacted", _("reacted")
     MOVED = "moved", _("moved")
     VISIBILITY_CHANGED = "visibility_changed", _("visibility changed")
     ARCHIVED = "archived", _("archived")
