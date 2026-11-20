@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak bookmarks i18n %}
+{% load biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
@@ -41,6 +41,7 @@
         {{ version.uploaded_at|date:"j. M Y, H:i" }}
       </p>
       {% if upload.description %}<div class="wb-markdown mb-4">{{ upload.description|markdown:item }}</div>{% endif %}
+      {% reactions item %}
       {% include "files/_comments.html" %}
     </div>
     <div class="col-lg-4">

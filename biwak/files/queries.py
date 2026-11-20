@@ -8,6 +8,8 @@ from biwak.items.models import Item, Kind
 
 # The project page shows this many messages, unless more are pinned
 FRONT_MESSAGES = 3
+# ... and this many of the latest changed docs and files
+FRONT_FILES = 3
 
 
 def board(project, user):
@@ -42,6 +44,18 @@ def front_messages(project, user):
     pinned = list(pinned_messages(messages))
     rest = max(0, FRONT_MESSAGES - len(pinned))
     return pinned + list(latest_messages(messages)[:rest])
+
+
+def front_files(project, user):
+    """The project page's docs and files: the latest three changed ones, at
+    any depth"""
+    return list(
+        Item.objects
+        .visible_to(user)
+        .filter(project=project, kind__in=[Kind.DOC, Kind.FILE])
+        .select_related("creator")
+        .order_by("-updated_at", "-pk")[:FRONT_FILES]
+    )
 
 
 def root_counts(project, user):

@@ -6,7 +6,7 @@ interface, and the same visibility: everything through
 import datetime as dt
 from typing import Literal
 
-from django.db.models import Value
+from django.db.models import Prefetch, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -32,6 +32,8 @@ from biwak.items import operations as ops
 from biwak.items.api import item_for
 from biwak.items.models import Kind, MessageCategory
 from biwak.projects.api import project_for
+from biwak.reactions.models import Reaction
+from biwak.reactions.schemas import ReactionOut, reactions_out
 from biwak.templatetags.biwak import excerpt
 
 
@@ -179,9 +181,10 @@ class MessageOut(ItemOut):
     pinned: bool
     pinned_at: dt.datetime | None
     comment_count: int
+    reactions: list[ReactionOut]
 
 
-def message_out(item):
+def message_out(item, user):
     message = item.message
     count = getattr(item, "comment_count", None)
     if count is None:
@@ -194,6 +197,7 @@ def message_out(item):
         "pinned": message.pinned_at is not None,
         "pinned_at": message.pinned_at,
         "comment_count": count,
+        "reactions": reactions_out(item, None, user),
     }
 
 
@@ -201,10 +205,19 @@ def message_for(request, pk):
     return item_for(request, pk, Kind.MESSAGE)
 
 
+def _reactions():
+    """One query for the reactions of a page of messages"""
+    return Prefetch("reactions", queryset=Reaction.objects.select_related("user"))
+
+
 def _message(request, pk):
     """With the annotations of the board"""
     return get_object_or_404(
-        queries.board(None, request.user).filter(pk=pk).select_related("project"),
+        queries
+        .board(None, request.user)
+        .filter(pk=pk)
+        .select_related("project")
+        .prefetch_related(_reactions()),
     )
 
 
@@ -221,15 +234,20 @@ def message_list(
     """The message board: the latest pinned first, then the rest newest
     first"""
     project = project_for(request, project_id)
-    messages = queries.board(project, request.user).annotate(
-        pin_key=Coalesce(
-            "message__pinned_at", Value(dt.datetime(1970, 1, 1, tzinfo=dt.UTC))
+    messages = (
+        queries
+        .board(project, request.user)
+        .annotate(
+            pin_key=Coalesce(
+                "message__pinned_at", Value(dt.datetime(1970, 1, 1, tzinfo=dt.UTC))
+            )
         )
+        .prefetch_related(_reactions())
     )
     return paginated(
         request,
         messages,
-        message_out,
+        lambda item: message_out(item, request.user),
         ordering=("-pin_key", "-created_at", "-pk"),
         cursor=cursor,
         page_size=page_size,
@@ -270,12 +288,12 @@ def message_create(request, project_id: int, data: MessageIn):
         visible=switch(request, data.visible_to_clients),
         whom=whom(project, data.notify),
     )
-    return Status(201, message_out(_message(request, item.pk)))
+    return Status(201, message_out(_message(request, item.pk), request.user))
 
 
 @router.get("messages/{message_id}/", response=MessageOut)
 def message_detail(request, message_id: int):
-    return message_out(_message(request, message_id))
+    return message_out(_message(request, message_id), request.user)
 
 
 class MessagePatch(Schema):
@@ -302,7 +320,7 @@ def message_update(request, message_id: int, data: MessagePatch):
     if "category_id" in given:
         changes["category"] = _category(data.category_id)
     operations.update_message(item, actor=request.user, **changes)
-    return message_out(_message(request, message_id))
+    return message_out(_message(request, message_id), request.user)
 
 
 @router.put("messages/{message_id}/pin/", response=MessageOut)
@@ -313,7 +331,7 @@ def message_pin(request, message_id: int):
     if request.user.is_client:
         raise HttpError(403, _("Only staff can pin messages."))
     operations.pin_message(item, actor=request.user)
-    return message_out(_message(request, message_id))
+    return message_out(_message(request, message_id), request.user)
 
 
 @router.delete("messages/{message_id}/pin/", response=MessageOut)
@@ -322,7 +340,7 @@ def message_unpin(request, message_id: int):
     if request.user.is_client:
         raise HttpError(403, _("Only staff can pin messages."))
     operations.unpin_message(item, actor=request.user)
-    return message_out(_message(request, message_id))
+    return message_out(_message(request, message_id), request.user)
 
 
 # Folders ----------------------------------------------------------------
@@ -432,9 +450,10 @@ class DocOut(ItemOut):
     # The newest version, the ``base_version`` of the next save
     version_id: int
     locked_by: PersonOut | None
+    reactions: list[ReactionOut]
 
 
-def doc_out(item):
+def doc_out(item, user):
     doc = item.doc
     holder = operations.lock_holder(doc)
     return item_out(item) | {
@@ -442,6 +461,7 @@ def doc_out(item):
         "content_html": html(doc.content, item),
         "version_id": doc.versions.first().pk,
         "locked_by": person_out(holder),
+        "reactions": reactions_out(item, None, user),
     }
 
 
@@ -468,12 +488,12 @@ def doc_create(request, project_id: int, data: DocIn):
         visible=switch(request, data.visible_to_clients),
         whom=whom(project, data.notify),
     )
-    return Status(201, doc_out(item_for(request, item.pk, Kind.DOC)))
+    return Status(201, doc_out(item_for(request, item.pk, Kind.DOC), request.user))
 
 
 @router.get("docs/{doc_id}/", response=DocOut)
 def doc_detail(request, doc_id: int):
-    return doc_out(item_for(request, doc_id, Kind.DOC))
+    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 
 class DocPatch(Schema):
@@ -517,7 +537,7 @@ def doc_update(request, doc_id: int, data: DocPatch):
         raise HttpError(
             409, _("%(name)s saved a newer version.") % {"name": exc.version.created_by}
         ) from exc
-    return doc_out(item_for(request, doc_id, Kind.DOC))
+    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 
 @router.put("docs/{doc_id}/lock/", response=DocOut)
@@ -531,14 +551,14 @@ def doc_lock(request, doc_id: int):
         raise HttpError(
             409, _("%(name)s is editing this doc.") % {"name": exc.user}
         ) from exc
-    return doc_out(item_for(request, doc_id, Kind.DOC))
+    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 
 @router.delete("docs/{doc_id}/lock/", response=DocOut)
 def doc_unlock(request, doc_id: int):
     item = item_for(request, doc_id, Kind.DOC)
     operations.unlock_doc(item, request.user)
-    return doc_out(item_for(request, doc_id, Kind.DOC))
+    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 
 class DocVersionOut(Schema):
@@ -605,7 +625,7 @@ def doc_version_restore(request, doc_id: int, version_id: int):
         raise HttpError(
             409, _("%(name)s is editing this doc.") % {"name": exc.user}
         ) from exc
-    return doc_out(item_for(request, doc_id, Kind.DOC))
+    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 
 # Files ------------------------------------------------------------------
@@ -633,6 +653,7 @@ class FileOut(ItemOut):
     # Newest first; clients get the current version only, older ones are
     # for staff
     versions: list[FileVersionOut]
+    reactions: list[ReactionOut]
 
 
 def _version_out(item, version, *, current):
@@ -671,6 +692,7 @@ def file_out(item, user):
             reverse("api:file_download", kwargs={"file_id": item.pk})
         ),
         "versions": [_version_out(item, v, current=current.pk) for v in versions],
+        "reactions": reactions_out(item, None, user),
     }
 
 

@@ -1,6 +1,9 @@
 import datetime as dt
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -398,3 +401,79 @@ class ProjectPageTest(Fixture, TestCase):
             queries.root_counts(self.project, self.cleo),
             {"folders": 0, "docs": 1, "files": 0},
         )
+
+
+class FrontFilesTest(Fixture, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.old = ops.create_doc(
+            project=self.project, title="Old doc", creator=self.ada, visible=True
+        )
+        self.folder = ops.create_folder(
+            project=self.project, title="Specs", creator=self.ada, visible=True
+        )
+        self.nested = ops.create_doc(
+            project=self.project,
+            title="Nested doc",
+            creator=self.bob,
+            visible=True,
+            parent=self.folder,
+        )
+        self.upload = ops.create_upload(
+            project=self.project,
+            file=SimpleUploadedFile("plan.txt", b"Plan"),
+            creator=self.ada,
+            visible=True,
+        )
+        self.internal = ops.create_doc(
+            project=self.project, title="Internal doc", creator=self.ada
+        )
+
+    def page(self, user):
+        self.client.force_login(user)
+        return self.client.get(reverse("project", args=[self.project.pk]))
+
+    def test_staff_sees_the_latest_three_changed(self):
+        response = self.page(self.ada)
+        self.assertEqual(
+            [i.title for i in response.context["front_files"]],
+            ["Internal doc", "plan.txt", "Nested doc"],
+        )
+        self.assertContains(response, "Internal doc")
+        self.assertContains(response, reverse("project_files", args=[self.project.pk]))
+
+    def test_changing_a_doc_brings_it_up(self):
+        Item.objects.filter(pk=self.old.pk).update(
+            updated_at=timezone.now() + dt.timedelta(minutes=1)
+        )
+        titles = [i.title for i in self.page(self.ada).context["front_files"]]
+        self.assertEqual(titles[0], "Old doc")
+
+    def test_a_client_sees_visible_ones_only(self):
+        response = self.page(self.cleo)
+        self.assertEqual(
+            [i.title for i in response.context["front_files"]],
+            ["plan.txt", "Nested doc", "Old doc"],
+        )
+        self.assertNotContains(response, "Internal doc")
+        self.assertContains(response, "plan.txt")
+
+    def test_a_fixed_number_of_queries(self):
+        def count():
+            with CaptureQueriesContext(connection) as queries:
+                self.page(self.ada)
+            return len(queries)
+
+        Event.objects.all().delete()  # the feed beside has its own queries
+        count()
+        before = count()
+        for n in range(3):
+            ops.create_doc(
+                project=self.project, title=f"More {n}", creator=self.ada, visible=True
+            )
+        Event.objects.all().delete()
+        self.assertEqual(count(), before)
+
+    def test_empty(self):
+        Item.objects.filter(kind__in=["doc", "file"]).delete()
+        self.assertContains(self.page(self.ada), "No docs or files yet.")

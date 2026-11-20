@@ -42,7 +42,8 @@ class EventOut(Schema):
     data: dict
     created_at: dt.datetime
     visible_to_clients: bool
-    # Comments: the start of the text as it is now (plain text), else empty
+    # Comments and messages (created, edited): the start of the text as it
+    # is now (plain text), else empty
     excerpt: str
 
 
@@ -102,6 +103,7 @@ def _feed(
         request,
         events,
         lambda event: event_out(event, request.user),
+        prepare=feed.add_excerpts,
         ordering=("-created_at", "-pk"),
         cursor=cursor,
         page_size=page_size,

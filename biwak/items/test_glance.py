@@ -3,7 +3,9 @@
 import datetime as dt
 
 import time_machine
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import APIToken
 from biwak.activity import mentions
@@ -358,4 +360,101 @@ class FeedExcerptsTest(Fixture):
         )
         self.assertTrue(
             all(not e["excerpt"] for e in results if e["action"] != "commented")
+        )
+
+
+class FeedMessageExcerptsTest(Fixture):
+    def setUp(self):
+        super().setUp()
+        self.message = ops.create_message(
+            project=self.project,
+            title="Shared news",
+            content="Hello **everybody** out there",
+            creator=self.ada,
+            visible=True,
+        )
+        self.hidden = ops.create_message(
+            project=self.project,
+            title="Hidden news",
+            content="Internal wording",
+            creator=self.ada,
+        )
+
+    def test_staff_feed_and_project_page(self):
+        self.client.force_login(self.ada)
+        for url in [
+            "/feed/",
+            f"/projects/{self.project.pk}/feed/",
+            f"/projects/{self.project.pk}/",
+        ]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(
+                    response, '<div class="wb-excerpt">Hello everybody out there</div>'
+                )
+                self.assertContains(response, "Internal wording")
+
+    def test_excerpt_is_the_current_text(self):
+        from biwak.files import operations as file_ops
+
+        file_ops.update_message(self.message, actor=self.ada, content="Changed text")
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/")
+        self.assertContains(response, '<div class="wb-excerpt">Changed text</div>')
+        self.assertNotContains(response, "everybody")
+
+    def test_client_feed(self):
+        self.client.force_login(self.cleo)
+        for url in ["/feed/", f"/projects/{self.project.pk}/feed/"]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, "Hello everybody out there")
+                self.assertNotContains(response, "Internal wording")
+
+    def test_trashed_message_is_gone_from_the_feed(self):
+        ops.trash(self.message, actor=self.ada)
+        for user in (self.ada, self.cleo):
+            self.client.force_login(user)
+            for url in ["/feed/", f"/projects/{self.project.pk}/"]:
+                with self.subTest(user=user.pk, url=url):
+                    self.assertNotContains(
+                        self.client.get(url), "Hello everybody out there"
+                    )
+
+    def test_other_actions_have_none(self):
+        from biwak.files import operations as file_ops
+
+        file_ops.pin_message(self.message, actor=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/?action=pinned")
+        self.assertContains(response, "pinned")
+        self.assertNotContains(response, "wb-excerpt")
+
+    def test_api(self):
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="read")
+        response = self.client.get(
+            "/api/v1/feed/", headers={"authorization": f"Bearer {secret}"}
+        )
+        self.assertEqual(
+            [e["excerpt"] for e in response.json()["results"]],
+            ["Hello everybody out there"],
+        )
+
+    def test_api_excerpts_cost_one_query_per_page(self):
+        for n in range(5):
+            ops.add_comment(self.todo, author=self.ada, content=f"Comment {n}")
+        ops.create_message(
+            project=self.project, title="Another", content="More", creator=self.ada
+        )
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="read")
+        headers = {"authorization": f"Bearer {secret}"}
+        self.client.get("/api/v1/feed/", headers=headers)  # warm caches
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get("/api/v1/feed/", headers=headers)
+        self.assertEqual(len(response.json()["results"]), 8)
+        self.assertEqual(
+            len([q for q in queries if 'FROM "items_comment"' in q["sql"]]), 1
+        )
+        self.assertEqual(
+            len([q for q in queries if 'FROM "items_message"' in q["sql"]]), 1
         )

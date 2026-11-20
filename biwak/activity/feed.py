@@ -16,7 +16,7 @@ from django.utils.translation import gettext, ngettext
 from biwak import cursors
 from biwak.accounts.models import User
 from biwak.activity.models import Action, Event
-from biwak.items.models import Comment, Kind
+from biwak.items.models import Comment, Kind, Message
 from biwak.projects.models import Project
 
 
@@ -108,29 +108,39 @@ EXCERPT_CHARS = 200
 
 
 def add_excerpts(events):
-    """``event.excerpt`` (specs/glance.md): the comment's text as it is now,
-    for events of comments, in one query; empty if the comment is gone. The
-    events are the viewer's, so the comments' items are visible to them."""
+    """``event.excerpt`` (specs/glance.md): the text as it is now, for
+    events of comments (the comment's) and for the creating and editing of
+    messages (the message's), two queries at most for all events; empty if
+    the comment is gone. The events are the viewer's, so the items are
+    visible to them."""
     from biwak.templatetags.biwak import excerpt
 
-    ids = {
+    comment_ids = {
         event.data.get("comment")
         for event in events
         if event.action == Action.COMMENTED and event.item is not None
     } - {None}
-    comments = {c.pk: c for c in Comment.objects.filter(pk__in=ids)}
+    comments = {c.pk: c for c in Comment.objects.filter(pk__in=comment_ids)}
+    message_ids = {event.item_id for event in events if _is_message_text(event)}
+    messages = {m.pk: m.content for m in Message.objects.filter(pk__in=message_ids)}
     for event in events:
-        comment = (
-            comments.get(event.data.get("comment"))
-            if event.action == Action.COMMENTED and event.item is not None
-            else None
-        )
-        # Only a comment of the event's own item
-        if comment is not None and comment.item_id != event.item_id:
-            comment = None
-        event.excerpt = (
-            excerpt(comment.content, EXCERPT_CHARS, event.item) if comment else ""
-        )
+        text = ""
+        if event.action == Action.COMMENTED and event.item is not None:
+            comment = comments.get(event.data.get("comment"))
+            # Only a comment of the event's own item
+            if comment is not None and comment.item_id == event.item_id:
+                text = comment.content
+        elif _is_message_text(event):
+            text = messages.get(event.item_id, "")
+        event.excerpt = excerpt(text, EXCERPT_CHARS, event.item) if text else ""
+
+
+def _is_message_text(event):
+    return (
+        event.action in {Action.CREATED, Action.EDITED}
+        and event.item is not None
+        and event.item.kind == Kind.MESSAGE
+    )
 
 
 def _noun(kind, count):

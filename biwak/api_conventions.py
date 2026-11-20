@@ -82,17 +82,24 @@ def item_out(item):
     }
 
 
-def paginated(request, queryset, out, *, ordering, cursor=None, page_size=None):
+def paginated(
+    request, queryset, out, *, ordering, cursor=None, page_size=None, prepare=None
+):
     """Cursor pagination with ninja's paginator, the results mapped through
     ``out``. The first ordering field has to be a field or an annotation of
-    the queryset's model (it marks the position)."""
+    the queryset's model (it marks the position). ``prepare(objects)`` sees
+    the page's objects before they are mapped, to load what they need with
+    one query."""
     paginator = CursorPagination(ordering=ordering, page_size=50, max_page_size=200)
     page = paginator.paginate_queryset(
         queryset,
         pagination=paginator.Input(cursor=cursor, page_size=page_size),
         request=request,
     )
-    return page | {"results": [out(obj) for obj in page["results"]]}
+    objects = list(page["results"])
+    if prepare is not None:
+        prepare(objects)
+    return page | {"results": [out(obj) for obj in objects]}
 
 
 def page_of(schema):

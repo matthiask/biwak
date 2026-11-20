@@ -11,10 +11,9 @@ from biwak.items.models import Comment, Item, Kind
 from biwak.reactions.emoji import MAX_LENGTH
 
 
-# Kinds of items reactions go on directly. Later parts add MESSAGE, DOC,
-# FILE and ANSWER when they exist; comments are reactable wherever they
-# are (``can_react()``).
-REACTABLE = {Kind.TODO}
+# Kinds of items reactions go on directly; comments are reactable wherever
+# they are (``can_react()``).
+REACTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
 
 def can_react(item, comment=None):

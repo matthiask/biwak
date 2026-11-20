@@ -307,6 +307,7 @@ def project_detail(request, pk):
             "form": form,
             "members": project.memberships.select_related("user"),
             "front_messages": file_queries.front_messages(project, request.user),
+            "front_files": file_queries.front_files(project, request.user),
             "root_counts": file_queries.root_counts(project, request.user),
             "is_member": project.is_member(request.user),
             "events": events,

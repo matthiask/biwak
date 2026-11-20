@@ -41,6 +41,12 @@ mails and the digest, `biwak react` and the reactions in `biwak todo show`
 - Migration `activity/0007` changes the choices of `Event.action`:
   parts adding actions in parallel need to merge their migrations.
 
+Messages, docs, files and check-in answers added (2026-11-20, branch
+`messages-followup`): the kinds are in `REACTABLE`, their pages and the
+comments under them show the block, and the API returns `reactions` on
+messages (`message_out(item, user)`, loaded for the board in one query),
+docs, files and answers (`answer_out(answer, user)`).
+
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Reactions are content on items: visibility tests
 through every entry point.
