@@ -693,10 +693,6 @@ a.wb-row-title:hover {
   display: none;
 }
 
-.wb-add-todo[open] > summary {
-  display: none;
-}
-
 .wb-add-todo-form {
   max-width: 36rem;
   padding: 0.75rem;
@@ -925,6 +921,11 @@ button.wb-signal:hover {
 .wb-reaction-add > summary {
   list-style: none;
   cursor: pointer;
+}
+
+/* After the less specific summary rules above (noDescendingSpecificity) */
+.wb-add-todo[open] > summary {
+  display: none;
 }
 
 .wb-reaction-picker {
