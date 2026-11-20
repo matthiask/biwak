@@ -43,6 +43,12 @@
 .bi-arrow-up::before {
   content: "\f148";
 }
+.bi-bookmark::before {
+  content: "\f1a2";
+}
+.bi-bookmark-fill::before {
+  content: "\f199";
+}
 .bi-calendar-event::before {
   content: "\f1e8";
 }
@@ -61,14 +67,29 @@
 .bi-eye::before {
   content: "\f341";
 }
+.bi-github::before {
+  content: "\f3ed";
+}
+.bi-gitlab::before {
+  content: "\f7e5";
+}
+.bi-google::before {
+  content: "\f3f0";
+}
 .bi-grip-vertical::before {
   content: "\f3fe";
+}
+.bi-link-45deg::before {
+  content: "\f470";
 }
 .bi-list-check::before {
   content: "\f473";
 }
 .bi-lock::before {
   content: "\f47b";
+}
+.bi-palette::before {
+  content: "\f4b1";
 }
 .bi-paperclip::before {
   content: "\f4b3";

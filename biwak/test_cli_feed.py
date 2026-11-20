@@ -38,6 +38,62 @@ class FeedCLITest(test_cli.CLITest):
         self.assertEqual(len({e["id"] for e in data}), Event.objects.count())
         self.assertGreater(len(data), 205)
 
+    def test_bookmarks(self):
+        todo = ops.create_todo(
+            todolist=self.list, title="Order the tent", creator=self.ada
+        )
+        self.biwak("bookmark", "add", todo.pk)
+        self.biwak("bookmark", "add", "--project", self.project.pk)
+        output = self.biwak("bookmarks").output
+        self.assertIn("Order the tent", output)
+        self.assertIn("todo", output)
+        self.assertIn("Website", output)
+        self.assertIn("[clients]", output)
+        data = json.loads(self.biwak("bookmarks", "--json").stdout)
+        self.assertEqual([b["project"] is None for b in data], [False, True])
+        self.biwak("bookmark", "remove", todo.pk)
+        self.biwak("bookmark", "remove", "--project", self.project.pk)
+        self.assertNotIn("Order the tent", self.biwak("bookmarks").output)
+        self.assertEqual(self.biwak("bookmark", "add", 999999).exit_code, 1)
+
+    def test_links(self):
+        result = self.biwak(
+            "link",
+            "add",
+            self.project.pk,
+            "https://figma.com/file/1",
+            "--title",
+            "Design",
+            "--json",
+        )
+        link = json.loads(result.stdout)
+        self.assertEqual(link["kind"], "figma")
+        self.biwak(
+            "link",
+            "add",
+            self.project.pk,
+            "https://github.com/example/repo",
+            "--item",
+            self.list.pk,
+            "--clients",
+        )
+        output = self.biwak("links", self.project.pk).output
+        self.assertIn("Design", output)
+        self.assertIn("figma", output)
+        self.assertIn("github", output)
+        self.assertIn(str(self.list.pk), output)
+        self.assertEqual(
+            len(json.loads(self.biwak("links", self.project.pk, "--json").stdout)), 2
+        )
+        self.assertIn("Deleted", self.biwak("link", "delete", link["id"]).output)
+        self.assertNotIn("Design", self.biwak("links", self.project.pk).output)
+        result = self.biwak("link", "add", self.project.pk, "javascript:alert(1)")
+        self.assertEqual(result.exit_code, 1)
+        result = self.biwak(
+            "link", "add", self.project.pk, "https://example.org/", access="read"
+        )
+        self.assertEqual(result.exit_code, 1)
+
 
 # The tests of test_cli.CLITest run there, not again here
 for _name in dir(test_cli.CLITest):

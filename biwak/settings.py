@@ -54,6 +54,7 @@ INSTALLED_APPS = [
         "biwak.items",
         "biwak.activity",
         "biwak.files",
+        "biwak.bookmarks",
         "biwak.audit",
         "debug_toolbar" if DEBUG_TOOLBAR else "",
     ]

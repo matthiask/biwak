@@ -1,7 +1,7 @@
 # Activity feed, item history, bookmarks, links
 
 **Status:** in progress. Built: the activity feed (pages, API, CLI), the
-item history. The project page keeps its short list of the latest 20
+item history, bookmarks and links (pages, API, CLI). The project page keeps its short list of the latest 20
 events (`activity/_events.html`) with a link to the feed.
 
 **Agent:** suits a cheaper model following this spec and the checklist
@@ -110,6 +110,15 @@ Decisions (proposed by the building agent, 2026-11-20):
   item's current title, kind and project. Bookmarks of items the person
   can't see any more are hidden, not deleted.
 
+Built (`biwak/bookmarks/`): the bookmark button (`{% bookmark_button obj
+%}`, from `{% load bookmarks %}`) is on the project, list and to-do pages;
+**pages of later kinds (messages, docs, files) add the button and
+`{% show_links item %}` themselves**. `/bookmarks/` is in the navigation.
+`POST /items/<pk>/bookmark/` and `/projects/<pk>/bookmark/` (`bookmark=1`
+adds, otherwise removes). API: `GET /bookmarks/`, `PUT`/`DELETE`
+`items/{id}/bookmark/` and `projects/{id}/bookmark/`; CLI `biwak
+bookmarks`, `biwak bookmark add|remove [--project] ID`.
+
 ## Links
 
 Links to outside tools on a project or on any item: Figma files,
@@ -130,6 +139,33 @@ sites, a project in a time tracking or accounting tool.
 - Later and only where useful: integrations per kind fetching live data
   (title and preview by oEmbed, an issue's state). No tool is
   hard-coded into the core.
+
+Built (`biwak/links.py`, `biwak/bookmarks/`): `Link.visible_to()`
+filters by project access and the item's visibility; clients also need
+the link's switch, so a switched link on an internal item stays hidden.
+Pages: `{% show_links project %}` at the top of the project page and
+`{% show_links item %}` under the title of lists and to-dos, with an add
+form for staff, `/links/<pk>/edit/`, `/links/<pk>/delete/`, and dragging
+(`frontend/links.js`) through `…/links/order/`. API: `GET
+projects/{id}/links/` (the project's own links in order, then those on
+items), `GET items/{id}/links/`, `POST` on both, `PATCH`/`DELETE
+links/{id}/`, `PUT …/links/order/` (all IDs of the project's or item's
+links); a link has `visible_to_clients` (what clients see) and `switch`
+(its own setting). CLI: `biwak links PROJECT`, `biwak link add PROJECT URL
+[--title] [--item] [--clients]`, `biwak link delete LINK`.
+
+Decisions (proposed by the building agent, 2026-11-20):
+
+- Only `http` and `https` addresses; the title defaults to the host.
+- Any staff member sees and changes the links of what they see, not only
+  the creator.
+- Links and bookmarks record no events and don't appear in the feed.
+- Bookmarks and links share one app, `biwak/bookmarks/`; both tables have
+  the audit trigger.
+- Bookmarks of what a person can't see any more are hidden, and come back
+  when they see it again.
+- Figma has no icon in Bootstrap Icons: the palette stands in for it;
+  Google Drive uses the Google icon.
 
 ## API and CLI
 

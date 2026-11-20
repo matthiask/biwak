@@ -430,3 +430,110 @@ def feed(project, person, kind, action, since, limit, as_json):
         )
     console.print(t)
     return None
+
+
+# Bookmarks and links --------------------------------------------------------
+
+
+@cli.command()
+@json_option
+def bookmarks(as_json):
+    """Your bookmarks, newest first"""
+    data = request("GET", "bookmarks/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Kind", "Title", "Project", "")
+    for bookmark in data:
+        if item := bookmark["item"]:
+            t.add_row(
+                str(item["id"]),
+                item["kind"],
+                item["title"],
+                str(item["project_id"]),
+                clients(item),
+            )
+        else:
+            project = bookmark["project"]
+            t.add_row(
+                str(project["id"]), "project", project["name"], str(project["id"]), ""
+            )
+    console.print(t)
+    return None
+
+
+@cli.group()
+def bookmark():
+    """Bookmark or un-bookmark an item or a project"""
+
+
+@bookmark.command("add")
+@click.argument("target", type=int)
+@click.option("--project", "is_project", is_flag=True, help="TARGET is a project.")
+def bookmark_add(target, is_project):
+    """Bookmark the item (or, with --project, the project) TARGET"""
+    request("PUT", f"{'projects' if is_project else 'items'}/{target}/bookmark/")
+    click.echo(f"Bookmarked #{target}.")
+
+
+@bookmark.command("remove")
+@click.argument("target", type=int)
+@click.option("--project", "is_project", is_flag=True, help="TARGET is a project.")
+def bookmark_remove(target, is_project):
+    """Remove the bookmark of the item (or, with --project, the project) TARGET"""
+    request("DELETE", f"{'projects' if is_project else 'items'}/{target}/bookmark/")
+    click.echo(f"Removed the bookmark of #{target}.")
+
+
+@cli.command()
+@click.argument("project", type=int)
+@json_option
+def links(project, as_json):
+    """The links to outside tools of PROJECT and its items"""
+    data = request("GET", f"projects/{project}/links/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Title", "Kind", "URL", "On item", "")
+    for link in data:
+        t.add_row(
+            str(link["id"]),
+            link["title"],
+            link["kind"],
+            link["url"],
+            str(link["item_id"] or ""),
+            clients(link),
+        )
+    console.print(t)
+    return None
+
+
+@cli.group()
+def link():
+    """Add and delete links to outside tools"""
+
+
+@link.command("add")
+@click.argument("project", type=int)
+@click.argument("url")
+@click.option("--title", default="", help="The host if left out.")
+@click.option("--item", type=int, help="On this item instead of the project.")
+@click.option(
+    "--clients", is_flag=True, help="Visible to clients (internal otherwise)."
+)
+@json_option
+def link_add(project, url, title, item, clients, as_json):
+    """Add URL to PROJECT, or to --item of it"""
+    body = {"url": url, "title": title, "visible_to_clients": clients}
+    path = f"items/{item}/links/" if item else f"projects/{project}/links/"
+    data = request("POST", path, json=body)
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Added link #{data['id']} ({data['kind']}).")
+    return None
+
+
+@link.command("delete")
+@click.argument("link_id", metavar="LINK", type=int)
+def link_delete(link_id):
+    """Delete LINK"""
+    request("DELETE", f"links/{link_id}/")
+    click.echo(f"Deleted link #{link_id}.")

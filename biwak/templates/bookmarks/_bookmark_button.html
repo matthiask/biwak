@@ -1,0 +1,23 @@
+{% load biwak i18n %}
+<form
+  method="post"
+  action="{% if is_item %}{% url 'item_bookmark' target.pk %}{% else %}{% url 'project_bookmark' target.pk %}{% endif %}"
+>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.path }}">
+  {% if is_bookmarked %}
+    <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Remove the bookmark' %}">
+      {% icon "bookmark-fill" %}<span class="visually-hidden">{% translate "Remove the bookmark" %}</span>
+    </button>
+  {% else %}
+    <button
+      type="submit"
+      name="bookmark"
+      value="1"
+      class="btn btn-sm btn-quiet"
+      title="{% translate 'Bookmark' %}"
+    >
+      {% icon "bookmark" %}<span class="visually-hidden">{% translate "Bookmark" %}</span>
+    </button>
+  {% endif %}
+</form>

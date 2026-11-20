@@ -50,6 +50,13 @@
                 href="{{ feed_url }}"
               >{% translate "Activity" %}</a>
             </li>
+            {% url 'bookmarks' as bookmarks_url %}
+            <li class="nav-item">
+              <a
+                class="nav-link{% if request.path == bookmarks_url %} active{% endif %}"
+                href="{{ bookmarks_url }}"
+              >{% translate "Bookmarks" %}</a>
+            </li>
           </ul>
           <div class="wb-nav-user d-flex align-items-center gap-2">
             {% include "_theme_toggle.html" %}
