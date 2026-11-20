@@ -26,9 +26,36 @@ visibility like the item.
   feed, but get mails only for what concerns them from then on and for
   new items they're notified about. Basecamp subscribes late joiners to
   every message, which floods them.
+- **Subscribing without participating**: every item (and list) has a
+  "Subscribe" button next to its subscribers, for following something
+  without commenting or being assigned (decided 2026-11-20).
 - Everybody can unsubscribe from anything, also from mail with one
   click, and subscribe others (who see who did it).
 - Subscribers are shown on the item.
+
+## Mentions
+
+- Typing `@` in any rich text (a to-do's title and notes, comments,
+  messages, docs, check-in answers) opens a list of people, filtered as
+  you type (first name, last name, short name, email); Enter or a click
+  inserts the mention. Keyboard only works too.
+- Only people who can see the item are offered: on internal items no
+  clients, in limited projects no staff outside it. Mentioning someone
+  who can't see it isn't possible; the list says why a name is missing
+  ("Ada can't see this list").
+- Stored as a reference to the person (renaming them updates every
+  mention), rendered as their name, plain `@Ada Lovelace` in mails and
+  Markdown.
+- A mention notifies the person, also on the "only what concerns me"
+  level, and subscribes them to the item (decided 2026-11-20). Editing
+  a text later notifies only people newly mentioned.
+- The mail and the item both offer unsubscribing in one click; a
+  mention doesn't come back after unsubscribing unless the person is
+  mentioned again.
+- In replies by mail and through the API, mentions are written as
+  `@email@example.org` or the API's person syntax; plain `@Name` in a
+  mail is resolved only when exactly one person who can see the item
+  matches.
 
 ## Levels
 
