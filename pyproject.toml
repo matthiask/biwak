@@ -1,0 +1,102 @@
+[project]
+name = "biwak"
+version = "0.0.1"
+license = "BSD-3-Clause"
+requires-python = ">=3.15"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.15",
+]
+dependencies = [
+  "coverage[toml]>=7.17.3",
+  "django>=6.1.3",
+  "django-allauth[mfa,socialaccount]>=65.22.1",
+  "django-canonical-domain>=0.11",
+  "django-debug-toolbar>=8",
+  "django-ninja>=1.8",
+  "django-tree-queries>=0.29",
+  "granian>=2.8.8",
+  "markdown-it-py[linkify]>=4.3",
+  "nh3>=0.3.8",
+  "psycopg[binary]>=3.3.9",
+  "sentry-sdk<3",
+  "speckenv>=6.5",
+  "time-machine>=3.6",
+]
+
+[tool.ruff]
+target-version = "py315"
+preview = true
+fix = true
+show-fixes = true
+lint.extend-select = [
+  "ASYNC",
+  "B",
+  "C4",
+  "C90",
+  "DJ",
+  "E",
+  "F",
+  "FBT",
+  "I",
+  "INP",
+  "INT",
+  "ISC",
+  "LOG",
+  "PGH",
+  "PIE",
+  "PLC",
+  "PLE",
+  "PLW",
+  "RET",
+  "RUF005",
+  "RUF006",
+  "RUF007",
+  "RUF008",
+  "RUF009",
+  "RUF010",
+  "RUF015",
+  "RUF016",
+  "RUF017",
+  "RUF100",
+  "RUF200",
+  "SLOT",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+lint.extend-ignore = [
+  # Allow zip() without strict=
+  "B905",
+  # No line length errors
+  "E501",
+  # Deferred imports for circular import avoidance are a common Django pattern
+  "PLC0415",
+  # Mutable class attributes are fine
+  "RUF012",
+]
+lint.per-file-ignores."*/migrat*/*" = [
+  "N806",
+  "N999",
+]
+lint.per-file-ignores."scripts/*" = [
+  "INP",
+]
+lint.isort.combine-as-imports = true
+lint.isort.lines-after-imports = 2
+lint.mccabe.max-complexity = 15
+
+[tool.coverage]
+run.omit = [
+  "*migrate*",
+  "*migrations*",
+  "*venv*",
+]
+run.branch = true
+report.skip_covered = true
+report.show_missing = true
+
+[tool.djangofmt]
+indent-width = 2
+profile = "django"
