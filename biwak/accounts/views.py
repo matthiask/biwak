@@ -4,11 +4,13 @@ from django.contrib import messages
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak import cli_version
+from biwak.accounts import passkeys
 from biwak.accounts.models import API_TOKEN_LIFETIME, APIToken, CalendarToken
 
 
@@ -111,4 +113,23 @@ def calendar_link(request):
             if link
             else None
         },
+    )
+
+
+@never_cache
+def passkey_offer(request):
+    """Add a passkey (allauth's page) or not now: dismissing stops the offer
+    for good (specs/access.md)"""
+    target = request.GET.get("next", "")
+    if not url_has_allowed_host_and_scheme(
+        target, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        target = "/"
+    if request.method == "POST":
+        passkeys.dismiss(request.user)
+        return redirect(target)
+    return render(
+        request,
+        "accounts/passkey_offer.html",
+        {"next": target, "has_passkey": passkeys.has_passkey(request.user)},
     )

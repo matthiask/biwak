@@ -42,7 +42,8 @@ client could see. Not built yet: their own part after the importer
 
 ## Closing the gaps to the web (decided 2026-11-20)
 
-**Built (2026-11-20, CLI 0.17.0).** The verification round found what the
+**Built (2026-11-20, CLI 0.17.0; the passkey offer and Google for
+staff only are in `access.md`).** The verification round found what the
 web does but the API and CLI can't; one small part closes it. Built on
 `create_project()` and `joinable_projects()` in `biwak/projects/operations.py`,
 which the web views use too. Choices made on the way: admins list the

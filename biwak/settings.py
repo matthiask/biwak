@@ -121,6 +121,7 @@ MIDDLEWARE = [
         "allauth.account.middleware.AccountMiddleware",
         "allauth.usersessions.middleware.UserSessionsMiddleware",
         "biwak.accounts.middleware.user_middleware",
+        "biwak.accounts.passkeys.passkey_offer_middleware",
     ]
     if m
 ]

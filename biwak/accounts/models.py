@@ -76,6 +76,10 @@ class User(AbstractBaseUser):
         default=MailDelivery.EACH,
     )
 
+    # The offer to add a passkey after logging in by code (specs/access.md)
+    # stops for good once the person dismissed it or added a passkey
+    passkey_offer_done = models.BooleanField(_("passkey offer done"), default=False)
+
     class ProjectOrder(models.TextChoices):
         ACTIVITY = "activity", _("Activity")
         NAME = "name", _("A–Z")

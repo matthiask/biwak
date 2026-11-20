@@ -31,7 +31,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `checkins.md` | | built | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | built | notifications 1, check-ins | strong |
 | `search.md` | | next | every kind of item | cheaper |
-| `api-cli.md` | gaps to the web, passkey offer, Google for staff | next | | cheaper |
+| `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | last | everything | strong |
