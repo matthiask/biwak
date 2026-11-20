@@ -1186,8 +1186,8 @@ def doc_show(doc_id, comments, version, as_json):
         return echo_json(data)
     marker = " [clients]" if data["visible_to_clients"] else ""
     click.echo(f"#{data['id']} {data['title']}{marker}")
-    if data["locked_by"]:
-        click.echo(f"Being edited by {data['locked_by']['name']}.")
+    if data["read_only"]:
+        click.echo("Read-only.")
     click.echo(f"URL: {data['url']}")
     if data["content"]:
         click.echo(f"\n{data['content']}")
@@ -1239,14 +1239,16 @@ def doc_new(project, title, text, parent, notify, visible, attach, as_json):
 def doc_edit(doc_id, title, new_version, as_json):
     """Edit DOC in $EDITOR and save when you quit
 
-    Takes the doc's lock while you edit, and refuses to save over a newer
-    version somebody else made meanwhile."""
-    doc = request("PUT", f"docs/{doc_id}/lock/")
+    People editing the doc in the browser meanwhile see your changes
+    arrive; saving over a newer version somebody else made meanwhile is
+    refused."""
+    doc = request("GET", f"docs/{doc_id}/")
+    if doc["read_only"]:
+        raise click.ClickException("The doc is read-only.")
     if doc["visible_to_clients"]:
         click.secho("Clients can see this doc.", fg="yellow", err=True)
     text = click.edit(doc["content"], extension=".md")
     if text is None or (text == doc["content"] and not title):
-        request("DELETE", f"docs/{doc_id}/lock/")
         click.echo("No changes.")
         return None
     changes = {
@@ -1256,15 +1258,23 @@ def doc_edit(doc_id, title, new_version, as_json):
     }
     if title:
         changes["title"] = title
-    try:
-        data = request("PATCH", f"docs/{doc_id}/", json=changes)
-    except SystemExit:
-        # The lock is ours still, give it up
-        request("DELETE", f"docs/{doc_id}/lock/")
-        raise
+    data = request("PATCH", f"docs/{doc_id}/", json=changes)
     if as_json:
         return echo_json(data)
     click.echo(f"Saved #{doc_id}.")
+    return None
+
+
+@doc.command("read-only")
+@click.argument("doc_id", metavar="DOC", type=int)
+@click.option("--off", is_flag=True, help="Make it editable again.")
+@json_option
+def doc_read_only(doc_id, off, as_json):
+    """Make DOC read-only for everybody, or editable again (staff)"""
+    data = request("PATCH", f"docs/{doc_id}/", json={"read_only": not off})
+    if as_json:
+        return echo_json(data)
+    click.echo(f"#{doc_id} is {'read-only' if data['read_only'] else 'editable'}.")
     return None
 
 

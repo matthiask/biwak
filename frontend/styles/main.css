@@ -806,6 +806,29 @@ a.wb-row-title:hover {
   outline-offset: 2px;
 }
 
+/* Docs edited live (specs/collaboration.md, frontend/collab.js) */
+.wb-live-editor .cm-editor {
+  min-height: 20rem;
+  background: var(--wb-field-bg);
+  border: 1px solid var(--wb-field-border);
+  border-radius: var(--bs-border-radius);
+}
+
+.wb-live-editor .cm-editor.cm-focused {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 1px;
+}
+
+.wb-live-editor .cm-content {
+  padding: 0.75rem 1rem;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.9rem;
+}
+
+[data-collab-state="gone"] .wb-live-editor {
+  display: none;
+}
+
 /* Scaled to the text's width */
 img.wb-attachment-image {
   max-width: 100%;

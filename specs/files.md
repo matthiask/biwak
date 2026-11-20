@@ -156,7 +156,8 @@ FILE` (repeatable).
   `MessageCategory(name, emoji, position)`, optional) and `pinned_at`.
   The categories are one list for the installation, edited by admins in
   the Django admin (decided 2026-11-20).
-- **Doc:** `Doc` gets `locked_by` and `locked_at`;
+- **Doc:** `Doc` gets `locked_by` and `locked_at` (replaced by
+  `read_only` with live editing, `collaboration.md`);
   `DocVersion(doc, title, content, created_by, created_at)`.
 
 ### Message board
@@ -196,12 +197,14 @@ top, with category, author, date and the number of comments.
     than 10 minutes or by someone else, plus "Save as a version" on
     request (decided 2026-11-20). Older versions can be viewed and
     restored (restoring saves the old content as a new version).
-  - **Lock** until real-time editing (`collaboration.md`): opening the
-    edit form takes the lock; the page renews it every minute
-    (`POST /docs/<pk>/lock/`); it expires 5 minutes after the last
-    renewal. Others see "Ada is editing" and can read; after the lock
-    expired they can edit, and saving over someone else's newer version
-    is refused with a link to compare.
+  - **Lock** until real-time editing (`collaboration.md`, which
+    replaced the locks 2026-11-20: docs are edited live, a whole-text
+    save over somebody else's newer version through the API is still
+    refused): opening the
+    edit form took the lock; the page renewed it every minute; it expired
+    5 minutes after the last renewal. Others saw "Ada is editing" and
+    could read; after the lock expired they could edit, and saving over
+    someone else's newer version was refused with a link to compare.
 - **Files** (`/files/<pk>/`): name, preview, description, comments,
   versions. "Replace" uploads a new version: the URL, comments and
   earlier versions stay.
@@ -254,7 +257,9 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   minutes, else starts a new one; "Save as a version" always starts a
   new one. Restoring saves the old title and content as a new version.
   Unchanged saves do nothing. The title is part of a version.
-- **Doc locks:** opening the edit form takes the lock (someone else
+- **Doc locks** (gone since live editing, `collaboration.md`; what
+  remains is the `base_version` refusal for whole-text saves through the
+  API and the CLI): opening the edit form takes the lock (someone else
   holding it is sent back to the doc with "Ada is editing"); the form
   renews it every minute (`frontend/doc-lock.js`); it expires 5 minutes
   after the last renewal. Saving gives the lock up (**?**), so does

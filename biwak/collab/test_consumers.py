@@ -1,0 +1,484 @@
+"""The websocket of docs edited live (specs/collaboration.md): who may
+connect, who may type, losing access during a session, storing
+
+A small Yjs client in Python (pycrdt) speaks the protocol of the browsers'
+y-websocket provider.
+"""
+
+import asyncio
+import json
+from unittest.mock import patch
+
+from channels.auth import AuthMiddlewareStack
+from channels.db import database_sync_to_async
+from channels.routing import URLRouter
+from channels.testing import WebsocketCommunicator
+from django.contrib.sessions.models import Session
+from django.test import Client, TransactionTestCase
+from pycrdt import (
+    Doc,
+    Text,
+    create_awareness_message,
+    create_sync_message,
+    create_update_message,
+    handle_sync_message,
+    read_message,
+)
+
+from biwak.activity.models import Event
+from biwak.collab import consumers, live, ytext
+from biwak.collab.consumers import decode_awareness, encode_awareness
+from biwak.collab.models import LiveUpdate
+from biwak.collab.routing import websocket_urlpatterns
+from biwak.files import operations
+from biwak.items import operations as ops
+from biwak.items.models import Item
+from biwak.projects import operations as project_ops
+from biwak.test_utils import person, project
+
+
+application = AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
+
+
+class YClient:
+    """An editor: its own Yjs document, synced through the websocket"""
+
+    def __init__(self, communicator):
+        self.communicator = communicator
+        self.doc = Doc()
+        self.text = self.doc.get(ytext.TEXT, type=Text)
+        self.modes = []
+        self.awareness = []
+
+    async def receive(self):
+        """The next message from the server, handled; returns it"""
+        output = await self.communicator.receive_output()
+        if output["type"] == "websocket.close":
+            return output
+        data = output["bytes"]
+        if data[0] == 0:
+            reply = handle_sync_message(data[1:], self.doc)
+            if reply is not None:
+                await self.communicator.send_to(bytes_data=reply)
+        elif data[0] == 1:
+            self.awareness.append(decode_awareness(read_message(data[1:])))
+        elif data[0] == consumers.MESSAGE_MODE:
+            self.modes.append(data[1])
+        return output
+
+    async def drain(self):
+        """Handles what the server sends until it's quiet"""
+        while not await self.communicator.receive_nothing(timeout=0.2):
+            await self.receive()
+
+    async def sync(self):
+        await self.communicator.send_to(bytes_data=create_sync_message(self.doc))
+        await self.drain()
+
+    async def type(self, at, value):
+        before = self.doc.get_state()
+        self.text.insert(len(str(self.text)[:at].encode()), value)
+        await self.send_update(self.doc.get_update(before))
+
+    async def send_update(self, update):
+        await self.communicator.send_to(bytes_data=create_update_message(update))
+
+    def __str__(self):
+        return str(self.text)
+
+
+@patch.multiple(consumers, SAVE_AFTER=0.05, SAVE_AT_LEAST_EVERY=1)
+class ConsumerTest(TransactionTestCase):
+    """A transaction test: the consumer commits like in production, and
+    closes connections still inside a test's transaction"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.cleo])
+        self.shared = ops.create_doc(
+            project=self.project,
+            title="Minutes",
+            content="Agenda\n",
+            creator=self.ada,
+            visible=True,
+        )
+        self.secret = ops.create_doc(
+            project=self.project, title="Secret", content="Internal", creator=self.ada
+        )
+        self.communicators = []
+
+    async def asyncTearDown(self):
+        for communicator in self.communicators:
+            await communicator.disconnect()
+
+    def session(self, user):
+        client = Client()
+        client.force_login(user)
+        return client.cookies["sessionid"].value
+
+    async def connect(self, user, item, *, sync=True):
+        headers = []
+        if user is not None:
+            key = await database_sync_to_async(self.session)(user)
+            headers = [(b"cookie", f"sessionid={key}".encode())]
+        communicator = WebsocketCommunicator(
+            application, f"/ws/docs/{item.pk}", headers=headers
+        )
+        self.communicators.append(communicator)
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+        editor = YClient(communicator)
+        if sync:
+            await editor.sync()
+        return editor
+
+    async def assertClosed(self, editor):
+        while True:
+            output = await editor.receive()
+            if output["type"] == "websocket.close":
+                self.assertEqual(output["code"], consumers.CLOSE_NOT_FOUND)
+                return
+
+    @database_sync_to_async
+    def content(self, item):
+        return Item.objects.get(pk=item.pk).doc.content
+
+    # Who may connect -------------------------------------------------------
+
+    async def test_the_doc_as_it_is(self):
+        editor = await self.connect(self.ada, self.shared)
+        self.assertEqual(str(editor), "Agenda\n")
+        self.assertEqual(editor.modes, [1])
+
+    async def test_internal_docs_are_refused_to_clients_like_the_pages(self):
+        editor = await self.connect(self.cleo, self.secret, sync=False)
+        await self.assertClosed(editor)
+        self.assertEqual(str(editor), "")
+
+    async def test_nobody_gets_in_without_a_login_or_access(self):
+        dan = await database_sync_to_async(person)("Dan", client=True)
+        for user in [None, dan]:
+            with self.subTest(user=user):
+                editor = await self.connect(user, self.shared, sync=False)
+                await self.assertClosed(editor)
+        other = await database_sync_to_async(project)("Other", all_access=False)
+        doc = await database_sync_to_async(ops.create_doc)(
+            project=other, title="Elsewhere", creator=self.bob
+        )
+        await self.assertClosed(await self.connect(self.ada, doc, sync=False))
+
+    async def test_only_pages_of_our_hosts_connect(self):
+        """asgi.py: the session cookie authenticates, so a page elsewhere
+        mustn't open the websocket with it (ALLOWED_HOSTS)"""
+        import asgi
+
+        key = await database_sync_to_async(self.session)(self.ada)
+        for origin, connects in [
+            ("https://elsewhere.example.org", False),
+            ("https://biwak.example.org", True),
+        ]:
+            with (
+                self.subTest(origin=origin),
+                self.settings(ALLOWED_HOSTS=["biwak.example.org"]),
+            ):
+                communicator = WebsocketCommunicator(
+                    asgi.application,
+                    f"/ws/docs/{self.shared.pk}",
+                    headers=[
+                        (b"cookie", f"sessionid={key}".encode()),
+                        (b"origin", origin.encode()),
+                    ],
+                )
+                connected, _ = await communicator.connect()
+                self.assertEqual(connected, connects)
+                await communicator.disconnect()
+
+    async def test_trashed_docs_are_refused(self):
+        await database_sync_to_async(ops.trash)(self.shared, actor=self.ada)
+        await self.assertClosed(await self.connect(self.ada, self.shared, sync=False))
+
+    # Who may type ----------------------------------------------------------
+
+    async def test_staff_type_and_the_others_see_it(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        await ada.type(6, " for Monday")
+        await bob.drain()
+        self.assertEqual(str(bob), "Agenda for Monday\n")
+        await bob.type(0, "# ")
+        await ada.drain()
+        self.assertEqual(str(ada), "# Agenda for Monday\n")
+        self.assertEqual(await self.content(self.shared), "# Agenda for Monday\n")
+
+    async def test_clients_watch_docs_they_did_not_create(self):
+        ada = await self.connect(self.ada, self.shared)
+        cleo = await self.connect(self.cleo, self.shared)
+        self.assertEqual(cleo.modes, [0])
+        await ada.type(0, "Draft: ")
+        await cleo.drain()
+        self.assertEqual(str(cleo), "Draft: Agenda\n")
+        # What a client types into the doc goes nowhere
+        await cleo.type(0, "Approved. ")
+        await ada.drain()
+        self.assertEqual(str(ada), "Draft: Agenda\n")
+        await asyncio.sleep(0.1)
+        self.assertEqual(await self.content(self.shared), "Draft: Agenda\n")
+
+    async def test_clients_edit_docs_they_created(self):
+        doc = await database_sync_to_async(ops.create_doc)(
+            project=self.project,
+            title="Our notes",
+            content="",
+            creator=self.cleo,
+            visible=True,
+        )
+        cleo = await self.connect(self.cleo, doc)
+        self.assertEqual(cleo.modes, [1])
+        ada = await self.connect(self.ada, doc)
+        await cleo.type(0, "Questions")
+        await ada.drain()
+        self.assertEqual(str(ada), "Questions")
+
+    async def test_read_only_docs_are_watched_by_everybody(self):
+        await database_sync_to_async(operations.set_read_only)(
+            self.shared, read_only=True, actor=self.ada
+        )
+        ada = await self.connect(self.ada, self.shared)
+        self.assertEqual(ada.modes, [0])
+        await ada.type(0, "x")
+        await asyncio.sleep(0.1)
+        self.assertEqual(await database_sync_to_async(LiveUpdate.objects.count)(), 0)
+
+    async def test_broken_messages_are_ignored(self):
+        ada = await self.connect(self.ada, self.shared)
+        with self.assertLogs("biwak.collab.consumers", "WARNING"):
+            for data in [
+                b"\x00\x02\x05xx",
+                b"\x00\x02\x02\x01\x02",
+                b"\x01\x03ab",
+                b"\x07",
+            ]:
+                await ada.communicator.send_to(bytes_data=data)
+            await ada.type(0, "Still ")
+            await ada.drain()
+        bob = await self.connect(self.bob, self.shared)
+        self.assertEqual(str(bob), "Still Agenda\n")
+
+    # Losing access during a session ----------------------------------------
+
+    def on_commit(self, function, *args, **kwargs):
+        """Runs the operation; its messages to the editors go out when it
+        commits"""
+        function(*args, **kwargs)
+
+    async def test_hiding_the_doc_closes_the_clients_session(self):
+        ada = await self.connect(self.ada, self.shared)
+        cleo = await self.connect(self.cleo, self.shared)
+        await database_sync_to_async(self.on_commit)(
+            ops.set_visibility, self.shared, visible=False, actor=self.ada
+        )
+        await self.assertClosed(cleo)
+        await ada.type(0, "Internal: ")
+        self.assertTrue(await ada.communicator.receive_nothing(0.2))
+
+    async def test_removing_the_client_closes_the_session(self):
+        cleo = await self.connect(self.cleo, self.shared)
+        await database_sync_to_async(self.on_commit)(
+            project_ops.remove_member, self.project, self.cleo, actor=self.ada
+        )
+        await self.assertClosed(cleo)
+
+    async def test_moving_the_doc_into_an_internal_folder(self):
+        folder = await database_sync_to_async(ops.create_folder)(
+            project=self.project, title="Internal", creator=self.ada
+        )
+        cleo = await self.connect(self.cleo, self.shared)
+        await database_sync_to_async(self.on_commit)(
+            ops.move_item, self.shared, parent=folder, actor=self.ada
+        )
+        await self.assertClosed(cleo)
+
+    async def test_trashing_the_doc_closes_every_session(self):
+        ada = await self.connect(self.ada, self.shared)
+        await database_sync_to_async(self.on_commit)(
+            ops.trash, self.shared, actor=self.ada
+        )
+        await self.assertClosed(ada)
+
+    async def test_becoming_read_only_stops_the_typing(self):
+        ada = await self.connect(self.ada, self.shared)
+        await database_sync_to_async(self.on_commit)(
+            operations.set_read_only, self.shared, read_only=True, actor=self.ada
+        )
+        await ada.drain()
+        self.assertEqual(ada.modes, [1, 0])
+        await ada.type(0, "x")
+        await asyncio.sleep(0.1)
+        self.assertEqual(await self.content(self.shared), "Agenda\n")
+        await database_sync_to_async(self.on_commit)(
+            operations.set_read_only, self.shared, read_only=False, actor=self.bob
+        )
+        await ada.drain()
+        self.assertEqual(ada.modes, [1, 0, 1])
+
+    async def test_a_person_made_client_or_deactivated(self):
+        bob = await self.connect(self.bob, self.shared)
+
+        def deactivate():
+            self.bob.is_active = False
+            self.bob.save()
+
+        await database_sync_to_async(self.on_commit)(deactivate)
+        await self.assertClosed(bob)
+
+    async def test_logging_out_closes_the_session_at_the_next_check(self):
+        cleo = await self.connect(self.cleo, self.shared)
+        await database_sync_to_async(Session.objects.all().delete)()
+        await database_sync_to_async(self.on_commit)(
+            live.check_access, doc=self.shared.pk
+        )
+        await self.assertClosed(cleo)
+
+    async def test_checking_periodically(self):
+        with patch.object(consumers, "CHECK_EVERY", 0.1):
+            cleo = await self.connect(self.cleo, self.shared)
+            await database_sync_to_async(Item.objects.filter(pk=self.shared.pk).update)(
+                is_client_visible=False
+            )
+            await self.assertClosed(cleo)
+
+    # Storing --------------------------------------------------------------
+
+    async def test_storing_after_a_pause_with_one_event_per_session(self):
+        ada = await self.connect(self.ada, self.shared)
+        await ada.type(6, " and minutes")
+        self.assertEqual(await self.content(self.shared), "Agenda\n")
+        await asyncio.sleep(0.2)
+        self.assertEqual(await self.content(self.shared), "Agenda and minutes\n")
+        await ada.type(0, "Our ")
+        await asyncio.sleep(0.2)
+
+        @database_sync_to_async
+        def check():
+            item = Item.objects.get(pk=self.shared.pk)
+            self.assertEqual(item.doc.content, "Our Agenda and minutes\n")
+            edits = Event.objects.filter(item=item, action="edited")
+            self.assertEqual([e.actor for e in edits], [self.ada])
+            versions = list(item.doc.versions.all())
+            self.assertEqual(len(versions), 1)
+            self.assertEqual(versions[0].content, "Our Agenda and minutes\n")
+            self.assertFalse(LiveUpdate.objects.exists())
+
+        await check()
+
+    async def test_storing_while_somebody_keeps_typing(self):
+        ada = await self.connect(self.ada, self.shared)
+        with patch.multiple(consumers, SAVE_AFTER=0.3, SAVE_AT_LEAST_EVERY=0.5):
+            for i in range(8):
+                await ada.type(0, f"{i}")
+                await asyncio.sleep(0.1)
+            self.assertIn("Agenda", await self.content(self.shared))
+            self.assertNotEqual(await self.content(self.shared), "Agenda\n")
+
+    async def test_two_people_typing_make_an_event_each(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        with patch.object(consumers, "SAVE_AFTER", 10):
+            await ada.type(0, "A")
+            await bob.drain()
+            await bob.type(1, "B")
+            await ada.drain()
+        # Leaving saves at once
+        await bob.communicator.disconnect()
+        self.communicators.remove(bob.communicator)
+
+        @database_sync_to_async
+        def check():
+            item = Item.objects.get(pk=self.shared.pk)
+            self.assertEqual(item.doc.content, "ABAgenda\n")
+            actors = set(
+                Event.objects.filter(item=item, action="edited").values_list(
+                    "actor__full_name", flat=True
+                )
+            )
+            self.assertEqual(actors, {"Ada Example", "Bob Example"})
+            # The creation's version by Ada, updated: one of the authors
+            self.assertEqual(item.doc.versions.count(), 1)
+
+        await check()
+
+    async def test_offline_edits_merge_on_reconnect(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        await ada.communicator.disconnect()
+        self.communicators.remove(ada.communicator)
+        # Both type, Ada offline
+        ada.text.insert(len(b"Agenda"), " (Ada)")
+        await bob.type(0, "Bob: ")
+        # Back online: a new connection with the same document
+        communicator = WebsocketCommunicator(
+            application,
+            f"/ws/docs/{self.shared.pk}",
+            headers=[
+                (
+                    b"cookie",
+                    f"sessionid={await database_sync_to_async(self.session)(self.ada)}".encode(),
+                )
+            ],
+        )
+        self.communicators.append(communicator)
+        await communicator.connect()
+        ada.communicator = communicator
+        await ada.sync()
+        await bob.drain()
+        self.assertEqual(str(ada), "Bob: Agenda (Ada)\n")
+        self.assertEqual(str(bob), "Bob: Agenda (Ada)\n")
+
+    async def test_an_api_edit_arrives_in_the_editors(self):
+        ada = await self.connect(self.ada, self.shared)
+        await ada.type(0, "Live ")
+        await database_sync_to_async(self.on_commit)(
+            operations.update_doc,
+            self.shared,
+            actor=self.bob,
+            content="Agenda\n- one\n",
+        )
+        await ada.drain()
+        # The API changed the text as it saw it, what Ada typed stays
+        self.assertEqual(str(ada), "Live Agenda\n- one\n")
+        self.assertEqual(await self.content(self.shared), "Live Agenda\n- one\n")
+
+    # Awareness: cursors and names -------------------------------------------
+
+    async def test_names_come_from_the_server_and_leaving_is_told(self):
+        ada = await self.connect(self.ada, self.shared)
+        cleo = await self.connect(self.cleo, self.shared)
+        state = json.dumps({"user": {"name": "The boss"}, "cursor": None})
+        update = encode_awareness([(cleo.doc.client_id, 1, state)])
+        await cleo.communicator.send_to(bytes_data=create_awareness_message(update))
+        # Not somebody else's state
+        update = encode_awareness([(ada.doc.client_id, 5, state)])
+        await cleo.communicator.send_to(bytes_data=create_awareness_message(update))
+        await ada.drain()
+        (entries,) = ada.awareness
+        ((client, clock, received),) = entries
+        self.assertEqual((client, clock), (cleo.doc.client_id, 1))
+        self.assertEqual(json.loads(received)["user"]["name"], "Cleo")
+        # Cleo hears herself too (y-websocket reconnects after 30 silent
+        # seconds)
+        await cleo.drain()
+        self.assertEqual(len(cleo.awareness), 1)
+        await cleo.communicator.disconnect()
+        self.communicators.remove(cleo.communicator)
+        await ada.drain()
+        self.assertEqual(ada.awareness[-1], [(cleo.doc.client_id, 2, "null")])
+
+    async def test_asking_for_the_others(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        await bob.communicator.send_to(bytes_data=bytes([consumers.QUERY_AWARENESS]))
+        output = await ada.receive()
+        self.assertEqual(output["bytes"], bytes([consumers.QUERY_AWARENESS]))
+        self.assertTrue(await bob.communicator.receive_nothing(0.1))

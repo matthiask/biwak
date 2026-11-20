@@ -106,6 +106,7 @@ class CLITest(TestCase):
             raise result.exception
         return result
 
+    @patch.object(cli_version, "MINIMUM", (0, 14, 0))
     def test_version_warnings(self):
         for version, warning in [
             ("0.14.0", "available"),  # older than the server's

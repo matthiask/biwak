@@ -16,17 +16,21 @@
         <a class="btn btn-sm btn-quiet" href="{% url 'doc_versions' item.pk %}">{% icon "clock-history" %}<span
           >{% translate "Versions" %}</span></a>
       {% endif %}
-      {% if can_change and not locked_by %}
+      {% if can_edit %}
         <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
+      {% else %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "broadcast" %}<span
+          >{% translate "Watch live" %}</span></a>
       {% endif %}
     </div>
   </div>
   {% show_links item %}
   {% include "items/_client_banner.html" %}
-  {% if locked_by %}
-    <div class="alert alert-warning">
-      {% blocktranslate with name=locked_by.get_short_name %}{{ name }} is editing. You can read the doc and edit it once they are done.{% endblocktranslate %}
+  {% if doc.read_only %}
+    <div class="alert alert-secondary">
+      {% icon "lock" %}
+      {% translate "This doc is read-only." %}
     </div>
   {% endif %}
   <div class="row g-4">
@@ -38,6 +42,24 @@
     <div class="col-lg-4">
       {% include "files/_sidebar.html" %}
       {% include "files/_move.html" %}
+      {% if is_staff %}
+        <form method="post" action="{% url 'doc_read_only' item.pk %}" class="mt-4 small">
+          {% csrf_token %}
+          {% if doc.read_only %}
+            <button type="submit" class="btn btn-sm btn-quiet">
+              {% icon "pencil" %}<span>{% translate "Make editable" %}</span>
+            </button>
+          {% else %}
+            <input type="hidden" name="read_only" value="1">
+            <button type="submit" class="btn btn-sm btn-quiet">
+              {% icon "lock" %}<span>{% translate "Make read-only" %}</span>
+            </button>
+            <span
+              class="text-body-secondary"
+            >{% translate "Nobody can edit it until staff make it editable again." %}</span>
+          {% endif %}
+        </form>
+      {% endif %}
     </div>
   </div>
 {% endblock content %}

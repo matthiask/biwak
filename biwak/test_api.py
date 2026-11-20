@@ -254,9 +254,9 @@ class APITest(TestCase):
         headers = self.api(self.ada)
         response = self.get("me/", headers | {"x-biwak-cli": "0.0.1"})
         self.assertEqual(response.status_code, 426)
-        response = self.get("me/", headers | {"x-biwak-cli": "0.13.0"})
-        self.assertEqual(response.status_code, 426, "no reminders since 0.14.0")
-        response = self.get("me/", headers | {"x-biwak-cli": "0.14.0"})
+        response = self.get("me/", headers | {"x-biwak-cli": "0.18.0"})
+        self.assertEqual(response.status_code, 426, "no doc locks since 0.19.0")
+        response = self.get("me/", headers | {"x-biwak-cli": "0.19.0"})
         self.assertIn("x-biwak-cli-latest", response.headers)
 
     def test_openapi_schema(self):

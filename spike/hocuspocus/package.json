@@ -1,7 +1,0 @@
-{
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@hocuspocus/server": "^4.9.0"
-  }
-}

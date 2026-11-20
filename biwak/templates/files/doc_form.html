@@ -1,56 +1,22 @@
 {% extends "base.html" %}
 {% load attachments biwak i18n %}
-{% block title %}{% if item %}{% translate "Edit the doc" %}{% else %}{% translate "New doc" %}{% endif %} –
-  Biwak{% endblock title %}
+{% block title %}{% translate "New doc" %} – Biwak{% endblock %}
 
 {% block content %}
   {% include "files/_crumbs.html" %}
-  <h1 class="mb-3">{% if item %}{% translate "Edit the doc" %}{% else %}{% translate "New doc" %}{% endif %}</h1>
-  {% include "items/_client_banner.html" %}
-  {% if conflict %}
-    <div class="alert alert-danger">
-      {% blocktranslate with name=conflict.created_by.get_short_name %}{{ name }} saved a newer version while you were editing, so your changes weren't saved. Copy your text, then reload the doc.{% endblocktranslate %}
-      {% if is_staff %}<a href="{% url 'doc_version' item.pk conflict.pk %}">{% translate "Compare" %}</a>{% endif %}
-    </div>
-  {% endif %}
+  <h1 class="mb-3">{% translate "New doc" %}</h1>
   <div class="card wb-form-card mb-4">
     <div class="card-body">
-      <form
-        method="post"
-        {% attachments_attrs project %}
-        {% if item %}data-doc-lock="{% url 'doc_lock' item.pk %}"{% endif %}
-      >
+      <form method="post" {% attachments_attrs project %}>
         {% csrf_token %}
-        {% if item %}<input type="hidden" name="base_version" value="{{ base_version }}">{% else %}{% if folder %}<input
-              type="hidden"
-              name="folder"
-              value="{{ folder.pk }}"
-            >{% endif %}{% endif %}
+        {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
         {% include "files/_attach_button.html" %}
         {{ form }}
-        <button type="submit" class="btn btn-primary">
-          {% if item %}{% translate "Save" %}{% else %}{% translate "Create" %}{% endif %}
-        </button>
-        {% if item %}
-          <button type="submit" name="new_version" value="1" class="btn btn-quiet">
-            {% translate "Save as a version" %}
-          </button>
-          <button
-            type="submit"
-            class="btn btn-quiet"
-            formaction="{% url 'doc_lock' item.pk %}"
-            name="release"
-            value="1"
-            formnovalidate
-          >
-            {% translate "Cancel" %}
-          </button>
-        {% else %}
-          <a
-            href="{% if folder %}{{ folder.get_absolute_url }}{% else %}{% url 'project_files' project.pk %}{% endif %}"
-            class="btn btn-quiet"
-          >{% translate "Cancel" %}</a>
-        {% endif %}
+        <button type="submit" class="btn btn-primary">{% translate "Create" %}</button>
+        <a
+          href="{% if folder %}{{ folder.get_absolute_url }}{% else %}{% url 'project_files' project.pk %}{% endif %}"
+          class="btn btn-quiet"
+        >{% translate "Cancel" %}</a>
       </form>
     </div>
   </div>

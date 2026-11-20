@@ -1,15 +1,16 @@
-"""Docs: versions and locks (specs/files.md, stage 2)"""
+"""Docs: versions (specs/files.md, stage 2), edited live
+(specs/collaboration.md)"""
 
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak.activity.history import diff_lines
+from biwak.collab import live
 from biwak.files import operations
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.library import (
@@ -76,14 +77,12 @@ def doc_new(request, pk):
 
 def _doc_context(request, item):
     doc = item.doc
-    holder = operations.lock_holder(doc)
     return {
         "item": item,
         "doc": doc,
         "breadcrumbs": breadcrumbs(item),
-        "locked_by": holder if holder != request.user else None,
         "is_staff": not request.user.is_client,
-        "can_change": ops.can_change(request.user, item),
+        "can_edit": not doc.read_only and ops.can_change(request.user, item),
         "move_choices": folder_choices(request.user, item.project, exclude=item),
     } | sidebar_context(request, item)
 
@@ -104,88 +103,51 @@ def doc(request, pk):
     )
 
 
+class TitleForm(Form):
+    title = forms.CharField(label=_("title"), max_length=500)
+
+
 def doc_edit(request, pk):
-    """Opening the form takes the lock; saving over somebody else's newer
-    version is refused. Clients only edit docs they created."""
+    """The doc edited live: everybody who can see it opens the editor,
+    those who can't change it (or a read-only doc) watch. Posting renames
+    the doc or saves what's typed as a version."""
     item = item_for(request, pk, Kind.DOC)
-    if not ops.can_change(request.user, item):
-        raise PermissionDenied
-    doc = item.doc
-    mentions_url = reverse("mentionable", args=[item.pk])
-    if request.method != "POST":
-        try:
-            operations.lock_doc(item, request.user)
-        except operations.DocLocked as exc:
-            messages.warning(
-                request,
-                _("%(name)s is editing this doc. You can read it meanwhile.")
-                % {"name": exc.user.get_short_name()},
-            )
-            return redirect(item)
-    latest = doc.versions.first()
-    form = DocForm(
-        request.POST or None,
-        initial={"title": item.title, "content": doc.content},
-    )
-    for name in ["title", "content"]:
-        form.fields[name].widget.attrs["data-mentions"] = mentions_url
-    conflict = None
-    if form.is_valid():
-        try:
+    can_edit = live.access(request.user, item.pk) == live.WRITE
+    form = TitleForm(request.POST or None, initial={"title": item.title})
+    if request.method == "POST":
+        if not can_edit:
+            raise PermissionDenied
+        if request.POST.get("new_version"):
+            operations.save_version(item, actor=request.user)
+            messages.success(request, _("Saved as a version."))
+            return redirect("doc_edit", item.pk)
+        if form.is_valid():
             operations.update_doc(
-                item,
-                actor=request.user,
-                new_version=bool(request.POST.get("new_version")),
-                base_version=_int(request.POST.get("base_version")),
-                **form.cleaned_data,
+                item, actor=request.user, title=form.cleaned_data["title"]
             )
-        except operations.DocConflict as exc:
-            conflict = exc.version
-        except operations.DocLocked as exc:
-            form.add_error(
-                None,
-                _("%(name)s is editing this doc.")
-                % {"name": exc.user.get_short_name()},
-            )
-        else:
-            return redirect(item)
+            return redirect("doc_edit", item.pk)
     return render(
         request,
-        "files/doc_form.html",
+        "files/doc_live.html",
         {
             "project": item.project,
             "item": item,
             "form": form,
             "breadcrumbs": breadcrumbs(item),
-            "base_version": request.POST.get("base_version") or (latest and latest.pk),
-            "conflict": conflict,
-            "is_staff": not request.user.is_client,
+            "can_edit": can_edit,
         },
     )
 
 
-def _int(value):
-    try:
-        return int(value)
-    except TypeError, ValueError:
-        return None
-
-
 @require_POST
-def doc_lock(request, pk):
-    """The edit page renews the lock every minute (frontend/doc-lock.js);
-    ``release`` gives it up (Cancel)"""
+def doc_read_only(request, pk):
+    """Staff make the doc read-only, or editable again"""
     item = item_for(request, pk, Kind.DOC)
-    if not ops.can_change(request.user, item):
-        raise PermissionDenied
-    if request.POST.get("release"):
-        operations.unlock_doc(item, request.user)
-        return redirect(item)
-    try:
-        operations.lock_doc(item, request.user)
-    except operations.DocLocked as exc:
-        return JsonResponse({"locked_by": exc.user.get_short_name()}, status=409)
-    return HttpResponse(status=204)
+    staff_only(request)
+    operations.set_read_only(
+        item, read_only=bool(request.POST.get("read_only")), actor=request.user
+    )
+    return redirect(item)
 
 
 def doc_versions(request, pk):
@@ -233,9 +195,6 @@ def doc_version_restore(request, pk, version_pk):
     version = get_object_or_404(item.doc.versions, pk=version_pk)
     try:
         operations.restore_doc_version(item, version, actor=request.user)
-    except operations.DocLocked as exc:
-        messages.error(
-            request,
-            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
-        )
+    except operations.DocReadOnly:
+        messages.error(request, _("The doc is read-only."))
     return redirect(item)

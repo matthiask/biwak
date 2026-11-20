@@ -13,14 +13,21 @@ Each test logs in through a session cookie and waits for what it expects
 (Playwright's waiting, no sleeps).
 """
 
+import asyncio
 import os
+import socket
+import time
 
 from django.conf import settings
+from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+from django.db import connections
 from django.db.models import F
 from django.test import Client, LiveServerTestCase, tag
+from django.test.testcases import LiveServerThread
 from django.urls import reverse
+from django.views.static import serve as static_serve
 
-from biwak.accounts.models import CalendarToken
+from biwak.accounts.models import APIToken, CalendarToken
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
@@ -34,6 +41,10 @@ try:
     from playwright.sync_api import expect, sync_playwright
 except ImportError:  # pragma: no cover
     expect = sync_playwright = None
+try:
+    import uvicorn
+except ImportError:  # pragma: no cover
+    uvicorn = None
 
 
 @tag("e2e")
@@ -588,45 +599,249 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(Attachment.objects.count(), 0)
 
 
-class DocLockTest(E2ETestCase):
-    def test_lock(self):
-        doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
-        edit = reverse("doc_edit", args=[doc.pk])
-        page = self.page
-        self.goto(page, edit)
-        page.locator("[data-doc-lock]").wait_for()
-        self.assertEqual(Doc.objects.get(item=doc).locked_by, self.ada)
+class ASGIServerThread(LiveServerThread):
+    """The live server through asgi.py with uvicorn, for the websockets of
+    docs edited live; static files from STATIC_ROOT like Django's"""
 
-        # A second person is sent back to the doc, which is locked
-        other = self.login(self.bob)
-        self.goto(other, edit)
-        other.wait_for_url(f"**{doc.get_absolute_url()}")
-        self.assertIn(
-            "Ada is editing this doc",
-            other.locator(".alert", has_text="editing").first.inner_text(),
+    def run(self):
+        sock = socket.socket()
+        try:
+            sock.bind((self.host, self.port))
+            self.port = sock.getsockname()[1]
+            self.server = self.create_server()
+            asyncio.run(self.server.serve(sockets=[sock]))
+        except OSError as exc:  # pragma: no cover
+            self.error = exc
+        finally:
+            self.is_ready.set()
+            connections.close_all()
+
+    def create_server(self):
+        from asgi import application
+
+        ready = self.is_ready
+
+        class Server(uvicorn.Server):
+            async def startup(self, sockets=None):
+                await super().startup(sockets=sockets)
+                ready.set()
+
+        return Server(
+            uvicorn.Config(
+                _ASGIStaticFilesHandler(application),
+                lifespan="off",
+                log_level="warning",
+                ws="websockets-sansio",
+            )
         )
-        self.assertEqual(Doc.objects.get(item=doc).locked_by, self.ada)
 
-        # Releasing frees it
-        page.get_by_role("button", name="Cancel").click()
-        page.wait_for_url(f"**{doc.get_absolute_url()}")
-        self.assertIsNone(Doc.objects.get(item=doc).locked_by)
-        self.goto(other, edit)
-        other.locator("[data-doc-lock]").wait_for()
-        self.assertEqual(Doc.objects.get(item=doc).locked_by, self.bob)
+    def terminate(self):
+        if hasattr(self, "server"):
+            self.server.should_exit = True
+        self.join()
 
-    def test_lock_is_renewed_every_minute(self):
-        doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
+
+class _ASGIStaticFilesHandler(ASGIStaticFilesHandler):
+    def get_base_url(self):
+        return settings.STATIC_URL
+
+    def serve(self, request):
+        return static_serve(
+            request, self.file_path(request.path), document_root=settings.STATIC_ROOT
+        )
+
+
+class CollabTest(E2ETestCase):
+    """Docs edited live (specs/collaboration.md): several browsers typing
+    at once, offline, watching, losing access, edits through the API"""
+
+    host = "127.0.0.1"
+    server_thread_class = ASGIServerThread
+
+    @classmethod
+    def setUpClass(cls):
+        if uvicorn is None:  # pragma: no cover
+            raise cls.skipTest(cls, "uvicorn isn't installed")
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.doc = ops.create_doc(
+            project=self.project,
+            title="Minutes",
+            content="Agenda\n",
+            creator=self.ada,
+            visible=True,
+        )
+
+    def editor(self, user, doc=None, *, page=None):
+        """The doc's editor page in a browser of the person, synced"""
+        page = page or self.login(user)
+        self.goto(page, reverse("doc_edit", args=[(doc or self.doc).pk]))
+        live = page.locator("[data-collab]")
+        expect(live).not_to_have_attribute("data-collab-state", "connecting")
+        return page
+
+    def content(self, page):
+        return page.locator(".cm-content")
+
+    def text(self, page):
+        """The editor's text (without the others' cursors)"""
+        return page.evaluate(
+            "document.querySelector('[data-collab]').collab.view.state.doc.toString()"
+        )
+
+    def wait_for_text(self, page, expected):
+        page.wait_for_function(
+            """(expected) => document.querySelector('[data-collab]')
+                .collab.view.state.doc.toString() === expected""",
+            arg=expected,
+        )
+
+    def type(self, page, text, *, end=True):
+        content = self.content(page)
+        content.click()
+        if end:
+            page.keyboard.press("Control+End")
+        page.keyboard.type(text)
+
+    def stored(self, doc=None):
+        return Doc.objects.get(pk=(doc or self.doc).pk).content
+
+    def wait_for_stored(self, expected, doc=None):
+        """Doc.content follows a few seconds after the last keystroke"""
+        for _ in range(100):
+            if self.stored(doc) == expected:
+                return
+            time.sleep(0.1)
+        self.assertEqual(self.stored(doc), expected)
+
+    def test_three_people_typing_at_once(self):
+        """Ada, Bob and Cleo (a client, in a doc she created) type at the
+        same time and see each other's text and cursors"""
+        doc = ops.create_doc(
+            project=self.project,
+            title="Our notes",
+            content="",
+            creator=self.cleo,
+            visible=True,
+        )
+        pages = [
+            self.editor(user, doc, page=self.page if user == self.ada else None)
+            for user in [self.ada, self.bob, self.cleo]
+        ]
+        for page in pages:
+            self.content(page).click()
+            page.keyboard.press("Control+End")
+            page.keyboard.press("Enter")
+        # Interleaved, a word each
+        for words in zip(*[
+            line.split() for line in ["Ada was here", "Bob too!", "Cleo as well"]
+        ]):
+            for page, word in zip(pages, words):
+                page.keyboard.type(f"{word} ")
+        for page in pages:
+            for word in ["Ada", "was", "Bob", "too!", "Cleo", "as"]:
+                expect(self.content(page)).to_contain_text(word)
+        final = self.text(pages[0])
+        for page in pages[1:]:
+            self.wait_for_text(page, final)
+        # The others' cursors with their names, and who is here
+        expect(pages[0].locator(".cm-ySelectionInfo", has_text="Bob")).to_have_count(1)
+        expect(pages[0].locator(".cm-ySelectionInfo", has_text="Cleo")).to_have_count(1)
+        expect(pages[2].locator("[data-collab-people]")).to_contain_text("Ada")
+        expect(pages[2].locator("[data-collab-people]")).to_contain_text("Bob")
+        self.wait_for_stored(final, doc)
+        self.assertFalse(self.errors)
+
+    def test_offline_and_reconnect(self):
+        ada = self.editor(self.ada, page=self.page)
+        bob = self.editor(self.bob)
+        live = ada.locator("[data-collab]")
+        expect(live).to_have_attribute("data-collab-state", "connected")
+        # The network goes, and with it the websocket (which the browser's
+        # offline mode leaves open); reconnecting fails until it's back
+        ada.context.set_offline(True)
+        ada.evaluate(
+            "document.querySelector('[data-collab]').collab.provider.ws.close()"
+        )
+        expect(live).to_have_attribute("data-collab-state", "offline")
+        expect(ada.locator("[data-collab-status]")).to_contain_text("Offline")
+        self.type(ada, "Typed offline")
+        self.type(bob, "Typed online. ")
+        expect(self.content(bob)).not_to_contain_text("Typed offline")
+        ada.context.set_offline(False)
+        expect(live).to_have_attribute("data-collab-state", "connected")
+        for page in [ada, bob]:
+            expect(self.content(page)).to_contain_text("Typed offline")
+            expect(self.content(page)).to_contain_text("Typed online.")
+        final = self.text(ada)
+        self.wait_for_text(bob, final)
+        self.wait_for_stored(final)
+        self.assertFalse(self.errors)
+
+    def test_a_client_watches_read_only(self):
+        ada = self.editor(self.ada, page=self.page)
+        cleo = self.editor(self.cleo)
+        expect(cleo.locator("[data-collab]")).to_have_attribute(
+            "data-collab-state", "watching"
+        )
+        expect(cleo.locator("[data-collab-status]")).to_contain_text("watching")
+        expect(self.content(cleo)).to_have_attribute("contenteditable", "false")
+        self.type(ada, "Decided: yes")
+        expect(self.content(cleo)).to_contain_text("Decided: yes")
+        expect(cleo.locator(".cm-ySelectionInfo", has_text="Ada")).to_have_count(1)
+        # Typing does nothing
+        self.content(cleo).click()
+        cleo.keyboard.type("No!")
+        self.wait_for_stored("Agenda\nDecided: yes")
+        expect(self.content(ada)).not_to_contain_text("No!")
+        # No form to rename it, no attaching
+        self.assertEqual(cleo.get_by_role("button", name="Rename").count(), 0)
+        self.assertFalse(self.errors)
+
+    def test_losing_access_closes_the_session(self):
+        cleo = self.editor(self.cleo)
+        expect(self.content(cleo)).to_contain_text("Agenda")
+        # Ada hides the doc on its page
         page = self.page
-        page.clock.install()
-        self.goto(page, reverse("doc_edit", args=[doc.pk]))
-        page.locator("[data-doc-lock]").wait_for()
-        before = Doc.objects.get(item=doc).locked_at
-        with page.expect_request("**/lock/"):
-            page.clock.run_for(61_000)
-        # The server answered
-        page.wait_for_load_state("networkidle")
-        self.assertGreater(Doc.objects.get(item=doc).locked_at, before)
+        self.goto(page, self.doc)
+        page.get_by_role("button", name="Hide from clients").click()
+        page.wait_for_load_state()
+        live = cleo.locator("[data-collab]")
+        expect(live).to_have_attribute("data-collab-state", "gone")
+        expect(cleo.locator("[data-collab-status]")).to_have_text(
+            "You can’t see this doc anymore."
+        )
+        expect(cleo.locator(".cm-content")).to_have_count(0)
+        self.assertFalse(self.errors)
+
+    def test_becoming_read_only_during_the_session(self):
+        bob = self.editor(self.bob)
+        expect(self.content(bob)).to_have_attribute("contenteditable", "true")
+        page = self.page
+        self.goto(page, self.doc)
+        page.get_by_role("button", name="Make read-only").click()
+        page.wait_for_load_state()
+        expect(self.content(bob)).to_have_attribute("contenteditable", "false")
+        expect(bob.locator("[data-collab-status]")).to_contain_text("watching")
+
+    def test_an_api_edit_arrives_in_the_open_editor(self):
+        ada = self.editor(self.ada, page=self.page)
+        self.type(ada, "Typed live", end=True)
+        self.wait_for_stored("Agenda\nTyped live")
+        _token, secret = APIToken.create_for(user=self.bob, title="CLI", access="write")
+        api = self.playwright.request.new_context(base_url=self.live_server_url)
+        response = api.patch(
+            f"/api/v1/docs/{self.doc.pk}/",
+            data={"content": "Agenda for Monday\nTyped live"},
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status, 200, response.text())
+        api.dispose()
+        expect(self.content(ada)).to_contain_text("Agenda for Monday")
+        expect(self.content(ada)).to_contain_text("Typed live")
+        self.assertFalse(self.errors)
 
 
 class LinksTest(E2ETestCase):

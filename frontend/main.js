@@ -22,17 +22,12 @@ if (document.querySelector("[data-attachments]")) {
   import(/* webpackChunkName: "attachments" */ "./attachments.js")
 }
 
-// Renewing the lock of a doc being edited (specs/files.md)
-if (document.querySelector("[data-doc-lock]")) {
-  import(/* webpackChunkName: "doc-lock" */ "./doc-lock.js")
-}
-
 // Dragging links on projects and items
 if (document.querySelector("[data-sortable-links]")) {
   import(/* webpackChunkName: "links" */ "./links.js")
 }
 
-// SPIKE: docs edited together
+// Docs edited live (specs/collaboration.md), the doc's editor page only
 if (document.querySelector("[data-collab]")) {
   import(/* webpackChunkName: "collab" */ "./collab.js")
 }

@@ -34,6 +34,8 @@ DEBUG_TOOLBAR = DEBUG and not TESTING
 INSTALLED_APPS = [
     a
     for a in [
+        # runserver serves the websockets of docs edited live too
+        # (specs/collaboration.md); a development dependency
         "daphne" if DEBUG and not TESTING else "",
         "biwak",
         "django.contrib.admin",
@@ -132,8 +134,19 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "biwak.urls"
 WSGI_APPLICATION = "wsgi.application"
+# Docs edited live (specs/collaboration.md): the websockets are served by
+# asgi.py; the processes talk through Redis, required when deployed (the
+# WSGI processes tell the editors about edits through the API too)
 ASGI_APPLICATION = "asgi.application"
-CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+REDIS_URL = env("REDIS_URL", default="", required=LIVE)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL], "prefix": "biwak"},
+    }
+    if REDIS_URL and not TESTING
+    else {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+}
 
 TEMPLATES = [
     {

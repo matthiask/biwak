@@ -49,6 +49,9 @@
 .bi-bookmark-fill::before {
   content: "\f199";
 }
+.bi-broadcast::before {
+  content: "\f1d6";
+}
 .bi-calendar-event::before {
   content: "\f1e8";
 }

@@ -34,7 +34,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
-| `collaboration.md` | | last | everything | strong |
+| `collaboration.md` | | built (branch `collaboration`, not deployed) | everything | strong |
 
 `todos.md` stage 3, `projects-overview.md` and `glance.md` touch
 different files ("Touches" in each) and can run at the same time.

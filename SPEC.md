@@ -174,7 +174,8 @@ a cheaper model ("Agent").
 7. `import-basecamp.md` (needs every kind of item), then the agent skills
    (`api-cli.md`).
 8. **Last and separately:** `collaboration.md` (real-time editing,
-   brings websockets and ASGI), then the German translation.
+   brings websockets and ASGI; built 2026-11-20, not deployed), then the
+   German translation.
 
 Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
 same branch.
@@ -250,3 +251,7 @@ Nothing at the moment.
 - 2026-11-20: Reactions: 24 quick emoji and short texts (40
   characters), telling only the author, collected into the next mail
   or the digest (`specs/reactions.md`).
+- 2026-11-20: Docs are edited live with Yjs and CodeMirror; the server
+  side is Channels with pycrdt inside Django, not a Hocuspocus service
+  (the spike, `specs/collaboration.md`). The doc locks are gone; docs can
+  be made read-only by staff.

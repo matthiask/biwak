@@ -12,6 +12,10 @@ them when a decision changes (dated: "decided 2026-11-20").
   `podman start local_postgres_1`), `./runtests.sh biwak.items` some.
 - `fl dev` runs Django and the rspack dev server; `uv run ./manage.py
   check_visibility` compares the stored visibility with the tree.
+  `runserver` is Daphne's (`DEBUG`), serving the websockets of docs
+  edited live too (`asgi.py`, `biwak/collab/`); the rspack dev server
+  passes `/ws/docs/` on. Deployed, the websockets need an ASGI process
+  and Redis (`REDIS_URL`), see `specs/collaboration.md`.
 - `./manage.py fairy_tasks` runs the daily jobs (trash older than 30
   days, expired API tokens, `check_visibility` mailing admins); new daily
   jobs go there, hourly ones into an `hourly_tasks` like Governance's.

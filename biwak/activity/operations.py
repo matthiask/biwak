@@ -16,6 +16,18 @@ from biwak.items.models import Item
 from biwak.projects.models import Project
 
 
+# What may take away who sees or edits docs: their open editors check again
+# (specs/collaboration.md)
+ACCESS_CHANGES = {
+    Action.MOVED,
+    Action.VISIBILITY_CHANGED,
+    Action.TRASHED,
+    Action.ARCHIVED,
+    Action.EDITED_PROJECT,
+    Action.REMOVED,
+    Action.LEFT,
+}
+
 # An edit within this time of the person's last edit of the item updates
 # that event instead of writing a new one ("once per editing session")
 EDIT_SESSION = dt.timedelta(minutes=10)
@@ -63,6 +75,10 @@ def record(*, actor, action, project, item=None, **data):
         # A reaction isn't activity of the project (decided by the building
         # agent, 2026-11-20)
         _touch_project(event)
+    if action in ACCESS_CHANGES:
+        from biwak.collab import live
+
+        live.check_access(project=project.pk)
     if item is not None:
         from biwak.activity.notify import notify
 
