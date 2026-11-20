@@ -40,25 +40,28 @@ def local_date(moment, time_zone):
     return moment.astimezone(zone(time_zone)).date()
 
 
-def next_fire(*, rule, starts_on, time_of_day, time_zone, after):
-    """The first moment strictly after ``after`` the rule asks, or None"""
-    # The day before ``after``'s: next_date() is strictly after its date,
-    # and today's time of day may still be ahead
-    day = local_date(after, time_zone) - dt.timedelta(days=1)
-    # Two dates are enough: the second is after ``after`` whatever the clocks
-    # did; the guard is only against a rule going nowhere
-    for _attempt in range(4):
+def next_occurrence(*, rule, starts_on, time_of_day, time_zone, after):
+    """The first date the rule asks strictly after ``after`` and its moment
+    (UTC), as ``(date, moment)``, or None. The date is the rule's: the
+    moment of a time in a gap just before midnight is on the next day."""
+    # Two days before ``after``'s date: next_date() is strictly after its
+    # date, today's time of day may still be ahead, and yesterday's may be
+    # today (a time in a gap before midnight)
+    day = local_date(after, time_zone) - dt.timedelta(days=2)
+    # Three dates are enough: the third is after ``after`` whatever the
+    # clocks did; the guard is only against a rule going nowhere
+    for _attempt in range(5):
         day = schedules.next_date(rule, day, anchor=starts_on)
         if day is None:
             return None
         fire = fire_at(day, time_of_day, time_zone)
         if fire > after:
-            return fire
+            return day, fire
     return None  # pragma: no cover
 
 
-def next_fire_of(question, *, after):
-    return next_fire(
+def next_occurrence_of(question, *, after):
+    return next_occurrence(
         rule=question.rule,
         starts_on=question.starts_on,
         time_of_day=question.time_of_day,
@@ -67,11 +70,31 @@ def next_fire_of(question, *, after):
     )
 
 
-def latest_fire(question, *, first, now):
-    """The last moment up to ``now`` the rule asks, counting on from
-    ``first`` (the stored next time): after downtime, a question is asked
-    once, for the latest date, not for every date missed"""
-    latest = first
-    while (following := next_fire_of(question, after=latest)) and following <= now:
+def next_fire(*, rule, starts_on, time_of_day, time_zone, after):
+    """The first moment strictly after ``after`` the rule asks, or None"""
+    found = next_occurrence(
+        rule=rule,
+        starts_on=starts_on,
+        time_of_day=time_of_day,
+        time_zone=time_zone,
+        after=after,
+    )
+    return found and found[1]
+
+
+def next_fire_of(question, *, after):
+    found = next_occurrence_of(question, after=after)
+    return found and found[1]
+
+
+def latest_occurrence(question, *, first, now):
+    """The last date up to ``now`` the rule asks and its moment, as
+    ``(date, moment)``, counting on from ``first`` (the stored next time,
+    one of the rule's moments): after downtime, a question is asked once,
+    for the latest date, not for every date missed"""
+    latest = next_occurrence_of(question, after=first - dt.timedelta(microseconds=1))
+    while (following := next_occurrence_of(question, after=latest[1])) and (
+        following[1] <= now
+    ):
         latest = following
     return latest

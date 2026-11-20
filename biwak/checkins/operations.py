@@ -305,9 +305,11 @@ def ask_due(*, now=None):
             )
             if question is None:
                 continue
-            fire = schedule.latest_fire(question, first=question.next_at, now=now)
+            date, _fire = schedule.latest_occurrence(
+                question, first=question.next_at, now=now
+            )
             if question.is_askable:
-                occurrence = _ask(question, fire, now)
+                occurrence = _ask(question, date, now)
                 if occurrence is not None:
                     created.append(occurrence)
             question.next_at = schedule.next_fire_of(question, after=now)
@@ -315,10 +317,9 @@ def ask_due(*, now=None):
     return created
 
 
-def _ask(question, fire, now):
-    """The occurrence of the date of ``fire``, unless it was asked already
+def _ask(question, date, now):
+    """The occurrence of the rule's ``date``, unless it was asked already
     (the schedule was edited on the day)"""
-    date = schedule.local_date(fire, question.time_zone)
     occurrence, was_created = Occurrence.objects.get_or_create(
         question=question, date=date, defaults={"asked_at": now}
     )

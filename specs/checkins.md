@@ -26,7 +26,11 @@ value or a product choice to the builder):
   zone, so in UTC it moves by an hour at the changes. A time which doesn't
   exist (02:30 when the clocks go forward) is asked an hour later (03:30);
   one which happens twice (02:30 when they go back) once, the first time.
-  A date is the calendar date in the question's zone.
+  A date is the calendar date in the question's zone. An occurrence's date
+  is the rule's date, not the date of the moment it is asked: a time in a
+  gap just before midnight (23:30 when America/Nuuk goes from 23:00 to
+  00:00) is asked at 00:30 the next day, for the day before (fixed
+  2026-11-20: it was stored under the next day, which then wasn't asked).
 - **After downtime** (or a late run) a question is asked once, for the
   latest date due, not for every missed date; `asked_at` is when it was
   really asked.

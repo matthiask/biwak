@@ -191,6 +191,20 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(dates(item), [dt.date(2027, 10, 31)])
         self.assertEqual(next_at(item), "2027-11-01 02:30")
 
+    def test_a_time_in_a_skipped_hour_before_midnight_keeps_its_date(self):
+        """America/Nuuk goes from Saturday 27 March 2027 23:00 (-02) to
+        Sunday 00:00 (-01): Saturday's 23:30 is asked at Sunday 00:30, and
+        Sunday's 23:30 is still asked"""
+        nuuk = schedule.zone("America/Nuuk")
+        item = self.question(
+            "Nuuk", rule="FREQ=DAILY", starts_on=dt.date(2027, 3, 1),
+            time_of_day=dt.time(23, 30), time_zone="America/Nuuk",
+            now=at("2027-03-27 12:00", nuuk),
+        )  # fmt: skip
+        self.run_at("2027-03-28 00:30", nuuk)
+        self.run_at("2027-03-28 23:30", nuuk)
+        self.assertEqual(dates(item), [dt.date(2027, 3, 27), dt.date(2027, 3, 28)])
+
     # Time zones --------------------------------------------------------------
 
     def test_each_question_in_its_own_time_zone(self):
