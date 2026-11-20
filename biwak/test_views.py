@@ -1,3 +1,6 @@
+import re
+
+from django.core import mail
 from django.test import TestCase
 
 from biwak.activity.models import Action, Event, Subscription
@@ -221,6 +224,17 @@ class ViewsTest(TestCase):
         for url in ["/accounts/2fa/", "/accounts/sessions/"]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_login_code_leads_back_to_the_item(self):
+        # The link in a notification mail: through the login, back to the item
+        url = self.todo.get_absolute_url()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        response = self.client.post(response["Location"], {"email": "ada@example.org"})
+        code = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", mail.outbox[-1].body)[1]
+        response = self.client.post(response["Location"], {"code": code})
+        self.assertRedirects(response, url, fetch_redirect_response=False)
+        self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_no_passwords(self):
         # Login is by code and passkeys; allauth's password pages are off
