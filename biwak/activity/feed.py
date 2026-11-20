@@ -16,6 +16,7 @@ from django.utils.translation import gettext, ngettext
 from biwak.accounts.models import User
 from biwak.activity.models import Action, Event
 from biwak.items.models import Kind
+from biwak.projects.models import Project
 
 
 PAGE_SIZE = 50
@@ -52,6 +53,15 @@ def feed_events(
     if since is not None:
         events = events.filter(created_at__gte=since)
     return events
+
+
+def people_visible_to(user, project=None):
+    """The people the viewer shares a project with (in ``project``, if
+    given); a person's feed and the person filter only reveal these"""
+    projects = Project.objects.accessible_to(user)
+    if project is not None:
+        projects = projects.filter(pk=project.pk)
+    return User.objects.filter(memberships__project__in=projects).distinct()
 
 
 def cursor_for(event):

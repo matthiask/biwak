@@ -10,17 +10,7 @@ from biwak.activity import feed as feed_module
 from biwak.activity.models import Action
 from biwak.forms import Form
 from biwak.items.models import Kind
-from biwak.projects.models import Project
 from biwak.projects.views import project_for
-
-
-def people_visible_to(user, project=None):
-    """The people the viewer shares a project with (in ``project``, if
-    given); a person's feed and the person filter only reveal these"""
-    projects = Project.objects.accessible_to(user)
-    if project is not None:
-        projects = projects.filter(pk=project.pk)
-    return User.objects.filter(memberships__project__in=projects).distinct()
 
 
 class FilterForm(Form):
@@ -43,7 +33,9 @@ class FilterForm(Form):
     def __init__(self, *args, user, project=None, with_person=True, **kwargs):
         super().__init__(*args, **kwargs)
         if with_person:
-            self.fields["person"].queryset = people_visible_to(user, project)
+            self.fields["person"].queryset = feed_module.people_visible_to(
+                user, project
+            )
         else:
             del self.fields["person"]
         if user.is_client:
@@ -119,7 +111,7 @@ def project_feed(request, pk):
 
 
 def person_feed(request, pk):
-    person = get_object_or_404(people_visible_to(request.user), pk=pk)
+    person = get_object_or_404(feed_module.people_visible_to(request.user), pk=pk)
     return feed_page(
         request,
         title=gettext("Activity of %(person)s") % {"person": person.display_name},

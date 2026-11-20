@@ -1,7 +1,6 @@
 # Activity feed, item history, bookmarks, links
 
-**Status:** in progress. Built: the activity feed (pages; the API and the
-CLI follow). The project page keeps its short list of the latest 20
+**Status:** in progress. Built: the activity feed (pages, API, CLI). The project page keeps its short list of the latest 20
 events (`activity/_events.html`) with a link to the feed.
 
 **Agent:** suits a cheaper model following this spec and the checklist
@@ -54,6 +53,14 @@ Decisions (proposed by the building agent, 2026-11-20):
   internal even when the to-do is visible now).
 - Merging applies to every action; the entry says "completed 5 to-dos in
   Launch", with "items" for mixed kinds.
+
+The API (`biwak/activity/api.py`) returns single events, not merged
+entries: `GET /api/v1/feed/` with `project_id`, `person_id`, `kind`,
+`action`, `visible_to_clients`, `since` (a date) and ninja's cursor
+(`next` is the URL of the next page), and `projects/{id}/feed/`,
+`people/{id}/feed/` with the same filters. For clients `data` has no
+`to`. `biwak feed [--project] [--person] [--kind] [--action] [--since]
+[--limit]` (50 by default, follows the cursor).
 
 ## Item history
 

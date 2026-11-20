@@ -1,6 +1,7 @@
 """The commands; output for people by default, --json for scripts"""
 
 import os
+from urllib.parse import parse_qs, urlsplit
 
 import click
 from rich.console import Console
@@ -374,4 +375,58 @@ def todo_comment(todo_id, text, attach, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Commented on #{todo_id}.")
+    return None
+
+
+# The activity feed ----------------------------------------------------------
+
+
+@cli.command()
+@click.option("--project", type=int, help="Only this project's ID.")
+@click.option("--person", type=int, help="Only what this person's ID did.")
+@click.option("--kind", help="Only this kind of item: todo, list, …")
+@click.option("--action", help="Only this action: created, completed, …")
+@click.option("--since", help="YYYY-MM-DD: nothing older.")
+@click.option("--limit", default=50, show_default=True, help="At most this many.")
+@json_option
+def feed(project, person, kind, action, since, limit, as_json):
+    """The latest activity, newest first"""
+    params = {
+        key: value
+        for key, value in {
+            "project_id": project,
+            "person_id": person,
+            "kind": kind,
+            "action": action,
+            "since": since,
+        }.items()
+        if value is not None
+    }
+    params["page_size"] = min(limit, 200)
+    events = []
+    while len(events) < limit:
+        data = request("GET", "feed/", params=params)
+        events += data["results"]
+        if not data["next"]:
+            break
+        # "next" is the URL of the next page
+        params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
+    events = events[:limit]
+    if as_json:
+        return echo_json(events)
+    t = table("When", "Person", "Action", "What", "Project", "")
+    for event in events:
+        item = event["item"] or {}
+        t.add_row(
+            event["created_at"][:16].replace("T", " "),
+            event["actor"]["short_name"],
+            event["action"].replace("_", " "),
+            item.get("title")
+            or event["data"].get("title")
+            or event["data"].get("name")
+            or "",
+            str(event["project_id"]),
+            clients(event),
+        )
+    console.print(t)
     return None
