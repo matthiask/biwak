@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "People" %} – {{ project }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  <h1 class="mb-3">{% translate "People" %}</h1>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="list-group mb-3">
+        {% for m in memberships %}
+          <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+            <div>
+              {{ m.user.display_name }}
+              {% if m.user.is_client %}<span class="badge wb-client-badge">{% translate "Client" %}</span>{% endif %}
+              {% if not request.user.is_client %}<div class="small text-body-secondary">
+                  {{ m.user.email }}
+                </div>{% endif %}
+            </div>
+            {% if can_manage or m.user == request.user %}
+              <form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-quiet">
+                  {% if m.user == request.user %}{% translate "Leave" %}{% else %}{% translate "Remove" %}{% endif %}
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="list-group-item text-body-secondary">{% translate "No members yet." %}</div>
+        {% endfor %}
+      </div>
+      <p class="small text-body-secondary">
+        {% if project.is_all_access %}
+          {% translate "All staff can open this project. Members are listed, can be mentioned and are included when someone notifies everybody in the project." %}
+        {% else %}
+          {% translate "Limited project: only members can open it." %}
+        {% endif %}
+        {% translate "Clients only see what is visible to clients." %}
+      </p>
+    </div>
+    {% if can_manage %}
+      <div class="col-lg-5">
+        {% if add_form.fields.user.queryset.exists %}
+          <div class="card mb-4">
+            <div class="card-body">
+              <h2 class="h6">{% translate "Add someone" %}</h2>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form" value="add">
+                {{ add_form }}
+                <button type="submit" class="btn btn-primary btn-sm">{% translate "Add" %}</button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+        <div class="card">
+          <div class="card-body">
+            <h2 class="h6">{% translate "Invite by email" %}</h2>
+            <p class="small text-body-secondary">
+              {% translate "New people get a mail and log in with a code sent to their address. Adding someone subscribes them to nothing that exists already." %}
+            </p>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="form" value="invite">
+              {{ invite_form }}
+              <button type="submit" class="btn btn-primary btn-sm">{% translate "Invite" %}</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock content %}

@@ -61,7 +61,7 @@
         {% endif %}
       </div>
     </nav>
-    <main class="container-xl wb-main">
+    <main class="container-xl wb-main{% block main_class %}{% endblock %}">
       {% block messages %}{% include "_messages.html" %}{% endblock %}
       {% block content %}{% endblock %}
     </main>

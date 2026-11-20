@@ -1,0 +1,7 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with actor=actor.display_name project=project %}{{ actor }} invited you to the project “{{ project }}” on Biwak.{% endblocktranslate %}
+
+{% translate "Open it here and log in with your email address; you'll get a code by mail:" %}
+{{ url }}
+
+{% translate "There's no password. After logging in you can add a passkey to log in without a code." %}
+{% endautoescape %}

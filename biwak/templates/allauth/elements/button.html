@@ -1,0 +1,22 @@
+{% load allauth %}
+{% comment %}allauth's tags: prominent/primary, secondary, outline, danger, link{% endcomment %}
+{% if "link" in attrs.tags %}{% firstof "btn btn-link px-0" as css %}{% elif "danger" in attrs.tags %}{% firstof "btn btn-sm btn-destructive" as css %}{% elif "tool" in attrs.tags %}{% firstof "btn btn-sm btn-quiet" as css %}{% elif "outline" in attrs.tags or "secondary" in attrs.tags %}{% firstof "btn btn-quiet" as css %}{% else %}{% firstof "btn btn-primary" as css %}{% endif %}
+{% if attrs.href %}
+  <a
+    href="{{ attrs.href }}"
+    class="{{ css }}"
+    {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+  >{% slot %}{% endslot %}</a>
+{% else %}
+  <button
+    class="{{ css }}"
+    {% if attrs.form %}form="{{ attrs.form }}"{% endif %}
+    {% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+    {% if attrs.name %}name="{{ attrs.name }}"{% endif %}
+    {% if attrs.value %}value="{{ attrs.value }}"{% endif %}
+    {% if attrs.type %}type="{{ attrs.type }}"{% endif %}
+  >
+    {% slot %}
+    {% endslot %}
+  </button>
+{% endif %}

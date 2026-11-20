@@ -27,6 +27,9 @@ class Action(models.TextChoices):
     TRASHED = "trashed", _("trashed")
     RESTORED = "restored", _("restored")
     JOINED = "joined", _("joined")
+    ADDED = "added", _("added")
+    REMOVED = "removed", _("removed")
+    LEFT = "left", _("left")
 
 
 class EventQuerySet(models.QuerySet):

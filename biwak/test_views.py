@@ -172,3 +172,13 @@ class ViewsTest(TestCase):
         self.client.force_login(self.cleo)
         self.client.post(self.project.get_absolute_url(), {"title": "Our wishes"})
         self.assertTrue(Item.objects.get(title="Our wishes").is_client_visible)
+
+    def test_allauth_pages(self):
+        # Rendered with our elements (biwak/templates/allauth/)
+        response = self.client.get("/accounts/login/")
+        self.assertContains(response, "form-control")
+        self.assertNotContains(response, "/accounts/signup/")
+        self.client.force_login(self.ada)
+        for url in ["/accounts/2fa/", "/accounts/sessions/"]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)

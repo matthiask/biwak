@@ -658,3 +658,38 @@ a.wb-row-title:hover {
   max-width: 28rem;
   margin-top: 0.25rem;
 }
+
+/* allauth's pages for logging in (allauth/layouts/entrance.html): a
+   narrow card in the middle */
+.wb-entrance {
+  max-width: 28rem;
+  width: calc(100% - 2rem);
+  margin-top: 2rem;
+  padding: 2rem;
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: var(--wb-shadow);
+}
+
+/* allauth's tables (passkeys, sessions); Bootstrap's tables aren't
+   compiled */
+.wb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wb-table :is(th, td) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--wb-surface-border);
+  vertical-align: middle;
+}
+
+.wb-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.wb-table th {
+  font-weight: 600;
+  text-align: start;
+}

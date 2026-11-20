@@ -4,7 +4,9 @@
     <li class="mb-2">
       <span class="fw-semibold">{{ event.actor.get_short_name }}</span>
       {{ event.get_action_display }}
-      {% if event.item %}<a href="{{ event.item.get_absolute_url }}">{{ event.data.title }}</a>{% endif %}
+      {% if event.item %}<a
+          href="{{ event.item.get_absolute_url }}"
+        >{{ event.data.title }}</a>{% elif event.data.name %}{{ event.data.name }}{% endif %}
       <div class="small text-body-secondary">{{ event.created_at|timesince }}</div>
     </li>
   {% empty %}
