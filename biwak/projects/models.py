@@ -38,6 +38,19 @@ class Project(models.Model):
     )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
+    # Stored by record() and recomputed nightly (specs/projects-overview.md);
+    # the client column only counts events of items visible to clients, so
+    # internal work never reorders or dates a client's projects
+    last_activity_at = models.DateTimeField(
+        _("last activity at"), null=True, blank=True, db_index=True, editable=False
+    )
+    last_client_activity_at = models.DateTimeField(
+        _("last client activity at"),
+        null=True,
+        blank=True,
+        db_index=True,
+        editable=False,
+    )
 
     objects = ProjectQuerySet.as_manager()
 
@@ -57,6 +70,13 @@ class Project(models.Model):
 
     def is_member(self, user):
         return self.memberships.filter(user=user).exists()
+
+    @property
+    def description_first_line(self):
+        """For the cards of the projects page"""
+        return next(
+            (line for line in self.description.splitlines() if line.strip()), ""
+        )
 
 
 class Membership(models.Model):
