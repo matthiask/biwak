@@ -104,6 +104,7 @@ def _build(user, occurrence, *, subject, context, name, first=False):
         headers |= reply_headers(user, occurrence)
     else:
         headers |= {"In-Reply-To": thread_id, "References": thread_id}
+    context["can_reply"] = "Reply-To" in headers
     message = EmailMultiAlternatives(
         subject,
         render_to_string(f"checkins/mails/{name}.txt", context),

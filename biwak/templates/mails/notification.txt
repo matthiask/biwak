@@ -9,6 +9,8 @@
 
 {% include "mails/_item.txt" %}
 
+{% if can_reply %}{% translate "Reply to this mail to comment." %}
+{% endif %}
 --
 {% translate "Unsubscribe from this" %}: {{ unsubscribe_url }}
 {% translate "Your notification settings" %}: {{ settings_url }}

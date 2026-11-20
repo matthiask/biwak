@@ -24,6 +24,9 @@ TOKEN_CHARS = string.ascii_lowercase + string.digits
 TOKEN_LENGTH = 20
 # Valid 6 months (decided 2026-11-20)
 TOKEN_VALIDITY = relativedelta(months=6)
+# Received mails, and tokens expired or revoked, are deleted after 90 days
+# (decided 2026-11-20)
+RETENTION_DAYS = 90
 
 
 def new_token():
