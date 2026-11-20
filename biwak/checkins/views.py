@@ -13,7 +13,6 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from biwak import schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
@@ -24,6 +23,7 @@ from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
 from biwak.projects.views import project_for
 from biwak.reactions.operations import prefetch
+from biwak.schedules_forms import KEEP, RuleField
 
 
 # How many occurrences a page shows (older ones: "Show more")
@@ -57,21 +57,11 @@ def candidate_people(project):
 
 class QuestionForm(Form):
     title = forms.CharField(label=_("Question"), max_length=500)
-    repeat = forms.ChoiceField(
-        label=_("Asked"),
-        choices=[c for c in schedules.preset_choices() if c[0]],
-        initial="weekly",
-    )
-    custom_rule = forms.CharField(
-        label=_("Custom schedule"),
-        required=False,
-        max_length=200,
-        help_text=_("An RRULE, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
-    )
+    rule = RuleField(label=_("Asked"), allow_empty=False, default_frequency="weekly")
     starts_on = forms.DateField(
         label=_("First asked on"),
         widget=forms.DateInput(attrs={"type": "date"}),
-        help_text=_("Weekly and monthly schedules count from this date."),
+        help_text=_("Schedules every two weeks and more count from this date."),
     )
     time_of_day = forms.TimeField(
         label=_("Time of day"), widget=forms.TimeInput(attrs={"type": "time"})
@@ -90,8 +80,7 @@ class QuestionForm(Form):
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
     field_order = [
         "title",
-        "repeat",
-        "custom_rule",
+        "rule",
         "starts_on",
         "time_of_day",
         "time_zone",
@@ -102,29 +91,16 @@ class QuestionForm(Form):
     def __init__(self, *args, project, item=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.item = item
+        self.fields["rule"].widget.anchor = self.initial.get("starts_on")
         self.fields["people"].queryset = candidate_people(project)
         if item is not None:
             # The switch is on the page
             del self.fields["visible"]
 
-    def _rule(self, data):
-        if data.get("repeat") == schedules.CUSTOM:
-            if not data.get("custom_rule"):
-                raise schedules.InvalidRule(_("Enter the schedule."))
-            return schedules.validate(data["custom_rule"])
-        if data.get("repeat") and data.get("starts_on"):
-            return schedules.from_preset(data["repeat"], data["starts_on"])
-        return ""
-
     def clean(self):
         data = super().clean()
-        repeat = data.get("repeat")
-        field = "custom_rule" if repeat == schedules.CUSTOM else "repeat"
-        try:
-            data["rule"] = self._rule(data)
-        except schedules.InvalidRule as exc:
-            data["rule"] = ""
-            self.add_error(field, str(exc))
+        if data.get("rule") is KEEP:
+            data["rule"] = self.initial.get("rule", "")
         visible = (
             self.item.is_client_visible
             if self.item is not None
@@ -173,11 +149,9 @@ def project_checkins(request, pk):
 
 def _form_initial(item):
     question = item.question
-    preset = schedules.preset_for(question.rule, question.starts_on)
     return {
         "title": item.title,
-        "repeat": preset,
-        "custom_rule": question.rule if preset == schedules.CUSTOM else "",
+        "rule": question.rule,
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
         "time_zone": question.time_zone,

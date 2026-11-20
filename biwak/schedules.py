@@ -181,15 +181,6 @@ PRESETS = {
 CUSTOM = "custom"
 
 
-def preset_choices():
-    r"""For the forms: ``("", "Doesn't repeat")``, the presets, "custom\""""
-    return [
-        ("", _("Doesn't repeat")),
-        *((key, label) for key, (label, _build) in PRESETS.items()),
-        (CUSTOM, _("Custom (RRULE)")),
-    ]
-
-
 def from_preset(key, anchor):
     """The rule of a preset, counting from the date ``anchor``"""
     try:
@@ -223,16 +214,6 @@ def preset_of(rule):
     if not rule:
         return ""
     return _preset_rules().get(rule, CUSTOM)
-
-
-def preset_for(rule, anchor):
-    """The preset of a form: only when it gives exactly ``rule`` counted
-    from ``anchor``, else ``"custom"``, so that saving the form keeps a
-    rule for another weekday or day; ``""`` for no rule"""
-    preset = preset_of(rule)
-    if preset not in ("", CUSTOM) and from_preset(preset, anchor) != rule:
-        return CUSTOM
-    return preset
 
 
 # The rule widget (specs/rule-widget.md) ---------------------------------

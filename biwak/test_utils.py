@@ -19,3 +19,18 @@ def project(name="Website", *, members=(), all_access=True):
     for user in members:
         Membership.objects.create(project=p, user=user)
     return p
+
+
+def rule_post(rule, name="recurrence"):
+    """What the rule widget posts for ``rule`` (the fields it shows, as a
+    browser sends them); rules it can't show post what leaving it alone
+    does: the hidden field"""
+    from biwak import schedules
+
+    if (fields := schedules.rule_fields(rule)) is None:
+        return {f"{name}_keep": "1"}
+    return {
+        f"{name}_{key}": value
+        for key, value in fields.items()
+        if value not in (None, "")
+    }

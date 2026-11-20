@@ -1,0 +1,177 @@
+{% load i18n %}
+{% comment %}
+  The rule widget (specs/rule-widget.md). Plain controls: without
+  JavaScript every part shows and the form posts the fields;
+  frontend/rule-widget.js shows the parts of the chosen frequency and
+  htmx fetches the description. Ids and names of the parts start with the
+  widget's id and name, so several widgets can share a page.
+{% endcomment %}
+<fieldset class="wb-rule" data-rule-widget>
+  <legend class="form-label fs-6">{{ widget.label|default:_("Repeat") }}</legend>
+  {% if widget.unshowable %}
+    <div class="wb-rule-elsewhere" data-rule-elsewhere>
+      <p class="mb-1">
+        {% blocktranslate with rule=widget.current %}This schedule was set elsewhere and can't be edited here: {{ rule }}{% endblocktranslate %}
+      </p>
+      <p class="small text-body-secondary mb-1">{{ widget.description }}</p>
+      <input type="hidden" name="{{ widget.name }}_keep" value="1">
+      <label class="btn btn-sm btn-quiet mb-2">
+        <input
+          type="checkbox"
+          name="{{ widget.name }}_replace"
+          value="1"
+          data-rule-replace
+          {% if widget.replace %}checked{% endif %}
+        >
+        {% translate "Replace" %}
+      </label>
+    </div>
+  {% endif %}
+  <div class="wb-rule-parts" data-rule-parts>
+    <div class="wb-rule-line">
+      <label class="visually-hidden" for="{{ widget.id }}_frequency">{% translate "Repeat" %}</label>
+      <select
+        name="{{ widget.name }}_frequency"
+        id="{{ widget.id }}_frequency"
+        class="form-select form-select-sm w-auto"
+        data-rule-frequency
+      >
+        {% for value, label in widget.frequencies %}
+          <option value="{{ value }}" {% if value == widget.fields.frequency %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <span class="wb-rule-every" data-rule-part="daily weekly monthly yearly">
+        <label for="{{ widget.id }}_interval">{% translate "every" %}</label>
+        <input
+          type="number"
+          name="{{ widget.name }}_interval"
+          id="{{ widget.id }}_interval"
+          min="1"
+          max="99"
+          value="{{ widget.fields.interval }}"
+          class="form-control form-control-sm"
+          style="width: 4.5rem"
+        >
+        <span data-rule-part="daily">{% translate "days" %}</span>
+        <span data-rule-part="weekly">{% translate "weeks" %}</span>
+        <span data-rule-part="monthly">{% translate "months" %}</span>
+        <span data-rule-part="yearly">{% translate "years" %}</span>
+      </span>
+    </div>
+    <div class="wb-rule-line" data-rule-part="weekly">
+      <fieldset class="wb-assignees">
+        <legend class="visually-hidden">{% translate "on" %}</legend>
+        {% for code, short, full, checked in widget.weekdays %}
+          <label class="wb-chip" title="{{ full }}">
+            <input
+              type="checkbox"
+              name="{{ widget.name }}_weekdays"
+              value="{{ code }}"
+              {% if checked %}checked{% endif %}
+            >
+            <span>{{ short }}</span>
+          </label>
+        {% endfor %}
+      </fieldset>
+    </div>
+    <div class="wb-rule-monthly" data-rule-part="monthly">
+      <div class="wb-rule-line">
+        <label class="form-check-label">
+          <input
+            type="radio"
+            class="form-check-input"
+            name="{{ widget.name }}_monthly"
+            value="day"
+            {% if widget.fields.monthly == "day" %}checked{% endif %}
+          >
+          {% translate "on day" %}
+        </label>
+        <input
+          type="number"
+          name="{{ widget.name }}_month_day"
+          min="1"
+          max="31"
+          value="{{ widget.fields.month_day }}"
+          class="form-control form-control-sm"
+          style="width: 4.5rem"
+          aria-label="{% translate 'Day of the month' %}"
+        >
+      </div>
+      <div class="wb-rule-line">
+        <label class="form-check-label">
+          <input
+            type="radio"
+            class="form-check-input"
+            name="{{ widget.name }}_monthly"
+            value="nth"
+            {% if widget.fields.monthly == "nth" %}checked{% endif %}
+          >
+          {% translate "on the" %}
+        </label>
+        <select
+          name="{{ widget.name }}_ordinal"
+          class="form-select form-select-sm w-auto"
+          aria-label="{% translate 'Which one' %}"
+        >
+          {% for value, label in widget.ordinals %}
+            <option
+              value="{{ value }}"
+              {% if value|stringformat:"s" == widget.fields.ordinal|stringformat:"s" %}selected{% endif %}
+            >
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+        <select
+          name="{{ widget.name }}_weekday"
+          class="form-select form-select-sm w-auto"
+          aria-label="{% translate 'Weekday' %}"
+        >
+          {% for value, label in widget.weekday_choices %}
+            <option value="{{ value }}" {% if value == widget.fields.weekday %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="wb-rule-line" data-rule-part="yearly">
+      <span>{% translate "on" %}</span>
+      <select
+        name="{{ widget.name }}_year_month"
+        class="form-select form-select-sm w-auto"
+        aria-label="{% translate 'Month' %}"
+      >
+        {% for value, label in widget.months %}
+          <option
+            value="{{ value }}"
+            {% if value|stringformat:"s" == widget.fields.year_month|stringformat:"s" %}selected{% endif %}
+          >
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+      <input
+        type="number"
+        name="{{ widget.name }}_year_day"
+        min="1"
+        max="31"
+        value="{{ widget.fields.year_day }}"
+        class="form-control form-control-sm"
+        style="width: 4.5rem"
+        aria-label="{% translate 'Day of the month' %}"
+      >
+    </div>
+    <p
+      class="small text-body-secondary mb-0 wb-rule-description"
+      data-rule-description
+      aria-live="polite"
+      hx-get="{{ widget.describe_url }}"
+      hx-vals='{"name": "{{ widget.name }}"}'
+      hx-include="closest [data-rule-widget]"
+      hx-trigger="change from:closest [data-rule-widget]"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% if not widget.unshowable %}{{ widget.description }}{% endif %}
+    </p>
+  </div>
+</fieldset>
