@@ -42,10 +42,14 @@ class EventOut(Schema):
     data: dict
     created_at: dt.datetime
     visible_to_clients: bool
+    # Comments: the start of the text as it is now (plain text), else empty
+    excerpt: str
 
 
 def event_out(event, user):
     item = event.item
+    if not hasattr(event, "excerpt"):
+        feed.add_excerpts([event])
     data = dict(event.data)
     if user.is_client:
         # A list's name may be internal even if the to-do is visible now
@@ -67,6 +71,7 @@ def event_out(event, user):
         "data": data,
         "created_at": event.created_at,
         "visible_to_clients": item is not None and item.is_client_visible,
+        "excerpt": event.excerpt,
     }
 
 

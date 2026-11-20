@@ -24,4 +24,6 @@
     >{{ person.get_short_name }}</span>{% endfor %}
   {% if todo.todo.due_on %}<span class="small text-body-secondary">{% icon "calendar-event" %}
       {{ todo.todo.due_on|date:"j. M" }}</span>{% endif %}
+  {% include "items/_signals.html" %}
+  <div class="wb-peek w-100" id="peek-{{ todo.pk }}"></div>
 </div>

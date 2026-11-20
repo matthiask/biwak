@@ -52,3 +52,4 @@
 {% endif %}
 {% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
 {% if event.item %}{% client_badge event.item %}{% endif %}
+{% if event.excerpt and not what %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}

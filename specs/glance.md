@@ -5,7 +5,25 @@ to know what's going on, people open one detail page after another. The
 pages should show a bit more content where it saves a click, without
 turning lists into walls of text.
 
-**Status:** open.
+**Status:** built (2026-11-20), branch `glance`. The filter (from the
+projects page), to-do indicators and the peek (`items/_signals.html`,
+`items/_peek.html`, `frontend/peek.js`, `biwak/items/glance.py`), list
+counts, feed excerpts (also on the project page's short list and as
+`excerpt` on API feed events; CLI 0.9.0). Not built: message excerpts
+(no message board yet; `feed.add_excerpts()` is where they go).
+Decisions, 2026-11-20:
+
+- `excerpt(text, chars, item)` takes the item from Python only (a
+  template filter has one argument): mentions show current names there,
+  the label as written in templates (to-do rows). No query per row.
+  Excerpts don't look attachments up.
+- Feed excerpts are 200 characters, clamped to two lines by CSS.
+- The attachment indicator is a plain icon with the count in its
+  `title`: it counts attachments linked to the to-do (notes and
+  comments), not a button.
+- Counts on the project page include only to-dos the person sees; the
+  count is "N open" and, when there are any, "M overdue" (danger color).
+- The person feed is linked from names too (see `feed.md`).
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Excerpts show content: every one goes through the same

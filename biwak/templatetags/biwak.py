@@ -71,15 +71,18 @@ def mail_markdown(text, item=None):
     return render_markdown(text, item, absolute=True)
 
 
-def render_markdown(text, item=None, *, absolute=False):
-    """``absolute`` for the API and mails: attachment URLs with BASE_URL"""
+def render_markdown(text, item=None, *, absolute=False, attachment_urls=True):
+    """``absolute`` for the API and mails: attachment URLs with BASE_URL.
+    ``attachment_urls=False`` skips looking them up (excerpts don't show
+    them)"""
     from biwak.activity.mentions import mentioned_ids, visible_names
 
     text = str(text or "")
     names = visible_names(item, mentioned_ids(text)) if item is not None else {}
     env = {"names": names}
     tokens = _markdown.parse(text, env)
-    _attachment_urls(tokens, absolute=absolute)
+    if attachment_urls:
+        _attachment_urls(tokens, absolute=absolute)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
@@ -136,14 +139,20 @@ def plain(text):
 
 
 @register.filter
-def excerpt(text, chars=200):
+def excerpt(text, chars=200, item=None):
     """The text as plain text of at most about ``chars`` characters
     (specs/glance.md): Markdown rendered like ``|markdown``, tags
     stripped, whitespace collapsed, cut at a word boundary, "…" added.
     Images and attachments become nothing, links their text. Plain
-    ``str``: templates escape it."""
+    ``str``: templates escape it. Mentions show the current name of people
+    who see ``item`` (from Python only: a filter takes one argument), the
+    label as written without it."""
     chars = int(chars)
-    rendered = str(render_markdown(text)).replace("</p>", " ").replace("<br>", " ")
+    rendered = (
+        str(render_markdown(text, item, attachment_urls=False))
+        .replace("</p>", " ")
+        .replace("<br>", " ")
+    )
     # strip_tags leaves entities; unescape the text (it is escaped again on
     # output) so that "&amp;" doesn't show
     result = " ".join(html.unescape(strip_tags(rendered)).split())

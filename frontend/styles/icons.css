@@ -52,6 +52,12 @@
 .bi-calendar-event::before {
   content: "\f1e8";
 }
+.bi-card-text::before {
+  content: "\f228";
+}
+.bi-chat-left-text::before {
+  content: "\f252";
+}
 .bi-check-circle::before {
   content: "\f26b";
 }

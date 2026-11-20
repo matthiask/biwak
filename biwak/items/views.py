@@ -14,7 +14,7 @@ from biwak import cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
-from biwak.items import operations as ops, visibility
+from biwak.items import glance, operations as ops, visibility
 from biwak.items.models import Group, Item, Kind, Status, TodoList
 
 
@@ -129,7 +129,7 @@ def wants_fragment(request):
 
 
 def _todos(todolist_item):
-    return (
+    return glance.with_signals(
         Item.objects
         .filter(parent=todolist_item, kind=Kind.TODO)
         .exclude(status=Status.TRASHED)
@@ -440,6 +440,22 @@ def todo(request, pk):
             "can_change": ops.can_change(request.user, item),
             "today": dt.date.today(),
             "previous": _previous(request, todo),
+        },
+    )
+
+
+def todo_peek(request, pk):
+    """The notes in full and the latest comments below a row, without
+    leaving the list (htmx, specs/glance.md); no forms"""
+    item = item_for(request, pk, Kind.TODO)
+    return render(
+        request,
+        "items/_peek.html",
+        {
+            "item": item,
+            "todo": item.todo,
+            "comments": glance.peek_comments(item),
+            "comment_count": item.comments.count(),
         },
     )
 

@@ -16,7 +16,7 @@ from django.utils.translation import gettext, ngettext
 from biwak import cursors
 from biwak.accounts.models import User
 from biwak.activity.models import Action, Event
-from biwak.items.models import Kind
+from biwak.items.models import Comment, Kind
 from biwak.projects.models import Project
 
 
@@ -101,6 +101,36 @@ def attach(events):
         event.assignee_names = [
             names[pk] for pk in event.data.get("assignees", []) if pk in names
         ]
+    add_excerpts(events)
+
+
+EXCERPT_CHARS = 200
+
+
+def add_excerpts(events):
+    """``event.excerpt`` (specs/glance.md): the comment's text as it is now,
+    for events of comments, in one query; empty if the comment is gone. The
+    events are the viewer's, so the comments' items are visible to them."""
+    from biwak.templatetags.biwak import excerpt
+
+    ids = {
+        event.data.get("comment")
+        for event in events
+        if event.action == Action.COMMENTED and event.item is not None
+    } - {None}
+    comments = {c.pk: c for c in Comment.objects.filter(pk__in=ids)}
+    for event in events:
+        comment = (
+            comments.get(event.data.get("comment"))
+            if event.action == Action.COMMENTED and event.item is not None
+            else None
+        )
+        # Only a comment of the event's own item
+        if comment is not None and comment.item_id != event.item_id:
+            comment = None
+        event.excerpt = (
+            excerpt(comment.content, EXCERPT_CHARS, event.item) if comment else ""
+        )
 
 
 def _noun(kind, count):

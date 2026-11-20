@@ -83,7 +83,16 @@
                 >{% icon "grip-vertical" %}</span>{% endif %}
               {% icon "list-check" %} {{ list }}
             </span>
-            {% client_badge list %}
+            <span class="d-flex align-items-center gap-2">
+              <span
+                class="small text-body-secondary"
+              >{% blocktranslate with count=list.open_count %}{{ count }} open{% endblocktranslate %}{% if list.overdue_count %}
+                  ·
+                  <span
+                    class="text-danger"
+                  >{% blocktranslate with count=list.overdue_count %}{{ count }} overdue{% endblocktranslate %}</span>{% endif %}</span>
+              {% client_badge list %}
+            </span>
           </a>
         {% empty %}
           <div class="list-group-item text-body-secondary">{% translate "No lists yet." %}</div>
