@@ -172,24 +172,17 @@ browsers (Playwright) typing, a client watching, an internal doc
   tests: the consumer commits), the end-to-end tests run `asgi.py` with
   uvicorn (a development dependency) in the live server's thread
   (`CollabTest` in `biwak/test_e2e.py`).
-- **Production** (nothing changed in the argocd repository; to do there):
-  - **An ASGI process for the websockets**: the image is the same, the
-    command `uv run granian --interface asgi asgi:application --host
-    0.0.0.0 --port 8000 --workers 2` (checked locally with two workers
-    and Redis: the editors in both processes sync, an API edit through
-    the WSGI process arrives). Recommended as a second deployment
-    (`biwak-live`, its own service) with the ingress sending `/ws/` to
-    it, so that pages keep running on WSGI: Django runs sync views under
-    ASGI one at a time per process. The shared `simpleapps` chart has one
-    deployment and one `/` path, so this needs the chart to learn an
-    extra deployment and path, or a template of biwak's own. The
-    alternative without a chart change: the existing deployment runs the
-    ASGI command for everything, with more workers.
+- **Production** (decided 2026-11-20: everything under ASGI, one
+  deployment):
+  - **The image runs ASGI**: the `Containerfile` starts `granian
+    --interface asgi asgi:application --workers 4`, for pages and
+    websockets alike (sync views run one at a time per worker under
+    ASGI, hence four workers instead of two). The chart stays as it is.
   - **Redis** for the channel layer: `REDIS_URL` (e.g.
-    `redis://redis.prod.svc.cluster.local:6379/N`), required when
-    `LIVE`, in the environment of both deployments and the cron jobs (the
-    WSGI side and `fairy_tasks` send API edits and access checks to the
-    editors). The shared Redis evicts with `allkeys-lru` at 200 MB; channel
+    `redis://redis.prod.svc.cluster.local:6379/N`), required outside
+    development and tests (an in-memory layer would keep editors on
+    different workers apart), in the environment of the deployment and
+    the cron jobs (`fairy_tasks` sends access checks to the editors). The shared Redis evicts with `allkeys-lru` at 200 MB; channel
     messages live seconds, so eviction would only drop a message under
     memory pressure (the editors resync on reconnect). The prefix is
     `biwak`.
@@ -231,14 +224,19 @@ API edits during a live session: `biwak/collab/test_consumers.py`,
 `test_live.py`, `CollabTest` in `biwak/test_e2e.py` (six browser tests,
 about 20 seconds).
 
-## Questions (built the way described meanwhile)
+## Decided after building (2026-11-20)
 
 - Saving 3 seconds after the last keystroke, at least every 30 seconds,
   checking access every 60 seconds.
-- The wording of the editor's states and of "Watch live", "Make
-  read-only", "Make editable".
 - The read-only option: nobody edits, staff neither, until staff turn it
   off; no event, no notification.
+- The editor's chunk (about 400 KB) is fine; `MINIMUM` 0.19.0 for the CLI
+  is fine (no CLI users yet).
+
+## Questions (built the way described meanwhile)
+
+- The wording of the editor's states and of "Watch live", "Make
+  read-only", "Make editable".
 - Versions with several authors: kept by whoever started the version
   within its 10 minutes.
 - No limit on the size of an update or a doc beyond the server's

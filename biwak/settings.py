@@ -138,7 +138,10 @@ WSGI_APPLICATION = "wsgi.application"
 # asgi.py; the processes talk through Redis, required when deployed (the
 # WSGI processes tell the editors about edits through the API too)
 ASGI_APPLICATION = "asgi.application"
-REDIS_URL = env("REDIS_URL", default="", required=LIVE)
+# The channel layer of live editing (specs/collaboration.md): required
+# outside development and tests, since with several workers an in-memory
+# layer would quietly keep editors on different workers apart
+REDIS_URL = env("REDIS_URL", default="", required=not (DEBUG or TESTING))
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
