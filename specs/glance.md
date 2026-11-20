@@ -9,8 +9,13 @@ turning lists into walls of text.
 projects page), to-do indicators and the peek (`items/_signals.html`,
 `items/_peek.html`, `frontend/peek.js`, `biwak/items/glance.py`), list
 counts, feed excerpts (also on the project page's short list and as
-`excerpt` on API feed events; CLI 0.9.0). Not built: message excerpts
-(no message board yet; `feed.add_excerpts()` is where they go).
+`excerpt` on API feed events; CLI 0.9.0). Message excerpts added
+(2026-11-20, branch `messages-followup`): `feed.add_excerpts()` also
+gives the current text of a message to its `created` and `edited`
+events (web feed, project page, API); other actions of a message (pinned,
+moved, ...) show none. `add_excerpts()` loads comments and messages with
+one query each for a page, the API feed included (`paginated(...,
+prepare=)`). Trashed messages are out of every feed, so no excerpt.
 Decisions, 2026-11-20:
 
 - `excerpt(text, chars, item)` takes the item from Python only (a
