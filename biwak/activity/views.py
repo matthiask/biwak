@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -6,10 +7,11 @@ from django.utils import timezone
 from django.utils.translation import gettext, gettext_lazy as _
 
 from biwak.accounts.models import User
-from biwak.activity import feed as feed_module
+from biwak.activity import feed as feed_module, history
 from biwak.activity.models import Action
 from biwak.forms import Form
 from biwak.items.models import Kind
+from biwak.items.views import item_for
 from biwak.projects.views import project_for
 
 
@@ -117,4 +119,18 @@ def person_feed(request, pk):
         title=gettext("Activity of %(person)s") % {"person": person.display_name},
         url=reverse("person_feed", args=[person.pk]),
         person=person,
+    )
+
+
+def item_history(request, pk):
+    """The changes of an item from the audit log. Staff only: old versions
+    of texts can hold what was meant to be internal, also on items clients
+    see now."""
+    item = item_for(request, pk)
+    if request.user.is_client:
+        raise PermissionDenied
+    return render(
+        request,
+        "activity/history.html",
+        {"item": item, "changes": history.history(item, request.user)},
     )

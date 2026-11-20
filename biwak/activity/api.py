@@ -6,11 +6,14 @@ import datetime as dt
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from ninja import Router, Schema
+from ninja.errors import HttpError
 
-from biwak.activity import feed
+from biwak.activity import feed, history
 from biwak.activity.models import Action
 from biwak.api_conventions import PersonOut, absolute, page_of, paginated, person_out
+from biwak.items.api import item_for
 from biwak.items.models import Kind
 from biwak.projects.api import project_for
 
@@ -178,3 +181,47 @@ def person_feed(
         cursor=cursor,
         page_size=page_size,
     )
+
+
+class DiffLineOut(Schema):
+    op: str  # "+", "-", " " or "…" (lines left out)
+    text: str
+
+
+class ChangeOut(Schema):
+    when: dt.datetime
+    person: PersonOut | None
+    # Who changed it if not a person: a job, "unknown"
+    person_name: str
+    field: str
+    label: str
+    kind: str  # created, changed, assigned, unassigned
+    old: str | None
+    new: str | None
+    # Texts: the changed lines with some context
+    diff: list[DiffLineOut] | None
+
+
+@router.get("items/{item_id}/history/", response=list[ChangeOut])
+def item_history(request, item_id: int):
+    """The changes of an item from the audit log, newest first. Staff only,
+    like the page."""
+    item = item_for(request, item_id)
+    if request.user.is_client:
+        raise HttpError(403, _("The history is for staff only."))
+    return [
+        {
+            "when": change.when,
+            "person": person_out(change.user),
+            "person_name": change.user_name,
+            "field": change.field,
+            "label": str(change.label),
+            "kind": change.kind,
+            "old": change.old,
+            "new": change.new,
+            "diff": None
+            if change.diff is None
+            else [{"op": op, "text": text} for op, text in change.diff],
+        }
+        for change in history.history(item, request.user)
+    ]

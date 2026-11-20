@@ -55,6 +55,9 @@
 .bi-chevron-down::before {
   content: "\f282";
 }
+.bi-clock-history::before {
+  content: "\f292";
+}
 .bi-eye::before {
   content: "\f341";
 }

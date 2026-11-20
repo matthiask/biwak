@@ -129,6 +129,12 @@
           </div>
         </form>
       {% endif %}
+      {% if not request.user.is_client %}
+        <p class="mt-4 mb-0">
+          <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
+            >{% translate "History" %}</span></a>
+        </p>
+      {% endif %}
       {% if can_change %}
         <form method="post" action="{% url 'item_trash' item.pk %}" class="mt-4">
           {% csrf_token %}

@@ -1,6 +1,7 @@
 # Activity feed, item history, bookmarks, links
 
-**Status:** in progress. Built: the activity feed (pages, API, CLI). The project page keeps its short list of the latest 20
+**Status:** in progress. Built: the activity feed (pages, API, CLI), the
+item history. The project page keeps its short list of the latest 20
 events (`activity/_events.html`) with a link to the feed.
 
 **Agent:** suits a cheaper model following this spec and the checklist
@@ -79,6 +80,26 @@ readable:
   audit's user name (`audit_user_id()`).
 - Events say what happened; the history shows the details. Only for
   people who can see the item now (the item through `item_for()`).
+
+Built (`biwak/activity/history.py`, `views.py`, `api.py`):
+`/items/<pk>/history/` and `GET /api/v1/items/{id}/history/` (newest
+first, complete) for every kind of item; the to-do page links to it. It
+tracks the title, the list, the effective visibility, the status; notes,
+group, start and due dates, completing and reopening and the assignees of
+to-dos; descriptions of lists, content of messages and docs. Texts are a
+line diff with one line of context. Positions and timestamps are ignored.
+`audit_user_id()` gives the person, otherwise the audit's name (a job).
+
+Decisions (proposed by the building agent, 2026-11-20):
+
+- The history is for staff only (403 for clients, 404 for what they
+  can't see): old versions of texts can hold what was internal at the
+  time, also on items clients see now.
+- The effective visibility is shown, not the switch: a to-do moved into a
+  visible list shows "Visible to clients: no, yes". Titles of lists the
+  viewer can't see read "another list".
+- Only changes to the item's own rows; comments have their own place on
+  the page, and files' versions come with `files.md`.
 
 ## Bookmarks
 
