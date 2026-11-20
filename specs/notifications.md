@@ -120,6 +120,35 @@ settings page also lists the person's overrides, items only while they
 can see them. For now only to-dos have a subscribe button, so a list's
 override is set through the API (built 2026-11-20).
 
+### Notified by default or only when tagged
+
+Decided 2026-11-20: people are in a project in one of two ways, and the
+project's level is that choice, not a new setting.
+
+- **Notified by default:** the project's level is "everything". They
+  get what they're subscribed to there, including messages, docs and
+  files posted to everybody.
+- **Only when tagged:** the project's level is "only what concerns me".
+  Posting to everybody still subscribes them, but their level holds the
+  mails back unless they're mentioned or assigned, or it's about their
+  own things.
+- **Who sets it:** whoever adds or invites someone chooses one of the
+  two (default: notified by default), stored as the person's
+  `LevelOverride` for the project. The person changes it later on the
+  project's notification page (built). An existing override isn't
+  changed when someone is added again.
+- **Shown** on the project's people page next to each member ("Notified
+  by default" or "Only when tagged", from their effective level for the
+  project; "nothing" shows as "No mails"), visible to staff. Staff can
+  change it there for others too; a client only their own.
+- **Posting** a message, doc or file therefore preselects "everybody in
+  the project" (decided 2026-11-20, replacing "no default"): the levels
+  already keep the mails away from those who only want them when tagged.
+  The API's and CLI's `notify` defaults to everybody too.
+- **API and CLI:** adding and inviting take `notify` (`default` or
+  `tagged`); the members list returns it. `biwak members PROJECT` shows
+  it, `biwak member add|invite … [--only-tagged]`.
+
 ### Who gets told
 
 `notify(event)` in `biwak/activity/notify.py`, called after the commit
