@@ -26,6 +26,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `todos.md` | 3: long lists of completed to-dos | built | stage 2 | cheaper |
 | `projects-overview.md` | favorites, activity order, cards | in progress (branch `projects-overview`) | `feed.md` (bookmarks) | cheaper, review the client column |
 | `glance.md` | excerpts, to-do indicators and peek, counts | after `feed.md`, notifications 1 | `feed.md`, notifications 1 | cheaper |
+| `reactions.md` | to-dos and comments first | after notifications 1 | notifications 1 | cheaper |
 | `checkins.md` | | open | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | open | notifications 1, check-ins | strong |
 | `import-basecamp.md` | | open | every kind of item | cheaper |

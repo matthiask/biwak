@@ -162,6 +162,8 @@ a cheaper model ("Agent").
    - Once `feed.md` is merged: `projects-overview.md` (favorites,
      ordering by activity, cards) and, after `notifications.md` stage 1
      too, `glance.md` (more content without opening every page).
+   - Once `notifications.md` stage 1 is merged: `reactions.md` (to-dos
+     and comments; later parts add their kinds).
 4. `checkins.md` (needs schedules, mails and attachments).
 5. `notifications.md`, stage 2: replying by mail, to comments and to
    check-in questions (a strong model: sender checks and mail loops are
@@ -182,14 +184,7 @@ and `specs/access.md`).
 Wanted, not specified in detail yet and not in the build order; give
 each a spec (or a section in one) before building it.
 
-- **Reactions** on messages, comments, to-dos and check-in answers (like
-  Basecamp's boosts; added 2026-11-20): a person adds an emoji to
-  something instead of writing a comment ("👍", "🎉"); shown under it
-  with who reacted. Visible wherever the item is, through the API too,
-  and in the feed at most as a merged line. Open: a fixed set of emoji
-  or any, whether a reaction notifies the author (probably only on the
-  "everything" level, merged into the next mail), and short text
-  reactions like Basecamp's.
+Nothing at the moment.
 
 ## Decisions
 
@@ -244,3 +239,6 @@ each a spec (or a section in one) before building it.
   number (`specs/files.md`).
 - 2026-11-20: More content on overview pages as small signals, short
   excerpts and a peek on demand, never settings (`specs/glance.md`).
+- 2026-11-20: Reactions: 24 quick emoji and short texts (16
+  characters), telling only the author, collected into the next mail
+  or the digest (`specs/reactions.md`).

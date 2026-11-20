@@ -2,7 +2,7 @@
 
 **Status:** built (2026-11-20): the activity feed (pages, API, CLI), the
 item history, bookmarks and links (pages, API, CLI), with the decisions
-below (proposed by the building agent, to be confirmed). The project page keeps
+below (proposed by the building agent, confirmed 2026-11-20). The project page keeps
 its short list of the latest 20 events (`activity/_events.html`) with a
 link to the feed. CLI 0.4.0.
 
@@ -39,12 +39,12 @@ From the events (`biwak/activity/`, `notifications.md`):
 
 Built (`biwak/activity/feed.py`, `views.py`): the cursor is
 `<microseconds since the epoch>,<id>` of the last event of a page
-(`?before=`, 400 if malformed); merging works within a page, so an entry
+(`?before=`, 400 if malformed); merging works within a page (merging is a nicety, not a requirement: confirmed 2026-11-20), so an entry
 can be split by a page boundary; there is a new index `(-created_at,
 -id)`, checked with `EXPLAIN` on 240,000 events: the first page takes
 about 1 ms for staff, for clients and per project.
 
-Decisions (proposed by the building agent, 2026-11-20):
+Decisions (proposed by the building agent, confirmed 2026-11-20):
 
 - A person's feed (`/people/<pk>/feed/`) exists for people who are a
   member of a project the viewer can access, else 404, so that it
@@ -92,7 +92,7 @@ to-dos; descriptions of lists, content of messages and docs. Texts are a
 line diff with one line of context. Positions and timestamps are ignored.
 `audit_user_id()` gives the person, otherwise the audit's name (a job).
 
-Decisions (proposed by the building agent, 2026-11-20):
+Decisions (proposed by the building agent, confirmed 2026-11-20):
 
 - The history is for staff only (403 for clients, 404 for what they
   can't see): old versions of texts can hold what was internal at the
@@ -156,7 +156,7 @@ links); a link has `visible_to_clients` (what clients see) and `switch`
 (its own setting). CLI: `biwak links PROJECT`, `biwak link add PROJECT URL
 [--title] [--item] [--clients]`, `biwak link delete LINK`.
 
-Decisions (proposed by the building agent, 2026-11-20):
+Decisions (proposed by the building agent, confirmed 2026-11-20):
 
 - Only `http` and `https` addresses; the title defaults to the host.
 - Any staff member sees and changes the links of what they see, not only
