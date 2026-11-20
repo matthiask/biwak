@@ -7,6 +7,8 @@ from biwak.audit.models import LoggedAction
 from biwak.bookmarks import operations as ops
 from biwak.bookmarks.models import Link
 from biwak.bookmarks.test_bookmarks import BookmarkBase
+from biwak.checkins.operations import create_question
+from biwak.checkins.support import MONDAY_9, at
 
 
 class KindTest(SimpleTestCase):
@@ -127,6 +129,27 @@ class LinkTest(BookmarkBase):
 
         ops_items.trash(self.todo, actor=self.ada)
         self.assertEqual(set(Link.objects.visible_to(self.cleo)), {shown})
+
+    def test_question_page_shows_links(self):
+        question = create_question(
+            project=self.project,
+            title="Q",
+            creator=self.ada,
+            people=[self.ada],
+            now=at("2027-03-19 12:00"),
+            **MONDAY_9,
+        )
+        ops.add_link(
+            project=self.project,
+            item=question,
+            url="https://github.com/example/repo",
+            title="The question link",
+            created_by=self.ada,
+        )
+        self.client.force_login(self.ada)
+        self.assertContains(
+            self.client.get(question.get_absolute_url()), "The question link"
+        )
 
     def test_pages_as_staff(self):
         ops.add_link(

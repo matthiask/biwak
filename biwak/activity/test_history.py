@@ -40,6 +40,14 @@ class HistoryTest(TestCase):
             for c in reversed(history.history(self.item(), self.ada))
         ]
 
+    def test_list_page_links_to_its_history(self):
+        url = f"/items/{self.shared.pk}/history/"
+        self.client.force_login(self.ada)
+        self.assertContains(self.client.get(self.shared.get_absolute_url()), url)
+        # Clients have no history
+        self.client.force_login(self.cleo)
+        self.assertNotContains(self.client.get(self.shared.get_absolute_url()), url)
+
     def test_history_of_a_todo(self):
         self.client.force_login(self.ada)
         self.client.post(
