@@ -8,4 +8,26 @@ urlpatterns = [
     path("projects/<int:pk>/feed/", views.project_feed, name="project_feed"),
     path("items/<int:pk>/history/", views.item_history, name="item_history"),
     path("people/<int:pk>/feed/", views.person_feed, name="person_feed"),
+    path(
+        "accounts/notifications/",
+        views.notification_settings,
+        name="notification_settings",
+    ),
+    path(
+        "projects/<int:pk>/notifications/",
+        views.project_notifications,
+        name="project_notifications",
+    ),
+    path(
+        "items/<int:pk>/notifications/",
+        views.item_notifications,
+        name="item_notifications",
+    ),
+    path("items/<int:pk>/mentionable/", views.mentionable, name="mentionable"),
+    path(
+        "lists/<int:pk>/mentionable/",
+        views.mentionable_list,
+        name="mentionable_list",
+    ),
+    path("unsubscribe/<str:token>/", views.unsubscribe, name="unsubscribe"),
 ]

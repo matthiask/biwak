@@ -10,7 +10,7 @@
     {% for bookmark in bookmarks %}
       {% if bookmark.item %}
         <a class="list-group-item list-group-item-action" href="{{ bookmark.item.get_absolute_url }}">
-          {{ bookmark.item.title }}
+          {{ bookmark.item|item_title }}
           {% client_badge bookmark.item %}
           <div class="small text-body-secondary">
             {{ bookmark.item.get_kind_display }} · {{ bookmark.item.project }}

@@ -1,0 +1,10 @@
+{% load i18n %}
+<form method="post" action="{% url 'item_notifications' item.pk %}" class="mt-2 d-flex gap-2 align-items-center">
+  {% csrf_token %}
+  <select name="level" class="form-select form-select-sm" aria-label="{% translate 'Notify me about' %}">
+    {% for value, label in level_choices %}
+      <option value="{{ value }}" {% if value == level %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-sm btn-quiet">{% translate "Save" %}</button>
+</form>

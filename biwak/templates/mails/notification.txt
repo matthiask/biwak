@@ -1,0 +1,14 @@
+{% load i18n %}{% autoescape off %}{% if item.is_client_visible %}{% translate "Clients can see this." %}
+
+{% endif %}{% for entry in entries %}{{ entry.line }}{% if entry.comment_text %}
+
+{{ entry.comment_text }}{% endif %}
+
+{% endfor %}---
+
+{% include "mails/_item.txt" %}
+
+--
+{% translate "Unsubscribe from this" %}: {{ unsubscribe_url }}
+{% translate "Your notification settings" %}: {{ settings_url }}
+{% endautoescape %}

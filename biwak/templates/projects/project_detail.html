@@ -28,13 +28,17 @@
           </button>
         </form>
       {% endif %}
-      {% if can_manage %}
-        <details class="dropdown wb-menu">
-          <summary class="btn btn-sm btn-quiet">
-            {% translate "More" %}
-            {% icon "chevron-down" %}
-          </summary>
-          <div class="dropdown-menu dropdown-menu-end">
+      <details class="dropdown wb-menu">
+        <summary class="btn btn-sm btn-quiet">
+          {% translate "More" %}
+          {% icon "chevron-down" %}
+        </summary>
+        <div class="dropdown-menu dropdown-menu-end">
+          <a
+            class="dropdown-item"
+            href="{% url 'project_notifications' project.pk %}"
+          >{% translate "Notifications" %}</a>
+          {% if can_manage %}
             <a class="dropdown-item" href="{% url 'project_edit' project.pk %}">{% translate "Edit the project" %}</a>
             <a class="dropdown-item" href="{% url 'project_trash' project.pk %}">{% translate "Trash" %}</a>
             <form method="post" action="{% url 'project_archive' project.pk %}">
@@ -47,9 +51,9 @@
                 <button type="submit" class="dropdown-item">{% translate "Archive the project" %}</button>
               {% endif %}
             </form>
-          </div>
-        </details>
-      {% endif %}
+          {% endif %}
+        </div>
+      </details>
     </div>
   </div>
   {% if project.archived_at %}

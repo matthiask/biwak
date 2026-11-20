@@ -12,7 +12,7 @@
     {% for item in items %}
       <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
         <div>
-          {{ item }}
+          {{ item|item_title }}
           {% client_badge item %}
           <div class="small text-body-secondary">
             {{ item.get_kind_display|capfirst }}{% if item.parent %}

@@ -18,7 +18,7 @@
   <a
     href="{{ todo.get_absolute_url }}"
     class="wb-todo-title{% if todo.todo.is_completed %} text-decoration-line-through text-body-secondary{% endif %}"
-  >{{ todo.title }}</a>
+  >{{ todo|item_title }}</a>
   {% for person in todo.todo.assignees.all %}<span
       class="badge wb-person"
     >{{ person.get_short_name }}</span>{% endfor %}

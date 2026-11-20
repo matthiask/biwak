@@ -172,3 +172,14 @@ def client_badge(item):
         gettext("Clients can see this"),
         gettext("Clients"),
     )
+
+
+@register.inclusion_tag("activity/_item_notifications.html", takes_context=True)
+def item_notifications(context, item):
+    """The person's level for an item, next to its subscribe button"""
+    from biwak.activity.views import item_level_context
+
+    user = context["request"].user
+    return {"item": item, "csrf_token": context.get("csrf_token")} | (
+        item_level_context(user, item)
+    )

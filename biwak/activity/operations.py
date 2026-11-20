@@ -4,7 +4,14 @@ from django.db import transaction
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
-from biwak.activity.models import Action, Event, Subscription, Unsubscription
+from biwak.accounts.models import MailDelivery, NotificationLevel
+from biwak.activity.models import (
+    Action,
+    Event,
+    LevelOverride,
+    Subscription,
+    Unsubscription,
+)
 from biwak.projects.models import Project
 
 
@@ -82,3 +89,33 @@ def unsubscribe(user, item):
 
 def is_subscribed(user, item):
     return Subscription.objects.filter(user=user, item=item).exists()
+
+
+@transaction.atomic
+def set_notification_settings(user, *, level=None, delivery=None):
+    """The person's level and mail delivery, what's given"""
+    fields = []
+    if level is not None:
+        user.notification_level = NotificationLevel(level)
+        fields.append("notification_level")
+    if delivery is not None:
+        user.mail_delivery = MailDelivery(delivery)
+        fields.append("mail_delivery")
+    if fields:
+        user.save(update_fields=fields)
+
+
+@transaction.atomic
+def set_level_override(user, level, *, project=None, item=None):
+    """Overrides the person's level for a project or an item (and what's in
+    it); ``level`` None removes the override"""
+    if (project is None) == (item is None):
+        raise ValueError("A project or an item, not both")
+    target = {"project": project} if project is not None else {"item": item}
+    if level is None:
+        LevelOverride.objects.filter(user=user, **target).delete()
+        return None
+    override, _created = LevelOverride.objects.update_or_create(
+        user=user, **target, defaults={"level": NotificationLevel(level)}
+    )
+    return override
