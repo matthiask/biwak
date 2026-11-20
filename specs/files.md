@@ -272,7 +272,8 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   Staff upload (clients don't, `access.md`); clients replace or rename
   only what they uploaded before that; staff everything. Replacing records `edited` (with the new
   version's name).
-- **Previews:** 400 pixels wide as specified, images already smaller are
+- **Previews:** stored as `preview/preview.webp` in the file's own
+  directory (a file can't be named like that, decided 2026-11-20); 400 pixels wide as specified, images already smaller are
   not enlarged (**?**); broken files have none (404, logged). Only the
   current version has a preview on the page.
 - **Folders:** staff create folders, docs and files; clients don't
