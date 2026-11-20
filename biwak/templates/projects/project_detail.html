@@ -116,6 +116,21 @@
           </div>
         </details>
       {% endif %}
+      <h2 class="h5 d-flex justify-content-between align-items-center mt-4">
+        <a
+          class="text-reset text-decoration-none"
+          href="{% url 'project_messages' project.pk %}"
+        >{% translate "Messages" %}</a>
+        <a class="btn btn-sm btn-quiet" href="{% url 'message_new' project.pk %}">{% icon "plus-lg" %}<span
+          >{% translate "New message" %}</span></a>
+      </h2>
+      <div class="list-group mb-3">
+        {% for item in front_messages %}
+          {% include "files/_message_row.html" with can_pin=False %}
+        {% empty %}
+          <div class="list-group-item text-body-secondary">{% translate "No messages yet." %}</div>
+        {% endfor %}
+      </div>
     </div>
     <div class="col-lg-4">
       <h2 class="h5 d-flex justify-content-between align-items-center">

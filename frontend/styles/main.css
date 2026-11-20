@@ -850,3 +850,24 @@ img.wb-attachment-image {
   color: inherit;
   opacity: 0.8;
 }
+
+/* The message board (specs/files.md): the first two lines of a message */
+.wb-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.wb-category {
+  white-space: nowrap;
+}
+
+.wb-file-preview {
+  max-height: 24rem;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
