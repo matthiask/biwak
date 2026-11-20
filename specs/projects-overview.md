@@ -4,7 +4,30 @@ The page people open first. Today it's an alphabetical list of names;
 it should show at a glance which projects matter to the person and where
 something is going on.
 
-**Status:** open.
+**Status:** built (2026-11-20, branch `projects-overview`, CLI 0.7.0).
+Decisions made while building, to be confirmed:
+
+- The `|excerpt` filter did not exist yet; added as `glance.md`
+  describes (`biwak/templatetags/biwak.py`). Mentions aren't rendered
+  by `|markdown` yet, so the excerpt shows none either.
+- The columns are ignored by the audit trigger on `projects_project`
+  (they change with every event; migration `projects.0002`).
+- `record()` uses `GREATEST(column, event time)`, so an older event
+  never moves the time back. The nightly recomputation and the data
+  migration share one SQL statement (`RECOMPUTE_ACTIVITY_SQL` in
+  `biwak/projects/operations.py`).
+- The counts use `biwak.items.due.todos(user, assignee="me")`: open
+  to-dos assigned to the person, in active projects, not in archived
+  lists; "overdue" is a due date before today.
+- Card wording: "3 hours ago" (`naturaltime`), "2 open", "1 overdue";
+  the description line is cut at 160 characters and by CSS.
+- `GET /api/v1/projects/` also takes archived projects (`archived=true`),
+  alphabetical, favorites first; `is_bookmarked` and `last_activity_at`
+  are on every project the API returns (single project, bookmarks).
+- The switch buttons are "Activity" and "A–Z" (as in this spec); the
+  archive page has none.
+- Tests: `biwak/projects/test_overview.py`, `biwak/test_cli_projects.py`,
+  `biwak/test_templatetags.py`.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The client column of the activity time (below) touches

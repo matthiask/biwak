@@ -4,7 +4,7 @@ already (specs/notifications.md)."""
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import connection, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
@@ -133,3 +133,47 @@ def unarchive_project(project, *, actor):
     project.archived_at = None
     project.save(update_fields=["archived_at"])
     record(actor=actor, action=Action.UNARCHIVED, project=project)
+
+
+# The stored activity times (specs/projects-overview.md). ``record()`` keeps
+# them current; this recomputes them from the events: events of trashed
+# items don't count, and the client column only counts items visible to
+# clients now. Used by ``fairy_tasks`` and the data migration.
+RECOMPUTE_ACTIVITY_SQL = """
+UPDATE projects_project p SET
+  last_activity_at = a.last_activity,
+  last_client_activity_at = a.last_client_activity
+FROM (
+  SELECT p2.id,
+    (SELECT max(e.created_at) FROM activity_event e
+       LEFT JOIN items_item i ON i.id = e.item_id
+       WHERE e.project_id = p2.id AND (i.id IS NULL OR i.status <> 'trashed')
+    ) AS last_activity,
+    (SELECT max(e.created_at) FROM activity_event e
+       JOIN items_item i ON i.id = e.item_id
+       WHERE e.project_id = p2.id AND i.status <> 'trashed' AND i.is_client_visible
+    ) AS last_client_activity
+  FROM projects_project p2
+) a
+WHERE a.id = p.id AND (
+  p.last_activity_at IS DISTINCT FROM a.last_activity
+  OR p.last_client_activity_at IS DISTINCT FROM a.last_client_activity
+)
+"""
+
+
+def recompute_activity():
+    """Returns the number of projects whose times changed"""
+    with connection.cursor() as cursor:
+        cursor.execute(RECOMPUTE_ACTIVITY_SQL)
+        return cursor.rowcount
+
+
+@transaction.atomic
+def set_project_order(user, order):
+    """The person's choice on the projects page, remembered"""
+    if order not in User.ProjectOrder.values:
+        raise ValueError(f"Unknown order {order!r}")
+    if user.project_order != order:
+        user.project_order = order
+        user.save(update_fields=["project_order"])

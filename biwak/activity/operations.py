@@ -1,12 +1,28 @@
+from django.db.models.functions import Greatest
+
 from biwak.activity.models import Event, Subscription, Unsubscription
+from biwak.projects.models import Project
 
 
 def record(*, actor, action, project, item=None, **data):
     if item is not None:
         data.setdefault("title", item.title)
-    return Event.objects.create(
+    event = Event.objects.create(
         project=project, item=item, actor=actor, action=action, data=data
     )
+    _touch_project(event, item)
+    return event
+
+
+def _touch_project(event, item):
+    """The stored activity times (specs/projects-overview.md), one UPDATE:
+    every event counts for staff, only events of items visible to clients
+    now for clients (not project events, not internal items)"""
+    when = event.created_at
+    changes = {"last_activity_at": Greatest("last_activity_at", when)}
+    if item is not None and item.is_client_visible:
+        changes["last_client_activity_at"] = Greatest("last_client_activity_at", when)
+    Project.objects.filter(pk=event.project_id).update(**changes)
 
 
 def subscribe(user, item, *, added_by=None, explicit=True):

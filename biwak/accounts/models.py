@@ -50,6 +50,17 @@ class User(AbstractBaseUser):
     )
     organization = models.CharField(_("organization"), max_length=200, blank=True)
 
+    class ProjectOrder(models.TextChoices):
+        ACTIVITY = "activity", _("Activity")
+        NAME = "name", _("A–Z")
+
+    project_order = models.CharField(
+        _("order of projects"),
+        max_length=10,
+        choices=ProjectOrder,
+        default=ProjectOrder.ACTIVITY,
+    )
+
     objects = UserManager()
 
     class Meta:
