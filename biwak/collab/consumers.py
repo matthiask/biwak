@@ -93,19 +93,21 @@ class DocConsumer(AsyncWebsocketConsumer):
         self.clock = 0
         self.save_task = self.check_task = None
         self.dirty_since = None
+        # Whether the person (a client) may know the others, by user ID
+        self.known = {}
         await self.accept()
         found = await database_sync_to_async(self._found)()
         if found is None:
             await self.refuse()
             return
-        self.mode, project = found
+        self.mode, self.project_id = found
         self.user_state = {
             "name": self.user.get_short_name(),
             "color": COLORS[self.user.pk % len(COLORS)],
         }
         for group in [
             live.doc_group(self.pk),
-            live.project_group(project),
+            live.project_group(self.project_id),
             live.user_group(self.user.pk),
         ]:
             await self.channel_layer.group_add(group, self.channel_name)
@@ -203,7 +205,12 @@ class DocConsumer(AsyncWebsocketConsumer):
     async def group_send(self, kind, **data):
         await self.channel_layer.group_send(
             live.doc_group(self.pk),
-            {"type": kind, "sender": self.channel_name, **data},
+            {
+                "type": kind,
+                "sender": self.channel_name,
+                "user": self.user.pk,
+                **data,
+            },
         )
 
     async def doc_update(self, event):
@@ -212,8 +219,25 @@ class DocConsumer(AsyncWebsocketConsumer):
 
     async def doc_awareness(self, event):
         # To the sender too: y-websocket reconnects when it hears nothing
-        # for 30 seconds, not even its own awareness
+        # for 30 seconds, not even its own awareness. Clients hear only
+        # about the people they may know (specs/access.md).
+        if not await self.knows(event["user"]):
+            return
         await self.send(bytes_data=create_awareness_message(event["update"]))
+
+    async def knows(self, pk):
+        if pk == self.user.pk or not self.user.is_client:
+            return True
+        if pk not in self.known:
+            self.known[pk] = await database_sync_to_async(self._knows)(pk)
+        return self.known[pk]
+
+    def _knows(self, pk):
+        from biwak.accounts.models import User
+        from biwak.projects.models import Project
+
+        project = Project.objects.get(pk=self.project_id)
+        return bool(project.people_known_to(self.user, User.objects.filter(pk=pk)))
 
     async def doc_query_awareness(self, event):
         if event["sender"] != self.channel_name:
@@ -223,6 +247,8 @@ class DocConsumer(AsyncWebsocketConsumer):
         """Closes the session when the person can't see the doc anymore,
         tells the editor when it may type or not anymore"""
         mode = await database_sync_to_async(self._access)()
+        # Who the person may know changes with the project's members
+        self.known = {}
         if mode is None:
             await self.refuse()
         elif mode != self.mode:

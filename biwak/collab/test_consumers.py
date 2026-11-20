@@ -475,6 +475,38 @@ class ConsumerTest(TransactionTestCase):
         await ada.drain()
         self.assertEqual(ada.awareness[-1], [(cleo.doc.client_id, 2, "null")])
 
+    def names(self, editor):
+        return [
+            json.loads(state)["user"]["name"]
+            for entries in editor.awareness
+            for _client, _clock, state in entries
+            if state != "null"
+        ]
+
+    async def announce(self, editor):
+        state = json.dumps({"cursor": None})
+        update = encode_awareness([(editor.doc.client_id, 1, state)])
+        await editor.communicator.send_to(bytes_data=create_awareness_message(update))
+
+    async def test_clients_see_only_the_members(self):
+        """specs/access.md: clients learn about the project's members only,
+        not about staff of an all-access project who aren't members"""
+        cleo = await self.connect(self.cleo, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        ada = await self.connect(self.ada, self.shared)
+        await self.announce(bob)
+        await self.announce(ada)
+        await cleo.drain()
+        await ada.drain()
+        self.assertEqual(self.names(cleo), ["Ada"])
+        self.assertEqual(self.names(ada), ["Bob", "Ada"])
+        # Nor that Bob leaves
+        await bob.communicator.disconnect()
+        self.communicators.remove(bob.communicator)
+        await cleo.drain()
+        clients = {client for entries in cleo.awareness for client, *_ in entries}
+        self.assertNotIn(bob.doc.client_id, clients)
+
     async def test_asking_for_the_others(self):
         ada = await self.connect(self.ada, self.shared)
         bob = await self.connect(self.bob, self.shared)
