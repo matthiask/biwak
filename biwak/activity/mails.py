@@ -297,20 +297,22 @@ def item_mail(user, item, notifications):
     subject = f"[{item.project}] {context['title']}"
     actor = entries[-1]["event"].actor
     thread = f"<item-{item.pk}@{host()}>"
+    headers = {
+        "Message-ID": make_msgid(domain=host()),
+        "In-Reply-To": thread,
+        "References": thread,
+        "List-Unsubscribe": f"<{context['unsubscribe_url']}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        "Auto-Submitted": "auto-generated",
+    } | (reply_to(user, item) if item.is_commentable else {})
+    # The mail says so only when replying works
+    context["can_reply"] = "Reply-To" in headers
     message = EmailMultiAlternatives(
         subject,
         render_to_string("mails/notification.txt", context),
         sender(_("%(name)s (Biwak)") % {"name": actor}),
         [user.email],
-        headers={
-            "Message-ID": make_msgid(domain=host()),
-            "In-Reply-To": thread,
-            "References": thread,
-            "List-Unsubscribe": f"<{context['unsubscribe_url']}>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-            "Auto-Submitted": "auto-generated",
-        }
-        | (reply_to(user, item) if item.is_commentable else {}),
+        headers=headers,
     )
     message.attach_alternative(
         render_to_string("mails/notification.html", context), "text/html"

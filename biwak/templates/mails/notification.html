@@ -15,6 +15,9 @@
       {% include "mails/_entries.html" %}
       {% include "mails/_item.html" %}
     {% endwith %}
+    {% if can_reply %}<p style="color: #666; font-size: 13px; margin-top: 24px">
+        {% translate "Reply to this mail to comment." %}
+      </p>{% endif %}
     <p style="color: #666; font-size: 13px; margin-top: 24px">
       <a href="{{ unsubscribe_url }}">{% translate "Unsubscribe from this" %}</a> ·
       <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>

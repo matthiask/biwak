@@ -17,6 +17,9 @@
     {% if schedule %}<p style="color: #666; font-size: 13px">
         {% blocktranslate %}Asked {{ schedule }}.{% endblocktranslate %}
       </p>{% endif %}
+    {% if can_reply %}<p style="color: #666; font-size: 13px; margin-top: 24px">
+        {% translate "Reply to this mail to answer." %}
+      </p>{% endif %}
     <p style="color: #666; font-size: 13px; margin-top: 24px">
       <a href="{{ unsubscribe_url }}">{% translate "Unsubscribe from this" %}</a> ·
       <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>
