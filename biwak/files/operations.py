@@ -220,10 +220,11 @@ def update_doc(
 
 
 def _write_doc(item, doc, title, content, *, actor):
-    if title != item.title:
-        item.title = title
-        item.updated_at = _now()
-        item.save(update_fields=["title", "updated_at"])
+    # Only called with a change; a new text is a change of the doc too
+    # ("latest docs and files" on the project page)
+    item.title = title
+    item.updated_at = _now()
+    item.save(update_fields=["title", "updated_at"])
     if content != doc.content:
         doc.content = content
         doc.save(update_fields=["content"])

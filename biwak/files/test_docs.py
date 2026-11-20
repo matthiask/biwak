@@ -490,3 +490,12 @@ class BookmarkTest(Fixture, TestCase):
         response = self.client.get(reverse("bookmarks"))
         self.assertNotContains(response, self.shared.get_absolute_url())
         self.assertContains(response, message.get_absolute_url())
+
+
+class UpdatedAtTest(Fixture, TestCase):
+    def test_editing_the_text_counts_as_a_change(self):
+        later = timezone.now() + dt.timedelta(hours=1)
+        with time_machine.travel(later, tick=False):
+            operations.update_doc(self.shared, actor=self.bob, content="New text")
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.updated_at, later)
