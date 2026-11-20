@@ -127,6 +127,8 @@ Microsoft account (decided 2026-11-20).
   adding a passkey set `User.passkey_offer_done`, which ends the offer for
   good; leaving the page any other way means it comes back with the next
   login by code. Not for passkey or Google logins, API and htmx requests.
+  Clients get it too; the behaviour, the wording and the API shapes of
+  `api-cli.md` confirmed 2026-11-20.
 - Staff can also use Google sign-in (allauth's Google provider), but it's
   never required. Only staff (decided 2026-11-20, built 2026-11-20 in
   `SocialAccountAdapter.pre_social_login`): clients can't sign in with
