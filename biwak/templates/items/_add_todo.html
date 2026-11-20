@@ -26,6 +26,7 @@
       required
       maxlength="500"
       autocomplete="off"
+      data-mentions="{% url 'mentionable_list' item.pk %}"
     >
     <textarea
       name="notes"
@@ -33,6 +34,7 @@
       rows="2"
       placeholder="{% translate 'Notes (Markdown)' %}"
       aria-label="{% translate 'notes' %}"
+      data-mentions="{% url 'mentionable_list' item.pk %}"
     ></textarea>
     <div class="wb-add-todo-meta mb-2">
       {% if people %}
