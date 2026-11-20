@@ -25,8 +25,8 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `files.md` | 2: messages (with pinning), folders, docs | next | notifications 1 | cheaper |
 | `todos.md` | 3: long lists of completed to-dos | built | stage 2 | cheaper |
 | `projects-overview.md` | favorites, activity order, cards | built | `feed.md` (bookmarks) | cheaper, review the client column |
-| `glance.md` | excerpts (the filter is built), to-do indicators and peek, counts | built (branch `glance`, message excerpts wait for the board) | `feed.md`, notifications 1 | cheaper |
-| `reactions.md` | to-dos and comments first | next | notifications 1 | cheaper |
+| `glance.md` | excerpts, to-do indicators and peek, counts | built (message excerpts come with the board) | `feed.md`, notifications 1 | cheaper |
+| `reactions.md` | to-dos and comments first | built | notifications 1 | cheaper |
 | `checkins.md` | | open | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | open | notifications 1, check-ins | strong |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
