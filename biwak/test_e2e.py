@@ -108,6 +108,13 @@ class E2ETestCase(LiveServerTestCase):
     def goto(self, page, target):
         url = target if isinstance(target, str) else target.get_absolute_url()
         page.goto(f"{self.live_server_url}{url}")
+        # The scripts for dragging are chunks loaded after the page: wait
+        # until every sortable container has its Sortable
+        page.wait_for_function(
+            """() => [...document.querySelectorAll(
+                "[data-todos], [data-groups], [data-sortable-links], [data-sortable-lists]"
+            )].every((el) => Object.keys(el).some((key) => key.startsWith("Sortable")))"""
+        )
 
     def make_list(self, title="Launch", *, visible=False, groups=(), todos=()):
         """A list with its groups and to-dos (titles; a ``(title, group)``
