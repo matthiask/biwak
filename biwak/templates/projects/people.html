@@ -8,7 +8,7 @@
   <div class="row g-4">
     <div class="col-lg-7">
       <div class="list-group mb-3">
-        {% for m in memberships %}
+        {% for m, notify in memberships %}
           <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
             <div>
               {{ m.user.display_name }}
@@ -16,6 +16,22 @@
               {% if not request.user.is_client %}<div class="small text-body-secondary">
                   {{ m.user.email }}
                 </div>{% endif %}
+              {% if notify %}
+                <form method="post" action="{% url 'member_notify' project.pk m.user.pk %}" class="d-flex gap-1 mt-1">
+                  {% csrf_token %}
+                  <select
+                    name="notify"
+                    class="form-select form-select-sm w-auto"
+                    aria-label="{% translate "Notifications" %}"
+                  >
+                    {% if notify.value == "nothing" %}<option selected disabled>{{ notify.label }}</option>{% endif %}
+                    {% for value, label in notify_choices %}
+                      <option value="{{ value }}" {% if value == notify.value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn btn-sm btn-quiet">{% translate "Save" %}</button>
+                </form>
+              {% endif %}
             </div>
             {% if can_manage or m.user == request.user %}
               <form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">

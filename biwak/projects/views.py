@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
@@ -100,8 +100,33 @@ def project_join(request, pk):
     return redirect(project)
 
 
+NOTIFY_LABELS = {
+    project_ops.NOTIFY_DEFAULT: _("Notified by default"),
+    project_ops.NOTIFY_TAGGED: _("Only when tagged"),
+    "nothing": _("No mails"),
+}
+
+
+def notify_field():
+    """How the person is in the project (specs/notifications.md)"""
+    return forms.ChoiceField(
+        label=_("Notifications"),
+        choices=[
+            (project_ops.NOTIFY_DEFAULT, NOTIFY_LABELS[project_ops.NOTIFY_DEFAULT]),
+            (project_ops.NOTIFY_TAGGED, NOTIFY_LABELS[project_ops.NOTIFY_TAGGED]),
+        ],
+        initial=project_ops.NOTIFY_DEFAULT,
+        widget=forms.RadioSelect,
+        help_text=_(
+            "Only when tagged: mails about posts to everybody are held back"
+            " unless the person is mentioned or assigned."
+        ),
+    )
+
+
 class AddMemberForm(Form):
     user = forms.ModelChoiceField(label=_("Person"), queryset=User.objects.none())
+    notify = notify_field()
 
 
 class InviteForm(Form):
@@ -116,6 +141,7 @@ class InviteForm(Form):
         widget=forms.RadioSelect,
         required=False,
     )
+    notify = notify_field()
     organization = forms.CharField(
         label=_("Organization"),
         max_length=200,
@@ -128,6 +154,29 @@ class InviteForm(Form):
         if not actor.is_admin:
             # Only admins create staff (specs/access.md)
             del self.fields["is_client"]
+
+
+def notify_row(actor, project, user):
+    """How the person is in the project, for staff and the person themselves"""
+    if not project_ops.can_change_notify_choice(actor, user):
+        return None
+    choice = project_ops.notify_choice(user, project)
+    return {"value": choice, "label": NOTIFY_LABELS[choice]}
+
+
+@require_POST
+def member_notify(request, pk, user_pk):
+    """Staff change anybody's choice, a client only their own"""
+    project = project_for(request, pk)
+    user = get_object_or_404(User, pk=user_pk, memberships__project=project)
+    if not project_ops.can_change_notify_choice(request.user, user):
+        raise PermissionDenied
+    notify = request.POST.get("notify")
+    if notify not in project_ops.NOTIFY_CHOICES:
+        raise Http404
+    project_ops.set_notify_choice(project, user, notify, actor=request.user)
+    messages.success(request, _("The choice has been saved."))
+    return redirect("project_people", pk=project.pk)
 
 
 def project_people(request, pk):
@@ -144,7 +193,12 @@ def project_people(request, pk):
         )
         if add_form.is_valid():
             user = add_form.cleaned_data["user"]
-            project_ops.add_member(project, user, actor=request.user)
+            project_ops.add_member(
+                project,
+                user,
+                actor=request.user,
+                notify=add_form.cleaned_data["notify"],
+            )
             messages.success(
                 request, _("%(name)s has been added.") % {"name": user.display_name}
             )
@@ -158,6 +212,7 @@ def project_people(request, pk):
                     full_name=data["full_name"],
                     is_client=data.get("is_client", True),
                     organization=data["organization"],
+                    notify=data["notify"],
                     actor=request.user,
                 )
             except project_ops.InvitationError as exc:
@@ -173,9 +228,15 @@ def project_people(request, pk):
         "projects/people.html",
         {
             "project": project,
-            "memberships": project.memberships.select_related("user").order_by(
-                "user__is_client", "user__full_name"
-            ),
+            "memberships": [
+                (m, notify_row(request.user, project, m.user))
+                for m in project.memberships.select_related("user").order_by(
+                    "user__is_client", "user__full_name"
+                )
+            ],
+            "notify_choices": [
+                (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
+            ],
             "can_manage": can_manage,
             "add_form": add_form,
             "invite_form": invite_form,

@@ -155,6 +155,102 @@ def projects(as_json, archived, order):
     return None
 
 
+NOTIFY_WORDS = {
+    "default": "notified by default",
+    "tagged": "only when tagged",
+    "nothing": "no mails",
+}
+
+only_tagged_option = click.option(
+    "--only-tagged",
+    is_flag=True,
+    help="Notify them only when tagged (default: notified by default).",
+)
+
+
+def show_member(person):
+    click.echo(f"{person['name']} ({person['id']}): {notify_word(person)}")
+
+
+def notify_word(person):
+    return NOTIFY_WORDS.get(person["notify"], "") if person["notify"] else ""
+
+
+@cli.command()
+@click.argument("project", type=int)
+@json_option
+def members(project, as_json):
+    """The people in PROJECT; staff see addresses and how each is notified
+    (notified by default, only when tagged, no mails), clients only their own"""
+    data = request("GET", f"projects/{project}/members/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Name", "Email", "Notified", "")
+    for person in data:
+        t.add_row(
+            str(person["id"]),
+            person["name"],
+            person["email"] or "",
+            notify_word(person),
+            "client" if person["is_client"] else "",
+        )
+    console.print(t)
+    return None
+
+
+@cli.group()
+def member():
+    """Add and invite people to a project (staff)"""
+
+
+@member.command("add")
+@click.argument("project", type=int)
+@click.argument("person", type=int)
+@only_tagged_option
+@json_option
+def member_add(project, person, only_tagged, as_json):
+    """Add the person with ID PERSON to PROJECT"""
+    data = request(
+        "POST",
+        f"projects/{project}/members/",
+        json={"person_id": person, "notify": "tagged" if only_tagged else "default"},
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo("Added: ", nl=False)
+    show_member(data)
+    return None
+
+
+@member.command("invite")
+@click.argument("project", type=int)
+@click.argument("email")
+@click.option("--name", default="", help="Their name, for new people.")
+@click.option("--organization", default="", help="A client's organization.")
+@click.option("--staff", is_flag=True, help="Staff instead of a client (admins).")
+@only_tagged_option
+@json_option
+def member_invite(project, email, name, organization, staff, only_tagged, as_json):
+    """Add the person with this address to PROJECT, creating them (as a
+    client) and mailing them how to log in if they're new"""
+    data = request(
+        "POST",
+        f"projects/{project}/members/invite/",
+        json={
+            "email": email,
+            "name": name,
+            "organization": organization,
+            "is_client": not staff,
+            "notify": "tagged" if only_tagged else "default",
+        },
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo("Invited: ", nl=False)
+    show_member(data)
+    return None
+
+
 @cli.command()
 @click.argument("project", type=int)
 @json_option

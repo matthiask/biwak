@@ -3,12 +3,15 @@
 import datetime as dt
 from typing import Literal
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
-from ninja import Router, Schema
+from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
+from biwak.accounts.models import User
 from biwak.activity.models import Action
 from biwak.activity.operations import record
 from biwak.api_conventions import PersonOut, absolute, html, person_out
@@ -97,18 +100,109 @@ def project_detail(request, project_id: int):
 
 class MemberOut(PersonOut):
     email: str | None
+    # How the person is in the project: "default" (notified by default),
+    # "tagged" (only when tagged) or "nothing" (no mails). Only for staff
+    # and for yourself, else null.
+    notify: str | None
+
+
+Notify = Literal["default", "tagged"]
+
+
+def member_out(project, user, actor):
+    notify = None
+    if project_ops.can_change_notify_choice(actor, user):
+        notify = project_ops.notify_choice(user, project)
+    return person_out(user) | {
+        "email": None if actor.is_client else user.email,
+        "notify": notify,
+    }
 
 
 @router.get("projects/{project_id}/members/", response=list[MemberOut])
 def project_members(request, project_id: int):
-    """Members; addresses only for staff, like on the people page"""
+    """Members; addresses and everybody's choice only for staff, like on the
+    people page"""
     project = project_for(request, project_id)
     return [
-        person_out(m.user) | {"email": None if request.user.is_client else m.user.email}
+        member_out(project, m.user, request.user)
         for m in project.memberships.select_related("user").order_by(
             "user__is_client", "user__full_name"
         )
     ]
+
+
+def staff_only(request):
+    if not project_ops.can_manage_members(request.user):
+        raise HttpError(403, _("Only staff can add people."))
+
+
+class MemberIn(Schema):
+    person_id: int
+    notify: Notify = "default"
+
+
+@router.post("projects/{project_id}/members/", response={201: MemberOut})
+def member_add(request, project_id: int, data: MemberIn):
+    """Adds an active person (staff). ``notify`` is stored as their choice
+    unless they have one already."""
+    project = project_for(request, project_id)
+    staff_only(request)
+    user = User.objects.active().filter(pk=data.person_id).first()
+    if user is None:
+        raise HttpError(404, _("Not found."))
+    project_ops.add_member(project, user, actor=request.user, notify=data.notify)
+    return Status(201, member_out(project, user, request.user))
+
+
+class InviteIn(Schema):
+    email: str
+    name: str = ""
+    # Only admins create staff
+    is_client: bool = True
+    organization: str = ""
+    notify: Notify = "default"
+
+
+@router.post("projects/{project_id}/members/invite/", response={201: MemberOut})
+def member_invite(request, project_id: int, data: InviteIn):
+    """Adds a person by address, creating and mailing them if they're new
+    (staff)"""
+    project = project_for(request, project_id)
+    staff_only(request)
+    try:
+        validate_email(data.email)
+    except ValidationError as exc:
+        raise HttpError(400, _("Enter a valid email address.")) from exc
+    try:
+        user, _changed = project_ops.invite(
+            project,
+            email=data.email,
+            full_name=data.name,
+            is_client=data.is_client,
+            organization=data.organization,
+            notify=data.notify,
+            actor=request.user,
+        )
+    except project_ops.InvitationError as exc:
+        raise HttpError(400, str(exc)) from exc
+    return Status(201, member_out(project, user, request.user))
+
+
+class MemberPatch(Schema):
+    notify: Notify
+
+
+@router.patch("projects/{project_id}/members/{person_id}/", response=MemberOut)
+def member_update(request, project_id: int, person_id: int, data: MemberPatch):
+    """Changes how the person is in the project: staff anybody's, clients
+    only their own (403 for others)"""
+    project = project_for(request, project_id)
+    user = get_object_or_404(User, pk=person_id, memberships__project=project)
+    if not project_ops.can_change_notify_choice(request.user, user):
+        raise HttpError(403, _("You can only change your own choice."))
+    project_ops.set_notify_choice(project, user, data.notify, actor=request.user)
+    return member_out(project, user, request.user)
 
 
 class ProjectPatch(Schema):

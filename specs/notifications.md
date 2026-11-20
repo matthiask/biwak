@@ -122,6 +122,18 @@ override is set through the API (built 2026-11-20).
 
 ### Notified by default or only when tagged
 
+**Status:** built (2026-11-20, branch `tagged`, CLI 0.15.0):
+`add_member()`, `invite()`, `set_notify_choice()` and `notify_choice()`
+in `biwak/projects/operations.py`, the people page with
+`/projects/<pk>/people/<user>/notify/`, `POST projects/ID/members/`,
+`POST projects/ID/members/invite/`, `PATCH projects/ID/members/PERSON/`,
+`biwak members` and `biwak member add|invite`. Tests in
+`biwak/projects/test_notify_choice.py`. Built on the way: the members
+list returns `notify` as `default`, `tagged` or `nothing`, and `null` for
+clients about others; a client can't add or invite (403) nor change
+others' choice (403, 404 for people who aren't members). The CLI has no
+command to change a choice, the API and the page do.
+
 Decided 2026-11-20: people are in a project in one of two ways, and the
 project's level is that choice, not a new setting.
 

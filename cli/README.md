@@ -19,8 +19,11 @@ biwak checkin due
 biwak checkin answer QUESTION "Busy with the launch"   # or standard input
 biwak checkin add PROJECT "Read any good books?" --schedule weekly --time 09:00
 biwak notifications --level concerns_me --delivery digest
+biwak members PROJECT
+biwak member add PROJECT PERSON --only-tagged      # notified only when tagged
+biwak member invite PROJECT ada@example.org --name "Ada"
 biwak messages PROJECT
-biwak message post PROJECT "Kick-off" "We start Monday" --notify everybody
+biwak message post PROJECT "Kick-off" "We start Monday" --notify nobody   # default: everybody
 biwak files PROJECT [FOLDER]
 biwak file upload PROJECT plan.pdf --folder 12 --notify nobody
 biwak file download FILE
