@@ -11,6 +11,7 @@ from biwak.accounts.models import User
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
+from biwak.files import queries as file_queries
 from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
@@ -305,6 +306,8 @@ def project_detail(request, pk):
             "can_manage": project_ops.can_manage_project(request.user),
             "form": form,
             "members": project.memberships.select_related("user"),
+            "front_messages": file_queries.front_messages(project, request.user),
+            "root_counts": file_queries.root_counts(project, request.user),
             "is_member": project.is_member(request.user),
             "events": events,
         },

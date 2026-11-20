@@ -1,0 +1,36 @@
+{% load biwak i18n %}
+<div class="list-group-item d-flex justify-content-between align-items-start gap-2 wb-message-row">
+  <a class="text-reset text-decoration-none flex-grow-1 min-w-0" href="{{ item.get_absolute_url }}">
+    <div class="fw-semibold">
+      {% if item.message.pinned_at %}<span
+          class="text-body-secondary"
+          title="{% translate 'Pinned' %}"
+        >{% icon "pin-angle-fill" %}</span>{% endif %}
+      {% if item.message.category %}<span class="wb-category">{{ item.message.category }}</span>{% endif %}
+      {{ item|item_title }}
+      {% client_badge item %}
+    </div>
+    <div class="small text-body-secondary">
+      {{ item.creator.get_short_name }} · {{ item.created_at|date:"j. M Y" }}
+      {% if item.comment_count %}·
+        {% blocktranslate count counter=item.comment_count %}{{ counter }} comment{% plural %}{{ counter }} comments{% endblocktranslate %}{% endif %}
+    </div>
+    {% if item.message.content %}<div class="small wb-excerpt">{{ item.message.content|excerpt:200 }}</div>{% endif %}
+  </a>
+  {% if can_pin %}
+    <details class="dropdown wb-menu">
+      <summary class="btn btn-sm btn-quiet" title="{% translate 'More' %}">{% icon "chevron-down" %}</summary>
+      <div class="dropdown-menu dropdown-menu-end">
+        <form method="post" action="{% url 'message_pin' item.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'project_messages' item.project_id %}">
+          {% if item.message.pinned_at %}
+            <button type="submit" name="unpin" value="1" class="dropdown-item">{% translate "Unpin" %}</button>
+          {% else %}
+            <button type="submit" class="dropdown-item">{% translate "Pin" %}</button>
+          {% endif %}
+        </form>
+      </div>
+    </details>
+  {% endif %}
+</div>

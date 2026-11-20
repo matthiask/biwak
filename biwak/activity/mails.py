@@ -226,6 +226,8 @@ def _item(item, user):
         context["text"] = item.todolist.description
     elif item.kind in {Kind.MESSAGE, Kind.DOC, Kind.ANSWER}:
         context["text"] = item.detail.content
+    elif item.kind == Kind.FILE:
+        context["text"] = item.upload.description
     context["text_plain"] = plain_text(context["text"], item)
     return context
 

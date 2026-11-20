@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load biwak bookmarks i18n %}
+{% block title %}{{ item|item_title }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2">
+    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
+    <a href="{% url 'project_messages' item.project_id %}">{% translate "Messages" %}</a>
+  </nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {% if message.pinned_at %}<span
+          class="text-body-secondary"
+          title="{% translate 'Pinned' %}"
+        >{% icon "pin-angle-fill" %}</span>{% endif %}
+      {{ item|item_title }}
+      {% client_badge item %}
+    </h1>
+    <div class="wb-page-actions">
+      {% bookmark_button item %}
+      {% if can_pin %}
+        <form method="post" action="{% url 'message_pin' item.pk %}">
+          {% csrf_token %}
+          {% if message.pinned_at %}
+            <button type="submit" name="unpin" value="1" class="btn btn-sm btn-quiet">
+              {% icon "pin-angle" %}<span>{% translate "Unpin" %}</span>
+            </button>
+          {% else %}
+            <button type="submit" class="btn btn-sm btn-quiet">
+              {% icon "pin-angle" %}<span>{% translate "Pin" %}</span>
+            </button>
+          {% endif %}
+        </form>
+      {% endif %}
+      {% if can_change %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'message_edit' item.pk %}">{% icon "pencil" %}<span
+          >{% translate "Edit" %}</span></a>
+      {% endif %}
+    </div>
+  </div>
+  <p class="small text-body-secondary">
+    {% if message.category %}<span class="wb-category">{{ message.category }}</span> ·{% endif %}
+    {{ item.creator.display_name }} · {{ item.created_at|date:"j. M Y, H:i" }}
+  </p>
+  {% show_links item %}
+  {% include "items/_client_banner.html" %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="wb-markdown mb-4">{{ message.content|markdown:item }}</div>
+      {% include "files/_comments.html" %}
+    </div>
+    <div class="col-lg-4">{% include "files/_sidebar.html" %}</div>
+  </div>
+{% endblock content %}

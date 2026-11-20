@@ -13,6 +13,7 @@ from biwak_cli.core import (
     browser_login,
     cli,
     current,
+    download,
     echo_json,
     read_config,
     request,
@@ -669,6 +670,418 @@ def checkin_mail(question_id, mode, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Mails about answers: {data['mode']}")
+    return None
+
+
+# Messages -------------------------------------------------------------------
+
+notify_option = click.option(
+    "--notify",
+    required=True,
+    metavar="WHOM",
+    help="Whom to tell: everybody (in the project), nobody, or people's IDs"
+    " separated by commas.",
+)
+visible_option = click.option(
+    "--visible", is_flag=True, help="Visible to clients (staff; clients always are)."
+)
+
+
+def whom(value):
+    """``everybody``, ``nobody`` or the IDs as a list"""
+    if value in {"everybody", "nobody"}:
+        return value
+    try:
+        return [int(part) for part in value.split(",") if part.strip()]
+    except ValueError:
+        terminate("--notify is everybody, nobody or people's IDs separated by commas.")
+
+
+def category_id(name):
+    """The ID of a category given by name or ID"""
+    if name is None:
+        return None
+    categories = request("GET", "message-categories/")
+    for category in categories:
+        if name in {str(category["id"]), category["name"]}:
+            return category["id"]
+    terminate(
+        f"No category {name!r}. There are: "
+        + ", ".join(c["name"] for c in categories)
+        + "."
+    )
+    return None
+
+
+@cli.command()
+@click.argument("project", type=int)
+@click.option("--limit", default=25, show_default=True, help="At most this many.")
+@json_option
+def messages(project, limit, as_json):
+    """The message board of PROJECT: pinned first, then the newest"""
+    data = request("GET", f"projects/{project}/messages/", params={"page_size": limit})
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "", "Category", "Message", "By", "Date", "Comments", "")
+    for message in data["results"]:
+        category = message["category"]
+        t.add_row(
+            str(message["id"]),
+            "pinned" if message["pinned"] else "",
+            f"{category['emoji']} {category['name']}".strip() if category else "",
+            message["title"],
+            message["creator"]["short_name"],
+            message["created_at"][:10],
+            str(message["comment_count"]),
+            clients(message),
+        )
+    console.print(t)
+    return None
+
+
+@cli.group()
+def message():
+    """Show, post and pin messages"""
+
+
+def show_message(data):
+    marker = " [clients]" if data["visible_to_clients"] else ""
+    pinned = " (pinned)" if data["pinned"] else ""
+    click.echo(f"#{data['id']} {data['title']}{pinned}{marker}")
+    category = data["category"]
+    for label, value in [
+        (
+            "Category",
+            f"{category['emoji']} {category['name']}".strip() if category else "",
+        ),
+        ("By", data["creator"]["name"]),
+        ("Date", data["created_at"][:16].replace("T", " ")),
+        ("URL", data["url"]),
+    ]:
+        if value:
+            click.echo(f"{label}: {value}")
+    if data["content"]:
+        click.echo(f"\n{data['content']}")
+
+
+@message.command("show")
+@click.argument("message_id", metavar="MESSAGE", type=int)
+@click.option("--comments", is_flag=True, help="With the comments.")
+@json_option
+def message_show(message_id, comments, as_json):
+    """Show MESSAGE"""
+    data = request("GET", f"messages/{message_id}/")
+    if comments:
+        data["comments"] = request("GET", f"items/{message_id}/comments/")["results"]
+    if as_json:
+        return echo_json(data)
+    show_message(data)
+    for comment in data.get("comments", []):
+        click.echo(f"\n{comment['author']['name']}, {comment['created_at'][:16]}:")
+        click.echo(comment["content"])
+    return None
+
+
+@message.command("post")
+@click.argument("project", type=int)
+@click.argument("title")
+@click.argument("text", required=False)
+@click.option("--category", help="A category's name or ID.")
+@notify_option
+@visible_option
+@attach_option
+@json_option
+def message_post(project, title, text, category, notify, visible, attach, as_json):
+    """Post a message titled TITLE to PROJECT; TEXT (Markdown) or standard input"""
+    if text is None:
+        text = click.get_text_stream("stdin").read()
+    if visible:
+        click.secho("Clients can see this message.", fg="yellow", err=True)
+    data = request(
+        "POST",
+        f"projects/{project}/messages/",
+        json={
+            "title": title,
+            "content": with_attachments(project, text, attach),
+            "category_id": category_id(category),
+            "visible_to_clients": visible,
+            "notify": whom(notify),
+        },
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Posted #{data['id']}: {data['url']}")
+    return None
+
+
+@message.command("pin")
+@click.argument("message_id", metavar="MESSAGE", type=int)
+@click.option("--undo", is_flag=True, help="Unpin it again.")
+@json_option
+def message_pin(message_id, undo, as_json):
+    """Pin MESSAGE for everybody (staff); it tells nobody"""
+    data = request("DELETE" if undo else "PUT", f"messages/{message_id}/pin/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"{'Unpinned' if undo else 'Pinned'} #{message_id}.")
+    return None
+
+
+# Docs and files -------------------------------------------------------------
+
+
+@cli.command()
+@click.argument("project", type=int)
+@click.argument("folder", type=int, required=False)
+@json_option
+def files(project, folder, as_json):
+    """The docs and files of PROJECT's root, or of FOLDER"""
+    data = request(
+        "GET",
+        f"projects/{project}/files/",
+        params={"folder_id": folder} if folder else None,
+    )
+    if as_json:
+        return echo_json(data)
+    if data["breadcrumbs"]:
+        click.echo("/ " + " / ".join(c["title"] for c in data["breadcrumbs"]))
+    t = table("ID", "Kind", "Name", "Size", "")
+    for entry in data["entries"]:
+        t.add_row(
+            str(entry["id"]),
+            entry["kind"],
+            entry["title"],
+            f"{entry['size']:,} B" if entry["size"] is not None else "",
+            clients(entry),
+        )
+    console.print(t)
+    return None
+
+
+@cli.group()
+def folder():
+    """Create folders and move docs and files"""
+
+
+@folder.command("new")
+@click.argument("project", type=int)
+@click.argument("title")
+@click.option("--folder", "parent", type=int, help="Inside this folder.")
+@visible_option
+@json_option
+def folder_new(project, title, parent, visible, as_json):
+    """Create a folder titled TITLE in PROJECT"""
+    data = request(
+        "POST",
+        f"projects/{project}/folders/",
+        json={"title": title, "parent_id": parent, "visible_to_clients": visible},
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Created #{data['id']}: {data['url']}")
+    return None
+
+
+@folder.command("move")
+@click.argument("item", type=int)
+@click.argument("folder", type=int, required=False)
+@json_option
+def folder_move(item, folder, as_json):
+    """Move a folder, doc or file ITEM into FOLDER, or to the root"""
+    data = request("POST", f"items/{item}/move/", json={"parent_id": folder})
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Moved #{item}.{' [clients]' if data['visible_to_clients'] else ''}")
+    return None
+
+
+@cli.group("file")
+def file_group():
+    """Upload, replace and download files"""
+
+
+@file_group.command("upload")
+@click.argument("project", type=int)
+@click.argument("path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--folder", "parent", type=int, help="Into this folder.")
+@click.option("--description", default="", help="Markdown.")
+@notify_option
+@visible_option
+@json_option
+def file_upload(project, path, parent, description, notify, visible, as_json):
+    """Upload the file at PATH to PROJECT's root or a folder"""
+    if visible:
+        click.secho("Clients can see this file.", fg="yellow", err=True)
+    with click.open_file(path, "rb") as file:
+        data = request(
+            "POST",
+            f"projects/{project}/files/",
+            files={"file": (os.path.basename(path), file)},
+            data={
+                "description": description,
+                "visible_to_clients": "true" if visible else "false",
+                "notify": notify,
+                **({"parent_id": parent} if parent else {}),
+            },
+        )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Uploaded #{data['id']} {data['name']}: {data['url']}")
+    return None
+
+
+@file_group.command("replace")
+@click.argument("file_id", metavar="FILE", type=int)
+@click.argument("path", type=click.Path(exists=True, dir_okay=False))
+@json_option
+def file_replace(file_id, path, as_json):
+    """Upload the file at PATH as a new version of FILE"""
+    with click.open_file(path, "rb") as file:
+        data = request(
+            "POST",
+            f"files/{file_id}/versions/",
+            files={"file": (os.path.basename(path), file)},
+        )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Replaced #{file_id}: {len(data['versions'])} versions.")
+    return None
+
+
+@file_group.command("download")
+@click.argument("file_id", metavar="FILE", type=int)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, writable=True),
+    help="Save as; the file's name by default.",
+)
+@click.option("--version", type=int, help="An older version's ID (staff).")
+def file_download(file_id, output, version):
+    """Download FILE, the current version unless --version says otherwise"""
+    data = request("GET", f"files/{file_id}/")
+    chosen = (
+        next((v for v in data["versions"] if v["id"] == version), None)
+        if version
+        else data["versions"][0]
+    )
+    if chosen is None:
+        terminate(f"File #{file_id} has no version #{version} for you.")
+    target = output or chosen["name"]
+    path = (
+        f"files/{file_id}/download/"
+        if chosen["is_current"]
+        else f"files/{file_id}/versions/{chosen['id']}/download/"
+    )
+    download(path, target)
+    click.echo(f"Saved {target} ({chosen['size']:,} B).")
+
+
+@cli.group()
+def doc():
+    """Show, create and edit docs"""
+
+
+@doc.command("show")
+@click.argument("doc_id", metavar="DOC", type=int)
+@click.option("--comments", is_flag=True, help="With the comments.")
+@click.option("--version", type=int, help="An older version's ID (staff).")
+@json_option
+def doc_show(doc_id, comments, version, as_json):
+    """Show DOC"""
+    data = request("GET", f"docs/{doc_id}/")
+    if version:
+        old = request("GET", f"docs/{doc_id}/versions/{version}/")
+        data |= {
+            "title": old["title"],
+            "content": old["content"],
+            "version_id": version,
+        }
+    if comments:
+        data["comments"] = request("GET", f"items/{doc_id}/comments/")["results"]
+    if as_json:
+        return echo_json(data)
+    marker = " [clients]" if data["visible_to_clients"] else ""
+    click.echo(f"#{data['id']} {data['title']}{marker}")
+    if data["locked_by"]:
+        click.echo(f"Being edited by {data['locked_by']['name']}.")
+    click.echo(f"URL: {data['url']}")
+    if data["content"]:
+        click.echo(f"\n{data['content']}")
+    for comment in data.get("comments", []):
+        click.echo(f"\n{comment['author']['name']}, {comment['created_at'][:16]}:")
+        click.echo(comment["content"])
+    return None
+
+
+@doc.command("new")
+@click.argument("project", type=int)
+@click.argument("title")
+@click.argument("text", required=False)
+@click.option("--folder", "parent", type=int, help="Inside this folder.")
+@notify_option
+@visible_option
+@attach_option
+@json_option
+def doc_new(project, title, text, parent, notify, visible, attach, as_json):
+    """Create a doc titled TITLE in PROJECT; TEXT (Markdown) or standard input"""
+    if text is None:
+        text = click.get_text_stream("stdin").read()
+    if visible:
+        click.secho("Clients can see this doc.", fg="yellow", err=True)
+    data = request(
+        "POST",
+        f"projects/{project}/docs/",
+        json={
+            "title": title,
+            "content": with_attachments(project, text, attach),
+            "parent_id": parent,
+            "visible_to_clients": visible,
+            "notify": whom(notify),
+        },
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Created #{data['id']}: {data['url']}")
+    return None
+
+
+@doc.command("edit")
+@click.argument("doc_id", metavar="DOC", type=int)
+@click.option("--title", help="Rename the doc too.")
+@click.option(
+    "--new-version", is_flag=True, help="Make a version now, not only after 10 minutes."
+)
+@json_option
+def doc_edit(doc_id, title, new_version, as_json):
+    """Edit DOC in $EDITOR and save when you quit
+
+    Takes the doc's lock while you edit, and refuses to save over a newer
+    version somebody else made meanwhile."""
+    doc = request("PUT", f"docs/{doc_id}/lock/")
+    if doc["visible_to_clients"]:
+        click.secho("Clients can see this doc.", fg="yellow", err=True)
+    text = click.edit(doc["content"], extension=".md")
+    if text is None or (text == doc["content"] and not title):
+        request("DELETE", f"docs/{doc_id}/lock/")
+        click.echo("No changes.")
+        return None
+    changes = {
+        "content": text,
+        "new_version": new_version,
+        "base_version": doc["version_id"],
+    }
+    if title:
+        changes["title"] = title
+    try:
+        data = request("PATCH", f"docs/{doc_id}/", json=changes)
+    except SystemExit:
+        # The lock is ours still, give it up
+        request("DELETE", f"docs/{doc_id}/lock/")
+        raise
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Saved #{doc_id}.")
     return None
 
 

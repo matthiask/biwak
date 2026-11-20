@@ -19,6 +19,13 @@ biwak checkin due
 biwak checkin answer QUESTION "Busy with the launch"   # or standard input
 biwak checkin add PROJECT "Read any good books?" --schedule weekly --time 09:00
 biwak notifications --level concerns_me --delivery digest
+biwak messages PROJECT
+biwak message post PROJECT "Kick-off" "We start Monday" --notify everybody
+biwak files PROJECT [FOLDER]
+biwak file upload PROJECT plan.pdf --folder 12 --notify nobody
+biwak file download FILE
+biwak doc show DOC
+biwak doc edit DOC                                     # in $EDITOR
 ```
 
 Every command takes `--json` for scripts and agents. Items visible to

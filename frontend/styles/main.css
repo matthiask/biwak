@@ -938,3 +938,16 @@ button.wb-signal:hover {
   display: flex;
   flex-wrap: wrap;
 }
+
+/* The message board (specs/files.md); its excerpts use .wb-excerpt */
+.wb-category {
+  white-space: nowrap;
+}
+
+.wb-file-preview {
+  max-height: 24rem;
+}
+
+.min-w-0 {
+  min-width: 0;
+}

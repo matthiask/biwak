@@ -25,8 +25,17 @@ class Response:
         self.status_code = response.status_code
         self.ok = response.status_code < 400
         self.headers = response.headers
-        self.text = response.content.decode()
+        # Streamed files (downloads) have no content to decode
+        self.content = (
+            b"".join(response.streaming_content)
+            if response.streaming
+            else response.content
+        )
+        self.text = self.content.decode(errors="replace")
         self._response = response
+
+    def iter_content(self, size):
+        yield self.content
 
     def json(self):
         return self._response.json()
@@ -54,7 +63,17 @@ class CLITest(TestCase):
         )
 
     def request(
-        self, method, url, *, headers, timeout, params=None, json=None, files=None
+        self,
+        method,
+        url,
+        *,
+        headers,
+        timeout,
+        params=None,
+        json=None,
+        files=None,
+        data=None,
+        stream=False,
     ):
         path = urllib.parse.urlsplit(url).path
         if method == "GET":
@@ -65,7 +84,8 @@ class CLITest(TestCase):
                 {
                     field: SimpleUploadedFile(name, file.read())
                     for field, (name, file) in files.items()
-                },
+                }
+                | (data or {}),
                 headers=headers,
             )
         else:

@@ -22,7 +22,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `todos.md` | 1: schedules, recurrence | built | core | cheaper |
 | `todos.md` | 2: by due date, iCal | built | stage 1 | cheaper |
 | `feed.md` | feed, history, bookmarks, links | built | core | cheaper |
-| `files.md` | 2: messages (with pinning), folders, docs | next | notifications 1 | cheaper |
+| `files.md` | 2: messages (with pinning), folders, docs, files | built (branch `files2`) | notifications 1 | cheaper |
 | `todos.md` | 3: long lists of completed to-dos | built | stage 2 | cheaper |
 | `projects-overview.md` | favorites, activity order, cards | built | `feed.md` (bookmarks) | cheaper, review the client column |
 | `glance.md` | excerpts, to-do indicators and peek, counts | built (message excerpts come with the board) | `feed.md`, notifications 1 | cheaper |

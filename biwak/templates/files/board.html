@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Messages" %} – {{ project }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Messages" %}</h1>
+    <div class="wb-page-actions">
+      <a class="btn btn-sm btn-primary" href="{% url 'message_new' project.pk %}">{% icon "plus-lg" %}<span
+        >{% translate "New message" %}</span></a>
+    </div>
+  </div>
+  <div class="list-group mb-3" id="messages">
+    {% for item in pinned %}{% include "files/_message_row.html" %}{% endfor %}
+    {% for item in messages %}{% include "files/_message_row.html" %}{% endfor %}
+    {% if not pinned and not messages %}
+      <div class="list-group-item text-body-secondary">{% translate "No messages yet." %}</div>
+    {% endif %}
+  </div>
+  {% if cursor %}
+    <a class="btn btn-sm btn-quiet" href="?before={{ cursor|urlencode }}">{% translate "Older messages" %}</a>
+  {% endif %}
+{% endblock content %}

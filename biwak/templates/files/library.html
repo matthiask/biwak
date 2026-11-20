@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load biwak bookmarks i18n %}
+{% block title %}{% if folder %}{{ folder|item_title }}{% else %}{% translate "Docs and files" %}{% endif %} –
+  {{ project }} – Biwak{% endblock title %}
+
+{% block content %}
+  {% include "files/_crumbs.html" %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {% if folder %}{% icon "folder" %} {{ folder|item_title }}
+        {% client_badge folder %}{% else %}{% translate "Docs and files" %}{% endif %}
+    </h1>
+    <div class="wb-page-actions">
+      {% if folder %}{% bookmark_button folder %}{% endif %}
+      <a
+        class="btn btn-sm btn-quiet"
+        href="{% url 'doc_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
+      >{% icon "file-earmark-plus" %}<span>{% translate "New doc" %}</span></a>
+      <a
+        class="btn btn-sm btn-quiet"
+        href="{% url 'file_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
+      >{% icon "upload" %}<span>{% translate "Upload a file" %}</span></a>
+    </div>
+  </div>
+  {% if folder %}
+    {% show_links folder %}
+    {% include "items/_client_banner.html" with item=folder %}
+  {% endif %}
+  <div class="list-group mb-3">
+    {% for row in rows %}
+      <a
+        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2"
+        href="{{ row.get_absolute_url }}"
+      >
+        <span class="d-flex align-items-center gap-2 min-w-0">
+          {% if row.kind == "folder" %}{% icon "folder" %}{% elif row.kind == "doc" %}{% icon "file-earmark-text" %}{% else %}{% icon "file-earmark" %}{% endif %}
+          <span>{{ row|item_title }}</span>
+          {% if row.version %}<span
+              class="small text-body-secondary"
+            >{{ row.version.size|filesizeformat }}</span>{% endif %}
+        </span>
+        {% client_badge row %}
+      </a>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">{% translate "Nothing here yet." %}</div>
+    {% endfor %}
+  </div>
+  <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
+    {% csrf_token %}
+    <input
+      type="text"
+      name="title"
+      class="form-control w-auto flex-grow-1"
+      placeholder="{% translate 'New folder' %}"
+      required
+      maxlength="500"
+    >
+    {% if can_create_switch %}
+      <label class="form-check mb-0"><input type="checkbox" name="visible" class="form-check-input">
+        {% translate "Visible to clients" %}</label>
+    {% endif %}
+    <button type="submit" class="btn btn-quiet">
+      {% icon "folder-plus" %}<span>{% translate "Add folder" %}</span>
+    </button>
+  </form>
+  {% if folder %}
+    <div class="row mt-4">
+      <div class="col-lg-4">
+        {% include "files/_move.html" %}
+        {% include "files/_sidebar.html" %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock content %}

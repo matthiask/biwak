@@ -1,0 +1,20 @@
+{% load attachments biwak i18n %}
+<h2 class="h5" id="comments">{% translate "Comments" %}</h2>
+{% for comment in comments %}
+  <div class="card mb-2">
+    <div class="card-body">
+      <div class="small text-body-secondary mb-1">
+        <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+      </div>
+      <div class="wb-markdown">{{ comment.content|markdown:item }}</div>
+    </div>
+  </div>
+{% endfor %}
+{% include "items/_client_banner.html" %}
+<form method="post" class="mt-2" {% attachments_attrs item.project %}>
+  {% csrf_token %}
+  <input type="hidden" name="form" value="comment">
+  {% include "files/_attach_button.html" %}
+  {{ comment_form }}
+  <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
+</form>

@@ -46,6 +46,10 @@
   {% translate "trashed" %} {% include "activity/_subject.html" %}
 {% elif event.action == "restored" %}
   {% translate "restored" %} {% include "activity/_subject.html" %}
+{% elif event.action == "pinned" %}
+  {% translate "pinned" %} {% include "activity/_subject.html" %}
+{% elif event.action == "unpinned" %}
+  {% translate "unpinned" %} {% include "activity/_subject.html" %}
 {% elif event.action == "edited_project" %}
   {% translate "edited the project" %}
 {% elif event.action == "joined" %}

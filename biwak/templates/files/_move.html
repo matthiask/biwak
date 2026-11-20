@@ -1,0 +1,17 @@
+{% load i18n %}
+{% comment %}Moving a folder, doc or file; `move_choices` are (folder, path) pairs{% endcomment %}
+{% if can_change %}
+  <h2 class="h6 mt-4">{% translate "Move to…" %}</h2>
+  <form method="post" action="{% url 'item_move' item.pk %}" class="d-flex gap-2">
+    {% csrf_token %}
+    <select name="folder" class="form-select form-select-sm" aria-label="{% translate 'folder' %}">
+      <option value="">{% translate "Project root" %}</option>
+      {% for target, path in move_choices %}
+        <option value="{{ target.pk }}" {% if target.pk == item.parent_id %}selected{% endif %}>
+          {{ path }}{% if target.is_client_visible %} ({% translate "clients can see this" %}){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Move" %}</button>
+  </form>
+{% endif %}

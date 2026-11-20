@@ -40,14 +40,18 @@ def clean_name(name):
     return name[-255:] or "file"
 
 
-@transaction.atomic
-def upload(*, project, file, uploaded_by):
-    """Stores the file as an attachment without item; the caller checked
-    that the person may open the project"""
+def check_size(file):
     if file.size > MAX_SIZE:
         raise UploadError(
             _("Files can be at most %(size)s MB.") % {"size": MAX_SIZE // 2**20}
         )
+
+
+@transaction.atomic
+def upload(*, project, file, uploaded_by):
+    """Stores the file as an attachment without item; the caller checked
+    that the person may open the project"""
+    check_size(file)
     name = clean_name(file.name)
     attachment = Attachment(
         project=project,
@@ -92,17 +96,26 @@ def serve(attachment):
     """The download, after the visibility check: a redirect to a presigned
     URL valid 5 minutes with a bucket, the file itself otherwise. Images
     and PDFs inline, everything else (SVG and HTML above all) as a
-    download; never sniffed."""
-    as_attachment = not attachment.is_inline
-    storage = attachment.file.storage
+    download; never sniffed. Works for everything with ``file``, ``name``,
+    ``content_type`` and ``is_inline`` (attachments, file versions)."""
+    return respond(
+        attachment.file.storage,
+        attachment.file.name,
+        content_type=attachment.content_type,
+        filename=attachment.name,
+        as_attachment=not attachment.is_inline,
+    )
+
+
+def respond(storage, name, *, content_type, filename, as_attachment):
     if _presigns(storage):
         response = HttpResponseRedirect(
             storage.url(
-                attachment.file.name,
+                name,
                 parameters={
-                    "ResponseContentType": attachment.content_type,
+                    "ResponseContentType": content_type,
                     "ResponseContentDisposition": content_disposition_header(
-                        as_attachment, attachment.name
+                        as_attachment, filename
                     ),
                 },
                 expire=PRESIGNED_SECONDS,
@@ -110,10 +123,10 @@ def serve(attachment):
         )
     else:
         response = FileResponse(
-            attachment.file.open("rb"),
+            storage.open(name, "rb"),
             as_attachment=as_attachment,
-            filename=attachment.name,
-            content_type=attachment.content_type,
+            filename=filename,
+            content_type=content_type,
         )
     response["X-Content-Type-Options"] = "nosniff"
     patch_cache_control(response, private=True, max_age=0)

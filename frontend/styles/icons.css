@@ -73,8 +73,26 @@
 .bi-clock-history::before {
   content: "\f292";
 }
+.bi-download::before {
+  content: "\f30a";
+}
 .bi-eye::before {
   content: "\f341";
+}
+.bi-file-earmark::before {
+  content: "\f392";
+}
+.bi-file-earmark-plus::before {
+  content: "\f37d";
+}
+.bi-file-earmark-text::before {
+  content: "\f38b";
+}
+.bi-folder::before {
+  content: "\f3d7";
+}
+.bi-folder-plus::before {
+  content: "\f3d3";
 }
 .bi-github::before {
   content: "\f3ed";
@@ -115,6 +133,12 @@
 .bi-play-circle::before {
   content: "\f4f3";
 }
+.bi-pin-angle::before {
+  content: "\f4eb";
+}
+.bi-pin-angle-fill::before {
+  content: "\f4ea";
+}
 .bi-plus-lg::before {
   content: "\f64d";
 }
@@ -123,4 +147,7 @@
 }
 .bi-trash::before {
   content: "\f5de";
+}
+.bi-upload::before {
+  content: "\f603";
 }

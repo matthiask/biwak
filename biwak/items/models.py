@@ -27,6 +27,7 @@ class Kind(models.TextChoices):
     DOC = "doc", _("doc")
     QUESTION = "question", _("check-in question")
     ANSWER = "answer", _("check-in answer")
+    FILE = "file", _("file")
 
 
 # Allowed parents per kind; None is the project's top level (lists, the
@@ -39,14 +40,22 @@ ALLOWED_PARENTS = {
     Kind.DOC: {None, Kind.FOLDER},
     Kind.QUESTION: {None},
     Kind.ANSWER: {Kind.QUESTION},
+    Kind.FILE: {None, Kind.FOLDER},
 }
 
 # Kinds with a "visible to clients" switch when at the top level; their
 # descendants inherit it (specs/access.md)
-SWITCHABLE = {Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.QUESTION}
+SWITCHABLE = {
+    Kind.LIST,
+    Kind.MESSAGE,
+    Kind.FOLDER,
+    Kind.DOC,
+    Kind.FILE,
+    Kind.QUESTION,
+}
 
 # Kinds people can comment on (no comments on lists and folders)
-COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.ANSWER}
+COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
 
 class Status(models.TextChoices):
@@ -116,18 +125,13 @@ class Item(TreeNode):
         return self.title
 
     def get_absolute_url(self):
-        if self.kind in {Kind.LIST, Kind.TODO}:
-            return reverse(self.kind, kwargs={"pk": self.pk})
-        if self.kind == Kind.QUESTION:
-            return reverse("question", kwargs={"pk": self.pk})
         if self.kind == Kind.ANSWER:
             # The occurrence's page, at the answer (specs/checkins.md)
             return (
                 reverse("question", kwargs={"pk": self.parent_id})
                 + f"?occurrence={self.answer.occurrence_id}#answer-{self.pk}"
             )
-        # Messages, folders and docs get their pages with specs/files.md
-        return self.project.get_absolute_url()
+        return reverse(self.kind, kwargs={"pk": self.pk})
 
     @property
     def has_switch(self):
@@ -141,7 +145,9 @@ class Item(TreeNode):
     @property
     def detail(self):
         """The kind's detail model"""
-        return getattr(self, {Kind.LIST: "todolist"}.get(self.kind, self.kind))
+        return getattr(
+            self, {Kind.LIST: "todolist", Kind.FILE: "upload"}.get(self.kind, self.kind)
+        )
 
     def clean(self):
         super().clean()
@@ -158,7 +164,10 @@ class Item(TreeNode):
             raise ValidationError(_("The parent belongs to another project."))
         if self.visible_to_clients and not self.has_switch:
             raise ValidationError(
-                _("Only top-level lists, folders, messages and docs have a switch.")
+                _(
+                    "Only top-level lists, folders, messages, docs and files have"
+                    " a switch."
+                )
             )
 
     def save(self, *args, **kwargs):
@@ -279,12 +288,43 @@ class Todo(Detail):
         return schedules.describe(self.recurrence)
 
 
+class MessageCategory(models.Model):
+    """One list for the installation, edited by admins (specs/files.md)"""
+
+    name = models.CharField(_("name"), max_length=100)
+    emoji = models.CharField(_("emoji"), max_length=20, blank=True)
+    position = models.PositiveIntegerField(_("position"), default=0)
+
+    class Meta:
+        ordering = ["position", "name", "pk"]
+        verbose_name = _("message category")
+        verbose_name_plural = _("message categories")
+
+    def __str__(self):
+        return f"{self.emoji} {self.name}".strip()
+
+
 class Message(Detail):
     content = models.TextField(_("content"), blank=True)
+    category = models.ForeignKey(
+        MessageCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="messages",
+        verbose_name=_("category"),
+    )
+    # Pinned for everybody, by staff; the latest pinned first. Kept when
+    # the message is trashed, so restoring brings the pin back.
+    pinned_at = models.DateTimeField(_("pinned at"), null=True, blank=True)
 
     class Meta:
         verbose_name = _("message")
         verbose_name_plural = _("messages")
+
+    @property
+    def is_pinned(self):
+        return self.pinned_at is not None
 
 
 class Folder(Detail):
@@ -295,10 +335,60 @@ class Folder(Detail):
 
 class Doc(Detail):
     content = models.TextField(_("content"), blank=True)
+    # The lock until real-time editing (specs/files.md): who is editing,
+    # renewed every minute, expiring 5 minutes after the last renewal
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("locked by"),
+    )
+    locked_at = models.DateTimeField(_("locked at"), null=True, blank=True)
 
     class Meta:
         verbose_name = _("doc")
         verbose_name_plural = _("docs")
+
+
+class DocVersion(models.Model):
+    """What a doc said at some point; the newest equals the doc's content"""
+
+    doc = models.ForeignKey(
+        Doc,
+        on_delete=models.CASCADE,
+        related_name="versions",
+        verbose_name=_("doc"),
+    )
+    title = models.CharField(_("title"), max_length=500)
+    content = models.TextField(_("content"), blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("created by"),
+    )
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        verbose_name = _("doc version")
+        verbose_name_plural = _("doc versions")
+
+    def __str__(self):
+        return f"{self.title} ({self.created_at:%Y-%m-%d %H:%M})"
+
+
+class Upload(Detail):
+    """The detail of a file; its versions (``biwak.files.models.FileVersion``)
+    hold the files themselves, the newest is the current one"""
+
+    description = models.TextField(_("description"), blank=True)
+
+    class Meta:
+        verbose_name = _("file")
+        verbose_name_plural = _("files")
 
 
 class Comment(models.Model):

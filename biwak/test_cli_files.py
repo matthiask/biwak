@@ -1,0 +1,309 @@
+"""The commands of files.md, stage 2; the CLI test case is the one of
+test_cli.py"""
+
+import json
+import os
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+import biwak_cli
+import click
+
+from biwak import test_cli
+from biwak.accounts.models import APIToken
+from biwak.files import operations
+from biwak.items import operations as ops
+from biwak.items.models import Doc, Item, MessageCategory
+from biwak.projects.models import Membership
+from biwak.test_utils import person
+
+
+class FilesCLITest(test_cli.CLITest):
+    def setUp(self):
+        super().setUp()
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        for user in [self.bob, self.cleo]:
+            Membership.objects.create(project=self.project, user=user)
+        self.news = MessageCategory.objects.create(name="News", emoji="📣")
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.directory = Path(directory.name)
+
+    def test_messages(self):
+        shared = ops.create_message(
+            project=self.project,
+            title="Kick-off",
+            content="We start **Monday**",
+            creator=self.ada,
+            visible=True,
+            category=self.news,
+        )
+        ops.create_message(project=self.project, title="Internal", creator=self.ada)
+        operations.pin_message(shared, actor=self.ada)
+        output = self.biwak("messages", self.project.pk).output
+        for text in ["Kick-off", "Internal", "pinned", "📣 News", "[clients]"]:
+            self.assertIn(text, output)
+        data = json.loads(self.biwak("messages", self.project.pk, "--json").stdout)
+        self.assertEqual(
+            [m["title"] for m in data["results"]], ["Kick-off", "Internal"]
+        )
+        output = self.biwak("message", "show", shared.pk, "--comments").output
+        self.assertIn("We start **Monday**", output)
+        self.assertIn("(pinned)", output)
+        self.assertIn("[clients]", output)
+
+    def test_post(self):
+        result = self.biwak(
+            "message",
+            "post",
+            self.project.pk,
+            "News",
+            "Hello",
+            "--category",
+            "News",
+            "--notify",
+            "nobody",
+            "--visible",
+            "--json",
+        )
+        data = json.loads(result.stdout)
+        self.assertTrue(data["visible_to_clients"])
+        self.assertEqual(data["category"]["name"], "News")
+        self.assertIn("Clients can see this message.", result.output)
+        item = Item.objects.get(pk=data["id"])
+        self.assertEqual(item.message.content, "Hello")
+        # Standard input, notifying chosen people
+        result = self.biwak(
+            "message",
+            "post",
+            self.project.pk,
+            "Piped",
+            "--notify",
+            f"{self.bob.pk}",
+            input="From stdin\n",
+        )
+        self.assertIn("Posted #", result.output)
+        self.assertEqual(
+            Item.objects.get(title="Piped").message.content, "From stdin\n"
+        )
+
+    def test_post_needs_whom_to_notify_and_a_known_category(self):
+        result = self.biwak("message", "post", self.project.pk, "No", "Text")
+        self.assertEqual(result.exit_code, 2)
+        self.assertIn("--notify", result.output)
+        result = self.biwak(
+            "message", "post", self.project.pk, "No", "Text", "--notify", "nobody",
+            "--category", "Nope",
+        )  # fmt: skip
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("No category", result.output)
+        result = self.biwak(
+            "message", "post", self.project.pk, "No", "Text", "--notify", "some"
+        )
+        self.assertEqual(result.exit_code, 1)
+        self.assertFalse(Item.objects.filter(title="No").exists())
+
+    def test_pin(self):
+        message = ops.create_message(project=self.project, title="Hi", creator=self.ada)
+        self.assertIn("Pinned", self.biwak("message", "pin", message.pk).output)
+        message.message.refresh_from_db()
+        self.assertIsNotNone(message.message.pinned_at)
+        self.biwak("message", "pin", message.pk, "--undo")
+        message.message.refresh_from_db()
+        self.assertIsNone(message.message.pinned_at)
+
+    def test_attachments_in_messages(self):
+        plan = self.directory / "plan.pdf"
+        plan.write_bytes(b"%PDF-1.7")
+        result = self.biwak(
+            "message", "post", self.project.pk, "With a plan", "See",
+            "--notify", "nobody", "--attach", plan, "--json",
+        )  # fmt: skip
+        item = Item.objects.get(pk=json.loads(result.stdout)["id"])
+        self.assertEqual(item.attachments.count(), 1)
+
+    def test_folders_and_files(self):
+        data = json.loads(
+            self.biwak(
+                "folder", "new", self.project.pk, "Specs", "--visible", "--json"
+            ).stdout
+        )
+        folder = data["id"]
+        self.assertTrue(data["visible_to_clients"])
+        plan = self.directory / "plan.txt"
+        plan.write_bytes(b"The plan")
+        result = self.biwak(
+            "file", "upload", self.project.pk, plan, "--folder", folder,
+            "--description", "About it", "--notify", "nobody", "--json",
+        )  # fmt: skip
+        uploaded = json.loads(result.stdout)
+        self.assertEqual(uploaded["parent_id"], folder)
+        self.assertTrue(uploaded["visible_to_clients"])
+        self.assertEqual(uploaded["description"], "About it")
+
+        output = self.biwak("files", self.project.pk).output
+        self.assertIn("Specs", output)
+        self.assertIn("[clients]", output)
+        output = self.biwak("files", self.project.pk, folder).output
+        self.assertIn("plan.txt", output)
+        self.assertIn("/ Specs", output)
+        data = json.loads(self.biwak("files", self.project.pk, "--json").stdout)
+        self.assertEqual([e["title"] for e in data["entries"]], ["Specs"])
+
+    def test_upload_download_and_replace(self):
+        plan = self.directory / "plan.txt"
+        plan.write_bytes(b"One")
+        uploaded = json.loads(
+            self.biwak(
+                "file", "upload", self.project.pk, plan, "--notify", "nobody", "--json"
+            ).stdout
+        )
+        fid = uploaded["id"]
+        self.assertFalse(uploaded["visible_to_clients"])
+        target = self.directory / "saved.txt"
+        result = self.biwak("file", "download", fid, "-o", target)
+        self.assertIn("Saved", result.output)
+        self.assertEqual(target.read_bytes(), b"One")
+
+        newer = self.directory / "plan2.txt"
+        newer.write_bytes(b"Two")
+        self.assertIn("2 versions", self.biwak("file", "replace", fid, newer).output)
+        self.biwak("file", "download", fid, "-o", target)
+        self.assertEqual(target.read_bytes(), b"Two")
+        old = uploaded["versions"][0]["id"]
+        self.biwak("file", "download", fid, "--version", old, "-o", target)
+        self.assertEqual(target.read_bytes(), b"One")
+        result = self.biwak("file", "download", fid, "--version", 999999)
+        self.assertEqual(result.exit_code, 1)
+
+    def test_download_to_the_files_name(self):
+        item = ops.create_upload(
+            project=self.project,
+            file=test_cli.SimpleUploadedFile("named.txt", b"Named"),
+            creator=self.ada,
+        )
+        previous = Path.cwd()
+        os.chdir(self.directory)
+        self.addCleanup(os.chdir, previous)
+        self.biwak("file", "download", item.pk)
+        self.assertEqual((self.directory / "named.txt").read_bytes(), b"Named")
+
+    def test_moving(self):
+        folder = ops.create_folder(
+            project=self.project, title="Specs", creator=self.ada, visible=True
+        )
+        doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
+        output = self.biwak("folder", "move", doc.pk, folder.pk).output
+        self.assertIn("[clients]", output)
+        self.assertEqual(Item.objects.get(pk=doc.pk).parent, folder)
+        self.biwak("folder", "move", doc.pk)
+        self.assertIsNone(Item.objects.get(pk=doc.pk).parent)
+
+    def test_docs(self):
+        data = json.loads(
+            self.biwak(
+                "doc", "new", self.project.pk, "Minutes", "Decided",
+                "--notify", "nobody", "--json",
+            ).stdout
+        )  # fmt: skip
+        did = data["id"]
+        output = self.biwak("doc", "show", did).output
+        self.assertIn("Minutes", output)
+        self.assertIn("Decided", output)
+        self.assertNotIn("[clients]", output)
+
+    def test_editing_a_doc(self):
+        doc = ops.create_doc(
+            project=self.project,
+            title="Minutes",
+            content="One",
+            creator=self.ada,
+            visible=True,
+        )
+        with patch.object(click, "edit", return_value="Two") as edit:
+            result = self.biwak("doc", "edit", doc.pk)
+        edit.assert_called_once()
+        self.assertEqual(edit.call_args.args[0], "One")
+        self.assertIn("Clients can see this doc.", result.output)
+        self.assertIn("Saved", result.output)
+        doc.doc.refresh_from_db()
+        self.assertEqual(doc.doc.content, "Two")
+        # Saving gave up the lock
+        self.assertIsNone(operations.lock_holder(doc.doc))
+
+    def test_editing_without_changes_gives_up_the_lock(self):
+        doc = ops.create_doc(
+            project=self.project, title="Minutes", content="One", creator=self.ada
+        )
+        with patch.object(click, "edit", return_value="One"):
+            result = self.biwak("doc", "edit", doc.pk)
+        self.assertIn("No changes", result.output)
+        doc.doc.refresh_from_db()
+        self.assertIsNone(operations.lock_holder(doc.doc))
+
+    def test_editing_refuses_while_somebody_else_edits(self):
+        doc = ops.create_doc(
+            project=self.project, title="Minutes", content="One", creator=self.ada
+        )
+        operations.lock_doc(doc, self.bob)
+        with patch.object(click, "edit", return_value="Two") as edit:
+            result = self.biwak("doc", "edit", doc.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("409", result.output)
+        edit.assert_not_called()
+
+    def test_editing_refuses_to_overwrite_a_newer_version(self):
+        doc = ops.create_doc(
+            project=self.project, title="Minutes", content="One", creator=self.ada
+        )
+
+        def editor(text, **kwargs):
+            # Somebody else saves while the editor is open (the lock expired)
+
+            Doc.objects.filter(item=doc).update(locked_by=None, locked_at=None)
+            operations.update_doc(doc, actor=self.bob, content="Bob's")
+            return "Ada's"
+
+        with patch.object(click, "edit", side_effect=editor):
+            result = self.biwak("doc", "edit", doc.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("saved a newer version", result.output)
+        doc.doc.refresh_from_db()
+        self.assertEqual(doc.doc.content, "Bob's")
+
+    def test_a_client_cannot_see_internal_items(self):
+        secret = ops.create_doc(project=self.project, title="Secret", creator=self.ada)
+        private = ops.create_folder(
+            project=self.project, title="Private", creator=self.ada
+        )
+        hidden = ops.create_message(
+            project=self.project, title="Hidden", creator=self.ada
+        )
+        _token, token = APIToken.create_for(user=self.cleo, title="T", access="write")
+        biwak_cli.core.write_config({"url": "http://testserver", "token": token})
+        for args in [
+            ("doc", "show", secret.pk),
+            ("files", self.project.pk, private.pk),
+            ("message", "show", hidden.pk),
+        ]:
+            with patch.object(biwak_cli.commands.console, "_color_system", None):
+                result = test_cli.CliRunner().invoke(
+                    biwak_cli.cli, [str(a) for a in args]
+                )
+            self.assertEqual(result.exit_code, 1, args)
+            self.assertIn("404", result.output)
+        self.assertNotIn("Hidden", self.cli_as(self.cleo, "messages", self.project.pk))
+        self.assertNotIn("Secret", self.cli_as(self.cleo, "files", self.project.pk))
+
+    def cli_as(self, user, *args):
+        _token, token = APIToken.create_for(user=user, title="T", access="write")
+        biwak_cli.core.write_config({"url": "http://testserver", "token": token})
+        with patch.object(biwak_cli.commands.console, "_color_system", None):
+            return (
+                test_cli
+                .CliRunner()
+                .invoke(biwak_cli.cli, [str(a) for a in args])
+                .output
+            )

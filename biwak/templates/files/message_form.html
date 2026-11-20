@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load attachments biwak i18n %}
+{% block title %}{% if item %}{% translate "Edit the message" %}{% else %}{% translate "New message" %}{% endif %} –
+  Biwak{% endblock title %}
+
+{% block content %}
+  <nav class="small mb-2">
+    <a href="{{ project.get_absolute_url }}">{{ project }}</a> /
+    <a href="{% url 'project_messages' project.pk %}">{% translate "Messages" %}</a>
+  </nav>
+  <h1 class="mb-3">
+    {% if item %}{% translate "Edit the message" %}{% else %}{% translate "New message" %}{% endif %}
+  </h1>
+  {% include "items/_client_banner.html" %}
+  <div class="card wb-form-card mb-4">
+    <div class="card-body">
+      <form method="post" {% attachments_attrs project %}>
+        {% csrf_token %}
+        {% include "files/_attach_button.html" %}
+        {{ form }}
+        <button type="submit" class="btn btn-primary">
+          {% if item %}{% translate "Save" %}{% else %}{% translate "Post" %}{% endif %}
+        </button>
+        <a
+          href="{% if item %}{{ item.get_absolute_url }}{% else %}{% url 'project_messages' project.pk %}{% endif %}"
+          class="btn btn-quiet"
+        >{% translate "Cancel" %}</a>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

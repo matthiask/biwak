@@ -15,12 +15,15 @@ from django.utils import timezone
 from biwak import schedules
 from biwak.activity import mentions
 from biwak.activity.models import Action
+from biwak.activity.notify import notify_people
 from biwak.activity.operations import record, subscribe
 from biwak.files import attachments
+from biwak.files.models import FileVersion, content_type_for
 from biwak.items import visibility
 from biwak.items.models import (
     Comment,
     Doc,
+    DocVersion,
     Folder,
     Group,
     Item,
@@ -29,6 +32,7 @@ from biwak.items.models import (
     Status,
     Todo,
     TodoList,
+    Upload,
 )
 
 
@@ -142,7 +146,18 @@ def create_todo(
 
 
 @transaction.atomic
-def create_message(*, project, title, creator, content="", visible=False):
+def create_message(
+    *,
+    project,
+    title,
+    creator,
+    content="",
+    visible=False,
+    category=None,
+    whom="nobody",
+):
+    """``whom`` to notify: ``"everybody"``, a list of people or
+    ``"nobody"`` (``notify_people()``, specs/files.md)"""
     item = _create_item(
         project=project,
         kind=Kind.MESSAGE,
@@ -150,9 +165,11 @@ def create_message(*, project, title, creator, content="", visible=False):
         creator=creator,
         visible=visible,
     )
-    Message.objects.create(item=item, content=content)
+    Message.objects.create(item=item, content=content, category=category)
     attachments.link(item, content, actor=creator)
-    _created(item, creator)
+    event = _created(item, creator)
+    mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
+    notify_people(item, whom=whom, actor=creator)
     return item
 
 
@@ -172,7 +189,16 @@ def create_folder(*, project, title, creator, parent=None, visible=False):
 
 
 @transaction.atomic
-def create_doc(*, project, title, creator, parent=None, content="", visible=False):
+def create_doc(
+    *,
+    project,
+    title,
+    creator,
+    parent=None,
+    content="",
+    visible=False,
+    whom="nobody",
+):
     item = _create_item(
         project=project,
         kind=Kind.DOC,
@@ -182,8 +208,61 @@ def create_doc(*, project, title, creator, parent=None, content="", visible=Fals
         visible=visible and parent is None,
     )
     Doc.objects.create(item=item, content=content)
+    DocVersion.objects.create(
+        doc_id=item.pk, title=title, content=content, created_by=creator
+    )
     attachments.link(item, content, actor=creator)
-    _created(item, creator)
+    event = _created(item, creator)
+    mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
+    notify_people(item, whom=whom, actor=creator)
+    return item
+
+
+def new_version(upload, file, *, uploaded_by):
+    """Stores ``file`` (an uploaded file) as the newest version of the
+    upload; raises ``attachments.UploadError`` for files over the limit"""
+    name = attachments.clean_name(file.name)
+    attachments.check_size(file)
+    version = FileVersion(
+        upload=upload,
+        name=name,
+        size=file.size,
+        content_type=content_type_for(name),
+        uploaded_by=uploaded_by,
+    )
+    version.file.save(name, file, save=False)
+    version.save()
+    return version
+
+
+@transaction.atomic
+def create_upload(
+    *,
+    project,
+    file,
+    creator,
+    parent=None,
+    description="",
+    visible=False,
+    whom="nobody",
+):
+    """Uploads a file into the root or a folder; its title is the file's
+    name. Raises ``attachments.UploadError`` for files over the limit."""
+    attachments.check_size(file)
+    item = _create_item(
+        project=project,
+        kind=Kind.FILE,
+        title=attachments.clean_name(file.name),
+        creator=creator,
+        parent=parent,
+        visible=visible and parent is None,
+    )
+    upload = Upload.objects.create(item=item, description=description)
+    new_version(upload, file, uploaded_by=creator)
+    attachments.link(item, description, actor=creator)
+    event = _created(item, creator)
+    mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
+    notify_people(item, whom=whom, actor=creator)
     return item
 
 
@@ -474,8 +553,14 @@ def reorder(items):
 
 @transaction.atomic
 def move_item(item, *, parent, actor):
-    """Moves a folder, doc (or another item) into another folder or to the
-    top level, with its subtree; recomputes visibility"""
+    """Moves a folder, doc or file (or another item) into another folder or
+    to the top level, with its subtree; recomputes visibility. A folder
+    can't go into itself or what's in it."""
+    if parent is not None and (
+        parent.pk == item.pk
+        or Item.objects.descendants(item).filter(pk=parent.pk).exists()
+    ):
+        raise ValueError("A folder can't be moved into itself")
     item.parent = parent
     item.position = _next_position(
         Item.objects.filter(project=item.project, parent=parent, kind=item.kind)
