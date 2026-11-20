@@ -23,9 +23,8 @@ indexes.
 - **PostgreSQL full-text search**, no outside service: a `tsvector` per
   item (title and text) and per comment, kept up to date by the
   operations or generated columns, with GIN indexes. Several languages
-  are expected (English and German texts): use the `simple`
-  configuration plus prefix matching unless a better choice is
-  confirmed (question below).
+  are expected (English and German texts): the `simple` configuration
+  plus prefix matching.
 - **Results** go through `Item.objects.visible_to(user)` (comments through
   their item), so a client never finds what they can't see and trashed
   items don't show. Each result: kind icon, title, project, a short
@@ -37,14 +36,14 @@ indexes.
   cursor pagination; `biwak search TERMS [--project ID] [--kind K]`,
   marking `[clients]`.
 
-## Questions before building
+## Decided (2026-11-20)
 
-- The text search configuration (`simple` with prefixes, or detecting
-  the language).
-- Whether archived projects are searched (proposed: yes, with a filter,
-  since archived projects stay readable).
-- The page size and the excerpt length (proposed: like the feed, 50 and
-  200 characters).
+- The `simple` text search configuration with prefix matching, the same
+  for every language; no stemming.
+- Archived projects are searched, their results marked as archived; a
+  filter leaves them out.
+- Page size and excerpt length like the feed: 50 results, 200
+  characters.
 
 ## Done when
 
