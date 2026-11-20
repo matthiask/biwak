@@ -29,5 +29,10 @@ urlpatterns = [
         views.mentionable_list,
         name="mentionable_list",
     ),
+    path(
+        "projects/<int:pk>/mentionable/",
+        views.mentionable_new,
+        name="mentionable_new",
+    ),
     path("unsubscribe/<str:token>/", views.unsubscribe, name="unsubscribe"),
 ]

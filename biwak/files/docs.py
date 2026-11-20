@@ -49,6 +49,7 @@ def doc_new(request, pk):
     if not ops.can_create(request.user, Kind.DOC):
         raise PermissionDenied
     form = NewDocForm(request.POST or None, project=project)
+    form.mention_fields(project, "title", "content", folder=folder)
     if form.is_valid():
         data = form.cleaned_data
         item = ops.create_doc(

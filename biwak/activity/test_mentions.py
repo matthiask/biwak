@@ -172,3 +172,89 @@ class MentionsTest(TestCase):
         self.assertEqual(
             mentions.candidates(self.todo, "example.org", for_user=self.cleo), []
         )
+
+
+class NewItemMentionsTest(TestCase):
+    """The @ list of the new message, doc and file forms: who will see the
+    item that doesn't exist yet"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.cleo = person("Cleo", client=True)
+        self.dan = person("Dan", client=True)  # not a member
+        self.project = project(members=[self.ada, self.cleo], all_access=False)
+        self.bob = person("Bob")  # staff, not a member
+        self.url = f"/projects/{self.project.pk}/mentionable/"
+        self.shared = ops.create_folder(
+            project=self.project, title="Shared", creator=self.ada, visible=True
+        )
+        self.internal = ops.create_folder(
+            project=self.project, title="Internal", creator=self.ada
+        )
+
+    def get(self, user, **params):
+        self.client.force_login(user)
+        response = self.client.get(self.url, params)
+        self.assertEqual(response.status_code, 200)
+        return {r["name"]: r for r in response.json()}
+
+    def test_internal_staff_only(self):
+        result = self.get(self.ada)
+        self.assertTrue(result["Ada Example"]["available"])
+        self.assertEqual(result["Cleo Example"]["reason"], "can't see internal items")
+        self.assertEqual(
+            result["Bob Example"]["reason"], "not a member of this project"
+        )
+
+    def test_visible_adds_the_client_members(self):
+        result = self.get(self.ada, visible="1")
+        self.assertTrue(result["Cleo Example"]["available"])
+        self.assertFalse(result["Bob Example"]["available"])
+        self.assertNotIn("Dan Example", result)
+
+    def test_the_folder_decides(self):
+        result = self.get(self.ada, folder=self.shared.pk)
+        self.assertTrue(result["Cleo Example"]["available"])
+        result = self.get(self.ada, folder=self.internal.pk, visible="1")
+        self.assertFalse(result["Cleo Example"]["available"])
+
+    def test_clients_find_members_without_addresses(self):
+        result = self.get(self.cleo)
+        self.assertEqual(set(result), {"Ada Example", "Cleo Example"})
+        self.assertTrue(result["Cleo Example"]["available"])
+        self.assertEqual({r["email"] for r in result.values()}, {""})
+        self.assertEqual(self.get(self.cleo, q="example.org"), {})
+        self.assertEqual(self.get(self.cleo, q="Bob"), {})
+
+    def test_no_access(self):
+        for user in [self.bob, self.dan]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                self.assertEqual(self.client.get(self.url).status_code, 404)
+
+    def test_a_folder_clients_cannot_see(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.url, {"folder": self.internal.pk})
+        self.assertEqual(response.status_code, 404)
+        other = project("Other", members=[self.ada])
+        folder = ops.create_folder(project=other, title="F", creator=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url, {"folder": folder.pk})
+        self.assertEqual(response.status_code, 404)
+
+    def test_the_forms_use_it(self):
+        self.client.force_login(self.ada)
+        for url in [
+            f"/projects/{self.project.pk}/messages/new/",
+            f"/projects/{self.project.pk}/docs/new/",
+            f"/projects/{self.project.pk}/files/new/",
+        ]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, f'data-mentions="{self.url}"')
+        response = self.client.get(
+            f"/projects/{self.project.pk}/docs/new/", {"folder": self.shared.pk}
+        )
+        self.assertContains(
+            response, f'data-mentions="{self.url}?folder={self.shared.pk}"'
+        )

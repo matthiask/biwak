@@ -39,12 +39,16 @@ def mentionable_people(item):
     ``Item.objects.visible_to()``: members of the project, all staff in
     all-access projects, clients only if they're members and the item is
     visible to clients"""
-    project = item.project
+    return people_who_see(item.project, item.is_client_visible)
+
+
+def people_who_see(project, visible):
+    """The same for an item that doesn't exist yet"""
     staff = models.Q(is_client=False)
     if not project.is_all_access:
         staff &= models.Q(memberships__project=project)
     can_see = staff
-    if item.is_client_visible:
+    if visible:
         can_see |= models.Q(is_client=True, memberships__project=project)
     return User.objects.active().filter(can_see).distinct()
 
@@ -68,7 +72,13 @@ def candidates(item, query, *, for_user):
     """The ``@`` list: people matching ``query``, those who can see the item
     first; the others greyed out with the reason. Clients only find the
     project's members and not by email, and don't see addresses."""
-    project = item.project
+    return candidates_for(
+        item.project, item.is_client_visible, query, for_user=for_user
+    )
+
+
+def candidates_for(project, visible, query, *, for_user):
+    """The same for a new item of ``project``, visible to clients or not"""
     people = User.objects.active().filter(memberships__project=project)
     if not for_user.is_client:
         people = User.objects.active().filter(
@@ -82,7 +92,7 @@ def candidates(item, query, *, for_user):
         people = people.filter(q)
     people = list(people.distinct().order_by("full_name", "email")[:200])
     available = set(
-        mentionable_people(item)
+        people_who_see(project, visible)
         .filter(pk__in=[p.pk for p in people])
         .values_list("pk", flat=True)
     )

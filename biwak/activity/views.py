@@ -166,6 +166,26 @@ def mentionable_list(request, pk):
     return mentionable(request, pk, Kind.LIST)
 
 
+def mentionable_new(request, pk):
+    """For messages, docs and files not created yet: the people who will see
+    them. ``?visible=1`` for visible to clients, ``?folder=`` for the folder
+    of a doc or file (it decides, like when saving); clients always create
+    what clients see."""
+    project = project_for(request, pk)
+    visible = request.user.is_client or bool(request.GET.get("visible"))
+    if folder_id := request.GET.get("folder"):
+        folder = item_for(request, folder_id, Kind.FOLDER)
+        if folder.project_id != project.pk:
+            raise Http404
+        visible = folder.is_client_visible
+    return JsonResponse(
+        mentions.candidates_for(
+            project, visible, request.GET.get("q", ""), for_user=request.user
+        ),
+        safe=False,
+    )
+
+
 class SettingsForm(Form):
     notification_level = forms.ChoiceField(
         label=_("Notify me about"),
