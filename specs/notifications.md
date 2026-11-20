@@ -18,9 +18,14 @@ store enough to render without the item (the title at the time, in
 .visible_to()`). Events feed the activity feed (`feed.md`) and
 notifications.
 
-To add in stage 1: **edits merge**. An `edited` event by the same person
-on the same item within 10 minutes of the last one updates that event's
-time instead of creating a new one ("once per editing session").
+**Edits merge** (built in stage 1, `record()`): an `edited` event by the
+same person on the same item within 10 minutes of the last one updates
+that event's time instead of creating a new one ("once per editing
+session"). The person's last `edited` event counts, even when others'
+events came in between; a merged edit tells nobody again who was told
+already, except people mentioned in it for the first time (proposed by
+the building agent, 2026-11-20). Changing a to-do's title, notes or due
+date records `edited` (`update_todo()`; assignees record `assigned`).
 
 ## Subscriptions (built)
 
@@ -72,10 +77,14 @@ time instead of creating a new one ("once per editing session").
 - **Model:** `Mention(item, comment null, user, created_at)`, written by
   the operations that save texts (`create_todo`, `update_todo`,
   `add_comment`, later messages, docs and answers) via
-  `mentions.update(item, text, comment=None, actor)`. It parses the
-  text, ignores people who can't see the item (a mention typed by hand
-  for someone without access is shown as plain text, not linked), and
-  returns those **newly** mentioned.
+  `mentions.update(item, text, comment=None, actor, event=None)`. It
+  parses the text, ignores people who can't see the item (a mention
+  typed by hand for someone without access is shown as plain text, not
+  linked), and returns those **newly** mentioned, adding them to
+  `event.data["mentioned"]` for `notify()`. A to-do's title and notes
+  are one text. People removed from a text are forgotten, so mentioning
+  them again counts as new (proposed by the building agent,
+  2026-11-20).
 - **A new mention** notifies the person (on every level except
   "nothing") and subscribes them (`explicit=True`). Editing a text later
   notifies only people newly mentioned. A mention doesn't come back
@@ -88,12 +97,15 @@ time instead of creating a new one ("once per editing session").
 
 Per person (`User.notification_level`), overridable per project and per
 item (`LevelOverride(user, project null, item null, level)`, one of the
-two set; the item's override wins over the project's):
+two set; the item's override wins over the project's). An item's
+override also covers what's in it: the nearest override along the item
+and its containers wins (proposed by the building agent, 2026-11-20):
 
 - **Everything** (the default): everything the person is subscribed to.
 - **Only what concerns me:** being assigned, being mentioned, comments on
   items they created or commented on, their to-dos completed by someone
-  else.
+  else ("their": assigned to them or created by them; proposed by the
+  building agent, 2026-11-20).
 - **Nothing:** no mails; the feed still shows everything.
 
 Never a notification about one's own actions.

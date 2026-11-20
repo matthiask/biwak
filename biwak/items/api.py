@@ -252,7 +252,7 @@ def todo_out(item):
         and {"id": group.pk, "title": group.title, "position": group.position},
         "position": item.position,
         "notes": todo.notes,
-        "notes_html": html(todo.notes),
+        "notes_html": html(todo.notes, item),
         "starts_on": todo.starts_on,
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,
@@ -580,7 +580,7 @@ def comment_out(comment, item):
         "item_id": item.pk,
         "author": person_out(comment.author),
         "content": comment.content,
-        "content_html": html(comment.content),
+        "content_html": html(comment.content, item),
         "created_at": comment.created_at,
         "visible_to_clients": item.is_client_visible,
     }

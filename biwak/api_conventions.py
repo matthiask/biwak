@@ -25,8 +25,10 @@ def absolute(url):
     return settings.BASE_URL + url
 
 
-def html(text):
-    return str(render_markdown(text, absolute=True))
+def html(text, item=None):
+    """Mentions with current names when the item is given, attachment URLs
+    with BASE_URL"""
+    return str(render_markdown(text, item, absolute=True))
 
 
 class PersonOut(Schema):
