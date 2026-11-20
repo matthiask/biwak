@@ -115,6 +115,11 @@ class DocConsumer(AsyncWebsocketConsumer):
         ]:
             await self.channel_layer.group_add(group, self.channel_name)
             self.groups_joined.append(group)
+        # Once more: a change before joining told nobody
+        self.mode = await database_sync_to_async(self._access)()
+        if self.mode is None:
+            await self.refuse()
+            return
         await self.send_mode()
         self.check_task = asyncio.create_task(self.check_periodically())
 
@@ -171,7 +176,11 @@ class DocConsumer(AsyncWebsocketConsumer):
     async def receive_sync(self, data):
         if data[0] == YSyncMessageType.SYNC_STEP1:
             # What we have that the editor doesn't, then what we have, so
-            # that it sends what we don't (typed offline)
+            # that it sends what we don't (typed offline); to who may still
+            # see it
+            await self.access_check()
+            if self.mode is None:
+                return
             doc = await database_sync_to_async(live.load)(self.pk)
             await self.send(bytes_data=handle_sync_message(data, doc))
             await self.send(bytes_data=create_sync_message(doc))

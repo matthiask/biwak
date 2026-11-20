@@ -345,6 +345,25 @@ class ConsumerTest(TransactionTestCase):
         await database_sync_to_async(self.on_commit)(limit)
         await self.assertClosed(bob)
 
+    async def test_access_lost_while_connecting(self):
+        """Checked again after joining the groups that tell about changes:
+        a change between the first check and joining isn't missed"""
+        with patch.object(live, "access", side_effect=[live.READ, None]):
+            cleo = await self.connect(self.cleo, self.shared, sync=False)
+            await self.assertClosed(cleo)
+        self.assertEqual(cleo.modes, [])
+
+    async def test_access_is_checked_before_syncing(self):
+        cleo = await self.connect(self.cleo, self.shared, sync=False)
+        await cleo.drain()
+        # Without telling the editors
+        await database_sync_to_async(Item.objects.filter(pk=self.shared.pk).update)(
+            is_client_visible=False
+        )
+        await cleo.communicator.send_to(bytes_data=create_sync_message(cleo.doc))
+        await self.assertClosed(cleo)
+        self.assertEqual(str(cleo), "")
+
     async def test_logging_out_closes_the_session_at_the_next_check(self):
         cleo = await self.connect(self.cleo, self.shared)
         await database_sync_to_async(Session.objects.all().delete)()

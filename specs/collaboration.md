@@ -107,7 +107,9 @@ browsers (Playwright) typing, a client watching, an internal doc
   they created and watch the others they see; nobody edits a read-only
   doc; internal docs, other projects, trashed docs and no login: the
   websocket accepts and closes with 4404 (like the pages' 404; the editor
-  doesn't reconnect). Checked again when an event may change access
+  doesn't reconnect). Checked again right after joining the channel
+  groups that tell about changes, before answering every sync, when an
+  event may change access
   (moved, visibility changed, trashed, archived, project edited, member
   removed or left), when a person is saved (admin: deactivated, made a
   client) or a project (admin: made limited, archived), when the read-only option changes, and every 60 seconds
