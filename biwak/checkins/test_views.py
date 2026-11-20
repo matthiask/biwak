@@ -163,6 +163,25 @@ class PagesTest(ViewsTestCase):
         self.assertNotContains(response, "Dora")
         self.assertContains(self.get(self.ada, self.shared.get_absolute_url()), "Dora")
 
+    def test_clients_dont_see_staff_who_arent_members_as_missing(self):
+        outsider = person("Dora")
+        ops.set_people(self.shared, [self.ada, self.cleo, outsider], actor=self.ada)
+        self.run_at("2027-03-29 09:00")
+        response = self.get(self.cleo, self.shared.get_absolute_url())
+        self.assertNotContains(response, "Dora")
+        self.assertIn(self.ada, response.context["missing"])
+        response = self.get(self.ada, self.shared.get_absolute_url())
+        self.assertIn(outsider, response.context["missing"])
+
+    def test_a_client_cant_open_the_persons_page_of_a_non_member(self):
+        outsider = person("Dora")
+        ops.set_people(self.shared, [self.ada, self.cleo, outsider], actor=self.ada)
+        url = self.url("question_person", self.shared, outsider.pk)
+        self.assertEqual(self.get(self.cleo, url).status_code, 404)
+        self.assertEqual(self.get(self.ada, url).status_code, 200)
+        url = self.url("question_person", self.shared, self.ada.pk)
+        self.assertEqual(self.get(self.cleo, url).status_code, 200)
+
     def test_a_person_answers_over_time(self):
         ops.answer(self.item, user=self.ada, content="Now")
         self.run_at("2027-03-29 09:00")

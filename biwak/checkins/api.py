@@ -91,7 +91,13 @@ def question_out(request, item):
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
         "time_zone": question.time_zone,
-        "people": [person_out(user) for user in question.people.all()],
+        # Clients only learn about the project's members
+        "people": [
+            person_out(user)
+            for user in item.project.people_known_to(
+                request.user, question.people.all()
+            )
+        ],
         "paused": question.is_paused,
         "next_at": question.next_at,
         "latest_occurrence_id": latest.pk if latest else None,
@@ -273,7 +279,12 @@ def occurrence_list(
             "asked_at": occurrence.asked_at,
             "answers": [answer_out(a, request.user) for a in found],
             "missing": (
-                [person_out(u) for u in ops.missing(occurrence)]
+                [
+                    person_out(u)
+                    for u in item.project.people_known_to(
+                        request.user, ops.missing(occurrence)
+                    )
+                ]
                 if occurrence == latest
                 else None
             ),
