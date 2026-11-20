@@ -21,10 +21,10 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `files.md` | 1: storage, attachments, downloads | built | core | strong |
 | `todos.md` | 1: schedules, recurrence | built | core | cheaper |
 | `todos.md` | 2: by due date, iCal | built | stage 1 | cheaper |
-| `feed.md` | feed, history, bookmarks, links | in progress (branch `feed`) | core | cheaper |
+| `feed.md` | feed, history, bookmarks, links | built | core | cheaper |
 | `files.md` | 2: messages (with pinning), folders, docs | next once notifications 1 is merged | notifications 1 | cheaper |
 | `todos.md` | 3: long lists of completed to-dos | next | stage 2 | cheaper |
-| `projects-overview.md` | favorites, activity order, cards | after `feed.md` | `feed.md` (bookmarks) | cheaper, review the client column |
+| `projects-overview.md` | favorites, activity order, cards | in progress (branch `projects-overview`) | `feed.md` (bookmarks) | cheaper, review the client column |
 | `glance.md` | excerpts, to-do indicators and peek, counts | after `feed.md`, notifications 1 | `feed.md`, notifications 1 | cheaper |
 | `checkins.md` | | open | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | open | notifications 1, check-ins | strong |
