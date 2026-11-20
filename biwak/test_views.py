@@ -148,6 +148,12 @@ class ViewsTest(TestCase):
         ops.add_comment(self.secret_todo, author=self.ada, content="Internal note")
         response = self.client.get(self.internal.get_absolute_url())
         self.assertContains(response, "1 to-do and 1 comments")
+        self.assertContains(response, "visible to 1 client.")
+        Membership.objects.create(
+            project=self.project, user=person("Dora", client=True)
+        )
+        response = self.client.get(self.internal.get_absolute_url())
+        self.assertContains(response, "visible to 2 clients.")
         self.client.post(f"/items/{self.internal.pk}/switch/", {"visible": "1"})
         self.assertIn(self.secret_todo, Item.objects.visible_to(self.cleo))
 

@@ -39,7 +39,8 @@ def set_switch(item, *, visible):
 
 def affected(item):
     """What turning the switch on would show, for the switch's question:
-    the item and its descendants, and their comments"""
+    the item and its descendants, their comments, and the clients among the
+    project's members who would see them"""
     from biwak.items.models import Comment
 
     pks = list(
@@ -48,6 +49,7 @@ def affected(item):
     return {
         "items": len(pks) - 1,
         "comments": Comment.objects.filter(item__in=pks).count(),
+        "clients": item.project.memberships.filter(user__is_client=True).count(),
     }
 
 

@@ -285,7 +285,9 @@ class VisibilityTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
         ops.add_comment(todo, author=self.ada, content="Done?")
-        self.assertEqual(visibility.affected(todolist), {"items": 1, "comments": 1})
+        self.assertEqual(
+            visibility.affected(todolist), {"items": 1, "comments": 1, "clients": 1}
+        )
 
     def test_assigning_clients(self):
         todolist = ops.create_list(
