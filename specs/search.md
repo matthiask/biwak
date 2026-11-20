@@ -39,6 +39,9 @@ indexes.
 
 ## Decided (2026-11-20)
 
+- Excerpts are plain text like the excerpts elsewhere (`glance.md`): no
+  Markdown, mentions as "@Label" as written.
+
 - The `simple` text search configuration with prefix matching, the same
   for every language; no stemming.
 - Archived projects are searched, their results marked as archived; a
@@ -74,8 +77,8 @@ indexes.
   first), cut to 200 characters in Python, then escaped; `<mark>` is the
   only markup. The text of the item if it has the words, else the first
   matching comment (marked "Comment:"), none if only the title has them.
-  `ts_headline` drops HTML tags from texts; Markdown is shown as
-  written. API: `excerpt` (plain), `excerpt_html`, `title_html`,
+  Texts and comments are turned into plain text first (Markdown rendered,
+  tags stripped, mentions as written). API: `excerpt` (plain), `excerpt_html`, `title_html`,
   `in_comment`, `project_name`, `project_archived` on top of `ItemOut`.
 - **Page and field**: `/search/?q=` with the project, kind, "only mine"
   and "without archived projects" filters; the field in the navigation of

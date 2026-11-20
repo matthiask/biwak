@@ -192,6 +192,13 @@ def headlines(texts, text):
         return [row[0] for row in cursor.fetchall()]
 
 
+def as_text(text):
+    """Markdown as plain text, the whole of it"""
+    from biwak.templatetags.biwak import excerpt
+
+    return excerpt(text, chars=len(text or "") + 1) if text else ""
+
+
 def hits(items, terms):
     """``{item ID: Hit}`` for the items of a page of results: the title and
     an excerpt of the text, or of the first comment if only a comment has
@@ -224,8 +231,10 @@ def hits(items, terms):
         comments[item_id] = content
     # Titles first, then the texts, then the comments: one query
     sources = [plain(item.title, item) for item in items]
-    sources += [texts.get(item.pk, "") for item in items]
-    sources += [comments.get(item.pk, "") for item in items]
+    # Texts as plain text, like the excerpts elsewhere (specs/glance.md):
+    # no Markdown, mentions as written (no query per result)
+    sources += [as_text(texts.get(item.pk, "")) for item in items]
+    sources += [as_text(comments.get(item.pk, "")) for item in items]
     marked = headlines(sources, text)
     count = len(items)
     result = {}

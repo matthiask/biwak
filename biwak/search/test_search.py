@@ -423,6 +423,18 @@ class ExcerptTest(SearchBase):
         response = self.search("order")
         self.assertContains(response, "<mark>Order</mark> the tent")
 
+    def test_excerpts_are_plain_text(self):
+        """Like the excerpts elsewhere: no Markdown, mentions as written"""
+        ops.update_todo(
+            self.todo,
+            actor=self.ada,
+            notes=f"Ask [@Bob](person:{self.bob.pk}) for **more** [pegs](https://example.org/)",
+        )
+        response = self.search("pegs")
+        self.assertContains(response, "Ask @Bob for more <mark>pegs</mark>")
+        self.assertNotContains(response, "person:")
+        self.assertNotContains(response, "**more**")
+
     def test_the_excerpt_is_escaped(self):
         ops.update_todo(
             self.todo,
