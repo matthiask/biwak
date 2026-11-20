@@ -28,7 +28,14 @@ function replace(textarea, placeholder, text) {
     insert(textarea, text)
     return
   }
-  textarea.setRangeText(text, index, index + placeholder.length, "preserve")
+  // "preserve" would select the new text when the caret was at the end of
+  // the placeholder, so that typing replaced it; the caret follows the text
+  const end = index + placeholder.length
+  const shift = (position) =>
+    position >= end ? position + text.length - placeholder.length : position
+  const { selectionStart, selectionEnd } = textarea
+  textarea.setRangeText(text, index, end, "preserve")
+  textarea.setSelectionRange(shift(selectionStart), shift(selectionEnd))
   textarea.dispatchEvent(new Event("input", { bubbles: true }))
 }
 

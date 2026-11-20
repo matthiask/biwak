@@ -34,9 +34,17 @@ editable as a dev dependency) is tested by running it against the API
 through the test client (`biwak/test_cli.py`). Each part adds its API
 endpoints (`<app>/api.py`, conventions in `biwak/api_conventions.py`) and
 CLI commands with its pages; bump `cli/pyproject.toml`'s version with new
-commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break. Browser end-to-end tests (Playwright) only where
-nothing else can test something, and not while we're still exploring
-(decided 2026-11-20): they slow us down.
+commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break.
+
+End-to-end tests (`biwak/test_e2e.py`, tagged `e2e`) run the real server and
+Chromium through Playwright: `uv run playwright install chromium` once,
+without the browser they're skipped, `./runtests.sh --exclude-tag e2e`
+leaves them out. They need the production bundle in `static/`, which
+`./runtests.sh` builds first. Only for what nothing but a browser can test:
+the JavaScript in `frontend/` and htmx (decided 2026-11-20); the test client
+covers everything else. A change to a script or an htmx interaction gets a
+test there: logged in through a session cookie, Playwright's waiting
+instead of sleeps, at least the client's view where it differs.
 
 # Code and conventions
 
@@ -110,7 +118,8 @@ What every part does the same way. Look at how the core does it
     operations, every page and endpoint as staff and as a client
     (including a client getting 404 for internal items), the CLI
     commands (`biwak/test_cli.py`). Made-up data from
-    `biwak/test_utils.py`. No browser tests.
+    `biwak/test_utils.py`. Browser tests (`biwak/test_e2e.py`) only for
+    JavaScript and htmx interactions (decided 2026-11-20).
 12. **Done** means: the spec's "Done when" list is true, `./runtests.sh`
     passes, `uvx prek run --all-files` is clean, and the spec says what
     was built (a "Status" line) and any decisions made on the way.

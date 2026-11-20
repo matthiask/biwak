@@ -3,8 +3,8 @@
   <div
     class="wb-reactions"
     id="{{ dom_id }}"
-    hx-target="this"
-    hx-swap="outerHTML"
+    hx-target:inherited="this"
+    hx-swap:inherited="outerHTML"
   >
     {% for reaction in reactions %}
       <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline">
