@@ -1,17 +1,38 @@
-"""Attachments (specs/files.md, stage 1): uploading files to insert into
-texts, their metadata and downloads"""
+"""Files (specs/files.md): attachments (stage 1), the message board,
+folders, docs and files (stage 2). The same operations as the web
+interface, and the same visibility: everything through
+``Item.objects.visible_to()``."""
 
 import datetime as dt
+from typing import Literal
 
+from django.db.models import Value
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from ninja import File, Router, Schema, Status, UploadedFile
+from django.utils.translation import gettext as _
+from ninja import File, Form, Router, Schema, Status, UploadedFile
 from ninja.errors import HttpError
 
-from biwak.api_conventions import PersonOut, absolute, person_out
-from biwak.files import attachments
+from biwak.accounts.models import User
+from biwak.api_conventions import (
+    ItemOut,
+    PersonOut,
+    absolute,
+    html,
+    item_out,
+    page_of,
+    paginated,
+    person_out,
+)
+from biwak.files import attachments, operations, queries
+from biwak.files.library import breadcrumbs, contents
 from biwak.files.models import Attachment
+from biwak.items import operations as ops
+from biwak.items.api import item_for
+from biwak.items.models import Kind, MessageCategory
 from biwak.projects.api import project_for
+from biwak.templatetags.biwak import excerpt
 
 
 router = Router(tags=["files"])
@@ -86,3 +107,666 @@ def attachment_detail(request, key: str):
 def attachment_download(request, key: str):
     """The file, or a redirect to a presigned URL with a bucket"""
     return attachments.serve(attachment_for(request, key))
+
+
+# Whom to notify, the same choice as the forms ---------------------------
+
+Notify = Literal["everybody", "nobody"] | list[int]
+
+
+def whom(project, notify):
+    """``"everybody"``, ``"nobody"`` or the IDs of project members, as
+    ``notify_people()`` takes them; 400 for anybody else"""
+    if isinstance(notify, str):
+        return notify
+    people = list(
+        User.objects.active().filter(pk__in=notify, memberships__project=project)
+    )
+    if len(people) != len(set(notify)):
+        raise HttpError(400, _("Only members of the project can be notified."))
+    return people
+
+
+def notify_from_form(value):
+    """The multipart endpoints take ``everybody``, ``nobody`` or
+    comma-separated IDs"""
+    if value in {"everybody", "nobody"}:
+        return value
+    try:
+        return [int(part) for part in value.split(",") if part.strip()]
+    except ValueError as exc:
+        raise HttpError(
+            400, _("notify is everybody, nobody or IDs separated by commas.")
+        ) from exc
+
+
+def parent_folder(request, project, parent_id):
+    """The folder (a folder the person sees in the project) or None"""
+    if parent_id is None:
+        return None
+    folder = item_for(request, parent_id, Kind.FOLDER)
+    if folder.project_id != project.pk:
+        raise HttpError(404, _("Not found."))
+    return folder
+
+
+def switch(request, visible):
+    """What clients create is visible to clients (specs/access.md)"""
+    return visible or request.user.is_client
+
+
+# Messages ---------------------------------------------------------------
+
+
+class CategoryOut(Schema):
+    id: int
+    name: str
+    emoji: str
+
+
+def category_out(category):
+    if category is None:
+        return None
+    return {"id": category.pk, "name": category.name, "emoji": category.emoji}
+
+
+class MessageOut(ItemOut):
+    content: str
+    content_html: str
+    # The first lines as plain text, like the board shows them
+    excerpt: str
+    category: CategoryOut | None
+    pinned: bool
+    pinned_at: dt.datetime | None
+    comment_count: int
+
+
+def message_out(item):
+    message = item.message
+    count = getattr(item, "comment_count", None)
+    if count is None:
+        count = item.comments.count()
+    return item_out(item) | {
+        "content": message.content,
+        "content_html": html(message.content, item),
+        "excerpt": excerpt(message.content),
+        "category": category_out(message.category),
+        "pinned": message.pinned_at is not None,
+        "pinned_at": message.pinned_at,
+        "comment_count": count,
+    }
+
+
+def message_for(request, pk):
+    return item_for(request, pk, Kind.MESSAGE)
+
+
+def _message(request, pk):
+    """With the annotations of the board"""
+    return get_object_or_404(
+        queries.board(None, request.user).filter(pk=pk).select_related("project"),
+    )
+
+
+@router.get("message-categories/", response=list[CategoryOut])
+def category_list(request):
+    """The categories of the installation, for ``category_id``"""
+    return [category_out(c) for c in MessageCategory.objects.all()]
+
+
+@router.get("projects/{project_id}/messages/", response=page_of(MessageOut))
+def message_list(
+    request, project_id: int, cursor: str | None = None, page_size: int | None = None
+):
+    """The message board: the latest pinned first, then the rest newest
+    first"""
+    project = project_for(request, project_id)
+    messages = queries.board(project, request.user).annotate(
+        pin_key=Coalesce(
+            "message__pinned_at", Value(dt.datetime(1970, 1, 1, tzinfo=dt.UTC))
+        )
+    )
+    return paginated(
+        request,
+        messages,
+        message_out,
+        ordering=("-pin_key", "-created_at", "-pk"),
+        cursor=cursor,
+        page_size=page_size,
+    )
+
+
+class MessageIn(Schema):
+    title: str
+    content: str = ""
+    category_id: int | None = None
+    visible_to_clients: bool = False
+    # Required: everybody, nobody or the IDs of members (notify_people())
+    notify: Notify
+
+
+def _category(category_id):
+    if category_id is None:
+        return None
+    category = MessageCategory.objects.filter(pk=category_id).first()
+    if category is None:
+        raise HttpError(400, _("There is no such category."))
+    return category
+
+
+@router.post("projects/{project_id}/messages/", response={201: MessageOut})
+def message_create(request, project_id: int, data: MessageIn):
+    """Posts a message and tells whom ``notify`` says. Clients' messages
+    are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
+    project = project_for(request, project_id)
+    if not data.title.strip():
+        raise HttpError(400, _("The title can't be empty."))
+    item = ops.create_message(
+        project=project,
+        title=data.title,
+        content=data.content,
+        category=_category(data.category_id),
+        creator=request.user,
+        visible=switch(request, data.visible_to_clients),
+        whom=whom(project, data.notify),
+    )
+    return Status(201, message_out(_message(request, item.pk)))
+
+
+@router.get("messages/{message_id}/", response=MessageOut)
+def message_detail(request, message_id: int):
+    return message_out(_message(request, message_id))
+
+
+class MessagePatch(Schema):
+    title: str | None = None
+    content: str | None = None
+    # null removes the category
+    category_id: int | None = None
+
+
+@router.patch("messages/{message_id}/", response=MessageOut)
+def message_update(request, message_id: int, data: MessagePatch):
+    """Changes the fields given; clients only their own messages"""
+    item = message_for(request, message_id)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change messages you created."))
+    given = data.model_fields_set
+    changes = {}
+    if "title" in given:
+        if not data.title:
+            raise HttpError(400, _("The title can't be empty."))
+        changes["title"] = data.title
+    if "content" in given:
+        changes["content"] = data.content or ""
+    if "category_id" in given:
+        changes["category"] = _category(data.category_id)
+    operations.update_message(item, actor=request.user, **changes)
+    return message_out(_message(request, message_id))
+
+
+@router.put("messages/{message_id}/pin/", response=MessageOut)
+def message_pin(request, message_id: int):
+    """Pins the message for everybody, staff only; the event notifies
+    nobody"""
+    item = message_for(request, message_id)
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff can pin messages."))
+    operations.pin_message(item, actor=request.user)
+    return message_out(_message(request, message_id))
+
+
+@router.delete("messages/{message_id}/pin/", response=MessageOut)
+def message_unpin(request, message_id: int):
+    item = message_for(request, message_id)
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff can pin messages."))
+    operations.unpin_message(item, actor=request.user)
+    return message_out(_message(request, message_id))
+
+
+# Folders ----------------------------------------------------------------
+
+
+class EntryOut(ItemOut):
+    # Files only
+    size: int | None = None
+    content_type: str | None = None
+    download_url: str | None = None
+
+
+def entry_out(item):
+    entry = item_out(item)
+    if item.kind == Kind.FILE:
+        version = item.upload.versions.all()[0]
+        entry |= {
+            "size": version.size,
+            "content_type": version.content_type,
+            "download_url": absolute(
+                reverse("api:file_download", kwargs={"file_id": item.pk})
+            ),
+        }
+    return entry
+
+
+class CrumbOut(Schema):
+    id: int
+    title: str
+
+
+class FolderOut(Schema):
+    # None for the root
+    folder: ItemOut | None
+    breadcrumbs: list[CrumbOut]
+    entries: list[EntryOut]
+
+
+@router.get("projects/{project_id}/files/", response=FolderOut)
+def folder_contents(request, project_id: int, folder_id: int | None = None):
+    """The root of the project's docs and files, or a folder: folders
+    first, then docs and files by title"""
+    project = project_for(request, project_id)
+    folder = parent_folder(request, project, folder_id)
+    rows = contents(request.user, project, folder).prefetch_related("upload__versions")
+    return {
+        "folder": item_out(folder) if folder else None,
+        "breadcrumbs": [
+            {"id": c.pk, "title": c.title}
+            for c in breadcrumbs(folder) + ([folder] if folder else [])
+        ],
+        "entries": [entry_out(row) for row in rows],
+    }
+
+
+class FolderIn(Schema):
+    title: str
+    parent_id: int | None = None
+    visible_to_clients: bool = False
+
+
+@router.post("projects/{project_id}/folders/", response={201: ItemOut})
+def folder_create(request, project_id: int, data: FolderIn):
+    project = project_for(request, project_id)
+    folder = parent_folder(request, project, data.parent_id)
+    if not data.title.strip():
+        raise HttpError(400, _("The title can't be empty."))
+    item = ops.create_folder(
+        project=project,
+        title=data.title,
+        creator=request.user,
+        parent=folder,
+        visible=switch(request, data.visible_to_clients),
+    )
+    return Status(201, item_out(item))
+
+
+class MoveIn(Schema):
+    # null: the root
+    parent_id: int | None = None
+
+
+@router.post("items/{item_id}/move/", response=ItemOut)
+def item_move(request, item_id: int, data: MoveIn):
+    """Moves a folder, doc or file into a folder or to the root; the
+    visibility follows the new place. Clients only move what they created,
+    into folders they see."""
+    item = item_for(request, item_id)
+    if item.kind not in {Kind.FOLDER, Kind.DOC, Kind.FILE}:
+        raise HttpError(400, _("Only folders, docs and files can be moved."))
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only move what you created."))
+    folder = parent_folder(request, item.project, data.parent_id)
+    try:
+        ops.move_item(item, parent=folder, actor=request.user)
+    except ValueError as exc:
+        raise HttpError(400, _("A folder can't be moved into itself.")) from exc
+    return item_out(item_for(request, item_id))
+
+
+# Docs -------------------------------------------------------------------
+
+
+class DocOut(ItemOut):
+    content: str
+    content_html: str
+    # The newest version, the ``base_version`` of the next save
+    version_id: int
+    locked_by: PersonOut | None
+
+
+def doc_out(item):
+    doc = item.doc
+    holder = operations.lock_holder(doc)
+    return item_out(item) | {
+        "content": doc.content,
+        "content_html": html(doc.content, item),
+        "version_id": doc.versions.first().pk,
+        "locked_by": person_out(holder),
+    }
+
+
+class DocIn(Schema):
+    title: str
+    content: str = ""
+    parent_id: int | None = None
+    visible_to_clients: bool = False
+    notify: Notify
+
+
+@router.post("projects/{project_id}/docs/", response={201: DocOut})
+def doc_create(request, project_id: int, data: DocIn):
+    project = project_for(request, project_id)
+    folder = parent_folder(request, project, data.parent_id)
+    if not data.title.strip():
+        raise HttpError(400, _("The title can't be empty."))
+    item = ops.create_doc(
+        project=project,
+        title=data.title,
+        content=data.content,
+        creator=request.user,
+        parent=folder,
+        visible=switch(request, data.visible_to_clients),
+        whom=whom(project, data.notify),
+    )
+    return Status(201, doc_out(item_for(request, item.pk, Kind.DOC)))
+
+
+@router.get("docs/{doc_id}/", response=DocOut)
+def doc_detail(request, doc_id: int):
+    return doc_out(item_for(request, doc_id, Kind.DOC))
+
+
+class DocPatch(Schema):
+    title: str | None = None
+    content: str | None = None
+    # Make a version now, even within ten minutes of the last one
+    new_version: bool = False
+    # The ``version_id`` you edited; refused (409) if somebody else saved a
+    # newer version since
+    base_version: int | None = None
+
+
+@router.patch("docs/{doc_id}/", response=DocOut)
+def doc_update(request, doc_id: int, data: DocPatch):
+    """Saves the fields given, with the version rules of the web
+    interface: a version when the last one is older than 10 minutes or by
+    someone else, or ``new_version``. 409 while somebody else is editing,
+    and when ``base_version`` was overtaken by somebody else's save."""
+    item = item_for(request, doc_id, Kind.DOC)
+    given = data.model_fields_set
+    changes = {}
+    if "title" in given:
+        if not data.title:
+            raise HttpError(400, _("The title can't be empty."))
+        changes["title"] = data.title
+    if "content" in given:
+        changes["content"] = data.content or ""
+    try:
+        operations.update_doc(
+            item,
+            actor=request.user,
+            new_version=data.new_version,
+            base_version=data.base_version,
+            **changes,
+        )
+    except operations.DocLocked as exc:
+        raise HttpError(
+            409, _("%(name)s is editing this doc.") % {"name": exc.user}
+        ) from exc
+    except operations.DocConflict as exc:
+        raise HttpError(
+            409, _("%(name)s saved a newer version.") % {"name": exc.version.created_by}
+        ) from exc
+    return doc_out(item_for(request, doc_id, Kind.DOC))
+
+
+@router.put("docs/{doc_id}/lock/", response=DocOut)
+def doc_lock(request, doc_id: int):
+    """Takes or renews the lock (it expires 5 minutes after the last
+    renewal); 409 while somebody else holds it"""
+    item = item_for(request, doc_id, Kind.DOC)
+    try:
+        operations.lock_doc(item, request.user)
+    except operations.DocLocked as exc:
+        raise HttpError(
+            409, _("%(name)s is editing this doc.") % {"name": exc.user}
+        ) from exc
+    return doc_out(item_for(request, doc_id, Kind.DOC))
+
+
+@router.delete("docs/{doc_id}/lock/", response=DocOut)
+def doc_unlock(request, doc_id: int):
+    item = item_for(request, doc_id, Kind.DOC)
+    operations.unlock_doc(item, request.user)
+    return doc_out(item_for(request, doc_id, Kind.DOC))
+
+
+class DocVersionOut(Schema):
+    id: int
+    title: str
+    created_by: PersonOut
+    created_at: dt.datetime
+    is_current: bool
+
+
+class DocVersionDetailOut(DocVersionOut):
+    content: str
+    content_html: str
+
+
+def _staff_only(request):
+    """Older versions can hold what was meant to be internal, also of docs
+    clients see now (like the history): staff only"""
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff see the versions."))
+
+
+def version_out(version, item, *, current):
+    return {
+        "id": version.pk,
+        "title": version.title,
+        "created_by": person_out(version.created_by),
+        "created_at": version.created_at,
+        "is_current": version.pk == current,
+    }
+
+
+@router.get("docs/{doc_id}/versions/", response=list[DocVersionOut])
+def doc_versions(request, doc_id: int):
+    """Newest first, staff only"""
+    item = item_for(request, doc_id, Kind.DOC)
+    _staff_only(request)
+    versions = list(item.doc.versions.select_related("created_by"))
+    return [version_out(v, item, current=versions[0].pk) for v in versions]
+
+
+@router.get("docs/{doc_id}/versions/{version_id}/", response=DocVersionDetailOut)
+def doc_version(request, doc_id: int, version_id: int):
+    item = item_for(request, doc_id, Kind.DOC)
+    _staff_only(request)
+    version = get_object_or_404(
+        item.doc.versions.select_related("created_by"), pk=version_id
+    )
+    return version_out(version, item, current=item.doc.versions.first().pk) | {
+        "content": version.content,
+        "content_html": html(version.content, item),
+    }
+
+
+@router.post("docs/{doc_id}/versions/{version_id}/restore/", response=DocOut)
+def doc_version_restore(request, doc_id: int, version_id: int):
+    """Saves the old content as a new version"""
+    item = item_for(request, doc_id, Kind.DOC)
+    _staff_only(request)
+    version = get_object_or_404(item.doc.versions, pk=version_id)
+    try:
+        operations.restore_doc_version(item, version, actor=request.user)
+    except operations.DocLocked as exc:
+        raise HttpError(
+            409, _("%(name)s is editing this doc.") % {"name": exc.user}
+        ) from exc
+    return doc_out(item_for(request, doc_id, Kind.DOC))
+
+
+# Files ------------------------------------------------------------------
+
+
+class FileVersionOut(Schema):
+    id: int
+    name: str
+    size: int
+    content_type: str
+    uploaded_by: PersonOut
+    uploaded_at: dt.datetime
+    is_current: bool
+    download_url: str
+
+
+class FileOut(ItemOut):
+    description: str
+    description_html: str
+    # The current version
+    name: str
+    size: int
+    content_type: str
+    download_url: str
+    # Newest first; clients get the current version only, older ones are
+    # for staff
+    versions: list[FileVersionOut]
+
+
+def _version_out(item, version, *, current):
+    if version.pk == current:
+        url = reverse("api:file_download", kwargs={"file_id": item.pk})
+    else:
+        url = reverse(
+            "api:file_version_download",
+            kwargs={"file_id": item.pk, "version_id": version.pk},
+        )
+    return {
+        "id": version.pk,
+        "name": version.name,
+        "size": version.size,
+        "content_type": version.content_type,
+        "uploaded_by": person_out(version.uploaded_by),
+        "uploaded_at": version.uploaded_at,
+        "is_current": version.pk == current,
+        "download_url": absolute(url),
+    }
+
+
+def file_out(item, user):
+    upload = item.upload
+    versions = list(upload.versions.select_related("uploaded_by"))
+    current = versions[0]
+    if user.is_client:
+        versions = versions[:1]
+    return item_out(item) | {
+        "description": upload.description,
+        "description_html": html(upload.description, item),
+        "name": current.name,
+        "size": current.size,
+        "content_type": current.content_type,
+        "download_url": absolute(
+            reverse("api:file_download", kwargs={"file_id": item.pk})
+        ),
+        "versions": [_version_out(item, v, current=current.pk) for v in versions],
+    }
+
+
+class FileIn(Schema):
+    description: str = ""
+    parent_id: int | None = None
+    visible_to_clients: bool = False
+    # everybody, nobody or IDs separated by commas
+    notify: str
+
+
+@router.post("projects/{project_id}/files/", response={201: FileOut})
+def file_create(request, project_id: int, file: File[UploadedFile], data: Form[FileIn]):
+    """Uploads a file (multipart, field ``file``, at most 100 MB) into the
+    root or a folder; its title is the file's name"""
+    project = project_for(request, project_id)
+    folder = parent_folder(request, project, data.parent_id)
+    try:
+        item = ops.create_upload(
+            project=project,
+            file=file,
+            description=data.description,
+            creator=request.user,
+            parent=folder,
+            visible=switch(request, data.visible_to_clients),
+            whom=whom(project, notify_from_form(data.notify)),
+        )
+    except attachments.UploadError as exc:
+        raise HttpError(413, str(exc)) from exc
+    return Status(201, file_out(item_for(request, item.pk, Kind.FILE), request.user))
+
+
+@router.get("files/{file_id}/", response=FileOut)
+def file_detail(request, file_id: int):
+    return file_out(item_for(request, file_id, Kind.FILE), request.user)
+
+
+class FilePatch(Schema):
+    title: str | None = None
+    description: str | None = None
+
+
+@router.patch("files/{file_id}/", response=FileOut)
+def file_update(request, file_id: int, data: FilePatch):
+    """Renames the file or changes its description; clients only their
+    own files"""
+    item = item_for(request, file_id, Kind.FILE)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change files you uploaded."))
+    given = data.model_fields_set
+    changes = {}
+    if "title" in given:
+        if not data.title:
+            raise HttpError(400, _("The title can't be empty."))
+        changes["title"] = data.title
+    if "description" in given:
+        changes["description"] = data.description or ""
+    operations.update_upload(item, actor=request.user, **changes)
+    return file_out(item_for(request, file_id, Kind.FILE), request.user)
+
+
+@router.post("files/{file_id}/versions/", response={201: FileOut})
+def file_replace(request, file_id: int, file: File[UploadedFile]):
+    """A new version: the URL, the comments and the earlier versions stay"""
+    item = item_for(request, file_id, Kind.FILE)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change files you uploaded."))
+    try:
+        operations.replace_upload(item, file, actor=request.user)
+    except attachments.UploadError as exc:
+        raise HttpError(413, str(exc)) from exc
+    return Status(201, file_out(item_for(request, file_id, Kind.FILE), request.user))
+
+
+@router.get("files/{file_id}/versions/", response=list[FileVersionOut])
+def file_versions(request, file_id: int):
+    """Newest first, staff only"""
+    item = item_for(request, file_id, Kind.FILE)
+    _staff_only(request)
+    versions = list(item.upload.versions.select_related("uploaded_by"))
+    return [_version_out(item, v, current=versions[0].pk) for v in versions]
+
+
+@router.get("files/{file_id}/download/", url_name="file_download")
+def file_download(request, file_id: int):
+    """The current version: the file, or a redirect to a presigned URL
+    valid 5 minutes with a bucket"""
+    item = item_for(request, file_id, Kind.FILE)
+    return attachments.serve(item.upload.versions.all()[0])
+
+
+@router.get(
+    "files/{file_id}/versions/{version_id}/download/",
+    url_name="file_version_download",
+)
+def file_version_download(request, file_id: int, version_id: int):
+    item = item_for(request, file_id, Kind.FILE)
+    _staff_only(request)
+    return attachments.serve(get_object_or_404(item.upload.versions, pk=version_id))

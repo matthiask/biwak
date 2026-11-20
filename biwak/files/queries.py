@@ -11,14 +11,13 @@ FRONT_MESSAGES = 3
 
 
 def board(project, user):
-    """The project's messages as the person sees them (the one check),
-    with comment counts"""
-    return (
-        Item.objects
-        .visible_to(user)
-        .filter(project=project, kind=Kind.MESSAGE)
-        .select_related("creator", "message__category")
-        .annotate(comment_count=Count("comments"))
+    """The project's messages (``None``: of all projects) as the person
+    sees them (the one check), with comment counts"""
+    messages = Item.objects.visible_to(user).filter(kind=Kind.MESSAGE)
+    if project is not None:
+        messages = messages.filter(project=project)
+    return messages.select_related("creator", "message__category").annotate(
+        comment_count=Count("comments")
     )
 
 
