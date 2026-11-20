@@ -333,6 +333,18 @@ class ConsumerTest(TransactionTestCase):
         await database_sync_to_async(self.on_commit)(deactivate)
         await self.assertClosed(bob)
 
+    async def test_a_project_made_limited_in_the_admin(self):
+        """Bob is staff, not a member: limiting the project shuts him out
+        even without an operation (the Django admin)"""
+        bob = await self.connect(self.bob, self.shared)
+
+        def limit():
+            self.project.is_all_access = False
+            self.project.save()
+
+        await database_sync_to_async(self.on_commit)(limit)
+        await self.assertClosed(bob)
+
     async def test_logging_out_closes_the_session_at_the_next_check(self):
         cleo = await self.connect(self.cleo, self.shared)
         await database_sync_to_async(Session.objects.all().delete)()

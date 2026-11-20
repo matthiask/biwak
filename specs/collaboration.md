@@ -109,7 +109,7 @@ browsers (Playwright) typing, a client watching, an internal doc
   doesn't reconnect). Checked again when an event may change access
   (moved, visibility changed, trashed, archived, project edited, member
   removed or left), when a person is saved (admin: deactivated, made a
-  client), when the read-only option changes, and every 60 seconds
+  client) or a project (admin: made limited, archived), when the read-only option changes, and every 60 seconds
   (**?**), which also closes sessions whose login session is gone
   (logging out everywhere). Losing access closes the session (4404; the
   editor shows "You can't see this doc anymore." and removes the text);
