@@ -280,6 +280,18 @@ class DocTest(Fixture, TestCase):
             base_version=self.versions()[0].pk,
         )
 
+    def test_refusing_to_overwrite_a_version_changed_in_place_by_somebody_else(self):
+        # Bob's second save within ten minutes changes his version
+        operations.update_doc(self.doc, actor=self.bob, content="Bob's")
+        base = self.versions()[0].pk
+        operations.update_doc(self.doc, actor=self.bob, content="Bob's newer")
+        with self.assertRaises(operations.DocConflict):
+            operations.update_doc(
+                self.doc, actor=self.ada, content="Ada's", base_version=base
+            )
+        self.doc.doc.refresh_from_db()
+        self.assertEqual(self.doc.doc.content, "Bob's newer")
+
     def test_a_newer_version_by_the_same_person_is_no_conflict(self):
         base = self.versions()[0].pk
         operations.update_doc(self.doc, actor=self.ada, content="Two", new_version=True)

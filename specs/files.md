@@ -263,7 +263,9 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   restoring while someone else holds an unexpired lock is refused.
   Refusing a stale save: the form carries `base_version` (the newest
   version when it opened); a newer version by somebody else refuses the
-  save, newer ones by the same person don't. The API's `base_version` is
+  save (also one he saved again within ten minutes: that replaces the
+  version by a new one with a new key, the window keeps its start),
+  newer ones by the same person don't. The API's `base_version` is
   optional. The lock columns are left out of the audit log (renewed
   every minute).
 - **Files:** the title is the file's name when uploaded and stays when a

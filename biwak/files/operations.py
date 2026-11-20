@@ -167,9 +167,14 @@ def _save_version(doc, *, title, content, actor, force=False):
         return DocVersion.objects.create(
             doc=doc, title=title, content=content, created_by=actor
         )
-    latest.title, latest.content = title, content
-    latest.save(update_fields=["title", "content"])
-    return latest
+    # Not changed in place: somebody who opened the form on this version
+    # compares primary keys when saving, so a changed text needs a new one
+    # (keeping the window's start)
+    created_at = latest.created_at
+    latest.delete()
+    return DocVersion.objects.create(
+        doc=doc, title=title, content=content, created_by=actor, created_at=created_at
+    )
 
 
 @transaction.atomic
