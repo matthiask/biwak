@@ -677,7 +677,8 @@ def checkin_mail(question_id, mode, as_json):
 
 notify_option = click.option(
     "--notify",
-    required=True,
+    default="everybody",
+    show_default=True,
     metavar="WHOM",
     help="Whom to tell: everybody (in the project), nobody, or people's IDs"
     " separated by commas.",

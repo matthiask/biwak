@@ -162,8 +162,8 @@ top, with category, author, date and the number of comments.
 
 - A message: title, Markdown, optional category, comments, attachments,
   pinned or not, the visibility switch.
-- Posting asks whom to notify: everybody in the project (the members at
-  that moment), chosen people, or nobody (`notify_people()`,
+- Posting asks whom to notify, everybody in the project preselected (the
+  members at that moment), chosen people, or nobody (`notify_people()`,
   `notifications.md`).
 - Pages: the board, `/messages/<pk>/` with comments, new and edit forms.
   The project page shows the pinned messages and then the latest ones,
@@ -230,10 +230,12 @@ rules, versions), files (upload, replace, versions, download URL).
 Proposed by the building agent (2026-11-20); change them here if wrong.
 Marked **?** are questions the spec didn't answer, built the safe way.
 
-- **Whom to notify (?)**: the forms, the API (`notify`: `everybody`,
-  `nobody` or IDs) and the CLI (`--notify`) have no default: posting a
-  message, doc or file asks every time. `create_message()`,
-  `create_doc()` and `create_upload()` default to `nobody`.
+- **Whom to notify** (decided 2026-11-20, replacing "no default"): the
+  forms preselect "everybody in the project", and the API (`notify`:
+  `everybody`, `nobody` or IDs) and the CLI (`--notify`) default to
+  everybody; the levels keep the mails away from those who want them
+  only when tagged (`notifications.md`). `create_message()`,
+  `create_doc()` and `create_upload()` still default to `nobody`.
 - **Older versions are for staff (?)**: the doc versions' pages and API,
   the older versions of files and their downloads. Like the history,
   they can hold what was internal before the item was shown to clients.
