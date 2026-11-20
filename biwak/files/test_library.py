@@ -647,7 +647,7 @@ class PreviewTest(Fixture, TestCase):
         version = item.upload.versions.get()
         storage = version.file.storage
         name = preview_name(version.file.name)
-        self.assertEqual(name.rsplit("/", 1)[0], version.file.name.rsplit("/", 1)[0])
+        self.assertTrue(name.startswith(version.file.name.rsplit("/", 1)[0] + "/"))
         self.assertFalse(storage.exists(name))
         self.preview(self.ada, item)
         self.assertTrue(storage.exists(name))
@@ -660,6 +660,16 @@ class PreviewTest(Fixture, TestCase):
         finally:
             previews.render = original
         self.assertEqual(calls, [])
+
+    def test_a_file_named_preview_webp_still_gets_a_preview(self):
+        item = self.upload("preview.webp", content=png(800, 400), visible=True)
+        version = item.upload.versions.get()
+        self.assertNotEqual(preview_name(version.file.name), version.file.name)
+        _response, body = self.preview(self.ada, item)
+        self.assertEqual(Image.open(io.BytesIO(body)).size, (400, 200))
+        with self.captureOnCommitCallbacks(execute=True):
+            item.delete()
+        self.assertFalse(version.file.storage.exists(version.file.name))
 
     def test_the_preview_is_deleted_with_the_file(self):
         item = self.upload("pic.png", content=png(), visible=True)

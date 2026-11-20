@@ -199,5 +199,6 @@ def delete_version_files(sender, instance, **kwargs):
 
 
 def preview_name(name):
-    """The preview is stored next to the file"""
-    return f"{name.rsplit('/', 1)[0]}/preview.webp"
+    """The preview is stored in a folder next to the file: file names
+    have no slashes, so none can be named like it"""
+    return f"{name.rsplit('/', 1)[0]}/preview/preview.webp"
