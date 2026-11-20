@@ -8,7 +8,7 @@ itself, less for client projects.
 **Status:** built (2026-11-20): models, `biwak/checkins/` (`schedule.py`
 the time arithmetic, `operations.py` asking, summaries and answering,
 `mails.py`), pages, API (`checkins/`), CLI 0.12.0; reminders removed
-again (CLI 0.14.0). Decisions
+again (CLI 0.14.0), skipping removed (CLI 0.16.0). Decisions
 made while building, to be confirmed (marked "Open" where the spec left a
 value or a product choice to the builder):
 
@@ -17,6 +17,11 @@ value or a product choice to the builder):
   question's page and in "due". Removed what was built: `remind_after`,
   `Occurrence.reminded_at`, the reminder mail, the form, API and CLI
   fields (`--remind`).
+- **No skipping (decided 2026-11-20).** Without reminders "Skip this time"
+  isn't worth having. Removed: `Skip`, the operation, button, page, API
+  endpoint and CLI command (`biwak checkin skip`). "Due" and "missing" mean
+  not answered. CLIs 0.15 only lose their `skip` command (the other
+  commands read no skip field), so `MINIMUM` stays.
 - **Added to the model:** `Question.starts_on` (the date the rule counts
   from: first date and phase of "every two weeks"; the forms say "first
   asked on"), `Question.next_at` (stored: when it is asked next, computed
@@ -48,25 +53,26 @@ value or a product choice to the builder):
   rule as a preset only when the preset gives that rule from the first
   date; a rule for another weekday or day (from the API or the CLI) is
   shown as custom, so saving the form keeps it (fixed 2026-11-20: saving
-  rebuilt it from the first date's weekday or day). Open (tests assert
-  what happens now): a new rule or time zone on the day it was asked
-  counts from now in the new zone, so a zone where that date is still
-  ahead doesn't ask it again and one where its time has passed asks the
-  next date; changing the zone before the day's time can skip the day
-  (08:00 in Zurich to Asia/Tokyo, where 09:00 has passed).
+  rebuilt it from the first date's weekday or day). A new rule or time
+  zone on the day it was asked counts from now in the new zone, so a zone
+  where that date is still ahead doesn't ask it again and one where its
+  time has passed asks the next date. Decided 2026-11-20: changing the
+  zone shortly before the question is asked can skip that day (Zurich to
+  Tokyo at 08:00 skips that Monday, 09:00 having passed in Tokyo); an
+  accepted rare edge case.
 - **A first date which doesn't match the rule** (API and CLI rules, e.g.
   Mondays from a Friday): the first date the rule gives on or after it.
-  Open: "every two weeks" counts its phase from the first date's week, so
-  the Monday right after a Friday isn't asked, the one after it is.
+  Decided 2026-11-20: "every two weeks" counts its phase from the first
+  date's week, so from a Friday the Monday right after isn't asked, the one
+  after it is (the first full interval); that's fine as it is.
 - **People:** adding is from the next occurrence on (those added are
   subscribed and can answer the latest occurrence, but aren't in its
   `asked` and aren't "due" for it); removing unsubscribes
   and keeps their answers. Clients only when the question is visible to
   clients; if it turns internal they aren't asked or mailed (they stay in
-  the list). Only people in the list answer or skip (staff who aren't asked
+  the list). Only people in the list answer (staff who aren't asked
   don't), the author edits their own answer (answering again changes it,
-  also from the trash), answering takes back a skip, skipping after
-  answering is refused.
+  also from the trash).
 - **Summary:** 07:00 on the day after the occurrence's date in the
   question's time zone (Open: or the installation's, like the digest), or,
   when it was asked later than its date (after downtime), on the day after
@@ -111,7 +117,6 @@ this part.
   `Answer(Detail)` with `content` (Markdown) and `occurrence`; one per
   person and occurrence (unique on occurrence and creator), editable by
   its author.
-- **`Skip(occurrence, user)`**: someone skipped an occurrence.
 - **`QuestionMail(question, user, mode)`**: how a person hears about the
   answers: `each` (a mail per answer, through the normal notifications),
   `summary` (one mail the morning after an occurrence with all its
@@ -131,7 +136,6 @@ this part.
   occurrence (or `?occurrence=` for an older one), Markdown with
   mentions and attachments. Everybody asked is subscribed to the
   question.
-- **Skipping:** a "Skip this time" button next to the form.
 - **Answers' mails** per `QuestionMail`: `each` through `notify()`;
   `summary` at 07:00 the morning after the occurrence (in `send_mails`),
   one mail with all answers.
@@ -153,7 +157,7 @@ this part.
 ## API and CLI
 
 Endpoints for questions (list, create, update, pause), occurrences with
-answers (cursor-paginated), answering, skipping, the mail mode.
+answers (cursor-paginated), answering, the mail mode.
 `biwak checkins PROJECT`, `biwak checkin show QUESTION`,
 `biwak checkin answer QUESTION [TEXT]` (standard input like comments),
 `biwak checkin due` (what I haven't answered yet).
@@ -164,5 +168,5 @@ Pages, API and CLI for all of the above. Tests: schedules across
 daylight saving time changes and time zones (a question at 09:00
 Europe/Zurich stays at 09:00 local time in March and October), pausing
 and resuming, answering an older occurrence, one answer per person and
-occurrence, skipping takes the occurrence off "due", the summary mail, a client asked on a visible question and not seeing
+occurrence, the summary mail, a client asked on a visible question and not seeing
 internal questions.

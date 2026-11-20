@@ -145,34 +145,6 @@ class Answer(Detail):
         verbose_name_plural = _("check-in answers")
 
 
-class Skip(models.Model):
-    """Somebody skipped an occurrence: it isn't due for them any more"""
-
-    occurrence = models.ForeignKey(
-        Occurrence,
-        on_delete=models.CASCADE,
-        related_name="skips",
-        verbose_name=_("occurrence"),
-    )
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="+",
-        verbose_name=_("person"),
-    )
-    created_at = models.DateTimeField(_("created at"), default=timezone.now)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["occurrence", "user"], name="unique_skip")
-        ]
-        verbose_name = _("skip")
-        verbose_name_plural = _("skips")
-
-    def __str__(self):
-        return f"{self.user} skipped {self.occurrence}"
-
-
 class Mode(models.TextChoices):
     EACH = "each", _("a mail for each answer")
     SUMMARY = "summary", _("one summary the morning after")

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from biwak import test_cli
 from biwak.checkins import operations as ops
-from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail, Skip
+from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import at
 from biwak.files.models import Attachment
 from biwak.items.models import Item
@@ -41,7 +41,7 @@ class CheckinCLITest(test_cli.CLITest):
         ops.pause(self.item, actor=self.ada)
         self.assertIn("paused", self.biwak("checkins", self.project.pk).output)
 
-    def test_answer_show_and_skip(self):
+    def test_answer_and_show(self):
         result = self.biwak(
             "checkin", "answer", self.item.pk, input="Busy with the **launch**\n"
         )
@@ -80,12 +80,6 @@ class CheckinCLITest(test_cli.CLITest):
         self.assertEqual(answer.answer.occurrence, self.occurrence)
         self.assertTrue(answer.answer.content.startswith("Back then\n\n![photo.png]("))
         self.assertEqual(Attachment.objects.get().item_id, answer.pk)
-
-    def test_skip(self):
-        self.biwak("checkin", "skip", self.item.pk)
-        self.assertEqual(Skip.objects.get().user, self.ada)
-        data = json.loads(self.biwak("checkin", "skip", self.item.pk, "--json").stdout)
-        self.assertTrue(data["skipped"])
 
     def test_due(self):
         output = self.biwak("checkin", "due").output

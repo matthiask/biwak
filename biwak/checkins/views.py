@@ -5,7 +5,6 @@ import zoneinfo
 
 from django import forms
 from django.conf import settings
-from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import Http404
@@ -443,24 +442,8 @@ def question_answer(request, pk):
             "occurrence": occurrence,
             "existing": existing,
             "form": form,
-            "skipped": occurrence.skips.filter(user=request.user).exists(),
         },
     )
-
-
-@require_POST
-def question_skip(request, pk):
-    item = question_for(request, pk)
-    if not ops.can_answer(request.user, item):
-        raise PermissionDenied
-    occurrence = _chosen_occurrence(request, item)
-    try:
-        ops.skip(item, user=request.user, occurrence=occurrence)
-    except ValueError:
-        messages.error(request, _("You answered already."))
-        return redirect(item)
-    messages.success(request, _("Skipped this time."))
-    return redirect(item)
 
 
 @require_POST

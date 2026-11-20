@@ -1,5 +1,5 @@
 """Check-ins (specs/checkins.md): questions, their occurrences with the
-answers, answering, skipping and the mail mode. The same operations as the
+answers, answering and the mail mode. The same operations as the
 web interface."""
 
 import datetime as dt
@@ -228,7 +228,7 @@ class OccurrenceOut(Schema):
     date: dt.date
     asked_at: dt.datetime
     answers: list[AnswerOut]
-    # Those asked who neither answered nor skipped; only for the latest
+    # Those asked who haven't answered; only for the latest
     # occurrence
     missing: list[PersonOut] | None
 
@@ -326,30 +326,6 @@ def answer_create(request, question_id: int, data: AnswerIn):
     )
 
 
-class SkipIn(Schema):
-    occurrence_id: int | None = None
-
-
-class SkipOut(Schema):
-    occurrence_id: int
-    skipped: bool
-
-
-@router.post("checkins/{question_id}/skip/", response=SkipOut)
-def skip(request, question_id: int, data: SkipIn):
-    """ "Skip this time": not due any more. Not once you answered."""
-    item = question_for(request, question_id)
-    if not ops.can_answer(request.user, item):
-        raise HttpError(403, _("You aren't asked this question."))
-    try:
-        found = ops.skip(
-            item, user=request.user, occurrence=_occurrence(item, data.occurrence_id)
-        )
-    except ValueError as exc:
-        bad_request(str(exc))
-    return {"occurrence_id": found.occurrence_id, "skipped": True}
-
-
 class MailOut(Schema):
     question_id: int
     mode: Literal["each", "summary", "none"]
@@ -389,7 +365,7 @@ class DueOut(Schema):
 @router.get("me/checkins/due/", response=list[DueOut])
 def due(request, project_id: int | None = None):
     """The latest occurrences of the questions you're asked and haven't
-    answered or skipped, across projects (or of ``project_id``)"""
+    answered, across projects (or of ``project_id``)"""
     project = project_for(request, project_id) if project_id is not None else None
     return [
         {

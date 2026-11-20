@@ -10,7 +10,7 @@ from biwak.activity import mentions
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.checkins import operations as ops
-from biwak.checkins.models import Answer, Mode, Occurrence, QuestionMail, Skip
+from biwak.checkins.models import Answer, Mode, Occurrence, QuestionMail
 from biwak.checkins.support import CheckinTestCase, at
 from biwak.files import attachments
 from biwak.items import operations as item_ops, visibility
@@ -113,28 +113,10 @@ class AnsweringTest(AnswerTestCase):
         self.assertFalse(Item.objects.get(pk=answer.pk).is_client_visible)
         self.assertEqual(visibility.check(), [])
 
-    def test_skipping_and_answering(self):
-        ops.skip(self.item, user=self.ada)
-        self.assertTrue(
-            Skip.objects.filter(occurrence=self.second, user=self.ada).exists()
-        )
-        ops.skip(self.item, user=self.ada)  # twice is fine
-        self.assertEqual(Skip.objects.count(), 1)
-        ops.answer(self.item, user=self.ada, content="After all")
-        self.assertFalse(Skip.objects.exists(), "answering takes the skip back")
-        with self.assertRaises(ValueError):
-            ops.skip(self.item, user=self.ada)
-
-    def test_skipping_an_older_occurrence(self):
-        ops.skip(self.item, user=self.bob, occurrence=self.first)
-        self.assertEqual(Skip.objects.get().occurrence, self.first)
-
     def test_not_asked_yet(self):
         item = self.question("New", people=[self.ada])
         with self.assertRaises(ValueError):
             ops.answer(item, user=self.ada, content="Too early")
-        with self.assertRaises(ValueError):
-            ops.skip(item, user=self.ada)
 
     def test_the_occurrence_must_belong_to_the_question(self):
         other = self.question("Other", people=[self.ada])
@@ -149,8 +131,6 @@ class AnsweringTest(AnswerTestCase):
         for user in [dora, self.cleo]:
             with self.assertRaises(ops.NotAllowed):
                 ops.answer(self.item, user=user, content="Hi")
-            with self.assertRaises(ops.NotAllowed):
-                ops.skip(self.item, user=user)
         self.assertFalse(Answer.objects.exists())
 
     def test_people_removed_cant_answer_but_their_answers_stay(self):
@@ -237,13 +217,12 @@ class DueTest(AnswerTestCase):
     def due(self, user, **kwargs):
         return [o.question.item_id for o in ops.due(user, **kwargs)]
 
-    def test_the_latest_occurrence_not_answered_or_skipped(self):
+    def test_the_latest_occurrence_not_answered(self):
         self.assertEqual(self.due(self.ada), [self.item.pk])
         self.assertEqual(self.due(self.ada, project=self.project), [self.item.pk])
         ops.answer(self.item, user=self.ada, content="Fine")
         self.assertEqual(self.due(self.ada), [])
-        ops.skip(self.item, user=self.bob)
-        self.assertEqual(self.due(self.bob), [])
+        self.assertEqual(self.due(self.bob), [self.item.pk])
 
     def test_answering_an_older_occurrence_doesnt_change_what_is_due(self):
         ops.answer(self.item, user=self.ada, content="Then", occurrence=self.first)

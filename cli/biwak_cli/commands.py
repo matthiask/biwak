@@ -557,7 +557,7 @@ def checkins(project, as_json):
 
 @cli.group()
 def checkin():
-    """Show, answer, skip and set up check-in questions"""
+    """Show, answer and set up check-in questions"""
 
 
 def show_answers(occurrence):
@@ -625,23 +625,6 @@ def checkin_answer(question_id, text, occurrence, attach, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Answered #{question_id} (occurrence #{data['occurrence_id']}).")
-    return None
-
-
-@checkin.command("skip")
-@click.argument("question_id", metavar="QUESTION", type=int)
-@click.option(
-    "--occurrence", type=int, help="An older occurrence's ID (default: the latest)."
-)
-@json_option
-def checkin_skip(question_id, occurrence, as_json):
-    """Skip this time: not due any more"""
-    data = request(
-        "POST", f"checkins/{question_id}/skip/", json={"occurrence_id": occurrence}
-    )
-    if as_json:
-        return echo_json(data)
-    click.echo(f"Skipped #{question_id} (occurrence #{data['occurrence_id']}).")
     return None
 
 

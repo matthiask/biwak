@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from biwak.activity.models import Event
 from biwak.checkins import operations as ops
-from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail, Skip
+from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items.models import Item
 from biwak.test_utils import person, project
@@ -90,7 +90,7 @@ class PagesTest(ViewsTestCase):
 
     def test_the_page_lists_those_who_didnt_answer(self):
         ops.answer(self.item, user=self.ada, content="Fine")
-        ops.skip(self.item, user=self.bob)
+        ops.answer(self.item, user=self.bob, content="Fine too")
         response = self.get(self.ada, self.item.get_absolute_url())
         self.assertNotContains(response, "Hasn't answered yet:")
 
@@ -432,7 +432,7 @@ class AnsweringPagesTest(ViewsTestCase):
     def test_the_form(self):
         response = self.get(self.ada, self.url("question_answer", self.item))
         self.assertContains(response, "How are you?")
-        self.assertContains(response, "Skip this time")
+        self.assertNotContains(response, "Skip")
         self.assertContains(response, "data-attachments")
         self.assertContains(response, "Monday, 22. March 2027")
         self.assertEqual(response.context["occurrence"], self.first)
@@ -451,7 +451,6 @@ class AnsweringPagesTest(ViewsTestCase):
         response = self.client.get(url)
         self.assertContains(response, "Fine")
         self.assertContains(response, "Save the answer")
-        self.assertNotContains(response, "Skip this time")
         self.client.post(url, {"content": "Better"})
         self.assertEqual(Item.objects.get(pk=answer.pk).answer.content, "Better")
         self.assertEqual(Item.objects.filter(kind="answer").count(), 1)
@@ -497,9 +496,6 @@ class AnsweringPagesTest(ViewsTestCase):
                 ).status_code,
                 403,
             )
-            self.assertEqual(
-                self.post(user, self.url("question_skip", self.item)).status_code, 403
-            )
         self.assertEqual(
             self.get(self.cleo, self.url("question_answer", self.item)).status_code, 404
         )
@@ -510,25 +506,6 @@ class AnsweringPagesTest(ViewsTestCase):
         self.assertContains(self.get(self.cleo, url), "Clients can see this.")
         self.post(self.cleo, url, {"content": "From the client"})
         self.assertTrue(Item.objects.get(kind="answer").is_client_visible)
-
-    def test_skipping(self):
-        response = self.post(self.ada, self.url("question_skip", self.item))
-        self.assertRedirects(response, self.item.get_absolute_url())
-        self.assertEqual(Skip.objects.get().occurrence, self.first)
-        response = self.get(self.ada, self.url("question_answer", self.item))
-        self.assertContains(response, "You skipped this time.")
-        self.assertNotContains(response, "Skip this time")
-        self.assertEqual(
-            self.client.get(self.url("question_skip", self.item)).status_code, 405
-        )
-
-    def test_skipping_after_answering_says_so(self):
-        ops.answer(self.item, user=self.ada, content="Fine")
-        response = self.post(
-            self.ada, self.url("question_skip", self.item), follow=True
-        )
-        self.assertContains(response, "You answered already.")
-        self.assertFalse(Skip.objects.exists())
 
     def test_the_mail_mode(self):
         self.post(self.bob, self.url("question_mail", self.item), {"mode": "each"})
