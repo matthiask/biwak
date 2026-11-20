@@ -332,7 +332,14 @@ Resend's documentation (checked 2026-11-20) and what that changed:
   the `From` address we parse, its results count as `unknown`.
 
 Decisions made while building (proposed by the building agent,
-2026-11-20; change them here if wrong):
+confirmed 2026-11-20):
+
+- **Retention:** received mails (`InboundMessage`) and reply tokens
+  expired or revoked more than 90 days ago are deleted by `fairy_tasks`
+  (decided 2026-11-20).
+- **Saying so:** notification mails and check-in question mails that
+  carry a `Reply-To` say "Reply to this mail to comment." (to answer, for
+  check-ins) above the footer (decided 2026-11-20).
 
 - **Which mails get a `Reply-To`:** notification mails about something
   commentable (to-dos, messages, docs, files, answers; not lists), and

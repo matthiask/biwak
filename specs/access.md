@@ -3,7 +3,9 @@
 **Status:** built (2026-11-20). The separate review of the visibility
 checks (2026-11-20) found leaks and missing permission checks, fixed with
 the decisions marked "after the visibility review" here and in the specs
-of the parts.
+of the parts; the fixing agent's choices confirmed 2026-11-20 (merged
+edits never cross visibility, existing events count as internal, clients
+keep changing what they created before, raw notes in the to-do form).
 
 The most delicate part of the app: a bug here shows internal content to a
 client. One function decides visibility, everything uses it, and the
