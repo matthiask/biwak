@@ -54,6 +54,7 @@ def _fields():
             "view": (gettext("View"), VALUE),
         },
         "items_message": {"content": (gettext("Content"), TEXT)},
+        "items_upload": {"description": (gettext("Description"), TEXT)},
         "items_doc": {"content": (gettext("Content"), TEXT)},
     }
 

@@ -1,6 +1,7 @@
 import datetime as dt
 
 import time_machine
+from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -426,3 +427,34 @@ class VersionsTest(Fixture, TestCase):
         self.assertEqual(
             self.client.get(self.url("doc_versions", self.secret)).status_code, 200
         )
+
+
+class HistoryTest(Fixture, TestCase):
+    def test_the_history_of_docs_messages_and_files_is_for_staff(self):
+        message = ops.create_message(
+            project=self.project, title="Hi", creator=self.ada, visible=True
+        )
+        upload = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="a.txt"),
+            creator=self.ada,
+            visible=True,
+        )
+        operations.update_doc(self.shared, actor=self.ada, content="Two")
+        operations.update_upload(upload, actor=self.ada, description="About it")
+        for item in [self.shared, message, upload]:
+            url = reverse("item_history", args=[item.pk])
+            self.client.force_login(self.ada)
+            self.assertEqual(self.client.get(url).status_code, 200)
+            self.client.force_login(self.cleo)
+            self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("item_history", args=[self.shared.pk]))
+        self.assertContains(response, "Two")
+        response = self.client.get(reverse("item_history", args=[upload.pk]))
+        self.assertContains(response, "About it")
+
+    def test_a_client_gets_404_for_internal_items_first(self):
+        self.client.force_login(self.cleo)
+        url = reverse("item_history", args=[self.secret.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
