@@ -1,8 +1,10 @@
 """The activity feed (specs/feed.md): the events a person can see, like the
 web interface's feed but one event each (merging is for people), cursor
-paginated"""
+paginated. Notification settings and the @ list (specs/notifications.md,
+``biwak notifications``)."""
 
 import datetime as dt
+from typing import Literal
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -10,8 +12,9 @@ from django.utils.translation import gettext as _
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from biwak.activity import feed, history
-from biwak.activity.models import Action
+from biwak.activity import feed, history, mentions
+from biwak.activity.models import Action, LevelOverride
+from biwak.activity.operations import set_level_override, set_notification_settings
 from biwak.api_conventions import PersonOut, absolute, page_of, paginated, person_out
 from biwak.items.api import item_for
 from biwak.items.models import Kind
@@ -225,3 +228,128 @@ def item_history(request, item_id: int):
         }
         for change in history.history(item, request.user)
     ]
+
+
+# Notifications --------------------------------------------------------------
+
+notifications_router = Router(tags=["notifications"])
+
+Level = Literal["everything", "concerns_me", "nothing"]
+Delivery = Literal["each", "digest"]
+
+
+class SettingsOut(Schema):
+    level: Level
+    delivery: Delivery
+
+
+class SettingsIn(Schema):
+    level: Level | None = None
+    delivery: Delivery | None = None
+
+
+def settings_out(user):
+    return {"level": user.notification_level, "delivery": user.mail_delivery}
+
+
+@notifications_router.get("me/notifications/", response=SettingsOut)
+def settings_detail(request):
+    """Your level (everything, only what concerns you, nothing) and how mails
+    come (each change, or a daily digest)"""
+    return settings_out(request.user)
+
+
+@notifications_router.put("me/notifications/", response=SettingsOut)
+def settings_update(request, data: SettingsIn):
+    """Changes what's given"""
+    set_notification_settings(request.user, level=data.level, delivery=data.delivery)
+    return settings_out(request.user)
+
+
+class OverrideIn(Schema):
+    level: Level
+
+
+class ProjectOverrideOut(Schema):
+    project_id: int
+    level: Level | None
+
+
+class ItemOverrideOut(Schema):
+    item_id: int
+    level: Level | None
+
+
+def _override(user, **target):
+    override = LevelOverride.objects.filter(user=user, **target).first()
+    return override.level if override else None
+
+
+@notifications_router.get(
+    "projects/{project_id}/notifications/", response=ProjectOverrideOut
+)
+def project_override(request, project_id: int):
+    """Your level for the project, null when it's your usual one"""
+    project = project_for(request, project_id)
+    return {
+        "project_id": project.pk,
+        "level": _override(request.user, project=project),
+    }
+
+
+@notifications_router.put(
+    "projects/{project_id}/notifications/", response=ProjectOverrideOut
+)
+def project_override_set(request, project_id: int, data: OverrideIn):
+    project = project_for(request, project_id)
+    set_level_override(request.user, data.level, project=project)
+    return {"project_id": project.pk, "level": data.level}
+
+
+@notifications_router.delete(
+    "projects/{project_id}/notifications/", response=ProjectOverrideOut
+)
+def project_override_delete(request, project_id: int):
+    """Back to your usual level"""
+    project = project_for(request, project_id)
+    set_level_override(request.user, None, project=project)
+    return {"project_id": project.pk, "level": None}
+
+
+@notifications_router.get("items/{item_id}/notifications/", response=ItemOverrideOut)
+def item_override(request, item_id: int):
+    """Your level for the item and what's in it, null when there's none"""
+    item = item_for(request, item_id)
+    return {"item_id": item.pk, "level": _override(request.user, item=item)}
+
+
+@notifications_router.put("items/{item_id}/notifications/", response=ItemOverrideOut)
+def item_override_set(request, item_id: int, data: OverrideIn):
+    item = item_for(request, item_id)
+    set_level_override(request.user, data.level, item=item)
+    return {"item_id": item.pk, "level": data.level}
+
+
+@notifications_router.delete("items/{item_id}/notifications/", response=ItemOverrideOut)
+def item_override_delete(request, item_id: int):
+    item = item_for(request, item_id)
+    set_level_override(request.user, None, item=item)
+    return {"item_id": item.pk, "level": None}
+
+
+class MentionableOut(Schema):
+    id: int
+    name: str
+    short_name: str
+    email: str
+    available: bool
+    reason: str
+
+
+@notifications_router.get("items/{item_id}/mentionable/", response=list[MentionableOut])
+def mentionable(request, item_id: int, q: str = ""):
+    """People to mention, at most 10; those who can't see the item are
+    listed as unavailable with the reason. Write a mention as
+    ``[@Name](person:ID)``; ``@email`` and an unambiguous ``@Name`` work too."""
+    item = item_for(request, item_id)
+    return mentions.candidates(item, q, for_user=request.user)
