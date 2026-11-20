@@ -175,6 +175,25 @@ class SummaryTest(CheckinTestCase):
         self.summarize("2027-03-30 07:00")
         self.assertNotIn(self.cleo.email, [m.to[0] for m in self.summaries()])
 
+    def test_visibility_is_checked_again_when_sending(self):
+        """The mails go out after the commit: a question turned internal
+        in between doesn't reach the client (like ``_deliverable()``)"""
+        visible = self.question("Shared", visible=True, people=[self.ada, self.cleo])
+        self.run_at("2027-03-29 09:00")
+        ops.set_mail_mode(visible, user=self.cleo, mode=Mode.SUMMARY)
+        ops.answer(visible, user=self.ada, content="One")
+        self.sent()
+        with self.captureOnCommitCallbacks() as callbacks:
+            ops.run(now=at("2027-03-30 07:00"))
+        item_ops.set_visibility(
+            Item.objects.get(pk=visible.pk), visible=False, actor=self.ada
+        )
+        for callback in callbacks:
+            callback()
+        recipients = [m.to[0] for m in self.summaries()]
+        self.assertIn(self.ada.email, recipients)
+        self.assertNotIn(self.cleo.email, recipients)
+
     def test_the_morning_is_in_the_questions_time_zone(self):
         tokyo = self.question(
             "Tokyo", time_zone="Asia/Tokyo", now=at("2027-03-19 12:00")

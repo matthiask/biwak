@@ -87,8 +87,10 @@ value or a product choice to the builder):
 - **Not asked:** trashed and archived questions, questions of archived
   projects.
 - **Mails** (question, summary) go out after the commit, one per
-  person, in their language; a mail which can't be sent is logged and not
-  retried. Replying by mail (`notifications.md`, stage 2) goes into
+  person, in their language, only to people still active and seeing the
+  question then (checked again after the commit, like the notification
+  mails; fixed 2026-11-20 after the visibility review); a mail which
+  can't be sent is logged and not retried. Replying by mail (`notifications.md`, stage 2) goes into
   `biwak/checkins/mails.py`: `reply_headers()` returns the `Reply-To` and
   `thread()` the thread of a person and occurrence; `Occurrence` is what a
   reply points at.
