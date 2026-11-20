@@ -129,6 +129,12 @@ Microsoft account (decided 2026-11-20).
   login by code. Not for passkey or Google logins, API and htmx requests.
   Clients get it too; the behaviour, the wording and the API shapes of
   `api-cli.md` confirmed 2026-11-20.
+- Everybody's address is allauth's verified primary address
+  (`verify_email()`, also when it changes): allauth confirms who someone
+  is before adding a passkey, and without passwords that's a code by mail,
+  which it only sends to verified addresses; without one, adding a
+  passkey later than five minutes after logging in answered 403 (fixed
+  2026-11-20).
 - Staff can also use Google sign-in (allauth's Google provider), but it's
   never required. Only staff (decided 2026-11-20, built 2026-11-20 in
   `SocialAccountAdapter.pre_social_login`): clients can't sign in with
