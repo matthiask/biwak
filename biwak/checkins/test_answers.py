@@ -9,6 +9,7 @@ from biwak.accounts.models import NotificationLevel
 from biwak.activity import mentions
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Action, Event, Notification, Subscription
+from biwak.audit.models import LoggedAction
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, QuestionMail
 from biwak.checkins.support import CheckinTestCase, at
@@ -139,6 +140,20 @@ class AnsweringTest(AnswerTestCase):
         with self.assertRaises(ops.NotAllowed):
             ops.answer(self.item, user=self.bob, content="After")
         self.assertEqual([a.content for a in ops.answers_of(self.second)], ["Before"])
+
+    def test_clients_stay_in_the_list_of_an_internal_question(self):
+        shared = self.question("Shared", visible=True, people=[self.cleo])
+        item_ops.set_visibility(shared, visible=False, actor=self.ada)
+        visible = Item.objects.get(pk=shared.pk)
+        # Saving the list again works, adding a client doesn't
+        ops.set_people(visible, [self.ada, self.cleo], actor=self.ada)
+        ops.update_question(visible, actor=self.ada, people=[self.cleo])
+        other = person("Dora", client=True)
+        with self.assertRaises(ValueError):
+            ops.set_people(visible, [self.cleo, other], actor=self.ada)
+        ops.set_people(visible, [self.ada], actor=self.ada)
+        with self.assertRaises(ValueError):  # removed: not coming back
+            ops.set_people(visible, [self.cleo], actor=self.ada)
 
     def test_a_client_on_an_internal_question_isnt_allowed(self):
         visible = self.question("Shared", visible=True, people=[self.cleo])
@@ -378,3 +393,32 @@ class NotificationsTest(AnswerTestCase):
             lambda: ops.answer(self.item, user=self.ada, content="Two")
         )
         self.assertNotIn(self.cleo, told)
+
+
+class AuditTest(AnswerTestCase):
+    def test_audit_log(self):
+        LoggedAction.objects.all().delete()
+        ops.update_question(
+            self.item, actor=self.ada, title="Renamed", time_zone="Asia/Tokyo"
+        )
+        ops.answer(self.item, user=self.ada, content="Fine")
+        ops.set_mail_mode(self.item, user=self.bob, mode=Mode.EACH)
+        ops.set_people(self.item, [self.ada], actor=self.ada)
+        self.run_at("2027-03-29 09:00")  # the occurrence isn't audited
+        tables = set(LoggedAction.objects.values_list("table_name", flat=True))
+        self.assertTrue(
+            {
+                "checkins_question",
+                "checkins_question_people",
+                "checkins_answer",
+                "checkins_questionmail",
+            }
+            <= tables
+        )
+        self.assertNotIn("checkins_occurrence", tables)
+        # The next fire time isn't logged
+        self.assertFalse(
+            LoggedAction.objects.filter(
+                table_name="checkins_question", changed_fields__has_key="next_at"
+            )
+        )

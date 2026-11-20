@@ -70,7 +70,9 @@ value or a product choice to the builder):
   `asked` and aren't "due" for it); removing unsubscribes
   and keeps their answers. Clients only when the question is visible to
   clients; if it turns internal they aren't asked or mailed (they stay in
-  the list). Only people in the list answer (staff who aren't asked
+  the list, and saving the form or the API's `people` with them still
+  works; only adding clients to an internal question is refused, decided
+  2026-11-20). Only people in the list answer (staff who aren't asked
   don't), the author edits their own answer (answering again changes it,
   also from the trash).
 - **Summary:** 07:00 on the day after the occurrence's date in the

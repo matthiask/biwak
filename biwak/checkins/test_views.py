@@ -6,7 +6,9 @@ from biwak.activity.models import Event
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import CheckinTestCase
+from biwak.items import operations as item_ops
 from biwak.items.models import Item
+from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
 
@@ -320,6 +322,27 @@ class FormsTest(ViewsTestCase):
             response, "Clients can only be asked about check-ins they can see."
         )
         self.assertFalse(Item.objects.filter(title="What did you read?").exists())
+
+    def test_an_internal_question_keeps_its_clients_when_edited(self):
+        item_ops.set_visibility(self.shared, visible=False, actor=self.ada)
+        url = self.url("question_edit", self.shared)
+        initial = self.get(self.ada, url).context["form"].initial
+        data = {k: v for k, v in initial.items() if v is not None}
+        data["people"] = [u.pk for u in data["people"]]
+        response = self.post(self.ada, url, data | {"title": "Renamed"})
+        self.assertEqual(response.status_code, 302)
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.title, "Renamed")
+        self.assertIn(self.cleo, self.shared.question.people.all())
+        # Adding another client is still refused
+        other = person("Dora", client=True)
+        Membership.objects.create(project=self.project, user=other)
+        response = self.post(
+            self.ada, url, data | {"people": [*data["people"], other.pk]}
+        )
+        self.assertContains(
+            response, "Clients can only be asked about check-ins they can see."
+        )
 
     def test_a_custom_schedule_and_mistakes(self):
         url = reverse("question_new", args=[self.project.pk])
