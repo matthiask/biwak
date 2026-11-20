@@ -811,3 +811,42 @@ img.wb-attachment-image {
   max-width: 100%;
   height: auto;
 }
+
+/* Mentioning people (mentions.js, specs/notifications.md) */
+.wb-mention {
+  font-weight: 600;
+  color: var(--bs-primary-text-emphasis);
+}
+
+.wb-mentions {
+  --bs-list-group-action-color: var(--bs-body-color);
+  --bs-list-group-active-bg: var(--bs-primary);
+  --bs-list-group-active-border-color: var(--bs-primary);
+  /* Below the "@" being typed, mentions.js places it */
+  position: absolute;
+  z-index: 20;
+  width: max-content;
+  min-width: 14rem;
+  max-width: min(28rem, 100%);
+  margin-top: 0.25rem;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
+}
+
+.wb-mentions .list-group-item {
+  cursor: pointer;
+  padding-block: 0.375rem;
+}
+
+.wb-mentions .is-unavailable {
+  cursor: default;
+  color: var(--bs-secondary-color);
+}
+
+.wb-mentions-detail {
+  color: var(--bs-secondary-color);
+}
+
+.wb-mentions .active .wb-mentions-detail {
+  color: inherit;
+  opacity: 0.8;
+}

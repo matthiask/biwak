@@ -13,6 +13,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from biwak import schedules
+from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.operations import record, subscribe
 from biwak.files import attachments
@@ -53,7 +54,7 @@ def _create_item(*, project, kind, title, creator, parent=None, visible=False):
 
 def _created(item, creator):
     subscribe(creator, item)
-    record(actor=creator, action=Action.CREATED, project=item.project, item=item)
+    return record(actor=creator, action=Action.CREATED, project=item.project, item=item)
 
 
 @transaction.atomic
@@ -133,7 +134,8 @@ def create_todo(
         **_recurrence_fields(recurrence, recurrence_ends_on, recurrence_count),
     )
     attachments.link(item, notes, actor=creator)
-    _created(item, creator)
+    event = _created(item, creator)
+    mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
     if assignees:
         assign(item, assignees, actor=creator)
     return item
@@ -190,13 +192,14 @@ def add_comment(item, *, author, content):
     comment = Comment.objects.create(item=item, author=author, content=content)
     attachments.link(item, content, actor=author)
     subscribe(author, item, explicit=False)
-    record(
+    event = record(
         actor=author,
         action=Action.COMMENTED,
         project=item.project,
         item=item,
         comment=comment.pk,
     )
+    mentions.update(item, content, comment=comment, actor=author, event=event)
     return comment
 
 
@@ -252,16 +255,18 @@ def update_todo(
     the complete new set. Removing the recurrence removes its end and
     count too."""
     todo = item.todo
+    edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
         item.updated_at = timezone.now()
         item.save(update_fields=["title", "updated_at"])
+        edited = True
     fields = []
-    if notes is not _UNCHANGED:
+    if notes is not _UNCHANGED and notes != todo.notes:
         todo.notes = notes
         fields.append("notes")
         attachments.link(item, notes, actor=actor)
-    if due_on is not _UNCHANGED:
+    if due_on is not _UNCHANGED and due_on != todo.due_on:
         todo.due_on = due_on
         fields.append("due_on")
     given = {
@@ -280,6 +285,12 @@ def update_todo(
                 fields.append(name)
     if fields:
         todo.save(update_fields=fields)
+    if edited or fields:
+        # Edits merge into one event per editing session (record())
+        event = record(
+            actor=actor, action=Action.EDITED, project=item.project, item=item
+        )
+        mentions.update(item, f"{item.title}\n\n{todo.notes}", actor=actor, event=event)
     if assignees is not _UNCHANGED:
         new, old = set(assignees), set(todo.assignees.all())
         assign(item, list(new - old), actor=actor)

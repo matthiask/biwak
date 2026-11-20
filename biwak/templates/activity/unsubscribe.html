@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Unsubscribe" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="card wb-form-card">
+    <div class="card-body">
+      {% if done %}
+        <h1 class="h4">{% translate "Unsubscribed" %}</h1>
+        <p>
+          {% if title %}
+            {% blocktranslate %}You won't get mails about “{{ title }}” any more, unless somebody mentions you or assigns it to you.{% endblocktranslate %}
+          {% else %}
+            {% translate "You won't get mails about this any more, unless somebody mentions you or assigns it to you." %}
+          {% endif %}
+        </p>
+      {% else %}
+        <h1 class="h4">{% translate "Unsubscribe?" %}</h1>
+        <p>
+          {% if title %}
+            {% blocktranslate %}Stop getting mails about “{{ title }}”?{% endblocktranslate %}
+          {% else %}
+            {% translate "Stop getting mails about this?" %}
+          {% endif %}
+        </p>
+        <form method="post">
+          <button type="submit" class="btn btn-primary">{% translate "Unsubscribe" %}</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock content %}

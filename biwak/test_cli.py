@@ -11,6 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 
 from biwak.accounts.models import APIToken
+from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Item
@@ -210,3 +211,49 @@ class CLITest(TestCase):
         comment = Comment.objects.get()
         self.assertTrue(comment.content.startswith("Both\n\n[plan.pdf](attachment:"))
         self.assertEqual(Attachment.objects.filter(item_id=data["id"]).count(), 4)
+
+    def test_notifications(self):
+        output = self.biwak("notifications").output
+        self.assertIn("Level: everything", output)
+        self.assertIn("Delivery: each", output)
+        self.biwak("notifications", "--level", "concerns_me", "--delivery", "digest")
+        self.ada.refresh_from_db()
+        self.assertEqual(
+            (self.ada.notification_level, self.ada.mail_delivery),
+            ("concerns_me", "digest"),
+        )
+        data = json.loads(self.biwak("notifications", "--json").stdout)
+        self.assertEqual(data, {"level": "concerns_me", "delivery": "digest"})
+
+        # A project's and an item's own level
+        project_id = self.project.pk
+        self.assertIn(
+            "Level: as usual",
+            self.biwak("notifications", "--project", project_id).output,
+        )
+        self.biwak("notifications", "--project", project_id, "--level", "nothing")
+        self.assertIn(
+            "Level: nothing",
+            self.biwak("notifications", "--project", project_id).output,
+        )
+        self.biwak("notifications", "--project", project_id, "--level", "default")
+        self.assertFalse(LevelOverride.objects.exists())
+        result = self.biwak(
+            "notifications", "--item", self.list.pk, "--level", "everything", "--json"
+        )
+        self.assertEqual(
+            json.loads(result.stdout), {"item_id": self.list.pk, "level": "everything"}
+        )
+
+        # Mistakes
+        for args in [
+            ["--project", project_id, "--item", self.list.pk],
+            ["--project", project_id, "--delivery", "each"],
+            ["--level", "default"],
+        ]:
+            self.assertEqual(self.biwak("notifications", *args).exit_code, 1)
+        # Somebody else's project
+        other = project("Other", all_access=False)
+        result = self.biwak("notifications", "--project", other.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("404", result.output)

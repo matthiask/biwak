@@ -1,0 +1,13 @@
+{% load biwak i18n %}
+<div style="border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px">
+  <div style="color: #666; font-size: 13px">{{ kind|capfirst }}{% if list %} · {{ list }}{% endif %}</div>
+  <h2 style="font-size: 17px; margin: 4px 0"><a href="{{ url }}">{{ title }}</a></h2>
+  {% if assignees or todo.due_on or todo.completed_at %}
+    <p style="color: #666; font-size: 13px; margin: 0 0 8px">
+      {% if assignees %}{% translate "Assigned to" %}: {{ assignees }}{% endif %}
+      {% if todo.due_on %}· {% translate "Due on" %}: {{ todo.due_on|date:"j. F Y" }}{% endif %}
+      {% if todo.completed_at %}· {% translate "Completed." %}{% endif %}
+    </p>
+  {% endif %}
+  {% if text %}<div>{{ text|mail_markdown:item_obj }}</div>{% endif %}
+</div>

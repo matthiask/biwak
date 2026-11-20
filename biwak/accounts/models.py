@@ -25,6 +25,19 @@ class UserManager(BaseUserManager):
         return self.filter(is_active=True)
 
 
+class NotificationLevel(models.TextChoices):
+    """Which notifications somebody gets (specs/notifications.md)"""
+
+    EVERYTHING = "everything", _("Everything")
+    CONCERNS_ME = "concerns_me", _("Only what concerns me")
+    NOTHING = "nothing", _("Nothing")
+
+
+class MailDelivery(models.TextChoices):
+    EACH = "each", _("A mail for each change")
+    DIGEST = "digest", _("A daily digest")
+
+
 class User(AbstractBaseUser):
     """Staff or client (specs/access.md). Clients belong to an organization,
     shown beside their name"""
@@ -49,6 +62,19 @@ class User(AbstractBaseUser):
         ),
     )
     organization = models.CharField(_("organization"), max_length=200, blank=True)
+    # Overridable per project and item (biwak.activity.models.LevelOverride)
+    notification_level = models.CharField(
+        _("notifications"),
+        max_length=20,
+        choices=NotificationLevel,
+        default=NotificationLevel.EVERYTHING,
+    )
+    mail_delivery = models.CharField(
+        _("mail delivery"),
+        max_length=20,
+        choices=MailDelivery,
+        default=MailDelivery.EACH,
+    )
 
     class ProjectOrder(models.TextChoices):
         ACTIVITY = "activity", _("Activity")

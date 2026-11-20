@@ -552,3 +552,60 @@ def link_delete(link_id):
     """Delete LINK"""
     request("DELETE", f"links/{link_id}/")
     click.echo(f"Deleted link #{link_id}.")
+
+
+# Notifications --------------------------------------------------------------
+
+LEVELS = ["everything", "concerns_me", "nothing"]
+
+
+@cli.command()
+@click.option(
+    "--level",
+    type=click.Choice([*LEVELS, "default"]),
+    help="What to be told about; 'default' removes a project's or item's own.",
+)
+@click.option("--delivery", type=click.Choice(["each", "digest"]), help="Mails.")
+@click.option("--project", type=int, help="Show or set the level for PROJECT.")
+@click.option("--item", type=int, help="Show or set the level for an item.")
+@json_option
+def notifications(level, delivery, project, item, as_json):
+    """Show and set your notification level and mail delivery"""
+    if project and item:
+        terminate("A project or an item, not both.")
+    if project or item:
+        if delivery:
+            terminate(
+                "The delivery is the same everywhere; leave out --project and --item."
+            )
+        path = (
+            f"projects/{project}/notifications/"
+            if project
+            else (f"items/{item}/notifications/")
+        )
+        if level == "default":
+            data = request("DELETE", path)
+        elif level:
+            data = request("PUT", path, json={"level": level})
+        else:
+            data = request("GET", path)
+        if as_json:
+            return echo_json(data)
+        click.echo(f"Level: {data['level'] or 'as usual'}")
+        return None
+    if level == "default":
+        terminate("'default' is for --project and --item.")
+    if level or delivery:
+        changes = {"level": level, "delivery": delivery}
+        data = request(
+            "PUT",
+            "me/notifications/",
+            json={k: v for k, v in changes.items() if v},
+        )
+    else:
+        data = request("GET", "me/notifications/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Level: {data['level']}")
+    click.echo(f"Delivery: {data['delivery']}")
+    return None

@@ -1,3 +1,3 @@
 {% load biwak %}{% if what %}{{ what }}{% elif event.item %}<a
     href="{{ event.item.get_absolute_url }}"
-  >{{ event.data.title }}</a>{% else %}{{ event.data.title }}{% endif %}
+  >{{ event.data.title|title_text }}</a>{% else %}{{ event.data.title|title_text }}{% endif %}

@@ -10,6 +10,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from biwak.accounts.models import NotificationLevel
 from biwak.items.models import Item
 from biwak.projects.models import Project
 
@@ -157,3 +158,136 @@ class Unsubscription(models.Model):
 
     def __str__(self):
         return f"{self.user} ↛ {self.item}"
+
+
+class Mention(models.Model):
+    """Somebody mentioned in an item's text (``comment`` empty: the item's
+    own texts, e.g. a to-do's title and notes) or in a comment
+    (biwak.activity.mentions). Only people who could see the item when it
+    was written."""
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="mentions",
+        verbose_name=_("item"),
+    )
+    comment = models.ForeignKey(
+        "items.Comment",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="mentions",
+        verbose_name=_("comment"),
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("person"),
+    )
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["item", "comment", "user"],
+                name="unique_mention",
+                nulls_distinct=False,
+            )
+        ]
+        verbose_name = _("mention")
+        verbose_name_plural = _("mentions")
+
+    def __str__(self):
+        return f"@{self.user} in {self.item}"
+
+
+class LevelOverride(models.Model):
+    """A person's notification level for one project or one item (and
+    what's in it), instead of ``User.notification_level``"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="level_overrides",
+        verbose_name=_("person"),
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("project"),
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("item"),
+    )
+    level = models.CharField(
+        _("notifications"), max_length=20, choices=NotificationLevel
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(project__isnull=True) ^ models.Q(item__isnull=True),
+                name="override_project_or_item",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "project"],
+                condition=models.Q(project__isnull=False),
+                name="unique_project_override",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "item"],
+                condition=models.Q(item__isnull=False),
+                name="unique_item_override",
+            ),
+        ]
+        verbose_name = _("notification level override")
+        verbose_name_plural = _("notification level overrides")
+
+    def __str__(self):
+        return f"{self.user}: {self.level} for {self.project or self.item}"
+
+
+class Notification(models.Model):
+    """An event a person is told about by mail (biwak.activity.notify);
+    ``send_mails`` sends and marks them"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        verbose_name=_("person"),
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        verbose_name=_("event"),
+    )
+    # Moved forward when a merged edit notifies again before sending
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+    sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        indexes = [
+            models.Index(
+                fields=["user", "created_at"],
+                condition=models.Q(sent_at__isnull=True),
+                name="unsent_notifications",
+            )
+        ]
+        verbose_name = _("notification")
+        verbose_name_plural = _("notifications")
+
+    def __str__(self):
+        return f"{self.user}: {self.event}"

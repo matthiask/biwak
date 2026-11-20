@@ -1,8 +1,11 @@
 # Notifications: events, subscriptions, mentions, mails, replies
 
 **Status:** events and subscriptions are built (core, 2026-11-20:
-`biwak/activity/`). Stage 1 (mentions, levels, mails, digests) and
-stage 2 (replying by mail) are open.
+`biwak/activity/`). Stage 1 (mentions, levels, mails, digests) is built
+(2026-11-20, branch `notifications`): `mentions.py`, `notify.py`,
+`mails.py` and `./manage.py send_mails`, the settings pages, the API
+endpoints and `biwak notifications` (CLI 0.8.0). Stage 2 (replying by
+mail) is open.
 
 **Agent:** a strong model for both stages. Stage 1 decides who gets
 told about what, across visibility; stage 2 posts mail as people.
@@ -18,9 +21,14 @@ store enough to render without the item (the title at the time, in
 .visible_to()`). Events feed the activity feed (`feed.md`) and
 notifications.
 
-To add in stage 1: **edits merge**. An `edited` event by the same person
-on the same item within 10 minutes of the last one updates that event's
-time instead of creating a new one ("once per editing session").
+**Edits merge** (built in stage 1, `record()`): an `edited` event by the
+same person on the same item within 10 minutes of the last one updates
+that event's time instead of creating a new one ("once per editing
+session"). The person's last `edited` event counts, even when others'
+events came in between; a merged edit tells nobody again who was told
+already, except people mentioned in it for the first time (proposed by
+the building agent, 2026-11-20). Changing a to-do's title, notes or due
+date records `edited` (`update_todo()`; assignees record `assigned`).
 
 ## Subscriptions (built)
 
@@ -72,10 +80,14 @@ time instead of creating a new one ("once per editing session").
 - **Model:** `Mention(item, comment null, user, created_at)`, written by
   the operations that save texts (`create_todo`, `update_todo`,
   `add_comment`, later messages, docs and answers) via
-  `mentions.update(item, text, comment=None, actor)`. It parses the
-  text, ignores people who can't see the item (a mention typed by hand
-  for someone without access is shown as plain text, not linked), and
-  returns those **newly** mentioned.
+  `mentions.update(item, text, comment=None, actor, event=None)`. It
+  parses the text, ignores people who can't see the item (a mention
+  typed by hand for someone without access is shown as plain text, not
+  linked), and returns those **newly** mentioned, adding them to
+  `event.data["mentioned"]` for `notify()`. A to-do's title and notes
+  are one text. People removed from a text are forgotten, so mentioning
+  them again counts as new (proposed by the building agent,
+  2026-11-20).
 - **A new mention** notifies the person (on every level except
   "nothing") and subscribes them (`explicit=True`). Editing a text later
   notifies only people newly mentioned. A mention doesn't come back
@@ -88,19 +100,25 @@ time instead of creating a new one ("once per editing session").
 
 Per person (`User.notification_level`), overridable per project and per
 item (`LevelOverride(user, project null, item null, level)`, one of the
-two set; the item's override wins over the project's):
+two set; the item's override wins over the project's). An item's
+override also covers what's in it: the nearest override along the item
+and its containers wins (proposed by the building agent, 2026-11-20):
 
 - **Everything** (the default): everything the person is subscribed to.
 - **Only what concerns me:** being assigned, being mentioned, comments on
   items they created or commented on, their to-dos completed by someone
-  else.
+  else ("their": assigned to them or created by them; proposed by the
+  building agent, 2026-11-20).
 - **Nothing:** no mails; the feed still shows everything.
 
 Never a notification about one's own actions.
 
 Pages: the person's level and delivery on `/accounts/notifications/`
 (linked from the user menu); a project's override in the project page's
-"More" menu; an item's override next to its subscribe button.
+"More" menu; an item's override next to its subscribe button. The
+settings page also lists the person's overrides, items only while they
+can see them. For now only to-dos have a subscribe button, so a list's
+override is set through the API (built 2026-11-20).
 
 ### Who gets told
 
@@ -147,13 +165,38 @@ Project events (joined, added, removed) notify nobody.
   in production, decided 2026-11-20; the console in development). After
   the commit, never inside a transaction.
 
+Built in stage 1 (proposed by the building agent, 2026-11-20):
+
+- `send_mails` checks again when sending: inactive people, people who
+  can't see the item any more and people whose level is now "nothing"
+  get nothing, and those notifications are deleted. A mail that fails to
+  send leaves its notifications unsent for the next run.
+- Clients aren't told where an item moved ("Ada moved it."), like the
+  feed: the name may be internal.
+- Attachments are links with `BASE_URL` in the HTML part and their
+  download URLs in the plain text part; the download checks access.
+- The unsubscribe link of a new item a person hears about through its
+  container unsubscribes from the container. A `GET` of the link only
+  asks (link checkers follow links), the `POST` unsubscribes; only who
+  can still see the item is shown its title.
+- Digests have no one-click unsubscribing (they're about many items):
+  their `List-Unsubscribe` is the settings page, without
+  `List-Unsubscribe-Post`. Their subject: `[Biwak] What happened on
+  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`.
+- Mails carry `Auto-Submitted: auto-generated`.
+- The `@` list for clients finds only the project's members, not by
+  email, and shows no addresses.
+
 ### API and CLI
 
 - `GET/PUT /api/v1/me/notifications/` (level, delivery),
-  `PUT/DELETE /api/v1/projects/{id}/notifications/` and
-  `/api/v1/items/{id}/notifications/` (overrides),
-  `GET /api/v1/items/{id}/mentionable/?q=`.
-- `biwak notifications` shows and sets the level and delivery.
+  `GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and
+  `/api/v1/items/{id}/notifications/` (overrides; `level` null without
+  one), `GET /api/v1/items/{id}/mentionable/?q=`. Texts written through
+  the API (to-dos, comments) resolve `@email` and an unambiguous `@Name`.
+- `biwak notifications` shows and sets the level and delivery;
+  `--project` and `--item` the overrides (`--level default` removes
+  one).
 
 ### Done when (stage 1)
 

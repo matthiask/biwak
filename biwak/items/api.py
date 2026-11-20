@@ -12,6 +12,7 @@ from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
 from biwak import schedules
+from biwak.activity.mentions import resolve as resolve_mentions
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.api_conventions import (
     ItemOut,
@@ -252,7 +253,7 @@ def todo_out(item):
         and {"id": group.pk, "title": group.title, "position": group.position},
         "position": item.position,
         "notes": todo.notes,
-        "notes_html": html(todo.notes),
+        "notes_html": html(todo.notes, item),
         "starts_on": todo.starts_on,
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,
@@ -360,10 +361,10 @@ def todo_create(request, list_id: int, data: TodoIn):
         group = get_object_or_404(Group, pk=data.group_id, todolist=item.todolist)
     todo = ops.create_todo(
         todolist=item,
-        title=data.title,
+        title=resolve_mentions(item, data.title),
         creator=request.user,
         group=group,
-        notes=data.notes,
+        notes=resolve_mentions(item, data.notes),
         due_on=data.due_on,
         assignees=_assignees(item, data.assignees),
         recurrence=_rule(data.recurrence, data.due_on),
@@ -463,6 +464,8 @@ def todo_update(request, todo_id: int, data: TodoPatch):
         bad_request(_("The title can't be empty."))
     if "notes" in changes and changes["notes"] is None:
         changes["notes"] = ""
+    for field in {"title", "notes"} & changes.keys():
+        changes[field] = resolve_mentions(item, changes[field])
     if "assignees" in given:
         changes["assignees"] = _assignees(item, data.assignees or [])
     if "recurrence" in given:
@@ -580,7 +583,7 @@ def comment_out(comment, item):
         "item_id": item.pk,
         "author": person_out(comment.author),
         "content": comment.content,
-        "content_html": html(comment.content),
+        "content_html": html(comment.content, item),
         "created_at": comment.created_at,
         "visible_to_clients": item.is_client_visible,
     }
@@ -597,7 +600,9 @@ def comment_create(request, item_id: int, data: CommentIn):
         bad_request(_("Lists and folders have no comments."))
     if not data.content.strip():
         bad_request(_("The comment is empty."))
-    comment = ops.add_comment(item, author=request.user, content=data.content)
+    comment = ops.add_comment(
+        item, author=request.user, content=resolve_mentions(item, data.content)
+    )
     return Status(201, comment_out(comment, item))
 
 

@@ -1,11 +1,13 @@
 import html
+import re
 
 from django import template
 from django.conf import settings
-from django.utils.html import format_html, strip_tags
+from django.utils.html import escape, format_html, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext
 from markdown_it import MarkdownIt
+from markdown_it.token import Token
 
 
 register = template.Library()
@@ -14,17 +16,70 @@ register = template.Library()
 _markdown = MarkdownIt("commonmark", {"html": False, "linkify": True, "breaks": True})
 _markdown.enable(["linkify", "strikethrough", "table"])
 
+_PERSON = re.compile(r"person:(\d+)")
+
+
+def _mentions(state):
+    """Mentions (``[@Ada](person:12)``, biwak/activity/mentions.py) are
+    links to ``person:``: shown with the current name of people who can see
+    the item (``env["names"]``), as plain text otherwise"""
+    names = state.env.get("names") or {}
+    for block in state.tokens:
+        if block.type != "inline" or not block.children:
+            continue
+        children, result = block.children, []
+        index = 0
+        while index < len(children):
+            token = children[index]
+            match = token.type == "link_open" and _PERSON.fullmatch(
+                token.attrGet("href") or ""
+            )
+            if not match:
+                result.append(token)
+                index += 1
+                continue
+            end = index + 1
+            while children[end].type != "link_close":
+                end += 1
+            label = "".join(t.content for t in children[index + 1 : end])
+            name = names.get(int(match[1]))
+            mention = Token("html_inline", "", 0)
+            mention.content = (
+                f'<span class="wb-mention">@{escape(name)}</span>'
+                if name
+                else escape(f"@{label.removeprefix('@')}")
+            )
+            result.append(mention)
+            index = end + 1
+        block.children = result
+
+
+_markdown.core.ruler.push("mentions", _mentions)
+
 
 @register.filter
-def markdown(text):
-    return render_markdown(text)
+def markdown(text, item=None):
+    """Markdown as HTML; mentions with current names when the item they're
+    in is given (``{{ comment.content|markdown:item }}``)"""
+    return render_markdown(text, item)
 
 
-def render_markdown(text, *, absolute=False):
+@register.filter
+def mail_markdown(text, item=None):
+    """For mails: like ``markdown``, attachment URLs with BASE_URL"""
+    return render_markdown(text, item, absolute=True)
+
+
+def render_markdown(text, item=None, *, absolute=False):
     """``absolute`` for the API and mails: attachment URLs with BASE_URL"""
-    tokens = _markdown.parse(str(text or ""))
+    from biwak.activity.mentions import mentioned_ids, visible_names
+
+    text = str(text or "")
+    names = visible_names(item, mentioned_ids(text)) if item is not None else {}
+    env = {"names": names}
+    tokens = _markdown.parse(text, env)
     _attachment_urls(tokens, absolute=absolute)
-    return mark_safe(_markdown.renderer.render(tokens, _markdown.options, {}))
+    return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
 def _attachment_urls(tokens, *, absolute):
@@ -54,6 +109,23 @@ def _attachment_urls(tokens, *, absolute):
         if attr == "src":
             token.attrJoin("class", "wb-attachment-image")
             token.attrSet("loading", "lazy")
+
+
+@register.filter
+def item_title(item):
+    """An item's title with the mentions as ``@`` and current names"""
+    from biwak.activity.mentions import plain as plain_mentions
+
+    return plain_mentions(item.title, item)
+
+
+@register.filter
+def title_text(title):
+    """A stored title (e.g. an event's) with the mentions as ``@`` and their
+    labels, without looking anybody up"""
+    from biwak.activity.mentions import plain as plain_mentions
+
+    return plain_mentions(title)
 
 
 @register.filter
@@ -99,4 +171,15 @@ def client_badge(item):
         '<span class="badge wb-client-badge" title="{}">{}</span>',
         gettext("Clients can see this"),
         gettext("Clients"),
+    )
+
+
+@register.inclusion_tag("activity/_item_notifications.html", takes_context=True)
+def item_notifications(context, item):
+    """The person's level for an item, next to its subscribe button"""
+    from biwak.activity.views import item_level_context
+
+    user = context["request"].user
+    return {"item": item, "csrf_token": context.get("csrf_token")} | (
+        item_level_context(user, item)
     )

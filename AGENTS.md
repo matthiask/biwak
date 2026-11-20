@@ -15,7 +15,9 @@ them when a decision changes (dated: "decided 2026-11-20").
 - `./manage.py fairy_tasks` runs the daily jobs (trash older than 30
   days, expired API tokens, `check_visibility` mailing admins); new daily
   jobs go there, hourly ones into an `hourly_tasks` like Governance's.
-  Once deployed, the cron job lives in the argocd repository.
+  `./manage.py send_mails` sends the notification mails and digests that
+  are due; cron runs it every minute. Once deployed, the cron jobs live
+  in the argocd repository.
 - The audit log (`biwak/audit/`) is a trigger on the main tables; new
   tables people change get `audit_tables()` in a migration. Requests,
   API tokens and `fairy_tasks` set who changes things (`set_user_name()`).

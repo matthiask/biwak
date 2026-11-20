@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Notifications" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "Notifications" %}</h1>
+  <div class="card wb-form-card mb-4">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+      </form>
+    </div>
+  </div>
+  {% if project_overrides or item_overrides %}
+    <h2 class="h5">{% translate "Different in some places" %}</h2>
+    <ul class="list-unstyled">
+      {% for override in project_overrides %}
+        <li class="mb-2 d-flex align-items-center gap-2">
+          <a href="{{ override.project.get_absolute_url }}">{{ override.project }}</a>:
+          {{ override.get_level_display }}
+          <form method="post" action="{% url 'project_notifications' override.project.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'notification_settings' %}">
+            <button type="submit" class="btn btn-sm btn-quiet">{% translate "As usual" %}</button>
+          </form>
+        </li>
+      {% endfor %}
+      {% for override in item_overrides %}
+        <li class="mb-2 d-flex align-items-center gap-2">
+          <a href="{{ override.item.get_absolute_url }}">{{ override.item|item_title }}</a>
+          {% client_badge override.item %}:
+          {{ override.get_level_display }}
+          <form method="post" action="{% url 'item_notifications' override.item.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'notification_settings' %}">
+            <button type="submit" class="btn btn-sm btn-quiet">{% translate "As usual" %}</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock content %}

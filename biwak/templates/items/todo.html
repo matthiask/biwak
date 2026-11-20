@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load attachments biwak bookmarks i18n %}
-{% block title %}{{ item }} – Biwak{% endblock %}
+{% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
   <nav class="small mb-2">
@@ -10,7 +10,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
-      {{ item }}
+      {{ item|item_title }}
       {% client_badge item %}
     </h1>
     <div class="wb-page-actions">
@@ -45,12 +45,12 @@
       {% translate "Previous:" %}
       <a
         href="{{ previous.get_absolute_url }}"
-      >{% if previous.todo.is_completed %}{% blocktranslate with who=previous.todo.completed_by.get_short_name when=previous.todo.completed_at|date:"j. F Y" %}completed on {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous.title }}{% endif %}</a>
+      >{% if previous.todo.is_completed %}{% blocktranslate with who=previous.todo.completed_by.get_short_name when=previous.todo.completed_at|date:"j. F Y" %}completed on {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous|item_title }}{% endif %}</a>
     </p>
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown }}</div>{% endif %}
+      {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown:item }}</div>{% endif %}
       <div class="card mb-4">
         <div class="card-body">
           <form method="post" {% attachments_attrs item.project %}>
@@ -69,7 +69,7 @@
             <div class="small text-body-secondary mb-1">
               <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
             </div>
-            <div class="wb-markdown">{{ comment.content|markdown }}</div>
+            <div class="wb-markdown">{{ comment.content|markdown:item }}</div>
           </div>
         </div>
       {% endfor %}
@@ -97,6 +97,7 @@
           <button type="submit" class="btn btn-sm btn-quiet">{% translate "Subscribe" %}</button>
         {% endif %}
       </form>
+      {% item_notifications item %}
       {% if not todo.is_completed %}
         <h2 class="h6 mt-4">{% translate "Move to…" %}</h2>
         <form method="post" action="{% url 'todo_move' item.pk %}" class="wb-move-form">

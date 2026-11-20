@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
@@ -400,6 +401,9 @@ def todo(request, pk):
         },
     )
     form.fields["assignees"].queryset = people
+    mentions_url = reverse("mentionable", args=[item.pk])
+    for field in ["title", "notes"]:
+        form.fields[field].widget.attrs["data-mentions"] = mentions_url
     if form.is_valid():
         data = form.cleaned_data
         ops.update_todo(
@@ -415,6 +419,7 @@ def todo(request, pk):
     comment_form = CommentForm(
         request.POST if request.POST.get("form") == "comment" else None
     )
+    comment_form.fields["content"].widget.attrs["data-mentions"] = mentions_url
     if comment_form.is_valid():
         ops.add_comment(
             item, author=request.user, content=comment_form.cleaned_data["content"]
