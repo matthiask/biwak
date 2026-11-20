@@ -8,7 +8,7 @@ Shown under the thing with who reacted.
 (model, operations, views, API, template tag `{% reactions item %}` and
 `{% reactions item comment %}`), the `reacted` action in the feed, the
 mails and the digest, `biwak react` and the reactions in `biwak todo show`
-(CLI 0.11.0). Decisions made on the way (proposed by the building agent,
+(CLI 0.11.0). Decisions made on the way (proposed by the building agent, confirmed
 2026-11-20):
 
 - A reaction is one `reacted` event each, with `content` and, for
