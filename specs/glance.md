@@ -17,10 +17,18 @@ Decisions, 2026-11-20:
   template filter has one argument): mentions show current names there,
   the label as written in templates (to-do rows). No query per row.
   Excerpts don't look attachments up.
-- Feed excerpts are 200 characters, clamped to two lines by CSS.
+- Feed excerpts are 200 characters, clamped to two lines by CSS
+  (confirmed 2026-11-20).
+- The peek shows the latest three comments newest first (decided
+  2026-11-20).
 - The attachment indicator is a plain icon with the count in its
   `title`: it counts attachments linked to the to-do (notes and
-  comments), not a button.
+  comments), not a button (fine for now, 2026-11-20; it could open the
+  peek later).
+- **Later:** mentions in to-do rows' notes excerpts show the label as
+  written, not the current name. Good enough for now (2026-11-20);
+  current names need one batch lookup of the mentioned people per page,
+  not a query per row.
 - Counts on the project page include only to-dos the person sees; the
   count is "N open" and, when there are any, "M overdue" (danger color).
 - The person feed is linked from names too (see `feed.md`).

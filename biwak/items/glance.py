@@ -38,8 +38,7 @@ def list_counts(user, lists, today):
 
 
 def peek_comments(item, limit=3):
-    """The latest ``limit`` comments, oldest first"""
-    latest = list(
+    """The latest ``limit`` comments, newest first"""
+    return list(
         item.comments.select_related("author").order_by("-created_at", "-pk")[:limit]
     )
-    return latest[::-1]

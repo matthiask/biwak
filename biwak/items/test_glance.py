@@ -159,13 +159,13 @@ class PeekTest(Fixture):
         response = self.client.get(f"/todos/{self.todo.pk}/peek/")
         self.assertContains(response, "<strong>notes</strong>")
         self.assertContains(response, "@Ada Example")
-        # The latest three, oldest of them first
+        # The latest three, newest first
         self.assertNotContains(response, "Comment number 1")
         self.assertContains(response, "Comment number 2")
         self.assertContains(response, "Comment number 4")
         self.assertLess(
-            response.text.index("Comment number 2"),
             response.text.index("Comment number 4"),
+            response.text.index("Comment number 2"),
         )
         self.assertContains(response, "The latest 3 of 5 comments")
         self.assertContains(response, f'href="/todos/{self.todo.pk}/"')
