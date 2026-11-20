@@ -59,6 +59,7 @@ INSTALLED_APPS = [
         "biwak.bookmarks",
         "biwak.reactions",
         "biwak.checkins",
+        "biwak.inbound",
         "biwak.audit",
         "debug_toolbar" if DEBUG_TOOLBAR else "",
     ]
@@ -197,6 +198,14 @@ MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
 if LIVE:  # pragma: no cover
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
+
+# Replying by mail (specs/notifications.md, stage 2) through Resend: the
+# receiving subdomain (its MX at Resend), an API key which can read
+# received mails, the webhook's signing secret (whsec_...). Without all
+# three replying is off and mails carry no Reply-To.
+REPLY_DOMAIN = env("REPLY_DOMAIN", default="")
+RESEND_API_KEY = env("RESEND_API_KEY", default="")
+RESEND_WEBHOOK_SECRET = env("RESEND_WEBHOOK_SECRET", default="")
 
 EMAIL_URL = env("EMAIL_URL", default="console:" if DEBUG else "smtp:")
 MAILERS = {"default": django_mailer_url(EMAIL_URL)}
