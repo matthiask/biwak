@@ -375,6 +375,26 @@ class FormsTest(ViewsTestCase):
         self.assertEqual(form.initial["repeat"], "custom")
         self.assertEqual(form.initial["custom_rule"], "FREQ=WEEKLY;BYDAY=MO,TH")
 
+    def test_saving_keeps_a_rule_for_another_weekday_or_day(self):
+        """Rules from the API or the CLI (first date a Friday): saving the
+        form with a new title keeps them"""
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+            "FREQ=MONTHLY;BYMONTHDAY=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=-1",
+            "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+        ]:
+            item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 19))
+            url = self.url("question_edit", item)
+            initial = self.get(self.ada, url).context["form"].initial
+            data = {k: v for k, v in initial.items() if v is not None}
+            data["people"] = [u.pk for u in data["people"]]
+            response = self.post(self.ada, url, data | {"title": "Renamed"})
+            self.assertEqual(response.status_code, 302, rule)
+            self.assertEqual(Question.objects.get(item=item).rule, rule)
+
     def test_editing_a_visible_question_keeps_the_clients(self):
         response = self.post(
             self.ada,

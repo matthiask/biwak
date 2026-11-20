@@ -40,7 +40,11 @@ value or a product choice to the builder):
   dropped, not sent when it comes back; such questions also move on
   without asking.
 - **Editing the schedule** counts from now: today's time only if still
-  ahead, and a date already asked isn't asked again.
+  ahead, and a date already asked isn't asked again. The edit form shows a
+  rule as a preset only when the preset gives that rule from the first
+  date; a rule for another weekday or day (from the API or the CLI) is
+  shown as custom, so saving the form keeps it (fixed 2026-11-20: saving
+  rebuilt it from the first date's weekday or day).
 - **People:** adding is from the next occurrence on (those added are
   subscribed and can answer the latest occurrence, but aren't in its
   `asked`, aren't reminded and aren't "due" for it); removing unsubscribes
