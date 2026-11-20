@@ -24,6 +24,8 @@ class Action(models.TextChoices):
     MOVED = "moved", _("moved")
     VISIBILITY_CHANGED = "visibility_changed", _("visibility changed")
     ARCHIVED = "archived", _("archived")
+    UNARCHIVED = "unarchived", _("unarchived")
+    EDITED_PROJECT = "edited_project", _("edited the project")
     TRASHED = "trashed", _("trashed")
     RESTORED = "restored", _("restored")
     JOINED = "joined", _("joined")

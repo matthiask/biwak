@@ -1,13 +1,29 @@
 from django.contrib.auth.middleware import LoginRequiredMiddleware
+from django.db import connections
 from django.utils.translation import activate
 
 
-def language_middleware(get_response):
-    """The interface in the person's language, if they chose one"""
+def set_user_name(user):
+    """Who the audit log (biwak/audit/) records for changes, a person or a
+    name like ``Fairy tasks``"""
+    if not isinstance(user, str):
+        user = f"user-{user.pk}-{user.get_short_name()}"
+    connections["default"].cursor().execute(
+        "SET SESSION application_name TO %s", [user]
+    )
+
+
+def user_middleware(get_response):
+    """The person's language, if they chose one, and their name for the
+    audit log"""
 
     def middleware(request):
-        if request.user.is_authenticated and request.user.language:
-            activate(request.user.language)
+        if request.user.is_authenticated:
+            set_user_name(request.user)
+            if request.user.language:
+                activate(request.user.language)
+        else:
+            set_user_name("user-0-anonymous")
         return get_response(request)
 
     return middleware

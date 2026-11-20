@@ -15,13 +15,21 @@
         class="btn btn-sm btn-quiet{% if view == 'board' %} active{% endif %}"
         href="?view=board"
       >{% translate "Board" %}</a>
+      {% if can_change %}
+        <a class="btn btn-sm btn-quiet" href="{% url 'list_edit' item.pk %}">{% icon "pencil" %}<span
+          >{% translate "Edit" %}</span></a>
+      {% endif %}
     </div>
   </div>
+  {% if item.status == "archived" %}
+    <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
+  {% endif %}
   {% include "items/_client_banner.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
   {% csrf_token %}
   <div class="wb-todolist{% if view == 'board' %} is-board{% endif %}" data-groups="{{ item.pk }}">
-    <section class="wb-group">
+    {# On the board, the ungrouped to-dos get a column only if there are any #}
+    <section class="wb-group" {% if view == "board" and groups and not ungrouped %}hidden{% endif %}>
       <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="">
         {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
       </div>
@@ -35,17 +43,53 @@
             data-group-handle
             title="{% translate 'Drag to move the group' %}"
           >{% icon "grip-vertical" %}</span>
-          {{ group }}
-          <form method="post" action="{% url 'group_delete' group.pk %}" class="ms-auto">
-            {% csrf_token %}
-            <button
-              type="submit"
-              class="btn btn-sm btn-quiet"
-              title="{% translate 'Remove the group; its to-dos stay' %}"
-            >
-              {% icon "x-lg" %}
-            </button>
-          </form>
+          <span class="wb-group-name">{{ group }}</span>
+          <span class="wb-group-tools ms-auto">
+            {% if not forloop.first %}
+              <form method="post" action="{% url 'group_move' group.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
+                <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group up' %}">
+                  {% icon "arrow-up" %}
+                </button>
+              </form>
+            {% endif %}
+            {% if not forloop.last %}
+              <form method="post" action="{% url 'group_move' group.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="index" value="{{ forloop.counter }}">
+                <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group down' %}">
+                  {% icon "arrow-down" %}
+                </button>
+              </form>
+            {% endif %}
+            <details class="dropdown wb-menu">
+              <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
+                {% icon "pencil" %}
+              </summary>
+              <div class="dropdown-menu dropdown-menu-end p-2 wb-group-menu">
+                <form method="post" action="{% url 'group_rename' group.pk %}" class="d-flex gap-2 mb-2">
+                  {% csrf_token %}
+                  <input
+                    type="text"
+                    name="title"
+                    value="{{ group.title }}"
+                    class="form-control form-control-sm"
+                    aria-label="{% translate 'title' %}"
+                    required
+                    maxlength="200"
+                  >
+                  <button type="submit" class="btn btn-sm btn-primary">{% translate "Rename" %}</button>
+                </form>
+                <form method="post" action="{% url 'group_delete' group.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-destructive w-100">
+                    {% translate "Remove the group; its to-dos stay" %}
+                  </button>
+                </form>
+              </div>
+            </details>
+          </span>
         </h2>
         <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="{{ group.pk }}">
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}

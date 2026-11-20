@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 from django.template.loader import render_to_string
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import User
@@ -113,3 +113,23 @@ def send_invitation(project, user, *, actor):
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
         )
+
+
+def can_manage_project(user):
+    """Staff edit and archive projects; clients don't"""
+    return user.is_authenticated and not user.is_client
+
+
+@transaction.atomic
+def archive_project(project, *, actor):
+    """Out of the lists and the feed; everything stays readable"""
+    project.archived_at = timezone.now()
+    project.save(update_fields=["archived_at"])
+    record(actor=actor, action=Action.ARCHIVED, project=project)
+
+
+@transaction.atomic
+def unarchive_project(project, *, actor):
+    project.archived_at = None
+    project.save(update_fields=["archived_at"])
+    record(actor=actor, action=Action.UNARCHIVED, project=project)

@@ -1,16 +1,18 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak.accounts.models import User
-from biwak.activity.models import Event
+from biwak.activity.models import Action, Event
+from biwak.activity.operations import record
 from biwak.forms import Form, ModelForm
 from biwak.items import operations as ops
-from biwak.items.models import Item, Kind
-from biwak.projects import operations as members
+from biwak.items.models import Item, Kind, Status
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
 
 
@@ -21,15 +23,21 @@ def project_for(request, pk):
 
 
 def project_list(request):
-    projects = Project.objects.accessible_to(request.user).active()
+    archived = bool(request.GET.get("archived"))
+    projects = Project.objects.accessible_to(request.user)
+    projects = (
+        projects.filter(archived_at__isnull=False) if archived else projects.active()
+    )
     others = Project.objects.none()
-    if request.user.is_admin:
+    if request.user.is_admin and not archived:
         # Admins see that limited projects exist and can join them
-        others = Project.objects.active().exclude(pk__in=projects)
+        others = Project.objects.active().exclude(
+            pk__in=Project.objects.accessible_to(request.user)
+        )
     return render(
         request,
         "projects/project_list.html",
-        {"projects": projects, "others": others},
+        {"projects": projects, "others": others, "archived": archived},
     )
 
 
@@ -65,7 +73,7 @@ def project_join(request, pk):
         project = get_object_or_404(Project, pk=pk)
     else:
         project = project_for(request, pk)
-    members.add_member(project, request.user, actor=request.user)
+    project_ops.add_member(project, request.user, actor=request.user)
     return redirect(project)
 
 
@@ -102,18 +110,18 @@ class InviteForm(Form):
 def project_people(request, pk):
     """Members; staff add, invite and remove people"""
     project = project_for(request, pk)
-    can_manage = members.can_manage_members(request.user)
+    can_manage = project_ops.can_manage_members(request.user)
     add_form = invite_form = None
     if can_manage:
         which = request.POST.get("form")
         add_form = AddMemberForm(request.POST if which == "add" else None)
-        add_form.fields["user"].queryset = members.addable_people(project)
+        add_form.fields["user"].queryset = project_ops.addable_people(project)
         invite_form = InviteForm(
             request.POST if which == "invite" else None, actor=request.user
         )
         if add_form.is_valid():
             user = add_form.cleaned_data["user"]
-            members.add_member(project, user, actor=request.user)
+            project_ops.add_member(project, user, actor=request.user)
             messages.success(
                 request, _("%(name)s has been added.") % {"name": user.display_name}
             )
@@ -121,7 +129,7 @@ def project_people(request, pk):
         if invite_form.is_valid():
             data = invite_form.cleaned_data
             try:
-                user, _changed = members.invite(
+                user, _changed = project_ops.invite(
                     project,
                     email=data["email"],
                     full_name=data["full_name"],
@@ -129,7 +137,7 @@ def project_people(request, pk):
                     organization=data["organization"],
                     actor=request.user,
                 )
-            except members.InvitationError as exc:
+            except project_ops.InvitationError as exc:
                 invite_form.add_error(None, str(exc))
             else:
                 messages.success(
@@ -157,9 +165,9 @@ def member_remove(request, pk, user_pk):
     """Staff remove anybody; everybody can leave"""
     project = project_for(request, pk)
     user = get_object_or_404(User, pk=user_pk)
-    if user != request.user and not members.can_manage_members(request.user):
+    if user != request.user and not project_ops.can_manage_members(request.user):
         raise PermissionDenied
-    members.remove_member(project, user, actor=request.user)
+    project_ops.remove_member(project, user, actor=request.user)
     if user == request.user:
         return redirect("projects")
     return redirect("project_people", pk=project.pk)
@@ -170,10 +178,79 @@ class ListForm(Form):
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
 
 
+def project_edit(request, pk):
+    project = project_for(request, pk)
+    if not project_ops.can_manage_project(request.user):
+        raise PermissionDenied
+    form = ProjectForm(request.POST or None, instance=project)
+    if form.is_valid():
+        form.save()
+        record(actor=request.user, action=Action.EDITED_PROJECT, project=project)
+        return redirect(project)
+    return render(
+        request,
+        "projects/project_edit.html",
+        {"form": form, "project": project},
+    )
+
+
+@require_POST
+def project_archive(request, pk):
+    """Archives or (``unarchive``) brings the project back"""
+    project = project_for(request, pk)
+    if not project_ops.can_manage_project(request.user):
+        raise PermissionDenied
+    if request.POST.get("unarchive"):
+        project_ops.unarchive_project(project, actor=request.user)
+    else:
+        project_ops.archive_project(project, actor=request.user)
+    return redirect(project)
+
+
+@require_POST
+def list_order(request, pk):
+    """The lists in the dragged order (frontend/todos.js); ``lists`` are
+    the IDs of all active lists the person sees"""
+    project = project_for(request, pk)
+    if request.user.is_client:
+        raise PermissionDenied
+    lists = {
+        item.pk: item
+        for item in Item.objects.visible_to(request.user).filter(
+            project=project, kind=Kind.LIST, parent=None, status=Status.ACTIVE
+        )
+    }
+    try:
+        ids = [int(pk) for pk in request.POST.getlist("lists")]
+    except ValueError:
+        ids = []
+    if sorted(ids) != sorted(lists):
+        return HttpResponse(status=400)
+    ops.reorder([lists[pk] for pk in ids])
+    return HttpResponse(status=204)
+
+
+def project_trash(request, pk):
+    """What was trashed in the project, restorable for TRASH_DAYS days;
+    staff only"""
+    project = project_for(request, pk)
+    if request.user.is_client:
+        raise PermissionDenied
+    items = ops.trashed_roots(
+        Item.objects.visible_to(request.user, with_trashed=True).filter(project=project)
+    ).select_related("parent")
+    return render(
+        request,
+        "projects/trash.html",
+        {"project": project, "items": items, "days": ops.TRASH_DAYS},
+    )
+
+
 def project_detail(request, pk):
     project = project_for(request, pk)
     items = Item.objects.visible_to(request.user).filter(project=project)
-    lists = items.filter(kind=Kind.LIST, parent=None).exclude(status="archived")
+    all_lists = items.filter(kind=Kind.LIST, parent=None)
+    lists = all_lists.filter(status=Status.ACTIVE)
     form = ListForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         item = ops.create_list(
@@ -190,6 +267,8 @@ def project_detail(request, pk):
         {
             "project": project,
             "lists": lists,
+            "archived_lists": all_lists.filter(status=Status.ARCHIVED),
+            "can_manage": project_ops.can_manage_project(request.user),
             "form": form,
             "members": project.memberships.select_related("user"),
             "is_member": project.is_member(request.user),

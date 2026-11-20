@@ -605,6 +605,21 @@ a.wb-row-title:hover {
   min-height: 1.5rem;
 }
 
+.wb-group-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.wb-group-tools .btn {
+  --bs-btn-border-color: transparent;
+}
+
+.wb-group-menu {
+  min-width: 18rem;
+  font-weight: normal;
+}
+
 .wb-todo {
   display: flex;
   align-items: center;
@@ -617,6 +632,18 @@ a.wb-row-title:hover {
   cursor: grab;
   color: var(--bs-secondary-color);
   opacity: 0.5;
+}
+
+/* Selected for dragging several at once (frontend/todos.js) */
+.wb-todo.is-selected {
+  background: var(--wb-primary-bg);
+  border-radius: var(--bs-border-radius-sm);
+  box-shadow: 0 0 0 0.25rem var(--wb-primary-bg);
+}
+
+.wb-todo.is-selected .wb-handle {
+  opacity: 1;
+  color: var(--bs-primary);
 }
 
 .wb-todo:hover .wb-handle,

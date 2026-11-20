@@ -13,6 +13,17 @@ From the events (`notifications.md`):
   shows what they can see now.
 - Paginated by time, fast on hundreds of thousands of events.
 
+## Item history
+
+The audit log (`biwak/audit/`, a database trigger on the main tables,
+copied from Governance) records every change with who made it. Like
+Governance's history (`governance/history/`), a page per item condenses
+it into something readable: who changed the title, the notes, the
+assignees, the due date or the visibility, and when, with the old and new
+values. Events say what happened; the history shows the details. Only
+what the person could see at the time: the history goes through the same
+visibility check as everything else.
+
 ## Bookmarks
 
 Any item or project, per person, private. A list of one's bookmarks,

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
         "biwak.projects",
         "biwak.items",
         "biwak.activity",
+        "biwak.audit",
         "debug_toolbar" if DEBUG_TOOLBAR else "",
     ]
     if a
@@ -109,7 +110,7 @@ MIDDLEWARE = [
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "allauth.account.middleware.AccountMiddleware",
         "allauth.usersessions.middleware.UserSessionsMiddleware",
-        "biwak.accounts.middleware.language_middleware",
+        "biwak.accounts.middleware.user_middleware",
     ]
     if m
 ]

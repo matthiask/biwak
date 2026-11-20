@@ -1,6 +1,7 @@
 import datetime as dt
 
 from django import forms
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +12,7 @@ from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form
 from biwak.items import operations as ops, visibility
-from biwak.items.models import Group, Item, Kind
+from biwak.items.models import Group, Item, Kind, Status, TodoList
 
 
 def item_for(request, pk, kind=None):
@@ -67,7 +68,7 @@ def _todos(todolist_item):
     return (
         Item.objects
         .filter(parent=todolist_item, kind=Kind.TODO)
-        .exclude(status="trashed")
+        .exclude(status=Status.TRASHED)
         .select_related("todo")
         .prefetch_related("todo__assignees")
     )
@@ -126,6 +127,7 @@ def todolist(request, pk):
             "people": form.fields["assignees"].queryset,
             "view": view,
             "can_switch": item.has_switch and not request.user.is_client,
+            "can_change": ops.can_change(request.user, item),
             "affected": visibility.affected(item)
             if item.has_switch and not item.is_client_visible
             else None,
@@ -150,31 +152,88 @@ def group_delete(request, pk):
 
 
 @require_POST
-def group_move(request, pk):
+def group_rename(request, pk):
     group = get_object_or_404(Group, pk=pk)
-    item_for(request, group.todolist_id, Kind.LIST)
-    ops.move_group(group, index=int(request.POST.get("index", 0)))
-    return HttpResponse(status=204)
+    item = item_for(request, group.todolist_id, Kind.LIST)
+    if title := request.POST.get("title", "").strip():
+        ops.rename_group(group, title=title[:200])
+    return redirect(item)
+
+
+@require_POST
+def group_move(request, pk):
+    """Dragging (quietly) or the up and down buttons (redirecting back)"""
+    group = get_object_or_404(Group, pk=pk)
+    item = item_for(request, group.todolist_id, Kind.LIST)
+    ops.move_group(group, index=max(0, int(request.POST.get("index", 0))))
+    if request.POST.get("quiet"):
+        return HttpResponse(status=204)
+    return redirect(item)
+
+
+def _index(value):
+    """A position, or None for the end"""
+    return None if value in {None, "", "end"} else max(0, int(value))
 
 
 @require_POST
 def todo_move(request, pk):
-    """Dragging (frontend/todos.js): into a list's group at an index"""
+    """Dragging (frontend/todos.js, quietly): into a list's group at an
+    index. The to-do's page (keyboard): ``target`` is ``LIST`` or
+    ``LIST:GROUP``, ``index`` 0 (the top) or empty (the end)."""
     item = item_for(request, pk, Kind.TODO)
-    target = item_for(request, request.POST.get("list", item.parent_id), Kind.LIST)
+    list_id, group_id = (
+        request.POST.get("list", item.parent_id),
+        request.POST.get("group"),
+    )
+    if target_value := request.POST.get("target"):
+        list_id, _sep, group_id = target_value.partition(":")
+    target = item_for(request, list_id, Kind.LIST)
     group = None
-    if group_id := request.POST.get("group"):
+    if group_id:
         group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)
     ops.move_todo(
         item,
         todolist=target,
         group=group,
-        index=int(request.POST.get("index", 0)),
+        index=_index(request.POST.get("index")),
         actor=request.user,
     )
     if request.headers.get("HX-Request") or request.POST.get("quiet"):
         return HttpResponse(status=204)
-    return redirect(target)
+    return redirect(item if target_value else target)
+
+
+@require_POST
+def todos_move(request, pk):
+    """Dragging one or several to-dos (frontend/todos.js) into list ``pk``,
+    a ``group`` (empty: ungrouped), next to each other at ``index`` among
+    the others there; ``todos`` in their new order"""
+    target = item_for(request, pk, Kind.LIST)
+    try:
+        ids = [int(value) for value in request.POST.getlist("todos")]
+    except ValueError:
+        return HttpResponse(status=400)
+    todos = {
+        todo.pk: todo
+        for todo in Item.objects
+        .visible_to(request.user)
+        .filter(pk__in=ids, kind=Kind.TODO, project=target.project_id)
+        .select_related("todo")
+    }
+    if not ids or len(todos) != len(set(ids)):
+        return HttpResponse(status=404)
+    group = None
+    if group_id := request.POST.get("group"):
+        group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)
+    ops.move_todos(
+        [todos[pk] for pk in ids],
+        todolist=target,
+        group=group,
+        index=_index(request.POST.get("index")),
+        actor=request.user,
+    )
+    return HttpResponse(status=204)
 
 
 @require_POST
@@ -258,9 +317,28 @@ def todo(request, pk):
             "comments": item.comments.select_related("author"),
             "subscribers": [s.user for s in item.subscriptions.select_related("user")],
             "is_subscribed": is_subscribed(request.user, item),
+            "move_targets": _move_targets(request, item),
+            "can_change": ops.can_change(request.user, item),
             "today": dt.date.today(),
         },
     )
+
+
+def _move_targets(request, item):
+    """The lists (and their groups) a to-do can move to, without dragging:
+    the active lists of the project the person sees"""
+    lists = (
+        Item.objects
+        .visible_to(request.user)
+        .filter(
+            project=item.project_id,
+            kind=Kind.LIST,
+            parent=None,
+            status=Status.ACTIVE,
+        )
+        .prefetch_related("todolist__groups")
+    )
+    return [(target, list(target.todolist.groups.all())) for target in lists]
 
 
 @require_POST
@@ -288,5 +366,74 @@ def switch(request, pk):
 @require_POST
 def item_trash(request, pk):
     item = item_for(request, pk)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
     ops.trash(item, actor=request.user)
+    messages.success(
+        request,
+        _("“%(title)s” is in the trash for %(days)s days.")
+        % {"title": item.title, "days": ops.TRASH_DAYS},
+    )
     return redirect(item.parent or item.project)
+
+
+@require_POST
+def item_restore(request, pk):
+    """From the project's trash, staff only"""
+    if request.user.is_client:
+        raise PermissionDenied
+    item = get_object_or_404(
+        Item.objects.visible_to(request.user, with_trashed=True), pk=pk
+    )
+    try:
+        ops.restore(item, actor=request.user)
+    except ValueError:
+        messages.error(request, _("Restore what it was in first."))
+        return redirect("project_trash", pk=item.project_id)
+    return redirect(item)
+
+
+@require_POST
+def item_archive(request, pk):
+    """Archives a list, or (``unarchive``) brings it back"""
+    item = item_for(request, pk, Kind.LIST)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
+    if request.POST.get("unarchive"):
+        ops.unarchive(item, actor=request.user)
+    else:
+        ops.archive(item, actor=request.user)
+    return redirect(item)
+
+
+class ListEditForm(Form):
+    title = forms.CharField(label=_("title"), max_length=500)
+    description = forms.CharField(
+        label=_("description"),
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text=_("Markdown"),
+    )
+    view = forms.ChoiceField(
+        label=_("Shown as"),
+        choices=TodoList.View.choices,
+        widget=forms.RadioSelect,
+    )
+
+
+def list_edit(request, pk):
+    item = item_for(request, pk, Kind.LIST)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
+    form = ListEditForm(
+        request.POST or None,
+        initial={
+            "title": item.title,
+            "description": item.todolist.description,
+            "view": item.todolist.view,
+        },
+    )
+    if form.is_valid():
+        ops.update_list(item, actor=request.user, **form.cleaned_data)
+        return redirect(item)
+    return render(request, "items/list_edit.html", {"item": item, "form": form})

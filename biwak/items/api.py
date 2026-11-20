@@ -3,6 +3,7 @@ specs/api-cli.md). The same operations as the web interface, so writes
 create the same events and subscriptions."""
 
 import datetime as dt
+from typing import Literal
 
 from django.db.models import F
 from django.shortcuts import get_object_or_404
@@ -112,6 +113,60 @@ def list_detail(request, list_id: int):
     return list_out(item_for(request, list_id, Kind.LIST))
 
 
+class ListPatch(Schema):
+    title: str | None = None
+    description: str | None = None
+    view: Literal["list", "board"] | None = None
+    archived: bool | None = None
+
+
+@router.patch("lists/{list_id}/", response=ListOut)
+def list_update(request, list_id: int, data: ListPatch):
+    """Changes the fields given; ``archived`` archives the list or brings it
+    back. Clients only change lists they created."""
+    item = item_for(request, list_id, Kind.LIST)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change lists you created."))
+    given = data.model_fields_set
+    changes = {
+        f: getattr(data, f) for f in ["title", "description", "view"] if f in given
+    }
+    empty_title = "title" in changes and not changes["title"]
+    if empty_title or any(value is None for value in changes.values()):
+        bad_request(_("Leave out what doesn't change instead of sending null."))
+    if changes:
+        ops.update_list(item, actor=request.user, **changes)
+    if "archived" in given:
+        archived = item.status == ItemStatus.ARCHIVED
+        if data.archived and not archived:
+            ops.archive(item, actor=request.user)
+        elif archived and not data.archived:
+            ops.unarchive(item, actor=request.user)
+    return list_out(item_for(request, list_id, Kind.LIST))
+
+
+class ListOrderIn(Schema):
+    list_ids: list[int]
+
+
+@router.put("projects/{project_id}/lists/order/", response=list[ListOut])
+def list_order(request, project_id: int, data: ListOrderIn):
+    """The order of the project's active lists: all their IDs, staff only"""
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff can reorder lists."))
+    project = project_for(request, project_id)
+    lists = {
+        item.pk: item
+        for item in Item.objects.visible_to(request.user).filter(
+            project=project, kind=Kind.LIST, parent=None, status=ItemStatus.ACTIVE
+        )
+    }
+    if sorted(data.list_ids) != sorted(lists):
+        bad_request(_("Send the IDs of all active lists, each once."))
+    ops.reorder([lists[pk] for pk in data.list_ids])
+    return list_list(request, project_id)
+
+
 class GroupIn(Schema):
     title: str
 
@@ -123,6 +178,36 @@ def group_create(request, list_id: int, data: GroupIn):
     return Status(
         201, {"id": group.pk, "title": group.title, "position": group.position}
     )
+
+
+class GroupPatch(Schema):
+    title: str | None = None
+    index: int | None = None
+
+
+def _group_for(request, group_id):
+    group = get_object_or_404(Group, pk=group_id)
+    item_for(request, group.todolist_id, Kind.LIST)
+    return group
+
+
+@router.patch("groups/{group_id}/", response=GroupOut)
+def group_update(request, group_id: int, data: GroupPatch):
+    """Renames the group and/or moves it (with its to-dos) to ``index``"""
+    group = _group_for(request, group_id)
+    if data.title:
+        ops.rename_group(group, title=data.title[:200])
+    if data.index is not None:
+        ops.move_group(group, index=max(0, data.index))
+        group.refresh_from_db()
+    return {"id": group.pk, "title": group.title, "position": group.position}
+
+
+@router.delete("groups/{group_id}/", response={204: None})
+def group_delete(request, group_id: int):
+    """Removes the group; its to-dos stay, ungrouped at the end"""
+    ops.delete_group(_group_for(request, group_id))
+    return Status(204, None)
 
 
 # To-dos ---------------------------------------------------------------------
@@ -312,6 +397,39 @@ def todo_move(request, todo_id: int, data: MoveIn):
     return todo_out(Item.objects.get(pk=todo_id))
 
 
+class MoveManyIn(Schema):
+    todo_ids: list[int]
+    group_id: int | None = None
+    index: int | None = None
+
+
+@router.post("lists/{list_id}/todos/move/", response=list[TodoOut])
+def todos_move(request, list_id: int, data: MoveManyIn):
+    """Moves several to-dos together into the list's group (or ungrouped),
+    next to each other in the given order at ``index`` (default: the end)"""
+    target = item_for(request, list_id, Kind.LIST)
+    todos = {
+        todo.pk: todo
+        for todo in Item.objects
+        .visible_to(request.user)
+        .filter(pk__in=data.todo_ids, kind=Kind.TODO, project=target.project_id)
+        .select_related("todo")
+    }
+    if not data.todo_ids or len(todos) != len(set(data.todo_ids)):
+        raise HttpError(404, _("Not all of these to-dos were found."))
+    group = None
+    if data.group_id is not None:
+        group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
+    ops.move_todos(
+        [todos[pk] for pk in data.todo_ids],
+        todolist=target,
+        group=group,
+        index=data.index,
+        actor=request.user,
+    )
+    return [todo_out(item_for(request, pk, Kind.TODO)) for pk in data.todo_ids]
+
+
 # Comments and subscriptions -------------------------------------------------
 
 
@@ -408,4 +526,50 @@ def visibility_switch(request, item_id: int, data: SwitchIn):
             _("Only top-level lists, folders, messages and docs have a switch.")
         )
     ops.set_visibility(item, visible=data.visible_to_clients, actor=request.user)
+    return item_out(item_for(request, item_id))
+
+
+# The trash ----------------------------------------------------------------
+
+
+@router.delete("items/{item_id}/", response=ItemOut)
+def item_trash(request, item_id: int):
+    """Moves the item (with what's in it) to the trash for 30 days; clients
+    only what they created"""
+    item = item_for(request, item_id)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only trash what you created."))
+    ops.trash(item, actor=request.user)
+    item.refresh_from_db()
+    return item_out(item)
+
+
+@router.get("projects/{project_id}/trash/", response=list[ItemOut])
+def project_trash(request, project_id: int):
+    """Trashed items (not those trashed with their parent), staff only"""
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff see the trash."))
+    project = project_for(request, project_id)
+    return [
+        item_out(item)
+        for item in ops.trashed_roots(
+            Item.objects
+            .visible_to(request.user, with_trashed=True)
+            .filter(project=project)
+            .select_related("creator")
+        )
+    ]
+
+
+@router.post("items/{item_id}/restore/", response=ItemOut)
+def item_restore(request, item_id: int):
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff restore from the trash."))
+    item = get_object_or_404(
+        Item.objects.visible_to(request.user, with_trashed=True), pk=item_id
+    )
+    try:
+        ops.restore(item, actor=request.user)
+    except ValueError as exc:
+        bad_request(str(exc))
     return item_out(item_for(request, item_id))

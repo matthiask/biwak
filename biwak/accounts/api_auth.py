@@ -5,6 +5,7 @@ from django.utils.translation import activate, gettext as _
 from ninja.errors import HttpError
 from ninja.security import HttpBearer, SessionAuth
 
+from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import APIToken
 
 
@@ -25,6 +26,7 @@ class UserToken(HttpBearer):
         # The language middleware only does this for sessions
         if user.language:
             activate(user.language)
+        set_user_name(user)
         if (
             token.access == APIToken.Access.READ
             and not self.allow_read_only

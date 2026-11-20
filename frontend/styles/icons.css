@@ -34,8 +34,8 @@
   margin-inline-start: 0.35em;
 }
 
-.bi-arrow-counterclockwise::before {
-  content: "\f117";
+.bi-archive::before {
+  content: "\f10d";
 }
 .bi-arrow-down::before {
   content: "\f128";
@@ -43,14 +43,8 @@
 .bi-arrow-up::before {
   content: "\f148";
 }
-.bi-box-arrow-up-right::before {
-  content: "\f1c5";
-}
 .bi-calendar-event::before {
   content: "\f1e8";
-}
-.bi-chat::before {
-  content: "\f268";
 }
 .bi-check-circle::before {
   content: "\f26b";
@@ -61,26 +55,8 @@
 .bi-chevron-down::before {
   content: "\f282";
 }
-.bi-clipboard::before {
-  content: "\f290";
-}
-.bi-clock-history::before {
-  content: "\f292";
-}
-.bi-envelope::before {
-  content: "\f32f";
-}
 .bi-eye::before {
   content: "\f341";
-}
-.bi-folder::before {
-  content: "\f3d7";
-}
-.bi-gear::before {
-  content: "\f3e5";
-}
-.bi-globe::before {
-  content: "\f3ee";
 }
 .bi-grip-vertical::before {
   content: "\f3fe";
@@ -94,33 +70,12 @@
 .bi-pencil::before {
   content: "\f4cb";
 }
-.bi-people::before {
-  content: "\f4d0";
-}
-.bi-person-check::before {
-  content: "\f4d6";
-}
 .bi-person-plus::before {
   content: "\f4dd";
-}
-.bi-play-fill::before {
-  content: "\f4f4";
 }
 .bi-plus-lg::before {
   content: "\f64d";
 }
-.bi-stop-fill::before {
-  content: "\f592";
-}
-.bi-three-dots::before {
-  content: "\f5d4";
-}
 .bi-trash::before {
   content: "\f5de";
-}
-.bi-x-circle::before {
-  content: "\f623";
-}
-.bi-x-lg::before {
-  content: "\f659";
 }

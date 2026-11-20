@@ -59,7 +59,10 @@ Ordinary pages and the visibility check don't need recursive queries;
 keep `with_tree_fields()` off by default.
 
 Trashing is soft and recoverable for 30 days; children follow their
-parent. Archiving keeps items readable but out of the way.
+parent. Archiving keeps items readable but out of the way. Staff see a
+project's trash and restore from it; clients rename, archive and trash
+only what they created. `fairy_tasks` deletes what has been in the trash
+for 30 days.
 
 ## Text
 
@@ -80,7 +83,8 @@ formatting buttons can come later, as long as it writes Markdown.
   with its to-dos. In the board view the same groups are columns
   (`todos.md`).
 - Dragging a group moves it with its to-dos as a block: only the group's
-  position changes. Dragging a to-do across a heading sets its group and
+  position changes. Clicking several to-dos' grips selects them, dragging
+  one moves them together (built 2026-11-20, `move_todos()`). Dragging a to-do across a heading sets its group and
   position. Dragging a to-do to another list moves it there, ungrouped
   unless dropped into a group. Keyboard alternatives for all of it.
 - Deleting a group keeps its to-dos, ungrouped at the end.

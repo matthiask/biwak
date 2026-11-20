@@ -170,3 +170,10 @@ class APIToken(models.Model):
             key_hash=_hash_api_token(secret),
         )
         return token, secret
+
+
+def prune_api_tokens():
+    """Expired tokens go after another lifetime (fairy_tasks)"""
+    return APIToken.objects.filter(
+        expires_at__lte=timezone.now() - API_TOKEN_LIFETIME
+    ).delete()

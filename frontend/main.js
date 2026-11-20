@@ -8,7 +8,8 @@ import "./theme.js"
 import "./menus.js"
 import "htmx.org"
 
-// The script is deferred, the page is parsed already
-if (document.querySelector("[data-todos]")) {
+// The script is deferred, the page is parsed already; dragging to-dos,
+// groups and lists
+if (document.querySelector("[data-todos], [data-sortable-lists]")) {
   import(/* webpackChunkName: "todos" */ "./todos.js")
 }

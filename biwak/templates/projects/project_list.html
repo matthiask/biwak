@@ -4,13 +4,18 @@
 
 {% block content %}
   <div class="wb-page-header">
-    <h1>{% translate "Projects" %}</h1>
-    {% if not request.user.is_client %}
-      <div class="wb-page-actions">
-        <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
-          >{% translate "New project" %}</span></a>
-      </div>
-    {% endif %}
+    <h1>{% if archived %}{% translate "Archived projects" %}{% else %}{% translate "Projects" %}{% endif %}</h1>
+    <div class="wb-page-actions">
+      {% if archived %}
+        <a href="?" class="btn btn-sm btn-quiet">{% translate "Active projects" %}</a>
+      {% else %}
+        <a href="?archived=1" class="btn btn-sm btn-quiet">{% translate "Archive" %}</a>
+        {% if not request.user.is_client %}
+          <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
+            >{% translate "New project" %}</span></a>
+        {% endif %}
+      {% endif %}
+    </div>
   </div>
   <div class="list-group mb-4">
     {% for project in projects %}
@@ -22,7 +27,9 @@
           >{% icon "lock" %}</span>{% endif %}
       </a>
     {% empty %}
-      <div class="list-group-item text-body-secondary">{% translate "No projects yet." %}</div>
+      <div class="list-group-item text-body-secondary">
+        {% if archived %}{% translate "No archived projects." %}{% else %}{% translate "No projects yet." %}{% endif %}
+      </div>
     {% endfor %}
   </div>
   {% if others %}

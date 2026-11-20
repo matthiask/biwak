@@ -6,6 +6,8 @@ event and the subscriptions. Views, the API and imports call these, they
 don't save items themselves.
 """
 
+import datetime as dt
+
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -72,7 +74,8 @@ def create_group(*, todolist, title):
 
 
 def _todos_in(todolist_item, group):
-    """The open to-dos of a list's group (or the ungrouped ones), in order"""
+    """The open to-dos of a list's group (or the ungrouped ones), in order;
+    the list and the group as objects or IDs"""
     return Item.objects.filter(
         parent=todolist_item,
         kind=Kind.TODO,
@@ -268,40 +271,54 @@ def _renumber(items):
 @transaction.atomic
 def move_todo(item, *, todolist, group=None, index=None, actor):
     """Moves a to-do into a list's group (or ungrouped) at ``index`` (0-based,
-    None: at the end). Locks the lists, so concurrent moves don't mix up
-    positions. Moving into another list recomputes its visibility."""
-    source = item.parent
-    lists = sorted({source.pk, todolist.pk})
+    None: at the end), see ``move_todos()``"""
+    move_todos([item], todolist=todolist, group=group, index=index, actor=actor)
+
+
+@transaction.atomic
+def move_todos(items, *, todolist, group=None, index=None, actor):
+    """Moves to-dos together (dragging several at once) into a list's group
+    (or ungrouped), next to each other in the given order, starting at
+    ``index`` among the others there (0-based, None: at the end). Locks the
+    lists, so concurrent moves don't mix up positions. Moving into another
+    list recomputes the visibility."""
+    if not items:
+        return
+    sources = {(i.parent_id, i.todo.group_id) for i in items}
+    lists = sorted({todolist.pk} | {list_id for list_id, _group in sources})
     list(TodoList.objects.select_for_update().filter(item__in=lists).order_by("pk"))
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
-    if todolist.project_id != item.project_id:
+    if any(i.project_id != todolist.project_id for i in items):
         raise ValueError("Moving to-dos between projects isn't possible")
 
-    todo = item.todo
-    old_group = todo.group
-    siblings = [i for i in _todos_in(todolist, group) if i.pk != item.pk]
+    moved = {i.pk for i in items}
+    siblings = [i for i in _todos_in(todolist, group) if i.pk not in moved]
     if index is None or index > len(siblings):
         index = len(siblings)
-    siblings.insert(index, item)
+    siblings[index:index] = items
 
-    if source.pk != todolist.pk:
-        item.parent = todolist
-        item.save(update_fields=["parent"])
-    todo.group = group
-    todo.save(update_fields=["group"])
+    for item in items:
+        changed_list = item.parent_id != todolist.pk
+        if changed_list:
+            item.parent = todolist
+            item.save(update_fields=["parent"])
+        if item.todo.group_id != (group.pk if group else None):
+            item.todo.group = group
+            item.todo.save(update_fields=["group"])
+        if changed_list:
+            visibility.recompute(item)
+            record(
+                actor=actor,
+                action=Action.MOVED,
+                project=item.project,
+                item=item,
+                to=todolist.title,
+            )
     _renumber(siblings)
-    if source.pk != todolist.pk or old_group != group:
-        _renumber(list(_todos_in(source, old_group)))
-    if source.pk != todolist.pk:
-        visibility.recompute(item)
-        record(
-            actor=actor,
-            action=Action.MOVED,
-            project=item.project,
-            item=item,
-            to=todolist.title,
-        )
+    for list_id, group_id in sources:
+        if (list_id, group_id) != (todolist.pk, group.pk if group else None):
+            _renumber(list(_todos_in(list_id, group_id)))
 
 
 @transaction.atomic
@@ -379,6 +396,10 @@ def trash(item, *, actor):
 
 @transaction.atomic
 def restore(item, *, actor):
+    if item.status != Status.TRASHED:
+        raise ValueError("The item isn't in the trash")
+    if item.parent_id and item.parent.status == Status.TRASHED:
+        raise ValueError("Restore the parent first")
     Item.objects.filter(
         pk__in=list(
             Item.objects.descendants(item, include_self=True).values_list(
@@ -389,3 +410,87 @@ def restore(item, *, actor):
     ).update(status=Status.ACTIVE, trashed_at=None)
     item.refresh_from_db()
     record(actor=actor, action=Action.RESTORED, project=item.project, item=item)
+
+
+# Changing, archiving and the trash (specs/core.md) -----------------------
+
+# Trashed items are deleted for good after this (fairy_tasks)
+TRASH_DAYS = 30
+
+
+def can_change(user, item):
+    """Staff change everything they see; clients what they created
+    (renaming, archiving, trashing; to-dos' fields stay open to everybody
+    who sees them)"""
+    return not user.is_client or item.creator_id == user.pk
+
+
+@transaction.atomic
+def update_list(
+    item, *, actor, title=_UNCHANGED, description=_UNCHANGED, view=_UNCHANGED
+):
+    todolist = item.todolist
+    if title is not _UNCHANGED and title != item.title:
+        item.title = title
+        item.updated_at = timezone.now()
+        item.save(update_fields=["title", "updated_at"])
+    fields = []
+    if description is not _UNCHANGED:
+        todolist.description = description
+        fields.append("description")
+    if view is not _UNCHANGED:
+        todolist.view = view
+        fields.append("view")
+    if fields:
+        todolist.save(update_fields=fields)
+    record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+    return item
+
+
+@transaction.atomic
+def archive(item, *, actor):
+    """Readable, but out of the way (lists, later folders and messages)"""
+    if item.status != Status.ACTIVE:
+        raise ValueError("Only active items can be archived")
+    item.status = Status.ARCHIVED
+    item.save(update_fields=["status"])
+    record(actor=actor, action=Action.ARCHIVED, project=item.project, item=item)
+
+
+@transaction.atomic
+def unarchive(item, *, actor):
+    if item.status != Status.ARCHIVED:
+        raise ValueError("The item isn't archived")
+    item.status = Status.ACTIVE
+    item.save(update_fields=["status"])
+    record(actor=actor, action=Action.UNARCHIVED, project=item.project, item=item)
+
+
+@transaction.atomic
+def rename_group(group, *, title):
+    group.title = title
+    group.save(update_fields=["title"])
+
+
+def trashed_roots(items):
+    """The trashed items to show in the trash: those whose parent isn't
+    trashed too (the parent's restore brings them back)"""
+    return (
+        items
+        .filter(status=Status.TRASHED)
+        .exclude(parent__status=Status.TRASHED)
+        .order_by("-trashed_at", "-pk")
+    )
+
+
+def purge_trash(*, now=None):
+    """Deletes items trashed more than TRASH_DAYS ago, with their subtree,
+    comments and events (cascading); returns how many trashed items were
+    deleted for good"""
+    cutoff = (now or timezone.now()) - dt.timedelta(days=TRASH_DAYS)
+    old = Item.objects.filter(status=Status.TRASHED, trashed_at__lt=cutoff)
+    count = old.count()
+    # Roots first is enough: children cascade
+    for item in old.exclude(parent__in=old).order_by("pk"):
+        item.delete()
+    return count

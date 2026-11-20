@@ -1,7 +1,9 @@
 // Dragging to-dos within and between groups, and groups as blocks
 // (items/todolist.html, specs/core.md). Each move is one request; the page
 // stays as it is. SortableJS is a chunk of its own (main.js).
-import Sortable from "sortablejs"
+import { MultiDrag, Sortable } from "sortablejs"
+
+Sortable.mount(new MultiDrag())
 
 import "./add-todo.js"
 
@@ -21,20 +23,42 @@ function post(url, data) {
   })
 }
 
+// Clicking grips selects several to-dos, dragging one of them moves them
+// all; one request with the to-dos in their new order and where the first
+// one is among the others
 for (const container of document.querySelectorAll("[data-todos]")) {
   Sortable.create(container, {
     group: `todos-${container.dataset.list}`,
     handle: "[data-handle]",
     draggable: "[data-todo]",
     animation: 120,
+    multiDrag: true,
+    selectedClass: "is-selected",
     onEnd(event) {
-      if (event.from === event.to && event.oldIndex === event.newIndex) return
-      post(`/todos/${event.item.dataset.todo}/move/`, {
-        list: event.to.dataset.list,
-        group: event.to.dataset.group,
-        index: event.newIndex,
-        quiet: "1",
+      const moved = event.items.length ? event.items : [event.item]
+      if (
+        moved.length === 1 &&
+        event.from === event.to &&
+        event.oldIndex === event.newIndex
+      )
+        return
+      const rows = [...event.to.querySelectorAll("[data-todo]")]
+      const ordered = rows.filter((row) => moved.includes(row))
+      const index = rows
+        .slice(0, rows.indexOf(ordered[0]))
+        .filter((row) => !moved.includes(row)).length
+      const data = new FormData()
+      for (const row of ordered) data.append("todos", row.dataset.todo)
+      data.append("group", event.to.dataset.group)
+      data.append("index", index)
+      fetch(`/lists/${event.to.dataset.list}/todos/move/`, {
+        method: "POST",
+        body: data,
+        headers: { "X-CSRFToken": csrfToken() },
+      }).then((response) => {
+        if (!response.ok) window.location.reload()
       })
+      for (const row of moved) Sortable.utils.deselect(row)
     },
   })
 }
@@ -50,6 +74,30 @@ for (const container of document.querySelectorAll("[data-groups]")) {
       const groups = [...container.querySelectorAll("[data-group-item]")]
       post(`/groups/${event.item.dataset.groupItem}/move/`, {
         index: groups.indexOf(event.item),
+        quiet: "1",
+      })
+    },
+  })
+}
+
+// The lists on the project page, all IDs in their new order
+for (const container of document.querySelectorAll("[data-sortable-lists]")) {
+  Sortable.create(container, {
+    handle: "[data-list-handle]",
+    draggable: "[data-list-item]",
+    animation: 120,
+    onEnd(event) {
+      if (event.oldIndex === event.newIndex) return
+      const body = new FormData()
+      for (const item of container.querySelectorAll("[data-list-item]")) {
+        body.append("lists", item.dataset.listItem)
+      }
+      fetch(container.dataset.sortableLists, {
+        method: "POST",
+        body,
+        headers: { "X-CSRFToken": csrfToken() },
+      }).then((response) => {
+        if (!response.ok) window.location.reload()
       })
     },
   })

@@ -51,16 +51,16 @@ class Status(models.TextChoices):
 
 
 class ItemQuerySet(TreeQuerySet):
-    def visible_to(self, user):
+    def visible_to(self, user, *, with_trashed=False):
         """The only place deciding who sees which item (specs/access.md):
-        items of accessible projects, not trashed, and for clients only
-        those visible to clients. A filter on stored columns, no recursive
-        query."""
+        items of accessible projects, not trashed (unless ``with_trashed``,
+        for the trash), and for clients only those visible to clients. A
+        filter on stored columns, no recursive query."""
         if not user.is_authenticated or not user.is_active:
             return self.none()
-        qs = self.filter(
-            project__in=Project.objects.accessible_to(user),
-        ).exclude(status=Status.TRASHED)
+        qs = self.filter(project__in=Project.objects.accessible_to(user))
+        if not with_trashed:
+            qs = qs.exclude(status=Status.TRASHED)
         if user.is_client:
             qs = qs.filter(is_client_visible=True)
         return qs

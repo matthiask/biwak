@@ -1,6 +1,10 @@
 {% load biwak i18n %}
 <div class="wb-todo" data-todo="{{ todo.pk }}">
-  <span class="wb-handle" data-handle title="{% translate 'Drag to move' %}">{% icon "grip-vertical" %}</span>
+  <span
+    class="wb-handle"
+    data-handle
+    title="{% translate 'Drag to move; click several to move them together' %}"
+  >{% icon "grip-vertical" %}</span>
   <form method="post" action="{% url 'todo_toggle' todo.pk %}" class="d-inline">
     {% csrf_token %}
     <button
