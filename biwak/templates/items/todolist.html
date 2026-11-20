@@ -114,10 +114,12 @@
       {% icon "plus-lg" %}<span>{% translate "Add group" %}</span>
     </button>
   </form>
-  {% if completed %}
-    <details class="mt-4">
-      <summary class="text-body-secondary">{% translate "Completed" %}</summary>
-      <div class="mt-2">{% for todo in completed %}{% include "items/_todo.html" %}{% endfor %}</div>
+  {% if completed_count %}
+    <details class="mt-4 wb-completed">
+      <summary class="text-body-secondary">
+        {% blocktranslate %}Completed ({{ completed_count }}){% endblocktranslate %}
+      </summary>
+      <div class="mt-2">{% include "items/_completed.html" with cursor=completed_cursor %}</div>
     </details>
   {% endif %}
   {% if can_switch %}
