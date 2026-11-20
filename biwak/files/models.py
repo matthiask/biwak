@@ -137,3 +137,67 @@ def delete_file(sender, instance, **kwargs):
     name, storage = instance.file.name, instance.file.storage
     if name:
         transaction.on_commit(lambda: storage.delete(name))
+
+
+def version_path(version, filename):
+    """files/<project>/<key>/<name>, like attachments"""
+    return f"files/{version.upload.item.project_id}/{new_key()}/{filename}"
+
+
+class FileVersion(models.Model):
+    """A version of an uploaded file (kind ``file``); the newest is the
+    current one. Visible exactly when its file's item is."""
+
+    upload = models.ForeignKey(
+        "items.Upload",
+        on_delete=models.CASCADE,
+        related_name="versions",
+        verbose_name=_("file"),
+    )
+    file = models.FileField(_("file"), upload_to=version_path, max_length=500)
+    name = models.CharField(_("name"), max_length=255)
+    size = models.PositiveBigIntegerField(_("size"))
+    content_type = models.CharField(_("content type"), max_length=200)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("uploaded by"),
+    )
+    uploaded_at = models.DateTimeField(_("uploaded at"), default=timezone.now)
+
+    class Meta:
+        ordering = ["-uploaded_at", "-pk"]
+        verbose_name = _("file version")
+        verbose_name_plural = _("file versions")
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_image(self):
+        return self.content_type in IMAGE_TYPES
+
+    @property
+    def is_inline(self):
+        return self.content_type in INLINE_TYPES
+
+    @property
+    def has_preview(self):
+        """Images and PDFs get a preview (``biwak.files.previews``)"""
+        return self.content_type in IMAGE_TYPES | {"application/pdf"}
+
+
+@receiver(post_delete, sender=FileVersion)
+def delete_version_files(sender, instance, **kwargs):
+    """The file and its preview go with the row, once the transaction
+    commits"""
+    name, storage = instance.file.name, instance.file.storage
+    if name:
+        preview = preview_name(name)
+        transaction.on_commit(lambda: (storage.delete(name), storage.delete(preview)))
+
+
+def preview_name(name):
+    """The preview is stored next to the file"""
+    return f"{name.rsplit('/', 1)[0]}/preview.webp"

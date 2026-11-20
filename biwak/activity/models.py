@@ -33,6 +33,8 @@ class Action(models.TextChoices):
     ADDED = "added", _("added")
     REMOVED = "removed", _("removed")
     LEFT = "left", _("left")
+    PINNED = "pinned", _("pinned")
+    UNPINNED = "unpinned", _("unpinned")
 
 
 class EventQuerySet(models.QuerySet):

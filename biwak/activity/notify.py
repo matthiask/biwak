@@ -21,6 +21,10 @@ from biwak.activity.operations import subscribe
 from biwak.items.models import Comment, Item
 
 
+# Events which tell nobody: pinning (specs/files.md)
+SILENT = {Action.PINNED, Action.UNPINNED}
+
+
 def can_see(user, item):
     """The one check (specs/access.md), now, not when the event happened"""
     return Item.objects.visible_to(user).filter(pk=item.pk).exists()
@@ -104,7 +108,7 @@ def notify(event_pk):
     A merged edit (``record()``) notifies again: unsent notifications move
     forward, sent ones only get a new one for people mentioned since."""
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
-    if event is None or event.item is None:
+    if event is None or event.item is None or event.action in SILENT:
         return []
     now = timezone.now()
     told = []
