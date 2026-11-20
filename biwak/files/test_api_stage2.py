@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from biwak.accounts.models import APIToken
-from biwak.activity.models import Action, Event, Notification
+from biwak.activity.models import Action, Event, Mention, Notification
 from biwak.activity.operations import subscribe
 from biwak.files import attachments, operations
 from biwak.items import operations as ops
@@ -331,6 +331,71 @@ class MessageAPITest(APIFixture, TestCase):
         self.assertIn("Shared news", text)
         self.assertNotIn("Secret", text)
         self.assertIn("pinned", text)
+
+
+class MentionsAPITest(APIFixture, TestCase):
+    """Plain mentions are resolved on create and on update, for those who
+    can see the item (like to-dos and comments)"""
+
+    def test_message_create_and_update(self):
+        response = self.call(
+            self.ada,
+            "post",
+            f"projects/{self.project.pk}/messages/",
+            {"title": "N", "content": "Hi @bob@example.org", "notify": "nobody"},
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(
+            response.json()["content"], f"Hi [@Bob Example](person:{self.bob.pk})"
+        )
+        pk = response.json()["id"]
+        response = self.call(
+            self.ada, "patch", f"messages/{pk}/", {"content": "Hi @Bob"}
+        )
+        self.assertEqual(
+            response.json()["content"], f"Hi [@Bob Example](person:{self.bob.pk})"
+        )
+        self.assertTrue(Mention.objects.filter(item_id=pk, user=self.bob).exists())
+        # A client can't see an internal message: stays as written
+        response = self.call(
+            self.ada, "patch", f"messages/{pk}/", {"content": "Hi @cleo@example.org"}
+        )
+        self.assertEqual(response.json()["content"], "Hi @cleo@example.org")
+
+    def test_visible_message_resolves_clients(self):
+        response = self.call(
+            self.ada,
+            "post",
+            f"projects/{self.project.pk}/messages/",
+            {
+                "title": "N",
+                "content": "Hi @cleo@example.org",
+                "visible_to_clients": True,
+                "notify": "nobody",
+            },
+        )
+        self.assertIn(f"(person:{self.cleo.pk})", response.json()["content"])
+
+    def test_doc_create_and_update(self):
+        response = self.call(
+            self.ada,
+            "post",
+            f"projects/{self.project.pk}/docs/",
+            {"title": "D", "content": "See @bob@example.org", "notify": "nobody"},
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(
+            response.json()["content"], f"See [@Bob Example](person:{self.bob.pk})"
+        )
+        pk = response.json()["id"]
+        response = self.call(
+            self.ada, "patch", f"docs/{pk}/", {"content": "Then @bob@example.org"}
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json()["content"], f"Then [@Bob Example](person:{self.bob.pk})"
+        )
+        self.assertTrue(Mention.objects.filter(item_id=pk, user=self.bob).exists())
 
 
 class FolderAPITest(APIFixture, TestCase):
