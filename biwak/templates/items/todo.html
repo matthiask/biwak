@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load attachments biwak bookmarks i18n %}
+{% load attachments biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
@@ -51,6 +51,7 @@
   <div class="row g-4">
     <div class="col-lg-8">
       {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown:item }}</div>{% endif %}
+      {% reactions item %}
       <div class="card mb-4">
         <div class="card-body">
           <form method="post" {% attachments_attrs item.project %}>
@@ -64,12 +65,13 @@
       </div>
       <h2 class="h5" id="comments">{% translate "Comments" %}</h2>
       {% for comment in comments %}
-        <div class="card mb-2">
+        <div class="card mb-2" id="comment-{{ comment.pk }}">
           <div class="card-body">
             <div class="small text-body-secondary mb-1">
               <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
             </div>
             <div class="wb-markdown">{{ comment.content|markdown:item }}</div>
+            {% reactions item comment %}
           </div>
         </div>
       {% endfor %}
