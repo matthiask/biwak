@@ -106,6 +106,26 @@ class CLITest(TestCase):
             "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
         )
 
+    def test_repeat(self):
+        result = self.biwak(
+            "todo", "add", self.list.pk, "Pay rent", "--due", "2026-11-20",
+            "--repeat", "monthly", "--json",
+        )  # fmt: skip
+        data = json.loads(result.stdout)
+        self.assertEqual(data["recurrence"], "FREQ=MONTHLY;BYMONTHDAY=20")
+        self.assertIn(
+            "Repeats: the 20th of every month",
+            self.biwak("todo", "show", data["id"]).output,
+        )
+        self.biwak("todo", "edit", data["id"], "--repeat", "FREQ=WEEKLY;BYDAY=MO,TH")
+        self.assertEqual(
+            Item.objects.get(pk=data["id"]).todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH"
+        )
+        self.biwak("todo", "edit", data["id"], "--repeat", "none")
+        self.assertEqual(Item.objects.get(pk=data["id"]).todo.recurrence, "")
+        result = self.biwak("todo", "edit", data["id"], "--repeat", "sometimes")
+        self.assertEqual(result.exit_code, 1)
+
     def test_read_only_and_errors(self):
         result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")
         self.assertEqual(result.exit_code, 1)

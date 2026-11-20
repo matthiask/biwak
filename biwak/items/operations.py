@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from biwak import schedules
 from biwak.activity.models import Action
 from biwak.activity.operations import record, subscribe
 from biwak.items import visibility
@@ -73,6 +74,17 @@ def create_group(*, todolist, title):
     )
 
 
+def _recurrence_fields(recurrence, ends_on, count):
+    """The validated recurrence fields of a to-do; without a rule neither an
+    end date nor a count. Raises ``schedules.InvalidRule``."""
+    rule = schedules.validate(recurrence) if recurrence else ""
+    return {
+        "recurrence": rule,
+        "recurrence_ends_on": ends_on if rule else None,
+        "recurrence_count": count if rule else None,
+    }
+
+
 def _todos_in(todolist_item, group):
     """The open to-dos of a list's group (or the ungrouped ones), in order;
     the list and the group as objects or IDs"""
@@ -86,7 +98,17 @@ def _todos_in(todolist_item, group):
 
 @transaction.atomic
 def create_todo(
-    *, todolist, title, creator, group=None, notes="", due_on=None, assignees=()
+    *,
+    todolist,
+    title,
+    creator,
+    group=None,
+    notes="",
+    due_on=None,
+    assignees=(),
+    recurrence="",
+    recurrence_ends_on=None,
+    recurrence_count=None,
 ):
     """``todolist`` is the list's item"""
     TodoList.objects.select_for_update().get(item=todolist)
@@ -102,7 +124,13 @@ def create_todo(
     )
     item.save()
     visibility.recompute(item)
-    Todo.objects.create(item=item, group=group, notes=notes, due_on=due_on)
+    Todo.objects.create(
+        item=item,
+        group=group,
+        notes=notes,
+        due_on=due_on,
+        **_recurrence_fields(recurrence, recurrence_ends_on, recurrence_count),
+    )
     _created(item, creator)
     if assignees:
         assign(item, assignees, actor=creator)
@@ -211,9 +239,13 @@ def update_todo(
     notes=_UNCHANGED,
     due_on=_UNCHANGED,
     assignees=_UNCHANGED,
+    recurrence=_UNCHANGED,
+    recurrence_ends_on=_UNCHANGED,
+    recurrence_count=_UNCHANGED,
 ):
     """Changes what's given (the to-do's page and the API); assignees are
-    the complete new set"""
+    the complete new set. Removing the recurrence removes its end and
+    count too."""
     todo = item.todo
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -226,6 +258,20 @@ def update_todo(
     if due_on is not _UNCHANGED:
         todo.due_on = due_on
         fields.append("due_on")
+    given = {
+        "recurrence": recurrence,
+        "recurrence_ends_on": recurrence_ends_on,
+        "recurrence_count": recurrence_count,
+    }
+    if any(value is not _UNCHANGED for value in given.values()):
+        merged = {
+            name: getattr(todo, name) if value is _UNCHANGED else value
+            for name, value in given.items()
+        }
+        for name, value in _recurrence_fields(*merged.values()).items():
+            if getattr(todo, name) != value:
+                setattr(todo, name, value)
+                fields.append(name)
     if fields:
         todo.save(update_fields=fields)
     if assignees is not _UNCHANGED:
@@ -245,6 +291,58 @@ def complete(item, *, actor):
     todo.completed_by = actor
     todo.save(update_fields=["completed_at", "completed_by"])
     record(actor=actor, action=Action.COMPLETED, project=item.project, item=item)
+    if todo.recurrence:
+        _create_next(item, todo, actor=actor)
+
+
+def _create_next(item, todo, *, actor):
+    """The next to-do of a recurring one: same list and group, at the end,
+    same title, notes, assignees, subscribers and rule, due on the rule's
+    next date after today (specs/todos.md). None when the count or the end
+    date is used up, or one was made from this to-do already (reopening
+    and completing again)."""
+    if todo.recurrence_count is not None and todo.recurrence_count <= 0:
+        return None
+    due_on = schedules.next_date(todo.recurrence, schedules.today(), anchor=todo.due_on)
+    if due_on is None or (
+        todo.recurrence_ends_on is not None and due_on > todo.recurrence_ends_on
+    ):
+        return None
+    if item.following.exclude(item__status=Status.TRASHED).exists():
+        return None
+    todolist = item.parent
+    TodoList.objects.select_for_update().get(item=todolist)
+    following = Item(
+        project=item.project,
+        parent=todolist,
+        kind=Kind.TODO,
+        title=item.title,
+        creator=item.creator,
+        position=_next_position(_todos_in(todolist, todo.group)),
+    )
+    following.save()
+    visibility.recompute(following)
+    Todo.objects.create(
+        item=following,
+        group=todo.group,
+        notes=todo.notes,
+        due_on=due_on,
+        recurrence=todo.recurrence,
+        recurrence_ends_on=todo.recurrence_ends_on,
+        recurrence_count=None
+        if todo.recurrence_count is None
+        else todo.recurrence_count - 1,
+        previous=item,
+    )
+    for subscription in item.subscriptions.select_related("user"):
+        if subscription.user.is_active:
+            subscribe(subscription.user, following, added_by=subscription.added_by)
+    record(actor=actor, action=Action.CREATED, project=item.project, item=following)
+    people = [u for u in todo.assignees.all() if u.is_active]
+    people = [u for u in people if can_be_assigned(u, following)]
+    if people:
+        assign(following, people, actor=actor)
+    return following
 
 
 @transaction.atomic

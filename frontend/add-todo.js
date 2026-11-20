@@ -43,8 +43,19 @@ async function submit(form) {
   }
 }
 
+// "Repeat": the custom rule, the end and the count only when they matter
+function syncRepeat(form) {
+  const value = form.querySelector("[data-repeat-select]").value
+  form.querySelector("[data-repeat-custom]").hidden = value !== "custom"
+  for (const element of form.querySelectorAll("[data-repeat-ends]"))
+    element.hidden = !value
+}
+
 for (const details of forms) {
   const form = details.querySelector("[data-add-todo-form]")
+  syncRepeat(form)
+  form.addEventListener("change", () => syncRepeat(form))
+  form.addEventListener("reset", () => setTimeout(() => syncRepeat(form)))
 
   details.addEventListener("toggle", () => {
     if (!details.open) return

@@ -4,8 +4,8 @@ Builds on `core.md` and `access.md`.
 
 **Status:** assignees, the board view, moving several to-dos at once and
 adding to-dos inline are built (core, 2026-11-20). Stage 1 (schedules
-and recurrence) and stage 2 (the list by due date, the iCal feed) are
-open.
+and recurrence) is built (2026-11-20); stage 2 (the list by due date, the
+iCal feed) is open.
 
 **Agent:** both stages suit a cheaper model following this spec and the
 checklist in `AGENTS.md`.
@@ -69,6 +69,43 @@ check-ins (`checkins.md`):
 `recurrence_count` and `previous_id` on `TodoOut`, writable in
 create and patch. `biwak todo add|edit --repeat RULE` (a preset name or
 an RRULE).
+
+### Decisions made while building stage 1
+
+All proposed by the building agent, 2026-11-20; change them here if wrong.
+
+- **Presets count from the anchor date:** a to-do's due date, today when it
+  has none. "Every week" is the due date's weekday, "every month" its day
+  of the month, "the first/last weekday of the month" its weekday (the
+  first or last Monday, not the first working day; the last working day
+  is a custom rule, `FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1`).
+  The stored rule is the plain RRULE, it doesn't follow later changes of
+  the due date.
+- **Short months and leap days:** the 29th to 31st of the month and 29
+  February fall on the last day of shorter months instead of skipping
+  them (`BYMONTHDAY=28,29,30,31;BYSETPOS=-1`).
+- **Rules** have no `DTSTART`, `COUNT` or `UNTIL` (ends are the to-do's end
+  date and count), nothing shorter than daily, and must produce a date.
+  `next_date()` takes an optional `anchor` so "every two weeks" keeps its
+  phase.
+- **Count** is how many more to-dos get created after this one: 2 makes
+  two more, the last has 0. Both end options are optional and removed
+  together with the rule.
+- **One series:** completing a to-do that already has a next one (not in
+  the trash) creates none, so reopening and completing again never makes
+  a branch.
+- **Next to-do:** created by the original creator, with the "created"
+  event by whoever completed it; assignees who are inactive or can't see
+  it any more are left out.
+- **Form:** the "Repeat" select, a field for the custom rule, the end date
+  and "repeats left"; a missing "Repeat" field on a posted form removes
+  the rule.
+- **API:** `recurrence` accepts a preset name (counted from the due date
+  sent, or the stored one) or an RRULE; `null` or `""` removes it.
+  `previous_id` is hidden when the to-do is visible to clients and the
+  previous one isn't (moved since), for staff too: the API doesn't know
+  who asks. The CLI has `--repeat` only; end date and count are
+  API-only for now.
 
 ### Done when (stage 1)
 

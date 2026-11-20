@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from biwak import schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form
@@ -33,7 +34,67 @@ def assignable_people(item):
     return people.distinct()
 
 
-class TodoForm(Form):
+class RepeatForm(Form):
+    """The "Repeat" fields shared by the inline form and the to-do's page
+    (specs/todos.md); ``cleaned_data["recurrence"]`` is the rule. Presets
+    count from the due date (today without one); the form's due date is
+    ``due_on``."""
+
+    repeat = forms.ChoiceField(
+        label=_("Repeat"),
+        required=False,
+        choices=schedules.preset_choices(),
+        help_text=_("The next to-do is created when this one is completed."),
+    )
+    custom_rule = forms.CharField(
+        label=_("Custom schedule"),
+        required=False,
+        max_length=200,
+        help_text=_("An RRULE, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
+    )
+    recurrence_ends_on = forms.DateField(
+        label=_("Repeats until"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    recurrence_count = forms.IntegerField(
+        label=_("Repeats left"),
+        required=False,
+        min_value=1,
+        help_text=_("How many more to-dos to create; empty: no limit."),
+    )
+
+    def _rule(self, data):
+        repeat = data["repeat"]
+        if repeat == schedules.CUSTOM:
+            if not data.get("custom_rule"):
+                raise schedules.InvalidRule(_("Enter the schedule."))
+            return schedules.validate(data["custom_rule"])
+        return schedules.from_preset(repeat, data.get("due_on") or schedules.today())
+
+    def clean(self):
+        data = super().clean()
+        data["recurrence"] = ""
+        if data.get("repeat"):
+            try:
+                data["recurrence"] = self._rule(data)
+            except schedules.InvalidRule as exc:
+                field = (
+                    "custom_rule" if data["repeat"] == schedules.CUSTOM else "repeat"
+                )
+                self.add_error(field, str(exc))
+        return data
+
+    def recurrence_kwargs(self):
+        data = self.cleaned_data
+        return {
+            "recurrence": data["recurrence"],
+            "recurrence_ends_on": data["recurrence_ends_on"],
+            "recurrence_count": data["recurrence_count"],
+        }
+
+
+class TodoForm(RepeatForm):
     """Adding a to-do from the list: inline, with everything a to-do has
     at first (specs/todos.md); without JavaScript a plain form"""
 
@@ -53,6 +114,7 @@ class TodoForm(Form):
         widget=forms.DateInput(attrs={"type": "date"}),
     )
     group = forms.IntegerField(required=False, widget=forms.HiddenInput)
+    field_order = ["title", "notes", "assignees", "due_on", "group"]
 
     def __init__(self, *args, item, **kwargs):
         super().__init__(*args, **kwargs)
@@ -107,6 +169,7 @@ def todolist(request, pk):
                 notes=data["notes"],
                 due_on=data["due_on"],
                 assignees=list(data["assignees"]),
+                **form.recurrence_kwargs(),
             )
             if wants_fragment(request):
                 return render(request, "items/_todo.html", {"todo": todo}, status=201)
@@ -246,7 +309,7 @@ def todo_toggle(request, pk):
     return redirect(request.POST.get("next") or item.parent)
 
 
-class TodoDetailForm(Form):
+class TodoDetailForm(RepeatForm):
     title = forms.CharField(label=_("title"), max_length=500)
     notes = forms.CharField(
         label=_("notes"),
@@ -265,6 +328,7 @@ class TodoDetailForm(Form):
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
+    field_order = ["title", "notes", "due_on", "assignees"]
 
 
 class CommentForm(Form):
@@ -284,6 +348,12 @@ def todo(request, pk):
             "notes": todo.notes,
             "due_on": todo.due_on,
             "assignees": list(todo.assignees.all()),
+            "repeat": schedules.preset_of(todo.recurrence),
+            "custom_rule": todo.recurrence
+            if schedules.preset_of(todo.recurrence) == schedules.CUSTOM
+            else "",
+            "recurrence_ends_on": todo.recurrence_ends_on,
+            "recurrence_count": todo.recurrence_count,
         },
     )
     form.fields["assignees"].queryset = people
@@ -296,6 +366,7 @@ def todo(request, pk):
             notes=data["notes"],
             due_on=data["due_on"],
             assignees=data["assignees"],
+            **form.recurrence_kwargs(),
         )
         return redirect(item)
     comment_form = CommentForm(
@@ -320,7 +391,21 @@ def todo(request, pk):
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),
             "today": dt.date.today(),
+            "previous": _previous(request, todo),
         },
+    )
+
+
+def _previous(request, todo):
+    """The to-do this one was created from, if the person sees it"""
+    if todo.previous_id is None:
+        return None
+    return (
+        Item.objects
+        .visible_to(request.user)
+        .filter(pk=todo.previous_id)
+        .select_related("todo__completed_by")
+        .first()
     )
 
 
