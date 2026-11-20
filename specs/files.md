@@ -72,7 +72,8 @@ They belong to their item and aren't shown in folders.
   Unlinked attachments are visible only to who uploaded them;
   `fairy_tasks` deletes those older than a day.
 - **Rendering:** the Markdown filter turns `attachment:KEY` into the
-  download URL; images show inline, scaled to the text's width.
+  download URL (only the rendered item's own attachments, see below);
+  images show inline, scaled to the text's width.
 - **Limit:** 100 MB per file (decided 2026-11-20; the ingress needs the
   same limit).
 
@@ -83,7 +84,11 @@ them here if wrong):
   item yet, in the item's project, uploaded by the person saving the
   text. Once linked, an attachment stays with its item, also when the
   text no longer references it; referencing it in another item's text
-  doesn't move it (people who see only the other item get a 404).
+  doesn't move it. Such a reference (or one to a missing attachment)
+  renders as a plain "attachment", without link or name, on pages, in
+  mails (HTML and plain text) and in the API's `*_html`: the URL holds
+  the file's name, which may be internal (decided 2026-11-20 after the
+  visibility review).
 - **Where:** linked when to-dos' notes are created or changed, comments
   added, messages and docs created (their edit operations come with
   stage 2 and call `attachments.link()` too). Lists' and projects'
@@ -239,7 +244,10 @@ Marked **?** are questions the spec didn't answer, built the safe way.
 - **Older versions are for staff (?)**: the doc versions' pages and API,
   the older versions of files and their downloads. Like the history,
   they can hold what was internal before the item was shown to clients.
-  Clients see and edit the current doc, and download the current file.
+  Clients see the current doc and download the current file; they edit
+  and lock only docs they created (`can_change()`, 403 otherwise, decided
+  2026-11-20 after the visibility review: a client could rewrite an
+  agreed brief or hold its lock and keep staff out).
   A client's refused save over a newer version names who saved it but
   has no link to compare.
 - **Doc versions:** the newest version always equals the doc. Saving
@@ -260,14 +268,14 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   every minute).
 - **Files:** the title is the file's name when uploaded and stays when a
   new version is uploaded (**?**), the version has its own name.
-  Clients upload where they see and replace or rename only what they
-  uploaded; staff everything. Replacing records `edited` (with the new
+  Staff upload (clients don't, `access.md`); clients replace or rename
+  only what they uploaded before that; staff everything. Replacing records `edited` (with the new
   version's name).
 - **Previews:** 400 pixels wide as specified, images already smaller are
   not enlarged (**?**); broken files have none (404, logged). Only the
   current version has a preview on the page.
-- **Folders:** anyone who sees where creates folders, docs and files
-  (what clients create is visible). Moving: `can_change()` (clients only
+- **Folders:** staff create folders, docs and files; clients don't
+  (decided 2026-11-20 after the visibility review, `access.md`). Moving: `can_change()` (clients only
   what they created), into folders the person sees, a folder never into
   itself or below itself. A client's item moved to the root gets the
   root's default (internal), as the switch is off there (decided

@@ -87,12 +87,14 @@ value or a product choice to the builder):
 - **Not asked:** trashed and archived questions, questions of archived
   projects.
 - **Mails** (question, summary) go out after the commit, one per
-  person, in their language; a mail which can't be sent is logged and not
-  retried. Replying by mail (`notifications.md`, stage 2, built
-  2026-11-20): `reply_headers()` in `biwak/checkins/mails.py` gives the
-  question mail a `Reply-To` whose token points at the occurrence;
-  replying answers that occurrence (changing an answer given already).
-  The summary has no `Reply-To`.
+  person, in their language, only to people still active and seeing the
+  question then (checked again after the commit, like the notification
+  mails; fixed 2026-11-20 after the visibility review); a mail which
+  can't be sent is logged and not retried. Replying by mail
+  (`notifications.md`, stage 2, built 2026-11-20): `reply_headers()` in
+  `biwak/checkins/mails.py` gives the question mail a `Reply-To` whose
+  token points at the occurrence; replying answers that occurrence
+  (changing an answer given already). The summary has no `Reply-To`.
 - **Open (values the spec doesn't fix):** how many occurrences a page shows
   (5, `OCCURRENCES_PER_PAGE`); the wording of the two mails and the
   pages; no default time of day (the form asks); asking people with the
@@ -142,6 +144,12 @@ this part.
   one mail with all answers.
 - Staff create and edit questions; clients can be asked when the
   question is visible to clients.
+- Clients only learn about the project's members among the people asked
+  (staff of all-access projects needn't be members): the question page's
+  people and "hasn't answered yet", the API's `people` and `missing`,
+  and a person's answers (`/questions/<pk>/people/<user pk>/` is 404 for
+  a client asking about a non-member) (decided 2026-11-20 after the
+  visibility review, `Project.people_known_to()`).
 
 ## Pages
 

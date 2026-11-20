@@ -397,6 +397,27 @@ class AnswersAPITest(APITestCase):
             404,
         )
 
+    def test_clients_dont_see_staff_who_arent_members(self):
+        outsider = person("Dora")  # all-access projects: staff need no membership
+        ops.set_people(self.shared, [self.ada, self.cleo, outsider], actor=self.ada)
+        self.run_at("2027-03-29 09:00")
+
+        def names(user):
+            question = self.get(user, f"checkins/{self.shared.pk}/").json()
+            occurrences = self.get(user, f"checkins/{self.shared.pk}/occurrences/")
+            latest = occurrences.json()["results"][0]
+            return (
+                {p["short_name"] for p in question["people"]},
+                {p["short_name"] for p in latest["missing"]},
+            )
+
+        self.assertEqual(names(self.cleo), ({"Ada", "Cleo"}, {"Ada", "Cleo"}))
+        self.assertEqual(
+            names(self.ada), ({"Ada", "Cleo", "Dora"}, {"Ada", "Cleo", "Dora"})
+        )
+        listed = self.get(self.cleo, f"projects/{self.project.pk}/checkins/").json()
+        self.assertNotIn("Dora", str(listed))
+
     def test_comments_on_answers_use_the_comment_endpoints(self):
         answer = self.post(
             self.ada, f"checkins/{self.item.pk}/answer/", {"content": "Fine"}

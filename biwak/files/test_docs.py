@@ -63,7 +63,12 @@ class DocPageTest(Fixture, TestCase):
             for doc in [self.shared, self.nested]:
                 response = self.client.get(doc.get_absolute_url())
                 self.assertContains(response, "Clients can see this")
-                self.assertContains(response, "Edit")
+                # Clients edit only docs they created
+                edit = self.url("doc_edit", doc)
+                if user.is_client:
+                    self.assertNotContains(response, edit)
+                else:
+                    self.assertContains(response, edit)
         self.assertContains(
             self.client.get(self.shared.get_absolute_url()), "<strong>text</strong>"
         )
@@ -165,9 +170,14 @@ class NewDocTest(Fixture, TestCase):
         self.send(self.ada, title="Top", visible="on")
         self.assertTrue(Item.objects.get(title="Top").is_client_visible)
 
-    def test_a_client_creates_visible_docs_where_it_can_see(self):
-        self.send(self.cleo, folder=self.public)
-        self.assertTrue(Item.objects.get(title="Minutes").is_client_visible)
+    def test_clients_dont_create_docs(self):
+        """Clients create to-dos, comments and messages (specs/access.md)"""
+        self.assertEqual(self.send(self.cleo, folder=self.public).status_code, 403)
+        self.assertEqual(self.send(self.cleo).status_code, 403)
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.client.get(self.url()).status_code, 403)
+        self.assertFalse(Item.objects.filter(title="Minutes").exists())
+        # Internal folders stay 404
         self.assertEqual(self.send(self.cleo, folder=self.private).status_code, 404)
 
     def test_whom_to_notify(self):
@@ -210,7 +220,7 @@ class EditTest(Fixture, TestCase):
     def test_somebody_else_cannot_open_the_form_meanwhile(self):
         self.client.force_login(self.ada)
         self.client.get(self.url("doc_edit", self.shared))
-        self.client.force_login(self.cleo)
+        self.client.force_login(self.bob)
         response = self.client.get(self.url("doc_edit", self.shared), follow=True)
         self.assertRedirects(response, self.shared.get_absolute_url())
         self.assertContains(response, "Ada is editing")
@@ -220,7 +230,7 @@ class EditTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         self.client.get(self.url("doc_edit", self.shared))
         with time_machine.travel(timezone.now() + dt.timedelta(minutes=6)):
-            self.client.force_login(self.cleo)
+            self.client.force_login(self.bob)
             response = self.client.get(self.url("doc_edit", self.shared))
             self.assertEqual(response.status_code, 200)
 
@@ -231,11 +241,33 @@ class EditTest(Fixture, TestCase):
         self.assertEqual(self.shared.title, "Renamed")
         self.assertEqual(self.shared.doc.content, "Changed")
 
-    def test_clients_edit_visible_docs(self):
-        self.edit(self.cleo, content="By a client")
+    def test_clients_cannot_edit_or_lock_docs_staff_created(self):
+        """Clients change only what they created (specs/access.md)"""
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.url("doc_edit", self.shared))
+        self.assertEqual(response.status_code, 403)
+        response = self.edit(self.cleo, content="Scope doubled, same price")
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(self.url("doc_lock", self.shared))
+        self.assertEqual(response.status_code, 403)
         self.shared.doc.refresh_from_db()
-        self.assertEqual(self.shared.doc.content, "By a client")
-        self.assertEqual(self.latest(self.shared).created_by, self.cleo)
+        self.assertEqual(self.shared.doc.content, "Shared **text**")
+        self.assertIsNone(operations.lock_holder(self.shared.doc))
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertNotContains(response, self.url("doc_edit", self.shared))
+
+    def test_clients_edit_docs_they_created(self):
+        doc = ops.create_doc(
+            project=self.project,
+            title="Notes",
+            content="Ours",
+            creator=self.cleo,
+            visible=True,
+        )
+        self.edit(self.cleo, doc, content="By a client")
+        doc.doc.refresh_from_db()
+        self.assertEqual(doc.doc.content, "By a client")
+        self.assertEqual(self.latest(doc).created_by, self.cleo)
 
     def test_save_as_a_version(self):
         self.edit(self.ada, content="One")
@@ -277,11 +309,14 @@ class EditTest(Fixture, TestCase):
         self.assertEqual(self.shared.doc.content, "Bob's")
 
     def test_clients_get_no_link_to_the_versions(self):
+        doc = ops.create_doc(
+            project=self.project, title="Shared doc", creator=self.cleo, visible=True
+        )
         self.client.force_login(self.cleo)
-        base = self.latest(self.shared).pk
-        operations.update_doc(self.shared, actor=self.bob, content="Bob's")
+        base = self.latest(doc).pk
+        operations.update_doc(doc, actor=self.bob, content="Bob's")
         response = self.client.post(
-            self.url("doc_edit", self.shared),
+            self.url("doc_edit", doc),
             {"title": "Shared doc", "content": "Cleo's", "base_version": base},
         )
         self.assertContains(response, "Bob saved a newer version")
@@ -331,14 +366,14 @@ class LockEndpointTest(Fixture, TestCase):
 
     def test_somebody_else_holds_it(self):
         operations.lock_doc(self.shared, self.ada)
-        self.client.force_login(self.cleo)
+        self.client.force_login(self.bob)
         response = self.client.post(self.url("doc_lock", self.shared))
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), {"locked_by": "Ada"})
 
     def test_it_expires_five_minutes_after_the_last_renewal(self):
         operations.lock_doc(self.shared, self.ada)
-        self.client.force_login(self.cleo)
+        self.client.force_login(self.bob)
         with time_machine.travel(timezone.now() + dt.timedelta(minutes=4)):
             self.assertEqual(
                 self.client.post(self.url("doc_lock", self.shared)).status_code, 409

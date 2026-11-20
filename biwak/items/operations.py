@@ -622,6 +622,15 @@ def restore(item, *, actor):
 TRASH_DAYS = 30
 
 
+# What clients create where they can see (specs/access.md, decided
+# 2026-11-20); comments too. Everything else is staff only.
+CLIENTS_CREATE = {Kind.TODO, Kind.MESSAGE, Kind.ANSWER}
+
+
+def can_create(user, kind):
+    return not user.is_client or kind in CLIENTS_CREATE
+
+
 def can_change(user, item):
     """Staff change everything they see; clients what they created
     (renaming, archiving, trashing; to-dos' fields stay open to everybody

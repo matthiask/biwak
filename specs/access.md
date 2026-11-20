@@ -1,7 +1,9 @@
 # Access: client visibility and login
 
 **Status:** built (2026-11-20). The separate review of the visibility
-checks is still due before the first client gets a login.
+checks (2026-11-20) found leaks and missing permission checks, fixed with
+the decisions marked "after the visibility review" here and in the specs
+of the parts.
 
 The most delicate part of the app: a bug here shows internal content to a
 client. One function decides visibility, everything uses it, and the
@@ -20,7 +22,10 @@ the first client gets a login.
     finances, some client projects).
   - Admins see the list of all projects, including limited ones, and can
     add themselves; that's recorded as an event in the project. They
-    don't see a limited project's content without joining.
+    don't see a limited project's content without joining. The
+    memberships are read-only in the Django admin, so that joining always
+    goes through the app and its event (decided 2026-11-20 after the
+    visibility review).
 - **Staff** with access to a project see everything in it.
 - **Clients** are never covered by all-access: they see a project only
   if they're members, and in it only what
@@ -31,9 +36,20 @@ the first client gets a login.
   their own. Off by default: better to show too little once.
 - Comments on a visible item are visible. There are no internal comments
   on visible items (decided 2026-11-20: too easy to get wrong).
-- Clients can create to-dos, comments and messages where they can see;
-  what they create is visible by definition.
+- Clients can create to-dos, comments and messages where they can see,
+  and answer check-ins they're asked; what they create is visible by
+  definition. Nothing else: lists, groups (in lists they didn't create),
+  folders, docs and files are staff only, through the pages and the API
+  (403; 404 first where the place itself is hidden), and clients don't
+  get the forms (decided 2026-11-20 after the visibility review, which
+  found clients creating lists, folders, docs and files;
+  `ops.can_create()`). What clients created before stays theirs to change
+  (`can_change()`).
 - Assigning a client to a to-do requires the to-do to be visible.
+- Clients learn about the project's members only, not about staff who
+  see the project because it's all-access (decided 2026-11-20 after the
+  visibility review): subscribers on item pages, the people asked by a
+  check-in and who hasn't answered (`Project.people_known_to()`).
 - Turning visibility off later hides the content again, including
   comments clients wrote; the switch says so.
 
@@ -55,6 +71,19 @@ and review, no recursive query on the hot path.
   whenever a switch changes, an item moves, or an item is created, in the
   same transaction.
 - Comments, files attached to texts and events follow their item.
+- **Events also store whether their item was visible to clients when
+  they happened** (decided 2026-11-20, after the visibility review):
+  events keep the title at the time, assignees and people mentioned, so
+  a to-do created internally ("Raise the rate for Cleo"), renamed and
+  moved into a visible list mustn't show clients its internal past.
+  Clients see an event only if it was visible then and its item is
+  visible now. `record()` sets `Event.is_client_visible` from the item's
+  stored visibility; an edit merges only into an event of the same
+  visibility, so a visible event never takes in internal edits (title,
+  people mentioned) and stays visible once it was. Events from before
+  this change are not visible to clients (a safe default). The feed's
+  "visible to clients" filter, the API's `visible_to_clients` of an
+  event and the badge on feed entries mean the same.
 - Drift is the risk: tests compare the stored value with the value
   computed from the tree after every kind of change, and a management
   command (`check_visibility`) does the same on real data, also run

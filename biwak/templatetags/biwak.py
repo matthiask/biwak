@@ -82,37 +82,68 @@ def render_markdown(text, item=None, *, absolute=False, attachment_urls=True):
     env = {"names": names}
     tokens = _markdown.parse(text, env)
     if attachment_urls:
-        _attachment_urls(tokens, absolute=absolute)
+        _attachment_urls(tokens, item, absolute=absolute)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
-def _attachment_urls(tokens, *, absolute):
+def _attachment_reference(token):
+    """``(attribute, key)`` of a link or image to ``attachment:KEY``"""
+    from biwak.files.models import REFERENCE
+
+    attr = {"link_open": "href", "image": "src"}.get(token.type)
+    if attr and (match := REFERENCE.fullmatch(token.attrGet(attr) or "")):
+        return attr, match[1]
+    return None
+
+
+def _attachment_urls(tokens, item, *, absolute):
     """``attachment:KEY`` (specs/files.md) becomes the download URL; images
     show inline, scaled to the text's width. Whoever reads the text may
-    not see the attachment: the download checks."""
-    from biwak.files.models import REFERENCE, Attachment
+    not see the attachment: the download checks. Only the item's own
+    attachments: a reference to another item's (or a missing one) becomes
+    a plain "attachment", without its name, which its URL contains too."""
+    from biwak.files.models import Attachment
 
-    references = []
-    for token in tokens:
-        for child in token.children or ():
-            attr = {"link_open": "href", "image": "src"}.get(child.type)
-            if attr and (match := REFERENCE.fullmatch(child.attrGet(attr) or "")):
-                references.append((child, attr, match[1]))
-    if not references:
-        return
-    found = {
-        a.key: a
-        for a in Attachment.objects.filter(key__in={key for *_, key in references})
+    blocks = [token for token in tokens if token.children]
+    keys = {
+        reference[1]
+        for block in blocks
+        for child in block.children
+        if (reference := _attachment_reference(child))
     }
-    for token, attr, key in references:
-        if attachment := found.get(key):
-            url = attachment.get_absolute_url()
-            token.attrSet(attr, settings.BASE_URL + url if absolute else url)
-        else:
-            token.attrSet(attr, "#")
-        if attr == "src":
-            token.attrJoin("class", "wb-attachment-image")
-            token.attrSet("loading", "lazy")
+    if not keys:
+        return
+    found = {}
+    if item is not None and item.pk is not None:
+        found = {a.key: a for a in Attachment.objects.filter(key__in=keys, item=item)}
+    for block in blocks:
+        result = []
+        children = block.children
+        index = 0
+        while index < len(children):
+            child = children[index]
+            index += 1
+            if (reference := _attachment_reference(child)) is None:
+                result.append(child)
+                continue
+            attr, key = reference
+            if attachment := found.get(key):
+                url = attachment.get_absolute_url()
+                child.attrSet(attr, settings.BASE_URL + url if absolute else url)
+                if attr == "src":
+                    child.attrJoin("class", "wb-attachment-image")
+                    child.attrSet("loading", "lazy")
+                result.append(child)
+                continue
+            text = Token("text", "", 0)
+            text.content = gettext("attachment")
+            result.append(text)
+            if attr == "href":
+                # Leave out the link's text up to its end
+                while children[index].type != "link_close":
+                    index += 1
+                index += 1
+        block.children = result
 
 
 @register.filter

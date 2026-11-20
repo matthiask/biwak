@@ -4,9 +4,22 @@ from biwak.projects.models import Membership, Project
 
 
 class MembershipInline(admin.TabularInline):
+    """Read-only: people join, are added and leave through the app, which
+    records the events (specs/access.md)"""
+
     model = Membership
-    raw_id_fields = ["user"]
+    fields = readonly_fields = ["user", "created_at"]
     extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Project)

@@ -17,6 +17,7 @@ from django.utils.translation import gettext as _
 
 from biwak.activity import mentions
 from biwak.activity.mails import absolute, host, plain_text, sender, unsubscribe_url
+from biwak.activity.notify import can_see
 from biwak.inbound.tokens import reply_to
 
 
@@ -25,8 +26,9 @@ logger = logging.getLogger(__name__)
 
 def after_commit(build, occurrence, people):
     """Sends ``build(person, occurrence)`` to each of the people once the
-    transaction has committed; a mail which can't be sent is logged and
-    doesn't keep the others from going out"""
+    transaction has committed, if they're still active and see the question
+    then (like ``biwak.activity.mails._deliverable()``); a mail which can't
+    be sent is logged and doesn't keep the others from going out"""
     pks = [person.pk for person in people]
     transaction.on_commit(lambda: _send_all(build, occurrence, pks), robust=True)
 
@@ -34,7 +36,10 @@ def after_commit(build, occurrence, people):
 def _send_all(build, occurrence, pks):
     from biwak.accounts.models import User
 
-    for user in User.objects.filter(pk__in=pks).order_by("pk"):
+    item = occurrence.question.item
+    for user in User.objects.active().filter(pk__in=pks).order_by("pk"):
+        if not can_see(user, item):
+            continue
         try:
             with translation.override(user.language or settings.LANGUAGE_CODE):
                 message = build(user, occurrence)

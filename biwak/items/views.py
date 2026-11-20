@@ -243,9 +243,18 @@ def todolist(request, pk):
     )
 
 
+def _changeable_list(request, pk):
+    """Groups are changed like their list: clients only in lists they
+    created (``can_change()``)"""
+    item = item_for(request, pk, Kind.LIST)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
+    return item
+
+
 @require_POST
 def group_create(request, pk):
-    item = item_for(request, pk, Kind.LIST)
+    item = _changeable_list(request, pk)
     if title := request.POST.get("title", "").strip():
         ops.create_group(todolist=item.todolist, title=title[:200])
     return redirect(item)
@@ -254,7 +263,7 @@ def group_create(request, pk):
 @require_POST
 def group_delete(request, pk):
     group = get_object_or_404(Group, pk=pk)
-    item = item_for(request, group.todolist_id, Kind.LIST)
+    item = _changeable_list(request, group.todolist_id)
     ops.delete_group(group)
     return redirect(item)
 
@@ -262,7 +271,7 @@ def group_delete(request, pk):
 @require_POST
 def group_rename(request, pk):
     group = get_object_or_404(Group, pk=pk)
-    item = item_for(request, group.todolist_id, Kind.LIST)
+    item = _changeable_list(request, group.todolist_id)
     if title := request.POST.get("title", "").strip():
         ops.rename_group(group, title=title[:200])
     return redirect(item)
@@ -272,7 +281,7 @@ def group_rename(request, pk):
 def group_move(request, pk):
     """Dragging (quietly) or the up and down buttons (redirecting back)"""
     group = get_object_or_404(Group, pk=pk)
-    item = item_for(request, group.todolist_id, Kind.LIST)
+    item = _changeable_list(request, group.todolist_id)
     ops.move_group(group, index=max(0, int(request.POST.get("index", 0))))
     if request.POST.get("quiet"):
         return HttpResponse(status=204)
@@ -435,7 +444,11 @@ def todo(request, pk):
             "form": form,
             "comment_form": comment_form,
             "comments": item.comments.select_related("author"),
-            "subscribers": [s.user for s in item.subscriptions.select_related("user")],
+            # Clients only learn about the project's members
+            "subscribers": item.project.people_known_to(
+                request.user,
+                [s.user for s in item.subscriptions.select_related("user")],
+            ),
             "is_subscribed": is_subscribed(request.user, item),
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),

@@ -64,5 +64,6 @@
   {{ event.get_action_display }} {% include "activity/_subject.html" %}
 {% endif %}
 {% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
-{% if event.item %}{% client_badge event.item %}{% endif %}
+{# Clients see the event: the item now, and the event of its time #}
+{% if event.item and event.is_client_visible %}{% client_badge event.item %}{% endif %}
 {% if event.excerpt and not what %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}

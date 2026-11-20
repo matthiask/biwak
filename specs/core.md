@@ -91,6 +91,10 @@ formatting buttons can come later, as long as it writes Markdown.
   position. Dragging a to-do to another list moves it there, ungrouped
   unless dropped into a group. Keyboard alternatives for all of it.
 - Deleting a group keeps its to-dos, ungrouped at the end.
+- Groups are changed like their list (`can_change()`): clients add,
+  rename, move and remove groups only in lists they created, 403
+  otherwise, and don't get the controls (decided 2026-11-20 after the
+  visibility review).
 - Completed to-dos leave the sequence and show below the list, newest
   first, collapsed.
 - Positions: integers with gaps, renumbered when needed, or fractional

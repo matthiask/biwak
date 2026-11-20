@@ -79,6 +79,16 @@ class APITest(TestCase):
         )
         self.assertEqual(self.get("me/", headers).status_code, 401)
 
+    def test_clients_dont_create_lists(self):
+        response = self.send(
+            "post",
+            f"projects/{self.project.pk}/lists/",
+            self.api(self.cleo),
+            {"title": "Our wishes"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Item.objects.filter(title="Our wishes").exists())
+
     def test_client_sees_what_clients_see(self):
         headers = self.api(self.cleo)
         lists = self.get(f"projects/{self.project.pk}/lists/", headers).json()
@@ -115,7 +125,7 @@ class APITest(TestCase):
         self.assertEqual({m["email"] for m in members}, {None})
         # What clients create is visible
         response = self.send(
-            "post", f"projects/{self.project.pk}/lists/", headers, {"title": "Wishes"}
+            "post", f"lists/{self.shared.pk}/todos/", headers, {"title": "Wish"}
         )
         self.assertTrue(response.json()["visible_to_clients"])
 

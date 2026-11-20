@@ -101,22 +101,24 @@
           <div class="list-group-item text-body-secondary">{% translate "No lists yet." %}</div>
         {% endfor %}
       </div>
-      <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
-        {% csrf_token %}
-        <input
-          type="text"
-          name="title"
-          class="form-control w-auto flex-grow-1"
-          placeholder="{% translate 'New list' %}"
-          required
-          maxlength="500"
-        >
-        {% if not request.user.is_client %}
+      {% if can_create_lists %}
+        <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
+          {% csrf_token %}
+          <input
+            type="text"
+            name="title"
+            class="form-control w-auto flex-grow-1"
+            placeholder="{% translate 'New list' %}"
+            required
+            maxlength="500"
+          >
           <label class="form-check mb-0"><input type="checkbox" name="visible" class="form-check-input">
             {% translate "Visible to clients" %}</label>
-        {% endif %}
-        <button type="submit" class="btn btn-quiet">{% icon "plus-lg" %}<span>{% translate "Add list" %}</span></button>
-      </form>
+          <button type="submit" class="btn btn-quiet">
+            {% icon "plus-lg" %}<span>{% translate "Add list" %}</span>
+          </button>
+        </form>
+      {% endif %}
       {% if archived_lists %}
         <details class="mt-4">
           <summary class="text-body-secondary">{% translate "Archived lists" %}</summary>

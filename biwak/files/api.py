@@ -152,6 +152,13 @@ def parent_folder(request, project, parent_id):
     return folder
 
 
+def _staff_creates(request, kind):
+    """Clients create to-dos, comments and messages, not folders, docs or
+    files (specs/access.md); after the checks which give 404"""
+    if not ops.can_create(request.user, kind):
+        raise HttpError(403, _("Only staff create folders, docs and files."))
+
+
 def switch(request, visible):
     """What clients create is visible to clients (specs/access.md)"""
     return visible or request.user.is_client
@@ -404,8 +411,10 @@ class FolderIn(Schema):
 
 @router.post("projects/{project_id}/folders/", response={201: ItemOut})
 def folder_create(request, project_id: int, data: FolderIn):
+    """Staff only (specs/access.md)"""
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
+    _staff_creates(request, Kind.FOLDER)
     if not data.title.strip():
         raise HttpError(400, _("The title can't be empty."))
     item = ops.create_folder(
@@ -413,7 +422,7 @@ def folder_create(request, project_id: int, data: FolderIn):
         title=data.title,
         creator=request.user,
         parent=folder,
-        visible=switch(request, data.visible_to_clients),
+        visible=data.visible_to_clients,
     )
     return Status(201, item_out(item))
 
@@ -475,8 +484,10 @@ class DocIn(Schema):
 
 @router.post("projects/{project_id}/docs/", response={201: DocOut})
 def doc_create(request, project_id: int, data: DocIn):
+    """Staff only (specs/access.md)"""
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
+    _staff_creates(request, Kind.DOC)
     if not data.title.strip():
         raise HttpError(400, _("The title can't be empty."))
     item = ops.create_doc(
@@ -485,7 +496,7 @@ def doc_create(request, project_id: int, data: DocIn):
         content=data.content,
         creator=request.user,
         parent=folder,
-        visible=switch(request, data.visible_to_clients),
+        visible=data.visible_to_clients,
         whom=whom(project, data.notify),
     )
     return Status(201, doc_out(item_for(request, item.pk, Kind.DOC), request.user))
@@ -506,13 +517,21 @@ class DocPatch(Schema):
     base_version: int | None = None
 
 
+def _changeable_doc(request, doc_id):
+    item = item_for(request, doc_id, Kind.DOC)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change docs you created."))
+    return item
+
+
 @router.patch("docs/{doc_id}/", response=DocOut)
 def doc_update(request, doc_id: int, data: DocPatch):
     """Saves the fields given, with the version rules of the web
     interface: a version when the last one is older than 10 minutes or by
     someone else, or ``new_version``. 409 while somebody else is editing,
-    and when ``base_version`` was overtaken by somebody else's save."""
-    item = item_for(request, doc_id, Kind.DOC)
+    and when ``base_version`` was overtaken by somebody else's save.
+    Clients only change docs they created (403)."""
+    item = _changeable_doc(request, doc_id)
     given = data.model_fields_set
     changes = {}
     if "title" in given:
@@ -544,7 +563,7 @@ def doc_update(request, doc_id: int, data: DocPatch):
 def doc_lock(request, doc_id: int):
     """Takes or renews the lock (it expires 5 minutes after the last
     renewal); 409 while somebody else holds it"""
-    item = item_for(request, doc_id, Kind.DOC)
+    item = _changeable_doc(request, doc_id)
     try:
         operations.lock_doc(item, request.user)
     except operations.DocLocked as exc:
@@ -556,7 +575,7 @@ def doc_lock(request, doc_id: int):
 
 @router.delete("docs/{doc_id}/lock/", response=DocOut)
 def doc_unlock(request, doc_id: int):
-    item = item_for(request, doc_id, Kind.DOC)
+    item = _changeable_doc(request, doc_id)
     operations.unlock_doc(item, request.user)
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
@@ -707,9 +726,11 @@ class FileIn(Schema):
 @router.post("projects/{project_id}/files/", response={201: FileOut})
 def file_create(request, project_id: int, file: File[UploadedFile], data: Form[FileIn]):
     """Uploads a file (multipart, field ``file``, at most 100 MB) into the
-    root or a folder; its title is the file's name"""
+    root or a folder; its title is the file's name. Staff only
+    (specs/access.md)."""
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
+    _staff_creates(request, Kind.FILE)
     try:
         item = ops.create_upload(
             project=project,
@@ -717,7 +738,7 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
             description=data.description,
             creator=request.user,
             parent=folder,
-            visible=switch(request, data.visible_to_clients),
+            visible=data.visible_to_clients,
             whom=whom(project, notify_from_form(data.notify)),
         )
     except attachments.UploadError as exc:

@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from biwak.activity.models import Action, Event, Subscription
+from biwak.activity.operations import subscribe
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Item
 from biwak.projects.models import Membership
@@ -168,10 +169,37 @@ class ViewsTest(TestCase):
         self.assertTrue(self.project.is_member(self.bob))
         self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
 
-    def test_client_creates_visible_list(self):
+    def test_clients_see_only_members_among_subscribers(self):
+        """Bob is staff in an all-access project, not a member: clients
+        don't learn about him (like the members list)"""
+        message = ops.create_message(
+            project=self.project, title="News", creator=self.ada, visible=True
+        )
+        folder = ops.create_folder(
+            project=self.project, title="Shared files", creator=self.ada, visible=True
+        )
+        for item in [self.todo, message, folder]:
+            subscribe(self.bob, item)
+            subscribe(self.cleo, item)
+            with self.subTest(kind=item.kind):
+                self.client.force_login(self.cleo)
+                response = self.client.get(item.get_absolute_url())
+                self.assertContains(response, "Cleo")
+                self.assertNotContains(response, "Bob")
+                self.client.force_login(self.ada)
+                self.assertContains(self.client.get(item.get_absolute_url()), "Bob")
+
+    def test_clients_dont_create_lists(self):
+        """Clients create to-dos, comments and messages, not lists
+        (specs/access.md)"""
         self.client.force_login(self.cleo)
-        self.client.post(self.project.get_absolute_url(), {"title": "Our wishes"})
-        self.assertTrue(Item.objects.get(title="Our wishes").is_client_visible)
+        url = self.project.get_absolute_url()
+        response = self.client.post(url, {"title": "Our wishes"})
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Item.objects.filter(title="Our wishes").exists())
+        self.assertNotContains(self.client.get(url), "Add list")
+        self.client.force_login(self.ada)
+        self.assertContains(self.client.get(url), "Add list")
 
     def test_allauth_pages(self):
         # Rendered with our elements (biwak/templates/allauth/)

@@ -2,6 +2,7 @@
 
 from django import forms
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -41,16 +42,13 @@ class NewDocForm(NotifyForm, DocForm):
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
     field_order = ["title", "content", "visible", "notify", "people"]
 
-    def __init__(self, *args, user, **kwargs):
-        super().__init__(*args, **kwargs)
-        if user.is_client:
-            del self.fields["visible"]
-
 
 def doc_new(request, pk):
     project = project_for(request, pk)
     folder = folder_param(request, project)
-    form = NewDocForm(request.POST or None, project=project, user=request.user)
+    if not ops.can_create(request.user, Kind.DOC):
+        raise PermissionDenied
+    form = NewDocForm(request.POST or None, project=project)
     if form.is_valid():
         data = form.cleaned_data
         item = ops.create_doc(
@@ -59,7 +57,7 @@ def doc_new(request, pk):
             content=data["content"],
             creator=request.user,
             parent=folder,
-            visible=data.get("visible", False) or request.user.is_client,
+            visible=data["visible"],
             whom=form.whom(),
         )
         return redirect(item)
@@ -85,6 +83,7 @@ def _doc_context(request, item):
         "breadcrumbs": breadcrumbs(item),
         "locked_by": holder if holder != request.user else None,
         "is_staff": not request.user.is_client,
+        "can_change": ops.can_change(request.user, item),
         "move_choices": folder_choices(request.user, item.project, exclude=item),
     } | sidebar_context(request, item)
 
@@ -107,8 +106,10 @@ def doc(request, pk):
 
 def doc_edit(request, pk):
     """Opening the form takes the lock; saving over somebody else's newer
-    version is refused"""
+    version is refused. Clients only edit docs they created."""
     item = item_for(request, pk, Kind.DOC)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
     doc = item.doc
     mentions_url = reverse("mentionable", args=[item.pk])
     if request.method != "POST":
@@ -175,6 +176,8 @@ def doc_lock(request, pk):
     """The edit page renews the lock every minute (frontend/doc-lock.js);
     ``release`` gives it up (Cancel)"""
     item = item_for(request, pk, Kind.DOC)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
     if request.POST.get("release"):
         operations.unlock_doc(item, request.user)
         return redirect(item)

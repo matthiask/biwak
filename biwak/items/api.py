@@ -101,14 +101,16 @@ class ListIn(Schema):
 
 @router.post("projects/{project_id}/lists/", response={201: ListOut})
 def list_create(request, project_id: int, data: ListIn):
-    """What clients create is visible to clients (specs/access.md)"""
+    """Staff only (specs/access.md)"""
     project = project_for(request, project_id)
+    if not ops.can_create(request.user, Kind.LIST):
+        raise HttpError(403, _("Only staff create lists."))
     item = ops.create_list(
         project=project,
         title=data.title,
         description=data.description,
         creator=request.user,
-        visible=data.visible_to_clients or request.user.is_client,
+        visible=data.visible_to_clients,
     )
     return Status(201, list_out(item))
 
@@ -178,7 +180,7 @@ class GroupIn(Schema):
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
-    item = item_for(request, list_id, Kind.LIST)
+    item = _changeable_list(request, list_id)
     group = ops.create_group(todolist=item.todolist, title=data.title[:200])
     return Status(
         201, {"id": group.pk, "title": group.title, "position": group.position}
@@ -190,9 +192,18 @@ class GroupPatch(Schema):
     index: int | None = None
 
 
+def _changeable_list(request, list_id):
+    """Groups are changed like their list: clients only in lists they
+    created (403)"""
+    item = item_for(request, list_id, Kind.LIST)
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change lists you created."))
+    return item
+
+
 def _group_for(request, group_id):
     group = get_object_or_404(Group, pk=group_id)
-    item_for(request, group.todolist_id, Kind.LIST)
+    _changeable_list(request, group.todolist_id)
     return group
 
 

@@ -16,7 +16,7 @@
         <a class="btn btn-sm btn-quiet" href="{% url 'doc_versions' item.pk %}">{% icon "clock-history" %}<span
           >{% translate "Versions" %}</span></a>
       {% endif %}
-      {% if not locked_by %}
+      {% if can_change and not locked_by %}
         <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
       {% endif %}

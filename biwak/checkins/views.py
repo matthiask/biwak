@@ -316,11 +316,11 @@ def question(request, pk):
     rows = [(o, answers[o.pk]) for o in occurrences]
     comment_form = CommentForm()
     comment_form.fields["content"].widget.attrs["data-mentions"] = ""
-    people = question.people.all()
-    if user.is_client:
-        # As on the project page: clients know the members
-        people = people.filter(memberships__project=item.project)
-    people = sorted(people, key=lambda u: (u.full_name or u.email).lower())
+    people = sorted(
+        item.project.people_known_to(user, question.people.all()),
+        key=lambda u: (u.full_name or u.email).lower(),
+    )
+    missing = ops.missing(latest) if is_latest_page and latest else []
     return render(
         request,
         "checkins/question.html",
@@ -330,7 +330,7 @@ def question(request, pk):
             "rows": rows,
             "more": more,
             "latest": latest,
-            "missing": ops.missing(latest) if is_latest_page and latest else [],
+            "missing": item.project.people_known_to(user, missing),
             "can_answer": ops.can_answer(user, item),
             "answered": {
                 o.pk
@@ -350,9 +350,12 @@ def question(request, pk):
 
 
 def question_person(request, pk, user_pk):
-    """One person's answers over time, newest first, ``?before=`` a date"""
+    """One person's answers over time, newest first, ``?before=`` a date;
+    clients only of the project's members"""
     item = question_for(request, pk)
     person = get_object_or_404(User, pk=user_pk)
+    if not item.project.people_known_to(request.user, [person]):
+        raise Http404("Not a member")
     asked = item.question.people.filter(pk=person.pk).exists()
     visible = Item.objects.visible_to(request.user)
     answers = Answer.objects.filter(

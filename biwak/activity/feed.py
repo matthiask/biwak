@@ -50,7 +50,8 @@ def feed_events(
     if action:
         events = events.filter(action=action)
     if visible_to_clients:
-        events = events.filter(item__is_client_visible=True)
+        # What clients see (``Event.objects.visible_to()``)
+        events = events.filter(item__is_client_visible=True, is_client_visible=True)
     if since is not None:
         events = events.filter(created_at__gte=since)
     return events
@@ -202,7 +203,10 @@ class Entry:
 
     @property
     def is_client_visible(self):
-        return all(e.item and e.item.is_client_visible for e in self.events)
+        return all(
+            e.is_client_visible and e.item and e.item.is_client_visible
+            for e in self.events
+        )
 
 
 def container(event):

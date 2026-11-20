@@ -71,6 +71,16 @@ class Project(models.Model):
     def is_member(self, user):
         return self.memberships.filter(user=user).exists()
 
+    def people_known_to(self, viewer, people):
+        """Those of ``people`` the viewer may see named: everybody for staff,
+        the members for clients (as on the project page; staff of
+        all-access projects needn't be members)"""
+        people = list(people)
+        if not viewer.is_client:
+            return people
+        members = set(self.memberships.values_list("user", flat=True))
+        return [user for user in people if user.pk in members]
+
     @property
     def description_first_line(self):
         """For the cards of the projects page"""

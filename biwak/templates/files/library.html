@@ -12,14 +12,16 @@
     </h1>
     <div class="wb-page-actions">
       {% if folder %}{% bookmark_button folder %}{% endif %}
-      <a
-        class="btn btn-sm btn-quiet"
-        href="{% url 'doc_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
-      >{% icon "file-earmark-plus" %}<span>{% translate "New doc" %}</span></a>
-      <a
-        class="btn btn-sm btn-quiet"
-        href="{% url 'file_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
-      >{% icon "upload" %}<span>{% translate "Upload a file" %}</span></a>
+      {% if can_create %}
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'doc_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
+        >{% icon "file-earmark-plus" %}<span>{% translate "New doc" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'file_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
+        >{% icon "upload" %}<span>{% translate "Upload a file" %}</span></a>
+      {% endif %}
     </div>
   </div>
   {% if folder %}
@@ -45,24 +47,26 @@
       <div class="list-group-item text-body-secondary">{% translate "Nothing here yet." %}</div>
     {% endfor %}
   </div>
-  <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
-    {% csrf_token %}
-    <input
-      type="text"
-      name="title"
-      class="form-control w-auto flex-grow-1"
-      placeholder="{% translate 'New folder' %}"
-      required
-      maxlength="500"
-    >
-    {% if can_create_switch %}
-      <label class="form-check mb-0"><input type="checkbox" name="visible" class="form-check-input">
-        {% translate "Visible to clients" %}</label>
-    {% endif %}
-    <button type="submit" class="btn btn-quiet">
-      {% icon "folder-plus" %}<span>{% translate "Add folder" %}</span>
-    </button>
-  </form>
+  {% if can_create %}
+    <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
+      {% csrf_token %}
+      <input
+        type="text"
+        name="title"
+        class="form-control w-auto flex-grow-1"
+        placeholder="{% translate 'New folder' %}"
+        required
+        maxlength="500"
+      >
+      {% if can_create_switch %}
+        <label class="form-check mb-0"><input type="checkbox" name="visible" class="form-check-input">
+          {% translate "Visible to clients" %}</label>
+      {% endif %}
+      <button type="submit" class="btn btn-quiet">
+        {% icon "folder-plus" %}<span>{% translate "Add folder" %}</span>
+      </button>
+    </form>
+  {% endif %}
   {% if folder %}
     <div class="row mt-4">
       <div class="col-lg-4">

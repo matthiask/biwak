@@ -165,6 +165,30 @@ class MailsTest(TestCase):
         callbacks[0]()
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_references_to_other_items_attachments(self):
+        """Their names stay out of mails (specs/files.md)"""
+        subscribe(self.cleo, self.todo)
+        secret = ops.create_todo(todolist=self.internal, title="Pay", creator=self.ada)
+        salaries = attachments.upload(
+            project=self.project,
+            file=ContentFile(b"%PDF-", name="Salaries 2027.pdf"),
+            uploaded_by=self.ada,
+        )
+        ops.update_todo(secret, actor=self.ada, notes=salaries.markdown)
+        self.act(
+            lambda: ops.add_comment(
+                self.todo,
+                author=self.ada,
+                content=f"See [the table](attachment:{salaries.key})",
+            )
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        cleo = next(m for m in mail.outbox if m.to == [self.cleo.email])
+        for text in [cleo.body, cleo.alternatives[0].content]:
+            self.assertIn("See attachment", text)
+            self.assertNotIn("Salaries", text)
+            self.assertNotIn(salaries.key, text)
+
     def test_moves_and_attachments(self):
         """Clients don't learn where it moved (the name may be internal);
         attachments are links with BASE_URL"""
