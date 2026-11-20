@@ -29,7 +29,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `reactions.md` | to-dos and comments first | built | notifications 1 | cheaper |
 | `notifications.md` | 1b: notified by default or only when tagged | built | notifications 1, files 2 | cheaper |
 | `checkins.md` | | built | schedules, mails, attachments | cheaper |
-| `notifications.md` | 2: replying by mail | built (branch `replies`) | notifications 1, check-ins | strong |
+| `notifications.md` | 2: replying by mail | built | notifications 1, check-ins | strong |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
 | `collaboration.md` | | last | everything | strong |
 
