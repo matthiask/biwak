@@ -66,6 +66,11 @@
                 {% icon "chevron-down" %}
               </summary>
               <div class="dropdown-menu dropdown-menu-end">
+                {% can_open_feed request.user as own_feed %}
+                {% if own_feed %}<a
+                    class="dropdown-item"
+                    href="{% url 'person_feed' request.user.pk %}"
+                  >{% translate "My activity" %}</a>{% endif %}
                 <a class="dropdown-item" href="{% url 'notification_settings' %}">{% translate "Notifications" %}</a>
                 <a class="dropdown-item" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
                 <a class="dropdown-item" href="{% url 'usersessions_list' %}">{% translate "Sessions" %}</a>

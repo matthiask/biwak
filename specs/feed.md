@@ -50,6 +50,12 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   member of a project the viewer can access, else 404, so that it
   doesn't tell whether a person exists. The person filter lists the same
   people.
+- The person feed is linked (decided 2026-11-20): the actor's name in
+  feed entries and on the project page, the names in its members list
+  and "My activity" in the user menu. A link appears only where the
+  viewer wouldn't get a 404 (`can_open_feed`, `person_link` in
+  `templatetags/biwak.py`): someone who left the project or shares none
+  with the viewer is plain text.
 - "Within an hour" means each event is at most an hour after the next
   older one of the entry (chains merge), and never across midnight.
 - A moved to-do's target list is not shown to clients (its name may be

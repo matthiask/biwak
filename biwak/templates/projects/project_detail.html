@@ -124,7 +124,7 @@
           >{% if request.user.is_client %}{% translate "All" %}{% else %}{% translate "Manage" %}{% endif %}</span></a>
       </h2>
       <ul class="list-unstyled mb-4">
-        {% for m in members %}<li>{{ m.user.display_name }}</li>{% endfor %}
+        {% for m in members %}<li>{% person_link m.user name=m.user.display_name %}</li>{% endfor %}
       </ul>
       <h2 class="h5">{% translate "Activity" %}</h2>
       {% include "activity/_events.html" %}
