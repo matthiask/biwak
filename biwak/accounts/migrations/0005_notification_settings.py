@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("accounts", "0003_calendartoken"),
+        ("accounts", "0004_user_project_order"),
     ]
 
     operations = [
