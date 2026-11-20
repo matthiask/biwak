@@ -1,3 +1,5 @@
+import html
+
 from django import template
 from django.conf import settings
 from django.utils.html import format_html, strip_tags
@@ -58,6 +60,27 @@ def _attachment_urls(tokens, *, absolute):
 def plain(text):
     """The text without Markdown, e.g. for snippets"""
     return " ".join(strip_tags(markdown(text)).split())
+
+
+@register.filter
+def excerpt(text, chars=200):
+    """The text as plain text of at most about ``chars`` characters
+    (specs/glance.md): Markdown rendered like ``|markdown``, tags
+    stripped, whitespace collapsed, cut at a word boundary, "…" added.
+    Images and attachments become nothing, links their text. Plain
+    ``str``: templates escape it."""
+    chars = int(chars)
+    rendered = str(render_markdown(text)).replace("</p>", " ").replace("<br>", " ")
+    # strip_tags leaves entities; unescape the text (it is escaped again on
+    # output) so that "&amp;" doesn't show
+    result = " ".join(html.unescape(strip_tags(rendered)).split())
+    if len(result) <= chars:
+        return result
+    cut = result[:chars]
+    if not result[chars].isspace():
+        # In the middle of a word: back to the last space, if there is one
+        cut = cut.rsplit(" ", 1)[0] if " " in cut else cut
+    return cut.rstrip() + "…"
 
 
 @register.simple_tag
