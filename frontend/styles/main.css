@@ -7,36 +7,41 @@
     "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --bs-body-font-size: 0.9rem;
   --bs-body-line-height: 1.55;
-  --bs-body-bg: #e9ecf0;
-  --bs-body-color: #1d2127;
-  --bs-border-color: #e1e4e9;
-  --bs-secondary-color: rgba(29, 33, 39, 0.62);
-  --bs-primary: #4257c8;
-  --bs-primary-rgb: 66, 87, 200;
-  --bs-link-color: #4257c8;
-  --bs-link-color-rgb: 66, 87, 200;
-  --bs-link-hover-color: #2f3f99;
-  --bs-link-hover-color-rgb: 47, 63, 153;
+  --bs-body-bg: #eeebe4;
+  --bs-body-color: #22251f;
+  --bs-border-color: #e2ddd2;
+  --bs-secondary-color: rgba(34, 37, 31, 0.62);
+  --bs-primary: #2d6a4f;
+  --bs-primary-rgb: 45, 106, 79;
+  --bs-link-color: #2d6a4f;
+  --bs-link-color-rgb: 45, 106, 79;
+  --bs-link-hover-color: #1f4d39;
+  --bs-link-hover-color-rgb: 31, 77, 57;
   --bs-border-radius: 0.5rem;
   --wb-surface: #fff;
   /* Fields on the page's background, e.g. filters */
   --wb-field-bg: #fff;
-  --wb-surface-border: #e1e4e9;
-  --wb-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  /* Stronger than the cards' borders: fields sit on the stone page too */
+  --wb-field-border: #c9c1b1;
+  --wb-surface-border: #e2ddd2;
+  --wb-shadow: 0 1px 2px rgba(40, 32, 16, 0.05);
 }
 
 [data-bs-theme="dark"] {
-  --bs-body-bg: #0b0d10;
-  --bs-body-color: #dfe2e7;
-  --bs-border-color: #2b2f37;
-  --bs-secondary-color: rgba(223, 226, 231, 0.62);
-  --bs-link-color: #8f9ef0;
-  --bs-link-color-rgb: 143, 158, 240;
-  --bs-link-hover-color: #b5bff5;
-  --bs-link-hover-color-rgb: 181, 191, 245;
-  --wb-surface: #15181d;
+  --bs-body-bg: #0d0f0d;
+  --bs-body-color: #e2e3dc;
+  --bs-border-color: #2d322c;
+  --bs-secondary-color: rgba(226, 227, 220, 0.62);
+  --bs-link-color: #7fcca4;
+  --bs-link-color-rgb: 127, 204, 164;
+  --bs-link-hover-color: #a8e0c2;
+  --bs-link-hover-color-rgb: 168, 224, 194;
+  --wb-surface: #171a16;
   --wb-field-bg: #000;
-  --wb-surface-border: #2b2f37;
+  --wb-field-border: #434a41;
+  --wb-surface-border: #2d322c;
+  --bs-primary: #3a8562;
+  --bs-primary-rgb: 58, 133, 98;
   --wb-shadow: none;
 }
 
@@ -71,8 +76,8 @@ h3,
 .btn-primary {
   --bs-btn-bg: var(--bs-primary);
   --bs-btn-border-color: var(--bs-primary);
-  --bs-btn-hover-bg: #3546a8;
-  --bs-btn-hover-border-color: #3546a8;
+  --bs-btn-hover-bg: #24583f;
+  --bs-btn-hover-border-color: #24583f;
 }
 
 .card {
@@ -87,9 +92,34 @@ h3,
   --bs-list-group-border-color: var(--wb-surface-border);
 }
 
+/* The pine bar with the amber tent: Biwak at a glance, in both modes */
 .wb-navbar {
-  background: var(--wb-surface);
-  border-bottom: 1px solid var(--wb-surface-border);
+  --bs-navbar-color: rgba(255, 255, 255, 0.78);
+  --bs-navbar-hover-color: #fff;
+  --bs-navbar-active-color: #fff;
+  --bs-navbar-brand-color: #fff;
+  --bs-navbar-brand-hover-color: #fff;
+  background: #1f3d2f;
+  border-bottom: 3px solid #e8a33d;
+}
+
+[data-bs-theme="dark"] .wb-navbar {
+  background: #142a20;
+}
+
+.wb-navbar .nav-link.active {
+  box-shadow: inset 0 -2px 0 #e8a33d;
+}
+
+.wb-navbar .btn-quiet {
+  --bs-btn-color: rgba(255, 255, 255, 0.85);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: rgba(255, 255, 255, 0.25);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --bs-btn-hover-border-color: rgba(255, 255, 255, 0.4);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: rgba(255, 255, 255, 0.15);
 }
 
 /* Small screens without Bootstrap's JavaScript: the brand and the user's
@@ -235,10 +265,18 @@ h3,
   display: none !important;
 }
 
-/* Not grey on the grey page (filters, the page's actions): unchecked
-   boxes would disappear */
-:is(.wb-filters, .wb-page-actions) :is(.form-select, .form-control) {
+/* Fields stand out on cards and on the stone page alike */
+:is(.form-select, .form-control) {
   background-color: var(--wb-field-bg);
+  border-color: var(--wb-field-border);
+}
+
+.form-check-input {
+  --bs-form-check-bg: var(--wb-field-bg);
+}
+
+.form-check-input:not(:checked) {
+  border-color: var(--wb-field-border);
 }
 
 /* Disabled fields (e.g. the mail address in the settings): Bootstrap's
@@ -248,10 +286,6 @@ h3,
   border-style: dashed;
   color: var(--bs-secondary-color);
   cursor: not-allowed;
-}
-
-.wb-filters .form-check-input {
-  --bs-form-check-bg: var(--wb-field-bg);
 }
 
 .wb-meta {
@@ -437,10 +471,10 @@ a.wb-row-title:hover {
    assigned tones are the circle browser's */
 :root,
 [data-bs-theme="light"] {
-  --wb-neutral-bg: #eceef2;
-  --wb-neutral-ink: #4a525c;
-  --wb-primary-bg: #e5e8f8;
-  --wb-primary-ink: #2f3f99;
+  --wb-neutral-bg: #ebe7df;
+  --wb-neutral-ink: #514c42;
+  --wb-primary-bg: #dcefe4;
+  --wb-primary-ink: #1f4d39;
   --wb-circle-bg: #e1edfb;
   --wb-circle-ink: #1a58a6;
   --wb-info-bg: #d9f1f4;
@@ -456,10 +490,10 @@ a.wb-row-title:hover {
 }
 
 [data-bs-theme="dark"] {
-  --wb-neutral-bg: #262a31;
-  --wb-neutral-ink: #c3c8d0;
-  --wb-primary-bg: #1f2547;
-  --wb-primary-ink: #aab5f5;
+  --wb-neutral-bg: #292c27;
+  --wb-neutral-ink: #c9cbc2;
+  --wb-primary-bg: #16352a;
+  --wb-primary-ink: #9fdcbc;
   --wb-circle-bg: #132a46;
   --wb-circle-ink: #8fbcf2;
   --wb-info-bg: #0e3338;
