@@ -149,7 +149,23 @@
           href="{% url 'project_files' project.pk %}"
         >{% translate "Docs and files" %}</a>
       </h2>
-      <p>
+      <div class="list-group mb-2">
+        {% for item in front_files %}
+          <a
+            class="list-group-item list-group-item-action"
+            href="{{ item.get_absolute_url }}"
+          >
+            {% if item.kind == "doc" %}{% icon "file-earmark-text" %}{% else %}{% icon "file-earmark" %}{% endif %}
+            <span class="fw-semibold">{{ item|item_title }}</span>
+            {% client_badge item %}
+            <span class="small text-body-secondary">· {{ item.creator.get_short_name }} ·
+              {{ item.updated_at|date:"j. M Y" }}</span>
+          </a>
+        {% empty %}
+          <div class="list-group-item text-body-secondary">{% translate "No docs or files yet." %}</div>
+        {% endfor %}
+      </div>
+      <p class="small">
         <a
           href="{% url 'project_files' project.pk %}"
         >{% blocktranslate with folders=root_counts.folders docs=root_counts.docs files=root_counts.files %}{{ folders }} folders, {{ docs }} docs, {{ files }} files{% endblocktranslate %}</a>

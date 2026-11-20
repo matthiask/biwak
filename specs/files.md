@@ -13,6 +13,13 @@ through `previews.py`) and `docs.py`; the API in `api.py`, CLI 0.10.0.
 Decisions and open questions of the building agent are under "Details
 of stage 2".
 
+Decided 2026-11-20 ("consistent with the rest"): the message board has 50
+messages per page; the project page lists the latest three docs and files;
+whom to notify has no default (the same in form, API and CLI); older doc
+and file versions are for staff only (like the item history); moving to
+the top level makes the item internal (like new top-level items).
+Reactions on messages, docs and files: see `reactions.md`.
+
 **Agent:** stage 1 with a strong model (downloads are an entry point for
 visibility); stage 2 suits a cheaper model following this spec and the
 checklist in `AGENTS.md`.
@@ -261,11 +268,16 @@ Marked **?** are questions the spec didn't answer, built the safe way.
   (what clients create is visible). Moving: `can_change()` (clients only
   what they created), into folders the person sees, a folder never into
   itself or below itself. A client's item moved to the root gets the
-  root's default (internal), as the switch is off there (**?**).
-- **Board:** 25 messages per page besides the pinned ones (all on the
-  first page), "Older messages" pages by cursor (**?**); the API pages
-  with cursors, pinned first. The project page shows only counts of the
-  root's folders, docs and files under "Docs and files" (**?**).
+  root's default (internal), as the switch is off there (decided
+  2026-11-20).
+- **Board:** 50 messages per page besides the pinned ones (all on the
+  first page; the feed's page size, decided 2026-11-20, "consistent with
+  the rest"), "Older messages" pages by cursor; the API pages with
+  cursors, pinned first. The project page shows the latest three docs
+  and files changed, at any depth (title, kind icon, who and when, client
+  badge; what the person sees, `queries.front_files()`) and a small line
+  with the counts of the root's folders, docs and files, linking to the
+  files page (decided 2026-11-20).
 - **Pinning:** `pinned` and `unpinned` are events like the others but
   `notify()` skips them; the pin operations refuse clients themselves
   too.

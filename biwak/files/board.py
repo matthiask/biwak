@@ -22,7 +22,7 @@ from biwak.projects.views import project_for
 
 # Messages per page of the board besides the pinned ones (not decided in
 # the spec; the board grows)
-PAGE_SIZE = 25
+PAGE_SIZE = 50
 
 
 def project_messages(request, pk):
