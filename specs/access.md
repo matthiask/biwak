@@ -77,15 +77,23 @@ Like Basecamp's bright yellow:
 No single sign-on as the only way in: not every client has a Google or
 Microsoft account (decided 2026-11-20).
 
-- Everybody can log in with their email address: a one-time login link by
-  mail, valid for a short time and once. Optionally a passkey afterwards.
-  Invitations work the same way.
-- Staff can also use Google sign-in (`django-authlib`, as in Governance).
+- **django-allauth** instead of Governance's `django-authlib` (decided
+  2026-11-20): it covers everything below in one maintained package, above
+  all passkeys. Verify the details against its current documentation.
+- Everybody can log in with their email address: a one-time code by mail
+  (allauth's login by code), short-lived and single-use. A code works
+  when the mail is read on the phone and the app is open on the laptop,
+  which a link doesn't. Invitations work the same way.
+- **Passkeys** (WebAuthn, allauth's MFA module): offered after the first
+  login, then the fastest way in, without a mail.
+- Staff can also use Google sign-in (allauth's Google provider), but it's
+  never required.
+- No passwords at first; add them only if somebody really needs them.
 - Sessions last weeks; people can see their sessions and log out
   everywhere.
 - Links in notification mails lead to the item, through the login if
   needed, and back to the item.
-- Rate limits on login links per address and per IP; the response never
+- Rate limits on login codes per address and per IP (allauth has them); the response never
   says whether an address exists.
 - Staff or client is a property of the person, set by admins; clients
   belong to an organization (for display: "Ada, Example Ltd").

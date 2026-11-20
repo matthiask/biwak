@@ -171,7 +171,7 @@ and `specs/access.md`).
 - 2026-11-20: No comments on lists, groups or folders; no to-dos outside
   lists.
 - 2026-11-20: No internal comments on items visible to clients.
-- 2026-11-20: No single sign-on as the only way in; login by mail link for
+- 2026-11-20: No single sign-on as the only way in; login by mail code or passkey (django-allauth) for
   everybody, Google sign-in optional for staff.
 - 2026-11-20: Replying to notification mails posts a comment, from the
   start.
