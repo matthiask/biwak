@@ -39,6 +39,9 @@ indexes.
 
 ## Decided (2026-11-20)
 
+- Excerpts are plain text like the excerpts elsewhere (`glance.md`): no
+  Markdown, mentions as "@Label" as written.
+
 - The `simple` text search configuration with prefix matching, the same
   for every language; no stemming.
 - Archived projects are searched, their results marked as archived; a
