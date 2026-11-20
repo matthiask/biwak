@@ -23,6 +23,36 @@ from biwak.inbound.models import (
 from biwak.inbound.support import ReplyTestCase, replying
 from biwak.inbound.tokens import prune
 from biwak.items import operations as ops
+from biwak.test_utils import person
+
+
+class RevokeActionTest(ReplyTestCase):
+    def test_admin_revokes_tokens(self):
+        admin = person("Root", is_admin=True)
+        token = self.token()
+        done = self.token(revoked_at=timezone.now() - dt.timedelta(days=1))
+        revoked_at = done.revoked_at
+        self.client.force_login(admin)
+        response = self.client.post(
+            "/admin/inbound/replytoken/",
+            {"action": "revoke", "_selected_action": [token.pk, done.pk]},
+        )
+        self.assertEqual(response.status_code, 302)
+        token.refresh_from_db()
+        done.refresh_from_db()
+        self.assertIsNotNone(token.revoked_at)
+        # Already revoked ones keep their time
+        self.assertEqual(done.revoked_at, revoked_at)
+
+    def test_staff_without_admin_cannot(self):
+        token = self.token()
+        self.client.force_login(self.ada)
+        self.client.post(
+            "/admin/inbound/replytoken/",
+            {"action": "revoke", "_selected_action": [token.pk]},
+        )
+        token.refresh_from_db()
+        self.assertIsNone(token.revoked_at)
 
 
 class ReplyToTest(ReplyTestCase):

@@ -87,6 +87,7 @@ class MailsTest(TestCase):
             message.extra_headers["List-Unsubscribe-Post"],
             "List-Unsubscribe=One-Click",
         )
+        self.assertEqual(message.extra_headers["Auto-Submitted"], "auto-generated")
         self.assertFalse(Notification.objects.filter(sent_at__isnull=True).exists())
         # Nothing twice
         self.assertEqual(self.send(now + dt.timedelta(minutes=10)), 0)
@@ -115,6 +116,16 @@ class MailsTest(TestCase):
         self.bob.notification_level = NotificationLevel.NOTHING
         self.bob.save()
         self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+
+    def test_deactivated_before_sending(self):
+        """Inactive people get nothing; their notifications are deleted"""
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        self.assertTrue(Notification.objects.filter(user=self.bob).exists())
+        self.bob.is_active = False
+        self.bob.save()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(user=self.bob).exists())
 
     def test_failed_sending_retries(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
@@ -153,6 +164,11 @@ class MailsTest(TestCase):
         self.assertNotIn("Today", message.body)
         self.assertEqual(message.body.count("Clients can see this."), 1)
         self.assertNotIn("List-Unsubscribe-Post", message.extra_headers)
+        self.assertEqual(
+            message.extra_headers["List-Unsubscribe"],
+            "<https://biwak.example.org/accounts/notifications/>",
+        )
+        self.assertEqual(message.extra_headers["Auto-Submitted"], "auto-generated")
         self.assertEqual(Notification.objects.filter(sent_at=None).count(), 1)
         self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 1, tzinfo=ZURICH)), 0)
 
