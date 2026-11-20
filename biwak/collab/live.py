@@ -9,6 +9,7 @@ writes ``Doc.content``, the events and the versions.
 """
 
 from importlib import import_module
+from itertools import groupby
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -16,6 +17,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from biwak.activity.mentions import mentioned_ids
 from biwak.collab import ytext
 from biwak.collab.models import LiveState, LiveUpdate
 from biwak.items import operations as ops
@@ -110,21 +112,68 @@ def apply_text(doc, content, *, user):
     return True
 
 
+def may_write(user, item):
+    """Whether what the person typed is merged: they still see the doc and
+    may change it. Trashing and the read-only option don't count: what was
+    typed before is kept."""
+    return (
+        ops.can_change(user, item)
+        and Item.objects.visible_to(user, with_trashed=True).filter(pk=item.pk).exists()
+    )
+
+
 def merge(doc):
     """Merges the pending updates into the state; call with the doc's row
-    locked. Returns the text and who wrote the updates (in order, without
-    repetitions)."""
+    locked. The updates of people who can't change the doc anymore are
+    dropped, unless others' updates build on them (their text would be
+    lost); either way they aren't authors. Returns the text, the authors
+    (in order, without repetitions) and who typed the mentions new in the
+    text, by the mentioned person's ID (the author whose updates completed
+    them)."""
     state = ensure_state(doc)
     updates = list(doc.live_updates.select_related("user"))
     if not updates:
-        return doc.content, []
-    y = ytext.ydoc(state.state, [u.data for u in updates])
+        return doc.content, [], {}
+    LiveUpdate.objects.filter(pk__in=[u.pk for u in updates]).delete()
+    authors = {u.user_id: u.user for u in updates}
+    authors = {pk: user for pk, user in authors.items() if may_write(user, doc.item)}
+    kept = [u for u in updates if u.user_id in authors]
+    if len(kept) < len(updates) and _strands(state.state, updates, kept):
+        kept = updates
+    y = ytext.ydoc(state.state)
+    known = mentioned_ids(ytext.text(y))
+    typed = {}
+    for user_id, run in groupby(kept, key=lambda u: u.user_id):
+        for update in run:
+            y.apply_update(bytes(update.data))
+        now = mentioned_ids(ytext.text(y))
+        if user_id in authors:
+            for pk in now - known:
+                typed.setdefault(pk, authors[user_id])
+        known = now
     state.state = y.get_update()
     state.updated_at = timezone.now()
     state.save(update_fields=["state", "updated_at"])
-    LiveUpdate.objects.filter(pk__in=[u.pk for u in updates]).delete()
-    authors = list({u.user_id: u.user for u in updates}.values())
-    return ytext.text(y), authors
+    return ytext.text(y), list(authors.values()), typed
+
+
+def _strands(state, updates, kept):
+    """Whether some of ``kept`` build on the other updates: Yjs keeps them
+    pending without them, and their text out of the document"""
+    y = ytext.ydoc(state)
+    clients = set()
+    for update in updates:
+        before = ytext.clocks(y)
+        y.apply_update(bytes(update.data))
+        if update in kept:
+            clients |= {
+                client
+                for client, clock in ytext.clocks(y).items()
+                if before.get(client) != clock
+            }
+    everything = ytext.clocks(y)
+    merged = ytext.clocks(ytext.ydoc(state, [u.data for u in kept]))
+    return any(merged.get(client, 0) < everything[client] for client in clients)
 
 
 def pending():

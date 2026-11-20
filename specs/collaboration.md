@@ -109,10 +109,10 @@ browsers (Playwright) typing, a client watching, an internal doc
   websocket accepts and closes with 4404 (like the pages' 404; the editor
   doesn't reconnect). Checked again right after joining the channel
   groups that tell about changes, before answering every sync, when an
-  event may change access
-  (moved, visibility changed, trashed, archived, project edited, member
-  removed or left), when a person is saved (admin: deactivated, made a
-  client) or a project (admin: made limited, archived), when the read-only option changes, and every 60 seconds
+  event may change access (moved, visibility changed, trashed, archived,
+  project edited, member removed or left), when a person is saved
+  (admin: deactivated, made a client) or a project (admin: made limited,
+  archived), when the read-only option changes, and every 60 seconds
   (**?**), which also closes sessions whose login session is gone
   (logging out everywhere). Losing access closes the session (4404; the
   editor shows "You can't see this doc anymore." and removes the text);
@@ -126,9 +126,15 @@ browsers (Playwright) typing, a client watching, an internal doc
   session), mentions, attachments, a version by the version rules of
   `files.md`. With several authors the newest version is updated when it
   is by one of them and younger than 10 minutes, else a new one is made
-  by the first of them (**?**). Mentions newly typed are credited to the
-  first author of the merge. `fairy_tasks` saves what is left (a process
-  stopped while somebody typed).
+  by the first of them (**?**). Mentions newly typed are credited to who
+  typed them (whose updates completed them), the others to the first
+  author. What people typed who can't change the doc anymore when it's
+  saved (no longer seeing it, a client now) is dropped; when others'
+  updates build on it (Yjs would leave their text out too), it stays,
+  but they're no authors: no event, no mentions (decided 2026-11-20,
+  after the visibility review). Trashing and the read-only option don't
+  drop what was typed before. `fairy_tasks` saves what is left (a
+  process stopped while somebody typed).
 - **Edits through the API, the CLI, restoring a version, renaming**
   (`update_doc()`, `restore_doc_version()`): the new content is applied
   as an edit (a minimal diff) of the stored state, whose text is the

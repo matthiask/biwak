@@ -3,7 +3,7 @@ browsers' Yjs (``frontend/collab.js``: ``ydoc.getText("content")``)"""
 
 from difflib import SequenceMatcher
 
-from pycrdt import Doc, Text
+from pycrdt import Decoder, Doc, Text
 
 
 TEXT = "content"
@@ -56,6 +56,16 @@ def edit(doc, new):
                 begin = start + len(inserted)
                 del ytext[begin : begin + len(old[i1:i2].encode())]
     return doc.get_update(before)
+
+
+def clocks(doc):
+    """The document's state vector: what it has of every Yjs client, as
+    ``{client ID: clock}``"""
+    decoder = Decoder(doc.get_state())
+    return {
+        decoder.read_var_uint(): decoder.read_var_uint()
+        for _ in range(decoder.read_var_uint())
+    }
 
 
 def is_valid(update):

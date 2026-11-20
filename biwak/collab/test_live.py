@@ -9,12 +9,13 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.utils import timezone
 
-from biwak.activity.models import Event
+from biwak.activity.models import Event, Subscription
 from biwak.collab import live, ytext
 from biwak.collab.models import LiveState, LiveUpdate
 from biwak.files import attachments, operations
 from biwak.items import operations as ops
 from biwak.items.models import Item
+from biwak.projects.models import Project
 from biwak.search.queries import search
 from biwak.test_utils import person, project
 
@@ -160,6 +161,56 @@ class LiveTest(TestCase):
         event = Event.objects.get(item=self.item, action="edited")
         self.assertEqual(event.actor, self.bob)
         self.assertEqual(event.data["mentioned"], [self.ada.pk])
+
+    def test_mentions_are_credited_to_who_typed_them(self):
+        self.type(self.ada, f"Agenda [@Bob](person:{self.bob.pk})")
+        self.type(
+            self.bob,
+            f"Agenda [@Bob](person:{self.bob.pk}) [@Ada](person:{self.ada.pk})",
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            operations.save_live(self.doc.pk)
+        mentioned = {
+            event.actor: event.data.get("mentioned")
+            for event in Event.objects.filter(item=self.item, action="edited")
+        }
+        self.assertEqual(mentioned, {self.ada: [self.bob.pk], self.bob: [self.ada.pk]})
+        self.assertEqual(
+            Subscription.objects.get(item=self.item, user=self.bob).added_by, self.ada
+        )
+
+    def test_what_people_who_lost_access_typed_is_dropped(self):
+        """Bob is staff, not a member: the project made limited before the
+        save, what he typed is gone (and so are his event and mentions)"""
+        self.type(self.ada, "Agenda by Ada")
+        self.type(self.bob, f"Agenda by Ada, [@Cleo](person:{self.cleo.pk}) and Bob")
+        Project.objects.filter(pk=self.project.pk).update(is_all_access=False)
+        operations.save_live(self.doc.pk)
+        self.refresh()
+        self.assertEqual(self.doc.content, "Agenda by Ada")
+        self.assertEqual(ytext.text(live.load(self.doc.pk)), "Agenda by Ada")
+        self.assertEqual(
+            [e.actor for e in Event.objects.filter(item=self.item, action="edited")],
+            [self.ada],
+        )
+        self.assertFalse(LiveUpdate.objects.exists())
+
+    def test_what_others_built_on_stays_but_isnt_credited(self):
+        """Dropping Bob's text would leave out Ada's typed after it (Yjs
+        keeps her updates pending without his): it stays, but Bob is no
+        author"""
+        self.type(self.bob, f"Agenda [@Ada](person:{self.ada.pk}) by Bob")
+        self.type(self.ada, f"Agenda [@Ada](person:{self.ada.pk}) by Bob, approved")
+        Project.objects.filter(pk=self.project.pk).update(is_all_access=False)
+        with self.captureOnCommitCallbacks(execute=True):
+            operations.save_live(self.doc.pk)
+        self.refresh()
+        self.assertEqual(
+            self.doc.content, f"Agenda [@Ada](person:{self.ada.pk}) by Bob, approved"
+        )
+        (event,) = Event.objects.filter(item=self.item, action="edited")
+        self.assertEqual(event.actor, self.ada)
+        self.assertNotIn("mentioned", event.data)
 
     def test_search_finds_what_was_typed_and_clients_still_dont(self):
         self.type(self.ada, "Agenda zeppelin")

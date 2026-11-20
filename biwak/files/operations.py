@@ -149,7 +149,7 @@ def _save(item, doc, *, title=None, actor=None, new_version=False):
     into ``Doc.content``; ``title`` renames the doc. One ``edited`` event
     per person and editing session (merging into their last one), a
     version by the version rules. Returns whether anything changed."""
-    content, authors = live.merge(doc)
+    content, authors, typed = live.merge(doc)
     if actor is not None and actor not in authors:
         authors.append(actor)
     renamed = title is not None and title != item.title
@@ -170,8 +170,15 @@ def _save(item, doc, *, title=None, actor=None, new_version=False):
         record(actor=author, action=Action.EDITED, project=item.project, item=item)
         for author in authors
     ]
+    # Mentions to who typed them, the rest (a title, an API edit) to the
+    # first author
+    by_author = dict(zip(authors, events, strict=True))
     mentions.update(
-        item, f"{item.title}\n\n{content}", actor=authors[0], event=events[0]
+        item,
+        f"{item.title}\n\n{content}",
+        actor=authors[0],
+        event=events[0],
+        credit={pk: (author, by_author[author]) for pk, author in typed.items()},
     )
     _save_version(
         doc, title=item.title, content=content, authors=authors, force=new_version

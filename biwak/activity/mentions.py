@@ -148,13 +148,15 @@ def resolve(item, text):
     return "".join(result)
 
 
-def update(item, text, *, comment=None, actor, event=None):
+def update(item, text, *, comment=None, actor, event=None, credit=None):
     """Stores who ``text`` (an item's texts, or ``comment``) mentions, from
     the operations saving texts. Only people who can see the item count;
     those newly mentioned are subscribed (even after unsubscribing) and
     added to ``event.data["mentioned"]``, so ``notify()`` tells them.
     People no longer mentioned are forgotten: mentioning them again counts
-    as new. Returns those newly mentioned."""
+    as new. ``credit`` gives others than ``actor`` and ``event`` the
+    mentions they typed: ``{mentioned person's ID: (actor, event)}`` (docs
+    edited live by several people). Returns those newly mentioned."""
     ids = mentioned_ids(text)
     mentions = Mention.objects.filter(item=item, comment=comment)
     mentions.exclude(user__in=ids).delete()
@@ -167,11 +169,20 @@ def update(item, text, *, comment=None, actor, event=None):
     Mention.objects.bulk_create([
         Mention(item=item, comment=comment, user=user) for user in people
     ])
-    newly = [user for user in people if user != actor]
-    for user in newly:
-        subscribe(user, item, added_by=actor)
-    if event is not None and newly:
-        mentioned = set(event.data.get("mentioned", []))
-        event.data["mentioned"] = sorted(mentioned | {user.pk for user in newly})
-        event.save(update_fields=["data"])
+    credit = credit or {}
+    newly = []
+    # Event ID: (event, IDs of those it newly mentions)
+    told = {}
+    for user in people:
+        by, by_event = credit.get(user.pk, (actor, event))
+        if user == by:
+            continue
+        newly.append(user)
+        subscribe(user, item, added_by=by)
+        if by_event is not None:
+            told.setdefault(by_event.pk, (by_event, set()))[1].add(user.pk)
+    for told_event, ids in told.values():
+        mentioned = set(told_event.data.get("mentioned", []))
+        told_event.data["mentioned"] = sorted(mentioned | ids)
+        told_event.save(update_fields=["data"])
     return newly
