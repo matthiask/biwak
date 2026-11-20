@@ -3,9 +3,15 @@
 **Status:** stage 1 built (2026-11-20): `biwak/files/` (the
 `Attachment` model, `attachments.py` with the operations, upload and
 download views, `api.py`), storage settings, `frontend/attachments.js`,
-`--attach` on `biwak todo add|edit|comment`. Stage 2 is open; the item
-kinds `message`, `folder` and `doc` and their detail models exist (core),
-without pages.
+`--attach` on `biwak todo add|edit|comment`. Stage 2 built (2026-11-20,
+branch `files2`): the file kind (`Upload` in `biwak/items/models.py`,
+`FileVersion` in `biwak/files/models.py`), message categories (Django
+admin), `Message.pinned_at`, doc versions and locks; operations in
+`biwak/files/operations.py` (creating is in `biwak/items/operations.py`);
+pages in `board.py` (messages), `library.py` (folders, files, previews
+through `previews.py`) and `docs.py`; the API in `api.py`, CLI 0.10.0.
+Decisions and open questions of the building agent are under "Details
+of stage 2".
 
 **Agent:** stage 1 with a strong model (downloads are an entry point for
 visibility); stage 2 suits a cheaper model following this spec and the
@@ -208,3 +214,61 @@ rules, versions), files (upload, replace, versions, download URL).
   newer version); file versions keep comments and URL.
 - Pinning: the board's and the project page's order, a client can't pin
   (page and API), the events notify nobody.
+
+### Details of stage 2
+
+Proposed by the building agent (2026-11-20); change them here if wrong.
+Marked **?** are questions the spec didn't answer, built the safe way.
+
+- **Whom to notify (?)**: the forms, the API (`notify`: `everybody`,
+  `nobody` or IDs) and the CLI (`--notify`) have no default: posting a
+  message, doc or file asks every time. `create_message()`,
+  `create_doc()` and `create_upload()` default to `nobody`.
+- **Older versions are for staff (?)**: the doc versions' pages and API,
+  the older versions of files and their downloads. Like the history,
+  they can hold what was internal before the item was shown to clients.
+  Clients see and edit the current doc, and download the current file.
+  A client's refused save over a newer version names who saved it but
+  has no link to compare.
+- **Doc versions:** the newest version always equals the doc. Saving
+  updates it when it is by the same person and not older than 10
+  minutes, else starts a new one; "Save as a version" always starts a
+  new one. Restoring saves the old title and content as a new version.
+  Unchanged saves do nothing. The title is part of a version.
+- **Doc locks:** opening the edit form takes the lock (someone else
+  holding it is sent back to the doc with "Ada is editing"); the form
+  renews it every minute (`frontend/doc-lock.js`); it expires 5 minutes
+  after the last renewal. Saving gives the lock up (**?**), so does
+  Cancel (a POST to `/docs/<pk>/lock/` with `release`). Saving or
+  restoring while someone else holds an unexpired lock is refused.
+  Refusing a stale save: the form carries `base_version` (the newest
+  version when it opened); a newer version by somebody else refuses the
+  save, newer ones by the same person don't. The API's `base_version` is
+  optional. The lock columns are left out of the audit log (renewed
+  every minute).
+- **Files:** the title is the file's name when uploaded and stays when a
+  new version is uploaded (**?**), the version has its own name.
+  Clients upload where they see and replace or rename only what they
+  uploaded; staff everything. Replacing records `edited` (with the new
+  version's name).
+- **Previews:** 400 pixels wide as specified, images already smaller are
+  not enlarged (**?**); broken files have none (404, logged). Only the
+  current version has a preview on the page.
+- **Folders:** anyone who sees where creates folders, docs and files
+  (what clients create is visible). Moving: `can_change()` (clients only
+  what they created), into folders the person sees, a folder never into
+  itself or below itself. A client's item moved to the root gets the
+  root's default (internal), as the switch is off there (**?**).
+- **Board:** 25 messages per page besides the pinned ones (all on the
+  first page), "Older messages" pages by cursor (**?**); the API pages
+  with cursors, pinned first. The project page shows only counts of the
+  root's folders, docs and files under "Docs and files" (**?**).
+- **Pinning:** `pinned` and `unpinned` are events like the others but
+  `notify()` skips them; the pin operations refuse clients themselves
+  too.
+- **Mentions:** the edit forms and comments offer `@`; the new forms have
+  no item to ask yet, so typed `@` completion is missing there (the
+  syntax still works), and the API's create endpoints take the syntax
+  only (plain `@names` are resolved on update).
+- **Dependencies:** Pillow and pypdfium2 (pure wheels, no system
+  packages).

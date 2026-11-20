@@ -458,3 +458,35 @@ class HistoryTest(Fixture, TestCase):
         self.client.force_login(self.cleo)
         url = reverse("item_history", args=[self.secret.pk])
         self.assertEqual(self.client.get(url).status_code, 404)
+
+
+class BookmarkTest(Fixture, TestCase):
+    def test_bookmarks_follow_visibility_for_the_new_kinds(self):
+        message = ops.create_message(
+            project=self.project, title="Hi", creator=self.ada, visible=True
+        )
+        upload = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="a.txt"),
+            creator=self.ada,
+            visible=True,
+        )
+        items = [self.shared, message, upload, self.public]
+        self.client.force_login(self.cleo)
+        for item in items:
+            self.client.post(
+                reverse("item_bookmark", args=[item.pk]), {"bookmark": "1"}
+            )
+        response = self.client.get(reverse("bookmarks"))
+        for item in items:
+            self.assertContains(response, item.get_absolute_url())
+        # Internal items cannot be bookmarked by a client
+        response = self.client.post(
+            reverse("item_bookmark", args=[self.secret.pk]), {"bookmark": "1"}
+        )
+        self.assertEqual(response.status_code, 404)
+        # What is hidden again disappears from their bookmarks
+        ops.set_visibility(self.shared, visible=False, actor=self.ada)
+        response = self.client.get(reverse("bookmarks"))
+        self.assertNotContains(response, self.shared.get_absolute_url())
+        self.assertContains(response, message.get_absolute_url())
