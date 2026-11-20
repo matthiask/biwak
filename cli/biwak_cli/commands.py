@@ -1210,6 +1210,57 @@ def feed(project, person, kind, action, since, limit, as_json):
     return None
 
 
+# Search ---------------------------------------------------------------------
+
+
+@cli.command()
+@click.argument("terms", nargs=-1, required=True)
+@click.option("--project", type=int, help="Only this project's ID.")
+@click.option("--kind", help="Only this kind of item: todo, doc, message, …")
+@click.option("--mine", is_flag=True, help="Only what you created.")
+@click.option("--no-archived", is_flag=True, help="Leave out archived projects.")
+@click.option("--limit", default=50, show_default=True, help="At most this many.")
+@json_option
+def search(terms, project, kind, mine, no_archived, limit, as_json):
+    """Find items by words in their title, text or comments, newest first.
+    Every word also matches as the start of a word."""
+    params = {"q": " ".join(terms), "page_size": min(limit, 200)}
+    if project is not None:
+        params["project_id"] = project
+    if kind:
+        params["kind"] = kind
+    if mine:
+        params["mine"] = "true"
+    if no_archived:
+        params["exclude_archived"] = "true"
+    results = []
+    while len(results) < limit:
+        data = request("GET", "search/", params=params)
+        results += data["results"]
+        if not data["next"]:
+            break
+        params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
+    results = results[:limit]
+    if as_json:
+        return echo_json(results)
+    t = table("ID", "Kind", "Title", "Project", "Found", "")
+    for result in results:
+        found = result["excerpt"]
+        if found and result["in_comment"]:
+            found = f"(comment) {found}"
+        t.add_row(
+            str(result["id"]),
+            result["kind"],
+            result["title"],
+            result["project_name"]
+            + (" (archived)" if result["project_archived"] else ""),
+            found,
+            clients(result),
+        )
+    console.print(t)
+    return None
+
+
 # Bookmarks and links --------------------------------------------------------
 
 
