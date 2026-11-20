@@ -31,9 +31,9 @@ from biwak.test_utils import person, project
 
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import expect, sync_playwright
 except ImportError:  # pragma: no cover
-    sync_playwright = None
+    expect = sync_playwright = None
 
 
 @tag("e2e")
@@ -160,7 +160,7 @@ class TodosTest(E2ETestCase):
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         title = add.locator("[name=title]")
-        self.assertTrue(title.evaluate("el => el === document.activeElement"))
+        expect(title).to_be_focused()
 
         title.fill("Write the brief")
         add.locator("[name=notes]").fill("Two pages, *short*")
@@ -176,7 +176,7 @@ class TodosTest(E2ETestCase):
         self.assertEqual(title.input_value(), "")
         self.assertEqual(add.locator("[name=notes]").input_value(), "")
         self.assertFalse(add.locator(".wb-chip input").first.is_checked())
-        self.assertTrue(title.evaluate("el => el === document.activeElement"))
+        expect(title).to_be_focused()
 
         title.fill("Send it")
         title.press("Control+Enter")
@@ -708,9 +708,7 @@ class PageTest(E2ETestCase):
         menu.locator("summary").focus()
         menu.locator("summary").press("Escape")
         self.assertFalse(menu.evaluate("el => el.open"))
-        self.assertTrue(
-            menu.locator("summary").evaluate("el => el === document.activeElement")
-        )
+        expect(menu.locator("summary")).to_be_focused()
 
     def test_theme(self):
         page = self.page
