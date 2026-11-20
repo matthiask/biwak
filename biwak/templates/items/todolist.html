@@ -132,6 +132,7 @@
       <div class="mt-2">{% include "items/_completed.html" with cursor=completed_cursor %}</div>
     </details>
   {% endif %}
+  <div class="mt-4">{% item_notifications item %}</div>
   {% if can_switch %}
     <form method="post" action="{% url 'switch' item.pk %}" class="mt-4 small">
       {% csrf_token %}

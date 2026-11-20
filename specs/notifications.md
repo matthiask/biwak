@@ -83,7 +83,11 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   reason ("can't see internal items", "not a member of this project")
   and can't be chosen.
 - **Endpoint** for the list: `GET /items/<pk>/mentionable/?q=` (and
-  `GET /lists/<pk>/mentionable/?q=` for to-dos not created yet), JSON:
+  `GET /lists/<pk>/mentionable/?q=` for to-dos not created yet, and
+  `GET /projects/<pk>/mentionable/?q=&visible=1&folder=<pk>` for new
+  messages, docs and files: who will see them, from the visibility
+  checkbox (`data-mentions-visible`) or the folder, which decides when
+  given; clients always create what clients see), JSON:
   `[{id, name, short_name, email, available, reason}]`, at most 10.
 - **Model:** `Mention(item, comment null, user, created_at)`, written by
   the operations that save texts (`create_todo`, `update_todo`,
@@ -125,10 +129,10 @@ Pages: the person's level and delivery on `/accounts/notifications/`
 (linked from the user menu); a project's override in the project page's
 "More" menu; an item's override next to its subscribe button. The
 settings page also lists the person's overrides, items only while they
-can see them. To-dos, messages, docs, files and the
+can see them. To-dos, lists, messages, docs, files and the
 library's folders have the subscribe button and the override form
-(`files/_sidebar.html`); a list's override is still set through the API
-(built 2026-11-20).
+(`files/_sidebar.html`); a list's override is at the bottom of the list's
+page, also through the API (built 2026-11-20).
 
 ### Notified by default or only when tagged
 

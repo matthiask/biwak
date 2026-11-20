@@ -128,6 +128,23 @@ class SettingsPagesTest(SettingsBase):
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
 
+    def test_list_override_on_the_list_page(self):
+        url = f"/items/{self.shared.pk}/notifications/"
+        for user in [self.ada, self.cleo]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                self.assertContains(
+                    self.client.get(self.shared.get_absolute_url()), url
+                )
+                response = self.client.post(url, {"level": "nothing"})
+                self.assertRedirects(response, self.shared.get_absolute_url())
+                self.assertEqual(
+                    LevelOverride.objects.get(user=user, item=self.shared).level,
+                    NotificationLevel.NOTHING,
+                )
+                self.client.post(url, {"level": ""})
+                self.assertFalse(LevelOverride.objects.filter(user=user).exists())
+
     def test_item_override_of_internal_items(self):
         url = f"/items/{self.secret.pk}/notifications/"
         for user in [self.cleo, self.dora, self.eve]:

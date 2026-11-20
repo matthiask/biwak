@@ -23,6 +23,7 @@ from biwak.items import operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 # How many occurrences a page shows (older ones: "Show more")
@@ -274,7 +275,7 @@ def _answers(request, occurrences):
     answers = (
         Answer.objects
         .filter(occurrence__in=occurrences, item__in=visible)
-        .select_related("item__creator", "occurrence")
+        .select_related("item__creator", "occurrence", "author")
         .order_by("-item__created_at", "-pk")
     )
     comments = {}
@@ -282,6 +283,7 @@ def _answers(request, occurrences):
         item__in=[a.item_id for a in answers]
     ).select_related("author"):
         comments.setdefault(comment.item_id, []).append(comment)
+    prefetch(*[answer.item for answer in answers])
     result = {o.pk: [] for o in occurrences}
     for answer in answers:
         result[answer.occurrence_id].append((answer, comments.get(answer.pk, [])))

@@ -1,5 +1,7 @@
 import datetime as dt
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from biwak.activity.models import Event
@@ -615,3 +617,32 @@ class AnsweringPagesTest(ViewsTestCase):
             reverse("project_checkins", args=[self.project.pk]),
         ]:
             self.assertEqual(self.client.get(url).status_code, 302)
+
+
+class QueryCountTest(ViewsTestCase):
+    def test_reactions_are_loaded_in_one_query(self):
+        """More answers and comments don't mean more queries"""
+        from biwak.reactions.operations import add_reaction
+
+        self.run_at("2027-03-29 09:00")
+
+        def add_answer(user, occurrence=None):
+            answer = ops.answer(
+                self.item, user=user, content=f"By {user}", occurrence=occurrence
+            )
+            add_reaction(self.ada, "🎉", item=answer)
+            comment = item_ops.add_comment(answer, author=self.ada, content="Nice")
+            add_reaction(self.bob, "👍", comment=comment)
+
+        url = self.item.get_absolute_url()
+        self.client.force_login(self.ada)
+
+        add_answer(self.ada)
+        self.client.get(url)  # warm up caches
+        with CaptureQueriesContext(connection) as queries:
+            self.client.get(url)
+        add_answer(self.bob)
+        add_answer(self.ada, self.first)
+        add_answer(self.bob, self.first)
+        with self.assertNumQueries(len(queries)):
+            self.assertEqual(self.client.get(url).status_code, 200)

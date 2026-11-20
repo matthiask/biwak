@@ -452,6 +452,45 @@ class TodoPageTest(E2ETestCase):
         page.wait_for_load_state("networkidle")
         self.assertTrue(listbox.is_hidden())
 
+    def test_mentions_in_the_new_message_form(self):
+        """Without an item yet, the list follows the visibility checkbox;
+        a client only finds the project's members"""
+        page = self.page
+        page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
+        content = page.locator("textarea[name=content]")
+        content.click()
+        content.press_sequentially("@Cleo")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        self.assertEqual(
+            listbox.locator("li.is-unavailable small").inner_text(),
+            "can't see internal items",
+        )
+        content.press("Escape")
+        page.get_by_label("Visible to clients").check()
+        content.fill("")
+        content.press_sequentially("@Cleo")
+        listbox.wait_for()
+        self.assertEqual(listbox.locator("li.is-unavailable").count(), 0)
+        content.press("Enter")
+        self.assertEqual(
+            content.input_value(), f"[@Cleo Example](person:{self.cleo.pk}) "
+        )
+
+        page = self.login(self.cleo)
+        page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
+        content = page.locator("textarea[name=content]")
+        content.click()
+        content.press_sequentially("@Example")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        self.assertEqual(
+            sorted(listbox.locator("li span").all_inner_texts()),
+            ["Ada Example", "Cleo Example"],
+        )
+        self.assertNotIn("@example.org", listbox.inner_text())
+        self.assertEqual(self.errors, [])
+
     def test_reactions(self):
         """The picker adds a quick reaction or a few words, clicking one's
         own reaction removes it"""

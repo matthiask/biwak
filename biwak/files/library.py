@@ -200,6 +200,7 @@ def file_new(request, pk):
     if not ops.can_create(request.user, Kind.FILE):
         raise PermissionDenied
     form = NewFileForm(request.POST or None, request.FILES or None, project=project)
+    form.mention_fields(project, "description", folder=folder)
     if form.is_valid():
         data = form.cleaned_data
         try:

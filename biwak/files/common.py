@@ -43,6 +43,17 @@ class NotifyForm(Form):
             memberships__project=project
         )
 
+    def mention_fields(self, project, *names, folder=None):
+        """The ``@`` list of the fields: whoever will see the new item"""
+        url = reverse("mentionable_new", args=[project.pk])
+        if folder:
+            url += f"?folder={folder.pk}"
+        for name in names:
+            attrs = self.fields[name].widget.attrs
+            attrs["data-mentions"] = url
+            if "visible" in self.fields and not folder:
+                attrs["data-mentions-visible"] = "#id_visible"
+
     def whom(self):
         """What ``notify_people()`` takes"""
         data = self.cleaned_data

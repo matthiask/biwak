@@ -87,6 +87,7 @@ class MessageForm(NotifyForm, MessageEditForm):
 def message_new(request, pk):
     project = project_for(request, pk)
     form = MessageForm(request.POST or None, project=project, user=request.user)
+    form.mention_fields(project, "title", "content")
     if form.is_valid():
         data = form.cleaned_data
         item = ops.create_message(
