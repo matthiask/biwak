@@ -86,6 +86,41 @@ class FeedAPITest(FeedBase):
         self.assertEqual(actions("feed/", since="2999-01-01"), [])
         self.assertEqual(self.get(self.ada, "feed/", kind="nope").status_code, 422)
 
+    def test_project_and_person_feeds_take_the_other_filter(self):
+        other = project("Other", members=[self.ada, self.bob])
+        item = ops_list(other, self.bob)
+        Event.objects.all().delete()
+        record(actor=self.bob, action=Action.EDITED, project=other, item=item)
+        record(actor=self.ada, action=Action.COMPLETED, project=other, item=item)
+        record(
+            actor=self.bob,
+            action=Action.COMPLETED,
+            project=self.project,
+            item=self.todo,
+        )
+
+        def actors(path, **params):
+            return [
+                (e["actor"]["id"], e["action"])
+                for e in self.get(self.ada, path, **params).json()["results"]
+            ]
+
+        self.assertEqual(
+            actors(f"projects/{other.pk}/feed/", person_id=self.bob.pk),
+            [(self.bob.pk, "edited")],
+        )
+        self.assertEqual(
+            actors(f"people/{self.bob.pk}/feed/", project_id=other.pk),
+            [(self.bob.pk, "edited")],
+        )
+        # Someone not in the project, or a hidden project: 404 as on feed/
+        stranger = person("Dora")
+        for path, params in [
+            (f"projects/{other.pk}/feed/", {"person_id": stranger.pk}),
+            (f"people/{self.bob.pk}/feed/", {"project_id": project("Y").pk}),
+        ]:
+            self.assertEqual(self.get(self.ada, path, **params).status_code, 404)
+
     def test_no_access_is_404(self):
         hidden = project("Hidden", members=[self.bob], all_access=False)
         stranger = person("Dora")

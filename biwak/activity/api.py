@@ -152,6 +152,7 @@ def project_feed(
     request,
     project_id: int,
     *,
+    person_id: int | None = None,
     kind: Kind | None = None,
     action: Action | None = None,
     visible_to_clients: bool = False,
@@ -159,9 +160,16 @@ def project_feed(
     cursor: str | None = None,
     page_size: int | None = None,
 ):
+    project = project_for(request, project_id)
+    person = None
+    if person_id:
+        person = get_object_or_404(
+            feed.people_visible_to(request.user, project), pk=person_id
+        )
     return _feed(
         request,
-        project=project_for(request, project_id),
+        project=project,
+        person=person,
         kind=kind,
         action=action,
         visible_to_clients=visible_to_clients,
@@ -176,6 +184,7 @@ def person_feed(
     request,
     person_id: int,
     *,
+    project_id: int | None = None,
     kind: Kind | None = None,
     action: Action | None = None,
     visible_to_clients: bool = False,
@@ -183,9 +192,13 @@ def person_feed(
     cursor: str | None = None,
     page_size: int | None = None,
 ):
-    person = get_object_or_404(feed.people_visible_to(request.user), pk=person_id)
+    project = project_for(request, project_id) if project_id else None
+    person = get_object_or_404(
+        feed.people_visible_to(request.user, project), pk=person_id
+    )
     return _feed(
         request,
+        project=project,
         person=person,
         kind=kind,
         action=action,
