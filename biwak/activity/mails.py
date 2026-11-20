@@ -108,6 +108,8 @@ def describe(event, user):
     data = event.data
     actor = str(event.actor)
     match event.action:
+        case Action.CREATED if event.item.kind == Kind.ANSWER:
+            text = _("%(actor)s answered.")
         case Action.CREATED:
             text = _("%(actor)s added it.")
         case Action.EDITED:
@@ -222,7 +224,7 @@ def _item(item, user):
         }
     elif item.kind == Kind.LIST:
         context["text"] = item.todolist.description
-    elif item.kind in {Kind.MESSAGE, Kind.DOC}:
+    elif item.kind in {Kind.MESSAGE, Kind.DOC, Kind.ANSWER}:
         context["text"] = item.detail.content
     context["text_plain"] = plain_text(context["text"], item)
     return context

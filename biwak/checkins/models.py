@@ -69,6 +69,15 @@ class Question(Detail):
         return self.paused_at is not None
 
     @property
+    def next_local(self):
+        """When it's asked next, as wall clock time in its time zone"""
+        if self.next_at is None:
+            return None
+        from biwak.checkins import schedule
+
+        return self.next_at.astimezone(schedule.zone(self.time_zone))
+
+    @property
     def schedule_description(self):
         from biwak import schedules
 

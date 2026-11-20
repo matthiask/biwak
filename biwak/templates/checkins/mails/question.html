@@ -1,0 +1,26 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #222">
+    {% if item.is_client_visible %}
+      <p style="background: #ffe14d; color: #222; padding: 6px 10px; font-weight: 600">
+        {% translate "Clients can see this." %}
+      </p>
+    {% endif %}
+    {% if reminder %}<p style="color: #666">{% translate "A reminder: you haven't answered yet." %}</p>{% endif %}
+    <div style="color: #666; font-size: 13px">{{ project }}</div>
+    <h2 style="font-size: 18px; margin: 4px 0 12px">{{ title }}</h2>
+    <p><a href="{{ url }}">{% translate "Answer" %}</a></p>
+    {% if schedule %}<p style="color: #666; font-size: 13px">
+        {% blocktranslate %}Asked {{ schedule }}.{% endblocktranslate %}
+      </p>{% endif %}
+    <p style="color: #666; font-size: 13px; margin-top: 24px">
+      <a href="{{ unsubscribe_url }}">{% translate "Unsubscribe from this" %}</a> ·
+      <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>
+    </p>
+  </body>
+</html>

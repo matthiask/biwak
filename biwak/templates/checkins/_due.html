@@ -1,0 +1,19 @@
+{% load biwak i18n %}
+{% if due %}
+  <div class="alert alert-warning">
+    <h2 class="h6">
+      {% icon "chat-square-text" %}
+      {% translate "Waiting for your answer" %}
+    </h2>
+    <ul class="list-unstyled mb-0">
+      {% for occurrence in due %}
+        <li>
+          <a
+            href="{% url 'question_answer' occurrence.question.item_id %}?occurrence={{ occurrence.pk }}"
+          >{{ occurrence.question.item|item_title }}</a>
+          {% client_badge occurrence.question.item %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}

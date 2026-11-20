@@ -18,7 +18,7 @@ from biwak.activity.models import (
     Subscription,
 )
 from biwak.activity.operations import subscribe
-from biwak.items.models import Comment, Item
+from biwak.items.models import Comment, Item, Kind
 
 
 def can_see(user, item):
@@ -79,6 +79,17 @@ def wants(user, event):
     level = effective_level(user, event.item)
     if level == NotificationLevel.NOTHING:
         return False
+    if (
+        event.item.kind == Kind.ANSWER
+        and event.action == Action.CREATED
+        and user.pk not in event.data.get("mentioned", ())
+    ):
+        # A check-in's answers: a mail each only for those who chose it
+        # (specs/checkins.md), whatever their level; the others get the
+        # summary the morning after
+        from biwak.checkins.models import Mode, mail_mode
+
+        return mail_mode(user, event.item.parent_id) == Mode.EACH
     if level == NotificationLevel.CONCERNS_ME:
         return concerns(user, event)
     return True

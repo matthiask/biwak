@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{{ person.display_name }} – {{ item|item_title }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2">
+    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
+    <a href="{{ item.get_absolute_url }}">{{ item|item_title }}</a>
+  </nav>
+  <h1 class="wb-title">{{ person.display_name }} {% client_badge item %}</h1>
+  {% for answer in answers %}
+    <div class="card mb-2" id="answer-{{ answer.pk }}">
+      <div class="card-body">
+        <div class="small text-body-secondary mb-1">
+          <a href="{{ answer.item.get_absolute_url }}">{{ answer.occurrence.date|date:"l, j. F Y" }}</a>
+        </div>
+        <div class="wb-markdown">{{ answer.content|markdown:answer.item }}</div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-body-secondary">{% translate "No answers yet." %}</p>
+  {% endfor %}
+  {% if more %}
+    <a class="btn btn-sm btn-quiet" href="?before={{ more }}">{% translate "Show more" %}</a>
+  {% endif %}
+{% endblock content %}

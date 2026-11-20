@@ -1,0 +1,27 @@
+{% load biwak i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #222">
+    {% if item.is_client_visible %}
+      <p style="background: #ffe14d; color: #222; padding: 6px 10px; font-weight: 600">
+        {% translate "Clients can see this." %}
+      </p>
+    {% endif %}
+    <div style="color: #666; font-size: 13px">{{ project }} · {{ day }}</div>
+    <h2 style="font-size: 18px; margin: 4px 0 12px"><a href="{{ page_url }}">{{ title }}</a></h2>
+    {% for answer in answers %}
+      <div style="border-top: 1px solid #ddd; padding-top: 8px; margin-top: 12px">
+        <p style="margin: 0 0 4px"><strong><a href="{{ answer.url }}">{{ answer.author }}</a></strong></p>
+        <div>{{ answer.content|mail_markdown:answer.item }}</div>
+      </div>
+    {% endfor %}
+    <p style="color: #666; font-size: 13px; margin-top: 24px">
+      <a href="{{ unsubscribe_url }}">{% translate "Unsubscribe from this" %}</a> ·
+      <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>
+    </p>
+  </body>
+</html>
