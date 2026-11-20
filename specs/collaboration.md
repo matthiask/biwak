@@ -175,7 +175,7 @@ browsers (Playwright) typing, a client watching, an internal doc
 - **Production** (decided 2026-11-20: everything under ASGI, one
   deployment):
   - **The image runs ASGI**: the `Containerfile` starts `granian
-    --interface asgi asgi:application --workers 4`, for pages and
+    --interface asginl asgi:application --workers 4`, for pages and
     websockets alike (sync views run one at a time per worker under
     ASGI, hence four workers instead of two). The chart stays as it is.
   - **Redis** for the channel layer: `REDIS_URL` (e.g.

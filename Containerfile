@@ -14,4 +14,4 @@ RUN uv run python manage.py collectstatic --noinput && rm .env
 RUN useradd -U -m deploy
 USER deploy
 EXPOSE 8000
-CMD ["uv", "run", "granian", "--interface", "asgi", "asgi:application", "--workers", "4", "--host", "0.0.0.0", "--port", "8000", "--respawn-failed-workers", "--static-path-mount", "/src/static/", "--static-path-expires", "720d"]
+CMD ["uv", "run", "granian", "--interface", "asginl", "asgi:application", "--workers", "4", "--host", "0.0.0.0", "--port", "8000", "--respawn-failed-workers", "--static-path-mount", "/src/static/", "--static-path-expires", "720d"]
