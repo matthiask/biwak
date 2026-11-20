@@ -1,6 +1,6 @@
 {% load biwak i18n %}
 {# One event, or a merged entry: pass `what` ("5 to-dos") and `where` (the list or project) with its latest event. Later parts add their actions here. #}
-<span class="fw-semibold">{{ event.actor.get_short_name }}</span>
+<span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
 {% if event.action == "created" %}
   {% translate "created" %} {% include "activity/_subject.html" %}
 {% elif event.action == "edited" %}
@@ -52,3 +52,4 @@
 {% endif %}
 {% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
 {% if event.item %}{% client_badge event.item %}{% endif %}
+{% if event.excerpt and not what %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}

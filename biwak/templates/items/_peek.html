@@ -1,0 +1,20 @@
+{% load biwak i18n %}
+<div class="wb-peek-body">
+  {% if todo.notes %}
+    <div class="wb-markdown">{{ todo.notes|markdown:item }}</div>
+  {% endif %}
+  {% for comment in comments %}
+    <div class="wb-peek-comment">
+      <div class="small text-body-secondary">
+        <strong>{{ comment.author.get_short_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+      </div>
+      <div class="wb-markdown">{{ comment.content|markdown:item }}</div>
+    </div>
+  {% endfor %}
+  {% if comment_count > comments|length %}
+    <div class="small text-body-secondary">
+      {% blocktranslate with shown=comments|length total=comment_count %}The latest {{ shown }} of {{ total }} comments{% endblocktranslate %}
+    </div>
+  {% endif %}
+  <a class="small" href="{{ item.get_absolute_url }}">{% translate "Open" %}</a>
+</div>

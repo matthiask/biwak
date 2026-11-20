@@ -6,11 +6,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from biwak import schedules
 from biwak.accounts.models import User
+from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.forms import Form, ModelForm
-from biwak.items import operations as ops
+from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
@@ -270,7 +272,7 @@ def project_detail(request, pk):
     project = project_for(request, pk)
     items = Item.objects.visible_to(request.user).filter(project=project)
     all_lists = items.filter(kind=Kind.LIST, parent=None)
-    lists = all_lists.filter(status=Status.ACTIVE)
+    lists = all_lists.filter(status=Status.ACTIVE).select_related("project")
     form = ListForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         item = ops.create_list(
@@ -281,6 +283,17 @@ def project_detail(request, pk):
             visible=form.cleaned_data["visible"] or request.user.is_client,
         )
         return redirect(item)
+    lists = list(lists)
+    counts = glance.list_counts(request.user, lists, schedules.today())
+    for todolist in lists:
+        todolist.open_count, todolist.overdue_count = counts.get(todolist.pk, (0, 0))
+    events = list(
+        Event.objects
+        .visible_to(request.user)
+        .filter(project=project)
+        .select_related("actor", "item")[:20]
+    )
+    feed.attach(events)
     return render(
         request,
         "projects/project_detail.html",
@@ -292,9 +305,6 @@ def project_detail(request, pk):
             "form": form,
             "members": project.memberships.select_related("user"),
             "is_member": project.is_member(request.user),
-            "events": Event.objects
-            .visible_to(request.user)
-            .filter(project=project)
-            .select_related("actor", "item")[:20],
+            "events": events,
         },
     )

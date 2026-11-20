@@ -8,6 +8,7 @@ import "./theme.js"
 import "./menus.js"
 import "./copy.js"
 import "./mentions.js"
+import "./peek.js"
 import "htmx.org"
 
 // The script is deferred, the page is parsed already; dragging to-dos,

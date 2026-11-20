@@ -1,0 +1,32 @@
+{% load biwak i18n %}
+{% comment %}Quiet signals on a to-do row (specs/glance.md); the counts come from glance.with_signals(), a to-do just created has none{% endcomment %}
+{% if todo.todo.notes %}<button
+    type="button"
+    class="wb-signal"
+    data-peek
+    hx-get="{% url 'todo_peek' todo.pk %}"
+    hx-target="#peek-{{ todo.pk }}"
+    hx-swap="innerHTML"
+    aria-expanded="false"
+    aria-controls="peek-{{ todo.pk }}"
+    title="{{ todo.todo.notes|excerpt:200 }}"
+  >
+    {% icon "card-text" %}<span class="visually-hidden">{% translate "Notes" %}</span>
+  </button>{% endif %}
+{% if todo.comment_count %}<button
+    type="button"
+    class="wb-signal"
+    data-peek
+    hx-get="{% url 'todo_peek' todo.pk %}"
+    hx-target="#peek-{{ todo.pk }}"
+    hx-swap="innerHTML"
+    aria-expanded="false"
+    aria-controls="peek-{{ todo.pk }}"
+    title="{% blocktranslate count count=todo.comment_count %}{{ count }} comment{% plural %}{{ count }} comments{% endblocktranslate %}"
+  >
+    {% icon "chat-left-text" %}<span class="wb-signal-count">{{ todo.comment_count }}</span>
+  </button>{% endif %}
+{% if todo.attachment_count %}<span
+    class="wb-signal"
+    title="{% blocktranslate count count=todo.attachment_count %}{{ count }} attachment{% plural %}{{ count }} attachments{% endblocktranslate %}"
+  >{% icon "paperclip" %}</span>{% endif %}

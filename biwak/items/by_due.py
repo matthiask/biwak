@@ -15,7 +15,7 @@ from biwak import schedules
 from biwak.accounts.models import CalendarToken, User
 from biwak.api_conventions import absolute
 from biwak.forms import Form
-from biwak.items import due
+from biwak.items import due, glance
 from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
 
@@ -108,6 +108,7 @@ def todos_by_due(request, project=None):
     )
     if not valid:
         todos = todos.none()
+    todos = glance.with_signals(todos)
     context = {
         "form": form,
         "project": project,

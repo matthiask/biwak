@@ -350,3 +350,59 @@ class FeedViewsTest(FeedBase):
         self.assertContains(response, "<details>")
         self.assertContains(response, "Todo 2")
         self.assertEqual(timezone.localdate(), response.context["days"][0][0])
+
+
+class PersonFeedLinksTest(FeedBase):
+    def link(self, person):
+        return f'href="/people/{person.pk}/feed/"'
+
+    def test_staff_get_links_from_names_members_and_the_menu(self):
+        record(
+            actor=self.bob, action=Action.EDITED, project=self.project, item=self.todo
+        )
+        self.client.force_login(self.ada)
+        for url in ["/feed/", f"/projects/{self.project.pk}/"]:
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), self.link(self.bob))
+        page = self.client.get(f"/projects/{self.project.pk}/")
+        self.assertContains(page, self.link(self.cleo))  # members list
+        self.assertContains(page, "My activity")
+        self.assertContains(page, self.link(self.ada))
+
+    def test_client_links_only_people_it_may_open(self):
+        stranger = person("Dora")
+        other = project("Other", members=[stranger])
+        item = ops.create_list(
+            project=other, title="Elsewhere", creator=stranger, visible=True
+        )
+        record(actor=stranger, action=Action.EDITED, project=other, item=item)
+        record(
+            actor=self.bob, action=Action.EDITED, project=self.project, item=self.todo
+        )
+        self.client.force_login(self.cleo)
+        response = self.client.get("/feed/")
+        self.assertContains(response, self.link(self.bob))
+        self.assertEqual(
+            self.client.get(f"/people/{stranger.pk}/feed/").status_code, 404
+        )
+        self.assertNotContains(response, f"/people/{stranger.pk}/feed/")
+        self.assertContains(response, "My activity")
+
+    def test_no_link_to_somebody_who_left(self):
+        record(
+            actor=self.bob, action=Action.EDITED, project=self.project, item=self.todo
+        )
+        self.project.memberships.filter(user=self.bob).delete()
+        self.client.force_login(self.cleo)
+        response = self.client.get("/feed/")
+        self.assertContains(response, "Bob")
+        self.assertNotContains(response, self.link(self.bob))
+        self.assertEqual(
+            self.client.get(f"/people/{self.bob.pk}/feed/").status_code, 404
+        )
+
+    def test_no_menu_entry_without_a_project(self):
+        loner = person("Eve")
+        self.client.force_login(loner)
+        response = self.client.get("/feed/")
+        self.assertNotContains(response, "My activity")
