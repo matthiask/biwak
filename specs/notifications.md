@@ -86,7 +86,7 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   linked), and returns those **newly** mentioned, adding them to
   `event.data["mentioned"]` for `notify()`. A to-do's title and notes
   are one text. People removed from a text are forgotten, so mentioning
-  them again counts as new (proposed by the building agent,
+  them again counts as new (proposed by the building agent, confirmed
   2026-11-20).
 - **A new mention** notifies the person (on every level except
   "nothing") and subscribes them (`explicit=True`). Editing a text later
@@ -102,7 +102,7 @@ Per person (`User.notification_level`), overridable per project and per
 item (`LevelOverride(user, project null, item null, level)`, one of the
 two set; the item's override wins over the project's). An item's
 override also covers what's in it: the nearest override along the item
-and its containers wins (proposed by the building agent, 2026-11-20):
+and its containers wins (proposed by the building agent, confirmed 2026-11-20):
 
 - **Everything** (the default): everything the person is subscribed to.
 - **Only what concerns me:** being assigned, being mentioned, comments on
@@ -165,7 +165,7 @@ Project events (joined, added, removed) notify nobody.
   in production, decided 2026-11-20; the console in development). After
   the commit, never inside a transaction.
 
-Built in stage 1 (proposed by the building agent, 2026-11-20):
+Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
 
 - `send_mails` checks again when sending: inactive people, people who
   can't see the item any more and people whose level is now "nothing"
