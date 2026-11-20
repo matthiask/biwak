@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak i18n %}
+{% load biwak bookmarks i18n %}
 {% block title %}{{ project }} – Biwak{% endblock %}
 
 {% block content %}
@@ -19,6 +19,7 @@
     <div class="wb-page-actions">
       <a class="btn btn-sm btn-quiet" href="{% url 'project_todos' project.pk %}">{% icon "calendar-event" %}<span
         >{% translate "To-dos by due date" %}</span></a>
+      {% bookmark_button project %}
       {% if not is_member and not request.user.is_client %}
         <form method="post" action="{% url 'project_join' project.pk %}">
           {% csrf_token %}
@@ -56,6 +57,7 @@
       {% blocktranslate with when=project.archived_at|date:"j. F Y" %}Archived on {{ when }}. Everything stays readable.{% endblocktranslate %}
     </div>
   {% endif %}
+  {% show_links project %}
   <div class="row g-4">
     <div class="col-lg-8">
       <h2 class="h5">{% translate "To-do lists" %}</h2>
@@ -122,6 +124,7 @@
       </ul>
       <h2 class="h5">{% translate "Activity" %}</h2>
       {% include "activity/_events.html" %}
+      <p class="small"><a href="{% url 'project_feed' project.pk %}">{% translate "All activity" %}</a></p>
     </div>
   </div>
 {% endblock content %}

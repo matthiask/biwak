@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{{ title }} – Biwak{% endblock %}
+
+{% block content %}
+  {% if project %}
+    <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  {% endif %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{{ title }}</h1>
+  </div>
+  <form method="get" action="{{ url }}" class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    {% for field in form %}
+      <div>
+        {% if field.field.widget.input_type == "checkbox" %}
+          <label class="form-check mb-2">{{ field }} {{ field.label }}</label>
+        {% else %}
+          <label class="form-label small mb-0" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-quiet">{% translate "Filter" %}</button>
+    {% if filtered %}<a href="{{ url }}" class="btn btn-quiet">{% translate "Clear" %}</a>{% endif %}
+  </form>
+  {% include "activity/_entries.html" %}
+  {% if older %}
+    <p class="mt-4"><a class="btn btn-quiet" href="{{ older }}">{% translate "Older" %}</a></p>
+  {% endif %}
+{% endblock content %}

@@ -19,3 +19,8 @@ if (document.querySelector("[data-todos], [data-sortable-lists]")) {
 if (document.querySelector("[data-attachments]")) {
   import(/* webpackChunkName: "attachments" */ "./attachments.js")
 }
+
+// Dragging links on projects and items
+if (document.querySelector("[data-sortable-links]")) {
+  import(/* webpackChunkName: "links" */ "./links.js")
+}

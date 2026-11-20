@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Bookmarks" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Bookmarks" %}</h1>
+  </div>
+  <div class="list-group">
+    {% for bookmark in bookmarks %}
+      {% if bookmark.item %}
+        <a class="list-group-item list-group-item-action" href="{{ bookmark.item.get_absolute_url }}">
+          {{ bookmark.item.title }}
+          {% client_badge bookmark.item %}
+          <div class="small text-body-secondary">
+            {{ bookmark.item.get_kind_display }} · {{ bookmark.item.project }}
+          </div>
+        </a>
+      {% else %}
+        <a class="list-group-item list-group-item-action" href="{{ bookmark.project.get_absolute_url }}">
+          {{ bookmark.project }}
+          <div class="small text-body-secondary">{% translate "Project" %}</div>
+        </a>
+      {% endif %}
+    {% empty %}
+      <div class="list-group-item text-body-secondary">
+        {% translate "Nothing bookmarked yet. Use the bookmark icon on a project or an item." %}
+      </div>
+    {% endfor %}
+  </div>
+{% endblock content %}

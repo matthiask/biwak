@@ -1,0 +1,75 @@
+{% load biwak i18n %}
+{% if links or can_manage %}
+  <div class="wb-links mb-3">
+    {% if links %}
+      <ul
+        class="list-unstyled d-flex flex-wrap gap-2 mb-2"
+        {% if can_manage %}
+          data-sortable-links="{% if is_item %}{% url 'item_link_order' target.pk %}{% else %}{% url 'project_link_order' target.pk %}{% endif %}"
+        {% endif %}
+      >
+        {% for link in links %}
+          <li class="d-flex align-items-center gap-1 border rounded px-2 py-1" data-link-item="{{ link.pk }}">
+            {% if can_manage %}<span
+                class="wb-handle"
+                data-link-handle
+                title="{% translate 'Drag to move' %}"
+              >{% icon "grip-vertical" %}</span>{% endif %}
+            {% include "bookmarks/_kind_icon.html" with kind=link.kind %}
+            <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a>
+            {% if link.visible_to_clients %}<span
+                class="badge wb-client-badge"
+                title="{% translate 'Clients can see this' %}"
+              >{% translate "Clients" %}</span>{% endif %}
+            {% if can_manage %}
+              <a
+                class="btn btn-sm btn-quiet"
+                href="{% url 'link_edit' link.pk %}"
+                title="{% translate 'Edit' %}"
+              >{% icon "pencil" %}<span class="visually-hidden">{% translate "Edit" %}</span></a>
+              <form method="post" action="{% url 'link_delete' link.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Delete' %}">
+                  {% icon "trash" %}<span class="visually-hidden">{% translate "Delete" %}</span>
+                </button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if can_manage %}
+      <details>
+        <summary class="small text-body-secondary">{% translate "Add a link" %}</summary>
+        <form
+          method="post"
+          action="{% if is_item %}{% url 'item_link_create' target.pk %}{% else %}{% url 'project_link_create' target.pk %}{% endif %}"
+          class="d-flex flex-wrap gap-2 align-items-center mt-2"
+        >
+          {% csrf_token %}
+          <input
+            type="url"
+            name="url"
+            class="form-control w-auto flex-grow-1"
+            placeholder="https://…"
+            aria-label="{% translate 'URL' %}"
+            required
+          >
+          <input
+            type="text"
+            name="title"
+            class="form-control w-auto"
+            placeholder="{% translate 'Title' %}"
+            aria-label="{% translate 'Title' %}"
+            maxlength="200"
+          >
+          <label class="form-check mb-0">
+            <input type="checkbox" name="visible_to_clients" class="form-check-input">
+            {% translate "Visible to clients" %}
+          </label>
+          <button type="submit" class="btn btn-quiet">{% icon "plus-lg" %}<span>{% translate "Add" %}</span></button>
+        </form>
+      </details>
+    {% endif %}
+  </div>
+{% endif %}

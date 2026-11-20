@@ -79,7 +79,11 @@ class Event(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-pk"]
-        indexes = [models.Index(fields=["project", "-created_at"])]
+        indexes = [
+            models.Index(fields=["project", "-created_at"]),
+            # The feed across projects, newest first (specs/feed.md)
+            models.Index(fields=["-created_at", "-id"], name="event_created_idx"),
+        ]
         verbose_name = _("event")
         verbose_name_plural = _("events")
 

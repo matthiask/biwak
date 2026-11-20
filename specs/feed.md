@@ -1,7 +1,10 @@
 # Activity feed, item history, bookmarks, links
 
-**Status:** open. The project page shows its latest 20 events
-(`activity/_events.html`), nothing more.
+**Status:** built (2026-11-20): the activity feed (pages, API, CLI), the
+item history, bookmarks and links (pages, API, CLI), with the decisions
+below (proposed by the building agent, to be confirmed). The project page keeps
+its short list of the latest 20 events (`activity/_events.html`) with a
+link to the feed. CLI 0.4.0.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.
@@ -34,6 +37,34 @@ From the events (`biwak/activity/`, `notifications.md`):
   event's `data` (title at the time, assignees, where it moved), so
   later parts only add their actions there.
 
+Built (`biwak/activity/feed.py`, `views.py`): the cursor is
+`<microseconds since the epoch>,<id>` of the last event of a page
+(`?before=`, 400 if malformed); merging works within a page, so an entry
+can be split by a page boundary; there is a new index `(-created_at,
+-id)`, checked with `EXPLAIN` on 240,000 events: the first page takes
+about 1 ms for staff, for clients and per project.
+
+Decisions (proposed by the building agent, 2026-11-20):
+
+- A person's feed (`/people/<pk>/feed/`) exists for people who are a
+  member of a project the viewer can access, else 404, so that it
+  doesn't tell whether a person exists. The person filter lists the same
+  people.
+- "Within an hour" means each event is at most an hour after the next
+  older one of the entry (chains merge), and never across midnight.
+- A moved to-do's target list is not shown to clients (its name may be
+  internal even when the to-do is visible now).
+- Merging applies to every action; the entry says "completed 5 to-dos in
+  Launch", with "items" for mixed kinds.
+
+The API (`biwak/activity/api.py`) returns single events, not merged
+entries: `GET /api/v1/feed/` with `project_id`, `person_id`, `kind`,
+`action`, `visible_to_clients`, `since` (a date) and ninja's cursor
+(`next` is the URL of the next page), and `projects/{id}/feed/`,
+`people/{id}/feed/` with the same filters. For clients `data` has no
+`to`. `biwak feed [--project] [--person] [--kind] [--action] [--since]
+[--limit]` (50 by default, follows the cursor).
+
 ## Item history
 
 The audit log (`biwak/audit/`, a database trigger on the main tables,
@@ -52,6 +83,26 @@ readable:
 - Events say what happened; the history shows the details. Only for
   people who can see the item now (the item through `item_for()`).
 
+Built (`biwak/activity/history.py`, `views.py`, `api.py`):
+`/items/<pk>/history/` and `GET /api/v1/items/{id}/history/` (newest
+first, complete) for every kind of item; the to-do page links to it. It
+tracks the title, the list, the effective visibility, the status; notes,
+group, start and due dates, completing and reopening and the assignees of
+to-dos; descriptions of lists, content of messages and docs. Texts are a
+line diff with one line of context. Positions and timestamps are ignored.
+`audit_user_id()` gives the person, otherwise the audit's name (a job).
+
+Decisions (proposed by the building agent, 2026-11-20):
+
+- The history is for staff only (403 for clients, 404 for what they
+  can't see): old versions of texts can hold what was internal at the
+  time, also on items clients see now.
+- The effective visibility is shown, not the switch: a to-do moved into a
+  visible list shows "Visible to clients: no, yes". Titles of lists the
+  viewer can't see read "another list".
+- Only changes to the item's own rows; comments have their own place on
+  the page, and files' versions come with `files.md`.
+
 ## Bookmarks
 
 - `Bookmark(user, item null, project null, created_at)`, one of the two
@@ -60,6 +111,15 @@ readable:
   item's and project's page; `/bookmarks/`, newest first, with the
   item's current title, kind and project. Bookmarks of items the person
   can't see any more are hidden, not deleted.
+
+Built (`biwak/bookmarks/`): the bookmark button (`{% bookmark_button obj
+%}`, from `{% load bookmarks %}`) is on the project, list and to-do pages;
+**pages of later kinds (messages, docs, files) add the button and
+`{% show_links item %}` themselves**. `/bookmarks/` is in the navigation.
+`POST /items/<pk>/bookmark/` and `/projects/<pk>/bookmark/` (`bookmark=1`
+adds, otherwise removes). API: `GET /bookmarks/`, `PUT`/`DELETE`
+`items/{id}/bookmark/` and `projects/{id}/bookmark/`; CLI `biwak
+bookmarks`, `biwak bookmark add|remove [--project] ID`.
 
 ## Links
 
@@ -81,6 +141,33 @@ sites, a project in a time tracking or accounting tool.
 - Later and only where useful: integrations per kind fetching live data
   (title and preview by oEmbed, an issue's state). No tool is
   hard-coded into the core.
+
+Built (`biwak/links.py`, `biwak/bookmarks/`): `Link.visible_to()`
+filters by project access and the item's visibility; clients also need
+the link's switch, so a switched link on an internal item stays hidden.
+Pages: `{% show_links project %}` at the top of the project page and
+`{% show_links item %}` under the title of lists and to-dos, with an add
+form for staff, `/links/<pk>/edit/`, `/links/<pk>/delete/`, and dragging
+(`frontend/links.js`) through `…/links/order/`. API: `GET
+projects/{id}/links/` (the project's own links in order, then those on
+items), `GET items/{id}/links/`, `POST` on both, `PATCH`/`DELETE
+links/{id}/`, `PUT …/links/order/` (all IDs of the project's or item's
+links); a link has `visible_to_clients` (what clients see) and `switch`
+(its own setting). CLI: `biwak links PROJECT`, `biwak link add PROJECT URL
+[--title] [--item] [--clients]`, `biwak link delete LINK`.
+
+Decisions (proposed by the building agent, 2026-11-20):
+
+- Only `http` and `https` addresses; the title defaults to the host.
+- Any staff member sees and changes the links of what they see, not only
+  the creator.
+- Links and bookmarks record no events and don't appear in the feed.
+- Bookmarks and links share one app, `biwak/bookmarks/`; both tables have
+  the audit trigger.
+- Bookmarks of what a person can't see any more are hidden, and come back
+  when they see it again.
+- Figma has no icon in Bootstrap Icons: the palette stands in for it;
+  Google Drive uses the Google icon.
 
 ## API and CLI
 

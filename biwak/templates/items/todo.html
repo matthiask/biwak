@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load attachments biwak i18n %}
+{% load attachments biwak bookmarks i18n %}
 {% block title %}{{ item }} – Biwak{% endblock %}
 
 {% block content %}
@@ -14,6 +14,7 @@
       {% client_badge item %}
     </h1>
     <div class="wb-page-actions">
+      {% bookmark_button item %}
       <form method="post" action="{% url 'todo_toggle' item.pk %}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
@@ -24,6 +25,7 @@
       </form>
     </div>
   </div>
+  {% show_links item %}
   {% include "items/_client_banner.html" %}
   {% if todo.is_completed %}
     <p class="text-body-secondary">
@@ -128,6 +130,12 @@
             </button>
           </div>
         </form>
+      {% endif %}
+      {% if not request.user.is_client %}
+        <p class="mt-4 mb-0">
+          <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
+            >{% translate "History" %}</span></a>
+        </p>
       {% endif %}
       {% if can_change %}
         <form method="post" action="{% url 'item_trash' item.pk %}" class="mt-4">
