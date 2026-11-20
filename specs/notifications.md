@@ -59,17 +59,50 @@ Never a notification about one's own actions.
 Commonly used, especially by clients who rarely open the app. In scope
 from the start (decided 2026-11-20).
 
-- Every notification mail has its own reply-to address with a signed
-  token for the item and the recipient. A reply is posted as a comment by
-  that person, if the sender address matches theirs.
-- Inbound mail by provider webhook (any service posting parsed mail) or
-  by polling a mailbox over IMAP; both behind one interface.
-- Quoted text and signatures are stripped (e.g. `email-reply-parser`);
-  attachments become attachments of the comment.
+- **Address**: a receiving subdomain of its own (e.g.
+  `reply.example.org`) with its MX at the inbound provider; the
+  organization's normal mail is untouched. Every notification mail has a
+  `Reply-To` of `r-<token>@` that subdomain.
+- **Token**: random, about 20 lowercase characters (local parts are
+  limited to 64 characters and some servers lowercase them), stored in a
+  table pointing to item, recipient and sending time; revocable, expires
+  after some months.
+- **Providers** behind one interface, each an adapter turning what the
+  provider delivers into one inbound message (sender, recipients,
+  headers, text, HTML, attachments, authentication results): Brevo and
+  Resend first (both offer inbound parsing to a webhook on a subdomain),
+  plus reading `.eml` files from a management command for tests and
+  debugging. Polling an IMAP mailbox only if needed.
+  - Brevo posts the parsed mail (text, HTML, a reply already stripped of
+    quotes and signature as Markdown, all headers, an rspamd spam score);
+    attachments are fetched by token through its API; no raw MIME, no
+    documented SPF/DKIM verdicts.
+  - Resend posts only metadata (signed webhooks); body, headers, raw MIME
+    and attachments are fetched through its API, with SPF, DKIM and DMARC
+    results computed by its receiving servers.
+  - Verify against the providers' current documentation when building.
+- **Sender check**: the reply is posted as the token's recipient only if
+  the `From` address is theirs and the sender's authentication passed
+  (DMARC, or SPF/DKIM aligned with the `From` domain, as computed by the
+  receiving server, never trusted from headers the sender could write).
+  The token alone isn't enough: forwarded mails carry it.
+- **Webhooks** are authenticated (the provider's signature, or a secret
+  token in a header) and idempotent (providers retry; the provider's
+  message id is stored).
+- **Cleanup**: quoted text and signatures are stripped
+  (`email-reply-parser` on our side, even when the provider offers its
+  own, so the result doesn't depend on the provider); attachments become
+  attachments of the comment, with a size limit.
 - Visibility applies: a reply to a visible item is visible, and a person
   can only reply to what they can see now (not when the mail was sent).
-- Auto-replies, out-of-office and bounces are recognised and dropped.
-- Replies that can't be posted get a short answer saying why.
+- **Loops**: auto-replies, out-of-office and bounces are recognised
+  (`Auto-Submitted`, `Precedence`, empty envelope sender, common
+  auto-reply headers) and dropped, never answered. A rate limit per token.
+- Replies that can't be posted (wrong sender, no access any more,
+  expired token) get a short answer saying why, at most once per token.
+- **Threading**: outgoing mails set `Message-ID`, and `In-Reply-To` and
+  `References` pointing at the item's first mail, so mail clients keep one
+  thread per item; `List-Unsubscribe` with one click.
 - Check-in questions are answered the same way (`checkins.md`).
 
 ## Tests
