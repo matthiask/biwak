@@ -12,7 +12,7 @@ palette's "New project"), the navigation's search field opens the palette
 (`keyboard.md`). Wording chosen: trash modal "Move to the trash?" / "It
 can be restored for 30 days."; notifications "Your own level for this one
 instead of the one of the project. The activity feed always shows
-everything." Parts 3 to 6 open.
+everything." Parts 5 and 6 built (overdue badges, archiving on the projects page); parts 3 and 4 open.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Split into the parts below, in this order, since later
@@ -96,8 +96,19 @@ For projects with dozens of people:
   on lists, the board, "my to-dos", the list by due date, the to-do's
   page and the palette's results; due today gets a quieter "Today"
   badge (decided 2026-11-21). Completed to-dos are never overdue.
-- A danger tone in the palette tokens (`--wb-tone-danger`), checked for
-  contrast with the others.
+- A danger tone in the palette tokens (`.wb-tone-danger`, from
+  `--wb-danger-bg/ink`), checked for contrast with the others
+  (`biwak/accounts/test_palette.py`).
+
+**Built:** the `{% due_badge todo.todo %}` tag renders
+`items/_due_badge.html` everywhere a to-do shows its date: list and board
+rows (`_todo.html`), "my to-dos" and the list by due date (`_due_row.html`),
+the to-do's page (above the notes). `items.due.badge_state()` decides
+(`overdue`, `today` or nothing; completed never). "Overdue · 18. Nov" is
+the danger badge, "Today" the neutral one, both with the full date as the
+title; later dates stay plain text. The palette has no to-dos among its
+jumps, so the badge is on bookmarked to-dos (`due` in the bookmarks' JSON,
+text from the server). Search results don't show it (not asked for).
 
 ## 6. The projects page
 
@@ -105,6 +116,18 @@ For projects with dozens of people:
   archived projects, with htmx: the card moves out or the list swaps,
   without a reload; a short "Archived. Undo" message (the user likes the
   current archive, `specs/ui-feedback.md`).
+
+**Built:** the page's content (`projects/_page.html`, `#projects-page`) is
+what htmx swaps. "Archive" / "Active projects" are `hx-get` links selecting
+`#projects-page` from the full page, with `hx-push-url`. Staff get a quiet
+archive icon on each card, and "Bring back from the archive" on the archived
+list's rows; clients get neither. `project_archive` takes `list` (`active` or
+`archived`, what the page shows): for htmx it answers with `_page.html` and
+"Archived." or "Brought back." with Undo (a form posting the opposite
+with `undo=1`, which says nothing itself); without htmx it redirects to the
+projects page; without `list` (the project's own menu) it redirects to the
+project as before. The whole content is re-rendered, so Undo puts the card
+back in its sorted place. The messages stay until the next action (no timer; decided 2026-11-21: consistent with the other messages).
 
 ## Done when
 

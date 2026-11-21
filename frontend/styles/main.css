@@ -767,6 +767,10 @@ h3,
   --wb-tone-bg: var(--wb-neutral-bg);
   --wb-tone-ink: var(--wb-neutral-ink);
 }
+.wb-tone-danger {
+  --wb-tone-bg: var(--wb-danger-bg);
+  --wb-tone-ink: var(--wb-danger-ink);
+}
 .wb-tone-warning {
   --wb-tone-bg: var(--wb-warning-bg);
   --wb-tone-ink: var(--wb-warning-ink);

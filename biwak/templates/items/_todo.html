@@ -7,8 +7,7 @@
     >{% icon "grip-vertical" %}</span>{% endif %}
   {% include "items/_todo_lead.html" %}
   {% include "items/_todo_assignees.html" %}
-  {% if todo.todo.due_on %}<span class="small text-body-secondary">{% icon "calendar-event" %}
-      {{ todo.todo.due_on|date:"j. M" }}</span>{% endif %}
+  {% due_badge todo.todo %}
   {% include "items/_signals.html" %}
   <div class="wb-peek w-100" id="peek-{{ todo.pk }}"></div>
 </div>

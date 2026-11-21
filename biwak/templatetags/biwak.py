@@ -318,6 +318,22 @@ def client_badge(item):
     )
 
 
+@register.inclusion_tag("items/_due_badge.html")
+def due_badge(todo, date_format="j. M"):
+    """A to-do's due date (``todo``: the item's ``Todo`` detail), as a
+    danger badge when it's open and past due, as a quiet "Today" badge on
+    the day, else as plain text; nothing without a date. One place for
+    lists, the board, "my to-dos" and the to-do's page (specs/ui-round-1.md,
+    part 5)."""
+    from biwak.items import due
+
+    return {
+        "due_on": todo.due_on,
+        "state": due.badge_state(todo),
+        "date_format": date_format,
+    }
+
+
 @register.simple_tag
 def project_dot(project):
     """The project's color as a dot before its name (specs/project-colors.md);

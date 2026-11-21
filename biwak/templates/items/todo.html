@@ -28,6 +28,7 @@
   {% show_links item %}
   {% include "items/_client_banner.html" %}
   <div id="live-status" data-live>
+    {% if todo.due_on %}<p class="mb-2">{% due_badge todo %}</p>{% endif %}
     {% if todo.is_completed %}
       <p class="text-body-secondary">
         {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
