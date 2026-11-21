@@ -58,6 +58,18 @@ visibility tests reviewed.
   The help says so (`docs/files.md`).
 - Without JavaScript: "Move to…" per item as today.
 
+## 4b. Uploading by dropping files (decided 2026-11-21)
+
+- Files dragged from the computer onto a folder's grid upload into that
+  folder, onto a folder tile (or "..", a breadcrumb) into that one;
+  several at once. A drop zone shows while dragging, each file gets a
+  progress row, and its tile appears when it's done; an error (too big,
+  refused) says so on its row.
+- The same upload operation as "Upload a file", with its defaults
+  (proposed): no description, visible as the folder decides today,
+  nobody notified; changing that afterwards on the file's page. Only for
+  who may upload there.
+
 ## 5. New docs (decided 2026-11-21)
 
 Every doc is edited together (the live editor); the new-doc form with a
