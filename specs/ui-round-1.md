@@ -5,7 +5,14 @@ From the user's first round of feedback after testing
 the to-do page is an edit form rather than a page to read, and some
 controls don't scale.
 
-**Status:** open.
+**Status:** parts 1 and 2 built (modals, the quieter pages: New list, New
+group and renaming, notification level, Move to and Trash in the "More"
+menu, adding and inviting members, editing and creating a project, the
+palette's "New project"), the navigation's search field opens the palette
+(`keyboard.md`). Wording chosen: trash modal "Move to the trash?" / "It
+can be restored for 30 days."; notifications "Your own level for this one
+instead of the one of the project. The activity feed always shows
+everything." Parts 3 to 6 open.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Split into the parts below, in this order, since later
