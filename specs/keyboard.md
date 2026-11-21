@@ -114,8 +114,8 @@ own:
 
 - **Notifications:** what's on the page now (level, mail delivery, the
   overrides per project and item).
-- **Keyboard:** `User.keyboard_shortcuts`, on by default (proposed
-  below), with the list of shortcuts.
+- **Keyboard:** `User.keyboard_shortcuts`, on by default (decided
+  2026-11-21), with the list of shortcuts.
 - **Appearance:** the theme (light, dark, as the system), moving the
   stored choice from the browser to the person so it follows them to
   other devices; the toggle in the navigation stays and saves there too.
@@ -140,6 +140,4 @@ the notification endpoints stay as they are.
 
 ## Questions before building
 
-- Shortcuts on by default (proposed: yes, with the setting to turn them
-  off), or off until turned on?
 - The labels of the actions; proposed as listed.
