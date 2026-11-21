@@ -324,6 +324,24 @@ def todo_move(request, pk):
     return redirect(item if target_value else target)
 
 
+def todos_to_move(request, target, ids):
+    """The to-dos by ID, for moving into the list ``target``: 404 unless
+    the person sees them all, 400 for to-dos of another project (the pages
+    and the API)"""
+    todos = {
+        todo.pk: todo
+        for todo in Item.objects
+        .visible_to(request.user)
+        .filter(pk__in=ids, kind=Kind.TODO)
+        .select_related("todo")
+    }
+    if not ids or len(todos) != len(set(ids)):
+        raise Http404(_("Not all of these to-dos were found."))
+    if any(todo.project_id != target.project_id for todo in todos.values()):
+        raise BadRequest(_("To-dos can't move to another project."))
+    return todos
+
+
 @require_POST
 def todos_move(request, pk):
     """Dragging one or several to-dos (frontend/todos.js) into list ``pk``,
@@ -331,15 +349,7 @@ def todos_move(request, pk):
     the others there; ``todos`` in their new order"""
     target = item_for(request, pk, Kind.LIST)
     ids = [_number(value) for value in request.POST.getlist("todos")]
-    todos = {
-        todo.pk: todo
-        for todo in Item.objects
-        .visible_to(request.user)
-        .filter(pk__in=ids, kind=Kind.TODO, project=target.project_id)
-        .select_related("todo")
-    }
-    if not ids or len(todos) != len(set(ids)):
-        return HttpResponse(status=404)
+    todos = todos_to_move(request, target, ids)
     group = None
     if group_id := request.POST.get("group"):
         group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)

@@ -54,6 +54,10 @@ SWITCHABLE = {
     Kind.QUESTION,
 }
 
+SWITCH_MESSAGE = _(
+    "Only top-level lists, folders, messages, docs, files and check-ins have a switch."
+)
+
 # Kinds people can comment on (no comments on lists and folders)
 COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
@@ -167,12 +171,7 @@ class Item(TreeNode):
         if self.parent_id and self.parent.project_id != self.project_id:
             raise ValidationError(_("The parent belongs to another project."))
         if self.visible_to_clients and not self.has_switch:
-            raise ValidationError(
-                _(
-                    "Only top-level lists, folders, messages, docs and files have"
-                    " a switch."
-                )
-            )
+            raise ValidationError(SWITCH_MESSAGE)
 
     def save(self, *args, **kwargs):
         # Enforced in the model, not only in forms (specs/core.md)

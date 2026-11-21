@@ -26,11 +26,18 @@ from biwak.api_conventions import (
     person_out,
 )
 from biwak.items import due, operations as ops
-from biwak.items.models import Group, Item, Kind, Status as ItemStatus
+from biwak.items.models import (
+    SWITCH_MESSAGE,
+    Group,
+    Item,
+    Kind,
+    Status as ItemStatus,
+)
 from biwak.items.views import (
     changeable_group,
     changeable_list,
     item_for,
+    todos_to_move,
 )
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
@@ -537,15 +544,7 @@ def todos_move(request, list_id: int, data: MoveManyIn):
     """Moves several to-dos together into the list's group (or ungrouped),
     next to each other in the given order at ``index`` (default: the end)"""
     target = item_for(request, list_id, Kind.LIST)
-    todos = {
-        todo.pk: todo
-        for todo in Item.objects
-        .visible_to(request.user)
-        .filter(pk__in=data.todo_ids, kind=Kind.TODO, project=target.project_id)
-        .select_related("todo")
-    }
-    if not data.todo_ids or len(todos) != len(set(data.todo_ids)):
-        raise HttpError(404, _("Not all of these to-dos were found."))
+    todos = todos_to_move(request, target, data.todo_ids)
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
@@ -663,9 +662,7 @@ def visibility_switch(request, item_id: int, data: SwitchIn):
         raise HttpError(403, _("Only staff can change what clients see."))
     item = item_for(request, item_id)
     if not item.has_switch:
-        bad_request(
-            _("Only top-level lists, folders, messages and docs have a switch.")
-        )
+        bad_request(str(SWITCH_MESSAGE))
     ops.set_visibility(item, visible=data.visible_to_clients, actor=request.user)
     return item_out(item_for(request, item_id))
 

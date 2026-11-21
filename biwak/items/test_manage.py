@@ -260,6 +260,29 @@ class ManageTest(TestCase):
             headers={"authorization": f"Bearer {secret}"},
         )
         self.assertEqual(response.status_code, 400)
+        # Several at once: the same 400 (was 404), 404 for to-dos nobody
+        # may know about
+        response = self.client.post(
+            f"/api/v1/lists/{there.pk}/todos/move/",
+            {"todo_ids": [self.todo.pk]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(), {"detail": "To-dos can't move to another project."}
+        )
+        response = self.client.post(
+            f"/lists/{there.pk}/todos/move/", {"todos": [self.todo.pk]}
+        )
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post(
+            f"/api/v1/lists/{there.pk}/todos/move/",
+            {"todo_ids": [999999999]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 404)
         self.todo.refresh_from_db()
         self.assertEqual(self.todo.parent, self.shared)
 

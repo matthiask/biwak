@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
@@ -166,7 +166,7 @@ def member_notify(request, pk, user_pk):
         raise PermissionDenied
     notify = request.POST.get("notify")
     if notify not in project_ops.NOTIFY_CHOICES:
-        raise Http404
+        return HttpResponse(status=400)
     project_ops.set_notify_choice(project, user, notify, actor=request.user)
     messages.success(request, _("The choice has been saved."))
     return redirect("project_people", pk=project.pk)

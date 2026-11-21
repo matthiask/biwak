@@ -289,6 +289,8 @@ class APITest(TestCase):
             {"visible_to_clients": False},
         )
         self.assertEqual(response.status_code, 400)
+        # Files and check-ins have switches too
+        self.assertIn("files and check-ins", response.json()["detail"])
 
     def test_subscription(self):
         headers = self.api(self.ada)
