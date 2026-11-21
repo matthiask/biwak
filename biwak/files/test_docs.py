@@ -369,15 +369,15 @@ class TellTest(Fixture, TestCase):
             self, response, reverse("project_files", args=[self.project.pk])
         )
 
-    def test_not_now(self):
+    def test_no_one_else(self):
         """Nobody else: those who want to hear are told anyway (decided
         2026-11-21: additive)"""
         self.write()
         # What was typed is saved first
         response = self.client.get(self.tell, headers={"HX-Modal": "true"})
         assert_modal(self, response, title="Tell people about it?")
-        self.assertContains(response, "Not now")
-        self.assertContains(response, "Tell them")
+        self.assertContains(response, "No one else")
+        self.assertContains(response, "Tell them too")
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 self.tell, {"not_now": "1"}, headers={"HX-Modal": "true"}

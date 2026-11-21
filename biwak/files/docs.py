@@ -149,7 +149,8 @@ def default_told(item, user):
 def doc_tell(request, pk):
     """The first "Done" of a doc begun as a draft (specs/files.md, "Docs"): its
     creator is asked once whom to tell besides those told by default,
-    "Tell them" or "Not now" (only those), never again either way. A modal of the editor, also a page.
+    "Tell them too" or "No one else" (only those), never again either way. A
+    modal of the editor, also a page.
     What was typed is saved first; a draft still empty goes back to its
     folder."""
     item = item_for(request, pk, Kind.DOC, drafts=True)
@@ -190,7 +191,7 @@ def doc_tell(request, pk):
         intro=_("Nobody has heard of this doc yet. You're asked once."),
         item=item,
         cancel_url=item.get_absolute_url(),
-        submit_label=_("Tell them"),
+        submit_label=_("Tell them too"),
         template="files/doc_tell.html",
     )
 

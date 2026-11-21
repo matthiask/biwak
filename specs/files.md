@@ -220,8 +220,10 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
 - **Telling people once** (decided 2026-11-21): the creator's first
   "Done" saves and asks "Tell people about it?" (`Doc.tell_pending`,
   `docs.doc_tell`): who is told by default and "Also tell…" with a
-  note (additive, `notifications.md`, decided 2026-11-21); "Tell them"
-  records `shared` to both, "Not now" to those told by default only
+  note (additive, `notifications.md`, decided 2026-11-21); "Tell them
+  too" records `shared` to both, "No one else" to those told by default
+  only (the buttons say that the others are told anyway, decided
+  2026-11-21)
   (nothing when there's nobody), and either way it's never asked again. Escape or Cancel doesn't
   answer, the next "Done" asks again. Only the creator is asked.
 - The API and CLI create docs with title and text, not as drafts.

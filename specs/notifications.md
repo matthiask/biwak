@@ -76,8 +76,8 @@ it for the first time.
   internal, a client's visible) and aren't told already, nothing
   preselected. A doc begun as a draft asks at its first "Done" ("Tell
   people about it?", `docs.TellForm`): the same line and "Also tell…"
-  with a note; "Tell them" records `shared` to those told by default
-  (not subscribed yet) and those added, "Not now" to those told by
+  with a note; "Tell them too" records `shared` to those told by default
+  (not subscribed yet) and those added, "No one else" to those told by
   default only.
 
 ## Mentions
