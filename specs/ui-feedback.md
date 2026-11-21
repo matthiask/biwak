@@ -31,3 +31,17 @@
 - The lantern can use more horizonal space with all the content it has.
 - My counter now says 7 unread (which is correct), but I only have 5 entries (because of grouping). So, it might instead say how many entries I have?
 - There seems to be a double divider between unread and read lantern items, that looks like a bug.
+
+
+## Round 3
+
+Ad hoc.
+
+## Round 4
+
+- "Sign out" in menu. It's understood that this only does the log out here.
+- Instead of the help text, add a button to sign out immediately on the sessions card. "Sign out here" or something like that.
+- The to do checkbox is misaligned.
+- "Add a to-do" and "New group" should be on the same line.
+- "Show to clients" is a potentially destructive action and needs a warning modal. One click isn't enough for revealing potentially damaging information.
+- The grouping in the activity log is nice. It could go further I think, and for example group conversation happening within an hour or more and show them together. Stop collapsing items, I'd like to try going without <details> here. The individual items themselves should be indented though in groups.

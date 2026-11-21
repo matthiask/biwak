@@ -195,6 +195,11 @@ each a spec (or a section in one) before building it.
   (`EMAIL_URL` to its SMTP, a From domain verified there, e.g.
   `biwak.feinheit.app`) as decided for both directions, when there's a
   reason to.
+- **Activating people through the API and CLI** (added 2026-11-21): the
+  importer creates people without an account inactive on purpose, so
+  nobody gets mail or a login before someone decides. Activating them
+  (one or several, optionally with the login mail) through the API and
+  `biwak people activate`, admins only. Until then the Django admin.
 
 ## Decisions
 
