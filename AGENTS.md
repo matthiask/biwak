@@ -148,42 +148,26 @@ What every part does the same way. Look at how the core does it
    only what they created (`ops.can_change()`), except the fields of
    visible to-dos, which are shared work (`specs/access.md`). Visibility
    switches are staff only.
-5. **Pages.** Server-rendered templates extending `base.html`, the
-   client badge (`{% client_badge item %}`) on everything visible to
-   clients (not in the feed and the lantern, which tell what happened:
-   the item's page shows it, decided 2026-11-21); on the page of something
-   visible to clients the tab at the window's edge (`items/_client_tab.html`,
-   sticky, decided 2026-11-21: a banner was too imposing), and the banner
-   (`items/_client_banner.html`) only above forms in modals. Icons with `{% icon %}`; a new icon goes into
-   `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
-   only for interaction, in `frontend/`, loaded from `main.js`. Every
-   `Textarea` is a Markdown field with the toolbar (`data-toolbar`); texts
-   shown with `{% checklist_markdown text item %}` can be ticked in place,
-   and a detail model with a text that may have a task list inherits
+5. **Pages.** Server-rendered templates extending `base.html`,
+   following the UI rules in `specs/ui.md` (read it before building a
+   page): forms in modals, quiet pages, one primary button, cards, empty
+   states, filters, the combobox, `capfirst` labels, the client badge,
+   tab and banner, phones, motion, keyboard rows. How to build them:
+   icons with `{% icon %}`, a new one in `frontend/styles/icons.css`
+   (`biwak/test_icons.py` checks). JavaScript only for interaction, in
+   `frontend/`, loaded from `main.js`. Every `Textarea` is a Markdown
+   field with the toolbar (`data-toolbar`); texts shown with
+   `{% checklist_markdown text item %}` can be ticked in place, and a
+   detail model with a text that may have a task list inherits
    `Checklist` (stored counts, shown on rows with
-   `items/_checklist_signal.html`).
-   What several pages show comes from an include (comments, subscribers,
-   the visibility switch, breadcrumbs, the to-do row), not a copy. A class
-   in a template needs CSS in the bundle (`biwak/test_css.py`: Bootstrap
-   is compiled in parts, `frontend/styles/bootstrap.scss`, or a `wb-` class
-   in `main.css`). The button creating what a page is about is primary
-   when it's the page's one such action (new project, message, check-in);
-   elsewhere it's quiet (`btn-quiet`). Empty lists say so: a
-   `list-group-item` in a list group, else a `text-body-secondary`
-   paragraph (decided 2026-11-21). Disclosures that float (menus, the
-   reaction picker) close on a click elsewhere and Escape (`data-dismiss`).
-   Rows people move through with j/k (to-dos, messages, feed entries,
-   search results) carry `data-kb-row`, `data-kb-open` and, for to-dos,
-   `data-kb-complete`; what a page offers in the command palette and as
-   shortcuts is decided on the server in `biwak/palette/actions.py` (with
-   the same permission checks as the buttons) and a new kind of page or
-   action goes there, with a test on the rendered JSON. View choices
-   (orderings, groupings) are query parameters remembered by
-   `frontend/filters.js`, not fields on `User`. Colors are palette
-   tokens (`--wb-palette-*`, `--wb-accent-*`), never hard-coded violet.
-   Form labels show with `capfirst` in the templates, whatever case
-   they're written in (model `verbose_name`s are lowercase), so one
-   translation serves both (decided 2026-11-21).
+   `items/_checklist_signal.html`). What several pages show comes from
+   an include, not a copy. A class in a template needs CSS in the bundle
+   (`biwak/test_css.py`: Bootstrap is compiled in parts,
+   `frontend/styles/bootstrap.scss`, or a `wb-` class in `main.css`).
+   What a page offers in the command palette and as shortcuts is decided
+   in `biwak/palette/actions.py` (the buttons' permission checks); a new
+   kind of page or action goes there, with a test on the rendered JSON.
+   Colors are palette tokens, never hard-coded.
    Template comments: `{# … #}` only on one line (Django prints a
    multi-line one); longer ones in `{% comment %}…{% endcomment %}`.
 6. **API.** Endpoints in the app's `api.py`, registered in
