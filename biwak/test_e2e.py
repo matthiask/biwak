@@ -651,6 +651,22 @@ class TodoPageTest(E2ETestCase):
         self.assertNotIn("@example.org", listbox.inner_text())
         self.assertEqual(self.errors, [])
 
+    def test_reaction_pills_are_as_tall_as_the_add_button(self):
+        """One's own pill and the others' alike"""
+        from biwak.reactions import operations as reaction_ops
+
+        reaction_ops.add_reaction(self.ada, "🙏", item=self.todo)
+        reaction_ops.add_reaction(self.cleo, "🎉", item=self.todo)
+        self.goto(self.page, self.todo)
+        heights = self.page.locator(".wb-reactions").first.evaluate(
+            """el => [...el.querySelectorAll(
+              ".wb-reaction-own, :scope > form:not(.wb-reaction-own) > .wb-reaction,"
+              + " .wb-reaction-add > summary"
+            )].map(e => Math.round(e.getBoundingClientRect().height))"""
+        )
+        self.assertEqual(len(heights), 3)
+        self.assertEqual(len(set(heights)), 1, heights)
+
     def test_the_reaction_picker_fills_its_rows(self):
         self.goto(self.page, self.todo)
         reactions = self.page.locator(".wb-reactions").first

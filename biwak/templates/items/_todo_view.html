@@ -10,11 +10,8 @@
     <div class="wb-fact wb-edit-hit" data-edit-focus="assignees">
       <dt>{% translate "Assigned to" %}</dt>
       <dd>
-        {% for person in todo.assignees.all %}<span
-            class="badge wb-person"
-          >{% person_page person %}</span>{% empty %}<span
-            class="text-body-secondary"
-          >{% translate "Nobody" %}</span>{% endfor %}
+        {% for person in todo.assignees.all %}{% person_page person %}{% if not forloop.last %},
+          {% endif %}{% empty %}<span class="text-body-secondary">{% translate "Nobody" %}</span>{% endfor %}
       </dd>
     </div>
     <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">

@@ -254,14 +254,15 @@ class PickerTest(E2ETestCase):
         expect(listbox).to_be_visible()
         # Members first, the non-member says so
         names = listbox.locator("li").all_inner_texts()
-        self.assertTrue(names[0].startswith("Ada"))
-        self.assertTrue(names[1].startswith("Cleo"))
+        # Each with their mark (the initials) before the name
+        self.assertIn("Ada", names[0])
+        self.assertIn("Cleo", names[1])
         self.assertIn("not in the project yet", names[2])
         # Typing filters; the arrow keys and Enter pick
         field.press_sequentially("bo")
         expect(listbox.locator("li")).to_have_count(1)
         field.press("Enter")
-        expect(page.locator(".wb-pill")).to_have_text("Bob×")
+        expect(page.locator(".wb-pill")).to_have_text("BEBob×")  # with the mark
         # Escape closes the list but not the form
         field.press("Escape")
         expect(listbox).to_be_hidden()
