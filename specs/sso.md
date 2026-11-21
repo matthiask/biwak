@@ -128,7 +128,7 @@ the organization's IdP.
   checks: a provider the installation has set up (`SOCIALACCOUNT_PROVIDERS`
   with a client ID), Google needs the organization's domains, Microsoft a
   tenant ID that is a UUID and not the tenant of personal accounts
-  (`9188040d-…`). Switching back to codes keeps the provider for later.
+  (`9188040d-…`, [Microsoft's ID token claims](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference), `iss` and `tid`). Switching back to codes keeps the provider for later.
 - **Decided while building (2026-11-21, the most secure reasonable
   option; confirmed 2026-11-21):**
   - The domains of an organization with single sign-on decide whose

@@ -130,7 +130,8 @@ class IdP(models.TextChoices):
 
 
 # The tenant of personal Microsoft accounts: anybody can have one, it never
-# stands for an organization
+# stands for an organization (the iss and tid claims in
+# https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference)
 MICROSOFT_CONSUMER_TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad"
 
 
