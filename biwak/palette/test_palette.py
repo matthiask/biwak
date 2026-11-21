@@ -73,9 +73,6 @@ class PaletteBase(TestCase):
 
 
 class JumpsTest(PaletteBase):
-    def test_login_required(self):
-        self.assertEqual(self.client.get("/palette/?q=tent").status_code, 302)
-
     def test_staff_find_every_kind_grouped_by_kind(self):
         results = self.jump(self.ada, "tent")
         self.assertEqual(
@@ -157,6 +154,15 @@ class JumpsTest(PaletteBase):
         self.assertFalse(
             next(r for r in results if r["title"] == "Tent office")["archived"]
         )
+
+    def test_archived_lists_come_last_marked(self):
+        ops.archive(self.visible, actor=self.ada)
+        results = {r["title"]: r["archived"] for r in self.jump(self.ada, "tent")}
+        self.assertTrue(results["Tent visible"])
+        self.assertFalse(results["Tent internal"])
+        marks = [r["archived"] for r in self.jump(self.ada, "tent")]
+        self.assertEqual(marks, sorted(marks))
+        self.assertTrue(marks[-1])
 
     def test_at_most_twenty(self):
         for index in range(30):

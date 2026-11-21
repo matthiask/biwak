@@ -7,7 +7,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("accounts", "0014_remove_user_project_order"),
+        ("accounts", "0015_user_mail_undeliverable_at"),
     ]
 
     operations = [

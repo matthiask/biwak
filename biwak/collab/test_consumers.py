@@ -45,6 +45,21 @@ from biwak.projects.models import Membership
 from biwak.test_utils import organization, person, project
 
 
+# How long the server stays quiet before a test takes it as done: longer
+# than its slowest answer on a busy machine (tests run in parallel), the
+# communicator returns as soon as something arrives
+QUIET = 0.5
+
+
+async def eventually(check):
+    """Waits until ``await check()`` is true (five seconds at most): a test
+    waiting for the server's work in the background doesn't depend on its
+    speed"""
+    async with asyncio.timeout(5):
+        while not await check():  # noqa: ASYNC110 (the database, no event)
+            await asyncio.sleep(0.02)
+
+
 application = AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
 
 
@@ -60,7 +75,7 @@ class YClient:
 
     async def receive(self):
         """The next message from the server, handled; returns it"""
-        output = await self.communicator.receive_output()
+        output = await self.communicator.receive_output(timeout=5)
         if output["type"] == "websocket.close":
             return output
         data = output["bytes"]
@@ -76,7 +91,7 @@ class YClient:
 
     async def drain(self):
         """Handles what the server sends until it's quiet"""
-        while not await self.communicator.receive_nothing(timeout=0.2):
+        while not await self.communicator.receive_nothing(timeout=QUIET):
             await self.receive()
 
     async def sync(self):
@@ -536,10 +551,13 @@ class ConsumerTest(TransactionTestCase):
         ada = await self.connect(self.ada, self.shared)
         await ada.type(6, " and minutes")
         self.assertEqual(await self.content(self.shared), "Agenda\n")
-        await asyncio.sleep(0.2)
-        self.assertEqual(await self.content(self.shared), "Agenda and minutes\n")
+
+        async def stored(text):
+            return await self.content(self.shared) == text
+
+        await eventually(lambda: stored("Agenda and minutes\n"))
         await ada.type(0, "Our ")
-        await asyncio.sleep(0.2)
+        await eventually(lambda: stored("Our Agenda and minutes\n"))
 
         @database_sync_to_async
         def check():
@@ -855,7 +873,7 @@ class ConsumerTest(TransactionTestCase):
                 bytes_data=bytes([consumers.QUERY_AWARENESS])
             )
         queries = 0
-        while not await ada.communicator.receive_nothing(timeout=0.2):
+        while not await ada.communicator.receive_nothing(timeout=QUIET):
             output = await ada.receive()
             queries += output["bytes"] == bytes([consumers.QUERY_AWARENESS])
         self.assertEqual(queries, 2)
@@ -867,7 +885,7 @@ class ConsumerTest(TransactionTestCase):
         for _n in range(5):
             await bob.communicator.send_to(bytes_data=create_sync_message(bob.doc))
         answers = 0
-        while not await bob.communicator.receive_nothing(timeout=0.2):
+        while not await bob.communicator.receive_nothing(timeout=QUIET):
             output = await bob.receive()
             answers += output["bytes"][:2] == bytes([0, 0])
         self.assertEqual(answers, 2)
@@ -895,4 +913,4 @@ class ConsumerTest(TransactionTestCase):
         self.assertTrue(await bob.communicator.receive_nothing(timeout=0.2))
         # A normal one is answered
         await bob.communicator.send_to(bytes_data=create_sync_message(bob.doc))
-        self.assertFalse(await bob.communicator.receive_nothing(timeout=0.2))
+        self.assertFalse(await bob.communicator.receive_nothing(timeout=5))

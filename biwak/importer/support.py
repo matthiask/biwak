@@ -380,6 +380,23 @@ def make_data():
         )
     ]
 
+    # Archived recordings other than to-dos and lists: found by the
+    # recordings' listing, not imported
+    def archived(rid, type_, title):
+        return recording(
+            rid, type_, title, BOB, "2026-01-02T09:00:00.000Z", status="archived"
+        )
+
+    for type_, rid, title in [
+        ("Message", 9001, "Old announcement"),
+        ("Document", 9002, "Old notes"),
+        ("Upload", 9003, "old.png"),
+        ("Question", 9004, "Last year's question"),
+    ]:
+        d[
+            f"/projects/recordings.json?bucket={PROJECT}&status=archived&type={type_}"
+        ] = [archived(rid, type_, title)]
+
     # Comments and subscriptions -------------------------------------------
     def comment(cid, text, creator, created, parent):
         return recording(

@@ -83,11 +83,11 @@ class LiveConsumerTest(TransactionTestCase):
         return communicator
 
     async def receive(self, communicator):
-        return json.loads(await communicator.receive_from(timeout=2))
+        return json.loads(await communicator.receive_from(timeout=5))
 
     async def assertClosed(self, communicator, code=consumers.CLOSE_NOT_FOUND):
         """Closed, and nothing else came before"""
-        output = await communicator.receive_output(timeout=2)
+        output = await communicator.receive_output(timeout=5)
         self.assertEqual(output, {"type": "websocket.close", "code": code})
 
     async def assertQuiet(self, *communicators):
@@ -333,12 +333,17 @@ class LiveConsumerTest(TransactionTestCase):
         await self.run_op(make_client)
         await self.assertQuiet(bob)
         groups = get_channel_layer().groups
-        self.assertEqual(
-            len(groups.get(announce.item_group(self.shared.pk, clients=True), {})), 1
-        )
-        self.assertEqual(
-            len(groups.get(announce.item_group(self.shared.pk, clients=False), {})), 0
-        )
+
+        def members(clients):
+            group = announce.item_group(self.shared.pk, clients=clients)
+            return len(groups.get(group, {}))
+
+        # The consumer moves on its own time (however busy the machine is)
+        for _ in range(250):
+            if (members(clients=True), members(clients=False)) == (1, 0):
+                break
+            await asyncio.sleep(0.02)
+        self.assertEqual((members(clients=True), members(clients=False)), (1, 0))
 
     async def logged_in(self, user):
         """A client logged in, and its session listed as logging in by code

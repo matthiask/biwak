@@ -27,7 +27,7 @@ from django.utils.translation import gettext as _
 from biwak.activity.operations import is_assigned, is_subscribed
 from biwak.bookmarks.operations import can_manage_links, is_bookmarked
 from biwak.items import operations as ops
-from biwak.items.models import Item, Kind
+from biwak.items.models import Item, Kind, Status
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
@@ -199,6 +199,15 @@ def on_item(request, item, context):
             actions.append(link(_("List view"), f"{url}?view=list"))
         else:
             actions.append(link(_("Board view"), f"{url}?view=board"))
+        if ops.can_change(user, item):
+            archived = item.status == Status.ARCHIVED
+            actions.append(
+                post(
+                    _("Unarchive") if archived else _("Archive"),
+                    reverse("list_archive", args=[item.pk]),
+                    {"unarchive": "1", "next": url} if archived else {"next": url},
+                )
+            )
     if item.is_commentable:
         actions.append(focus(_("Comment"), COMMENT_FORM, shortcut="c"))
     if item.kind == Kind.TODO:

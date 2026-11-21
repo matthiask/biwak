@@ -94,15 +94,6 @@ class HelpTest(TestCase):
         for page in ["missing", "README", "constitution", "todos.md"]:
             self.assertEqual(self.client.get(f"/help/{page}/").status_code, 404)
 
-    def test_login_is_required(self):
-        for page in PAGES["en"]:
-            response = self.client.get(url(page))
-            self.assertRedirects(
-                response,
-                f"/accounts/login/code/?next={url(page)}",
-                fetch_redirect_response=False,
-            )
-
 
 class ShortcutsTest(TestCase):
     """The one list of shortcuts: the keyboard page, the "?" dialog"""

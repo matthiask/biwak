@@ -506,6 +506,9 @@ def project_detail(request, pk):
     all_lists = items.filter(kind=Kind.LIST, parent=None)
     lists = all_lists.filter(status=Status.ACTIVE).select_related("project")
     lists = list(lists)
+    archived_lists = list(all_lists.filter(status=Status.ARCHIVED))
+    for todolist in lists + archived_lists:
+        todolist.can_change = ops.can_change(request.user, todolist)
     counts = glance.list_counts(request.user, lists, schedules.today())
     for todolist in lists:
         todolist.open_count, todolist.overdue_count = counts.get(todolist.pk, (0, 0))
@@ -523,7 +526,7 @@ def project_detail(request, pk):
         {
             "project": project,
             "lists": lists,
-            "archived_lists": all_lists.filter(status=Status.ARCHIVED),
+            "archived_lists": archived_lists,
             "can_manage": project_ops.can_manage_project(request.user),
             "can_create_lists": ops.can_create(request.user, Kind.LIST),
             "members": project.memberships.select_related("user"),

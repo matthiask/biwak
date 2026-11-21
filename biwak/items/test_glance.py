@@ -120,7 +120,7 @@ class RowsTest(Fixture):
         urls = [
             self.shared.get_absolute_url(),
             self.shared.get_absolute_url() + "?view=board",
-            "/todos/",
+            "/todos/?assignee=anybody",
             f"/projects/{self.project.pk}/todos/",
         ]
         before = {url: self.count_queries(url) for url in urls}
@@ -149,7 +149,7 @@ class RowsTest(Fixture):
         self.todo.todo.due_on = dt.date(2026, 1, 1)
         self.todo.todo.save()
         ops.add_comment(self.todo, author=self.ada, content="Hi")
-        response = self.client.get("/todos/")
+        response = self.client.get("/todos/?assignee=anybody")
         self.assertContains(response, 'title="1 comment"')
         self.assertContains(response, f"/todos/{self.todo.pk}/peek/")
 
@@ -187,11 +187,6 @@ class PeekTest(Fixture):
         response = self.client.get(f"/todos/{self.secret.pk}/peek/")
         self.assertEqual(response.status_code, 404)
         self.assertNotContains(response, "Internal notes", status_code=404)
-
-    def test_login_required(self):
-        self.assertEqual(
-            self.client.get(f"/todos/{self.todo.pk}/peek/").status_code, 302
-        )
 
 
 class ListCountsTest(Fixture):

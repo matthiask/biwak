@@ -860,7 +860,7 @@ def item_archive(request, pk):
         ops.unarchive(item, actor=request.user)
     else:
         ops.archive(item, actor=request.user)
-    return redirect(item)
+    return redirect(next_url(request) or item)
 
 
 class ListEditForm(Form):

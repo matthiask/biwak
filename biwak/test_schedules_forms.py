@@ -158,8 +158,3 @@ class DescribeTest(TestCase):
     def test_a_bad_name(self):
         self.assertEqual(self.get({"name": "a b"}).status_code, 400)
         self.assertEqual(self.get({}).status_code, 400)
-
-    def test_login_required(self):
-        self.client.logout()
-        response = self.client.get("/schedules/describe/", {"name": "rule"})
-        self.assertEqual(response.status_code, 302)

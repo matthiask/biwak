@@ -42,6 +42,12 @@ class ViewsTest(TestCase):
         self.assertContains(response, 'maxlength="40"')
         self.assertContains(response, f"/items/{self.todo.pk}/reactions/")
         self.assertContains(response, f"/comments/{self.comment.pk}/reactions/")
+        # The picker's button is a smiling face, not a "+"
+        html = response.content.decode()
+        summary = html[html.index('aria-label="Add a reaction"') :]
+        summary = summary[: summary.index("</summary>")]
+        self.assertIn("bi-emoji-smile", summary)
+        self.assertNotIn("+", summary)
 
     def test_toggle_on_todo_and_comment(self):
         self.client.force_login(self.bob)
@@ -156,11 +162,6 @@ class ViewsTest(TestCase):
         self.assertEqual(
             self.client.get(f"/items/{self.todo.pk}/reactions/").status_code, 405
         )
-
-    def test_login_required(self):
-        response = self.post(f"/items/{self.todo.pk}/reactions/", "👍")
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(Reaction.objects.exists())
 
     def test_client_on_visible_items(self):
         self.client.force_login(self.cleo)

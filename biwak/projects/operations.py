@@ -4,10 +4,8 @@ already (specs/notifications.md)."""
 
 from collections import Counter
 from dataclasses import dataclass
-from functools import partial
 
-from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.db import connection, models, transaction
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -16,11 +14,14 @@ from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import Color, NotificationLevel, User
+from biwak.activity.mails import sender
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import is_importing, record, set_level_override
 from biwak.api_conventions import absolute
 from biwak.organizations import operations as org_ops
+from biwak.outbox import sending as outbox
+from biwak.outbox.models import Kind as MailKind
 from biwak.projects.models import Membership, Project
 
 
@@ -219,13 +220,12 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_DEFAULT):
         ]
         done.append(Invited(user, created, added))
     if errors:
-        # Rolls the round back, the mails registered below aren't sent
+        # Rolls the round back; no mail is queued before this
         raise InvitationErrors(errors)
     for invited in done:
         if invited.created:
-            transaction.on_commit(
-                partial(send_invitation, projects, invited.user, actor=actor)
-            )
+            # Through the outbox: sent once this commits, not on a rollback
+            send_invitation(projects, invited.user, actor=actor)
     return done
 
 
@@ -280,8 +280,8 @@ def resend_invitation(user, *, actor):
     (no limit in code, decided 2026-11-21); after the commit"""
     if not can_manage_invitation(actor, user):
         raise PermissionError("Only staff resend invitations of people not signed in.")
-    projects = list(invitation_projects(user))
-    transaction.on_commit(partial(send_invitation, projects, user, actor=actor))
+    # Through the outbox: sent once this commits
+    send_invitation(list(invitation_projects(user)), user, actor=actor)
 
 
 def _referred_to(user):
@@ -358,12 +358,14 @@ def send_invitation(projects, user, *, actor):
             }
         else:
             subject = _("%(actor)s invited you to Biwak") % {"actor": actor}
-        send_mail(
+        message = EmailMessage(
             subject,
             render_to_string("projects/invitation.txt", context),
-            settings.DEFAULT_FROM_EMAIL,
+            # From the person inviting, like notification mails
+            sender(_("%(name)s (Biwak)") % {"name": actor}),
             [user.email],
         )
+    outbox.send(message, MailKind.INVITATION)
 
 
 def can_manage_project(user):

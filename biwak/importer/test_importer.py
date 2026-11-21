@@ -139,7 +139,11 @@ class ImportEveryKindTest(ImportCase):
         done = self.item("Pick a camp date")
         self.assertEqual(done.todo.completed_at, at("2026-01-08T16:30:00+00:00"))
         self.assertEqual(done.todo.completed_by, self.ada)
-        self.assertEqual(self.item("Whale watching").status, Status.ARCHIVED)
+        # Archived to-dos come in completed, not archived (specs/archiving.md)
+        whale = self.item("Whale watching")
+        self.assertEqual(whale.status, Status.ACTIVE)
+        self.assertEqual(whale.todo.completed_at, at("2026-01-08T09:00:00+00:00"))
+        self.assertEqual(whale.todo.completed_by, self.ada)
 
         # Messages
         announcement = self.item("We have a camp")
@@ -575,6 +579,48 @@ class SecondRunTest(ImportCase):
         self.assertEqual(Item.objects.filter(title="Peel potatoes").count(), 1)
 
 
+class ArchivedTest(ImportCase):
+    def test_archived_recordings_are_skipped_and_reported(self):
+        report = self.run_import()
+        titles = set(Item.objects.values_list("title", flat=True))
+        for title in [
+            "Old announcement",
+            "Old notes",
+            "old.png",
+            "Last year's question",
+        ]:
+            self.assertNotIn(title, titles)
+        self.assertEqual(len(report.archived), 4)
+
+    def test_archived_to_dos_keep_their_comments_and_complete_once(self):
+        self.client_.data["/recordings/3031/comments.json"] = [
+            support.recording(
+                9100,
+                "Comment",
+                "Re: Whale watching",
+                support.BOB,
+                "2026-01-09T09:00:00.000Z",
+                parent={"id": 3031, "type": "Todo", "title": "Whale watching"},
+                content="Too cold",
+                content_attachments=[],
+            )
+        ]
+        for rec in self.client_.data["/todolists/303/todos.json?status=archived"]:
+            rec["comments_count"] = 1
+        self.run_import()
+        self.run_import()
+        whale = self.item("Whale watching")
+        self.assertTrue(whale.todo.is_completed)
+        self.assertEqual(Comment.objects.filter(item=whale).count(), 1)
+        self.assertEqual(
+            Event.objects.filter(item=whale, action="completed").count(), 1
+        )
+
+    def test_archived_lists_stay_archived(self):
+        self.run_import()
+        self.assertEqual(self.item("Old ideas").status, Status.ARCHIVED)
+
+
 class DryRunTest(ImportCase):
     def test_writes_nothing(self):
         report = self.run_import(dry_run=True)
@@ -616,6 +662,21 @@ class DryRunTest(ImportCase):
         self.assertIn("Dry run", text)
         self.assertIn("Raise the rate for Cleo", text)
         self.assertIn("to-dos: 6 new", text)
+
+    def test_lists_archived_recordings_it_skips(self):
+        report = self.run_import(dry_run=True)
+        self.assertEqual(
+            report.archived,
+            [
+                "message: Old announcement",
+                "doc: Old notes",
+                "file: old.png",
+                "check-in question: Last year's question",
+            ],
+        )
+        text = report.as_text()
+        self.assertIn("Archived in Basecamp, skipped:", text)
+        self.assertIn("  doc: Old notes", text)
 
     def test_after_a_run_it_counts_existing_ones(self):
         self.run_import()

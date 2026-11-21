@@ -644,16 +644,46 @@ def member_remove(project, person, as_json):
 
 @cli.command()
 @click.argument("project", type=int)
+@click.option("--archived", is_flag=True, help="Archived lists instead.")
 @json_option
-def lists(project, as_json):
+def lists(project, archived, as_json):
     """The to-do lists of PROJECT"""
-    data = request("GET", f"projects/{project}/lists/")
+    data = request("GET", f"projects/{project}/lists/", params={"archived": archived})
     if as_json:
         return echo_json(data)
     t = table("ID", "List", "")
     for item in data:
         t.add_row(str(item["id"]), item["title"], clients(item))
     console.print(t)
+    return None
+
+
+@cli.group("list")
+def list_group():
+    """Archive and unarchive to-do lists"""
+
+
+@list_group.command("archive")
+@click.argument("list_id", metavar="LIST", type=int)
+@json_option
+def list_archive(list_id, as_json):
+    """Archive LIST: readable, but out of the way (it stays out of your to-dos)"""
+    data = request("PATCH", f"lists/{list_id}/", json={"archived": True})
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Archived {data['title']} ({data['id']}).")
+    return None
+
+
+@list_group.command("unarchive")
+@click.argument("list_id", metavar="LIST", type=int)
+@json_option
+def list_unarchive(list_id, as_json):
+    """Bring LIST back from the archive"""
+    data = request("PATCH", f"lists/{list_id}/", json={"archived": False})
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Brought {data['title']} ({data['id']}) back from the archive.")
     return None
 
 

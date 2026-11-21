@@ -1,5 +1,7 @@
 """Made-up people and projects for the tests (no real data, AGENTS.md)"""
 
+from html.parser import HTMLParser
+
 from biwak.accounts.models import User
 from biwak.organizations.models import Organization
 from biwak.projects.models import Membership, Project
@@ -130,3 +132,22 @@ def invite_data(projects, *rows, notify="default"):
         for key, value in values.items():
             data[f"person-{index}-{key}"] = value
     return data
+
+
+def tags(html, *, cls, **attrs):
+    """The start tags (their attributes) with the class ``cls`` among
+    others and the ``attrs`` (``data_x`` for ``data-x``), in any order:
+    what matters of an element without its other classes"""
+    wanted = {name.replace("_", "-"): value for name, value in attrs.items()}
+    found = []
+
+    class Parser(HTMLParser):
+        def handle_starttag(self, tag, attributes):
+            attributes = dict(attributes)
+            if cls in (attributes.get("class") or "").split() and all(
+                attributes.get(name) == value for name, value in wanted.items()
+            ):
+                found.append(attributes)
+
+    Parser().feed(html)
+    return found

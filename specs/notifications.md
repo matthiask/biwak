@@ -268,9 +268,10 @@ Project events (joined, added, removed) notify nobody.
   - `List-Unsubscribe` and `List-Unsubscribe-Post` (RFC 8058): a signed
     URL `/unsubscribe/<token>/` (no login, `django.core.signing`, person
     and item) that unsubscribes from the item.
-- **Sending** through Django's mail API with `EMAIL_URL` (Resend's SMTP
-  in production, decided 2026-11-20; the console in development). After
-  the commit, never inside a transaction.
+- **Sending** through the outbox (`specs/mail-sending.md`, built
+  2026-11-21): the finished mail is put into it in the transaction that
+  marks the notifications sent, and goes out after the commit, retried
+  until Resend (its API, in production) accepted it.
 
 Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
 
@@ -278,11 +279,11 @@ Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
   who can't see the item any more get nothing, and those notifications
   are deleted. (A level changed since no longer holds mails back, nor
   hides them in the lantern: the level decided who was told, 2026-11-21,
-  `ui-round-6.md`.) A mail that fails to
-  send leaves its notifications unsent for the next run.
-- At most once: notifications are marked sent when the transaction
-  commits, before the mail goes out; a crash in between loses those mails
-  rather than sending them twice (accepted, 2026-11-21).
+  `ui-round-6.md`.) A mail that fails to send is the outbox's to retry;
+  its notifications stay sent.
+- Once: notifications are marked sent in the transaction that puts their
+  mail into the outbox, so a crash loses neither (2026-11-21, replacing
+  "at most once" with the outbox).
 - A mail that fails to be built is logged and its notifications stay
   unsent; the other mails, the digests and the check-ins go out anyway
   (each part of `send_mails` on its own, like each task of

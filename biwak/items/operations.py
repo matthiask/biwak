@@ -659,6 +659,9 @@ def _create_next(item, todo, *, actor):
     if item.following.exclude(item__status=Status.TRASHED).exists():
         return None
     todolist = item.parent
+    if todolist.status == Status.ARCHIVED:
+        # Nothing new in an archived list (specs/archiving.md)
+        return None
     TodoList.objects.select_for_update().get(item=todolist)
     following = create_item(
         project=item.project,
@@ -957,8 +960,11 @@ def update_list(
 
 @transaction.atomic
 def archive(item, *, actor):
-    """Readable, but out of the way (lists, later folders and messages);
-    archiving an archived item again changes nothing (a double submit)"""
+    """Readable, but out of the way: lists only (specs/archiving.md; to-dos
+    are completed, not archived); archiving an archived list again changes
+    nothing (a double submit)"""
+    if item.kind != Kind.LIST:
+        raise ValueError("Only lists can be archived")
     if item.status == Status.ARCHIVED:
         return
     if item.status != Status.ACTIVE:

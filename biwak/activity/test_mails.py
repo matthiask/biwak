@@ -16,6 +16,8 @@ from biwak.activity.operations import record, subscribe
 from biwak.files import attachments
 from biwak.items import operations as ops
 from biwak.items.models import Item
+from biwak.outbox import sending as outbox
+from biwak.outbox.models import OutgoingMail
 from biwak.reactions.operations import add_reaction
 from biwak.test_utils import person, project
 
@@ -181,35 +183,54 @@ class MailsTest(TestCase):
         self.assertFalse(Notification.objects.filter(user=self.bob).exists())
 
     def test_failed_sending_retries(self):
+        """The outbox has the mail (specs/mail-sending.md): the notifications
+        are sent, the mail goes out with a later try"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         later = timezone.now() + dt.timedelta(minutes=3)
         with (
-            patch("django.core.mail.EmailMultiAlternatives.send", side_effect=OSError),
+            patch.object(
+                mail.mailers.default.__class__, "send_messages", side_effect=OSError
+            ),
+            self.assertLogs("biwak.outbox.sending", "WARNING"),
+        ):
+            self.assertEqual(self.send(later), 1)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(sent_at__isnull=True).exists())
+        self.assertEqual(self.send(later), 0)
+        with self.captureOnCommitCallbacks(execute=True):
+            outbox.retry(now=timezone.now() + dt.timedelta(minutes=2))
+        self.assertEqual([m.to for m in mail.outbox], [[self.bob.email]])
+
+    def test_failed_building_retries(self):
+        """A mail which can't be built leaves its notifications unsent"""
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        later = timezone.now() + dt.timedelta(minutes=3)
+        with (
+            patch.object(mails_module, "item_mail", side_effect=ValueError),
             self.assertLogs("biwak.activity.mails", "ERROR"),
         ):
-            self.send(later)
+            self.assertEqual(self.send(later), 0)
+        self.assertFalse(OutgoingMail.objects.exists())
         self.assertTrue(Notification.objects.filter(sent_at__isnull=True).exists())
         self.assertEqual(self.send(later), 1)
 
-    def test_failed_sending_with_a_newer_notification(self):
-        """The newer one carries the event (one unsent per person and
-        event)"""
-        self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="One"))
+    def test_in_the_outbox_with_the_notifications(self):
+        """Queued in the transaction which marks the notifications sent:
+        both or neither (no mail lost to a crash in between)"""
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         with self.captureOnCommitCallbacks() as callbacks:
             send_mails(now=timezone.now() + dt.timedelta(minutes=3))
-        # Merged into the same event, Bob mentioned since
-        self.act(
-            lambda: ops.update_todo(
-                self.todo, actor=self.ada, notes=mentions.syntax(self.bob)
-            )
-        )
-        with (
-            patch("django.core.mail.EmailMultiAlternatives.send", side_effect=OSError),
-            self.assertLogs("biwak.activity.mails", "ERROR"),
-        ):
-            callbacks[0]()
-        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)
-        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 1)
+        (row,) = OutgoingMail.objects.all()
+        self.assertEqual(row.kind, "notification")
+        self.assertEqual(row.recipients, [self.bob.email])
+        self.assertFalse(Notification.objects.filter(sent_at=None).exists())
+        self.assertEqual(mail.outbox, [])
+        for callback in callbacks:
+            callback()
+        self.assertEqual(len(mail.outbox), 1)
+        row.refresh_from_db()
+        self.assertIsNotNone(row.sent_at)
+        self.assertIsNone(row.message)
 
     def test_digest(self):
         self.bob.mail_delivery = MailDelivery.DIGEST
