@@ -11,8 +11,8 @@ and Basecamp's profile images. Built 2026-11-21. Where it lives now:
 - **C, Basecamp's profile images:** `import-basecamp.md`, `people.md`.
 - **D, the projects page and colors:** no archiving from the cards
   (`projects-overview.md`), the swatches (`project-colors.md`).
-- **E, sign-in and sessions on the settings page:** `keyboard.md`
-  ("The settings page").
+- **E, sign-in and sessions on the settings page:** `access.md`
+  ("Sign-in").
 - **F, people with the same first name:** `people.md` ("Names").
 - The client badge left the feed and the lantern (`feed.md`); filters
   and grouping went to round 3.

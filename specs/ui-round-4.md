@@ -11,15 +11,8 @@ plus round 4 of `ui-feedback.md`. Built 2026-11-21. Where it lives now:
 4. **Small things:** "just now" (`core.md`); the comment field's label
    is "Comment", visually hidden under the "Comments" heading.
 5. Round 4 of the feedback: "Sign out" in the "Me" menu and "Sign out
-   here" in the sessions (`keyboard.md`); showing to clients asks first
-   in a modal, hiding is one click (`access.md`); the feed groups
+   here" in the sessions (`access.md`, "Sign-in"); showing to clients
+   asks first in a modal, hiding is one click (`access.md`, "Making it
+   obvious"); the feed groups
    conversations and nothing collapses (`feed.md`); groupings and orders
    as filters (`core.md`, `todos.md`, `projects-overview.md`).
-
-## To move after the builds
-
-Into `access.md` (the switch's modal, 5.4): `GET /items/<pk>/switch/`
-is the question (a page, a modal for `HX-Modal`; an item already visible
-redirects to itself); the POST with `visible=1` shows it, without it
-hides. The question's text is built by the view per kind
-(`_show_texts()`), so the switch include shows no sentence by the button.
