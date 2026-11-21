@@ -190,13 +190,17 @@ def anchor(notification):
 def read(user, *, item=None, items=None):
     """Marks the person's notifications read: those of the item (and its
     comments, which are the item's events) or the items, or all; returns
-    how many. One query when there's nothing to read."""
-    notifications = Notification.objects.filter(user=user, read_at__isnull=True)
+    how many. Only those the person sees (``notifications_for()``): the
+    others aren't counted, and stay unread and unseen. One query when
+    there's nothing to read."""
+    notifications = notifications_for(user, unread=True)
     if item is not None:
         items = [item]
     if items is not None:
         notifications = notifications.filter(event__item__in=items)
-    count = notifications.update(read_at=timezone.now())
+    count = Notification.objects.filter(
+        pk__in=notifications.order_by().values("pk")
+    ).update(read_at=timezone.now())
     if count:
         live.lantern_changed([user.pk])
     return count
@@ -204,14 +208,9 @@ def read(user, *, item=None, items=None):
 
 @transaction.atomic
 def unread(user, *, item):
-    """Marks the item's newest notification unread again; returns whether
-    there was one"""
-    newest = (
-        Notification.objects
-        .filter(user=user, event__item=item, read_at__isnull=False)
-        .order_by("-created_at", "-pk")
-        .first()
-    )
+    """Marks the item's newest notification the person sees
+    (``notifications_for()``) unread again; returns whether there was one"""
+    newest = notifications_for(user, unread=False).filter(event__item=item).first()
     if newest is None:
         return False
     newest.read_at = None

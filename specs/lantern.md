@@ -221,6 +221,11 @@ setup as `collaboration.md`).
   once (4401), and logging out everywhere those of the others: before,
   they kept hearing changes until the next check (60 seconds). Like the
   live editor's (`collaboration.md`).
+- **Reading and marking unread** touch only the notifications listed
+  (`notifications_for()`): "Mark all as read" counted (`{"read": N}` in
+  the API) and read those about items the person can't see anymore, and
+  "Mark as unread" could bring back a client's notification of an
+  internal event.
 
 ## Questions (built the way described meanwhile)
 

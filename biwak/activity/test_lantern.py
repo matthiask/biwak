@@ -318,6 +318,28 @@ class ReadingTest(LanternTestCase):
                     response = self.client.post(reverse(name), {"item": value})
                     self.assertEqual(response.status_code, 404)
 
+    def test_marking_touches_only_what_one_sees(self):
+        """Reading all counts and reads only notifications one sees (the
+        others stay unread, unseen); marking unread doesn't bring back an
+        internal event's"""
+        self.comment(self.todo, "Visible")
+        self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
+        self.assertEqual(lantern.read(self.cleo), 0)
+        self.assertIsNone(Notification.objects.get(user=self.cleo).read_at)
+        # Visible again, and a notification of an internal event, read
+        self.act(lambda: ops.set_visibility(self.shared, visible=True, actor=self.ada))
+        self.assertEqual(lantern.read(self.cleo), 1)
+        event = Event.objects.create(
+            project=self.project, item=self.todo, actor=self.ada, action="edited"
+        )
+        internal = Notification.objects.create(
+            user=self.cleo, event=event, read_at=timezone.now()
+        )
+        self.assertTrue(lantern.unread(self.cleo, item=self.todo))
+        internal.refresh_from_db()
+        self.assertIsNotNone(internal.read_at)
+        self.assertEqual(lantern.unread_count(self.cleo), 1)
+
     def test_question_page_reads_the_answers_shown(self):
         (answer,) = check_in_answers(self.project, [self.ada])
         subscribe(self.bob, answer)
@@ -546,7 +568,13 @@ class APITest(LanternTestCase):
             self.assertEqual(
                 self.call("post", self.bob, "lantern/read/", data).status_code, 400
             )
-        # Clients: internal items don't exist
+        # Clients: reading all counts only what they see
+        self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
+        self.assertEqual(
+            self.call("post", self.cleo, "lantern/read/", {"all": True}).json(),
+            {"read": 0},
+        )
+        # Internal items don't exist
         response = self.call(
             "post", self.cleo, "lantern/read/", {"item_id": self.secret.pk}
         )
