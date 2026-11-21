@@ -36,8 +36,8 @@ tone, with `role="status"` (`aria-live="polite"`). It never covers
 content, and pushes it down instead.
 
 - **In the live editor:** "You're offline. What you type is kept and
-  merged when you're back." Plus "Don't close this tab until then",
-  unless the typing is kept in the browser (see the question).
+  merged when you're back." The typing is kept in the browser, so
+  closing the tab is safe too (below).
 - **On other pages:** "You're offline. This page isn't updating, and
   changes can't be saved until you're back."
 - **Back:** "Back online." for 3 seconds. The page fetches what changed
@@ -67,10 +67,9 @@ does):
 - "Back online." and the page catching up;
 - screen readers: the status role.
 
-## Questions before building
+## Keeping the live editor's typing (decided 2026-11-21)
 
-1. **Keeping the live editor's typing in the browser** (Yjs's IndexedDB
-   storage), so closing the tab, a crash or a restart while offline
-   loses nothing; it is merged when the doc is opened again. Suggested:
-   yes; then the banner doesn't need "Don't close this tab". The stored
-   copy is removed once it's synced, and on logging out.
+The live editor keeps its unsent changes in the browser (Yjs's IndexedDB
+storage), so closing the tab, a crash or a restart while offline loses
+nothing: the changes are merged when the doc is opened again. The stored
+copy is removed once the server has it, and on logging out.
