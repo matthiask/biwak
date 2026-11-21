@@ -55,6 +55,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `ui-round-4.md` | phones: headers, to-do rows, toolbar, small things; feedback round 4 (sign out, visibility modal, feed conversations) | built 2026-11-21 (`ui4-layout`, `ui4-behavior`) | ui-round-3, ui-round-2 D | cheaper |
 | `ui-round-5.md` | feedback round 5: cards on to-dos and docs, the project's to-dos linked, filter buttons, assigned by me | built 2026-11-21 (`ui5`) | ui-round-4 | cheaper |
 | `ui-round-6.md` | a combobox for long people selects, inviting several people to several projects, invitations visible, subscribing is the switch | next | organizations, subscribers | cheaper (A), review B and C |
+| `ui-round-7.md` | files as tiles with "..", folder modals, ordering per folder, drag and drop and selecting several, new docs opening the editor | next | files, doc-titles, subscribers | strong, review visibility |
 | `activation.md` | activating imported people and deactivating people who left: pages, API, CLI, admins only | next | ui-round-6, sso | cheaper, review deactivating |
 | `doc-titles.md` | a doc's title is its first line (a heading or the first text), no title form below the editor | next | files, collaboration | cheaper |
 | `deploy-checklist.md` | what the next deploy brings, what to set up before and after, what to check | for the next deploy | | |

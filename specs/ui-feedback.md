@@ -65,3 +65,14 @@ Spec: `ui-round-6.md`.
 - "add someone" on the people page of a project: the list can get really long really quickly. we need an autocomplete widget here, i think the best candidate is in workbench (good to copy since it's my code even though gpl)
 - i'd expect a invite flow on the people page where i can invite (multiple) people, assign them to organizations, send out the mails and add them to projects directly (all to the same set of projects, if the projects aren't the same i'll start another round of invites). are we seeing invitations anywhere?
 - On a to do item, I'm confused by notifications vs. subscribers. When I'm subscribing, I get notifications. The notification setting is important on projects or list, but on a single issue, when I'm a subscriber, I will be notified.
+
+## round 7
+
+Spec: `ui-round-7.md`.
+
+- files should also use cards instead of the list they use now
+- folder addition and editing through a modal
+- showing the superfolder with ".." could be a nice touch, but we do have breadcrumbs already
+- drag drop moving into subfolders (and parents?) would be nice, seleting multiple files at once too
+- I'd like to be able to set ordering options per folder. I don't need an audit log for this. I just want to be able to set chronological, reverse chronological, alphabetical and reverse alphabetical (I think)
+- The form to create a new doc is different from the form used for editing a doc, is that correct? Does that make sense? Especially with notifications... Or no, how does Biwak decide whether this is a collab document or not?
