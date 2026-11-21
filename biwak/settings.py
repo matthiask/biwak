@@ -287,7 +287,8 @@ RESEND_WEBHOOK_SECRET = env("RESEND_WEBHOOK_SECRET", default="")
 # RESEND_API_KEY (anymail); otherwise any Django mailer URL: ``console:``
 # in development, tests use Django's locmem.
 EMAIL_URL = env("EMAIL_URL", default="console:" if DEBUG else "smtp:")
-if EMAIL_URL == "resend:":  # pragma: no cover
+# Any spelling of the scheme ("resend:", "resend://") means Resend
+if EMAIL_URL.strip().lower().split(":", 1)[0] == "resend":  # pragma: no cover
     if not RESEND_API_KEY:
         raise ImproperlyConfigured("EMAIL_URL=resend: needs RESEND_API_KEY.")
     MAILERS = {
