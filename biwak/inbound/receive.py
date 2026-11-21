@@ -29,11 +29,11 @@ from django.utils.translation import gettext as _
 from biwak.accounts.middleware import set_user_name
 from biwak.activity import mentions
 from biwak.activity.mails import sender
+from biwak.activity.notify import can_see
 from biwak.files import attachments
 from biwak.inbound.models import InboundMessage, InboundStatus, ReplyToken
 from biwak.inbound.strip import reply_text
 from biwak.inbound.tokens import token_in
-from biwak.items.models import Item
 
 
 logger = logging.getLogger(__name__)
@@ -81,10 +81,8 @@ def can_reply(user, token):
     to them now, commentable; for check-ins asked the question"""
     from biwak.checkins.operations import can_answer
 
-    if not user.is_active:
-        return False
-    item = Item.objects.visible_to(user).filter(pk=token.item_id).first()
-    if item is None:
+    item = token.item
+    if not can_see(user, item):
         return False
     if token.occurrence_id:
         return can_answer(user, item)

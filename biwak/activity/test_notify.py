@@ -7,9 +7,16 @@ from django.utils import timezone
 from biwak.accounts.models import NotificationLevel
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event, LevelOverride, Notification
-from biwak.activity.notify import effective_level, notify, notify_people
+from biwak.activity.notify import (
+    can_see,
+    effective_level,
+    notify,
+    notify_people,
+    who_can_see,
+)
 from biwak.activity.operations import record, subscribe, unsubscribe
 from biwak.items import operations as ops
+from biwak.items.models import Item
 from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
@@ -254,3 +261,38 @@ class NotifyTest(TestCase):
             notify_people(message, whom=[self.bob, self.cleo], actor=self.ada),
             [self.bob],
         )
+
+
+class WhoCanSeeTest(TestCase):
+    def test_the_same_as_visible_to(self):
+        """``who_can_see()`` restates ``Item.objects.visible_to()`` for
+        everybody at once: both agree for every kind of person, project,
+        switch and status"""
+        ada = person("Ada")  # staff, member of both
+        bob = person("Bob")  # staff, member of none
+        cleo = person("Cleo", client=True)  # client, member of both
+        dan = person("Dan", client=True)  # client, member of none
+        eve = person("Eve", is_active=False)  # inactive staff, member
+        fay = person("Fay", client=True, is_active=False)  # inactive client
+        people = [ada, bob, cleo, dan, eve, fay]
+        items = []
+        for all_access in [True, False]:
+            p = project(
+                f"All access {all_access}",
+                members=[ada, cleo, eve, fay],
+                all_access=all_access,
+            )
+            for visible in [True, False]:
+                todolist = ops.create_list(
+                    project=p, title="List", creator=ada, visible=visible
+                )
+                todo = ops.create_todo(todolist=todolist, title="To-do", creator=ada)
+                trashed = ops.create_todo(todolist=todolist, title="Gone", creator=ada)
+                ops.trash(trashed, actor=ada)
+                items += [todolist, todo, trashed]
+        for item in Item.objects.filter(pk__in=[i.pk for i in items]):
+            with self.subTest(item=item, project=item.project):
+                self.assertEqual(
+                    set(who_can_see(item)),
+                    {user for user in people if can_see(user, item)},
+                )

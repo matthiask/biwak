@@ -5,7 +5,7 @@
 mails, merged per item or as a daily digest.
 """
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from biwak.accounts.models import NotificationLevel, User
@@ -18,7 +18,7 @@ from biwak.activity.models import (
     Subscription,
 )
 from biwak.activity.operations import subscribe
-from biwak.items.models import Comment, Item, Kind
+from biwak.items.models import Comment, Item, Kind, Status
 
 
 # Events which tell nobody: pinning (specs/files.md)
@@ -28,6 +28,27 @@ SILENT = {Action.PINNED, Action.UNPINNED}
 def can_see(user, item):
     """The one check (specs/access.md), now, not when the event happened"""
     return Item.objects.visible_to(user).filter(pk=item.pk).exists()
+
+
+def people_who_see(project, visible):
+    """The active people who see an item of ``project``, visible to clients
+    or not, that isn't trashed (it may not exist yet):
+    ``Item.objects.visible_to()`` in reverse, for everybody at once.
+    ``test_notify.WhoCanSeeTest`` compares the two so they can't drift."""
+    staff = models.Q(is_client=False)
+    if not project.is_all_access:
+        staff &= models.Q(memberships__project=project)
+    can_see = staff
+    if visible:
+        can_see |= models.Q(is_client=True, memberships__project=project)
+    return User.objects.active().filter(can_see).distinct()
+
+
+def who_can_see(item):
+    """The people who can see the item now: ``can_see()`` for everybody"""
+    if item.status == Status.TRASHED:
+        return User.objects.none()
+    return people_who_see(item.project, item.is_client_visible)
 
 
 def effective_level(user, item=None, *, project=None):
