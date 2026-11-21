@@ -52,7 +52,12 @@ leaves them out. They need the production bundle in `static/`, which
 the JavaScript in `frontend/` and htmx (decided 2026-11-20); the test client
 covers everything else. A change to a script or an htmx interaction gets a
 test there: logged in through a session cookie, Playwright's waiting
-instead of sleeps, at least the client's view where it differs.
+instead of sleeps, at least the client's view where it differs. No tests
+of plain CSS layout (sizes, positions, alignment, wrapping, fitting the
+screen): they're slow, break on font differences between machines and
+test the browser, not our code; look at screenshots instead (decided
+2026-11-21). Positions that JavaScript computes (menus, the reaction
+picker) and computed colors stay testable.
 
 # Modals
 
@@ -188,7 +193,8 @@ What every part does the same way. Look at how the core does it
     (including a client getting 404 for internal items), the CLI
     commands (`biwak/test_cli.py`). Made-up data from
     `biwak/test_utils.py`. Browser tests (`biwak/test_e2e.py`) only for
-    JavaScript and htmx interactions (decided 2026-11-20).
+    JavaScript and htmx interactions (decided 2026-11-20), not for CSS
+    layout (decided 2026-11-21, above): screenshots for that.
 13. **Done** means: the spec's "Done when" list is true, the help says
     what was built, the tests of the apps you touched pass
     (`./runtests.sh biwak.<app> …`, plus the browser tests of those
