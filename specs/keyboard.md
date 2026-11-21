@@ -144,8 +144,9 @@ stored choice (`frontend/appearance-preview.js`).
 
 **The navigation's search field** (decided 2026-11-21) becomes a button
 opening the palette: the magnifier as a quiet button like its
-neighbours, on wide screens with "Ctrl+K" ("⌘K" on Macs), written as everywhere else in the app beside it, no
-field-like box (decided 2026-11-21 after trying it). It's the visible way into the palette and search for
+neighbours, on wide screens with "Ctrl+K" beside it ("⌘K" on Macs;
+written like the app's other shortcuts), no field-like box (decided
+2026-11-21 after trying it). It's the visible way into the palette and search for
 people without the shortcut (phones); the palette's "Search for '…'"
 leads to the search page, which keeps its own field with the filters.
 Without JavaScript the button is a link to the search page.
