@@ -212,6 +212,7 @@ def update_question(
         question.save(update_fields=fields)
     if changed:
         record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+        read_by_acting(actor, item)
     if people is not _UNCHANGED:
         set_people(item, people, actor=actor)
     return item
@@ -520,6 +521,7 @@ def update_answer(answer, content, *, actor, base=None):
     attachments.link(item, content, actor=actor)
     event = record(actor=actor, action=Action.EDITED, project=item.project, item=item)
     mentions.update(item, content, actor=actor, event=event, previous=previous)
+    read_by_acting(actor, item)
 
 
 @transaction.atomic

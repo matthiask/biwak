@@ -15,7 +15,7 @@ from biwak import checklists
 from biwak.accounts.middleware import set_user_name
 from biwak.activity import mentions
 from biwak.activity.models import Action
-from biwak.activity.operations import record
+from biwak.activity.operations import read_by_acting, record
 from biwak.collab import live
 from biwak.files import attachments
 from biwak.items import editing, operations as ops
@@ -81,6 +81,7 @@ def update_message(
             event=event,
             previous=previous,
         )
+        read_by_acting(actor, item)
     return item
 
 
@@ -164,6 +165,7 @@ def _save(item, doc, *, title=None, actor=None, new_version=False):
     renamed = title is not None and title != item.title
     if not authors or not (renamed or content != doc.content or new_version):
         return False
+    changed = renamed or content != doc.content
     # The text before: mentions in it were looked at when they were written
     previous = f"{item.title}\n\n{doc.content}"
     if renamed:
@@ -195,6 +197,10 @@ def _save(item, doc, *, title=None, actor=None, new_version=False):
     _save_version(
         doc, title=item.title, content=content, authors=authors, force=new_version
     )
+    if changed:
+        # Whoever typed or saved it edited the doc (specs/lantern.md)
+        for author in authors:
+            read_by_acting(author, item)
     return True
 
 
@@ -348,6 +354,7 @@ def replace_upload(item, file, *, actor):
         item=item,
         version=version.name,
     )
+    read_by_acting(actor, item)
     return version
 
 
@@ -379,4 +386,5 @@ def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED, base
             event=event,
             previous=previous,
         )
+        read_by_acting(actor, item)
     return item

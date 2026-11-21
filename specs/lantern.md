@@ -54,8 +54,7 @@ out after the commit, as `read()` always did) and does nothing inside
 `importing()`, the one place where operations run as somebody who isn't
 acting (the importer's `reopen()` now runs in it too). Called by
 `complete()`, `reopen()` (only when they change something), `update_todo()`
-(only when a field, the title or the assignees actually changed: saving
-the same values reads nothing), `tick()` (to-dos, messages, files, check-in
+(only when a field, the title or the assignees actually changed), `tick()` (to-dos, messages, files, check-in
 answers by way of their update operations; docs and comments directly),
 `add_comment()` (pages, the API and mail replies all end there),
 `add_reaction()` (when added: removing a reaction, or adding one that's
@@ -66,15 +65,27 @@ item or a comment) and the check-in's `answer()`. Tests:
 
 Decisions on the way:
 
-- Edits other than a to-do's (a message's, a doc's, a file's or an
-  answer's text, a list's title) are not a signal: the list above names
-  "changing its fields" for to-dos only, and the operations it names are
-  to-do operations. Docs are edited live and saved on a timer, which isn't
-  an act either. Ticking a box in them is (it's listed).
+- Editing reads for every kind, like changing a to-do's fields (decided
+  2026-11-21, "the same for every kind"): `update_message()`,
+  `update_upload()` and `replace_upload()`, `update_doc()`,
+  `update_list()`, `update_answer()` and `update_question()` call
+  `read_by_acting()` where they record an edit, so only when something
+  actually changed (saving the same values reads nothing). Not pausing or
+  resuming a question, pinning a message, changing a project (not item
+  edits).
+- Docs: `_save()`, which every doc save goes through (the API's
+  `update_doc()`, restoring a version, and the live editor's `save_live()`
+  after a pause or when the editor leaves, which has no actor), reads for
+  each author of the saved change, when the text or title changed: the
+  people who typed it edited the doc. Typing alone reads nothing until it
+  is saved (a few seconds); saving a version of an unchanged text reads
+  nothing.
 - Answering a check-in question reads the notifications of the question
   and of the person's own answer item (the answers are items of their
   own, with their own comments and edits); other people's answers to the
-  same question stay unread.
+  same question stay unread (decided 2026-11-21).
+- Reacting again with a reaction that's there already is no action: it
+  reads nothing (decided 2026-11-21).
 - Mails: nothing to add, `send_mails` skips them like any read ones
   (tested).
 

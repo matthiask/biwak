@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from biwak.activity import lantern
 from biwak.activity.mails import send_mails
-from biwak.activity.models import Notification
+from biwak.activity.models import Action, Event, Notification
 from biwak.activity.operations import importing, subscribe
 from biwak.activity.test_lantern import LanternTestCase
 from biwak.bookmarks.operations import add_bookmark
@@ -27,11 +27,22 @@ class ReadingTestCase(LanternTestCase):
 
     def prime(self, item):
         """Dan comments: Ada, Bob (and Cleo, where she sees it) have an unread
-        notification about the item"""
+        notification about the item (an edit by him where there are no comments)"""
         for user in [self.ada, self.bob, self.cleo]:
             if lantern_sees(user, item):
                 subscribe(user, item)
-        self.comment(item, "From Dan", author=self.dan)
+        if item.is_commentable:
+            self.comment(item, "From Dan", author=self.dan)
+            return
+        event = Event.objects.create(
+            actor=self.dan,
+            action=Action.EDITED,
+            project=self.project,
+            item=item,
+            data={},
+        )
+        for user in [self.ada, self.bob]:
+            Notification.objects.create(user=user, event=event)
 
     def unread(self, user, item):
         return (
@@ -238,20 +249,6 @@ class NotSignalsTest(ReadingTestCase):
         self.act(lambda: ops.complete(self.todo, actor=self.ada))
         self.assertGreater(self.unread(self.ada, self.todo), 0)
 
-    def test_editing_other_kinds_isnt_a_signal(self):
-        message = ops.create_message(
-            project=self.project, title="News", content="", creator=self.ada
-        )
-        doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
-        for item in [message, doc]:
-            self.prime(item)
-        self.act(
-            lambda: file_ops.update_message(message, actor=self.ada, content="New")
-        )
-        self.act(lambda: file_ops.update_doc(doc, actor=self.ada, content="New"))
-        self.assertGreater(self.unread(self.ada, message), 0)
-        self.assertGreater(self.unread(self.ada, doc), 0)
-
     def test_the_importer_reads_nothing(self):
         self.prime(self.todo)
         before = self.unread(self.ada, self.todo)
@@ -322,3 +319,156 @@ class EntryPointsTest(ReadingTestCase):
         self.client.force_login(self.ada)
         self.assertEqual(self.client.get(self.todo.get_absolute_url()).status_code, 200)
         self.assertGreater(self.unread(self.ada, self.todo), 0)
+
+
+class EditsTest(ReadingTestCase):
+    """Editing reads like changing a to-do's fields: when something
+    changed, for the editor only; saving the same values reads nothing"""
+
+    def edits(self, item, change, same):
+        self.prime(item)
+        before = self.unread(self.ada, item)
+        self.assertGreater(before, 0)
+        self.act(lambda: same(self.ada))
+        self.assertEqual(self.unread(self.ada, item), before, "unchanged read")
+        self.act(lambda: change(self.ada))
+        self.assertReadFor(self.ada, item, others=[self.bob])
+
+    def test_message(self):
+        for kwargs in [{"title": "New"}, {"content": "New"}]:
+            with self.subTest(kwargs=kwargs):
+                Notification.objects.all().delete()
+                message = ops.create_message(
+                    project=self.project, title="News", content="Text", creator=self.dan
+                )
+                self.edits(
+                    message,
+                    lambda a, message=message, kwargs=kwargs: file_ops.update_message(
+                        message, actor=a, **kwargs
+                    ),
+                    lambda a, message=message: file_ops.update_message(
+                        message, actor=a, title="News", content="Text"
+                    ),
+                )
+
+    def test_upload(self):
+        from django.core.files.base import ContentFile
+
+        upload = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"%PDF-1.4", name="plan.pdf"),
+            creator=self.dan,
+            description="Plan",
+        )
+        self.edits(
+            upload,
+            lambda a: file_ops.update_upload(upload, actor=a, description="New"),
+            lambda a: file_ops.update_upload(upload, actor=a, description="Plan"),
+        )
+        Notification.objects.all().delete()
+        self.prime(upload)
+        self.act(
+            lambda: file_ops.replace_upload(
+                upload, ContentFile(b"%PDF-1.5", name="plan.pdf"), actor=self.ada
+            )
+        )
+        self.assertReadFor(self.ada, upload, others=[self.bob])
+
+    def test_doc(self):
+        doc = ops.create_doc(
+            project=self.project, title="Notes", creator=self.dan, content="Text"
+        )
+        self.edits(
+            doc,
+            lambda a: file_ops.update_doc(doc, actor=a, content="New"),
+            lambda a: file_ops.update_doc(doc, actor=a, content="Text"),
+        )
+
+    def test_doc_renamed(self):
+        doc = ops.create_doc(
+            project=self.project, title="Notes", creator=self.dan, content="Text"
+        )
+        self.edits(
+            doc,
+            lambda a: file_ops.update_doc(doc, actor=a, title="Minutes"),
+            lambda a: file_ops.update_doc(doc, actor=a, title="Notes"),
+        )
+
+    def test_doc_typed_live_and_saved(self):
+        """What's typed in the editor is saved with its typists as authors
+        (``save_live()``, no actor): each of them edited the doc"""
+        from biwak.collab import live, ytext
+
+        doc = ops.create_doc(
+            project=self.project, title="Notes", creator=self.dan, content="Text"
+        )
+        self.prime(doc)
+        live.prepare(doc.doc.pk)
+        state = live.load(doc.doc.pk)
+        live.append(doc.doc.pk, ytext.edit(state, "Text, typed"), self.ada)
+        before = self.unread(self.ada, doc)
+        self.assertGreater(before, 0)
+        self.assertGreater(self.unread(self.bob, doc), 0)
+        # Typing alone reads nothing, saving does
+        self.assertEqual(self.unread(self.ada, doc), before)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertTrue(file_ops.save_live(doc.doc.pk))
+        self.assertReadFor(self.ada, doc, others=[self.bob])
+        # Nothing typed since: nothing to save, nothing read
+        self.comment(doc, "Again", author=self.dan)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertFalse(file_ops.save_live(doc.doc.pk))
+        self.assertGreater(self.unread(self.ada, doc), 0)
+
+    def test_saving_a_version_without_changes_reads_nothing(self):
+        doc = ops.create_doc(
+            project=self.project, title="Notes", creator=self.dan, content="Text"
+        )
+        self.prime(doc)
+        before = self.unread(self.ada, doc)
+        self.act(lambda: file_ops.save_version(doc, actor=self.ada))
+        self.assertEqual(self.unread(self.ada, doc), before)
+
+    def test_list(self):
+        self.edits(
+            self.shared,
+            lambda a: ops.update_list(self.shared, actor=a, title="Renamed"),
+            lambda a: ops.update_list(self.shared, actor=a, title="Shared"),
+        )
+
+    def test_answer_and_question(self):
+        from biwak.checkins.support import MONDAY_9, at
+
+        question = checkin_ops.create_question(
+            project=self.project,
+            title="How is the camp?",
+            creator=self.ada,
+            people=[self.ada, self.bob],
+            now=at("2027-03-19 12:00"),
+            **MONDAY_9,
+        )
+        checkin_ops.run(now=at("2027-03-22 09:00"))
+        answer = checkin_ops.answer(question, user=self.ada, content="Fine")
+        self.edits(
+            answer,
+            lambda a: checkin_ops.update_answer(answer.answer, "Better", actor=a),
+            lambda a: checkin_ops.update_answer(answer.answer, "Fine", actor=a),
+        )
+        Notification.objects.all().delete()
+        self.edits(
+            question,
+            lambda a: checkin_ops.update_question(question, actor=a, title="Camp?"),
+            lambda a: checkin_ops.update_question(
+                question, actor=a, title="How is the camp?"
+            ),
+        )
+
+    def test_the_importer_reads_nothing(self):
+        message = ops.create_message(
+            project=self.project, title="News", content="Text", creator=self.dan
+        )
+        self.prime(message)
+        before = self.unread(self.ada, message)
+        with importing():
+            file_ops.update_message(message, actor=self.ada, content="Imported")
+        self.assertEqual(self.unread(self.ada, message), before)

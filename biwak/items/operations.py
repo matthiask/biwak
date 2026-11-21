@@ -919,6 +919,7 @@ def update_list(
         todolist.save(update_fields=fields)
     if edited or fields:
         record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+        read_by_acting(actor, item)
     return item
 
 
