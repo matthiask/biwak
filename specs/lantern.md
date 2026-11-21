@@ -1,6 +1,8 @@
-# Hey! and live updates
+# The lantern and live updates
 
-An in-app inbox for notifications, like Basecamp's "Hey!" menu, and pages
+An in-app inbox for notifications, the **lantern** (named 2026-11-21,
+after Biwak's camp theme; avoiding "Hey!", the name of Basecamp's mail
+product), and pages
 that update while they're open: comments, reactions and changes by others
 appear without reloading.
 
@@ -14,21 +16,21 @@ the Redis channel layer), notifications stage 1 (the `Notification`
 records, levels, `send_mails`), reactions.
 
 **Touches:**
-- `biwak/activity/` (reading, the Hey! views, API, mails skipping what
+- `biwak/activity/` (reading, the lantern views, API, mails skipping what
   was read);
 - a new `biwak/live/` (the websocket consumer and the "changed" signals);
-- `base.html` (the Hey! menu);
+- `base.html` (the lantern menu);
 - the item, list and board templates (live regions);
-- `frontend/hey.js` and `frontend/live.js`;
+- `frontend/lantern.js` and `frontend/live.js`;
 - the settings page (mail delivery "none");
 - the CLI.
 
 ## Decided (2026-11-21)
 
-- Hey! shows the same notifications as the mails, with the same levels:
+- The lantern shows the same notifications as the mails, with the same levels:
   whatever you'd be told about. Mail becomes a delivery choice: **each**
   (as today), **digest**, or **none**.
-- **Read in Hey!, not mailed:** a notification read in the app before its
+- **Read in the lantern, not mailed:** a notification read in the app before its
   mail goes (the merge window of about 2 minutes, or before the digest)
   is left out of the mail, and a mail with nothing left isn't sent.
 - **Live** on item pages (to-dos, messages, docs, files, check-in
@@ -38,9 +40,9 @@ records, levels, `send_mails`), reactions.
   highlight; nothing moves what you're reading or typing in.
 - **Browser notifications** (Web Push) later, not now.
 
-## Hey!
+## The lantern
 
-- **The menu:** a bell in the navigation with the number of unread
+- **The menu:** a lantern icon (`bi-lamp` or a lantern of our own) in the navigation with the number of unread
   notifications. Opening it shows them grouped by item, newest first:
   - the item's title, kind icon, project and client badge;
   - what happened ("Ada commented", "Bob completed it", "Cleo reacted
@@ -50,7 +52,7 @@ records, levels, `send_mails`), reactions.
 
   Unread ones on top, then the latest 30 read ones. "Mark all as read".
   A link to the whole list.
-- **The page** `/hey/`: the same, paginated like the feed, with filters
+- **The page** `/lantern/`: the same, paginated like the feed, with filters
   "unread" and "mentions only".
 - **Reading:**
   - opening an item marks its notifications read, and those of its
@@ -64,9 +66,9 @@ records, levels, `send_mails`), reactions.
   when mailing. A notification about something the person can't see
   any more isn't shown; it stays in the database, unseen.
 - **API and CLI:**
-  - `GET /api/v1/hey/` (cursor-paginated, `unread`, `mentions`);
-  - `POST /api/v1/hey/read/` (all, or by item);
-  - `biwak hey [--unread] [--read ITEM|--all]`.
+  - `GET /api/v1/lantern/` (cursor-paginated, `unread`, `mentions`);
+  - `POST /api/v1/lantern/read/` (all, or by item);
+  - `biwak lantern [--unread] [--read ITEM|--all]`.
 
 ## Live updates
 
@@ -77,7 +79,7 @@ setup as `collaboration.md`).
   checks access on joining (`item_for()` rules: `visible_to()`, for
   clients only visible items) and again when access changes, through the
   same `check_access()` mechanism as the live editor.
-- **The person's own group** gets the Hey! count and new entries.
+- **The person's own group** gets the lantern count and new entries.
 - **Never content through the websocket.** Operations announce "this
   item changed" (after commit, with the kind of change and the ids). The
   browser then fetches the changed part through the normal views (htmx
@@ -111,7 +113,7 @@ setup as `collaboration.md`).
 
 ## Done when
 
-- **Hey!:**
+- **The lantern:**
   - the menu, the page, reading by opening and by marking;
   - the count updating live;
   - mail delivery "none";
@@ -134,7 +136,7 @@ setup as `collaboration.md`).
 
 ## Questions before building
 
-- How long read notifications stay in the Hey! list (proposed: they're
+- How long read notifications stay in the lantern list (proposed: they're
   kept, as decided for the records; the menu shows the latest 30, the
   page pages through all).
 - The wording of the entries; proposed above.

@@ -119,10 +119,18 @@ own:
 - **Appearance:** the theme (light, dark, as the system), moving the
   stored choice from the browser to the person so it follows them to
   other devices; the toggle in the navigation stays and saves there too.
+  And an **accent color** (decided 2026-11-21): violet as today, blue,
+  green, teal, orange, rose, for the navigation, buttons, links and the
+  focus ring, each defined as tokens in `main.css` for light and dark and
+  checked for contrast (WCAG AA for text and controls, a test over the
+  token values). The clients' amber is reserved and not offered, so the
+  client badge and banner always stand out. `User.accent`, in `me/`
+  like the theme.
 - **Sign-in:** links to passkeys, sessions and API tokens (allauth's and
   Biwak's existing pages), so the user menu gets shorter.
 
-The API: `me/` gets `keyboard_shortcuts` and `theme` (read and change);
+The API: `me/` gets `keyboard_shortcuts`, `theme` and `accent` (read and
+change);
 the notification endpoints stay as they are.
 
 ## Done when
