@@ -7,6 +7,7 @@ import importlib
 from django.apps import apps
 from django.test import TestCase
 
+from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
 from biwak.items import operations as ops
 from biwak.items.models import Item, Status, Todo
@@ -93,6 +94,31 @@ class ArchivingTest(TestCase):
             self.client.post(f"/lists/{message.pk}/archive/").status_code, 404
         )
         self.assertNotContains(self.client.get(message.get_absolute_url()), "/archive/")
+
+    def test_api(self):
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="write")
+        headers = {"authorization": f"Bearer {secret}"}
+
+        def call(method, path, data=None):
+            return getattr(self.client, method)(
+                f"/api/v1/{path}",
+                data,
+                content_type="application/json",
+                headers=headers,
+            )
+
+        # A client archives only what they created
+        self.assertEqual(
+            call("patch", f"lists/{self.list.pk}/", {"archived": True}).status_code, 403
+        )
+        response = call("patch", f"lists/{self.own.pk}/", {"archived": True})
+        self.assertEqual(response.json()["status"], "archived")
+        url = f"projects/{self.project.pk}/lists/"
+        self.assertEqual([i["title"] for i in call("get", url).json()], ["Launch"])
+        archived = call("get", url + "?archived=true").json()
+        self.assertEqual([i["title"] for i in archived], ["Wishes"])
+        call("patch", f"lists/{self.own.pk}/", {"archived": False})
+        self.assertEqual(Item.objects.get(pk=self.own.pk).status, Status.ACTIVE)
 
     def test_no_next_to_do_in_an_archived_list(self):
         todo = ops.create_todo(

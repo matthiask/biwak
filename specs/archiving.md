@@ -5,12 +5,24 @@ Putting finished things out of the way without deleting them. Decided
 To-dos are completed, not archived; long runs of completed to-dos are
 already collapsed ("Completed (N)", `todos.md` stage 3).
 
-**Status:** in progress (2026-11-21): lists done (menus, palette action,
-left out of the places listed, silent events); smaller items refuse
-`archived` in `archive()` (the one place; `Status` keeps the value) and
-migration `items/0011` converts old ones (archived to-dos are completed
-at their `updated_at`, without a "completed by"; trashed ones that were
-archived too); the importer, API and CLI follow.
+**Status:** built (2026-11-21). Lists: "Archive"/"Unarchive" in the list's
+"More" menu, in a menu on each list row of the project page (the rows are
+a `div` with the link inside) and as a palette action (all with
+`ops.can_change()`: staff, and clients for lists they created, as the edit
+page's button always was); archived lists are out of the project's lists,
+"my to-dos", the by-due list and calendar feed, and last and marked in the
+palette; recurring to-dos in them create no next one; the events notify
+nobody (`notify.SILENT`). Smaller items: `ops.archive()` refuses anything
+but lists (the one place; `Status` keeps the value) and migration
+`items/0011` converts old ones (archived to-dos completed at their
+`updated_at`, no "completed by"; items trashed while archived the same).
+Importer: archived to-dos completed at the recording's `updated_at` by the
+importing person (the API names neither the time nor the person of the
+archiving), archived messages, docs, files and questions found through the
+recordings listing (`status=archived`, per type and project), skipped and
+listed in the report. API (`PATCH lists/{id}/ {"archived": ...}`, `GET
+projects/{id}/lists/?archived=true`) existed; CLI 0.32.0 adds `biwak list
+archive|unarchive LIST` and `biwak lists --archived`.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.

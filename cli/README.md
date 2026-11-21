@@ -9,7 +9,8 @@ biwak login https://biwak.example.org --write   # or --read
 biwak projects
 biwak project add "New project" --limited   # staff; you become a member
 biwak project join ID                        # admins: biwak projects --joinable
-biwak lists PROJECT
+biwak lists PROJECT                        # --archived for the archived ones
+biwak list archive LIST                     # and unarchive: out of the way, still readable
 biwak todos LIST
 biwak todos --mine --due overdue
 biwak todos --assigned-by-me             # what you assigned to others (or yourself with --mine)
