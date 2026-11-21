@@ -16,7 +16,8 @@ in `AGENTS.md`. The palette lists content: its results go through
 **Touches:** a new app `biwak/palette/` (the endpoint for results),
 `frontend/palette.js`, `frontend/shortcuts.js`, `base.html` (the dialog,
 the actions of the page), templates that list rows (`data-kb-*`
-attributes), a setting on the person (`biwak/accounts/`), CSS.
+attributes), the settings page (`biwak/accounts/`, the notification settings view in
+`biwak/activity/views.py` moving there), CSS.
 
 ## Decided (2026-11-21)
 
@@ -104,11 +105,25 @@ Rows say what they are through attributes, so one script serves every
 page: `data-kb-row` on the row, `data-kb-open` (the link),
 `data-kb-complete` (the toggle form). No page-specific JavaScript.
 
-## The setting
+## The settings page (decided 2026-11-21)
 
-`User.keyboard_shortcuts` (on by default, proposed below), on the
-notification settings page renamed to "Settings", or a small section of
-its own there; through the API (`me/`) and `biwak` doesn't need it.
+The notification settings page becomes the person's settings page:
+`/accounts/settings/`, "Settings" in the user menu (replacing
+"Notifications"), the old URL redirecting. Sections, each saved on its
+own:
+
+- **Notifications:** what's on the page now (level, mail delivery, the
+  overrides per project and item).
+- **Keyboard:** `User.keyboard_shortcuts`, on by default (proposed
+  below), with the list of shortcuts.
+- **Appearance:** the theme (light, dark, as the system), moving the
+  stored choice from the browser to the person so it follows them to
+  other devices; the toggle in the navigation stays and saves there too.
+- **Sign-in:** links to passkeys, sessions and API tokens (allauth's and
+  Biwak's existing pages), so the user menu gets shorter.
+
+The API: `me/` gets `keyboard_shortcuts` and `theme` (read and change);
+the notification endpoints stay as they are.
 
 ## Done when
 
