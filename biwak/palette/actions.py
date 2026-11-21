@@ -213,7 +213,7 @@ def on_item(request, item, context):
                 )
             )
     if item.kind == Kind.FOLDER and ops.can_change(user, item):
-        actions.append(modal(_("Rename…"), reverse("folder_rename", args=[item.pk])))
+        actions.append(modal(_("Edit…"), reverse("folder_edit", args=[item.pk])))
     if item.kind == Kind.FOLDER and not user.is_client:
         actions.append(modal(_("Order…"), reverse("folder_order", args=[item.pk])))
     if item.is_commentable:

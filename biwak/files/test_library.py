@@ -310,12 +310,12 @@ class LibraryTest(Fixture, TestCase):
         self.assertContains(response, f'href="{self.new_folder_url(self.private)}"')
 
     def test_renaming_a_folder(self):
-        url = reverse("folder_rename", args=[self.public.pk])
+        url = reverse("folder_edit", args=[self.public.pk])
         self.client.force_login(self.ada)
         response = self.client.get(self.public.get_absolute_url())
         self.assertContains(response, f'href="{url}"')
         response = self.client.get(url, headers={"HX-Modal": "true"})
-        assert_modal(self, response, title="Rename…")
+        assert_modal(self, response, title="Edit…")
         self.assertContains(response, 'value="Public"')
         response = self.client.post(
             url, {"title": "Shared"}, headers={"HX-Modal": "true"}
@@ -327,12 +327,73 @@ class LibraryTest(Fixture, TestCase):
             Event.objects.filter(item=self.public, action=Action.EDITED).exists()
         )
 
+    def test_folder_colors_through_the_modals(self):
+        """No color unless chosen; the tile and the header carry it"""
+        self.client.force_login(self.ada)
+        url = reverse("folder_new", args=[self.project.pk])
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        self.assertContains(response, "wb-color-picker")
+        self.assertContains(response, "checked", count=1)  # None
+        self.client.post(url, {"title": "Plain"})
+        self.client.post(url, {"title": "Tinted", "color": "lake"})
+        folders = {i.title: i for i in Item.objects.filter(kind=Kind.FOLDER)}
+        self.assertEqual(folders["Plain"].folder.color, "")
+        self.assertEqual(folders["Tinted"].folder.color, "lake")
+        response = self.client.post(url, {"title": "Bad", "color": "amber"})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(title="Bad").exists())
+        # The grid: only the colored one is tinted
+        response = self.client.get(reverse("project_files", args=[self.project.pk]))
+        self.assertContains(response, 'data-folder-color="lake"', count=1)
+        self.assertContains(
+            self.client.get(folders["Tinted"].get_absolute_url()),
+            'class="wb-folder-icon" data-folder-color="lake"',
+        )
+        self.assertNotContains(
+            self.client.get(folders["Plain"].get_absolute_url()), "data-folder-color"
+        )
+        # Edit: the color alone, no event, then none again
+        edit = reverse("folder_edit", args=[folders["Plain"].pk])
+        response = self.client.get(edit, headers={"HX-Modal": "true"})
+        self.assertContains(response, 'value="Plain"')
+        before = Event.objects.filter(item=folders["Plain"], action=Action.EDITED)
+        response = self.client.post(
+            edit, {"title": "Plain", "color": "ember"}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(self, response, folders["Plain"].get_absolute_url())
+        self.assertEqual(Folder.objects.get(pk=folders["Plain"].pk).color, "ember")
+        self.assertFalse(before.exists())
+        response = self.client.get(edit, headers={"HX-Modal": "true"})
+        self.assertRegex(
+            response.content.decode(), r"value=\"ember\"\s+id=\"id_color_5\"\s+checked"
+        )
+        self.client.post(edit, {"title": "Plain", "color": ""})
+        self.assertEqual(Folder.objects.get(pk=folders["Plain"].pk).color, "")
+
+    def test_clients_dont_color_folders(self):
+        url = reverse("folder_edit", args=[self.public.pk])
+        self.client.force_login(self.cleo)
+        self.assertEqual(
+            self.client.post(url, {"title": "Public", "color": "lake"}).status_code,
+            403,
+        )
+        url = reverse("folder_edit", args=[self.private.pk])
+        self.assertEqual(
+            self.client.post(url, {"title": "Private", "color": "lake"}).status_code,
+            404,
+        )
+        self.assertFalse(Folder.objects.exclude(color="").exists())
+        # They see what staff chose
+        Folder.objects.filter(pk=self.public.pk).update(color="forest")
+        response = self.client.get(self.public.get_absolute_url())
+        self.assertContains(response, 'data-folder-color="forest"')
+
     def test_clients_dont_rename_folders(self):
-        url = reverse("folder_rename", args=[self.public.pk])
+        url = reverse("folder_edit", args=[self.public.pk])
         self.client.force_login(self.cleo)
         self.assertNotContains(self.client.get(self.public.get_absolute_url()), url)
         self.assertEqual(self.client.post(url, {"title": "Mine"}).status_code, 403)
-        url = reverse("folder_rename", args=[self.private.pk])
+        url = reverse("folder_edit", args=[self.private.pk])
         self.assertEqual(self.client.post(url, {"title": "Mine"}).status_code, 404)
         self.assertFalse(Item.objects.filter(title="Mine").exists())
 

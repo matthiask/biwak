@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from biwak import checklists
 from biwak.accounts.middleware import set_user_name
+from biwak.accounts.models import Color
 from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.operations import read_by_acting, record
@@ -376,8 +377,15 @@ def set_read_only(item, *, read_only, actor):
 
 
 @transaction.atomic
-def update_folder(item, *, actor, title=_UNCHANGED):
-    """Renames a folder: an edit like any other"""
+def update_folder(item, *, actor, title=_UNCHANGED, color=_UNCHANGED):
+    """Renames a folder or sets its color: an edit like any other. A
+    color alone is just a setting (like the order): no event."""
+    folder = item.folder
+    if color is not _UNCHANGED and color != folder.color:
+        if color:
+            Color(color)  # ValueError for a name outside the palette
+        folder.color = color
+        folder.save(update_fields=["color"])
     if title is _UNCHANGED or title == item.title:
         return item
     item.title = title
