@@ -53,6 +53,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `subscribers.md` | assigned means subscribed; adding others, telling them now | next once ui-round-2 B is merged | ui-round-2 B, modals, lantern | cheaper, visibility tests |
 | `ui-round-3.md` | "My to-dos" by project or due date, no list filter, filters apply themselves | next | todos 2 | cheaper |
 | `ui-round-4.md` | phones: headers, to-do rows, toolbar, small things; feedback round 4 (sign out, visibility modal, feed conversations) | next, after view-prefs | ui-round-3, ui-round-2 D | cheaper |
+| `feed.md` | links: projects only, quieter ("Links", changed 2026-11-21) | after ui-round-4 | ui-round-4 | cheaper |
 
 `todos.md` stage 3, `projects-overview.md` and `glance.md` touch
 different files ("Touches" in each) and can run at the same time.

@@ -157,6 +157,22 @@ bookmarks`, `biwak bookmark add|remove [--project] ID`.
 
 ## Links
 
+**Changed 2026-11-21: links are on projects only, and quieter.** Items
+(messages, to-dos, lists, docs, files) have a Markdown text where a link
+is clickable in context, so a separate link block there only duplicated
+it. What a link block is for is the project: where its Figma, repository
+or staging site is.
+- **Items lose links:** `Link.item`, the add form under titles of lists
+  and to-dos, `{% show_links item %}`, and the item part of the API and
+  CLI all go. A migration removes the field; there are no links on
+  items in any database worth keeping.
+- **On the project page:** "Add a link…" in the project's "More" menu,
+  opening a modal (`form_response`). The links block at the top appears
+  only when the project has links, with no disclosure otherwise. Editing,
+  deleting and dragging stay as they are.
+- The rest below (kinds, visibility to clients, staff only) stays.
+
+
 Links to outside tools on a project or on any item: Figma files,
 repositories and issues, Google Drive documents, staging and production
 sites, a project in a time tracking or accounting tool.
