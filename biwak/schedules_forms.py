@@ -175,9 +175,6 @@ class RuleField(forms.Field):
                     ValidationError(str(m)) for m in exc.errors.values()
                 ]) from exc
             raise ValidationError(str(exc)) from exc
-        if rule and self.initial_rule and schedules.same_rule(rule, self.initial_rule):
-            # Written differently, but the same: saving never rewrites it
-            return KEEP
         if not rule and not self.allow_empty:
             raise ValidationError(_("Choose how often it repeats."))
         return rule

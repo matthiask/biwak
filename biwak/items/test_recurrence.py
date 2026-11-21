@@ -339,21 +339,25 @@ class PagesTest(RecurrenceTestCase):
             data["assignees"] = []
             self.assertRedirects(self.client.post(url, data), url)
             item.todo.refresh_from_db()
-            self.assertEqual(item.todo.recurrence, rule)
+            self.assertEqual(item.todo.recurrence, schedules.validate(rule))
             self.assertEqual(Item.objects.get(pk=item.pk).title, "Renamed")
 
     def test_saving_an_unchanged_form_changes_nothing(self):
-        """Rules the widget shows, but writes differently (order of days,
-        the default interval and week start): no new text, no event"""
+        """Rules written differently (order of days, the default interval
+        and week start) are stored in their canonical form, which the
+        widget shows (decided 2026-11-21): saving changes nothing"""
         self.client.force_login(self.ada)
-        for rule in [
-            "FREQ=WEEKLY;BYDAY=TH,MO",
-            "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO",
-            "FREQ=WEEKLY;BYDAY=MO;WKST=MO",
+        for written, rule in [
+            ("FREQ=WEEKLY;BYDAY=TH,MO", "FREQ=WEEKLY;BYDAY=MO,TH"),
+            ("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO", "FREQ=WEEKLY;BYDAY=MO"),
+            ("FREQ=WEEKLY;BYDAY=MO;WKST=MO", "FREQ=WEEKLY;BYDAY=MO"),
         ]:
-            item = self.todo(rule, "2026-11-20")
+            item = self.todo(written, "2026-11-20")
             self.assertEqual(item.todo.recurrence, rule)
             url = item.get_absolute_url()
+            page = self.client.get(url).content.decode()
+            self.assertNotIn("can't be edited here", page)
+            self.assertIn(schedules.describe(rule), page)
             data = rule_post(rule) | {
                 "form": "todo",
                 "title": item.title,
@@ -601,6 +605,29 @@ class APITest(RecurrenceTestCase):
         )
         self.assertEqual(response.json()["recurrence"], "")
         self.assertIsNone(response.json()["recurrence_count"])
+
+    def test_rules_are_stored_canonical(self):
+        """However they're written, rules are stored and returned in their
+        canonical form (decided 2026-11-21)"""
+        response = self.send(
+            "post",
+            f"lists/{self.list.pk}/todos/",
+            self.ada,
+            {"title": "Water", "recurrence": "rrule:byday=th,mo;freq=weekly;wkst=mo"},
+        )
+        self.assertEqual(response.json()["recurrence"], "FREQ=WEEKLY;BYDAY=MO,TH")
+        item = Item.objects.get(pk=response.json()["id"])
+        self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH")
+        response = self.send(
+            "patch",
+            f"todos/{item.pk}/",
+            self.ada,
+            {"recurrence": "FREQ=MONTHLY;BYSETPOS=-1;BYMONTHDAY=30,28,29;INTERVAL=1"},
+        )
+        self.assertEqual(
+            response.json()["recurrence"],
+            "FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1",
+        )
 
     def test_preset_follows_the_new_due_date(self):
         item = self.todo("")

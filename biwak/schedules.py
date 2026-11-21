@@ -15,6 +15,7 @@ months.
 
 import datetime as dt
 import functools
+import re
 from zoneinfo import ZoneInfo
 
 from dateutil import rrule
@@ -67,6 +68,9 @@ PARTS = {
 }
 # The longest interval: the rule widget's maximum too
 MAX_INTERVAL = 99
+# The order of the parts in a stored rule (the presets' and the widget's)
+ORDER = ["FREQ", "INTERVAL", "BYMONTH", "BYDAY", "BYMONTHDAY", "BYSETPOS", "WKST"]
+_WEEKDAY = re.compile(r"([+-]?\d+)?([A-Z]{2})")
 
 
 def _tz(tz=None):
@@ -105,7 +109,8 @@ def _check_numbers(parts):
 
 
 def validate(rule):
-    """The rule normalized (upper case, without ``RRULE:``); raises
+    """The rule in its canonical form (``_canonical()``), as it's stored:
+    equal schedules are equal strings (decided 2026-11-21); raises
     ``InvalidRule`` for anything we can't use: unknown or unsupported
     parts, intervals shorter than a day or longer than ``MAX_INTERVAL``,
     ``COUNT``/``UNTIL``/``DTSTART``, rules without a date or with only
@@ -135,7 +140,7 @@ def validate(rule):
         raise InvalidRule(_("Not a valid schedule: %(rule)s") % {"rule": rule}) from exc
     if first is None or second is None:
         raise InvalidRule(_("The schedule never produces a date."))
-    return rule
+    return _canonical(parts)
 
 
 def next_date(rule, after, tz=None, *, anchor=None):
@@ -370,24 +375,44 @@ def build_rule(fields):
         raise InvalidRule(errors={"year_day": _("This date doesn't exist.")}) from None
 
 
-def _canonical(rule):
-    parts = _parts(rule)
-    if parts.get("INTERVAL") == "1":
+def _numbers(value):
+    return sorted({int(number) for number in value.split(",")})
+
+
+def _weekday_key(entry):
+    number, day = _WEEKDAY.fullmatch(entry).groups()
+    return DAYS.index(day), int(number or 0)
+
+
+def _weekdays(value):
+    """``-1FR,+1MO,FR`` as ``1MO,-1FR,FR``: in week order, numbers plain"""
+    entries = set()
+    for entry in value.split(","):
+        # dateutil also reads MO(+1), which isn't RFC 5545
+        if not (match := _WEEKDAY.fullmatch(entry)) or match[2] not in DAYS:
+            raise InvalidRule(_("Not a valid schedule: %(rule)s") % {"rule": value})
+        number, day = match.groups()
+        entries.add(f"{int(number)}{day}" if number else day)
+    return sorted(entries, key=_weekday_key)
+
+
+def _canonical(parts):
+    """The rule of valid parts written one way only: the parts in
+    ``ORDER``, lists sorted (days in week order, numbers ascending) without
+    repeats, numbers without signs and zeros in front, and without the
+    defaults ``INTERVAL=1`` and ``WKST=MO``. The meaning stays the same."""
+    parts = dict(parts)
+    parts["INTERVAL"] = str(int(parts.get("INTERVAL", "1")))
+    if parts["INTERVAL"] == "1":
         del parts["INTERVAL"]
     if parts.get("WKST") == "MO":
         del parts["WKST"]
+    for name in ["BYMONTH", "BYMONTHDAY", "BYSETPOS"]:
+        if name in parts:
+            parts[name] = ",".join(str(n) for n in _numbers(parts[name]))
     if "BYDAY" in parts:
-        days = parts["BYDAY"].split(",")
-        parts["BYDAY"] = ",".join(
-            sorted(days, key=lambda d: DAYS.index(d) if d in DAYS else 99)
-        )
-    return sorted(parts.items())
-
-
-def same_rule(a, b):
-    """Whether two valid rules are the same apart from how they're written
-    (order of days, the default interval and week start)"""
-    return _canonical(a) == _canonical(b)
+        parts["BYDAY"] = ",".join(_weekdays(parts["BYDAY"]))
+    return ";".join(f"{name}={parts[name]}" for name in ORDER if name in parts)
 
 
 def _guess_fields(parts):
@@ -438,7 +463,7 @@ def rule_fields(rule):
     try:
         rule = validate(rule)
         fields = _guess_fields(_parts(rule))
-        if _canonical(build_rule(fields)) == _canonical(rule):
+        if build_rule(fields) == rule:
             return fields
     except InvalidRule, ValueError, KeyError, IndexError:
         pass

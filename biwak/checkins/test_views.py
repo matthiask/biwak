@@ -459,14 +459,18 @@ class FormsTest(ViewsTestCase):
         self.assertFalse(Item.objects.filter(title="What did you read?").exists())
 
     def test_saving_an_unchanged_form_changes_nothing(self):
-        for rule in [
-            "FREQ=WEEKLY;BYDAY=TH,MO",
-            "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO",
-            "FREQ=WEEKLY;BYDAY=MO;WKST=MO",
+        """Rules are stored in their canonical form, which the widget shows
+        (decided 2026-11-21)"""
+        for written, rule in [
+            ("FREQ=WEEKLY;BYDAY=TH,MO", "FREQ=WEEKLY;BYDAY=MO,TH"),
+            ("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO", "FREQ=WEEKLY;BYDAY=MO"),
+            ("FREQ=WEEKLY;BYDAY=MO;WKST=MO", "FREQ=WEEKLY;BYDAY=MO"),
         ]:
-            item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 22))
+            item = self.question(written, rule=written, starts_on=dt.date(2027, 3, 22))
             before = Question.objects.get(item=item)
             self.assertEqual(before.rule, rule)
+            page = self.get(self.ada, self.url("question_edit", item))
+            self.assertNotContains(page, "can't be edited here")
             events = item.events.count()
             data = self.data(
                 title=item.title,

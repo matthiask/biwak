@@ -209,7 +209,13 @@ class CLITest(TestCase):
             "Repeats: the 20th of every month",
             self.biwak("todo", "show", data["id"]).output,
         )
-        self.biwak("todo", "edit", data["id"], "--repeat", "FREQ=WEEKLY;BYDAY=MO,TH")
+        # Stored and shown in the canonical form (decided 2026-11-21)
+        result = self.biwak(
+            "todo", "edit", data["id"], "--repeat", "FREQ=WEEKLY;BYDAY=TH,MO", "--json"
+        )
+        self.assertEqual(
+            json.loads(result.stdout)["recurrence"], "FREQ=WEEKLY;BYDAY=MO,TH"
+        )
         self.assertEqual(
             Item.objects.get(pk=data["id"]).todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH"
         )

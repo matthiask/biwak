@@ -204,6 +204,23 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(data["time_zone"], "Asia/Tokyo")
         self.assertEqual([p["short_name"] for p in data["people"]], ["Bob"])
 
+    def test_rules_are_stored_canonical(self):
+        """However it's written (decided 2026-11-21)"""
+        data = self.patch(
+            self.ada,
+            f"checkins/{self.item.pk}/",
+            {"schedule": "BYDAY=TH,MO;FREQ=WEEKLY;INTERVAL=1"},
+        ).json()
+        self.assertEqual(data["rule"], "FREQ=WEEKLY;BYDAY=MO,TH")
+        self.item.question.refresh_from_db()
+        self.assertEqual(self.item.question.rule, "FREQ=WEEKLY;BYDAY=MO,TH")
+        data = self.post(
+            self.ada,
+            f"projects/{self.project.pk}/checkins/",
+            {"title": "x", "schedule": "freq=daily;wkst=mo", "time_of_day": "09:00"},
+        ).json()
+        self.assertEqual(data["rule"], "FREQ=DAILY")
+
     def test_update_checks_the_title(self):
         for title in ["", "   ", "x" * 501]:
             response = self.patch(
