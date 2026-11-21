@@ -1,33 +1,38 @@
 # Importing a Basecamp 4 account
 
-For moving an existing team over. Reads the Basecamp API (OAuth, the
-same endpoints the official `basecamp` CLI uses) and creates projects,
-people and items.
+For moving an existing team over: reads the Basecamp API and creates
+projects, people and items.
 
-**Status:** built (2026-11-21), branch `importer`: `biwak/importer/`
-(`client.py` the API, `convert.py` HTML to Markdown, `importer.py` the
-import, `models.py` `ImportedObject`, `management/commands/import_basecamp.py`,
-`support.py` recorded shapes with made-up data and a fake client for the
-tests). Not built: `--lazy-files`, Basecamp's bookmarks of people other than
-the one whose token it is (the API only gives one's own). The decisions
-and the questions the spec left open are under "Details of the build".
-Built after (2026-11-21), branch `importer2`: what was internal inside a
-visible container goes into "<container> (internal)" (a top-level folder,
-a list), reused by a second run (`ImportedObject` types `Vault::Internal`
-and `Todolist::Internal`) and listed by the dry run; inactive people go
-through the operations inside `importing()`; the project's paused
-check-ins resume together (page button, `POST
-/api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume
---project ID`, CLI 0.20.0). Messages never need it (top-level, their own
-switch) and check-in answers can't be moved: an internal answer to a
-visible question is still skipped and reported.
+**Status:** built (2026-11-21): `biwak/importer/` (`client.py` the API,
+`convert.py` HTML to Markdown, `importer.py`, `images.py`,
+`models.py` `ImportedObject`, `support.py` recorded shapes with made-up
+data and a fake client for the tests). Not built: `--lazy-files`
+(fetching old attachments when first opened), other people's bookmarks
+(the API only gives the token owner's).
 
-**Agent:** suits a cheaper model following this spec and the checklist
-in `AGENTS.md`, with recorded API responses to work against. Recording
-them (made up, see below) is the first step.
+## Running it
 
-**Depends on:** every kind of item (`files.md`, `checkins.md`), mentions
-and attachments.
+`BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
+[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--user EMAIL]`.
+Always dry-run first: counts per kind, people to create, problems, what
+goes into internal containers, archived recordings skipped.
+
+- The token must be an administrator's: only they get the people's
+  addresses (others get them redacted; the importer reports it and
+  creates placeholder people `basecamp-ID@import.invalid`).
+- The import runs as the token's owner (`/my/profile.json`, or
+  `--user`), who must be Biwak staff: they create the projects and own
+  the bookmarks.
+- **Idempotent:** `ImportedObject(basecamp_id, basecamp_type,
+  content_type, object_id)` maps what was imported, so a second run
+  updates titles, texts, due dates, assignees, completion, archived
+  lists, categories and visibility, and adds new comments; it doesn't
+  change imported comments, positions or files. `--since` skips leaves
+  (to-dos, cards, messages, docs, files, answers, comments) last updated
+  before the date; containers are always read.
+- **Rates:** at most 50 requests per 10 seconds, 429 waited out
+  (`Retry-After`); one request per recording for its comments and its
+  subscribers, so big accounts take a while.
 
 ## Mapping
 
@@ -38,165 +43,63 @@ and attachments.
 | To-do list group | Group of the list |
 | To-do | To-do (assignees, due dates, completion, notes) |
 | Card table | List with its columns as groups, shown as board |
-| Card | To-do in the group of its column |
-| Message board, message | Message board, message (category by name) |
+| Card | To-do in its column's group; steps as a checklist in the notes |
+| Message board, message | Message board, message (category by name, created when missing) |
 | Vault (folder), document, upload | Folder, doc, file |
 | Questionnaire, question, answer | Check-in question, answer |
 | Comment | Comment |
 | Client visibility | Visible to clients on the container or item |
-| Subscriptions, bookmarks | Subscriptions, bookmarks |
-| Schedule, chat, pings, forwards | Not imported |
+| Subscriptions, bookmarks | Subscriptions (who can see it), bookmarks |
+| Schedule, chat, pings, forwards, wormholes | Not imported |
 
-Basecamp stores rich text as HTML: convert it to Markdown
-(`markdownify`), mentions (`<bc-attachment content-type=
-"application/vnd.basecamp.mention">`) to `[@Name](person:ID)`, embedded
-files to attachments (`files.md`).
+## Rules
 
-## Model
-
-`ImportedObject(basecamp_id, basecamp_type, content_type, object_id,
-imported_at)`, unique on Basecamp ID and type: the mapping that makes a
-second run update instead of duplicating.
-
-## Requirements
-
-- `./manage.py import_basecamp --account ID --project ID [--dry-run]
-  [--since DATE]`, with the OAuth token from the environment
-  (`BASECAMP_TOKEN`). Imports run per project.
-- **Idempotent and resumable:** a second run updates; an interrupted run
-  continues where it stopped.
-- **Through the operations** (`AGENTS.md`), with the original authors and
-  timestamps set afterwards; events get the original times and notify
-  nobody (a flag on the operations' `record()` call, or importing with
-  notifications switched off).
-- **People** by email address; people without an account are created
-  inactive, as staff or client as in Basecamp.
-- **Attachments** in texts are downloaded and uploaded; links between
-  items are rewritten to Biwak URLs. Optionally (`--lazy-files`),
-  attachments of items older than a year are fetched when first opened.
-- **Profile images** (decided 2026-11-21, `ui-round-2.md` part C): people
-  without an image in Biwak get Basecamp's (`avatar_url` from
-  `people/ID.json`, `people.json` has null), processed like an upload and
-  once, never overwriting one. Images Basecamp generated (flat colored
-  square with initials, its placeholder) are told apart by content and
-  skipped; the report lists both. A dry run fetches nothing.
-- **Dry run** first: counts per kind, people to create, problems.
-- **Rate limits:** Basecamp answers 429 with `Retry-After`; wait as told,
-  at most 50 requests per 10 seconds otherwise.
-
-## Done when
-
-Tests against recorded API responses with made-up data (record the
-shapes from the documentation at github.com/basecamp/bc3-api or from a
-test account, then replace every name, text and address): every row of
-the mapping, HTML to Markdown with mentions and attachments, a second
-run updating, visibility as in Basecamp (a client must not see what was
-internal there), the dry run.
-
-## Details of the build
-
-Run it: `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID
---project ID [--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--user
-EMAIL]`. The token must be an administrator's: Basecamp only gives them
-the people's email addresses (others get them redacted, which the
-importer reports and works around with placeholder people). The import
-runs as the person the token belongs to (`/my/profile.json`, or `--user`),
-who must be Biwak staff: they create the projects (and so become
-members) and own the bookmarks.
-
-Built the way the spec says: everything through the operations, inside
-`activity.operations.importing(at=...)` (events notify nobody, carry the
-original time), then the original times on the items, comments and
-projects. Besides: `checkins.operations.add_occurrence()` and the public
-`create_answer()`.
-
-Proposed by the building agent (2026-11-21); marked **?** are the
-questions the spec left open, built the safe way until answered:
-
-- **Visibility** (decided by `access.md`, here only how it maps): the
-  top-level list (to-do lists, card tables), message, folder, doc, file and
-  check-in question gets Basecamp's `visible_to_clients`; what is inside a
-  container inherits, as in both. What was **internal inside a visible
-  container** can't be shown that way in Biwak (children have no switch):
-  it is **skipped** and reported as a problem (**?**: a different home for
-  it, e.g. an internal folder, or importing the container as internal).
-  Messages by clients are visible in Biwak by definition: the importer
-  sets the switch to what Basecamp had (a client's internal message stays
-  internal).
-- **People without an account** are created inactive, as staff or client
-  as in Basecamp (never as admins), clients with their company as
-  organization. Companies become organizations by name, ignoring case
-  and spaces (`organizations.md`, 2026-11-21): clients and staff who
-  aren't Basecamp employees (collaborators) get their company's, so
-  collaborators are partners (individual partners without a company);
-  employees get the own organization, which always
-  exists. People who exist keep
-  theirs. The operations refuse inactive people (`add_member()`,
-  `assign()`), so their memberships and assignments are written directly
-  (**?**): once somebody activates them they are members. Without an
-  address (not an administrator's token): a placeholder
-  `basecamp-ID@import.invalid`, inactive, named as in Basecamp.
+- **Through the operations** (`AGENTS.md`), inside
+  `activity.operations.importing(at=...)`: events notify nobody and carry
+  the original time; the original times are set on items, comments and
+  projects afterwards. Open pages and live editors still check access at
+  once when an import changes who sees what.
+- **Visibility** as in Basecamp, so a client never sees what was internal
+  there: top-level containers and items get Basecamp's
+  `visible_to_clients`, children inherit. What was **internal inside a
+  visible container** goes into an internal "<container> (internal)"
+  (decided 2026-11-21): a top-level folder for docs and files (nested
+  folders flattened into it), a list for to-dos (groups of the same
+  title; a board for a card table). An internal answer to a visible
+  question can't move and is skipped and reported. A client's internal
+  message stays internal.
+- **People** by address. Those without an account are created
+  **inactive** (never admins), as staff or client as in Basecamp, so
+  nobody gets mail or a login before someone decides (`activation.md`);
+  the operations accept inactive people only inside `importing()`.
+  Companies become organizations by name, ignoring case and spaces:
+  employees get the own organization, clients and collaborators their
+  company's (collaborators become partners). Existing people keep theirs.
+- **Profile images** (decided 2026-11-21): for people without an image
+  in Biwak, `avatar_url` from `people/<id>.json` (`people.json` has
+  null), processed like an upload, never overwriting one. Basecamp's
+  generated ones (a flat square with initials, its beige placeholder)
+  are skipped, told apart by content (`looks_generated()`: scaled to 64
+  pixels, the four corners within 12 per channel, and quantized to 8
+  colors the most common covering at least 60 %). A dry run fetches
+  nothing; people with an image are never fetched again.
+- **Rich text:** HTML to Markdown with `markdownify`
+  (`biwak/htmlmarkdown.py`, shared with pasting); mentions of the
+  project's people become `[@Name](person:ID)`, others stay `@Name`;
+  files in texts are downloaded once and attached; links to imported
+  recordings are rewritten.
 - **Check-ins:** the schedule becomes a rule through
-  `schedules.validate()` (`every_day` with days is weekly on those days,
-  `every_other_week` interval 2, `every_month` by the first date's day of
-  the month or by `week_instance` for the nth weekday; **?** what
-  `week_instance` means for "last"), the time zone is the installation's
-  (**?** Basecamp's schedule has none), `start_date` the first date. They
-  are imported **paused** (**?**), so that Biwak doesn't start asking and
-  mailing people unasked; the answers' authors who can see the question
-  are the people asked (Basecamp's respondents aren't in the API
-  responses). Occurrences come from the answers' `group_on`.
-- **Subscriptions** are set to Basecamp's subscribers of each recording
-  who can see it (the creator's automatic one goes if Basecamp has none).
-- **Rich text:** the converter is `markdownify`; divs become paragraphs;
-  mentions of people on the project become `[@Name](person:ID)` (others
-  stay `@Name`); files in texts are downloaded once (keyed by Basecamp's
-  attachment ID) and attached; links to recordings already imported are
-  rewritten when converting, the others when the project is done (comments
-  have no operation to change them: those rows are updated directly).
-  Card steps become a checklist at the end of the card's notes (**?**).
-- **What isn't imported:** to-dos' start dates (no operation sets them),
-  trashed recordings (**?**), archived messages, docs, files and questions
-  (decided 2026-11-21, `archiving.md`: found by the recordings listing's
-  `status=archived` per type and listed in the report, the dry run too, not
-  imported),
-  pins of messages (not in the API's documentation), older versions of
-  files, docs without a history, schedule entries, chat, pings, forwards,
-  wormholes. **Basecamp has no repeating to-dos in its API**, so there are
-  no rules to convert for them.
-- **Message categories** are looked up by name, and **created** when
-  missing (**?**, categories are the installation's list).
-- **Second run:** updates titles, texts, due dates, assignees,
-  completion, archived lists, categories and the visibility switch from
-  Basecamp; adds new comments; doesn't change comments, positions or
-  files already imported. `--since` skips leaves (to-dos, cards,
-  messages, docs, files, answers, comments) last updated before the date;
-  containers are always read.
-- **Rates:** one request per recording for its comments and for its
-  subscribers: big accounts take a while (50 requests per 10 seconds at
-  most, and 429 is waited out).
-
-## Decided after building (2026-11-21)
-
-- Archived to-dos (and cards' to-dos) come in **completed** (decided
-  2026-11-21, `archiving.md`): at the recording's `updated_at` (the API
-  doesn't give the archiving time or the person), by the importing person
-  unless Basecamp names who completed it; their comments are imported.
-  Lists and projects stay archived.
-
-- Internal items inside a container visible to clients go into a
-  separate internal folder (for files and docs: a top-level folder
-  "<container> (internal)"; for to-dos: an internal list "<list>
-  (internal)"), so nothing is lost and nothing leaks; the dry run lists
-  them. Built: a nested internal folder moves into the internal folder
-  with its content (deeper levels are flattened into that one folder); a
-  to-do from a group goes into a group of the same title in the internal
-  list; the internal list of a card table is a board.
-- People without a Biwak account are created inactive, and the
-  operations accept inactive people only inside `importing()`
-  (assigning, subscribing, memberships), so everything still goes
-  through the operations; outside an import they keep refusing them.
-- Imported check-ins stay paused; a project's paused check-ins can be
-  resumed together (a button on the project's check-ins page, `POST
-  /api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume
-  --project ID`).
+  `schedules.validate()` (`every_day` with days weekly on those,
+  `every_other_week` interval 2, `every_month` by day or by
+  `week_instance`), in the installation's time zone (Basecamp's has
+  none), `start_date` the first date. Imported **paused**, so Biwak
+  doesn't start mailing people unasked. Occurrences come from the
+  answers' `group_on`.
+- **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
+  come in completed at the recording's `updated_at`, by the importing
+  person unless Basecamp names who completed it, with their comments;
+  archived lists and projects stay archived; archived messages, docs,
+  files and questions are skipped and listed in the report.
+- **Not imported:** trashed recordings, to-dos' start dates, pins of
+  messages (not in the API), older versions of files, docs' history.
+  Basecamp's API has no repeating to-dos.
