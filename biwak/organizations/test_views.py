@@ -59,7 +59,7 @@ class PagesTest(TestCase):
         self.client.force_login(self.root)
         response = self.client.get(self.own.get_absolute_url())
         self.assertContains(response, "Merge…")
-        self.assertContains(response, "/delete/")
+        self.assertNotContains(response, "/delete/")  # it always exists
 
     def test_create_as_modal_and_page(self):
         assert_modal(
@@ -151,7 +151,7 @@ class PagesTest(TestCase):
         self.assertEqual(self.cleo.organization.name, "Newco")
         self.assertRedirects(response, self.cleo.organization.get_absolute_url())
         # Into the installation's own: admins only
-        bob = person("Bob")
+        bob = person("Bob", organization=None)
         response = self.client.post(
             f"/people/{bob.pk}/organization/", {"organization": "Example Team"}
         )

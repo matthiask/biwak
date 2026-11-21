@@ -15,7 +15,7 @@ class AdminsTest(TestCase):
     def setUp(self):
         self.own = organization("Example Team", is_own=True)
         self.root = person("Root", is_admin=True, organization=self.own)
-        self.other_admin = person("Ora", is_admin=True)  # without one: own
+        self.other_admin = person("Ora", is_admin=True)  # the own one too
         self.agency = organization("Example Agency")
 
     def test_no_admin_partners(self):
@@ -71,22 +71,21 @@ class AdminsTest(TestCase):
         self.assertContains(response, "no admin")
 
     def test_merging_the_own_one_away(self):
-        with self.assertRaisesMessage(ValidationError, "no admin"):
+        """It always exists, and with it the admins' place"""
+        with self.assertRaisesMessage(ValidationError, "always exists"):
             org_ops.merge(self.own, self.agency, actor=self.root)
         self.assertTrue(Organization.objects.filter(pk=self.own.pk).exists())
         self.client.force_login(self.root)
         response = self.client.post(
             f"/organizations/{self.own.pk}/merge/", {"into": self.agency.pk}
         )
-        self.assertContains(response, "no admin")
+        self.assertContains(response, "always exists")
 
     def test_moving_or_removing_the_mark(self):
-        for org in [self.agency, None]:
-            with (
-                self.subTest(org=org),
-                self.assertRaisesMessage(ValidationError, "no admin"),
-            ):
-                org_ops.mark_own(org, actor=self.root)
+        with self.assertRaisesMessage(ValidationError, "no admin"):
+            org_ops.mark_own(self.agency, actor=self.root)
+        with self.assertRaisesMessage(ValidationError, "always"):
+            org_ops.mark_own(None, actor=self.root)
         self.own.refresh_from_db()
         self.assertTrue(self.own.is_own)
         # In the Django admin too
@@ -98,7 +97,64 @@ class AdminsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.own.refresh_from_db()
         self.assertTrue(self.own.is_own)
-        # Once the admins are in the other one, the mark moves
-        org_ops.set_organization(self.root, None, actor=self.root)
-        org_ops.mark_own(self.agency, actor=self.root)
-        self.assertEqual(Organization.objects.get(is_own=True), self.agency)
+        response = self.client.post(
+            f"/admin/organizations/organization/{self.agency.pk}/change/",
+            {"name": "Example Agency", "domains": "", "is_own": "on"},
+        )
+        self.assertContains(response, "no admin")
+        self.assertEqual(Organization.objects.get(is_own=True), self.own)
+
+
+class IndividualsTest(TestCase):
+    """Staff without an organization are individuals, partners (decided
+    2026-11-21); the installation's own organization always exists"""
+
+    def test_staff_without_an_organization_are_partners(self):
+        gus = person("Gus", organization=None)
+        self.assertTrue(gus.is_partner)
+        self.assertFalse(gus.sees_all_access)
+        cleo = person("Cleo", client=True, organization=None)
+        self.assertFalse(cleo.is_partner)
+
+    def test_superusers_are_the_own_staff(self):
+        from biwak.accounts.models import User
+
+        root = User.objects.create_superuser("root@example.org")
+        self.assertTrue(root.organization.is_own)
+        self.assertEqual(Organization.objects.get(is_own=True).name, "Our organization")
+
+    def test_inviting_staff_without_a_choice(self):
+        from biwak.projects import operations as project_ops
+        from biwak.test_utils import project
+
+        root = person("Root", is_admin=True)
+        camp = project("Camp", members=[root])
+        gus, _created = project_ops.invite(
+            camp, email="gus@example.net", is_client=False, actor=root
+        )
+        self.assertIsNone(gus.organization)
+        self.assertTrue(gus.is_partner)
+        own = Organization.objects.own()
+        hal, _created = project_ops.invite(
+            camp, email="hal@example.net", is_client=False, organization=own, actor=root
+        )
+        self.assertFalse(hal.is_partner)
+
+    def test_the_migration(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        from biwak.accounts.models import User
+
+        Organization.objects.filter(is_own=True).delete()
+        bob = person("Bob", organization=None)
+        cleo = person("Cleo", client=True, organization=None)
+        migration = import_module(
+            "biwak.organizations.migrations.0003_own_organization"
+        )
+        migration.own_organization(apps, None)
+        own = Organization.objects.get(is_own=True)
+        self.assertEqual(own.name, "Our organization")
+        self.assertEqual(User.objects.get(pk=bob.pk).organization, own)
+        self.assertIsNone(User.objects.get(pk=cleo.pk).organization)

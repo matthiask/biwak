@@ -122,8 +122,9 @@ questions the spec left open, built the safe way until answered:
   organization. Companies become organizations by name, ignoring case
   and spaces (`organizations.md`, 2026-11-21): clients and staff who
   aren't Basecamp employees (collaborators) get their company's, so
-  collaborators are partners; employees get the installation's own
-  organization if one is marked, else none. People who exist keep
+  collaborators are partners (individual partners without a company);
+  employees get the installation's own organization, which always
+  exists. People who exist keep
   theirs. The operations refuse inactive people (`add_member()`,
   `assign()`), so their memberships and assignments are written directly
   (**?**): once somebody activates them they are members. Without an

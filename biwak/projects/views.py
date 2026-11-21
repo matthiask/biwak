@@ -317,7 +317,8 @@ class InviteForm(OrganizationFieldMixin, Form):
     organization = organization_field(
         help_text=_(
             "For new people; left empty, the organization of the address's"
-            " domain. Shown beside the names of clients and partners."
+            " domain. Shown beside the names of clients and partners. No"
+            " organization: staff see only the projects they're added to."
         ),
     )
 

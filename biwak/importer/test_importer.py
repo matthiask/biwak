@@ -613,9 +613,21 @@ class PeopleTest(ImportCase):
             report.people,
         )
 
-    def test_without_an_own_organization_employees_have_none(self):
+    def test_employees_in_the_own_organization_which_always_exists(self):
         self.run_import()
-        self.assertIsNone(User.objects.get(email="bob@example.org").organization)
+        bob = User.objects.get(email="bob@example.org")
+        self.assertTrue(bob.organization.is_own)
+        self.assertFalse(bob.is_partner)
+
+    def test_collaborators_without_a_company_are_individual_partners(self):
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people.append(
+            support.person(6, "Gus Example", "gus@example.org") | {"employee": False}
+        )
+        self.run_import()
+        gus = User.objects.get(email="gus@example.org")
+        self.assertIsNone(gus.organization)
+        self.assertTrue(gus.is_partner)
 
     def test_redacted_addresses_become_placeholders(self):
         # Only administrators get addresses (sections/people.md)

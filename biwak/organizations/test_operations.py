@@ -148,8 +148,14 @@ class OperationsTest(TestCase):
         # Others, not the own: all staff
         org_ops.set_organization(pia, other, actor=self.bob)
         org_ops.merge(org, other, actor=self.bob)
-        # Marking another one moves the mark
-        org_ops.mark_own(other, actor=self.admin)
-        self.own.refresh_from_db()
-        self.assertFalse(self.own.is_own)
-        self.assertEqual(Organization.objects.get(is_own=True), other)
+        # The own one always exists: not deleted, not merged away, the mark
+        # not removed; moving it would make the admins partners
+        with self.assertRaisesMessage(ValidationError, "always exists"):
+            org_ops.delete_organization(self.own, actor=self.admin)
+        with self.assertRaisesMessage(ValidationError, "always exists"):
+            org_ops.merge(self.own, other, actor=self.admin)
+        with self.assertRaisesMessage(ValidationError, "always"):
+            org_ops.mark_own(None, actor=self.admin)
+        with self.assertRaisesMessage(ValidationError, "no admin"):
+            org_ops.mark_own(other, actor=self.admin)
+        self.assertEqual(Organization.objects.get(is_own=True), self.own)

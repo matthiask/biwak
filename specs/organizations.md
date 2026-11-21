@@ -45,6 +45,26 @@ point.
   all-access projects open only to the installation's own staff
   (`access.md` to be changed accordingly, tests through every entry
   point).
+- **No organization is an individual** (decided 2026-11-21): the
+  organization stays optional; staff without one (freelancers) are
+  partners, clients without one are fine. Only the own organization's
+  people are the installation's own staff (`is_partner`: staff not in
+  the own organization; `own_staff()`: not clients, `organization__is_own`).
+- **The own organization always exists** (decided 2026-11-21):
+  `Organization.objects.own()` creates "Our organization" if none is
+  marked, for admins to rename; migration `organizations.0003` does the
+  same and puts every staff person without an organization into it, so
+  nobody lost access by the change. `createsuperuser` puts the admin
+  there. It can't be deleted, merged into another one or unmarked; the
+  mark only moves while no admin would be left out (in practice: rename
+  it, or merge others into it).
+- **Inviting staff:** the domain preselects as before; without a choice
+  the person is an individual partner, and the form says so ("No
+  organization: staff see only the projects they're added to"). An
+  admin can pick the own organization. The importer puts Basecamp's
+  employees into the own organization; collaborators without a company
+  stay individual partners. Made-up staff in the tests
+  (`biwak/test_utils.py`) belong to the own organization.
 - **Admins are always the installation's own staff** (decided
   2026-11-21): every change that would make an admin a partner is
   refused, and the message says what to do first: ticking "is admin" on
@@ -157,17 +177,14 @@ decides who sees all-access projects.
 - **The importer** (`biwak/importer/importer.py`): Basecamp's companies
   become organizations by name (ignoring case and spaces); clients and
   collaborators (staff who aren't Basecamp employees) get theirs, which
-  makes collaborators partners; employees the installation's own if one
-  is marked, else none. The dry run's list says "partner" and the company.
+  makes collaborators partners; employees the installation's own (it
+  always exists). The dry run's list says "partner" and the company.
 - **The admin:** organizations with their people count; marking one as
   the installation's own moves the mark (`mark_own()`); a person's
   organization with autocomplete.
 
 ## Decided meanwhile (2026-11-21, to be confirmed)
 
-- **Staff without an organization** count as the installation's own: an
-  installation without organizations set up behaves as before. Only staff
-  in another organization are partners.
 - **Partners** learn about members only, like clients: the `@` list,
   mentions, assignees, subscribers, the people a check-in asks (they
   ask members; people already asked stay), names in an item's history,

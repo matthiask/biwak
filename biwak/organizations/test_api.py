@@ -41,7 +41,7 @@ class APITest(TestCase):
         data = self.call("get", "organizations/").json()
         self.assertEqual(
             [(o["name"], o["people_count"], o["is_own"]) for o in data],
-            [("Example Ltd", 1, False), ("Example Team", 0, True)],
+            [("Example Ltd", 1, False), ("Example Team", 2, True)],
         )
         data = self.call("get", f"organizations/{self.example.pk}/").json()
         self.assertEqual(data["domains"], ["example.com"])
@@ -87,7 +87,7 @@ class APITest(TestCase):
         self.assertFalse(Organization.objects.filter(pk=empty.pk).exists())
 
     def test_the_own_organization_is_for_admins(self):
-        bob = person("Bob")
+        bob = person("Bob", organization=None)
         response = self.call(
             "put", f"people/{bob.pk}/organization/", {"organization_id": self.own.pk}
         )
@@ -120,7 +120,8 @@ class OrgsCLITest(test_cli.CLITest):
         self.assertIn("Example Ltd", output)
         self.assertIn("example.com", output)
         data = json.loads(self.biwak("orgs", "--json").stdout)
-        self.assertEqual([o["name"] for o in data], ["Example Ltd"])
+        # The installation's own always exists
+        self.assertEqual([o["name"] for o in data], ["Example Ltd", "Our organization"])
         output = self.biwak("orgs", "show", self.example.pk).output
         self.assertIn("Cleo Example", output)
         output = self.biwak(

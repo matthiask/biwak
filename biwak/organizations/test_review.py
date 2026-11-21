@@ -192,14 +192,8 @@ class SubscriptionsTest(ReviewTestCase):
         )
         self.assertEqual(self.subscribed(), {self.book.pk})
 
-    def test_merged_out_of_the_own(self):
-        org_ops.set_organization(self.bob, self.own, actor=self.root)
-        org_ops.merge(self.own, organization("Example Agency"), actor=self.root)
-        self.assertEqual(self.subscribed(), set())
-
-    def test_another_one_marked(self):
-        org_ops.set_organization(self.bob, self.own, actor=self.root)
-        org_ops.mark_own(organization("Example Agency"), actor=self.root)
+    def test_an_individual_now(self):
+        org_ops.set_organization(self.bob, None, actor=self.root)
         self.assertEqual(self.subscribed(), set())
 
 

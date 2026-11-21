@@ -65,7 +65,7 @@ def _no_admin_partners(admins, *, own_after):
 
 
 def _admins_in(org):
-    """The admins of the organization; of none: the admins without one"""
+    """The admins of the organization"""
     from biwak.accounts.models import User
 
     return list(User.objects.filter(is_admin=True, organization=org))
@@ -166,6 +166,14 @@ def merge(source, target, *, actor):
     if source.pk == target.pk:
         raise ValidationError(_("An organization can't be merged into itself."))
     _check_touch(actor, source, target)
+    if source.is_own:
+        raise ValidationError(
+            _(
+                "The installation's own organization always exists: merge"
+                " %(organization)s into it instead."
+            )
+            % {"organization": target}
+        )
     _no_admin_partners(_admins_in(source), own_after=target.is_own)
     moved = list(source.people.values_list("pk", flat=True))
     source.people.update(organization=target)
@@ -180,8 +188,12 @@ def merge(source, target, *, actor):
 
 @transaction.atomic
 def delete_organization(org, *, actor):
-    """Only organizations nobody belongs to"""
+    """Only organizations nobody belongs to, never the installation's own"""
     _check_touch(actor, org)
+    if org.is_own:
+        raise ValidationError(
+            _("The installation's own organization always exists: rename it instead.")
+        )
     if org.people.exists():
         raise ValidationError(
             _("People belong to %(organization)s: merge it instead.")
@@ -198,7 +210,7 @@ def set_organization(user, org, *, actor):
     _check_touch(actor, user.organization if user.organization_id else None, org)
     if user.is_admin:
         # Without an organization, staff are the installation's own
-        _no_admin_partners([user], own_after=org is None or org.is_own)
+        _no_admin_partners([user], own_after=org is not None and org.is_own)
     user.organization = org
     user.save(update_fields=["organization"])
     _access_changed([user.pk])
@@ -207,13 +219,20 @@ def set_organization(user, org, *, actor):
 
 @transaction.atomic
 def mark_own(org, *, actor):
-    """Marks the installation's own organization (admins only); only one is
-    marked, so another one loses it"""
+    """Marks the installation's own organization (admins only); exactly one
+    is marked (decided 2026-11-21), so another one loses it"""
     if not (actor.is_authenticated and actor.is_admin):
         raise PermissionError(
             _("Only admins mark the installation's own organization.")
         )
-    if org is not None and org.is_own:
+    if org is None:
+        raise ValidationError(
+            _(
+                "There is always an installation's own organization: mark"
+                " another one instead."
+            )
+        )
+    if org.is_own:
         return org
     for old in Organization.objects.filter(is_own=True):
         _no_admin_partners(_admins_in(old), own_after=False)
@@ -221,9 +240,8 @@ def mark_own(org, *, actor):
         Organization.objects.filter(is_own=True).values_list("people", flat=True)
     )
     Organization.objects.filter(is_own=True).update(is_own=False)
-    if org is not None:
-        org.is_own = True
-        org.save(update_fields=["is_own"])
+    org.is_own = True
+    org.save(update_fields=["is_own"])
     _access_changed(unmarked)
     return org
 

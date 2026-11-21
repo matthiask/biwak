@@ -56,7 +56,9 @@ def organization_detail(request, pk):
             "organization": org,
             "people": people,
             "can_touch": org_ops.can_touch(request.user, org),
-            "can_delete": org_ops.can_touch(request.user, org) and not people.exists(),
+            "can_delete": org_ops.can_touch(request.user, org)
+            and not org.is_own
+            and not people.exists(),
         },
     )
 
@@ -196,7 +198,12 @@ def organization_delete(request, pk):
 
 
 class PersonOrganizationForm(OrganizationFieldMixin, Form):
-    organization = organization_field(help_text=gettext_lazy("Empty: none."))
+    organization = organization_field(
+        help_text=gettext_lazy(
+            "Empty: none. Staff without an organization see only the projects"
+            " they're added to."
+        )
+    )
 
 
 def person_organization(request, pk):

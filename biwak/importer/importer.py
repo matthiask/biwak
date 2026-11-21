@@ -254,7 +254,7 @@ class Importer(Resolver):
         if client or partner:
             organization = self._organization(company)
         else:
-            organization = Organization.objects.filter(is_own=True).first()
+            organization = Organization.objects.own()
         return User.objects.create_user(
             email,
             full_name=name,

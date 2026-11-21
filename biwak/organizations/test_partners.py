@@ -87,18 +87,16 @@ class QueriesTest(PartnerTestCase):
         root = person("Root", is_admin=True)
         org_ops.set_organization(self.pia, self.own, actor=root)
         self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
+        # Without one, an individual: a partner (decided 2026-11-21)
         org_ops.set_organization(self.pia, None, actor=root)
-        self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
+        self.assertTrue(self.pia.is_partner)
+        self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
         org_ops.set_organization(self.pia, organization("Other Agency"), actor=root)
         self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
-        # Their organization marked as the installation's own: Ada's isn't
-        # anymore, she sees only the projects she's a member of
-        team = project("Team")
-        org_ops.mark_own(self.pia.organization, actor=root)
+        # Their organization merged into the installation's own
+        org_ops.merge(self.pia.organization, self.own, actor=root)
         self.pia.refresh_from_db()
-        self.ada.refresh_from_db()
-        self.assertIn(team, Project.objects.accessible_to(self.pia))
-        self.assertNotIn(team, Project.objects.accessible_to(self.ada))
+        self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
 
     def test_assignable_and_mentionable(self):
         """Partners are assigned and mentioned as members only, and assign

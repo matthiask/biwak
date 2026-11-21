@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin
 from django.db.models import Count
+from django.utils.translation import gettext as _
 
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
@@ -20,8 +21,11 @@ class OrganizationForm(forms.ModelForm):
             and Organization.objects.filter(pk=self.instance.pk, is_own=True).exists()
         )
         if was_own and not data.get("is_own"):
-            org_ops._no_admin_partners(
-                org_ops._admins_in(self.instance), own_after=False
+            raise forms.ValidationError(
+                _(
+                    "There is always an installation's own organization: mark"
+                    " another one instead."
+                )
             )
         if data.get("is_own") and not was_own:
             for old in Organization.objects.filter(is_own=True):
@@ -48,11 +52,6 @@ class OrganizationAdmin(admin.ModelAdmin):
         return obj.people_count
 
     def save_model(self, request, obj, form, change):
-        if change and "is_own" in form.changed_data and not obj.is_own:
-            super().save_model(request, obj, form, change)
-            # Its people lose all-access projects they aren't members of
-            org_ops._access_changed(obj.people.values_list("pk", flat=True))
-            return
         # Only one is the installation's own: another one loses the mark
         if obj.is_own:
             obj.is_own = False

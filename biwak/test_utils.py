@@ -6,15 +6,26 @@ from biwak.projects.models import Membership, Project
 
 
 def organization(name="Example Client Ltd", **kwargs):
-    """The organization of this name, created if needed"""
+    """The organization of this name, created if needed; ``is_own=True``
+    is the installation's own, which always exists: it gets the name"""
+    if kwargs.pop("is_own", False):
+        own = Organization.objects.own()
+        own.name = name
+        for field, value in kwargs.items():
+            setattr(own, field, value)
+        own.save()
+        return own
     return Organization.objects.get_or_create(name=name, defaults=kwargs)[0]
 
 
 def person(name="Ada", *, client=False, **kwargs):
-    """Clients belong to "Example Client Ltd" unless ``organization`` says
-    otherwise (a name or an organization); staff to none, which makes them
-    the installation's own"""
-    org = kwargs.pop("organization", "Example Client Ltd" if client else None)
+    """Clients belong to "Example Client Ltd", staff to the installation's
+    own organization, unless ``organization`` says otherwise (a name, an
+    organization or None: an individual, a partner if staff)"""
+    if "organization" in kwargs:
+        org = kwargs.pop("organization")
+    else:
+        org = "Example Client Ltd" if client else Organization.objects.own()
     if isinstance(org, str):
         org = organization(org) if org else None
     return User.objects.create_user(

@@ -41,9 +41,10 @@ the first client gets a login.
   `organizations.md`): staff whose organization isn't the installation's
   own (freelancers, partner agencies) see only the projects they're
   members of; all-access projects open only to the installation's own
-  staff. Staff without an organization count as the installation's own,
-  so nothing changes before organizations are set up (`User.is_partner`,
-  `User.sees_all_access`, `own_staff()` for querysets).
+  staff. Staff without an organization are individuals (freelancers) and
+  partners too (decided 2026-11-21); the own organization always exists
+  and admins are always in it (`User.is_partner`, `User.sees_all_access`,
+  `own_staff()` for querysets).
   `Project.objects.accessible_to()` and `notify.people_who_see()` decide
   it, so pages, the feed, search, the palette, the lantern, mails, mail
   replies, the API, the CLI and both websockets follow. Partners are

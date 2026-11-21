@@ -39,6 +39,10 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **kwargs):
+        """Admins are the installation's own staff (decided 2026-11-21)"""
+        from biwak.organizations.models import Organization
+
+        kwargs.setdefault("organization", Organization.objects.own())
         return self.create_user(email, password, is_admin=True, **kwargs)
 
     def active(self):
@@ -101,10 +105,7 @@ def own_staff(prefix=""):
     """``Q()`` for the people who see all-access projects
     (``User.sees_all_access``); ``prefix`` for lookups through a relation,
     e.g. ``"user__"``"""
-    return Q(**{f"{prefix}is_client": False}) & (
-        Q(**{f"{prefix}organization__isnull": True})
-        | Q(**{f"{prefix}organization__is_own": True})
-    )
+    return Q(**{f"{prefix}is_client": False, f"{prefix}organization__is_own": True})
 
 
 class User(AbstractBaseUser):
@@ -222,14 +223,12 @@ class User(AbstractBaseUser):
 
     @property
     def is_partner(self):
-        """Staff of an organization other than the installation's own
-        (freelancers, partner agencies): they see only the projects they're
-        members of. Staff without an organization are the installation's
-        own, so that nothing changes before organizations are set up."""
-        return (
-            not self.is_client
-            and self.organization_id is not None
-            and not self.organization.is_own
+        """Staff who aren't in the installation's own organization: of
+        another one (partner agencies) or of none (individuals, e.g.
+        freelancers, decided 2026-11-21). They see only the projects
+        they're members of."""
+        return not self.is_client and not (
+            self.organization_id is not None and self.organization.is_own
         )
 
     @property

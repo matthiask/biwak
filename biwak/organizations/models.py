@@ -60,7 +60,23 @@ def domain_of(email):
     return "" if domain in FREE_MAIL_DOMAINS else domain
 
 
+# The installation's own organization when none is marked yet; admins
+# rename it
+OWN_NAME = "Our organization"
+
+
 class OrganizationQuerySet(models.QuerySet):
+    def own(self):
+        """The installation's own organization, which always exists
+        (decided 2026-11-21): created as "Our organization" if none is
+        marked"""
+        own = self.filter(is_own=True).first()
+        if own is None:
+            own = self.named(OWN_NAME) or Organization(name=OWN_NAME)
+            own.is_own = True
+            own.save()
+        return own
+
     def named(self, name):
         """The organization of this name, ignoring case and spaces, or None"""
         name = normalize_name(name)
