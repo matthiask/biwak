@@ -20,6 +20,7 @@
         <a class="btn btn-sm btn-quiet" href="{% url 'file_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
       {% endif %}
+      {% include "items/_more.html" %}
     </div>
   </div>
   {% show_links item %}
@@ -75,7 +76,6 @@
         </ul>
       {% endif %}
       <div class="mt-4">{% include "files/_sidebar.html" %}</div>
-      {% include "files/_move.html" %}
     </div>
   </div>
 {% endblock content %}

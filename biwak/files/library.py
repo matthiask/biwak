@@ -17,6 +17,7 @@ from biwak.forms import Form
 from biwak.items import editing, glance, operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
+from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.views import project_for
 
@@ -147,21 +148,61 @@ def folder(request, pk):
     return library(request, item.project, item)
 
 
-@require_POST
+class MoveForm(Form):
+    """Where a folder, doc or file goes; the view checks the folder itself"""
+
+    folder = forms.ChoiceField(label=_("Folder"), required=False)
+
+    def __init__(self, *args, choices, current, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["folder"].choices = [
+            ("", _("Project root")),
+            *(
+                (
+                    str(target.pk),
+                    path
+                    + (
+                        f" ({_('clients can see this')})"
+                        if target.is_client_visible
+                        else ""
+                    ),
+                )
+                for target, path in choices
+            ),
+        ]
+        self.initial["folder"] = str(current or "")
+
+
 def item_move(request, pk):
     """Moves a folder, doc or file into a folder or (empty ``folder``) to
-    the root"""
+    the root: a modal on its page, also a page"""
     item = item_for(request, pk)
     if item.kind not in CONTAINED:
         raise PermissionDenied
     if not ops.can_change(request.user, item):
         raise PermissionDenied
-    target = folder_param(request, item.project)
-    try:
-        ops.move_item(item, parent=target, actor=request.user)
-    except ValueError:
-        messages.error(request, _("A folder can't be moved into itself."))
-    return redirect(item)
+    form = MoveForm(
+        request.POST or None,
+        choices=folder_choices(request.user, item.project, exclude=item),
+        current=item.parent_id,
+    )
+    if request.method == "POST":
+        target = folder_param(request, item.project)
+        try:
+            ops.move_item(item, parent=target, actor=request.user)
+        except ValueError:
+            form.add_error(None, _("A folder can't be moved into itself."))
+        else:
+            return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("Move to…"),
+        item=item,
+        parent=item.parent,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Move"),
+    )
 
 
 def folder_param(request, project):

@@ -22,6 +22,7 @@
             >{% translate "Complete" %}</span>{% endif %}
         </button>
       </form>
+      {% include "items/_more.html" %}
     </div>
   </div>
   {% show_links item %}
@@ -76,42 +77,7 @@
     </div>
     <div class="col-lg-4">
       {% include "items/_subscribers.html" %}
-      {% if not todo.is_completed %}
-        <h2 class="h6 mt-4">{% translate "Move to…" %}</h2>
-        <form method="post" action="{% url 'todo_move' item.pk %}">
-          {% csrf_token %}
-          <select name="target" class="form-select form-select-sm mb-2" aria-label="{% translate 'list and group' %}">
-            {% for target, target_groups in move_targets %}
-              <optgroup label="{{ target }}{% if target.is_client_visible %} ({% translate 'clients can see this' %}){% endif %}">
-                <option
-                  value="{{ target.pk }}"
-                  {% if target.pk == item.parent_id and not todo.group_id %}selected{% endif %}
-                >
-                  {{ target }}
-                </option>
-                {% for g in target_groups %}
-                  <option
-                    value="{{ target.pk }}:{{ g.pk }}"
-                    {% if g.pk == todo.group_id %}selected{% endif %}
-                  >
-                    {{ target }} / {{ g }}
-                  </option>
-                {% endfor %}
-              </optgroup>
-            {% endfor %}
-          </select>
-          <div class="d-flex gap-2">
-            <button type="submit" name="index" value="0" class="btn btn-sm btn-quiet">
-              {% translate "To the top" %}
-            </button>
-            <button type="submit" name="index" value="end" class="btn btn-sm btn-quiet">
-              {% translate "To the end" %}
-            </button>
-          </div>
-        </form>
-      {% endif %}
       {% include "items/_history_link.html" with block=True %}
-      {% if can_change %}{% include "items/_trash_button.html" %}{% endif %}
     </div>
   </div>
 {% endblock content %}

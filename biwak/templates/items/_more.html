@@ -1,0 +1,27 @@
+{% load biwak i18n %}
+{% comment %}
+  The "More" menu of an item's page: its notification level, moving and
+  trashing (who may change it), each in a modal (frontend/modal.js) which
+  is also a page. `can_change` comes from the page.
+{% endcomment %}
+<details class="dropdown wb-menu">
+  <summary class="btn btn-sm btn-quiet">
+    {% translate "More" %}
+    {% icon "chevron-down" %}
+  </summary>
+  <div class="dropdown-menu dropdown-menu-end">
+    <a
+      class="dropdown-item"
+      href="{% url 'item_notifications' item.pk %}"
+      data-modal
+    >{% translate "Notifications…" %}</a>
+    {% move_url item as move %}
+    {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}
+    {% if move and can_change or move and item.kind == "todo" %}
+      <a class="dropdown-item" href="{{ move }}" data-modal>{% translate "Move to…" %}</a>
+    {% endif %}
+    {% if can_change %}
+      <a class="dropdown-item" href="{% url 'item_trash' item.pk %}" data-modal>{% translate "Trash" %}</a>
+    {% endif %}
+  </div>
+</details>

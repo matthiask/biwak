@@ -23,6 +23,7 @@
         <a class="btn btn-sm btn-quiet" href="{% url 'list_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
       {% endif %}
+      {% include "items/_more.html" %}
     </div>
   </div>
   {% if item.status == "archived" %}
@@ -148,6 +149,5 @@
       </details>
     {% endif %}
   </div>
-  <div class="mt-4">{% item_notifications item %}</div>
   {% include "items/_switch.html" with kind="list" %}
 {% endblock content %}

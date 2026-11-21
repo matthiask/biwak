@@ -230,7 +230,8 @@ class ManageTest(TestCase):
         other = ops.create_todo(todolist=self.shared, title="Other", creator=self.ada)
         url = f"/todos/{other.pk}/"
         self.assertContains(
-            self.client.get(url), f'value="{self.shared.pk}:{self.group.pk}"'
+            self.client.get(url + "move-to/"),
+            f'value="{self.shared.pk}:{self.group.pk}"',
         )
         self.client.post(
             url + "move/", {"target": f"{self.shared.pk}:{self.group.pk}", "index": ""}
@@ -253,7 +254,8 @@ class ManageTest(TestCase):
         self.assertFalse(other.is_client_visible)
         # Clients don't get internal lists as targets
         self.client.force_login(self.cleo)
-        response = self.client.get(f"/todos/{self.todo.pk}/")
+        response = self.client.get(f"/todos/{self.todo.pk}/move-to/")
+        self.assertContains(response, f'value="{self.shared.pk}"')
         self.assertNotContains(response, f'value="{self.internal.pk}"')
 
     def test_move_to_another_project_is_refused(self):

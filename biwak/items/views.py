@@ -360,6 +360,72 @@ def todo_move(request, pk):
     return redirect(item if target_value else target)
 
 
+class MoveTodoForm(Form):
+    """Moving a to-do without dragging: the list or one of its groups, and
+    where in it"""
+
+    target = forms.ChoiceField(label=_("List and group"))
+    index = forms.ChoiceField(
+        label=_("Position"),
+        choices=[("0", _("To the top")), ("end", _("To the end"))],
+        initial="end",
+        widget=forms.RadioSelect,
+    )
+
+    def __init__(self, *args, targets, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = []
+        for target, groups in targets:
+            label = str(target)
+            if target.is_client_visible:
+                label += f" ({_('clients can see this')})"
+            choices.append((
+                label,
+                [
+                    (str(target.pk), str(target)),
+                    *((f"{target.pk}:{g.pk}", f"{target} / {g}") for g in groups),
+                ],
+            ))
+        self.fields["target"].choices = choices
+
+
+def todo_move_to(request, pk):
+    """Moving a to-do to a list or group: a modal on its page, also a page"""
+    item = item_for(request, pk, Kind.TODO)
+    if item.todo.is_completed:
+        raise Http404
+    todo = item.todo
+    initial = f"{item.parent_id}:{todo.group_id}" if todo.group_id else item.parent_id
+    form = MoveTodoForm(
+        request.POST or None,
+        targets=_move_targets(request, item),
+        initial={"target": str(initial)},
+    )
+    if form.is_valid():
+        list_id, _sep, group_id = form.cleaned_data["target"].partition(":")
+        target = item_for(request, int(list_id), Kind.LIST)
+        group = None
+        if group_id:
+            group = get_object_or_404(Group, pk=int(group_id), todolist=target.todolist)
+        ops.move_todo(
+            item,
+            todolist=target,
+            group=group,
+            index=_index(form.cleaned_data["index"]),
+            actor=request.user,
+        )
+        return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("Move to…"),
+        item=item,
+        parent=item.parent,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Move"),
+    )
+
+
 def todos_to_move(request, target, ids):
     """The to-dos by ID, for moving into the list ``target``: 404 unless
     the person sees them all, 400 for to-dos of another project (the pages
@@ -631,11 +697,23 @@ def item_editing(request, pk):
     return HttpResponse(status=204)
 
 
-@require_POST
 def item_trash(request, pk):
+    """Moving an item to the trash: asks first (a modal, also a page),
+    the POST does it"""
     item = item_for(request, pk)
     if not ops.can_change(request.user, item):
         raise PermissionDenied
+    if request.method != "POST":
+        return form_response(
+            request,
+            None,
+            title=_("Move to the trash?"),
+            intro=_("It can be restored for %(days)s days.") % {"days": ops.TRASH_DAYS},
+            item=item,
+            cancel_url=item.get_absolute_url(),
+            submit_label=_("Move to the trash"),
+            destructive=True,
+        )
     ops.trash(item, actor=request.user)
     messages.success(
         request,

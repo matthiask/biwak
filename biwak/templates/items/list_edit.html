@@ -29,11 +29,7 @@
         </button>
       {% endif %}
     </form>
-    <form method="post" action="{% url 'item_trash' item.pk %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-destructive">
-        {% icon "trash" %}<span>{% translate "Move the list and its to-dos to the trash" %}</span>
-      </button>
-    </form>
+    <a class="btn btn-sm btn-destructive" href="{% url 'item_trash' item.pk %}" data-modal>{% icon "trash" %}<span
+      >{% translate "Move the list and its to-dos to the trash" %}</span></a>
   </div>
 {% endblock content %}
