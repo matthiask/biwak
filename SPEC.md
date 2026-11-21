@@ -251,6 +251,9 @@ Nothing at the moment.
   interval, weekdays, monthly by day or nth weekday, yearly), no presets
   or raw RRULE in the forms, the description instead of a preview
   (`specs/rule-widget.md`); the API and CLI keep RRULEs and presets.
+- 2026-11-21: GitHub's task lists in all texts, tickable in place and
+  counted on rows; a small toolbar on every Markdown field; pasting rich
+  text keeps bold, emphasis, links and lists (`specs/editor.md`).
 - 2026-11-21: An accent color per person in the settings (the clients'
   amber reserved), and a color per project set by staff
   (`specs/keyboard.md`, `specs/project-colors.md`).
