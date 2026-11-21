@@ -188,7 +188,12 @@ and `specs/access.md`).
 Wanted, not specified in detail yet and not in the build order; give
 each a spec (or a section in one) before building it.
 
-Nothing at the moment.
+- **Sending through Resend** (added 2026-11-21): mail goes out through
+  the cluster's postfix and Gmail today (`biwak@feinheit.ch`, passing
+  SPF and DKIM); Resend only receives replies. Moving sending to Resend
+  (`EMAIL_URL` to its SMTP, a From domain verified there, e.g.
+  `biwak.feinheit.app`) as decided for both directions, when there's a
+  reason to.
 
 ## Decisions
 
