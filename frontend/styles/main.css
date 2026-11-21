@@ -1644,7 +1644,7 @@ button.wb-signal:hover {
 }
 
 .wb-lantern-dropdown {
-  width: min(26rem, calc(100vw - 2rem));
+  width: min(34rem, calc(100vw - 2rem));
   max-height: 70vh;
   overflow-y: auto;
   padding: 0.75rem;
@@ -1678,10 +1678,26 @@ button.wb-signal:hover {
   cursor: pointer;
 }
 
+/* Read items are quiet: the secondary color, not bold. Unread ones are
+   bold, with a red dot before the title, the lantern button's red. */
 .wb-lantern-title {
-  font-weight: 600;
   text-decoration: none;
+  color: var(--bs-secondary-color);
+}
+
+.wb-lantern-item.is-unread .wb-lantern-title {
+  font-weight: 600;
   color: var(--bs-link-color);
+}
+
+.wb-lantern-unread {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-inline-end: 0.35rem;
+  vertical-align: 0.05em;
+  background: var(--wb-lantern-dot);
+  border-radius: 50%;
 }
 
 .wb-lantern-link:hover,
@@ -1691,10 +1707,12 @@ button.wb-signal:hover {
 
 .wb-lantern-entry {
   margin-top: 0.25rem;
+  color: var(--bs-secondary-color);
 }
 
 .wb-lantern-entry.is-unread {
   font-weight: 600;
+  color: var(--bs-body-color);
 }
 
 .wb-lantern-entry .wb-excerpt {

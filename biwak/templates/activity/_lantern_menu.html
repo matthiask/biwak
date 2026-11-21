@@ -14,14 +14,12 @@
     {% if bookmarked_groups %}
       <h2 class="h6 small text-body-secondary mb-1">{% translate "Bookmarked" %}</h2>
       {% include "activity/_lantern_groups.html" with groups=bookmarked_groups next="" %}
-      {% if unread_groups or read_groups %}<hr class="dropdown-divider">{% endif %}
     {% endif %}
     {% include "activity/_lantern_groups.html" with groups=unread_groups next="" %}
     {% if more_unread %}
       <p class="small text-body-secondary">{% translate "More unread notifications are on the lantern's page." %}</p>
     {% endif %}
     {% if read_groups %}
-      {% if unread_groups %}<hr class="dropdown-divider">{% endif %}
       {% include "activity/_lantern_groups.html" with groups=read_groups next="" %}
     {% endif %}
   {% else %}

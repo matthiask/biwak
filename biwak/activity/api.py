@@ -409,6 +409,16 @@ class LanternEntryOut(Schema):
     event: EventOut
 
 
+class LanternPageOut(Schema):
+    next: str | None
+    previous: str | None
+    results: list[LanternEntryOut]
+    unread: int = Field(description="Your unread notifications")
+    unread_items: int = Field(
+        description="The items with unread notifications: what the menu counts"
+    )
+
+
 class LanternReadIn(Schema):
     item_id: int | None = None
     all: bool = False
@@ -418,7 +428,7 @@ class LanternReadOut(Schema):
     read: int
 
 
-@notifications_router.get("lantern/", response=page_of(LanternEntryOut))
+@notifications_router.get("lantern/", response=LanternPageOut)
 def lantern_list(
     request,
     *,
@@ -438,7 +448,8 @@ def lantern_list(
         notifications[:] = lantern.wanted(notifications, user)
         lantern.prepare(notifications, user)
 
-    return paginated(
+    unread_notifications, unread_items = lantern.unread_counts(user)
+    page = paginated(
         request,
         lantern.notifications_for(
             user, unread=True if unread else None, mentions=mentions
@@ -456,6 +467,7 @@ def lantern_list(
         cursor=cursor,
         page_size=page_size,
     )
+    return page | {"unread": unread_notifications, "unread_items": unread_items}
 
 
 @notifications_router.post("lantern/read/", response=LanternReadOut)
