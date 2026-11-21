@@ -104,7 +104,8 @@ def toggle_reaction(user, content, *, item=None, comment=None):
 
 def summary(item, comment, user):
     """What's shown under the thing: one entry per distinct content, in the
-    order of the first reaction: ``{content, count, people, mine}``"""
+    order of the first reaction: ``{content, count, people, mine, words}``
+    (``words``: a few words rather than emojis, shown at the text's size)"""
     found = {}
     comment_id = comment.pk if comment else None
     rows = item.reactions.all()
@@ -115,7 +116,13 @@ def summary(item, comment, user):
             continue
         entry = found.setdefault(
             reaction.content,
-            {"content": reaction.content, "count": 0, "people": [], "mine": False},
+            {
+                "content": reaction.content,
+                "count": 0,
+                "people": [],
+                "mine": False,
+                "words": any(c.isalnum() for c in reaction.content),
+            },
         )
         entry["count"] += 1
         entry["people"].append(reaction.user)

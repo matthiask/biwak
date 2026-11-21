@@ -4,7 +4,7 @@ Today people appear as names only. A face, or at least a colored mark,
 makes lists, comments and the lantern quicker to scan, and the People
 page (`organizations.md`) wants something to show per person.
 
-**Status:** open (spec, 2026-11-21; questions at the end).
+**Status:** open (spec, 2026-11-21; its questions answered the same day).
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`; have the image's visibility reviewed.
@@ -91,12 +91,11 @@ fitting Biwak's theme: a tent, a mountain, a lake, a fir, an ibex, a
 marmot, …, each on a palette color. The set ships with the app (SVG);
 choosing stores its name. This waits for the drawings.
 
-## Questions before building
+## Decided (2026-11-21)
 
-1. **The default mark:** initials on a palette color from the id. Fine,
-   or would you rather people choose the color (the accent setting
-   exists)? Suggested: from the id, no setting.
-2. **Basecamp's images:** import them once, as above? Suggested: yes.
-3. **The person's page** with "projects in common": useful, or is the
-   People page plus the feed enough? Suggested: yes, small.
-4. **Admins removing others' images:** needed? Suggested: yes, recorded.
+- The default mark is the initials on a palette color chosen from the
+  id, with no setting.
+- Basecamp's profile images are imported once and never overwrite one
+  set in Biwak.
+- Each person gets a page with the projects in common.
+- Admins can remove someone's image, recorded in the audit log.

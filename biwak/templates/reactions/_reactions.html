@@ -15,7 +15,7 @@
           <a
             href="{% url remove_url_name target.pk %}?content={{ reaction.content|urlencode }}"
             role="button"
-            class="btn btn-sm wb-reaction is-mine"
+            class="btn btn-sm wb-reaction is-mine{% if reaction.words %} is-words{% endif %}"
             title="{% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
             aria-pressed="true"
             data-confirm-remove
@@ -37,7 +37,7 @@
           <input type="hidden" name="content" value="{{ reaction.content }}">
           <button
             type="submit"
-            class="btn btn-sm wb-reaction"
+            class="btn btn-sm wb-reaction{% if reaction.words %} is-words{% endif %}"
             title="{% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
             aria-pressed="false"
           >

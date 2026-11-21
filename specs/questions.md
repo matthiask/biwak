@@ -6,13 +6,7 @@ answer goes into the spec named, and the entry leaves this file. Kept up
 to date: questions asked in the conversation and answered there are
 recorded in their spec and leave this file too.
 
-**Profile images** (`people.md`):
-1. The default mark: initials on a palette color chosen from the id, no
-   setting? Suggested: yes.
-2. Import Basecamp's profile images once, never overwriting? Suggested:
-   yes.
-3. A page per person with the projects in common? Suggested: yes.
-4. Admins can remove someone's image (recorded)? Suggested: yes.
+Nothing open at the moment.
 
 Decided to wait: the wording of mails, messages and the editor's and the
 lantern's texts is reviewed all at once with the German translation;

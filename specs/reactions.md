@@ -156,3 +156,6 @@ label "Add a reaction"; one's own pill (`.wb-reaction-own`,
 `…/reactions/remove/?content=…` for items and comments.
 - **The picker's emojis** (2026-11-21): plain and larger, without button
   frames, in full rows: 8 by 3, on a phone 6 by 4.
+- **The pills** (2026-11-21): as tall as the button adding a reaction,
+  emojis a little larger than the text; a few words stay at the text's
+  size.
