@@ -28,7 +28,7 @@ ZURICH = zoneinfo.ZoneInfo("Europe/Zurich")
 @override_settings(
     BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
 )
-class MailsTest(TestCase):
+class MailsBase(TestCase):
     def setUp(self):
         self.ada = person("Ada")
         self.bob = person("Bob")
@@ -56,6 +56,8 @@ class MailsTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             return send_mails(now=now)
 
+
+class MailsTest(MailsBase):
     def test_merged_after_two_minutes(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
         self.act(
@@ -513,3 +515,50 @@ class MailsTest(TestCase):
         self.assertFalse(
             Subscription.objects.filter(user=self.bob, item=self.shared).exists()
         )
+
+
+class BackAndForthTest(MailsBase):
+    """Completing and reopening back and forth (decided 2026-11-21): what
+    cancels out among the unsent notifications isn't mailed; once the
+    completion went out, the reopening does too"""
+
+    def test_what_cancels_out_isnt_mailed(self):
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(user=self.bob).exists())
+
+    def test_the_net_change_is_mailed_once(self):
+        for run in [ops.complete, ops.reopen, ops.complete]:
+            self.act(lambda run=run: run(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 1)
+        (message,) = mail.outbox
+        self.assertEqual(message.body.count("completed"), 1)
+        self.assertNotIn("reopened", message.body)
+
+    def test_a_mailed_completion_is_followed_by_the_reopening(self):
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        now = timezone.now()
+        self.assertEqual(self.send(now + dt.timedelta(minutes=3)), 1)
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        self.assertEqual(self.send(now + dt.timedelta(minutes=6)), 1)
+        self.assertIn("completed", mail.outbox[0].body)
+        self.assertIn("reopened", mail.outbox[1].body)
+
+    def test_digests_too(self):
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Oops"))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        tomorrow = timezone.localtime() + dt.timedelta(days=1)
+        self.assertEqual(self.send(tomorrow.replace(hour=8)), 1)
+        (message,) = mail.outbox
+        self.assertIn("Oops", message.body)
+        self.assertNotIn("completed", message.body)
+        self.assertNotIn("reopened", message.body)

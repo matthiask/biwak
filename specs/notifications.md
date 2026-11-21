@@ -208,6 +208,15 @@ large).
   (link checkers), the `POST` unsubscribes; only who still sees the item
   is shown its title. Through a container, it unsubscribes from the
   container. Digests: the settings page, no one-click.
+- **Completing and reopening back and forth** (decided 2026-11-21,
+  replacing deleting the earlier event within ten minutes): every one is
+  recorded and notifies as usual. Of a person's unsent notifications,
+  those of one person's consecutive completing and reopening of an item
+  are mailed as the net change (`timeline.cancelled()` in
+  `mails._deliverable()`): the last one, or nothing (and they're deleted)
+  when the to-do is back where it started. A completion already mailed is
+  followed by a mail of the reopening, so the inbox ends up right. The
+  lantern does the same with the unread ones (`lantern.md`).
 - **Checked again when sending:** inactive people and people who can't
   see the item any more get nothing (their notifications are deleted),
   and read ones are left out (`lantern.md`); the level decided who was

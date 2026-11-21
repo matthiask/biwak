@@ -886,3 +886,24 @@ class UnreadMarkupTest(LanternTestCase):
                 # No headings, and no rule on top of the items' borders
                 self.assertNotIn("<hr", html)
                 self.assertNotIn(">Read<", html)
+
+
+class BackAndForthTest(LanternTestCase):
+    """Unread notifications of completing and reopening which cancel out
+    don't show (decided 2026-11-21); an odd number shows the last"""
+
+    def test_cancelled_out(self):
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        self.assertEqual(lantern.unread_count(self.bob), 0)
+        self.assertEqual(self.items(self.bob, unread=True), [])
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+        [(_item, entries)] = lantern.menu(self.bob)[1]
+        self.assertEqual([n.event.action for n in entries], ["completed"])
+
+    def test_a_read_completion_stays_and_the_reopening_shows(self):
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        lantern.read(self.bob)
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        self.assertEqual(lantern.unread_count(self.bob), 1)

@@ -56,6 +56,11 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   Minutes.", the files linked; counted once; following it, "Mark as
   read" and "Mark as unread" act on all its files. No bookmark button:
   bookmarks are per item.
+- **Completing and reopening back and forth** (decided 2026-11-21): of
+  the unread notifications, those of a person's consecutive completing
+  and reopening of an item don't show when they cancel out; otherwise
+  only the last shows (`mails._deliverable()`, `notifications.md`).
+  Read ones show as they were.
 - **The page** `/lantern/`: the same, paginated like the feed, filters
   "unread" and "mentions only".
 - **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", which

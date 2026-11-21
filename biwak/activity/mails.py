@@ -289,17 +289,24 @@ def _deliverable(notifications, user):
     notification exists anyway). Levels decided who was told
     (``notify()``); subscribing is the switch (specs/notifications.md,
     "Subscriptions"), so a level changed since doesn't hold the mail back. Item
-    mails and digests both pass here. The same number of queries for any number of
+    mails and digests both pass here, and the lantern (``lantern.wanted()``).
+    Of the unread ones, those of completing and reopening which cancel out
+    aren't (``timeline.cancelled()``, decided 2026-11-21): the net change,
+    if any, is the last one. The same number of queries for any number of
     items."""
+    from biwak.activity.timeline import cancelled
+
     items = {n.event.item_id: n.event.item for n in notifications if n.event.item}
     visible = set(
         Item.objects.visible_to(user).filter(pk__in=items).values_list("pk", flat=True)
     )
+    hidden = cancelled([n.event for n in notifications if n.read_at is None])
     return [
         notification
         for notification in notifications
         if notification.event.item_id in visible
         and (notification.event.is_client_visible or not user.is_client)
+        and not (notification.read_at is None and notification.event_id in hidden)
     ]
 
 
