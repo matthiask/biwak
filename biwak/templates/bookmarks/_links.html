@@ -25,7 +25,7 @@
             data-sortable-handle
             title="{% translate 'Drag to move' %}"
           >{% icon "grip-vertical" %}</span>{% endif %}
-        {% include "bookmarks/_kind_icon.html" with kind=link.kind %}
+        <span class="me-1">{% include "bookmarks/_kind_icon.html" with kind=link.kind %}</span>
         <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a>
         {% client_badge link %}
       </span>
