@@ -7,6 +7,7 @@ nothing for several people."""
 from allauth.mfa.models import Authenticator
 from allauth.usersessions.models import UserSession
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -69,6 +70,33 @@ def activate(users, *, actor, mail=False):
     return done
 
 
+def lock_with_admins(user_ids):
+    """Locks the rows of these people and of every active admin, in the
+    order of their IDs (no deadlocks between requests locking several), so
+    two requests can't each take away an admin the other counted on;
+    returns these people"""
+    user_ids = set(user_ids)
+    rows = (
+        User.objects
+        .select_for_update()
+        .filter(Q(pk__in=user_ids) | Q(is_active=True, is_admin=True))
+        .order_by("pk")
+    )
+    return [user for user in rows if user.pk in user_ids]
+
+
+def check_admins_left(leaving):
+    """``ActivationError`` when no active admin would be left without the
+    people ``leaving`` (IDs); after ``lock_with_admins()``"""
+    if (
+        not User.objects
+        .filter(is_active=True, is_admin=True)
+        .exclude(pk__in=leaving)
+        .exists()
+    ):
+        raise ActivationError(_("The last active admin can't be deactivated."))
+
+
 @transaction.atomic
 def deactivate(users, *, actor):
     """Clears ``is_active`` and ends the access at once: sessions, API
@@ -76,34 +104,51 @@ def deactivate(users, *, actor):
     Everything else stays. Refused (``ActivationError``) for oneself and
     when no active admin would be left; all or nothing. Returns the people
     deactivated."""
-    from biwak.collab import live
-
-    users = list(User.objects.select_for_update().filter(pk__in=[u.pk for u in users]))
+    users = lock_with_admins([u.pk for u in users])
     _check(actor, users)
     if any(user.pk == actor.pk for user in users):
         raise ActivationError(_("You can't deactivate yourself."))
     leaving = {user.pk for user in users if user.is_active}
-    if (
-        any(user.is_admin for user in users if user.pk in leaving)
-        and not User.objects
-        .filter(is_active=True, is_admin=True)
-        .exclude(pk__in=leaving)
-        .exists()
-    ):
-        raise ActivationError(_("The last active admin can't be deactivated."))
+    if any(user.is_admin for user in users if user.pk in leaving):
+        check_admins_left(leaving)
     done = []
     for user in users:
         if user.pk not in leaving:
             continue
         user.is_active = False
         user.save(update_fields=["is_active"])
+        done.append(user)
+    end_access_now_and_after_commit([user.pk for user in done])
+    return done
+
+
+def end_access(users):
+    """Ends the access of these (inactive) people: sessions, API tokens and
+    calendar links go, open websockets check again (``sso.session_alive()``)"""
+    from biwak.collab import live
+
+    for user in users:
         for session in UserSession.objects.filter(user=user):
             session.end()
         APIToken.objects.filter(user=user).delete()
         CalendarToken.objects.filter(user=user).delete()
         live.check_access(user=user.pk)
-        done.append(user)
-    return done
+
+
+def end_access_now_and_after_commit(user_ids):
+    """``end_access()`` now, and again once the transaction committed for
+    those still inactive then: what other requests made meanwhile (they
+    didn't see the change yet) goes too, like
+    ``sso.enforce_required_now_and_after_commit()``"""
+    user_ids = list(user_ids)
+    if not user_ids:
+        return
+
+    def run():
+        end_access(User.objects.filter(pk__in=user_ids, is_active=False))
+
+    run()
+    transaction.on_commit(run)
 
 
 # Resetting someone's second factor (specs/two-factor.md): the same split
@@ -117,12 +162,13 @@ def can_reset_two_factor(actor, user):
 
 @transaction.atomic
 def reset_two_factor(user, *, actor):
-    """Deletes the person's authenticator app, ends their sessions and mails
-    them (through the outbox, after the commit) so a reset they didn't ask
-    for is noticed; the audit log has the deleted row. Passkeys stay: they
-    are a way in, not a second factor. ``PermissionError`` for people the
-    actor may not change, ``ActivationError`` for oneself. Returns whether
-    there was an app; without one nothing happens."""
+    """Deletes the person's authenticator app, their passkeys and API tokens
+    (decided 2026-11-21: whoever took over the account may have added
+    them), ends their sessions and mails them (through the outbox, after
+    the commit) so a reset they didn't ask for is noticed; the audit log
+    has the deleted rows. ``PermissionError`` for people the actor may not
+    change, ``ActivationError`` for oneself. Returns whether there was an
+    app; without one nothing happens."""
     from biwak.collab import live
 
     user = User.objects.select_for_update().get(pk=user.pk)
@@ -131,12 +177,12 @@ def reset_two_factor(user, *, actor):
         raise ActivationError(
             _("Turn your own authenticator app off in your settings.")
         )
-    deleted, _rows = Authenticator.objects.filter(
-        user=user,
-        type__in=[Authenticator.Type.TOTP, Authenticator.Type.RECOVERY_CODES],
-    ).delete()
-    if not deleted:
+    if not Authenticator.objects.filter(
+        user=user, type=Authenticator.Type.TOTP
+    ).exists():
         return False
+    Authenticator.objects.filter(user=user).delete()
+    APIToken.objects.filter(user=user).delete()
     for session in UserSession.objects.filter(user=user):
         session.end()
     live.check_access(user=user.pk)

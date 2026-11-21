@@ -55,6 +55,15 @@ class AccountAdapter(DefaultAccountAdapter):
         )
         outbox.send(message, kind)
 
+    def send_notification_mail(self, template_prefix, user, context=None, email=None):
+        """allauth's notifications of changes to how somebody signs in: a
+        passkey added or removed, the authenticator app turned on or off
+        (specs/two-factor.md, decided 2026-11-21); the others stay off
+        (``ACCOUNT_EMAIL_NOTIFICATIONS`` is unset)"""
+        from biwak.accounts import security_mails
+
+        security_mails.send(template_prefix.rsplit("/", 1)[-1], user)
+
     def get_reauthentication_methods(self, user):
         """Confirming who one is: not by a code by mail for people with an
         authenticator app (specs/two-factor.md), the app or a passkey"""
@@ -87,7 +96,8 @@ class AccountAdapter(DefaultAccountAdapter):
             messages.error(request, message)
             return redirect(sso.idp_login_url(user))
         # Organizations requiring a second factor (specs/two-factor.md)
-        if (message := two_factor.refuse_login(request, user)) is not None:
+        sociallogin = (kwargs.get("signal_kwargs") or {}).get("sociallogin")
+        if (message := two_factor.refuse_login(request, user, sociallogin)) is not None:
             clear_login(request)
             clear_authentication_records(request)
             messages.error(request, message)

@@ -87,6 +87,26 @@ class ActivateTest(Base):
             with self.subTest(actor=actor, target=target):
                 self.assertEqual(activation.can_change(actor, target), allowed)
 
+    def test_the_active_admins_are_locked_before_the_check(self):
+        """Two requests deactivating the last two admins at the same time
+        would both see the other one still active: every active admin's row
+        is locked first, with the people deactivated, in the order of their
+        IDs (no deadlocks between requests locking several)"""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        otto = person("Otto", is_admin=True)
+        with CaptureQueriesContext(connection) as queries:
+            activation.deactivate([self.cleo], actor=self.root)
+        locks = [q["sql"] for q in queries if "FOR UPDATE" in q["sql"]]
+        self.assertTrue(locks)
+        where = locks[0].split(" WHERE ", 1)[1]
+        self.assertIn('"accounts_user"."is_admin"', where)
+        self.assertIn(f"IN ({self.cleo.pk})", where)
+        self.assertTrue(where.endswith('ORDER BY "accounts_user"."id" ASC FOR UPDATE'))
+        self.assertEqual(len(locks), 1)
+        del otto
+
     def test_nothing_changes_if_one_is_refused(self):
         with (
             self.captureOnCommitCallbacks(execute=True),
@@ -133,6 +153,22 @@ class DeactivateTest(Base):
         self.assertFalse(sso.session_alive(self.key, self.cleo))
         self.assertTrue(self.site.is_member(self.cleo))
         self.assertEqual(self.client.get("/").status_code, 302)
+
+    def test_ends_access_again_after_the_commit(self):
+        """What another request made meanwhile (it didn't see the change
+        yet) goes too, like ``sso.enforce_required_now_and_after_commit()``"""
+        with self.captureOnCommitCallbacks() as callbacks:
+            activation.deactivate([self.cleo], actor=self.ada)
+            APIToken.create_for(user=self.cleo, title="Meanwhile", access="read")
+            CalendarToken.renew(self.cleo)
+            UserSession.objects.create(
+                user=self.cleo, session_key="meanwhile", ip="127.0.0.1", user_agent="x"
+            )
+        for callback in callbacks:
+            callback()
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(UserSession.objects.filter(user=self.cleo).exists())
 
     def test_the_sessions_of_others_stay(self):
         other = Client()
@@ -499,3 +535,74 @@ class NameTest(TestCase):
 
     def test_clients_dont(self):
         self.assertEqual(self.rename(self.cleo, self.bob).status_code, 404)
+
+    def test_not_oneself_its_in_the_settings(self):
+        for actor in [self.root, self.bob]:
+            with self.subTest(actor=actor):
+                response = self.rename(actor, actor)
+                self.assertRedirects(
+                    response, "/accounts/settings/", fetch_redirect_response=False
+                )
+                actor.refresh_from_db()
+                self.assertNotEqual(actor.full_name, "Lovelace Ada")
+
+
+class DjangoAdminTest(TestCase):
+    """The Django admin's ``is_active`` and ``is_admin`` go through the same
+    rules: unticking ``is_active`` deactivates (sessions, tokens, calendar
+    links end), and the last active admin stays one"""
+
+    def setUp(self):
+        self.root = person("Root", is_admin=True)
+        self.cleo = person("Cleo", client=True)
+        self.client.force_login(self.root)
+
+    def post(self, user, **changes):
+        data = {
+            "email": user.email,
+            "full_name": user.full_name,
+            "short_name": user.short_name,
+            "language": user.language,
+            "organization": user.organization_id or "",
+            "is_client": "on" if user.is_client else "",
+            "is_active": "on" if user.is_active else "",
+            "is_admin": "on" if user.is_admin else "",
+            "mail_undeliverable_at_0": "",
+            "mail_undeliverable_at_1": "",
+        } | changes
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(f"/admin/accounts/user/{user.pk}/change/", data)
+
+    def test_unticking_is_active_deactivates(self):
+        other = Client()
+        other.force_login(self.cleo)
+        UserSession.objects.create(
+            user=self.cleo,
+            session_key=other.session.session_key,
+            ip="127.0.0.1",
+            user_agent="Firefox",
+        )
+        APIToken.create_for(user=self.cleo, title="T", access="read")
+        CalendarToken.renew(self.cleo)
+        response = self.post(self.cleo, is_active="")
+        self.assertEqual(response.status_code, 302)
+        self.cleo.refresh_from_db()
+        self.assertFalse(self.cleo.is_active)
+        self.assertFalse(UserSession.objects.filter(user=self.cleo).exists())
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.cleo).exists())
+
+    def test_the_last_active_admin(self):
+        for changes in [{"is_active": ""}, {"is_admin": ""}]:
+            with self.subTest(changes=changes):
+                response = self.post(self.root, **changes)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "last active admin")
+                self.root.refresh_from_db()
+                self.assertTrue(self.root.is_active)
+                self.assertTrue(self.root.is_admin)
+        # With another admin, an admin may stop being one
+        otto = person("Otto", is_admin=True)
+        self.assertEqual(self.post(otto, is_admin="").status_code, 302)
+        otto.refresh_from_db()
+        self.assertFalse(otto.is_admin)

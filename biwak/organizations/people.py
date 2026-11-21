@@ -83,6 +83,8 @@ def decorate(user, viewer, shared):
     # Invited, not signed in yet (specs/activation.md, "Invitations"): for the staff who
     # resend and withdraw invitations, with who invited them and when
     user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
+    # Resend and Withdraw: staff for clients, admins for everybody
+    user.manage_invitation = project_ops.can_manage_invitation(viewer, user)
     # Activating and deactivating (specs/activation.md)
     user.can_activate = not user.is_active and activation.can_change(viewer, user)
     user.can_deactivate = user.is_active and activation.can_deactivate(viewer, user)
@@ -340,6 +342,9 @@ def person_name(request, pk):
     (activation.can_change(), specs/activation.md); a modal, also a page"""
     from biwak.accounts.views import NameForm
 
+    if pk == request.user.pk and project_ops.can_manage_members(request.user):
+        # One's own name is in the settings (not offered here)
+        return redirect("settings")
     who = person_to_change(request, pk)
     form = NameForm(
         request.POST or None,
@@ -377,8 +382,8 @@ def person_reset_two_factor(request, pk):
             messages.success(
                 request,
                 _(
-                    "The authenticator app of %(name)s has been removed; they"
-                    " got a mail about it."
+                    "The authenticator app, passkeys and API tokens of"
+                    " %(name)s have been removed; they got a mail about it."
                 )
                 % {"name": who.display_name},
             )
@@ -388,9 +393,9 @@ def person_reset_two_factor(request, pk):
         None,
         title=_("Reset two-factor for %(name)s?") % {"name": who.display_name},
         intro=_(
-            "Removes their authenticator app and signs them out everywhere."
-            " They sign in with a code or a passkey then and can set up an"
-            " app again. They get a mail about it."
+            "Removes their authenticator app, their passkeys and their API"
+            " tokens, and signs them out everywhere. They sign in with a code"
+            " then and can set them up again. They get a mail about it."
         ),
         cancel_url=back(request, who),
         submit_label=_("Reset"),

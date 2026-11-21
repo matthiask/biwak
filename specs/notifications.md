@@ -143,9 +143,11 @@ me"), stored as the person's `LevelOverride` for the project
 (`add_member()`, `invite()`, `set_notify_choice()`,
 `notify_choice()` in `biwak/projects/operations.py`); adding someone
 again doesn't change it. The project's people page shows it next to
-each member ("No mails" for "nothing") to staff; staff change it for
-others, a client only their own. API: `notify` (`default`, `tagged`,
-`nothing`; `null` for clients about others) on the members list, adding
+each member ("No mails" for "nothing") to own staff; own staff change
+it for others, clients and partners see and change only their own
+(partners too, decided 2026-11-21 after a review:
+`can_change_notify_choice()`). API: `notify` (`default`, `tagged`,
+`nothing`; `null` for clients and partners about others) on the members list, adding
 and inviting; `biwak members`, `biwak member add|invite …
 [--only-tagged]`.
 

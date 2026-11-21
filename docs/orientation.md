@@ -114,7 +114,9 @@ which row is wrong.
 when. "Resend" sends the invitation again, naming the projects they are
 in now. "Withdraw…" removes them from the projects you can open, and
 deletes the account if nothing else refers to it (no comments, no
-assignments, no other projects). "Invited" on the People page lists
+assignments, no other projects); if something does, the account stays
+but is deactivated. Staff resend and withdraw clients' invitations,
+admins everybody's. "Invited" on the People page lists
 everybody who hasn't signed in yet, the oldest invitation first.
 
 **Activating and deactivating:** people the import created can't sign in

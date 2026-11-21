@@ -59,9 +59,11 @@ to both.
   `invited_at`, set by `invite()`) and has never signed in
   (`User.objects.invited()`). Marked "Invited, not signed in yet" with
   who and when on the project's people page, `/people/` and the person's
-  page; `/people/?invited=1` lists them oldest first. The mark, Resend
-  and Withdraw are for own staff only (clients and partners don't learn
-  who invited whom).
+  page; `/people/?invited=1` lists them oldest first. The mark is for own
+  staff only (clients and partners don't learn who invited whom); Resend
+  and Withdraw follow the split above (`can_manage_invitation()`: staff
+  for clients, admins for everybody, decided 2026-11-21 after a review),
+  on the pages, the API and the CLI.
 - **Resend** sends the mail again from the person resending, naming the
   projects they're in now (not archived); "Sent again."; no limit
   (decided 2026-11-21); `invited_by` and `invited_at` stay.
@@ -70,7 +72,12 @@ to both.
   (recorded as "removed", the "added" events stay); the account goes when
   they're in no other project and nothing refers to it (comments, items,
   events, files, links, assignments, check-ins asking them, mentions,
-  reactions). The question says which of the two happens.
+  reactions). When something refers to it, the account stays
+  deactivated (decided 2026-11-21: through `activation.deactivate()`, so
+  sessions, API tokens and calendar links go too). While they're in
+  projects the withdrawing person can't open, the account stays as it is,
+  invited to those. The question says which happens; the API answers
+  `deleted` and `deactivated`.
 
 ## Activating
 
@@ -93,16 +100,26 @@ nobody gets mail or a sign-in before someone decides
 ## Deactivating
 
 - Clears `is_active`; refused for oneself (not offered) and for the last
-  active admin (an error on the page, 400 in the API). Already inactive
+  active admin (an error on the page, 400 in the API). The rows of the
+  people and of every active admin are locked first, in the order of
+  their IDs (`lock_with_admins()`), so two requests can't each deactivate
+  an admin the other counted on (fixed 2026-11-21 after a review). Already inactive
   people are skipped quietly.
 - **Ends access at once:** sessions (`UserSession.end()`), API tokens
   and calendar links are deleted; open websockets close through
   `sso.session_alive()` after `live.check_access(user=…)` told them to
-  check.
+  check. Again after the commit (`end_access_now_and_after_commit()`, as
+  `sso.enforce_required_now_and_after_commit()`), so what other requests
+  made meanwhile goes too.
 - Keeps everything they did and what points at them: memberships,
   subscriptions (no mail goes to inactive people), assignments (their
   to-dos count under "Nobody active", `todos.md`), comments.
 - No mail to the person. Reactivating is "Activate" again.
+- **The Django admin** follows the same rules (fixed 2026-11-21 after a
+  review): unticking "is active" deactivates through `deactivate()`
+  (sessions, tokens, calendar links end), not oneself, and neither
+  "is active" nor "is admin" can be taken from the last active admin
+  (the form says so; `UserAdmin.save_model()` locks the admins first).
 
 ## Resetting a second factor
 

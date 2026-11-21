@@ -1,0 +1,7 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate %}{{ change }} on {{ when }}.{% endblocktranslate %}
+
+{% translate "Your passkeys and the authenticator app are in your settings:" %}
+{{ url }}
+
+{% translate "If it wasn't you, tell an admin of your team right away." %}
+{% endautoescape %}

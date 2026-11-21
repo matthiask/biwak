@@ -4,6 +4,7 @@ already (specs/notifications.md)."""
 
 from collections import Counter
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from django.core.mail import EmailMessage
 from django.db import connection, models, transaction
@@ -57,8 +58,9 @@ def notify_choice(user, project):
 
 
 def can_change_notify_choice(actor, user):
-    """Staff change everybody's, clients only their own"""
-    return actor.is_authenticated and (not actor.is_client or actor == user)
+    """Own staff change (and see) everybody's; clients and partners only
+    their own (decided 2026-11-21 after a review)"""
+    return actor.is_authenticated and (can_manage_members(actor) or actor == user)
 
 
 @transaction.atomic
@@ -67,7 +69,7 @@ def set_notify_choice(project, user, notify, *, actor):
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")
     if not can_change_notify_choice(actor, user):
-        raise PermissionError("Clients change only their own choice.")
+        raise PermissionError("Clients and partners change only their own choice.")
     set_level_override(user, NOTIFY_CHOICES[notify], project=project)
 
 
@@ -275,16 +277,22 @@ def invitation_projects(user):
 
 
 def can_manage_invitation(actor, user):
-    """Own staff resend and withdraw invitations, while the person hasn't
-    signed in yet"""
-    return can_manage_members(actor) and user.is_invited
+    """Resending and withdrawing invitations, while the person hasn't signed
+    in yet: the split of ``activation.can_change()``, staff for clients,
+    admins for everybody"""
+    from biwak.organizations import activation
+
+    return user.is_invited and activation.can_change(actor, user)
 
 
 def resend_invitation(user, *, actor):
     """The invitation mail again, naming the projects the person is in now
     (no limit in code, decided 2026-11-21); after the commit"""
     if not can_manage_invitation(actor, user):
-        raise PermissionError("Only staff resend invitations of people not signed in.")
+        raise PermissionError(
+            "Only staff resend invitations of clients not signed in, admins"
+            " everybody's."
+        )
     # Through the outbox: sent once this commits
     send_invitation(list(invitation_projects(user)), user, actor=actor)
 
@@ -309,37 +317,59 @@ def _referred_to(user):
     )
 
 
+class Withdrawn(NamedTuple):
+    """What withdrawing an invitation does (or did)"""
+
+    # The projects the person is removed from (those the actor can open)
+    projects: list
+    # The account goes: nothing refers to it, no other projects
+    deleted: bool
+    # The account stays but is deactivated: something refers to it, no other
+    # projects (decided 2026-11-21)
+    deactivated: bool
+
+
 def withdrawal(user, *, actor):
-    """What withdrawing the invitation does: ``(projects, delete)``, the
-    projects the person is removed from (those the actor can open) and
-    whether the account goes too, which it does when nothing else refers
-    to it (``_referred_to()``) and they're in no other projects"""
+    """What withdrawing the invitation does (``Withdrawn``): removed from
+    the projects the actor can open; the account deleted when nothing else
+    refers to it (``_referred_to()``) and they're in no other projects,
+    deactivated when something refers to it; while they're in projects the
+    actor can't open, it stays as it is, invited to those"""
     memberships = Project.objects.filter(memberships__user=user)
     projects = list(
         memberships.filter(
             pk__in=Project.objects.accessible_to(actor).values("pk")
         ).order_by(Lower("name"))
     )
-    others = memberships.exclude(pk__in=[p.pk for p in projects]).exists()
-    return projects, not others and not _referred_to(user)
+    if memberships.exclude(pk__in=[p.pk for p in projects]).exists():
+        return Withdrawn(projects, deleted=False, deactivated=False)
+    referred_to = _referred_to(user)
+    return Withdrawn(projects, deleted=not referred_to, deactivated=referred_to)
 
 
 @transaction.atomic
 def withdraw_invitation(user, *, actor):
-    """Removes the invited person from the projects the actor can open,
-    and the account itself if nothing else refers to it (``withdrawal()``);
-    staff only, while the person hasn't signed in. The feed's "added"
-    events stay. Returns whether the account was deleted."""
+    """Removes the invited person from the projects the actor can open
+    (``withdrawal()``); the account goes too, or is deactivated
+    (``activation.deactivate()``, decided 2026-11-21: sessions, tokens and
+    calendar links go). Staff for clients, admins
+    for everybody, while the person hasn't signed in. The feed's "added"
+    events stay. Returns ``Withdrawn``."""
+    from biwak.organizations import activation
+
     if not can_manage_invitation(actor, user):
         raise PermissionError(
-            "Only staff withdraw invitations of people not signed in."
+            "Only staff withdraw invitations of clients not signed in, admins"
+            " everybody's."
         )
-    projects, delete = withdrawal(user, actor=actor)
-    for project in projects:
+    withdrawn = withdrawal(user, actor=actor)
+    for project in withdrawn.projects:
         remove_member(project, user, actor=actor)
-    if delete:
+    if withdrawn.deleted:
         user.delete()
-    return delete
+    elif withdrawn.deactivated:
+        activation.deactivate([user], actor=actor)
+    return withdrawn
 
 
 def send_invitation(projects, user, *, actor):

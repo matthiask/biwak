@@ -14,6 +14,9 @@ below is what prevents that.
 - **Passkeys are a way in, not a second factor:** a code, the
   organization's identity provider and a passkey are each enough alone.
   allauth's two-factor step never asks for a passkey.
+- **Every key added is a passkey** (decided 2026-11-21 after a review): a
+  discoverable credential that verifies the person (PIN, fingerprint),
+  never a key that only proves it's present; no "Passwordless" checkbox.
 - **Authenticator apps (TOTP) are an optional second factor:** anybody
   may turn one on in their settings (a QR code and a code to confirm, one
   app per person); then signing in by code or through the identity
@@ -25,15 +28,22 @@ below is what prevents that.
   code by mail: a code by mail could otherwise add a passkey, which signs
   in alone, or turn the app off (built 2026-11-21, the most secure
   reading).
+- **A mail on every change** (decided 2026-11-21 after a review): adding
+  or removing a passkey and turning the app on or off mail the person
+  what changed and when, with "if it wasn't you, tell an admin", so a
+  change somebody else made with their session is noticed.
 - **No recovery codes:** losing the app means signing in with a passkey,
   or asking for a reset.
 - **Resetting someone's second factor:** "Reset two-factor…" with the
   split of `activation.md`: staff reset clients, admins also own staff
   and partners; nobody resets themselves this way (they turn it off in
-  the settings). A reset deletes the person's authenticator app, ends
-  their sessions and mails them ("Ada removed your authenticator app"),
-  so a reset they didn't ask for is noticed. Passkeys stay. Without an
-  app nothing happens (no mail, sessions stay). The audit log has it.
+  the settings). A reset deletes the person's authenticator app, their
+  passkeys and their API tokens (decided 2026-11-21: whoever took over
+  the account may have added them; it was "passkeys stay"), ends their
+  sessions and mails them ("Ada removed your authenticator app", naming
+  the passkeys and tokens), so a reset they didn't ask for is noticed.
+  They sign in by code then. Without an app nothing happens (no mail,
+  sessions stay). The audit log has it.
 - **Organizations requiring single sign-on:** no passkeys and no
   authenticator apps (the identity provider does that); existing ones are
   deleted when the organization switches to "required" (`sso.md`).
@@ -44,7 +54,12 @@ below is what prevents that.
   - a code alone isn't: the authenticator app's code follows;
   - a sign-in through the organization's identity provider is enough
     (its own second factor is its business); a person's own app is still
-    asked for there, as everywhere, the requirement only doesn't need it;
+    asked for there, as everywhere, the requirement only doesn't need it.
+    Only its own Workspace (`hd` one of its domains) or Entra tenant
+    (`tid`, an address of its domains) counts, checked against the
+    organization as it is now: a personal Gmail account signing in with
+    Google where single sign-on is allowed is like a code (decided
+    2026-11-21 after a review);
   - someone with neither a passkey nor an app who signs in by code is led
     to a page making them add one (a passkey or an app) before anything
     else; the same after a reset;
@@ -75,9 +90,25 @@ below is what prevents that.
   leaves out the code by mail for people with an app;
   `signin.reauthenticate(…, by_code=True)` sends the code pages to the
   app's.
+- **Adding a passkey:** `signin.AddPasskeyView` (allauth's, at
+  `/accounts/2fa/webauthn/add/` through `signin.add_passkey`) registers
+  with `begin_registration(user, True)`: resident key and user
+  verification required, which the server checks again on the answer
+  (fido2's state, `AddPasskeyForm.clean()`); its template
+  (`mfa/webauthn/add_form.html`) gives allauth's script a hidden, ticked
+  "passwordless" box. Whether the key really is discoverable only the
+  browser knows; one that isn't can't sign in.
+- **Mails on changes:** allauth's notification hook
+  (`AccountAdapter.send_notification_mail`, which its passkey and TOTP
+  flows call) sends `security_mails.send()` for `webauthn_added`,
+  `webauthn_removed`, `totp_activated`, `totp_deactivated` through the
+  outbox (`accounts/security_change.txt`, `Kind.ACCOUNT`; not to
+  inactive people or bounced addresses). allauth's other notifications
+  stay off (`ACCOUNT_EMAIL_NOTIFICATIONS` unset).
 - **Resets:** `activation.can_reset_two_factor()` (`can_change()`, not
   oneself) and `activation.reset_two_factor()` in
-  `biwak/organizations/activation.py`: deletes the app, ends the sessions
+  `biwak/organizations/activation.py`: deletes the app, the passkeys and
+  the API tokens, ends the sessions
   (`UserSession.end()`, `live.check_access()`), mails through the outbox
   (`accounts/two_factor_reset.txt`, `Kind.ACCOUNT`, from the actor, not
   to inactive people or bounced addresses). The page
@@ -101,13 +132,14 @@ below is what prevents that.
   paths setting one up needs stay open (`SETUP_PATHS`). A sign-in through
   the organization's identity provider is recognized by the session's
   record (`sso.remember_sign_in()`: person, organization, address,
-  provider), without the 24 hours of SSO required.
+  provider, `hd`, `tid`), without the 24 hours of SSO required, and
+  `sso.is_organization_idp()` decides on the claims (also in
+  `refuse_login()`, from the social login allauth passes to `pre_login`).
 
 ## Not done (known, open)
 
 - The app's secret is stored as allauth stores it, unencrypted
   (`MFAAdapter.encrypt()` could add it).
-- A reset keeps the person's API tokens.
 - Sessions signed in by code before an organization starts requiring a
   second factor stay for people who have one.
 - Merging or moving people between organizations doesn't look at the

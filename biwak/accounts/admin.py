@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
@@ -17,8 +18,41 @@ class UndeliverableFilter(admin.SimpleListFilter):
         return queryset
 
 
+class UserAdminForm(forms.ModelForm):
+    """The rules of deactivating (specs/activation.md): not oneself, and an
+    active admin stays (``is_active`` and ``is_admin``)"""
+
+    class Meta:
+        model = User
+        # The admin's fieldsets decide
+        fields = ["is_active", "is_admin"]
+
+    def clean(self):
+        data = super().clean()
+        user = self.instance
+        if user.pk is None:
+            return data
+        unticked = user.is_active and not data.get("is_active")
+        if unticked and user.pk == self.actor.pk:
+            self.add_error("is_active", _("You can't deactivate yourself."))
+        leaving = user.is_active and user.is_admin
+        if (
+            leaving
+            and not (data.get("is_active") and data.get("is_admin"))
+            and not User.objects
+            .filter(is_active=True, is_admin=True)
+            .exclude(pk=user.pk)
+            .exists()
+        ):
+            raise forms.ValidationError(
+                _("The last active admin can't be deactivated or stop being one.")
+            )
+        return data
+
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    form = UserAdminForm
     list_display = [
         "email",
         "full_name",
@@ -38,6 +72,32 @@ class UserAdmin(admin.ModelAdmin):
         (None, {"fields": ["mail_undeliverable_at"]}),
     ]
     actions = ["clear_undeliverable"]
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.actor = request.user
+        return form
+
+    def save_model(self, request, obj, form, change):
+        """Unticking ``is_active`` deactivates through the operation
+        (sessions, API tokens and calendar links end, also after the
+        commit); taking ``is_admin`` away locks the active admins first, so
+        the last one stays (``activation.lock_with_admins()``)"""
+        from biwak.organizations import activation
+
+        if not change:
+            super().save_model(request, obj, form, change)
+            return
+        before = activation.lock_with_admins([obj.pk])[0]
+        deactivating = before.is_active and not obj.is_active
+        if before.is_active and before.is_admin and not obj.is_admin:
+            activation.check_admins_left({obj.pk})
+        if deactivating:
+            obj.is_active = True
+        super().save_model(request, obj, form, change)
+        if deactivating:
+            activation.deactivate([obj], actor=request.user)
+            obj.is_active = False
 
     @admin.action(description=_("Mail to the selected people works again"))
     def clear_undeliverable(self, request, queryset):

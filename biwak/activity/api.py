@@ -19,6 +19,7 @@ from biwak.api_conventions import PersonOut, absolute, page_of, paginated, perso
 from biwak.items.api import item_for
 from biwak.items.models import Kind
 from biwak.projects.api import project_for
+from biwak.projects.models import known_ids_for
 
 
 router = Router(tags=["feed"])
@@ -49,6 +50,10 @@ class EventOut(Schema):
     )
 
 
+# What events' data names people in, by ID
+PEOPLE_KEYS = ("mentioned", "assigned", "people", "assignees")
+
+
 def event_out(event, user):
     item = event.item
     if not hasattr(event, "excerpt"):
@@ -56,6 +61,12 @@ def event_out(event, user):
     if not hasattr(event, "target_list"):
         feed.add_target_lists([event], user)
     data = dict(event.data)
+    # People by ID: only those the reader may know (specs/access.md)
+    if any(key in data for key in PEOPLE_KEYS):
+        known = known_ids_for(user, event)
+        for key in PEOPLE_KEYS:
+            if key in data and known is not None:
+                data[key] = [pk for pk in data[key] if pk in known]
     # The list a to-do moved to: only if the viewer may see it now
     if "to" in data:
         data["to"] = event.target_list

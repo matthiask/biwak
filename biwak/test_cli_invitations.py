@@ -6,6 +6,7 @@ from django.core import mail
 
 from biwak import test_cli
 from biwak.accounts.models import User
+from biwak.items import operations as ops
 from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
@@ -67,6 +68,19 @@ class InvitationsCLITest(test_cli.CLITest):
             f"removed from {self.project.pk}; the account is deleted.", output
         )
         self.assertFalse(User.objects.filter(pk=dora.pk).exists())
+
+    def test_withdraw_deactivates_a_kept_account(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            dora, _created = project_ops.invite(
+                self.project, email="dora@example.net", actor=self.ada
+            )
+        ops.create_list(project=self.project, title="Copy", creator=dora)
+        output = self.biwak("invitations", "withdraw", dora.pk).output
+        self.assertIn(
+            f"removed from {self.project.pk}; the account is deactivated.", output
+        )
+        dora.refresh_from_db()
+        self.assertFalse(dora.is_active)
 
     def test_clients_cant(self):
         cleo = person("Cleo", client=True)

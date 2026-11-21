@@ -285,10 +285,7 @@ def todo_out(item, user):
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,
         "completed_by": person_out(todo.completed_by),
-        "assignees": [
-            person_out(a.user) | {"assigned_by": person_out(a.assigned_by)}
-            for a in todo.assignment_set.all()
-        ],
+        "assignees": _assignees_out(item, todo, user),
         "recurrence": todo.recurrence,
         "recurrence_description": todo.recurrence_description,
         "recurrence_ends_on": todo.recurrence_ends_on,
@@ -296,6 +293,19 @@ def todo_out(item, user):
         "previous_id": _previous_id(item, todo),
         "reactions": reactions_out(item, None, user),
     }
+
+
+def _assignees_out(item, todo, user):
+    """Those the reader may know (``people_known_to()``: clients and
+    partners don't learn about people removed from the project)"""
+    from biwak.projects.models import known_ids_for
+
+    known = known_ids_for(user, item)
+    return [
+        person_out(a.user) | {"assigned_by": person_out(a.assigned_by)}
+        for a in todo.assignment_set.all()
+        if known is None or a.user_id in known
+    ]
 
 
 # The assignees in the order of the people, with who assigned them

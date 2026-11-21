@@ -193,12 +193,17 @@ class InviteRow(Form):
 
     def clean(self):
         data = super().clean()
-        if data.get("email") and not data.get("organization"):
-            # The domain's, else the only one involved
-            found = org_ops.for_new_person(data["email"])
-            if found is None and len(self.chosen) == 1:
-                found = self.chosen[0]
-            data["organization"] = found
+        if (
+            data.get("email")
+            and not data.get("organization")
+            and org_ops.for_new_person(data["email"]) is None
+            and len(self.chosen) == 1
+        ):
+            # No domain matching: the only one involved. The domain's is
+            # ``invite()``'s, which drops it where the actor may not put
+            # people (the own or a partner organization, for staff), as on
+            # the invite page and in the API
+            data["organization"] = self.chosen[0]
         return data
 
 
@@ -340,6 +345,9 @@ def project_people(request, pk):
     )
     for m in memberships:
         m.user.show_invitation = can_manage and m.user.is_invited
+        m.user.manage_invitation = project_ops.can_manage_invitation(
+            request.user, m.user
+        )
     rows = [(m, notify_row(request.user, project, m.user)) for m in memberships]
     return render(
         request,
@@ -398,9 +406,10 @@ def member_add(request, pk):
 
 @require_POST
 def member_remove(request, pk, user_pk):
-    """Staff remove anybody; everybody can leave"""
+    """Staff remove anybody; everybody can leave. Non-members are 404 like
+    IDs nobody has (as in the API): nothing said about who exists"""
     project = project_for(request, pk)
-    user = get_object_or_404(User, pk=user_pk)
+    user = get_object_or_404(User, pk=user_pk, memberships__project=project)
     if user != request.user and not project_ops.can_manage_members(request.user):
         raise PermissionDenied
     project_ops.remove_member(project, user, actor=request.user)

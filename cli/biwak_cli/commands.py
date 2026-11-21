@@ -448,7 +448,8 @@ def invite(
 def people(ctx, inactive, as_json):
     """The active people (staff), or with --inactive those who can't sign
     in; `biwak people activate` and `deactivate` change that,
-    `reset-two-factor` removes somebody's authenticator app"""
+    `reset-two-factor` removes somebody's authenticator app, passkeys and
+    API tokens"""
     if ctx.invoked_subcommand is not None:
         return None
     data = request("GET", "people/", params={"inactive": inactive})
@@ -502,8 +503,8 @@ def people_deactivate(ids, as_json):
 @click.argument("person_id", type=int)
 @json_option
 def people_reset_two_factor(person_id, as_json):
-    """Remove the person's authenticator app, sign them out everywhere and
-    mail them; staff reset clients, admins also staff and partners, not
+    """Remove the person's authenticator app, passkeys and API tokens, sign
+    them out everywhere and mail them; staff reset clients, admins also staff and partners, not
     yourself (turn your own off in the settings)"""
     data = request("POST", f"people/{person_id}/reset-two-factor/")
     if as_json:
@@ -558,15 +559,19 @@ def invitations_resend(person, as_json):
 @json_option
 def invitations_withdraw(person, as_json):
     """Withdraw the invitation of PERSON: removed from the projects you can
-    open, the account deleted if nothing else refers to it"""
+    open, the account deleted if nothing else refers to it, else
+    deactivated (staff for clients, admins for everybody)"""
     data = request("DELETE", f"invitations/{person}/")
     if as_json:
         return echo_json(data)
     removed = ", ".join(str(pk) for pk in data["removed_from"]) or "no projects"
-    click.echo(
-        f"Withdrawn: removed from {removed}"
-        + ("; the account is deleted." if data["deleted"] else "; the account stays.")
-    )
+    if data["deleted"]:
+        account = "the account is deleted."
+    elif data.get("deactivated"):
+        account = "the account is deactivated."
+    else:
+        account = "the account stays, invited to other projects."
+    click.echo(f"Withdrawn: removed from {removed}; {account}")
     return None
 
 

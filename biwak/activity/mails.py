@@ -269,7 +269,9 @@ def _item(item, user):
         context |= {
             "text": todo.notes,
             "todo": todo,
-            "assignees": ", ".join(str(a) for a in todo.assignees.all()),
+            "assignees": ", ".join(
+                str(a) for a in item.project.people_known_to(user, todo.assignees.all())
+            ),
             "list": mentions.plain(item.parent.title, item.parent),
         }
     elif item.kind == Kind.LIST:

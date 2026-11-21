@@ -266,6 +266,34 @@ class NewProjectTest(TestCase):
             {self.ada.pk, self.cleo.pk, self.bob.pk},
         )
 
+    def test_a_domain_of_the_own_or_a_partner_organization_isnt_suggested(self):
+        """Staff can't put people there (admins only): the domain's
+        suggestion is dropped, as on the invite page and in the API"""
+        self.own.domains = ["team.example"]
+        self.own.save()
+        self.pia.organization.domains = ["partner.example"]
+        self.pia.organization.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                "/projects/new/",
+                {
+                    **self.project_data,
+                    "step": "people",
+                    "organizations": [self.example.pk],
+                    "people": [],
+                    **self.rows(
+                        {"email": "finn@team.example"},
+                        {"email": "gus@partner.example"},
+                    ),
+                },
+            )
+        project = Project.objects.get(name="Camp")
+        self.assertRedirects(response, project.get_absolute_url())
+        for email in ["finn@team.example", "gus@partner.example"]:
+            user = User.objects.get(email=email)
+            self.assertIsNone(user.organization)
+            self.assertTrue(user.is_client)
+
     def test_partners_by_their_organization(self):
         response = self.people_step(self.pia.organization)
         self.assertContains(response, "Pia Example, Example Partner Agency")
