@@ -27,6 +27,7 @@
         <a
           class="btn btn-sm btn-quiet"
           href="{% url 'list_edit' item.pk %}"
+          data-modal
           title="{% translate 'Edit' %}"
         >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% endif %}
@@ -36,7 +37,7 @@
   {% if item.status == "archived" %}
     <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
   {% endif %}
-  {% include "items/_client_banner.html" %}
+  {% include "items/_client_tab.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
   {% csrf_token %}
   {# Live updates (frontend/live.js): every child of a data-live-list has an id #}

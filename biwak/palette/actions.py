@@ -225,6 +225,8 @@ def on_item(request, item, context):
         edit_url = reverse(EDIT_URLS[item.kind], args=[item.pk])
         if item.kind in {Kind.MESSAGE, Kind.FILE}:
             actions.append(click(_("Edit"), EDIT_OPEN, edit_url, "e"))
+        elif item.kind == Kind.LIST:
+            actions.append(modal(_("Edit"), edit_url, "e"))
         else:
             actions.append(link(_("Edit"), edit_url, "e"))
     elif item.kind == Kind.QUESTION and not user.is_client:

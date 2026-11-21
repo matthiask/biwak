@@ -894,4 +894,14 @@ def list_edit(request, pk):
     if form.is_valid():
         ops.update_list(item, actor=request.user, **form.cleaned_data)
         return redirect(item)
-    return render(request, "items/list_edit.html", {"item": item, "form": form})
+    # A modal, also a page (AGENTS.md); archiving and the trash are in the
+    # list's "More" menu
+    return form_response(
+        request,
+        form,
+        title=_("Edit the list"),
+        item=item,
+        parent=item,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Save"),
+    )

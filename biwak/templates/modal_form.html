@@ -14,6 +14,12 @@
   <div>
     <h1 class="wb-form-title" {% if modal %}id="modal-title"{% endif %}>{{ title }}</h1>
     {% if item %}{% include "items/_client_banner.html" %}{% endif %}
+    {% if clients_see %}
+      <div class="wb-client-banner" role="note">
+        {% icon "eye" %}
+        {% translate "The clients of this project can see this." %}
+      </div>
+    {% endif %}
     {% if intro %}<p class="text-body-secondary">{{ intro }}</p>{% endif %}
     {% if help_page %}
       <p class="small"><a href="{% url 'help' help_page %}">{% translate "More in the help" %}</a></p>
