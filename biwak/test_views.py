@@ -217,12 +217,12 @@ class ViewsTest(TestCase):
         (specs/access.md)"""
         self.client.force_login(self.cleo)
         url = self.project.get_absolute_url()
-        response = self.client.post(url, {"title": "Our wishes"})
+        response = self.client.post(url + "lists/new/", {"title": "Our wishes"})
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Item.objects.filter(title="Our wishes").exists())
-        self.assertNotContains(self.client.get(url), "Add list")
+        self.assertNotContains(self.client.get(url), "New list")
         self.client.force_login(self.ada)
-        self.assertContains(self.client.get(url), "Add list")
+        self.assertContains(self.client.get(url), "New list")
 
     def test_allauth_pages(self):
         # Rendered with our elements (biwak/templates/allauth/)

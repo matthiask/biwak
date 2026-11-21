@@ -52,3 +52,34 @@ def check_in_answers(project, people, *, content="Giraffes everywhere"):
     )
     checkin_ops.run(now=at("2027-03-22 09:00"))
     return [checkin_ops.answer(question, user=user, content=content) for user in people]
+
+
+MODAL = {"HX-Modal": "true"}
+
+
+def assert_modal(test, response, *, title):
+    """The response is the form for the dialog (``biwak/modals.py``): no
+    page around it, labelled by its title, which posts to the dialog"""
+    test.assertEqual(response.status_code, 200)
+    test.assertNotContains(response, "<html")
+    test.assertNotContains(response, "wb-navbar")
+    test.assertContains(response, f'id="modal-title">{title}</h1>')
+    test.assertContains(response, 'hx-target="#modal"')
+
+
+def assert_page(test, response, *, title):
+    """The same form as a page of its own (without JavaScript)"""
+    test.assertEqual(response.status_code, 200)
+    test.assertContains(response, "<html")
+    test.assertContains(response, f">{title}</h1>")
+    test.assertNotContains(response, "hx-post")
+    test.assertNotContains(response, 'id="modal-title"')
+
+
+def assert_modal_redirect(test, response, url=None):
+    """A modal form saved: the dialog's request is answered with
+    ``HX-Redirect``, which loads the page"""
+    test.assertEqual(response.status_code, 200)
+    test.assertIn("HX-Redirect", response.headers)
+    if url is not None:
+        test.assertEqual(response.headers["HX-Redirect"], url)

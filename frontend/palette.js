@@ -8,6 +8,7 @@
 // Actions are run here, never decided: the palette only shows what the server
 // rendered for this page.
 import { send } from "./http.js"
+import { openModal } from "./modal.js"
 import { cycleTheme } from "./theme.js"
 
 const script = document.getElementById("wb-palette-data")
@@ -60,6 +61,9 @@ export function runAction(action, { status } = {}) {
   switch (action.type) {
     case "link":
       window.location.assign(action.url)
+      break
+    case "modal":
+      openModal(action.url)
       break
     case "post":
       send(action.url, action.data).then(

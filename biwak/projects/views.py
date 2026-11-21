@@ -14,6 +14,7 @@ from biwak.files import queries as file_queries
 from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
+from biwak.modals import form_response
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import overview
@@ -329,16 +330,13 @@ def project_trash(request, pk):
     )
 
 
-def project_detail(request, pk):
+def list_new(request, pk):
+    """A new list: a modal on the project's page, also a page of its own"""
     project = project_for(request, pk)
-    items = Item.objects.visible_to(request.user).filter(project=project)
-    all_lists = items.filter(kind=Kind.LIST, parent=None)
-    lists = all_lists.filter(status=Status.ACTIVE).select_related("project")
-    can_create = ops.can_create(request.user, Kind.LIST)
-    if request.method == "POST" and not can_create:
+    if not ops.can_create(request.user, Kind.LIST):
         raise PermissionDenied
     form = ListForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
+    if form.is_valid():
         item = ops.create_list(
             project=project,
             title=form.cleaned_data["title"],
@@ -346,6 +344,21 @@ def project_detail(request, pk):
             visible=form.cleaned_data["visible"],
         )
         return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("New list"),
+        project=project,
+        cancel_url=project.get_absolute_url(),
+        submit_label=_("Add list"),
+    )
+
+
+def project_detail(request, pk):
+    project = project_for(request, pk)
+    items = Item.objects.visible_to(request.user).filter(project=project)
+    all_lists = items.filter(kind=Kind.LIST, parent=None)
+    lists = all_lists.filter(status=Status.ACTIVE).select_related("project")
     lists = list(lists)
     counts = glance.list_counts(request.user, lists, schedules.today())
     for todolist in lists:
@@ -366,8 +379,7 @@ def project_detail(request, pk):
             "lists": lists,
             "archived_lists": all_lists.filter(status=Status.ARCHIVED),
             "can_manage": project_ops.can_manage_project(request.user),
-            "form": form,
-            "can_create_lists": can_create,
+            "can_create_lists": ops.can_create(request.user, Kind.LIST),
             "members": project.memberships.select_related("user"),
             "front_messages": file_queries.front_messages(project, request.user),
             "front_files": file_queries.front_files(project, request.user),

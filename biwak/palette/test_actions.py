@@ -135,8 +135,11 @@ class ProjectActionsTest(ActionsBase):
             "To-dos by due date",
         ]:
             self.assertEqual(actions[label]["group"], "page", label)
-        # On the page with the form it focuses it
-        self.assertEqual(actions["New list"]["type"], "focus")
+        # The form opens in a modal
+        self.assertEqual(actions["New list"]["type"], "modal")
+        self.assertEqual(
+            actions["New list"]["url"], f"/projects/{self.camp.pk}/lists/new/"
+        )
         self.assertEqual(
             actions["New message"]["url"], f"/projects/{self.camp.pk}/messages/new/"
         )
@@ -148,11 +151,11 @@ class ProjectActionsTest(ActionsBase):
         for label in ["New list", "New doc", "Upload a file", "New check-in"]:
             self.assertNotIn(label, actions)
 
-    def test_other_project_pages_link_to_the_form_of_the_project_page(self):
+    def test_other_project_pages_open_the_same_modal(self):
         actions = self.actions(self.ada, f"/projects/{self.camp.pk}/messages/")
-        self.assertEqual(actions["New list"]["type"], "link")
+        self.assertEqual(actions["New list"]["type"], "modal")
         self.assertEqual(
-            actions["New list"]["url"], f"/projects/{self.camp.pk}/#new-list"
+            actions["New list"]["url"], f"/projects/{self.camp.pk}/lists/new/"
         )
 
     def test_the_folder_of_a_new_doc(self):
