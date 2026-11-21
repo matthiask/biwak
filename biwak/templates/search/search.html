@@ -6,7 +6,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">{% translate "Search" %}</h1>
   </div>
-  <form method="get" action="{% url 'search' %}" class="d-flex flex-wrap gap-2 align-items-end mb-3">
+  <form method="get" data-autosubmit action="{% url 'search' %}" class="d-flex flex-wrap gap-2 align-items-end mb-3">
     {% for field in form %}
       <div {% if field.name == "q" %}class="flex-grow-1"{% endif %}>
         {% if field.field.widget.input_type == "checkbox" %}

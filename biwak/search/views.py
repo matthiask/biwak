@@ -27,7 +27,13 @@ KIND_ICONS = {
 
 
 class SearchForm(Form):
-    q = forms.CharField(label=_("Search"), max_length=200, required=False)
+    q = forms.CharField(
+        label=_("Search"),
+        max_length=200,
+        required=False,
+        # Enter searches, the other filters apply themselves
+        widget=forms.TextInput(attrs={"data-no-autosubmit": ""}),
+    )
     project = forms.ModelChoiceField(
         label=_("Project"),
         queryset=Project.objects.none(),

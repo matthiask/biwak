@@ -155,9 +155,15 @@ today, this week (until Sunday), later and no date.
 
 - `/todos/` across all projects the person can see, `/projects/<pk>/todos/`
   per project; "My to-dos" (`/todos/?assignee=me`) in the navigation.
-- Filters as query parameters, the form submitting with GET: project,
-  assignee (anybody, me, a person, nobody), list, open or completed
-  (completed: the latest first, paginated), visible to clients or not.
+- Filters as query parameters, the form submitting with GET and applying
+  itself (`ui-round-3.md`): project, assignee (anybody, me, a person,
+  nobody), open or completed (completed: the latest first, paginated),
+  visible to clients or not. No list filter (decided 2026-11-21: a list's
+  page shows one list).
+- Two groupings, remembered per person (`User.todo_grouping`): by
+  project (projects by name, lists and groups in their own order, the
+  to-dos outside groups first) or by due date as below; completed to-dos
+  stay newest first.
 - Each row: the to-do with its checkbox (completing works here too),
   project, list, assignees, due date, the client badge.
 - Through `Item.objects.visible_to()` like everything else.
@@ -174,7 +180,8 @@ today, this week (until Sunday), later and no date.
 
 ### API and CLI
 
-`GET /api/v1/todos/?…` with the same filters and grouping key per to-do,
+`GET /api/v1/todos/?…` with the same filters, `grouping=project|due` and
+the due group per to-do,
 cursor-paginated. `biwak todos --mine|--project ID|--due …` across
 projects (the existing `biwak todos LIST` stays).
 
@@ -206,7 +213,8 @@ All proposed by the building agent, confirmed 2026-11-21.
   `project_name` and `list_title`. Open ones are ordered by due date (to-dos
   without one last), completed ones latest first.
 - **CLI:** `biwak todos` without LIST takes `--mine`, `--project ID`,
-  `--due GROUP` and `--completed`; it shows the first 200.
+  `--due GROUP`, `--by-due` and `--completed`; it shows the first 200, with
+  headings for projects, lists and groups unless `--by-due`.
 
 ### Done when (stage 2)
 

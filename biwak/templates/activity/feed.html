@@ -9,7 +9,13 @@
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
   </div>
-  <form method="get" action="{{ url }}" class="d-flex flex-wrap gap-2 align-items-end mb-3">
+  <form
+    method="get"
+    data-autosubmit
+    data-remember
+    action="{{ url }}"
+    class="d-flex flex-wrap gap-2 align-items-end mb-3"
+  >
     {% for field in form %}
       <div>
         {% if field.field.widget.input_type == "checkbox" %}
@@ -20,8 +26,12 @@
         {% endif %}
       </div>
     {% endfor %}
-    <button type="submit" class="btn btn-quiet">{% translate "Filter" %}</button>
-    {% if filtered %}<a href="{{ url }}" class="btn btn-quiet">{% translate "Clear" %}</a>{% endif %}
+    <button type="submit" class="btn btn-quiet" data-autosubmit-button>{% translate "Filter" %}</button>
+    {% if filtered %}<a
+        href="{{ url }}"
+        class="btn btn-quiet"
+        data-reset-filters
+      >{% translate "Reset filters" %}</a>{% endif %}
   </form>
   {% include "activity/_entries.html" %}
   {% if older %}

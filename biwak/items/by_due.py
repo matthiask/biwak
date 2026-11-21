@@ -6,18 +6,18 @@ from django import forms
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 from icalendar import Calendar, Event as CalendarEvent
 
 from biwak import schedules
 from biwak.accounts.models import CalendarToken, User
 from biwak.activity import mentions
 from biwak.api_conventions import absolute
-from biwak.forms import Form
-from biwak.items import due, glance
-from biwak.items.models import Item, Kind, Status
+from biwak.forms import Form, next_url
+from biwak.items import due, glance, operations as ops
 from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
@@ -43,12 +43,6 @@ class FilterForm(Form):
         empty_label=_("All projects"),
     )
     assignee = forms.ChoiceField(label=_("assigned to"), required=False)
-    list = forms.ModelChoiceField(
-        label=_("list"),
-        queryset=Item.objects.none(),
-        required=False,
-        empty_label=_("All lists"),
-    )
     state = forms.ChoiceField(
         label=_("state"),
         required=False,
@@ -72,17 +66,6 @@ class FilterForm(Form):
             projects = projects.filter(pk=project.pk)
         else:
             self.fields["project"].queryset = projects
-        self.fields["list"].queryset = (
-            Item.objects
-            .visible_to(user)
-            .filter(
-                kind=Kind.LIST,
-                parent=None,
-                status=Status.ACTIVE,
-                project__in=projects,
-            )
-            .select_related("project")
-        )
         choices = [("", _("Anybody")), ("me", _("Me")), ("nobody", _("Nobody"))]
         if not user.is_client:
             people = User.objects.active().filter(memberships__project__in=projects)
@@ -103,7 +86,6 @@ def todos_by_due(request, project=None):
     todos = due.todos(
         request.user,
         project=project or data.get("project"),
-        todolist=data.get("list"),
         assignee=data.get("assignee") or None,
         completed=completed,
         visible_to_clients={"yes": True, "no": False}.get(data.get("visible")),
@@ -111,7 +93,14 @@ def todos_by_due(request, project=None):
     if not valid:
         todos = todos.none()
     todos = glance.with_signals(todos)
+    grouping = request.GET.get("grouping")
+    if grouping in User.TodoGrouping.values:
+        # The links of the switch without JavaScript store it too
+        ops.set_todo_grouping(request.user, grouping)
+    grouping = request.user.todo_grouping
     context = {
+        "grouping": grouping,
+        "groupings": User.TodoGrouping.choices,
         "form": form,
         "project": project,
         "completed": completed,
@@ -124,6 +113,8 @@ def todos_by_due(request, project=None):
         query = request.GET.copy()
         query.pop("page", None)
         context |= {"page": page, "querystring": query.urlencode()}
+    elif grouping == User.TodoGrouping.PROJECT:
+        context["projects"] = due.by_project(todos)
     else:
         today = schedules.today()
         sections = {key: [] for key in due.GROUPS}
@@ -133,6 +124,17 @@ def todos_by_due(request, project=None):
             (key, GROUP_LABELS[key], items) for key, items in sections.items() if items
         ]
     return render(request, "items/todos_by_due.html", context)
+
+
+@require_POST
+def todo_grouping(request):
+    """The switch on the to-dos page, remembered per person; comes back to
+    the page with its filters"""
+    try:
+        ops.set_todo_grouping(request.user, request.POST.get("grouping"))
+    except ValueError:
+        return HttpResponse(status=400)
+    return redirect(next_url(request) or "todos")
 
 
 def project_todos(request, pk):

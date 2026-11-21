@@ -7,7 +7,7 @@ Feedback from using "My to-dos" (2026-11-21):
   project, list and group;
 - filter forms only apply after pressing the button.
 
-**Status:** open (spec, 2026-11-21).
+**Status:** built 2026-11-21. Decisions: the switch is a POST form like the projects page's (`/todos/grouping/`, back to the page with its filters) and a valid `?grouping=` stores the choice too; the API's `list_id` is gone, to-dos carry `project_name`, `list_title` and `list_position` (projects have no position, they go by name) beside their group's; `biwak todos` is by project unless `--by-due`; autosubmit is `frontend/autosubmit.js` (`data-autosubmit`, buttons marked `data-autosubmit-button`, `data-no-autosubmit` on a field), remembered filters `frontend/filters.js` (`data-remember`, `data-reset-filters`).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.
@@ -25,9 +25,9 @@ archiving of lists, both merged.
 
 ## 1. No list filter
 
-The list filter goes from the page, the API (`list`) and the CLI. A
-list's own page shows one list. Old links with `?list=` are ignored, not
-an error.
+The list filter is gone from the page, the API (`list_id`) and the CLI. A
+list's own page shows one list. Nothing reads `?list=` anymore, like any
+other unknown parameter (decided 2026-11-21).
 
 ## 2. Two ways to see them: by project or by due date
 
@@ -89,7 +89,6 @@ Decided 2026-11-21.
   - both groupings with projects, lists, groups and to-dos outside
     groups, as staff and as a client (a client sees no internal lists);
   - the remembered choice;
-  - `?list=` ignored;
   - the API's `grouping` and positions;
   - the CLI.
 - **Browser tests:** a select change applying the filter, the focus

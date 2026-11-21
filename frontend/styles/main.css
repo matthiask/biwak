@@ -1991,3 +1991,9 @@ main:has([data-hide-title]) [data-edit-open] {
 .wb-person-link:focus-visible {
   text-decoration: underline;
 }
+
+/* Filter forms apply themselves: the button is for people without JavaScript
+   (frontend/autosubmit.js) */
+.js [data-autosubmit] [data-autosubmit-button] {
+  display: none;
+}

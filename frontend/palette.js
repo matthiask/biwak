@@ -7,6 +7,7 @@
 //
 // Actions are run here, never decided: the palette only shows what the server
 // rendered for this page.
+import { withFilters } from "./filters.js"
 import { send } from "./http.js"
 import { openModal } from "./modal.js"
 import { cycleTheme } from "./theme.js"
@@ -60,7 +61,7 @@ export function focusElement(element) {
 export function runAction(action, { status } = {}) {
   switch (action.type) {
     case "link":
-      window.location.assign(action.url)
+      window.location.assign(withFilters(action.url))
       break
     case "modal":
       openModal(action.url)

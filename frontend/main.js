@@ -25,6 +25,8 @@ import "./stored-docs.js"
 import "./assignees.js"
 import "./view-edit.js"
 import "./lantern.js"
+import "./autosubmit.js"
+import "./filters.js"
 import "./live.js"
 
 // The script is deferred, the page is parsed already; dragging to-dos and
