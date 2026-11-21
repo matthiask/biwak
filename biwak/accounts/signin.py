@@ -21,7 +21,7 @@ from allauth.usersessions.models import UserSession
 from allauth.usersessions.views import list_usersessions
 from django.contrib import messages
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, gettext_lazy
@@ -358,4 +358,20 @@ def deactivate_app(request):
         cancel_url=reverse("settings") + "#sign-in",
         submit_label=_("Turn off"),
         destructive=True,
+    )
+
+
+def two_factor_setup(request):
+    """Organizations requiring a second factor (specs/two-factor.md): people
+    with neither a passkey nor an app add one here before anything else
+    (``two_factor.setup_middleware``)"""
+    from biwak.accounts import two_factor
+    from biwak.forms import next_url
+
+    if not two_factor.setup_required(request.user, request.session):
+        return redirect(next_url(request) or "/")
+    return render(
+        request,
+        "accounts/two_factor_setup.html",
+        {"organization": two_factor.required_organization(request.user)},
     )

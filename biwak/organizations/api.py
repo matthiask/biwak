@@ -30,6 +30,8 @@ class OrganizationOut(Schema):
     # empty); changed by admins on the organization's page only
     signin: str
     idp: str
+    # A code alone isn't enough for its people (specs/two-factor.md)
+    requires_two_factor: bool
     people_count: int
     url: str
 
@@ -49,6 +51,7 @@ def organization_out(org, *, people=False):
         "is_own": org.is_own,
         "signin": org.signin,
         "idp": org.sso,
+        "requires_two_factor": org.two_factor_required,
         "people_count": count,
         "url": absolute(org.get_absolute_url()),
     }

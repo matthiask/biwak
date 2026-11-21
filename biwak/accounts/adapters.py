@@ -69,20 +69,29 @@ class AccountAdapter(DefaultAccountAdapter):
         """People whose organization requires single sign-on sign in only
         through its identity provider (specs/sso.md): every way allauth signs
         somebody in comes here, after recording the method (codes, passkeys,
-        social logins); deactivated people are allauth's (``super()``)"""
+        social logins); deactivated people are allauth's (``super()``). The
+        same for organizations requiring a second factor
+        (specs/two-factor.md): a code isn't enough for people with only a
+        passkey."""
         response = super().pre_login(request, user, **kwargs)
         if response is not None:
             return response
-        if (message := sso.refuse_login(request, user)) is not None:
-            from allauth.account.internal.flows.login import (
-                clear_authentication_records,
-            )
-            from allauth.account.internal.stagekit import clear_login
+        from allauth.account.internal.flows.login import clear_authentication_records
+        from allauth.account.internal.stagekit import clear_login
 
+        from biwak.accounts import two_factor
+
+        if (message := sso.refuse_login(request, user)) is not None:
             clear_login(request)
             clear_authentication_records(request)
             messages.error(request, message)
             return redirect(sso.idp_login_url(user))
+        # Organizations requiring a second factor (specs/two-factor.md)
+        if (message := two_factor.refuse_login(request, user)) is not None:
+            clear_login(request)
+            clear_authentication_records(request)
+            messages.error(request, message)
+            return redirect(reverse("account_login"))
         return None
 
 

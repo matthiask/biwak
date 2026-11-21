@@ -43,5 +43,6 @@ urlpatterns = [
     ),
     path("calendar/", views.calendar_link, name="calendar_link"),
     path("passkey-offer/", views.passkey_offer, name="passkey_offer"),
+    path("two-factor/", signin.two_factor_setup, name="two_factor_setup"),
     path("cli-login/", views.cli_login, name="cli_login"),
 ]

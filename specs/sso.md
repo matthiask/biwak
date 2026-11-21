@@ -61,7 +61,8 @@ changes for staff, codes and passkeys keep working).
   - the login page sends people of such an organization to their IdP
     (after they enter their address, or with the provider's button);
   - codes: refused with a message naming the IdP;
-  - passkeys: not offered (no passkey offer, no "Add a passkey");
+  - passkeys and authenticator apps (`two-factor.md`): not offered (no
+    passkey offer, no "Add a passkey", no "Authenticator app");
     existing passkeys are removed when the organization switches to
     "required" (or a person moves into it), and signing in with one is
     refused (decided 2026-11-21: removed, not only blocked, so switching

@@ -170,6 +170,9 @@ MIDDLEWARE = [
         "allauth.usersessions.middleware.UserSessionsMiddleware",
         # Sessions of organizations requiring single sign-on (specs/sso.md)
         "biwak.accounts.sso.session_middleware",
+        # Organizations requiring a second factor: setting one up comes
+        # first (specs/two-factor.md)
+        "biwak.accounts.two_factor.setup_middleware",
         "biwak.accounts.middleware.user_middleware",
         "biwak.accounts.passkeys.passkey_offer_middleware",
     ]

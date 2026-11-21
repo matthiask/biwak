@@ -31,6 +31,24 @@ is enough alone: it already needs your device and its PIN or fingerprint.
 People whose organization requires single sign-on have no authenticator
 app: their identity provider asks for a second step if it wants one.
 
+## Organizations requiring a second factor
+
+Admins can require a second factor for an organization (its page,
+"Sign-in…", "Require a second factor"). Then a code by mail alone isn't
+enough for its people:
+
+- a passkey is enough, and so is a sign-in through the organization's
+  identity provider;
+- after a code, the authenticator app's code follows;
+- people with a passkey but no app sign in with the passkey (a code alone
+  is refused);
+- people with neither add a passkey or set up an app right after signing
+  in by code, before anything else; the same after a reset, or when the
+  setting is switched on.
+
+API tokens made before keep working. Where single sign-on is required,
+the setting doesn't matter: there are no codes.
+
 ## Single sign-on
 
 Each organization decides how its people sign in (admins change it on the

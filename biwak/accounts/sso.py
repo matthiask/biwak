@@ -387,6 +387,11 @@ def session_alive(session_key, user):
     user = User.objects.select_related("organization").filter(pk=user.pk).first()
     if user is None or not user.is_active:
         return False
+    from biwak.accounts import two_factor
+
+    if two_factor.setup_required(user, data):
+        # A second factor to set up first (specs/two-factor.md)
+        return False
     org = required_organization(user)
     return org is None or _sign_in_counts(data.get(SESSION_KEY), user, org) is not None
 

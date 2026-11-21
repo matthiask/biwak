@@ -62,6 +62,9 @@
         Sign-in: only {{ provider }}; sessions and API tokens last 24 hours.
       {% endblocktranslate %}
     {% endif %}
+    {% if organization.two_factor_required %}
+      {% translate "A second factor is required: a passkey, the identity provider, or a code and an authenticator app." %}
+    {% endif %}
   </p>
   <h2 class="h5">{% translate "People" %}</h2>
   <div class="list-group">
