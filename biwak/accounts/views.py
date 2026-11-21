@@ -2,13 +2,15 @@ import re
 
 from django import forms
 from django.contrib import messages
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.core.files.storage import default_storage
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
 from biwak.accounts import operations, passkeys
@@ -24,7 +26,34 @@ from biwak.activity.operations import set_notification_settings
 from biwak.activity.views import SettingsForm
 from biwak.forms import Form
 from biwak.items.models import Item
+from biwak.modals import form_response
 from biwak.projects.models import Project
+
+
+IMAGE_MAX_AGE = 365 * 24 * 3600
+
+
+@require_GET
+def person_image(request, pk, version):
+    """A person's image, for those who may know the person (the rule of the
+    People page), else 404. The version is in the URL, so it's cached for
+    good; an old version is gone with the image. Streamed through the app
+    also from a bucket: it's small, and a presigned redirect would be
+    cached past its expiry."""
+    from biwak.organizations.people import known_people
+
+    person = get_object_or_404(known_people(request.user), pk=pk)
+    if not person.image or person.image_version != version:
+        raise Http404("No image")
+    try:
+        with default_storage.open(person.image, "rb") as file:
+            data = file.read()
+    except FileNotFoundError as exc:
+        raise Http404("No image") from exc
+    response = HttpResponse(data, content_type="image/webp")
+    response["X-Content-Type-Options"] = "nosniff"
+    patch_cache_control(response, private=True, max_age=IMAGE_MAX_AGE, immutable=True)
+    return response
 
 
 @never_cache
@@ -223,6 +252,7 @@ def _settings_page(request, *, notifications=None):
                 initial={"keyboard_shortcuts": user.keyboard_shortcuts}
             ),
             "themes": Theme.choices,
+            "image_help": _("JPEG, PNG or WebP, at most 5 MB."),
             "accents": Accent.choices,
             "project_overrides": project_overrides,
             "item_overrides": item_overrides,
@@ -279,3 +309,59 @@ def settings_appearance(request):
         return HttpResponse(status=204)
     messages.success(request, _("Your appearance settings have been saved."))
     return redirect("settings")
+
+
+@never_cache
+@require_POST
+def settings_image(request):
+    """Uploading one's own profile image"""
+    upload = request.FILES.get("image")
+    if upload is None:
+        messages.error(request, _("Please choose an image."))
+        return redirect("settings")
+    try:
+        operations.set_image(
+            request.user,
+            upload.read(operations.IMAGE_MAX_BYTES + 1),
+            actor=request.user,
+        )
+    except operations.InvalidImage as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, _("Your profile image has been saved."))
+    return redirect("settings")
+
+
+@never_cache
+def person_image_remove(request, pk):
+    """Back to the initials: people remove their own image, admins anybody's
+    (an unfitting one); the audit log has it. A question, as a modal or a
+    page."""
+    from biwak.organizations.people import known_people
+
+    person = get_object_or_404(known_people(request.user), pk=pk)
+    if not person.image or not operations.can_remove_image(request.user, person):
+        raise Http404("No image to remove")
+    own = person.pk == request.user.pk
+    back = reverse("settings") if own else reverse("person", args=[person.pk])
+    if request.method == "POST":
+        operations.remove_image(person, actor=request.user)
+        messages.success(
+            request,
+            _("Your profile image has been removed.")
+            if own
+            else _("The profile image of %(name)s has been removed.")
+            % {"name": person},
+        )
+        return redirect(back)
+    return form_response(
+        request,
+        None,
+        title=_("Remove the profile image?")
+        if own
+        else _("Remove the profile image of %(name)s?") % {"name": person},
+        intro=_("The initials are shown instead."),
+        cancel_url=back,
+        submit_label=_("Remove"),
+        destructive=True,
+    )

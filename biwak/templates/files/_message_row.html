@@ -11,6 +11,7 @@
       {% client_badge item %}
     </div>
     <div class="small text-body-secondary">
+      {% avatar item.creator %}
       {{ item.creator.get_short_name }} · {{ item.created_at|date:"j. M Y" }}
       {% if item.comment_count %}·
         {% blocktranslate count counter=item.comment_count %}{{ counter }} comment{% plural %}{{ counter }} comments{% endblocktranslate %}{% endif %}

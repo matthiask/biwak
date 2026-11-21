@@ -4,7 +4,8 @@ Today people appear as names only. A face, or at least a colored mark,
 makes lists, comments and the lantern quicker to scan, and the People
 page (`organizations.md`) wants something to show per person.
 
-**Status:** open (spec, 2026-11-21; its questions answered the same day).
+**Status:** stage 1 built (2026-11-21), see "Built" below; stage 2 open
+(waits for the drawings).
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`; have the image's visibility reviewed.
@@ -99,3 +100,58 @@ choosing stores its name. This waits for the drawings.
   set in Biwak.
 - Each person gets a page with the projects in common.
 - Admins can remove someone's image, recorded in the audit log.
+
+## Built (stage 1, 2026-11-21)
+
+- **The field and the operations** (`biwak/accounts/`): `User.image`, the
+  storage name `people/<id>/<version>.webp` (the version is a random key
+  that changes with every upload, `User.image_version`); no table of its
+  own, the person's row is in the audit log, which records removing.
+  `operations.set_image()` (own image only: not even admins set another's),
+  `remove_image()` (own, or any by admins) and `image_data()`, which cuts
+  the middle square, scales to 256 pixels and saves WebP; JPEG, PNG and
+  WebP, at most 5 MB, anything else is `InvalidImage`. The old file goes
+  after the commit.
+- **Serving** (`accounts.views.person_image`,
+  `/accounts/people/<id>/image/<version>.webp`): for whoever
+  `organizations.people.known_people(viewer)` lists, which the People page
+  uses too (own staff everybody, partners and clients members of their
+  projects, and themselves), else 404; also 404 for an old version.
+  `Cache-Control: private, max-age=1 year, immutable`. Streamed through
+  the app also with a bucket (a presigned redirect would be cached past its
+  expiry; the file is a few kilobytes).
+- **The mark** (`{% avatar person size %}`, sizes `sm`, `md`, `lg`;
+  `frontend/avatar.js` for what scripts build): the image where the viewer
+  may know the person (the tag checks, once per request, so no broken
+  images), else white initials on the fill of one of the ten palette names,
+  `PALETTE[id % 10]` (`data-avatar-color`, `User.avatar_color`). The
+  contrast is the palette's "white on fill" check, and
+  `AvatarColorsTest` that every name has its rule. `title` and `alt` are the
+  full name.
+- **Settings:** "Profile image" at the top of Appearance (upload, remove
+  asking first). Admins remove other people's images on the person's page.
+- **The person's page** (`/people/<id>/`, `organizations.people.person`):
+  large mark, name, role, organization, the projects both are in
+  (`Projects in common`), "Activity" (their feed, where the viewer may open
+  it), "Remove image" for admins, "Change organization" as on the People
+  page. The People page's names link here; the feed is one click further.
+- **Places:** the People page, the person's page, comments, messages (page
+  and board row), feed entries, the lantern's entries (who did it),
+  assignee pills (server and picker), the `@` list, subscribers, the
+  project's members (project page and people page), check-in answers and
+  those asked, the live editor's others (their short name stays the
+  label). Not in mails, and not in an item's history (staff only, names in
+  text).
+- **API and CLI** (CLI 0.26.0): `image_url` (absolute, or null) on every
+  person, `PUT /api/v1/me/image/` (multipart, field `image`, 400 for a
+  wrong file) and `DELETE`, both answer like `GET /api/v1/me/`;
+  `biwak me image FILE` and `biwak me image --remove`. The multipart PUT
+  needs ninja's `fix_request_files_middleware`.
+- **The importer** (decided 2026-11-21): Basecamp's `avatar_url` is
+  **not imported**. Its URLs (`.../people/<sgid>/avatar`, redirecting to the
+  image) are the same for generated initials and uploaded images, so
+  there's no marker to tell them apart without looking at a real account's
+  answers, and the spec prefers our mark to a generated one. To change
+  that: look at the redirect target and headers of a person with and without
+  an uploaded image in a real account; `test_profile_images_are_not_imported`
+  pins today's behavior.

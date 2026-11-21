@@ -8,6 +8,8 @@
 // "[@Name](person:ID)", Escape closes. Without JavaScript the fields stay
 // plain fields. Adapted from Governance's mentions.js.
 
+import { avatar } from "./avatar.js"
+
 const DELAY = 150
 
 // The "@query" before the caret, if any: "@" at the start or after a
@@ -132,7 +134,7 @@ function attach(field) {
         const organization = person.organization
           ? `, ${person.organization}`
           : ""
-        item.append(name, organization, " ", detail)
+        item.append(avatar(person.avatar), " ", name, organization, " ", detail)
         // mousedown keeps the focus in the field
         item.addEventListener("mousedown", (event) => {
           event.preventDefault()

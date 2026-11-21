@@ -126,6 +126,8 @@ MIDDLEWARE = [
         "django.middleware.locale.LocaleMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
+        # Multipart PUT (PUT /api/v1/me/image/) fills request.FILES
+        "ninja.compatibility.files.fix_request_files_middleware",
         "biwak.organizations.models.own_middleware",
         "biwak.modals.modal_middleware",
         "biwak.accounts.middleware.LoginRequired",

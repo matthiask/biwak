@@ -117,15 +117,47 @@ def logout():
         terminate("Forgot the token, but couldn't revoke it: see the API tokens page.")
 
 
-@cli.command()
+@cli.group(invoke_without_command=True)
 @json_option
-def me(as_json):
-    """Who you are and the token's access"""
+@click.pass_context
+def me(ctx, as_json):
+    """Who you are and the token's access; `biwak me image` sets your
+    profile image"""
+    if ctx.invoked_subcommand is not None:
+        return None
     data = request("GET", "me/")
     if as_json:
         return echo_json(data)
     kind = "client" if data["is_client"] else "staff"
     click.echo(f"{data['name']} <{data['email']}>, {kind}, {data['access']} access")
+    return None
+
+
+@me.command("image")
+@click.argument("path", required=False, type=click.Path(exists=True, dir_okay=False))
+@click.option("--remove", is_flag=True, help="Back to the initials.")
+@json_option
+def me_image(path, remove, as_json):
+    """Set your profile image to the JPEG, PNG or WebP at PATH (at most 5 MB;
+    cut to a square in the middle), or remove it"""
+    if remove == bool(path):
+        terminate("Give a file, or --remove.")
+    if remove:
+        data = request("DELETE", "me/image/")
+    else:
+        with click.open_file(path, "rb") as file:
+            data = request(
+                "PUT",
+                "me/image/",
+                files={"image": (os.path.basename(path), file)},
+            )
+    if as_json:
+        return echo_json(data)
+    click.echo(
+        "Removed your profile image."
+        if remove
+        else f"Your profile image: {data['image_url']}"
+    )
     return None
 
 

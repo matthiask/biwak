@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load biwak i18n %}
 {% block title %}{% translate "People" %} – {{ project }} – Biwak{% endblock %}
 
 {% block content %}
@@ -11,6 +11,7 @@
         {% for m, notify in memberships %}
           <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
             <div>
+              {% avatar m.user "md" %}
               {{ m.user.display_name }}
               {% if m.user.is_client %}<span class="badge wb-client-badge">{% translate "Client" %}</span>{% endif %}
               {% if not request.user.is_client %}<div class="small text-body-secondary">

@@ -52,6 +52,7 @@
   </div>
   <p class="small text-body-secondary">
     {% if message.category %}<span class="wb-category">{{ message.category }}</span> ·{% endif %}
+    {% avatar item.creator %}
     {{ item.creator.display_name }} · {{ item.created_at|date:"j. M Y, H:i" }}
   </p>
   {% show_links item %}

@@ -56,6 +56,7 @@
       {% for notification in entries %}
         <li class="wb-lantern-entry{% if not notification.read_at %} is-unread{% endif %}">
           <a href="{{ notification.url }}" class="wb-lantern-link" data-lantern-read="{{ notification.read_url }}">
+            {% if notification.event.actor %}{% avatar notification.event.actor %}{% endif %}
             {{ notification.line }}
             {% if notification.mentioned %}<strong>{% translate "You were mentioned." %}</strong>{% endif %}
             {% if notification.event.excerpt %}<span

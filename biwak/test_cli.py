@@ -7,8 +7,10 @@ from unittest.mock import patch
 
 import biwak_cli
 from click.testing import CliRunner
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
+from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 
 from biwak import cli_version
 from biwak.accounts.models import APIToken
@@ -80,15 +82,20 @@ class CLITest(TestCase):
         if method == "GET":
             response = self.api_client.get(path, params, headers=headers)
         elif files:
-            response = self.api_client.post(
-                path,
-                {
-                    field: SimpleUploadedFile(name, file.read())
-                    for field, (name, file) in files.items()
-                }
-                | (data or {}),
-                headers=headers,
-            )
+            body = {
+                field: SimpleUploadedFile(name, file.read())
+                for field, (name, file) in files.items()
+            } | (data or {})
+            if method == "POST":
+                response = self.api_client.post(path, body, headers=headers)
+            else:  # PUT: multipart by hand, the test client only does POST
+                response = self.api_client.generic(
+                    method,
+                    path,
+                    encode_multipart(BOUNDARY, body),
+                    content_type=MULTIPART_CONTENT,
+                    headers=headers,
+                )
         else:
             response = getattr(self.api_client, method.lower())(
                 path, json, content_type="application/json", headers=headers
@@ -407,3 +414,47 @@ class CLITest(TestCase):
         result = self.biwak("notifications", "--project", other.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("404", result.output)
+
+
+class CLIImageTest(CLITest):
+    def picture(self):
+        from biwak.accounts.test_images import picture
+
+        directory = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: [f.unlink() for f in directory.iterdir()])
+        path = directory / "ada.png"
+        path.write_bytes(picture())
+        return path
+
+    def test_setting_and_removing_the_profile_image(self):
+        path = self.picture()
+        result = self.biwak("me", "image", path)
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn(
+            f"Your profile image: {settings.BASE_URL}/accounts/people/", result.output
+        )
+        self.ada.refresh_from_db()
+        self.assertTrue(self.ada.image)
+        data = json.loads(self.biwak("me", "--json").output)
+        self.assertTrue(data["image_url"].endswith(self.ada.image_url))
+        result = self.biwak("me", "image", "--remove")
+        self.assertIn("Removed your profile image.", result.output)
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.image, "")
+
+    def test_json(self):
+        data = json.loads(self.biwak("me", "image", self.picture(), "--json").output)
+        self.assertIsNotNone(data["image_url"])
+
+    def test_a_file_or_remove_but_not_both_or_neither(self):
+        self.assertNotEqual(self.biwak("me", "image").exit_code, 0)
+        self.assertNotEqual(
+            self.biwak("me", "image", self.picture(), "--remove").exit_code, 0
+        )
+
+    def test_a_wrong_file_says_so(self):
+        path = self.picture()
+        path.write_bytes(b"text")
+        result = self.biwak("me", "image", path)
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("JPEG, PNG or WebP", result.output)

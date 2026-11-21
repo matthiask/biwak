@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{{ person }} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-page-header">
+    <div class="d-flex align-items-center gap-3">
+      {% avatar person "lg" %}
+      <div>
+        <h1 class="wb-title mb-1">{{ person }}</h1>
+        <div>
+          {% if person.is_client %}
+            <span class="badge wb-client-badge">{{ person.role }}</span>
+          {% else %}
+            <span class="badge wb-tone-neutral">{{ person.role }}</span>
+          {% endif %}
+          {% if not person.is_active %}<span class="badge wb-tone-neutral">{% translate "inactive" %}</span>{% endif %}
+          {% if person.organization %}<span class="text-body-secondary">{{ person.organization_name }}</span>{% endif %}
+        </div>
+        {% if person.show_email %}<div class="small text-body-secondary">{{ person.email }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      {% if person.feed %}
+        <a href="{% url 'person_feed' person.pk %}" class="btn btn-sm btn-quiet">{% translate "Activity" %}</a>
+      {% endif %}
+      {% if can_remove_image %}
+        <a
+          href="{% url 'person_image_remove' person.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Remove image" %}</a>
+      {% endif %}
+      {% if person.can_move %}
+        <a
+          href="{% url 'person_organization' person.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Change organization" %}</a>
+      {% endif %}
+    </div>
+  </div>
+  <h2 class="h5">{% translate "Projects in common" %}</h2>
+  <div class="list-group mb-4">
+    {% for project in projects %}
+      <a
+        class="list-group-item list-group-item-action"
+        href="{{ project.get_absolute_url }}"
+      >{% project_dot project %}{{ project }}</a>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">{% translate "No projects in common." %}</div>
+    {% endfor %}
+  </div>
+  <p><a href="{% url 'people' %}">{% translate "All people" %}</a></p>
+{% endblock content %}

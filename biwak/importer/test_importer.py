@@ -197,6 +197,14 @@ class ImportEveryKindTest(ImportCase):
             [(self.ada.pk, announcement.pk)],
         )
 
+    def test_profile_images_are_not_imported(self):
+        """Basecamp's generated initials images can't be told apart from
+        uploaded ones by their URL (specs/people.md, decided 2026-11-21):
+        none are imported, our own mark is better"""
+        self.run_import()
+        self.assertEqual(User.objects.exclude(image="").count(), 0)
+        self.assertFalse([url for url in self.client_.downloads if "avatar" in url])
+
     def test_people(self):
         self.run_import()
         self.assertEqual(User.objects.filter(email="ada@example.org").count(), 1)

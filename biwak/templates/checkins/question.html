@@ -76,6 +76,7 @@
               <div class="card mb-2" id="answer-{{ answer.pk }}" data-live>
                 <div class="card-body">
                   <div class="small text-body-secondary mb-1">
+                    {% avatar answer.author %}
                     <a href="{% url 'question_person' item.pk answer.author_id %}"><strong
                       >{{ answer.author.display_name }}</strong></a>
                     · {{ answer.item.created_at|date:"j. M Y, H:i" }}
@@ -146,7 +147,9 @@
       <h2 class="h6">{% translate "People asked" %}</h2>
       <ul class="list-unstyled small">
         {% for person in people %}
-          <li><a href="{% url 'question_person' item.pk person.pk %}">{{ person.display_name }}</a></li>
+          <li>
+            {% avatar person %} <a href="{% url 'question_person' item.pk person.pk %}">{{ person.display_name }}</a>
+          </li>
         {% empty %}
           <li class="text-body-secondary">{% translate "Nobody yet." %}</li>
         {% endfor %}

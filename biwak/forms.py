@@ -85,6 +85,8 @@ class AssigneeSelect(forms.SelectMultiple):
         instance = getattr(value, "instance", None)
         if instance is not None and hasattr(instance, "is_member"):
             option["attrs"]["data-member"] = "true" if instance.is_member else "false"
+        if instance is not None and hasattr(instance, "avatar_json"):
+            option["attrs"]["data-avatar"] = instance.avatar_json
         return option
 
 

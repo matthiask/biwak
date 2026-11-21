@@ -9,6 +9,8 @@
 // without JavaScript it's usable as it is.
 // Keyboard handling as in mentions.js.
 
+import { avatar, optionAvatar } from "./avatar.js"
+
 let counter = 0
 
 function attach(select) {
@@ -80,7 +82,7 @@ function attach(select) {
           changed()
           input.focus()
         })
-        pill.append(name, remove)
+        pill.append(avatar(optionAvatar(option)), name, remove)
         return pill
       }),
     )
@@ -117,7 +119,7 @@ function attach(select) {
             )
             const name = document.createElement("span")
             name.textContent = option.textContent
-            item.append(name)
+            item.append(avatar(optionAvatar(option)), " ", name)
             if (option.dataset.member === "false") {
               const detail = document.createElement("small")
               detail.className = "wb-mentions-detail"
