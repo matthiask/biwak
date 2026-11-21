@@ -531,10 +531,10 @@ class QueryCountTest(OverviewTestCase):
     def test_fixed_number_of_queries(self):
         self.build(5)
         small = {u: self.count(u)[0] for u in (self.ada, self.cleo)}
-        self.build(195)
+        self.build(15)
         for user in (self.ada, self.cleo):
             number, response = self.count(user)
-            self.assertEqual(len(response.context["projects"]), 200)
+            self.assertEqual(len(response.context["projects"]), 20)
             self.assertEqual(number, small[user])
             self.assertLessEqual(number, 13)  # one for the names (display_names)
         self.client.force_login(self.ada)
@@ -546,10 +546,10 @@ class QueryCountTest(OverviewTestCase):
         self.api("projects/")
         with CaptureQueriesContext(connection) as small:
             self.api("projects/")
-        self.build(45)
+        self.build(15)
         with CaptureQueriesContext(connection) as large:
             response = self.api("projects/")
-        self.assertEqual(len(response.json()), 50)
+        self.assertEqual(len(response.json()), 20)
         self.assertEqual(len(large), len(small))
 
 

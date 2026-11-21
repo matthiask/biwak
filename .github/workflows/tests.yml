@@ -52,13 +52,12 @@ jobs:
           LIVE: "False"
           SECRET_KEY: "unsafe"
           TESTING: "True"
-        run: |
-          uv run coverage run ./manage.py test -v2 --exclude-tag e2e
-          uv run coverage report -m
+        # A process per CPU, no coverage: nothing reads it (decided
+        # 2026-11-21, COVERAGE=1 ./runtests.sh measures it locally)
+        run: uv run ./manage.py test -v2 --parallel auto --exclude-tag e2e
 
-  # The browser tests (Playwright), only once the fast tests passed
+  # The browser tests (Playwright), next to the Django tests
   e2e:
-    needs: tests
     runs-on: ubuntu-latest
 
     services:
@@ -97,7 +96,9 @@ jobs:
           LIVE: "False"
           SECRET_KEY: "unsafe"
           TESTING: "True"
-        run: uv run ./manage.py test -v2 --tag e2e
+        # Two processes, each with its server and Chromium, on the runner's
+        # four CPUs
+        run: uv run ./manage.py test -v2 --parallel 2 --tag e2e
 
   checks:
     runs-on: ubuntu-latest

@@ -1,11 +1,12 @@
 import datetime as dt
 import re
+from unittest.mock import patch
 from urllib.parse import unquote
 
 from django.test import TestCase
 from django.urls import reverse
 
-from biwak.items import operations as ops
+from biwak.items import operations as ops, views
 from biwak.items.models import Item, Status
 from biwak.test_utils import person, project
 
@@ -97,25 +98,33 @@ class CompletedTest(TestCase):
         self.assertEqual(len(seen), total)
         self.assertEqual(len(set(seen)), total)
 
+    # Small pages: the paging doesn't depend on their size
+    @patch.object(views, "COMPLETED_FIRST", 5)
+    @patch.object(views, "COMPLETED_MORE", 4)
     def test_paging_without_gaps(self):
-        self.complete(120)
+        self.complete(12)
         seen = self.walk(self.ada)
-        self.check_paging(seen, 120)
+        self.check_paging(seen, 12)
         self.assertEqual(seen, sorted(seen, reverse=True))
 
+    @patch.object(views, "COMPLETED_FIRST", 5)
+    @patch.object(views, "COMPLETED_MORE", 4)
     def test_paging_with_equal_completed_at(self):
-        self.complete(120, same_time=True)
-        self.check_paging(self.walk(self.ada), 120)
+        self.complete(12, same_time=True)
+        self.check_paging(self.walk(self.ada), 12)
 
+    @patch.object(views, "COMPLETED_FIRST", 5)
+    @patch.object(views, "COMPLETED_MORE", 4)
     def test_fragment_sizes(self):
-        self.complete(130)
+        self.complete(10)
         first = self.page(self.ada)
+        self.assertEqual(len(self.titles(first)), 5)
         cursor = re.search(r'before=([^"]+)"', first.content.decode()).group(1)
         url = reverse("list_completed", args=[self.list.pk])
         second = self.client.get(url, {"before": unquote(cursor)})
         # Not the whole page: no layout
         self.assertNotContains(second, "<html")
-        self.assertEqual(len(self.titles(second)), 50)
+        self.assertEqual(len(self.titles(second)), 4)
 
     def test_bad_cursor(self):
         self.client.force_login(self.ada)

@@ -100,6 +100,11 @@ def item_out(item):
     }
 
 
+# Pages of lists: the size without ``page_size`` and the largest one
+PAGE_SIZE = 50
+MAX_PAGE_SIZE = 200
+
+
 def paginated(
     request, queryset, out, *, ordering, cursor=None, page_size=None, prepare=None
 ):
@@ -108,7 +113,9 @@ def paginated(
     the queryset's model (it marks the position). ``prepare(objects)`` sees
     the page's objects before they are mapped, to load what they need with
     one query."""
-    paginator = CursorPagination(ordering=ordering, page_size=50, max_page_size=200)
+    paginator = CursorPagination(
+        ordering=ordering, page_size=PAGE_SIZE, max_page_size=MAX_PAGE_SIZE
+    )
     page = paginator.paginate_queryset(
         queryset,
         pagination=paginator.Input(cursor=cursor, page_size=page_size),

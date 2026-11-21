@@ -186,6 +186,7 @@ TEMPLATES = [
     }
 ]
 FORM_RENDERER = "biwak.forms.Renderer"
+TEST_RUNNER = "biwak.test_runner.TestRunner"
 
 LOCALE_PATHS = [BASE_DIR / "conf" / "locale"]
 

@@ -90,9 +90,3 @@ class FeedCLITest(test_cli.CLITest):
             "link", "add", self.project.pk, "https://example.org/", access="read"
         )
         self.assertEqual(result.exit_code, 1)
-
-
-# The tests of test_cli.CLITest run there, not again here
-for _name in dir(test_cli.CLITest):
-    if _name.startswith("test_") and _name not in vars(FeedCLITest):
-        setattr(FeedCLITest, _name, None)
