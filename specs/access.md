@@ -210,6 +210,9 @@ Microsoft account (decided 2026-11-20).
   Google, neither with a matching address nor with a connected account;
   they're sent back to the login page with a message pointing to codes and
   passkeys.
+  To be replaced by sign-in per organization (`sso.md`, specified
+  2026-11-21): SSO for clients too, when their organization's IdP
+  manages their account.
 - No passwords at first; add them only if somebody really needs them
   (allauth's password pages answer 404, `biwak/urls.py`).
 - Sessions last weeks; people can see their sessions and log out
