@@ -405,6 +405,7 @@ class DueTodoOut(TodoOut):
     due_group: Literal["overdue", "today", "this_week", "later", "none"]
     project_name: str
     list_title: str
+    list_position: int
 
 
 @router.get("todos/", response=page_of(DueTodoOut))
@@ -412,28 +413,29 @@ def todo_overview(
     request,
     *,
     project_id: int | None = None,
-    list_id: int | None = None,
     assignee: str | None = None,
     completed: bool = False,
+    grouping: Literal["project", "due"] | None = None,
     visible_to_clients: bool | None = None,
     due_group: Literal["overdue", "today", "this_week", "later", "none"] | None = None,
     cursor: str | None = None,
     page_size: int | None = None,
 ):
     """To-dos across all projects the person sees, by due date (to-dos
-    without one last); ``completed`` the completed ones, the latest first.
+    without one last) or, with ``grouping=project``, by project name, the
+    list's position, the group's position (to-dos outside groups first)
+    and the to-do's; without ``grouping`` the person's choice on the page
+    counts. ``completed`` the completed ones, the latest first.
     ``assignee`` is ``me``, ``nobody`` or a person's ID, ``due_group`` one
     of the groups of the page. Archived projects and lists are left out.
     Clients only ever get what is visible to them."""
     project = project_for(request, project_id) if project_id is not None else None
-    todolist = item_for(request, list_id, Kind.LIST) if list_id is not None else None
     if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
         bad_request(_("assignee is me, nobody or a person's ID."))
     qs = _for_todo_out(
         due.todos(
             request.user,
             project=project,
-            todolist=todolist,
             assignee=assignee or None,
             completed=completed,
             visible_to_clients=visible_to_clients,
@@ -441,7 +443,13 @@ def todo_overview(
         )
     )
     today = schedules.today()
-    ordering = ("-completed_key", "-pk") if completed else ("due_key", "pk")
+    grouping = grouping or request.user.todo_grouping
+    if completed:
+        ordering = ("-completed_key", "-pk")
+    elif grouping == "project":
+        ordering = due.PROJECT_ORDERING
+    else:
+        ordering = ("due_key", "pk")
     if completed:
         qs = qs.annotate(completed_key=F("todo__completed_at"))
     return paginated(
@@ -453,6 +461,7 @@ def todo_overview(
                 "due_group": due.group_of(item.todo.due_on, today),
                 "project_name": item.project.name,
                 "list_title": item.parent.title,
+                "list_position": item.parent.position,
             }
         ),
         ordering=ordering,

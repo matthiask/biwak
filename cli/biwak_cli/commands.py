@@ -565,18 +565,23 @@ def lists(project, as_json):
     type=click.Choice(["overdue", "today", "this_week", "later", "none"]),
     help="Only to-dos in this group by due date.",
 )
+@click.option(
+    "--by-due",
+    is_flag=True,
+    help="Order by due date instead of by project, list and group.",
+)
 @json_option
-def todos(list_id, completed, mine, project_id, due, as_json):
+def todos(list_id, completed, mine, project_id, due, by_due, as_json):
     """The open to-dos of LIST, by group; without LIST across all projects by
     due date (--mine, --project, --due)"""
-    if list_id and (mine or project_id or due):
-        terminate("--mine, --project and --due go without LIST.")
+    if list_id and (mine or project_id or due or by_due):
+        terminate("--mine, --project, --due and --by-due go without LIST.")
     if list_id and completed:
         data = paginate(f"lists/{list_id}/todos/completed/")
     elif list_id:
         data = request("GET", f"lists/{list_id}/todos/")
     else:
-        params = {"completed": completed}
+        params = {"completed": completed, "grouping": "due" if by_due else "project"}
         if mine:
             params["assignee"] = "me"
         if project_id:
@@ -586,6 +591,9 @@ def todos(list_id, completed, mine, project_id, due, as_json):
         data = paginate("todos/", params)
     if as_json:
         return echo_json(data)
+    if not list_id and not completed and not by_due:
+        show_todos_by_project(data)
+        return None
     t = table(
         "ID", "To-do", "Project" if not list_id else "Group", "Assignees", "Due", ""
     )
@@ -602,6 +610,38 @@ def todos(list_id, completed, mine, project_id, due, as_json):
         )
     console.print(t)
     return None
+
+
+def show_todos_by_project(data):
+    """Headings for projects, lists and groups, as the page has them"""
+    seen = None
+    t = None
+    for todo in data:
+        heading = (
+            todo["project_id"],
+            todo["list_id"],
+            (todo["group"] or {}).get("id"),
+        )
+        if heading != seen:
+            if t is not None:
+                console.print(t)
+            if seen is None or heading[0] != seen[0]:
+                console.print(f"[bold]{todo['project_name']}[/bold]")
+            if seen is None or heading[:2] != seen[:2]:
+                console.print(f"  {todo['list_title']}")
+            if todo["group"]:
+                console.print(f"    [dim]{todo['group']['title']}[/dim]")
+            t = table("ID", "To-do", "Assignees", "Due", "")
+            seen = heading
+        t.add_row(
+            str(todo["id"]),
+            todo["title"],
+            names(todo["assignees"]),
+            todo["due_on"] or "",
+            clients(todo),
+        )
+    if t is not None:
+        console.print(t)
 
 
 # One to-do ------------------------------------------------------------------

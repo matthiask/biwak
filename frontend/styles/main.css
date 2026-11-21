@@ -2056,3 +2056,9 @@ main:has([data-hide-title]) [data-edit-open] {
 .wb-row-people .wb-person-link {
   white-space: nowrap;
 }
+
+/* Filter forms apply themselves: the button is for people without JavaScript
+   (frontend/autosubmit.js) */
+.js [data-autosubmit] [data-autosubmit-button] {
+  display: none;
+}

@@ -2745,3 +2745,82 @@ class AvatarTest(E2ETestCase):
             "() => document.querySelector('img.wb-avatar').naturalWidth === 256"
         )
         self.assertEqual(self.errors, [])
+
+
+class FiltersTest(E2ETestCase):
+    """Filter forms apply themselves and are remembered (specs/ui-round-3.md)"""
+
+    def setUp(self):
+        super().setUp()
+        self.make_list("Launch", todos=["Plan"])
+
+    def test_a_select_applies_the_filter_and_keeps_the_focus(self):
+        page = self.page
+        self.goto(page, "/todos/")
+        # Without JavaScript's help the button would be the way; here it's gone
+        expect(page.locator("[data-autosubmit-button]")).to_be_hidden()
+        page.locator("#id_assignee").select_option("nobody")
+        page.wait_for_url("**/todos/?*assignee=nobody*")
+        page.wait_for_function("document.activeElement.name === 'assignee'")
+        page.locator("#id_state").select_option("completed")
+        page.wait_for_url("**state=completed*")
+        page.wait_for_function("document.activeElement.name === 'state'")
+        expect(page.locator("#id_assignee")).to_have_value("nobody")
+        self.assertEqual(self.errors, [])
+
+    def test_a_checkbox_applies_the_lantern_filter(self):
+        page = self.page
+        self.goto(page, "/lantern/")
+        page.locator('input[name="unread"]').check()
+        page.wait_for_url("**/lantern/?unread=1")
+        expect(page.locator('input[name="unread"]')).to_be_checked()
+        page.wait_for_function("document.activeElement.name === 'unread'")
+
+    def test_search_keeps_its_button_and_waits_for_enter(self):
+        page = self.page
+        self.goto(page, "/search/")
+        expect(
+            page.locator("form[data-autosubmit] button[type=submit]")
+        ).to_be_visible()
+        page.locator('input[name="q"]').fill("Plan")
+        page.wait_for_timeout(700)
+        self.assertNotIn("q=", page.url)
+        page.locator('input[name="q"]').press("Enter")
+        page.wait_for_url("**q=Plan*")
+
+    def test_filters_are_restored_through_the_navigation_and_reset(self):
+        page = self.page
+        self.goto(page, "/todos/?assignee=nobody&state=completed")
+        # The link of the top bar goes to the stored filters
+        self.goto(page, "/")
+        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        expect(link).to_have_attribute(
+            "href", "/todos/?assignee=nobody&state=completed"
+        )
+        link.click()
+        page.wait_for_url("**/todos/?assignee=nobody&state=completed")
+        expect(page.locator("#id_state")).to_have_value("completed")
+        # Opening the page by another link uses its own query
+        self.goto(page, "/todos/?assignee=me")
+        expect(page.locator("#id_assignee")).to_have_value("me")
+        # Reset clears what is stored
+        page.get_by_role("link", name="Reset filters").click()
+        page.wait_for_url("**/todos/")
+        self.goto(page, "/")
+        expect(page.locator(".wb-nav-links a", has_text="My to-dos")).to_have_attribute(
+            "href", "/todos/?assignee=me"
+        )
+        # The palette's link too
+        self.goto(page, "/todos/?assignee=nobody")
+        self.goto(page, "/")
+        page.keyboard.press("Control+k")
+        page.locator("#wb-palette-input").fill("my to-dos")
+        page.keyboard.press("Enter")
+        page.wait_for_url("**/todos/?assignee=nobody")
+        self.assertEqual(self.errors, [])
+
+    def test_search_is_not_remembered(self):
+        page = self.page
+        self.goto(page, "/search/?q=Plan")
+        self.assertIsNone(page.evaluate("localStorage.getItem('filters:/search/')"))
+        self.assertEqual(self.errors, [])

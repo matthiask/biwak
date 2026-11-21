@@ -304,8 +304,25 @@ class CLITest(TestCase):
         ops.create_todo(todolist=self.list, title="Nobodys", creator=self.ada)
         ops.create_todo(todolist=other_list, title="Elsewhere", creator=self.ada)
         output = self.biwak("todos").output
-        for title in ["Mine", "Nobodys", "Elsewhere", "Website / Launch", "2020-01-01"]:
+        # By project, with headings
+        for title in [
+            "Mine",
+            "Nobodys",
+            "Elsewhere",
+            "Website",
+            "Launch",
+            "2020-01-01",
+        ]:
             self.assertIn(title, output)
+        self.assertNotIn("Website / Launch", output)
+        self.assertLess(output.index("Other"), output.index("Website"))
+        self.assertLess(output.index("Chores"), output.index("Elsewhere"))
+        self.assertLess(output.index("Website"), output.index("Launch"))
+        # By due date: a column with project and list
+        output = self.biwak("todos", "--by-due").output
+        for title in ["Mine", "Website / Launch", "Other / Chores"]:
+            self.assertIn(title, output)
+        self.assertLess(output.index("Mine"), output.index("Nobodys"))
         output = self.biwak("todos", "--mine").output
         self.assertIn("Mine", output)
         self.assertNotIn("Nobodys", output)
@@ -319,6 +336,7 @@ class CLITest(TestCase):
         self.assertEqual({t["title"] for t in data}, {"Nobodys", "Elsewhere"})
         self.assertEqual(data[0]["due_group"], "none")
         self.assertEqual(self.biwak("todos", self.list.pk, "--mine").exit_code, 1)
+        self.assertEqual(self.biwak("todos", self.list.pk, "--by-due").exit_code, 1)
         # The list's own to-dos stay
         self.assertIn("Nobodys", self.biwak("todos", self.list.pk).output)
 

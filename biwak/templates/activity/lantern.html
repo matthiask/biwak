@@ -16,7 +16,13 @@
       </form>
     </div>
   </div>
-  <form method="get" action="{% url 'lantern' %}" class="d-flex flex-wrap gap-3 align-items-center mb-3">
+  <form
+    method="get"
+    data-autosubmit
+    data-remember
+    action="{% url 'lantern' %}"
+    class="d-flex flex-wrap gap-3 align-items-center mb-3"
+  >
     <label class="form-check mb-0">
       <input type="checkbox" class="form-check-input" name="unread" value="1" {% if unread %}checked{% endif %}>
       {% translate "Unread" %}
@@ -25,8 +31,12 @@
       <input type="checkbox" class="form-check-input" name="mentions" value="1" {% if mentions %}checked{% endif %}>
       {% translate "Mentions only" %}
     </label>
-    <button type="submit" class="btn btn-quiet">{% translate "Filter" %}</button>
-    {% if filtered %}<a href="{% url 'lantern' %}" class="btn btn-quiet">{% translate "Clear" %}</a>{% endif %}
+    <button type="submit" class="btn btn-quiet" data-autosubmit-button>{% translate "Filter" %}</button>
+    {% if filtered %}<a
+        href="{% url 'lantern' %}"
+        class="btn btn-quiet"
+        data-reset-filters
+      >{% translate "Reset filters" %}</a>{% endif %}
   </form>
   <div>
     {% if bookmarked_groups %}

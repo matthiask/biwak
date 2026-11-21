@@ -4,7 +4,7 @@ later and no date. Everything goes through ``Item.objects.visible_to()``."""
 
 import datetime as dt
 
-from django.db.models import DateField, Value
+from django.db.models import DateField, F, Value
 from django.db.models.functions import Coalesce
 
 from biwak import schedules
@@ -55,7 +55,6 @@ def todos(
     user,
     *,
     project=None,
-    todolist=None,
     assignee=None,
     completed=False,
     visible_to_clients=None,
@@ -76,18 +75,20 @@ def todos(
             parent__status=Status.ACTIVE,
             todo__completed_at__isnull=not completed,
         )
-        .select_related("project", "parent", "creator", "todo__previous")
+        .select_related("project", "parent", "creator", "todo__previous", "todo__group")
         .prefetch_related("todo__assignees")
         .annotate(
             due_key=Coalesce(
                 "todo__due_on", Value(NO_DATE_SORT), output_field=DateField()
-            )
+            ),
+            # For ordering by project: to-dos outside groups come first, and
+            # the first ordering field of cursors is a plain annotation
+            project_key=F("project__name"),
+            group_key=Coalesce("todo__group__position", Value(-1)),
         )
     )
     if project is not None:
         qs = qs.filter(project=project)
-    if todolist is not None:
-        qs = qs.filter(parent=todolist)
     if assignee == "me":
         qs = qs.filter(todo__assignees=user)
     elif assignee == "nobody":
@@ -116,3 +117,41 @@ def _in_group(qs, group, today):
 def ordered(qs):
     """Open to-dos by due date, those without one last"""
     return qs.order_by("due_key", "project__name", "parent__position", "position", "pk")
+
+
+PROJECT_ORDERING = (
+    "project_key",
+    "project_id",
+    "parent__position",
+    "parent_id",
+    "group_key",
+    "todo__group_id",
+    "position",
+    "pk",
+)
+
+
+def ordered_by_project(qs):
+    """Open to-dos in the order of the pages: projects by name, lists in
+    their positions, ungrouped to-dos first, then the groups, and each to-do
+    in its position"""
+    return qs.order_by(*PROJECT_ORDERING)
+
+
+def by_project(qs):
+    """``ordered_by_project()`` as ``[(project, [(list, [(group, [to-do])])])]``,
+    ``group`` is ``None`` for to-dos outside groups (listed first). One query:
+    empty projects, lists and groups don't appear."""
+    projects = []
+    for item in ordered_by_project(qs):
+        if not projects or projects[-1][0].pk != item.project_id:
+            projects.append((item.project, []))
+        lists = projects[-1][1]
+        if not lists or lists[-1][0].pk != item.parent_id:
+            lists.append((item.parent, []))
+        groups = lists[-1][1]
+        group = item.todo.group
+        if not groups or (groups[-1][0] and groups[-1][0].pk) != (group and group.pk):
+            groups.append((group, []))
+        groups[-1][1].append(item)
+    return projects

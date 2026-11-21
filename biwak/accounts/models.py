@@ -176,6 +176,18 @@ class User(AbstractBaseUser):
         default=ProjectOrder.ACTIVITY,
     )
 
+    class TodoGrouping(models.TextChoices):
+        PROJECT = "project", _("By project")
+        DUE = "due", _("By due date")
+
+    # How "My to-dos" is grouped, remembered (specs/ui-round-3.md)
+    todo_grouping = models.CharField(
+        _("grouping of to-dos"),
+        max_length=10,
+        choices=TodoGrouping,
+        default=TodoGrouping.PROJECT,
+    )
+
     # Single-key shortcuts, on by default (decided 2026-11-21); Ctrl+K
     # always works
     keyboard_shortcuts = models.BooleanField(_("keyboard shortcuts"), default=True)

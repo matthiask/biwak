@@ -6,8 +6,33 @@
   {% if project %}{% include "_breadcrumbs.html" %}{% endif %}
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
+    {% if not completed %}
+      <div class="wb-page-actions">
+        <form
+          method="post"
+          action="{% url 'todo_grouping' %}"
+          class="btn-group btn-group-sm"
+          role="group"
+          aria-label="{% translate 'Grouping' %}"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% for value, label in groupings %}
+            <button
+              type="submit"
+              name="grouping"
+              value="{{ value }}"
+              class="btn btn-sm {% if value == grouping %}btn-primary{% else %}btn-quiet{% endif %}"
+              {% if value == grouping %}aria-pressed="true"{% endif %}
+            >
+              {{ label }}
+            </button>
+          {% endfor %}
+        </form>
+      </div>
+    {% endif %}
   </div>
-  <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+  <form method="get" data-autosubmit data-remember class="d-flex flex-wrap align-items-end gap-2 mb-4">
     {% for field in form %}
       <div>
         <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -15,8 +40,8 @@
         {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
       </div>
     {% endfor %}
-    <button type="submit" class="btn btn-sm btn-primary">{% translate "Filter" %}</button>
-    <a class="btn btn-sm btn-quiet" href="{{ request.path }}">{% translate "Reset" %}</a>
+    <button type="submit" class="btn btn-sm btn-primary" data-autosubmit-button>{% translate "Filter" %}</button>
+    <a class="btn btn-sm btn-quiet" href="{{ request.path }}" data-reset-filters>{% translate "Reset filters" %}</a>
   </form>
   {% if completed %}
     {% for todo in page %}
@@ -34,6 +59,34 @@
           >{% translate "Older" %}</a>{% endif %}
       </nav>
     {% endif %}
+  {% elif grouping == "project" %}
+    {% for entry_project, lists in projects %}
+      <section class="mb-4" data-project="{{ entry_project.pk }}">
+        {% if not project %}
+          <h2 class="h5 mb-2">
+            {% project_dot entry_project %}<a
+              href="{{ entry_project.get_absolute_url }}"
+              class="text-reset text-decoration-none"
+            >{{ entry_project }}</a>
+          </h2>
+        {% endif %}
+        {% for todolist, groups in lists %}
+          <div class="mb-3" data-list="{{ todolist.pk }}">
+            <h3 class="h6 mb-1">
+              <a href="{{ todolist.get_absolute_url }}" class="text-reset text-decoration-none">{{ todolist }}</a>
+            </h3>
+            {% for group, todos in groups %}
+              {% if group %}<h4 class="small text-body-secondary mt-2 mb-1" data-group="{{ group.pk }}">
+                  {{ group }}
+                </h4>{% endif %}
+              {% for todo in todos %}{% include "items/_due_row.html" with in_project=True %}{% endfor %}
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </section>
+    {% empty %}
+      <p class="text-body-secondary">{% translate "Nothing to do." %}</p>
+    {% endfor %}
   {% else %}
     {% for key, label, todos in sections %}
       <section class="mb-4" data-section="{{ key }}">

@@ -3,10 +3,12 @@ from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 import time_machine
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from icalendar import Calendar
 
-from biwak.accounts.models import APIToken, CalendarToken
+from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.items import due, operations as ops
 from biwak.items.models import Item
 from biwak.projects.models import Membership
@@ -60,6 +62,8 @@ class ByDueTestCase(TestCase):
         self.internal = ops.create_list(
             project=self.project, title="Internal", creator=self.ada
         )
+        # The pages and the API default to the person's choice: by project
+        User.objects.update(todo_grouping="due")
         self.other = project("Other", members=[self.ada])
         self.other_list = ops.create_list(
             project=self.other, title="Elsewhere", creator=self.ada
@@ -69,13 +73,14 @@ class ByDueTestCase(TestCase):
             project=self.limited, title="Hidden", creator=self.bob
         )
 
-    def todo(self, title, due=None, *, todolist=None, assignees=()):
+    def todo(self, title, due=None, *, todolist=None, assignees=(), group=None):
         return ops.create_todo(
             todolist=todolist or self.shared,
             title=title,
             creator=self.ada,
             due_on=d(due) if due else None,
             assignees=assignees,
+            group=group,
         )
 
     def sections(self, response):
@@ -197,7 +202,6 @@ class PageTest(ByDueTestCase):
         self.assertEqual(found(assignee="nobody"), ["Internal", "Nobodys", "Other"])
         self.assertEqual(found(assignee=self.bob.pk), ["Bobs"])
         self.assertEqual(found(project=self.other.pk), ["Other"])
-        self.assertEqual(found(list=self.internal.pk), ["Internal"])
         self.assertEqual(found(visible="yes"), ["Bobs", "Mine", "Nobodys"])
         self.assertEqual(found(visible="no"), ["Internal", "Other"])
         response = self.client.get("/todos/", {"assignee": "me"})
@@ -206,7 +210,6 @@ class PageTest(ByDueTestCase):
         for params in [
             {"assignee": "x"},
             {"project": "x"},
-            {"list": self.limited_list.pk},
         ]:
             with self.subTest(params=params):
                 response = self.client.get("/todos/", params)
@@ -317,9 +320,6 @@ class APITest(ByDueTestCase):
                 self.titles(self.get(self.ada, due_group="later")), ["Far"]
             )
             self.assertEqual(
-                self.titles(self.get(self.ada, list_id=self.internal.pk)), ["Internal"]
-            )
-            self.assertEqual(
                 self.titles(
                     self.get(
                         self.ada, project_id=self.project.pk, visible_to_clients=False
@@ -329,9 +329,6 @@ class APITest(ByDueTestCase):
             )
         self.assertEqual(
             self.get(self.ada, project_id=self.limited.pk).status_code, 404
-        )
-        self.assertEqual(
-            self.get(self.ada, list_id=self.limited_list.pk).status_code, 404
         )
         self.assertEqual(self.get(self.ada, assignee="x").status_code, 400)
         self.assertEqual(self.get(self.ada, due_group="soonish").status_code, 422)
@@ -372,13 +369,11 @@ class APITest(ByDueTestCase):
         self.assertEqual(self.titles(self.get(self.cleo)), ["Visible"])
         for params in [
             {"visible_to_clients": False},
-            {"list_id": self.internal.pk},
             {"assignee": "nobody"},
         ]:
             with self.subTest(params=params):
                 response = self.get(self.cleo, **params)
                 self.assertNotIn("Internal", str(response.content))
-        self.assertEqual(self.get(self.cleo, list_id=self.internal.pk).status_code, 404)
         self.assertEqual(self.get(self.cleo, project_id=self.other.pk).status_code, 404)
         self.assertEqual(self.titles(self.get(self.cleo, assignee="me")), ["Visible"])
         self.assertEqual(self.client.get("/api/v1/todos/").status_code, 401)
@@ -492,3 +487,235 @@ class FeedTest(ByDueTestCase):
             str(event["description"]),
             f"{self.project} / Shared with @{self.bob.get_short_name()}",
         )
+
+
+class ByProjectTest(ByDueTestCase):
+    def setUp(self):
+        super().setUp()
+        User.objects.update(todo_grouping="project")
+        self.doing = ops.create_group(todolist=self.shared.todolist, title="Doing")
+        self.soon = ops.create_group(todolist=self.shared.todolist, title="Soon")
+        self.later_list = ops.create_list(
+            project=self.project, title="Later list", creator=self.ada, visible=True
+        )
+
+    def grouped(self, response):
+        return [
+            (
+                project.name,
+                [
+                    (
+                        todolist.title,
+                        [
+                            (group and group.title, [t.title for t in todos])
+                            for group, todos in groups
+                        ],
+                    )
+                    for todolist, groups in lists
+                ],
+            )
+            for project, lists in response.context["projects"]
+        ]
+
+    def fill(self):
+        self.todo("Z in list two", todolist=self.later_list)
+        self.todo("Second", "2026-11-10")
+        self.todo("First")
+        self.todo("In soon", group=self.soon)
+        self.todo("In doing", group=self.doing)
+        self.todo("Elsewhere", todolist=self.other_list)
+        self.todo("Internal", todolist=self.internal)
+        self.todo("Secret", todolist=self.limited_list)
+
+    def test_projects_lists_groups_and_todos(self):
+        self.fill()
+        self.client.force_login(self.ada)
+        with at("2026-11-18 12:00"):
+            response = self.client.get("/todos/")
+        self.assertEqual(
+            self.grouped(response),
+            [
+                ("Other", [("Elsewhere", [(None, ["Elsewhere"])])]),
+                (
+                    self.project.name,
+                    [
+                        (
+                            "Shared",
+                            [
+                                (None, ["Second", "First"]),
+                                ("Doing", ["In doing"]),
+                                ("Soon", ["In soon"]),
+                            ],
+                        ),
+                        ("Internal", [(None, ["Internal"])]),
+                        ("Later list", [(None, ["Z in list two"])]),
+                    ],
+                ),
+            ],
+        )
+        self.assertContains(response, "Second")
+        self.assertContains(response, 'aria-pressed="true"')
+
+    def test_a_client_sees_no_internal_lists(self):
+        self.fill()
+        self.client.force_login(self.cleo)
+        response = self.client.get("/todos/")
+        self.assertEqual(
+            [(p, [t for t, _g in lists]) for p, lists in self.grouped(response)],
+            [(self.project.name, ["Shared", "Later list"])],
+        )
+        self.assertNotContains(response, "Internal")
+        self.assertNotContains(response, "Elsewhere")
+
+    def test_empty_projects_and_lists_are_left_out(self):
+        self.client.force_login(self.ada)
+        response = self.client.get("/todos/")
+        self.assertEqual(self.grouped(response), [])
+        self.assertContains(response, "Nothing to do.")
+
+    def test_the_project_page_has_no_project_heading(self):
+        self.fill()
+        self.client.force_login(self.ada)
+        response = self.client.get(f"/projects/{self.project.pk}/todos/")
+        self.assertEqual(
+            [name for name, _lists in self.grouped(response)], [self.project.name]
+        )
+        self.assertNotContains(response, 'class="h5 mb-2"')
+        self.assertContains(response, "data-list=")
+        self.assertContains(response, "data-group=")
+
+    def test_the_choice_is_remembered(self):
+        self.fill()
+        self.client.force_login(self.ada)
+        self.assertIn("projects", self.client.get("/todos/").context)
+        response = self.client.post(
+            "/todos/grouping/", {"grouping": "due", "next": "/todos/?assignee=me"}
+        )
+        self.assertRedirects(
+            response, "/todos/?assignee=me", fetch_redirect_response=False
+        )
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.todo_grouping, "due")
+        self.assertIn("sections", self.client.get("/todos/").context)
+        # Without JavaScript the links of the switch carry it
+        self.client.get("/todos/", {"grouping": "project"})
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.todo_grouping, "project")
+        self.assertEqual(
+            self.client.post("/todos/grouping/", {"grouping": "x"}).status_code, 400
+        )
+        self.assertEqual(self.client.get("/todos/grouping/").status_code, 405)
+        # Per person
+        self.bob.refresh_from_db()
+        self.assertEqual(self.bob.todo_grouping, "project")
+        self.client.post("/todos/grouping/", {"grouping": "due"})
+        self.bob.refresh_from_db()
+        self.assertEqual(self.bob.todo_grouping, "project")
+
+    def test_a_next_elsewhere_is_ignored(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            "/todos/grouping/", {"grouping": "due", "next": "https://example.org/"}
+        )
+        self.assertRedirects(response, "/todos/", fetch_redirect_response=False)
+
+    def test_completed_are_not_grouped(self):
+        todo = self.todo("Done")
+        ops.complete(todo, actor=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get("/todos/", {"state": "completed"})
+        self.assertIn("page", response.context)
+        self.assertNotIn("projects", response.context)
+        self.assertContains(response, "Done")
+
+    def test_the_overdue_badge_stays(self):
+        self.todo("Late", "2026-11-10")
+        self.client.force_login(self.ada)
+        with at("2026-11-18 12:00"):
+            response = self.client.get("/todos/")
+        self.assertContains(response, "Overdue")
+
+    def test_the_number_of_queries_stays_the_same(self):
+        self.client.force_login(self.ada)
+        self.fill()
+        self.client.get("/todos/")  # warm up
+        with CaptureQueriesContext(connection) as few:
+            self.client.get("/todos/")
+        for n in range(4):
+            other = project(f"Extra {n}", members=[self.ada])
+            for m in range(2):
+                todolist = ops.create_list(
+                    project=other, title=f"List {m}", creator=self.ada
+                )
+                group = ops.create_group(todolist=todolist.todolist, title=f"Group {m}")
+                for k in range(3):
+                    self.todo(
+                        f"T{n}{m}{k}", "2026-11-10", todolist=todolist, group=group
+                    )
+        with CaptureQueriesContext(connection) as many:
+            response = self.client.get("/todos/")
+        self.assertEqual(len(response.context["projects"]), 6)
+        self.assertEqual(len(many), len(few))
+
+    def test_the_api(self):
+        self.fill()
+        # by project is the person's choice here, "due" the other
+        todos = self.api_get(self.ada)
+        self.assertEqual(
+            [t["title"] for t in todos],
+            [
+                "Elsewhere",
+                "Second",
+                "First",
+                "In doing",
+                "In soon",
+                "Internal",
+                "Z in list two",
+            ],
+        )
+        first = todos[1]
+        self.assertEqual(first["project_name"], self.project.name)
+        self.assertEqual(first["list_title"], "Shared")
+        self.assertEqual(first["list_position"], self.shared.position)
+        self.assertIsNone(first["group"])
+        self.assertEqual(todos[3]["group"]["title"], "Doing")
+        self.assertEqual(todos[3]["group"]["position"], self.doing.position)
+        by_due = self.api_get(self.ada, grouping="due")
+        self.assertEqual(by_due[0]["title"], "Second")
+        self.assertEqual(by_due[-1]["due_group"], "none")
+        self.assertEqual(self.api_get(self.ada, grouping="x", raw=True), 422)
+        # Clients only see what is visible
+        self.assertEqual(
+            [t["title"] for t in self.api_get(self.cleo)],
+            ["Second", "First", "In doing", "In soon", "Z in list two"],
+        )
+
+    def test_api_cursor_pages_keep_the_order(self):
+        self.fill()
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="read")
+        headers = {"authorization": f"Bearer {secret}"}
+        titles, cursor = [], None
+        while True:
+            params = {"page_size": 2} | ({"cursor": cursor} if cursor else {})
+            data = self.client.get("/api/v1/todos/", params, headers=headers).json()
+            titles += [t["title"] for t in data["results"]]
+            cursor = (
+                data["next"] and parse_qs(urlsplit(data["next"]).query)["cursor"][0]
+            )
+            if not cursor:
+                break
+        self.assertEqual(
+            titles, [t["title"] for t in self.api_get(self.ada, size=None)]
+        )
+
+    def api_get(self, user, *, raw=False, size=200, **params):
+        _token, secret = APIToken.create_for(user=user, title="T", access="read")
+        response = self.client.get(
+            "/api/v1/todos/",
+            params | ({"page_size": size} if size else {}),
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        if raw:
+            return response.status_code
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json()["results"]
