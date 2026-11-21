@@ -243,3 +243,12 @@ Built as decided, with these details:
   texts, the stale save for every kind), `biwak/test_e2e_editor.py`
   (`EditingTest`: two browsers, one editing, one ticking; the reloaded text
   with the message).
+
+## Docs: ticks never wait (decided 2026-11-21)
+
+Ticking a doc is never refused because someone has it open in the live
+editor, oneself included: the tick goes into the open editors like an
+API edit (a Yjs update), so nothing is overwritten. The live editor's
+presence only gives the heads-up ("Ada is editing this"). Plain edit
+forms (to-dos, messages, files, answers) still block ticks, since saving
+the form would overwrite them.
