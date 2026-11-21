@@ -100,7 +100,7 @@ own (`notifications.md`); checklists, the toolbar and pasting are
 ## Pages: conventions shared by every part
 
 Decided in the UI rounds (2026-11-21, `ui-round-1.md` to
-`ui-round-6.md`); `AGENTS.md` has the how-to.
+`ui-round-7.md`); `AGENTS.md` has the how-to.
 
 - **Forms open in modals** and every modal form is also a page
   (`AGENTS.md`, "Modals"). Pages show content, not forms: "New list",

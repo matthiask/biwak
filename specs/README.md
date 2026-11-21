@@ -9,8 +9,8 @@ user's own feedback notes: `ui-feedback.md`.
 | `core.md` | built | projects, items, lists, groups, ordering; conventions shared by every page |
 | `access.md` | built | client visibility (one function decides what clients see) and sign-in: the ways in, the sign-in page, sessions |
 | `api-cli.md` | built; agent skills postponed | the API's conventions, the CLI |
-| `notifications.md` | built | events, subscriptions, mentions, levels, mails and digests, replying by mail |
-| `files.md` | built | attachments, the message board, folders, docs with versions, files |
+| `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, mails and digests, replying by mail |
+| `files.md` | built | attachments, the message board, folders as tiles with ordering, drag and drop and uploading several, docs (title from the first line, versions, drafts), files |
 | `todos.md` | built | assignees, the board, the to-do's page, recurrence, the to-dos page, the calendar feed |
 | `rule-widget.md` | built | one control for repeat rules |
 | `feed.md` | built | the activity feed, item history, bookmarks, project links |
@@ -21,7 +21,7 @@ user's own feedback notes: `ui-feedback.md`.
 | `search.md` | built | full-text search across projects |
 | `import-basecamp.md` | built | importing Basecamp 4 projects |
 | `collaboration.md` | built | docs edited together live (Yjs, Channels) |
-| `lantern.md` | built | notifications in the app, live updates, reading by acting |
+| `lantern.md` | built | notifications in the app counted by item, reading by acting, live updates |
 | `keyboard.md` | built | the command palette, shortcuts, the settings page, the palette of colors |
 | `project-colors.md` | built | a color per project |
 | `editor.md` | built | checklists, the toolbar, pasting, ticking while someone edits |
@@ -38,10 +38,9 @@ user's own feedback notes: `ui-feedback.md`.
 | `mail-sending.md` | built | the outbox and sending through Resend, bounces |
 | `sso.md` | built | sign-in per organization, single sign-on allowed or required |
 | `activation.md` | built | people: inviting several at once, invitations, activating, deactivating, resets |
-| `doc-titles.md` | built | a doc's title is its first line |
+| `doc-titles.md` | built | pointer: a doc's title is its first line, now in `files.md` |
 | `two-factor.md` | built | passkeys as a way in, authenticator apps as an optional second factor, organizations requiring one |
-| `ui-round-1.md` … `ui-round-6.md` | built | feedback rounds: where their decisions live now |
-| `ui-round-7.md` | open | files as tiles, folder modals, ordering, drag and drop, new docs opening the editor |
+| `ui-round-1.md` … `ui-round-7.md` | built | feedback rounds: where their decisions live now |
 
 ## Writing a spec for a new part
 
