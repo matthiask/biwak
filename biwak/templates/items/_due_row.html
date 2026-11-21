@@ -1,20 +1,25 @@
 {% load biwak i18n %}
 <div class="wb-todo" data-kb-row>
-  {% include "items/_todo_lead.html" with keep_page=True %}
-  {% client_badge todo %}
-  {% include "items/_signals.html" %}
-  {% include "items/_todo_assignees.html" %}
-  <span class="small text-body-secondary ms-auto">
-    {% if not in_project %}
-      {% if not project %}<a
-          href="{{ todo.project.get_absolute_url }}"
-          class="text-body-secondary"
-        >{% project_dot todo.project %}{{ todo.project }}</a> /{% endif %}
-      <a href="{{ todo.parent.get_absolute_url }}" class="text-body-secondary">{{ todo.parent }}</a>
-    {% endif %}
-    {% if todo.todo.due_on %}{% if not in_project %}·{% endif %} {% due_badge todo.todo "D, j. M Y" %}{% endif %}
-    {% if todo.todo.is_completed %}·
-      {% blocktranslate with day=todo.todo.completed_at|date:"j. M Y" %}completed {{ day }}{% endblocktranslate %}{% endif %}
-  </span>
-  <div class="wb-peek w-100" id="peek-{{ todo.pk }}"></div>
+  {% include "items/_todo_check.html" with keep_page=True %}
+  <div class="wb-todo-body">
+    {% include "items/_todo_title.html" %}
+    {% client_badge todo %}
+    <div class="wb-todo-meta">
+      {% include "items/_signals.html" %}
+      {% include "items/_todo_assignees.html" %}
+      <span class="small text-body-secondary">
+        {% if not in_project %}
+          {% if not project %}<a
+              href="{{ todo.project.get_absolute_url }}"
+              class="text-body-secondary"
+            >{% project_dot todo.project %}{{ todo.project }}</a> /{% endif %}
+          <a href="{{ todo.parent.get_absolute_url }}" class="text-body-secondary">{{ todo.parent }}</a>
+        {% endif %}
+        {% if todo.todo.due_on %}{% if not in_project %}·{% endif %} {% due_badge todo.todo "D, j. M Y" %}{% endif %}
+        {% if todo.todo.is_completed %}·
+          {% blocktranslate with day=todo.todo.completed_at|date:"j. M Y" %}completed {{ day }}{% endblocktranslate %}{% endif %}
+      </span>
+    </div>
+  </div>
+  <div class="wb-peek" id="peek-{{ todo.pk }}"></div>
 </div>

@@ -1,7 +1,13 @@
+import datetime as dt
+
+import time_machine
 from django.template import Context, Template
 from django.test import TestCase
+from django.utils import timezone
 
+from biwak.items import operations as ops
 from biwak.templatetags.biwak import excerpt
+from biwak.test_utils import person, project
 
 
 class ExcerptTest(TestCase):
@@ -51,3 +57,31 @@ class ExcerptTest(TestCase):
             Context({"text": "alpha beta gamma"})
         )
         self.assertEqual(html, "alpha…")
+
+
+class AgoTest(TestCase):
+    def ago(self, delta):
+        return Template("{% load biwak %}{{ when|ago }}").render(
+            Context({"when": timezone.now() - delta})
+        )
+
+    def test_under_a_minute_is_just_now_never_0_minutes(self):
+        self.assertEqual(self.ago(dt.timedelta(0)), "just now")
+        self.assertEqual(self.ago(dt.timedelta(seconds=59)), "just now")
+
+    def test_longer_ago(self):
+        self.assertEqual(self.ago(dt.timedelta(minutes=5)), "5\xa0minutes ago")
+        self.assertEqual(self.ago(dt.timedelta(hours=3)), "3\xa0hours ago")
+
+    def test_a_project_pages_activity(self):
+        ada = person("Ada")
+        self.client.force_login(ada)
+        shared = project(members=[ada])
+        ops.create_list(project=shared, title="Launch", creator=ada)
+        with time_machine.travel(timezone.now(), tick=False) as traveller:
+            html = self.client.get(shared.get_absolute_url()).content.decode()
+            self.assertIn("just now", html)
+            self.assertNotIn("0\xa0minutes", html)
+            traveller.shift(dt.timedelta(minutes=5))
+            html = self.client.get(shared.get_absolute_url()).content.decode()
+            self.assertIn("5\xa0minutes ago", html)

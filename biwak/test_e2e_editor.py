@@ -317,11 +317,15 @@ class ToolbarTest(E2ETestCase):
         self.assertEqual(self.value(), "see [docs](url)")
         self.assertEqual(self.errors, [])
 
-    def test_the_toolbar_scrolls_on_a_phone(self):
+    def test_the_toolbar_wraps_on_a_phone(self):
         self.page.set_viewport_size({"width": 320, "height": 600})
-        height = self.bar.evaluate("el => el.getBoundingClientRect().height")
-        self.assertLess(height, 60)
-        self.assertTrue(self.bar.evaluate("el => el.scrollWidth > el.clientWidth"))
+        # No sideways scrolling, in a second row at most, all in the screen
+        self.assertTrue(self.bar.evaluate("el => el.scrollWidth <= el.clientWidth"))
+        buttons = self.bar.locator("button")
+        self.assertGreater(buttons.count(), 0)
+        for index in range(buttons.count()):
+            box = buttons.nth(index).bounding_box()
+            self.assertLessEqual(box["x"] + box["width"], 320)
         self.assertTrue(
             self.page.evaluate(
                 "() => document.documentElement.scrollWidth <= window.innerWidth"

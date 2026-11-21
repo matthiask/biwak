@@ -1,0 +1,4 @@
+{% load biwak i18n %}
+{% comment %}"New group", on the line of the last "Add a to-do" (specs/ui-round-4.md, 5.3).{% endcomment %}
+<a class="btn btn-sm btn-quiet" href="{% url 'group_create' item.pk %}" data-modal>{% icon "plus-lg" %}<span
+  >{% translate "New group" %}</span></a>

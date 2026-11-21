@@ -1,13 +1,23 @@
 {% load biwak i18n %}
+{% comment %}
+  A to-do's row, a grid: handle | check | body. The body has the title,
+  then a line with the assignees, the due date and the signals; the title
+  wraps inside it (specs/ui-round-4.md).
+{% endcomment %}
 <div class="wb-todo" data-todo="{{ todo.pk }}" id="todo-{{ todo.pk }}" data-live data-kb-row>
   {% if not todo.todo.is_completed %}<span
       class="wb-handle"
       data-handle
       title="{% translate 'Drag to move; click several to move them together' %}"
     >{% icon "grip-vertical" %}</span>{% endif %}
-  {% include "items/_todo_lead.html" %}
-  {% include "items/_todo_assignees.html" %}
-  {% due_badge todo.todo %}
-  {% include "items/_signals.html" %}
-  <div class="wb-peek w-100" id="peek-{{ todo.pk }}"></div>
+  {% include "items/_todo_check.html" %}
+  <div class="wb-todo-body">
+    {% include "items/_todo_title.html" %}
+    <div class="wb-todo-meta">
+      {% include "items/_todo_assignees.html" %}
+      {% due_badge todo.todo %}
+      {% include "items/_signals.html" %}
+    </div>
+  </div>
+  <div class="wb-peek" id="peek-{{ todo.pk }}"></div>
 </div>

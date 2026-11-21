@@ -504,8 +504,13 @@ class TodoDetailForm(TodoFieldsForm):
 
 class CommentForm(Form):
     content = forms.CharField(
-        label=_("comment"), widget=forms.Textarea(attrs={"rows": 3})
+        label=_("Comment"), widget=forms.Textarea(attrs={"rows": 3})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The "Comments" heading is right above the field
+        self.fields["content"].hide_label = True
 
 
 def todo(request, pk, *, edit=False):

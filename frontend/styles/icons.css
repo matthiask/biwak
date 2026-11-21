@@ -37,6 +37,9 @@
 .bi-archive::before {
   content: "\f10d";
 }
+.bi-arrow-counterclockwise::before {
+  content: "\f117";
+}
 .bi-arrow-down::before {
   content: "\f128";
 }

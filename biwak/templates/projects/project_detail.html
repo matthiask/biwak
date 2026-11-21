@@ -16,14 +16,18 @@
           {{ project.description|markdown }}
         </div>{% endif %}
     </div>
-    <div class="wb-page-actions">
-      <a class="btn btn-sm btn-quiet" href="{% url 'project_todos' project.pk %}">{% icon "calendar-event" %}<span
-        >{% translate "To-dos by due date" %}</span></a>
-      <a class="btn btn-sm btn-quiet" href="{% url 'project_checkins' project.pk %}">{% icon "chat-square-text" %}<span
-        >{% translate "Check-ins" %}</span></a>
+    <div class="wb-page-actions is-compact">
+      <a
+        class="btn btn-sm btn-quiet wb-phone-hide"
+        href="{% url 'project_todos' project.pk %}"
+      >{% icon "calendar-event" %}<span>{% translate "To-dos by due date" %}</span></a>
+      <a
+        class="btn btn-sm btn-quiet wb-phone-hide"
+        href="{% url 'project_checkins' project.pk %}"
+      >{% icon "chat-square-text" %}<span>{% translate "Check-ins" %}</span></a>
       {% bookmark_button project %}
       {% if not is_member and not request.user.is_client %}
-        <form method="post" action="{% url 'project_join' project.pk %}">
+        <form method="post" action="{% url 'project_join' project.pk %}" class="wb-phone-hide">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm btn-quiet">
             {% icon "person-plus" %}<span>{% translate "Join" %}</span>
@@ -36,6 +40,21 @@
           {% icon "chevron-down" %}
         </summary>
         <div class="dropdown-menu dropdown-menu-end">
+          {# What the header doesn't show on phones #}
+          <a
+            class="dropdown-item wb-phone-only"
+            href="{% url 'project_todos' project.pk %}"
+          >{% translate "To-dos by due date" %}</a>
+          <a
+            class="dropdown-item wb-phone-only"
+            href="{% url 'project_checkins' project.pk %}"
+          >{% translate "Check-ins" %}</a>
+          {% if not is_member and not request.user.is_client %}
+            <form method="post" action="{% url 'project_join' project.pk %}" class="wb-phone-only">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item">{% translate "Join" %}</button>
+            </form>
+          {% endif %}
           <a
             class="dropdown-item"
             href="{% url 'project_notifications' project.pk %}"

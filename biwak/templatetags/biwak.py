@@ -1,3 +1,4 @@
+import datetime as dt
 import html
 import re
 
@@ -428,10 +429,12 @@ def client_badge(item):
 
 
 @register.inclusion_tag("items/_due_badge.html")
-def due_badge(todo, date_format="j. M"):
+def due_badge(todo, date_format="j. M", *, badge_only=False):
     """A to-do's due date (``todo``: the item's ``Todo`` detail), as a
     danger badge when it's open and past due, as a quiet "Today" badge on
-    the day, else as plain text; nothing without a date. One place for
+    the day, else as plain text; nothing without a date. ``badge_only``:
+    just the badge, without the day, and nothing when it would be plain
+    text (next to the date, on the to-do's page). One place for
     lists, the board, "my to-dos" and the to-do's page (specs/ui-round-1.md,
     part 5)."""
     from biwak.items import due
@@ -440,7 +443,21 @@ def due_badge(todo, date_format="j. M"):
         "due_on": todo.due_on,
         "state": due.badge_state(todo),
         "date_format": date_format,
+        "badge_only": badge_only,
     }
+
+
+@register.filter
+def ago(when):
+    """How long ago, "just now" under a minute (``timesince`` says "0
+    minutes"), else "5 minutes ago" """
+    from django.utils import timezone
+    from django.utils.timesince import timesince
+
+    now = timezone.now()
+    if now - when < dt.timedelta(minutes=1):
+        return gettext("just now")
+    return gettext("%(time)s ago") % {"time": timesince(when, now)}
 
 
 @register.simple_tag

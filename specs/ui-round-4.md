@@ -5,7 +5,17 @@ buttons of varying heights, and the checkbox and drag handle alone on
 their line. Screenshots at 390 px wide of a list, a to-do and a project
 page showed more of the same kind.
 
-**Status:** open (spec, 2026-11-21).
+**Status:** sections 1 to 4 and 5.2 and 5.3 built on branch `ui4-layout`
+(2026-11-21); 5.1, 5.4, 5.5 and 5.6 are other branches. Decisions on the
+way: the header's actions are one row at the `btn-sm` height (2rem), phones
+(under 576 px) get icons only (`.wb-label`) and "More" with what's
+`.wb-phone-hide` in the header (`.wb-phone-only` in the menu), on lists,
+to-dos and projects (`.is-compact`: no wrapping); the to-do row is a grid
+(handle | check | body, the title then a line with assignees, due date and
+signals; "My to-dos" has the same, its list and due date in that line); the
+to-do page's badge says "Overdue" or "Today" next to the date; relative
+times use the `ago` filter ("just now"); "New group" sits in the row of the
+last group's "Add a to-do" (or the ungrouped one without groups).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`. Every change gets a browser test at 390 px (`PhoneTest`)

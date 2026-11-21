@@ -35,7 +35,10 @@
   </fieldset>
 {% else %}
   <div class="mb-3">
-    {% if field.label %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
+    {% if field.label %}<label
+        class="form-label{% if field.field.hide_label %} visually-hidden{% endif %}"
+        for="{{ field.id_for_label }}"
+      >{{ field.label }}</label>{% endif %}
     {{ field }}
     {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}

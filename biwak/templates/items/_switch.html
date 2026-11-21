@@ -11,7 +11,7 @@
       <button type="submit" class="btn btn-sm btn-quiet">
         {% icon "lock" %}<span>{% translate "Hide from clients" %}</span>
       </button>
-      <span class="text-body-secondary">
+      <span class="wb-switch-help text-body-secondary">
         {% if kind == "list" %}
           {% translate "Hides the list, its to-dos and their comments again, also what clients wrote." %}
         {% elif kind == "checkin" %}
@@ -25,7 +25,7 @@
       <button type="submit" class="btn btn-sm btn-quiet">
         {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
       </button>
-      <span class="text-body-secondary">
+      <span class="wb-switch-help text-body-secondary">
         {% if kind == "checkin" %}
           {% translate "Makes the check-in, its answers and their comments visible to the project's clients." %}
         {% else %}

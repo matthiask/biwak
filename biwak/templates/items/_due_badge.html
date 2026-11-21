@@ -8,11 +8,11 @@
       class="badge wb-tone-danger"
       data-due="overdue"
       title="{{ due_on|date:'l, j. F Y' }}"
-    >{% blocktranslate with day=due_on|date:"j. M" %}Overdue · {{ day }}{% endblocktranslate %}</span>{% elif state == "today" %}<span
+    >{% if badge_only %}{% translate "Overdue" %}{% else %}{% blocktranslate with day=due_on|date:"j. M" %}Overdue · {{ day }}{% endblocktranslate %}{% endif %}</span>{% elif state == "today" %}<span
       class="badge wb-tone-neutral"
       data-due="today"
       title="{{ due_on|date:'l, j. F Y' }}"
-    >{% translate "Today" %}</span>{% else %}<span
+    >{% translate "Today" %}</span>{% elif not badge_only %}<span
       class="small text-body-secondary"
       data-due="later"
     >{% icon "calendar-event" %}
