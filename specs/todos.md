@@ -12,8 +12,13 @@ checklist in `AGENTS.md`.
 
 ## Built
 
-- **Assignees:** any number, staff and clients (clients only on visible
-  to-dos, `assignable_people()`); completing completes for everybody and
+- **Assignees:** any number, everybody who can see the to-do: staff
+  (in all-access projects every staff member), clients only on visible
+  to-dos. Assigning somebody who isn't a member makes them a member,
+  recorded as added (`add_member()`, decided 2026-11-21). One rule in
+  `ops.assignable_people()` for the forms (members first), the API and
+  the next to-do of a recurring one, which leaves out assignees removed
+  from the project since instead of adding them again; completing completes for everybody and
   records who did it; assigning subscribes the assignee. Notifying them
   is `notifications.md`.
 - **Board view:** a list's groups as columns, ungrouped to-dos in a first
@@ -33,10 +38,14 @@ checklist in `AGENTS.md`.
 A small module of its own, `biwak/schedules.py`, used here and by
 check-ins (`checkins.md`):
 
-- A rule as an RRULE string (`python-dateutil`), validated on save.
+- A rule as an RRULE string (`python-dateutil`), validated on save:
+  `INTERVAL` from 1 to 99 (the widget's maximum), no day 0 in
+  `BYMONTHDAY` or `BYSETPOS`, at least two dates (decided 2026-11-21:
+  `INTERVAL=0` made dateutil loop forever).
 - `next_date(rule, after, tz)`: the next date of the rule after a date,
   in the installation's time zone (`TIME_ZONE`); check-ins add a time of
-  day.
+  day. A stored rule which isn't valid gives no date, never an error or
+  a hang.
 - Presets for the forms, each with a human description: every weekday,
   every week on a chosen day, every two weeks, every month on the same
   day, the first (or last) weekday of the month, every three months,
@@ -44,6 +53,20 @@ check-ins (`checkins.md`):
   users.
 - `describe(rule)`: a short English text ("every Monday", "the first
   Monday of every month") for pages and the API.
+
+- **Rules are stored in canonical form** (decided 2026-11-21): `validate()`
+  normalizes what the API, the CLI or an importer send (parts in a fixed
+  order, lists sorted, `INTERVAL=1` and `WKST=MO` dropped), so equal
+  schedules are equal strings; existing rules are normalized once by a
+  migration. The meaning never changes.
+  Built 2026-11-21: the order is `FREQ`, `INTERVAL`, `BYMONTH`, `BYDAY`,
+  `BYMONTHDAY`, `BYSETPOS`, `WKST` (the presets' and the widget's, so
+  their rules were canonical already); days in week order with numbers
+  plain (`-1FR,+1MO` is `1MO,-1FR`), numbers ascending, repeats dropped;
+  dateutil's `MO(+1)` is refused. `checkins/0005_canonical_rules` rewrites
+  the stored to-do and question rules without events and without
+  touching `next_at` (rules no longer valid stay as they are). The API
+  and the CLI return the stored rule.
 
 ### Recurring to-dos
 
@@ -99,7 +122,8 @@ All proposed by the building agent, 2026-11-20; change them here if wrong.
 - **Next to-do:** created by the original creator, with the "created"
   event by whoever completed it; assignees who are inactive or can't see
   it any more are left out.
-- **Form:** the "Repeat" select, a field for the custom rule, the end date
+- **Form:** the rule widget (`specs/rule-widget.md`, since 2026-11-20; it
+  replaced the preset select and the custom rule field), the end date
   and "repeats left"; a missing "Repeat" field on a posted form removes
   the rule.
 - **API:** `recurrence` accepts a preset name (counted from the due date
@@ -113,6 +137,8 @@ All proposed by the building agent, 2026-11-20; change them here if wrong.
   the due date (`schedules.preset_for`), else "custom", so saving the
   form with only the title changed keeps a rule set through the API or
   the CLI for another weekday or day (it became `BYDAY=FR` before).
+  Superseded by the widget: rules are explicit, and rules it can't show
+  stay unchanged unless "Replace" is pressed.
 
 ### Done when (stage 1)
 

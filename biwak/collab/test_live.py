@@ -179,6 +179,37 @@ class LiveTest(TestCase):
             Subscription.objects.get(item=self.item, user=self.bob).added_by, self.ada
         )
 
+    def test_clients_mention_members_only_also_when_typing_with_others(self):
+        """Bob is staff and sees the doc, but isn't a member: Cleo's mention
+        of him doesn't count, Ada's does; saved again with Ada as the first
+        author, Cleo's stays rejected (it was in the text before)"""
+        doc = ops.create_doc(
+            project=self.project, title="Ours", creator=self.cleo, visible=True
+        )
+        self.item, self.doc = doc, doc.doc
+        bob = f"[@Bob](person:{self.bob.pk})"
+        self.type(self.cleo, f"Hi {bob}")
+        self.type(self.ada, f"Hi {bob}, and Ada")
+        with self.captureOnCommitCallbacks(execute=True):
+            operations.save_live(self.doc.pk)
+        self.assertFalse(Event.objects.filter(data__has_key="mentioned").exists())
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
+
+        self.type(self.ada, f"Hi {bob}, and Ada. Hi {bob}")
+        with self.captureOnCommitCallbacks(execute=True):
+            operations.save_live(self.doc.pk)
+        self.assertFalse(Event.objects.filter(data__has_key="mentioned").exists())
+
+        self.type(self.ada, "Hi")
+        operations.save_live(self.doc.pk)
+        self.type(self.ada, f"Hi {bob}")
+        with self.captureOnCommitCallbacks(execute=True):
+            operations.save_live(self.doc.pk)
+        event = Event.objects.get(data__has_key="mentioned")
+        self.assertEqual(
+            (event.actor, event.data["mentioned"]), (self.ada, [self.bob.pk])
+        )
+
     def test_what_people_who_lost_access_typed_is_dropped(self):
         """Bob is staff, not a member: the project made limited before the
         save, what he typed is gone (and so are his event and mentions)"""

@@ -4,7 +4,7 @@ unsubscribing from mails (specs/feed.md, specs/notifications.md)"""
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import BadRequest, PermissionDenied
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,7 +18,7 @@ from biwak.accounts.models import MailDelivery, NotificationLevel, User
 from biwak.activity import feed as feed_module, history, mentions
 from biwak.activity.mails import read_unsubscribe_token
 from biwak.activity.models import Action, LevelOverride
-from biwak.activity.notify import can_see, effective_level
+from biwak.activity.notify import can_see, level_choices
 from biwak.activity.operations import (
     set_level_override,
     set_notification_settings,
@@ -27,6 +27,7 @@ from biwak.activity.operations import (
 from biwak.forms import Form, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
+from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
 
@@ -80,7 +81,9 @@ def feed_page(request, *, title, url, project=None, person=None):
         visible_to_clients=filters.get("clients", False),
     )
     try:
-        found, more = feed_module.page(events, request.GET.get("before"))
+        found, more = feed_module.page(
+            events, request.GET.get("before"), user=request.user
+        )
     except ValueError:
         return HttpResponseBadRequest("Invalid cursor.")
     today = timezone.localdate()
@@ -166,6 +169,28 @@ def mentionable_list(request, pk):
     return mentionable(request, pk, Kind.LIST)
 
 
+def mentionable_new(request, pk):
+    """For messages, docs and files not created yet: the people who will see
+    them. ``?visible=1`` for visible to clients, ``?folder=`` for the folder
+    of a doc or file (it decides, like when saving); clients always create
+    what clients see."""
+    project = project_for(request, pk)
+    visible = request.user.is_client or bool(request.GET.get("visible"))
+    if folder_id := request.GET.get("folder"):
+        if not folder_id.isdecimal():
+            raise Http404
+        folder = item_for(request, folder_id, Kind.FOLDER)
+        if folder.project_id != project.pk:
+            raise Http404
+        visible = folder.is_client_visible
+    return JsonResponse(
+        mentions.candidates_for(
+            project, visible, request.GET.get("q", ""), for_user=request.user
+        ),
+        safe=False,
+    )
+
+
 class SettingsForm(Form):
     notification_level = forms.ChoiceField(
         label=_("Notify me about"),
@@ -216,12 +241,19 @@ def notification_settings(request):
         .filter(pk__in=[o.item_id for o in overrides if o.item_id])
         .values_list("pk", flat=True)
     )
+    # Projects one has left: their overrides stay, but aren't shown
+    projects = set(
+        Project.objects
+        .accessible_to(request.user)
+        .filter(pk__in=[o.project_id for o in overrides if o.project_id])
+        .values_list("pk", flat=True)
+    )
     return render(
         request,
         "activity/notification_settings.html",
         {
             "form": form,
-            "project_overrides": [o for o in overrides if o.project_id],
+            "project_overrides": [o for o in overrides if o.project_id in projects],
             "item_overrides": [o for o in overrides if o.item_id in visible],
         },
     )
@@ -231,19 +263,8 @@ def _level(request):
     """The level posted, None for the person's default"""
     level = request.POST.get("level") or None
     if level is not None and level not in NotificationLevel.values:
-        raise Http404
+        raise BadRequest("Invalid level.")
     return level
-
-
-def level_choices(default):
-    return [
-        (
-            "",
-            gettext("As usual (%(level)s)")
-            % {"level": NotificationLevel(default).label},
-        ),
-        *NotificationLevel.choices,
-    ]
 
 
 @never_cache
@@ -276,16 +297,6 @@ def item_notifications(request, pk):
     return redirect(next_url(request) or item)
 
 
-def item_level_context(user, item):
-    """For the form next to the subscribe button"""
-    override = LevelOverride.objects.filter(user=user, item=item).first()
-    default = effective_level(user, item.parent, project=item.project)
-    return {
-        "level": override.level if override else "",
-        "level_choices": level_choices(default),
-    }
-
-
 @login_not_required
 @csrf_exempt
 @never_cache
@@ -303,13 +314,18 @@ def unsubscribe(request, token):
     if request.method == "POST":
         unsubscribe_from(user, item)
         done = True
+    title = ""
+    # Only who may still see it learns the title, with the names the
+    # mail's recipient may know (not who's logged in, if anybody)
+    if can_see(user, item):
+        with mentions.reading_as(user):
+            title = mentions.plain(item.title, item)
     return render(
         request,
         "activity/unsubscribe.html",
         {
             "done": done,
-            # Only who may still see it learns the title
-            "title": mentions.plain(item.title, item) if can_see(user, item) else "",
+            "title": title,
             "item": item,
         },
     )

@@ -4,25 +4,24 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak.activity.history import diff_lines
 from biwak.collab import live
-from biwak.files import operations
+from biwak.files import operations, queries
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.library import (
     breadcrumbs,
     folder_choices,
     folder_param,
-    staff_only,
 )
 from biwak.forms import Form
 from biwak.items import operations as ops
 from biwak.items.models import Kind
 from biwak.items.views import item_for
+from biwak.permissions import staff_only
 from biwak.projects.views import project_for
 
 
@@ -50,6 +49,7 @@ def doc_new(request, pk):
     if not ops.can_create(request.user, Kind.DOC):
         raise PermissionDenied
     form = NewDocForm(request.POST or None, project=project)
+    form.mention_fields(project, "title", "content", folder=folder)
     if form.is_valid():
         data = form.cleaned_data
         item = ops.create_doc(
@@ -168,12 +168,9 @@ def doc_version(request, pk, version_pk):
     """An older version with what changed since the one before it"""
     item = item_for(request, pk, Kind.DOC)
     staff_only(request)
-    versions = list(item.doc.versions.select_related("created_by"))
-    index = next((i for i, v in enumerate(versions) if v.pk == version_pk), None)
-    if index is None:
-        return HttpResponse(status=404)
-    version = versions[index]
-    before = versions[index + 1] if index + 1 < len(versions) else None
+    versions = item.doc.versions.select_related("created_by")
+    version = get_object_or_404(versions, pk=version_pk)
+    before, is_latest = queries.neighbours(versions, version)
     return render(
         request,
         "files/doc_version.html",
@@ -182,7 +179,7 @@ def doc_version(request, pk, version_pk):
             "breadcrumbs": breadcrumbs(item),
             "version": version,
             "before": before,
-            "is_latest": index == 0,
+            "is_latest": is_latest,
             "diff": diff_lines(before.content if before else "", version.content),
         },
     )

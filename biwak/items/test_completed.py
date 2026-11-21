@@ -52,6 +52,18 @@ class CompletedTest(TestCase):
         response = self.page(self.ada)
         self.assertNotContains(response, "Completed (")
 
+    def test_completed_to_dos_have_no_drag_handles(self):
+        """Nothing sorts the completed section, open to-dos keep theirs"""
+        self.complete(2)
+        ops.create_todo(todolist=self.list, title="Open", creator=self.ada)
+        html = self.page(self.ada).content.decode()
+        self.assertEqual(html.count("data-handle"), 1)
+        # Also the pages "Show more" loads
+        self.client.force_login(self.ada)
+        more = self.client.get(reverse("list_completed", args=[self.list.pk]))
+        self.assertNotContains(more, "data-handle")
+        self.assertContains(more, "Done 001")
+
     def test_short_list_has_no_show_more(self):
         self.complete(20)
         response = self.page(self.ada)
@@ -72,7 +84,9 @@ class CompletedTest(TestCase):
         response = self.page(user)
         seen = self.titles(response)
         url = None
-        while match := re.search(r'hx-get="([^"]+)"', response.content.decode()):
+        while match := re.search(
+            r'hx-get="(/lists/[^"]+/completed/[^"]+)"', response.content.decode()
+        ):
             url = match.group(1).replace("&amp;", "&")
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)

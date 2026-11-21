@@ -40,6 +40,21 @@ IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/avif
 INLINE_TYPES = IMAGE_TYPES | {"application/pdf"}
 
 
+class ContentTypeMixin:
+    """What attachments and file versions share: how their content type
+    is shown"""
+
+    content_type: str
+
+    @property
+    def is_image(self):
+        return self.content_type in IMAGE_TYPES
+
+    @property
+    def is_inline(self):
+        return self.content_type in INLINE_TYPES
+
+
 def new_key():
     return get_random_string(KEY_LENGTH, KEY_CHARS)
 
@@ -49,10 +64,35 @@ def content_type_for(name):
     return mimetypes.guess_type(name)[0] or "application/octet-stream"
 
 
+# The stored name is shortened to this many bytes (file systems allow 255
+# bytes, and the folder's key and the path need room); the shown name is
+# the full one (``Attachment.name``)
+STORAGE_NAME_BYTES = 100
+
+
+def storage_name(filename):
+    """The name a file is stored under: ASCII-safe characters of the name
+    and its extension, at most ``STORAGE_NAME_BYTES`` bytes long, never
+    empty ("file" for names of only symbols). Files already stored keep
+    their names."""
+    stem, dot, extension = str(filename).rpartition(".")
+    if not dot:
+        stem, extension = extension, ""
+    stem = _unsafe.sub("", "_".join(stem.split()))
+    extension = _unsafe.sub("", extension)[:20].encode()[:20].decode()
+    stem = stem.strip("._")
+    room = STORAGE_NAME_BYTES - len(extension.encode()) - (1 if extension else 0)
+    stem = stem.encode()[:room].decode(errors="ignore") or "file"
+    return f"{stem}.{extension}" if extension else stem
+
+
+_unsafe = re.compile(r"[^-\w.]")
+
+
 def attachment_path(attachment, filename):
     """files/<project>/<key>/<name>: names never collide, paths can't be
     guessed"""
-    return f"files/{attachment.project_id}/{attachment.key}/{filename}"
+    return f"files/{attachment.project_id}/{attachment.key}/{storage_name(filename)}"
 
 
 class AttachmentQuerySet(models.QuerySet):
@@ -72,7 +112,7 @@ class AttachmentQuerySet(models.QuerySet):
         )
 
 
-class Attachment(models.Model):
+class Attachment(ContentTypeMixin, models.Model):
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -115,14 +155,6 @@ class Attachment(models.Model):
         return reverse("attachment", kwargs={"key": self.key, "name": self.name})
 
     @property
-    def is_image(self):
-        return self.content_type in IMAGE_TYPES
-
-    @property
-    def is_inline(self):
-        return self.content_type in INLINE_TYPES
-
-    @property
     def markdown(self):
         """What the text gets: an image or a link"""
         name = re.sub(r"([\\\[\]])", r"\\\1", " ".join(self.name.split()))
@@ -141,10 +173,11 @@ def delete_file(sender, instance, **kwargs):
 
 def version_path(version, filename):
     """files/<project>/<key>/<name>, like attachments"""
-    return f"files/{version.upload.item.project_id}/{new_key()}/{filename}"
+    project_id = version.upload.item.project_id
+    return f"files/{project_id}/{new_key()}/{storage_name(filename)}"
 
 
-class FileVersion(models.Model):
+class FileVersion(ContentTypeMixin, models.Model):
     """A version of an uploaded file (kind ``file``); the newest is the
     current one. Visible exactly when its file's item is."""
 
@@ -175,17 +208,10 @@ class FileVersion(models.Model):
         return self.name
 
     @property
-    def is_image(self):
-        return self.content_type in IMAGE_TYPES
-
-    @property
-    def is_inline(self):
-        return self.content_type in INLINE_TYPES
-
-    @property
     def has_preview(self):
-        """Images and PDFs get a preview (``biwak.files.previews``)"""
-        return self.content_type in IMAGE_TYPES | {"application/pdf"}
+        """Images and PDFs get a preview (``biwak.files.previews``): what
+        browsers show"""
+        return self.is_inline
 
 
 @receiver(post_delete, sender=FileVersion)
@@ -194,11 +220,16 @@ def delete_version_files(sender, instance, **kwargs):
     commits"""
     name, storage = instance.file.name, instance.file.storage
     if name:
-        preview = preview_name(name)
-        transaction.on_commit(lambda: (storage.delete(name), storage.delete(preview)))
+        names = [name, preview_name(name), failed_preview_name(name)]
+        transaction.on_commit(lambda: [storage.delete(n) for n in names])
 
 
 def preview_name(name):
     """The preview is stored in a folder next to the file: file names
     have no slashes, so none can be named like it"""
     return f"{name.rsplit('/', 1)[0]}/preview/preview.webp"
+
+
+def failed_preview_name(name):
+    """An empty file next to the preview: making it failed, don't try again"""
+    return f"{name.rsplit('/', 1)[0]}/preview/failed"

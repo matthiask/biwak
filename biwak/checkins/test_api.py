@@ -1,11 +1,17 @@
 import datetime as dt
+from unittest import mock
+
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import APIToken
+from biwak.activity.models import Mention
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Mode, Occurrence, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
+from biwak.reactions import operations as reactions_ops
 from biwak.test_utils import person, project
 
 
@@ -139,6 +145,13 @@ class QuestionsAPITest(APITestCase):
             {"people": [999999]},
             {"people": [self.cleo.pk]},  # internal
             {"time_of_day": "late"},
+            # Looped forever (INTERVAL=0) or never asked (a huge interval)
+            {"schedule": "FREQ=DAILY;INTERVAL=0"},
+            {"schedule": "FREQ=DAILY;INTERVAL=99999999999"},
+            {"schedule": "FREQ=MONTHLY;BYMONTHDAY=0"},
+            # A 500 (DataError) or an empty title
+            {"title": "x" * 501},
+            {"title": "   "},
         ]:
             response = self.post(
                 self.ada, f"projects/{self.project.pk}/checkins/", base | changes
@@ -191,6 +204,39 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(data["time_zone"], "Asia/Tokyo")
         self.assertEqual([p["short_name"] for p in data["people"]], ["Bob"])
 
+    def test_rules_are_stored_canonical(self):
+        """However it's written (decided 2026-11-21)"""
+        data = self.patch(
+            self.ada,
+            f"checkins/{self.item.pk}/",
+            {"schedule": "BYDAY=TH,MO;FREQ=WEEKLY;INTERVAL=1"},
+        ).json()
+        self.assertEqual(data["rule"], "FREQ=WEEKLY;BYDAY=MO,TH")
+        self.item.question.refresh_from_db()
+        self.assertEqual(self.item.question.rule, "FREQ=WEEKLY;BYDAY=MO,TH")
+        data = self.post(
+            self.ada,
+            f"projects/{self.project.pk}/checkins/",
+            {"title": "x", "schedule": "freq=daily;wkst=mo", "time_of_day": "09:00"},
+        ).json()
+        self.assertEqual(data["rule"], "FREQ=DAILY")
+
+    def test_update_checks_the_title(self):
+        for title in ["", "   ", "x" * 501]:
+            response = self.patch(
+                self.ada, f"checkins/{self.item.pk}/", {"title": title}
+            )
+            self.assertIn(response.status_code, {400, 422}, title)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, "How are you?")
+
+    def test_update_refuses_a_schedule_which_hangs(self):
+        for schedule in ["FREQ=DAILY;INTERVAL=0", "FREQ=DAILY;INTERVAL=-1"]:
+            response = self.patch(
+                self.ada, f"checkins/{self.item.pk}/", {"schedule": schedule}
+            )
+            self.assertEqual(response.status_code, 400, schedule)
+
     def test_update_leaves_out_what_doesnt_change(self):
         data = self.patch(
             self.ada, f"checkins/{self.item.pk}/", {"title": "New"}
@@ -216,6 +262,35 @@ class QuestionsAPITest(APITestCase):
                 400,
                 body,
             )
+
+    def test_people_null_is_refused(self):
+        response = self.patch(self.ada, f"checkins/{self.item.pk}/", {"people": None})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.item.question.people.count(), 2)
+
+    def test_clients_get_404_before_403(self):
+        """A client can't learn that a project or question exists"""
+        other = project("Secret", members=[self.ada])
+        body = {"title": "x", "schedule": "weekly", "time_of_day": "09:00"}
+        self.assertEqual(
+            self.post(self.cleo, f"projects/{other.pk}/checkins/", body).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.patch(
+                self.cleo, f"checkins/{self.item.pk}/", {"title": "x"}
+            ).status_code,
+            404,
+        )
+
+    def test_update_is_one_transaction(self):
+        with mock.patch.object(ops, "pause", side_effect=ValueError("No")):
+            response = self.patch(
+                self.ada, f"checkins/{self.item.pk}/", {"title": "New", "paused": True}
+            )
+        self.assertEqual(response.status_code, 400)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, "How are you?")
 
     def test_pause_and_resume(self):
         data = self.patch(
@@ -284,6 +359,22 @@ class AnswersAPITest(APITestCase):
         ).json()
         self.assertEqual(data["occurrence_id"], self.first.pk)
         self.assertIn(f"(person:{self.bob.pk})", data["content"])
+
+    def test_clients_mention_members_only(self):
+        """Not staff who see the project because it's all-access
+        (specs/access.md)"""
+        dora = person("Dora")
+        data = self.post(
+            self.cleo,
+            f"checkins/{self.shared.pk}/answer/",
+            {"content": f"@Dora, [@x](person:{dora.pk}) and @Ada"},
+        ).json()
+        self.assertTrue(data["content"].startswith("@Dora, "), data["content"])
+        self.assertIn(f"(person:{self.ada.pk})", data["content"])
+        self.assertNotIn("Dora Example", data["content_html"])
+        answer = Item.objects.get(pk=data["id"])
+        self.assertFalse(Mention.objects.filter(item=answer, user=dora).exists())
+        self.assertTrue(Mention.objects.filter(item=answer, user=self.ada).exists())
 
     def test_mistakes(self):
         path = f"checkins/{self.item.pk}/answer/"
@@ -387,6 +478,21 @@ class AnswersAPITest(APITestCase):
             [a["content"] for a in data["results"][0]["answers"]], ["Bob's"]
         )
 
+    def test_clients_ask_only_about_members(self):
+        outsider = person("Dora")  # all-access projects: staff need no membership
+        ops.set_people(self.shared, [self.ada, self.cleo, outsider], actor=self.ada)
+        ops.answer(self.shared, user=outsider, content="Dora's")
+        path = f"checkins/{self.shared.pk}/occurrences/"
+        self.assertEqual(
+            self.get(self.cleo, path, person_id=outsider.pk).status_code, 404
+        )
+        self.assertEqual(
+            self.get(self.ada, path, person_id=outsider.pk).status_code, 200
+        )
+        self.assertEqual(
+            self.get(self.cleo, path, person_id=self.ada.pk).status_code, 200
+        )
+
     def test_clients_dont_see_internal_answers(self):
         ops.answer(self.shared, user=self.cleo, content="Client answer")
         ops.answer(self.item, user=self.ada, content="Internal answer")
@@ -477,3 +583,39 @@ class AnswersAPITest(APITestCase):
             Item.objects.get(pk=self.shared.pk), visible=False, actor=self.ada
         )
         self.assertEqual(self.get(self.cleo, "me/checkins/due/").json(), [])
+
+
+class QueriesTest(APITestCase):
+    """The lists take the same number of queries for any number of rows"""
+
+    def queries(self, user, path):
+        headers = self.api(user)
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(f"/api/v1/{path}", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        return len(context)
+
+    def test_question_list(self):
+        path = f"projects/{self.project.pk}/checkins/"
+        few = {user: self.queries(user, path) for user in [self.ada, self.cleo]}
+        for n in range(3):
+            item = self.question(
+                f"More {n}", visible=True, people=[self.ada, self.bob, self.cleo]
+            )
+            ops.set_mail_mode(item, user=self.ada, mode=Mode.EACH)
+            ops.set_mail_mode(item, user=self.cleo, mode=Mode.EACH)
+        self.run_at("2027-03-29 09:00")
+        for user, count in few.items():
+            self.assertEqual(self.queries(user, path), count, user)
+
+    def test_occurrence_list(self):
+        path = f"checkins/{self.shared.pk}/occurrences/"
+        ops.answer(self.shared, user=self.ada, content="One")
+        few = {user: self.queries(user, path) for user in [self.ada, self.cleo]}
+        for date in ["2027-03-29", "2027-04-05", "2027-04-12"]:
+            self.run_at(f"{date} 09:00")
+            answer = ops.answer(self.shared, user=self.ada, content="Again")
+            ops.answer(self.shared, user=self.cleo, content="Me too")
+            reactions_ops.add_reaction(self.cleo, "👍", item=answer)
+        for user, count in few.items():
+            self.assertEqual(self.queries(user, path), count, user)

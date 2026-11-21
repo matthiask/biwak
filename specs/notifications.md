@@ -67,7 +67,9 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   same as the Basecamp CLI's, so agents know it. The label is only a
   fallback: pages and mails always show the person's current name, so
   renaming someone updates every mention. In mails and plain text:
-  `@Ada Lovelace`.
+  `@Ada Lovelace`. Clients read the label for people who aren't members
+  of the project (`access.md`, decided 2026-11-20 after the second
+  visibility review).
 - **Where:** a to-do's title and notes, comments, messages, docs,
   check-in answers: every Markdown text of an item, and comments.
 - **Typing `@`** in a text field with `data-mentions="URL"` opens a list
@@ -83,7 +85,11 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   reason ("can't see internal items", "not a member of this project")
   and can't be chosen.
 - **Endpoint** for the list: `GET /items/<pk>/mentionable/?q=` (and
-  `GET /lists/<pk>/mentionable/?q=` for to-dos not created yet), JSON:
+  `GET /lists/<pk>/mentionable/?q=` for to-dos not created yet, and
+  `GET /projects/<pk>/mentionable/?q=&visible=1&folder=<pk>` for new
+  messages, docs and files: who will see them, from the visibility
+  checkbox (`data-mentions-visible`) or the folder, which decides when
+  given; clients always create what clients see), JSON:
   `[{id, name, short_name, email, available, reason}]`, at most 10.
 - **Model:** `Mention(item, comment null, user, created_at)`, written by
   the operations that save texts (`create_todo`, `update_todo`,
@@ -95,14 +101,18 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   `event.data["mentioned"]` for `notify()`. A to-do's title and notes
   are one text. People removed from a text are forgotten, so mentioning
   them again counts as new (proposed by the building agent, confirmed
-  2026-11-20).
+  2026-11-20). Only mentions a save adds count: those already in the
+  text before were looked at when written, so a client's rejected
+  mention of staff doesn't notify them when staff save the item later
+  (`previous` of `update()`, decided 2026-11-21).
 - **A new mention** notifies the person (on every level except
   "nothing") and subscribes them (`explicit=True`). Editing a text later
   notifies only people newly mentioned. A mention doesn't come back
   after unsubscribing unless the person is mentioned again.
 - **Mail replies and the API** may write `@ada@example.org` or the
   syntax above; plain `@Ada` is resolved only when exactly one person
-  who can see the item matches (stage 2 and `api-cli.md`).
+  who can see the item matches (stage 2 and `api-cli.md`). What clients
+  write resolves and notifies the project's members only (`access.md`).
 
 ### Levels
 
@@ -125,10 +135,12 @@ Pages: the person's level and delivery on `/accounts/notifications/`
 (linked from the user menu); a project's override in the project page's
 "More" menu; an item's override next to its subscribe button. The
 settings page also lists the person's overrides, items only while they
-can see them. To-dos, messages, docs, files and the
+can see them, projects only while they have access (an override of a
+project one has left stays, unseen, and counts again on coming back,
+2026-11-21). To-dos, lists, messages, docs, files and the
 library's folders have the subscribe button and the override form
-(`files/_sidebar.html`); a list's override is still set through the API
-(built 2026-11-20).
+(`files/_sidebar.html`); a list's override is at the bottom of the list's
+page, also through the API (built 2026-11-20).
 
 ### Notified by default or only when tagged
 
@@ -180,13 +192,23 @@ project's level is that choice, not a new setting.
    subscribers of its parent container; plus people newly mentioned or
    assigned by this event.
 2. Without the actor, inactive people, and people who can't see the
-   item **now** (`Item.objects.visible_to(user)`), checked per person.
-3. Filtered by each person's effective level.
-4. One `Notification(user, event, created_at, sent_at null)` per person.
+   item **now** (`Item.objects.visible_to(user)`; for everybody at once
+   `who_can_see(item)`, tested against it, 2026-11-21).
+3. Filtered by each person's effective level (a query for all,
+   `effective_levels()`; `notify()` makes the same number of queries for
+   any number of people).
+4. One `Notification(user, event, created_at, sent_at null)` per person;
+   at most one unsent per person and event, a constraint in the database
+   (two `notify()` at once can't tell anybody twice, 2026-11-21).
 
 Project events (joined, added, removed) notify nobody.
 
 ### Mails
+
+- **Notification records are kept** (decided 2026-11-21): they record who
+  was told about which event and when, small rows, never pruned unless
+  the table actually grows large. The history itself is in the events
+  and the audit log, both kept.
 
 - **Delivery** per person (`User.mail_delivery`): each change (the
   default) or a daily digest.
@@ -222,6 +244,14 @@ Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
   can't see the item any more and people whose level is now "nothing"
   get nothing, and those notifications are deleted. A mail that fails to
   send leaves its notifications unsent for the next run.
+- At most once: notifications are marked sent when the transaction
+  commits, before the mail goes out; a crash in between loses those mails
+  rather than sending them twice (accepted, 2026-11-21).
+- A mail that fails to be built is logged and its notifications stay
+  unsent; the other mails, the digests and the check-ins go out anyway
+  (each part of `send_mails` on its own, like each task of
+  `fairy_tasks`; 2026-11-21). Nothing left to say (reactions to a
+  comment deleted since): no mail, the notifications are deleted.
 - Clients aren't told where an item moved ("Ada moved it."), like the
   feed: the name may be internal.
 - Attachments are links with `BASE_URL` in the HTML part and their
@@ -233,7 +263,10 @@ Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
 - Digests have no one-click unsubscribing (they're about many items):
   their `List-Unsubscribe` is the settings page, without
   `List-Unsubscribe-Post`. Their subject: `[Biwak] What happened on
-  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`.
+  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`; a digest of more
+  than one day (after a downtime, or switching to digests) names them:
+  `[Biwak] What happened from 17. November 2026 to 19. November 2026`
+  (the first and the last day with notifications, 2026-11-21).
 - Mails carry `Auto-Submitted: auto-generated`.
 - The `@` list for clients finds only the project's members, not by
   email, and shows no addresses.
@@ -334,7 +367,10 @@ Resend's documentation (checked 2026-11-20) and what that changed:
   unsigned or the signing domain does not match the From domain", so
   `pass` is aligned); SPF alone is never enough. A domain without DMARC
   and without DKIM (rare) can't reply. If Resend's `from` differs from
-  the `From` address we parse, its results count as `unknown`.
+  the `From` address we parse, its results count as `unknown` (its `from`
+  compared as an address, also when it comes with a name; an answer of
+  its API that isn't a JSON object fails like a network error and Resend
+  tries again, 2026-11-21).
 
 Decisions made while building (proposed by the building agent,
 confirmed 2026-11-20):
@@ -367,7 +403,9 @@ confirmed 2026-11-20):
   (`can_answer()`). Replying to a question already answered changes the
   answer, like answering again in the app.
 - **Stripping:** we cut at the first quote header ("On … wrote:", "Am …
-  schrieb …:", also quoted by iOS), Outlook's header block ("From:" with
+  schrieb …:", also quoted by iOS, wrapped over up to three lines but
+  not past a blank line or another line starting with "On"/"Am", so the
+  person's own "On Friday …" right above it stays; 2026-11-21), Outlook's header block ("From:" with
   "Sent:"/"To:" below, "Von:" with "Gesendet:"/"An:"), "-----Original
   Message-----", forwarding markers and `-- `; phones' last lines ("Sent
   from my iPhone", "Von meinem iPhone gesendet", "Get Outlook for …");

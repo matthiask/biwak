@@ -237,8 +237,12 @@ def icon(name):
 
 @register.simple_tag
 def client_badge(item):
-    """The bright badge on everything visible to clients (specs/access.md)"""
-    if not item.is_client_visible:
+    """The bright badge on everything visible to clients (specs/access.md):
+    items, and links, which have a flag of their own"""
+    visible = getattr(item, "is_client_visible", None)
+    if visible is None:
+        visible = item.visible_to_clients
+    if not visible:
         return ""
     return format_html(
         '<span class="badge wb-client-badge" title="{}">{}</span>',
@@ -250,9 +254,33 @@ def client_badge(item):
 @register.inclusion_tag("activity/_item_notifications.html", takes_context=True)
 def item_notifications(context, item):
     """The person's level for an item, next to its subscribe button"""
-    from biwak.activity.views import item_level_context
+    from biwak.activity.notify import item_level_context
 
     user = context["request"].user
     return {"item": item, "csrf_token": context.get("csrf_token")} | (
         item_level_context(user, item)
+    )
+
+
+@register.simple_tag
+def rule_widget(bound_field, uid, *, posted=False):
+    """The rule widget of a form field with ids of its own (``uid``): the
+    list page has one inline form per group, all from the same form. Shows
+    the field's initial value, not what was posted to another one; with
+    ``posted``, what was posted to this one."""
+    widget = bound_field.field.widget
+    return widget.render(
+        bound_field.html_name,
+        bound_field.value() if posted else bound_field.initial,
+        attrs={"id": f"{bound_field.auto_id}_{uid}"},
+    )
+
+
+@register.simple_tag
+def posted_here(form, group):
+    """Whether the bound inline form of the list page was sent from this
+    group's section (``None``: the ungrouped one), and came back with its
+    errors"""
+    return form.is_bound and str(form.data.get("group") or "") == (
+        str(group.pk) if group else ""
     )

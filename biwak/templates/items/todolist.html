@@ -3,7 +3,7 @@
 {% block title %}{{ item }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2"><a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a></nav>
+  {% include "_breadcrumbs.html" with project=item.project %}
   <div class="wb-page-header">
     <h1 class="wb-title">{{ item }} {% client_badge item %}</h1>
     <div class="wb-page-actions">
@@ -16,10 +16,7 @@
         class="btn btn-sm btn-quiet{% if view == 'board' %} active{% endif %}"
         href="?view=board"
       >{% translate "Board" %}</a>
-      {% if not request.user.is_client %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
-          >{% translate "History" %}</span></a>
-      {% endif %}
+      {% include "items/_history_link.html" %}
       {% if can_change %}
         <a class="btn btn-sm btn-quiet" href="{% url 'list_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
@@ -36,13 +33,23 @@
   <div class="wb-todolist{% if view == 'board' %} is-board{% endif %}" data-groups="{{ item.pk }}">
     {# On the board, the ungrouped to-dos get a column only if there are any #}
     <section class="wb-group" {% if view == "board" and groups and not ungrouped %}hidden{% endif %}>
-      <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="">
+      <div
+        class="wb-todos"
+        data-todos
+        data-list="{{ item.pk }}"
+        data-group=""
+        data-move-url="{% url 'todos_move' item.pk %}"
+      >
         {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
       </div>
       {% include "items/_add_todo.html" with group=None %}
     </section>
     {% for group, todos in groups %}
-      <section class="wb-group" data-group-item="{{ group.pk }}">
+      <section
+        class="wb-group"
+        data-group-item="{{ group.pk }}"
+        {% if can_change %}data-move-url="{% url 'group_move' group.pk %}"{% endif %}
+      >
         <h2 class="h6 wb-group-title">
           {% if can_change %}
             <span
@@ -101,7 +108,13 @@
             </span>
           {% endif %}
         </h2>
-        <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="{{ group.pk }}">
+        <div
+          class="wb-todos"
+          data-todos
+          data-list="{{ item.pk }}"
+          data-group="{{ group.pk }}"
+          data-move-url="{% url 'todos_move' item.pk %}"
+        >
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
         </div>
         {% include "items/_add_todo.html" %}
@@ -109,7 +122,7 @@
     {% endfor %}
   </div>
   {% if can_change %}
-    <form method="post" action="{% url 'group_create' item.pk %}" class="d-flex gap-2 my-3 wb-add-group">
+    <form method="post" action="{% url 'group_create' item.pk %}" class="d-flex gap-2 my-3">
       {% csrf_token %}
       <input
         type="text"
@@ -132,26 +145,6 @@
       <div class="mt-2">{% include "items/_completed.html" with cursor=completed_cursor %}</div>
     </details>
   {% endif %}
-  {% if can_switch %}
-    <form method="post" action="{% url 'switch' item.pk %}" class="mt-4 small">
-      {% csrf_token %}
-      {% if item.is_client_visible %}
-        <button type="submit" class="btn btn-sm btn-quiet">
-          {% icon "lock" %}<span>{% translate "Hide from clients" %}</span>
-        </button>
-        <span
-          class="text-body-secondary"
-        >{% translate "Hides the list, its to-dos and their comments again, also what clients wrote." %}</span>
-      {% else %}
-        <input type="hidden" name="visible" value="1">
-        <button type="submit" class="btn btn-sm btn-quiet">
-          {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
-        </button>
-        <span class="text-body-secondary">
-          {% blocktranslate asvar to_clients count counter=affected.clients %}{{ counter }} client{% plural %}{{ counter }} clients{% endblocktranslate %}
-          {% blocktranslate count counter=affected.items with comments=affected.comments clients=to_clients %}Makes this list, {{ counter }} to-do and {{ comments }} comments visible to {{ clients }}.{% plural %}Makes this list, {{ counter }} to-dos and {{ comments }} comments visible to {{ clients }}.{% endblocktranslate %}
-        </span>
-      {% endif %}
-    </form>
-  {% endif %}
+  <div class="mt-4">{% item_notifications item %}</div>
+  {% include "items/_switch.html" with kind="list" %}
 {% endblock content %}

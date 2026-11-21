@@ -45,6 +45,12 @@ class AnsweringTest(AnswerTestCase):
         self.assertEqual(ops.answers_of(self.second), [answer])
         self.assertEqual(ops.answers_of(self.first), [])
 
+    def test_renaming_the_question_renames_its_answers(self):
+        item = ops.answer(self.item, user=self.ada, content="Fine")
+        ops.update_question(self.item, actor=self.ada, title="How is it going?")
+        item.refresh_from_db()
+        self.assertEqual(item.title, "How is it going?")
+
     def test_answering_an_older_occurrence(self):
         item = ops.answer(
             self.item, user=self.ada, content="Last week", occurrence=self.first

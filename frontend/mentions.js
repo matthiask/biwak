@@ -2,7 +2,9 @@
 // (specs/notifications.md). Typing "@" and a part of a name or address
 // lists the matching people (the URL answers ?q= with at most 10); those
 // who can't see the item are greyed out with the reason and can't be
-// chosen. Up/Down choose, Enter or a click inserts
+// chosen. For items not created yet, data-mentions-visible="#id" names the
+// "visible to clients" checkbox, whose state is sent as ?visible=1.
+// Up/Down choose, Enter or a click inserts
 // "[@Name](person:ID)", Escape closes. Without JavaScript the fields stay
 // plain fields. Adapted from Governance's mentions.js.
 
@@ -170,10 +172,18 @@ function attach(field) {
     controller?.abort()
     controller = new AbortController()
     try {
-      const response = await fetch(
-        `${url}?${new URLSearchParams({ q: typed.query })}`,
-        { credentials: "same-origin", signal: controller.signal },
-      )
+      const target = new URL(url, location.href)
+      const params = target.searchParams
+      params.set("q", typed.query)
+      // New items: who will see it depends on the visibility checkbox
+      const checkbox = field.dataset.mentionsVisible
+        ? document.querySelector(field.dataset.mentionsVisible)
+        : null
+      if (checkbox?.checked) params.set("visible", "1")
+      const response = await fetch(target, {
+        credentials: "same-origin",
+        signal: controller.signal,
+      })
       if (!response.ok || current !== typed) return
       results = await response.json()
       active = results.findIndex((person) => person.available)

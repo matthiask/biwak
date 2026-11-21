@@ -99,14 +99,26 @@ What every part does the same way. Look at how the core does it
    get their stored visibility with `visibility.recompute(item)` in the
    creating operation.
 4. **Who may change what.** Staff change everything they see; clients
-   create where they can see and change only what they created
-   (`ops.can_change()`). Visibility switches are staff only.
+   create to-dos, comments and messages where they can see and change
+   only what they created (`ops.can_change()`), except the fields of
+   visible to-dos, which are shared work (`specs/access.md`). Visibility
+   switches are staff only.
 5. **Pages.** Server-rendered templates extending `base.html`, the
    client badge (`{% client_badge item %}`) on everything visible to
    clients and the banner (`items/_client_banner.html`) above forms on
    visible items. Icons with `{% icon %}`; a new icon goes into
    `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
    only for interaction, in `frontend/`, loaded from `main.js`.
+   What several pages show comes from an include (comments, subscribers,
+   the visibility switch, breadcrumbs, the to-do row), not a copy. A class
+   in a template needs CSS in the bundle (`biwak/test_css.py`: Bootstrap
+   is compiled in parts, `frontend/styles/bootstrap.scss`, or a `wb-` class
+   in `main.css`). The button creating what a page is about is primary
+   when it's the page's one such action (new project, message, check-in);
+   elsewhere it's quiet (`btn-quiet`). Empty lists say so: a
+   `list-group-item` in a list group, else a `text-body-secondary`
+   paragraph (decided 2026-11-21). Disclosures that float (menus, the
+   reaction picker) close on a click elsewhere and Escape (`data-dismiss`).
 6. **API.** Endpoints in the app's `api.py`, registered in
    `biwak/api.py`, following `biwak/api_conventions.py`
    (`visible_to_clients` on every item, Markdown plus `*_html`, cursor

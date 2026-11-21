@@ -49,6 +49,7 @@ def update_message(
 ):
     """Changes what's given; ``category`` is a ``MessageCategory`` or None"""
     message = Message.objects.select_for_update().get(item=item)
+    previous = f"{item.title}\n\n{message.content}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -70,7 +71,11 @@ def update_message(
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
         mentions.update(
-            item, f"{item.title}\n\n{message.content}", actor=actor, event=event
+            item,
+            f"{item.title}\n\n{message.content}",
+            actor=actor,
+            event=event,
+            previous=previous,
         )
     return item
 
@@ -155,6 +160,8 @@ def _save(item, doc, *, title=None, actor=None, new_version=False):
     renamed = title is not None and title != item.title
     if not authors or not (renamed or content != doc.content or new_version):
         return False
+    # The text before: mentions in it were looked at when they were written
+    previous = f"{item.title}\n\n{doc.content}"
     if renamed:
         item.title = title
     # A new text is a change of the doc too ("latest docs and files" on the
@@ -178,6 +185,7 @@ def _save(item, doc, *, title=None, actor=None, new_version=False):
         f"{item.title}\n\n{content}",
         actor=authors[0],
         event=events[0],
+        previous=previous,
         credit={pk: (author, by_author[author]) for pk, author in typed.items()},
     )
     _save_version(
@@ -292,6 +300,7 @@ def set_read_only(item, *, read_only, actor):
 # Files ------------------------------------------------------------------
 
 
+@attachments.cleans_up_files
 @transaction.atomic
 def replace_upload(item, file, *, actor):
     """Uploads a new version: the URL, the comments and the earlier
@@ -313,6 +322,7 @@ def replace_upload(item, file, *, actor):
 @transaction.atomic
 def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED):
     upload = Upload.objects.select_for_update().get(item=item)
+    previous = f"{item.title}\n\n{upload.description}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -329,6 +339,10 @@ def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED):
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
         mentions.update(
-            item, f"{item.title}\n\n{upload.description}", actor=actor, event=event
+            item,
+            f"{item.title}\n\n{upload.description}",
+            actor=actor,
+            event=event,
+            previous=previous,
         )
     return item

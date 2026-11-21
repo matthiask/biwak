@@ -296,6 +296,15 @@ class Notification(models.Model):
                 name="unsent_notifications",
             )
         ]
+        constraints = [
+            # One unsent notification per person and event, even when two
+            # notify() run at once (biwak.activity.notify)
+            models.UniqueConstraint(
+                fields=["user", "event"],
+                condition=models.Q(sent_at__isnull=True),
+                name="one_unsent_notification",
+            )
+        ]
         verbose_name = _("notification")
         verbose_name_plural = _("notifications")
 

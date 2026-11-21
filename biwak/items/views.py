@@ -1,8 +1,6 @@
-import datetime as dt
-
 from django import forms
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -15,45 +13,42 @@ from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
 from biwak.items import glance, operations as ops, visibility
-from biwak.items.models import Group, Item, Kind, Status, TodoList
+from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.reactions.operations import prefetch
+from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
 
 def item_for(request, pk, kind=None):
     """The item if the person may see it, else 404: the one check
-    (specs/access.md)"""
-    qs = Item.objects.visible_to(request.user).select_related("project", "parent")
+    (specs/access.md), for the pages and the API"""
+    qs = Item.objects.visible_to(request.user).select_related(
+        "project", "parent", "creator"
+    )
     if kind:
         qs = qs.filter(kind=kind)
     return get_object_or_404(qs, pk=pk)
 
 
-def assignable_people(item):
-    """People who can see the item (clients only if it's visible to them)"""
-    project = item.project
-    people = User.objects.active().filter(memberships__project=project)
-    if not item.is_client_visible:
-        people = people.filter(is_client=False)
-    return people.distinct()
-
-
-class RepeatForm(Form):
-    """The "Repeat" fields shared by the inline form and the to-do's page
-    (specs/todos.md); ``cleaned_data["recurrence"]`` is the rule. Presets
-    count from the due date (today without one); the form's due date is
-    ``due_on``."""
-
-    repeat = forms.ChoiceField(
-        label=_("Repeat"),
-        required=False,
-        choices=schedules.preset_choices(),
-        help_text=_("The next to-do is created when this one is completed."),
+def comment_for(request, pk):
+    """The comment if the person may see its item, else 404: the same check
+    as ``item_for()``"""
+    return get_object_or_404(
+        Comment.objects.filter(
+            item__in=Item.objects.visible_to(request.user)
+        ).select_related("item", "item__project"),
+        pk=pk,
     )
-    custom_rule = forms.CharField(
-        label=_("Custom schedule"),
-        required=False,
-        max_length=200,
-        help_text=_("An RRULE, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
+
+
+class RepeatForm(RuleFormMixin, Form):
+    """The "Repeat" fields shared by the inline form and the to-do's page
+    (specs/todos.md, specs/rule-widget.md); ``cleaned_data["recurrence"]``
+    is the rule. A rule the widget can't show stays as it is (``initial``).
+    The widget starts from the due date (today without one)."""
+
+    recurrence = RuleField(
+        label=_("Repeat"),
+        help_text=_("The next to-do is created when this one is completed."),
     )
     recurrence_ends_on = forms.DateField(
         label=_("Repeats until"),
@@ -67,25 +62,16 @@ class RepeatForm(Form):
         help_text=_("How many more to-dos to create; empty: no limit."),
     )
 
-    def _rule(self, data):
-        repeat = data["repeat"]
-        if repeat == schedules.CUSTOM:
-            if not data.get("custom_rule"):
-                raise schedules.InvalidRule(_("Enter the schedule."))
-            return schedules.validate(data["custom_rule"])
-        return schedules.from_preset(repeat, data.get("due_on") or schedules.today())
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["recurrence"].widget.anchor = (
+            self.initial.get("due_on") or schedules.today()
+        )
 
     def clean(self):
         data = super().clean()
-        data["recurrence"] = ""
-        if data.get("repeat"):
-            try:
-                data["recurrence"] = self._rule(data)
-            except schedules.InvalidRule as exc:
-                field = (
-                    "custom_rule" if data["repeat"] == schedules.CUSTOM else "repeat"
-                )
-                self.add_error(field, str(exc))
+        if data.get("recurrence") is KEEP:
+            data["recurrence"] = self.initial.get("recurrence", "")
         return data
 
     def recurrence_kwargs(self):
@@ -97,13 +83,21 @@ class RepeatForm(Form):
         }
 
 
-class TodoForm(RepeatForm):
-    """Adding a to-do from the list: inline, with everything a to-do has
-    at first (specs/todos.md); without JavaScript a plain form"""
+class TodoFieldsForm(RepeatForm):
+    """A to-do's fields, for adding one (``TodoForm``) and on its page
+    (``TodoDetailForm``); ``item`` is the to-do or its list"""
 
     title = forms.CharField(label=_("title"), max_length=500)
     notes = forms.CharField(
-        label=_("notes"), required=False, widget=forms.Textarea(attrs={"rows": 3})
+        label=_("notes"),
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text=_("Markdown"),
+    )
+    due_on = forms.DateField(
+        label=_("due on"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
     )
     assignees = forms.ModelMultipleChoiceField(
         label=_("assignees"),
@@ -111,17 +105,23 @@ class TodoForm(RepeatForm):
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
-    due_on = forms.DateField(
-        label=_("due on"),
-        required=False,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
+
+    def __init__(self, *args, item, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["assignees"].queryset = ops.assignable_people(item, user)
+
+
+class TodoForm(TodoFieldsForm):
+    """Adding a to-do from the list: inline, with everything a to-do has
+    at first (specs/todos.md); without JavaScript a plain form"""
+
     group = forms.IntegerField(required=False, widget=forms.HiddenInput)
     field_order = ["title", "notes", "assignees", "due_on", "group"]
 
-    def __init__(self, *args, item, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["assignees"].queryset = assignable_people(item)
+        self.fields["notes"].widget.attrs["rows"] = 3
+        self.fields["notes"].help_text = ""
 
 
 def wants_fragment(request):
@@ -191,7 +191,7 @@ def todolist(request, pk):
     by_group = {None: []} | {g.pk: [] for g in groups}
     for todo in open_todos:
         by_group[todo.todo.group_id].append(todo)
-    form = TodoForm(request.POST or None, item=item)
+    form = TodoForm(request.POST or None, item=item, user=request.user)
     if request.method == "POST":
         if not form.is_valid():
             if wants_fragment(request):
@@ -243,18 +243,24 @@ def todolist(request, pk):
     )
 
 
-def _changeable_list(request, pk):
-    """Groups are changed like their list: clients only in lists they
-    created (``can_change()``)"""
+def changeable_list(request, pk):
+    """The list if the person may change it and its groups: clients only
+    lists they created (``can_change()``, 403); for the pages and the API"""
     item = item_for(request, pk, Kind.LIST)
     if not ops.can_change(request.user, item):
-        raise PermissionDenied
+        raise PermissionDenied(_("You can only change lists you created."))
     return item
+
+
+def changeable_group(request, pk):
+    """The group and its list, changed like the list"""
+    group = get_object_or_404(Group, pk=pk)
+    return group, changeable_list(request, group.todolist_id)
 
 
 @require_POST
 def group_create(request, pk):
-    item = _changeable_list(request, pk)
+    item = changeable_list(request, pk)
     if title := request.POST.get("title", "").strip():
         ops.create_group(todolist=item.todolist, title=title[:200])
     return redirect(item)
@@ -262,16 +268,14 @@ def group_create(request, pk):
 
 @require_POST
 def group_delete(request, pk):
-    group = get_object_or_404(Group, pk=pk)
-    item = _changeable_list(request, group.todolist_id)
+    group, item = changeable_group(request, pk)
     ops.delete_group(group)
     return redirect(item)
 
 
 @require_POST
 def group_rename(request, pk):
-    group = get_object_or_404(Group, pk=pk)
-    item = _changeable_list(request, group.todolist_id)
+    group, item = changeable_group(request, pk)
     if title := request.POST.get("title", "").strip():
         ops.rename_group(group, title=title[:200])
     return redirect(item)
@@ -280,17 +284,24 @@ def group_rename(request, pk):
 @require_POST
 def group_move(request, pk):
     """Dragging (quietly) or the up and down buttons (redirecting back)"""
-    group = get_object_or_404(Group, pk=pk)
-    item = _changeable_list(request, group.todolist_id)
-    ops.move_group(group, index=max(0, int(request.POST.get("index", 0))))
+    group, item = changeable_group(request, pk)
+    ops.move_group(group, index=_index(request.POST.get("index", 0)) or 0)
     if request.POST.get("quiet"):
         return HttpResponse(status=204)
     return redirect(item)
 
 
+def _number(value):
+    """A number posted (an ID, an index); 400 for anything else"""
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise BadRequest(f"Not a number: {value!r}") from exc
+
+
 def _index(value):
     """A position, or None for the end"""
-    return None if value in {None, "", "end"} else max(0, int(value))
+    return None if value in {None, "", "end"} else max(0, _number(value))
 
 
 @require_POST
@@ -305,13 +316,13 @@ def todo_move(request, pk):
     )
     if target_value := request.POST.get("target"):
         list_id, _sep, group_id = target_value.partition(":")
-    target = item_for(request, list_id, Kind.LIST)
+    target = item_for(request, _number(list_id), Kind.LIST)
     if target.project_id != item.project_id:
         # To-dos stay in their project
         return HttpResponse(status=400)
     group = None
     if group_id:
-        group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)
+        group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
     ops.move_todo(
         item,
         todolist=target,
@@ -324,35 +335,45 @@ def todo_move(request, pk):
     return redirect(item if target_value else target)
 
 
+def todos_to_move(request, target, ids):
+    """The to-dos by ID, for moving into the list ``target``: 404 unless
+    the person sees them all, 400 for to-dos of another project (the pages
+    and the API)"""
+    todos = {
+        todo.pk: todo
+        for todo in Item.objects
+        .visible_to(request.user)
+        .filter(pk__in=ids, kind=Kind.TODO)
+        .select_related("todo")
+    }
+    if not ids or len(todos) != len(set(ids)):
+        raise Http404(_("Not all of these to-dos were found."))
+    if any(todo.project_id != target.project_id for todo in todos.values()):
+        raise BadRequest(_("To-dos can't move to another project."))
+    return todos
+
+
 @require_POST
 def todos_move(request, pk):
     """Dragging one or several to-dos (frontend/todos.js) into list ``pk``,
     a ``group`` (empty: ungrouped), next to each other at ``index`` among
     the others there; ``todos`` in their new order"""
     target = item_for(request, pk, Kind.LIST)
-    try:
-        ids = [int(value) for value in request.POST.getlist("todos")]
-    except ValueError:
-        return HttpResponse(status=400)
-    todos = {
-        todo.pk: todo
-        for todo in Item.objects
-        .visible_to(request.user)
-        .filter(pk__in=ids, kind=Kind.TODO, project=target.project_id)
-        .select_related("todo")
-    }
-    if not ids or len(todos) != len(set(ids)):
-        return HttpResponse(status=404)
+    ids = [_number(value) for value in request.POST.getlist("todos")]
+    todos = todos_to_move(request, target, ids)
     group = None
     if group_id := request.POST.get("group"):
-        group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)
-    ops.move_todos(
-        [todos[pk] for pk in ids],
-        todolist=target,
-        group=group,
-        index=_index(request.POST.get("index")),
-        actor=request.user,
-    )
+        group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
+    try:
+        ops.move_todos(
+            [todos[pk] for pk in ids],
+            todolist=target,
+            group=group,
+            index=_index(request.POST.get("index")),
+            actor=request.user,
+        )
+    except ValueError:
+        return HttpResponse(status=400)
     return HttpResponse(status=204)
 
 
@@ -366,25 +387,7 @@ def todo_toggle(request, pk):
     return redirect(next_url(request) or item.parent)
 
 
-class TodoDetailForm(RepeatForm):
-    title = forms.CharField(label=_("title"), max_length=500)
-    notes = forms.CharField(
-        label=_("notes"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 4}),
-        help_text=_("Markdown"),
-    )
-    due_on = forms.DateField(
-        label=_("due on"),
-        required=False,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
-    assignees = forms.ModelMultipleChoiceField(
-        label=_("assignees"),
-        queryset=User.objects.none(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
+class TodoDetailForm(TodoFieldsForm):
     field_order = ["title", "notes", "due_on", "assignees"]
 
 
@@ -397,8 +400,6 @@ class CommentForm(Form):
 def todo(request, pk):
     item = item_for(request, pk, Kind.TODO)
     todo = item.todo
-    people = assignable_people(item)
-    preset = schedules.preset_for(todo.recurrence, todo.due_on or schedules.today())
     form = TodoDetailForm(
         request.POST if request.POST.get("form") == "todo" else None,
         initial={
@@ -406,13 +407,13 @@ def todo(request, pk):
             "notes": todo.notes,
             "due_on": todo.due_on,
             "assignees": list(todo.assignees.all()),
-            "repeat": preset,
-            "custom_rule": todo.recurrence if preset == schedules.CUSTOM else "",
+            "recurrence": todo.recurrence,
             "recurrence_ends_on": todo.recurrence_ends_on,
             "recurrence_count": todo.recurrence_count,
         },
+        item=item,
+        user=request.user,
     )
-    form.fields["assignees"].queryset = people
     mentions_url = reverse("mentionable", args=[item.pk])
     for field in ["title", "notes"]:
         form.fields[field].widget.attrs["data-mentions"] = mentions_url
@@ -455,7 +456,6 @@ def todo(request, pk):
             "is_subscribed": is_subscribed(request.user, item),
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),
-            "today": dt.date.today(),
             "previous": _previous(request, todo),
         },
     )

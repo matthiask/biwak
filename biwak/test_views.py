@@ -2,6 +2,7 @@ import re
 
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.activity.models import Action, Event, Subscription
 from biwak.activity.operations import subscribe
@@ -87,6 +88,14 @@ class ViewsTest(TestCase):
         self.client.force_login(admin)
         self.assertContains(self.client.get("/"), "Salaries")
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 404)
+        # Not archived ones, which the list leaves out
+        limited.archived_at = timezone.now()
+        limited.save()
+        self.assertEqual(
+            self.client.post(f"/projects/{limited.pk}/join/").status_code, 404
+        )
+        limited.archived_at = None
+        limited.save()
         self.client.post(f"/projects/{limited.pk}/join/")
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 200)
         self.assertTrue(
@@ -266,7 +275,9 @@ class ViewsTest(TestCase):
         url = self.shared.get_absolute_url()
         response = self.client.get(url)
         self.assertContains(response, "data-add-todo-form", count=1)
-        self.assertContains(response, f'name="assignees" value="{self.cleo.pk}"')
+        self.assertRegex(
+            response.content.decode(), rf'name="assignees"\s+value="{self.cleo.pk}"'
+        )
         response = self.client.post(
             url,
             {
@@ -293,8 +304,9 @@ class ViewsTest(TestCase):
     def test_add_todo_no_clients_on_internal_lists(self):
         self.client.force_login(self.ada)
         url = self.internal.get_absolute_url()
-        self.assertNotContains(
-            self.client.get(url), f'name="assignees" value="{self.cleo.pk}"'
+        self.assertNotRegex(
+            self.client.get(url).content.decode(),
+            rf'name="assignees"\s+value="{self.cleo.pk}"',
         )
         response = self.client.post(
             url,

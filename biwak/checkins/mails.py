@@ -4,21 +4,26 @@ the answers. Everything goes out after the transaction commits
 notifications (``biwak.activity``)."""
 
 import logging
-from email.utils import make_msgid
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import translation
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
 from biwak.activity import mentions
-from biwak.activity.mails import absolute, host, plain_text, sender, unsubscribe_url
-from biwak.activity.notify import can_see
+from biwak.activity.mails import (
+    absolute,
+    build_mail,
+    host,
+    plain_text,
+    unsubscribe_headers,
+    unsubscribe_url,
+)
+from biwak.activity.notify import who_can_see
 from biwak.inbound.tokens import reply_to
+from biwak.items.models import Item
 
 
 logger = logging.getLogger(__name__)
@@ -34,14 +39,14 @@ def after_commit(build, occurrence, people):
 
 
 def _send_all(build, occurrence, pks):
-    from biwak.accounts.models import User
-
-    item = occurrence.question.item
-    for user in User.objects.active().filter(pk__in=pks).order_by("pk"):
-        if not can_see(user, item):
-            continue
+    # As it is now, not as it was loaded
+    item = Item.objects.select_related("project").get(pk=occurrence.question.item_id)
+    for user in who_can_see(item).filter(pk__in=pks).order_by("pk"):
         try:
-            with translation.override(user.language or settings.LANGUAGE_CODE):
+            with (
+                translation.override(user.language or settings.LANGUAGE_CODE),
+                mentions.reading_as(user),
+            ):
                 message = build(user, occurrence)
             message.send()
         except Exception:
@@ -49,7 +54,7 @@ def _send_all(build, occurrence, pks):
 
 
 def question_url(occurrence):
-    """The answer form of the occurrence"""
+    """The answer form of the occurrence (the mail and the API's "due")"""
     item = occurrence.question.item
     return (
         absolute(reverse("question_answer", args=[item.pk]))
@@ -92,30 +97,20 @@ def _context(user, occurrence):
 def _build(user, occurrence, *, subject, context, name, first=False):
     """``first``: the mail starting the occurrence's thread"""
     thread_id = thread(user, occurrence)
-    headers = {
-        "Message-ID": thread_id if first else make_msgid(domain=host()),
-        "List-Unsubscribe": f"<{context['unsubscribe_url']}>",
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        "Auto-Submitted": "auto-generated",
-    }
+    headers = unsubscribe_headers(context["unsubscribe_url"])
     if first:
         # Only the question takes replies: a reply to the summary isn't
         # an answer
-        headers |= reply_headers(user, occurrence)
+        headers |= {"Message-ID": thread_id} | reply_headers(user, occurrence)
     else:
         headers |= {"In-Reply-To": thread_id, "References": thread_id}
-    context["can_reply"] = "Reply-To" in headers
-    message = EmailMultiAlternatives(
-        subject,
-        render_to_string(f"checkins/mails/{name}.txt", context),
-        sender("Biwak"),
-        [user.email],
+    return build_mail(
+        user,
+        subject=subject,
+        template=f"checkins/mails/{name}",
+        context=context,
         headers=headers,
     )
-    message.attach_alternative(
-        render_to_string(f"checkins/mails/{name}.html", context), "text/html"
-    )
-    return message
 
 
 def question_mail(user, occurrence):

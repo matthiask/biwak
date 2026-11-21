@@ -9,10 +9,12 @@ don't save items themselves.
 import datetime as dt
 
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Exists, Max, OuterRef, Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from biwak import schedules
+from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.notify import notify_people
@@ -34,21 +36,31 @@ from biwak.items.models import (
     TodoList,
     Upload,
 )
+from biwak.projects import operations as project_ops
+from biwak.projects.models import Membership
 
 
 def _next_position(qs):
     return (qs.aggregate(m=Max("position"))["m"] or 0) + 1
 
 
-def _create_item(*, project, kind, title, creator, parent=None, visible=False):
-    siblings = Item.objects.filter(project=project, parent=parent, kind=kind)
+def create_item(
+    *, project, kind, title, creator, parent=None, visible=False, position=None
+):
+    """The item of a new item with its stored visibility, for the
+    ``create_*`` operations (of every app), which add the detail model and
+    record the event (``created()``). ``position``: at the end of its
+    siblings of the same kind unless given."""
+    if position is None:
+        siblings = Item.objects.filter(project=project, parent=parent, kind=kind)
+        position = _next_position(siblings)
     item = Item(
         project=project,
         parent=parent,
         kind=kind,
         title=title,
         creator=creator,
-        position=_next_position(siblings),
+        position=position,
         visible_to_clients=visible,
     )
     item.save()
@@ -56,18 +68,19 @@ def _create_item(*, project, kind, title, creator, parent=None, visible=False):
     return item
 
 
-def _created(item, creator):
+def created(item, creator):
+    """The creator subscribed and the event recorded (returned)"""
     subscribe(creator, item)
     return record(actor=creator, action=Action.CREATED, project=item.project, item=item)
 
 
 @transaction.atomic
 def create_list(*, project, title, creator, description="", visible=False):
-    item = _create_item(
+    item = create_item(
         project=project, kind=Kind.LIST, title=title, creator=creator, visible=visible
     )
     TodoList.objects.create(item=item, description=description)
-    _created(item, creator)
+    created(item, creator)
     return item
 
 
@@ -120,7 +133,7 @@ def create_todo(
     TodoList.objects.select_for_update().get(item=todolist)
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
-    item = Item(
+    item = create_item(
         project=todolist.project,
         parent=todolist,
         kind=Kind.TODO,
@@ -128,8 +141,6 @@ def create_todo(
         creator=creator,
         position=_next_position(_todos_in(todolist, group)),
     )
-    item.save()
-    visibility.recompute(item)
     Todo.objects.create(
         item=item,
         group=group,
@@ -138,11 +149,16 @@ def create_todo(
         **_recurrence_fields(recurrence, recurrence_ends_on, recurrence_count),
     )
     attachments.link(item, notes, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
     if assignees:
         assign(item, assignees, actor=creator)
     return item
+
+
+def message_visibility(creator, visible):
+    """What clients post is visible to clients (specs/access.md)"""
+    return bool(visible) or creator.is_client
 
 
 @transaction.atomic
@@ -158,16 +174,16 @@ def create_message(
 ):
     """``whom`` to notify: ``"everybody"``, a list of people or
     ``"nobody"`` (``notify_people()``, specs/files.md)"""
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.MESSAGE,
         title=title,
         creator=creator,
-        visible=visible,
+        visible=message_visibility(creator, visible),
     )
     Message.objects.create(item=item, content=content, category=category)
     attachments.link(item, content, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -175,7 +191,7 @@ def create_message(
 
 @transaction.atomic
 def create_folder(*, project, title, creator, parent=None, visible=False):
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.FOLDER,
         title=title,
@@ -184,7 +200,7 @@ def create_folder(*, project, title, creator, parent=None, visible=False):
         visible=visible and parent is None,
     )
     Folder.objects.create(item=item)
-    _created(item, creator)
+    created(item, creator)
     return item
 
 
@@ -199,7 +215,7 @@ def create_doc(
     visible=False,
     whom="nobody",
 ):
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.DOC,
         title=title,
@@ -212,7 +228,7 @@ def create_doc(
         doc_id=item.pk, title=title, content=content, created_by=creator
     )
     attachments.link(item, content, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -230,11 +246,12 @@ def new_version(upload, file, *, uploaded_by):
         content_type=content_type_for(name),
         uploaded_by=uploaded_by,
     )
-    version.file.save(name, file, save=False)
+    attachments.store(version.file, name, file)
     version.save()
     return version
 
 
+@attachments.cleans_up_files
 @transaction.atomic
 def create_upload(
     *,
@@ -249,7 +266,7 @@ def create_upload(
     """Uploads a file into the root or a folder; its title is the file's
     name. Raises ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.FILE,
         title=attachments.clean_name(file.name),
@@ -260,7 +277,7 @@ def create_upload(
     upload = Upload.objects.create(item=item, description=description)
     new_version(upload, file, uploaded_by=creator)
     attachments.link(item, description, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -282,19 +299,54 @@ def add_comment(item, *, author, content):
     return comment
 
 
-def can_be_assigned(user, item):
-    """Clients only on to-dos visible to them (specs/access.md)"""
-    return Item.objects.visible_to(user).filter(pk=item.pk).exists()
+def assignable_people(item, by=None):
+    """Who can be assigned to the to-do: the active people who can see it
+    (specs/access.md, specs/todos.md), the project's members first. Staff
+    of all-access projects whether they're members or not (assigning makes
+    them members), clients only members and only on visible to-dos. The
+    one rule for the forms, the API and the next to-do of a recurring
+    one. Clients (``by``) assign members only: they don't learn about other
+    staff."""
+    project = item.project
+    members = Q(memberships__project=project)
+    everybody = project.is_all_access and not (by and by.is_client)
+    staff = Q(is_client=False) & (Q() if everybody else members)
+    who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
+    return (
+        User.objects
+        .active()
+        .filter(who)
+        .distinct()
+        .annotate(
+            is_member=Exists(
+                Membership.objects.filter(project=project, user=OuterRef("pk"))
+            )
+        )
+        .order_by("-is_member", Lower("full_name"), "email")
+    )
+
+
+def _assignable(item, by=None):
+    """``{pk: is_member}`` of ``assignable_people()``, with the stored
+    visibility, not what the object knew when it was loaded"""
+    item.refresh_from_db(fields=["is_client_visible"])
+    return dict(assignable_people(item, by).values_list("pk", "is_member"))
 
 
 @transaction.atomic
 def assign(item, users, *, actor):
-    """Adds assignees; returns those newly assigned"""
+    """Adds assignees (``assignable_people()``, ``ValueError`` for anybody
+    else); staff who aren't members yet become members, recorded as added
+    (decided 2026-11-21). Returns those newly assigned."""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
+    allowed = _assignable(item, actor) if users else {}
     for user in users:
-        if not can_be_assigned(user, item):
-            raise ValueError(f"{user} can't see {item}")
+        if user.pk not in allowed:
+            raise ValueError(f"{user} can't be assigned to {item}")
+    for user in users:
+        if not allowed[user.pk]:
+            project_ops.add_member(item.project, user, actor=actor)
     todo.assignees.add(*users)
     for user in users:
         subscribe(user, item, added_by=actor)
@@ -334,6 +386,7 @@ def update_todo(
     the complete new set. Removing the recurrence removes its end and
     count too."""
     todo = item.todo
+    previous = f"{item.title}\n\n{todo.notes}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -369,7 +422,13 @@ def update_todo(
         event = record(
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
-        mentions.update(item, f"{item.title}\n\n{todo.notes}", actor=actor, event=event)
+        mentions.update(
+            item,
+            f"{item.title}\n\n{todo.notes}",
+            actor=actor,
+            event=event,
+            previous=previous,
+        )
     if assignees is not _UNCHANGED:
         new, old = set(assignees), set(todo.assignees.all())
         assign(item, list(new - old), actor=actor)
@@ -412,7 +471,7 @@ def _create_next(item, todo, *, actor):
         return None
     todolist = item.parent
     TodoList.objects.select_for_update().get(item=todolist)
-    following = Item(
+    following = create_item(
         project=item.project,
         parent=todolist,
         kind=Kind.TODO,
@@ -420,8 +479,6 @@ def _create_next(item, todo, *, actor):
         creator=item.creator,
         position=_next_position(_todos_in(todolist, todo.group)),
     )
-    following.save()
-    visibility.recompute(following)
     Todo.objects.create(
         item=following,
         group=todo.group,
@@ -438,8 +495,9 @@ def _create_next(item, todo, *, actor):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
-    people = [u for u in todo.assignees.all() if u.is_active]
-    people = [u for u in people if can_be_assigned(u, following)]
+    # Assignees removed from the project since aren't brought back
+    allowed = _assignable(following)
+    people = [u for u in todo.assignees.all() if allowed.get(u.pk)]
     if people:
         assign(following, people, actor=actor)
     return following
@@ -479,9 +537,12 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     (or ungrouped), next to each other in the given order, starting at
     ``index`` among the others there (0-based, None: at the end). Locks the
     lists, so concurrent moves don't mix up positions. Moving into another
-    list recomputes the visibility."""
+    list recomputes the visibility. Raises ``ValueError`` for a to-do given
+    twice."""
     if not items:
         return
+    if len({i.pk for i in items}) != len(items):
+        raise ValueError("A to-do can't be moved twice at once")
     sources = {(i.parent_id, i.todo.group_id) for i in items}
     lists = sorted({todolist.pk} | {list_id for list_id, _group in sources})
     list(TodoList.objects.select_for_update().filter(item__in=lists).order_by("pk"))
@@ -494,6 +555,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     siblings = [i for i in _todos_in(todolist, group) if i.pk not in moved]
     if index is None or index > len(siblings):
         index = len(siblings)
+    index = max(0, index)
     siblings[index:index] = items
 
     for item in items:
@@ -501,9 +563,20 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
         if changed_list:
             item.parent = todolist
             item.save(update_fields=["parent"])
-        if item.todo.group_id != (group.pk if group else None):
+        changed_group = item.todo.group_id != (group.pk if group else None)
+        if changed_group:
             item.todo.group = group
             item.todo.save(update_fields=["group"])
+        if changed_group and not changed_list:
+            # A board column; merged like edits (record())
+            record(
+                actor=actor,
+                action=Action.MOVED,
+                project=item.project,
+                item=item,
+                group=group.title if group else "",
+                list=todolist.title,
+            )
         if changed_list:
             visibility.recompute(item)
             record(
@@ -512,6 +585,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 project=item.project,
                 item=item,
                 to=todolist.title,
+                to_id=todolist.pk,
             )
     _renumber(siblings)
     for list_id, group_id in sources:
@@ -587,10 +661,12 @@ def set_visibility(item, *, visible, actor):
 @transaction.atomic
 def trash(item, *, actor):
     """Soft and recoverable; active descendants follow, and come back with
-    it, those trashed earlier stay trashed"""
+    it, those trashed earlier stay trashed. An archived item comes back
+    archived."""
+    item.archived_when_trashed = item.status == Status.ARCHIVED
     item.status = Status.TRASHED
     item.trashed_at = timezone.now()
-    item.save(update_fields=["status", "trashed_at"])
+    item.save(update_fields=["status", "trashed_at", "archived_when_trashed"])
     Item.objects.filter(
         pk__in=list(Item.objects.descendants(item).values_list("pk", flat=True)),
         status=Status.ACTIVE,
@@ -605,13 +681,13 @@ def restore(item, *, actor):
     if item.parent_id and item.parent.status == Status.TRASHED:
         raise ValueError("Restore the parent first")
     Item.objects.filter(
-        pk__in=list(
-            Item.objects.descendants(item, include_self=True).values_list(
-                "pk", flat=True
-            )
-        ),
+        pk__in=list(Item.objects.descendants(item).values_list("pk", flat=True)),
         trashed_at=item.trashed_at,
     ).update(status=Status.ACTIVE, trashed_at=None)
+    item.status = Status.ARCHIVED if item.archived_when_trashed else Status.ACTIVE
+    item.trashed_at = None
+    item.archived_when_trashed = False
+    item.save(update_fields=["status", "trashed_at", "archived_when_trashed"])
     item.refresh_from_db()
     record(actor=actor, action=Action.RESTORED, project=item.project, item=item)
 
@@ -642,27 +718,35 @@ def can_change(user, item):
 def update_list(
     item, *, actor, title=_UNCHANGED, description=_UNCHANGED, view=_UNCHANGED
 ):
+    """Changes what's given and differs; records an edit only then, like
+    ``update_todo()``"""
     todolist = item.todolist
+    edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
         item.updated_at = timezone.now()
         item.save(update_fields=["title", "updated_at"])
-    fields = []
-    if description is not _UNCHANGED:
-        todolist.description = description
-        fields.append("description")
-    if view is not _UNCHANGED:
-        todolist.view = view
-        fields.append("view")
+        edited = True
+    fields = [
+        name
+        for name, value in [("description", description), ("view", view)]
+        if value is not _UNCHANGED and value != getattr(todolist, name)
+    ]
+    for name in fields:
+        setattr(todolist, name, description if name == "description" else view)
     if fields:
         todolist.save(update_fields=fields)
-    record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+    if edited or fields:
+        record(actor=actor, action=Action.EDITED, project=item.project, item=item)
     return item
 
 
 @transaction.atomic
 def archive(item, *, actor):
-    """Readable, but out of the way (lists, later folders and messages)"""
+    """Readable, but out of the way (lists, later folders and messages);
+    archiving an archived item again changes nothing (a double submit)"""
+    if item.status == Status.ARCHIVED:
+        return
     if item.status != Status.ACTIVE:
         raise ValueError("Only active items can be archived")
     item.status = Status.ARCHIVED
@@ -672,6 +756,8 @@ def archive(item, *, actor):
 
 @transaction.atomic
 def unarchive(item, *, actor):
+    if item.status == Status.ACTIVE:
+        return
     if item.status != Status.ARCHIVED:
         raise ValueError("The item isn't archived")
     item.status = Status.ACTIVE

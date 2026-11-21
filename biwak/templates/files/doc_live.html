@@ -21,7 +21,7 @@
     type (specs/collaboration.md). The texts are the states it shows.
   {% endcomment %}
   <div
-    class="wb-live mb-3"
+    class="mb-3"
     data-collab="/ws/docs/{{ item.pk }}"
     data-collab-connecting="{% translate 'Connecting…' %}"
     data-collab-connected="{% translate 'Changes are saved as you type.' %}"
@@ -43,7 +43,7 @@
     <noscript>{{ item.doc.content|linebreaks }}</noscript>
   </div>
   {% if can_edit %}
-    <div class="card wb-form-card mb-4">
+    <div class="card mb-4">
       <div class="card-body">
         <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
           {% csrf_token %}

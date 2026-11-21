@@ -23,22 +23,30 @@ from biwak.items.models import Group, Item, Kind
 
 
 # table → column → (label, kind of value); the other columns are ignored
-TEXT, VALUE, BOOL, DATE, ITEM, GROUP, COMPLETED = (
+TEXT, VALUE, BOOL, DATE, TIME, ITEM, GROUP, COMPLETED, PAUSED, SCHEDULE = (
     "text",
     "value",
     "bool",
     "date",
+    "time",
     "item",
     "group",
     "completed",
+    "paused",
+    "schedule",
 )
+# Folders hold docs, files and folders; lists hold to-dos
+IN_FOLDERS = {Kind.DOC, Kind.FILE, Kind.FOLDER}
 
 
-def _fields():
+def _fields(item):
     return {
         "items_item": {
             "title": (gettext("Title"), VALUE),
-            "parent_id": (gettext("List"), ITEM),
+            "parent_id": (
+                gettext("Folder") if item.kind in IN_FOLDERS else gettext("List"),
+                ITEM,
+            ),
             "is_client_visible": (gettext("Visible to clients"), BOOL),
             "status": (gettext("Status"), VALUE),
         },
@@ -56,6 +64,33 @@ def _fields():
         "items_message": {"content": (gettext("Content"), TEXT)},
         "items_upload": {"description": (gettext("Description"), TEXT)},
         "items_doc": {"content": (gettext("Content"), TEXT)},
+        "checkins_answer": {"content": (gettext("Content"), TEXT)},
+        "checkins_question": {
+            "rule": (gettext("Schedule"), SCHEDULE),
+            "starts_on": (gettext("First asked on"), DATE),
+            "time_of_day": (gettext("Time of day"), TIME),
+            "time_zone": (gettext("Time zone"), VALUE),
+            "paused_at": (gettext("Paused"), PAUSED),
+        },
+    }
+
+
+# The people of an item: table → (kind, column of the item, label added,
+# label removed)
+def _people_tables():
+    return {
+        "items_todo_assignees": (
+            Kind.TODO,
+            "todo_id",
+            gettext("Assigned"),
+            gettext("Unassigned"),
+        ),
+        "checkins_question_people": (
+            Kind.QUESTION,
+            "question_id",
+            gettext("Asked"),
+            gettext("No longer asked"),
+        ),
     }
 
 
@@ -97,8 +132,9 @@ def _rows(item):
     wanted = Q(table_name="items_item", row_data__id=pk) | Q(
         table_name=type(item.detail)._meta.db_table, row_data__item_id=pk
     )
-    if item.kind == Kind.TODO:
-        wanted |= Q(table_name="items_todo_assignees", row_data__todo_id=pk)
+    for table, (kind, column, *_labels) in _people_tables().items():
+        if item.kind == kind:
+            wanted |= Q(table_name=table, **{f"row_data__{column}": pk})
     return list(
         LoggedAction.objects.filter(wanted, row_data__isnull=False).order_by("event_id")
     )
@@ -114,8 +150,10 @@ def _ids(rows, column):
     }
 
 
-def _show(rows, viewer):
+def _show(rows, viewer, item):
     """The function turning a raw value of a kind into text"""
+    from biwak import schedules
+
     items = {
         i.pk: i.title
         for i in Item.objects.visible_to(viewer).filter(pk__in=_ids(rows, "parent_id"))
@@ -130,10 +168,19 @@ def _show(rows, viewer):
         if kind == BOOL:
             return gettext("yes") if raw in {"t", "true", True} else gettext("no")
         if kind == ITEM:
-            return items.get(int(raw), gettext("another list"))
+            return items.get(
+                int(raw),
+                gettext("another folder")
+                if item.kind in IN_FOLDERS
+                else gettext("another list"),
+            )
         if kind == GROUP:
             return groups.get(int(raw), gettext("a deleted group"))
-        if kind == COMPLETED:
+        if kind == TIME:
+            return raw[:5]
+        if kind == SCHEDULE:
+            return schedules.describe(raw)
+        if kind in {COMPLETED, PAUSED}:
             when = parse_datetime(raw)
             return timezone.localtime(when).strftime("%Y-%m-%d %H:%M") if when else raw
         return raw
@@ -142,25 +189,29 @@ def _show(rows, viewer):
 
 
 def _assignment(row, who, people):
+    """Assigned or unassigned, asked or no longer asked"""
     assigned = row.action == "I"
+    _kind, _column, added, removed = _people_tables()[row.table_name]
     name = people.get(int(row.row_data["user_id"]))
     return Change(
         **who,
-        field="assignees",
-        label=gettext("Assigned") if assigned else gettext("Unassigned"),
+        field="assignees" if row.table_name == "items_todo_assignees" else "people",
+        label=added if assigned else removed,
         kind="assigned" if assigned else "unassigned",
         new=str(name) if name else gettext("somebody"),
     )
 
 
-def _updates(row, who, show):
-    for column, (label, kind) in _fields().get(row.table_name, {}).items():
+def _updates(row, who, show, fields):
+    for column, (label, kind) in fields.get(row.table_name, {}).items():
         if column not in (row.changed_fields or {}):
             continue
         old, new = row.row_data.get(column), row.changed_fields[column]
         change = Change(**who, field=column, label=label, kind="changed")
         if kind == COMPLETED:
             change.label = gettext("Completed") if new else gettext("Reopened")
+        if kind == PAUSED:
+            change.label = gettext("Paused") if new else gettext("Resumed")
         if kind == TEXT:
             change.old, change.new = old or None, new or None
             change.diff = diff_lines(old, new)
@@ -173,7 +224,8 @@ def history(item, viewer):
     """The changes of the item, newest first. ``viewer`` only sees the
     titles of items they can see."""
     rows = _rows(item)
-    show = _show(rows, viewer)
+    show = _show(rows, viewer, item)
+    fields = _fields(item)
     people = {
         u.pk: u
         for u in User.objects.filter(
@@ -188,7 +240,7 @@ def history(item, viewer):
             "user": user,
             "user_name": "" if user else (row.user_name or gettext("unknown")),
         }
-        if row.table_name == "items_todo_assignees":
+        if row.table_name in _people_tables():
             if row.action in {"I", "D"}:
                 changes.append(_assignment(row, who, people))
         elif row.action == "I" and row.table_name == "items_item":
@@ -202,5 +254,5 @@ def history(item, viewer):
                 )
             )
         elif row.action == "U":
-            changes += _updates(row, who, show)
+            changes += _updates(row, who, show, fields)
     return list(reversed(changes))

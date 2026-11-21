@@ -3,13 +3,10 @@
 {% block title %}{% translate "Edit the list" %} – {{ item }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{{ item.get_absolute_url }}">{{ item }}</a>
-  </nav>
+  {% include "_breadcrumbs.html" with project=item.project parent=item %}
   <h1 class="mb-3">{% translate "Edit the list" %}</h1>
   {% include "items/_client_banner.html" %}
-  <div class="card wb-form-card mb-4">
+  <div class="card mb-4">
     <div class="card-body">
       <form method="post">
         {% csrf_token %}

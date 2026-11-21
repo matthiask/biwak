@@ -13,13 +13,12 @@ from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
 from biwak.accounts.models import User
-from biwak.activity.models import Action
-from biwak.activity.operations import record
 from biwak.api_conventions import PersonOut, absolute, html, person_out
 from biwak.bookmarks.models import Bookmark
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import activity_column, overview
+from biwak.projects.views import project_for
 
 
 router = Router(tags=["projects"])
@@ -38,11 +37,6 @@ class ProjectOut(Schema):
     last_activity_at: dt.datetime | None
     archived_at: dt.datetime | None
     url: str
-
-
-def project_for(request, pk):
-    """The project if the person may open it, else 404, like the web"""
-    return get_object_or_404(Project.objects.accessible_to(request.user), pk=pk)
 
 
 def project_out(project, user):
@@ -121,15 +115,12 @@ def project_create(request, data: ProjectIn):
     """Creates the project (staff); the creator becomes a member"""
     if not project_ops.can_manage_project(request.user):
         raise HttpError(403, _("Only staff can create projects."))
-    try:
-        project = project_ops.create_project(
-            name=data.name,
-            description=data.description,
-            is_all_access=data.is_all_access,
-            actor=request.user,
-        )
-    except ValidationError as exc:
-        raise HttpError(400, " ".join(exc.messages)) from exc
+    project = project_ops.create_project(
+        name=data.name,
+        description=data.description,
+        is_all_access=data.is_all_access,
+        actor=request.user,
+    )
     return Status(201, project_out(project, request.user))
 
 
@@ -139,10 +130,9 @@ def project_join(request, project_id: int):
     (recorded as ``joined``); joining twice changes nothing"""
     if request.user.is_client:
         raise HttpError(403, _("Only staff can join projects."))
-    if request.user.is_admin:
-        project = get_object_or_404(Project, pk=project_id)
-    else:
-        project = project_for(request, project_id)
+    project = get_object_or_404(
+        project_ops.projects_to_join(request.user), pk=project_id
+    )
     project_ops.add_member(project, request.user, actor=request.user)
     return project_out(project, request.user)
 
@@ -287,16 +277,15 @@ def project_update(request, project_id: int, data: ProjectPatch):
     if not project_ops.can_manage_project(request.user):
         raise HttpError(403, _("Only staff can change projects."))
     given = data.model_fields_set
-    fields = [f for f in ["name", "description", "is_all_access"] if f in given]
-    for field in fields:
-        value = getattr(data, field)
+    changes = {
+        field: getattr(data, field)
+        for field in ["name", "description", "is_all_access"]
+        if field in given
+    }
+    for field, value in changes.items():
         if value is None or (field == "name" and not value.strip()):
             raise HttpError(400, _("%(field)s can't be empty.") % {"field": field})
-        setattr(project, field, value)
-    if fields:
-        project.full_clean()
-        project.save(update_fields=fields)
-        record(actor=request.user, action=Action.EDITED_PROJECT, project=project)
+    project_ops.update_project(project, actor=request.user, **changes)
     if "archived" in given and data.archived != bool(project.archived_at):
         if data.archived:
             project_ops.archive_project(project, actor=request.user)

@@ -61,8 +61,24 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   with the viewer is plain text.
 - "Within an hour" means each event is at most an hour after the next
   older one of the entry (chains merge), and never across midnight.
-- A moved to-do's target list is not shown to clients (its name may be
-  internal even when the to-do is visible now).
+- A client sees the target list of a move between lists ("moved ... to
+  Plans") when that list is visible to them now (decided 2026-11-21): checked
+  when the feed, a mail or the API is shown, not when it was recorded, so a
+  list made internal later disappears from the event. The event stores the
+  list's ID (`to_id`) next to its title; `feed.add_target_lists()` resolves
+  visibility for a page of events in one query and shows the list's current
+  title. Events recorded without the ID stay staff-only (staff fall back to
+  the title at the time). The source list is visible anyway, since the
+  to-do is. In the API a client's `data` has `to` and `to_id` only for a
+  visible list.
+- Moving a to-do to another group of its list (a board column) is a
+  `moved` event with the group and the list: "Ada moved 'Order the tent'
+  to Done", shown to everybody who sees the to-do (the group is as
+  visible as the to-do), in mails too. Like edits, the same person
+  moving the same to-do within 10 minutes updates that event, so
+  dragging back and forth is one event with the last group. Reordering
+  within a group is no event (decided 2026-11-21). Moving it out of every
+  group reads "moved ... out of its group" (decided 2026-11-21).
 - Merging applies to every action; the entry says "completed 5 to-dos in
   Launch", with "items" for mixed kinds.
 
@@ -99,8 +115,12 @@ Built (`biwak/activity/history.py`, `views.py`, `api.py`):
 first, complete) for every kind of item; the to-do page links to it. It
 tracks the title, the list, the effective visibility, the status; notes,
 group, start and due dates, completing and reopening and the assignees of
-to-dos; descriptions of lists, content of messages and docs. Texts are a
-line diff with one line of context. Positions and timestamps are ignored.
+to-dos; descriptions of lists, content of messages and docs; the content
+of check-in answers, the schedule, first date, time of day, time zone,
+pausing and the people asked of questions (2026-11-21). The parent is
+"List" for to-dos and "Folder" for docs, files and folders ("another
+folder" when the viewer can't see it). Texts are a line diff with one
+line of context. Positions and timestamps are ignored.
 `audit_user_id()` gives the person, otherwise the audit's name (a job).
 
 Decisions (proposed by the building agent, confirmed 2026-11-20):

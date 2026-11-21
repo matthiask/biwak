@@ -5,7 +5,8 @@
 {% block content %}
   {% include "files/_crumbs.html" %}
   <h1 class="mb-3">{% translate "New doc" %}</h1>
-  <div class="card wb-form-card mb-4">
+  {% include "items/_client_banner.html" with item=folder %}
+  <div class="card mb-4">
     <div class="card-body">
       <form method="post" {% attachments_attrs project %}>
         {% csrf_token %}

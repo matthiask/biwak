@@ -79,11 +79,13 @@ def _lexemes(text):
     """The words as the database indexes them (so that "1.5" or an email
     address match what is stored)"""
     with connection.cursor() as cursor:
+        # In the order typed (a tsvector is sorted, its positions aren't)
         cursor.execute(
-            "SELECT tsvector_to_array(to_tsvector('simple', %s))",
-            [text[:MAX_QUERY_CHARS]],
+            "SELECT lexeme FROM unnest(to_tsvector('simple', %s)) "
+            "ORDER BY positions[1] LIMIT %s",
+            [text[:MAX_QUERY_CHARS], MAX_TERMS],
         )
-        return cursor.fetchone()[0][:MAX_TERMS]
+        return [row[0] for row in cursor.fetchall()]
 
 
 def matching_ids(prefix):
@@ -116,7 +118,7 @@ def search(
     words = prefixes(terms)
     if not words:
         return Item.objects.none()
-    items = Item.objects.visible_to(user).select_related("project", "creator")
+    items = Item.objects.visible_to(user).select_related("project", "creator", "answer")
     # Every word anywhere in the item: the title can have one, the text
     # another, a comment a third
     for word in words:

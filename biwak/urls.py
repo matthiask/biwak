@@ -7,6 +7,7 @@ from django.templatetags.static import static
 from django.urls import include, path, re_path
 
 from biwak.api import api
+from biwak.schedules_forms import describe
 
 
 @login_not_required
@@ -33,6 +34,7 @@ urlpatterns = [
     path("", include("biwak.checkins.urls")),
     path("", include("biwak.search.urls")),
     path("", include("biwak.inbound.urls")),
+    path("schedules/describe/", describe, name="schedules_describe"),
     path("api/v1/", api.urls),
     path("accounts/", include("biwak.accounts.urls")),
     re_path(r"^accounts/password/", no_passwords),

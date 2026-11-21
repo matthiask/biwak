@@ -70,28 +70,17 @@ def next_occurrence_of(question, *, after):
     )
 
 
-def next_fire(*, rule, starts_on, time_of_day, time_zone, after):
-    """The first moment strictly after ``after`` the rule asks, or None"""
-    found = next_occurrence(
-        rule=rule,
-        starts_on=starts_on,
-        time_of_day=time_of_day,
-        time_zone=time_zone,
-        after=after,
-    )
-    return found and found[1]
-
-
 def next_fire_of(question, *, after):
     found = next_occurrence_of(question, after=after)
     return found and found[1]
 
 
-def latest_occurrence(question, *, first, now):
+def latest_due(question, *, first, now):
     """The last date up to ``now`` the rule asks and its moment, as
     ``(date, moment)``, counting on from ``first`` (the stored next time,
     one of the rule's moments): after downtime, a question is asked once,
-    for the latest date, not for every date missed"""
+    for the latest date, not for every date missed. (An ``Occurrence`` is
+    what's created for it: ``operations.latest_occurrence()``.)"""
     latest = next_occurrence_of(question, after=first - dt.timedelta(microseconds=1))
     while (following := next_occurrence_of(question, after=latest[1])) and (
         following[1] <= now

@@ -3,10 +3,7 @@
 {% block title %}{% translate "History" %}: {{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{{ item.get_absolute_url }}">{{ item|item_title }}</a>
-  </nav>
+  {% include "_breadcrumbs.html" with project=item.project parent=item %}
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% translate "History" %}: {{ item|item_title }}
@@ -24,9 +21,9 @@
         <div>
           <span class="fw-semibold">{{ change.label }}</span>
           {% if change.diff %}
-            <div class="font-monospace small mt-1">
+            <div class="wb-diff small mt-1">
               {% for sign, line in change.diff %}
-                <div class="text-break{% if sign == '+' %} bg-success-subtle{% elif sign == '-' %} bg-danger-subtle{% endif %}">
+                <div {% if sign == '+' %}class="wb-diff-add"{% elif sign == '-' %}class="wb-diff-del"{% endif %}>
                   {% if sign == "…" %}…{% else %}{{ sign }} {{ line }}{% endif %}
                 </div>
               {% endfor %}

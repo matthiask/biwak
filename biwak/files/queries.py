@@ -1,7 +1,7 @@
 """What the project page, the message board and the API list (specs/files.md):
 everything through ``Item.objects.visible_to()``"""
 
-from django.db.models import Count
+from django.db.models import Count, Q
 
 from biwak.items.models import Item, Kind
 
@@ -76,3 +76,15 @@ def root_counts(project, user):
         "docs": counts.get(Kind.DOC, 0),
         "files": counts.get(Kind.FILE, 0),
     }
+
+
+def neighbours(versions, version):
+    """The version before ``version`` (older, or None) and whether it is the
+    newest; two small queries instead of loading every version"""
+    before = Q(created_at__lt=version.created_at) | Q(
+        created_at=version.created_at, pk__lt=version.pk
+    )
+    newer = Q(created_at__gt=version.created_at) | Q(
+        created_at=version.created_at, pk__gt=version.pk
+    )
+    return versions.filter(before).first(), not versions.filter(newer).exists()

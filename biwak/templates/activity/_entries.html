@@ -1,9 +1,9 @@
 {% load i18n %}
 {% for day, label, entries in days %}
-  <h2 class="h6 mt-4 text-body-secondary wb-feed-day">
+  <h2 class="h6 mt-4 text-body-secondary">
     {% if label %}{{ label }} · {% endif %}{{ day|date:"l, j. F Y" }}
   </h2>
-  <ul class="list-unstyled wb-events">
+  <ul class="list-unstyled">
     {% for entry in entries %}
       <li class="mb-2">
         {% if entry.is_merged %}

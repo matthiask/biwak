@@ -6,15 +6,14 @@ import zoneinfo
 from django import forms
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from biwak import schedules
 from biwak.accounts.models import User
+from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
@@ -23,6 +22,8 @@ from biwak.items import operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
+from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
 
 # How many occurrences a page shows (older ones: "Show more")
@@ -41,36 +42,16 @@ def staff_only(request):
         raise PermissionDenied
 
 
-def candidate_people(project):
-    """Who a question of the project can ask: members, and all staff in
-    all-access projects (clients only on visible questions, checked by
-    ``operations.set_people()``)"""
-    people = Q(memberships__project=project)
-    if project.is_all_access:
-        people |= Q(is_client=False)
-    return User.objects.active().filter(people).distinct()
-
-
 # Forms -----------------------------------------------------------------------
 
 
-class QuestionForm(Form):
+class QuestionForm(RuleFormMixin, Form):
     title = forms.CharField(label=_("Question"), max_length=500)
-    repeat = forms.ChoiceField(
-        label=_("Asked"),
-        choices=[c for c in schedules.preset_choices() if c[0]],
-        initial="weekly",
-    )
-    custom_rule = forms.CharField(
-        label=_("Custom schedule"),
-        required=False,
-        max_length=200,
-        help_text=_("An RRULE, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
-    )
+    rule = RuleField(label=_("Asked"), allow_empty=False, default_frequency="weekly")
     starts_on = forms.DateField(
         label=_("First asked on"),
         widget=forms.DateInput(attrs={"type": "date"}),
-        help_text=_("Weekly and monthly schedules count from this date."),
+        help_text=_("Schedules every two weeks and more count from this date."),
     )
     time_of_day = forms.TimeField(
         label=_("Time of day"), widget=forms.TimeInput(attrs={"type": "time"})
@@ -89,8 +70,7 @@ class QuestionForm(Form):
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
     field_order = [
         "title",
-        "repeat",
-        "custom_rule",
+        "rule",
         "starts_on",
         "time_of_day",
         "time_zone",
@@ -101,29 +81,18 @@ class QuestionForm(Form):
     def __init__(self, *args, project, item=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.item = item
-        self.fields["people"].queryset = candidate_people(project)
+        self.fields["rule"].widget.anchor = self.initial.get("starts_on")
+        # Who sees a visible question: clients only on visible ones, checked
+        # by ``clean()`` and ``operations.set_people()``
+        self.fields["people"].queryset = people_who_see(project, visible=True)
         if item is not None:
             # The switch is on the page
             del self.fields["visible"]
 
-    def _rule(self, data):
-        if data.get("repeat") == schedules.CUSTOM:
-            if not data.get("custom_rule"):
-                raise schedules.InvalidRule(_("Enter the schedule."))
-            return schedules.validate(data["custom_rule"])
-        if data.get("repeat") and data.get("starts_on"):
-            return schedules.from_preset(data["repeat"], data["starts_on"])
-        return ""
-
     def clean(self):
         data = super().clean()
-        repeat = data.get("repeat")
-        field = "custom_rule" if repeat == schedules.CUSTOM else "repeat"
-        try:
-            data["rule"] = self._rule(data)
-        except schedules.InvalidRule as exc:
-            data["rule"] = ""
-            self.add_error(field, str(exc))
+        if data.get("rule") is KEEP:
+            data["rule"] = self.initial.get("rule", "")
         visible = (
             self.item.is_client_visible
             if self.item is not None
@@ -172,11 +141,9 @@ def project_checkins(request, pk):
 
 def _form_initial(item):
     question = item.question
-    preset = schedules.preset_for(question.rule, question.starts_on)
     return {
         "title": item.title,
-        "repeat": preset,
-        "custom_rule": question.rule if preset == schedules.CUSTOM else "",
+        "rule": question.rule,
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
         "time_zone": question.time_zone,
@@ -267,14 +234,25 @@ def question_mail(request, pk):
 # The question's page ---------------------------------------------------------
 
 
+def _comment_form(answer):
+    """The comment form under an answer: own field IDs, and the people to
+    mention come from the answer"""
+    form = CommentForm(auto_id=f"id_answer_{answer.pk}_%s")
+    form.fields["content"].widget.attrs["data-mentions"] = reverse(
+        "mentionable", args=[answer.pk]
+    )
+    return form
+
+
 def _answers(request, occurrences):
     """The occurrences' answers (the person's visible ones), newest first,
-    with their comments, as ``{occurrence ID: [(answer, comments)]}``"""
+    with their comments and a comment form, as ``{occurrence ID: [(answer,
+    comments, form)]}``"""
     visible = Item.objects.visible_to(request.user)
     answers = (
         Answer.objects
         .filter(occurrence__in=occurrences, item__in=visible)
-        .select_related("item__creator", "occurrence")
+        .select_related("item__creator", "occurrence", "author")
         .order_by("-item__created_at", "-pk")
     )
     comments = {}
@@ -282,9 +260,14 @@ def _answers(request, occurrences):
         item__in=[a.item_id for a in answers]
     ).select_related("author"):
         comments.setdefault(comment.item_id, []).append(comment)
+    prefetch(*[answer.item for answer in answers])
     result = {o.pk: [] for o in occurrences}
     for answer in answers:
-        result[answer.occurrence_id].append((answer, comments.get(answer.pk, [])))
+        result[answer.occurrence_id].append((
+            answer,
+            comments.get(answer.pk, []),
+            _comment_form(answer),
+        ))
     return result
 
 
@@ -318,8 +301,6 @@ def question(request, pk):
     latest = ops.latest_occurrence(item)
     is_latest_page = bool(occurrences) and occurrences[0] == latest
     rows = [(o, answers[o.pk]) for o in occurrences]
-    comment_form = CommentForm()
-    comment_form.fields["content"].widget.attrs["data-mentions"] = ""
     people = sorted(
         item.project.people_known_to(user, question.people.all()),
         key=lambda u: (u.full_name or u.email).lower(),
@@ -339,9 +320,8 @@ def question(request, pk):
             "answered": {
                 o.pk
                 for o in occurrences
-                if any(a.author_id == user.pk for a, _c in answers[o.pk])
+                if any(a.author_id == user.pk for a, _c, _f in answers[o.pk])
             },
-            "comment_form": comment_form,
             "people": people,
             "mode": mail_mode(user, item),
             "modes": Mode.choices,
@@ -417,7 +397,7 @@ def question_answer(request, pk):
     existing = (
         Answer.objects
         .filter(occurrence=occurrence, author=request.user)
-        .exclude(item__status="trashed")
+        .not_trashed()
         .first()
     )
     form = AnswerForm(

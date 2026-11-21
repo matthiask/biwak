@@ -171,8 +171,9 @@ def _send(method, url, path, token, **kwargs):
 
 
 def request(method, path, **kwargs):
-    """The API's JSON, or terminate with its error. An expired token is
-    replaced through the browser with the same access, in a terminal."""
+    """The API's JSON (``None`` for an answer without content), or terminate
+    with its error. An expired token is replaced through the browser with
+    the same access, in a terminal."""
     url, token = current()
     response = _send(method, url, path, token, **kwargs)
     access = read_config().get("access")
@@ -202,7 +203,29 @@ def request(method, path, **kwargs):
         terminate(
             f"{response.status_code}: {detail or ' '.join(response.text.split())[:200]}"
         )
+    if response.status_code == 204:
+        return None
     return response.json()
+
+
+# The API's largest page (biwak/api_conventions.py)
+MAX_PAGE_SIZE = 200
+
+
+def paginate(path, params=None, *, limit=None):
+    """The results of a list with cursor pagination, following ``next``
+    page by page: all of them, or the first ``limit``"""
+    params = dict(params or {})
+    params["page_size"] = min(limit or MAX_PAGE_SIZE, MAX_PAGE_SIZE)
+    results = []
+    while limit is None or len(results) < limit:
+        data = request("GET", path, params=params)
+        results += data["results"]
+        if not data["next"]:
+            break
+        # "next" is the URL of the next page
+        params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
+    return results[:limit]
 
 
 def download(path, target):

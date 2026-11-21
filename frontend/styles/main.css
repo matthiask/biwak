@@ -1,4 +1,4 @@
-/* Layout classes from Workbench (workbench/static/workbench/main.scss),
+/* Layout classes from Governance (which has them from Workbench),
    written against Bootstrap's CSS custom properties instead of Sass. */
 
 :root,
@@ -19,7 +19,7 @@
   --bs-link-hover-color-rgb: 78, 47, 156;
   --bs-border-radius: 0.5rem;
   --wb-surface: #fff;
-  /* Fields on the page's background, e.g. filters */
+  /* Fields on the page's background */
   --wb-field-bg: #fff;
   /* Stronger than the cards' borders: fields sit on the stone page too */
   --wb-field-border: #c9c1b1;
@@ -172,9 +172,7 @@ h3,
 }
 
 /* Buttons destroying or ending something (deleting, removing somebody,
-   withdrawing): danger ink, a solid one confirming. Buttons for what the
-   constitution leaves to others (as admin, as Secretary standing in for
-   the Circle Leads, the button_class tag) are amber: only when needed. */
+   withdrawing): danger ink, a solid one confirming */
 .btn-destructive {
   --bs-btn-color: var(--wb-danger-ink);
   --bs-btn-bg: var(--wb-surface);
@@ -185,19 +183,6 @@ h3,
   --bs-btn-active-color: var(--wb-danger-ink);
   --bs-btn-active-bg: var(--wb-danger-bg);
   --bs-btn-active-border-color: var(--wb-danger-ink);
-}
-
-.btn-danger {
-  --bs-btn-color: #fff;
-  --bs-btn-bg: #b02a1f;
-  --bs-btn-border-color: #b02a1f;
-  --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: #8f2219;
-  --bs-btn-hover-border-color: #8f2219;
-  --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: #8f2219;
-  --bs-btn-active-border-color: #8f2219;
-  --bs-btn-focus-shadow-rgb: 176, 42, 31;
 }
 
 .btn-elevated {
@@ -245,26 +230,6 @@ h3,
   margin-top: 0.125rem;
 }
 
-/* Filters of lists (generic/_filters.html), like Workbench's */
-.wb-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.wb-filters select {
-  width: auto;
-  max-width: 16em;
-}
-
-/* Rows filtered away (filter_rows.js), also those with d-flex */
-[data-filter-text][hidden],
-[data-filter-group][hidden] {
-  display: none !important;
-}
-
 /* Fields stand out on cards and on the stone page alike */
 :is(.form-select, .form-control) {
   background-color: var(--wb-field-bg);
@@ -288,171 +253,31 @@ h3,
   cursor: not-allowed;
 }
 
-.wb-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1.25rem;
-}
-
-.wb-meta-label,
-.wb-stat-label {
-  color: var(--bs-secondary-color);
-  font-size: 0.8rem;
-}
-
 .wb-description {
   max-width: 70ch;
-}
-
-.wb-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  gap: 0.75rem;
-}
-
-.wb-stat {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--wb-surface-border);
-  border-radius: var(--bs-border-radius);
-  background: var(--wb-surface);
-  box-shadow: var(--wb-shadow);
-}
-
-.wb-stat-value {
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.wb-fields {
-  display: grid;
-  grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
-  gap: 0.4rem 1rem;
-  margin: 0;
-}
-
-.wb-fields dt {
-  color: var(--bs-secondary-color);
-  font-size: 0.8rem;
-  font-weight: 400;
-  padding-top: 0.1rem;
-}
-
-.wb-fields dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.wb-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.25rem 1rem;
-}
-
-/* The title with badges after it, on one line */
-.wb-row-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 0.5rem;
-}
-
-/* Rows clickable as a whole: their title link covers the row, other links
-   and controls stay on top and work on their own */
-.wb-row-link {
-  position: relative;
-}
-
-.wb-row-link a.wb-row-title::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-
-.wb-row-link
-  :is(a:not(.wb-row-title), button, input, select, textarea, label, summary) {
-  position: relative;
-  z-index: 1;
-}
-
-.wb-row-link:hover {
-  background-color: var(--bs-tertiary-bg);
-}
-
-/* A row whose default action is a button (the agenda's "Process"): the
-   button covers the row like a title link */
-.wb-row-link button.wb-row-action {
-  position: static;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
-.wb-row-link button.wb-row-action:focus-visible::after {
-  outline: 2px solid var(--bs-primary);
-  outline-offset: -2px;
-}
-
-.wb-row-link .wb-row-action::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-
-/* Drag handles (frontend/sortable.js), without JavaScript the
-   arrows (.wb-no-js) */
-.wb-drag-handle {
-  position: relative;
-  z-index: 1;
-  align-self: center;
-  margin-inline-end: -0.5rem;
-  color: var(--bs-secondary-color);
-  cursor: grab;
-  touch-action: none;
-}
-
-html:not(.js) .wb-drag-handle,
-.js .wb-no-js {
-  display: none;
 }
 
 .sortable-ghost {
   opacity: 0.4;
 }
 
-a.wb-row-title:hover {
-  color: var(--bs-link-hover-color);
+/* Markdown texts: descriptions, notes, comments */
+.wb-markdown {
+  overflow-wrap: anywhere;
 }
 
-.wb-row-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 0.75rem;
-  color: var(--bs-secondary-color);
-  font-size: 0.85rem;
-}
-
-.wb-row-aside {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  text-align: end;
-}
-
-.wb-table-card > .table {
-  margin: 0;
-  --bs-table-bg: transparent;
-}
-
-/* Markdown texts: purposes, accountabilities, policies */
 .wb-markdown > :last-child {
   margin-bottom: 0;
 }
 
 .wb-markdown p {
   margin-bottom: 0.5rem;
+}
+
+.wb-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .wb-markdown ul,
@@ -467,26 +292,19 @@ a.wb-row-title:hover {
 }
 
 /* Badges in tones: a tinted background with ink of the same hue (AA on
-   it), for states and kinds (the tone filter); the circle, core and
-   assigned tones are the circle browser's */
+   it), for states (paused, current, archived, waiting) */
 :root,
 [data-bs-theme="light"] {
   --wb-neutral-bg: #ebe7df;
   --wb-neutral-ink: #514c42;
   --wb-primary-bg: #ece6fb;
   --wb-primary-ink: #4e2f9c;
-  --wb-circle-bg: #e1edfb;
-  --wb-circle-ink: #1a58a6;
-  --wb-info-bg: #d9f1f4;
-  --wb-info-ink: #0b6470;
   --wb-success-bg: #dcf3e9;
   --wb-success-ink: #0f6e4b;
   --wb-warning-bg: #fbefd2;
   --wb-warning-ink: #855600;
   --wb-danger-bg: #fce3e2;
   --wb-danger-ink: #b02a1f;
-  --wb-core-bg: #ebe8fb;
-  --wb-core-ink: #4a3ab5;
 }
 
 [data-bs-theme="dark"] {
@@ -494,18 +312,12 @@ a.wb-row-title:hover {
   --wb-neutral-ink: #c9cbc2;
   --wb-primary-bg: #2a1f4a;
   --wb-primary-ink: #c7b7f5;
-  --wb-circle-bg: #132a46;
-  --wb-circle-ink: #8fbcf2;
-  --wb-info-bg: #0e3338;
-  --wb-info-ink: #7fd3de;
   --wb-success-bg: #0f3326;
   --wb-success-ink: #6fd6a8;
   --wb-warning-bg: #3a2c0c;
   --wb-warning-ink: #f0c060;
   --wb-danger-bg: #3d1818;
   --wb-danger-ink: #f59a92;
-  --wb-core-bg: #262046;
-  --wb-core-ink: #b4abf2;
 }
 
 .badge[class*="wb-tone-"] {
@@ -517,33 +329,9 @@ a.wb-row-title:hover {
   --wb-tone-bg: var(--wb-neutral-bg);
   --wb-tone-ink: var(--wb-neutral-ink);
 }
-.wb-tone-primary {
-  --wb-tone-bg: var(--wb-primary-bg);
-  --wb-tone-ink: var(--wb-primary-ink);
-}
-.wb-tone-circle {
-  --wb-tone-bg: var(--wb-circle-bg);
-  --wb-tone-ink: var(--wb-circle-ink);
-}
-.wb-tone-info {
-  --wb-tone-bg: var(--wb-info-bg);
-  --wb-tone-ink: var(--wb-info-ink);
-}
-.wb-tone-success {
-  --wb-tone-bg: var(--wb-success-bg);
-  --wb-tone-ink: var(--wb-success-ink);
-}
 .wb-tone-warning {
   --wb-tone-bg: var(--wb-warning-bg);
   --wb-tone-ink: var(--wb-warning-ink);
-}
-.wb-tone-danger {
-  --wb-tone-bg: var(--wb-danger-bg);
-  --wb-tone-ink: var(--wb-danger-ink);
-}
-.wb-tone-core {
-  --wb-tone-bg: var(--wb-core-bg);
-  --wb-tone-ink: var(--wb-core-ink);
 }
 
 /* Visible to clients (specs/access.md): bright yellow, impossible to miss */
@@ -634,6 +422,11 @@ a.wb-row-title:hover {
   opacity: 0.5;
 }
 
+/* Dragging needs JavaScript (the inline script in base.html sets .js) */
+html:not(.js) .wb-handle {
+  display: none;
+}
+
 /* Selected for dragging several at once (frontend/todos.js) */
 .wb-todo.is-selected {
   background: var(--wb-primary-bg);
@@ -690,10 +483,6 @@ a.wb-row-title:hover {
 }
 
 .wb-add-todo > summary::-webkit-details-marker {
-  display: none;
-}
-
-.wb-add-todo[open] > summary {
   display: none;
 }
 
@@ -789,6 +578,11 @@ a.wb-row-title:hover {
 
 .wb-table tr:last-child td {
   border-bottom: 0;
+}
+
+/* A table wider than the screen scrolls inside its card */
+.wb-table-scroll {
+  overflow-x: auto;
 }
 
 .wb-table th {
@@ -950,11 +744,33 @@ button.wb-signal:hover {
   cursor: pointer;
 }
 
+/* After the less specific summary rules above (noDescendingSpecificity) */
+.wb-add-todo[open] > summary {
+  display: none;
+}
+
 .wb-reaction-picker {
   position: absolute;
   z-index: 10;
   width: 18rem;
   max-width: 80vw;
+}
+
+/* On a phone the picker is as wide as the reactions, below them */
+@media (max-width: 575.98px) {
+  .wb-reactions {
+    position: relative;
+  }
+
+  .wb-reaction-add {
+    position: static;
+  }
+
+  .wb-reaction-picker {
+    inset-inline: 0;
+    width: auto;
+    max-width: none;
+  }
 }
 
 .wb-reaction-quick {
@@ -968,9 +784,66 @@ button.wb-signal:hover {
 }
 
 .wb-file-preview {
+  max-width: 100%;
+  height: auto;
   max-height: 24rem;
+  border-radius: var(--bs-border-radius);
+}
+
+.wb-rounded {
+  border-radius: var(--bs-border-radius);
+}
+
+/* Diffs of texts (activity/history.html, files/doc_version.html); long
+   lines wrap */
+.wb-diff {
+  font-family: var(--bs-font-monospace);
+  overflow-wrap: anywhere;
+}
+
+.wb-diff-add {
+  background: var(--wb-success-bg);
+}
+
+.wb-diff-del {
+  background: var(--wb-danger-bg);
+}
+
+/* The project cards: as many columns as fit */
+.wb-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.wb-project-card {
+  height: 100%;
 }
 
 .min-w-0 {
   min-width: 0;
+}
+
+/* The rule widget (forms/rule_widget.html) */
+.wb-rule {
+  min-width: 0;
+}
+
+.wb-rule-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.wb-rule-every {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.wb-rule-description {
+  min-height: 1.5em;
 }

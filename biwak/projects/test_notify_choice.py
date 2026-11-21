@@ -144,7 +144,8 @@ class PageTest(Fixture, TestCase):
         response = self.client.post(
             f"{self.people_url}{self.dan.pk}/notify/", {"notify": "x"}
         )
-        self.assertEqual(response.status_code, 404)
+        # A bad value, like the projects' order (was 404)
+        self.assertEqual(response.status_code, 400)
 
     def test_add_and_invite_forms_take_the_choice(self):
         self.client.force_login(self.ada)

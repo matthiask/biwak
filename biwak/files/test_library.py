@@ -224,6 +224,16 @@ class MoveTest(Fixture, TestCase):
             {"folder": folder.pk if folder else ""},
         )
 
+    def test_a_folder_that_is_no_number_answers_404(self):
+        self.client.force_login(self.ada)
+        for folder in ["x", "1.5", "-1"]:
+            with self.subTest(folder=folder):
+                response = self.client.post(
+                    reverse("item_move", args=[self.root_secret.pk]),
+                    {"folder": folder},
+                )
+                self.assertEqual(response.status_code, 404)
+
     def test_moving_a_file_between_folders_changes_its_visibility(self):
         response = self.move(self.ada, self.secret_file, self.public)
         self.assertRedirects(response, self.secret_file.get_absolute_url())
@@ -325,6 +335,16 @@ class UploadPageTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         form = self.client.get(self.url()).context["form"]
         self.assertEqual(form["notify"].value(), "everybody")
+
+    def test_the_form_in_a_visible_folder_has_the_client_banner(self):
+        self.client.force_login(self.ada)
+        self.assertContains(
+            self.client.get(self.url(self.public)), "Clients can see this"
+        )
+        self.assertNotContains(
+            self.client.get(self.url(self.private)), "Clients can see this"
+        )
+        self.assertNotContains(self.client.get(self.url()), "Clients can see this")
 
     def send(self, user, folder=None, **data):
         self.client.force_login(user)
@@ -672,6 +692,43 @@ class PreviewTest(Fixture, TestCase):
             item.delete()
         self.assertFalse(version.file.storage.exists(version.file.name))
 
+    def test_two_first_requests_leave_one_preview(self):
+        item = self.upload("pic.png", content=png(), visible=True)
+        version = item.upload.versions.get()
+        storage = version.file.storage
+        name = preview_name(version.file.name)
+        real = previews.render
+
+        def render(version):
+            # The other request saves its preview while this one renders
+            data = real(version)
+            storage.save(name, ContentFile(data))
+            return data
+
+        with patch.object(previews, "render", render):
+            self.assertEqual(previews.preview_for(version), name)
+        folder = name.rsplit("/", 1)[0]
+        self.assertEqual(storage.listdir(folder)[1], ["preview.webp"])
+
+    def test_a_failed_preview_is_not_rendered_again(self):
+        item = self.upload("broken.png", content=b"not an image", visible=True)
+        with self.assertLogs("biwak.files.previews", "WARNING"):
+            self.assertEqual(self.preview(self.ada, item)[0].status_code, 404)
+        with patch.object(previews, "render", return_value=None) as render:
+            self.assertEqual(self.preview(self.ada, item)[0].status_code, 404)
+        render.assert_not_called()
+
+    def test_the_failure_marker_is_deleted_with_the_file(self):
+        item = self.upload("broken.png", content=b"not an image", visible=True)
+        version = item.upload.versions.get()
+        with self.assertLogs("biwak.files.previews", "WARNING"):
+            self.preview(self.ada, item)
+        folder = preview_name(version.file.name).rsplit("/", 1)[0]
+        self.assertTrue(version.file.storage.listdir(folder)[1])
+        with self.captureOnCommitCallbacks(execute=True):
+            item.delete()
+        self.assertEqual(version.file.storage.listdir(folder)[1], [])
+
     def test_the_preview_is_deleted_with_the_file(self):
         item = self.upload("pic.png", content=png(), visible=True)
         version = item.upload.versions.get()
@@ -774,5 +831,41 @@ class BucketTest(Fixture, TestCase):
 class ProjectPageTest(Fixture, TestCase):
     def test_the_docs_and_files_section_counts_what_the_person_sees(self):
         url = reverse("project", args=[self.project.pk])
-        self.assertContains(self.get(self.ada, url), "2 folders, 0 docs, 2 files")
-        self.assertContains(self.get(self.cleo, url), "1 folders, 0 docs, 1 files")
+        for user, counts in [
+            (self.ada, "2 folders, 0 docs, 2 files"),
+            (self.cleo, "1 folder, 0 docs, 1 file"),
+        ]:
+            html = self.get(user, url).content.decode()
+            self.assertIn(counts, " ".join(html.split()))
+
+
+class BreadcrumbsTest(Fixture, TestCase):
+    def test_two_queries_however_deep(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from biwak.files.library import breadcrumbs
+
+        folder = self.public
+        for title in ["One", "Two", "Three", "Four"]:
+            folder = ops.create_folder(
+                project=self.project, title=title, creator=self.ada, parent=folder
+            )
+        folder = Item.objects.get(pk=folder.pk)
+        with CaptureQueriesContext(connection) as queries:
+            crumbs = breadcrumbs(folder)
+        self.assertEqual([c.title for c in crumbs], ["Public", "One", "Two", "Three"])
+        self.assertLessEqual(len(queries), 2)
+        self.assertEqual(breadcrumbs(self.public), [])
+        self.assertEqual(breadcrumbs(None), [])
+
+
+class FolderParamTest(TestCase):
+    def test_a_folder_which_is_no_number(self):
+        from biwak.test_utils import person, project
+
+        ada = person("Ada")
+        website = project(members=[ada])
+        self.client.force_login(ada)
+        response = self.client.get(f"/projects/{website.pk}/docs/new/?folder=x")
+        self.assertEqual(response.status_code, 404)

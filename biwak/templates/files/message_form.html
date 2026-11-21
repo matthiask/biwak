@@ -4,15 +4,12 @@
   Biwak{% endblock title %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ project.get_absolute_url }}">{{ project }}</a> /
-    <a href="{% url 'project_messages' project.pk %}">{% translate "Messages" %}</a>
-  </nav>
+  {% url 'project_messages' project.pk as area_url %}{% translate "Messages" as area %}{% include "_breadcrumbs.html" %}
   <h1 class="mb-3">
     {% if item %}{% translate "Edit the message" %}{% else %}{% translate "New message" %}{% endif %}
   </h1>
   {% include "items/_client_banner.html" %}
-  <div class="card wb-form-card mb-4">
+  <div class="card mb-4">
     <div class="card-body">
       <form method="post" {% attachments_attrs project %}>
         {% csrf_token %}

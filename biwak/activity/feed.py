@@ -15,8 +15,9 @@ from django.utils.translation import gettext, ngettext
 
 from biwak import cursors
 from biwak.accounts.models import User
+from biwak.activity import mentions
 from biwak.activity.models import Action, Event
-from biwak.items.models import Comment, Kind, Message
+from biwak.items.models import Comment, Item, Kind, Message
 from biwak.projects.models import Project
 
 
@@ -38,8 +39,9 @@ def feed_events(
     """The events the person can see, newest first, narrowed down by the
     filters (all optional): the project, the actor, the kind of item, the
     action, only items clients can see, only events from ``since`` on"""
+    # An answer's link needs its occurrence (``Item.get_absolute_url()``)
     events = Event.objects.visible_to(user).select_related(
-        "actor", "project", "item", "item__parent"
+        "actor", "project", "item", "item__parent", "item__answer"
     )
     if project is not None:
         events = events.filter(project=project)
@@ -73,7 +75,7 @@ def cursor_for(event):
     return cursors.encode(event.created_at, event.pk)
 
 
-def page(events, before=None):
+def page(events, before=None, *, user):
     """One page of events and the cursor of the next one (or None). With
     ``before`` only older events than the cursor's."""
     if before:
@@ -84,13 +86,14 @@ def page(events, before=None):
     found = list(events[: PAGE_SIZE + 1])
     more = len(found) > PAGE_SIZE
     found = found[:PAGE_SIZE]
-    attach(found)
+    attach(found, user)
     return found, cursor_for(found[-1]) if more else None
 
 
-def attach(events):
+def attach(events, user):
     """What rendering needs besides the event: the assigned people's names
-    (``event.assignee_names``) and the project on the item, which saves a
+    (``event.assignee_names``), the target list of moves the viewer may
+    see (``event.target_list``) and the project on the item, which saves a
     query per link"""
     ids = {
         pk
@@ -106,6 +109,7 @@ def attach(events):
             names[pk] for pk in event.data.get("assignees", []) if pk in names
         ]
     add_excerpts(events)
+    add_target_lists(events, user)
 
 
 EXCERPT_CHARS = 200
@@ -113,9 +117,10 @@ EXCERPT_CHARS = 200
 
 def add_excerpts(events):
     """``event.excerpt`` (specs/glance.md): the text as it is now, for
-    events of comments (the comment's) and for the creating and editing of
-    messages (the message's), two queries at most for all events; empty if
-    the comment is gone. The events are the viewer's, so the items are
+    events of comments (the comment's) and for every other event of a
+    message (the message's: created, edited, archived and so on; decided
+    2026-11-20), two queries at most for all events;
+    empty if the comment is gone. The events are the viewer's, so the items are
     visible to them."""
     from biwak.templatetags.biwak import excerpt
 
@@ -137,6 +142,31 @@ def add_excerpts(events):
         elif _is_message_text(event):
             text = messages.get(event.item_id, "")
         event.excerpt = excerpt(text, EXCERPT_CHARS, event.item) if text else ""
+
+
+def add_target_lists(events, user):
+    """``event.target_list``: the name of the list a to-do moved to, or ""
+    if the viewer may not see it (specs/feed.md). Checked now, not when the
+    event was recorded, in one query for all events. Clients see the list's
+    current title if it is visible to them, and nothing for events without
+    the list's ID (recorded before it was stored); staff fall back to the
+    title at the time for lists they can't find any more."""
+    moves = [e for e in events if e.action == Action.MOVED and e.data.get("to")]
+    ids = {e.data.get("to_id") for e in moves} - {None}
+    lists = dict(
+        Item.objects
+        .visible_to(user)
+        .filter(pk__in=ids, kind=Kind.LIST)
+        .values_list("pk", "title")
+    )
+    for event in moves:
+        title = lists.get(event.data.get("to_id"))
+        if title is None and not user.is_client:
+            title = event.data["to"]
+        event.target_list = title or ""
+    for event in events:
+        if not hasattr(event, "target_list"):
+            event.target_list = ""
 
 
 def _is_message_text(event):
@@ -204,20 +234,13 @@ class Entry:
         key = container(self.latest)
         return key[2]
 
-    @property
-    def is_client_visible(self):
-        return all(
-            e.is_client_visible and e.item and e.item.is_client_visible
-            for e in self.events
-        )
-
 
 def container(event):
     """What counts as "the same list or project": a to-do's list, otherwise
     the project; as (kind, id, name)"""
     item = event.item
     if item is not None and item.parent_id is not None:
-        return ("item", item.parent_id, item.parent.title)
+        return ("item", item.parent_id, mentions.plain(item.parent.title, item.parent))
     return ("project", event.project_id, event.project.name)
 
 

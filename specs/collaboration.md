@@ -4,7 +4,8 @@
 (the websocket, the shared state, `asgi.py`), the doc operations in
 `biwak/files/operations.py`, the editor page (`files/doc_live.html`,
 `frontend/collab.js`), the read-only option (page, API, `biwak doc
-read-only`, CLI 0.19.0). Not deployed: production needs what "Running it"
+read-only`, CLI 0.20.0: 0.19.0 on the branch, 0.20.0 after merging
+main, whose 0.19.0 still took locks). Not deployed: production needs what "Running it"
 says. Values the spec didn't fix are marked **?** below, built the way
 described meanwhile. **Agent:** a strong model.
 
@@ -164,7 +165,7 @@ browsers (Playwright) typing, a client watching, an internal doc
   What remains of them is the refusal of a whole-text save over somebody
   else's newer version (`base_version`, API and CLI), and the read-only
   option for docs that mustn't change. Without JavaScript the editor page
-  shows the text only. CLI 0.19.0 doesn't take locks anymore; older CLIs
+  shows the text only. CLI 0.20.0 doesn't take locks anymore; older CLIs
   are refused (`MINIMUM`).
 - **Frontend**: `frontend/collab.js`, a chunk loaded on the editor page
   only: Yjs, y-websocket (cross-tab broadcasting off: every tab goes
@@ -244,7 +245,7 @@ about 20 seconds).
   checking access every 60 seconds.
 - The read-only option: nobody edits, staff neither, until staff turn it
   off; no event, no notification.
-- The editor's chunk (about 400 KB) is fine; `MINIMUM` 0.19.0 for the CLI
+- The editor's chunk (about 400 KB) is fine; `MINIMUM` 0.20.0 for the CLI
   is fine (no CLI users yet).
 
 ## Questions (built the way described meanwhile)

@@ -2,6 +2,7 @@
 does. Conventions in biwak/api_conventions.py."""
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import BadRequest, PermissionDenied, ValidationError
 from ninja import NinjaAPI
 
 from biwak.accounts.api import router as accounts_router
@@ -26,6 +27,28 @@ api = NinjaAPI(
     docs_decorator=login_required,
     urls_namespace="api",
 )
+
+
+@api.exception_handler(ValidationError)
+def validation_error(request, exc):
+    """What the models refuse (``full_clean()``) is the request's mistake"""
+    return api.create_response(request, {"detail": " ".join(exc.messages)}, status=400)
+
+
+def _shared_check(status):
+    """Checks shared with the pages (``changeable_list()``,
+    ``todos_to_move()``) answer with their message"""
+
+    def handler(request, exc):
+        return api.create_response(request, {"detail": str(exc)}, status=status)
+
+    return handler
+
+
+api.add_exception_handler(PermissionDenied, _shared_check(403))
+api.add_exception_handler(BadRequest, _shared_check(400))
+
+
 api.add_router("/", accounts_router)
 api.add_router("/", projects_router)
 api.add_router("/", items_router)

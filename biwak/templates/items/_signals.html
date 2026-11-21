@@ -24,7 +24,7 @@
     aria-controls="peek-{{ todo.pk }}"
     title="{% blocktranslate count count=todo.comment_count %}{{ count }} comment{% plural %}{{ count }} comments{% endblocktranslate %}"
   >
-    {% icon "chat-left-text" %}<span class="wb-signal-count">{{ todo.comment_count }}</span>
+    {% icon "chat-left-text" %}<span>{{ todo.comment_count }}</span>
   </button>{% endif %}
 {% if todo.attachment_count %}<span
     class="wb-signal"

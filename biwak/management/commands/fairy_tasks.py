@@ -1,3 +1,5 @@
+import logging
+
 from django.core.management import BaseCommand, call_command
 
 from biwak.accounts.middleware import set_user_name
@@ -7,6 +9,9 @@ from biwak.files.operations import save_pending
 from biwak.inbound.tokens import prune as prune_replies
 from biwak.items.operations import purge_trash
 from biwak.projects.operations import recompute_activity
+
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -20,10 +25,21 @@ class Command(BaseCommand):
 
     def handle(self, **options):
         set_user_name("Fairy tasks")
-        purge_trash()
-        prune_api_tokens()
-        delete_unlinked()
-        save_pending()
-        prune_replies()
-        recompute_activity()
-        call_command("check_visibility", mail=True, stdout=self.stdout)
+        tasks = {
+            "purge_trash": purge_trash,
+            "prune_api_tokens": prune_api_tokens,
+            "delete_unlinked": delete_unlinked,
+            "save_pending": save_pending,
+            "prune_replies": prune_replies,
+            "recompute_activity": recompute_activity,
+            "check_visibility": lambda: call_command(
+                "check_visibility", mail=True, stdout=self.stdout
+            ),
+        }
+        # Each task on its own: one failing doesn't keep the others from
+        # running
+        for name, task in tasks.items():
+            try:
+                task()
+            except Exception:
+                logger.exception("The daily task %s failed", name)

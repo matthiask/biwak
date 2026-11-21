@@ -41,6 +41,23 @@ _PHONE_SIGNATURE = re.compile(
 )
 
 
+def _starts_header(line):
+    return any(start.match(line) for start, _end in _QUOTE_HEADERS)
+
+
+def _headers(lines, index):
+    """The lines a quote header starting at ``index`` may be wrapped over:
+    one, two or three, not past a blank line or another line starting a
+    header (the person's own "On Friday …" right above the real one)"""
+    header = [lines[index]]
+    yield header
+    for line in lines[index + 1 : index + 3]:
+        if not line.strip() or _starts_header(line):
+            return
+        header = [*header, line]
+        yield header
+
+
 def _cut(lines):
     """Lines up to the first quote header or separator"""
     for index, line in enumerate(lines):
@@ -48,8 +65,7 @@ def _cut(lines):
             return lines[:index]
         for start, end in _QUOTE_HEADERS:
             if start.match(line) and any(
-                end.search(" ".join(lines[index : index + count]))
-                for count in range(1, 4)
+                end.search(" ".join(header)) for header in _headers(lines, index)
             ):
                 return lines[:index]
         if _OUTLOOK_FROM.match(line) and any(

@@ -2,6 +2,7 @@
 does (specs/api-cli.md, "Closing the gaps to the web")"""
 
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
@@ -51,6 +52,15 @@ class ProjectGapsAPITest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Project.objects.count(), 2)
 
+    def test_update_validates_and_strips(self):
+        """A name too long for the model was a 500; update didn't strip"""
+        path = f"projects/{self.open.pk}/"
+        response = self.api("patch", path, self.bob, {"name": "x" * 201})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        response = self.api("patch", path, self.bob, {"name": "  Renamed  "})
+        self.assertEqual(response.json()["name"], "Renamed")
+
     def test_clients_dont_create(self):
         response = self.api("post", "projects/", self.cleo, {"name": "New"})
         self.assertEqual(response.status_code, 403)
@@ -82,6 +92,14 @@ class ProjectGapsAPITest(TestCase):
         # Again: nothing changes
         self.api("post", f"projects/{self.limited.pk}/join/", self.root)
         self.assertEqual(Event.objects.filter(action=Action.JOINED).count(), 1)
+
+    def test_admins_dont_join_archived_limited(self):
+        """Like the web: only what ``joinable_projects()`` lists"""
+        self.limited.archived_at = timezone.now()
+        self.limited.save()
+        response = self.api("post", f"projects/{self.limited.pk}/join/", self.root)
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(self.limited.is_member(self.root))
 
     def test_staff_join_all_access_not_limited(self):
         self.assertEqual(

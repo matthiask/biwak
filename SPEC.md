@@ -248,6 +248,22 @@ Nothing at the moment.
 - 2026-11-20: Replies by mail are posted when the receiving server
   reports DMARC or (aligned) DKIM as passed; SPF alone isn't enough,
   since Resend doesn't report its alignment (`specs/notifications.md`).
+- 2026-11-20: Repeat rules are edited with one widget (frequency,
+  interval, weekdays, monthly by day or nth weekday, yearly), no presets
+  or raw RRULE in the forms, the description instead of a preview
+  (`specs/rule-widget.md`); the API and CLI keep RRULEs and presets.
+- 2026-11-21: An accent color per person in the settings (the clients'
+  amber reserved), and a color per project set by staff
+  (`specs/keyboard.md`, `specs/project-colors.md`).
+- 2026-11-21: The lantern (named so, not "Hey!"): notifications in the app (an icon with a count, a
+  page), mail optional (each, digest, none), what's read in the app not
+  mailed; item pages, lists and the board update live, reactions
+  included, changes appearing in place; the websocket only says what
+  changed, content comes through the permission-checked views
+  (`specs/lantern.md`). Browser notifications later.
+- 2026-11-21: A command palette (Ctrl+K and "/") with jumps and actions,
+  search being one of them, and single-key shortcuts inside pages that a
+  setting turns off (`specs/keyboard.md`).
 - 2026-11-20: Reactions: 24 quick emoji and short texts (40
   characters), telling only the author, collected into the next mail
   or the digest (`specs/reactions.md`).

@@ -1,0 +1,42 @@
+{% load biwak i18n %}
+{% comment %}
+  The switch of an item's visibility to clients, for staff. `kind` ("list",
+  "checkin" or nothing) picks what it says about what goes along; the
+  counts of `affected` are for the default and the list.
+{% endcomment %}
+{% if can_switch %}
+  <form method="post" action="{% url 'switch' item.pk %}" class="mt-4 small">
+    {% csrf_token %}
+    {% if item.is_client_visible %}
+      <button type="submit" class="btn btn-sm btn-quiet">
+        {% icon "lock" %}<span>{% translate "Hide from clients" %}</span>
+      </button>
+      <span class="text-body-secondary">
+        {% if kind == "list" %}
+          {% translate "Hides the list, its to-dos and their comments again, also what clients wrote." %}
+        {% elif kind == "checkin" %}
+          {% translate "Hides the check-in, its answers and their comments again." %}
+        {% else %}
+          {% translate "Hides it again, with what's in it and its comments, also what clients wrote." %}
+        {% endif %}
+      </span>
+    {% else %}
+      <input type="hidden" name="visible" value="1">
+      <button type="submit" class="btn btn-sm btn-quiet">
+        {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
+      </button>
+      <span class="text-body-secondary">
+        {% if kind == "checkin" %}
+          {% translate "Makes the check-in, its answers and their comments visible to the project's clients." %}
+        {% else %}
+          {% blocktranslate asvar to_clients count counter=affected.clients %}{{ counter }} client{% plural %}{{ counter }} clients{% endblocktranslate %}
+          {% if kind == "list" %}
+            {% blocktranslate count counter=affected.items with comments=affected.comments clients=to_clients %}Makes this list, {{ counter }} to-do and {{ comments }} comments visible to {{ clients }}.{% plural %}Makes this list, {{ counter }} to-dos and {{ comments }} comments visible to {{ clients }}.{% endblocktranslate %}
+          {% else %}
+            {% blocktranslate with items=affected.items comments=affected.comments clients=to_clients %}Makes it, {{ items }} items below it and {{ comments }} comments visible to {{ clients }}.{% endblocktranslate %}
+          {% endif %}
+        {% endif %}
+      </span>
+    {% endif %}
+  </form>
+{% endif %}

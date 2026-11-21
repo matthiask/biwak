@@ -10,12 +10,30 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
+def verify_email(user):
+    """The person's address as allauth's verified primary address: codes
+    and invitations go there, so it's proven, and allauth only confirms
+    who someone is (before adding a passkey) by codes to verified
+    addresses; without one it answers 403 (no passwords here). A changed
+    address replaces the old one: it doesn't log in anymore and can be
+    given to somebody else"""
+    from allauth.account.models import EmailAddress
+
+    EmailAddress.objects.filter(user=user).exclude(email__iexact=user.email).delete()
+    EmailAddress.objects.update_or_create(
+        user=user,
+        email__iexact=user.email,
+        defaults={"email": user.email, "verified": True, "primary": True},
+    )
+
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **kwargs):
         user = self.model(email=self.normalize_email(email), **kwargs)
         # No passwords (specs/access.md): codes by mail, passkeys, Google
         user.set_unusable_password()
         user.save()
+        verify_email(user)
         return user
 
     def create_superuser(self, email, password=None, **kwargs):
@@ -100,6 +118,13 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return self.full_name or self.email
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        fields = kwargs.get("update_fields")
+        if fields is None or "email" in fields:
+            # A changed address (the Django admin) stays allauth's verified one
+            verify_email(self)
 
     def get_full_name(self):
         return str(self)

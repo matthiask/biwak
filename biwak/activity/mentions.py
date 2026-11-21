@@ -4,16 +4,26 @@ The syntax of the Basecamp CLI, so agents know it. The label is only a
 fallback: pages and mails show the person's current name, as long as the
 person can see the item; a mention of somebody who can't (typed by hand) is
 shown as plain text.
+
+Clients learn about the project's members only (specs/access.md): their
+``@`` resolves and notifies members only, and they read the label as
+written for anybody else, never the current name. Who reads is
+``reader()``: the person of the request (the middleware, also for API
+tokens) or of the mail (``reading_as()``); nobody set reads like a client.
 """
 
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.db import models
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import User
 from biwak.activity.models import Mention
+from biwak.activity.notify import people_who_see
 from biwak.activity.operations import subscribe
+from biwak.projects.models import knows_everybody
 
 
 MENTION = re.compile(r"\[@([^\]\n]*)\]\(person:(\d+)\)")
@@ -25,6 +35,34 @@ MENTION_NAME = re.compile(r"(?<![\w@\[])@([^\W\d_][\w-]*)(?![\w@-])")
 # How many people the list offers at most
 LIMIT = 10
 
+# A function returning who reads the texts rendered now (see reader())
+_reader = ContextVar("mention_reader", default=None)
+
+
+@contextmanager
+def reading_as(person):
+    """Renders texts for ``person``, or for whoever a function returns
+    (the request's user, set late by the API's token authentication)"""
+    token = _reader.set(person if callable(person) else lambda: person)
+    try:
+        yield
+    finally:
+        _reader.reset(token)
+
+
+def reader():
+    """Who reads the texts rendered now, or None"""
+    get = _reader.get()
+    return get() if get else None
+
+
+def known_to(people, project, person):
+    """Those of ``people`` (a queryset) the person may learn about:
+    ``Project.people_known_to()`` for querysets"""
+    if knows_everybody(person):
+        return people
+    return people.filter(pk__in=project.memberships.values("user"))
+
 
 def syntax(user):
     return f"[@{user}](person:{user.pk})"
@@ -35,25 +73,21 @@ def mentioned_ids(text):
 
 
 def mentionable_people(item):
-    """Active people who can see the item, the same rules as
-    ``Item.objects.visible_to()``: members of the project, all staff in
-    all-access projects, clients only if they're members and the item is
-    visible to clients"""
-    project = item.project
-    staff = models.Q(is_client=False)
-    if not project.is_all_access:
-        staff &= models.Q(memberships__project=project)
-    can_see = staff
-    if item.is_client_visible:
-        can_see |= models.Q(is_client=True, memberships__project=project)
-    return User.objects.active().filter(can_see).distinct()
+    """Active people who can see the item (``notify.people_who_see()``):
+    members of the project, all staff in all-access projects, clients only
+    if they're members and the item is visible to clients"""
+    return people_who_see(item.project, item.is_client_visible)
 
 
 def visible_names(item, ids):
-    """The current names of those people who can see the item, by ID"""
+    """The current names of those people who can see the item and whom the
+    reader may know, by ID"""
     if not ids:
         return {}
-    return {user.pk: str(user) for user in mentionable_people(item).filter(pk__in=ids)}
+    people = known_to(
+        mentionable_people(item).filter(pk__in=ids), item.project, reader()
+    )
+    return {user.pk: str(user) for user in people}
 
 
 def plain(text, item=None):
@@ -68,7 +102,13 @@ def candidates(item, query, *, for_user):
     """The ``@`` list: people matching ``query``, those who can see the item
     first; the others greyed out with the reason. Clients only find the
     project's members and not by email, and don't see addresses."""
-    project = item.project
+    return candidates_for(
+        item.project, item.is_client_visible, query, for_user=for_user
+    )
+
+
+def candidates_for(project, visible, query, *, for_user):
+    """The same for a new item of ``project``, visible to clients or not"""
     people = User.objects.active().filter(memberships__project=project)
     if not for_user.is_client:
         people = User.objects.active().filter(
@@ -82,7 +122,7 @@ def candidates(item, query, *, for_user):
         people = people.filter(q)
     people = list(people.distinct().order_by("full_name", "email")[:200])
     available = set(
-        mentionable_people(item)
+        people_who_see(project, visible)
         .filter(pk__in=[p.pk for p in people])
         .values_list("pk", flat=True)
     )
@@ -111,13 +151,13 @@ def candidates(item, query, *, for_user):
     ]
 
 
-def resolve(item, text):
+def resolve(item, text, *, author):
     """Turns ``@ada@example.org`` and an unambiguous ``@Ada`` into the
-    syntax, for people who can see the item; anything else stays as it
-    is (the API, later mail replies)"""
+    syntax, for people who can see the item and whom the author may know;
+    anything else stays as it is (the API, mail replies)"""
     if "@" not in (text or ""):
         return text
-    people = list(mentionable_people(item))
+    people = list(known_to(mentionable_people(item), item.project, author))
     by_email = {user.email.lower(): user for user in people}
 
     def email(match):
@@ -148,41 +188,51 @@ def resolve(item, text):
     return "".join(result)
 
 
-def update(item, text, *, comment=None, actor, event=None, credit=None):
+def update(item, text, *, comment=None, actor, event=None, previous="", credit=None):
     """Stores who ``text`` (an item's texts, or ``comment``) mentions, from
-    the operations saving texts. Only people who can see the item count;
-    those newly mentioned are subscribed (even after unsubscribing) and
-    added to ``event.data["mentioned"]``, so ``notify()`` tells them.
-    People no longer mentioned are forgotten: mentioning them again counts
-    as new. ``credit`` gives others than ``actor`` and ``event`` the
-    mentions they typed: ``{mentioned person's ID: (actor, event)}`` (docs
-    edited live by several people). Returns those newly mentioned."""
+    the operations saving texts. Only people who can see the item and
+    whom the one who typed the mention may know count (clients: the
+    members), and only those this save adds: mentions already in
+    ``previous`` (the text before) were looked at when they were written,
+    also the rejected ones; those newly mentioned are subscribed (even
+    after unsubscribing) and added to ``event.data["mentioned"]``, so
+    ``notify()`` tells them. People no longer mentioned are forgotten:
+    mentioning them again counts as new. ``credit`` gives others than
+    ``actor`` and ``event`` the mentions they typed: ``{mentioned person's
+    ID: (actor, event)}`` (docs edited live by several people). Returns
+    those newly mentioned."""
     ids = mentioned_ids(text)
     mentions = Mention.objects.filter(item=item, comment=comment)
     mentions.exclude(user__in=ids).delete()
-    known = set(mentions.values_list("user", flat=True))
-    people = [
-        user
-        for user in mentionable_people(item).filter(pk__in=ids)
-        if user.pk not in known
-    ]
-    Mention.objects.bulk_create([
-        Mention(item=item, comment=comment, user=user) for user in people
-    ])
+    known = set(mentions.values_list("user", flat=True)) | mentioned_ids(previous)
     credit = credit or {}
+    members = None
+    people = []
+    for user in mentionable_people(item).filter(pk__in=ids):
+        if user.pk in known:
+            continue
+        by, by_event = credit.get(user.pk, (actor, event))
+        if not knows_everybody(by):
+            if members is None:
+                members = set(item.project.memberships.values_list("user", flat=True))
+            if user.pk not in members:
+                continue
+        people.append((user, by, by_event))
+    Mention.objects.bulk_create([
+        Mention(item=item, comment=comment, user=user) for user, _by, _e in people
+    ])
     newly = []
     # Event ID: (event, IDs of those it newly mentions)
     told = {}
-    for user in people:
-        by, by_event = credit.get(user.pk, (actor, event))
+    for user, by, by_event in people:
         if user == by:
             continue
         newly.append(user)
         subscribe(user, item, added_by=by)
         if by_event is not None:
             told.setdefault(by_event.pk, (by_event, set()))[1].add(user.pk)
-    for told_event, ids in told.values():
+    for told_event, told_ids in told.values():
         mentioned = set(told_event.data.get("mentioned", []))
-        told_event.data["mentioned"] = sorted(mentioned | ids)
+        told_event.data["mentioned"] = sorted(mentioned | told_ids)
         told_event.save(update_fields=["data"])
     return newly

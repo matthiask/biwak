@@ -3,10 +3,7 @@
 {% block title %}{{ person.display_name }} – {{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{{ item.get_absolute_url }}">{{ item|item_title }}</a>
-  </nav>
+  {% include "_breadcrumbs.html" with project=item.project parent=item %}
   <h1 class="wb-title">{{ person.display_name }} {% client_badge item %}</h1>
   {% for answer in answers %}
     <div class="card mb-2" id="answer-{{ answer.pk }}">

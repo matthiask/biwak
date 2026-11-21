@@ -28,11 +28,18 @@ from biwak.api_conventions import (
     person_out,
 )
 from biwak.files import attachments, operations, queries
-from biwak.files.library import breadcrumbs, contents
+from biwak.files.library import (
+    CONTAINED,
+    breadcrumbs,
+    contents,
+    current_version,
+    version_for,
+)
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.api import item_for
 from biwak.items.models import Kind, MessageCategory
+from biwak.permissions import api_staff_only
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
 from biwak.reactions.schemas import ReactionOut, reactions_out
@@ -161,16 +168,25 @@ def _staff_creates(request, kind):
         raise HttpError(403, _("Only staff create folders, docs and files."))
 
 
-def resolve_for_new(project, visible, text):
+def clean_title(title):
+    """The title without surrounding spaces; 400 if nothing is left"""
+    title = (title or "").strip()
+    if not title:
+        raise HttpError(400, _("The title can't be empty."))
+    return title
+
+
+def visible_in(folder, switch):
+    """Whether a new doc or file is visible to clients: in a folder it
+    follows the folder, at the top level the switch (``create_doc()``)"""
+    return folder.is_client_visible if folder else bool(switch)
+
+
+def resolve_for_new(project, visible, text, *, author):
     """Resolves ``@ada@example.org`` and ``@Ada`` in the text of an item
     which doesn't exist yet, for those who will see it"""
     stand_in = SimpleNamespace(project=project, is_client_visible=bool(visible))
-    return resolve_mentions(stand_in, text)
-
-
-def switch(request, visible):
-    """What clients create is visible to clients (specs/access.md)"""
-    return visible or request.user.is_client
+    return resolve_mentions(stand_in, text, author=author)
 
 
 # Messages ---------------------------------------------------------------
@@ -202,9 +218,6 @@ class MessageOut(ItemOut):
 
 def message_out(item, user):
     message = item.message
-    count = getattr(item, "comment_count", None)
-    if count is None:
-        count = item.comments.count()
     return item_out(item) | {
         "content": message.content,
         "content_html": html(message.content, item),
@@ -212,7 +225,7 @@ def message_out(item, user):
         "category": category_out(message.category),
         "pinned": message.pinned_at is not None,
         "pinned_at": message.pinned_at,
-        "comment_count": count,
+        "comment_count": item.comment_count,
         "reactions": reactions_out(item, None, user),
     }
 
@@ -293,13 +306,12 @@ def message_create(request, project_id: int, data: MessageIn):
     """Posts a message and tells whom ``notify`` says. Clients' messages
     are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
     project = project_for(request, project_id)
-    if not data.title.strip():
-        raise HttpError(400, _("The title can't be empty."))
-    visible = switch(request, data.visible_to_clients)
+    title = clean_title(data.title)
+    visible = ops.message_visibility(request.user, data.visible_to_clients)
     item = ops.create_message(
         project=project,
-        title=data.title,
-        content=resolve_for_new(project, visible, data.content),
+        title=title,
+        content=resolve_for_new(project, visible, data.content, author=request.user),
         category=_category(data.category_id),
         creator=request.user,
         visible=visible,
@@ -329,11 +341,11 @@ def message_update(request, message_id: int, data: MessagePatch):
     given = data.model_fields_set
     changes = {}
     if "title" in given:
-        if not data.title:
-            raise HttpError(400, _("The title can't be empty."))
-        changes["title"] = data.title
+        changes["title"] = clean_title(data.title)
     if "content" in given:
-        changes["content"] = resolve_mentions(item, data.content or "")
+        changes["content"] = resolve_mentions(
+            item, data.content or "", author=request.user
+        )
     if "category_id" in given:
         changes["category"] = _category(data.category_id)
     operations.update_message(item, actor=request.user, **changes)
@@ -373,7 +385,7 @@ class EntryOut(ItemOut):
 def entry_out(item):
     entry = item_out(item)
     if item.kind == Kind.FILE:
-        version = item.upload.versions.all()[0]
+        version = current_version(item)
         entry |= {
             "size": version.size,
             "content_type": version.content_type,
@@ -425,11 +437,10 @@ def folder_create(request, project_id: int, data: FolderIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.FOLDER)
-    if not data.title.strip():
-        raise HttpError(400, _("The title can't be empty."))
+    title = clean_title(data.title)
     item = ops.create_folder(
         project=project,
-        title=data.title,
+        title=title,
         creator=request.user,
         parent=folder,
         visible=data.visible_to_clients,
@@ -448,7 +459,7 @@ def item_move(request, item_id: int, data: MoveIn):
     visibility follows the new place. Clients only move what they created,
     into folders they see."""
     item = item_for(request, item_id)
-    if item.kind not in {Kind.FOLDER, Kind.DOC, Kind.FILE}:
+    if item.kind not in CONTAINED:
         raise HttpError(400, _("Only folders, docs and files can be moved."))
     if not ops.can_change(request.user, item):
         raise HttpError(403, _("You can only move what you created."))
@@ -498,16 +509,15 @@ def doc_create(request, project_id: int, data: DocIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.DOC)
-    if not data.title.strip():
-        raise HttpError(400, _("The title can't be empty."))
+    title = clean_title(data.title)
     item = ops.create_doc(
         project=project,
-        title=data.title,
+        title=title,
         content=resolve_for_new(
             project,
-            data.visible_to_clients
-            or (folder is not None and folder.is_client_visible),
+            visible_in(folder, data.visible_to_clients),
             data.content,
+            author=request.user,
         ),
         creator=request.user,
         parent=folder,
@@ -560,11 +570,11 @@ def doc_update(request, doc_id: int, data: DocPatch):
         operations.set_read_only(item, read_only=False, actor=request.user)
     changes = {}
     if "title" in given:
-        if not data.title:
-            raise HttpError(400, _("The title can't be empty."))
-        changes["title"] = data.title
+        changes["title"] = clean_title(data.title)
     if "content" in given:
-        changes["content"] = resolve_mentions(item, data.content or "")
+        changes["content"] = resolve_mentions(
+            item, data.content or "", author=request.user
+        )
     if changes or data.new_version:
         try:
             operations.update_doc(
@@ -579,7 +589,8 @@ def doc_update(request, doc_id: int, data: DocPatch):
         except operations.DocConflict as exc:
             raise HttpError(
                 409,
-                _("%(name)s saved a newer version.") % {"name": exc.version.created_by},
+                _("%(name)s saved a newer version.")
+                % {"name": exc.version.created_by.get_short_name()},
             ) from exc
     if read_only:
         operations.set_read_only(item, read_only=True, actor=request.user)
@@ -602,17 +613,16 @@ class DocVersionDetailOut(DocVersionOut):
 def _staff_only(request):
     """Older versions can hold what was meant to be internal, also of docs
     clients see now (like the history): staff only"""
-    if request.user.is_client:
-        raise HttpError(403, _("Only staff see the versions."))
+    api_staff_only(request, _("Only staff see the versions."))
 
 
-def version_out(version, item, *, current):
+def version_out(version, *, is_current):
     return {
         "id": version.pk,
         "title": version.title,
         "created_by": person_out(version.created_by),
         "created_at": version.created_at,
-        "is_current": version.pk == current,
+        "is_current": is_current,
     }
 
 
@@ -622,7 +632,7 @@ def doc_versions(request, doc_id: int):
     item = item_for(request, doc_id, Kind.DOC)
     _staff_only(request)
     versions = list(item.doc.versions.select_related("created_by"))
-    return [version_out(v, item, current=versions[0].pk) for v in versions]
+    return [version_out(v, is_current=v.pk == versions[0].pk) for v in versions]
 
 
 @router.get("docs/{doc_id}/versions/{version_id}/", response=DocVersionDetailOut)
@@ -632,7 +642,8 @@ def doc_version(request, doc_id: int, version_id: int):
     version = get_object_or_404(
         item.doc.versions.select_related("created_by"), pk=version_id
     )
-    return version_out(version, item, current=item.doc.versions.first().pk) | {
+    _before, is_latest = queries.neighbours(item.doc.versions, version)
+    return version_out(version, is_current=is_latest) | {
         "content": version.content,
         "content_html": html(version.content, item),
     }
@@ -739,7 +750,12 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
         item = ops.create_upload(
             project=project,
             file=file,
-            description=data.description,
+            description=resolve_for_new(
+                project,
+                visible_in(folder, data.visible_to_clients),
+                data.description,
+                author=request.user,
+            ),
             creator=request.user,
             parent=folder,
             visible=data.visible_to_clients,
@@ -770,11 +786,11 @@ def file_update(request, file_id: int, data: FilePatch):
     given = data.model_fields_set
     changes = {}
     if "title" in given:
-        if not data.title:
-            raise HttpError(400, _("The title can't be empty."))
-        changes["title"] = data.title
+        changes["title"] = clean_title(data.title)
     if "description" in given:
-        changes["description"] = data.description or ""
+        changes["description"] = resolve_mentions(
+            item, data.description or "", author=request.user
+        )
     operations.update_upload(item, actor=request.user, **changes)
     return file_out(item_for(request, file_id, Kind.FILE), request.user)
 
@@ -806,7 +822,7 @@ def file_download(request, file_id: int):
     """The current version: the file, or a redirect to a presigned URL
     valid 5 minutes with a bucket"""
     item = item_for(request, file_id, Kind.FILE)
-    return attachments.serve(item.upload.versions.all()[0])
+    return attachments.serve(version_for(request, item))
 
 
 @router.get(
@@ -815,5 +831,4 @@ def file_download(request, file_id: int):
 )
 def file_version_download(request, file_id: int, version_id: int):
     item = item_for(request, file_id, Kind.FILE)
-    _staff_only(request)
-    return attachments.serve(get_object_or_404(item.upload.versions, pk=version_id))
+    return attachments.serve(version_for(request, item, version_id, deny=_staff_only))

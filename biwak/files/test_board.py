@@ -42,6 +42,13 @@ class BoardTest(Fixture, TestCase):
     def url(self):
         return reverse("project_messages", args=[self.project.pk])
 
+    def test_a_bad_cursor_is_a_bad_request(self):
+        self.client.force_login(self.ada)
+        for before in ["x", "!!!", "MTIz"]:
+            with self.subTest(before=before):
+                response = self.client.get(self.url(), {"before": before})
+                self.assertEqual(response.status_code, 400)
+
     def test_staff_sees_everything_with_clients_badge(self):
         self.client.force_login(self.ada)
         response = self.client.get(self.url())
@@ -130,7 +137,7 @@ class BoardTest(Fixture, TestCase):
         self.assertFalse(first & second)
         self.assertEqual(len(first | second), board.PAGE_SIZE + 4)
         self.assertIsNone(rest.context["cursor"])
-        self.assertEqual(self.client.get(self.url(), {"before": "x"}).status_code, 404)
+        self.assertEqual(self.client.get(self.url(), {"before": "x"}).status_code, 400)
 
 
 class MessageNewTest(Fixture, TestCase):

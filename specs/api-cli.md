@@ -18,6 +18,11 @@ API first: everything the web interface does is possible through the API
 - Rich text accepted as Markdown, returned as HTML and Markdown.
 - Cursor pagination; filters matching the web interface's.
 - Writes create the same events and notifications as the web interface.
+- Errors (decided 2026-11-21, after the code review): `{"detail": ...}`;
+  what the schema refuses is ninja's 422 list (titles: `Title` in
+  `biwak/api_conventions.py`, stripped, 1 to 500 characters), what the
+  models refuse (`ValidationError`) a 400 from one handler in
+  `biwak/api.py`, 404 where an object's existence mustn't leak.
 - Webhooks for events (later): signed, retried, per project or
   installation.
 
@@ -30,6 +35,10 @@ a name this short):
   comments, messages, docs, files (upload and download), check-in answers,
   the chronological list ("my to-dos"), the feed, search, bookmarks.
 - Human-readable output by default, `--json` for scripts and agents.
+- Lists with cursor pagination are read page by page (`paginate()` in
+  `cli/biwak_cli/core.py`): complete, or up to `--limit` where a command
+  has one (fixed 2026-11-21, CLI 0.19.0: completed to-dos, comments and
+  `todos` showed only the first page).
 - Versioned with the server; warns when they don't match.
 
 ## Agent skills

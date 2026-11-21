@@ -7,6 +7,13 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
+def knows_everybody(viewer):
+    """Whether the viewer may learn about people who aren't members of the
+    project: staff, not clients and not nobody (mails rendered for nobody
+    in particular)"""
+    return viewer is not None and viewer.is_authenticated and not viewer.is_client
+
+
 class ProjectQuerySet(models.QuerySet):
     def accessible_to(self, user):
         """The projects a person may open (specs/access.md): staff all
@@ -73,10 +80,11 @@ class Project(models.Model):
 
     def people_known_to(self, viewer, people):
         """Those of ``people`` the viewer may see named: everybody for staff,
-        the members for clients (as on the project page; staff of
-        all-access projects needn't be members)"""
+        the members for clients and for nobody in particular (as on the
+        project page; staff of all-access projects needn't be members).
+        ``biwak.activity.mentions.known_to()`` is the same for querysets."""
         people = list(people)
-        if not viewer.is_client:
+        if knows_everybody(viewer):
             return people
         members = set(self.memberships.values_list("user", flat=True))
         return [user for user in people if user.pk in members]

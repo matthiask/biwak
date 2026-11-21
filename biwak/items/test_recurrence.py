@@ -1,4 +1,5 @@
 import datetime as dt
+import re
 from zoneinfo import ZoneInfo
 
 import time_machine
@@ -8,8 +9,9 @@ from biwak import schedules
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event, Subscription
 from biwak.items import operations as ops
-from biwak.items.models import Item
-from biwak.test_utils import person, project
+from biwak.items.models import Item, Todo
+from biwak.projects import operations as project_ops
+from biwak.test_utils import person, project, rule_post
 
 
 ZURICH = ZoneInfo("Europe/Zurich")
@@ -96,6 +98,18 @@ class OperationsTest(RecurrenceTestCase):
         self.assertTrue(
             Event.objects.filter(item=item, action=Action.COMPLETED).exists()
         )
+
+    def test_a_stored_rule_which_isnt_valid_makes_no_next(self):
+        """INTERVAL=0 hung completing (dateutil looped forever), -1 was an
+        error; rules stored before they were refused just stop"""
+        for rule in ["FREQ=DAILY;INTERVAL=0", "FREQ=DAILY;INTERVAL=-1"]:
+            with self.subTest(rule=rule):
+                item = self.todo("FREQ=DAILY", "2026-11-20")
+                Todo.objects.filter(item=item).update(recurrence=rule)
+                ops.complete(item, actor=self.ada)
+                item.todo.refresh_from_db()
+                self.assertTrue(item.todo.is_completed)
+                self.assertIsNone(self.following(item))
 
     def test_without_a_rule_nothing_happens(self):
         item = self.todo("")
@@ -204,6 +218,17 @@ class OperationsTest(RecurrenceTestCase):
         ops.complete(item, actor=self.ada)
         self.assertEqual(list(self.following(item).todo.assignees.all()), [self.ada])
 
+    def test_assignees_removed_from_the_project_arent_brought_back(self):
+        """Assigning makes members; the next to-do doesn't make somebody
+        removed since a member again"""
+        dan = person("Dan")
+        item = self.todo("FREQ=DAILY", assignees=[self.ada, dan])
+        self.assertTrue(self.project.is_member(dan))
+        project_ops.remove_member(self.project, dan, actor=self.ada)
+        ops.complete(item, actor=self.ada)
+        self.assertEqual(list(self.following(item).todo.assignees.all()), [self.ada])
+        self.assertFalse(self.project.is_member(dan))
+
     def test_a_client_completes_a_visible_recurring_todo(self):
         item = self.todo("FREQ=DAILY", "2026-11-20", assignees=[self.cleo])
         with at("2026-11-20 12:00"):
@@ -257,7 +282,9 @@ class PagesTest(RecurrenceTestCase):
             "form": "todo",
             "title": "Water",
             "due_on": "2026-11-20",
-            "repeat": "weekly",
+            "recurrence_frequency": "weekly",
+            "recurrence_interval": "1",
+            "recurrence_weekdays": ["FR"],
             "recurrence_count": "3",
         }
         self.assertRedirects(self.client.post(url, data), url)
@@ -267,53 +294,126 @@ class PagesTest(RecurrenceTestCase):
         response = self.client.get(url)
         self.assertContains(response, "Repeats: every Friday.")
         self.assertContains(response, '<option value="weekly" selected>')
-        # Custom
-        data |= {"repeat": "custom", "custom_rule": "FREQ=WEEKLY;BYDAY=MO,TH"}
+        # Another rule
+        data |= {"recurrence_weekdays": ["MO", "TH"]}
         self.client.post(url, data)
         item.todo.refresh_from_db()
         self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH")
-        self.assertContains(self.client.get(url), "FREQ=WEEKLY;BYDAY=MO,TH")
-        # Invalid, empty
-        for rule in ["FREQ=HOURLY", ""]:
-            response = self.client.post(url, data | {"custom_rule": rule})
+        self.assertContains(self.client.get(url), "every Monday, Thursday")
+        # Invalid: no day, no number
+        for bad in [{"recurrence_weekdays": []}, {"recurrence_interval": "0"}]:
+            response = self.client.post(url, data | bad)
             self.assertEqual(response.status_code, 200)
             item.todo.refresh_from_db()
             self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH")
         # Removing it
-        self.client.post(url, data | {"repeat": ""})
+        self.client.post(url, data | {"recurrence_frequency": ""})
         item.todo.refresh_from_db()
         self.assertEqual((item.todo.recurrence, item.todo.recurrence_count), ("", None))
 
-    def test_saving_keeps_a_rule_for_another_weekday_or_day(self):
-        """Rules from the API or the CLI (due on a Friday): saving the form
-        with a new title keeps them"""
+    def test_saving_keeps_rules_the_widget_cant_show(self):
+        """Rules from the API or the CLI: saving the form with a new title
+        keeps them, whether the widget shows them or not"""
         self.client.force_login(self.ada)
         for rule in [
             "FREQ=WEEKLY;BYDAY=MO",
             "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
             "FREQ=MONTHLY;BYMONTHDAY=1",
             "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+            # The widget can't show these
+            "FREQ=MONTHLY;BYMONTHDAY=1,15",
+            "FREQ=MONTHLY;BYMONTHDAY=-1",
+            "FREQ=WEEKLY",
+            "FREQ=MONTHLY;BYDAY=MO,WE;BYSETPOS=1",
+            "FREQ=YEARLY;BYMONTH=1,7;BYMONTHDAY=1",
+            "FREQ=WEEKLY;WKST=SU;BYDAY=MO",
         ]:
             item = self.todo(rule, "2026-11-20")
             url = item.get_absolute_url()
-            initial = self.client.get(url).context["form"].initial
-            data = {k: v for k, v in initial.items() if v is not None}
-            data["assignees"] = [u.pk for u in data["assignees"]]
-            data |= {"form": "todo", "title": "Renamed"}
+            page = self.client.get(url)
+            shown = schedules.rule_fields(rule) is not None
+            self.assertEqual(
+                "can't be edited here" in page.content.decode(), not shown, rule
+            )
+            data = rule_post(rule) | {"form": "todo", "title": "Renamed"}
+            data["assignees"] = []
+            self.assertRedirects(self.client.post(url, data), url)
+            item.todo.refresh_from_db()
+            self.assertEqual(item.todo.recurrence, schedules.validate(rule))
+            self.assertEqual(Item.objects.get(pk=item.pk).title, "Renamed")
+
+    def test_saving_an_unchanged_form_changes_nothing(self):
+        """Rules written differently (order of days, the default interval
+        and week start) are stored in their canonical form, which the
+        widget shows (decided 2026-11-21): saving changes nothing"""
+        self.client.force_login(self.ada)
+        for written, rule in [
+            ("FREQ=WEEKLY;BYDAY=TH,MO", "FREQ=WEEKLY;BYDAY=MO,TH"),
+            ("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO", "FREQ=WEEKLY;BYDAY=MO"),
+            ("FREQ=WEEKLY;BYDAY=MO;WKST=MO", "FREQ=WEEKLY;BYDAY=MO"),
+        ]:
+            item = self.todo(written, "2026-11-20")
+            self.assertEqual(item.todo.recurrence, rule)
+            url = item.get_absolute_url()
+            page = self.client.get(url).content.decode()
+            self.assertNotIn("can't be edited here", page)
+            self.assertIn(schedules.describe(rule), page)
+            data = rule_post(rule) | {
+                "form": "todo",
+                "title": item.title,
+                "due_on": "2026-11-20",
+                "assignees": [],
+            }
+            events = item.events.count()
             self.assertRedirects(self.client.post(url, data), url)
             item.todo.refresh_from_db()
             self.assertEqual(item.todo.recurrence, rule)
+            self.assertEqual(item.events.count(), events, rule)
+
+    def test_replacing_a_rule_the_widget_cant_show(self):
+        self.client.force_login(self.ada)
+        rule = "FREQ=MONTHLY;BYMONTHDAY=1,15"
+        item = self.todo(rule, "2026-11-20")
+        url = item.get_absolute_url()
+        data = {"form": "todo", "title": "Water", "recurrence_replace": "1"}
+        data |= rule_post(rule) | {
+            "recurrence_frequency": "daily",
+            "recurrence_interval": "3",
+        }
+        self.assertRedirects(self.client.post(url, data), url)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "FREQ=DAILY;INTERVAL=3")
+        # Replacing with nothing removes it
+        item = self.todo(rule, "2026-11-20")
+        data |= {"recurrence_frequency": ""}
+        self.client.post(item.get_absolute_url(), data)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "")
+
+    def test_keeping_is_only_for_the_rule_there_is(self):
+        """The hidden field on a to-do without a rule, or on the inline form,
+        keeps nothing: no rule"""
+        self.client.force_login(self.ada)
+        item = self.todo("", "2026-11-20")
+        url = item.get_absolute_url()
+        data = {"form": "todo", "title": "Water", "recurrence_keep": "1"}
+        self.assertRedirects(self.client.post(url, data), url)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "")
 
     def test_the_inline_form(self):
         self.client.force_login(self.ada)
         url = self.list.get_absolute_url()
-        self.assertContains(self.client.get(url), 'name="repeat"')
+        self.assertContains(self.client.get(url), 'name="recurrence_frequency"')
         response = self.client.post(
             url,
             {
                 "title": "Pay rent",
                 "due_on": "2026-01-31",
-                "repeat": "monthly",
+                "recurrence_frequency": "monthly",
+                "recurrence_interval": "1",
+                "recurrence_monthly": "day",
+                "recurrence_month_day": "31",
                 "recurrence_ends_on": "2027-01-31",
             },
             headers={"X-Biwak-Fragment": "1"},
@@ -326,11 +426,108 @@ class PagesTest(RecurrenceTestCase):
         )
         response = self.client.post(
             url,
-            {"title": "Bad", "repeat": "custom", "custom_rule": "nope"},
+            {
+                "title": "Bad",
+                "recurrence_frequency": "yearly",
+                "recurrence_interval": "1",
+                "recurrence_year_month": "2",
+                "recurrence_year_day": "30",
+            },
             headers={"X-Biwak-Fragment": "1"},
         )
         self.assertEqual(response.status_code, 422)
+        self.assertIn("doesn't exist", response.content.decode())
         self.assertFalse(Item.objects.filter(title="Bad").exists())
+        # Without JavaScript: no fragment, the form comes back with the error
+        response = self.client.post(
+            url,
+            {
+                "title": "Bad",
+                "recurrence_frequency": "weekly",
+                "recurrence_interval": "1",
+            },
+        )
+        self.assertContains(response, "Choose at least one weekday.")
+        self.assertFalse(Item.objects.filter(title="Bad").exists())
+
+    def test_a_failed_post_without_javascript_keeps_what_was_typed(self):
+        """The form of the group it was sent from comes back open, filled in,
+        with its errors; the other forms stay as they were"""
+        group = ops.create_group(todolist=self.list.todolist, title="Soon")
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.list.get_absolute_url(),
+            {
+                "title": "Bad title",
+                "notes": "Some <notes>",
+                "due_on": "not a date",
+                "assignees": [str(self.ada.pk)],
+                "group": str(group.pk),
+                "recurrence_frequency": "weekly",
+                "recurrence_interval": "1",
+            },
+        )
+        html = response.content.decode()
+        self.assertEqual(html.count("data-add-todo open"), 1)
+        self.assertEqual(html.count('value="Bad title"'), 1)
+        self.assertEqual(html.count("Some &lt;notes&gt;"), 1)
+        self.assertEqual(html.count('value="not a date"'), 1)
+        self.assertEqual(html.count("Enter a valid date."), 1)
+        self.assertEqual(html.count("Choose at least one weekday."), 1)
+        self.assertEqual(
+            len(re.findall(r'name="assignees"\s+value="\d+"\s+checked', html)), 1
+        )
+        # The open form is the group's
+        open_form = html[html.index("data-add-todo open") :]
+        self.assertLess(
+            open_form.index('value="Bad title"'), open_form.index("</form>")
+        )
+        self.assertEqual(html.count('value="weekly" selected'), 1)
+        self.assertFalse(Item.objects.filter(title="Bad title").exists())
+
+    def test_clients_use_the_widget_on_what_they_created(self):
+        self.client.force_login(self.cleo)
+        url = self.list.get_absolute_url()
+        response = self.client.post(
+            url,
+            {
+                "title": "Client's chore",
+                "recurrence_frequency": "daily",
+                "recurrence_interval": "2",
+            },
+            headers={"X-Biwak-Fragment": "1"},
+        )
+        self.assertEqual(response.status_code, 201)
+        item = Item.objects.get(title="Client's chore")
+        self.assertEqual(item.todo.recurrence, "FREQ=DAILY;INTERVAL=2")
+        page = item.get_absolute_url()
+        self.assertContains(self.client.get(page), "every 2 days")
+        data = {
+            "form": "todo",
+            "title": "Client's chore",
+            "recurrence_frequency": "monthly",
+            "recurrence_interval": "1",
+            "recurrence_monthly": "nth",
+            "recurrence_ordinal": "2",
+            "recurrence_weekday": "TU",
+        }
+        self.assertRedirects(self.client.post(page, data), page)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "FREQ=MONTHLY;BYDAY=TU;BYSETPOS=2")
+        # Internal ones are not there
+        internal = ops.create_todo(
+            todolist=self.internal, title="Secret", creator=self.ada
+        )
+        self.assertEqual(self.client.get(internal.get_absolute_url()).status_code, 404)
+
+    def test_the_inline_forms_of_groups_dont_share_ids(self):
+        group = ops.create_group(todolist=self.list.todolist, title="Later")
+        self.client.force_login(self.ada)
+        html = self.client.get(self.list.get_absolute_url()).content.decode()
+        ids = re.findall(r'id="([^"]+)"', html)
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertIn(f"id_recurrence_{group.pk}_frequency", ids)
+        self.assertIn("id_recurrence_ungrouped_frequency", ids)
 
     def test_completing_from_the_page_and_the_link_to_the_previous(self):
         item = self.todo("FREQ=DAILY", "2026-11-20")
@@ -409,6 +606,29 @@ class APITest(RecurrenceTestCase):
         self.assertEqual(response.json()["recurrence"], "")
         self.assertIsNone(response.json()["recurrence_count"])
 
+    def test_rules_are_stored_canonical(self):
+        """However they're written, rules are stored and returned in their
+        canonical form (decided 2026-11-21)"""
+        response = self.send(
+            "post",
+            f"lists/{self.list.pk}/todos/",
+            self.ada,
+            {"title": "Water", "recurrence": "rrule:byday=th,mo;freq=weekly;wkst=mo"},
+        )
+        self.assertEqual(response.json()["recurrence"], "FREQ=WEEKLY;BYDAY=MO,TH")
+        item = Item.objects.get(pk=response.json()["id"])
+        self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH")
+        response = self.send(
+            "patch",
+            f"todos/{item.pk}/",
+            self.ada,
+            {"recurrence": "FREQ=MONTHLY;BYSETPOS=-1;BYMONTHDAY=30,28,29;INTERVAL=1"},
+        )
+        self.assertEqual(
+            response.json()["recurrence"],
+            "FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1",
+        )
+
     def test_preset_follows_the_new_due_date(self):
         item = self.todo("")
         response = self.send(
@@ -424,6 +644,9 @@ class APITest(RecurrenceTestCase):
             {"recurrence": "sometimes"},
             {"recurrence": "FREQ=WEEKLY;COUNT=3"},
             {"recurrence_count": 0, "recurrence": "daily"},
+            {"recurrence": "FREQ=DAILY;INTERVAL=0"},
+            {"recurrence": "FREQ=DAILY;INTERVAL=-1"},
+            {"recurrence": "FREQ=MONTHLY;BYMONTHDAY=0"},
         ]:
             with self.subTest(body=body):
                 response = self.send(
@@ -438,6 +661,25 @@ class APITest(RecurrenceTestCase):
             "patch", f"todos/{item.pk}/", self.ada, {"recurrence": "x"}
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_a_client_cant_store_a_rule_which_hangs(self):
+        response = self.send(
+            "post",
+            f"lists/{self.list.pk}/todos/",
+            self.cleo,
+            {"title": "Water", "recurrence": "FREQ=DAILY;INTERVAL=0"},
+        )
+        self.assertEqual(response.status_code, 400)
+        item = self.todo("")
+        response = self.send(
+            "patch",
+            f"todos/{item.pk}/",
+            self.cleo,
+            {"recurrence": "FREQ=DAILY;INTERVAL=0"},
+        )
+        self.assertEqual(response.status_code, 400)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "")
 
     def test_client_completes_and_doesnt_learn_internal_ids(self):
         item = self.todo("FREQ=DAILY", "2026-11-20")

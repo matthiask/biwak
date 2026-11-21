@@ -49,11 +49,9 @@ value or a product choice to the builder):
   occurrences aren't asked. Questions which can't be asked (paused,
   trashed, archived or in an archived project) move on without asking.
 - **Editing the schedule** counts from now: today's time only if still
-  ahead, and a date already asked isn't asked again. The edit form shows a
-  rule as a preset only when the preset gives that rule from the first
-  date; a rule for another weekday or day (from the API or the CLI) is
-  shown as custom, so saving the form keeps it (fixed 2026-11-20: saving
-  rebuilt it from the first date's weekday or day). A new rule or time
+  ahead, and a date already asked isn't asked again. The edit form
+  uses the rule widget (`specs/rule-widget.md`): a rule it can't show
+  (from the API or the CLI) stays unchanged unless "Replace" is pressed. A new rule or time
   zone on the day it was asked counts from now in the new zone, so a zone
   where that date is still ahead doesn't ask it again and one where its
   time has passed asks the next date. Decided 2026-11-20: changing the
@@ -121,7 +119,8 @@ this part.
 - **Kind `answer`** (parent: its question), commentable:
   `Answer(Detail)` with `content` (Markdown) and `occurrence`; one per
   person and occurrence (unique on occurrence and creator), editable by
-  its author.
+  its author. Its title is the question's, renamed with it (fixed
+  2026-11-21: answers kept the old title in the feed and search).
 - **`QuestionMail(question, user, mode)`**: how a person hears about the
   answers: `each` (a mail per answer, through the normal notifications),
   `summary` (one mail the morning after an occurrence with all its
@@ -149,8 +148,9 @@ this part.
 - Clients only learn about the project's members among the people asked
   (staff of all-access projects needn't be members): the question page's
   people and "hasn't answered yet", the API's `people` and `missing`,
-  and a person's answers (`/questions/<pk>/people/<user pk>/` is 404 for
-  a client asking about a non-member) (decided 2026-11-20 after the
+  and a person's answers (`/questions/<pk>/people/<user pk>/` and the
+  API's `occurrences/?person_id=` are 404 for a client asking about a
+  non-member; the API since 2026-11-21) (decided 2026-11-20 after the
   visibility review, `Project.people_known_to()`).
 
 ## Pages

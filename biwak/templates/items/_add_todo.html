@@ -5,7 +5,8 @@
   the page, Ctrl+Enter saves and starts the next one, Escape or a click
   elsewhere closes it. Without JavaScript it's a plain form.
 {% endcomment %}
-<details class="wb-add-todo" data-add-todo>
+{% posted_here form group as posted %}
+<details class="wb-add-todo" data-add-todo {% if posted %}open{% endif %}>
   <summary class="btn btn-sm btn-quiet">{% icon "plus-lg" %}<span>{% translate "Add a to-do" %}</span></summary>
   <form
     method="post"
@@ -27,6 +28,7 @@
       maxlength="500"
       autocomplete="off"
       data-mentions="{% url 'mentionable_list' item.pk %}"
+      {% if posted %}value="{{ form.title.value|default:'' }}"{% endif %}
     >
     <textarea
       name="notes"
@@ -35,14 +37,19 @@
       placeholder="{% translate 'Notes (Markdown)' %}"
       aria-label="{% translate 'notes' %}"
       data-mentions="{% url 'mentionable_list' item.pk %}"
-    ></textarea>
+    >{% if posted %}{{ form.notes.value|default:"" }}{% endif %}</textarea>
     <div class="wb-add-todo-meta mb-2">
       {% if people %}
         <fieldset class="wb-assignees">
           <legend class="visually-hidden">{% translate "assignees" %}</legend>
           {% for person in people %}
             <label class="wb-chip">
-              <input type="checkbox" name="assignees" value="{{ person.pk }}">
+              <input
+                type="checkbox"
+                name="assignees"
+                value="{{ person.pk }}"
+                {% if posted and person.pk|stringformat:"s" in form.assignees.value %}checked{% endif %}
+              >
               <span>{{ person.get_short_name }}</span>
             </label>
           {% endfor %}
@@ -55,37 +62,31 @@
           name="due_on"
           class="form-control form-control-sm"
           aria-label="{% translate 'due on' %}"
+          {% if posted %}value="{{ form.due_on.value|default:'' }}"{% endif %}
         >
       </label>
     </div>
-    <div class="wb-add-todo-meta mb-2" data-repeat>
+    <div class="mb-2" data-repeat>
+      {% if group %}{% rule_widget form.recurrence group.pk posted=posted %}{% else %}{% rule_widget form.recurrence "ungrouped" posted=posted %}{% endif %}
+      {% if posted %}
+        {% for error in form.non_field_errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
+        {% for field in form %}
+          {% for error in field.errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
+        {% endfor %}
+      {% endif %}
+    </div>
+    <div class="wb-add-todo-meta mb-2" data-repeat-ends>
       <label class="wb-due">
-        <span>{% translate "Repeat" %}</span>
-        <select name="repeat" class="form-select form-select-sm" data-repeat-select>
-          {% for value, label in form.fields.repeat.choices %}
-            <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <input
-        type="text"
-        name="custom_rule"
-        class="form-control form-control-sm w-auto"
-        placeholder="FREQ=WEEKLY;BYDAY=MO,TH"
-        aria-label="{% translate 'Custom schedule' %}"
-        maxlength="200"
-        data-repeat-custom
-      >
-      <label class="wb-due" data-repeat-ends>
         <span>{% translate "until" %}</span>
         <input
           type="date"
           name="recurrence_ends_on"
           class="form-control form-control-sm"
           aria-label="{% translate 'Repeats until' %}"
+          {% if posted %}value="{{ form.recurrence_ends_on.value|default:'' }}"{% endif %}
         >
       </label>
-      <label class="wb-due" data-repeat-ends>
+      <label class="wb-due">
         <span>{% translate "left" %}</span>
         <input
           type="number"
@@ -94,6 +95,7 @@
           class="form-control form-control-sm"
           style="width: 5rem"
           aria-label="{% translate 'Repeats left' %}"
+          {% if posted %}value="{{ form.recurrence_count.value|default:'' }}"{% endif %}
         >
       </label>
     </div>

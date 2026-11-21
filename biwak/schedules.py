@@ -15,16 +15,26 @@ months.
 
 import datetime as dt
 import functools
+import re
 from zoneinfo import ZoneInfo
 
 from dateutil import rrule
 from django.conf import settings
+from django.contrib.humanize.templatetags.humanize import ordinal
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.dates import MONTHS
+from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 
 class InvalidRule(ValueError):
-    pass
+    """A rule we can't use. ``errors`` has a message per field of the rule
+    widget (``build_rule``), empty for everything else"""
+
+    def __init__(self, message="", errors=None):
+        self.errors = errors or {}
+        if not message and self.errors:
+            message = " ".join(str(m) for m in self.errors.values())
+        super().__init__(message)
 
 
 DAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
@@ -56,6 +66,11 @@ PARTS = {
     "BYSETPOS",
     "WKST",
 }
+# The longest interval: the rule widget's maximum too
+MAX_INTERVAL = 99
+# The order of the parts in a stored rule (the presets' and the widget's)
+ORDER = ["FREQ", "INTERVAL", "BYMONTH", "BYDAY", "BYMONTHDAY", "BYSETPOS", "WKST"]
+_WEEKDAY = re.compile(r"([+-]?\d+)?([A-Z]{2})")
 
 
 def _tz(tz=None):
@@ -72,11 +87,34 @@ def _parts(rule):
     return parts
 
 
+def _is_number(value):
+    return value.removeprefix("-").removeprefix("+").isdecimal()
+
+
+def _check_numbers(parts):
+    """dateutil loops forever for ``INTERVAL=0``, fails for negative ones
+    and reads a day 0 as every day"""
+    interval = parts.get("INTERVAL", "1")
+    if not (interval.isdecimal() and 1 <= int(interval) <= MAX_INTERVAL):
+        raise InvalidRule(
+            _("The interval is a number from 1 to %(max)s.") % {"max": MAX_INTERVAL}
+        )
+    for name in ["BYMONTHDAY", "BYSETPOS"]:
+        if name in parts and not all(
+            _is_number(value) and int(value) != 0 for value in parts[name].split(",")
+        ):
+            raise InvalidRule(
+                _("Not a valid schedule: %(rule)s") % {"rule": f"{name}={parts[name]}"}
+            )
+
+
 def validate(rule):
-    """The rule normalized (upper case, without ``RRULE:``); raises
+    """The rule in its canonical form (``_canonical()``), as it's stored:
+    equal schedules are equal strings (decided 2026-11-21); raises
     ``InvalidRule`` for anything we can't use: unknown or unsupported
-    parts, intervals shorter than a day, ``COUNT``/``UNTIL``/``DTSTART``,
-    rules without any date"""
+    parts, intervals shorter than a day or longer than ``MAX_INTERVAL``,
+    ``COUNT``/``UNTIL``/``DTSTART``, rules without a date or with only
+    one"""
     rule = (rule or "").strip().removeprefix("RRULE:").removeprefix("rrule:")
     rule = rule.strip().upper()
     if not rule:
@@ -93,14 +131,16 @@ def validate(rule):
             _("Not supported in a schedule: %(parts)s. Ends are set separately.")
             % {"parts": ", ".join(sorted(unknown))}
         )
+    _check_numbers(parts)
     try:
         parsed = rrule.rrulestr(rule, dtstart=dt.datetime(2028, 1, 1))
         first = parsed.after(dt.datetime(2028, 1, 1), inc=True)
+        second = first and parsed.after(first)
     except (ValueError, TypeError, KeyError) as exc:
         raise InvalidRule(_("Not a valid schedule: %(rule)s") % {"rule": rule}) from exc
-    if first is None:
+    if first is None or second is None:
         raise InvalidRule(_("The schedule never produces a date."))
-    return rule
+    return _canonical(parts)
 
 
 def next_date(rule, after, tz=None, *, anchor=None):
@@ -108,14 +148,19 @@ def next_date(rule, after, tz=None, *, anchor=None):
     taken as the date in ``tz``, default ``TIME_ZONE``); ``None`` when
     there's none. ``anchor`` is the date the rule starts counting from
     (default ``after``): "every two weeks" depends on it, a to-do's due
-    date keeps the phase."""
+    date keeps the phase. A stored rule which isn't valid (any more)
+    produces no date: no next to-do, no next check-in."""
     if isinstance(after, dt.datetime):
         after = (
             timezone.localtime(after, _tz(tz)).date() if after.tzinfo else after.date()
         )
     anchor = anchor or after
     start = dt.datetime.combine(anchor, dt.time())
-    parsed = rrule.rrulestr(validate(rule), dtstart=start)
+    try:
+        rule = validate(rule)
+    except InvalidRule:
+        return None
+    parsed = rrule.rrulestr(rule, dtstart=start)
     found = parsed.after(dt.datetime.combine(after, dt.time.max))
     return found.date() if found else None
 
@@ -127,11 +172,11 @@ def today(tz=None):
 # Presets ----------------------------------------------------------------
 
 
-def _clamped(day, extra=""):
+def _clamped(day):
     """A day of the month; the 29th to 31st fall on the last day of shorter
-    months"""
+    months (the presets and the widget)"""
     if day <= 28:
-        return f"BYMONTHDAY={day}{extra}"
+        return f"BYMONTHDAY={day}"
     return f"BYMONTHDAY={','.join(str(d) for d in range(28, day + 1))};BYSETPOS=-1"
 
 
@@ -174,15 +219,6 @@ PRESETS = {
 CUSTOM = "custom"
 
 
-def preset_choices():
-    r"""For the forms: ``("", "Doesn't repeat")``, the presets, "custom\""""
-    return [
-        ("", _("Doesn't repeat")),
-        *((key, label) for key, (label, _build) in PRESETS.items()),
-        (CUSTOM, _("Custom (RRULE)")),
-    ]
-
-
 def from_preset(key, anchor):
     """The rule of a preset, counting from the date ``anchor``"""
     try:
@@ -218,30 +254,243 @@ def preset_of(rule):
     return _preset_rules().get(rule, CUSTOM)
 
 
-def preset_for(rule, anchor):
-    """The preset of a form: only when it gives exactly ``rule`` counted
-    from ``anchor``, else ``"custom"``, so that saving the form keeps a
-    rule for another weekday or day; ``""`` for no rule"""
-    preset = preset_of(rule)
-    if preset not in ("", CUSTOM) and from_preset(preset, anchor) != rule:
-        return CUSTOM
-    return preset
+# The rule widget (specs/rule-widget.md) ---------------------------------
+#
+# ``rule_fields()`` and ``build_rule()`` are the only code which knows how
+# the widget's fields map to RRULE parts.
+
+FREQUENCY_FIELDS = {
+    "daily": "DAILY",
+    "weekly": "WEEKLY",
+    "monthly": "MONTHLY",
+    "yearly": "YEARLY",
+}
+ORDINAL_VALUES = [1, 2, 3, 4, -1]
+WORKING_DAY = "WD"
+
+
+def default_fields(anchor, frequency=""):
+    """The widget's fields for a new rule: everything on the anchor's
+    weekday, day and date"""
+    nth = (anchor.day - 1) // 7 + 1
+    return {
+        "frequency": frequency,
+        "interval": 1,
+        "weekdays": [DAYS[anchor.weekday()]],
+        "monthly": "day",
+        "month_day": anchor.day,
+        "ordinal": nth if nth in ORDINAL_VALUES else -1,
+        "weekday": DAYS[anchor.weekday()],
+        "year_month": anchor.month,
+        "year_day": anchor.day,
+    }
+
+
+def _int(value, low, high):
+    try:
+        number = int(str(value).strip())
+    except TypeError, ValueError:
+        return None
+    return number if low <= number <= high else None
+
+
+def _build_weekly(fields, errors):
+    days = fields.get("weekdays") or []
+    if isinstance(days, str):
+        days = [days]
+    if not days or not set(days) <= set(DAYS):
+        errors["weekdays"] = _("Choose at least one weekday.")
+        return ""
+    return ";BYDAY=" + ",".join(d for d in DAYS if d in days)
+
+
+def _build_monthly(fields, errors):
+    match fields.get("monthly"):
+        case "nth":
+            ordinal = _int(fields.get("ordinal"), -1, 4)
+            weekday = fields.get("weekday")
+            if ordinal not in ORDINAL_VALUES:
+                errors["ordinal"] = _("Choose first, second, third, fourth or last.")
+            if weekday != WORKING_DAY and weekday not in DAYS:
+                errors["weekday"] = _("Choose a weekday or working day.")
+            if errors:
+                return ""
+            byday = WEEKDAYS if weekday == WORKING_DAY else weekday
+            return f";BYDAY={byday};BYSETPOS={ordinal}"
+        case "day":
+            day = _int(fields.get("month_day"), 1, 31)
+            if day is None:
+                errors["month_day"] = _("Enter a day from 1 to 31.")
+                return ""
+            return ";" + _clamped(day)
+    errors["monthly"] = _("Choose a day or a weekday.")
+    return ""
+
+
+def _build_yearly(fields, errors):
+    month = _int(fields.get("year_month"), 1, 12)
+    day = _int(fields.get("year_day"), 1, 31)
+    if month is None:
+        errors["year_month"] = _("Choose a month.")
+    if day is None:
+        errors["year_day"] = _("Enter a day from 1 to 31.")
+    if errors:
+        return ""
+    if (month, day) == (2, 29):
+        return ";BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1"
+    return f";BYMONTH={month};BYMONTHDAY={day}"
+
+
+def build_rule(fields):
+    """The normalized rule for the widget's fields (``rule_fields()``'s
+    keys, values as posted); ``""`` without a frequency. Only the fields
+    of the chosen frequency count. Raises ``InvalidRule`` with a message
+    per field in ``errors``."""
+    frequency = str(fields.get("frequency") or "")
+    if not frequency:
+        return ""
+    if frequency not in FREQUENCY_FIELDS:
+        raise InvalidRule(errors={"frequency": _("Choose how often it repeats.")})
+    errors = {}
+    interval = _int(fields.get("interval"), 1, MAX_INTERVAL)
+    if interval is None:
+        errors["interval"] = _("Enter a number from 1 to %(max)s.") % {
+            "max": MAX_INTERVAL
+        }
+    head = f"FREQ={FREQUENCY_FIELDS[frequency]}"
+    if interval and interval > 1:
+        head += f";INTERVAL={interval}"
+    builder = {
+        "weekly": _build_weekly,
+        "monthly": _build_monthly,
+        "yearly": _build_yearly,
+    }.get(frequency)
+    tail = builder(fields, errors) if builder else ""
+    if errors:
+        raise InvalidRule(errors=errors)
+    try:
+        return validate(head + tail)
+    except InvalidRule:
+        # Only 30 and 31 February, 31 April and the like never happen
+        raise InvalidRule(errors={"year_day": _("This date doesn't exist.")}) from None
+
+
+def _numbers(value):
+    return sorted({int(number) for number in value.split(",")})
+
+
+def _weekday_key(entry):
+    number, day = _WEEKDAY.fullmatch(entry).groups()
+    return DAYS.index(day), int(number or 0)
+
+
+def _weekdays(value):
+    """``-1FR,+1MO,FR`` as ``1MO,-1FR,FR``: in week order, numbers plain"""
+    entries = set()
+    for entry in value.split(","):
+        # dateutil also reads MO(+1), which isn't RFC 5545
+        if not (match := _WEEKDAY.fullmatch(entry)) or match[2] not in DAYS:
+            raise InvalidRule(_("Not a valid schedule: %(rule)s") % {"rule": value})
+        number, day = match.groups()
+        entries.add(f"{int(number)}{day}" if number else day)
+    return sorted(entries, key=_weekday_key)
+
+
+def _canonical(parts):
+    """The rule of valid parts written one way only: the parts in
+    ``ORDER``, lists sorted (days in week order, numbers ascending) without
+    repeats, numbers without signs and zeros in front, and without the
+    defaults ``INTERVAL=1`` and ``WKST=MO``. The meaning stays the same."""
+    parts = dict(parts)
+    parts["INTERVAL"] = str(int(parts.get("INTERVAL", "1")))
+    if parts["INTERVAL"] == "1":
+        del parts["INTERVAL"]
+    if parts.get("WKST") == "MO":
+        del parts["WKST"]
+    for name in ["BYMONTH", "BYMONTHDAY", "BYSETPOS"]:
+        if name in parts:
+            parts[name] = ",".join(str(n) for n in _numbers(parts[name]))
+    if "BYDAY" in parts:
+        parts["BYDAY"] = ",".join(_weekdays(parts["BYDAY"]))
+    return ";".join(f"{name}={parts[name]}" for name in ORDER if name in parts)
+
+
+def _guess_fields(parts):
+    interval = _int(parts.get("INTERVAL", "1"), 1, MAX_INTERVAL)
+    fields = {"interval": interval}
+    days = parts["BYDAY"].split(",") if "BYDAY" in parts else []
+    monthdays = parts["BYMONTHDAY"].split(",") if "BYMONTHDAY" in parts else []
+    setpos = parts.get("BYSETPOS", "")
+    match parts["FREQ"]:
+        case "DAILY":
+            fields["frequency"] = "daily"
+        case "WEEKLY":
+            fields |= {"frequency": "weekly", "weekdays": days}
+        case "MONTHLY":
+            fields["frequency"] = "monthly"
+            if days:
+                fields |= {
+                    "monthly": "nth",
+                    "ordinal": int(setpos),
+                    "weekday": WORKING_DAY if days == WEEKDAYS.split(",") else days[0],
+                }
+            else:
+                fields |= {"monthly": "day", "month_day": _day_of(monthdays, setpos)}
+        case "YEARLY":
+            fields |= {
+                "frequency": "yearly",
+                "year_month": int(parts["BYMONTH"]),
+                "year_day": _day_of(monthdays, setpos),
+            }
+    return fields
+
+
+def _day_of(monthdays, setpos):
+    """The day of ``BYMONTHDAY=5`` or ``BYMONTHDAY=28,29,30;BYSETPOS=-1``"""
+    if setpos:
+        return int(monthdays[-1])
+    return int(monthdays[0])
+
+
+def rule_fields(rule):
+    """The widget's fields for the rule, or ``None`` if the widget can't
+    show it. What's returned always builds the same rule again
+    (``build_rule(rule_fields(rule)) == rule``, normalized): a rule the
+    widget would change is not shown, so that saving a form never
+    rewrites it."""
+    if not rule:
+        return {"frequency": ""}
+    try:
+        rule = validate(rule)
+        fields = _guess_fields(_parts(rule))
+        if build_rule(fields) == rule:
+            return fields
+    except InvalidRule, ValueError, KeyError, IndexError:
+        pass
+    return None
 
 
 # Describing -------------------------------------------------------------
+#
+# Every text goes through gettext (whole phrases with placeholders, so
+# that a translation can order them); month names and ordinal numbers come
+# from Django's catalogs.
 
 
 def _ordinal(n):
     if n in ORDINALS:
         return str(ORDINALS[n])
-    suffix = (
-        "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    )
-    return f"{n}{suffix}"
+    return ordinal(n)
 
 
 def _every(interval, unit):
-    return f"every {unit}" if interval == 1 else f"every {interval} {unit}s"
+    texts = {
+        "day": lambda: ngettext("every day", "every %(n)s days", interval),
+        "week": lambda: ngettext("every week", "every %(n)s weeks", interval),
+        "month": lambda: ngettext("every month", "every %(n)s months", interval),
+        "year": lambda: ngettext("every year", "every %(n)s years", interval),
+    }
+    return texts[unit]() % {"n": interval}
 
 
 def _describe_weekly(interval, days, parts):
@@ -250,14 +499,21 @@ def _describe_weekly(interval, days, parts):
         return None
     if not days:
         return _every(interval, "week")
+    if not all(day in names for day in days):
+        return None
     if days == WEEKDAYS.split(","):
-        return "every weekday" if interval == 1 else None
-    if len(days) == 1 and days[0] in names and interval in {1, 2}:
-        other = "" if interval == 1 else "other "
-        return f"every {other}{names[days[0]]}"
-    if interval == 1 and all(day in names for day in days):
-        return "every " + ", ".join(names[day] for day in days)
-    return None
+        if interval == 1:
+            return gettext("every weekday")
+        return gettext("%(every)s on weekdays") % {"every": _every(interval, "week")}
+    listed = ", ".join(names[day] for day in days)
+    if interval == 1:
+        return gettext("every %(days)s") % {"days": listed}
+    if len(days) == 1 and interval == 2:
+        return gettext("every other %(day)s") % {"day": listed}
+    return gettext("%(every)s on %(days)s") % {
+        "every": _every(interval, "week"),
+        "days": listed,
+    }
 
 
 def _describe_monthly(interval, days, monthdays, parts):
@@ -266,23 +522,38 @@ def _describe_monthly(interval, days, monthdays, parts):
     setpos = parts.get("BYSETPOS", "")
     if parts.keys() - {"FREQ", "INTERVAL", "BYDAY", "BYMONTHDAY", "BYSETPOS", "WKST"}:
         return None
-    if len(days) == 1 and days[0] in names and setpos.lstrip("-").isdigit():
-        return f"the {_ordinal(int(setpos))} {names[days[0]]} of {month}"
-    if days == WEEKDAYS.split(",") and setpos in {"1", "-1"}:
-        return f"the {_ordinal(int(setpos))} weekday of {month}"
+    nth = setpos.lstrip("-").isdigit() and int(setpos) in ORDINALS
+    if len(days) == 1 and days[0] in names and nth:
+        return gettext("the %(nth)s %(day)s of %(every)s") % {
+            "nth": _ordinal(int(setpos)),
+            "day": names[days[0]],
+            "every": month,
+        }
+    if days == WEEKDAYS.split(",") and nth:
+        return gettext("the %(nth)s working day of %(every)s") % {
+            "nth": _ordinal(int(setpos)),
+            "every": month,
+        }
     if len(monthdays) == 1 and not days and not setpos:
-        return f"the {_ordinal(int(monthdays[0]))} of {month}"
+        return gettext("the %(day)s of %(every)s") % {
+            "day": _ordinal(int(monthdays[0])),
+            "every": month,
+        }
     if monthdays and not days and setpos == "-1":
         last = int(monthdays[-1])
         if monthdays == [str(d) for d in range(28, last + 1)]:
-            return f"the {_ordinal(last)} (or the last day) of {month}"
+            return gettext("the %(day)s (or the last day) of %(every)s") % {
+                "day": _ordinal(last),
+                "every": month,
+            }
     return None
 
 
 def _describe_yearly(interval, parts, monthdays):
     month_number = parts.get("BYMONTH", "")
     setpos = parts.get("BYSETPOS")
-    if interval != 1 or parts.keys() - {
+    year = _every(interval, "year")
+    if parts.keys() - {
         "FREQ",
         "INTERVAL",
         "BYMONTH",
@@ -292,17 +563,24 @@ def _describe_yearly(interval, parts, monthdays):
         return None
     if not (month_number.isdigit() and 1 <= int(month_number) <= 12):
         return None
-    month_name = dt.date(2028, int(month_number), 1).strftime("%B")
+    month_name = str(MONTHS[int(month_number)])
     if len(monthdays) == 1 and not setpos:
-        return f"every year on {month_name} {monthdays[0]}"
+        return gettext("%(every)s on %(month)s %(day)s") % {
+            "every": year,
+            "month": month_name,
+            "day": monthdays[0],
+        }
     if monthdays == ["28", "29"] and setpos == "-1":
-        return f"every year on {month_name} 29 (or the last day)"
+        return gettext("%(every)s on %(month)s 29 (or the last day)") % {
+            "every": year,
+            "month": month_name,
+        }
     return None
 
 
 def describe(rule):
-    """A short English text: "every Monday", "the first Monday of every
-    month"; unusual rules show the rule itself"""
+    """A short text: "every Monday", "the first Monday of every month";
+    unusual rules show the rule itself. In the active language."""
     if not rule:
         return ""
     parts = _parts(rule)
@@ -323,4 +601,6 @@ def describe(rule):
             text = _describe_monthly(interval, days, monthdays, parts)
         case "YEARLY":
             text = _describe_yearly(interval, parts, monthdays)
-    return text if text and interval else f"custom schedule ({rule})"
+    if text and interval:
+        return text
+    return gettext("custom schedule (%(rule)s)") % {"rule": rule}

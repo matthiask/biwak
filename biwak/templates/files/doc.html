@@ -28,7 +28,7 @@
   {% show_links item %}
   {% include "items/_client_banner.html" %}
   {% if doc.read_only %}
-    <div class="alert alert-secondary">
+    <div class="alert alert-info">
       {% icon "lock" %}
       {% translate "This doc is read-only." %}
     </div>
@@ -37,7 +37,7 @@
     <div class="col-lg-8">
       <div class="wb-markdown mb-4">{{ doc.content|markdown:item }}</div>
       {% reactions item %}
-      {% include "files/_comments.html" %}
+      {% include "items/_comments.html" %}
     </div>
     <div class="col-lg-4">
       {% include "files/_sidebar.html" %}

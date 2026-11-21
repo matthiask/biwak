@@ -1,10 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
+from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event, Subscription
 from biwak.activity.operations import subscribe, unsubscribe
 from biwak.items import operations as ops, visibility
 from biwak.items.models import Comment, Item, Kind, Status
+from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
 
@@ -61,6 +63,23 @@ class TreeTest(TestCase):
                 title="x",
                 creator=self.ada,
             ).save()
+
+    def test_saving_some_fields_checks_only_those(self):
+        """full_clean() loaded the parent for every status or position
+        save; the fields saved are still checked"""
+        todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="T", creator=self.ada)
+        todo = Item.objects.get(pk=todo.pk)
+        todo.status = Status.ARCHIVED
+        with self.assertNumQueries(1):
+            todo.save(update_fields=["status"])
+        todo.title = ""
+        with self.assertRaises(ValidationError):
+            todo.save(update_fields=["title"])
+        todo = Item.objects.get(pk=todo.pk)
+        todo.visible_to_clients = True
+        with self.assertRaises(ValidationError):
+            todo.save(update_fields=["visible_to_clients"])
 
     def test_detail_rows_and_events(self):
         todolist = ops.create_list(
@@ -302,6 +321,84 @@ class VisibilityTest(TestCase):
             [self.cleo, self.ada],
         )
         self.assertEqual(ops.assign(todo, [self.cleo], actor=self.ada), [])
+
+    def test_assigning_makes_staff_members(self):
+        """Staff who see the to-do can be assigned (decided 2026-11-21):
+        in all-access projects everybody, who becomes a member, recorded
+        as added; the page offers them after the members"""
+        dan = person("Dan")
+        todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        self.assertEqual(list(ops.assignable_people(todo)), [self.ada, dan], "Not Cleo")
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            todo.get_absolute_url(),
+            {"form": "todo", "title": "DNS", "assignees": [dan.pk]},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(self.project.is_member(dan))
+        event = Event.objects.get(action=Action.ADDED)
+        self.assertEqual((event.actor, event.data["user"]), (self.ada, dan.pk))
+        self.assertEqual(list(todo.todo.assignees.all()), [dan])
+
+    def test_assigning_through_the_api_makes_members(self):
+        dan = person("Dan")
+        todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        response = self.client.patch(
+            f"/api/v1/todos/{todo.pk}/",
+            {"assignees": [dan.pk]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(self.project.is_member(dan))
+        self.assertTrue(Event.objects.filter(action=Action.ADDED).exists())
+
+    def test_clients_assign_members_only(self):
+        """Clients learn about the project's members only: other staff
+        aren't offered to them, nor taken from them"""
+        dan = person("Dan")
+        todolist = ops.create_list(
+            project=self.project, title="L", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        self.assertEqual(
+            list(ops.assignable_people(todo, self.cleo)), [self.ada, self.cleo]
+        )
+        self.client.force_login(self.cleo)
+        self.assertNotContains(self.client.get(todo.get_absolute_url()), "Dan")
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="write")
+        response = self.client.patch(
+            f"/api/v1/todos/{todo.pk}/",
+            {"assignees": [dan.pk]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 400)
+        with self.assertRaises(ValueError):
+            ops.assign(todo, [dan], actor=self.cleo)
+        self.assertFalse(self.project.is_member(dan))
+
+    def test_limited_projects_assign_members_only(self):
+        dan = person("Dan")
+        limited = project("HR", members=[self.ada], all_access=False)
+        todolist = ops.create_list(project=limited, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        with self.assertRaises(ValueError):
+            ops.assign(todo, [dan], actor=self.ada)
+        self.assertFalse(limited.is_member(dan))
+
+    def test_removing_an_assigned_member(self):
+        """As before: the membership goes, the assignment stays"""
+        dan = person("Dan")
+        todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        ops.assign(todo, [dan], actor=self.ada)
+        self.assertTrue(project_ops.remove_member(self.project, dan, actor=self.ada))
+        self.assertFalse(self.project.is_member(dan))
+        self.assertEqual(list(todo.todo.assignees.all()), [dan])
 
 
 class SubscriptionTest(TestCase):

@@ -12,6 +12,9 @@ One spec per part. Every spec starts with the same header, so an agent
 
 ## Index
 
+Open questions and decisions waiting for confirmation, across all
+parts: `questions.md`.
+
 Stages are separate hand-offs. "Next" means it can start now.
 
 | Part | Stage | Status (2026-11-20) | Depends on | Agent |
@@ -32,6 +35,10 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `notifications.md` | 2: replying by mail | built | notifications 1, check-ins | strong |
 | `search.md` | | built | every kind of item | cheaper |
 | `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
+| `rule-widget.md` | one control for repeat rules | next | to-dos, check-ins | cheaper, review the round trips |
+| `keyboard.md` | command palette (Ctrl+K), shortcuts | next | search | cheaper |
+| `lantern.md` | the lantern (notifications in the app), live updates | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
+| `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | built (branch `collaboration`, not deployed) | everything | strong |

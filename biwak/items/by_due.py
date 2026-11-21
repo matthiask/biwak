@@ -6,18 +6,20 @@ from django import forms
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from icalendar import Calendar, Event as CalendarEvent
 
 from biwak import schedules
 from biwak.accounts.models import CalendarToken, User
+from biwak.activity import mentions
 from biwak.api_conventions import absolute
 from biwak.forms import Form
 from biwak.items import due, glance
 from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
+from biwak.projects.views import project_for
 
 
 GROUP_LABELS = {
@@ -134,31 +136,33 @@ def todos_by_due(request, project=None):
 
 
 def project_todos(request, pk):
-    project = get_object_or_404(Project.objects.accessible_to(request.user), pk=pk)
-    return todos_by_due(request, project=project)
+    return todos_by_due(request, project=project_for(request, pk))
 
 
 # The iCal feed ----------------------------------------------------------
 
 
 def calendar_for(user):
-    """The person's open to-dos with a due date as all-day events"""
+    """The person's open to-dos with a due date as all-day events; mentions
+    as names the person may know, like the mails"""
     calendar = Calendar()
     calendar.add("prodid", "-//Biwak//To-dos//EN")
     calendar.add("version", "2.0")
     calendar.add("x-wr-calname", "Biwak")
     qs = due.todos(user, assignee="me").filter(todo__due_on__isnull=False)
-    for item in qs.order_by("todo__due_on", "pk"):
-        event = CalendarEvent()
-        event.add("uid", f"todo-{item.pk}@biwak")
-        event.add("summary", item.title)
-        event.add("dtstart", item.todo.due_on)
-        event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
-        event.add("dtstamp", item.updated_at)
-        event.add("transp", "TRANSPARENT")
-        event.add("url", absolute(item.get_absolute_url()))
-        event.add("description", f"{item.project} / {item.parent}")
-        calendar.add_component(event)
+    with mentions.reading_as(user):
+        for item in qs.order_by("todo__due_on", "pk"):
+            event = CalendarEvent()
+            event.add("uid", f"todo-{item.pk}@biwak")
+            event.add("summary", mentions.plain(item.title, item))
+            event.add("dtstart", item.todo.due_on)
+            event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
+            event.add("dtstamp", item.updated_at)
+            event.add("transp", "TRANSPARENT")
+            event.add("url", absolute(item.get_absolute_url()))
+            todolist = mentions.plain(item.parent.title, item.parent)
+            event.add("description", f"{item.project} / {todolist}")
+            calendar.add_component(event)
     return calendar
 
 

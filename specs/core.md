@@ -63,7 +63,7 @@ Ordinary pages and the visibility check don't need recursive queries;
 keep `with_tree_fields()` off by default.
 
 Trashing is soft and recoverable for 30 days; children follow their
-parent. Archiving keeps items readable but out of the way. Staff see a
+parent; an archived item comes back archived (fixed 2026-11-21). Archiving keeps items readable but out of the way. Staff see a
 project's trash and restore from it; clients rename, archive and trash
 only what they created. `fairy_tasks` deletes what has been in the trash
 for 30 days.

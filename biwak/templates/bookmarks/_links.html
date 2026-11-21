@@ -5,22 +5,20 @@
       <ul
         class="list-unstyled d-flex flex-wrap gap-2 mb-2"
         {% if can_manage %}
-          data-sortable-links="{% if is_item %}{% url 'item_link_order' target.pk %}{% else %}{% url 'project_link_order' target.pk %}{% endif %}"
+          data-sortable-field="links"
+          data-sortable-order="{% if is_item %}{% url 'item_link_order' target.pk %}{% else %}{% url 'project_link_order' target.pk %}{% endif %}"
         {% endif %}
       >
         {% for link in links %}
-          <li class="d-flex align-items-center gap-1 border rounded px-2 py-1" data-link-item="{{ link.pk }}">
+          <li class="d-flex align-items-center gap-1 border wb-rounded px-2 py-1" data-sortable-item="{{ link.pk }}">
             {% if can_manage %}<span
                 class="wb-handle"
-                data-link-handle
+                data-sortable-handle
                 title="{% translate 'Drag to move' %}"
               >{% icon "grip-vertical" %}</span>{% endif %}
             {% include "bookmarks/_kind_icon.html" with kind=link.kind %}
             <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a>
-            {% if link.visible_to_clients %}<span
-                class="badge wb-client-badge"
-                title="{% translate 'Clients can see this' %}"
-              >{% translate "Clients" %}</span>{% endif %}
+            {% client_badge link %}
             {% if can_manage %}
               <a
                 class="btn btn-sm btn-quiet"
@@ -39,7 +37,7 @@
       </ul>
     {% endif %}
     {% if can_manage %}
-      <details>
+      <details data-dismiss>
         <summary class="small text-body-secondary">{% translate "Add a link" %}</summary>
         <form
           method="post"

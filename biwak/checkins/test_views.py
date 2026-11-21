@@ -1,7 +1,10 @@
 import datetime as dt
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
+from biwak.accounts.models import APIToken
 from biwak.activity.models import Event
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
@@ -9,7 +12,7 @@ from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
 from biwak.projects.models import Membership
-from biwak.test_utils import person, project
+from biwak.test_utils import person, project, rule_post
 
 
 class ViewsTestCase(CheckinTestCase):
@@ -278,8 +281,9 @@ class FormsTest(ViewsTestCase):
     def data(self, **kwargs):
         return {
             "title": "What did you read?",
-            "repeat": "weekly",
-            "custom_rule": "",
+            "rule_frequency": "weekly",
+            "rule_interval": "1",
+            "rule_weekdays": ["FR"],
             "starts_on": "2027-03-26",
             "time_of_day": "08:30",
             "time_zone": "Europe/Zurich",
@@ -293,7 +297,7 @@ class FormsTest(ViewsTestCase):
         item = Item.objects.get(title="What did you read?")
         self.assertRedirects(response, item.get_absolute_url())
         question = item.question
-        self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR", "from the first date")
+        self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR")
         self.assertEqual(question.time_of_day, dt.time(8, 30))
         self.assertEqual(set(question.people.all()), {self.ada, self.bob})
         self.assertFalse(item.is_client_visible)
@@ -327,8 +331,9 @@ class FormsTest(ViewsTestCase):
         item_ops.set_visibility(self.shared, visible=False, actor=self.ada)
         url = self.url("question_edit", self.shared)
         initial = self.get(self.ada, url).context["form"].initial
-        data = {k: v for k, v in initial.items() if v is not None}
+        data = {k: v for k, v in initial.items() if v is not None and k != "rule"}
         data["people"] = [u.pk for u in data["people"]]
+        data |= rule_post(initial["rule"], "rule")
         response = self.post(self.ada, url, data | {"title": "Renamed"})
         self.assertEqual(response.status_code, 302)
         self.shared.refresh_from_db()
@@ -344,19 +349,17 @@ class FormsTest(ViewsTestCase):
             response, "Clients can only be asked about check-ins they can see."
         )
 
-    def test_a_custom_schedule_and_mistakes(self):
+    def test_another_schedule_and_mistakes(self):
         url = reverse("question_new", args=[self.project.pk])
-        self.post(
-            self.ada, url,
-            self.data(repeat="custom", custom_rule="FREQ=WEEKLY;BYDAY=MO,TH"),
-        )  # fmt: skip
+        self.post(self.ada, url, self.data(rule_weekdays=["MO", "TH"]))
         self.assertEqual(
             Item.objects.get(title="What did you read?").question.rule,
             "FREQ=WEEKLY;BYDAY=MO,TH",
         )
         for data in [
-            {"repeat": "custom", "custom_rule": ""},
-            {"repeat": "custom", "custom_rule": "FREQ=HOURLY"},
+            {"rule_frequency": ""},
+            {"rule_weekdays": []},
+            {"rule_interval": "100"},
             {"time_zone": "Mars/Olympus"},
             {"time_of_day": ""},
             {"starts_on": ""},
@@ -388,14 +391,15 @@ class FormsTest(ViewsTestCase):
         url = self.url("question_edit", self.item)
         response = self.get(self.ada, url)
         form = response.context["form"]
-        self.assertEqual(form.initial["repeat"], "weekly")
+        self.assertEqual(form.initial["rule"], "FREQ=WEEKLY;BYDAY=MO")
         self.assertEqual(form.initial["time_of_day"], dt.time(9, 0))
         self.assertContains(response, "Edit the check-in")
         response = self.post(
             self.ada,
             url,
             self.data(
-                title="How is it going?", repeat="biweekly", starts_on="2027-03-22",
+                title="How is it going?", rule_interval="2", rule_weekdays=["MO"],
+                starts_on="2027-03-22",
                 time_of_day="10:00", people=[self.bob.pk],
             ),
         )  # fmt: skip
@@ -406,11 +410,23 @@ class FormsTest(ViewsTestCase):
         self.assertEqual(item.question.time_of_day, dt.time(10, 0))
         self.assertEqual(set(item.question.people.all()), {self.bob})
 
-    def test_editing_a_custom_schedule_shows_it(self):
-        ops.update_question(self.item, actor=self.ada, rule="FREQ=WEEKLY;BYDAY=MO,TH")
-        form = self.get(self.ada, self.url("question_edit", self.item)).context["form"]
-        self.assertEqual(form.initial["repeat"], "custom")
-        self.assertEqual(form.initial["custom_rule"], "FREQ=WEEKLY;BYDAY=MO,TH")
+    def test_a_schedule_the_widget_cant_show_stays_unless_replaced(self):
+        rule = "FREQ=WEEKLY;BYDAY=MO,TH;BYSETPOS=1"
+        ops.update_question(self.item, actor=self.ada, rule=rule)
+        url = self.url("question_edit", self.item)
+        response = self.get(self.ada, url)
+        self.assertEqual(response.context["form"].initial["rule"], rule)
+        self.assertContains(response, "can't be edited here")
+        response = self.post(self.ada, url, self.data(title="Same", rule_keep="1"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Question.objects.get(item=self.item).rule, rule)
+        response = self.post(
+            self.ada, url, self.data(title="Same", rule_keep="1", rule_replace="1")
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Question.objects.get(item=self.item).rule, "FREQ=WEEKLY;BYDAY=FR"
+        )
 
     def test_saving_keeps_a_rule_for_another_weekday_or_day(self):
         """Rules from the API or the CLI (first date a Friday): saving the
@@ -422,15 +438,55 @@ class FormsTest(ViewsTestCase):
             "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
             "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=-1",
             "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1",
+            "FREQ=MONTHLY;BYMONTHDAY=1,15",
+            "FREQ=WEEKLY",
         ]:
             item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 19))
             url = self.url("question_edit", item)
-            initial = self.get(self.ada, url).context["form"].initial
-            data = {k: v for k, v in initial.items() if v is not None}
-            data["people"] = [u.pk for u in data["people"]]
-            response = self.post(self.ada, url, data | {"title": "Renamed"})
+            data = self.data(title="Renamed", people=[self.ada.pk])
+            data = {k: v for k, v in data.items() if not k.startswith("rule_")}
+            data |= rule_post(rule, "rule")
+            response = self.post(self.ada, url, data)
             self.assertEqual(response.status_code, 302, rule)
             self.assertEqual(Question.objects.get(item=item).rule, rule)
+
+    def test_keep_without_a_stored_rule_is_a_form_error(self):
+        url = reverse("question_new", args=[self.project.pk])
+        data = self.data(rule_keep="1")
+        data = {k: v for k, v in data.items() if k != "rule_frequency"}
+        response = self.post(self.ada, url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(title="What did you read?").exists())
+
+    def test_saving_an_unchanged_form_changes_nothing(self):
+        """Rules are stored in their canonical form, which the widget shows
+        (decided 2026-11-21)"""
+        for written, rule in [
+            ("FREQ=WEEKLY;BYDAY=TH,MO", "FREQ=WEEKLY;BYDAY=MO,TH"),
+            ("FREQ=WEEKLY;INTERVAL=1;BYDAY=MO", "FREQ=WEEKLY;BYDAY=MO"),
+            ("FREQ=WEEKLY;BYDAY=MO;WKST=MO", "FREQ=WEEKLY;BYDAY=MO"),
+        ]:
+            item = self.question(written, rule=written, starts_on=dt.date(2027, 3, 22))
+            before = Question.objects.get(item=item)
+            self.assertEqual(before.rule, rule)
+            page = self.get(self.ada, self.url("question_edit", item))
+            self.assertNotContains(page, "can't be edited here")
+            events = item.events.count()
+            data = self.data(
+                title=item.title,
+                starts_on="2027-03-22",
+                time_of_day=before.time_of_day.strftime("%H:%M"),
+                time_zone=before.time_zone,
+            )
+            data = {k: v for k, v in data.items() if not k.startswith("rule_")}
+            data |= rule_post(rule, "rule")
+            data["people"] = [self.ada.pk]
+            response = self.post(self.ada, self.url("question_edit", item), data)
+            self.assertEqual(response.status_code, 302, rule)
+            after = Question.objects.get(item=item)
+            self.assertEqual(after.rule, rule)
+            self.assertEqual(after.next_at, before.next_at)
+            self.assertEqual(item.events.count(), events, rule)
 
     def test_editing_a_visible_question_keeps_the_clients(self):
         response = self.post(
@@ -594,6 +650,20 @@ class AnsweringPagesTest(ViewsTestCase):
             404,
         )
 
+    def test_every_answer_has_its_own_comment_form(self):
+        """Own field IDs, mentions and attachments like other comment forms"""
+        first = ops.answer(self.item, user=self.ada, content="Fine")
+        second = ops.answer(self.item, user=self.bob, content="Also fine")
+        html = self.get(self.ada, self.item.get_absolute_url()).content.decode()
+        self.assertNotIn('id="id_content"', html)
+        for answer in (first, second):
+            self.assertEqual(html.count(f'id="id_answer_{answer.pk}_content"'), 1)
+            self.assertIn(
+                f'data-mentions="{reverse("mentionable", args=[answer.pk])}"', html
+            )
+        self.assertEqual(html.count("data-attachments="), 2)
+        self.assertEqual(html.count("data-attach-template"), 2)
+
     def test_a_client_comments_on_a_visible_answer(self):
         answer = ops.answer(self.shared, user=self.ada, content="Fine")
         self.post(
@@ -615,3 +685,62 @@ class AnsweringPagesTest(ViewsTestCase):
             reverse("project_checkins", args=[self.project.pk]),
         ]:
             self.assertEqual(self.client.get(url).status_code, 302)
+
+
+class QueryCountTest(ViewsTestCase):
+    def test_reactions_are_loaded_in_one_query(self):
+        """More answers and comments don't mean more queries"""
+        from biwak.reactions.operations import add_reaction
+
+        self.run_at("2027-03-29 09:00")
+
+        def add_answer(user, occurrence=None):
+            answer = ops.answer(
+                self.item, user=user, content=f"By {user}", occurrence=occurrence
+            )
+            add_reaction(self.ada, "🎉", item=answer)
+            comment = item_ops.add_comment(answer, author=self.ada, content="Nice")
+            add_reaction(self.bob, "👍", comment=comment)
+
+        url = self.item.get_absolute_url()
+        self.client.force_login(self.ada)
+
+        add_answer(self.ada)
+        self.client.get(url)  # warm up caches
+        with CaptureQueriesContext(connection) as queries:
+            self.client.get(url)
+        add_answer(self.bob)
+        add_answer(self.ada, self.first)
+        add_answer(self.bob, self.first)
+        with self.assertNumQueries(len(queries)):
+            self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_links_to_answers_in_feeds(self):
+        """An answer's link needs its occurrence: loaded for all events at
+        once, on the pages and in the API"""
+        pages = [
+            reverse("feed"),
+            reverse("project_feed", args=[self.project.pk]),
+            reverse("project", args=[self.project.pk]),
+            "/api/v1/feed/",
+        ]
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="read")
+        headers = {"authorization": f"Bearer {secret}"}
+        self.client.force_login(self.ada)
+        ops.answer(self.item, user=self.ada, content="One")
+
+        def counts():
+            result = []
+            for url in pages:
+                with CaptureQueriesContext(connection) as queries:
+                    self.assertEqual(
+                        self.client.get(url, headers=headers).status_code, 200
+                    )
+                result.append(len(queries))
+            return result
+
+        counts()  # warm up caches
+        few = counts()
+        ops.answer(self.item, user=self.bob, content="Two")
+        ops.answer(self.item, user=self.ada, content="Three", occurrence=self.first)
+        self.assertEqual(counts(), few)

@@ -1,0 +1,12 @@
+{% load biwak %}
+{% comment %}
+  The way to a page: the project (`project`), the area (`area` with its
+  `area_url`: "Check-ins"), folders (`crumbs`) and the item above it
+  (`parent`).
+{% endcomment %}
+<nav class="small mb-2">
+  <a href="{{ project.get_absolute_url }}">{{ project }}</a>
+  {% if area_url %}/ <a href="{{ area_url }}">{{ area }}</a>{% endif %}
+  {% for crumb in crumbs %}/ <a href="{{ crumb.get_absolute_url }}">{{ crumb|item_title }}</a>{% endfor %}
+  {% if parent %}/ <a href="{{ parent.get_absolute_url }}">{{ parent|item_title }}</a>{% endif %}
+</nav>

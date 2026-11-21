@@ -2,9 +2,16 @@
 <form
   method="post"
   action="{% if is_item %}{% url 'item_bookmark' target.pk %}{% else %}{% url 'project_bookmark' target.pk %}{% endif %}"
+  {% if card %}hx-post="{% url 'project_bookmark' target.pk %}" hx-swap="outerHTML"{% endif %}
 >
   {% csrf_token %}
-  <input type="hidden" name="next" value="{{ request.path }}">
+  {% if card %}
+    {# A card of the projects page swaps itself #}
+    <input type="hidden" name="card" value="1">
+    <input type="hidden" name="next" value="{% url 'projects' %}">
+  {% else %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+  {% endif %}
   {% if is_bookmarked %}
     <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Remove the bookmark' %}">
       {% icon "bookmark-fill" %}<span class="visually-hidden">{% translate "Remove the bookmark" %}</span>

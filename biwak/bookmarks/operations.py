@@ -80,9 +80,23 @@ def delete_link(link):
 
 
 @transaction.atomic
-def reorder_links(ordered):
-    """Positions in the given order; all links of one project or item"""
+def reorder_links(ids, *, user, project, item=None):
+    """Puts the links of the project (``item`` None) or of the item in the
+    order of ``ids``, which has to name all the links the person sees
+    there, each once; raises ``ValueError`` otherwise. Returns the links
+    in the new order."""
+    found = {
+        link.pk: link
+        for link in Link.objects
+        .visible_to(user)
+        .filter(project=project, item=item)
+        .select_related("item", "created_by", "project")
+    }
+    if sorted(ids) != sorted(found):
+        raise ValueError("Name all the links, each once.")
+    ordered = [found[pk] for pk in ids]
     for position, link in enumerate(ordered, start=1):
         if link.position != position:
             link.position = position
             link.save(update_fields=["position"])
+    return ordered

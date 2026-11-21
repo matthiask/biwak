@@ -1,0 +1,7 @@
+{% load biwak i18n %}
+<form method="post" action="{% url 'item_trash' item.pk %}" class="mt-4">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-sm btn-destructive">
+    {% icon "trash" %}<span>{% translate "Move to trash" %}</span>
+  </button>
+</form>

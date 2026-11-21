@@ -5,6 +5,7 @@ already (specs/notifications.md)."""
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import connection, transaction
+from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
@@ -13,6 +14,7 @@ from biwak.accounts.models import NotificationLevel, User
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import record, set_level_override
+from biwak.api_conventions import absolute
 from biwak.projects.models import Membership, Project
 
 
@@ -154,7 +156,7 @@ def send_invitation(project, user, *, actor):
         "project": project,
         "user": user,
         "actor": actor,
-        "url": settings.BASE_URL + project.get_absolute_url(),
+        "url": absolute(project.get_absolute_url()),
     }
     # In their language if they have one, else in the inviter's
     with translation.override(user.language or translation.get_language()):
@@ -186,12 +188,59 @@ def create_project(*, name, description="", is_all_access=True, actor):
     return project
 
 
+_UNCHANGED = object()
+
+
+@transaction.atomic
+def update_project(
+    project, *, actor, name=_UNCHANGED, description=_UNCHANGED, is_all_access=_UNCHANGED
+):
+    """Changes what's given and differs (staff only); raises
+    ``ValidationError`` for what the model refuses. Making the project
+    limited takes access from staff who aren't members: their subscriptions
+    in the project go, as in ``remove_member()``."""
+    if not can_manage_project(actor):
+        raise PermissionError("Only staff change projects.")
+    given = {
+        "name": name if name is _UNCHANGED else name.strip(),
+        "description": description,
+        "is_all_access": is_all_access,
+    }
+    fields = [
+        field
+        for field, value in given.items()
+        if value is not _UNCHANGED and value != getattr(project, field)
+    ]
+    if not fields:
+        return project
+    limited = "is_all_access" in fields and not is_all_access
+    for field in fields:
+        setattr(project, field, given[field])
+    project.full_clean()
+    project.save(update_fields=fields)
+    record(actor=actor, action=Action.EDITED_PROJECT, project=project)
+    if limited:
+        Subscription.objects.filter(item__project=project).exclude(
+            user__memberships__project=project
+        ).delete()
+    return project
+
+
 def joinable_projects(user):
     """Limited projects an admin isn't in: they see that they exist and can
     join them (specs/access.md); nobody else does"""
     if not (user.is_authenticated and user.is_admin):
         return Project.objects.none()
     return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))
+
+
+def projects_to_join(user):
+    """What somebody can join: the projects they can open, and for admins
+    the limited ones ``joinable_projects()`` lists (not archived ones)"""
+    return Project.objects.filter(
+        Q(pk__in=Project.objects.accessible_to(user).values("pk"))
+        | Q(pk__in=joinable_projects(user).values("pk"))
+    )
 
 
 @transaction.atomic

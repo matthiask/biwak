@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
@@ -10,7 +10,6 @@ from biwak import schedules
 from biwak.accounts.models import User
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
-from biwak.activity.operations import record
 from biwak.files import queries as file_queries
 from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
@@ -89,10 +88,7 @@ def project_join(request, pk):
     specs/access.md); joining subscribes to nothing that exists already"""
     if request.user.is_client:
         raise PermissionDenied
-    if request.user.is_admin:
-        project = get_object_or_404(Project, pk=pk)
-    else:
-        project = project_for(request, pk)
+    project = get_object_or_404(project_ops.projects_to_join(request.user), pk=pk)
     project_ops.add_member(project, request.user, actor=request.user)
     return redirect(project)
 
@@ -170,7 +166,7 @@ def member_notify(request, pk, user_pk):
         raise PermissionDenied
     notify = request.POST.get("notify")
     if notify not in project_ops.NOTIFY_CHOICES:
-        raise Http404
+        return HttpResponse(status=400)
     project_ops.set_notify_choice(project, user, notify, actor=request.user)
     messages.success(request, _("The choice has been saved."))
     return redirect("project_people", pk=project.pk)
@@ -263,10 +259,10 @@ def project_edit(request, pk):
     project = project_for(request, pk)
     if not project_ops.can_manage_project(request.user):
         raise PermissionDenied
-    form = ProjectForm(request.POST or None, instance=project)
+    # The form validates a copy: update_project() compares with the project
+    form = ProjectForm(request.POST or None, instance=Project.objects.get(pk=pk))
     if form.is_valid():
-        form.save()
-        record(actor=request.user, action=Action.EDITED_PROJECT, project=project)
+        project_ops.update_project(project, actor=request.user, **form.cleaned_data)
         return redirect(project)
     return render(
         request,
@@ -353,9 +349,9 @@ def project_detail(request, pk):
         .visible_to(request.user)
         .filter(project=project)
         .exclude(action=Action.REACTED)
-        .select_related("actor", "item")[:20]
+        .select_related("actor", "project", "item__answer")[:20]
     )
-    feed.attach(events)
+    feed.attach(events, request.user)
     return render(
         request,
         "projects/project_detail.html",

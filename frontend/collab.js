@@ -18,17 +18,11 @@ import { yCollab, yUndoManagerKeymap } from "y-codemirror.next"
 import { WebsocketProvider } from "y-websocket"
 import * as Y from "yjs"
 
+import { csrfToken } from "./http.js"
+
 // biwak/collab/consumers.py
 const MESSAGE_MODE = 100
 const CLOSE_NOT_FOUND = 4404
-
-function csrfToken(container) {
-  return (
-    container.querySelector("[name=csrfmiddlewaretoken]")?.value ||
-    document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] ||
-    ""
-  )
-}
 
 function setUp(container) {
   const texts = container.dataset
@@ -161,7 +155,7 @@ function attachments(container, view) {
       const response = await fetch(url, {
         method: "POST",
         body,
-        headers: { "X-CSRFToken": csrfToken(container) },
+        headers: { "X-CSRFToken": csrfToken() },
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail)

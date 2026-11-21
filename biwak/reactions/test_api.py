@@ -1,6 +1,8 @@
 import json
 
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import APIToken
 from biwak.items import operations as ops
@@ -128,3 +130,21 @@ class APITest(TestCase):
         self.assertFalse(data["reactions"][0]["mine"])
         data = self.call("get", self.bob, f"items/{self.todo.pk}/comments/").json()
         self.assertEqual(data["results"][0]["reactions"][0]["content"], "Nice")
+
+    def test_the_reactions_are_loaded_once(self):
+        """Adding or removing loads the reactions to answer with once, not
+        before the change too"""
+        for method in ["post", "delete"]:
+            with self.subTest(method=method):
+                with CaptureQueriesContext(connection) as queries:
+                    self.call(
+                        method, self.ada, f"items/{self.todo.pk}/reactions/", "🎉"
+                    )
+                # The reactions with their people, as answered
+                loaded = [
+                    q["sql"]
+                    for q in queries.captured_queries
+                    if 'FROM "reactions_reaction" INNER JOIN "accounts_user"'
+                    in q["sql"]
+                ]
+                self.assertEqual(len(loaded), 1, loaded)
