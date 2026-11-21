@@ -91,6 +91,9 @@
 .bi-download::before {
   content: "\f30a";
 }
+.bi-emoji-smile::before {
+  content: "\f327";
+}
 .bi-eye::before {
   content: "\f341";
 }

@@ -595,7 +595,7 @@ class TodoPageTest(E2ETestCase):
         reactions = page.locator(".wb-reactions").first
         reactions.locator(".wb-reaction-add summary").click()
         reactions.locator("button", has_text="🎉").click()
-        mine = reactions.locator("button.wb-reaction.is-mine")
+        mine = reactions.locator(".wb-reaction.is-mine")
         mine.wait_for()
         self.assertEqual(mine.get_attribute("aria-pressed"), "true")
         self.assertIn("🎉", mine.inner_text())
@@ -609,15 +609,17 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(words.get_attribute("maxlength"), "40")
         words.fill("Looks good to me")
         reactions.get_by_role("button", name="React", exact=True).click()
-        reactions.locator("button.wb-reaction", has_text="Looks good").wait_for()
+        reactions.locator(".wb-reaction", has_text="Looks good").wait_for()
         self.assertEqual(
             sorted(Reaction.objects.values_list("content", flat=True)),
             ["Looks good to me", "🎉"],
         )
 
-        # Clicking one's own removes it
-        reactions.locator("button.wb-reaction", has_text="🎉").click()
-        reactions.locator("button.wb-reaction", has_text="🎉").wait_for(
+        # Clicking one's own asks first, the trash removes it
+        own = reactions.locator(".wb-reaction-own", has_text="🎉")
+        own.locator("a.wb-reaction").click()
+        own.get_by_role("button", name="Remove your 🎉").click()
+        reactions.locator("button.wb-reaction, a.wb-reaction", has_text="🎉").wait_for(
             state="detached"
         )
         self.assertEqual(
@@ -626,6 +628,57 @@ class TodoPageTest(E2ETestCase):
         )
         self.assertEqual(self.errors, [])
 
+    def test_the_picker_button_is_a_smiling_face(self):
+        self.goto(self.page, self.todo)
+        summary = self.page.locator(".wb-reaction-add summary").first
+        self.assertEqual(summary.get_attribute("aria-label"), "Add a reaction")
+        self.assertEqual(summary.locator("i.bi-emoji-smile").count(), 1)
+        self.assertNotIn("+", summary.inner_text())
+
+    def test_removing_ones_own_reaction_asks_first(self):
+        Reaction.objects.create(user=self.ada, item=self.todo, content="👍")
+        page = self.page
+        self.goto(page, self.todo)
+        own = page.locator(".wb-reaction-own").first
+        trash = own.get_by_role("button", name="Remove your 👍")
+        expect(trash).to_be_hidden()
+
+        # Clicking shows the trash and keeps the reaction
+        own.locator("a.wb-reaction").click()
+        expect(trash).to_be_visible()
+        self.assertEqual(Reaction.objects.count(), 1)
+
+        # Escape cancels
+        page.keyboard.press("Escape")
+        expect(trash).to_be_hidden()
+        # An outside click too
+        own.locator("a.wb-reaction").click()
+        expect(trash).to_be_visible()
+        page.locator("h1").first.click()
+        expect(trash).to_be_hidden()
+        self.assertEqual(Reaction.objects.count(), 1)
+
+        # The keyboard: Enter or Space show it, Tab reaches it
+        own.locator("a.wb-reaction").focus()
+        page.keyboard.press("Enter")
+        expect(trash).to_be_visible()
+        page.keyboard.press("Escape")
+        page.keyboard.press("Space")
+        expect(trash).to_be_visible()
+        page.keyboard.press("Tab")
+        expect(trash).to_be_focused()
+        page.keyboard.press("Enter")
+        expect(page.locator(".wb-reaction-own")).to_have_count(0)
+        self.assertFalse(Reaction.objects.exists())
+
+    def test_someone_elses_reaction_is_added_at_once(self):
+        Reaction.objects.create(user=self.bob, item=self.todo, content="🎉")
+        page = self.page
+        self.goto(page, self.todo)
+        page.locator("button.wb-reaction", has_text="🎉").click()
+        page.locator(".wb-reaction-own", has_text="🎉").wait_for()
+        self.assertEqual(Reaction.objects.filter(content="🎉").count(), 2)
+
     def test_reaction_on_a_comment(self):
         ops.add_comment(self.todo, author=self.bob, content="Hello")
         page = self.page
@@ -633,7 +686,7 @@ class TodoPageTest(E2ETestCase):
         reactions = page.locator("#live-comments .card .wb-reactions")
         reactions.locator(".wb-reaction-add summary").click()
         reactions.locator("button", has_text="👍").click()
-        reactions.locator("button.wb-reaction.is-mine").wait_for()
+        reactions.locator(".wb-reaction.is-mine").wait_for()
         self.assertEqual(Reaction.objects.get().comment.content, "Hello")
 
     def test_attaching_files(self):
@@ -1047,7 +1100,7 @@ class LiveTest(E2ETestCase):
         reactions = bob.locator(".wb-reactions").first
         reactions.locator(".wb-reaction-add summary").click()
         reactions.locator("button", has_text="🎉").click()
-        bob.locator("button.wb-reaction.is-mine").first.wait_for()
+        bob.locator(".wb-reaction.is-mine").first.wait_for()
         expect(ada.locator(".wb-reactions").first).to_contain_text("🎉")
         # Completed
         bob.get_by_role("button", name="Complete").click()

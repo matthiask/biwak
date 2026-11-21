@@ -146,3 +146,11 @@ templates), `items/todo.html` and the comment template, the CLI.
   clicking that removes the reaction. A click elsewhere or Escape
   cancels. Clicking someone else's pill still adds the same reaction
   at once.
+  Without JavaScript one's own pill links to a small confirmation page
+  ("Remove your 👍?") whose form removes it. With JavaScript, Enter or
+  Space on one's pill shows the trash, Tab reaches it.
+
+Status: built (2026-11-21): the picker button is `emoji-smile` with the
+label "Add a reaction"; one's own pill (`.wb-reaction-own`,
+`frontend/reactions.js`) asks first; the confirmation page lives at
+`…/reactions/remove/?content=…` for items and comments.

@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load biwak i18n %}
 {% if not hidden %}
   <div
     class="wb-reactions"
@@ -8,22 +8,51 @@
     hx-swap:inherited="outerHTML"
   >
     {% for reaction in reactions %}
-      <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline">
-        {% csrf_token %}
-        <input type="hidden" name="content" value="{{ reaction.content }}">
-        <button
-          type="submit"
-          class="btn btn-sm wb-reaction{% if reaction.mine %} is-mine{% endif %}"
-          title="{% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
-          aria-pressed="{% if reaction.mine %}true{% else %}false{% endif %}"
-        >
-          {{ reaction.content }} <span class="wb-reaction-count">{{ reaction.count }}</span>
-        </button>
-      </form>
+      {% if reaction.mine %}
+        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline wb-reaction-own">
+          {% csrf_token %}
+          <input type="hidden" name="content" value="{{ reaction.content }}">
+          <a
+            href="{% url remove_url_name target.pk %}?content={{ reaction.content|urlencode }}"
+            role="button"
+            class="btn btn-sm wb-reaction is-mine"
+            title="{% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+            aria-pressed="true"
+            data-confirm-remove
+          >
+            {{ reaction.content }} <span class="wb-reaction-count">{{ reaction.count }}</span>
+          </a>
+          <button
+            type="submit"
+            class="btn btn-sm wb-reaction-remove"
+            hidden
+            aria-label="{% blocktranslate with content=reaction.content %}Remove your {{ content }}{% endblocktranslate %}"
+          >
+            {% icon "trash" %}
+          </button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="content" value="{{ reaction.content }}">
+          <button
+            type="submit"
+            class="btn btn-sm wb-reaction"
+            title="{% for person in reaction.people %}{{ person.get_short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+            aria-pressed="false"
+          >
+            {{ reaction.content }} <span class="wb-reaction-count">{{ reaction.count }}</span>
+          </button>
+        </form>
+      {% endif %}
     {% endfor %}
     <details class="d-inline wb-reaction-add" data-dismiss>
-      <summary class="btn btn-sm btn-quiet" title="{% translate 'React' %}">
-        +<span class="visually-hidden"> {% translate "React" %}</span>
+      <summary
+        class="btn btn-sm btn-quiet"
+        title="{% translate 'Add a reaction' %}"
+        aria-label="{% translate 'Add a reaction' %}"
+      >
+        {% icon "emoji-smile" %}
       </summary>
       <div class="wb-reaction-picker card card-body p-2">
         <form method="post" action="{{ url }}" hx-post="{{ url }}" class="wb-reaction-quick">
