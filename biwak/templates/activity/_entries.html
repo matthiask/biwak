@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load biwak i18n %}
 {% for day, label, entries in days %}
   <h2 class="h6 mt-4 text-body-secondary">
     {% if label %}{{ label }} · {% endif %}{{ day|date:"l, j. F Y" }}
@@ -25,7 +25,8 @@
           {% with event=entry.latest %}
             {% include "activity/_event.html" %}
             <span class="small text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
-            {% if not project %}<span class="small text-body-secondary">· {{ event.project }}</span>{% endif %}
+            {% if not project %}<span class="small text-body-secondary">·
+                {% project_dot event.project %}{{ event.project }}</span>{% endif %}
           {% endwith %}
         {% endif %}
       </li>

@@ -120,8 +120,25 @@ if (data && dialog) {
     live.textContent = message
   }
 
-  function entry(label, { hint = "", badge = "", run, group }) {
-    return { label, hint, badge, run, group }
+  function entry(
+    label,
+    { hint = "", context = "", badge = "", color = null, run, group },
+  ) {
+    return { label, hint, context, badge, color, run, group }
+  }
+
+  // The project's color (specs/project-colors.md): a dot, with the color's
+  // name for screen readers, before the project's name
+  function dot(color) {
+    const span = document.createElement("span")
+    span.className = "wb-project-dot"
+    span.dataset.projectColor = color.name
+    span.title = color.label
+    const hidden = document.createElement("span")
+    hidden.className = "visually-hidden"
+    hidden.textContent = color.label
+    span.append(hidden)
+    return span
   }
 
   function actionEntry(action) {
@@ -134,12 +151,16 @@ if (data && dialog) {
 
   function resultEntry(result, group) {
     return entry(result.title, {
-      hint: [result.label, result.context].filter(Boolean).join(" · "),
+      hint: result.kind === "project" ? "" : result.label,
+      context: result.context,
       badge: result.archived
         ? data.texts.archived
         : result.visible_to_clients
           ? data.texts.clients
           : "",
+      color: result.color
+        ? { name: result.color, label: result.color_name }
+        : null,
       group,
       run: () => window.location.assign(result.url),
     })
@@ -203,6 +224,9 @@ if (data && dialog) {
       const label = document.createElement("span")
       label.className = "wb-palette-label"
       label.textContent = item.label
+      // On a project the dot is before its name, else before the name of
+      // the project in the hint
+      if (item.color && !item.context) label.prepend(dot(item.color))
       row.append(label)
       if (item.badge) {
         const badge = document.createElement("span")
@@ -210,10 +234,15 @@ if (data && dialog) {
         badge.textContent = item.badge
         row.append(badge)
       }
-      if (item.hint) {
+      if (item.hint || item.context) {
         const hint = document.createElement("span")
         hint.className = "wb-palette-hint"
         hint.textContent = item.hint
+        if (item.context) {
+          hint.append(item.hint ? " · " : "")
+          if (item.color) hint.append(dot(item.color))
+          hint.append(item.context)
+        }
         row.append(hint)
       }
       row.addEventListener("click", () => choose(index))

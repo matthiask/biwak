@@ -65,11 +65,12 @@ class Theme(models.TextChoices):
     DARK = "dark", _("Dark")
 
 
-class Accent(models.TextChoices):
-    """The accent colors people choose from (specs/keyboard.md, "The
-    palette"); the tokens are ``--wb-palette-<name>-*`` in
-    ``frontend/styles/main.css``. The clients' amber is reserved and not in
-    the palette."""
+class Color(models.TextChoices):
+    """The palette: the one list of names, stored as such (specs/keyboard.md,
+    "The palette"); the tokens are ``--wb-palette-<name>-*`` in
+    ``frontend/styles/main.css``. The accent colors and the project colors
+    (specs/project-colors.md) are chosen from it. The clients' amber is
+    reserved and not in the palette."""
 
     HEATHER = "heather", _("Heather")
     LAKE = "lake", _("Lake")
@@ -77,11 +78,19 @@ class Accent(models.TextChoices):
     GLACIER = "glacier", _("Glacier")
     EMBER = "ember", _("Ember")
     ALPENGLOW = "alpenglow", _("Alpenglow")
+    MOSS = "moss", _("Moss")
+    SLATE = "slate", _("Slate")
+    BARK = "bark", _("Bark")
+    BERRY = "berry", _("Berry")
 
 
-# The palette's other colors, for projects only (specs/project-colors.md)
-PROJECT_ONLY_COLORS = ["moss", "slate", "bark", "berry"]
-PALETTE = [*Accent.values, *PROJECT_ONLY_COLORS]
+# The colors people may pick as their accent; the others are for projects only
+ACCENT_NAMES = ["heather", "lake", "forest", "glacier", "ember", "alpenglow"]
+Accent = models.TextChoices(
+    "Accent", [(Color(name).name, (name, Color(name).label)) for name in ACCENT_NAMES]
+)
+Accent.__doc__ = "The accent colors people choose from, a part of ``Color``"
+PALETTE = Color.values
 
 
 class User(AbstractBaseUser):

@@ -60,6 +60,7 @@ def jumps(user, terms):
             "title": project.name,
             "url": project.get_absolute_url(),
             "context": "",
+            **color_of(project),
             "archived": project.archived_at is not None,
             "visible_to_clients": False,
         })
@@ -73,6 +74,7 @@ def jumps(user, terms):
             "title": plain(item.title),
             "url": item.get_absolute_url(),
             "context": item.project.name,
+            **color_of(item.project),
             "archived": item.project.archived_at is not None,
             "visible_to_clients": item.is_client_visible,
         })
@@ -96,6 +98,11 @@ def jumps(user, terms):
     return results[:LIMIT]
 
 
+def color_of(project):
+    """The project's color for the dot before its name, with its label"""
+    return {"color": project.color, "color_name": project.color_label}
+
+
 def person_url(person):
     return reverse("person_feed", args=[person.pk])
 
@@ -117,6 +124,7 @@ def bookmarks(user):
                 "title": plain(item.title),
                 "url": item.get_absolute_url(),
                 "context": item.project.name,
+                **color_of(item.project),
                 "archived": item.project.archived_at is not None,
                 "visible_to_clients": item.is_client_visible,
             })
@@ -128,6 +136,7 @@ def bookmarks(user):
                 "title": project.name,
                 "url": project.get_absolute_url(),
                 "context": "",
+                **color_of(project),
                 "archived": project.archived_at is not None,
                 "visible_to_clients": False,
             })

@@ -6,6 +6,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from biwak.accounts.models import Color
+
 
 def knows_everybody(viewer):
     """Whether the viewer may learn about people who aren't members of the
@@ -43,6 +45,13 @@ class Project(models.Model):
             " members of."
         ),
     )
+    color = models.CharField(
+        _("color"),
+        max_length=10,
+        blank=True,
+        choices=Color,
+        help_text=_("Tells projects apart on cards, headers and next to names."),
+    )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
     # Stored by record() and recomputed nightly (specs/projects-overview.md);
@@ -74,6 +83,11 @@ class Project(models.Model):
 
     def is_accessible_to(self, user):
         return Project.objects.accessible_to(user).filter(pk=self.pk).exists()
+
+    @property
+    def color_label(self):
+        """The color's name, empty without a color"""
+        return self.get_color_display() if self.color else ""
 
     def is_member(self, user):
         return self.memberships.filter(user=user).exists()

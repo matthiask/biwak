@@ -42,7 +42,8 @@
               </div>
             {% endif %}
             <div class="small text-body-secondary">
-              {{ item.get_kind_display }} · {{ item.project }} · {{ item.updated_at|date:"j. F Y" }}
+              {{ item.get_kind_display }} · {% project_dot item.project %}{{ item.project }} ·
+              {{ item.updated_at|date:"j. F Y" }}
             </div>
           </a>
         {% endwith %}
