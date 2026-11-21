@@ -598,10 +598,12 @@ def set_visibility(item, *, visible, actor):
 @transaction.atomic
 def trash(item, *, actor):
     """Soft and recoverable; active descendants follow, and come back with
-    it, those trashed earlier stay trashed"""
+    it, those trashed earlier stay trashed. An archived item comes back
+    archived."""
+    item.archived_when_trashed = item.status == Status.ARCHIVED
     item.status = Status.TRASHED
     item.trashed_at = timezone.now()
-    item.save(update_fields=["status", "trashed_at"])
+    item.save(update_fields=["status", "trashed_at", "archived_when_trashed"])
     Item.objects.filter(
         pk__in=list(Item.objects.descendants(item).values_list("pk", flat=True)),
         status=Status.ACTIVE,
@@ -616,13 +618,13 @@ def restore(item, *, actor):
     if item.parent_id and item.parent.status == Status.TRASHED:
         raise ValueError("Restore the parent first")
     Item.objects.filter(
-        pk__in=list(
-            Item.objects.descendants(item, include_self=True).values_list(
-                "pk", flat=True
-            )
-        ),
+        pk__in=list(Item.objects.descendants(item).values_list("pk", flat=True)),
         trashed_at=item.trashed_at,
     ).update(status=Status.ACTIVE, trashed_at=None)
+    item.status = Status.ARCHIVED if item.archived_when_trashed else Status.ACTIVE
+    item.trashed_at = None
+    item.archived_when_trashed = False
+    item.save(update_fields=["status", "trashed_at", "archived_when_trashed"])
     item.refresh_from_db()
     record(actor=actor, action=Action.RESTORED, project=item.project, item=item)
 

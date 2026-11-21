@@ -350,6 +350,22 @@ class ManageTest(TestCase):
         own.refresh_from_db()
         self.assertEqual(own.status, Status.TRASHED)
 
+    def test_an_archived_list_comes_back_archived(self):
+        """Restoring made an archived list active: the archive was lost"""
+        ops.archive(self.shared, actor=self.ada)
+        ops.trash(self.shared, actor=self.ada)
+        ops.restore(Item.objects.get(pk=self.shared.pk), actor=self.ada)
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.status, Status.ARCHIVED)
+        # Its to-dos are back too
+        self.todo.refresh_from_db()
+        self.assertEqual(self.todo.status, Status.ACTIVE)
+        # Active ones stay active
+        ops.trash(self.internal, actor=self.ada)
+        ops.restore(Item.objects.get(pk=self.internal.pk), actor=self.ada)
+        self.internal.refresh_from_db()
+        self.assertEqual(self.internal.status, Status.ACTIVE)
+
     def test_purge_and_fairy_tasks(self):
         ops.trash(self.secret, actor=self.ada)
         ops.trash(self.internal, actor=self.ada)

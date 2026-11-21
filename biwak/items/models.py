@@ -103,6 +103,10 @@ class Item(TreeNode):
         _("status"), max_length=20, choices=Status, default=Status.ACTIVE
     )
     trashed_at = models.DateTimeField(_("trashed at"), null=True, blank=True)
+    # Restoring brings an archived item back archived (ops.restore())
+    archived_when_trashed = models.BooleanField(
+        _("archived when trashed"), default=False, editable=False
+    )
     # The switch, only meaningful on SWITCHABLE kinds at the top level
     visible_to_clients = models.BooleanField(_("visible to clients"), default=False)
     # The effective visibility, stored (biwak.items.visibility)
