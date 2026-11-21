@@ -318,6 +318,34 @@ class UploadTest(E2ETestCase):
         )
         self.assertEqual(self.errors, [])
 
+    def test_dropping_files_after_selecting(self):
+        """Selecting didn't add another drop handler each time: the files
+        were listed once per click more"""
+        ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"Plan", name="a.txt"),
+            creator=self.ada,
+            parent=self.minutes,
+        )
+        page = self.page
+        self.goto(page, self.minutes)
+        page.wait_for_load_state("networkidle")
+        tile = page.locator(".wb-tile-file")
+        tile.click(modifiers=["ControlOrMeta"])
+        tile.click(modifiers=["ControlOrMeta"])
+        opened = []
+        page.on(
+            "request",
+            lambda request: "/files/new/" in request.url and opened.append(request),
+        )
+        page.evaluate(DROP, [".wb-tiles", ["one.txt"]])
+        rows = page.get_by_role("dialog", name="Upload files").locator(".wb-upload-row")
+        expect(rows.first).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        self.assertEqual(len(opened), 1)
+        self.assertEqual(rows.count(), 1)
+        self.assertEqual(self.errors, [])
+
     def test_dropping_onto_a_folder_tile_and_the_button(self):
         page = self.page
         self.goto(page, self.minutes)
