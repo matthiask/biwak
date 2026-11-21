@@ -864,3 +864,55 @@ class MoveOutOfGroupTest(FeedBase):
             self.assertEqual(
                 describe(event, user), "Ada Example moved it out of its group."
             )
+
+
+class ToggleUndoTest(FeedBase):
+    """Completing and reopening again soon after is nothing to tell
+    (decided 2026-11-21): the same person undoing their last one within ten
+    minutes removes that event instead of recording the opposite"""
+
+    def actions(self):
+        return list(
+            Event.objects
+            .filter(item=self.todo)
+            .order_by("created_at", "pk")
+            .values_list("action", flat=True)
+        )
+
+    def test_back_and_forth_leaves_the_net_change(self):
+        ops.complete(self.todo, actor=self.ada)
+        ops.reopen(self.todo, actor=self.ada)
+        self.assertEqual(self.actions(), [])
+        for _ in range(3):
+            ops.complete(self.todo, actor=self.ada)
+            ops.reopen(self.todo, actor=self.ada)
+        ops.complete(self.todo, actor=self.ada)
+        self.assertEqual(self.actions(), [Action.COMPLETED])
+
+    def test_reopening_an_old_completion_is_told(self):
+        ops.complete(self.todo, actor=self.ada)
+        Event.objects.update(created_at=timezone.now() - dt.timedelta(minutes=11))
+        ops.reopen(self.todo, actor=self.ada)
+        self.assertEqual(self.actions(), [Action.COMPLETED, Action.REOPENED])
+
+    def test_someone_else_reopening_is_told(self):
+        ops.complete(self.todo, actor=self.ada)
+        ops.reopen(self.todo, actor=self.bob)
+        self.assertEqual(self.actions(), [Action.COMPLETED, Action.REOPENED])
+        # Ada completing again doesn't undo Bob's
+        ops.complete(self.todo, actor=self.ada)
+        self.assertEqual(
+            self.actions(), [Action.COMPLETED, Action.REOPENED, Action.COMPLETED]
+        )
+
+    def test_the_notifications_go_with_the_event(self):
+        from biwak.activity.models import Notification
+        from biwak.activity.operations import subscribe
+
+        subscribe(self.bob, self.todo)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.complete(self.todo, actor=self.ada)
+        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.reopen(self.todo, actor=self.ada)
+        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 0)

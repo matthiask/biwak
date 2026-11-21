@@ -93,6 +93,13 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   dragging back and forth is one event with the last group. Reordering
   within a group is no event (decided 2026-11-21). Moving it out of every
   group reads "moved ... out of its group" (decided 2026-11-21).
+- Completing and reopening a to-do again soon after is nothing to tell
+  (decided 2026-11-21): when the same person undoes their latest one
+  within 10 minutes (as edits), that event is deleted with its
+  notifications instead of recording the opposite, so clicking back and
+  forth leaves at most the net change. Someone else's reopening, or one
+  after more than 10 minutes, is told as before; the importer keeps
+  every event.
 - Merging applies to every action; the entry says "completed 5 to-dos in
   Launch", with "items" for mixed kinds.
 
@@ -146,7 +153,8 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   visible list shows "Visible to clients: no, yes". Titles of lists the
   viewer can't see read "another list".
 - Only changes to the item's own rows; comments have their own place on
-  the page, and files' versions come with `files.md`.
+  the page, and files' versions come with `files.md`. The to-do page's
+  timeline (`timeline.md`) shows the events between the comments.
 
 ## Bookmarks
 
