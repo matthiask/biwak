@@ -54,6 +54,18 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   the subscribers on every item (decided 2026-11-20).
 - Everybody can unsubscribe from anything, also from mail with one click,
   and subscribe others (who see who did it, `Subscription.added_by`).
+- **Assigned means subscribed** (decided 2026-11-21): while someone is
+  assigned to a to-do, they can't unsubscribe from it. The subscribers
+  box says "You're assigned, so you hear about it" and offers "Unassign
+  me" instead. Nobody else can unsubscribe them either.
+  - **Mail:** the one-click unsubscribe link of such a to-do does
+    nothing. Its page explains why and links the to-do.
+  - **API:** unsubscribing answers 400 with that reason.
+  - **Unassigned again**, unsubscribing works as before, and the
+    subscription stays until then.
+  - Assigning subscribes as it always did (`explicit=True`).
+  - In `items.operations`/`activity.subscriptions`, one check used by the
+    page, the mail link, the API and the CLI.
 - Posting a message, doc or file lets the author choose whom to notify:
   everybody in the project (the members at that moment), chosen people,
   or nobody; those chosen are subscribed (`files.md` uses
