@@ -152,6 +152,16 @@ class NewDocTest(Fixture, TestCase):
         form = self.client.get(self.url()).context["form"]
         self.assertEqual(form["notify"].value(), "everybody")
 
+    def test_the_form_in_a_visible_folder_has_the_client_banner(self):
+        self.client.force_login(self.ada)
+        self.assertContains(
+            self.client.get(self.url(self.public)), "Clients can see this"
+        )
+        self.assertNotContains(
+            self.client.get(self.url(self.private)), "Clients can see this"
+        )
+        self.assertNotContains(self.client.get(self.url()), "Clients can see this")
+
     def send(self, user, folder=None, **data):
         self.client.force_login(user)
         data = {"title": "Minutes", "content": "Text", "notify": "nobody"} | data
@@ -408,7 +418,7 @@ class VersionsTest(Fixture, TestCase):
         self.assertContains(response, "The first version")
         middle = self.versions[1]
         response = self.client.get(self.url("doc_version", self.shared, middle.pk))
-        self.assertContains(response, "bg-success-subtle")  # what changed
+        self.assertContains(response, "wb-diff-add")  # what changed
         self.assertContains(response, "Restore this version")
         latest = self.client.get(
             self.url("doc_version", self.shared, self.versions[0].pk)

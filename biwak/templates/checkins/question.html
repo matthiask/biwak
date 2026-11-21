@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak bookmarks i18n reactions %}
+{% load attachments biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
@@ -72,7 +72,7 @@
                 {% endif %}{% endfor %}
             </p>
           {% endif %}
-          {% for answer, comments in answers %}
+          {% for answer, comments, comment_form in answers %}
             <div class="card mb-2" id="answer-{{ answer.pk }}">
               <div class="card-body">
                 <div class="small text-body-secondary mb-1">
@@ -99,9 +99,15 @@
                 {% endfor %}
                 <details class="mt-2">
                   <summary class="small">{% translate "Comment" %}</summary>
-                  <form method="post" action="{% url 'answer_comment' answer.pk %}" class="mt-2">
+                  <form
+                    method="post"
+                    action="{% url 'answer_comment' answer.pk %}"
+                    class="mt-2"
+                    {% attachments_attrs item.project %}
+                  >
                     {% csrf_token %}
                     {% include "items/_client_banner.html" with item=answer.item %}
+                    {% include "files/_attach_button.html" %}
                     {{ comment_form }}
                     <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
                   </form>
