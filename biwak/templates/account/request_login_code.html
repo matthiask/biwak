@@ -1,0 +1,53 @@
+{% extends "account/base_entrance.html" %}
+{% comment %}
+  allauth's, the page people sign in on (LOGIN_URL): the code and passkeys
+  right here instead of behind "Other sign-in options" (passkeys are a way in
+  of their own, specs/two-factor.md); single sign-on behind a link
+{% endcomment %}
+{% load account allauth i18n %}
+{% block head_title %}
+  {% translate "Sign In" %}
+{% endblock head_title %}
+
+{% block content %}
+  {% element h1 %}
+  {% translate "Sign In" %}
+  {% endelement %}
+  {% element p %}
+  {% blocktranslate %}You will receive a special code for a password-free sign-in.{% endblocktranslate %}
+  {% endelement %}
+  {% element form form=form method="post" action=request_login_code_url tags="entrance,login" %}
+  {% slot body %}
+  {% csrf_token %}
+  {% element fields form=form unlabeled=True %}
+  {% endelement %}
+  {{ redirect_field }}
+  {% endslot %}
+  {% slot actions %}
+  {% element button type="submit" tags="prominent,login" %}
+  {% translate "Send me a sign-in code" %}
+  {% endelement %}
+  {% endslot %}
+  {% endelement %}
+  {% if PASSKEY_LOGIN_ENABLED %}
+    {% element hr %}
+    {% endelement %}
+    {% element button type="submit" form="mfa_login" id="passkey_login" tags="prominent,login,outline,primary" %}
+    {% translate "Sign in with a passkey" %}
+    {% endelement %}
+  {% endif %}
+  {% if SOCIALACCOUNT_ENABLED %}
+    {# Single sign-on a little out of the way (decided 2026-11-21): the providers' buttons are on the other page #}
+    {% url 'account_login' as login_url %}
+    {% element button href=login_url tags="link" %}
+    {% translate "Sign in through your organization" %}
+    {% endelement %}
+  {% endif %}
+{% endblock content %}
+
+{% block extra_body %}
+  {{ block.super }}
+  {% if PASSKEY_LOGIN_ENABLED %}
+    {% include "mfa/webauthn/snippets/login_script.html" with button_id="passkey_login" %}
+  {% endif %}
+{% endblock extra_body %}

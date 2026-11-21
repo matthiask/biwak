@@ -39,6 +39,11 @@ whom), `mail-sending.md` (the outbox).
 - **Organizations requiring SSO:** no passkeys and no authenticator apps
   (the IdP does that); existing apps are deleted when the organization
   switches to "required", like passkeys (`sso.md`).
+- **The sign-in page** (built 2026-11-21 on main): the code and "Sign in
+  with a passkey" right on the page people land on (`LOGIN_URL`, allauth's
+  code page, our template), no longer behind "Other sign-in options";
+  single sign-on a little out of the way, behind "Sign in through your
+  organization" (decided 2026-11-21).
 - Not now: an organization requiring a second factor.
 
 ## Done when

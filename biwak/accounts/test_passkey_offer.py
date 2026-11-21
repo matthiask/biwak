@@ -8,6 +8,7 @@ from allauth.mfa.signals import authenticator_added
 from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
+from django.urls import reverse
 
 from biwak.accounts import passkeys
 from biwak.test_utils import person
@@ -133,3 +134,14 @@ class AddingAPasskeyLaterTest(TestCase):
         address = EmailAddress.objects.get(user=self.ada, primary=True)
         self.assertEqual(address.email, "ada.new@example.org")
         self.assertTrue(address.verified)
+
+
+class SignInPageTest(TestCase):
+    """The page people sign in on (LOGIN_URL): the code and passkeys right
+    there, single sign-on behind a link (specs/two-factor.md)"""
+
+    def test_passkeys_are_not_hidden(self):
+        response = self.client.get(reverse("account_request_login_code"))
+        self.assertContains(response, 'id="passkey_login"')
+        self.assertNotContains(response, "Other sign-in options")
+        self.assertContains(response, "Sign in through your organization")
