@@ -92,6 +92,10 @@ from Workbench directly (GPLv3).
 - One part per branch and worktree (`specs/<part>.md`), in the order of
   "Build order" in `SPEC.md`; a part's spec says what it depends on.
 - Small commits, each with tests, docs and spec changes together.
+- Keep it consistent: check what the existing code already does (the
+  same action elsewhere, the other entry points) and do the same. No
+  branches for special cases unless the special case makes sense
+  (decided 2026-11-21). Often that answers a question before it's asked.
 - Questions the spec doesn't answer go to the user; write the answer into
   the spec. Don't invent product decisions: values the spec doesn't fix
   (durations, limits, wording of states) are questions too.
