@@ -91,6 +91,10 @@ records, levels, `send_mails`), reactions.
   means no mail (decided 2026-11-21): a notification marked unread by
   hand is never mailed afterwards, neither by each change nor in the
   digest (`Notification.marked_unread_at`, left out by `send_mails`).
+- **Switching mail back from "none"** (decided 2026-11-21: as built):
+  whatever is unread and wasn't marked unread by hand is mailed with the
+  next mail or digest, all at once; no special case for the time of the
+  switch.
 - **The favicon** (decided 2026-11-21, configurable): with the setting
   on, the browser tab's icon shows a dot when there are unread
   notifications, updated live; the setting (`User.lantern_in_favicon`,
@@ -259,8 +263,6 @@ setup as `collaboration.md`).
 - The wording of "No mails", "Pin to the top", "Changed meanwhile: …",
   "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
   "You were mentioned.").
-- Switching delivery from "none" to "each" or "digest" mails the unread
-  notifications collected meanwhile, all at once.
 - The lantern's pins and pinned messages (staff pin a message for
   everybody) both say "pin"; another word for one of them?
 - The menu shows at most 100 unread notifications (the page has all):

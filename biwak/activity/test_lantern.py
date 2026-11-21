@@ -146,6 +146,31 @@ class ReadNotMailedTest(LanternTestCase):
         self.assertFalse([m for m in mail.outbox if m.to == [self.bob.email]])
         self.assertEqual(self.items(self.bob, unread=True), ["Order the tent"])
 
+    def test_switching_back_from_none_mails_whats_unread(self):
+        """No special case for the switch (decided 2026-11-21): whatever is
+        unread and wasn't marked unread by hand goes out with the next
+        mail"""
+        self.bob.mail_delivery = MailDelivery.NONE
+        self.bob.save()
+        message = ops.create_message(
+            project=self.project, title="News", content="", creator=self.ada
+        )
+        subscribe(self.bob, message)
+        self.comment(self.todo, "One")
+        self.comment(self.secret, "Two")
+        self.comment(message, "Three")
+        lantern.read(self.bob, item=self.secret)
+        lantern.read(self.bob, item=message)
+        lantern.unread(self.bob, item=message)
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.bob.mail_delivery = MailDelivery.EACH
+        self.bob.save()
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        (sent,) = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertIn("Order the tent", sent.subject + sent.body)
+        self.assertNotIn("Budget", sent.subject + sent.body)
+        self.assertNotIn("News", sent.subject + sent.body)
+
     def test_a_change_after_reading_is_unread_again(self):
         """A merged edit moves the unsent notification forward: unread"""
         self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="One"))
