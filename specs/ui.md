@@ -48,8 +48,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   (`.wb-phone-hide`, `.wb-phone-only`); on lists the bookmark, Edit and
   List/Board stay, on to-dos Complete, Edit and the bookmark. Grids go
   to one column.
-- **Floating disclosures** (menus, the reaction picker) close on a click
-  elsewhere and Escape (`data-dismiss`).
+- **Floating disclosures** (menus, the reaction picker, the people
+  picker's list) close on a click elsewhere and Escape (`data-dismiss`;
+  elements other than `<details>` get a `dismiss` event).
 - **Shared pieces come from an include** (comments, subscribers, the
   visibility switch, breadcrumbs, the to-do row), not a copy.
 

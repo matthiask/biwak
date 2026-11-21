@@ -279,9 +279,8 @@ class UploadTest(E2ETestCase):
         dialog.locator(".wb-picker-input").fill("da")
         dialog.locator(".wb-picker-input").press("Enter")
         expect(pills).to_have_text([re.compile("Dan")])
-        # The picker's list closes on a click elsewhere
-        dialog.get_by_text("Cleo will be told.").click()
-        dialog.get_by_role("button", name="Upload").click()
+        # Nobody left to pick: the button under the list takes the click
+        dialog.get_by_role("button", name="Upload").click(timeout=2000)
         expect(page.locator(".wb-tile-file")).to_have_count(1)
         upload = Item.objects.get(parent=self.minutes, kind="file")
         self.assertEqual(
