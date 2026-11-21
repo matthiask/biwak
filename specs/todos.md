@@ -45,6 +45,12 @@ check-ins (`checkins.md`):
 - `describe(rule)`: a short English text ("every Monday", "the first
   Monday of every month") for pages and the API.
 
+- **Rules are stored in canonical form** (decided 2026-11-21): `validate()`
+  normalizes what the API, the CLI or an importer send (parts in a fixed
+  order, lists sorted, `INTERVAL=1` and `WKST=MO` dropped), so equal
+  schedules are equal strings; existing rules are normalized once by a
+  migration. The meaning never changes.
+
 ### Recurring to-dos
 
 - **Model:** `Todo.recurrence` (the RRULE, empty for none),
