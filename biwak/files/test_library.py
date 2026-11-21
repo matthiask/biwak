@@ -224,6 +224,16 @@ class MoveTest(Fixture, TestCase):
             {"folder": folder.pk if folder else ""},
         )
 
+    def test_a_folder_that_is_no_number_answers_404(self):
+        self.client.force_login(self.ada)
+        for folder in ["x", "1.5", "-1"]:
+            with self.subTest(folder=folder):
+                response = self.client.post(
+                    reverse("item_move", args=[self.root_secret.pk]),
+                    {"folder": folder},
+                )
+                self.assertEqual(response.status_code, 404)
+
     def test_moving_a_file_between_folders_changes_its_visibility(self):
         response = self.move(self.ada, self.secret_file, self.public)
         self.assertRedirects(response, self.secret_file.get_absolute_url())
@@ -671,6 +681,43 @@ class PreviewTest(Fixture, TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             item.delete()
         self.assertFalse(version.file.storage.exists(version.file.name))
+
+    def test_two_first_requests_leave_one_preview(self):
+        item = self.upload("pic.png", content=png(), visible=True)
+        version = item.upload.versions.get()
+        storage = version.file.storage
+        name = preview_name(version.file.name)
+        real = previews.render
+
+        def render(version):
+            # The other request saves its preview while this one renders
+            data = real(version)
+            storage.save(name, ContentFile(data))
+            return data
+
+        with patch.object(previews, "render", render):
+            self.assertEqual(previews.preview_for(version), name)
+        folder = name.rsplit("/", 1)[0]
+        self.assertEqual(storage.listdir(folder)[1], ["preview.webp"])
+
+    def test_a_failed_preview_is_not_rendered_again(self):
+        item = self.upload("broken.png", content=b"not an image", visible=True)
+        with self.assertLogs("biwak.files.previews", "WARNING"):
+            self.assertEqual(self.preview(self.ada, item)[0].status_code, 404)
+        with patch.object(previews, "render", return_value=None) as render:
+            self.assertEqual(self.preview(self.ada, item)[0].status_code, 404)
+        render.assert_not_called()
+
+    def test_the_failure_marker_is_deleted_with_the_file(self):
+        item = self.upload("broken.png", content=b"not an image", visible=True)
+        version = item.upload.versions.get()
+        with self.assertLogs("biwak.files.previews", "WARNING"):
+            self.preview(self.ada, item)
+        folder = preview_name(version.file.name).rsplit("/", 1)[0]
+        self.assertTrue(version.file.storage.listdir(folder)[1])
+        with self.captureOnCommitCallbacks(execute=True):
+            item.delete()
+        self.assertEqual(version.file.storage.listdir(folder)[1], [])
 
     def test_the_preview_is_deleted_with_the_file(self):
         item = self.upload("pic.png", content=png(), visible=True)

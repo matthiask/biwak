@@ -145,11 +145,7 @@ def item_move(request, pk):
         raise PermissionDenied
     if not ops.can_change(request.user, item):
         raise PermissionDenied
-    target = None
-    if target_pk := request.POST.get("folder"):
-        target = item_for(request, target_pk, Kind.FOLDER)
-        if target.project_id != item.project_id:
-            return HttpResponse(status=404)
+    target = folder_param(request, item.project)
     try:
         ops.move_item(item, parent=target, actor=request.user)
     except ValueError:

@@ -220,11 +220,16 @@ def delete_version_files(sender, instance, **kwargs):
     commits"""
     name, storage = instance.file.name, instance.file.storage
     if name:
-        preview = preview_name(name)
-        transaction.on_commit(lambda: (storage.delete(name), storage.delete(preview)))
+        names = [name, preview_name(name), failed_preview_name(name)]
+        transaction.on_commit(lambda: [storage.delete(n) for n in names])
 
 
 def preview_name(name):
     """The preview is stored in a folder next to the file: file names
     have no slashes, so none can be named like it"""
     return f"{name.rsplit('/', 1)[0]}/preview/preview.webp"
+
+
+def failed_preview_name(name):
+    """An empty file next to the preview: making it failed, don't try again"""
+    return f"{name.rsplit('/', 1)[0]}/preview/failed"
