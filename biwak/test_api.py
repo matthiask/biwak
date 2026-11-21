@@ -1,6 +1,8 @@
 import datetime as dt
 
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from biwak.accounts.models import APIToken
@@ -206,6 +208,30 @@ class APITest(TestCase):
             "post", f"lists/{self.shared.pk}/todos/", headers, {"title": " Tea "}
         )
         self.assertEqual(response.json()["title"], "Tea")
+
+    def test_todo_overview_queries(self):
+        """A query per to-do for its group, who completed it and reactions"""
+        headers = self.api(self.ada)
+        group = ops.create_group(todolist=self.shared.todolist, title="G")
+
+        def queries(**params):
+            with CaptureQueriesContext(connection) as context:
+                response = self.get("todos/", headers, **params)
+            self.assertEqual(response.status_code, 200)
+            return len(context)
+
+        def add(count):
+            for n in range(count):
+                todo = ops.create_todo(
+                    todolist=self.shared, title=f"T{n}", creator=self.ada, group=group
+                )
+                if n % 2:
+                    ops.complete(todo, actor=self.ada)
+
+        add(4)
+        few = queries(), queries(completed="true")
+        add(8)
+        self.assertEqual((queries(), queries(completed="true")), few)
 
     def test_comments_paginate(self):
         headers = self.api(self.ada)

@@ -257,11 +257,10 @@ def todo_out(item, user):
     }
 
 
-def _todos(request, list_item):
+def _for_todo_out(qs):
+    """What ``todo_out()`` reads, without a query per to-do"""
     return (
-        Item.objects
-        .visible_to(request.user)
-        .filter(parent=list_item, kind=Kind.TODO)
+        qs
         .select_related(
             "creator", "todo__group", "todo__completed_by", "todo__previous"
         )
@@ -269,6 +268,12 @@ def _todos(request, list_item):
         .prefetch_related(
             Prefetch("reactions", queryset=Reaction.objects.select_related("user"))
         )
+    )
+
+
+def _todos(request, list_item):
+    return _for_todo_out(
+        Item.objects.visible_to(request.user).filter(parent=list_item, kind=Kind.TODO)
     )
 
 
@@ -395,14 +400,16 @@ def todo_overview(
     todolist = item_for(request, list_id, Kind.LIST) if list_id is not None else None
     if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
         bad_request(_("assignee is me, nobody or a person's ID."))
-    qs = due.todos(
-        request.user,
-        project=project,
-        todolist=todolist,
-        assignee=assignee or None,
-        completed=completed,
-        visible_to_clients=visible_to_clients,
-        group=due_group,
+    qs = _for_todo_out(
+        due.todos(
+            request.user,
+            project=project,
+            todolist=todolist,
+            assignee=assignee or None,
+            completed=completed,
+            visible_to_clients=visible_to_clients,
+            group=due_group,
+        )
     )
     today = schedules.today()
     ordering = ("-completed_key", "-pk") if completed else ("due_key", "pk")
