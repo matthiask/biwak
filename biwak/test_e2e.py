@@ -1045,9 +1045,13 @@ class LiveTest(E2ETestCase):
         expect(doing.locator("[data-todo]", has_text="Pack the stove")).to_have_count(1)
         # Bob moves the tent into "Doing", on the to-do's page
         self.goto(bob, self.todo)
-        bob.locator("select[name=target]").select_option(label="Shared / Doing")
-        bob.get_by_role("button", name="To the top").click()
-        bob.wait_for_load_state()
+        bob.locator("details.wb-menu", has_text="More").first.locator("summary").click()
+        bob.get_by_role("link", name="Move to…").click()
+        modal = bob.locator("dialog#modal")
+        modal.locator("select[name=target]").select_option(label="Shared / Doing")
+        modal.get_by_label("To the top").check()
+        with bob.expect_navigation():
+            modal.get_by_role("button", name="Move", exact=True).click()
         expect(doing.locator("[data-todo]").first).to_contain_text("Order the tent")
         expect(ada.locator("#todos-none [data-todo]")).to_have_count(0)
         # Still draggable: the new rows are in a Sortable
