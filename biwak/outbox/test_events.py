@@ -81,7 +81,7 @@ class DeliveryEventsTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             ops.add_comment(self.todo, author=self.ada, content="Hi")
         with self.captureOnCommitCallbacks(execute=True):
-            return send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            return send_mails(now=timezone.now() + dt.timedelta(minutes=11))
 
     def test_delivered(self):
         self.assertEqual(self.post(event("email.delivered")).status_code, 204)

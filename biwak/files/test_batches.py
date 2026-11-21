@@ -104,7 +104,7 @@ class BatchTest(TestCase):
 
     def test_one_mail(self):
         files = self.upload(["a.txt", "b.txt", "c.txt"])
-        later = timezone.now() + dt.timedelta(minutes=3)
+        later = timezone.now() + dt.timedelta(minutes=11)
         self.assertEqual(self.send(later), 2)  # Bob and Cleo
         message = next(m for m in mail.outbox if m.to == [self.bob.email])
         self.assertEqual(message.subject, "[Website] Minutes")

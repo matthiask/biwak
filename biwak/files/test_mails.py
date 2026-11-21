@@ -28,7 +28,7 @@ class MailsTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             run()
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=5))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         mails = {m.to[0]: m for m in mail.outbox}
         mail.outbox.clear()
         return mails

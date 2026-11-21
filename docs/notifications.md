@@ -76,7 +76,7 @@ latest read ones. The page "All notifications" has the whole list with
 Under Settings, "Mails":
 
 - **A mail for each change** (the default): one mail per item, sent
-  about two minutes after its last change, so quick edits and several
+  about ten minutes after its last change, so quick edits and several
   comments arrive together;
 - **A daily digest** at 07:00, with what happened the day before;
 - **No mails:** the lantern only, also no check-in questions and

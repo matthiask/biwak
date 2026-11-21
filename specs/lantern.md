@@ -17,7 +17,7 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   levels: whatever you'd be told about. Mail is a delivery choice:
   **each**, **digest** or **none** ("No mails", `MailDelivery.NONE`).
 - **Read in the lantern, not mailed:** a notification read before its
-  mail goes (the 2-minute merge window, or before the digest) is left
+  mail goes (the 10-minute merge window, or before the digest) is left
   out of it; a mail or digest with nothing left isn't sent.
 - **Live** on item pages (to-dos, messages, docs, files, check-in
   questions), lists and the board, reactions included. Not the feed or

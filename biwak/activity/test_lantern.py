@@ -77,7 +77,7 @@ class ReadNotMailedTest(LanternTestCase):
         self.comment(self.todo, "One")
         self.comment(self.secret, "Two")
         lantern.read(self.bob, item=self.todo)
-        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 2)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 2)
         bobs = [m for m in mail.outbox if m.to == [self.bob.email]]
         self.assertEqual([m.subject for m in bobs], ["[Website] Budget"])
         # Kept for the lantern, read and not sent
@@ -92,7 +92,7 @@ class ReadNotMailedTest(LanternTestCase):
         self.comment(self.todo, "One")
         self.comment(self.todo, "Two")
         lantern.read(self.bob)
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         self.assertFalse([m for m in mail.outbox if m.to == [self.bob.email]])
         self.assertEqual(
             Notification.objects.filter(user=self.bob, read_at__isnull=False).count(),
@@ -162,10 +162,10 @@ class ReadNotMailedTest(LanternTestCase):
         lantern.read(self.bob, item=self.secret)
         lantern.read(self.bob, item=message)
         lantern.unread(self.bob, item=message)
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         self.bob.mail_delivery = MailDelivery.EACH
         self.bob.save()
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         (sent,) = [m for m in mail.outbox if m.to == [self.bob.email]]
         self.assertIn("Order the tent", sent.subject + sent.body)
         self.assertNotIn("Budget", sent.subject + sent.body)
@@ -187,7 +187,7 @@ class ReadNotMailedTest(LanternTestCase):
         lantern.read(self.bob)
         self.assertTrue(lantern.unread(self.bob, item=self.todo))
         self.assertEqual(lantern.unread_count(self.bob), 1)
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         self.bob.mail_delivery = MailDelivery.DIGEST
         self.bob.save()
         self.send(timezone.now() + dt.timedelta(days=1))
@@ -816,7 +816,7 @@ class AssignedAndMentionedTest(LanternTestCase):
         self.assertNotIn("You were mentioned.", page)
         self.assertEqual(lantern.unread_count(self.bob), 1)
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         message = next(m for m in mail.outbox if m.to == [self.bob.email])
         self.assertIn("Ada Example assigned you (and mentioned you).", message.body)
         self.assertEqual(message.body.count("mentioned you"), 1)

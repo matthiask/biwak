@@ -186,8 +186,11 @@ large).
   at all, check-in questions and summaries included (decided
   2026-11-21, `checkins.md`); digests leave check-in mails alone.
 - **Each change:** `send_mails`, every minute by cron, sends one mail
-  per person and item once the newest unsent notification for it is 2
-  minutes old (decided 2026-11-20), so quick edits merge. **A batch of
+  per person and item once the newest unsent notification for it is 10
+  minutes old (`MERGE_AFTER`; 2 minutes decided 2026-11-20, 10 since
+  2026-11-21: "if it were urgent, they would have gotten a phone call,
+  or they would have Biwak open"; the lantern is immediate), so quick
+  edits merge. **A batch of
   uploaded files is one mail** (`batch_mail()`, `mails/batch.*`,
   `files.md`), whose unsubscribe link is the settings page (there's no
   one item).

@@ -224,7 +224,7 @@ class SettingsForm(Form):
         choices=MailDelivery.choices,
         widget=forms.RadioSelect,
         help_text=_(
-            "A mail about an item comes two minutes after its last change;"
+            "A mail about an item comes ten minutes after its last change;"
             " the digest at 07:00 with what happened the day before. What"
             " you read in the lantern before isn't mailed."
         ),
