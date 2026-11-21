@@ -34,7 +34,7 @@ class PeoplePageTest(TestCase):
         return [
             (m[0] or m[1]).strip()
             for m in re.findall(
-                r'<h2 class="h5">\s*(?:<a [^>]*>)?([^<]*)|data-kb-row\s*>\s*<div>\s*(?:<a [^>]*>)?([^<\n]*)',
+                r'<h2 class="h5">\s*(?:<a [^>]*>)?([^<]*)|data-kb-row\s*>\s*<div[^>]*>\s*<[^>]*>[^<]*(?:</span>|<img[^>]*>)\s*<div>\s*(?:<a [^>]*>)?([^<\n]*)',
                 main,
             )
         ]
@@ -63,7 +63,7 @@ class PeoplePageTest(TestCase):
         self.assertContains(response, "inactive")
         self.assertContains(response, f'href="{self.own.get_absolute_url()}"')
         self.assertContains(response, "cleo@example.org")
-        self.assertContains(response, f"/people/{self.cleo.pk}/feed/")
+        self.assertContains(response, f'href="/people/{self.cleo.pk}/"')
         self.assertContains(response, f"/people/{self.cleo.pk}/organization/")
         # Roles
         for word in ["admin", "staff", "partner", "client"]:

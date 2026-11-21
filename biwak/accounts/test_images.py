@@ -234,3 +234,57 @@ class AvatarTagTest(TestCase):
     def test_unknown_sizes_are_an_error(self):
         with self.assertRaises(ValueError):
             self.render(self.ada, self.ben, "huge")
+
+
+class SettingsTest(TestCase):
+    def setUp(self):
+        self.cleo = person("Cleo", client=True)
+        self.client.force_login(self.cleo)
+
+    def upload(self, data, name="me.png"):
+        file = io.BytesIO(data)
+        file.name = name
+        return self.client.post(reverse("settings_image"), {"image": file}, follow=True)
+
+    def test_the_section_is_on_the_settings_page(self):
+        response = self.client.get(reverse("settings"))
+        self.assertContains(response, "Profile image")
+        self.assertContains(response, "JPEG, PNG or WebP, at most 5 MB.")
+        self.assertNotContains(response, "image/remove/")
+
+    def test_uploading_shows_the_image_and_offers_removing(self):
+        response = self.upload(picture())
+        self.assertContains(response, "Your profile image has been saved.")
+        self.cleo.refresh_from_db()
+        self.assertTrue(self.cleo.image)
+        self.assertContains(response, "<img")
+        self.assertContains(
+            response, reverse("person_image_remove", args=[self.cleo.pk])
+        )
+
+    def test_a_wrong_file_is_refused_with_a_message(self):
+        response = self.upload(b"just text", "me.png")
+        self.assertContains(response, "Please upload a JPEG, PNG or WebP image.")
+        self.cleo.refresh_from_db()
+        self.assertEqual(self.cleo.image, "")
+        response = self.client.post(reverse("settings_image"), follow=True)
+        self.assertContains(response, "Please choose an image.")
+
+    def test_removing_asks_first_then_goes_back_to_the_initials(self):
+        self.upload(picture())
+        url = reverse("person_image_remove", args=[self.cleo.pk])
+        self.assertContains(self.client.get(url), "Remove the profile image?")
+        self.cleo.refresh_from_db()
+        self.assertTrue(self.cleo.image)
+        response = self.client.post(url, follow=True)
+        self.assertContains(response, "Your profile image has been removed.")
+        self.cleo.refresh_from_db()
+        self.assertEqual(self.cleo.image, "")
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_the_modal_form_is_the_form_only(self):
+        self.upload(picture())
+        url = reverse("person_image_remove", args=[self.cleo.pk])
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        self.assertNotContains(response, "<html")
+        self.assertContains(response, "Remove")

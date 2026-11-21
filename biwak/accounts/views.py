@@ -26,6 +26,7 @@ from biwak.activity.operations import set_notification_settings
 from biwak.activity.views import SettingsForm
 from biwak.forms import Form
 from biwak.items.models import Item
+from biwak.modals import form_response
 from biwak.projects.models import Project
 
 
@@ -251,6 +252,7 @@ def _settings_page(request, *, notifications=None):
                 initial={"keyboard_shortcuts": user.keyboard_shortcuts}
             ),
             "themes": Theme.choices,
+            "image_help": _("JPEG, PNG or WebP, at most 5 MB."),
             "accents": Accent.choices,
             "project_overrides": project_overrides,
             "item_overrides": item_overrides,
@@ -307,3 +309,59 @@ def settings_appearance(request):
         return HttpResponse(status=204)
     messages.success(request, _("Your appearance settings have been saved."))
     return redirect("settings")
+
+
+@never_cache
+@require_POST
+def settings_image(request):
+    """Uploading one's own profile image"""
+    upload = request.FILES.get("image")
+    if upload is None:
+        messages.error(request, _("Please choose an image."))
+        return redirect("settings")
+    try:
+        operations.set_image(
+            request.user,
+            upload.read(operations.IMAGE_MAX_BYTES + 1),
+            actor=request.user,
+        )
+    except operations.InvalidImage as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, _("Your profile image has been saved."))
+    return redirect("settings")
+
+
+@never_cache
+def person_image_remove(request, pk):
+    """Back to the initials: people remove their own image, admins anybody's
+    (an unfitting one); the audit log has it. A question, as a modal or a
+    page."""
+    from biwak.organizations.people import known_people
+
+    person = get_object_or_404(known_people(request.user), pk=pk)
+    if not person.image or not operations.can_remove_image(request.user, person):
+        raise Http404("No image to remove")
+    own = person.pk == request.user.pk
+    back = reverse("settings") if own else reverse("person", args=[person.pk])
+    if request.method == "POST":
+        operations.remove_image(person, actor=request.user)
+        messages.success(
+            request,
+            _("Your profile image has been removed.")
+            if own
+            else _("The profile image of %(name)s has been removed.")
+            % {"name": person},
+        )
+        return redirect(back)
+    return form_response(
+        request,
+        None,
+        title=_("Remove the profile image?")
+        if own
+        else _("Remove the profile image of %(name)s?") % {"name": person},
+        intro=_("The initials are shown instead."),
+        cancel_url=back,
+        submit_label=_("Remove"),
+        destructive=True,
+    )

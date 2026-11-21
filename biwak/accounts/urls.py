@@ -10,6 +10,12 @@ urlpatterns = [
         views.person_image,
         name="person_image",
     ),
+    path(
+        "people/<int:pk>/image/remove/",
+        views.person_image_remove,
+        name="person_image_remove",
+    ),
+    path("settings/image/", views.settings_image, name="settings_image"),
     path("settings/", views.settings, name="settings"),
     path(
         "settings/notifications/",

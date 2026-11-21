@@ -36,21 +36,20 @@
             class="list-group-item d-flex justify-content-between align-items-center gap-2{% if not user.is_active %} text-body-secondary{% endif %}"
             data-kb-row
           >
-            <div>
-              {% if user.feed %}
-                <a href="{% url 'person_feed' user.pk %}" data-kb-open>{{ user }}</a>
-              {% else %}
-                {{ user }}
-              {% endif %}
-              {% if user.is_client %}
-                <span class="badge wb-client-badge">{{ user.role }}</span>
-              {% else %}
-                <span class="badge wb-tone-neutral">{{ user.role }}</span>
-              {% endif %}
-              {% if not user.is_active %}<span
-                  class="badge wb-tone-neutral"
-                >{% translate "inactive" %}</span>{% endif %}
-              {% if user.show_email %}<div class="small text-body-secondary">{{ user.email }}</div>{% endif %}
+            <div class="d-flex align-items-center gap-2">
+              {% avatar user "md" %}
+              <div>
+                <a href="{% url 'person' user.pk %}" data-kb-open>{{ user }}</a>
+                {% if user.is_client %}
+                  <span class="badge wb-client-badge">{{ user.role }}</span>
+                {% else %}
+                  <span class="badge wb-tone-neutral">{{ user.role }}</span>
+                {% endif %}
+                {% if not user.is_active %}<span
+                    class="badge wb-tone-neutral"
+                  >{% translate "inactive" %}</span>{% endif %}
+                {% if user.show_email %}<div class="small text-body-secondary">{{ user.email }}</div>{% endif %}
+              </div>
             </div>
             {% if user.can_move %}
               <a

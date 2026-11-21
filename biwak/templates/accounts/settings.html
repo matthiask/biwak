@@ -6,6 +6,40 @@
   <h1 class="mb-3">{% translate "Settings" %}</h1>
   <h2 class="h5" id="appearance">{% translate "Appearance" %}</h2>
   <div class="card mb-4">
+    <div class="card-body border-bottom" id="profile-image">
+      <h3 class="h6">{% translate "Profile image" %}</h3>
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        {% avatar request.user "lg" %}
+        <form
+          method="post"
+          action="{% url 'settings_image' %}"
+          enctype="multipart/form-data"
+          class="d-flex flex-wrap align-items-center gap-2"
+        >
+          {% csrf_token %}
+          <input
+            type="file"
+            name="image"
+            class="form-control form-control-sm w-auto"
+            accept="image/jpeg, image/png, image/webp"
+            aria-label="{% translate 'Profile image' %}"
+            required
+          >
+          <button type="submit" class="btn btn-sm btn-primary">{% translate "Upload" %}</button>
+        </form>
+        {% if request.user.image %}
+          <a
+            href="{% url 'person_image_remove' request.user.pk %}"
+            data-modal
+            class="btn btn-sm btn-quiet"
+          >{% translate "Remove" %}</a>
+        {% endif %}
+      </div>
+      <div class="form-text">
+        {{ image_help }}
+        {% translate "Cut to a square in the middle. Without one, your initials are shown." %}
+      </div>
+    </div>
     <div class="card-body">
       <form method="post" action="{% url 'settings_appearance' %}" data-appearance-preview>
         {% csrf_token %}
