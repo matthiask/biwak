@@ -2968,14 +2968,15 @@ class CompletionTest(E2ETestCase):
         expect(page.locator("[data-todos] .wb-todo", has_text="Plan")).to_have_count(1)
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, False)
 
-    def test_the_to_do_page_pops_the_button(self):
+    def test_the_to_do_page_fills_the_check(self):
         page = self.page
         self.make_list("Launch", todos=["Plan"])
         self.goto(page, Item.objects.get(title="Plan"))
         page.get_by_role("button", name="Complete").click()
-        # The button's icon and the heading's new check pop, the title is
-        # struck through
-        expect(page.locator(".bi.is-popping")).to_have_count(2)
+        # The button's check fills and pops, the heading's new check pops,
+        # the title is struck through
+        expect(page.locator("form .wb-check.is-done.is-popping")).to_be_visible()
+        expect(page.locator("h1 .bi.is-popping")).to_be_visible()
         expect(page.locator("h1 .wb-todo-title.is-striking")).to_be_visible()
         expect(page.get_by_text("Completed by")).to_be_visible()
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)

@@ -95,16 +95,19 @@ async function row(form, row) {
 const HOLD = 400
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// The to-do's page: the heading gets the moment of a row (the check pops
-// in before the title, the title is struck through), the button's icon
-// pops, then the page follows
+// The to-do's page: the button's check fills and pops like a row's, the
+// heading gets the same moment (a check pops in before the title, the
+// title is struck through), then the page follows
 async function page(form) {
-  const icon = form.querySelector(".bi")
+  const check = form.querySelector(".wb-check")
   const completing = form.dataset.celebrate === "complete"
   const animations = []
+  if (!completing) check?.classList.remove("is-done")
   if (completing) {
-    icon.classList.add("is-popping")
-    animations.push(ended(icon, "wb-pop"))
+    if (check) {
+      check.classList.add("is-done", "is-popping")
+      animations.push(ended(check, "wb-pop"))
+    }
     const title = document.querySelector("[data-celebrate-title]")
     if (title) {
       const mark = document.createElement("span")

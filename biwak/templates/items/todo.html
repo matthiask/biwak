@@ -33,11 +33,10 @@
           class="btn btn-sm btn-quiet"
           title="{% if todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
         >
-          {% if todo.is_completed %}{% icon "arrow-counterclockwise" %}<span
-              class="wb-label"
-            >{% translate "Reopen" %}</span>{% else %}{% icon "check-lg" %}<span
-              class="wb-label"
-            >{% translate "Complete" %}</span>{% endif %}
+          {# The rows' check, filled by the script before the page follows #}
+          <span class="wb-check{% if todo.is_completed %} is-done{% endif %}">{% icon "check-lg" %}</span><span
+            class="wb-label"
+          >{% if todo.is_completed %}{% translate "Reopen" %}{% else %}{% translate "Complete" %}{% endif %}</span>
         </button>
       </form>
       {% if can_edit %}
