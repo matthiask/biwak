@@ -83,6 +83,24 @@ The rule:
 
 Decided 2026-11-21.
 
+## 4. Filters remembered
+
+Like Workbench: a filter page opened from the navigation shows the
+filters used there last.
+- **When stored:** in the browser (`localStorage`, wrapped in try/catch,
+  per path), when a filter page loads with a query.
+- **When restored:** a navigation link (the top bar, the palette's
+  jumps) to such a page goes to it with the stored query.
+- **Clearing:** a "Reset filters" link on the page clears it and the
+  stored value. Opening the page by any other link (a bookmark, a link
+  in a mail) uses that link's query as it is.
+- **Which pages:** "My to-dos", the feed and the lantern's page; search
+  is excluded (its query is the point).
+- **The code:** written fresh in `frontend/`, not copied from Workbench
+  (GPL).
+
+Decided 2026-11-21.
+
 ## Done when
 
 - **Django tests:**
@@ -92,7 +110,8 @@ Decided 2026-11-21.
   - the API's `grouping` and positions;
   - the CLI.
 - **Browser tests:** a select change applying the filter, the focus
-  kept, the button hidden with JavaScript.
+  kept, the button hidden with JavaScript, a filter restored through the
+  navigation and cleared with "Reset filters".
 - **`specs/todos.md`** updated: stage 2's filters and this grouping.
 - **A screenshot** of "By project" with two projects, a group and an
   overdue to-do.

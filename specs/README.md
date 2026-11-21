@@ -49,7 +49,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `collaboration.md` | | built (branch `collaboration`, merged into `main` 2026-11-21, not deployed) | everything | strong |
 | `people.md` | 1: profile images, the person's page | built 2026-11-21 (branch `people`) | `organizations.md` | cheaper, review the image's visibility |
 | `people.md` | 2: choosing from drawn images | later | stage 1, the drawings | cheaper |
-| `ui-round-2.md` | A: the lantern; B: people in the interface; C: Basecamp's images | next, three parts in parallel | lantern, people 1 | cheaper |
+| `ui-round-2.md` | A–C built; D: projects page and color picker; E: sign-in and sessions; F: same first names | D, E, F next, in parallel | lantern, people 1 | cheaper |
 | `subscribers.md` | assigned means subscribed; adding others, telling them now | next once ui-round-2 B is merged | ui-round-2 B, modals, lantern | cheaper, visibility tests |
 | `ui-round-3.md` | "My to-dos" by project or due date, no list filter, filters apply themselves | next | todos 2 | cheaper |
 
