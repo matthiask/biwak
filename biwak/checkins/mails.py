@@ -21,8 +21,9 @@ from biwak.activity.mails import (
     unsubscribe_headers,
     unsubscribe_url,
 )
-from biwak.activity.notify import can_see
+from biwak.activity.notify import who_can_see
 from biwak.inbound.tokens import reply_to
+from biwak.items.models import Item
 
 
 logger = logging.getLogger(__name__)
@@ -38,12 +39,9 @@ def after_commit(build, occurrence, people):
 
 
 def _send_all(build, occurrence, pks):
-    from biwak.accounts.models import User
-
-    item = occurrence.question.item
-    for user in User.objects.active().filter(pk__in=pks).order_by("pk"):
-        if not can_see(user, item):
-            continue
+    # As it is now, not as it was loaded
+    item = Item.objects.select_related("project").get(pk=occurrence.question.item_id)
+    for user in who_can_see(item).filter(pk__in=pks).order_by("pk"):
         try:
             with (
                 translation.override(user.language or settings.LANGUAGE_CODE),
@@ -56,7 +54,7 @@ def _send_all(build, occurrence, pks):
 
 
 def question_url(occurrence):
-    """The answer form of the occurrence"""
+    """The answer form of the occurrence (the mail and the API's "due")"""
     item = occurrence.question.item
     return (
         absolute(reverse("question_answer", args=[item.pk]))

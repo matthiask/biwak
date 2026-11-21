@@ -2,6 +2,7 @@ import datetime as dt
 import itertools
 from zoneinfo import ZoneInfo
 
+from dateutil import rrule
 from django.test import SimpleTestCase
 from django.utils import translation
 
@@ -41,9 +42,44 @@ class ValidateTest(SimpleTestCase):
             "FREQ=MONTHLY;BYMONTHDAY=0",
             "FREQ=MONTHLY;BYMONTHDAY=0,5",
             "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=0",
+            # dateutil's own spelling, not RFC 5545
+            "FREQ=MONTHLY;BYDAY=MO(+1)",
         ]:
             with self.subTest(rule=rule), self.assertRaises(InvalidRule):
                 validate(rule)
+
+    def test_canonical_form(self):
+        """Equal schedules are equal strings (decided 2026-11-21): parts in
+        a fixed order, lists sorted and without repeats, numbers plain,
+        ``INTERVAL=1`` and ``WKST=MO`` dropped"""
+        for rule, canonical in [
+            ("FREQ=WEEKLY;BYDAY=TH,MO", "FREQ=WEEKLY;BYDAY=MO,TH"),
+            ("BYDAY=MO;FREQ=WEEKLY;INTERVAL=1", "FREQ=WEEKLY;BYDAY=MO"),
+            ("freq=weekly;byday=mo;wkst=mo", "FREQ=WEEKLY;BYDAY=MO"),
+            (
+                "FREQ=WEEKLY;WKST=SU;INTERVAL=02;BYDAY=SU,MO,MO",
+                "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,SU;WKST=SU",
+            ),
+            (
+                "FREQ=MONTHLY;BYSETPOS=-1;BYMONTHDAY=30,28,29",
+                "FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1",
+            ),
+            ("FREQ=MONTHLY;BYMONTHDAY=15,-1,+1", "FREQ=MONTHLY;BYMONTHDAY=-1,1,15"),
+            ("FREQ=MONTHLY;BYDAY=-1FR,+1MO,FR", "FREQ=MONTHLY;BYDAY=1MO,-1FR,FR"),
+            (
+                "FREQ=YEARLY;BYMONTHDAY=1;BYMONTH=07,1",
+                "FREQ=YEARLY;BYMONTH=1,7;BYMONTHDAY=1",
+            ),
+        ]:
+            with self.subTest(rule=rule):
+                self.assertEqual(validate(rule), canonical)
+                self.assertEqual(validate(canonical), canonical)
+                start = dt.datetime(2027, 1, 1)
+                self.assertEqual(
+                    list(rrule.rrulestr(rule, dtstart=start)[:30]),
+                    list(rrule.rrulestr(canonical, dtstart=start)[:30]),
+                    "the same dates",
+                )
 
     def test_intervals_up_to_the_widgets_maximum(self):
         self.assertEqual(validate("FREQ=WEEKLY;INTERVAL=99"), "FREQ=WEEKLY;INTERVAL=99")

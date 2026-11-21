@@ -1,6 +1,8 @@
 import datetime as dt
 
 from django.core import mail
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import LevelOverride
@@ -256,3 +258,32 @@ class SummaryAfterDowntimeTest(CheckinTestCase):
         self.assertEqual(
             len([m for m in self.sent() if ": answers of 22. March" in m.subject]), 2
         )
+
+
+class QueriesTest(CheckinTestCase):
+    """Who gets mail is found with the same number of queries for any
+    number of people"""
+
+    def queries(self, function):
+        with CaptureQueriesContext(connection) as context:
+            function()
+        return len(context)
+
+    def test_summary_recipients(self):
+        question = self.item.question
+        few = self.queries(lambda: ops.summary_recipients(question))
+        more = [person(f"Staff {n}") for n in range(3)]
+        ops.set_people(self.item, [self.ada, self.bob, *more], actor=self.ada)
+        ops.set_mail_mode(self.item, user=more[0], mode=Mode.EACH)
+        self.assertEqual(len(ops.summary_recipients(question)), 4)
+        self.assertEqual(self.queries(lambda: ops.summary_recipients(question)), few)
+
+    def test_people_asked_and_missing(self):
+        self.run_at("2027-03-22 09:00")
+        occurrence = Occurrence.objects.select_related("question__item__project").get()
+        few = self.queries(lambda: ops.missing(occurrence))
+        more = [person(f"Staff {n}") for n in range(3)]
+        occurrence.asked.add(*more)
+        ops.set_people(self.item, [self.ada, self.bob, *more], actor=self.ada)
+        self.assertEqual(len(ops.missing(occurrence)), 5)
+        self.assertEqual(self.queries(lambda: ops.missing(occurrence)), few)

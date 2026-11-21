@@ -13,7 +13,7 @@ from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
 from biwak.items import glance, operations as ops, visibility
-from biwak.items.models import Group, Item, Kind, Status, TodoList
+from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.reactions.operations import prefetch
 from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
@@ -27,6 +27,17 @@ def item_for(request, pk, kind=None):
     if kind:
         qs = qs.filter(kind=kind)
     return get_object_or_404(qs, pk=pk)
+
+
+def comment_for(request, pk):
+    """The comment if the person may see its item, else 404: the same check
+    as ``item_for()``"""
+    return get_object_or_404(
+        Comment.objects.filter(
+            item__in=Item.objects.visible_to(request.user)
+        ).select_related("item", "item__project"),
+        pk=pk,
+    )
 
 
 class RepeatForm(RuleFormMixin, Form):

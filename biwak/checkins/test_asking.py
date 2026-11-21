@@ -709,13 +709,13 @@ class TwoRunsAtOnceTest(TransactionTestCase):
             people=[ada], now=at("2027-03-19 12:00"), **MONDAY_9,
         )  # fmt: skip
         locked, release = threading.Event(), threading.Event()
-        latest_occurrence = schedule.latest_occurrence
+        latest_due = schedule.latest_due
 
         def first_waits(question, **kwargs):
             if not locked.is_set():
                 locked.set()
                 release.wait(10)
-            return latest_occurrence(question, **kwargs)
+            return latest_due(question, **kwargs)
 
         results = {}
 
@@ -726,7 +726,7 @@ class TwoRunsAtOnceTest(TransactionTestCase):
                 close_old_connections()
                 connection.close()
 
-        with patch.object(schedule, "latest_occurrence", first_waits):
+        with patch.object(schedule, "latest_due", first_waits):
             first = threading.Thread(target=run, args=["first"])
             first.start()
             self.assertTrue(locked.wait(10))

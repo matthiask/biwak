@@ -23,6 +23,11 @@ GROUPS = [OVERDUE, TODAY, THIS_WEEK, LATER, NO_DATE]
 NO_DATE_SORT = dt.date.max
 
 
+def week_end(today):
+    """The Sunday ending ``today``'s week: where ``this_week`` ends"""
+    return today + dt.timedelta(days=6 - today.weekday())
+
+
 def group_of(due_on, today):
     """The group a to-do is in: ``this_week`` runs until Sunday"""
     if due_on is None:
@@ -31,7 +36,7 @@ def group_of(due_on, today):
         return OVERDUE
     if due_on == today:
         return TODAY
-    if due_on <= today + dt.timedelta(days=6 - today.weekday()):
+    if due_on <= week_end(today):
         return THIS_WEEK
     return LATER
 
@@ -87,14 +92,13 @@ def todos(
 
 
 def _in_group(qs, group, today):
-    week_end = today + dt.timedelta(days=6 - today.weekday())
+    """``group_of()`` as a filter"""
+    sunday = week_end(today)
     return {
         OVERDUE: lambda: qs.filter(todo__due_on__lt=today),
         TODAY: lambda: qs.filter(todo__due_on=today),
-        THIS_WEEK: lambda: qs.filter(
-            todo__due_on__gt=today, todo__due_on__lte=week_end
-        ),
-        LATER: lambda: qs.filter(todo__due_on__gt=week_end),
+        THIS_WEEK: lambda: qs.filter(todo__due_on__gt=today, todo__due_on__lte=sunday),
+        LATER: lambda: qs.filter(todo__due_on__gt=sunday),
         NO_DATE: lambda: qs.filter(todo__due_on__isnull=True),
     }[group]()
 

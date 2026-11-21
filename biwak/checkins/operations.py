@@ -19,19 +19,19 @@ from biwak import schedules
 from biwak.accounts.models import NotificationLevel, User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
-from biwak.activity.notify import can_see, effective_level
+from biwak.activity.notify import can_see, effective_levels, who_can_see
 from biwak.activity.operations import record, subscribe
 from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
+    DEFAULT_MODE,
     Answer,
     Mode,
     Occurrence,
     Question,
     QuestionMail,
-    mail_mode,
 )
 from biwak.files import attachments
-from biwak.items import operations as items_ops, visibility
+from biwak.items import operations as items_ops
 from biwak.items.models import Item, Kind, Status
 
 
@@ -51,12 +51,6 @@ class NotAllowed(Exception):
 # Who -------------------------------------------------------------------------
 
 
-def askable_people(item):
-    """People who can be asked: those who can see the question (clients only
-    when it is visible to clients)"""
-    return mentions.mentionable_people(item)
-
-
 def can_answer(user, item):
     """People asked who still see the question; staff who aren't asked
     don't answer"""
@@ -68,9 +62,10 @@ def can_answer(user, item):
 
 
 def _check_people(item, people, *, kept=()):
-    """``kept``: people already in the list, who stay when the question
-    turns internal (clients aren't asked then, but aren't removed)"""
-    allowed = set(askable_people(item).filter(pk__in=[u.pk for u in people]))
+    """Only people who can see the question are asked. ``kept``: people
+    already in the list, who stay when the question turns internal
+    (clients aren't asked then, but aren't removed)"""
+    allowed = set(who_can_see(item).filter(pk__in=[u.pk for u in people]))
     allowed |= {u for u in kept if u.is_client}
     for user in people:
         if user not in allowed:
@@ -108,16 +103,14 @@ def create_question(
     """Asks the first time on or after ``starts_on`` at ``time_of_day``
     (later than ``now``)"""
     rule, time_zone = _clean_schedule(rule, time_zone or settings.TIME_ZONE)
-    item = Item(
+    item = items_ops.create_item(
         project=project,
         kind=Kind.QUESTION,
         title=title,
         creator=creator,
-        position=0,
-        visible_to_clients=visible,
+        visible=visible,
+        position=0,  # Questions are ordered by title
     )
-    item.save()
-    visibility.recompute(item)
     _check_people(item, people)
     question = Question.objects.create(
         item=item,
@@ -128,8 +121,7 @@ def create_question(
     )
     question.next_at = schedule.next_fire_of(question, after=now or timezone.now())
     question.save(update_fields=["next_at"])
-    subscribe(creator, item)
-    record(actor=creator, action=Action.CREATED, project=project, item=item)
+    items_ops.created(item, creator)
     set_people(item, people, actor=creator)
     return item
 
@@ -176,6 +168,8 @@ def update_question(
         item.title = title
         item.updated_at = timezone.now()
         item.save(update_fields=["title", "updated_at"])
+        # Answers carry the question as their title (feed, search, events)
+        Item.objects.filter(parent=item, kind=Kind.ANSWER).update(title=title)
         changed.append("title")
     if rule is not _UNCHANGED:
         rule = schedules.validate(rule)
@@ -237,17 +231,15 @@ def resume(item, *, actor, now=None):
 def _recipients(question, occurrence=None):
     """Active people asked who can see the question now (a client doesn't
     once it's internal), and, with an ``occurrence``, were asked then"""
-    people = question.people.filter(is_active=True)
+    people = question.people.filter(pk__in=who_can_see(question.item).values("pk"))
     if occurrence is not None:
         people = people.filter(pk__in=occurrence.asked.values("pk"))
-    return [user for user in people.order_by("pk") if can_see(user, question.item)]
+    return list(people.order_by("pk"))
 
 
 def _answered_ids(occurrence):
     """People who answered (an answer in the trash doesn't count)"""
-    answered = Answer.objects.filter(occurrence=occurrence).exclude(
-        item__status=Status.TRASHED
-    )
+    answered = Answer.objects.filter(occurrence=occurrence).not_trashed()
     return set(answered.values_list("author", flat=True))
 
 
@@ -283,9 +275,7 @@ def ask_due(*, now=None):
             )
             if question is None:
                 continue
-            date, _fire = schedule.latest_occurrence(
-                question, first=question.next_at, now=now
-            )
+            date, _fire = schedule.latest_due(question, first=question.next_at, now=now)
             if question.is_askable:
                 occurrence = _ask(question, date, now)
                 if occurrence is not None:
@@ -322,14 +312,24 @@ def summary_recipients(question):
     """Subscribers of the question who get summaries (the default mode),
     who see it, and whose level isn't "nothing" (they may have changed
     since)"""
-    ids = Subscription.objects.filter(item=question.item).values("user")
-    people = User.objects.active().filter(pk__in=ids).order_by("pk")
+    item = question.item
+    people = list(
+        User.objects
+        .filter(pk__in=Subscription.objects.filter(item=item).values("user"))
+        .filter(pk__in=who_can_see(item).values("pk"))
+        .order_by("pk")
+    )
+    modes = dict(
+        QuestionMail.objects.filter(question=question, user__in=people).values_list(
+            "user", "mode"
+        )
+    )
+    levels = effective_levels(people, item)
     return [
         user
         for user in people
-        if mail_mode(user, question.item) == Mode.SUMMARY
-        and can_see(user, question.item)
-        and effective_level(user, question.item) != NotificationLevel.NOTHING
+        if modes.get(user.pk, DEFAULT_MODE) == Mode.SUMMARY
+        and levels[user.pk] != NotificationLevel.NOTHING
     ]
 
 
@@ -382,13 +382,15 @@ def answers_of(occurrence):
     return list(
         Answer.objects
         .filter(occurrence=occurrence)
-        .exclude(item__status=Status.TRASHED)
+        .not_trashed()
         .select_related("item__creator")
         .order_by("-item__created_at", "-pk")
     )
 
 
 def latest_occurrence(item):
+    """The question's latest ``Occurrence`` (``schedule.latest_due()`` is
+    the date the rule asks)"""
     return (
         Occurrence.objects.filter(question__item=item).order_by("-date", "-pk").first()
     )
@@ -432,21 +434,19 @@ def answer(item, *, user, content, occurrence=None):
 
 
 def _create_answer(question_item, user, content, occurrence):
-    item = Item(
+    item = items_ops.create_item(
         project=question_item.project,
         parent=question_item,
         kind=Kind.ANSWER,
         title=question_item.title,
         creator=user,
+        position=0,  # Answers are ordered by date
     )
-    item.save()
-    visibility.recompute(item)
     Answer.objects.create(
         item=item, content=content, occurrence=occurrence, author=user
     )
     attachments.link(item, content, actor=user)
-    subscribe(user, item)
-    event = record(actor=user, action=Action.CREATED, project=item.project, item=item)
+    event = items_ops.created(item, user)
     mentions.update(item, content, actor=user, event=event)
     return item
 
@@ -497,9 +497,9 @@ def due(user, *, project=None):
         .annotate(
             has_newer=Exists(_newer()),
             answered=Exists(
-                Answer.objects.filter(occurrence=OuterRef("pk"), author=user).exclude(
-                    item__status=Status.TRASHED
-                )
+                Answer.objects.filter(
+                    occurrence=OuterRef("pk"), author=user
+                ).not_trashed()
             ),
         )
         .filter(has_newer=False, answered=False)

@@ -5,9 +5,9 @@ web interface."""
 import datetime as dt
 from typing import Literal
 
-from django.db.models import Prefetch
+from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
 from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
@@ -19,19 +19,24 @@ from biwak.api_conventions import (
     ItemOut,
     PersonOut,
     Title,
-    absolute,
     html,
     item_out,
     page_of,
     paginated,
     person_out,
 )
-from biwak.checkins import operations as ops, schedule
-from biwak.checkins.models import Answer, Occurrence, mail_mode
+from biwak.checkins import mails, operations as ops, schedule
+from biwak.checkins.models import (
+    DEFAULT_MODE,
+    Answer,
+    Occurrence,
+    QuestionMail,
+    mail_mode,
+)
 from biwak.items.api import item_for as any_item_for
 from biwak.items.models import Item, Kind
 from biwak.projects.api import project_for
-from biwak.reactions.models import Reaction
+from biwak.reactions.operations import prefetch
 from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
@@ -43,6 +48,8 @@ def bad_request(message):
 
 
 def staff_only(request):
+    """After looking up what's changed: a client gets 404 for what they
+    don't see, not 403"""
     if request.user.is_client:
         raise HttpError(403, _("Only staff can change check-ins."))
 
@@ -83,9 +90,38 @@ class QuestionOut(ItemOut):
     mail: Literal["each", "summary", "none"]
 
 
-def question_out(request, item):
+def _question_context(request, items):
+    """What ``question_out()`` needs, for many questions at once: their
+    latest occurrences, the person's mail modes and the people asked the
+    person may learn about (clients: members only)"""
+    pks = [item.pk for item in items]
+    latest = dict(
+        Occurrence.objects
+        .filter(question__in=pks)
+        .order_by("question", "-date", "-pk")
+        .distinct("question")
+        .values_list("question", "pk")
+    )
+    modes = dict(
+        QuestionMail.objects.filter(question__in=pks, user=request.user).values_list(
+            "question", "mode"
+        )
+    )
+    known = set()
+    for project in {item.project for item in items}:
+        people = {
+            user
+            for item in items
+            if item.project == project
+            for user in item.question.people.all()
+        }
+        known |= {user.pk for user in project.people_known_to(request.user, people)}
+    return {"latest": latest, "modes": modes, "known": known}
+
+
+def question_out(request, item, context=None):
     question = item.question
-    latest = ops.latest_occurrence(item)
+    context = context or _question_context(request, [item])
     return item_out(item) | {
         "rule": question.rule,
         "schedule_description": question.schedule_description,
@@ -95,29 +131,29 @@ def question_out(request, item):
         # Clients only learn about the project's members
         "people": [
             person_out(user)
-            for user in item.project.people_known_to(
-                request.user, question.people.all()
-            )
+            for user in question.people.all()
+            if user.pk in context["known"]
         ],
         "paused": question.is_paused,
         "next_at": question.next_at,
-        "latest_occurrence_id": latest.pk if latest else None,
-        "mail": str(mail_mode(request.user, item)),
+        "latest_occurrence_id": context["latest"].get(item.pk),
+        "mail": context["modes"].get(item.pk, DEFAULT_MODE),
     }
 
 
 @router.get("projects/{project_id}/checkins/", response=list[QuestionOut])
 def question_list(request, project_id: int):
     project = project_for(request, project_id)
-    questions = (
+    questions = list(
         Item.objects
         .visible_to(request.user)
         .filter(project=project, kind=Kind.QUESTION)
-        .select_related("creator", "question")
+        .select_related("creator", "question", "project")
         .prefetch_related("question__people")
         .order_by("title", "pk")
     )
-    return [question_out(request, item) for item in questions]
+    context = _question_context(request, questions)
+    return [question_out(request, item, context) for item in questions]
 
 
 class QuestionIn(Schema):
@@ -143,8 +179,8 @@ def question_create(request, project_id: int, data: QuestionIn):
     monthly, monthly-first, monthly-last, quarterly, yearly: counting from
     ``starts_on``, default today) or an RRULE (at most daily), asked at
     ``time_of_day`` in ``time_zone`` (default: the installation's)."""
-    staff_only(request)
     project = project_for(request, project_id)
+    staff_only(request)
     starts_on = data.starts_on or schedules.today()
     try:
         item = ops.create_question(
@@ -182,26 +218,37 @@ class QuestionPatch(Schema):
 def question_update(request, question_id: int, data: QuestionPatch):
     """Staff only. Changes the fields given; ``people`` is the complete new
     set; ``paused`` pauses or resumes. A new schedule counts from now."""
-    staff_only(request)
     item = question_for(request, question_id)
+    staff_only(request)
     given = data.model_fields_set
     changes = {}
-    for field in ["title", "starts_on", "time_of_day", "time_zone", "schedule"]:
+    # ``"people": []`` asks nobody; null is a mistake, as for the others
+    for field in [
+        "title",
+        "starts_on",
+        "time_of_day",
+        "time_zone",
+        "schedule",
+        "people",
+    ]:
         if field in given:
-            if getattr(data, field) in {None, ""}:
+            value = getattr(data, field)
+            if value in (None, ""):
                 bad_request(_("Leave out what doesn't change instead of sending null."))
-            changes[field] = getattr(data, field)
+            changes[field] = value
     if "schedule" in changes:
         anchor = changes.get("starts_on", item.question.starts_on)
         changes["rule"] = _rule(changes.pop("schedule"), anchor)
     if "time_zone" in changes:
         changes["time_zone"] = _zone(changes["time_zone"])
-    if "people" in given:
-        changes["people"] = _people(data.people or [])
+    if "people" in changes:
+        changes["people"] = _people(changes["people"])
     try:
-        ops.update_question(item, actor=request.user, **changes)
-        if data.paused is not None:
-            (ops.pause if data.paused else ops.resume)(item, actor=request.user)
+        # All or nothing: the changes and pausing or resuming
+        with transaction.atomic():
+            ops.update_question(item, actor=request.user, **changes)
+            if data.paused is not None:
+                (ops.pause if data.paused else ops.resume)(item, actor=request.user)
     except ValueError as exc:
         bad_request(str(exc))
     return question_out(request, question_for(request, question_id))
@@ -250,8 +297,13 @@ def occurrence_list(
 ):
     """The question's occurrences with their answers (newest first, as on
     the page), the latest first; ``person_id``: only that person's answers
-    (and the occurrences they answered)"""
+    (and the occurrences they answered), 404 for clients asking about
+    somebody who isn't a member"""
     item = question_for(request, question_id)
+    if person_id is not None:
+        person = get_object_or_404(User, pk=person_id)
+        if not item.project.people_known_to(request.user, [person]):
+            raise Http404("Not a member")
     latest = ops.latest_occurrence(item)
     visible = Item.objects.visible_to(request.user)
     occurrences = Occurrence.objects.filter(question__item=item)
@@ -259,26 +311,29 @@ def occurrence_list(
     if person_id is not None:
         answers = answers.filter(author=person_id)
         occurrences = occurrences.filter(answers__in=answers).distinct()
+    found = {}
 
-    def out(occurrence):
-        found = (
+    def prepare(page):
+        """The page's answers with their reactions, newest first"""
+        page_answers = list(
             answers
-            .filter(occurrence=occurrence)
+            .filter(occurrence__in=page)
             .select_related("item__creator", "author")
-            .prefetch_related(
-                Prefetch(
-                    "item__reactions",
-                    queryset=Reaction.objects.select_related("user"),
-                )
-            )
             .order_by("-item__created_at", "-pk")
         )
+        prefetch(*[answer.item for answer in page_answers])
+        for answer in page_answers:
+            found.setdefault(answer.occurrence_id, []).append(answer)
+
+    def out(occurrence):
         return {
             "id": occurrence.pk,
             "question_id": item.pk,
             "date": occurrence.date,
             "asked_at": occurrence.asked_at,
-            "answers": [answer_out(a, request.user) for a in found],
+            "answers": [
+                answer_out(a, request.user) for a in found.get(occurrence.pk, [])
+            ],
             "missing": (
                 [
                     person_out(u)
@@ -298,6 +353,7 @@ def occurrence_list(
         ordering=("-date", "-pk"),
         cursor=cursor,
         page_size=page_size,
+        prepare=prepare,
     )
 
 
@@ -388,10 +444,7 @@ def due(request, project_id: int | None = None):
             "occurrence_id": occurrence.pk,
             "date": occurrence.date,
             "asked_at": occurrence.asked_at,
-            "url": absolute(
-                reverse("question_answer", args=[occurrence.question.item_id])
-            )
-            + f"?occurrence={occurrence.pk}",
+            "url": mails.question_url(occurrence),
             "visible_to_clients": occurrence.question.item.is_client_visible,
         }
         for occurrence in ops.due(request.user, project=project)

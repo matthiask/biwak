@@ -133,6 +133,8 @@ class Item(TreeNode):
         return self.title
 
     def get_absolute_url(self):
+        """An answer's needs its occurrence: lists of items load it with
+        ``select_related("answer")`` (or ``"item__answer"``)"""
         if self.kind == Kind.ANSWER:
             # The occurrence's page, at the answer (specs/checkins.md)
             return (

@@ -39,8 +39,9 @@ def feed_events(
     """The events the person can see, newest first, narrowed down by the
     filters (all optional): the project, the actor, the kind of item, the
     action, only items clients can see, only events from ``since`` on"""
+    # An answer's link needs its occurrence (``Item.get_absolute_url()``)
     events = Event.objects.visible_to(user).select_related(
-        "actor", "project", "item", "item__parent"
+        "actor", "project", "item", "item__parent", "item__answer"
     )
     if project is not None:
         events = events.filter(project=project)

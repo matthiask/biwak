@@ -119,6 +119,12 @@ class Occurrence(models.Model):
         return f"{self.question} on {self.date}"
 
 
+class AnswerQuerySet(models.QuerySet):
+    def not_trashed(self):
+        """Without answers in the trash: they don't count as answered"""
+        return self.exclude(item__status=Status.TRASHED)
+
+
 class Answer(Detail):
     content = models.TextField(_("content"), blank=True)
     occurrence = models.ForeignKey(
@@ -134,6 +140,8 @@ class Answer(Detail):
         related_name="+",
         verbose_name=_("author"),
     )
+
+    objects = AnswerQuerySet.as_manager()
 
     class Meta:
         constraints = [

@@ -1,9 +1,16 @@
 import datetime as dt
+from importlib import import_module
 from zoneinfo import ZoneInfo
 
+from django.apps import apps
 from django.test import SimpleTestCase
 
+from biwak.activity.models import Event
 from biwak.checkins import schedule
+from biwak.checkins.models import Question
+from biwak.checkins.support import CheckinTestCase
+from biwak.items import operations as item_ops
+from biwak.items.models import Todo
 
 
 ZURICH = ZoneInfo("Europe/Zurich")
@@ -18,12 +25,18 @@ def local(moment, tz=ZURICH):
     return moment.astimezone(tz).replace(tzinfo=None).isoformat(" ")
 
 
+def next_fire(**kwargs):
+    """The moment of ``schedule.next_occurrence()``"""
+    found = schedule.next_occurrence(**kwargs)
+    return found and found[1]
+
+
 def fires(rule, after, *, at=dt.time(9, 0), tz="Europe/Zurich", starts_on, count=3):
     """The next ``count`` moments, in local wall clock time"""
     result = []
     moment = utc(after)
     for _n in range(count):
-        moment = schedule.next_fire(
+        moment = next_fire(
             rule=rule, starts_on=starts_on, time_of_day=at, time_zone=tz, after=moment
         )
         result.append(local(moment, ZoneInfo(tz)))
@@ -138,7 +151,7 @@ class NextFireTest(SimpleTestCase):
 
     def test_the_gaps_between_utc_times_are_23_and_25_hours(self):
         before = schedule.fire_at(dt.date(2027, 3, 27), dt.time(9), "Europe/Zurich")
-        after = schedule.next_fire(
+        after = next_fire(
             rule="FREQ=DAILY",
             starts_on=dt.date(2027, 1, 1),
             time_of_day=dt.time(9),
@@ -147,7 +160,7 @@ class NextFireTest(SimpleTestCase):
         )
         self.assertEqual(after - before, dt.timedelta(hours=23))
         before = schedule.fire_at(dt.date(2027, 10, 30), dt.time(9), "Europe/Zurich")
-        after = schedule.next_fire(
+        after = next_fire(
             rule="FREQ=DAILY",
             starts_on=dt.date(2027, 1, 1),
             time_of_day=dt.time(9),
@@ -263,7 +276,7 @@ class NextFireTest(SimpleTestCase):
         moments = []
         moment = utc("2027-10-30 12:00")
         for _n in range(3):
-            moment = schedule.next_fire(
+            moment = next_fire(
                 rule="FREQ=DAILY",
                 starts_on=dt.date(2027, 1, 1),
                 time_of_day=dt.time(2, 30),
@@ -283,7 +296,7 @@ class NextFireTest(SimpleTestCase):
             ["2027-02-28 09:00:00", "2028-02-29 09:00:00", "2029-02-28 09:00:00"],
         )
 
-    def test_latest_occurrence_after_downtime_is_one_date(self):
+    def test_latest_due_after_downtime_is_one_date(self):
         class Q:
             rule = "FREQ=DAILY"
             starts_on = dt.date(2027, 1, 1)
@@ -293,7 +306,7 @@ class NextFireTest(SimpleTestCase):
         first = schedule.fire_at(dt.date(2027, 3, 1), dt.time(9), "Europe/Zurich")
         now = schedule.fire_at(dt.date(2027, 3, 5), dt.time(9, 30), "Europe/Zurich")
         self.assertEqual(
-            schedule.latest_occurrence(Q, first=first, now=now),
+            schedule.latest_due(Q, first=first, now=now),
             (
                 dt.date(2027, 3, 5),
                 schedule.fire_at(dt.date(2027, 3, 5), dt.time(9), "Europe/Zurich"),
@@ -301,9 +314,7 @@ class NextFireTest(SimpleTestCase):
         )
         # Nothing missed: the first stays
         self.assertEqual(
-            schedule.latest_occurrence(
-                Q, first=first, now=first + dt.timedelta(minutes=5)
-            ),
+            schedule.latest_due(Q, first=first, now=first + dt.timedelta(minutes=5)),
             (dt.date(2027, 3, 1), first),
         )
 
@@ -320,7 +331,7 @@ class NextFireTest(SimpleTestCase):
         saturday = schedule.fire_at(dt.date(2027, 3, 27), Q.time_of_day, Q.time_zone)
         self.assertEqual(schedule.local_date(saturday, Q.time_zone).day, 28)
         self.assertEqual(
-            schedule.latest_occurrence(Q, first=saturday, now=saturday),
+            schedule.latest_due(Q, first=saturday, now=saturday),
             (dt.date(2027, 3, 27), saturday),
         )
         # A minute before it (Sunday 00:29), Saturday's is next, not Sunday's
@@ -334,7 +345,7 @@ class StoredRuleTest(SimpleTestCase):
     def test_a_stored_rule_which_isnt_valid_is_never_asked(self):
         """INTERVAL=0 made send_mails loop forever"""
         self.assertIsNone(
-            schedule.next_fire(
+            next_fire(
                 rule="FREQ=DAILY;INTERVAL=0",
                 starts_on=dt.date(2027, 3, 22),
                 time_of_day=dt.time(9, 0),
@@ -342,3 +353,41 @@ class StoredRuleTest(SimpleTestCase):
                 after=utc("2027-03-22 12:00"),
             )
         )
+
+
+class CanonicalRulesMigrationTest(CheckinTestCase):
+    def test_stored_rules_become_canonical(self):
+        """To-do recurrences and question rules, without events and
+        without a new ``next_at``; rules which aren't valid stay"""
+        migration = import_module("biwak.checkins.migrations.0005_canonical_rules")
+        todolist = item_ops.create_list(
+            project=self.project, title="Chores", creator=self.ada
+        )
+        todos = [
+            item_ops.create_todo(todolist=todolist, title=str(n), creator=self.ada)
+            for n in range(4)
+        ]
+        written = {
+            "FREQ=WEEKLY;BYDAY=TH,MO": "FREQ=WEEKLY;BYDAY=MO,TH",
+            "BYDAY=MO;FREQ=WEEKLY;INTERVAL=1;WKST=MO": "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=DAILY;INTERVAL=0": "FREQ=DAILY;INTERVAL=0",
+            "": "",
+        }
+        for todo, rule in zip(todos, written, strict=True):
+            Todo.objects.filter(item=todo).update(recurrence=rule)
+        Question.objects.filter(item=self.item).update(
+            rule="FREQ=WEEKLY;BYDAY=MO,MO;WKST=MO"
+        )
+        before = Question.objects.get(item=self.item)
+        events = Event.objects.count()
+
+        migration.canonical_rules(apps, None)
+
+        self.assertEqual(
+            [Todo.objects.get(item=todo).recurrence for todo in todos],
+            list(written.values()),
+        )
+        after = Question.objects.get(item=self.item)
+        self.assertEqual(after.rule, "FREQ=WEEKLY;BYDAY=MO")
+        self.assertEqual(after.next_at, before.next_at)
+        self.assertEqual(Event.objects.count(), events)

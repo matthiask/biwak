@@ -20,9 +20,13 @@ every preset), `test_schedules_forms.py`, the pages' tests and
   `_year_day`, plus `_keep` and `_replace` for rules set elsewhere. The
   inline forms of a list's groups are separate `<form>`s, so they share
   names and differ only in ids (`id_recurrence_<group>_…`).
-- A rule is shown only if `build_rule(rule_fields(rule))` is the same rule
-  (parts compared normalized: order, `INTERVAL=1`, `WKST=MO`); so
-  `FREQ=WEEKLY` without `BYDAY` or `WKST=SU` are "set elsewhere".
+- A rule is shown only if `build_rule(rule_fields(rule))` is the same rule;
+  so `FREQ=WEEKLY` without `BYDAY` or `WKST=SU` are "set elsewhere".
+  Since rules are stored in canonical form (decided 2026-11-21,
+  `todos.md`), the same means the same string: `BYDAY=TH,MO` from the
+  API is stored as `BYDAY=MO,TH`, which the widget shows, and saving an
+  unchanged form compares plain strings (it compared normalized parts
+  before).
 - The end date and count stay separate form fields right after the
   fieldset, not inside it; the inline form hides them without a
   frequency.
