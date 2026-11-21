@@ -1,132 +1,72 @@
 # The projects page: favorites, activity, cards
 
-The page people open first. Today it's an alphabetical list of names;
-it should show at a glance which projects matter to the person and where
-something is going on.
+`/projects/` (Home is `/`, `dashboard.md`): which projects matter to the
+person and where something is going on.
 
-**Status:** built (2026-11-20, branch `projects-overview`, CLI 0.7.0).
-Decisions made while building, confirmed 2026-11-21:
-
-- The `|excerpt` filter did not exist yet; added as `glance.md`
-  describes (`biwak/templatetags/biwak.py`). Since `glance.md` the
-  excerpt renders mentions: the label as written, or the current name
-  when Python passes the item, so a mention in a description shows on
-  its card as `@Label`.
-- The columns are ignored by the audit trigger on `projects_project`
-  (they change with every event; migration `projects.0002`).
-- `record()` uses `GREATEST(column, event time)`, so an older event
-  never moves the time back. The nightly recomputation and the data
-  migration share one SQL statement (`RECOMPUTE_ACTIVITY_SQL` in
-  `biwak/projects/operations.py`).
-- The counts use `biwak.items.due.todos(user, assignee="me")`: open
-  to-dos assigned to the person, in active projects, not in archived
-  lists; "overdue" is a due date before today.
-- Card wording: "3 hours ago" (`naturaltime`), "2 open", "1 overdue";
-  the description line is cut at 160 characters and by CSS.
-- `GET /api/v1/projects/` also takes archived projects (`archived=true`),
-  alphabetical, favorites first; `is_bookmarked` and `last_activity_at`
-  are on every project the API returns (single project, bookmarks).
-- The switch buttons are "Activity" and "A–Z" (as in this spec); the
-  archive page has none.
-- Tests: `biwak/projects/test_overview.py`, `biwak/test_cli_projects.py`,
-  `biwak/test_templatetags.py`.
-
-**Agent:** suits a cheaper model following this spec and the checklist
-in `AGENTS.md`. The client column of the activity time (below) touches
-visibility: have its tests reviewed.
-
-**Depends on:** bookmarks (`feed.md`, merged). Nothing else.
-
-**Touches:** `biwak/projects/` (models, views, api, operations),
-`biwak/activity/operations.py` (`record()`), `biwak/accounts/models.py`
-(one field), `projects/project_list.html`, `fairy_tasks`, `cli/biwak_cli/commands.py`. Not the project page
-(`glance.md` changes that).
+**Status:** built (2026-11-20; archiving and the color picker changed
+2026-11-21).
 
 ## Favorites are bookmarked projects
 
-Decided 2026-11-20: no separate favorite. A bookmarked project
-(`Bookmark(user, project)`, `feed.md`) is a favorite: the person's
-bookmarked projects come first on the projects page, with the filled
-bookmark icon, in the chosen order among themselves. The bookmark
-button sits on each card, so favoriting doesn't need opening the
-project (htmx, swapping the button like on the project page).
+Decided 2026-11-20: no separate favorite. Bookmarked projects
+(`Bookmark(user, project)`, `feed.md`) come first, with the filled
+bookmark icon, in the chosen order among themselves. The bookmark button
+is on each card (htmx).
 
 ## Ordering: by activity or by name
 
-Decided 2026-11-20: by activity by default, with a switch to
-alphabetical, remembered per person.
+Decided 2026-11-20: by activity by default, or alphabetical.
 
-- **Stored activity time**, because computing it per request from the
-  events is too slow with many projects. `Project.last_activity_at` and
-  `Project.last_client_activity_at`, both nullable, indexed.
+- **Stored activity times**, because computing them from the events per
+  request is too slow: `Project.last_activity_at` and
+  `last_client_activity_at`, indexed, ignored by the audit trigger (they
+  change with every event).
 - `record()` (`biwak/activity/operations.py`) updates them in the same
-  transaction: `last_activity_at` for every event of the project;
-  `last_client_activity_at` only for events of items visible to clients
-  at that moment (`item.is_client_visible`), not for project events
-  (joining, members) or internal items. One `UPDATE … WHERE pk=` per
-  event, no extra query.
-- **Clients** are sorted and shown by `last_client_activity_at`, so
-  internal work doesn't reorder or date their projects. Staff by
-  `last_activity_at`.
-- **Drift:** an item switched to internal later keeps having counted for
-  clients. `fairy_tasks` recomputes both columns from the events every
-  night (reactions, events of trashed items and, for the client column, of items
-  not visible to clients now don't count). A data migration fills them
-  once the same way. Projects without events sort last, by name.
-- **The switch:** "Activity" and "A–Z" as two buttons in the page
-  header, a small form (`data-autosubmit`, `data-remember`) with an
-  "Order" select, `?order=activity|name` (default `activity`).
-  Decided 2026-11-21: a view choice is a query parameter remembered in
-  the browser by `frontend/filters.js` (`data-remember` on the page), not
-  a field on `User`; `User.project_order`, `set_project_order` and
-  `/projects/order/` are gone, and changing the order writes no row and
-  so no audit log entry.
-- Archived projects (`?archived=1`) stay alphabetical, as a plain list
-  as today, without cards.
+  transaction with `GREATEST(column, event time)`: `last_activity_at`
+  for every event of the project, `last_client_activity_at` only for
+  events of items visible to clients at that moment, not for project
+  events (joining, members) or internal items. Reactions don't count.
+- **Clients** are sorted and shown by the client column, so internal
+  work doesn't reorder or date their projects.
+- **Drift:** an item switched to internal later has counted for clients
+  already. `fairy_tasks` recomputes both columns from the events every
+  night (`RECOMPUTE_ACTIVITY_SQL` in `biwak/projects/operations.py`;
+  reactions, events of trashed items and, for clients, of items not
+  visible now don't count). Projects without events sort last, by name.
+- **The switch:** "Activity" and "A–Z", `?order=activity|name`, a small
+  filter form remembered in the browser (`core.md`; decided 2026-11-21,
+  not a field on `User`).
 
 ## Cards
 
-A responsive grid of cards instead of the list group (one column on
-phones, two on tablets, three on wide screens), favorites first.
+A grid of cards (one column on phones, two on tablets, three on wide
+screens), favorites first. Each card, and nothing more:
 
-Each card, and nothing more (the card must stay small):
+- the name, the project's color as a stripe (`project-colors.md`), the
+  lock icon for limited projects, the bookmark button;
+- the description's first line (`|excerpt`, cut at 160 characters and by
+  CSS);
+- a "Clients" badge if the project has client members (staff only);
+- the last activity ("3 hours ago") from the column matching the person;
+- open to-dos assigned to the person and the overdue ones among them
+  (danger color), each only when not zero, counted with
+  `biwak.items.due.todos(user, assignee="me")` in one query for all
+  cards (the page in a fixed number of queries with 200 projects).
 
-- The name (the link to the project), the lock icon for limited
-  projects, the bookmark button.
-- The description's first line as plain text, one line, cut with an
-  ellipsis (`|excerpt`, `glance.md`; if `glance.md` isn't merged yet,
-  add the filter as that spec describes).
-- A "Clients" badge if the project has client members (staff only; a
-  client knows already).
-- The last activity as a relative time ("3 hours ago"), from the column
-  matching the person; nothing if there was none.
-- Counts, each only when not zero: open to-dos assigned to the person,
-  overdue ones among them (in the danger color). Counted in one query
-  for all cards (`Item.objects.visible_to(user)` grouped by project),
-  never per card.
+## Archived projects
 
-The admins' section "Limited projects you're not a member of" stays a
-plain list below.
+- "Archive" and "Active projects" switch with htmx (the page's content,
+  `projects/_page.html`); the archived list (`?archived=1`) is a plain
+  alphabetical list without cards.
+- **No archiving from this page** (decided 2026-11-21): archiving and
+  bringing back are in the project's own "More" menu. After archiving
+  the projects page says "Archived Website." with an Undo.
+- The admins' "Limited projects you're not a member of" is a plain list
+  below.
 
 ## API and CLI
 
-- `GET /api/v1/projects/` takes `order` (`activity` or `name`, default
-  `activity`) and returns `is_bookmarked` and `last_activity_at`
-  (the column matching the person) with each project, favorites first.
-  The bookmark endpoints exist already (`feed.md`).
-- `biwak projects [--order activity|name]` marks favorites with `*` and
-  shows the last activity. Bump the CLI version.
-
-## Done when
-
-- Favorites first, in both orders; bookmarking from a card.
-- `record()` updates the columns, the client column only for events of
-  visible items; tests for an internal to-do changing nothing for a
-  client, a project event changing only the staff column, the nightly
-  recomputation and the data migration.
-- A client's cards show the client column's time and counts only of
-  what they see; staff see the badge, clients don't.
-- The order as a select with `?order=`, remembered by the browser; the API
-  and the CLI with `order`.
-- The page with 200 projects in a fixed, small number of queries
-  (`assertNumQueries`).
+`GET /api/v1/projects/` takes `order` (`activity` or `name`) and
+`archived=true` (alphabetical), favorites first; every project carries
+`is_bookmarked` and `last_activity_at` (the person's column). `biwak
+projects [--order activity|name]` marks favorites with `*`.
