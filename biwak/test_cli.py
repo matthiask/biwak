@@ -346,7 +346,7 @@ class CLITest(TestCase):
             todolist=self.list, title="Mine", creator=self.ada, assignees=[self.ada]
         )
         ops.create_todo(todolist=self.list, title="Nobodys", creator=self.ada)
-        eve = person("Eve")
+        eve = person("Zoe")
         Membership.objects.create(project=self.project, user=eve)
         ops.create_todo(
             todolist=self.list, title="Theirs", creator=eve, assignees=[eve]
