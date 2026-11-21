@@ -114,6 +114,10 @@ class CLITest(TestCase):
             raise result.exception
         return result
 
+
+class CLICommandsTest(CLITest):
+    """The core's commands; the base class has no tests to rerun"""
+
     @patch.object(cli_version, "MINIMUM", (0, 14, 0))
     def test_version_warnings(self):
         for version, warning in [

@@ -56,9 +56,3 @@ class LanternCLITest(test_cli.CLITest):
         self.assertIn("Marked 1 as read.", self.biwak("lantern", "--all").output)
         self.assertEqual(self.biwak("lantern", "--read", 999999).exit_code, 1)
         self.assertEqual(self.biwak("lantern", "--read", 1, "--all").exit_code, 1)
-
-
-# The tests of test_cli.CLITest run there, not again here
-for _name in dir(test_cli.CLITest):
-    if _name.startswith("test_") and _name not in vars(LanternCLITest):
-        setattr(LanternCLITest, _name, None)
