@@ -73,16 +73,19 @@ page for its own to-dos. Completing works in place.
 
 The filters apply as you change them:
 
-- **project** and **assigned to** (anybody, me, nobody, or a person;
-  clients choose between anybody, me and nobody);
+- **project** and **assigned to**: across projects your own by default,
+  or anybody, nobody active (nobody, or only people who are gone), or a
+  person (clients: me, anybody, nobody active); a project's to-dos show
+  anybody's by default;
 - **assigned by**: "Me" shows the to-dos you gave to others;
 - **state**: "Completed" shows finished to-dos, latest first, instead
   of the sections;
 - **visibility** (staff): visible to clients or internal;
 - **group by**: due date or project.
 
-"Assigned to me" at the top shows only your to-dos, with the other filters kept.
-Your browser remembers the filters; "Reset filters" (there when a filter is set) forgets them. To-dos of archived
+"Assigned to me" at the top (when someone else is chosen) shows your
+to-dos again, with the other filters kept. Your browser remembers the
+filters; "Reset filters" (there when a filter is set) forgets them. To-dos of archived
 projects and archived lists don't show here.
 
 ## The calendar

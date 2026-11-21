@@ -2412,12 +2412,12 @@ class KeyboardTest(E2ETestCase):
                 )
             )
 
-    def test_g_then_t_goes_to_my_todos(self):
+    def test_g_then_t_goes_to_the_todos(self):
         page = self.page
         self.goto(page, self.project)
         page.keyboard.press("g")
         page.keyboard.press("t")
-        page.wait_for_url("**/todos/?assignee=me")
+        page.wait_for_url("**/todos/")
         page.keyboard.press("g")
         page.keyboard.press("p")
         page.wait_for_url(f"{self.live_server_url}/projects/")
@@ -2495,7 +2495,7 @@ class KeyboardTest(E2ETestCase):
         # The actions still run from the palette
         page.keyboard.type("go to to-dos")
         page.keyboard.press("Enter")
-        page.wait_for_url("**/todos/?assignee=me")
+        page.wait_for_url("**/todos/")
 
     def test_the_theme_action_and_the_stored_theme(self):
         page = self.page
@@ -2782,14 +2782,14 @@ class FiltersTest(E2ETestCase):
         page.wait_for_url("**/todos/?assignee=nobody&state=completed")
         expect(page.locator("#id_state")).to_have_value("completed")
         # Opening the page by another link uses its own query
-        self.goto(page, "/todos/?assignee=me")
-        expect(page.locator("#id_assignee")).to_have_value("me")
+        self.goto(page, "/todos/?assignee=anybody")
+        expect(page.locator("#id_assignee")).to_have_value("anybody")
         # Reset clears what is stored
         page.get_by_role("link", name="Reset filters").click()
         page.wait_for_url("**/todos/")
         self.goto(page, "/")
         expect(page.locator(".wb-nav-links a", has_text="To-dos")).to_have_attribute(
-            "href", "/todos/?assignee=me"
+            "href", "/todos/"
         )
         # The palette's link too
         self.goto(page, "/todos/?assignee=nobody")

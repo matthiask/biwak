@@ -106,7 +106,7 @@ def todos(
 ):
     """To-dos the person sees, annotated with ``due_key`` (the due date,
     far away when there's none). Archived projects and lists are out of the
-    way. ``assignee``: ``"me"``, ``"nobody"`` or a person's ID (``None``:
+    way. ``assignee``: ``"me"``, ``"nobody"`` (nobody active) or a person's ID (``None``:
     anybody); ``assigned_by``: ``"me"`` for those the person assigned
     (to somebody, or to the ``assignee`` given; ``None``: anybody);
     ``visible_to_clients`` ``True`` or ``False`` (clients only
@@ -149,7 +149,13 @@ def todos(
     elif assignee == "me":
         qs = qs.filter(todo__assignees=user)
     elif assignee == "nobody":
-        qs = qs.filter(todo__assignees__isnull=True)
+        # Nobody active (decided 2026-11-21): assigned to nobody, or only to
+        # people deactivated since, it's nobody's job either way
+        qs = qs.exclude(
+            Exists(
+                Assignment.objects.filter(todo_id=OuterRef("pk"), user__is_active=True)
+            )
+        )
     elif assignee is not None:
         qs = qs.filter(todo__assignees=assignee)
     if visible_to_clients is not None and not user.is_client:

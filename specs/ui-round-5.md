@@ -35,8 +35,16 @@ Round 5 of `ui-feedback.md` (2026-11-21).
   page's title follows the filters: "My to-dos" (assigned to me),
   "To-dos I assigned" (by me, to anybody else), else "To-dos".
 - "Assigned to me" in the header (decided 2026-11-21, built): a link with
-  the same filters and `assignee=me`, gone when it's set already. "Reset
-  filters" only shows when a filter is set (the grouping isn't one).
+  the same filters and me as the assignee, shown when someone else is
+  chosen. "Reset filters" only shows when a filter is set (the grouping
+  isn't one).
+- **The default is the page's** (decided 2026-11-21): across projects
+  (`/todos/`, the top bar's "To-dos" without a query) the empty choice is
+  "Me", since everybody's open to-dos can get huge; "Anybody" is
+  `assignee=anybody`, `assignee=me` still works (Home's link). A
+  project's to-dos show anybody's by default. "Nobody" is "Nobody
+  active": to-dos assigned to nobody or only to deactivated people (the
+  API's `assignee=nobody` too).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; section 4 touches a model and the API, so check its

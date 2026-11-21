@@ -121,7 +121,8 @@ class FilterTest(AssignedByTestCase):
 
     def found(self, user, **params):
         self.client.force_login(user)
-        response = self.client.get("/todos/", {"grouping": "due"} | params)
+        query = {"grouping": "due", "assignee": "anybody"} | params
+        response = self.client.get("/todos/", query)
         self.assertEqual(response.status_code, 200)
         return sorted(
             t.title for _k, _l, todos in response.context["sections"] for t in todos
@@ -134,7 +135,7 @@ class FilterTest(AssignedByTestCase):
         )
         self.assertEqual(self.found(self.bob, assigned_by="me"), ["Bob to Ada"])
 
-    def test_the_default_is_anybody(self):
+    def test_assigned_by_anybody_is_the_default(self):
         self.assertEqual(len(self.found(self.ada, assigned_by="")), 6)
 
     def test_with_the_assignee_it_is_the_same_assignment(self):
@@ -195,15 +196,16 @@ class TitleTest(AssignedByTestCase):
         for params, title in [
             ({"assignee": "me"}, "My to-dos"),
             ({"assignee": "me", "assigned_by": "me"}, "My to-dos"),
-            ({"assignee": "", "assigned_by": "me"}, "To-dos I assigned"),
-            ({"assignee": ""}, "To-dos"),
+            ({"assignee": "anybody", "assigned_by": "me"}, "To-dos I assigned"),
+            ({"assignee": "anybody"}, "To-dos"),
+            ({}, "My to-dos"),
         ]:
             with self.subTest(params=params):
                 response = self.client.get("/todos/", params)
                 self.assertContains(response, f'<h1 class="wb-title">{title}</h1>')
                 self.assertRegex(
                     response.content.decode(),
-                    r'class="nav-link active"\s+href="/todos/\?assignee=me"',
+                    r'class="nav-link active"\s+href="/todos/"',
                 )
 
     def test_the_navigation_says_to_dos(self):

@@ -85,7 +85,7 @@ class EverywhereTest(ActionsBase):
             self.assertEqual(actions["Go to projects"]["url"], "/projects/")
             self.assertEqual(actions["Go to projects"]["shortcut"], "g p")
             self.assertEqual(actions["Go to bookmarks"]["shortcut"], "g b")
-            self.assertEqual(actions["Go to to-dos"]["url"], "/todos/?assignee=me")
+            self.assertEqual(actions["Go to to-dos"]["url"], "/todos/")
 
     def test_help_everywhere(self):
         """Also for clients, on every page (specs/help.md)"""
