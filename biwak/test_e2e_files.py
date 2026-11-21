@@ -279,9 +279,8 @@ class UploadTest(E2ETestCase):
         dialog.locator(".wb-picker-input").fill("da")
         dialog.locator(".wb-picker-input").press("Enter")
         expect(pills).to_have_text([re.compile("Dan")])
-        # The picker's list closes on a click elsewhere
-        dialog.get_by_text("Cleo will be told.").click()
-        dialog.get_by_role("button", name="Upload").click()
+        # Nobody left to pick: the button under the list takes the click
+        dialog.get_by_role("button", name="Upload").click(timeout=2000)
         expect(page.locator(".wb-tile-file")).to_have_count(1)
         upload = Item.objects.get(parent=self.minutes, kind="file")
         self.assertEqual(
@@ -387,7 +386,7 @@ class NewDocTest(E2ETestCase):
         expect(dialog.get_by_text("Cleo will be told.")).to_be_visible()
         expect(dialog.locator(".wb-pill")).to_have_count(0)
         dialog.get_by_label("Note").fill("Our plan")
-        dialog.get_by_role("button", name="Tell them").click()
+        dialog.get_by_role("button", name="Tell them too").click()
         page.wait_for_url(f"**{draft.get_absolute_url()}")
         event = Event.objects.get(item=draft, action="shared")
         self.assertEqual(event.data["note"], "Our plan")
@@ -399,7 +398,7 @@ class NewDocTest(E2ETestCase):
         expect(page.get_by_role("dialog")).to_have_count(0)
         self.assertEqual(self.errors, [])
 
-    def test_not_now_and_done_on_an_empty_draft(self):
+    def test_no_one_else_and_done_on_an_empty_draft(self):
         page, draft = self.new_doc()
         # Nothing written: back to the folder, no question
         page.get_by_role("link", name="Done").click()
@@ -412,7 +411,7 @@ class NewDocTest(E2ETestCase):
         page.wait_for_url(f"**{reverse('doc_edit', args=[draft.pk])}")
         page.get_by_role("link", name="Done").click()
         dialog = page.get_by_role("dialog", name="Tell people about it?")
-        dialog.get_by_role("button", name="Not now").click()
+        dialog.get_by_role("button", name="No one else").click()
         page.wait_for_url(f"**{draft.get_absolute_url()}")
         self.assertFalse(Item.objects.get(pk=draft.pk).doc.tell_pending)
         # Nobody else: Cleo, who wants to hear, is told anyway

@@ -1,12 +1,20 @@
 // What opens in a <details> and isn't needed often (details.wb-menu, and
 // those with data-dismiss: the reaction picker, the form for a link) closes
-// when clicking elsewhere and with Escape, like Bootstrap's dropdowns
+// when clicking elsewhere and with Escape, like Bootstrap's dropdowns; other
+// elements with data-dismiss get a "dismiss" event on a click elsewhere
 
 const OPEN = "details.wb-menu[open], details[data-dismiss][open]"
 
 document.addEventListener("click", (event) => {
   for (const menu of document.querySelectorAll(OPEN)) {
     if (!menu.contains(event.target)) menu.open = false
+  }
+  // Other floating things with data-dismiss (the people picker's list)
+  // close themselves on a "dismiss" event
+  for (const other of document.querySelectorAll(
+    "[data-dismiss]:not(details)",
+  )) {
+    if (!other.contains(event.target)) other.dispatchEvent(new Event("dismiss"))
   }
 })
 

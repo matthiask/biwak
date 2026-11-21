@@ -2,9 +2,11 @@
 {% load i18n %}
 {% comment %}
   "Tell people about it?" at the first "Done" of a doc begun as a draft
-  (files.docs.doc_tell): who is told, "Also tell…" with a note; "Tell them"
-  or "Not now", asked once either way.
+  (files.docs.doc_tell): who is told, "Also tell…" with a note; "Tell them too"
+  or "No one else" (those who want to hear are told either way), asked once.
 {% endcomment %}
 {% block extra_actions %}
-  <button type="submit" name="not_now" value="1" class="btn btn-quiet" formnovalidate>{% translate "Not now" %}</button>
+  <button type="submit" name="not_now" value="1" class="btn btn-quiet" formnovalidate>
+    {% translate "No one else" %}
+  </button>
 {% endblock extra_actions %}
