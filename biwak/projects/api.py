@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
-from biwak.accounts.models import User
+from biwak.accounts.models import Color, User
 from biwak.api_conventions import PersonOut, absolute, html, person_out
 from biwak.bookmarks.models import Bookmark
 from biwak.projects import operations as project_ops
@@ -32,6 +32,9 @@ class ProjectOut(Schema):
     is_all_access: bool
     is_member: bool
     is_bookmarked: bool
+    # A name of the palette (heather, lake, ...) or empty, with its label
+    color: Color | Literal[""]
+    color_name: str
     # When something last happened in the project: what the person can see
     # of it, so for clients only the activity on items visible to clients
     last_activity_at: dt.datetime | None
@@ -56,6 +59,8 @@ def project_out(project, user):
         "is_all_access": project.is_all_access,
         "is_member": is_member,
         "is_bookmarked": is_bookmarked,
+        "color": project.color,
+        "color_name": project.color_label,
         "last_activity_at": getattr(
             project, "activity", getattr(project, activity_column(user))
         ),
@@ -108,6 +113,8 @@ class ProjectIn(Schema):
     name: str
     description: str = ""
     is_all_access: bool = True
+    # Left out: a suggested color no other active project has; "": none
+    color: Color | Literal[""] | None = None
 
 
 @router.post("projects/", response={201: ProjectOut})
@@ -119,6 +126,7 @@ def project_create(request, data: ProjectIn):
         name=data.name,
         description=data.description,
         is_all_access=data.is_all_access,
+        color=data.color,
         actor=request.user,
     )
     return Status(201, project_out(project, request.user))
@@ -266,6 +274,7 @@ class ProjectPatch(Schema):
     name: str | None = None
     description: str | None = None
     is_all_access: bool | None = None
+    color: Color | Literal[""] | None = None
     archived: bool | None = None
 
 
@@ -279,7 +288,7 @@ def project_update(request, project_id: int, data: ProjectPatch):
     given = data.model_fields_set
     changes = {
         field: getattr(data, field)
-        for field in ["name", "description", "is_all_access"]
+        for field in ["name", "description", "is_all_access", "color"]
         if field in given
     }
     for field, value in changes.items():

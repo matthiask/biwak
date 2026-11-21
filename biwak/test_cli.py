@@ -224,6 +224,48 @@ class CLITest(TestCase):
         result = self.biwak("todo", "edit", data["id"], "--repeat", "sometimes")
         self.assertEqual(result.exit_code, 1)
 
+    def test_project_colors(self):
+        from biwak.accounts.models import Color
+
+        # The CLI has its own copy of the palette's names
+        self.assertEqual(biwak_cli.commands.PALETTE, Color.values)
+        output = self.biwak(
+            "project", "edit", self.project.pk, "--color", "lake"
+        ).output
+        self.assertIn("Lake", output)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.color, "lake")
+        self.assertIn("Lake", self.biwak("projects").output)
+        data = json.loads(
+            self.biwak(
+                "project", "edit", self.project.pk, "--color", "none", "--json"
+            ).output
+        )
+        self.assertEqual((data["color"], data["color_name"]), ("", ""))
+        # Not a color of the palette
+        self.assertNotEqual(
+            self.biwak(
+                "project", "edit", self.project.pk, "--color", "amber"
+            ).exit_code,
+            0,
+        )
+        self.assertNotEqual(self.biwak("project", "edit", self.project.pk).exit_code, 0)
+        data = json.loads(
+            self.biwak("project", "add", "Camp", "--color", "bark", "--json").output
+        )
+        self.assertEqual(data["color"], "bark")
+        data = json.loads(self.biwak("project", "add", "Other", "--json").output)
+        self.assertNotEqual(data["color"], "")
+
+    def test_project_colors_are_staff_only(self):
+        client = person("Kim", client=True)
+        self.project.memberships.create(user=client)
+        self.ada = client
+        result = self.biwak("project", "edit", self.project.pk, "--color", "lake")
+        self.assertNotEqual(result.exit_code, 0)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.color, "")
+
     def test_todos_across_projects(self):
         other = project("Other", members=[self.ada])
         other_list = ops.create_list(project=other, title="Chores", creator=self.ada)

@@ -1206,6 +1206,71 @@ button.wb-signal:hover {
   height: 100%;
 }
 
+/* Project colors (specs/project-colors.md): the palette's fill, as a stripe
+   on the card, a thin line under the project's header and a dot before the
+   name ({% project_dot %}); the color's name is in the text next to it */
+[data-project-color="heather"] {
+  --wb-project-color: var(--wb-palette-heather-fill);
+}
+
+[data-project-color="lake"] {
+  --wb-project-color: var(--wb-palette-lake-fill);
+}
+
+[data-project-color="forest"] {
+  --wb-project-color: var(--wb-palette-forest-fill);
+}
+
+[data-project-color="glacier"] {
+  --wb-project-color: var(--wb-palette-glacier-fill);
+}
+
+[data-project-color="ember"] {
+  --wb-project-color: var(--wb-palette-ember-fill);
+}
+
+[data-project-color="alpenglow"] {
+  --wb-project-color: var(--wb-palette-alpenglow-fill);
+}
+
+[data-project-color="moss"] {
+  --wb-project-color: var(--wb-palette-moss-fill);
+}
+
+[data-project-color="slate"] {
+  --wb-project-color: var(--wb-palette-slate-fill);
+}
+
+[data-project-color="bark"] {
+  --wb-project-color: var(--wb-palette-bark-fill);
+}
+
+[data-project-color="berry"] {
+  --wb-project-color: var(--wb-palette-berry-fill);
+}
+
+.wb-project-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.65em;
+  height: 0.65em;
+  margin-inline-end: 0.35em;
+  border-radius: 50%;
+  background: var(--wb-project-color);
+  vertical-align: baseline;
+}
+
+.wb-project-card[data-project-color] {
+  border-inline-start: 0.3rem solid var(--wb-project-color);
+}
+
+.wb-project-line {
+  height: 0.1875rem;
+  margin: -0.75rem 0 1.25rem;
+  border-radius: 0.1875rem;
+  background: var(--wb-project-color);
+}
+
 .min-w-0 {
   min-width: 0;
 }

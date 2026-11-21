@@ -6,7 +6,7 @@
   <div class="wb-page-header">
     <div>
       <h1 class="wb-title">
-        {{ project }}
+        {% project_dot project %}{{ project }}
         {% if not project.is_all_access %}<span
             class="text-body-secondary fs-6"
             title="{% translate 'Limited: members only' %}"
@@ -58,6 +58,8 @@
       </details>
     </div>
   </div>
+  {% if project.color %}<div class="wb-project-line" data-project-color="{{ project.color }}" aria-hidden="true">
+    </div>{% endif %}
   {% if project.archived_at %}
     <div class="alert alert-info">
       {% blocktranslate with when=project.archived_at|date:"j. F Y" %}Archived on {{ when }}. Everything stays readable.{% endblocktranslate %}

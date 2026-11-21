@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak import schedules
-from biwak.accounts.models import User
+from biwak.accounts.models import Color, User
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.files import queries as file_queries
@@ -64,8 +64,14 @@ def project_order(request):
 class ProjectForm(ModelForm):
     class Meta:
         model = Project
-        fields = ["name", "description", "is_all_access"]
+        fields = ["name", "description", "is_all_access", "color"]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["color"].choices = [("", _("None")), *Color.choices]
+        if not self.instance.pk:
+            self.fields["color"].initial = project_ops.suggested_color()
 
 
 def project_create(request):

@@ -2,6 +2,8 @@
 specs/access.md). Adding someone subscribes them to nothing that exists
 already (specs/notifications.md)."""
 
+from collections import Counter
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import connection, transaction
@@ -10,7 +12,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
-from biwak.accounts.models import NotificationLevel, User
+from biwak.accounts.models import Color, NotificationLevel, User
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import is_importing, record, set_level_override
@@ -175,12 +177,26 @@ def can_manage_project(user):
 
 
 @transaction.atomic
-def create_project(*, name, description="", is_all_access=True, actor):
-    """The creator becomes a member (staff only, ``can_manage_project``)"""
+def suggested_color():
+    """A color of the palette which no active project has, the one used
+    least when all are taken; the first in the palette's order on ties"""
+    used = Counter(
+        Project.objects.active().exclude(color="").values_list("color", flat=True)
+    )
+    return min(Color.values, key=lambda name: used[name])
+
+
+def create_project(*, name, description="", is_all_access=True, color=None, actor):
+    """The creator becomes a member (staff only, ``can_manage_project``).
+    Without ``color`` the project gets ``suggested_color()``; ``""`` is
+    none."""
     if not can_manage_project(actor):
         raise PermissionError("Only staff create projects.")
     project = Project(
-        name=name.strip(), description=description, is_all_access=is_all_access
+        name=name.strip(),
+        description=description,
+        is_all_access=is_all_access,
+        color=suggested_color() if color is None else color,
     )
     project.full_clean()
     project.save()
@@ -193,7 +209,13 @@ _UNCHANGED = object()
 
 @transaction.atomic
 def update_project(
-    project, *, actor, name=_UNCHANGED, description=_UNCHANGED, is_all_access=_UNCHANGED
+    project,
+    *,
+    actor,
+    name=_UNCHANGED,
+    description=_UNCHANGED,
+    is_all_access=_UNCHANGED,
+    color=_UNCHANGED,
 ):
     """Changes what's given and differs (staff only); raises
     ``ValidationError`` for what the model refuses. Making the project
@@ -205,6 +227,7 @@ def update_project(
         "name": name if name is _UNCHANGED else name.strip(),
         "description": description,
         "is_all_access": is_all_access,
+        "color": color,
     }
     fields = [
         field

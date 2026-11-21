@@ -251,6 +251,23 @@ def client_badge(item):
     )
 
 
+@register.simple_tag
+def project_dot(project):
+    """The project's color as a dot before its name (specs/project-colors.md);
+    nothing without a color. The color's name is there for screen readers: a
+    color is never the only signal."""
+    color = getattr(project, "color", "")
+    if not color:
+        return ""
+    return format_html(
+        '<span class="wb-project-dot" data-project-color="{}"'
+        ' title="{}"><span class="visually-hidden">{}</span></span>',
+        color,
+        project.color_label,
+        gettext("Color: %(color)s") % {"color": project.color_label},
+    )
+
+
 @register.inclusion_tag("activity/_item_notifications.html", takes_context=True)
 def item_notifications(context, item):
     """The person's level for an item, next to its subscribe button"""

@@ -63,6 +63,13 @@ def with_attachments(project_id, text, paths):
     return "\n\n".join(part for part in [text.rstrip(), *inserted] if part)
 
 
+# The palette (biwak.accounts.models.Color; a test keeps both in step)
+PALETTE = [
+    "heather", "lake", "forest", "glacier", "ember",
+    "alpenglow", "moss", "slate", "bark", "berry",
+]  # fmt: skip
+
+
 def table(*columns):
     t = Table(box=None, pad_edge=False, header_style="bold")
     for column in columns:
@@ -156,12 +163,13 @@ def projects(as_json, archived, joinable, order):
     data = request("GET", "projects/", params=params)
     if as_json:
         return echo_json(data)
-    t = table("", "ID", "Project", "Last activity", "")
+    t = table("", "ID", "Project", "Color", "Last activity", "")
     for p in data:
         t.add_row(
             "*" if p["is_bookmarked"] else "",
             str(p["id"]),
             p["name"],
+            p["color_name"],
             (p["last_activity_at"] or "")[:16].replace("T", " "),
             "" if p["is_all_access"] else "limited",
         )
@@ -174,6 +182,13 @@ def project():
     """Create and join projects"""
 
 
+color_option = click.option(
+    "--color",
+    type=click.Choice([*PALETTE, "none"]),
+    help="The project's color, or 'none'.",
+)
+
+
 @project.command("add")
 @click.argument("name")
 @click.option("--description", default="", help="Markdown.")
@@ -182,19 +197,50 @@ def project():
     is_flag=True,
     help="Only members see it (default: all staff can see it).",
 )
+@color_option
 @json_option
-def project_add(name, description, limited, as_json):
-    """Create the project NAME (staff); you become a member"""
-    data = request(
-        "POST",
-        "projects/",
-        json={"name": name, "description": description, "is_all_access": not limited},
-    )
+def project_add(name, description, limited, color, as_json):
+    """Create the project NAME (staff); you become a member. Without --color
+    it gets one no other active project has."""
+    body = {"name": name, "description": description, "is_all_access": not limited}
+    if color is not None:
+        body["color"] = "" if color == "none" else color
+    data = request("POST", "projects/", json=body)
     if as_json:
         return echo_json(data)
     click.echo(
         f"Created #{data['id']} {data['name']}"
         f"{'' if data['is_all_access'] else ' (limited)'}."
+    )
+    return None
+
+
+@project.command("edit")
+@click.argument("project_id", metavar="ID", type=int)
+@click.option("--name")
+@click.option("--description", help="Markdown, replaces the description.")
+@click.option("--limited/--all-access", default=None, help="Who can see it (staff).")
+@color_option
+@json_option
+def project_edit(project_id, name, description, limited, color, as_json):
+    """Change the project ID (staff)"""
+    changes = {}
+    if name is not None:
+        changes["name"] = name
+    if description is not None:
+        changes["description"] = description
+    if limited is not None:
+        changes["is_all_access"] = not limited
+    if color is not None:
+        changes["color"] = "" if color == "none" else color
+    if not changes:
+        terminate("Nothing to change.")
+    data = request("PATCH", f"projects/{project_id}/", json=changes)
+    if as_json:
+        return echo_json(data)
+    click.echo(
+        f"#{data['id']} {data['name']}"
+        f"{', ' + data['color_name'] if data['color'] else ''}."
     )
     return None
 

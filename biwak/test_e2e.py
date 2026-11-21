@@ -1546,3 +1546,101 @@ class KeyboardTest(E2ETestCase):
         self.ada.refresh_from_db()
         self.assertEqual(self.ada.theme, "light")
         self.assertEqual(self.errors, [])
+
+
+class ProjectColorTest(E2ETestCase):
+    """Project colors (specs/project-colors.md): the card's stripe, the dot
+    and the header's line are drawn, with the project's name beside them, and
+    nothing runs off the screen, on a phone and on a desktop"""
+
+    SIZES = {
+        "phone": {"width": 360, "height": 740},
+        "desktop": {"width": 1280, "height": 800},
+    }
+
+    def setUp(self):
+        super().setUp()
+        from biwak.projects import operations as project_ops
+
+        project_ops.update_project(self.project, actor=self.ada, color="lake")
+        self.second = project("Wiki", members=[self.ada])
+        project_ops.update_project(self.second, actor=self.ada, color="berry")
+        self.todolist = self.make_list("Launch plan", todos=["Pack"])
+
+    def assertFits(self, page):
+        self.assertEqual(
+            page.evaluate("document.documentElement.scrollWidth - window.innerWidth"),
+            0,
+        )
+
+    def colors(self, page, selector):
+        return page.evaluate(
+            """(selector) => [...document.querySelectorAll(selector)].map(
+                (el) => getComputedStyle(el)
+            ).map((style) => [style.backgroundColor, style.borderInlineStartColor])""",
+            selector,
+        )
+
+    def test_the_projects_page_and_a_feed_page(self):
+        for size, viewport in self.SIZES.items():
+            with self.subTest(size=size):
+                page = self.login(self.ada, viewport=viewport)
+                page.goto(f"{self.live_server_url}{reverse('projects')}")
+                cards = page.locator(".wb-project-card")
+                expect(cards).to_have_count(2)
+                lake = page.locator(".wb-project-card", has_text="Website")
+                berry = page.locator(".wb-project-card", has_text="Wiki")
+                # The dot and the name, in text
+                expect(lake.locator(".wb-project-dot")).to_be_visible()
+                expect(lake.locator(".wb-project-dot .visually-hidden")).to_have_text(
+                    "Color: Lake"
+                )
+                expect(berry.locator(".wb-project-dot .visually-hidden")).to_have_text(
+                    "Color: Berry"
+                )
+                stripes = page.evaluate(
+                    """() => [...document.querySelectorAll(".wb-project-card")].map(
+                        (el) => [
+                            getComputedStyle(el).borderInlineStartColor,
+                            getComputedStyle(el).borderInlineStartWidth,
+                            getComputedStyle(el.querySelector(".wb-project-dot"))
+                                .backgroundColor,
+                        ]
+                    )"""
+                )
+                self.assertEqual(len(stripes), 2)
+                for stripe, width, dot in stripes:
+                    self.assertEqual(stripe, dot)
+                    self.assertNotEqual(stripe, "rgba(0, 0, 0, 0)")
+                    self.assertGreaterEqual(float(width.removesuffix("px")), 3)
+                self.assertNotEqual(stripes[0][0], stripes[1][0])
+                self.assertFits(page)
+
+                # The project's header: the dot and the line
+                page.goto(f"{self.live_server_url}{self.project.get_absolute_url()}")
+                expect(page.locator("h1 .wb-project-dot")).to_be_visible()
+                expect(page.locator("h1")).to_contain_text("Website")
+                line = page.locator(".wb-project-line")
+                expect(line).to_be_visible()
+                self.assertGreaterEqual(line.bounding_box()["height"], 2)
+                self.assertFits(page)
+
+                # The feed: every project's dot, beside its name
+                page.goto(f"{self.live_server_url}{reverse('feed')}")
+                row = page.locator("li", has_text="Website").filter(
+                    has=page.locator(".wb-project-dot")
+                )
+                expect(row.first).to_be_visible()
+                self.assertFits(page)
+
+    def test_the_palette_shows_the_dot_beside_the_project(self):
+        page = self.login(self.ada, viewport=self.SIZES["desktop"])
+        self.goto(page, self.project)
+        page.keyboard.press("Control+k")
+        page.keyboard.type("launch")
+        option = page.locator("#wb-palette-list [role=option]").filter(
+            has_text="Launch plan"
+        )
+        expect(option).to_be_visible()
+        expect(option.locator(".wb-project-dot")).to_be_visible()
+        expect(option.locator(".wb-palette-hint")).to_contain_text("Website")
