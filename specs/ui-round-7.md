@@ -48,10 +48,14 @@ visibility tests reviewed.
   folder tile, the ".." tile or a breadcrumb; dropping moves (the same
   operation as "Move to…", visibility recomputed). No manual order: the
   folder's ordering decides where it shows.
-- **Selecting several:** a checkbox on each tile (on hover and on phones
-  always), and with a selection a bar: "Move to…" (the folder choice of
-  today) and "Move to trash"; dragging one of the selected drags them
-  all. Keyboard: Space selects the focused tile.
+- **Selecting several** (decided 2026-11-21: no checkboxes, it looks
+  nicer, at the price of being less discoverable): Ctrl-click (Cmd on a
+  Mac) adds or removes a tile, Shift-click selects the range from the
+  last one; a plain click opens as before. With a selection a bar shows:
+  "Move to…" (the folder choice of today), "Move to trash" and
+  "Deselect" (Escape too); dragging one of the selected drags them all.
+  Keyboard: Ctrl+Space and Shift+arrows on the focused tile do the same.
+  The help says so (`docs/files.md`).
 - Without JavaScript: "Move to…" per item as today.
 
 ## 5. New docs (decided 2026-11-21)
@@ -83,7 +87,8 @@ text field and "whom to notify" goes.
 
 - The grid with "..", the modals, the ordering (pages, API, CLI), drag
   and drop and the selection (browser tests for the JavaScript: dragging
-  onto a folder, "..", a breadcrumb; selecting several and moving them),
+  onto a folder, "..", a breadcrumb; Ctrl- and Shift-click selecting
+  several and moving them),
   new docs as drafts until written, telling people after "Done"; tests
   as staff and client (clients move only what they may, never see
   others' drafts); the help (`docs/files.md`).
