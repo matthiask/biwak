@@ -97,7 +97,8 @@ indexes.
   which people don't search for): 780 ms, as the sort needs all matches.
   As a client the same (the filter on the stored visibility is cheap).
 
-## Decisions made on the way (to confirm)
+## Decisions made on the way (confirmed 2026-11-21: newest first, all
+words anywhere in an item; "only mine" changed to created or assigned)
 
 - Order: newest first by `updated_at`, not by relevance (the spec says
   "paginated like the feed" and shows a date).

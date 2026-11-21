@@ -5,7 +5,7 @@ it should show at a glance which projects matter to the person and where
 something is going on.
 
 **Status:** built (2026-11-20, branch `projects-overview`, CLI 0.7.0).
-Decisions made while building, to be confirmed:
+Decisions made while building, confirmed 2026-11-21:
 
 - The `|excerpt` filter did not exist yet; added as `glance.md`
   describes (`biwak/templatetags/biwak.py`). Since `glance.md` the

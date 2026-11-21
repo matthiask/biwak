@@ -77,8 +77,8 @@ They belong to their item and aren't shown in folders.
 - **Limit:** 100 MB per file (decided 2026-11-20; the ingress needs the
   same limit).
 
-Details of stage 1 (proposed by the building agent, 2026-11-20; change
-them here if wrong):
+Details of stage 1 (proposed by the building agent, confirmed
+2026-11-21):
 
 - **Who links what:** saving a text links only attachments without an
   item yet, in the item's project, uploaded by the person saving the
@@ -231,8 +231,7 @@ rules, versions), files (upload, replace, versions, download URL).
 
 ### Details of stage 2
 
-Proposed by the building agent (2026-11-20); change them here if wrong.
-Marked **?** are questions the spec didn't answer, built the safe way.
+Proposed by the building agent (2026-11-20), confirmed 2026-11-21.
 
 - **Whom to notify** (decided 2026-11-20, replacing "no default"): the
   forms preselect "everybody in the project", and the API (`notify`:

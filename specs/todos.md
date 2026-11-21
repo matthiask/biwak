@@ -97,7 +97,7 @@ an RRULE).
 
 ### Decisions made while building stage 1
 
-All proposed by the building agent, 2026-11-20; change them here if wrong.
+All proposed by the building agent, confirmed 2026-11-21.
 
 - **Presets count from the anchor date:** a to-do's due date, today when it
   has none. "Every week" is the due date's weekday, "every month" its day
@@ -180,7 +180,7 @@ projects (the existing `biwak todos LIST` stays).
 
 ### Decisions made while building stage 2
 
-All proposed by the building agent, 2026-11-20; change them here if wrong.
+All proposed by the building agent, confirmed 2026-11-21.
 
 - **Left out of the list** (and the API and the feed): to-dos of archived
   projects and of archived lists, besides trashed ones.

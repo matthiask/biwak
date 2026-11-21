@@ -9,8 +9,9 @@ itself, less for client projects.
 the time arithmetic, `operations.py` asking, summaries and answering,
 `mails.py`), pages, API (`checkins/`), CLI 0.12.0; reminders removed
 again (CLI 0.14.0), skipping removed (CLI 0.16.0). Decisions
-made while building, to be confirmed (marked "Open" where the spec left a
-value or a product choice to the builder):
+made while building, confirmed 2026-11-21 (the summary at 07:00 in the
+question's time zone, 5 occurrences per page, no default time of day,
+people with the level "nothing" still asked):
 
 - **No reminders for missed check-ins (decided 2026-11-20).** The
   question mail is the only one asking; who hasn't answered shows on the
