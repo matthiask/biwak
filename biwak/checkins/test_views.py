@@ -449,6 +449,14 @@ class FormsTest(ViewsTestCase):
             self.assertEqual(response.status_code, 302, rule)
             self.assertEqual(Question.objects.get(item=item).rule, rule)
 
+    def test_keep_without_a_stored_rule_is_a_form_error(self):
+        url = reverse("question_new", args=[self.project.pk])
+        data = self.data(rule_keep="1")
+        data = {k: v for k, v in data.items() if k != "rule_frequency"}
+        response = self.post(self.ada, url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(title="What did you read?").exists())
+
     def test_saving_an_unchanged_form_changes_nothing(self):
         for rule in [
             "FREQ=WEEKLY;BYDAY=TH,MO",

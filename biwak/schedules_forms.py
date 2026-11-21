@@ -165,7 +165,7 @@ class RuleField(forms.Field):
     def to_python(self, value):
         if not value:
             value = {}
-        if value.get("unshowable") and not value.get("replace"):
+        if self.initial_rule and value.get("unshowable") and not value.get("replace"):
             return KEEP
         try:
             rule = schedules.build_rule(value)
@@ -186,7 +186,7 @@ class RuleField(forms.Field):
         pass
 
     def bound_data(self, data, initial):
-        if data.get("unshowable") and not data.get("replace"):
+        if initial and data.get("unshowable") and not data.get("replace"):
             return initial
         return data
 
