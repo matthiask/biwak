@@ -252,7 +252,7 @@ def _recipients(question, occurrence=None):
     people = question.people.filter(pk__in=who_can_see(question.item).values("pk"))
     if occurrence is not None:
         people = people.filter(pk__in=occurrence.asked.values("pk"))
-    return list(people.order_by("pk"))
+    return list(people.select_related("organization").order_by("pk"))
 
 
 def _answered_ids(occurrence):

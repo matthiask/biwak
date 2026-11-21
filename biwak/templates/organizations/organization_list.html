@@ -20,7 +20,7 @@
         data-kb-open
       >
         {{ organization }}
-        {% if organization.is_own %}<span class="badge text-bg-secondary">{% translate "Ours" %}</span>{% endif %}
+        {% if organization.is_own %}<span class="badge wb-tone-neutral">{% translate "Ours" %}</span>{% endif %}
         <div class="small text-body-secondary">
           {% blocktranslate count counter=organization.people_count %}{{ counter }} person{% plural %}{{ counter }} people{% endblocktranslate %}
           {% if organization.people_count %}:

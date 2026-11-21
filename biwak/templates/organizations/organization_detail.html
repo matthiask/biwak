@@ -7,7 +7,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">
       {{ organization }}
-      {% if organization.is_own %}<span class="badge text-bg-secondary">{% translate "Ours" %}</span>{% endif %}
+      {% if organization.is_own %}<span class="badge wb-tone-neutral">{% translate "Ours" %}</span>{% endif %}
     </h1>
     <div class="d-flex gap-2">
       <a
@@ -52,9 +52,9 @@
           {% if user.is_client %}<span
               class="badge wb-client-badge"
             >{% translate "Client" %}</span>{% elif user.is_partner %}<span
-              class="badge text-bg-secondary"
+              class="badge wb-tone-neutral"
             >{% translate "Partner" %}</span>{% endif %}
-          {% if not user.is_active %}<span class="badge text-bg-secondary">{% translate "Inactive" %}</span>{% endif %}
+          {% if not user.is_active %}<span class="badge wb-tone-neutral">{% translate "Inactive" %}</span>{% endif %}
           <div class="small text-body-secondary">{{ user.email }}</div>
         </div>
         {% if can_touch %}

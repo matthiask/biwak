@@ -6,6 +6,7 @@ import datetime as dt
 from typing import Literal
 
 from django.db import transaction
+from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -148,8 +149,12 @@ def question_list(request, project_id: int):
         Item.objects
         .visible_to(request.user)
         .filter(project=project, kind=Kind.QUESTION)
-        .select_related("creator", "question", "project")
-        .prefetch_related("question__people")
+        .select_related("creator__organization", "question", "project")
+        .prefetch_related(
+            Prefetch(
+                "question__people", queryset=User.objects.select_related("organization")
+            )
+        )
         .order_by("title", "pk")
     )
     context = _question_context(request, questions)
@@ -167,8 +172,12 @@ def question_resume_all(request, project_id: int):
     questions = (
         Item.objects
         .filter(pk__in=[i.pk for i in items])
-        .select_related("creator", "question", "project")
-        .prefetch_related("question__people")
+        .select_related("creator__organization", "question", "project")
+        .prefetch_related(
+            Prefetch(
+                "question__people", queryset=User.objects.select_related("organization")
+            )
+        )
         .order_by("title", "pk")
     )
     questions = list(questions)
@@ -338,7 +347,7 @@ def occurrence_list(
         page_answers = list(
             answers
             .filter(occurrence__in=page)
-            .select_related("item__creator", "author")
+            .select_related("item__creator__organization", "author__organization")
             .order_by("-item__created_at", "-pk")
         )
         prefetch(*[answer.item for answer in page_answers])
@@ -409,7 +418,9 @@ def answer_create(request, question_id: int, data: AnswerIn):
     except ValueError as exc:
         bad_request(str(exc))
     return answer_out(
-        Answer.objects.select_related("item__creator", "author").get(item=answer),
+        Answer.objects.select_related(
+            "item__creator__organization", "author__organization"
+        ).get(item=answer),
         request.user,
     )
 
