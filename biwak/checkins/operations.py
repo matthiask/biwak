@@ -19,16 +19,16 @@ from biwak import schedules
 from biwak.accounts.models import NotificationLevel, User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
-from biwak.activity.notify import can_see, effective_level, who_can_see
+from biwak.activity.notify import can_see, effective_levels, who_can_see
 from biwak.activity.operations import record, subscribe
 from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
+    DEFAULT_MODE,
     Answer,
     Mode,
     Occurrence,
     Question,
     QuestionMail,
-    mail_mode,
 )
 from biwak.files import attachments
 from biwak.items import operations as items_ops
@@ -231,10 +231,10 @@ def resume(item, *, actor, now=None):
 def _recipients(question, occurrence=None):
     """Active people asked who can see the question now (a client doesn't
     once it's internal), and, with an ``occurrence``, were asked then"""
-    people = question.people.filter(is_active=True)
+    people = question.people.filter(pk__in=who_can_see(question.item).values("pk"))
     if occurrence is not None:
         people = people.filter(pk__in=occurrence.asked.values("pk"))
-    return [user for user in people.order_by("pk") if can_see(user, question.item)]
+    return list(people.order_by("pk"))
 
 
 def _answered_ids(occurrence):
@@ -312,14 +312,24 @@ def summary_recipients(question):
     """Subscribers of the question who get summaries (the default mode),
     who see it, and whose level isn't "nothing" (they may have changed
     since)"""
-    ids = Subscription.objects.filter(item=question.item).values("user")
-    people = User.objects.active().filter(pk__in=ids).order_by("pk")
+    item = question.item
+    people = list(
+        User.objects
+        .filter(pk__in=Subscription.objects.filter(item=item).values("user"))
+        .filter(pk__in=who_can_see(item).values("pk"))
+        .order_by("pk")
+    )
+    modes = dict(
+        QuestionMail.objects.filter(question=question, user__in=people).values_list(
+            "user", "mode"
+        )
+    )
+    levels = effective_levels(people, item)
     return [
         user
         for user in people
-        if mail_mode(user, question.item) == Mode.SUMMARY
-        and can_see(user, question.item)
-        and effective_level(user, question.item) != NotificationLevel.NOTHING
+        if modes.get(user.pk, DEFAULT_MODE) == Mode.SUMMARY
+        and levels[user.pk] != NotificationLevel.NOTHING
     ]
 
 
