@@ -130,6 +130,44 @@ class LibraryTest(Fixture, TestCase):
         )
         self.assertContains(response, self.public.get_absolute_url())
 
+    def test_tiles_with_up_to_the_parent(self):
+        """A grid of tiles; inside a folder ".." leads to the folder above,
+        from a first-level folder to the project's top level
+        (specs/ui-round-7.md, part 1)"""
+        inner = ops.create_folder(
+            project=self.project, title="Inner", creator=self.ada, parent=self.public
+        )
+        response = self.get(self.ada, self.root())
+        self.assertNotContains(response, "wb-tile-up")
+        self.assertContains(response, 'class="wb-tile wb-tile-folder"', count=2)
+        self.assertContains(response, 'class="wb-tile wb-tile-file"', count=2)
+        response = self.get(self.cleo, self.public.get_absolute_url())
+        self.assertEqual(response.context["up_url"], self.root())
+        self.assertContains(response, "wb-tile-up")
+        self.assertContains(response, 'data-drop-folder=""')
+        response = self.get(self.cleo, inner.get_absolute_url())
+        self.assertEqual(response.context["up_url"], self.public.get_absolute_url())
+        self.assertContains(response, f'data-drop-folder="{self.public.pk}"')
+        self.assertContains(response, "Nothing here yet.")
+
+    def test_tiles_show_previews_of_images_sizes_and_checklists(self):
+        image = self.upload("photo.png", content=png(), parent=self.private)
+        ops.create_doc(
+            project=self.project,
+            title="Tasks",
+            content="- [x] one\n- [ ] two",
+            creator=self.ada,
+            parent=self.private,
+        )
+        response = self.get(self.ada, self.private.get_absolute_url())
+        self.assertContains(response, reverse("file_preview", args=[image.pk]))
+        self.assertContains(response, "1/2")
+        self.assertContains(response, "4\xa0bytes")  # secret.txt
+        # Only images have a preview
+        self.assertNotContains(
+            response, reverse("file_preview", args=[self.secret_file.pk])
+        )
+
     def test_non_members_get_404(self):
         outsider = person("Dan", client=True)
         self.assertEqual(self.get(outsider, self.root()).status_code, 404)

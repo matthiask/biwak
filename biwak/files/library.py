@@ -124,11 +124,18 @@ def library(request, project, folder=None):
     }
     for row in rows:
         row.version = versions.get(row.pk)
+        row.can_move = ops.can_change(request.user, row)
     context = {
         "project": project,
         "folder": folder,
         "breadcrumbs": breadcrumbs(folder) + ([folder] if folder else []),
         "rows": rows,
+        # ".." leads to the folder above, or the project's top level
+        "up_url": (
+            reverse("folder", args=[folder.parent_id])
+            if folder and folder.parent_id
+            else reverse("project_files", args=[project.pk])
+        ),
         "form": form,
         "can_create": can_create,
         "can_create_switch": folder is None and can_create,

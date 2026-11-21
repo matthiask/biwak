@@ -28,26 +28,7 @@
   {% if folder %}
     {% include "items/_client_banner.html" with item=folder %}
   {% endif %}
-  <div class="list-group mb-3">
-    {% for row in rows %}
-      <a
-        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2"
-        href="{{ row.get_absolute_url }}"
-      >
-        <span class="d-flex align-items-center gap-2 min-w-0">
-          {% if row.kind == "folder" %}{% icon "folder" %}{% elif row.kind == "doc" %}{% icon "file-earmark-text" %}{% else %}{% icon "file-earmark" %}{% endif %}
-          <span>{{ row|item_title }}</span>
-          {% if row.version %}<span
-              class="small text-body-secondary"
-            >{{ row.version.size|filesizeformat }}</span>{% endif %}
-          {% include "items/_checklist_signal.html" with done=row.checklist_done total=row.checklist_total %}
-        </span>
-        {% client_badge row %}
-      </a>
-    {% empty %}
-      <div class="list-group-item text-body-secondary">{% translate "Nothing here yet." %}</div>
-    {% endfor %}
-  </div>
+  {% include "files/_tiles.html" %}
   {% if can_create %}
     <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
       {% csrf_token %}

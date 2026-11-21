@@ -3,8 +3,9 @@
 Round 7 of `ui-feedback.md` (2026-11-21), the questions answered the same
 day.
 
-**Status:** spec (2026-11-21). Not built. Details marked "proposed" are
-the spec writer's.
+**Status:** being built (2026-11-21, branch `ui7`). Details marked
+"proposed" are the spec writer's, accepted unless noted. Built so far:
+part 1 (`files/_tiles.html`, `.wb-tiles` in `main.css`).
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

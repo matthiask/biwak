@@ -20,9 +20,13 @@ number of comments.
 ## Docs and files
 
 **Docs and files** on the project's page opens the project's root
-folder. Folders come first, then docs and files, by title. Staff create
-what is here: "Add folder", "New doc", "Upload a file". Move things
-between folders with "Move to..." in their "More" menu.
+folder. Its contents show as tiles: folders first, then docs and files,
+by title; images show a preview, files their size, docs with a task list
+how many are done. Inside a folder the first tile, "..", leads to the
+folder above (or the project's top level); the path above the title
+does too. Staff create what is here: "Add folder", "New doc", "Upload a
+file". Move things between folders with "Move to..." in their "More"
+menu.
 
 ### Docs
 
