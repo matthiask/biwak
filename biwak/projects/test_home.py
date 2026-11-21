@@ -615,6 +615,7 @@ class QueriesTest(HomeTestCase):
         self.fill(3)
         few = self.count(self.ada)
         self.fill(30)
+        self.assertEqual(Project.objects.count(), 34)  # Not none
         self.assertEqual(self.count(self.ada), few)
         self.assertEqual(self.count(self.bob), self.count(self.bob))
 
@@ -623,7 +624,3 @@ class QueriesTest(HomeTestCase):
         few = self.count(self.cleo)
         self.fill(20)
         self.assertEqual(self.count(self.cleo), few)
-
-    def test_the_projects_in_the_test_exist(self):
-        self.fill(1)
-        self.assertEqual(Project.objects.count(), 2)

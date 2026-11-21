@@ -11,7 +11,7 @@ from biwak.items import operations as ops
 from biwak.palette import queries
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
-from biwak.test_utils import person, project
+from biwak.test_utils import person, project, tags
 
 
 class ColorTest(TestCase):
@@ -151,8 +151,8 @@ class ColorPagesTest(TestCase):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
             html = self.client.get(reverse("projects")).content.decode()
-            self.assertIn(
-                'class="card wb-project-card" data-project-color="forest"', html
+            self.assertTrue(
+                tags(html, cls="wb-project-card", data_project_color="forest")
             )
             self.assertIn('data-project-color="forest" title="Forest"', html)
             self.assertIn("Camp", html)
@@ -168,8 +168,8 @@ class ColorPagesTest(TestCase):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
             html = self.client.get(self.camp.get_absolute_url()).content.decode()
-            self.assertIn('class="wb-project-line" data-project-color="forest"', html)
-            self.assertIn('class="wb-project-dot" data-project-color="forest"', html)
+            for cls in ["wb-project-line", "wb-project-dot"]:
+                self.assertTrue(tags(html, cls=cls, data_project_color="forest"))
 
     def test_the_archived_list_has_the_dot(self):
         project_ops.archive_project(self.camp, actor=self.ada)

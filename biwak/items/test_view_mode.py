@@ -4,6 +4,8 @@ form comes in place of the text (htmx) or as the page's own form; the
 editing marker is set only while the form is shown; the assignee picker
 and the rule widget's end fields."""
 
+import re
+
 from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.urls import reverse
@@ -13,7 +15,7 @@ from biwak.checkins.models import Answer
 from biwak.items import editing, operations as ops
 from biwak.items.models import Editing
 from biwak.projects import operations as project_ops
-from biwak.test_utils import check_in_answers, person, project
+from biwak.test_utils import check_in_answers, person, project, tags
 
 
 HTMX = {"HX-Request": "true", "HX-Target": "live-text"}
@@ -71,19 +73,24 @@ class TodoViewTest(ViewModeBase):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
             html = self.client.get(self.url).content.decode()
-            start = html.index('<div class="card mb-4" data-edit-url')
+            # The card, whatever its other classes and attributes
+            start = re.search(
+                r'<div(?=[^>]*class="[^"]*\bcard\b)(?=[^>]*data-edit-url)', html
+            ).start()
             card = html[start : html.index("Subscribers", start)]
             self.assertIn("Assigned to", card)
             self.assertIn("<hr", card)
             self.assertIn("<em>poles</em>", card)
             self.assertLess(card.index("Assigned to"), card.index("<hr"))
             self.assertLess(card.index("<hr"), card.index("<em>poles</em>"))
-            self.assertEqual(card.count('class="card '), 1)
+            # One card from the facts to the notes, not one each
+            notes = card.index("<em>poles</em>")
+            self.assertEqual(len(tags(card[:notes], cls="card")), 1)
             self.assertNotIn("Comments", card[: card.index("<em>poles</em>")])
 
     def test_the_form_in_place_sits_in_a_card_too(self):
         response = self.client.get(self.edit, headers=HTMX)
-        self.assertContains(response, '<div class="card mb-4">')
+        self.assertTrue(tags(response.content.decode(), cls="card"))
 
     def test_the_view_sets_no_marker(self):
         self.client.get(self.url)
