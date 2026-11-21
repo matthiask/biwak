@@ -155,3 +155,6 @@ choosing stores its name. This waits for the drawings.
   that: look at the redirect target and headers of a person with and without
   an uploaded image in a real account; `test_profile_images_are_not_imported`
   pins today's behavior.
+
+Basecamp's images are imported after all, telling generated ones by
+their content (`ui-round-2.md`, part C, decided 2026-11-21).

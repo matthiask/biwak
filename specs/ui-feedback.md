@@ -25,3 +25,9 @@
 - We will have a few Moritzes in Staff even, so we should probably find a way to differentiate them automatically. They do have different last names, so maybe that's enough when the people images or circles land.
 - My To Do: I think the default grouping should be: Project, List, Group. By due date would be a different view, or a different ordering.
 - Workbench (~/projects/sites/workbench) restores filters when navigating to the page again. I think I'd like that here as well.
+- The "Me" menu should use the profile image.
+- The items in the .wb-facts line on to dos isn't vertically aligned properly.
+- It should be clear which lantern items have already been viewed.
+- The lantern can use more horizonal space with all the content it has.
+- My counter now says 7 unread (which is correct), but I only have 5 entries (because of grouping). So, it might instead say how many entries I have?
+- There seems to be a double divider between unread and read lantern items, that looks like a bug.
