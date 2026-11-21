@@ -1662,6 +1662,18 @@ button.wb-signal:hover {
   padding: 0.75rem;
 }
 
+/* On a phone the menu spans the screen below the bar, with the same margin
+   on both sides (decided 2026-11-21); fixed, so menus.js leaves it */
+@media (max-width: 575.98px) {
+  .wb-menu[open] > .wb-lantern-dropdown {
+    position: fixed;
+    top: 3.5rem;
+    inset-inline: 0.5rem;
+    width: auto;
+    max-height: calc(100vh - 4.5rem);
+  }
+}
+
 /* One block per item, clearly apart (decided 2026-11-21) */
 .wb-lantern-item {
   padding-block: 0.75rem;

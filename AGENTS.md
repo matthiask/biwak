@@ -84,8 +84,10 @@ Workbench. Copy what fits instead of depending on it, and keep its
 conventions unless this file says otherwise: Django, PostgreSQL,
 django-ninja, htmx, the page layout, the frontend bundle, `fl` for the
 usual tasks, tests with `./runtests.sh`. Governance is BSD-3 licensed by
-Feinheit AG; copied files keep its copyright line (`NOTICE`). Don't copy
-from Workbench directly (GPLv3).
+Feinheit AG; copied files keep its copyright line (`NOTICE`). Workbench
+(`~/projects/sites/workbench`) is GPLv3 only because of its QR bill
+library; its own code is the user's, and adapting it is fine (decided
+2026-11-21). Leave its QR bill parts alone.
 
 # Working on a part
 

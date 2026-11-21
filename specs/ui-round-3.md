@@ -96,8 +96,9 @@ filters used there last.
   in a mail) uses that link's query as it is.
 - **Which pages:** "My to-dos", the feed and the lantern's page; search
   is excluded (its query is the point).
-- **The code:** written fresh in `frontend/`, not copied from Workbench
-  (GPL).
+- **The code:** adapted from Workbench's `main.js` (autosubmit and the
+  stored searches; its code is the user's own, adapting it is fine,
+  decided 2026-11-21).
 
 Decided 2026-11-21.
 
