@@ -199,3 +199,18 @@ def sign_in_with(client, user, provider="google", *, at=None, claims=None):
         "at": at,
     } | (claims or {})
     session.save()
+
+
+def bare_doc(**kwargs):
+    """A doc whose text is exactly ``content``, without the heading
+    ``create_doc()`` puts in front (specs/doc-titles.md), for tests of the
+    text itself; the title stays what's given"""
+    from biwak.items import operations as ops
+    from biwak.items.models import Doc, DocVersion
+
+    content = kwargs.pop("content", "")
+    item = ops.create_doc(**kwargs)
+    Doc.objects.filter(item=item).update(content=content)
+    DocVersion.objects.filter(doc_id=item.pk).update(content=content)
+    item.doc.refresh_from_db()
+    return item

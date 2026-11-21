@@ -7,11 +7,11 @@
 {% block content %}
   {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
   <div class="wb-page-header" id="live-header" data-live>
-    <h1 class="wb-title">
+    {# The title is the text's first line (specs/doc-titles.md) #}
+    <div class="wb-title">
       {% icon "file-earmark-text" %}
-      {{ item|item_title }}
       {% client_badge item %}
-    </h1>
+    </div>
     <div class="wb-page-actions">
       {% bookmark_button item %}
       {% if is_staff %}

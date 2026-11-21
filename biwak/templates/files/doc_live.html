@@ -8,11 +8,11 @@
 {% block content %}
   {% include "files/_crumbs.html" %}
   <div class="wb-page-header">
-    <h1 class="wb-title">
+    {# The title is the text's first line (specs/doc-titles.md) #}
+    <div class="wb-title">
       {% icon "file-earmark-text" %}
-      {{ item|item_title }}
       {% client_badge item %}
-    </h1>
+    </div>
     <div class="wb-page-actions">
       <a class="btn btn-sm btn-quiet" href="{{ item.get_absolute_url }}">{% translate "Done" %}</a>
     </div>
@@ -36,9 +36,17 @@
     data-collab-here="{% translate 'Also here:' %}"
     {% if can_edit %}{% attachments_attrs project %}{% endif %}
   >
-    <div class="d-flex flex-wrap gap-3 small text-body-secondary mb-2">
+    <div class="d-flex flex-wrap align-items-center gap-3 small text-body-secondary mb-2">
       <span data-collab-status role="status">{% translate "Connecting…" %}</span>
       <span data-collab-people></span>
+      {% if can_edit %}
+        <form method="post" class="ms-auto">
+          {% csrf_token %}
+          <button type="submit" name="new_version" value="1" class="btn btn-sm btn-quiet">
+            {% translate "Save as a version" %}
+          </button>
+        </form>
+      {% endif %}
     </div>
     <div data-collab-editor class="wb-live-editor"></div>
     {% if can_edit %}
@@ -47,23 +55,4 @@
     {% endif %}
     <noscript>{{ item.doc.content|linebreaks }}</noscript>
   </div>
-  {% if can_edit %}
-    <div class="card mb-4">
-      <div class="card-body">
-        <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
-          {% csrf_token %}
-          {# The label and the field without the group's margin: the buttons line up with the field #}
-          <div class="flex-grow-1">
-            <label class="form-label" for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-            {{ form.title }}
-            {% for error in form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-          </div>
-          <button type="submit" class="btn btn-quiet">{% translate "Rename" %}</button>
-          <button type="submit" name="new_version" value="1" class="btn btn-quiet" formnovalidate>
-            {% translate "Save as a version" %}
-          </button>
-        </form>
-      </div>
-    </div>
-  {% endif %}
 {% endblock content %}

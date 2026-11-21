@@ -42,7 +42,7 @@ from biwak.items import editing, operations as ops
 from biwak.items.models import Editing, Item
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import organization, person, project
+from biwak.test_utils import bare_doc, organization, person, project
 
 
 # How long the server stays quiet before a test takes it as done: longer
@@ -120,14 +120,14 @@ class ConsumerTest(TransactionTestCase):
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
         self.project = project(members=[self.ada, self.cleo])
-        self.shared = ops.create_doc(
+        self.shared = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
             creator=self.ada,
             visible=True,
         )
-        self.secret = ops.create_doc(
+        self.secret = bare_doc(
             project=self.project, title="Secret", content="Internal", creator=self.ada
         )
         self.communicators = []
@@ -189,7 +189,7 @@ class ConsumerTest(TransactionTestCase):
                 editor = await self.connect(user, self.shared, sync=False)
                 await self.assertClosed(editor)
         other = await database_sync_to_async(project)("Other", all_access=False)
-        doc = await database_sync_to_async(ops.create_doc)(
+        doc = await database_sync_to_async(bare_doc)(
             project=other, title="Elsewhere", creator=self.bob
         )
         await self.assertClosed(await self.connect(self.ada, doc, sync=False))
@@ -252,7 +252,7 @@ class ConsumerTest(TransactionTestCase):
         self.assertEqual(await self.content(self.shared), "Draft: Agenda\n")
 
     async def test_clients_edit_docs_they_created(self):
-        doc = await database_sync_to_async(ops.create_doc)(
+        doc = await database_sync_to_async(bare_doc)(
             project=self.project,
             title="Our notes",
             content="",
@@ -513,7 +513,7 @@ class ConsumerTest(TransactionTestCase):
         self.assertEqual(await self.holders(self.shared), ["Ada"])
 
     async def test_losing_access_ends_it(self):
-        doc = await database_sync_to_async(ops.create_doc)(
+        doc = await database_sync_to_async(bare_doc)(
             project=self.project,
             title="Our notes",
             content="",
@@ -652,7 +652,7 @@ class ConsumerTest(TransactionTestCase):
     async def test_a_tick_arrives_in_the_editors_and_keeps_what_was_typed(self):
         from biwak import checklists
 
-        doc = await database_sync_to_async(ops.create_doc)(
+        doc = await database_sync_to_async(bare_doc)(
             project=self.project,
             title="Packing",
             content="Packing\n\n- [ ] tent\n- [ ] rope\n",
@@ -692,7 +692,7 @@ class ConsumerTest(TransactionTestCase):
         box is ticked and the typing stays"""
         from biwak import checklists
 
-        doc = await database_sync_to_async(ops.create_doc)(
+        doc = await database_sync_to_async(bare_doc)(
             project=self.project,
             title="Packing",
             content="- [ ] tent\n",
@@ -715,7 +715,7 @@ class ConsumerTest(TransactionTestCase):
         self.assertEqual(await self.content(doc), "- [ ] new\n- [x] tent\n")
 
     async def test_a_tick_of_an_old_text_is_refused(self):
-        doc = await database_sync_to_async(ops.create_doc)(
+        doc = await database_sync_to_async(bare_doc)(
             project=self.project,
             title="Packing",
             content="- [ ] tent\n",

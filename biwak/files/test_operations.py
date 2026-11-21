@@ -11,7 +11,7 @@ from biwak.files import attachments, operations
 from biwak.files.models import MAX_SIZE, FileVersion
 from biwak.items import operations as ops, visibility
 from biwak.items.models import DocVersion, Item, Kind, MessageCategory
-from biwak.test_utils import person, project
+from biwak.test_utils import bare_doc, person, project
 
 
 def file(name="plan.pdf", content=b"%PDF-1.4"):
@@ -166,7 +166,7 @@ class PinningTest(Fixture, TestCase):
 class DocTest(Fixture, TestCase):
     def setUp(self):
         super().setUp()
-        self.doc = ops.create_doc(
+        self.doc = bare_doc(
             project=self.project, title="Notes", content="One", creator=self.ada
         )
 
@@ -206,15 +206,47 @@ class DocTest(Fixture, TestCase):
 
     def test_unchanged_saves_nothing(self):
         before = Event.objects.count()
-        operations.update_doc(self.doc, actor=self.bob, title="Notes", content="One")
+        operations.update_doc(self.doc, actor=self.bob, content="One")
         self.assertEqual(len(self.versions()), 1)
         self.assertEqual(Event.objects.count(), before)
 
-    def test_title(self):
-        operations.update_doc(self.doc, actor=self.bob, title="Meeting notes")
+    def test_the_title_is_the_first_line_of_the_text(self):
+        operations.update_doc(
+            self.doc, actor=self.bob, content="## Meeting notes\n\nText"
+        )
         self.doc.refresh_from_db()
         self.assertEqual(self.doc.title, "Meeting notes")
         self.assertEqual(self.versions()[0].title, "Meeting notes")
+        operations.update_doc(self.doc, actor=self.bob, content="Plain *line*\nmore")
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.title, "Plain line")
+        operations.update_doc(self.doc, actor=self.bob, content="")
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.title, "Untitled")
+
+    def test_a_save_without_a_new_text_keeps_the_title(self):
+        operations.save_version(self.doc, actor=self.bob)
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.title, "Notes")
+
+    def test_restoring_sets_the_title_too(self):
+        operations.update_doc(self.doc, actor=self.bob, content="# Two\n")
+        operations.update_doc(
+            self.doc, actor=self.bob, content="# Three\n", new_version=True
+        )
+        operations.restore_doc_version(self.doc, self.versions()[1], actor=self.ada)
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.title, "Two")
+
+    def test_creating_starts_with_the_title_as_a_heading(self):
+        doc = ops.create_doc(
+            project=self.project, title="Plan", content="Body", creator=self.ada
+        )
+        self.assertEqual(doc.doc.content, "# Plan\n\nBody")
+        self.assertEqual(doc.title, "Plan")
+        self.assertEqual(doc.doc.versions.get().content, "# Plan\n\nBody")
+        empty = ops.create_doc(project=self.project, title="Empty", creator=self.ada)
+        self.assertEqual(empty.doc.content, "# Empty\n\n")
 
     def test_restoring_saves_the_old_content_as_a_new_version(self):
         operations.update_doc(self.doc, actor=self.bob, content="Two")
@@ -225,7 +257,7 @@ class DocTest(Fixture, TestCase):
         self.assertEqual([v.content for v in self.versions()], ["One", "Two", "One"])
 
     def test_restoring_another_docs_version(self):
-        other = ops.create_doc(project=self.project, title="Other", creator=self.ada)
+        other = bare_doc(project=self.project, title="Other", creator=self.ada)
         with self.assertRaises(ValueError):
             operations.restore_doc_version(
                 self.doc, other.doc.versions.get(), actor=self.ada
@@ -414,7 +446,7 @@ class MoveTest(Fixture, TestCase):
         self.private = ops.create_folder(
             project=self.project, title="Private", creator=self.ada
         )
-        self.doc = ops.create_doc(
+        self.doc = bare_doc(
             project=self.project, title="Notes", creator=self.ada, parent=self.private
         )
         self.file = ops.create_upload(

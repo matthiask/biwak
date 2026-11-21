@@ -31,6 +31,7 @@ from biwak.activity.operations import importing, subscribe
 from biwak.bookmarks import operations as bookmark_ops
 from biwak.checkins import operations as checkin_ops
 from biwak.files import attachments, operations as file_ops
+from biwak.files.titles import with_heading
 from biwak.importer import client as api
 from biwak.importer.convert import Resolver, to_markdown
 from biwak.importer.images import looks_generated
@@ -1045,7 +1046,9 @@ class Importer(Resolver):
         def update(item):
             with importing(at=parse_time(rec.get("updated_at"))):
                 file_ops.update_doc(
-                    item, actor=item.creator, title=rec["title"], content=content()
+                    item,
+                    actor=item.creator,
+                    content=with_heading(rec["title"], content()),
                 )
 
         item = self._upsert("Document", rec, create=create, update=update)
