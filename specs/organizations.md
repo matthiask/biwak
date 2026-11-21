@@ -7,8 +7,8 @@ belong together only if the text matches exactly, nothing prevents typos,
 and renaming means editing everyone.
 
 **Status:** built (2026-11-21), see "Built" below; open: the questions
-under "Decided meanwhile". Not built: the people page grouping members by
-organization ("Later").
+under "Decided meanwhile". Not built yet: the people page grouping members by
+organization (decided 2026-11-21).
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The rules who
@@ -123,8 +123,10 @@ point.
 - **The picked people** become members; people without an account yet
   are invited from the same step (name, address; the domain preselects
   the organization).
-- **Later:** a project's people page groups members by organization and
-  offers "add people from …".
+- **A project's people page groups members by organization** (decided
+  2026-11-21, to build): own staff first, then each client organization,
+  then partners' organizations, each with its heading and "add people
+  from …" (the organization's people who aren't members yet).
 
 ## Elsewhere
 
@@ -206,16 +208,19 @@ decides who sees all-access projects.
   the own organization moves the mark (`mark_own()`); a person's
   organization with autocomplete.
 
-## Decided meanwhile (2026-11-21, to be confirmed)
+## Decided meanwhile (2026-11-21, confirmed by the user the same day)
 
-- **Partners** learn about members only, like clients: the `@` list,
-  mentions, assignees, subscribers, the people a check-in asks (they
-  ask members; people already asked stay), names in an item's history,
-  assignees in mails and the feed (others are "somebody" or left out);
-  the feed's old title of a list moved out of sight only for the
-  own staff. Errors naming people by ID say nothing about
-  who exists. The importer assigns and mentions as in Basecamp, also for
-  a creator who's a partner now.
+- **Partners see everybody in their projects** (changed by the user
+  2026-11-21, it was "members only, like clients"): in a project they're
+  in, partners know all its people, like staff of a limited project:
+  the members, the staff with access, its clients, in the `@` list,
+  mentions, assignees, subscribers, the people a check-in asks, names
+  in an item's history, mails and the feed. Still nothing about people
+  outside their projects (the people page, person pages, the API's
+  people lists only show people they share a project with). The feed's
+  old title of a list moved out of sight only for the own staff. Errors
+  naming people by ID say nothing about who exists. The importer assigns
+  and mentions as in Basecamp, also for a creator who's a partner now.
 - **Leaving the own organization** (moved, merged, another
   one marked, unmarked in the admin) drops the person's subscriptions in
   projects they can't open anymore, like being removed from a limited
