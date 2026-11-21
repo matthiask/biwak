@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Organizations" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Organizations" %}</h1>
+    <a href="{% url 'organization_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
+      >{% translate "New organization" %}</span></a>
+  </div>
+  <p class="text-body-secondary">
+    {% translate "The organizations people belong to: clients' companies, the installation's own and partners. Staff of other organizations than the installation's own only see the projects they're members of." %}
+  </p>
+  <div class="list-group">
+    {% for organization in organizations %}
+      <a
+        class="list-group-item list-group-item-action"
+        href="{{ organization.get_absolute_url }}"
+        data-kb-row
+        data-kb-open
+      >
+        {{ organization }}
+        {% if organization.is_own %}<span class="badge wb-tone-neutral">{% translate "Ours" %}</span>{% endif %}
+        <div class="small text-body-secondary">
+          {% blocktranslate count counter=organization.people_count %}{{ counter }} person{% plural %}{{ counter }} people{% endblocktranslate %}
+          {% if organization.people_count %}:
+            {% for user in organization.people.all|slice:":5" %}{{ user }}{% if not forloop.last %},
+              {% endif %}{% endfor %}{% if organization.people_count > 5 %}, …{% endif %}{% endif %}
+          {% if organization.domains %}· {{ organization.domains|join:", " }}{% endif %}
+        </div>
+      </a>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">{% translate "No organizations yet." %}</div>
+    {% endfor %}
+  </div>
+{% endblock content %}

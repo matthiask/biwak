@@ -11,21 +11,22 @@ from biwak.accounts.models import Color
 
 def knows_everybody(viewer):
     """Whether the viewer may learn about people who aren't members of the
-    project: staff, not clients and not nobody (mails rendered for nobody
-    in particular)"""
-    return viewer is not None and viewer.is_authenticated and not viewer.is_client
+    project: the installation's own staff, not partners, not clients and
+    not nobody (mails rendered for nobody in particular)"""
+    return viewer is not None and viewer.is_authenticated and viewer.sees_all_access
 
 
 class ProjectQuerySet(models.QuerySet):
     def accessible_to(self, user):
-        """The projects a person may open (specs/access.md): staff all
-        all-access projects and those they're members of, clients only
-        those they're members of. Admins aren't special here: they see
+        """The projects a person may open (specs/access.md): the
+        installation's own staff all all-access projects and those they're
+        members of, partners (staff of other organizations) and clients
+        only those they're members of. Admins aren't special here: they see
         limited projects in the list of all projects, not their content."""
         if not user.is_authenticated or not user.is_active:
             return self.none()
         members = Q(memberships__user=user)
-        if user.is_client:
+        if not user.sees_all_access:
             return self.filter(members).distinct()
         return self.filter(members | Q(is_all_access=True)).distinct()
 
@@ -93,9 +94,10 @@ class Project(models.Model):
         return self.memberships.filter(user=user).exists()
 
     def people_known_to(self, viewer, people):
-        """Those of ``people`` the viewer may see named: everybody for staff,
-        the members for clients and for nobody in particular (as on the
-        project page; staff of all-access projects needn't be members).
+        """Those of ``people`` the viewer may see named: everybody for the
+        installation's own staff, the members for clients, partners and for
+        nobody in particular (as on the project page; staff of all-access
+        projects needn't be members).
         ``biwak.activity.mentions.known_to()`` is the same for querysets."""
         people = list(people)
         if knows_everybody(viewer):

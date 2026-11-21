@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.db.models.functions import Lower
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -8,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak import schedules
-from biwak.accounts.models import Color, User
+from biwak.accounts.models import Color, User, own_staff
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.files import queries as file_queries
@@ -16,6 +18,9 @@ from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.modals import form_response
+from biwak.organizations import operations as org_ops
+from biwak.organizations.forms import OrganizationFieldMixin, organization_field
+from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import overview
@@ -44,6 +49,7 @@ def _list_context(request, archived):
         "others": others,
         "archived": archived,
         "can_manage": project_ops.can_manage_project(request.user),
+        "can_create": project_ops.can_create_project(request.user),
         "order": request.user.project_order,
         "orders": User.ProjectOrder.choices,
     }
@@ -80,19 +86,178 @@ class ProjectForm(ModelForm):
             self.fields["color"].initial = project_ops.suggested_color()
 
 
+ORGANIZATIONS, PEOPLE = "organizations", "people"
+
+
+class NewProjectForm(ProjectForm):
+    """The new project with the organizations involved (specs/organizations.md):
+    first the project and its organizations; with organizations, then their
+    people to pick from (all at first), the installation's own staff, and
+    people without an account to invite (``invites``)."""
+
+    organizations = forms.ModelMultipleChoiceField(
+        label=_("Organizations involved"),
+        queryset=Organization.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text=_("Next, you pick their people."),
+    )
+    step = forms.CharField(
+        widget=forms.HiddenInput, initial=ORGANIZATIONS, required=False
+    )
+
+    def __init__(self, *args, actor, step=None, organizations=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.actor = actor
+        self.stage = step or self.data.get("step") or ORGANIZATIONS
+        self.fields["organizations"].queryset = Organization.objects.filter(
+            is_own=False
+        )
+        if self.stage != PEOPLE:
+            return
+        if organizations is None:
+            organizations = self.fields["organizations"].queryset.filter(
+                pk__in=[pk for pk in self.data.getlist("organizations") if pk.isdigit()]
+            )
+        self.chosen = list(organizations)
+        self.fields["organizations"].widget = forms.MultipleHiddenInput()
+        people = (
+            User.objects
+            .active()
+            .filter(organization__in=self.chosen)
+            .exclude(pk=actor.pk)
+            .select_related("organization")
+            .order_by(Lower("organization__name"), Lower("full_name"), "email")
+        )
+        self.fields["people"] = forms.ModelMultipleChoiceField(
+            label=_("People of %(organizations)s")
+            % {"organizations": ", ".join(str(org) for org in self.chosen)},
+            queryset=people,
+            required=False,
+            widget=forms.CheckboxSelectMultiple,
+            initial=list(people),
+        )
+        self.fields["people"].label_from_instance = lambda user: user.display_name
+        self.fields["staff"] = forms.ModelMultipleChoiceField(
+            label=_("Staff"),
+            queryset=User.objects
+            .active()
+            .filter(own_staff())
+            .exclude(pk=actor.pk)
+            .order_by(Lower("full_name"), "email"),
+            required=False,
+            widget=forms.CheckboxSelectMultiple,
+            help_text=_("You're a member anyway."),
+        )
+        self.invites = InviteRows(
+            self.data or None,
+            prefix="invite",
+            form_kwargs={"organizations": self.chosen},
+        )
+
+    def is_valid(self):
+        valid = super().is_valid()
+        if self.stage == PEOPLE:
+            return self.invites.is_valid() and valid
+        return valid
+
+
+class InviteRow(Form):
+    """Somebody without an account, invited as a client"""
+
+    email = forms.EmailField(
+        label=_("Email"),
+        required=False,
+        widget=forms.EmailInput(attrs={"placeholder": _("Email")}),
+    )
+    full_name = forms.CharField(
+        label=_("Name"),
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": _("Name")}),
+    )
+    organization = forms.ModelChoiceField(
+        label=_("Organization"),
+        queryset=Organization.objects.none(),
+        required=False,
+        empty_label=_("By the address's domain"),
+    )
+
+    def __init__(self, *args, organizations, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.chosen = organizations
+        self.fields["organization"].queryset = Organization.objects.filter(
+            pk__in=[org.pk for org in organizations]
+        )
+
+    def clean(self):
+        data = super().clean()
+        if data.get("email") and not data.get("organization"):
+            # The domain's, else the only one involved
+            found = org_ops.for_new_person(data["email"])
+            if found is None and len(self.chosen) == 1:
+                found = self.chosen[0]
+            data["organization"] = found
+        return data
+
+
+InviteRows = forms.formset_factory(InviteRow, extra=3)
+
+
 def project_create(request):
-    if request.user.is_client:
+    """A modal in two steps (specs/organizations.md), also a page: without
+    organizations involved, the project is added at once"""
+    if not project_ops.can_create_project(request.user):
         raise PermissionDenied
-    form = ProjectForm(request.POST or None)
+    form = NewProjectForm(request.POST or None, actor=request.user)
     if form.is_valid():
-        project = project_ops.create_project(actor=request.user, **form.cleaned_data)
-        return redirect(project)
+        data = form.cleaned_data
+        if form.stage == ORGANIZATIONS and data["organizations"]:
+            form = NewProjectForm(
+                initial={**dict(data.items()), "step": PEOPLE},
+                actor=request.user,
+                step=PEOPLE,
+                organizations=data["organizations"],
+            )
+        else:
+            try:
+                with transaction.atomic():
+                    project = project_ops.create_project(
+                        actor=request.user,
+                        **{
+                            field: data[field]
+                            for field in [
+                                "name",
+                                "description",
+                                "is_all_access",
+                                "color",
+                            ]
+                        },
+                    )
+                    for user in [*data.get("people", []), *data.get("staff", [])]:
+                        project_ops.add_member(project, user, actor=request.user)
+                    for row in (
+                        form.invites.cleaned_data if form.stage == PEOPLE else []
+                    ):
+                        if row.get("email"):
+                            project_ops.invite(
+                                project,
+                                email=row["email"],
+                                full_name=row["full_name"],
+                                organization=row["organization"],
+                                actor=request.user,
+                            )
+            except project_ops.InvitationError as exc:
+                form.add_error(None, str(exc))
+            else:
+                return redirect(project)
     return form_response(
         request,
         form,
         title=_("New project"),
         cancel_url=reverse("projects"),
-        submit_label=_("Add project"),
+        submit_label=_("Continue") if form.stage == ORGANIZATIONS else _("Add project"),
+        template="projects/project_new.html",
     )
 
 
@@ -136,7 +301,7 @@ class AddMemberForm(Form):
     notify = notify_field()
 
 
-class InviteForm(Form):
+class InviteForm(OrganizationFieldMixin, Form):
     email = forms.EmailField(label=_("Email"))
     full_name = forms.CharField(label=_("Name"), max_length=200, required=False)
     is_client = forms.TypedChoiceField(
@@ -149,11 +314,12 @@ class InviteForm(Form):
         required=False,
     )
     notify = notify_field()
-    organization = forms.CharField(
-        label=_("Organization"),
-        max_length=200,
-        required=False,
-        help_text=_("Shown beside clients' names."),
+    organization = organization_field(
+        help_text=_(
+            "For new people; left empty, the organization of the address's"
+            " domain. Shown beside the names of clients and partners. No"
+            " organization: staff see only the projects they're added to."
+        ),
     )
 
     def __init__(self, *args, actor, **kwargs):
@@ -196,9 +362,9 @@ def project_people(request, pk):
             "project": project,
             "memberships": [
                 (m, notify_row(request.user, project, m.user))
-                for m in project.memberships.select_related("user").order_by(
-                    "user__is_client", "user__full_name"
-                )
+                for m in project.memberships.select_related(
+                    "user__organization"
+                ).order_by("user__is_client", "user__full_name")
             ],
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
@@ -245,15 +411,17 @@ def member_invite(request, pk):
     if form.is_valid():
         data = form.cleaned_data
         try:
-            user, _changed = project_ops.invite(
-                project,
-                email=data["email"],
-                full_name=data["full_name"],
-                is_client=data.get("is_client", True),
-                organization=data["organization"],
-                notify=data["notify"],
-                actor=request.user,
-            )
+            # A new organization only with the invitation
+            with transaction.atomic():
+                user, _changed = project_ops.invite(
+                    project,
+                    email=data["email"],
+                    full_name=data["full_name"],
+                    is_client=data.get("is_client", True),
+                    organization=form.organization(request.user),
+                    notify=data["notify"],
+                    actor=request.user,
+                )
         except project_ops.InvitationError as exc:
             form.add_error(None, str(exc))
         else:

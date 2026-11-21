@@ -110,7 +110,7 @@ def summary(item, comment, user):
     comment_id = comment.pk if comment else None
     rows = item.reactions.all()
     if "reactions" not in getattr(item, "_prefetched_objects_cache", {}):
-        rows = rows.select_related("user")
+        rows = rows.select_related("user__organization")
     for reaction in rows:
         if reaction.comment_id != comment_id:
             continue
@@ -135,5 +135,7 @@ def prefetch(*items):
     one query, so ``reactions_out()`` doesn't query for each"""
     prefetch_related_objects(
         items,
-        Prefetch("reactions", queryset=Reaction.objects.select_related("user")),
+        Prefetch(
+            "reactions", queryset=Reaction.objects.select_related("user__organization")
+        ),
     )

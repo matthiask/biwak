@@ -31,7 +31,7 @@ from biwak.activity.operations import (
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.projects import operations as project_ops
-from biwak.test_utils import person, project
+from biwak.test_utils import organization, partner, person, project
 
 
 class NotifyTest(TestCase):
@@ -287,12 +287,16 @@ class WhoCanSeeTest(TestCase):
         dan = person("Dan", client=True)  # client, member of none
         eve = person("Eve", is_active=False)  # inactive staff, member
         fay = person("Fay", client=True, is_active=False)  # inactive client
-        people = [ada, bob, cleo, dan, eve, fay]
+        own = organization("Example Team", is_own=True)
+        gus = person("Gus", organization=own)  # own staff, member of none
+        pia = partner("Pia")  # a partner, member of both
+        pat = partner("Pat")  # a partner, member of none
+        people = [ada, bob, cleo, dan, eve, fay, gus, pia, pat]
         items = []
         for all_access in [True, False]:
             p = project(
                 f"All access {all_access}",
-                members=[ada, cleo, eve, fay],
+                members=[ada, cleo, eve, fay, pia],
                 all_access=all_access,
             )
             for visible in [True, False]:

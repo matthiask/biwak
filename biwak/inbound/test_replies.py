@@ -15,7 +15,7 @@ from biwak.inbound.support_mails import ReceiveMixin, sample
 from biwak.items import operations as ops
 from biwak.items.models import Comment
 from biwak.projects import operations as project_ops
-from biwak.test_utils import person
+from biwak.test_utils import organization, person
 
 
 class EndToEndTest(ReceiveMixin, ReplyTestCase):
@@ -335,6 +335,15 @@ class VisibilityTest(ReceiveMixin, ReplyTestCase):
         token = self.token(self.cleo)
         project_ops.remove_member(self.project, self.cleo, actor=self.bea)
         self.assert_no_access(token)
+
+    def test_staff_now_a_partner_and_not_a_member(self):
+        """Ada saw the all-access project as the installation's own staff;
+        as a partner she sees only the projects she's a member of"""
+        token = self.token()
+        project_ops.remove_member(self.project, self.ada, actor=self.bea)
+        self.ada.organization = organization("Example Partner Agency")
+        self.ada.save()
+        self.assert_no_access(token, "gmail_en.eml")
 
     def test_staff_removed_from_a_limited_project(self):
         self.project.is_all_access = False

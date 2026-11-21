@@ -15,6 +15,7 @@ from ninja.errors import HttpError
 from biwak.accounts.models import Color, User
 from biwak.api_conventions import PersonOut, absolute, html, person_out
 from biwak.bookmarks.models import Bookmark
+from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import activity_column, overview
@@ -120,7 +121,7 @@ class ProjectIn(Schema):
 @router.post("projects/", response={201: ProjectOut})
 def project_create(request, data: ProjectIn):
     """Creates the project (staff); the creator becomes a member"""
-    if not project_ops.can_manage_project(request.user):
+    if not project_ops.can_create_project(request.user):
         raise HttpError(403, _("Only staff can create projects."))
     project = project_ops.create_project(
         name=data.name,
@@ -178,7 +179,7 @@ def project_members(request, project_id: int):
     project = project_for(request, project_id)
     return [
         member_out(project, m.user, request.user)
-        for m in project.memberships.select_related("user").order_by(
+        for m in project.memberships.select_related("user__organization").order_by(
             "user__is_client", "user__full_name"
         )
     ]
@@ -212,6 +213,9 @@ class InviteIn(Schema):
     name: str = ""
     # Only admins create staff
     is_client: bool = True
+    # For new people: the organization by ID or by name (existing ones,
+    # ignoring case and spaces); neither: the one of the address's domain
+    organization_id: int | None = None
     organization: str = ""
     notify: Notify = "default"
 
@@ -226,13 +230,22 @@ def member_invite(request, project_id: int, data: InviteIn):
         validate_email(data.email)
     except ValidationError as exc:
         raise HttpError(400, _("Enter a valid email address.")) from exc
+    organization = None
+    if data.organization_id is not None:
+        organization = Organization.objects.filter(pk=data.organization_id).first()
+    elif data.organization.strip():
+        organization = Organization.objects.named(data.organization)
+    if organization is None and (
+        data.organization_id is not None or data.organization.strip()
+    ):
+        raise HttpError(400, _("No such organization."))
     try:
         user, _changed = project_ops.invite(
             project,
             email=data.email,
             full_name=data.name,
             is_client=data.is_client,
-            organization=data.organization,
+            organization=organization,
             notify=data.notify,
             actor=request.user,
         )

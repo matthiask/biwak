@@ -16,7 +16,7 @@ from biwak.files import attachments, operations
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
 from biwak.projects import operations as project_ops
-from biwak.test_utils import person, project
+from biwak.test_utils import organization, person, project
 
 
 class APIFixture:
@@ -843,13 +843,13 @@ class FileAPITest(APIFixture, TestCase):
     def test_clients_of_the_same_organization_change_each_others_files(self):
         colleague = person("Cora", client=True)
         stranger = person("Dan", client=True)
-        stranger.organization = "Other Ltd"
+        stranger.organization = organization("Other Ltd")
         stranger.save()
         nobody = person("Eve", client=True)
-        nobody.organization = ""
+        nobody.organization = None
         nobody.save()
         no_org = person("Finn", client=True)
-        no_org.organization = ""
+        no_org.organization = None
         no_org.save()
         for user in [colleague, stranger, nobody, no_org]:
             project_ops.add_member(self.project, user, actor=self.ada)

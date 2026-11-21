@@ -232,6 +232,9 @@ def history(item, viewer):
             pk__in={r.user_id for r in rows if r.user_id} | _ids(rows, "user_id")
         )
     }
+    # Assigned and asked: named only if the viewer may know them (clients
+    # and partners: members, specs/access.md), else "somebody"
+    known = {u.pk: u for u in item.project.people_known_to(viewer, people.values())}
     changes = []
     for row in rows:
         user = people.get(row.user_id)
@@ -242,7 +245,7 @@ def history(item, viewer):
         }
         if row.table_name in _people_tables():
             if row.action in {"I", "D"}:
-                changes.append(_assignment(row, who, people))
+                changes.append(_assignment(row, who, known))
         elif row.action == "I" and row.table_name == "items_item":
             changes.append(
                 Change(

@@ -101,10 +101,18 @@ def attach(events, user):
         if event.action == Action.ASSIGNED
         for pk in event.data.get("assignees", [])
     }
-    names = {u.pk: u.get_short_name() for u in User.objects.filter(pk__in=ids)}
+    people = list(User.objects.filter(pk__in=ids))
+    # Whom the viewer may know, per project (clients and partners: members)
+    known = {}
     for event in events:
         if event.item is not None:
             event.item.project = event.project
+        if event.project_id not in known and event.action == Action.ASSIGNED:
+            known[event.project_id] = {
+                u.pk: u.get_short_name()
+                for u in event.project.people_known_to(user, people)
+            }
+        names = known.get(event.project_id, {})
         event.assignee_names = [
             names[pk] for pk in event.data.get("assignees", []) if pk in names
         ]
@@ -149,8 +157,9 @@ def add_target_lists(events, user):
     if the viewer may not see it (specs/feed.md). Checked now, not when the
     event was recorded, in one query for all events. Clients see the list's
     current title if it is visible to them, and nothing for events without
-    the list's ID (recorded before it was stored); staff fall back to the
-    title at the time for lists they can't find any more."""
+    the list's ID (recorded before it was stored); the installation's own
+    staff fall back to the title at the time for lists they can't find any
+    more, partners (who may not see that project) don't."""
     moves = [e for e in events if e.action == Action.MOVED and e.data.get("to")]
     ids = {e.data.get("to_id") for e in moves} - {None}
     lists = dict(
@@ -159,10 +168,14 @@ def add_target_lists(events, user):
         .filter(pk__in=ids, kind=Kind.LIST)
         .values_list("pk", "title")
     )
+    old_titles = None  # Whether the viewer gets them, asked once if needed
     for event in moves:
         title = lists.get(event.data.get("to_id"))
-        if title is None and not user.is_client:
-            title = event.data["to"]
+        if title is None:
+            if old_titles is None:
+                old_titles = user.sees_all_access
+            if old_titles:
+                title = event.data["to"]
         event.target_list = title or ""
     for event in events:
         if not hasattr(event, "target_list"):

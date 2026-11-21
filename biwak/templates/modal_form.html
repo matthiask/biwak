@@ -31,7 +31,9 @@
             {{ error }}
           </div>{% endfor %}
         {% for field in form.hidden_fields %}{{ field }}{% endfor %}
-        {% for field in form.visible_fields %}{{ field.as_field_group }}{% endfor %}
+        {% block fields %}
+          {% for field in form.visible_fields %}{{ field.as_field_group }}{% endfor %}
+        {% endblock fields %}
       {% endif %}
       <div class="wb-form-actions">
         <button

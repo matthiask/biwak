@@ -14,13 +14,14 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from biwak import schedules
 from biwak.accounts.models import NotificationLevel, User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
 from biwak.activity.notify import can_see, effective_levels, who_can_see
-from biwak.activity.operations import record, subscribe
+from biwak.activity.operations import is_importing, record, subscribe
 from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
     DEFAULT_MODE,
@@ -33,6 +34,7 @@ from biwak.checkins.models import (
 from biwak.files import attachments
 from biwak.items import editing, operations as items_ops
 from biwak.items.models import Item, Kind, Status
+from biwak.projects.models import knows_everybody
 
 
 logger = logging.getLogger(__name__)
@@ -61,15 +63,25 @@ def can_answer(user, item):
     )
 
 
-def _check_people(item, people, *, kept=()):
-    """Only people who can see the question are asked. ``kept``: people
-    already in the list, who stay when the question turns internal
-    (clients aren't asked then, but aren't removed)"""
-    allowed = set(who_can_see(item).filter(pk__in=[u.pk for u in people]))
+def _check_people(item, people, *, actor, kept=()):
+    """Only people who can see the question are asked, and by clients and
+    partners (``actor``) only members, whom they may know (specs/access.md).
+    ``kept``: people already in the list, who stay when the question turns
+    internal (clients aren't asked then, but aren't removed) and when a
+    partner edits the list. The error names nobody: the IDs come from the
+    API."""
+    candidates = who_can_see(item).filter(pk__in=[u.pk for u in people])
+    if not knows_everybody(actor) and not is_importing():
+        candidates = candidates.filter(memberships__project=item.project)
+    allowed = set(candidates)
     allowed |= {u for u in kept if u.is_client}
+    if not knows_everybody(actor):
+        allowed |= {u for u in kept if not u.is_client}
     for user in people:
         if user not in allowed:
-            raise ValueError(f"{user} can't see {item}")
+            raise ValueError(
+                gettext("Only people who can see the check-in can be asked.")
+            )
 
 
 def _clean_schedule(rule, time_zone):
@@ -111,7 +123,7 @@ def create_question(
         visible=visible,
         position=0,  # Questions are ordered by title
     )
-    _check_people(item, people)
+    _check_people(item, people, actor=creator)
     question = Question.objects.create(
         item=item,
         rule=rule,
@@ -134,7 +146,7 @@ def set_people(item, people, *, actor):
     question = Question.objects.select_for_update().get(item=item)
     people = list(people)
     old = set(question.people.all())
-    _check_people(item, people, kept=old)
+    _check_people(item, people, actor=actor, kept=old)
     new = set(people)
     question.people.set(new)
     for user in new - old:
@@ -252,7 +264,7 @@ def _recipients(question, occurrence=None):
     people = question.people.filter(pk__in=who_can_see(question.item).values("pk"))
     if occurrence is not None:
         people = people.filter(pk__in=occurrence.asked.values("pk"))
-    return list(people.order_by("pk"))
+    return list(people.select_related("organization").order_by("pk"))
 
 
 def _answered_ids(occurrence):

@@ -43,6 +43,7 @@ from biwak.items.models import (
     Todo,
     TodoList,
 )
+from biwak.organizations.models import Organization, normalize_name
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 
@@ -242,17 +243,37 @@ class Importer(Resolver):
             return user
         client = bool(person.get("client"))
         company = (person.get("company") or {}).get("name", "")
-        label = f"{name} <{email}> ({'client' if client else 'staff'})"
+        # Basecamp's employees are the account's own company; other staff
+        # ("collaborators") are partners (specs/organizations.md)
+        partner = not client and not person.get("employee", True)
+        kind = "client" if client else "partner" if partner else "staff"
+        label = f"{name} <{email}> ({kind}{', ' + company if company else ''})"
         self.report.people.append(label)
         if self.dry:
             return None
+        if client or partner:
+            organization = self._organization(company)
+        else:
+            organization = Organization.objects.own()
         return User.objects.create_user(
             email,
             full_name=name,
             is_client=client,
-            organization=company if client else "",
+            organization=organization,
             is_active=False,
         )
+
+    def _organization(self, name):
+        """Basecamp's company as an organization, by name (ignoring case and
+        spaces, like the migration from texts); not the installation's own,
+        which only admins give people"""
+        name = normalize_name(name)
+        if not name:
+            return None
+        found = Organization.objects.named(name)
+        if found is not None and found.is_own:
+            return None
+        return found or Organization.objects.create(name=name)
 
     def user_for_sgid(self, sgid):
         pid = self._people_by_sgid.get(sgid)

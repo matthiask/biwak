@@ -4,7 +4,9 @@ import secrets
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -37,6 +39,10 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **kwargs):
+        """Admins are the installation's own staff (decided 2026-11-21)"""
+        from biwak.organizations.models import Organization
+
+        kwargs.setdefault("organization", Organization.objects.own())
         return self.create_user(email, password, is_admin=True, **kwargs)
 
     def active(self):
@@ -95,9 +101,17 @@ Accent.__doc__ = "The accent colors people choose from, a part of ``Color``"
 PALETTE = Color.values
 
 
+def own_staff(prefix=""):
+    """``Q()`` for the people who see all-access projects
+    (``User.sees_all_access``); ``prefix`` for lookups through a relation,
+    e.g. ``"user__"``"""
+    return Q(**{f"{prefix}is_client": False, f"{prefix}organization__is_own": True})
+
+
 class User(AbstractBaseUser):
-    """Staff or client (specs/access.md). Clients belong to an organization,
-    shown beside their name"""
+    """Staff or client (specs/access.md). Everybody can belong to an
+    organization (specs/organizations.md); staff of an organization other
+    than the installation's own are partners."""
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -118,7 +132,14 @@ class User(AbstractBaseUser):
             " what is visible to clients."
         ),
     )
-    organization = models.CharField(_("organization"), max_length=200, blank=True)
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.PROTECT,
+        related_name="people",
+        verbose_name=_("organization"),
+        null=True,
+        blank=True,
+    )
     # Overridable per project and item (biwak.activity.models.LevelOverride)
     notification_level = models.CharField(
         _("notifications"),
@@ -181,6 +202,17 @@ class User(AbstractBaseUser):
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)
 
+    def clean(self):
+        super().clean()
+        if self.is_admin and self.is_partner:
+            # Admins are the installation's own staff (decided 2026-11-21)
+            raise ValidationError(
+                _(
+                    "Admins belong to the installation's own organization, a"
+                    " partner can't be an admin: move them into it first."
+                )
+            )
+
     def get_full_name(self):
         return str(self)
 
@@ -190,10 +222,43 @@ class User(AbstractBaseUser):
         )
 
     @property
+    def is_partner(self):
+        """Staff who aren't in the installation's own organization: of
+        another one (partner agencies) or of none (individuals, e.g.
+        freelancers, decided 2026-11-21). They see only the projects
+        they're members of."""
+        if self.is_client:
+            return False
+        if self.organization_id is None:
+            return True
+        # The own organization's ID, not the person's organization: no query
+        # per person (``own_pk()`` is remembered for the request)
+        from biwak.organizations.models import own_pk
+
+        return self.organization_id != own_pk()
+
+    @property
+    def sees_all_access(self):
+        """Opens all-access projects without being a member: the
+        installation's own staff (``own_staff()`` for querysets)"""
+        return not self.is_client and not self.is_partner
+
+    @property
+    def organization_name(self):
+        if not self.organization_id:
+            return ""
+        from biwak.organizations.models import own_values
+
+        # The own organization's without a query per person
+        pk, name = own_values()
+        return name if self.organization_id == pk else self.organization.name
+
+    @property
     def display_name(self):
-        """With the organization for clients: "Ada, Example Ltd" """
-        if self.is_client and self.organization:
-            return f"{self}, {self.organization}"
+        """With the organization for clients and partners: "Ada, Example
+        Ltd"; the installation's own staff without it"""
+        if self.organization_id and not self.sees_all_access:
+            return f"{self}, {self.organization.name}"
         return str(self)
 
     @property

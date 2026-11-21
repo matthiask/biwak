@@ -709,14 +709,16 @@ class MoveTargetTest(FeedBase):
             return len(queries)
 
         self.move(self.plans)
-        few = count(self.cleo)
+        few = (count(self.cleo), count(self.ada))
         for n in range(5):
             todo = ops.create_todo(
                 todolist=self.shared, title=f"More {n}", creator=self.ada
             )
             self.move(self.plans, todo)
-        self.assertEqual((count(self.cleo), count(self.ada)), (few, few))
-        self.assertEqual(few, 1)
+        self.assertEqual((count(self.cleo), count(self.ada)), few)
+        # Staff: one more, whether they're the installation's own (the old
+        # title of lists they can't see, specs/access.md)
+        self.assertEqual(few, (1, 2))
 
 
 class MoveOutOfGroupTest(FeedBase):

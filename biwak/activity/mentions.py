@@ -22,7 +22,7 @@ from django.utils.translation import gettext as _
 from biwak.accounts.models import User
 from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
-from biwak.activity.operations import subscribe
+from biwak.activity.operations import is_importing, subscribe
 from biwak.projects.models import knows_everybody
 
 
@@ -110,7 +110,8 @@ def candidates(item, query, *, for_user):
 def candidates_for(project, visible, query, *, for_user):
     """The same for a new item of ``project``, visible to clients or not"""
     people = User.objects.active().filter(memberships__project=project)
-    if not for_user.is_client:
+    if knows_everybody(for_user):
+        # Not partners: they learn about members only, like clients
         people = User.objects.active().filter(
             models.Q(memberships__project=project) | models.Q(is_client=False)
         )
@@ -120,7 +121,12 @@ def candidates_for(project, visible, query, *, for_user):
         for field in fields:
             q |= models.Q(**{f"{field}__icontains": word})
         people = people.filter(q)
-    people = list(people.distinct().order_by("full_name", "email")[:200])
+    people = list(
+        people
+        .distinct()
+        .select_related("organization")
+        .order_by("full_name", "email")[:200]
+    )
     available = set(
         people_who_see(project, visible)
         .filter(pk__in=[p.pk for p in people])
@@ -142,6 +148,7 @@ def candidates_for(project, visible, query, *, for_user):
         {
             "id": user.pk,
             "name": str(user),
+            "organization": user.organization_name,
             "short_name": user.get_short_name(),
             "email": "" if for_user.is_client else user.email,
             "available": user.pk in available,
@@ -212,7 +219,7 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
         if user.pk in known:
             continue
         by, by_event = credit.get(user.pk, (actor, event))
-        if not knows_everybody(by):
+        if not knows_everybody(by) and not is_importing():
             if members is None:
                 members = set(item.project.memberships.values_list("user", flat=True))
             if user.pk not in members:

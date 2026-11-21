@@ -17,12 +17,14 @@ from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import is_importing, record, set_level_override
 from biwak.api_conventions import absolute
+from biwak.organizations import operations as org_ops
 from biwak.projects.models import Membership, Project
 
 
 def can_manage_members(user):
-    """Staff manage members; clients don't"""
-    return user.is_authenticated and not user.is_client
+    """The installation's own staff manage members; clients and partners
+    don't (adding offers everybody, which partners mustn't learn about)"""
+    return user.is_authenticated and user.sees_all_access
 
 
 def addable_people(project):
@@ -107,10 +109,20 @@ def remove_member(project, user, *, actor):
             user=user.pk,
             name=user.display_name,
         )
-    # Without access, their subscriptions in the project go too
-    if not project.is_accessible_to(user):
-        Subscription.objects.filter(user=user, item__project=project).delete()
+    forget_lost_access(user, project=project)
     return True
+
+
+def forget_lost_access(user, *, project=None):
+    """Without access, the person's subscriptions go (in ``project``, or in
+    every project): removed from a limited project, or no longer the
+    installation's own staff (specs/access.md)"""
+    subscriptions = Subscription.objects.filter(user=user)
+    if project is not None:
+        subscriptions = subscriptions.filter(item__project=project)
+    subscriptions.exclude(
+        item__project__in=Project.objects.accessible_to(user)
+    ).delete()
 
 
 class InvitationError(ValueError):
@@ -125,24 +137,35 @@ def invite(
     actor,
     full_name="",
     is_client=True,
-    organization="",
+    organization=None,
     notify=NOTIFY_DEFAULT,
 ):
     """Adds a person by email address, creating them if they don't exist
     yet and mailing them how to log in. Only admins create staff
-    (specs/access.md: staff or client is set by admins). Returns the
-    person and whether they were created."""
+    (specs/access.md: staff or client is set by admins). New people belong
+    to ``organization``, else to the one their address's domain belongs to
+    (specs/organizations.md); only admins put people into the
+    installation's own. People who exist keep theirs. Returns the person
+    and whether they were created."""
     email = User.objects.normalize_email(email.strip())
     user = User.objects.filter(email__iexact=email).first()
     created = False
     if user is None:
         if not is_client and not actor.is_admin:
             raise InvitationError(_("Only admins can invite staff."))
+        if organization is not None and not org_ops.can_touch(actor, organization):
+            raise InvitationError(
+                _("Only admins add people to the installation's own organization.")
+            )
+        organization = org_ops.for_new_person(email, organization)
+        if organization is not None and not org_ops.can_touch(actor, organization):
+            # Suggested by the domain only: not for others than admins
+            organization = None
         user = User.objects.create_user(
             email,
             full_name=full_name.strip(),
             is_client=is_client,
-            organization=organization.strip() if is_client else "",
+            organization=organization,
         )
         created = True
     elif not user.is_active:
@@ -176,6 +199,12 @@ def can_manage_project(user):
     return user.is_authenticated and not user.is_client
 
 
+def can_create_project(user):
+    """The installation's own staff: the form offers the organizations and
+    their people, which partners mustn't learn about"""
+    return user.is_authenticated and user.sees_all_access
+
+
 @transaction.atomic
 def suggested_color():
     """A color of the palette which no active project has, the one used
@@ -187,10 +216,9 @@ def suggested_color():
 
 
 def create_project(*, name, description="", is_all_access=True, color=None, actor):
-    """The creator becomes a member (staff only, ``can_manage_project``).
-    Without ``color`` the project gets ``suggested_color()``; ``""`` is
-    none."""
-    if not can_manage_project(actor):
+    """The creator becomes a member (``can_create_project()``). Without
+    ``color`` the project gets ``suggested_color()``; ``""`` is none."""
+    if not can_create_project(actor):
         raise PermissionError("Only staff create projects.")
     project = Project(
         name=name.strip(),
@@ -251,7 +279,8 @@ def update_project(
 
 def joinable_projects(user):
     """Limited projects an admin isn't in: they see that they exist and can
-    join them (specs/access.md); nobody else does"""
+    join them (specs/access.md); nobody else does. Admins are always the
+    installation's own staff (decided 2026-11-21)"""
     if not (user.is_authenticated and user.is_admin):
         return Project.objects.none()
     return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))

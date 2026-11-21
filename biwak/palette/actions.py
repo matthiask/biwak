@@ -28,6 +28,9 @@ from biwak.activity.operations import is_subscribed
 from biwak.bookmarks.operations import is_bookmarked
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
+from biwak.organizations import operations as org_ops
+from biwak.organizations.models import Organization
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 
 
@@ -113,12 +116,15 @@ def everywhere(user):
         link(_("Go to the activity"), reverse("feed"), "g f"),
         link(_("Go to my to-dos"), reverse("todos") + "?assignee=me", "g t"),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),
+        link(_("Go to people"), reverse("people")),
         link(_("Settings"), reverse("settings")),
         link(_("Search"), reverse("search")),
         {"label": _("Switch the theme"), "type": "theme", "shortcut": ""},
     ]
-    if not user.is_client:
+    if project_ops.can_create_project(user):
         actions.append(modal(_("New project"), reverse("project_create")))
+    if org_ops.can_manage(user):
+        actions.append(link(_("Go to organizations"), reverse("organizations")))
     return actions
 
 
@@ -218,6 +224,24 @@ def on_item(request, item, context):
     return actions
 
 
+def on_organizations(user, name, organization):
+    """The organizations' pages (staff, as their buttons)"""
+    if name not in {"organizations", "organization"} or not org_ops.can_manage(user):
+        return []
+    actions = [modal(_("New organization"), reverse("organization_create"))]
+    if name == "organization" and isinstance(organization, Organization):
+        actions.append(
+            modal(_("Edit"), reverse("organization_edit", args=[organization.pk]), "e")
+        )
+        if org_ops.can_touch(user, organization):
+            actions.append(
+                modal(
+                    _("Merge…"), reverse("organization_merge", args=[organization.pk])
+                )
+            )
+    return actions
+
+
 def for_page(request, context):
     """The actions of the page: ``[{..., "group": "page"|"everywhere"}]``,
     those of the page first. ``context`` is the template's: the page's
@@ -235,6 +259,7 @@ def for_page(request, context):
         page += in_project(user, project, folder=item if name == "folder" else None)
     if item is not None:
         page += on_item(request, item, context)
+    page += on_organizations(user, name, context.get("organization"))
     return [{**a, "group": "page"} for a in page] + [
         {**a, "group": "everywhere"} for a in everywhere(user)
     ]
