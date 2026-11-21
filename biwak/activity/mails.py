@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -254,7 +255,17 @@ def _send(message, pks):
         message.send()
     except Exception:
         logger.exception("Sending a notification mail failed")
-        Notification.objects.filter(pk__in=pks).update(sent_at=None)
+        failed = Notification.objects.filter(pk__in=pks)
+        # Unsent again, except where a newer unsent one carries the event
+        # (one per person and event)
+        failed.filter(
+            Exists(
+                Notification.objects.filter(
+                    user=OuterRef("user"), event=OuterRef("event"), sent_at=None
+                )
+            )
+        ).delete()
+        failed.update(sent_at=None)
 
 
 def _deliverable(notifications, user):

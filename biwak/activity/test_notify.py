@@ -1,5 +1,6 @@
 import datetime as dt
 
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
 
@@ -226,6 +227,18 @@ class NotifyTest(TestCase):
         ops.update_todo(self.todo, actor=self.ada, title="Four")
         ops.update_todo(self.todo, actor=self.bob, title="Five")
         self.assertEqual(Event.objects.filter(action=Action.EDITED).count(), 3)
+
+    def test_one_unsent_notification_per_person_and_event(self):
+        """Two notify() at once (two quick edits merged into one event) can't
+        tell anybody twice: the database refuses a second unsent one"""
+        subscribe(self.bob, self.todo)
+        self.told(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        notification = Notification.objects.get(user=self.bob)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Notification.objects.create(user=self.bob, event=notification.event)
+        # Once sent, the next one may come
+        Notification.objects.update(sent_at=timezone.now())
+        Notification.objects.create(user=self.bob, event=notification.event)
 
     def test_notify_people(self):
         message = ops.create_message(

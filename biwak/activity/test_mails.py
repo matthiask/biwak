@@ -139,6 +139,26 @@ class MailsTest(TestCase):
         self.assertTrue(Notification.objects.filter(sent_at__isnull=True).exists())
         self.assertEqual(self.send(later), 1)
 
+    def test_failed_sending_with_a_newer_notification(self):
+        """The newer one carries the event (one unsent per person and
+        event)"""
+        self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="One"))
+        with self.captureOnCommitCallbacks() as callbacks:
+            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+        # Merged into the same event, Bob mentioned since
+        self.act(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=mentions.syntax(self.bob)
+            )
+        )
+        with (
+            patch("django.core.mail.EmailMultiAlternatives.send", side_effect=OSError),
+            self.assertLogs("biwak.activity.mails", "ERROR"),
+        ):
+            callbacks[0]()
+        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 1)
+
     def test_digest(self):
         self.bob.mail_delivery = MailDelivery.DIGEST
         self.bob.save()

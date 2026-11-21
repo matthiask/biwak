@@ -145,31 +145,38 @@ def notify(event_pk):
     for user in candidates(event):
         if not can_see(user, event.item) or not wants(user, event):
             continue
-        with transaction.atomic():
-            last = (
-                Notification.objects
-                .select_for_update()
-                .filter(user=user, event=event)
-                .order_by("-created_at", "-pk")
-                .first()
-            )
-            if last is None or (
-                last.sent_at is not None
-                and Mention.objects.filter(
-                    item=event.item,
-                    user=user,
-                    comment=None,
-                    created_at__gt=last.created_at,
-                ).exists()
-            ):
-                Notification.objects.create(user=user, event=event, created_at=now)
-            elif last.sent_at is None:
-                last.created_at = now
-                last.save(update_fields=["created_at"])
-            else:
-                continue
-        told.append(user)
+        if _tell(user, event, now):
+            told.append(user)
     return told
+
+
+@transaction.atomic
+def _tell(user, event, now):
+    """One unsent notification per person and event (a constraint, so two
+    notify() at once can't tell anybody twice): an unsent one moves
+    forward; after a sent one, only a mention since tells again"""
+    sent = (
+        Notification.objects
+        .filter(user=user, event=event, sent_at__isnull=False)
+        .order_by("-created_at", "-pk")
+        .first()
+    )
+    if sent is not None and not (
+        Notification.objects.filter(user=user, event=event, sent_at=None).exists()
+        or Mention.objects.filter(
+            item=event.item, user=user, comment=None, created_at__gt=sent.created_at
+        ).exists()
+    ):
+        return False
+    # Locked: a send_mails() claiming it at the same time waits, or we wait
+    # and create a new one
+    notification, created = Notification.objects.select_for_update().get_or_create(
+        user=user, event=event, sent_at=None, defaults={"created_at": now}
+    )
+    if not created:
+        notification.created_at = now
+        notification.save(update_fields=["created_at"])
+    return True
 
 
 def notify_people(item, *, whom, actor):
