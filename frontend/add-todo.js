@@ -11,6 +11,14 @@ function close(details, { focus = false } = {}) {
   if (focus) details.querySelector("summary").focus()
 }
 
+const isText = (response) =>
+  response.headers.get("Content-Type")?.startsWith("text/plain")
+
+function showFailure(error) {
+  error.textContent = error.dataset.offline || "Not saved, please try again."
+  error.hidden = false
+}
+
 async function submit(form) {
   if (!form.reportValidity()) return
   const error = form.querySelector("[data-add-todo-error]")
@@ -22,22 +30,28 @@ async function submit(form) {
       body: new FormData(form),
       headers: { "X-Biwak-Fragment": "1" },
     })
-    if (!response.ok) {
+    // Only the new row is a 201. A 200 is a login page after a redirect, a
+    // 403 or 500 an error page: none of them belongs into the list or the
+    // error line, only the form's own 422 says what is wrong
+    if (response.status === 422 && isText(response)) {
       error.textContent = await response.text()
       error.hidden = false
+      return
+    }
+    if (response.status !== 201) {
+      showFailure(error)
       return
     }
     // The new to-do at the end of its group, like the server puts it
     const todos = form.closest(".wb-group").querySelector("[data-todos]")
     todos.insertAdjacentHTML("beforeend", await response.text())
+    // htmx doesn't watch the page for new elements
+    window.htmx?.process(todos.lastElementChild)
     error.hidden = true
-    const group = form.querySelector("[name=group]")?.value
     form.reset()
-    if (group) form.querySelector("[name=group]").value = group
     form.querySelector("[name=title]").focus()
   } catch {
-    error.textContent = error.dataset.offline || "Not saved, please try again."
-    error.hidden = false
+    showFailure(error)
   } finally {
     button.disabled = false
   }

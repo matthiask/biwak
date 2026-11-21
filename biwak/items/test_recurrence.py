@@ -423,6 +423,41 @@ class PagesTest(RecurrenceTestCase):
         self.assertContains(response, "Choose at least one weekday.")
         self.assertFalse(Item.objects.filter(title="Bad").exists())
 
+    def test_a_failed_post_without_javascript_keeps_what_was_typed(self):
+        """The form of the group it was sent from comes back open, filled in,
+        with its errors; the other forms stay as they were"""
+        group = ops.create_group(todolist=self.list.todolist, title="Soon")
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.list.get_absolute_url(),
+            {
+                "title": "Bad title",
+                "notes": "Some <notes>",
+                "due_on": "not a date",
+                "assignees": [str(self.ada.pk)],
+                "group": str(group.pk),
+                "recurrence_frequency": "weekly",
+                "recurrence_interval": "1",
+            },
+        )
+        html = response.content.decode()
+        self.assertEqual(html.count("data-add-todo open"), 1)
+        self.assertEqual(html.count('value="Bad title"'), 1)
+        self.assertEqual(html.count("Some &lt;notes&gt;"), 1)
+        self.assertEqual(html.count('value="not a date"'), 1)
+        self.assertEqual(html.count("Enter a valid date."), 1)
+        self.assertEqual(html.count("Choose at least one weekday."), 1)
+        self.assertEqual(
+            len(re.findall(r'name="assignees"\s+value="\d+"\s+checked', html)), 1
+        )
+        # The open form is the group's
+        open_form = html[html.index("data-add-todo open") :]
+        self.assertLess(
+            open_form.index('value="Bad title"'), open_form.index("</form>")
+        )
+        self.assertEqual(html.count('value="weekly" selected'), 1)
+        self.assertFalse(Item.objects.filter(title="Bad title").exists())
+
     def test_clients_use_the_widget_on_what_they_created(self):
         self.client.force_login(self.cleo)
         url = self.list.get_absolute_url()

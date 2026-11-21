@@ -22,9 +22,7 @@
   {% translate "reacted to" %}
   {% if event.data.comment %}{% translate "a comment on" %}{% endif %}
   {% include "activity/_subject.html" with what="" %}
-  <span
-    class="wb-reaction-contents"
-  >{% if contents %}{{ contents|join:" " }}{% else %}{{ event.data.content }}{% endif %}</span>
+  <span>{% if contents %}{{ contents|join:" " }}{% else %}{{ event.data.content }}{% endif %}</span>
 {% elif event.action == "moved" %}
   {% translate "moved" %}
   {% include "activity/_subject.html" %}

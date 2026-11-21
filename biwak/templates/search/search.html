@@ -33,7 +33,7 @@
             {% if hit.title %}{{ hit.title }}{% else %}{{ item|item_title }}{% endif %}
             {% client_badge item %}
             {% if item.project.archived_at %}<span
-                class="badge text-bg-secondary"
+                class="badge wb-tone-neutral"
               >{% translate "Archived" %}</span>{% endif %}
             {% if hit.excerpt_html %}
               <div class="small">

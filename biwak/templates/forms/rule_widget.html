@@ -18,7 +18,7 @@
 >
   <legend class="form-label fs-6">{{ widget.label|default:_("Repeat") }}</legend>
   {% if widget.unshowable %}
-    <div class="wb-rule-elsewhere" data-rule-elsewhere>
+    <div data-rule-elsewhere>
       <p class="mb-1">
         {% blocktranslate with rule=widget.current %}This schedule was set elsewhere and can't be edited here: {{ rule }}{% endblocktranslate %}
       </p>
@@ -36,7 +36,7 @@
       </label>
     </div>
   {% endif %}
-  <div class="wb-rule-parts" data-rule-parts>
+  <div data-rule-parts>
     <div class="wb-rule-line">
       <label class="visually-hidden" for="{{ widget.id }}_frequency">{% translate "Repeat" %}</label>
       <select
@@ -83,7 +83,7 @@
         {% endfor %}
       </fieldset>
     </div>
-    <div class="wb-rule-monthly" data-rule-part="monthly">
+    <div data-rule-part="monthly">
       <div class="wb-rule-line">
         <label class="form-check-label">
           <input

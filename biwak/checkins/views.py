@@ -242,9 +242,20 @@ def question_mail(request, pk):
 # The question's page ---------------------------------------------------------
 
 
+def _comment_form(answer):
+    """The comment form under an answer: own field IDs, and the people to
+    mention come from the answer"""
+    form = CommentForm(auto_id=f"id_answer_{answer.pk}_%s")
+    form.fields["content"].widget.attrs["data-mentions"] = reverse(
+        "mentionable", args=[answer.pk]
+    )
+    return form
+
+
 def _answers(request, occurrences):
     """The occurrences' answers (the person's visible ones), newest first,
-    with their comments, as ``{occurrence ID: [(answer, comments)]}``"""
+    with their comments and a comment form, as ``{occurrence ID: [(answer,
+    comments, form)]}``"""
     visible = Item.objects.visible_to(request.user)
     answers = (
         Answer.objects
@@ -260,7 +271,11 @@ def _answers(request, occurrences):
     prefetch(*[answer.item for answer in answers])
     result = {o.pk: [] for o in occurrences}
     for answer in answers:
-        result[answer.occurrence_id].append((answer, comments.get(answer.pk, [])))
+        result[answer.occurrence_id].append((
+            answer,
+            comments.get(answer.pk, []),
+            _comment_form(answer),
+        ))
     return result
 
 
@@ -294,8 +309,6 @@ def question(request, pk):
     latest = ops.latest_occurrence(item)
     is_latest_page = bool(occurrences) and occurrences[0] == latest
     rows = [(o, answers[o.pk]) for o in occurrences]
-    comment_form = CommentForm()
-    comment_form.fields["content"].widget.attrs["data-mentions"] = ""
     people = sorted(
         item.project.people_known_to(user, question.people.all()),
         key=lambda u: (u.full_name or u.email).lower(),
@@ -315,9 +328,8 @@ def question(request, pk):
             "answered": {
                 o.pk
                 for o in occurrences
-                if any(a.author_id == user.pk for a, _c in answers[o.pk])
+                if any(a.author_id == user.pk for a, _c, _f in answers[o.pk])
             },
-            "comment_form": comment_form,
             "people": people,
             "mode": mail_mode(user, item),
             "modes": Mode.choices,

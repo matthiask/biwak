@@ -105,6 +105,16 @@ What every part does the same way. Look at how the core does it
    visible items. Icons with `{% icon %}`; a new icon goes into
    `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
    only for interaction, in `frontend/`, loaded from `main.js`.
+   What several pages show comes from an include (comments, subscribers,
+   the visibility switch, breadcrumbs, the to-do row), not a copy. A class
+   in a template needs CSS in the bundle (`biwak/test_css.py`: Bootstrap
+   is compiled in parts, `frontend/styles/bootstrap.scss`, or a `wb-` class
+   in `main.css`). The button creating what a page is about is primary
+   when it's the page's one such action (new project, message, check-in);
+   elsewhere it's quiet (`btn-quiet`). Empty lists say so: a
+   `list-group-item` in a list group, else a `text-body-secondary`
+   paragraph (decided 2026-11-21). Disclosures that float (menus, the
+   reaction picker) close on a click elsewhere and Escape (`data-dismiss`).
 6. **API.** Endpoints in the app's `api.py`, registered in
    `biwak/api.py`, following `biwak/api_conventions.py`
    (`visible_to_clients` on every item, Markdown plus `*_html`, cursor

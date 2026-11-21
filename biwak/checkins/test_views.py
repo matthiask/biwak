@@ -645,6 +645,20 @@ class AnsweringPagesTest(ViewsTestCase):
             404,
         )
 
+    def test_every_answer_has_its_own_comment_form(self):
+        """Own field IDs, mentions and attachments like other comment forms"""
+        first = ops.answer(self.item, user=self.ada, content="Fine")
+        second = ops.answer(self.item, user=self.bob, content="Also fine")
+        html = self.get(self.ada, self.item.get_absolute_url()).content.decode()
+        self.assertNotIn('id="id_content"', html)
+        for answer in (first, second):
+            self.assertEqual(html.count(f'id="id_answer_{answer.pk}_content"'), 1)
+            self.assertIn(
+                f'data-mentions="{reverse("mentionable", args=[answer.pk])}"', html
+            )
+        self.assertEqual(html.count("data-attachments="), 2)
+        self.assertEqual(html.count("data-attach-template"), 2)
+
     def test_a_client_comments_on_a_visible_answer(self):
         answer = ops.answer(self.shared, user=self.ada, content="Fine")
         self.post(

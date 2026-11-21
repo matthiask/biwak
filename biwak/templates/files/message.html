@@ -3,10 +3,7 @@
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{% url 'project_messages' item.project_id %}">{% translate "Messages" %}</a>
-  </nav>
+  {% url 'project_messages' item.project_id as area_url %}{% translate "Messages" as area %}{% include "_breadcrumbs.html" with project=item.project %}
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% if message.pinned_at %}<span
@@ -48,7 +45,7 @@
     <div class="col-lg-8">
       <div class="wb-markdown mb-4">{{ message.content|markdown:item }}</div>
       {% reactions item %}
-      {% include "files/_comments.html" %}
+      {% include "items/_comments.html" %}
     </div>
     <div class="col-lg-4">{% include "files/_sidebar.html" %}</div>
   </div>

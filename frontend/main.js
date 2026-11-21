@@ -12,9 +12,9 @@ import "./peek.js"
 import "htmx.org"
 import "./rule-widget.js"
 
-// The script is deferred, the page is parsed already; dragging to-dos,
-// groups and lists
-if (document.querySelector("[data-todos], [data-sortable-lists]")) {
+// The script is deferred, the page is parsed already; dragging to-dos and
+// groups
+if (document.querySelector("[data-todos]")) {
   import(/* webpackChunkName: "todos" */ "./todos.js")
 }
 
@@ -28,7 +28,7 @@ if (document.querySelector("[data-doc-lock]")) {
   import(/* webpackChunkName: "doc-lock" */ "./doc-lock.js")
 }
 
-// Dragging links on projects and items
-if (document.querySelector("[data-sortable-links]")) {
-  import(/* webpackChunkName: "links" */ "./links.js")
+// Dragging the lists of a project, the links of a project or an item
+if (document.querySelector("[data-sortable-order]")) {
+  import(/* webpackChunkName: "sortable-order" */ "./sortable-order.js")
 }

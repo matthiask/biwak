@@ -3,14 +3,15 @@
 // without renewal. Another person editing answers 409, nothing else to do
 // here: saving shows who is editing.
 
+import { csrfToken } from "./http.js"
+
 const RENEW_EVERY = 60 * 1000
 
 for (const form of document.querySelectorAll("[data-doc-lock]")) {
-  const token = form.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
   setInterval(() => {
     fetch(form.dataset.docLock, {
       method: "POST",
-      headers: { "X-CSRFToken": token },
+      headers: { "X-CSRFToken": csrfToken() },
     }).catch(() => {})
   }, RENEW_EVERY)
 }

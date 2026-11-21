@@ -108,11 +108,14 @@ class E2ETestCase(LiveServerTestCase):
     def goto(self, page, target):
         url = target if isinstance(target, str) else target.get_absolute_url()
         page.goto(f"{self.live_server_url}{url}")
+        self.wait_for_sortables(page)
+
+    def wait_for_sortables(self, page):
         # The scripts for dragging are chunks loaded after the page: wait
         # until every sortable container has its Sortable
         page.wait_for_function(
             """() => [...document.querySelectorAll(
-                "[data-todos], [data-groups], [data-sortable-links], [data-sortable-lists]"
+                "[data-todos], [data-groups], [data-sortable-order]"
             )].every((el) => Object.keys(el).some((key) => key.startsWith("Sortable")))"""
         )
 
@@ -203,6 +206,62 @@ class TodosTest(E2ETestCase):
         self.assertEqual(first.creator, self.ada)
         self.assertEqual(self.errors, [])
 
+    def test_a_new_row_has_a_working_peek_button(self):
+        """htmx processes the row the script inserted"""
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator("[name=title]").fill("Fresh")
+        add.locator("[name=notes]").fill("Some **notes**")
+        add.locator("[name=title]").press("Control+Enter")
+        row = page.locator("[data-todo]", has_text="Fresh")
+        row.wait_for()
+        row.locator("[data-peek]").first.click()
+        row.locator(".wb-peek-body").wait_for()
+        self.assertEqual(self.errors, [])
+
+    def test_adding_with_an_expired_session_inserts_no_page(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        page.context.clear_cookies()
+        add.locator("[name=title]").fill("Lost")
+        add.locator("[name=title]").press("Control+Enter")
+        error = add.locator("[data-add-todo-error]")
+        expect(error).to_be_visible()
+        self.assertEqual(page.locator("[data-todo]").count(), 0)
+        self.assertNotIn("<", error.inner_html())
+        self.assertLess(len(error.inner_text()), 80)
+        self.assertEqual(add.locator("[name=title]").input_value(), "Lost")
+
+    def test_adding_with_a_server_error_shows_no_page(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        page.route(
+            "**/lists/**",
+            lambda route: (
+                route.fulfill(
+                    status=500,
+                    content_type="text/html",
+                    body="<html><body>Server Error (500)</body></html>",
+                )
+                if route.request.method == "POST"
+                else route.continue_()
+            ),
+        )
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator("[name=title]").fill("Lost")
+        add.locator("[name=title]").press("Control+Enter")
+        error = add.locator("[data-add-todo-error]")
+        expect(error).to_be_visible()
+        self.assertNotIn("Server Error", error.inner_text())
+
     def test_adding_to_a_group_and_one_form_open(self):
         todolist = self.make_list(groups=["Soon"])
         page = self.page
@@ -280,6 +339,22 @@ class TodosTest(E2ETestCase):
             ["D", "B", "E"],
         )
         self.assertEqual(self.errors, [])
+
+    def test_a_drag_the_server_doesnt_get_reloads_the_page(self):
+        """Offline, the page shows what the server has again"""
+        todolist = self.make_list(todos=["A", "B", "C"])
+        page = self.page
+        self.goto(page, todolist)
+        page.evaluate("window.marker = 1")
+        page.route("**/todos/move/", lambda route: route.abort())
+        page.locator("[data-todo]", has_text="A").locator("[data-handle]").drag_to(
+            page.locator("[data-todo]", has_text="C"),
+            target_position={"x": 40, "y": 15},
+        )
+        page.wait_for_function("window.marker === undefined")
+        page.unroute("**/todos/move/")
+        titles = page.locator("[data-todo] .wb-todo-title")
+        self.assertEqual(titles.all_inner_texts(), ["A", "B", "C"])
 
     def test_selecting_several_and_moving_them(self):
         todolist = self.make_list(
@@ -669,6 +744,29 @@ class DocLockTest(E2ETestCase):
 
 
 class LinksTest(E2ETestCase):
+    def test_dragging_the_lists_of_a_project(self):
+        self.make_list("First")
+        self.make_list("Second")
+        page = self.page
+        self.goto(page, self.project)
+        with page.expect_response("**/lists/order/"):
+            page.locator("[data-sortable-item]", has_text="Second").locator(
+                "[data-sortable-handle]"
+            ).drag_to(
+                page.locator("[data-sortable-item]", has_text="First"),
+                target_position={"x": 40, "y": 3},
+            )
+        self.assertEqual(
+            list(
+                Item.objects
+                .filter(project=self.project, kind=Kind.LIST)
+                .order_by("position", "pk")
+                .values_list("title", flat=True)
+            ),
+            ["Second", "First"],
+        )
+        self.assertEqual(self.errors, [])
+
     def test_adding_and_dragging_links(self):
         page = self.page
         self.goto(page, self.project)
@@ -681,7 +779,8 @@ class LinksTest(E2ETestCase):
             form.locator("[name=url]").fill(url)
             form.locator("[name=title]").fill(title)
             form.get_by_role("button", name="Add").click()
-            page.locator("[data-link-item]", has_text=title).wait_for()
+            page.locator("[data-sortable-item]", has_text=title).wait_for()
+            self.wait_for_sortables(page)
             if title == "One":
                 page.locator(".wb-links details summary").click()
         self.assertEqual(
@@ -690,10 +789,10 @@ class LinksTest(E2ETestCase):
         )
 
         with page.expect_response("**/links/order/"):
-            page.locator("[data-link-item]", has_text="Two").locator(
-                "[data-link-handle]"
+            page.locator("[data-sortable-item]", has_text="Two").locator(
+                "[data-sortable-handle]"
             ).drag_to(
-                page.locator("[data-link-item]", has_text="One"),
+                page.locator("[data-sortable-item]", has_text="One"),
                 target_position={"x": 5, "y": 5},
             )
         self.assertEqual(
@@ -715,10 +814,10 @@ class LinksTest(E2ETestCase):
         page = self.page
         self.goto(page, todolist)
         with page.expect_response("**/links/order/"):
-            page.locator("[data-link-item]", has_text="Two").locator(
-                "[data-link-handle]"
+            page.locator("[data-sortable-item]", has_text="Two").locator(
+                "[data-sortable-handle]"
             ).drag_to(
-                page.locator("[data-link-item]", has_text="One"),
+                page.locator("[data-sortable-item]", has_text="One"),
                 target_position={"x": 5, "y": 5},
             )
         self.assertEqual(
@@ -749,15 +848,46 @@ class PageTest(E2ETestCase):
         self.assertFalse(menu.evaluate("el => el.open"))
         expect(menu.locator("summary")).to_be_focused()
 
+    def test_disclosures_close_like_menus(self):
+        """The reaction picker and the form for a link close with a click
+        elsewhere and with Escape"""
+        todo = self.make_list(todos=["Plan"])
+        todo = Item.objects.get(title="Plan")
+        page = self.page
+        self.goto(page, todo)
+        picker = page.locator("details.wb-reaction-add").first
+        picker.locator("summary").click()
+        self.assertTrue(picker.evaluate("el => el.open"))
+        page.locator("h1").first.click()
+        self.assertFalse(picker.evaluate("el => el.open"))
+        picker.locator("summary").click()
+        picker.locator("input[type=text]").focus()
+        picker.locator("input[type=text]").press("Escape")
+        self.assertFalse(picker.evaluate("el => el.open"))
+        expect(picker.locator("summary")).to_be_focused()
+
+        self.goto(page, self.project)
+        link = page.locator(".wb-links details").first
+        link.locator("summary").click()
+        self.assertTrue(link.evaluate("el => el.open"))
+        link.locator("[name=url]").press("Escape")
+        self.assertFalse(link.evaluate("el => el.open"))
+        link.locator("summary").click()
+        page.locator("h1").first.click()
+        self.assertFalse(link.evaluate("el => el.open"))
+
     def test_theme(self):
         page = self.page
         self.goto(page, self.project)
         toggle = page.locator("[data-theme-toggle]")
         html = page.locator("html")
         self.assertEqual(toggle.get_attribute("title"), "Theme: Auto")
+        shown = toggle.locator("[data-theme-icon]:not([hidden])")
+        self.assertEqual(shown.get_attribute("data-theme-icon"), "auto")
         toggle.click()
         self.assertEqual(html.get_attribute("data-bs-theme"), "light")
         self.assertEqual(toggle.get_attribute("title"), "Theme: Light")
+        self.assertEqual(shown.get_attribute("data-theme-icon"), "light")
         toggle.click()
         self.assertEqual(html.get_attribute("data-bs-theme"), "dark")
         self.assertEqual(page.evaluate("localStorage.getItem('theme')"), "dark")
@@ -800,7 +930,10 @@ class ClientTest(E2ETestCase):
         self.assertEqual(
             staff.get_by_role("button", name="Hide from clients").count(), 1
         )
-        self.assertEqual(staff.locator("[data-link-handle]").count(), 1)
+        self.assertEqual(
+            staff.locator("[data-sortable-field=links] [data-sortable-handle]").count(),
+            1,
+        )
         self.assertEqual(staff.locator("[data-group-handle]").count(), 1)
 
         page = self.login(self.cleo)
@@ -814,7 +947,10 @@ class ClientTest(E2ETestCase):
         )
         self.assertEqual(page.get_by_role("button", name="Show to clients").count(), 0)
         self.assertEqual(page.get_by_role("link", name="Edit").count(), 0)
-        self.assertEqual(page.locator("[data-link-handle]").count(), 0)
+        self.assertEqual(
+            page.locator("[data-sortable-field=links] [data-sortable-handle]").count(),
+            0,
+        )
         self.assertEqual(page.locator("[data-group-handle]").count(), 0)
         self.assertEqual(page.get_by_text("Add a link").count(), 0)
         self.assertEqual(page.get_by_role("button", name="Add group").count(), 0)
@@ -996,3 +1132,93 @@ class RuleWidgetTest(E2ETestCase):
             "of every month"
         )
         self.assertEqual(self.errors, [])
+
+
+class NoScriptTest(E2ETestCase):
+    def test_drag_handles_are_hidden_without_javascript(self):
+        todolist = self.make_list(groups=["Soon"], todos=["A"])
+        page = self.login(self.ada, java_script_enabled=False)
+        page.goto(f"{self.live_server_url}{todolist.get_absolute_url()}")
+        self.assertEqual(page.locator("[data-todo]").count(), 1)
+        for handle in page.locator(".wb-handle").all():
+            self.assertFalse(handle.is_visible())
+        self.assertGreater(page.locator(".wb-handle").count(), 1)
+
+
+class HtmxTest(E2ETestCase):
+    def test_a_request_of_any_element_carries_the_csrf_token(self):
+        """Not only forms: htmx 4 inherits headers only when told to"""
+        page = self.page
+        self.goto(page, self.project)
+        page.evaluate("""() => {
+            document.body.insertAdjacentHTML(
+              "beforeend", '<button id="x" hx-post="/nowhere/">x</button>')
+            htmx.process(document.getElementById("x"))
+        }""")
+        with page.expect_request("**/nowhere/") as request:
+            page.locator("#x").click()
+        self.assertTrue(request.value.headers.get("x-csrftoken"))
+
+
+class PhoneTest(E2ETestCase):
+    """What runs off the edge of a phone's screen"""
+
+    def setUp(self):
+        super().setUp()
+        self.page = self.login(self.ada, viewport={"width": 360, "height": 740})
+        self.todolist = self.make_list(todos=["Plan"])
+        self.todo = Item.objects.get(title="Plan")
+
+    def assertFits(self, path):
+        self.page.goto(f"{self.live_server_url}{path}")
+        self.assertEqual(
+            self.page.evaluate(
+                "document.documentElement.scrollWidth - window.innerWidth"
+            ),
+            0,
+            path,
+        )
+
+    def test_pages_fit_the_screen(self):
+        from biwak.accounts.models import APIToken
+
+        APIToken.create_for(
+            user=self.ada, title="A token for the build", access=APIToken.Access.READ
+        )
+        self.assertFits(reverse("api_tokens"))
+
+        # A diff with a line without spaces
+        doc = ops.create_doc(
+            project=self.project,
+            title="Notes",
+            creator=self.ada,
+            content="x" * 200,
+        )
+        from biwak.files import operations as file_ops
+
+        file_ops.update_doc(
+            doc, actor=self.ada, content="y" * 200 + " a", new_version=True
+        )
+        self.assertFits(reverse("item_history", args=[doc.pk]))
+        self.assertFits(
+            reverse(
+                "doc_version", args=[doc.pk, doc.doc.versions.order_by("pk").last().pk]
+            )
+        )
+
+        # A project with a long name
+        project("A" * 80, members=[self.ada])
+        self.assertFits(reverse("projects"))
+
+    def test_the_reaction_picker_stays_on_the_screen(self):
+        from biwak.reactions import operations as reaction_ops
+
+        # Enough reactions to push the button to the right
+        for word in ["Looks good", "On it", "Thanks a lot", "Agreed"]:
+            reaction_ops.add_reaction(self.ada, word, item=self.todo)
+        self.goto(self.page, self.todo)
+        reactions = self.page.locator(".wb-reactions").first
+        reactions.locator(".wb-reaction-add summary").click()
+        box = reactions.locator(".wb-reaction-picker").bounding_box()
+        self.assertGreaterEqual(box["x"], 0)
+        self.assertLessEqual(box["x"] + box["width"], 360)
