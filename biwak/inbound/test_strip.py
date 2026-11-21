@@ -10,6 +10,24 @@ class StripTest(SimpleTestCase):
             "On it, will do.\n\nAm Montag geht's los.",
         )
 
+    def test_own_line_before_the_quote_header(self):
+        """A line starting "On"/"Am" right before the real header stays"""
+        self.assertEqual(
+            strip_text(
+                "Thanks, will do.\nOn Friday I send the offer.\n\n"
+                "On Fri, 20 Nov 2026 at 10:00, Biwak <biwak@example.org> wrote:\n"
+                "> Old"
+            ),
+            "Thanks, will do.\nOn Friday I send the offer.",
+        )
+        self.assertEqual(
+            strip_text(
+                "Danke.\nAm Montag schicke ich es.\n"
+                "Am 20.11.2026 schrieb Biwak <biwak@example.org>:\n> alt"
+            ),
+            "Danke.\nAm Montag schicke ich es.",
+        )
+
     def test_signature_delimiter(self):
         self.assertEqual(
             strip_text("Fine by me.\n\n-- \nAda Example\nExample Ltd\n"), "Fine by me."

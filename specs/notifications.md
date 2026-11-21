@@ -382,7 +382,9 @@ confirmed 2026-11-20):
   (`can_answer()`). Replying to a question already answered changes the
   answer, like answering again in the app.
 - **Stripping:** we cut at the first quote header ("On … wrote:", "Am …
-  schrieb …:", also quoted by iOS), Outlook's header block ("From:" with
+  schrieb …:", also quoted by iOS, wrapped over up to three lines but
+  not past a blank line or another line starting with "On"/"Am", so the
+  person's own "On Friday …" right above it stays; 2026-11-21), Outlook's header block ("From:" with
   "Sent:"/"To:" below, "Von:" with "Gesendet:"/"An:"), "-----Original
   Message-----", forwarding markers and `-- `; phones' last lines ("Sent
   from my iPhone", "Von meinem iPhone gesendet", "Get Outlook for …");
