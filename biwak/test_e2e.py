@@ -203,6 +203,62 @@ class TodosTest(E2ETestCase):
         self.assertEqual(first.creator, self.ada)
         self.assertEqual(self.errors, [])
 
+    def test_a_new_row_has_a_working_peek_button(self):
+        """htmx processes the row the script inserted"""
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator("[name=title]").fill("Fresh")
+        add.locator("[name=notes]").fill("Some **notes**")
+        add.locator("[name=title]").press("Control+Enter")
+        row = page.locator("[data-todo]", has_text="Fresh")
+        row.wait_for()
+        row.locator("[data-peek]").first.click()
+        row.locator(".wb-peek-body").wait_for()
+        self.assertEqual(self.errors, [])
+
+    def test_adding_with_an_expired_session_inserts_no_page(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        page.context.clear_cookies()
+        add.locator("[name=title]").fill("Lost")
+        add.locator("[name=title]").press("Control+Enter")
+        error = add.locator("[data-add-todo-error]")
+        expect(error).to_be_visible()
+        self.assertEqual(page.locator("[data-todo]").count(), 0)
+        self.assertNotIn("<", error.inner_html())
+        self.assertLess(len(error.inner_text()), 80)
+        self.assertEqual(add.locator("[name=title]").input_value(), "Lost")
+
+    def test_adding_with_a_server_error_shows_no_page(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        page.route(
+            "**/lists/**",
+            lambda route: (
+                route.fulfill(
+                    status=500,
+                    content_type="text/html",
+                    body="<html><body>Server Error (500)</body></html>",
+                )
+                if route.request.method == "POST"
+                else route.continue_()
+            ),
+        )
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator("[name=title]").fill("Lost")
+        add.locator("[name=title]").press("Control+Enter")
+        error = add.locator("[data-add-todo-error]")
+        expect(error).to_be_visible()
+        self.assertNotIn("Server Error", error.inner_text())
+
     def test_adding_to_a_group_and_one_form_open(self):
         todolist = self.make_list(groups=["Soon"])
         page = self.page
