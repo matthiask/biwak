@@ -61,7 +61,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `celebrations.md` | small celebrations (completing a to-do, the last of a list) and animations | built | | cheaper |
 | `timeline.md` | the to-do's comments with what happened between them (completed, moved, assigned, due date, title, visibility, trash) | next | | cheaper, review visibility |
 | `pwa.md` | installable as an app (manifest, icons), no push and no offline yet | built | | cheaper |
-| `mail-sending.md` | sending through Resend, an outbox with retries, bounces and complaints | next | | strong |
+| `mail-sending.md` | sending through Resend, an outbox with retries, bounces and complaints | built 2026-11-21 (`mail-sending`), not deployed | | strong |
 | `sso.md` | sign-in per organization: codes and passkeys, SSO allowed or required; Google Workspace, Entra ID prepared | next | `organizations.md` | strong, review the checks |
 
 `todos.md` stage 3, `projects-overview.md` and `glance.md` touch

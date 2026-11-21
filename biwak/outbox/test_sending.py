@@ -218,7 +218,9 @@ class OutboxTest(TestCase):
         self.assertEqual(copy.body, "Text")
 
 
-@override_settings(BASE_URL="https://biwak.example.org")
+@override_settings(
+    BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
+)
 class KindsTest(TestCase):
     """Every mail of the app goes through the outbox, with its kind"""
 
@@ -231,6 +233,7 @@ class KindsTest(TestCase):
         self.assertEqual(row.kind, Kind.LOGIN_CODE)
         self.assertIsNotNone(row.expires_at)
         self.assertEqual(mail.outbox[0].to, [ada.email])
+        self.assertEqual(mail.outbox[0].from_email, "Biwak <biwak@example.org>")
 
     def test_unknown_addresses_asking_for_a_code(self):
         cache.clear()
@@ -250,6 +253,9 @@ class KindsTest(TestCase):
         (row,) = OutgoingMail.objects.all()
         self.assertEqual(row.kind, Kind.INVITATION)
         self.assertEqual(mail.outbox[0].to, ["new@example.org"])
+        self.assertEqual(
+            mail.outbox[0].from_email, '"Ada Example (Biwak)" <biwak@example.org>'
+        )
 
     def test_invitation_not_sent_on_rollback(self):
         ada = person("Ada")

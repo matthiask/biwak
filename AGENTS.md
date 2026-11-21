@@ -32,6 +32,10 @@ them when a decision changes (dated: "decided 2026-11-20").
   `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by
   hand. Off unless `REPLY_DOMAIN`, `RESEND_API_KEY` and
   `RESEND_WEBHOOK_SECRET` are set (`specs/notifications.md`).
+- Mail goes out through the outbox (`biwak/outbox/`, admin "Outgoing
+  mails") with Django's default mailer: `EMAIL_URL` (`console:` in
+  development), Resend's API with `EMAIL_URL=resend:`; the same webhook
+  records bounces and complaints (`specs/mail-sending.md`).
 - `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
   [--dry-run]` imports a Basecamp 4 project (`specs/import-basecamp.md`);
   a second run updates. Always dry-run first.

@@ -5,9 +5,12 @@ The idea (2026-11-21): move sending to Resend soon (the backlog's
 in the app, since the cluster's postfix (today's queue and retries) is
 out of the way then.
 
-**Status:** spec (2026-11-21), the questions answered the same day.
-Being built (2026-11-21, branch `mail-sending`): the outbox, see
-"Built".
+**Status:** built 2026-11-21 (branch `mail-sending`): the outbox
+(`biwak/outbox/`), sending through Resend's API with `EMAIL_URL=resend:`,
+the delivery events and undeliverable addresses; see "Built", "Setting it
+up" and "Open". Not deployed: the From domain's verification and the
+settings are the user's; the "Done when" item about a test mail's
+headers is for after that.
 
 **Agent:** a strong model: mail is easy to get subtly wrong (losing
 mail, sending twice, codes arriving late).
@@ -183,6 +186,43 @@ conservative choice where the spec was open):
   account (an open question below).
 - **No audit log** for `OutgoingMail`: only the system writes it (the
   outbox and Resend's webhooks); the admin is read-only.
+
+- **From:** the addresses come from `DEFAULT_FROM_EMAIL`, so moving to
+  `biwak@biwak.feinheit.app` is a setting. Invitations now come from the
+  person inviting ("Ada Example (Biwak)"), allauth's mails from "Biwak",
+  like the other mails without a person acting.
+
+### Setting it up
+
+1. **Resend:** add and verify `biwak.feinheit.app` as a sending domain
+   (its SPF, DKIM and the bounce MX records in the DNS, as Resend shows
+   them); a DMARC record for it (`_dmarc.biwak.feinheit.app`,
+   `p=none` to start).
+2. **Resend's webhook** to `https://<host>/inbound/resend/` (the one for
+   replies, or a new one: then its secret must be the same, there's one
+   `RESEND_WEBHOOK_SECRET`): add the events `email.delivered`,
+   `email.bounced` and `email.complained`.
+3. **Environment:** `EMAIL_URL=resend:`,
+   `DEFAULT_FROM_EMAIL=biwak@biwak.feinheit.app`; `RESEND_API_KEY` (the
+   existing full-access key can send) and `RESEND_WEBHOOK_SECRET` as for
+   replies. `ADMINS` for the mails given up.
+4. **Resend's rate limit** (requests per second of the account): a
+   `send_mails` run sends its mails one after another; what's over the
+   limit waits a minute.
+
+Rolling back: `EMAIL_URL` back to the SMTP URL; what's in the outbox goes
+out through it.
+
+### Open
+
+- Whether the login code warning may say that an address bounced to
+  whoever types it (allauth otherwise doesn't reveal whether an address
+  has an account); the alternative is saying it only after signing in.
+- Whether the notifications that waited while an address was
+  undeliverable should go out once it's cleared (they do now, like
+  switching from "No mails" back to mails), or be dropped.
+- Whether the person should see the notice on their settings page too
+  (now their activity page and the login warning).
 
 ## Done when
 

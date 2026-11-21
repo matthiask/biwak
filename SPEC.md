@@ -195,7 +195,8 @@ each a spec (or a section in one) before building it.
   (`EMAIL_URL` to its SMTP, a From domain verified there, e.g.
   `biwak.feinheit.app`) as decided for both directions, when there's a
   reason to. Specified 2026-11-21 in `specs/mail-sending.md` (the API
-  through django-anymail, an outbox).
+  through django-anymail, an outbox); built 2026-11-21, switched on with
+  `EMAIL_URL=resend:` once the domain is verified.
 - **Activating people through the API and CLI** (added 2026-11-21): the
   importer creates people without an account inactive on purpose, so
   nobody gets mail or a login before someone decides. Activating them

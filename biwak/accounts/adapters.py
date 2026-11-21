@@ -15,6 +15,13 @@ class AccountAdapter(DefaultAccountAdapter):
     def is_open_for_signup(self, request):
         return False
 
+    def get_from_email(self):
+        """ "Biwak" <DEFAULT_FROM_EMAIL>, like the other mails without a
+        person acting"""
+        from biwak.activity.mails import sender
+
+        return sender("Biwak")
+
     def send_mail(self, template_prefix, email, context):
         """Through the outbox (specs/mail-sending.md): login codes, and the
         mail to an address without an account asking for one, aren't sent

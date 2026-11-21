@@ -4,7 +4,6 @@ already (specs/notifications.md)."""
 
 from collections import Counter
 
-from django.conf import settings
 from django.core.mail import EmailMessage
 from django.db import connection, transaction
 from django.db.models import Q
@@ -13,6 +12,7 @@ from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import Color, NotificationLevel, User
+from biwak.activity.mails import sender
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import is_importing, record, set_level_override
@@ -190,7 +190,8 @@ def send_invitation(project, user, *, actor):
             _("%(actor)s invited you to %(project)s")
             % {"actor": actor, "project": project},
             render_to_string("projects/invitation.txt", context),
-            settings.DEFAULT_FROM_EMAIL,
+            # From the person inviting, like notification mails
+            sender(_("%(name)s (Biwak)") % {"name": actor}),
             [user.email],
         )
     outbox.send(message, MailKind.INVITATION)
