@@ -1,0 +1,53 @@
+"""The lantern's command (specs/lantern.md); the CLI test case is the one
+of test_cli.py"""
+
+import json
+
+from biwak import test_cli
+from biwak.activity import mentions
+from biwak.activity.models import Notification
+from biwak.activity.operations import subscribe
+from biwak.items import operations as ops
+from biwak.test_utils import person
+
+
+class LanternCLITest(test_cli.CLITest):
+    def setUp(self):
+        super().setUp()
+        self.bob = person("Bob")
+        self.todo = ops.create_todo(
+            todolist=self.list, title="Order the tent", creator=self.bob
+        )
+        subscribe(self.ada, self.todo)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.add_comment(
+                self.todo, author=self.bob, content=f"Hi {mentions.syntax(self.ada)}"
+            )
+
+    def test_lantern(self):
+        output = self.biwak("lantern").output
+        self.assertIn("Order the tent", output)
+        self.assertIn("new @", output)
+        self.assertIn("[clients]", output)
+        data = json.loads(self.biwak("lantern", "--unread", "--json").stdout)
+        self.assertEqual(len(data), 1)
+        self.assertTrue(data[0]["mentioned"])
+        self.assertIn(
+            "Marked 1 as read.", self.biwak("lantern", "--read", self.todo.pk).output
+        )
+        self.assertEqual(
+            json.loads(self.biwak("lantern", "--unread", "--json").stdout), []
+        )
+        self.assertEqual(
+            len(json.loads(self.biwak("lantern", "--mentions", "--json").stdout)), 1
+        )
+        Notification.objects.update(read_at=None)
+        self.assertIn("Marked 1 as read.", self.biwak("lantern", "--all").output)
+        self.assertEqual(self.biwak("lantern", "--read", 999999).exit_code, 1)
+        self.assertEqual(self.biwak("lantern", "--read", 1, "--all").exit_code, 1)
+
+
+# The tests of test_cli.CLITest run there, not again here
+for _name in dir(test_cli.CLITest):
+    if _name.startswith("test_") and _name not in vars(LanternCLITest):
+        setattr(LanternCLITest, _name, None)

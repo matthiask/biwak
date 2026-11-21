@@ -1529,3 +1529,52 @@ def notifications(level, delivery, project, item, as_json):
     click.echo(f"Level: {data['level']}")
     click.echo(f"Delivery: {data['delivery']}")
     return None
+
+
+# The lantern ----------------------------------------------------------------
+
+
+@cli.command()
+@click.option("--unread", is_flag=True, help="Only those not read yet.")
+@click.option("--mentions", is_flag=True, help="Only those mentioning you.")
+@click.option("--read", "read_item", type=int, metavar="ITEM", help="Mark ITEM read.")
+@click.option("--all", "read_all", is_flag=True, help="Mark everything read.")
+@click.option("--limit", default=50, show_default=True, help="At most this many.")
+@json_option
+def lantern(unread, mentions, read_item, read_all, limit, as_json):
+    """Your notifications, newest first, or mark them read"""
+    if read_item is not None and read_all:
+        terminate("An item or --all, not both.")
+    if read_item is not None or read_all:
+        data = request(
+            "POST",
+            "lantern/read/",
+            json={"all": True} if read_all else {"item_id": read_item},
+        )
+        if as_json:
+            return echo_json(data)
+        click.echo(f"Marked {data['read']} as read.")
+        return None
+    params = {"unread": "true"} if unread else {}
+    if mentions:
+        params["mentions"] = "true"
+    entries = paginate("lantern/", params, limit=limit)
+    if as_json:
+        return echo_json(entries)
+    t = table("When", "", "Person", "Action", "Item", "What", "")
+    for entry in entries:
+        event = entry["event"]
+        item = event["item"] or {}
+        t.add_row(
+            event["created_at"][:16].replace("T", " "),
+            ("" if entry["read"] else "new")
+            + (" @" if entry["mentioned"] else "")
+            + (" pinned" if entry["pinned"] else ""),
+            event["actor"]["short_name"],
+            event["action"].replace("_", " "),
+            str(item.get("id", "")),
+            item.get("title", ""),
+            clients(item),
+        )
+    console.print(t)
+    return None

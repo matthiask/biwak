@@ -457,3 +457,61 @@ class FaviconTest(LanternTestCase):
         self.assertContains(
             self.client.get(reverse("projects")), "data-lantern-favicon"
         )
+
+
+class APITest(LanternTestCase):
+    def call(self, method, user, path, data=None):
+        from biwak.accounts.models import APIToken
+
+        _token, secret = APIToken.create_for(user=user, title="T", access="write")
+        return getattr(self.client, method)(
+            f"/api/v1/{path}",
+            data,
+            content_type="application/json",
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+
+    def test_list_as_staff_and_client(self):
+        self.comment(self.todo, "Visible")
+        self.comment(self.secret, f"Internal {mentions.syntax(self.bob)}")
+        lantern.pin(self.bob, self.todo)
+        data = self.call("get", self.bob, "lantern/").json()
+        self.assertEqual(
+            [
+                (e["event"]["item"]["title"], e["read"], e["mentioned"], e["pinned"])
+                for e in data["results"]
+            ],
+            [("Budget", False, True, False), ("Order the tent", False, False, True)],
+        )
+        data = self.call("get", self.bob, "lantern/?mentions=true").json()
+        self.assertEqual(len(data["results"]), 1)
+        data = self.call("get", self.cleo, "lantern/").json()
+        self.assertEqual(
+            [e["event"]["item"]["title"] for e in data["results"]], ["Order the tent"]
+        )
+        self.assertTrue(data["results"][0]["event"]["visible_to_clients"])
+
+    def test_read(self):
+        self.comment(self.todo, "Visible")
+        self.comment(self.secret, "Internal")
+        response = self.call(
+            "post", self.bob, "lantern/read/", {"item_id": self.todo.pk}
+        )
+        self.assertEqual(response.json(), {"read": 1})
+        data = self.call("get", self.bob, "lantern/?unread=true").json()
+        self.assertEqual(
+            [e["event"]["item"]["title"] for e in data["results"]], ["Budget"]
+        )
+        self.assertEqual(
+            self.call("post", self.bob, "lantern/read/", {"all": True}).json(),
+            {"read": 1},
+        )
+        for data in [{}, {"all": True, "item_id": self.todo.pk}]:
+            self.assertEqual(
+                self.call("post", self.bob, "lantern/read/", data).status_code, 400
+            )
+        # Clients: internal items don't exist
+        response = self.call(
+            "post", self.cleo, "lantern/read/", {"item_id": self.secret.pk}
+        )
+        self.assertEqual(response.status_code, 404)

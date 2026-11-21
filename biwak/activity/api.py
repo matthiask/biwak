@@ -12,7 +12,7 @@ from ninja import Field, Router, Schema
 from ninja.errors import HttpError
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
-from biwak.activity import feed, history, mentions
+from biwak.activity import feed, history, lantern, mentions
 from biwak.activity.models import Action, LevelOverride
 from biwak.activity.operations import set_level_override, set_notification_settings
 from biwak.api_conventions import PersonOut, absolute, page_of, paginated, person_out
@@ -395,3 +395,76 @@ def mentionable(request, item_id: int, q: str = ""):
     ``[@Name](person:ID)``; ``@email`` and an unambiguous ``@Name`` work too."""
     item = item_for(request, item_id)
     return mentions.candidates(item, q, for_user=request.user)
+
+
+# The lantern (specs/lantern.md) ----------------------------------------------
+
+
+class LanternEntryOut(Schema):
+    id: int
+    read: bool
+    created_at: dt.datetime
+    mentioned: bool = Field(description="Whether you were mentioned")
+    pinned: bool = Field(description="Whether you pinned (bookmarked) the item")
+    event: EventOut
+
+
+class LanternReadIn(Schema):
+    item_id: int | None = None
+    all: bool = False
+
+
+class LanternReadOut(Schema):
+    read: int
+
+
+@notifications_router.get("lantern/", response=page_of(LanternEntryOut))
+def lantern_list(
+    request,
+    *,
+    unread: bool = False,
+    mentions: bool = False,
+    cursor: str | None = None,
+    page_size: int | None = None,
+):
+    """Your notifications (the lantern), newest first: about items you see
+    now, the same as the mails. ``unread`` only those not read yet,
+    ``mentions`` only those mentioning you. A page may hold fewer entries
+    than asked for (items whose level is "nothing" now are left out)."""
+    user = request.user
+    pinned = lantern.pinned_items(user)
+
+    def prepare(notifications):
+        notifications[:] = lantern.wanted(notifications, user)
+        lantern.prepare(notifications, user)
+
+    return paginated(
+        request,
+        lantern.notifications_for(
+            user, unread=True if unread else None, mentions=mentions
+        ),
+        lambda notification: {
+            "id": notification.pk,
+            "read": notification.read_at is not None,
+            "created_at": notification.created_at,
+            "mentioned": notification.mentioned,
+            "pinned": notification.event.item_id in pinned,
+            "event": event_out(notification.event, user),
+        },
+        prepare=prepare,
+        ordering=("-created_at", "-pk"),
+        cursor=cursor,
+        page_size=page_size,
+    )
+
+
+@notifications_router.post("lantern/read/", response=LanternReadOut)
+def lantern_read(request, data: LanternReadIn):
+    """Marks the notifications of an item (``item_id``: its own and its
+    comments') or ``all`` as read; returns how many"""
+    if data.all == (data.item_id is not None):
+        raise HttpError(400, _("Give an item or all, not both."))
+    if data.all:
+        return {"read": lantern.read(request.user)}
+    item = item_for(request, data.item_id)
+    return {"read": lantern.read(request.user, item=item)}

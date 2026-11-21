@@ -307,7 +307,14 @@ class CLITest(TestCase):
             ("concerns_me", "digest"),
         )
         data = json.loads(self.biwak("notifications", "--json").stdout)
-        self.assertEqual(data, {"level": "concerns_me", "delivery": "digest"})
+        self.assertEqual(
+            data,
+            {"level": "concerns_me", "delivery": "digest", "lantern_in_favicon": False},
+        )
+        self.biwak("notifications", "--delivery", "none")
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.mail_delivery, "none")
+        self.biwak("notifications", "--delivery", "digest")
 
         # A project's and an item's own level
         project_id = self.project.pk
