@@ -231,6 +231,11 @@ setup as `collaboration.md`).
   of it, also of a client who couldn't see the item anymore; now only who
   sees it, clients only for events of the time they saw it. Pinning,
   unpinning and marking unread pass their item too.
+- **Limits:** `?item=` longer than 18 digits closes with 4404 (it
+  crashed the consumer); at most 50 websockets per person and process
+  (**?**), more close with 4429 and the page reconnects later, backing
+  off like after being offline. The live editor's limits are in
+  `collaboration.md`.
 
 ## Questions (built the way described meanwhile)
 

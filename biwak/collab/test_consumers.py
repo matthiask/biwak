@@ -19,7 +19,10 @@ from django.test import Client, TransactionTestCase
 from django.urls import reverse
 from pycrdt import (
     Doc,
+    Encoder,
     Text,
+    YMessageType,
+    YSyncMessageType,
     create_awareness_message,
     create_sync_message,
     create_update_message,
@@ -611,3 +614,85 @@ class ConsumerTest(TransactionTestCase):
         output = await ada.receive()
         self.assertEqual(output["bytes"], bytes([consumers.QUERY_AWARENESS]))
         self.assertTrue(await bob.communicator.receive_nothing(0.1))
+
+    # Limits ------------------------------------------------------------------
+
+    async def awareness(self, editor, clock, state):
+        update = encode_awareness([(editor.doc.client_id, clock, json.dumps(state))])
+        await editor.communicator.send_to(bytes_data=create_awareness_message(update))
+
+    @patch.multiple(consumers, AWARENESS_RATE=(5, 0.001))
+    async def test_awareness_is_rate_limited(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        for clock in range(1, 21):
+            await self.awareness(bob, clock, {"cursor": None})
+        await ada.drain()
+        self.assertEqual(len(ada.awareness), 5)
+
+    async def test_big_awareness_and_cursors_are_ignored(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        await self.awareness(bob, 1, {"cursor": {"anchor": "x" * 2000}})
+        # Many entries, each small
+        update = encode_awareness([
+            (bob.doc.client_id, clock, "{}") for clock in range(1, 2000)
+        ])
+        await bob.communicator.send_to(bytes_data=create_awareness_message(update))
+        await ada.drain()
+        self.assertEqual(ada.awareness, [])
+        # A normal cursor still goes
+        await self.awareness(bob, 2, {"cursor": {"anchor": "x" * 100}})
+        await ada.drain()
+        self.assertEqual(len(ada.awareness), 1)
+
+    @patch.multiple(consumers, QUERY_AWARENESS_RATE=(2, 0.001))
+    async def test_asking_for_the_others_is_rate_limited(self):
+        ada = await self.connect(self.ada, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        for _n in range(5):
+            await bob.communicator.send_to(
+                bytes_data=bytes([consumers.QUERY_AWARENESS])
+            )
+        queries = 0
+        while not await ada.communicator.receive_nothing(timeout=0.2):
+            output = await ada.receive()
+            queries += output["bytes"] == bytes([consumers.QUERY_AWARENESS])
+        self.assertEqual(queries, 2)
+
+    @patch.multiple(consumers, SYNC_RATE=(3, 0.001))
+    async def test_syncing_is_rate_limited(self):
+        # Connecting synced once already
+        bob = await self.connect(self.bob, self.shared)
+        for _n in range(5):
+            await bob.communicator.send_to(bytes_data=create_sync_message(bob.doc))
+        answers = 0
+        while not await bob.communicator.receive_nothing(timeout=0.2):
+            output = await bob.receive()
+            answers += output["bytes"][:2] == bytes([0, 0])
+        self.assertEqual(answers, 2)
+
+    async def test_big_state_vectors_are_ignored(self):
+        """A state vector: how far the editor knows each Yjs client (a few
+        per doc); a huge one answered would make the server work for
+        nothing"""
+        bob = await self.connect(self.bob, self.shared)
+        clients = consumers.MAX_STATE_VECTOR // 4
+        state = Encoder()
+        state.write_var_uint(clients)
+        for client in range(1, clients + 1):
+            state.write_var_uint(2**20 + client)
+            state.write_var_uint(1)
+        state = state.to_bytes()
+        self.assertGreater(len(state), consumers.MAX_STATE_VECTOR)
+        length = Encoder()
+        length.write_var_uint(len(state))
+        await bob.communicator.send_to(
+            bytes_data=bytes([YMessageType.SYNC, YSyncMessageType.SYNC_STEP1])
+            + length.to_bytes()
+            + state
+        )
+        self.assertTrue(await bob.communicator.receive_nothing(timeout=0.2))
+        # A normal one is answered
+        await bob.communicator.send_to(bytes_data=create_sync_message(bob.doc))
+        self.assertFalse(await bob.communicator.receive_nothing(timeout=0.2))

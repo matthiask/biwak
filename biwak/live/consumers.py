@@ -20,6 +20,7 @@ page, which says so).
 
 import asyncio
 import json
+from collections import Counter
 from importlib import import_module
 
 from channels.db import database_sync_to_async
@@ -34,8 +35,17 @@ from biwak.live import announce
 # Not logged in, or the session ended (logged out): the page doesn't
 # reconnect
 CLOSE_NO_LOGIN = 4401
+# Too many tabs of the person: the page reconnects later (backing off)
+CLOSE_TOO_MANY = 4429
 # The item doesn't exist for the person (anymore), like the pages' 404
 CLOSE_NOT_FOUND = 4404
+# Open websockets of a person in one process (**?**, a value the spec
+# didn't fix): one per tab, so generous; it protects the server from a
+# script opening many. Per process: nothing to clean up after a process
+# died, and the workers together allow a few times as many.
+MAX_PER_PERSON = 50
+# The open websockets by person, in this process
+connections = Counter()
 # The most digits of an item's ID (fits a bigint)
 MAX_ID_DIGITS = 18
 # Access is checked this often besides the changes telling the pages
@@ -54,10 +64,16 @@ class LiveConsumer(AsyncWebsocketConsumer):
         self.item = None
         self.project_id = None
         self.as_client = None
+        self.counted = False
         await self.accept()
         if not self.user.is_authenticated:
             await self.refuse(CLOSE_NO_LOGIN)
             return
+        if connections[self.user.pk] >= MAX_PER_PERSON:
+            await self.refuse(CLOSE_TOO_MANY)
+            return
+        connections[self.user.pk] += 1
+        self.counted = True
         value = dict(
             pair.split("=", 1)
             for pair in self.scope.get("query_string", b"").decode().split("&")
@@ -129,6 +145,13 @@ class LiveConsumer(AsyncWebsocketConsumer):
         await self.leave()
 
     async def leave(self):
+        """Leaves the groups, and doesn't count as one of the person's
+        websockets anymore"""
+        if self.counted:
+            self.counted = False
+            connections[self.user.pk] -= 1
+            if not connections[self.user.pk]:
+                del connections[self.user.pk]
         for group in self.groups_joined:
             await self.channel_layer.group_discard(group, self.channel_name)
         self.groups_joined = []

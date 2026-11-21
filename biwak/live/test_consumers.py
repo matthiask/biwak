@@ -5,6 +5,7 @@ changes."""
 
 import asyncio
 import json
+from unittest.mock import patch
 
 from allauth.usersessions.models import UserSession
 from channels.auth import AuthMiddlewareStack
@@ -127,6 +128,23 @@ class LiveConsumerTest(TransactionTestCase):
                 await self.assertClosed(
                     await self.connect(self.ada, query=f"item={value}", ready=False)
                 )
+
+    async def test_tabs_per_person_are_capped(self):
+        with patch.object(consumers, "MAX_PER_PERSON", 2):
+            first = await self.connect(self.ada)
+            await self.connect(self.ada, self.todo)
+            await self.assertClosed(
+                await self.connect(self.ada, ready=False), consumers.CLOSE_TOO_MANY
+            )
+            # Others aren't affected, and a tab closed makes room
+            await self.connect(self.bob)
+            await first.disconnect()
+            self.communicators.remove(first)
+            # Refused ones don't count
+            await self.assertClosed(
+                await self.connect(self.ada, query="item=999999", ready=False)
+            )
+            await self.connect(self.ada)
 
     async def test_trashed_items_are_refused(self):
         await self.run_op(ops.trash, self.todo, actor=self.ada)

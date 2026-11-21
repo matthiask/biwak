@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import secrets
+import time
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -50,6 +51,21 @@ SAVE_AT_LEAST_EVERY = 30
 # besides the changes telling the editors (live.check_access())
 CHECK_EVERY = 60
 
+# Limits per connection (**?** values the spec didn't fix): at most the
+# first number of messages at once, then the second per second; more are
+# dropped. Awareness: every cursor move (typing fast, about 10 a second);
+# asking for the others' awareness makes every editor answer; syncing
+# loads the whole doc. Updates (typing) aren't limited.
+AWARENESS_RATE = (20, 10)
+QUERY_AWARENESS_RATE = (2, 0.1)
+SYNC_RATE = (3, 0.1)
+# Bytes of an awareness message, of the cursor's JSON in it, and of the
+# state vector of a sync (a few bytes per Yjs client that ever edited the
+# doc); bigger ones are dropped
+MAX_AWARENESS = 4096
+MAX_CURSOR = 1024
+MAX_STATE_VECTOR = 16384
+
 # The colors of the others' cursors, by person
 COLORS = [
     "#d63384",
@@ -82,6 +98,25 @@ def encode_awareness(entries):
     return encoder.to_bytes()
 
 
+class Bucket:
+    """At most ``burst`` at once, then ``rate`` per second (a token
+    bucket)"""
+
+    def __init__(self, burst, rate):
+        self.burst = self.tokens = burst
+        self.rate = rate
+        self.at = time.monotonic()
+
+    def take(self):
+        now = time.monotonic()
+        self.tokens = min(self.burst, self.tokens + (now - self.at) * self.rate)
+        self.at = now
+        if self.tokens < 1:
+            return False
+        self.tokens -= 1
+        return True
+
+
 class DocConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.pk = self.scope["url_route"]["kwargs"]["pk"]
@@ -98,6 +133,12 @@ class DocConsumer(AsyncWebsocketConsumer):
         self.clock = 0
         self.save_task = self.check_task = None
         self.dirty_since = None
+        self.limits = {
+            YMessageType.AWARENESS: Bucket(*AWARENESS_RATE),
+            QUERY_AWARENESS: Bucket(*QUERY_AWARENESS_RATE),
+            YMessageType.SYNC: Bucket(*SYNC_RATE),
+        }
+        self.dropped = set()
         await self.accept()
         found = await database_sync_to_async(self._found)()
         if found is None:
@@ -169,15 +210,38 @@ class DocConsumer(AsyncWebsocketConsumer):
         if kind == YMessageType.SYNC:
             await self.receive_sync(data[1:])
         elif kind == YMessageType.AWARENESS:
-            await self.receive_awareness(read_message(data[1:]))
-        elif kind == QUERY_AWARENESS:
+            if len(data) > MAX_AWARENESS:
+                self.drop("an awareness message too big")
+            elif self.allowed(kind):
+                await self.receive_awareness(read_message(data[1:]))
+        elif kind == QUERY_AWARENESS and self.allowed(kind):
             await self.group_send("doc.query_awareness")
+
+    def allowed(self, kind):
+        """Within the limits of this kind of message"""
+        if self.limits[kind].take():
+            return True
+        self.drop(f"too many messages of kind {kind}")
+        return False
+
+    def drop(self, why):
+        """Logs dropping something, once per connection and reason"""
+        if why not in self.dropped:
+            self.dropped.add(why)
+            logger.warning(
+                "Dropped %s from user %s for doc %s", why, self.user.pk, self.pk
+            )
 
     async def receive_sync(self, data):
         if data[0] == YSyncMessageType.SYNC_STEP1:
             # What we have that the editor doesn't, then what we have, so
             # that it sends what we don't (typed offline); to who may still
-            # see it
+            # see it. It loads the whole doc: limited.
+            if len(read_message(data[1:])) > MAX_STATE_VECTOR:
+                self.drop("a state vector too big")
+                return
+            if not self.allowed(YMessageType.SYNC):
+                return
             await self.access_check()
             if self.mode is None:
                 return
@@ -207,6 +271,9 @@ class DocConsumer(AsyncWebsocketConsumer):
             if state != "null":
                 data = json.loads(state)
                 if not isinstance(data, dict):
+                    continue
+                if len(json.dumps(data.get("cursor"))) > MAX_CURSOR:
+                    self.drop("a cursor too big")
                     continue
                 state = json.dumps(  # noqa: PLW2901
                     {"cursor": data.get("cursor"), "user": self.user_state}
