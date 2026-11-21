@@ -229,10 +229,6 @@ class ViewsTest(TestCase):
         response = self.client.get("/accounts/login/")
         self.assertContains(response, "form-control")
         self.assertNotContains(response, "/accounts/signup/")
-        self.client.force_login(self.ada)
-        for url in ["/accounts/2fa/", "/accounts/sessions/"]:
-            with self.subTest(url=url):
-                self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_login_code_leads_back_to_the_item(self):
         # The link in a notification mail: through the login, back to the item

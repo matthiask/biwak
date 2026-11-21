@@ -13,7 +13,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
-from biwak.accounts import operations, passkeys
+from biwak.accounts import operations, passkeys, signin
 from biwak.accounts.models import (
     API_TOKEN_LIFETIME,
     Accent,
@@ -256,6 +256,7 @@ def _settings_page(request, *, notifications=None):
             "accents": Accent.choices,
             "project_overrides": project_overrides,
             "item_overrides": item_overrides,
+            **signin.context(request),
         },
     )
 

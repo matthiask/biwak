@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak i18n %}
+{% load biwak humanize i18n %}
 {% block title %}{% translate "Settings" %} – Biwak{% endblock %}
 
 {% block content %}
@@ -138,12 +138,105 @@
     </div>
   </div>
   <h2 class="h5 mt-4" id="sign-in">{% translate "Sign-in" %}</h2>
-  <div class="list-group mb-4">
-    <a class="list-group-item list-group-item-action" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
-    <a
-      class="list-group-item list-group-item-action"
-      href="{% url 'usersessions_list' %}"
-    >{% translate "Sessions" %}</a>
-    <a class="list-group-item list-group-item-action" href="{% url 'api_tokens' %}">{% translate "API tokens" %}</a>
+  <div class="card mb-3">
+    <div class="card-body border-bottom">
+      <h3 class="h6">{% translate "Passkeys" %}</h3>
+      <p class="form-text mb-0">
+        {% translate "Sign in with your fingerprint, face or device PIN instead of a code by mail." %}
+      </p>
+    </div>
+    {% if passkeys %}
+      <div class="wb-table-scroll">
+        <table class="wb-table">
+          <thead>
+            <tr>
+              <th>{% translate "Passkey" %}</th>
+              <th>{% translate "Added" %}</th>
+              <th>{% translate "Last used" %}</th>
+              <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for passkey in passkeys %}
+              <tr>
+                <td>{{ passkey }}</td>
+                <td>{{ passkey.created_at|date:"SHORT_DATE_FORMAT" }}</td>
+                <td>
+                  {% if passkey.last_used_at %}
+                    <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|naturaltime }}</span>
+                  {% else %}
+                    <span class="text-body-secondary">{% translate "Never" %}</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <form method="post" action="{% url 'mfa_remove_webauthn' passkey.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="card-body text-body-secondary">{% translate "No passkeys yet." %}</div>
+    {% endif %}
+    <div class="card-body border-top">
+      <a class="btn btn-sm btn-quiet" href="{% url 'mfa_add_webauthn' %}">{% translate "Add a passkey" %}</a>
+    </div>
   </div>
+  <div class="card mb-3">
+    <div class="card-body border-bottom">
+      <h3 class="h6">{% translate "Sessions" %}</h3>
+      <p class="form-text mb-0">
+        {% translate "Where you're signed in. This browser is signed out with “Sign out of this browser” in the menu with your name." %}
+      </p>
+    </div>
+    <div class="wb-table-scroll">
+      <table class="wb-table" id="sessions">
+        <thead>
+          <tr>
+            <th>{% translate "Browser" %}</th>
+            <th>{% translate "IP address" %}</th>
+            <th>{% translate "Last seen" %}</th>
+            <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for session in sessions %}
+            <tr>
+              <td title="{{ session.user_agent }}">
+                {{ session.browser }}
+                {% if session.current %}<span
+                    class="badge wb-tone-neutral ms-1"
+                  >{% translate "This one" %}</span>{% endif %}
+              </td>
+              <td>{{ session.ip }}</td>
+              <td><span title="{{ session.last_seen_at }}">{{ session.last_seen_at|naturaltime }}</span></td>
+              <td class="text-end">
+                {% if not session.current %}
+                  <form method="post" action="{% url 'session_end' session.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Sign out" %}</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if sessions|length > 1 %}
+      <div class="card-body border-top">
+        <form method="post" action="{% url 'usersessions_list' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Sign out everywhere else" %}</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+  <p class="mb-4">
+    <a href="{% url 'api_tokens' %}">{% translate "API tokens and the command line" %} →</a>
+  </p>
 {% endblock content %}

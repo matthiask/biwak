@@ -244,6 +244,25 @@ passkeys and sessions (`templates/allauth/` or `mfa/`, `usersessions/`),
    everywhere else" (all other sessions). allauth's usersessions views
    do the work.
 
+**Status (E): built 2026-11-21.** `biwak/accounts/signin.py`, the section
+in `settings.html`. Decisions on the way:
+- allauth's usersessions has no way to end one session, only "all others"
+  (`flows.sessions.end_other_sessions`). One session goes through
+  `flows.sessions.end_sessions` in our `session_end` view (POST, own
+  sessions only, not the current one); "Sign out everywhere else" posts to
+  allauth's own view.
+- Removing a passkey posts to allauth's remove view, which asks for a
+  recent confirmation first (by code) and replays the request. Adding is
+  allauth's page as before.
+- `/accounts/2fa/`, `/accounts/2fa/webauthn/` and a GET of
+  `/accounts/sessions/` lead to the settings page's section; that's where
+  allauth returns to after adding or removing a passkey.
+- `USERSESSIONS_TRACK_ACTIVITY` is on, for "last seen" (it updates the
+  session's row on requests); allauth only has the User-Agent header, so
+  "Chrome on Linux" is made from it by `describe_agent()`, the header is
+  the cell's `title`.
+- The sessions table lists this one first, then by last seen.
+
 ### Part F: people with the same first name
 
 Several staff share a first name, e.g. "Moritz". Mentions and lists show

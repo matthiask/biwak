@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from biwak.accounts import views
+from biwak.accounts import signin, views
 
 
 urlpatterns = [
@@ -29,6 +29,7 @@ urlpatterns = [
         "notifications/",
         RedirectView.as_view(pattern_name="settings", permanent=True),
     ),
+    path("sessions/<int:pk>/end/", signin.end_session, name="session_end"),
     path("api-tokens/", views.api_tokens, name="api_tokens"),
     path(
         "api-tokens/<int:pk>/delete/",
