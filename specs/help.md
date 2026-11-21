@@ -1,128 +1,45 @@
 # Help pages
 
-The idea (2026-11-21): a help like Governance's, user documentation as
-pages in the app, and the keyboard shortcuts moved there from the
-settings page, with links to the help where people need it.
+User documentation as pages in the app, like Governance's.
 
-**Status:** built 2026-11-21 (branch `help`), the chapters confirmed the
-same day. `biwak/help.py` (copied from Governance, the constitution and
-the SVGs dropped, the per-language table kept; `PAGES["de"]` names the
-`*.de.md` files, used once they all exist), `templates/help.html`, `docs/`
-with the nine chapters, tests in `biwak/test_help.py`, the palette's
-in `biwak/palette/test_actions.py`, a browser test for the `?` dialog's
-link (`KeyboardTest`). The texts describe what is built now and still
-have to be read by the user (skimmed by the user 2026-11-21: fine).
-Decisions on the way:
-- The settings page's "All shortcuts" and the keyboard page's list
-  share the anchor `#shortcuts`. Every page has the list in the `?`
-  dialog anyway (`_palette.html` is in `base.html`), so "only on the
-  keyboard page" means the page's own section.
-- The "?" entry of the list now says "Show the shortcuts" (it no longer
-  is "this list"), and the list gets `g h`.
-- The quiet links: `form_response(help_page=...)` shows "More in the
-  help" in the modal and the page (the visibility modal passes
-  `clients`); the notification settings, the API tokens page and the
-  calendar page link to their chapters. "Help" sits in the "Me" menu
-  above the divider and "Sign out", in Home's "Useful" card and in the
-  palette (with "Keyboard shortcuts").
-- Left out of the texts because they are not built or not settled:
-  archiving lists (`archiving.md` is open), webhooks, agent skills,
-  Google sign-in, passkeys, importing from Basecamp (an admin task),
-  browser notifications.
-
-**Agent:** a cheaper model following this spec and the checklist in
-`AGENTS.md`. The texts are documentation: short, concrete, describing
-what the app does now (read the specs and the templates, try it), no
-marketing. Have them read by the user before merging.
-
-**Depends on:** Home (`dashboard.md`) merged (it links here and the
-docs describe it).
-
-**Touches:**
-- `docs/` (new: the Markdown files), `biwak/help.py` (copied from
-  Governance's `governance/help.py`, keeping its copyright line,
-  `NOTICE`), `templates/help.html`, a URL in `biwak/urls.py`;
-- `templates/accounts/settings.html` (the shortcuts list leaves),
-  `templates/palette/_shortcuts.html` (stays the one list),
-  `base.html` (the "Me" menu), Home's "Useful" card, the palette
-  (`biwak/palette/actions.py`);
-- `frontend/styles/main.css` (Governance's `.wb-help`,
-  `.wb-help-chapters`).
+**Status:** built 2026-11-21: `biwak/help.py` (copied from Governance,
+keeping its copyright line), `templates/help.html`, `docs/`.
 
 ## Pages
 
-- **`/help/`** and **`/help/<page>/`**, as in Governance: Markdown files
-  in `docs/` (`README.md` the start page), rendered with
-  `markdown-it-py` (in the dependencies already), the chapters as a
-  navigation above each page, the current one marked. The files link
-  each other relatively (`todos.md`), which works on GitHub; on the
-  pages the links lead to the help pages.
-- **English only for now**, like the interface (`AGENTS.md`): German
-  files (`name.de.md`) come with the German translation; `help.py`
-  keeps Governance's per-language table so they slot in.
-- **Login required**, like every page. **Everybody sees every
-  chapter** (decided 2026-11-21): clients may read how showing to
-  clients works and about the CLI; the chapters say where something is
-  for staff only.
-- The docs come from the repository, not from users: HTML like `<kbd>`
-  is fine in them (as in Governance).
+- **`/help/`** and **`/help/<page>/`**: Markdown files in `docs/`
+  (`README.md` the start page), rendered with `markdown-it-py`, the
+  chapters as a navigation above each page. The files link each other
+  relatively (`todos.md`), which works on GitHub and on the pages. HTML
+  like `<kbd>` is fine: the docs come from the repository.
+- **English only for now**, like the interface; German files
+  (`name.de.md`, `PAGES["de"]`) come with the translation.
+- **Login required. Everybody sees every chapter** (decided
+  2026-11-21): clients may read how showing to clients works and about
+  the CLI; the chapters say where something is for staff only.
+- **The texts** describe what the app does now, short and concrete, no
+  plans, no marketing (`AGENTS.md`, "Help"). A part that changes what
+  people see or do updates its chapter.
 
-## The keyboard page
+## Chapters
 
-- `/help/keyboard/` shows `docs/keyboard.md` (the palette, rows, what
-  `j`/`k`/`x`/`o` do where) **and the shortcuts list from
-  `palette/_shortcuts.html`** below it, so there's one list: the help
-  page, the `?` dialog and nothing else render it. `help.py` appends
-  the include for this page (a template for the page, not Markdown
-  copying the list).
-- **The settings page** keeps the on/off switch for shortcuts and loses
-  the list; below the switch: "All shortcuts" linking to
-  `/help/keyboard/`.
-- **The `?` dialog** keeps the list and gets a link "Help" to
-  `/help/keyboard/` at its end.
+Decided 2026-11-21, one file each, in `help.py`'s table: Help
+(`README.md`: what Biwak is for and doesn't do), Finding your way
+(`orientation.md`), To-dos, Messages, docs and files (`files.md`),
+Check-ins, Notifications, Clients, Keyboard, Signing in (`sign-in.md`),
+The CLI and the API (`cli.md`).
+
+## The shortcuts list
+
+`palette/_shortcuts.html` is the one list: `/help/keyboard/` shows
+`docs/keyboard.md` with the list appended (`WITH_SHORTCUTS`), the `?`
+dialog renders it with a "Help" link, and the settings page links to it
+(`#shortcuts`) instead of listing it.
 
 ## Links to the help
 
-- The "Me" menu: "Help" (as in Governance), above "Sign out".
-- Home's "Useful" card: "Help".
-- The palette: "Help" everywhere, and "Keyboard shortcuts" opening
-  `/help/keyboard/`.
-- Where a page has something to explain, a quiet link to the chapter,
-  only where it helps (proposed: the visibility switch's modal to
-  "Clients", the notification settings to "Notifications", the API
-  tokens page to "The CLI and the API", the calendar link page to
-  "To-dos").
-
-## Chapters (decided 2026-11-21)
-
-Each a file in `docs/`, short, with what a person does and where:
-
-1. **Help** (`README.md`): what Biwak is for, the chapters, what it
-   doesn't do (time tracking, invoices, chat).
-2. **Finding your way** (`orientation.md`): Home, projects, to-dos,
-   activity, the lantern, bookmarks, search and the palette, people.
-3. **To-dos** (`todos.md`): lists, groups, assigning, due dates,
-   repeating, checklists, the to-dos page and its filters, the calendar
-   subscription.
-4. **Messages, docs and files** (`files.md`): the message board,
-   folders, docs edited together, versions, uploads, attachments.
-5. **Check-ins** (`checkins.md`): questions on a schedule, answering,
-   by mail too.
-6. **Notifications** (`notifications.md`): the lantern, what reads a
-   notification (opening it there, acting on the item), mails and
-   digests, levels per project and item, replying by mail.
-7. **Clients** (`clients.md`): what clients see, showing and
-   hiding, the banner and badges, what clients can do.
-8. **Keyboard** (`keyboard.md`): the palette and the shortcuts (above).
-9. **The CLI and the API** (`cli.md`): tokens, installing
-   `biwak`, a few examples, a link to the CLI's README.
-
-## Done when
-
-- `/help/` and every chapter render, with the navigation; links between
-  the files work on the pages and on GitHub.
-- Clients see the same chapters as staff; test.
-- The shortcuts list is only in `palette/_shortcuts.html`, shown on
-  `/help/keyboard/` and in the `?` dialog; settings links there.
-- The links above exist (tests on the pages and the palette's JSON).
-- The texts read by the user.
+"Help" in the "Me" menu (above "Sign out"), Home's useful links and the
+palette (with "Keyboard shortcuts"). Quiet links to a chapter only where
+they help: `form_response(help_page=…)` ("More in the help", e.g. the
+visibility modal to "Clients"), the notification settings, the API
+tokens page and the calendar page.

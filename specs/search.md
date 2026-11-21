@@ -3,132 +3,60 @@
 Finding things across projects: a to-do, a message, a doc, a file, a
 comment, a check-in answer, by words in their title or text.
 
-**Status:** built 2026-11-20 (branch `search`): the page, the API and
-`biwak search`. **Changed 2026-11-21 (branch `search-archived`):**
-archived projects and archived lists with their contents are left out by
-default, "Include archived" brings them in. See "Built" below for how, the decisions made on the way
-and the query plan.
+**Status:** built (2026-11-20; archived left out by default since
+2026-11-21): `biwak/search/`.
 
-**Agent:** suits a cheaper model following this spec and the checklist
-in `AGENTS.md`. Search shows content: visibility tests through the page
-and the API, with a client and with staff without access to a limited
-project.
+## Decided
 
-**Depends on:** every kind of item that exists now (to-dos, messages,
-docs, files, check-ins, comments).
+- **PostgreSQL full-text search**, no outside service (2026-11-20). The
+  `simple` configuration with prefix matching, the same for every
+  language (English and German texts), no stemming.
+- **Newest first** by `updated_at`, not by relevance; 50 results per
+  page, excerpts of 200 characters, like the feed (confirmed
+  2026-11-21).
+- **All words anywhere in an item:** the title, its text and its
+  comments together.
+- **"Only mine":** items you created and to-dos assigned to you
+  (2026-11-21).
+- **Archived** (changed 2026-11-21): archived projects, archived lists
+  and their to-dos are left out unless "Include archived" (no negation
+  in the label; `archived=true` in the API, `--archived` in the CLI);
+  results are then marked "Archived" (`archived` and `project_archived`
+  in the API, `(archived)` in the CLI).
 
-**Touches:** a new app `biwak/search/` (queries, views, api, templates),
-a search field in `base.html`, the CLI, migrations for the search
-indexes.
+## How it works
 
-## What
-
-- **PostgreSQL full-text search**, no outside service: GIN indexes on
-  the title of items, the text of every kind and the comments, which
-  stay current by themselves (see "Built"). Several languages are
-  expected (English and German texts): the `simple` configuration plus
-  prefix matching.
-- **Results** go through `Item.objects.visible_to(user)` (comments through
-  their item), so a client never finds what they can't see and trashed
-  items don't show. Each result: kind icon, title, project, a short
-  excerpt with the matched words (`ts_headline`, escaped), the client
-  badge, the date.
-- **Page:** `/search/?q=…`, with filters for the project, the kind and
-  "only mine"; the field in the navigation. Paginated like the feed.
-- **API and CLI:** `GET /api/v1/search/?q=` with the same filters and
-  cursor pagination; `biwak search TERMS [--project ID] [--kind K]
-  [--archived]`,
-  marking `[clients]`.
-
-## Decided (2026-11-20)
-
-- Excerpts are plain text like the excerpts elsewhere (`glance.md`): no
-  Markdown, mentions as "@Label" as written.
-
-- The `simple` text search configuration with prefix matching, the same
-  for every language; no stemming.
-- Archived projects are searched, their results marked as archived; a
-  filter leaves them out. **Changed 2026-11-21:** archived projects and
-  archived lists (with their contents) are left out by default; a
-  checkbox "Include archived" (no negation in the label; `archived=true`
-  in the API, `--archived` in the CLI) brings them in, marked
-  "Archived".
-- Page size and excerpt length like the feed: 50 results, 200
-  characters.
-
-## Built (2026-11-20)
-
-- **Indexes, not stored vectors**: expression GIN indexes on
-  `to_tsvector('simple', …)` of `items_item.title`, `items_todolist.description`,
-  `items_todo.notes`, `items_message.content`, `items_doc.content`,
-  `items_upload.description`, `checkins_answer.content` and
-  `items_comment.content` (`biwak/search/migrations/0001_indexes.py`).
-  Nothing in the operations: the indexes follow every write, whoever
-  makes it (importer, admin, SQL), and the audit trigger doesn't see a
-  vector column. `biwak/search/queries.py` (`vector()`) has to use the
-  same expression as the migration, and a new text gets its index in a
+- **Indexes, not stored vectors:** expression GIN indexes on
+  `to_tsvector('simple', …)` of every searched text
+  (`biwak/search/migrations/0001_indexes.py`: item titles, list
+  descriptions, to-do notes, messages, docs, file descriptions, answers,
+  comments). They follow every write, whoever makes it (importer, admin,
+  SQL), and the audit trigger doesn't see a vector column. **Rule:**
+  `vector()` in `biwak/search/queries.py` must use the same expression
+  as the migration, and a new searchable text gets its index in a
   migration and its entry in `TEXTS`. Old doc versions aren't searched.
-- **The query**: every word of the query is read by the database itself
+- **The query:** each word is read by the database
   (`to_tsvector('simple', …)`, so "1.5" and addresses match as indexed),
-  quoted and made a prefix (`'word':*`); at most 10 words, 200
-  characters, never query syntax. An item is found when every word is
-  somewhere in it: the title, its text or its comments (the words can be
-  spread over them). Per word the IDs of the 8 sources are united (each
-  using its index), then `Item.objects.visible_to(user)` filters, so
-  comments are found through their item and trashed items (and those of a
-  trashed list) never show. Newest first by `updated_at`, cursor
-  paginated like the feed, 50 per page (`?before=` on the page,
-  `cursor` in the API).
-- **Excerpts**: `ts_headline` per text of the 50 results, in one query,
-  with private-use characters as markers (taken out of the texts
-  first), cut to 200 characters in Python, then escaped; `<mark>` is the
-  only markup. The text of the item if it has the words, else the first
-  matching comment (marked "Comment:"), none if only the title has them.
-  Texts and comments are turned into plain text first (Markdown rendered,
-  tags stripped, mentions as written). API: `excerpt` (plain), `excerpt_html`, `title_html`,
-  `in_comment`, `project_name`, `project_archived` on top of `ItemOut`.
-- **Page and field**: `/search/?q=` with the project, kind, "only mine"
-  and "Include archived" filters; the field in the navigation of
-  `base.html`. Filters of projects the person can't open are form errors
-  (page) or 404 (API). CLI: `biwak search TERMS… [--project] [--kind]
-  [--mine] [--archived] [--limit]`, 0.18.0 (`--archived` since 0.24.0).
-- **Query plan** (`EXPLAIN ANALYZE`, 300 000 items, 300 000 comments,
-  100 000 each of to-do notes, message and doc texts, 40 projects, made-up
-  words with a Zipf-like distribution, local PostgreSQL): every part of
-  the union uses its GIN index (Parallel Bitmap Heap Scan on a
-  Bitmap Index Scan for the large results, Bitmap Heap Scan for the
-  small ones; the tables of lists, files and answers are empty and
-  scanned). Then a semi join with the visible items, a top-N sort of the
-  first page. A word in 44 texts: 15 ms; in 344: 21 ms; in 16 700 (5 % of
-  the items): 130 ms; in 267 000 items (a word in nearly every text,
-  which people don't search for): 780 ms, as the sort needs all matches.
-  As a client the same (the filter on the stored visibility is cheap).
-
-## Decisions made on the way (confirmed 2026-11-21: newest first, all
-words anywhere in an item; "only mine" changed to created or assigned)
-
-- Order: newest first by `updated_at`, not by relevance (the spec says
-  "paginated like the feed" and shows a date).
-- "Only mine": items you created and to-dos assigned to you (decided
-  2026-11-21); still within `visible_to()`.
-- Words match anywhere in the item (title, text, comments together).
-- Archived projects and lists are left out by default (decided
-  2026-11-21, replacing "without archived projects"). The query leaves out
-  items in an archived project, archived lists and the to-dos in them (the
-  only kind with a parent besides folders and answers; comments follow their
-  item); `archived` brings all in. The result is marked "Archived" when the
-  project, the list or its list is archived (`archived` in the API, next to
-  `project_archived`; `(archived)` in the CLI). No extra query: `parent` is
-  joined with the items. Other archived items (messages, docs) don't exist
-  yet. The palette's jumps (`biwak/palette/`) are unchanged: archived
-  projects come last and marked, and items of archived projects too; they
-  only look at the project's archive state, so archived lists and their
-  to-dos are listed like active ones, unmarked.
-
-## Done when
-
-Searching titles, texts and comments of every kind; a client finding
-only visible items, never internal comments' items; staff without
-access to a limited project finding nothing in it; trashed items not
-found; the page, the API and the CLI; a query plan using the indexes on
-a few hundred thousand items.
+  quoted and made a prefix (`'word':*`); at most 10 words and 200
+  characters, never query syntax. Per word the IDs of every source are
+  united (each using its index), then `Item.objects.visible_to(user)`
+  filters: comments are found through their item, trashed items never
+  show. Cursor paginated (`?before=` on the page, `cursor` in the API).
+  Fast enough on a few hundred thousand items (measured 2026-11-20: 15
+  to 130 ms for realistic words).
+- **Excerpts:** `ts_headline` for the page's results in one query,
+  with private-use characters as markers, then escaped, `<mark>` the
+  only markup; texts made plain first (Markdown rendered, mentions as
+  written). The item's text if it has the words, else the first
+  matching comment ("Comment:"), none if only the title has them.
+- **Results:** kind icon, title, project with its color, the excerpt,
+  the client badge, the date, the checklist count.
+- **Page:** `/search/?q=` with project, kind, "only mine" and "Include
+  archived"; a project the person can't open is a form error (404 in
+  the API). Reached through the palette (`keyboard.md`).
+- **API and CLI:** `GET /api/v1/search/?q=` with the same filters
+  (`excerpt`, `excerpt_html`, `title_html`, `in_comment`,
+  `project_name` on top of `ItemOut`); `biwak search TERMS… [--project]
+  [--kind] [--mine] [--archived] [--limit]`, marking `[clients]`.
+- The palette's jumps (`keyboard.md`) are separate: archived projects
+  last and marked, archived lists listed like active ones.
