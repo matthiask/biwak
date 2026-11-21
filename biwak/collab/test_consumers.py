@@ -9,12 +9,14 @@ import asyncio
 import json
 from unittest.mock import ANY, patch
 
+from allauth.usersessions.models import UserSession
 from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
 from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
 from django.contrib.sessions.models import Session
 from django.test import Client, TransactionTestCase
+from django.urls import reverse
 from pycrdt import (
     Doc,
     Text,
@@ -118,10 +120,12 @@ class ConsumerTest(TransactionTestCase):
         client.force_login(user)
         return client.cookies["sessionid"].value
 
-    async def connect(self, user, item, *, sync=True):
+    async def connect(self, user, item, *, sync=True, key=None):
+        """``key``: the login session's, else a new one's"""
         headers = []
         if user is not None:
-            key = await database_sync_to_async(self.session)(user)
+            if key is None:
+                key = await database_sync_to_async(self.session)(user)
             headers = [(b"cookie", f"sessionid={key}".encode())]
         communicator = WebsocketCommunicator(
             application, f"/ws/docs/{item.pk}", headers=headers
@@ -370,6 +374,30 @@ class ConsumerTest(TransactionTestCase):
         await database_sync_to_async(self.on_commit)(
             live.check_access, doc=self.shared.pk
         )
+        await self.assertClosed(cleo)
+
+    async def logged_in(self, user):
+        """A client logged in, and its session listed as logging in by code
+        would (``force_login()`` doesn't)"""
+        client = Client()
+        await database_sync_to_async(client.force_login)(user)
+        key = client.cookies["sessionid"].value
+        await database_sync_to_async(UserSession.objects.create)(
+            user=user, session_key=key, ip="127.0.0.1", user_agent="Test"
+        )
+        return client, key
+
+    async def test_logging_out_closes_the_session(self):
+        client, key = await self.logged_in(self.cleo)
+        cleo = await self.connect(self.cleo, self.shared, key=key)
+        await database_sync_to_async(client.post)(reverse("account_logout"))
+        await self.assertClosed(cleo)
+
+    async def test_logging_out_everywhere_closes_the_session(self):
+        _client, key = await self.logged_in(self.cleo)
+        cleo = await self.connect(self.cleo, self.shared, key=key)
+        here, _key = await self.logged_in(self.cleo)
+        await database_sync_to_async(here.post)(reverse("usersessions_list"))
         await self.assertClosed(cleo)
 
     async def test_checking_periodically(self):

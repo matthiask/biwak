@@ -146,6 +146,10 @@ class LiveConsumer(AsyncWebsocketConsumer):
         await self.send_json({"type": "lantern"})
 
     async def access_check(self, event=None):
+        if event and event.get("session") and event["session"] == self.session_key:
+            # Logged out (the session may not be deleted yet)
+            await self.refuse(CLOSE_NO_LOGIN)
+            return
         found = await database_sync_to_async(self._access)()
         if found is not True:
             await self.refuse(found)

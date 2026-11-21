@@ -217,6 +217,10 @@ setup as `collaboration.md`).
   another request made an internal item visible pinged the client's tabs.
   (`notify()` leaving such clients out altogether, and the mails, are
   fixed on main, branch `mail-race`.)
+- **Logging out** closes the tabs' websockets of that login session at
+  once (4401), and logging out everywhere those of the others: before,
+  they kept hearing changes until the next check (60 seconds). Like the
+  live editor's (`collaboration.md`).
 
 ## Questions (built the way described meanwhile)
 

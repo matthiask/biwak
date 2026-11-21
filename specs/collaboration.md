@@ -113,9 +113,12 @@ browsers (Playwright) typing, a client watching, an internal doc
   event may change access (moved, visibility changed, trashed, archived,
   project edited, member removed or left), when a person is saved
   (admin: deactivated, made a client) or a project (admin: made limited,
-  archived), when the read-only option changes, and every 60 seconds
-  (**?**), which also closes sessions whose login session is gone
-  (logging out everywhere). Losing access closes the session (4404; the
+  archived), when the read-only option changes, when the person logs
+  out or logs out everywhere (`user_logged_out` and usersessions'
+  sessions deleted: the websockets of that login session close at once,
+  fixed 2026-11-21 after the visibility review of the live features), and
+  every 60 seconds (**?**), which also closes sessions whose login session
+  is gone some other way. Losing access closes the session (4404; the
   editor shows "You can't see this doc anymore." and removes the text);
   losing only the right to type switches the editor to watching.
 - **Storing** (`files.operations.save_live()`): 3 seconds after the last

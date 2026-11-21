@@ -251,6 +251,10 @@ class DocConsumer(AsyncWebsocketConsumer):
     async def access_check(self, event=None):
         """Closes the session when the person can't see the doc anymore,
         tells the editor when it may type or not anymore"""
+        if event and event.get("session") and event["session"] == self.session_key:
+            # Logged out (the session may not be deleted yet)
+            await self.refuse()
+            return
         mode = await database_sync_to_async(self._access)()
         if mode is None:
             await self.refuse()

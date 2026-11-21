@@ -6,13 +6,14 @@ changes."""
 import asyncio
 import json
 
+from allauth.usersessions.models import UserSession
 from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
 from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
-from django.contrib.sessions.models import Session
 from django.db import transaction
 from django.test import Client, TransactionTestCase
+from django.urls import reverse
 
 from biwak.activity.operations import subscribe
 from biwak.collab.routing import websocket_urlpatterns
@@ -58,10 +59,12 @@ class LiveConsumerTest(TransactionTestCase):
         client.force_login(user)
         return client.cookies["sessionid"].value
 
-    async def connect(self, user, item=None, *, query=None, ready=True):
+    async def connect(self, user, item=None, *, query=None, ready=True, key=None):
+        """``key``: the login session's, else a new one's"""
         headers = []
         if user is not None:
-            key = await database_sync_to_async(self.session)(user)
+            if key is None:
+                key = await database_sync_to_async(self.session)(user)
             headers = [(b"cookie", f"sessionid={key}".encode())]
         path = "/ws/live/"
         if query is not None:
@@ -291,11 +294,34 @@ class LiveConsumerTest(TransactionTestCase):
             len(groups.get(announce.item_group(self.shared.pk, clients=False), {})), 0
         )
 
+    async def logged_in(self, user):
+        """A client logged in, and its session listed as logging in by code
+        would (``force_login()`` doesn't)"""
+        client = Client()
+        await database_sync_to_async(client.force_login)(user)
+        key = client.cookies["sessionid"].value
+        await database_sync_to_async(UserSession.objects.create)(
+            user=user, session_key=key, ip="127.0.0.1", user_agent="Test"
+        )
+        return client, key
+
     async def test_logging_out_closes(self):
-        ada = await self.connect(self.ada)
-        await database_sync_to_async(Session.objects.all().delete)()
-        await self.run_op(self.ada.save)
+        client, key = await self.logged_in(self.ada)
+        ada = await self.connect(self.ada, self.todo, key=key)
+        elsewhere = await self.connect(self.ada, self.todo)
+        await self.run_op(client.post, reverse("account_logout"))
         await self.assertClosed(ada, consumers.CLOSE_NO_LOGIN)
+        # Only that session's tabs
+        await self.assertQuiet(elsewhere)
+
+    async def test_logging_out_everywhere_closes(self):
+        _client, key = await self.logged_in(self.ada)
+        ada = await self.connect(self.ada, self.todo, key=key)
+        here, here_key = await self.logged_in(self.ada)
+        tab = await self.connect(self.ada, self.todo, key=here_key)
+        await self.run_op(here.post, reverse("usersessions_list"))
+        await self.assertClosed(ada, consumers.CLOSE_NO_LOGIN)
+        await self.assertQuiet(tab)
 
     # The lantern -------------------------------------------------------------
 

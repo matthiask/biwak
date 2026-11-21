@@ -208,9 +208,11 @@ def send_update(pk, update):
     _send(doc_group(pk), {"type": "doc.update", "update": update})
 
 
-def check_access(*, doc=None, project=None, user=None):
+def check_access(*, doc=None, project=None, user=None, session=None):
     """Tells the editors of a doc, of a project's docs or of a person to
-    check whether they may still edit or see the doc, after the commit"""
+    check whether they may still edit or see the doc, after the commit;
+    ``session``: the key of a login session that ended (logging out), whose
+    websockets close"""
     groups = [
         group(pk)
         for group, pk in [
@@ -220,7 +222,10 @@ def check_access(*, doc=None, project=None, user=None):
         ]
         if pk is not None
     ]
+    message = {"type": "access.check"}
+    if session is not None:
+        message["session"] = session
     transaction.on_commit(
-        lambda: [_send(group, {"type": "access.check"}) for group in groups],
+        lambda: [_send(group, message) for group in groups],
         robust=True,
     )
