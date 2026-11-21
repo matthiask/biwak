@@ -339,7 +339,7 @@ def item_mail(user, item, notifications):
     thread = f"<item-{item.pk}@{host()}>"
     return build_mail(
         user,
-        subject=f"[{item.project}] {context['title']}",
+        subject=_("[%(project)s] %(title)s") % context,
         template="mails/notification",
         context=context,
         from_name=_("%(name)s (Biwak)") % {"name": entries[-1]["event"].actor},
