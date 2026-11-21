@@ -1155,21 +1155,26 @@ class CollabTest(E2ETestCase):
         bar = page.locator("[data-collab] .wb-toolbar")
         expect(bar).to_be_visible()
         self.content(page).click()
-        # "Agenda" selected, then bold
-        page.keyboard.press("Control+Home")
-        page.keyboard.press("Shift+End")
+
+        def select_agenda():
+            # The text is "# Minutes", an empty line, "Agenda", an empty line
+            page.keyboard.press("Control+End")
+            page.keyboard.press("ArrowUp")
+            page.keyboard.press("Home")
+            page.keyboard.press("Shift+End")
+
+        select_agenda()
         bar.locator('[data-toolbar-action="bold"]').click()
-        self.wait_for_text(page, "**Agenda**\n")
+        self.wait_for_text(page, "# Minutes\n\n**Agenda**\n")
         page.keyboard.press("Control+z")
-        self.wait_for_text(page, "Agenda\n")
+        self.wait_for_text(page, "# Minutes\n\nAgenda\n")
         # The keys, before CodeMirror's own
-        page.keyboard.press("Control+Home")
-        page.keyboard.press("Shift+End")
+        select_agenda()
         page.keyboard.press("Control+i")
-        self.wait_for_text(page, "_Agenda_\n")
-        bar.locator('[data-toolbar-action="heading"]').click()
-        self.wait_for_text(page, "## _Agenda_\n")
-        self.wait_for_stored("## _Agenda_\n")
+        self.wait_for_text(page, "# Minutes\n\n_Agenda_\n")
+        bar.locator('[data-toolbar-action="quote"]').click()
+        self.wait_for_text(page, "# Minutes\n\n> _Agenda_\n")
+        self.wait_for_stored("# Minutes\n\n> _Agenda_\n")
         self.assertEqual(self.errors, [])
 
     def test_a_tick_in_another_browser_arrives_in_the_open_editor(self):

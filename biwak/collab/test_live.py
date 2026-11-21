@@ -50,12 +50,14 @@ class YTextTest(TestCase):
         from django import forms
 
         from biwak.forms import Form
+        from biwak.items import operations as ops
 
         ada = person("Ada")
         doc = ops.create_doc(
             project=project(members=[ada]), title="Notes", content="a\r\nb", creator=ada
         )
-        self.assertEqual(doc.doc.content, "a\nb")
+        # After the heading with the title (specs/doc-titles.md)
+        self.assertEqual(doc.doc.content, "# Notes\n\na\nb")
 
         class TextForm(Form):
             text = forms.CharField(widget=forms.Textarea)
