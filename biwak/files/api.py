@@ -485,20 +485,20 @@ class DocOut(ItemOut):
     checklist_total: int
     # The newest version, the ``base_version`` of the next save
     version_id: int
-    locked_by: PersonOut | None
+    # Nobody edits it until staff turn this off (specs/collaboration.md)
+    read_only: bool
     reactions: list[ReactionOut]
 
 
 def doc_out(item, user):
     doc = item.doc
-    holder = operations.lock_holder(doc)
     return item_out(item) | {
         "content": doc.content,
         "content_html": html(doc.content, item),
         "checklist_done": doc.checklist_done,
         "checklist_total": doc.checklist_total,
         "version_id": doc.versions.first().pk,
-        "locked_by": person_out(holder),
+        "read_only": doc.read_only,
         "reactions": reactions_out(item, None, user),
     }
 
@@ -548,6 +548,8 @@ class DocPatch(Schema):
     # The ``version_id`` you edited; refused (409) if somebody else saved a
     # newer version since
     base_version: int | None = None
+    # Staff only
+    read_only: bool | None = None
 
 
 def _changeable_doc(request, doc_id):
@@ -561,11 +563,19 @@ def _changeable_doc(request, doc_id):
 def doc_update(request, doc_id: int, data: DocPatch):
     """Saves the fields given, with the version rules of the web
     interface: a version when the last one is older than 10 minutes or by
-    someone else, or ``new_version``. 409 while somebody else is editing,
-    and when ``base_version`` was overtaken by somebody else's save.
-    Clients only change docs they created (403)."""
+    someone else, or ``new_version``. The content is applied as an edit of
+    the text as it was last saved, so what people type in the doc meanwhile
+    stays, and it shows up in their editors (specs/collaboration.md). 409
+    when ``base_version`` was overtaken by somebody else's save and for
+    read-only docs. Clients only change docs they created (403);
+    ``read_only`` is for staff."""
     item = _changeable_doc(request, doc_id)
     given = data.model_fields_set
+    read_only = data.read_only if "read_only" in given else None
+    if read_only is not None and request.user.is_client:
+        raise HttpError(403, _("Only staff make docs read-only."))
+    if read_only is False:
+        operations.set_read_only(item, read_only=False, actor=request.user)
     changes = {}
     if "title" in given:
         changes["title"] = clean_title(data.title)
@@ -573,47 +583,25 @@ def doc_update(request, doc_id: int, data: DocPatch):
         changes["content"] = resolve_mentions(
             item, data.content or "", author=request.user
         )
-    try:
-        operations.update_doc(
-            item,
-            actor=request.user,
-            new_version=data.new_version,
-            base_version=data.base_version,
-            **changes,
-        )
-    except operations.DocLocked as exc:
-        raise HttpError(
-            409,
-            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
-        ) from exc
-    except operations.DocConflict as exc:
-        raise HttpError(
-            409,
-            _("%(name)s saved a newer version.")
-            % {"name": exc.version.created_by.get_short_name()},
-        ) from exc
-    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
-
-
-@router.put("docs/{doc_id}/lock/", response=DocOut)
-def doc_lock(request, doc_id: int):
-    """Takes or renews the lock (it expires 5 minutes after the last
-    renewal); 409 while somebody else holds it"""
-    item = _changeable_doc(request, doc_id)
-    try:
-        operations.lock_doc(item, request.user)
-    except operations.DocLocked as exc:
-        raise HttpError(
-            409,
-            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
-        ) from exc
-    return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
-
-
-@router.delete("docs/{doc_id}/lock/", response=DocOut)
-def doc_unlock(request, doc_id: int):
-    item = _changeable_doc(request, doc_id)
-    operations.unlock_doc(item, request.user)
+    if changes or data.new_version:
+        try:
+            operations.update_doc(
+                item,
+                actor=request.user,
+                new_version=data.new_version,
+                base_version=data.base_version,
+                **changes,
+            )
+        except operations.DocReadOnly as exc:
+            raise HttpError(409, _("The doc is read-only.")) from exc
+        except operations.DocConflict as exc:
+            raise HttpError(
+                409,
+                _("%(name)s saved a newer version.")
+                % {"name": exc.version.created_by.get_short_name()},
+            ) from exc
+    if read_only:
+        operations.set_read_only(item, read_only=True, actor=request.user)
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 
@@ -677,11 +665,8 @@ def doc_version_restore(request, doc_id: int, version_id: int):
     version = get_object_or_404(item.doc.versions, pk=version_id)
     try:
         operations.restore_doc_version(item, version, actor=request.user)
-    except operations.DocLocked as exc:
-        raise HttpError(
-            409,
-            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
-        ) from exc
+    except operations.DocReadOnly as exc:
+        raise HttpError(409, _("The doc is read-only.")) from exc
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
 

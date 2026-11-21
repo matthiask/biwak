@@ -2,6 +2,7 @@
 
 import datetime as dt
 import io
+import re
 import threading
 
 import time_machine
@@ -352,11 +353,10 @@ class ManageTest(TestCase):
     def test_board_hides_empty_ungrouped_column(self):
         self.client.force_login(self.ada)
         url = f"/lists/{self.shared.pk}/?view=board"
-        self.assertNotContains(
-            self.client.get(url), '<section class="wb-group" hidden>'
-        )
+        hidden = re.compile(r'<section[^>]*id="group-none"[^>]*\shidden\b')
+        self.assertNotRegex(self.client.get(url).content.decode(), hidden)
         ops.move_todo(self.todo, todolist=self.shared, group=self.group, actor=self.ada)
-        self.assertContains(self.client.get(url), '<section class="wb-group" hidden>')
+        self.assertRegex(self.client.get(url).content.decode(), hidden)
 
     def test_trash_and_restore(self):
         self.client.force_login(self.ada)

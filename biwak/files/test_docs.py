@@ -7,13 +7,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from biwak.activity.models import Event
+from biwak.collab import live
 from biwak.files import operations
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.test_utils import person, project
 
 
-POST_ONLY = {"doc_lock", "doc_version_restore", "item_move"}
+POST_ONLY = {"doc_read_only", "doc_version_restore", "item_move"}
 
 
 class Fixture:
@@ -63,12 +64,14 @@ class DocPageTest(Fixture, TestCase):
             for doc in [self.shared, self.nested]:
                 response = self.client.get(doc.get_absolute_url())
                 self.assertContains(response, "Clients can see this")
-                # Clients edit only docs they created
-                edit = self.url("doc_edit", doc)
+                # Clients edit only docs they created, and watch the others
+                self.assertContains(response, self.url("doc_edit", doc))
                 if user.is_client:
-                    self.assertNotContains(response, edit)
+                    self.assertContains(response, "Watch live")
+                    self.assertNotContains(response, "Make read-only")
                 else:
-                    self.assertContains(response, edit)
+                    self.assertContains(response, "Edit")
+                    self.assertContains(response, "Make read-only")
         self.assertContains(
             self.client.get(self.shared.get_absolute_url()), "<strong>text</strong>"
         )
@@ -79,7 +82,7 @@ class DocPageTest(Fixture, TestCase):
         for name, args in [
             ("doc", []),
             ("doc_edit", []),
-            ("doc_lock", []),
+            ("doc_read_only", []),
             ("doc_versions", []),
             ("doc_version", [version.pk]),
             ("doc_version_restore", [version.pk]),
@@ -211,60 +214,61 @@ class NewDocTest(Fixture, TestCase):
 
 
 class EditTest(Fixture, TestCase):
-    def edit(self, user, doc=None, **data):
-        doc = doc or self.shared
-        self.client.force_login(user)
-        base = self.latest(doc).pk
-        data = {"title": doc.title, "content": "New", "base_version": base} | data
-        return self.client.post(self.url("doc_edit", doc), data)
+    """The editor page; what's typed goes through the websocket
+    (biwak/collab/test_consumers.py)"""
 
-    def test_opening_the_form_takes_the_lock(self):
+    def test_staff_edit_live(self):
         self.client.force_login(self.ada)
         response = self.client.get(self.url("doc_edit", self.shared))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "data-doc-lock")
-        self.assertContains(response, 'name="base_version"')
-        self.shared.doc.refresh_from_db()
-        self.assertEqual(operations.lock_holder(self.shared.doc), self.ada)
+        self.assertContains(response, f'data-collab="/ws/docs/{self.shared.pk}"')
+        self.assertContains(response, "data-attachments=")
+        self.assertContains(response, "Rename")
+        self.assertContains(response, "Save as a version")
+        self.assertContains(response, "Clients can see this")
 
-    def test_somebody_else_cannot_open_the_form_meanwhile(self):
-        self.client.force_login(self.ada)
-        self.client.get(self.url("doc_edit", self.shared))
+    def test_renaming(self):
         self.client.force_login(self.bob)
-        response = self.client.get(self.url("doc_edit", self.shared), follow=True)
-        self.assertRedirects(response, self.shared.get_absolute_url())
-        self.assertContains(response, "Ada is editing")
-        self.assertNotContains(response, f'href="{self.url("doc_edit", self.shared)}"')
-
-    def test_after_the_lock_expired_others_can_edit(self):
-        self.client.force_login(self.ada)
-        self.client.get(self.url("doc_edit", self.shared))
-        with time_machine.travel(timezone.now() + dt.timedelta(minutes=6)):
-            self.client.force_login(self.bob)
-            response = self.client.get(self.url("doc_edit", self.shared))
-            self.assertEqual(response.status_code, 200)
-
-    def test_saving(self):
-        response = self.edit(self.ada, title="Renamed", content="Changed")
-        self.assertRedirects(response, self.shared.get_absolute_url())
+        response = self.client.post(
+            self.url("doc_edit", self.shared), {"title": "Renamed"}
+        )
+        self.assertRedirects(response, self.url("doc_edit", self.shared))
         self.shared.refresh_from_db()
         self.assertEqual(self.shared.title, "Renamed")
-        self.assertEqual(self.shared.doc.content, "Changed")
+        self.assertEqual(self.shared.doc.content, "Shared **text**")
+        latest = self.latest(self.shared)
+        self.assertEqual((latest.title, latest.created_by), ("Renamed", self.bob))
+        self.assertTrue(
+            Event.objects.filter(item=self.shared, actor=self.bob, action="edited")
+        )
+        response = self.client.post(self.url("doc_edit", self.shared), {"title": ""})
+        self.assertEqual(response.status_code, 200)
 
-    def test_clients_cannot_edit_or_lock_docs_staff_created(self):
-        """Clients change only what they created (specs/access.md)"""
+    def test_save_as_a_version(self):
+        live.apply_text(self.shared.doc, "Typed", user=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.url("doc_edit", self.shared), {"new_version": "1"}, follow=True
+        )
+        self.assertContains(response, "Saved as a version.")
+        self.assertEqual(
+            [v.content for v in self.shared.doc.versions.all()],
+            ["Typed", "Shared **text**"],
+        )
+
+    def test_clients_watch_docs_staff_created(self):
+        """Clients change only what they created (specs/access.md); the
+        others they watch (decided 2026-11-20)"""
         self.client.force_login(self.cleo)
         response = self.client.get(self.url("doc_edit", self.shared))
-        self.assertEqual(response.status_code, 403)
-        response = self.edit(self.cleo, content="Scope doubled, same price")
-        self.assertEqual(response.status_code, 403)
-        response = self.client.post(self.url("doc_lock", self.shared))
-        self.assertEqual(response.status_code, 403)
-        self.shared.doc.refresh_from_db()
-        self.assertEqual(self.shared.doc.content, "Shared **text**")
-        self.assertIsNone(operations.lock_holder(self.shared.doc))
-        response = self.client.get(self.shared.get_absolute_url())
-        self.assertNotContains(response, self.url("doc_edit", self.shared))
+        self.assertContains(response, f'data-collab="/ws/docs/{self.shared.pk}"')
+        self.assertNotContains(response, "Rename")
+        self.assertNotContains(response, "data-attachments=")
+        for data in [{"title": "Scope doubled"}, {"new_version": "1"}]:
+            response = self.client.post(self.url("doc_edit", self.shared), data)
+            self.assertEqual(response.status_code, 403)
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.title, "Shared doc")
+        self.assertEqual(self.shared.doc.versions.count(), 1)
 
     def test_clients_edit_docs_they_created(self):
         doc = ops.create_doc(
@@ -274,130 +278,67 @@ class EditTest(Fixture, TestCase):
             creator=self.cleo,
             visible=True,
         )
-        self.edit(self.cleo, doc, content="By a client")
-        doc.doc.refresh_from_db()
-        self.assertEqual(doc.doc.content, "By a client")
+        self.client.force_login(self.cleo)
+        self.assertContains(self.client.get(self.url("doc_edit", doc)), "Rename")
+        self.client.post(self.url("doc_edit", doc), {"title": "Our notes"})
+        doc.refresh_from_db()
+        self.assertEqual(doc.title, "Our notes")
         self.assertEqual(self.latest(doc).created_by, self.cleo)
 
-    def test_save_as_a_version(self):
-        self.edit(self.ada, content="One")
-        self.edit(self.ada, content="Two", new_version="1")
-        # The first save by the author within ten minutes updated the
-        # creation's version, the second one started a new one
-        self.assertEqual(
-            [v.content for v in self.shared.doc.versions.all()], ["Two", "One"]
-        )
-
-    def test_the_lock_is_given_up_when_saving(self):
+    def test_read_only_docs_are_watched_by_everybody(self):
+        operations.set_read_only(self.shared, read_only=True, actor=self.ada)
         self.client.force_login(self.ada)
-        self.client.get(self.url("doc_edit", self.shared))
-        self.client.post(
-            self.url("doc_edit", self.shared),
-            {
-                "title": "Shared doc",
-                "content": "Done",
-                "base_version": self.latest(self.shared).pk,
-            },
-        )
-        self.shared.doc.refresh_from_db()
-        self.assertIsNone(operations.lock_holder(self.shared.doc))
-
-    def test_a_save_over_a_newer_version_by_somebody_else_is_refused(self):
-        self.client.force_login(self.ada)
-        base = self.latest(self.shared).pk
-        operations.update_doc(self.shared, actor=self.bob, content="Bob's")
-        response = self.client.post(
-            self.url("doc_edit", self.shared),
-            {"title": "Shared doc", "content": "Ada's", "base_version": base},
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Bob saved a newer version")
-        self.assertContains(response, "Ada&#x27;s")  # her text stays in the form
-        newer = self.latest(self.shared)
-        self.assertContains(response, self.url("doc_version", self.shared, newer.pk))
-        self.shared.doc.refresh_from_db()
-        self.assertEqual(self.shared.doc.content, "Bob's")
-
-    def test_clients_get_no_link_to_the_versions(self):
-        doc = ops.create_doc(
-            project=self.project, title="Shared doc", creator=self.cleo, visible=True
-        )
-        self.client.force_login(self.cleo)
-        base = self.latest(doc).pk
-        operations.update_doc(doc, actor=self.bob, content="Bob's")
-        response = self.client.post(
-            self.url("doc_edit", doc),
-            {"title": "Shared doc", "content": "Cleo's", "base_version": base},
-        )
-        self.assertContains(response, "Bob saved a newer version")
-        self.assertNotContains(response, "/versions/")
-
-    def test_a_save_while_somebody_else_holds_the_lock_is_refused(self):
-        operations.lock_doc(self.shared, self.bob)
-        response = self.edit(self.ada, content="Ada's")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Bob is editing")
-        self.shared.doc.refresh_from_db()
-        self.assertEqual(self.shared.doc.content, "Shared **text**")
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertContains(response, "This doc is read-only.")
+        self.assertContains(response, "Watch live")
+        response = self.client.get(self.url("doc_edit", self.shared))
+        self.assertNotContains(response, "Rename")
+        response = self.client.post(self.url("doc_edit", self.shared), {"title": "x"})
+        self.assertEqual(response.status_code, 403)
 
     def test_mentions_in_docs_notify(self):
         with self.captureOnCommitCallbacks(execute=True):
-            self.edit(self.ada, content=f"Hi [@Bob](person:{self.bob.pk})")
+            operations.update_doc(
+                self.shared, actor=self.ada, content=f"Hi [@Bob](person:{self.bob.pk})"
+            )
         event = Event.objects.filter(item=self.shared, action="edited").get()
         self.assertEqual(event.data["mentioned"], [self.bob.pk])
         self.assertEqual({n.user for n in event.notifications.all()}, {self.bob})
 
-    def test_cancelling_gives_up_the_lock(self):
-        self.client.force_login(self.ada)
-        self.client.get(self.url("doc_edit", self.shared))
-        response = self.client.post(self.url("doc_lock", self.shared), {"release": "1"})
-        self.assertRedirects(response, self.shared.get_absolute_url())
-        self.shared.doc.refresh_from_db()
-        self.assertIsNone(operations.lock_holder(self.shared.doc))
-
     def test_internal_docs_cannot_be_saved_by_clients(self):
         self.client.force_login(self.cleo)
-        response = self.client.post(
-            self.url("doc_edit", self.secret), {"title": "x", "content": "Hacked"}
-        )
+        response = self.client.post(self.url("doc_edit", self.secret), {"title": "x"})
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(self.latest(self.secret).content, "Internal")
+        self.assertEqual(self.latest(self.secret).title, "Secret doc")
 
 
-class LockEndpointTest(Fixture, TestCase):
-    def test_taking_and_renewing(self):
-        self.client.force_login(self.ada)
-        url = self.url("doc_lock", self.shared)
-        self.assertEqual(self.client.post(url).status_code, 204)
-        first = Item.objects.get(pk=self.shared.pk).doc.locked_at
-        with time_machine.travel(timezone.now() + dt.timedelta(minutes=1)):
-            self.assertEqual(self.client.post(url).status_code, 204)
-        self.assertGreater(Item.objects.get(pk=self.shared.pk).doc.locked_at, first)
-
-    def test_somebody_else_holds_it(self):
-        operations.lock_doc(self.shared, self.ada)
+class ReadOnlyTest(Fixture, TestCase):
+    def test_staff_switch_it(self):
         self.client.force_login(self.bob)
-        response = self.client.post(self.url("doc_lock", self.shared))
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(response.json(), {"locked_by": "Ada"})
+        url = self.url("doc_read_only", self.shared)
+        response = self.client.post(url, {"read_only": "1"})
+        self.assertRedirects(response, self.shared.get_absolute_url())
+        self.assertTrue(Item.objects.get(pk=self.shared.pk).doc.read_only)
+        self.assertContains(self.client.get(response.url), "Make editable")
+        self.client.post(url)
+        self.assertFalse(Item.objects.get(pk=self.shared.pk).doc.read_only)
 
-    def test_it_expires_five_minutes_after_the_last_renewal(self):
-        operations.lock_doc(self.shared, self.ada)
-        self.client.force_login(self.bob)
-        with time_machine.travel(timezone.now() + dt.timedelta(minutes=4)):
-            self.assertEqual(
-                self.client.post(self.url("doc_lock", self.shared)).status_code, 409
+    def test_clients_dont(self):
+        doc = ops.create_doc(
+            project=self.project, title="Notes", creator=self.cleo, visible=True
+        )
+        self.client.force_login(self.cleo)
+        for item in [self.shared, doc]:
+            response = self.client.post(
+                self.url("doc_read_only", item), {"read_only": "1"}
             )
-        with time_machine.travel(timezone.now() + dt.timedelta(minutes=6)):
-            self.assertEqual(
-                self.client.post(self.url("doc_lock", self.shared)).status_code, 204
-            )
+            self.assertEqual(response.status_code, 403)
+            self.assertFalse(Item.objects.get(pk=item.pk).doc.read_only)
 
     def test_get_is_not_allowed(self):
         self.client.force_login(self.ada)
-        self.assertEqual(
-            self.client.get(self.url("doc_lock", self.shared)).status_code, 405
-        )
+        url = self.url("doc_read_only", self.shared)
+        self.assertEqual(self.client.get(url).status_code, 405)
 
 
 class VersionsTest(Fixture, TestCase):
@@ -463,12 +404,14 @@ class VersionsTest(Fixture, TestCase):
             ["Shared **text**", "Three", "Two", "Shared **text**"],
         )
 
-    def test_restoring_while_somebody_edits(self):
-        operations.lock_doc(self.shared, self.bob)
+    def test_restoring_a_read_only_doc_is_refused(self):
+        operations.set_read_only(self.shared, read_only=True, actor=self.ada)
         self.client.force_login(self.ada)
-        self.client.post(
-            self.url("doc_version_restore", self.shared, self.versions[-1].pk)
+        response = self.client.post(
+            self.url("doc_version_restore", self.shared, self.versions[-1].pk),
+            follow=True,
         )
+        self.assertContains(response, "The doc is read-only.")
         self.shared.doc.refresh_from_db()
         self.assertEqual(self.shared.doc.content, "Three")
 

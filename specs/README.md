@@ -37,12 +37,12 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
 | `rule-widget.md` | one control for repeat rules | next | to-dos, check-ins | cheaper, review the round trips |
 | `keyboard.md` | command palette (Ctrl+K), shortcuts | built 2026-11-21 | search | cheaper |
-| `lantern.md` | the lantern (notifications in the app), live updates | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
+| `lantern.md` | the lantern (notifications in the app), live updates (built 2026-11-21 on `collaboration`) | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
 | `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
 | `editor.md` | checklists and counts, the toolbar, pasting | built on branch `editor` | | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
-| `collaboration.md` | | last | everything | strong |
+| `collaboration.md` | | built (branch `collaboration`, merged into `main` 2026-11-21, not deployed) | everything | strong |
 
 `todos.md` stage 3, `projects-overview.md` and `glance.md` touch
 different files ("Touches" in each) and can run at the same time.

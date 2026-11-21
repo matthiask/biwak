@@ -216,6 +216,7 @@ def _settings_page(request, *, notifications=None):
                 initial={
                     "notification_level": user.notification_level,
                     "mail_delivery": user.mail_delivery,
+                    "lantern_in_favicon": user.lantern_in_favicon,
                 }
             ),
             "keyboard_form": KeyboardForm(
@@ -244,6 +245,7 @@ def settings_notifications(request):
         request.user,
         level=form.cleaned_data["notification_level"],
         delivery=form.cleaned_data["mail_delivery"],
+        favicon=form.cleaned_data["lantern_in_favicon"],
     )
     messages.success(request, _("Your notification settings have been saved."))
     return redirect("settings")

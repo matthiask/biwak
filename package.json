@@ -1,6 +1,11 @@
 {
   "private": true,
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
     "@rspack/cli": "^2.3.2",
     "@rspack/core": "^2.3.2",
     "@rspack/dev-server": "^2.2.2",
@@ -10,11 +15,16 @@
     "bootstrap-icons": "^1.13.2",
     "css-loader": "^7.1.5",
     "htmx.org": "^4.0.1",
+    "lib0": "^0.2.120",
     "postcss": "^8.5.32",
     "postcss-loader": "^8.2.1",
     "sass-embedded": "^1.108.2",
     "sass-loader": "^17.1.0",
-    "sortablejs": "^1.15.7"
+    "sortablejs": "^1.15.7",
+    "y-codemirror.next": "^0.3.6",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^3.1.0",
+    "yjs": "^13.6.33"
   },
   "prettier": {
     "semi": false

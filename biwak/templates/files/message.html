@@ -2,9 +2,11 @@
 {% load biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
+{% block live_item %}{{ item.pk }}{% endblock %}
+
 {% block content %}
   {% url 'project_messages' item.project_id as area_url %}{% translate "Messages" as area %}{% include "_breadcrumbs.html" with project=item.project %}
-  <div class="wb-page-header">
+  <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">
       {% if message.pinned_at %}<span
           class="text-body-secondary"
@@ -43,7 +45,7 @@
   {% include "items/_client_banner.html" %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div class="wb-markdown mb-4">{% checklist_markdown message.content item %}</div>
+      <div class="wb-markdown mb-4" id="live-text" data-live>{% checklist_markdown message.content item %}</div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

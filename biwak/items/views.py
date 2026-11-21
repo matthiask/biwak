@@ -539,7 +539,7 @@ def tick(request, pk):
     the text changed since: 409 and the page reloads. ``checked`` sets the
     box (1 or 0), so a repeated click can't flip it back. Answers with the
     new version."""
-    from biwak.files.operations import DocLocked
+    from biwak.files.operations import DocReadOnly
 
     item = item_for(request, pk)
     comment = None
@@ -559,7 +559,7 @@ def tick(request, pk):
             comment=comment,
             checked=checked,
         )
-    except ops.ChecklistConflict, DocLocked:
+    except ops.ChecklistConflict, DocReadOnly:
         return HttpResponse(status=409)
     except checklists.NoCheckbox:
         raise BadRequest("index") from None

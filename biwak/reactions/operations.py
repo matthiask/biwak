@@ -3,11 +3,12 @@ the item through ``item_for()``."""
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Prefetch, prefetch_related_objects
+from django.db.models import Prefetch, Q, prefetch_related_objects
 from django.utils.translation import gettext as _
 
-from biwak.activity.models import Action, Event
+from biwak.activity.models import Action, Event, Notification
 from biwak.activity.operations import record
+from biwak.live import announce as live
 from biwak.reactions.emoji import MAX_LENGTH
 from biwak.reactions.models import Reaction, can_react
 
@@ -77,7 +78,16 @@ def remove_reaction(user, content, *, item=None, comment=None):
             events = events.filter(data__comment__isnull=True)
         else:
             events = events.filter(data__comment=comment.pk)
+        # Those who see the item, clients only about events they saw
+        told = (
+            Notification.objects
+            .filter(event__in=events)
+            .filter(Q(user__is_client=False) | Q(event__is_client_visible=True))
+            .values_list("user", flat=True)
+        )
+        live.lantern_changed(list(told), item=item)
         events.delete()
+        live.changed(item, action=Action.REACTED, actor=user)
     return bool(deleted)
 
 

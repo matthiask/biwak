@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load attachments biwak i18n %}
+{% block title %}{{ item|item_title }} – Biwak{% endblock %}
+
+{# One websocket per tab: here the editor's (frontend/collab.js) #}
+{% block live_socket %}{% endblock %}
+
+{% block content %}
+  {% include "files/_crumbs.html" %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">
+      {% icon "file-earmark-text" %}
+      {{ item|item_title }}
+      {% client_badge item %}
+    </h1>
+    <div class="wb-page-actions">
+      <a class="btn btn-sm btn-quiet" href="{{ item.get_absolute_url }}">{% translate "Done" %}</a>
+    </div>
+  </div>
+  {% include "items/_client_banner.html" %}
+  {% comment %}
+    frontend/collab.js connects to the websocket in data-collab and puts
+    the editor into [data-collab-editor]; the server says whether it may
+    type (specs/collaboration.md). The texts are the states it shows.
+  {% endcomment %}
+  <div
+    class="mb-3"
+    data-collab="/ws/docs/{{ item.pk }}"
+    data-collab-connecting="{% translate 'Connecting…' %}"
+    data-collab-connected="{% translate 'Changes are saved as you type.' %}"
+    data-collab-offline="{% translate 'Offline. Your changes are kept and merged when the connection is back.' %}"
+    data-collab-watching="{% translate 'You are watching. You can’t change this doc.' %}"
+    data-collab-gone="{% translate 'You can’t see this doc anymore.' %}"
+    data-collab-here="{% translate 'Also here:' %}"
+    {% if can_edit %}{% attachments_attrs project %}{% endif %}
+  >
+    <div class="d-flex flex-wrap gap-3 small text-body-secondary mb-2">
+      <span data-collab-status role="status">{% translate "Connecting…" %}</span>
+      <span data-collab-people></span>
+    </div>
+    <div data-collab-editor class="wb-live-editor"></div>
+    {% if can_edit %}
+      {% csrf_token %}
+      {% include "files/_attach_button.html" %}
+    {% endif %}
+    <noscript>{{ item.doc.content|linebreaks }}</noscript>
+  </div>
+  {% if can_edit %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
+          {% csrf_token %}
+          <div class="flex-grow-1">{{ form.title.as_field_group }}</div>
+          <button type="submit" class="btn btn-quiet">{% translate "Rename" %}</button>
+          <button type="submit" name="new_version" value="1" class="btn btn-quiet" formnovalidate>
+            {% translate "Save as a version" %}
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock content %}

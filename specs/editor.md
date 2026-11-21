@@ -119,8 +119,10 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
   `frontend/checklist.js`): the page sends the box's index, the hash of
   the text it rendered (`checklists.text_hash()`) and the state to set
   (`checked`, so a repeated click can't flip it back). The operation locks
-  the detail row, refuses (409) when the text changed or a doc is locked
-  by somebody else, and edits through the item's own operation
+  the detail row, refuses (409) when the text changed (a doc being
+  locked by somebody else was refused too until the doc locks went with
+  `collaboration.md`; since the merge, 2026-11-21, read-only docs can't be
+  ticked: `can_tick()` is false, the boxes are disabled), and edits through the item's own operation
   (`update_todo`, `update_message`, `update_doc`, `update_upload`,
   `update_answer`), so it's an edit event (merging like other edits), an
   audit entry and, for docs, a version. Whoever may change the text ticks

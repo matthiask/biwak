@@ -32,7 +32,17 @@
     {% rspack_assets "main" %}
     {% block extra_head %}{% endblock %}
   </head>
-  <body hx-headers:inherited='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <body
+    hx-headers:inherited='{"X-CSRFToken": "{{ csrf_token }}"}'
+    {% if request.user.is_authenticated %}
+      {% block live_socket %}data-live-socket="/ws/live/"{% endblock %}
+      {% if request.user.lantern_in_favicon %}data-lantern-favicon{% endif %}
+    {% endif %}
+    data-live-item="{% block live_item %}{% endblock %}"
+    data-live-changed="{% translate 'Changed meanwhile: shown once you save or close this.' %}"
+    data-live-gone="{% translate 'This isn’t here anymore: it was trashed, or you can’t see it anymore.' %}"
+    data-live-back="{% translate 'Back' %}"
+  >
     <nav class="navbar navbar-expand wb-navbar mb-4">
       <div class="container-xl">
         <a class="navbar-brand" href="/" title="Biwak">
@@ -82,6 +92,20 @@
           </form>
           <div class="wb-nav-user d-flex align-items-center gap-2 ms-2">
             {% include "_theme_toggle.html" %}
+            <details
+              class="dropdown wb-menu"
+              data-lantern="{% url 'lantern_menu' %}"
+              data-lantern-count-url="{% url 'lantern_count' %}"
+            >
+              <summary class="btn btn-sm btn-quiet wb-lantern-button" title="{% translate 'Lantern' %}">
+                {% icon "lamp" %}
+                <span class="visually-hidden">{% translate "Lantern" %}</span>
+                <span class="badge wb-lantern-count" data-lantern-count hidden></span>
+              </summary>
+              <div class="dropdown-menu dropdown-menu-end wb-lantern-dropdown" data-lantern-menu>
+                <a class="dropdown-item" href="{% url 'lantern' %}">{% translate "All notifications" %}</a>
+              </div>
+            </details>
             <details class="dropdown wb-menu">
               <summary class="btn btn-sm btn-quiet">
                 {{ request.user.get_short_name }}

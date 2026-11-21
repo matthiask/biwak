@@ -1,0 +1,69 @@
+{% load biwak i18n %}
+{% comment %}
+  The lantern's notifications grouped by item (specs/lantern.md): `groups`
+  is [(item, notifications)], newest first; `next` where the buttons come
+  back to.
+{% endcomment %}
+{% for item, entries in groups %}
+  <section class="wb-lantern-item{% if item.has_unread %} is-unread{% endif %}" data-lantern-item="{{ item.pk }}">
+    <div class="d-flex align-items-start gap-2">
+      <a class="wb-lantern-title flex-grow-1" href="{{ entries.0.url }}">
+        {% icon item.kind_icon %}
+        {{ item|item_title }}
+        {% client_badge item %}
+      </a>
+      <form method="post" action="{% url 'lantern_bookmark' %}">
+        {% csrf_token %}
+        <input type="hidden" name="item" value="{{ item.pk }}">
+        <input type="hidden" name="next" value="{{ next }}">
+        {% if item.is_bookmarked %}<input type="hidden" name="remove" value="1">{% endif %}
+        <button
+          type="submit"
+          class="btn btn-sm btn-quiet"
+          title="{% if item.is_bookmarked %}{% translate 'Remove the bookmark' %}{% else %}{% translate 'Bookmark' %}{% endif %}"
+        >
+          {% if item.is_bookmarked %}{% icon "bookmark-fill" %}{% else %}{% icon "bookmark" %}{% endif %}
+          <span
+            class="visually-hidden"
+          >{% if item.is_bookmarked %}{% translate "Remove the bookmark" %}{% else %}{% translate "Bookmark" %}{% endif %}</span>
+        </button>
+      </form>
+      <form
+        method="post"
+        action="{% if item.has_unread %}{% url 'lantern_read' %}{% else %}{% url 'lantern_unread' %}{% endif %}"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="item" value="{{ item.pk }}">
+        <input type="hidden" name="next" value="{{ next }}">
+        <button
+          type="submit"
+          class="btn btn-sm btn-quiet"
+          title="{% if item.has_unread %}{% translate 'Mark as read' %}{% else %}{% translate 'Mark as unread' %}{% endif %}"
+        >
+          {% if item.has_unread %}{% icon "check2-all" %}{% else %}{% icon "dot" %}{% endif %}
+          <span
+            class="visually-hidden"
+          >{% if item.has_unread %}{% translate "Mark as read" %}{% else %}{% translate "Mark as unread" %}{% endif %}</span>
+        </button>
+      </form>
+    </div>
+    <div class="small text-body-secondary">{{ item.project }}</div>
+    <ul class="list-unstyled mb-0">
+      {% for notification in entries %}
+        <li class="wb-lantern-entry{% if not notification.read_at %} is-unread{% endif %}">
+          <a href="{{ notification.url }}" class="text-reset text-decoration-none">
+            {{ notification.line }}
+            {% if notification.mentioned %}<strong>{% translate "You were mentioned." %}</strong>{% endif %}
+            {% if notification.event.excerpt %}<span
+                class="wb-excerpt"
+              >{{ notification.event.excerpt }}</span>{% endif %}
+          </a>
+          <time
+            class="small text-body-secondary"
+            datetime="{{ notification.created_at|date:'c' }}"
+          >{{ notification.created_at|date:"j. M, H:i" }}</time>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endfor %}

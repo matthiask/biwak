@@ -20,6 +20,7 @@ from biwak.activity.models import (
 )
 from biwak.activity.operations import subscribe
 from biwak.items.models import Comment, Item, Kind, Status
+from biwak.live import announce as live
 
 
 # Events which tell nobody: pinning (specs/files.md)
@@ -264,8 +265,9 @@ def _tell(people, event):
         if created_at > last_sent[user]
     }
     # Sent meanwhile (send_mails claimed it): that mail has the change
-    # already, which is told before this notify() runs
-    existing.filter(user__in=unsent, sent_at=None).update(created_at=now)
+    # already, which is told before this notify() runs. Read in the lantern
+    # meanwhile: unread again, the change is new (specs/lantern.md).
+    existing.filter(user__in=unsent, sent_at=None).update(created_at=now, read_at=None)
     new = [
         user
         for user in people
@@ -276,7 +278,11 @@ def _tell(people, event):
         [Notification(user=user, event=event, created_at=now) for user in new],
         ignore_conflicts=True,
     )
-    return [user for user in people if user.pk in unsent or user in new]
+    told = [user for user in people if user.pk in unsent or user in new]
+    live.lantern_changed(
+        [user.pk for user in told], item=event.item, visible=event.is_client_visible
+    )
+    return told
 
 
 def notify_people(item, *, whom, actor):

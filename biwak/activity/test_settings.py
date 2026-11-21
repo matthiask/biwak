@@ -265,20 +265,42 @@ class SettingsAPITest(SettingsBase):
             with self.subTest(user=user):
                 response = self.call("get", user, "me/notifications/")
                 self.assertEqual(
-                    response.json(), {"level": "everything", "delivery": "each"}
+                    response.json(),
+                    {
+                        "level": "everything",
+                        "delivery": "each",
+                        "lantern_in_favicon": False,
+                    },
                 )
                 response = self.call(
-                    "put", user, "me/notifications/", {"delivery": "digest"}
+                    "put",
+                    user,
+                    "me/notifications/",
+                    {"delivery": "digest", "lantern_in_favicon": True},
                 )
                 self.assertEqual(
-                    response.json(), {"level": "everything", "delivery": "digest"}
+                    response.json(),
+                    {
+                        "level": "everything",
+                        "delivery": "digest",
+                        "lantern_in_favicon": True,
+                    },
                 )
                 response = self.call(
                     "put", user, "me/notifications/", {"level": "nothing"}
                 )
                 self.assertEqual(
-                    response.json(), {"level": "nothing", "delivery": "digest"}
+                    response.json(),
+                    {
+                        "level": "nothing",
+                        "delivery": "digest",
+                        "lantern_in_favicon": True,
+                    },
                 )
+                response = self.call(
+                    "put", user, "me/notifications/", {"delivery": "none"}
+                )
+                self.assertEqual(response.json()["delivery"], "none")
                 response = self.call(
                     "put", user, "me/notifications/", {"level": "always"}
                 )

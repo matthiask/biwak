@@ -16,6 +16,8 @@ import "./peek.js"
 import "./checklist.js"
 import "htmx.org"
 import "./rule-widget.js"
+import "./lantern.js"
+import "./live.js"
 
 // The script is deferred, the page is parsed already; dragging to-dos and
 // groups
@@ -28,12 +30,12 @@ if (document.querySelector("[data-attachments]")) {
   import(/* webpackChunkName: "attachments" */ "./attachments.js")
 }
 
-// Renewing the lock of a doc being edited (specs/files.md)
-if (document.querySelector("[data-doc-lock]")) {
-  import(/* webpackChunkName: "doc-lock" */ "./doc-lock.js")
-}
-
 // Dragging the lists of a project, the links of a project or an item
 if (document.querySelector("[data-sortable-order]")) {
   import(/* webpackChunkName: "sortable-order" */ "./sortable-order.js")
+}
+
+// Docs edited live (specs/collaboration.md), the doc's editor page only
+if (document.querySelector("[data-collab]")) {
+  import(/* webpackChunkName: "collab" */ "./collab.js")
 }

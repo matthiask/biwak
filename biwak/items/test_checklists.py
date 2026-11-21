@@ -244,15 +244,19 @@ class TickViewTest(Fixture):
         self.assertEqual(self.post(self.ada, self.todo, version=stale).status_code, 409)
         self.assertEqual(Todo.objects.get(pk=self.todo.pk).notes, "- [ ] new")
 
-    def test_doc_locked_by_somebody_else_is_409(self):
-        from biwak.files.operations import lock_doc
+    def test_read_only_doc_is_refused(self):
+        """The doc locks are gone (specs/collaboration.md); read-only docs
+        can't be ticked, and their pages don't offer it"""
+        from biwak.files.operations import set_read_only
 
-        bob = person("Bob")
         doc = ops.create_doc(
             project=self.project, title="Doc", creator=self.ada, content=TEXT
         )
-        lock_doc(doc, bob)
-        self.assertEqual(self.post(self.ada, doc).status_code, 409)
+        set_read_only(doc, read_only=True, actor=self.ada)
+        self.assertEqual(self.post(self.ada, doc).status_code, 403)
+        self.assertNotIn(
+            "wb-checklist", self.client.get(doc.get_absolute_url()).content.decode()
+        )
 
     def test_bad_requests(self):
         self.assertEqual(self.post(self.ada, self.todo, 9).status_code, 400)

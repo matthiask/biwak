@@ -1251,8 +1251,8 @@ def doc_show(doc_id, comments, version, as_json):
         return echo_json(data)
     marker = " [clients]" if data["visible_to_clients"] else ""
     click.echo(f"#{data['id']} {data['title']}{marker}")
-    if data["locked_by"]:
-        click.echo(f"Being edited by {data['locked_by']['name']}.")
+    if data["read_only"]:
+        click.echo("Read-only.")
     click.echo(f"URL: {data['url']}")
     if data["content"]:
         click.echo(f"\n{data['content']}")
@@ -1304,14 +1304,16 @@ def doc_new(project, title, text, parent, notify, visible, attach, as_json):
 def doc_edit(doc_id, title, new_version, as_json):
     """Edit DOC in $EDITOR and save when you quit
 
-    Takes the doc's lock while you edit, and refuses to save over a newer
-    version somebody else made meanwhile."""
-    doc = request("PUT", f"docs/{doc_id}/lock/")
+    People editing the doc in the browser meanwhile see your changes
+    arrive; saving over a newer version somebody else made meanwhile is
+    refused."""
+    doc = request("GET", f"docs/{doc_id}/")
+    if doc["read_only"]:
+        raise click.ClickException("The doc is read-only.")
     if doc["visible_to_clients"]:
         click.secho("Clients can see this doc.", fg="yellow", err=True)
     text = click.edit(doc["content"], extension=".md")
     if text is None or (text == doc["content"] and not title):
-        request("DELETE", f"docs/{doc_id}/lock/")
         click.echo("No changes.")
         return None
     changes = {
@@ -1321,15 +1323,23 @@ def doc_edit(doc_id, title, new_version, as_json):
     }
     if title:
         changes["title"] = title
-    try:
-        data = request("PATCH", f"docs/{doc_id}/", json=changes)
-    except SystemExit:
-        # The lock is ours still, give it up
-        request("DELETE", f"docs/{doc_id}/lock/")
-        raise
+    data = request("PATCH", f"docs/{doc_id}/", json=changes)
     if as_json:
         return echo_json(data)
     click.echo(f"Saved #{doc_id}.")
+    return None
+
+
+@doc.command("read-only")
+@click.argument("doc_id", metavar="DOC", type=int)
+@click.option("--off", is_flag=True, help="Make it editable again.")
+@json_option
+def doc_read_only(doc_id, off, as_json):
+    """Make DOC read-only for everybody, or editable again (staff)"""
+    data = request("PATCH", f"docs/{doc_id}/", json={"read_only": not off})
+    if as_json:
+        return echo_json(data)
+    click.echo(f"#{doc_id} is {'read-only' if data['read_only'] else 'editable'}.")
     return None
 
 
@@ -1540,7 +1550,9 @@ LEVELS = ["everything", "concerns_me", "nothing"]
     type=click.Choice([*LEVELS, "default"]),
     help="What to be told about; 'default' removes a project's or item's own.",
 )
-@click.option("--delivery", type=click.Choice(["each", "digest"]), help="Mails.")
+@click.option(
+    "--delivery", type=click.Choice(["each", "digest", "none"]), help="Mails."
+)
 @click.option("--project", type=int, help="Show or set the level for PROJECT.")
 @click.option("--item", type=int, help="Show or set the level for an item.")
 @json_option
@@ -1583,4 +1595,53 @@ def notifications(level, delivery, project, item, as_json):
         return echo_json(data)
     click.echo(f"Level: {data['level']}")
     click.echo(f"Delivery: {data['delivery']}")
+    return None
+
+
+# The lantern ----------------------------------------------------------------
+
+
+@cli.command()
+@click.option("--unread", is_flag=True, help="Only those not read yet.")
+@click.option("--mentions", is_flag=True, help="Only those mentioning you.")
+@click.option("--read", "read_item", type=int, metavar="ITEM", help="Mark ITEM read.")
+@click.option("--all", "read_all", is_flag=True, help="Mark everything read.")
+@click.option("--limit", default=50, show_default=True, help="At most this many.")
+@json_option
+def lantern(unread, mentions, read_item, read_all, limit, as_json):
+    """Your notifications, newest first, or mark them read"""
+    if read_item is not None and read_all:
+        terminate("An item or --all, not both.")
+    if read_item is not None or read_all:
+        data = request(
+            "POST",
+            "lantern/read/",
+            json={"all": True} if read_all else {"item_id": read_item},
+        )
+        if as_json:
+            return echo_json(data)
+        click.echo(f"Marked {data['read']} as read.")
+        return None
+    params = {"unread": "true"} if unread else {}
+    if mentions:
+        params["mentions"] = "true"
+    entries = paginate("lantern/", params, limit=limit)
+    if as_json:
+        return echo_json(entries)
+    t = table("When", "", "Person", "Action", "Item", "What", "")
+    for entry in entries:
+        event = entry["event"]
+        item = event["item"] or {}
+        t.add_row(
+            event["created_at"][:16].replace("T", " "),
+            ("" if entry["read"] else "new")
+            + (" @" if entry["mentioned"] else "")
+            + (" bookmarked" if entry["bookmarked"] else ""),
+            event["actor"]["short_name"],
+            event["action"].replace("_", " "),
+            str(item.get("id", "")),
+            item.get("title", ""),
+            clients(item),
+        )
+    console.print(t)
     return None

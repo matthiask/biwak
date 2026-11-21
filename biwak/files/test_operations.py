@@ -231,41 +231,25 @@ class DocTest(Fixture, TestCase):
                 self.doc, other.doc.versions.get(), actor=self.ada
             )
 
-    def test_lock(self):
-        operations.lock_doc(self.doc, self.ada)
-        self.doc.doc.refresh_from_db()
-        self.assertEqual(operations.lock_holder(self.doc.doc), self.ada)
-        # Renewing, and nobody else meanwhile
-        operations.lock_doc(self.doc, self.ada)
-        with self.assertRaises(operations.DocLocked) as raised:
-            operations.lock_doc(self.doc, self.bob)
-        self.assertEqual(raised.exception.user, self.ada)
-        with self.assertRaises(operations.DocLocked):
-            operations.update_doc(self.doc, actor=self.bob, content="Two")
-        with self.assertRaises(operations.DocLocked):
-            operations.restore_doc_version(self.doc, self.versions()[0], actor=self.bob)
-
-    def test_the_lock_expires_five_minutes_after_the_last_renewal(self):
-        operations.lock_doc(self.doc, self.ada)
-        with (
-            time_machine.travel(timezone.now() + dt.timedelta(minutes=4)),
-            self.assertRaises(operations.DocLocked),
-        ):
-            operations.lock_doc(self.doc, self.bob)
-        with time_machine.travel(timezone.now() + dt.timedelta(minutes=6)):
-            operations.update_doc(self.doc, actor=self.bob, content="Two")
+    def test_read_only(self):
+        """Nobody edits a read-only doc (specs/collaboration.md); staff
+        switch it"""
+        self.assertTrue(
+            operations.set_read_only(self.doc, read_only=True, actor=self.ada)
+        )
+        self.assertFalse(
+            operations.set_read_only(self.doc, read_only=True, actor=self.ada)
+        )
+        with self.assertRaises(operations.DocReadOnly):
+            operations.update_doc(self.doc, actor=self.ada, content="Two")
+        with self.assertRaises(operations.DocReadOnly):
+            operations.restore_doc_version(self.doc, self.versions()[0], actor=self.ada)
+        with self.assertRaises(PermissionDenied):
+            operations.set_read_only(self.doc, read_only=False, actor=self.cleo)
+        operations.set_read_only(self.doc, read_only=False, actor=self.bob)
+        operations.update_doc(self.doc, actor=self.ada, content="Two")
         self.doc.doc.refresh_from_db()
         self.assertEqual(self.doc.doc.content, "Two")
-
-    def test_saving_and_unlocking_give_up_the_lock(self):
-        operations.lock_doc(self.doc, self.ada)
-        operations.update_doc(self.doc, actor=self.ada, content="Two")
-        operations.lock_doc(self.doc, self.bob)
-        operations.unlock_doc(self.doc, self.ada)  # not hers: stays
-        with self.assertRaises(operations.DocLocked):
-            operations.lock_doc(self.doc, self.ada)
-        operations.unlock_doc(self.doc, self.bob)
-        operations.lock_doc(self.doc, self.ada)
 
     def test_refusing_to_overwrite_a_newer_version_by_somebody_else(self):
         base = self.versions()[0].pk

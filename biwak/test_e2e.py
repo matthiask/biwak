@@ -13,14 +13,23 @@ Each test logs in through a session cookie and waits for what it expects
 (Playwright's waiting, no sleeps).
 """
 
+import asyncio
+import json
 import os
+import re
+import socket
+import time
 
 from django.conf import settings
+from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+from django.db import connections
 from django.db.models import F
 from django.test import Client, LiveServerTestCase, tag
+from django.test.testcases import LiveServerThread
 from django.urls import reverse
+from django.views.static import serve as static_serve
 
-from biwak.accounts.models import CalendarToken
+from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
@@ -34,6 +43,10 @@ try:
     from playwright.sync_api import expect, sync_playwright
 except ImportError:  # pragma: no cover
     expect = sync_playwright = None
+try:
+    import uvicorn
+except ImportError:  # pragma: no cover
+    uvicorn = None
 
 
 @tag("e2e")
@@ -99,9 +112,15 @@ class E2ETestCase(LiveServerTestCase):
 
     def console(self, message):
         # The favicon lives in an app's static files, the test server
-        # serves only the bundle in static/
-        if message.type == "error" and not message.location["url"].endswith(
-            "/favicon.svg"
+        # serves only the bundle in static/. Live updates need the ASGI
+        # server (LiveTest), the others' pages try in vain.
+        if (
+            message.type == "error"
+            and not message.location["url"].endswith("/favicon.svg")
+            and not (
+                "/ws/live/" in message.text
+                and self.server_thread_class is not ASGIServerThread
+            )
         ):
             self.errors.append(f"{message.text} {message.location['url']}")
 
@@ -609,7 +628,7 @@ class TodoPageTest(E2ETestCase):
         ops.add_comment(self.todo, author=self.bob, content="Hello")
         page = self.page
         self.goto(page, self.todo)
-        reactions = page.locator("#comments ~ .card .wb-reactions")
+        reactions = page.locator("#live-comments .card .wb-reactions")
         reactions.locator(".wb-reaction-add summary").click()
         reactions.locator("button", has_text="👍").click()
         reactions.locator("button.wb-reaction.is-mine").wait_for()
@@ -702,45 +721,442 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(Attachment.objects.count(), 0)
 
 
-class DocLockTest(E2ETestCase):
-    def test_lock(self):
-        doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
-        edit = reverse("doc_edit", args=[doc.pk])
-        page = self.page
-        self.goto(page, edit)
-        page.locator("[data-doc-lock]").wait_for()
-        self.assertEqual(Doc.objects.get(item=doc).locked_by, self.ada)
+class ASGIServerThread(LiveServerThread):
+    """The live server through asgi.py with uvicorn, for the websockets of
+    docs edited live; static files from STATIC_ROOT like Django's"""
 
-        # A second person is sent back to the doc, which is locked
-        other = self.login(self.bob)
-        self.goto(other, edit)
-        other.wait_for_url(f"**{doc.get_absolute_url()}")
-        self.assertIn(
-            "Ada is editing this doc",
-            other.locator(".alert", has_text="editing").first.inner_text(),
+    def run(self):
+        sock = socket.socket()
+        try:
+            sock.bind((self.host, self.port))
+            self.port = sock.getsockname()[1]
+            self.server = self.create_server()
+            asyncio.run(self.server.serve(sockets=[sock]))
+        except OSError as exc:  # pragma: no cover
+            self.error = exc
+        finally:
+            self.is_ready.set()
+            connections.close_all()
+
+    def create_server(self):
+        from asgi import application
+
+        ready = self.is_ready
+
+        class Server(uvicorn.Server):
+            async def startup(self, sockets=None):
+                await super().startup(sockets=sockets)
+                ready.set()
+
+        return Server(
+            uvicorn.Config(
+                _ASGIStaticFilesHandler(application),
+                lifespan="off",
+                log_level="warning",
+                ws="websockets-sansio",
+            )
         )
-        self.assertEqual(Doc.objects.get(item=doc).locked_by, self.ada)
 
-        # Releasing frees it
-        page.get_by_role("button", name="Cancel").click()
-        page.wait_for_url(f"**{doc.get_absolute_url()}")
-        self.assertIsNone(Doc.objects.get(item=doc).locked_by)
-        self.goto(other, edit)
-        other.locator("[data-doc-lock]").wait_for()
-        self.assertEqual(Doc.objects.get(item=doc).locked_by, self.bob)
+    def terminate(self):
+        if hasattr(self, "server"):
+            self.server.should_exit = True
+        self.join()
 
-    def test_lock_is_renewed_every_minute(self):
-        doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
+
+class _ASGIStaticFilesHandler(ASGIStaticFilesHandler):
+    def get_base_url(self):
+        return settings.STATIC_URL
+
+    def serve(self, request):
+        return static_serve(
+            request, self.file_path(request.path), document_root=settings.STATIC_ROOT
+        )
+
+
+class CollabTest(E2ETestCase):
+    """Docs edited live (specs/collaboration.md): several browsers typing
+    at once, offline, watching, losing access, edits through the API"""
+
+    host = "127.0.0.1"
+    server_thread_class = ASGIServerThread
+
+    @classmethod
+    def setUpClass(cls):
+        if uvicorn is None:  # pragma: no cover
+            raise cls.skipTest(cls, "uvicorn isn't installed")
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.doc = ops.create_doc(
+            project=self.project,
+            title="Minutes",
+            content="Agenda\n",
+            creator=self.ada,
+            visible=True,
+        )
+
+    def editor(self, user, doc=None, *, page=None):
+        """The doc's editor page in a browser of the person, synced"""
+        page = page or self.login(user)
+        self.goto(page, reverse("doc_edit", args=[(doc or self.doc).pk]))
+        live = page.locator("[data-collab]")
+        expect(live).not_to_have_attribute("data-collab-state", "connecting")
+        return page
+
+    def content(self, page):
+        return page.locator(".cm-content")
+
+    def text(self, page):
+        """The editor's text (without the others' cursors)"""
+        return page.evaluate(
+            "document.querySelector('[data-collab]').collab.view.state.doc.toString()"
+        )
+
+    def wait_for_text(self, page, expected):
+        page.wait_for_function(
+            """(expected) => document.querySelector('[data-collab]')
+                .collab.view.state.doc.toString() === expected""",
+            arg=expected,
+        )
+
+    def type(self, page, text, *, end=True):
+        content = self.content(page)
+        content.click()
+        if end:
+            page.keyboard.press("Control+End")
+        page.keyboard.type(text)
+
+    def stored(self, doc=None):
+        return Doc.objects.get(pk=(doc or self.doc).pk).content
+
+    def wait_for_stored(self, expected, doc=None):
+        """Doc.content follows a few seconds after the last keystroke"""
+        for _ in range(100):
+            if self.stored(doc) == expected:
+                return
+            time.sleep(0.1)
+        self.assertEqual(self.stored(doc), expected)
+
+    def test_three_people_typing_at_once(self):
+        """Ada, Bob and Cleo (a client, in a doc she created) type at the
+        same time and see each other's text and cursors"""
+        doc = ops.create_doc(
+            project=self.project,
+            title="Our notes",
+            content="",
+            creator=self.cleo,
+            visible=True,
+        )
+        pages = [
+            self.editor(user, doc, page=self.page if user == self.ada else None)
+            for user in [self.ada, self.bob, self.cleo]
+        ]
+        for page in pages:
+            self.content(page).click()
+            page.keyboard.press("Control+End")
+            page.keyboard.press("Enter")
+        # Interleaved, a word each
+        for words in zip(*[
+            line.split() for line in ["Ada was here", "Bob too!", "Cleo as well"]
+        ]):
+            for page, word in zip(pages, words):
+                page.keyboard.type(f"{word} ")
+        for page in pages:
+            for word in ["Ada", "was", "Bob", "too!", "Cleo", "as"]:
+                expect(self.content(page)).to_contain_text(word)
+        final = self.text(pages[0])
+        for page in pages[1:]:
+            self.wait_for_text(page, final)
+        # The others' cursors with their names, and who is here
+        expect(pages[0].locator(".cm-ySelectionInfo", has_text="Bob")).to_have_count(1)
+        expect(pages[0].locator(".cm-ySelectionInfo", has_text="Cleo")).to_have_count(1)
+        expect(pages[2].locator("[data-collab-people]")).to_contain_text("Ada")
+        expect(pages[2].locator("[data-collab-people]")).to_contain_text("Bob")
+        self.wait_for_stored(final, doc)
+        self.assertFalse(self.errors)
+
+    def test_offline_and_reconnect(self):
+        ada = self.editor(self.ada, page=self.page)
+        bob = self.editor(self.bob)
+        live = ada.locator("[data-collab]")
+        expect(live).to_have_attribute("data-collab-state", "connected")
+        # The network goes, and with it the websocket (which the browser's
+        # offline mode leaves open); reconnecting fails until it's back
+        ada.context.set_offline(True)
+        ada.evaluate(
+            "document.querySelector('[data-collab]').collab.provider.ws.close()"
+        )
+        expect(live).to_have_attribute("data-collab-state", "offline")
+        expect(ada.locator("[data-collab-status]")).to_contain_text("Offline")
+        self.type(ada, "Typed offline")
+        self.type(bob, "Typed online. ")
+        expect(self.content(bob)).not_to_contain_text("Typed offline")
+        ada.context.set_offline(False)
+        expect(live).to_have_attribute("data-collab-state", "connected")
+        for page in [ada, bob]:
+            expect(self.content(page)).to_contain_text("Typed offline")
+            expect(self.content(page)).to_contain_text("Typed online.")
+        final = self.text(ada)
+        self.wait_for_text(bob, final)
+        self.wait_for_stored(final)
+        self.assertFalse(self.errors)
+
+    def test_a_client_watches_read_only(self):
+        ada = self.editor(self.ada, page=self.page)
+        cleo = self.editor(self.cleo)
+        expect(cleo.locator("[data-collab]")).to_have_attribute(
+            "data-collab-state", "watching"
+        )
+        expect(cleo.locator("[data-collab-status]")).to_contain_text("watching")
+        expect(self.content(cleo)).to_have_attribute("contenteditable", "false")
+        self.type(ada, "Decided: yes")
+        expect(self.content(cleo)).to_contain_text("Decided: yes")
+        expect(cleo.locator(".cm-ySelectionInfo", has_text="Ada")).to_have_count(1)
+        # Typing does nothing
+        self.content(cleo).click()
+        cleo.keyboard.type("No!")
+        self.wait_for_stored("Agenda\nDecided: yes")
+        expect(self.content(ada)).not_to_contain_text("No!")
+        # No form to rename it, no attaching
+        self.assertEqual(cleo.get_by_role("button", name="Rename").count(), 0)
+        self.assertFalse(self.errors)
+
+    def test_losing_access_closes_the_session(self):
+        cleo = self.editor(self.cleo)
+        expect(self.content(cleo)).to_contain_text("Agenda")
+        # Ada hides the doc on its page
         page = self.page
-        page.clock.install()
-        self.goto(page, reverse("doc_edit", args=[doc.pk]))
-        page.locator("[data-doc-lock]").wait_for()
-        before = Doc.objects.get(item=doc).locked_at
-        with page.expect_request("**/lock/"):
-            page.clock.run_for(61_000)
-        # The server answered
-        page.wait_for_load_state("networkidle")
-        self.assertGreater(Doc.objects.get(item=doc).locked_at, before)
+        self.goto(page, self.doc)
+        page.get_by_role("button", name="Hide from clients").click()
+        page.wait_for_load_state()
+        live = cleo.locator("[data-collab]")
+        expect(live).to_have_attribute("data-collab-state", "gone")
+        expect(cleo.locator("[data-collab-status]")).to_have_text(
+            "You can’t see this doc anymore."
+        )
+        expect(cleo.locator(".cm-content")).to_have_count(0)
+        self.assertFalse(self.errors)
+
+    def test_becoming_read_only_during_the_session(self):
+        bob = self.editor(self.bob)
+        expect(self.content(bob)).to_have_attribute("contenteditable", "true")
+        page = self.page
+        self.goto(page, self.doc)
+        page.get_by_role("button", name="Make read-only").click()
+        page.wait_for_load_state()
+        expect(self.content(bob)).to_have_attribute("contenteditable", "false")
+        expect(bob.locator("[data-collab-status]")).to_contain_text("watching")
+
+    def test_an_api_edit_arrives_in_the_open_editor(self):
+        ada = self.editor(self.ada, page=self.page)
+        self.type(ada, "Typed live", end=True)
+        self.wait_for_stored("Agenda\nTyped live")
+        _token, secret = APIToken.create_for(user=self.bob, title="CLI", access="write")
+        api = self.playwright.request.new_context(base_url=self.live_server_url)
+        response = api.patch(
+            f"/api/v1/docs/{self.doc.pk}/",
+            data={"content": "Agenda for Monday\nTyped live"},
+            headers={"Authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status, 200, response.text())
+        api.dispose()
+        expect(self.content(ada)).to_contain_text("Agenda for Monday")
+        expect(self.content(ada)).to_contain_text("Typed live")
+        self.assertFalse(self.errors)
+
+
+class LiveTest(E2ETestCase):
+    """Live updates and the lantern (specs/lantern.md): two browsers, the
+    other's changes appearing without reloading"""
+
+    host = "127.0.0.1"
+    server_thread_class = ASGIServerThread
+
+    @classmethod
+    def setUpClass(cls):
+        if uvicorn is None:  # pragma: no cover
+            raise cls.skipTest(cls, "uvicorn isn't installed")
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.todolist = self.make_list(
+            "Shared", visible=True, groups=["Doing"], todos=["Order the tent"]
+        )
+        self.todo = Item.objects.get(title="Order the tent")
+        self.frames = {}
+
+    def open(self, user, target, *, page=None):
+        """A page of the person, its websocket connected"""
+        page = page or self.login(user)
+        frames = self.frames.setdefault(page, [])
+
+        def received(payload):
+            # Playwright marks handlers: a function of our own, not a
+            # builtin method
+            frames.append(payload)
+
+        page.on("websocket", lambda ws: ws.on("framereceived", received))
+        self.goto(page, target)
+        expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
+        return page
+
+    def comment(self, page, text):
+        form = page.locator("form:has(input[name=form][value=comment])")
+        form.locator("textarea[name=content]").fill(text)
+        form.get_by_role("button", name="Add comment").click()
+        page.wait_for_load_state()
+
+    def test_a_comment_a_reaction_and_a_completion_appear(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        self.comment(bob, "Ordered!")
+        comment = ada.locator("#live-comments .card", has_text="Ordered!")
+        expect(comment).to_have_count(1)
+        expect(comment).to_have_class(re.compile("wb-live-new"))
+        # A reaction, on the to-do
+        reactions = bob.locator(".wb-reactions").first
+        reactions.locator(".wb-reaction-add summary").click()
+        reactions.locator("button", has_text="🎉").click()
+        bob.locator("button.wb-reaction.is-mine").first.wait_for()
+        expect(ada.locator(".wb-reactions").first).to_contain_text("🎉")
+        # Completed
+        bob.get_by_role("button", name="Complete").click()
+        bob.wait_for_load_state()
+        expect(ada.locator("#live-header")).to_contain_text("Reopen")
+        expect(ada.locator("#live-status")).to_contain_text("Completed by Bob")
+        self.assertFalse(self.errors)
+
+    def test_a_todo_added_and_moved_on_the_board(self):
+        board = f"{self.todolist.get_absolute_url()}?view=board"
+        ada = self.open(self.ada, board, page=self.page)
+        bob = self.open(self.bob, board)
+        section = bob.locator("section.wb-group[data-group-item]", has_text="Doing")
+        section.locator(".wb-add-todo summary").click()
+        title = section.locator("[data-add-todo-form] input[name=title]")
+        title.fill("Pack the stove")
+        title.press("Control+Enter")
+        bob.locator("[data-todo]", has_text="Pack the stove").wait_for()
+        doing = ada.locator("section.wb-group[data-group-item]", has_text="Doing")
+        expect(doing.locator("[data-todo]", has_text="Pack the stove")).to_have_count(1)
+        # Bob moves the tent into "Doing", on the to-do's page
+        self.goto(bob, self.todo)
+        bob.locator("select[name=target]").select_option(label="Shared / Doing")
+        bob.get_by_role("button", name="To the top").click()
+        bob.wait_for_load_state()
+        expect(doing.locator("[data-todo]").first).to_contain_text("Order the tent")
+        expect(ada.locator("#todos-none [data-todo]")).to_have_count(0)
+        # Still draggable: the new rows are in a Sortable
+        self.wait_for_sortables(ada)
+        self.assertFalse(self.errors)
+
+    def test_a_form_being_edited_isnt_replaced(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        title = ada.locator("#live-form input[name=title]")
+        title.fill("Order the big tent")
+        notes = bob.locator("#live-form textarea[name=notes]")
+        notes.fill("Two poles")
+        bob.locator("#live-form").get_by_role("button", name="Save").click()
+        bob.wait_for_load_state()
+        # The notes above the form follow, the form waits
+        expect(ada.locator("#live-text")).to_contain_text("Two poles")
+        expect(ada.locator("#live-form [data-live-note]")).to_be_visible()
+        expect(title).to_have_value("Order the big tent")
+        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value("")
+        # Put back and left: the form takes over what changed
+        title.fill("Order the tent")
+        title.blur()
+        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value(
+            "Two poles"
+        )
+        expect(ada.locator("#live-form [data-live-note]")).to_have_count(0)
+        self.assertFalse(self.errors)
+
+    def test_a_clients_page_doesnt_hear_of_an_internal_change(self):
+        internal = self.make_list("Internal", todos=["Budget"])
+        budget = Item.objects.get(title="Budget")
+        cleo = self.open(self.cleo, self.todolist)
+        ada = self.open(self.ada, budget, page=self.page)
+        self.comment(ada, "Internal remark")
+        self.goto(ada, internal)
+        section = ada.locator("section.wb-group").first
+        section.locator(".wb-add-todo summary").click()
+        section.locator("input[name=title]").fill("Secret plan")
+        section.locator("input[name=title]").press("Control+Enter")
+        ada.locator("[data-todo]", has_text="Secret plan").wait_for()
+        # Then something clients see: it arrives, the internal changes
+        # didn't (not even as a "changed")
+        self.goto(ada, self.todolist)
+        section = ada.locator("section.wb-group").first
+        section.locator(".wb-add-todo summary").click()
+        section.locator("input[name=title]").fill("Buy pegs")
+        section.locator("input[name=title]").press("Control+Enter")
+        expect(cleo.locator("[data-todo]", has_text="Buy pegs")).to_have_count(1)
+        received = [json.loads(frame) for frame in self.frames[cleo]]
+        changed = {m["item"] for m in received if m["type"] == "changed"}
+        self.assertNotIn(budget.pk, changed)
+        self.assertNotIn(internal.pk, changed)
+        self.assertFalse(
+            set(changed)
+            - set(
+                Item.objects.filter(is_client_visible=True).values_list("pk", flat=True)
+            )
+        )
+        expect(cleo.locator("body")).not_to_contain_text("Secret plan")
+        expect(cleo.locator("body")).not_to_contain_text("Internal remark")
+        self.assertFalse(self.errors)
+
+    def test_reconnecting_after_being_offline(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        ada.context.set_offline(True)
+        ada.evaluate("document.body.live.socket.close()")
+        expect(ada.locator("body")).to_have_attribute("data-live-state", "offline")
+        self.comment(bob, "While you were away")
+        ada.context.set_offline(False)
+        expect(ada.locator("body")).to_have_attribute(
+            "data-live-state", "connected", timeout=15000
+        )
+        expect(ada.locator("#live-comments")).to_contain_text("While you were away")
+
+    def test_the_lantern_count_and_menu(self):
+        ada = self.open(self.ada, reverse("projects"), page=self.page)
+        count = ada.locator("[data-lantern-count]")
+        expect(count).to_be_hidden()
+        bob = self.open(self.bob, self.todo)
+        self.comment(bob, "Hi Ada")
+        expect(count).to_have_text("1")
+        ada.locator("[data-lantern] > summary").click()
+        menu = ada.locator("[data-lantern-menu]")
+        expect(menu).to_contain_text("Order the tent")
+        expect(menu).to_contain_text("Bob Example commented:")
+        menu.get_by_role("button", name="Mark as read").click()
+        expect(count).to_be_hidden()
+        expect(menu.get_by_role("button", name="Mark as unread")).to_have_count(1)
+        menu.get_by_role("button", name="Bookmark", exact=True).click()
+        expect(menu).to_contain_text("Bookmarked")
+        self.assertTrue(self.ada.bookmarks.filter(item=self.todo).exists())
+        self.assertFalse(self.errors)
+
+    def test_the_favicon_dot(self):
+        icon = "document.querySelector('link[rel=icon]').href"
+        bob = self.open(self.bob, self.todo)
+        ada = self.open(self.ada, reverse("projects"), page=self.page)
+        self.comment(bob, "Without the setting")
+        expect(ada.locator("[data-lantern-count]")).to_have_text("1")
+        self.assertTrue(ada.evaluate(icon).endswith("/favicon.svg"))
+        User.objects.filter(pk=self.ada.pk).update(lantern_in_favicon=True)
+        ada.reload()
+        ada.wait_for_function(f"{icon}.startsWith('data:image/png')")
+        # Opening the item reads nothing, following the lantern's entry does
+        self.goto(ada, self.todo)
+        ada.wait_for_function(f"{icon}.startsWith('data:image/png')")
+        ada.locator("[data-lantern] > summary").click()
+        ada.locator("[data-lantern-menu]").get_by_text("Without the setting").click()
+        ada.wait_for_url(f"**{self.todo.get_absolute_url()}#comment-*")
+        ada.wait_for_function(f"{icon}.endsWith('/favicon.svg')")
 
 
 class LinksTest(E2ETestCase):

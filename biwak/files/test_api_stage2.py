@@ -11,6 +11,7 @@ from django.utils import timezone
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event, Mention, Notification
 from biwak.activity.operations import subscribe
+from biwak.collab import live
 from biwak.files import attachments, operations
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
@@ -555,7 +556,7 @@ class DocAPITest(APIFixture, TestCase):
             self.assertEqual(
                 data["version_id"], self.shared_doc.doc.versions.first().pk
             )
-            self.assertIsNone(data["locked_by"])
+            self.assertFalse(data["read_only"])
 
     def test_internal_docs_are_404_for_clients_everywhere(self):
         did = self.secret_doc.pk
@@ -563,8 +564,7 @@ class DocAPITest(APIFixture, TestCase):
         for method, path, data in [
             ("get", f"docs/{did}/", None),
             ("patch", f"docs/{did}/", {"content": "Hacked"}),
-            ("put", f"docs/{did}/lock/", None),
-            ("delete", f"docs/{did}/lock/", None),
+            ("patch", f"docs/{did}/", {"read_only": True}),
             ("get", f"docs/{did}/versions/", None),
             ("get", f"docs/{did}/versions/{version}/", None),
             ("post", f"docs/{did}/versions/{version}/restore/", None),
@@ -625,20 +625,19 @@ class DocAPITest(APIFixture, TestCase):
             self.call(self.bob, "patch", f"docs/{did}/", {"content": "Five"})
         self.assertEqual(self.shared_doc.doc.versions.count(), 4)
 
-    def test_clients_cannot_edit_or_lock_docs_staff_created(self):
+    def test_clients_cannot_edit_docs_staff_created(self):
         """Clients change only what they created (specs/access.md)"""
         did = self.shared_doc.pk
-        for method, path, data in [
-            ("patch", f"docs/{did}/", {"content": "Scope doubled, same price"}),
-            ("put", f"docs/{did}/lock/", None),
-            ("delete", f"docs/{did}/lock/", None),
+        for data in [
+            {"content": "Scope doubled, same price"},
+            {"read_only": True},
         ]:
-            with self.subTest(method=method, path=path):
-                response = self.call(self.cleo, method, path, data)
+            with self.subTest(data=data):
+                response = self.call(self.cleo, "patch", f"docs/{did}/", data)
                 self.assertEqual(response.status_code, 403)
         self.shared_doc.doc.refresh_from_db()
         self.assertEqual(self.shared_doc.doc.content, "One")
-        self.assertIsNone(operations.lock_holder(self.shared_doc.doc))
+        self.assertFalse(self.shared_doc.doc.read_only)
 
     def test_a_client_edits_a_doc_it_created(self):
         doc = ops.create_doc(
@@ -649,9 +648,9 @@ class DocAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["content"], "By Cleo")
-        self.assertEqual(
-            self.call(self.cleo, "put", f"docs/{doc.pk}/lock/").status_code, 200
-        )
+        # Read-only is for staff
+        response = self.call(self.cleo, "patch", f"docs/{doc.pk}/", {"read_only": True})
+        self.assertEqual(response.status_code, 403)
 
     def test_refusing_to_overwrite_a_newer_version(self):
         did = self.shared_doc.pk
@@ -670,32 +669,33 @@ class DocAPITest(APIFixture, TestCase):
         response = self.call(self.ada, "patch", f"docs/{did}/", {"content": "Ada's"})
         self.assertEqual(response.status_code, 200)
 
-    def test_locks(self):
+    def test_read_only(self):
         did = self.shared_doc.pk
-        response = self.call(self.ada, "put", f"docs/{did}/lock/")
-        self.assertEqual(response.json()["locked_by"]["name"], str(self.ada))
-        self.assertEqual(
-            self.call(self.ada, "put", f"docs/{did}/lock/").status_code, 200
+        response = self.call(
+            self.bob, "patch", f"docs/{did}/", {"read_only": True, "content": "Last"}
         )
-        self.assertEqual(
-            self.call(self.bob, "put", f"docs/{did}/lock/").status_code, 409
-        )
-        response = self.call(self.bob, "patch", f"docs/{did}/", {"content": "x"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["content"], "Last")
+        self.assertTrue(response.json()["read_only"])
+        response = self.call(self.ada, "patch", f"docs/{did}/", {"content": "x"})
         self.assertEqual(response.status_code, 409)
-        self.assertEqual(
-            self.call(self.bob, "get", f"docs/{did}/").json()["locked_by"][
-                "short_name"
-            ],
-            "Ada",
+        self.assertEqual(response.json()["detail"], "The doc is read-only.")
+        old = self.shared_doc.doc.versions.last().pk
+        response = self.call(self.ada, "post", f"docs/{did}/versions/{old}/restore/")
+        self.assertEqual(response.status_code, 409)
+        response = self.call(
+            self.ada, "patch", f"docs/{did}/", {"read_only": False, "content": "y"}
         )
-        with time_machine.travel(timezone.now() + dt.timedelta(minutes=6)):
-            self.assertEqual(
-                self.call(self.bob, "put", f"docs/{did}/lock/").status_code, 200
-            )
-        self.assertEqual(
-            self.call(self.bob, "delete", f"docs/{did}/lock/").json()["locked_by"],
-            None,
-        )
+        self.assertEqual(response.json()["content"], "y")
+        self.assertFalse(response.json()["read_only"])
+
+    def test_edits_merge_with_what_is_typed_live(self):
+        """The content is an edit of the text as last saved: what people
+        typed meanwhile stays (specs/collaboration.md)"""
+        did = self.shared_doc.pk
+        live.apply_text(Item.objects.get(pk=did).doc, "One, typed live", user=self.bob)
+        response = self.call(self.ada, "patch", f"docs/{did}/", {"content": "Uno"})
+        self.assertEqual(response.json()["content"], "Uno, typed live")
 
     def test_versions_are_for_staff(self):
         did = self.shared_doc.pk
@@ -992,17 +992,6 @@ class ReviewFixesAPITest(APIFixture, TestCase):
         )
         self.assertTrue(response.json()["visible_to_clients"])
         self.assertIn(f"(person:{self.cleo.pk})", response.json()["content"])
-
-    def test_lock_messages_name_people_by_their_short_name(self):
-        operations.lock_doc(self.shared_doc, self.bob)
-        path = f"docs/{self.shared_doc.pk}/"
-        for method, data in [("patch", {"content": "x"}), ("put", None)]:
-            with self.subTest(method=method):
-                response = self.call(
-                    self.ada, method, path + ("lock/" if data is None else ""), data
-                )
-                self.assertEqual(response.status_code, 409)
-                self.assertEqual(response.json()["detail"], "Bob is editing this doc.")
 
     def test_conflict_messages_name_people_by_their_short_name(self):
         base = self.shared_doc.doc.versions.first().pk

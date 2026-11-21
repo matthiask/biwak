@@ -15,7 +15,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
 from biwak.files import operations
 from biwak.items import operations as ops
-from biwak.items.models import Doc, Item, MessageCategory
+from biwak.items.models import Item, MessageCategory
 from biwak.projects.models import Membership
 from biwak.test_utils import person
 
@@ -239,29 +239,30 @@ class FilesCLITest(test_cli.CLITest):
         self.assertIn("Saved", result.output)
         doc.doc.refresh_from_db()
         self.assertEqual(doc.doc.content, "Two")
-        # Saving gave up the lock
-        self.assertIsNone(operations.lock_holder(doc.doc))
 
-    def test_editing_without_changes_gives_up_the_lock(self):
+    def test_editing_without_changes(self):
         doc = ops.create_doc(
             project=self.project, title="Minutes", content="One", creator=self.ada
         )
         with patch.object(click, "edit", return_value="One"):
             result = self.biwak("doc", "edit", doc.pk)
         self.assertIn("No changes", result.output)
-        doc.doc.refresh_from_db()
-        self.assertIsNone(operations.lock_holder(doc.doc))
+        self.assertEqual(doc.doc.versions.count(), 1)
 
-    def test_editing_refuses_while_somebody_else_edits(self):
+    def test_read_only_docs(self):
         doc = ops.create_doc(
             project=self.project, title="Minutes", content="One", creator=self.ada
         )
-        operations.lock_doc(doc, self.bob)
+        self.assertIn("is read-only", self.biwak("doc", "read-only", doc.pk).output)
+        self.assertIn("Read-only.", self.biwak("doc", "show", doc.pk).output)
         with patch.object(click, "edit", return_value="Two") as edit:
             result = self.biwak("doc", "edit", doc.pk)
         self.assertEqual(result.exit_code, 1)
-        self.assertIn("409", result.output)
+        self.assertIn("The doc is read-only.", result.output)
         edit.assert_not_called()
+        output = self.biwak("doc", "read-only", doc.pk, "--off").output
+        self.assertIn("is editable", output)
+        self.assertNotIn("Read-only.", self.biwak("doc", "show", doc.pk).output)
 
     def test_editing_refuses_to_overwrite_a_newer_version(self):
         doc = ops.create_doc(
@@ -269,9 +270,7 @@ class FilesCLITest(test_cli.CLITest):
         )
 
         def editor(text, **kwargs):
-            # Somebody else saves while the editor is open (the lock expired)
-
-            Doc.objects.filter(item=doc).update(locked_by=None, locked_at=None)
+            # Somebody else saves while the editor is open
             operations.update_doc(doc, actor=self.bob, content="Bob's")
             return "Ada's"
 

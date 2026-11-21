@@ -30,4 +30,11 @@ urlpatterns = [
         name="mentionable_new",
     ),
     path("unsubscribe/<str:token>/", views.unsubscribe, name="unsubscribe"),
+    path("lantern/", views.lantern, name="lantern"),
+    path("lantern/menu/", views.lantern_menu, name="lantern_menu"),
+    path("lantern/count/", views.lantern_count, name="lantern_count"),
+    path("lantern/<int:pk>/", views.lantern_open, name="lantern_open"),
+    path("lantern/read/", views.lantern_read, name="lantern_read"),
+    path("lantern/unread/", views.lantern_unread, name="lantern_unread"),
+    path("lantern/bookmark/", views.lantern_bookmark, name="lantern_bookmark"),
 ]

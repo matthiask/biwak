@@ -307,13 +307,23 @@ def _deliverable(notifications, user):
     ]
 
 
+# Notifications still to mail: not sent, not read in the lantern, not
+# marked unread by hand there (specs/lantern.md)
+MAILABLE = {
+    "sent_at__isnull": True,
+    "read_at__isnull": True,
+    "marked_unread_at__isnull": True,
+}
+
+
 def _claim(pks, now):
     """Locks and marks the notifications as sent (skipping those another
-    run is sending); returns those claimed"""
+    run is sending, and those read or marked unread in the lantern
+    meanwhile); returns those claimed"""
     claimed = list(
         Notification.objects
         .select_for_update(skip_locked=True, of=("self",))
-        .filter(pk__in=pks, sent_at__isnull=True)
+        .filter(pk__in=pks, **MAILABLE)
         .select_related("event__item__project", "event__actor", "user")
     )
     Notification.objects.filter(pk__in=[n.pk for n in claimed]).update(sent_at=now)
@@ -462,9 +472,11 @@ def _prepare(user, pks, now, build):
 
 
 def send_mails(*, now=None):
-    """Sends what's due; returns how many mails"""
+    """Sends what's due; returns how many mails. Notifications read in the
+    lantern before they're due are left out (and kept, the lantern lists
+    them); a mail with nothing left isn't sent (specs/lantern.md)."""
     now = now or timezone.now()
-    unsent = Notification.objects.filter(sent_at__isnull=True)
+    unsent = Notification.objects.filter(**MAILABLE)
     count = 0
 
     # Each change: per person and item, once the newest is 2 minutes old

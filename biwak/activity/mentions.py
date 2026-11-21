@@ -188,35 +188,51 @@ def resolve(item, text, *, author):
     return "".join(result)
 
 
-def update(item, text, *, comment=None, actor, event=None, previous=""):
+def update(item, text, *, comment=None, actor, event=None, previous="", credit=None):
     """Stores who ``text`` (an item's texts, or ``comment``) mentions, from
     the operations saving texts. Only people who can see the item and
-    whom the actor may know count (clients: the members), and only those
-    this save adds: mentions already in ``previous`` (the text before)
-    were looked at when they were written, also the rejected ones;
-    those newly mentioned are subscribed (even after unsubscribing) and
-    added to ``event.data["mentioned"]``, so ``notify()`` tells them.
-    People no longer mentioned are forgotten: mentioning them again counts
-    as new. Returns those newly mentioned."""
+    whom the one who typed the mention may know count (clients: the
+    members), and only those this save adds: mentions already in
+    ``previous`` (the text before) were looked at when they were written,
+    also the rejected ones; those newly mentioned are subscribed (even
+    after unsubscribing) and added to ``event.data["mentioned"]``, so
+    ``notify()`` tells them. People no longer mentioned are forgotten:
+    mentioning them again counts as new. ``credit`` gives others than
+    ``actor`` and ``event`` the mentions they typed: ``{mentioned person's
+    ID: (actor, event)}`` (docs edited live by several people). Returns
+    those newly mentioned."""
     ids = mentioned_ids(text)
     mentions = Mention.objects.filter(item=item, comment=comment)
     mentions.exclude(user__in=ids).delete()
     known = set(mentions.values_list("user", flat=True)) | mentioned_ids(previous)
-    people = [
-        user
-        for user in known_to(
-            mentionable_people(item).filter(pk__in=ids), item.project, actor
-        )
-        if user.pk not in known
-    ]
+    credit = credit or {}
+    members = None
+    people = []
+    for user in mentionable_people(item).filter(pk__in=ids):
+        if user.pk in known:
+            continue
+        by, by_event = credit.get(user.pk, (actor, event))
+        if not knows_everybody(by):
+            if members is None:
+                members = set(item.project.memberships.values_list("user", flat=True))
+            if user.pk not in members:
+                continue
+        people.append((user, by, by_event))
     Mention.objects.bulk_create([
-        Mention(item=item, comment=comment, user=user) for user in people
+        Mention(item=item, comment=comment, user=user) for user, _by, _e in people
     ])
-    newly = [user for user in people if user != actor]
-    for user in newly:
-        subscribe(user, item, added_by=actor)
-    if event is not None and newly:
-        mentioned = set(event.data.get("mentioned", []))
-        event.data["mentioned"] = sorted(mentioned | {user.pk for user in newly})
-        event.save(update_fields=["data"])
+    newly = []
+    # Event ID: (event, IDs of those it newly mentions)
+    told = {}
+    for user, by, by_event in people:
+        if user == by:
+            continue
+        newly.append(user)
+        subscribe(user, item, added_by=by)
+        if by_event is not None:
+            told.setdefault(by_event.pk, (by_event, set()))[1].add(user.pk)
+    for told_event, told_ids in told.values():
+        mentioned = set(told_event.data.get("mentioned", []))
+        told_event.data["mentioned"] = sorted(mentioned | told_ids)
+        told_event.save(update_fields=["data"])
     return newly

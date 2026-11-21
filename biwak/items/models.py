@@ -382,17 +382,9 @@ class Folder(Detail):
 
 class Doc(Checklist, Detail):
     content = models.TextField(_("content"), blank=True)
-    # The lock until real-time editing (specs/files.md): who is editing,
-    # renewed every minute, expiring 5 minutes after the last renewal
-    locked_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="+",
-        verbose_name=_("locked by"),
-    )
-    locked_at = models.DateTimeField(_("locked at"), null=True, blank=True)
+    # Edited live (specs/collaboration.md); read-only for everybody until
+    # staff turn it off
+    read_only = models.BooleanField(_("read-only"), default=False)
 
     class Meta:
         verbose_name = _("doc")

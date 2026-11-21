@@ -15,8 +15,21 @@ from biwak.activity.models import (
     Unsubscription,
 )
 from biwak.items.models import Item
+from biwak.live import announce
 from biwak.projects.models import Project
 
+
+# What may take away who sees or edits docs: their open editors check again
+# (specs/collaboration.md)
+ACCESS_CHANGES = {
+    Action.MOVED,
+    Action.VISIBILITY_CHANGED,
+    Action.TRASHED,
+    Action.ARCHIVED,
+    Action.EDITED_PROJECT,
+    Action.REMOVED,
+    Action.LEFT,
+}
 
 # An edit within this time of the person's last edit of the item updates
 # that event instead of writing a new one ("once per editing session")
@@ -98,10 +111,24 @@ def record(*, actor, action, project, item=None, **data):
         # A reaction isn't activity of the project (decided by the building
         # agent, 2026-11-20)
         _touch_project(event)
+    # Before announcing the change (both after the commit, in this order):
+    # a page losing access closes before it hears of the change, since the
+    # channel layer keeps the order of one sender's messages (the pages
+    # check again before passing anything on too). Pinned by
+    # biwak/live/test_announce.py. Also while importing: taking access
+    # away is never quiet.
+    if action in ACCESS_CHANGES:
+        from biwak.collab import live
+
+        live.check_access(project=project.pk)
     if item is not None and not _quiet.get():
         from biwak.activity.notify import notify
 
         transaction.on_commit(lambda: notify(event.pk), robust=True)
+        # The open pages of the item and its parent (specs/lantern.md)
+        announce.changed(
+            item, action=action, actor=actor, visible=event.is_client_visible
+        )
     return event
 
 
@@ -145,9 +172,13 @@ def is_subscribed(user, item):
 
 
 @transaction.atomic
-def set_notification_settings(user, *, level=None, delivery=None):
-    """The person's level and mail delivery, what's given"""
+def set_notification_settings(user, *, level=None, delivery=None, favicon=None):
+    """The person's level, mail delivery and whether the tab's icon shows
+    unread notifications, what's given"""
     fields = []
+    if favicon is not None:
+        user.lantern_in_favicon = favicon
+        fields.append("lantern_in_favicon")
     if level is not None:
         user.notification_level = NotificationLevel(level)
         fields.append("notification_level")

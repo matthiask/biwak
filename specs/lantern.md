@@ -6,7 +6,13 @@ product), and pages
 that update while they're open: comments, reactions and changes by others
 appear without reloading.
 
-**Status:** open.
+**Status:** built (2026-11-21, branch `collaboration`, not merged): the
+lantern (`biwak/activity/lantern.py`, the menu, `/lantern/`, reading,
+bookmarking, mail delivery "none", the favicon dot, `GET /api/v1/lantern/`,
+`POST /api/v1/lantern/read/`, `biwak lantern`, CLI 0.21.0) and live
+updates (`biwak/live/`, `frontend/live.js`, `frontend/lantern.js`). How
+it was built and what was decided on the way: "Built" below; open
+questions at the end.
 
 **Agent:** a strong model: live updates send changes to many people at
 once, and each must only ever get what they may see.
@@ -54,11 +60,15 @@ records, levels, `send_mails`), reactions.
   A link to the whole list.
 - **The page** `/lantern/`: the same, paginated like the feed, with filters
   "unread" and "mentions only".
-- **Reading:**
-  - opening an item marks its notifications read, and those of its
-    comments;
-  - clicking an entry opens the item, at the comment where it applies;
-  - "mark as read" and "mark as unread" per item.
+- **Reading** only through the lantern (decided 2026-11-21, replacing
+  "opening an item marks its notifications read"):
+  - clicking an entry in the menu or on the page marks the item's
+    notifications read (those of its comments too) and opens the item, at
+    the comment where it applies;
+  - "mark as read" and "mark all as read";
+  - opening the item some other way (the feed, a list, a mail's link, a
+    live update) reads nothing;
+  - "mark as unread" per item.
 - **The model:** `Notification.read_at` (null: unread). Mail delivery
   gains `none`. `send_mails` leaves out notifications read before
   sending, and deletes nothing it would need for merging.
@@ -70,14 +80,23 @@ records, levels, `send_mails`), reactions.
   - `POST /api/v1/lantern/read/` (all, or by item);
   - `biwak lantern [--unread] [--read ITEM|--all]`.
 
-- **Pinning** (decided 2026-11-21): an entry can be pinned to the top.
-  Pinning bookmarks its item (the existing bookmarks, no new concept);
-  bookmarked items with notifications appear in a "Pinned" section at
-  the top of the menu and the page, read or not, with their latest
-  notification, until unpinned (which removes the bookmark). The
-  bookmarks page shows the same pins.
+- **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", decided
+  2026-11-21 too: pinned messages on the board keep "Pin"): an entry's
+  item can be bookmarked (the existing bookmarks, no new concept, the
+  bookmark icons `bookmark` and `bookmark-fill` used elsewhere);
+  bookmarked items with notifications appear in a "Bookmarked" section
+  at the top of the menu and the page, read or not, with their latest
+  notification, until the bookmark is removed. The bookmarks page shows
+  the same items.
 - **Mark as unread** per item (also in the menu, next to each entry),
-  bringing the item's latest notification back to unread.
+  bringing the item's latest notification back to unread. Marked unread
+  means no mail (decided 2026-11-21): a notification marked unread by
+  hand is never mailed afterwards, neither by each change nor in the
+  digest (`Notification.marked_unread_at`, left out by `send_mails`).
+- **Switching mail back from "none"** (decided 2026-11-21: as built):
+  whatever is unread and wasn't marked unread by hand is mailed with the
+  next mail or digest, all at once; no special case for the time of the
+  switch.
 - **The favicon** (decided 2026-11-21, configurable): with the setting
   on, the browser tab's icon shows a dot when there are unread
   notifications, updated live; the setting (`User.lantern_in_favicon`,
@@ -129,10 +148,10 @@ setup as `collaboration.md`).
 ## Done when
 
 - **The lantern:**
-  - the menu, the page, reading by opening and by marking;
+  - the menu, the page, reading by following an entry and by marking;
   - the count updating live; the favicon dot with the setting on and
     not without it;
-  - pinning and unpinning (the bookmark follows), mark as unread;
+  - bookmarking and removing the bookmark, mark as unread;
   - mail delivery "none";
   - read notifications left out of mails and digests (a test for each);
   - a client never seeing a notification about something internal;
@@ -151,7 +170,107 @@ setup as `collaboration.md`).
   - a client's open page not receiving an internal change;
   - reconnecting after being offline.
 
-## Questions before building
+## Built (2026-11-21)
+
+- **Model:** `Notification.read_at`; `MailDelivery.NONE` ("No mails");
+  `User.lantern_in_favicon`. `notify()` moving an unsent notification
+  forward (a merged edit) makes it unread again: the change is new.
+- **Mails:** `send_mails` and `_claim()` skip read notifications; they're
+  kept (sent_at stays empty, they never go out later unless marked unread
+  again). A mail or digest with nothing left isn't sent.
+- **Listing** (`lantern.notifications_for()`, `wanted()`): items the
+  person sees now (`visible_to()`), for clients only events of the time
+  clients saw the item, then `_deliverable()`'s level check. Pages of the
+  page and the API may hold fewer entries than asked for (level
+  "nothing" is checked after loading the page).
+- **Reading:** an entry's links go through `/lantern/<notification>/`
+  (`views.lantern_open`), which reads the item's notifications (the entry
+  stands for the item) and redirects to the item, at the comment; a link,
+  so it works without JavaScript; 404 for others' notifications and items
+  one doesn't see. The item pages read nothing (decided 2026-11-21; built
+  first as reading when opened). "Mark as unread" brings the item's
+  newest notification back.
+- **Bookmarking:** "Bookmark" and "Remove the bookmark" in the lantern
+  (`lantern.bookmark()`, `unbookmark()`, `POST /lantern/bookmark/`); a
+  bookmark made on the item's page counts too. Bookmarked items are in
+  "Bookmarked" at the top (latest notification, read or not) and not in
+  the other sections. The API's entries say `bookmarked` (was `pinned`,
+  never released).
+- **The menu:** `frontend/lantern.js` fetches the count
+  (`/lantern/count/`) on every page and when told, the menu
+  (`/lantern/menu/`) when opened; its buttons post without leaving the
+  page. Without JavaScript the menu has the link to `/lantern/`.
+- **The websocket** (`biwak/live/consumers.py`, `/ws/live/?item=ID`, one
+  per tab): joining checks `visible_to()` (4404 like the pages' 404, 4401
+  without a login); the item's group is the staff one or the clients' one
+  (`announce.item_group()`), and an announcement goes to the clients'
+  group only if it happened while clients saw the item and they see the
+  watched item. It joins the live editor's project and person groups and
+  checks again on their `access.check` (and every 60 seconds); made a
+  client meanwhile, it switches groups. Messages carry IDs and the kind
+  of change only, never text or names; the actor's own pages aren't
+  told.
+- **Announcements** (`biwak/live/announce.py`): every event of an item
+  (`record()`) tells the pages of the item and its parent; reordering,
+  the lists a to-do left, groups added, renamed, moved or removed, and
+  reactions removed are told explicitly. After the commit only.
+- **The pages** (`frontend/live.js`): the page fetches itself through
+  its view and takes over its regions: `[data-live]` replaced, children of
+  `[data-live-list]` added, removed, reordered. A region with focus in a
+  field, a changed field, an open `<details>` or an open peek waits with
+  "Changed meanwhile: shown once you save or close this." (no name: names
+  don't go through the websocket) and takes over once left. A page whose
+  item is gone says "This isn’t here anymore: it was trashed, or you
+  can’t see it anymore." with a link back. After reconnecting it fetches
+  once; several changes within 300 ms are fetched once.
+- **The doc's editor page** has no `/ws/live/` (one socket per tab: the
+  editor's); its lantern count is fetched when it loads.
+
+## Fixed after the visibility review of the live features (2026-11-21)
+
+- **The lantern's ping** (`announce.lantern_changed()`) about an event
+  goes only to those who see its item then, and to clients only if the
+  event happened while clients saw the item: a `notify()` running after
+  another request made an internal item visible pinged the client's tabs.
+  (`notify()` leaving such clients out altogether, and the mails, are
+  fixed on main, branch `mail-race`.)
+- **Logging out** closes the tabs' websockets of that login session at
+  once (4401), and logging out everywhere those of the others: before,
+  they kept hearing changes until the next check (60 seconds). Like the
+  live editor's (`collaboration.md`).
+- **Reading and marking unread** touch only the notifications listed
+  (`notifications_for()`): "Mark all as read" counted (`{"read": N}` in
+  the API) and read those about items the person can't see anymore, and
+  "Mark as unread" could bring back a client's notification of an
+  internal event.
+- **Every ping about an item** goes through the same filter as
+  `notify()`'s: removing a reaction pinged the tabs of everybody notified
+  of it, also of a client who couldn't see the item anymore; now only who
+  sees it, clients only for events of the time they saw it. Bookmarking,
+  removing the bookmark and marking unread pass their item too.
+- **Losing access doesn't depend on one message:** the websocket checks
+  access again before passing on every announcement and ping (a few
+  queries; announcements only go to the tabs showing the item, and are
+  rare), not only on `access.check` and every 60 seconds. A lost
+  `access.check` (Redis evicting it, or a change in the database
+  directly) let a page hear of changes until the next 60-second check.
+  Chosen over a shorter timer: no window at all, and no load from idle
+  tabs.
+- **Limits:** `?item=` longer than 18 digits closes with 4404 (it
+  crashed the consumer); at most 50 websockets per person and process
+  (**?**), more close with 4429 and the page reconnects later, backing
+  off like after being offline. The live editor's limits are in
+  `collaboration.md`.
+
+## Questions (built the way described meanwhile)
+
+- The wording of "No mails", "Changed meanwhile: …",
+  "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
+  "You were mentioned.").
+- The menu shows at most 100 unread notifications (the page has all):
+  a value the spec didn't fix.
+
+## Questions before building (answered by building)
 
 - How long read notifications stay in the lantern list (proposed: they're
   kept, as decided for the records; the menu shows the latest 30, the

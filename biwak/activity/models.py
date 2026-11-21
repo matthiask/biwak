@@ -268,8 +268,10 @@ class LevelOverride(models.Model):
 
 
 class Notification(models.Model):
-    """An event a person is told about by mail (biwak.activity.notify);
-    ``send_mails`` sends and marks them"""
+    """An event a person is told about (biwak.activity.notify): in the
+    lantern (biwak.activity.lantern, specs/lantern.md) and by mail, which
+    ``send_mails`` sends and marks; read in the lantern before that, it
+    isn't mailed"""
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -286,6 +288,13 @@ class Notification(models.Model):
     # Moved forward when a merged edit notifies again before sending
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
+    # Read in the lantern, or the item opened (null: unread)
+    read_at = models.DateTimeField(_("read at"), null=True, blank=True)
+    # Marked unread by hand in the lantern: never mailed afterwards
+    # (decided 2026-11-21)
+    marked_unread_at = models.DateTimeField(
+        _("marked unread at"), null=True, blank=True
+    )
 
     class Meta:
         ordering = ["created_at", "pk"]
@@ -294,7 +303,11 @@ class Notification(models.Model):
                 fields=["user", "created_at"],
                 condition=models.Q(sent_at__isnull=True),
                 name="unsent_notifications",
-            )
+            ),
+            # The lantern, newest first
+            models.Index(
+                fields=["user", "-created_at", "-id"], name="lantern_notifications"
+            ),
         ]
         constraints = [
             # One unsent notification per person and event, even when two
