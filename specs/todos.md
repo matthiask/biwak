@@ -59,6 +59,14 @@ check-ins (`checkins.md`):
   order, lists sorted, `INTERVAL=1` and `WKST=MO` dropped), so equal
   schedules are equal strings; existing rules are normalized once by a
   migration. The meaning never changes.
+  Built 2026-11-21: the order is `FREQ`, `INTERVAL`, `BYMONTH`, `BYDAY`,
+  `BYMONTHDAY`, `BYSETPOS`, `WKST` (the presets' and the widget's, so
+  their rules were canonical already); days in week order with numbers
+  plain (`-1FR,+1MO` is `1MO,-1FR`), numbers ascending, repeats dropped;
+  dateutil's `MO(+1)` is refused. `checkins/0005_canonical_rules` rewrites
+  the stored to-do and question rules without events and without
+  touching `next_at` (rules no longer valid stay as they are). The API
+  and the CLI return the stored rule.
 
 ### Recurring to-dos
 

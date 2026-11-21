@@ -1,9 +1,16 @@
 import datetime as dt
+from importlib import import_module
 from zoneinfo import ZoneInfo
 
+from django.apps import apps
 from django.test import SimpleTestCase
 
+from biwak.activity.models import Event
 from biwak.checkins import schedule
+from biwak.checkins.models import Question
+from biwak.checkins.support import CheckinTestCase
+from biwak.items import operations as item_ops
+from biwak.items.models import Todo
 
 
 ZURICH = ZoneInfo("Europe/Zurich")
@@ -346,3 +353,41 @@ class StoredRuleTest(SimpleTestCase):
                 after=utc("2027-03-22 12:00"),
             )
         )
+
+
+class CanonicalRulesMigrationTest(CheckinTestCase):
+    def test_stored_rules_become_canonical(self):
+        """To-do recurrences and question rules, without events and
+        without a new ``next_at``; rules which aren't valid stay"""
+        migration = import_module("biwak.checkins.migrations.0005_canonical_rules")
+        todolist = item_ops.create_list(
+            project=self.project, title="Chores", creator=self.ada
+        )
+        todos = [
+            item_ops.create_todo(todolist=todolist, title=str(n), creator=self.ada)
+            for n in range(4)
+        ]
+        written = {
+            "FREQ=WEEKLY;BYDAY=TH,MO": "FREQ=WEEKLY;BYDAY=MO,TH",
+            "BYDAY=MO;FREQ=WEEKLY;INTERVAL=1;WKST=MO": "FREQ=WEEKLY;BYDAY=MO",
+            "FREQ=DAILY;INTERVAL=0": "FREQ=DAILY;INTERVAL=0",
+            "": "",
+        }
+        for todo, rule in zip(todos, written, strict=True):
+            Todo.objects.filter(item=todo).update(recurrence=rule)
+        Question.objects.filter(item=self.item).update(
+            rule="FREQ=WEEKLY;BYDAY=MO,MO;WKST=MO"
+        )
+        before = Question.objects.get(item=self.item)
+        events = Event.objects.count()
+
+        migration.canonical_rules(apps, None)
+
+        self.assertEqual(
+            [Todo.objects.get(item=todo).recurrence for todo in todos],
+            list(written.values()),
+        )
+        after = Question.objects.get(item=self.item)
+        self.assertEqual(after.rule, "FREQ=WEEKLY;BYDAY=MO")
+        self.assertEqual(after.next_at, before.next_at)
+        self.assertEqual(Event.objects.count(), events)
