@@ -25,7 +25,9 @@ def block_context(request, item, comment=None, *, error=""):
         "remove_url_name": "comment_reaction_remove"
         if comment
         else "item_reaction_remove",
-        "reactions": ops.summary(item, comment, request.user),
+        "reactions": (reactions := ops.summary(item, comment, request.user)),
+        # Marked in the picker: choosing one again keeps it
+        "mine": {entry["content"] for entry in reactions if entry["mine"]},
         "quick": QUICK,
         "max_length": MAX_LENGTH,
         "error": error,
@@ -40,8 +42,15 @@ def reaction_url(item, comment=None):
 
 def _toggle(request, item, comment=None):
     error = ""
+    # ``action``: "add" (the picker and others' pills: choosing a reaction
+    # one already has keeps it) or "remove" (one's own pill, after asking);
+    # without it the same reaction again removes it, as the API did first
+    change = {
+        "add": ops.add_reaction,
+        "remove": ops.remove_reaction,
+    }.get(request.POST.get("action"), ops.toggle_reaction)
     try:
-        ops.toggle_reaction(
+        change(
             request.user,
             request.POST.get("content", ""),
             item=None if comment else item,

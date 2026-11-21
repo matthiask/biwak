@@ -161,3 +161,10 @@ label "Add a reaction"; one's own pill (`.wb-reaction-own`,
 - **The pills** (2026-11-21): as tall as the button adding a reaction,
   emojis a little larger than the text; a few words stay at the text's
   size.
+- **Adding and removing are explicit** (decided 2026-11-21): the picker
+  and others' pills only add, and choosing a reaction one already has
+  keeps it. One's own reactions are marked in the picker. Removing goes
+  through one's own pill, after asking. When others reacted the same,
+  the remove button says "mine", so it's clear only one's own goes. The
+  form's `action` is `add` or `remove`; without it, as the API had it,
+  the same reaction again removes it.

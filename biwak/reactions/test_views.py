@@ -55,6 +55,42 @@ class ViewsTest(TestCase):
         self.post(f"/items/{self.todo.pk}/reactions/", "👍")
         self.assertEqual(Reaction.objects.count(), 1)
 
+    def test_adding_again_keeps_it_removing_is_explicit(self):
+        """The picker and others' pills add, one's own pill removes; choosing
+        a reaction one has again keeps it (decided 2026-11-21)"""
+        self.client.force_login(self.bob)
+        url = f"/items/{self.todo.pk}/reactions/"
+        for _ in range(2):
+            self.client.post(url, {"content": "👍", "action": "add"})
+        self.assertEqual(Reaction.objects.filter(user=self.bob).count(), 1)
+        page = self.client.get(self.todo.get_absolute_url()).content.decode()
+        # Marked in the picker, the others not
+        self.assertRegex(
+            page, r'value="👍"\s+class="wb-emoji is-mine"\s+aria-pressed="true"'
+        )
+        self.assertRegex(page, r'value="🎉"\s+class="wb-emoji"\s+aria-pressed="false"')
+        self.assertIn('name="action" value="remove"', page)
+        self.client.post(url, {"content": "👍", "action": "remove"})
+        self.client.post(url, {"content": "👍", "action": "remove"})
+        self.assertFalse(Reaction.objects.filter(user=self.bob).exists())
+
+    def test_removing_says_mine_when_others_reacted_the_same(self):
+        from biwak.reactions import operations as reaction_ops
+
+        reaction_ops.add_reaction(self.bob, "👍", item=self.todo)
+        self.client.force_login(self.bob)
+        alone = self.client.get(self.todo.get_absolute_url())
+        self.assertNotContains(alone, ">mine<")
+        reaction_ops.add_reaction(self.ada, "👍", item=self.todo)
+        shared = self.client.get(self.todo.get_absolute_url())
+        self.assertContains(shared, '<span class="small">mine</span>')
+        self.client.post(
+            f"/items/{self.todo.pk}/reactions/", {"content": "👍", "action": "remove"}
+        )
+        self.assertEqual(
+            list(Reaction.objects.values_list("user", flat=True)), [self.ada.pk]
+        )
+
     def test_htmx_swaps_the_block_only(self):
         self.client.force_login(self.bob)
         response = self.post(

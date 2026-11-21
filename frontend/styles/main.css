@@ -1361,6 +1361,12 @@ button.wb-signal:hover {
   background: var(--bs-tertiary-bg);
 }
 
+/* One's own reactions, marked in the picker: choosing one again keeps it */
+.wb-emoji.is-mine {
+  background: var(--wb-primary-bg);
+  box-shadow: inset 0 0 0 1px var(--bs-primary);
+}
+
 .wb-emoji:focus-visible {
   outline: 2px solid var(--wb-accent-ring);
   outline-offset: 1px;

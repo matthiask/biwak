@@ -12,6 +12,7 @@
         <form method="post" action="{{ url }}" hx-post="{{ url }}" class="wb-reaction-own">
           {% csrf_token %}
           <input type="hidden" name="content" value="{{ reaction.content }}">
+          <input type="hidden" name="action" value="remove">
           <a
             href="{% url remove_url_name target.pk %}?content={{ reaction.content|urlencode }}"
             role="button"
@@ -29,12 +30,15 @@
             aria-label="{% blocktranslate with content=reaction.content %}Remove your {{ content }}{% endblocktranslate %}"
           >
             {% icon "trash" %}
+            {# Others reacted the same: only one's own goes (decided 2026-11-21) #}
+            {% if reaction.count > 1 %}<span class="small">{% translate "mine" %}</span>{% endif %}
           </button>
         </form>
       {% else %}
         <form method="post" action="{{ url }}" hx-post="{{ url }}">
           {% csrf_token %}
           <input type="hidden" name="content" value="{{ reaction.content }}">
+          <input type="hidden" name="action" value="add">
           <button
             type="submit"
             class="btn btn-sm wb-reaction{% if reaction.words %} is-words{% endif %}"
@@ -57,17 +61,20 @@
       <div class="wb-reaction-picker card card-body p-2">
         <form method="post" action="{{ url }}" hx-post="{{ url }}" class="wb-reaction-quick">
           {% csrf_token %}
+          <input type="hidden" name="action" value="add">
           {% for emoji in quick %}<button
               type="submit"
               name="content"
               value="{{ emoji }}"
-              class="wb-emoji"
+              class="wb-emoji{% if emoji in mine %} is-mine{% endif %}"
+              aria-pressed="{% if emoji in mine %}true{% else %}false{% endif %}"
             >
               {{ emoji }}
             </button>{% endfor %}
         </form>
         <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-flex gap-1 mt-2">
           {% csrf_token %}
+          <input type="hidden" name="action" value="add">
           <input
             type="text"
             name="content"
