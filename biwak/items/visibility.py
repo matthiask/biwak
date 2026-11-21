@@ -7,7 +7,7 @@ subtrees whenever a switch changes, an item moves or is created, in the
 same transaction. ``check()`` compares the stored values with the tree.
 """
 
-from biwak.items.models import Item
+from biwak.items.models import Comment, Item
 
 
 def expected(item):
@@ -41,7 +41,6 @@ def affected(item):
     """What turning the switch on would show, for the switch's question:
     the item and its descendants, their comments, and the clients among the
     project's members who would see them"""
-    from biwak.items.models import Comment
 
     pks = list(
         Item.objects.descendants(item, include_self=True).values_list("pk", flat=True)

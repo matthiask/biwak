@@ -173,10 +173,23 @@ class Item(TreeNode):
         if self.visible_to_clients and not self.has_switch:
             raise ValidationError(SWITCH_MESSAGE)
 
-    def save(self, *args, **kwargs):
-        # Enforced in the model, not only in forms (specs/core.md)
-        self.full_clean(validate_unique=False, validate_constraints=False)
-        super().save(*args, **kwargs)
+    # What clean() checks: the tree and the switch
+    TREE_FIELDS = {"project", "parent", "kind", "visible_to_clients"}
+
+    def save(self, *args, update_fields=None, **kwargs):
+        # Enforced in the model, not only in forms (specs/core.md). Saving
+        # some fields (status, position) checks only those, the tree only
+        # when it's among them: no query per save for the parent.
+        if update_fields is None:
+            self.full_clean(validate_unique=False, validate_constraints=False)
+        else:
+            fields = set(update_fields)
+            self.clean_fields(
+                exclude=[f.name for f in self._meta.fields if f.name not in fields]
+            )
+            if fields & self.TREE_FIELDS:
+                self.clean()
+        super().save(*args, update_fields=update_fields, **kwargs)
 
 
 class Detail(models.Model):

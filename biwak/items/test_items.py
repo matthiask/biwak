@@ -64,6 +64,23 @@ class TreeTest(TestCase):
                 creator=self.ada,
             ).save()
 
+    def test_saving_some_fields_checks_only_those(self):
+        """full_clean() loaded the parent for every status or position
+        save; the fields saved are still checked"""
+        todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="T", creator=self.ada)
+        todo = Item.objects.get(pk=todo.pk)
+        todo.status = Status.ARCHIVED
+        with self.assertNumQueries(1):
+            todo.save(update_fields=["status"])
+        todo.title = ""
+        with self.assertRaises(ValidationError):
+            todo.save(update_fields=["title"])
+        todo = Item.objects.get(pk=todo.pk)
+        todo.visible_to_clients = True
+        with self.assertRaises(ValidationError):
+            todo.save(update_fields=["visible_to_clients"])
+
     def test_detail_rows_and_events(self):
         todolist = ops.create_list(
             project=self.project, title="Launch", creator=self.ada
