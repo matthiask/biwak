@@ -28,7 +28,7 @@ reviewed.
   inviting (staff invite clients, admins invite staff). Several at once
   with someone the actor may not change is refused as a whole.
 - **Pages:** `/people/` gets an "Inactive" filter (next to "Invited");
-  a person's page has "Activate…" or "Deactivate…" for admins, each a
+  a person's page has "Activate…" or "Deactivate…" for whoever may, each a
   modal (`form_response`).
 - **API:** `POST /api/v1/people/{id}/activate/` and `…/deactivate/`, and
   a bulk form taking several IDs (`POST /api/v1/people/activate/` with
