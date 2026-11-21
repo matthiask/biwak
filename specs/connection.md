@@ -5,7 +5,20 @@ arrive. Today only the live editor's status line says so; other pages
 quietly stop updating, and a tick, a drag or a form sent offline ends on
 the browser's error page.
 
-**Status:** open (spec, 2026-11-21).
+**Status:** built (2026-11-21, branch `connection-banner`, not merged).
+`frontend/connection.js` holds the state and the banner (`base.html`'s
+`[data-connection]`); `live.js` and `collab.js` report their socket;
+`http.js`' `send()` refuses while `navigator.onLine` is false and `post()`
+takes an `undo` (`remember()`) for drags; the submit of forms is held back
+with "Not sent". Decisions on the way: what the page does offline (undoing,
+holding back, the `beforeunload` question) follows `navigator.onLine` only,
+so a blocked websocket never keeps anyone from saving; the banner follows
+the sockets too. htmx requests not made by a form (a button with
+`hx-post`) aren't held back. Reactions are forms, so they are held back
+with the message rather than undone. The editor's storage is
+`frontend/collab-store.js` (`y-indexeddb`, database
+`biwak-doc-<user>-<doc>`), cleared by `stored-docs.js` on logging out.
+Tests: `biwak/test_connection.py`.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.

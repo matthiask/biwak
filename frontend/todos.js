@@ -6,11 +6,13 @@ import { MultiDrag, Sortable } from "sortablejs"
 Sortable.mount(new MultiDrag())
 
 import "./add-todo.js"
-import { post } from "./http.js"
+import { post, remember } from "./http.js"
 
 // Clicking grips selects several to-dos, dragging one of them moves them
 // all; one request with the to-dos in their new order and where the first
 // one is among the others
+let undo = () => {}
+
 function sortTodos(container) {
   if (Sortable.get(container)) return
   Sortable.create(container, {
@@ -20,6 +22,9 @@ function sortTodos(container) {
     animation: 120,
     multiDrag: true,
     selectedClass: "is-selected",
+    onStart() {
+      undo = remember(document.querySelectorAll("[data-todos]"))
+    },
     onEnd(event) {
       const moved = event.items.length ? event.items : [event.item]
       if (
@@ -33,11 +38,15 @@ function sortTodos(container) {
       const index = rows
         .slice(0, rows.indexOf(ordered[0]))
         .filter((row) => !moved.includes(row)).length
-      post(event.to.dataset.moveUrl, [
-        ...ordered.map((row) => ["todos", row.dataset.todo]),
-        ["group", event.to.dataset.group],
-        ["index", index],
-      ])
+      post(
+        event.to.dataset.moveUrl,
+        [
+          ...ordered.map((row) => ["todos", row.dataset.todo]),
+          ["group", event.to.dataset.group],
+          ["index", index],
+        ],
+        undo,
+      )
       for (const row of moved) Sortable.utils.deselect(row)
     },
   })
@@ -49,14 +58,21 @@ function sortGroups(container) {
     handle: "[data-group-handle]",
     draggable: "[data-group-item]",
     animation: 120,
+    onStart() {
+      undo = remember([container])
+    },
     onEnd(event) {
       if (event.oldIndex === event.newIndex) return
       // The ungrouped section comes first and doesn't move
       const groups = [...container.querySelectorAll("[data-group-item]")]
-      post(event.item.dataset.moveUrl, {
-        index: groups.indexOf(event.item),
-        quiet: "1",
-      })
+      post(
+        event.item.dataset.moveUrl,
+        {
+          index: groups.indexOf(event.item),
+          quiet: "1",
+        },
+        undo,
+      )
     },
   })
 }

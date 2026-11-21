@@ -14,6 +14,8 @@
 // fetched once, so nothing is missed. The lantern's count is
 // frontend/lantern.js's (the "biwak:lantern" event).
 
+import { report } from "./connection.js"
+
 const body = document.body
 const path = body.dataset.liveSocket
 const watched = body.dataset.liveItem
@@ -36,6 +38,7 @@ let socket = null
 let connectedBefore = false
 let retry = 1000
 let timer = null
+let reconnect = null
 let fetching = false
 let again = false
 // Regions waiting while they're edited: id → the new element
@@ -43,6 +46,9 @@ const waiting = new Map()
 
 function state(value) {
   body.dataset.liveState = value
+  // Connecting keeps what was reported: a socket that never gets through
+  // goes on retrying, and that's no short blip
+  if (value !== "connecting") report("live", value !== "offline")
 }
 
 function connect() {
@@ -83,10 +89,18 @@ function connect() {
       return
     }
     state("offline")
-    setTimeout(connect, retry)
+    reconnect = setTimeout(connect, retry)
     retry = Math.min(retry * 2, 30000)
   })
 }
+
+// The browser is back: no waiting for the next try
+addEventListener("online", () => {
+  if (socket || !reconnect) return
+  clearTimeout(reconnect)
+  retry = 1000
+  connect()
+})
 
 function schedule() {
   clearTimeout(timer)

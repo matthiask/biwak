@@ -635,7 +635,7 @@ json-parse-even-better-errors@^2.3.0:
   resolved "https://registry.yarnpkg.com/json-parse-even-better-errors/-/json-parse-even-better-errors-2.3.1.tgz#7c47805a94319928e05777405dc12e1f7a4ee02d"
   integrity sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==
 
-lib0@^0.2.102, lib0@^0.2.120, lib0@^0.2.42, lib0@^0.2.85, lib0@^0.2.99:
+lib0@^0.2.102, lib0@^0.2.120, lib0@^0.2.42, lib0@^0.2.74, lib0@^0.2.85, lib0@^0.2.99:
   version "0.2.120"
   resolved "https://registry.yarnpkg.com/lib0/-/lib0-0.2.120.tgz#ba06794de20be5037f1f0ebb9d2891b607ceff25"
   integrity sha512-/a2eRImR8sZbmMVKe2we1/KukDQkuPyPf8yol6epvCu2PH6hurjcRI3mdGFFAi0uGoRJGyns99JquZgxwW1tQg==
@@ -979,6 +979,13 @@ y-codemirror.next@^0.3.6:
   integrity sha512-GnmVXhTe+UtoFbbaSdwhq6gdAQZdIY9az0Xj6HR2J4PO6Yw4w3xaaSssU+6T72WhXAI0wf9FbuY2s0Ms+WrexA==
   dependencies:
     lib0 "^0.2.42"
+
+y-indexeddb@9.0.12:
+  version "9.0.12"
+  resolved "https://registry.yarnpkg.com/y-indexeddb/-/y-indexeddb-9.0.12.tgz#73657f31d52886d7532256610babf5cca4ad5e58"
+  integrity sha512-9oCFRSPPzBK7/w5vOkJBaVCQZKHXB/v6SIT+WYhnJxlEC61juqG0hBrAf+y3gmSMLFLwICNH9nQ53uscuse6Hg==
+  dependencies:
+    lib0 "^0.2.74"
 
 y-protocols@^1.0.5, y-protocols@^1.0.7:
   version "1.0.7"
