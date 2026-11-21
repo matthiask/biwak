@@ -7,7 +7,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
   </div>
-  <form method="get" data-autosubmit data-remember class="d-flex flex-wrap align-items-end gap-2 mb-4">
+  <form method="get" data-autosubmit data-remember class="wb-filters mb-4">
     {% for field in form %}
       <div>
         <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -15,8 +15,7 @@
         {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
       </div>
     {% endfor %}
-    <button type="submit" class="btn btn-sm btn-primary" data-autosubmit-button>{% translate "Filter" %}</button>
-    <a class="btn btn-sm btn-quiet" href="{{ request.path }}" data-reset-filters>{% translate "Reset filters" %}</a>
+    {% include "_filter_buttons.html" with reset_url=request.path filtered=True %}
   </form>
   {% if completed %}
     {% for todo in page %}

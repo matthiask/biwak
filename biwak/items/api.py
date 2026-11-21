@@ -6,6 +6,7 @@ import datetime as dt
 from typing import Annotated, Literal
 
 from django.db.models import F, Prefetch
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import Field, Router, Schema, Status
@@ -36,6 +37,7 @@ from biwak.api_conventions import (
 from biwak.items import due, operations as ops
 from biwak.items.models import (
     SWITCH_MESSAGE,
+    Assignment,
     Group,
     Item,
     Kind,
@@ -227,6 +229,13 @@ def group_delete(request, group_id: int):
 # To-dos ---------------------------------------------------------------------
 
 
+class AssigneeOut(PersonOut):
+    assigned_by: PersonOut | None = Field(
+        description="Who assigned them; null for assignments from before it"
+        " was stored, imported ones and people who were deleted."
+    )
+
+
 class TodoOut(ItemOut):
     list_id: int
     group: GroupOut | None
@@ -240,7 +249,7 @@ class TodoOut(ItemOut):
     due_on: dt.date | None
     completed_at: dt.datetime | None
     completed_by: PersonOut | None
-    assignees: list[PersonOut]
+    assignees: list[AssigneeOut]
     recurrence: str
     recurrence_description: str
     recurrence_ends_on: dt.date | None
@@ -276,7 +285,10 @@ def todo_out(item, user):
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,
         "completed_by": person_out(todo.completed_by),
-        "assignees": [person_out(user) for user in todo.assignees.all()],
+        "assignees": [
+            person_out(a.user) | {"assigned_by": person_out(a.assigned_by)}
+            for a in todo.assignment_set.all()
+        ],
         "recurrence": todo.recurrence,
         "recurrence_description": todo.recurrence_description,
         "recurrence_ends_on": todo.recurrence_ends_on,
@@ -286,6 +298,15 @@ def todo_out(item, user):
     }
 
 
+# The assignees in the order of the people, with who assigned them
+ASSIGNMENTS = Prefetch(
+    "todo__assignment_set",
+    queryset=Assignment.objects.select_related("user", "assigned_by").order_by(
+        Lower("user__full_name"), "user__email"
+    ),
+)
+
+
 def _for_todo_out(qs):
     """What ``todo_out()`` reads, without a query per to-do"""
     return (
@@ -293,7 +314,7 @@ def _for_todo_out(qs):
         .select_related(
             "creator", "todo__group", "todo__completed_by", "todo__previous"
         )
-        .prefetch_related("todo__assignees")
+        .prefetch_related(ASSIGNMENTS)
         .prefetch_related(
             Prefetch("reactions", queryset=Reaction.objects.select_related("user"))
         )
@@ -414,6 +435,7 @@ def todo_overview(
     *,
     project_id: int | None = None,
     assignee: str | None = None,
+    assigned_by: str | None = None,
     completed: bool = False,
     grouping: Literal["project", "due"] | None = None,
     visible_to_clients: bool | None = None,
@@ -425,17 +447,21 @@ def todo_overview(
     without one last) or, with ``grouping=project``, by project name, the
     list's position, the group's position (to-dos outside groups first)
     and the to-do's; ``grouping`` defaults to ``project``. ``completed`` the completed ones, the latest first.
-    ``assignee`` is ``me``, ``nobody`` or a person's ID, ``due_group`` one
+    ``assignee`` is ``me``, ``nobody`` or a person's ID, ``assigned_by=me``
+    the to-dos the person assigned to somebody, ``due_group`` one
     of the groups of the page. Archived projects and lists are left out.
     Clients only ever get what is visible to them."""
     project = project_for(request, project_id) if project_id is not None else None
     if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
         bad_request(_("assignee is me, nobody or a person's ID."))
+    if assigned_by not in {None, "", "me"}:
+        bad_request(_("assigned_by is me."))
     qs = _for_todo_out(
         due.todos(
             request.user,
             project=project,
             assignee=assignee or None,
+            assigned_by=assigned_by or None,
             completed=completed,
             visible_to_clients=visible_to_clients,
             group=due_group,

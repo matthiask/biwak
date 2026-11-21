@@ -2637,7 +2637,7 @@ class KeyboardTest(E2ETestCase):
         )
         self.open_palette(page)
         # The actions still run from the palette
-        page.keyboard.type("my to-dos")
+        page.keyboard.type("go to to-dos")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=me")
 
@@ -2903,6 +2903,32 @@ class FiltersTest(E2ETestCase):
         expect(page.locator("#id_assignee")).to_have_value("nobody")
         self.assertEqual(self.errors, [])
 
+    def test_the_buttons_line_up_with_the_fields(self):
+        page = self.page
+        for path in [
+            "/todos/?assignee=me",
+            f"/projects/{self.project.pk}/todos/",
+            "/feed/?kind=todo",
+            "/lantern/?unread=1",
+        ]:
+            self.goto(page, path)
+            page.evaluate(
+                "document.querySelector('[data-autosubmit-button]').hidden = false"
+            )
+            boxes = page.evaluate(
+                """() => [...document.querySelectorAll(
+                    "form.wb-filters .btn, form.wb-filters select, form.wb-filters .form-check")]
+                    .filter((el) => el.offsetParent)
+                    .map((el) => { const r = el.getBoundingClientRect(); return [r.top, r.bottom] })"""
+            )
+            self.assertGreater(len(boxes), 1, path)
+            self.assertEqual(
+                {round(box[1]) for box in boxes}, {round(boxes[0][1])}, path
+            )
+            self.assertEqual(
+                {round(box[0]) for box in boxes}, {round(boxes[0][0])}, (path, boxes)
+            )
+
     def test_a_checkbox_applies_the_lantern_filter(self):
         page = self.page
         self.goto(page, "/lantern/")
@@ -2928,7 +2954,7 @@ class FiltersTest(E2ETestCase):
         self.goto(page, "/todos/?assignee=nobody&state=completed")
         # The link of the top bar goes to the stored filters
         self.goto(page, "/")
-        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
         expect(link).to_have_attribute(
             "href", "/todos/?assignee=nobody&state=completed"
         )
@@ -2942,14 +2968,14 @@ class FiltersTest(E2ETestCase):
         page.get_by_role("link", name="Reset filters").click()
         page.wait_for_url("**/todos/")
         self.goto(page, "/")
-        expect(page.locator(".wb-nav-links a", has_text="My to-dos")).to_have_attribute(
+        expect(page.locator(".wb-nav-links a", has_text="To-dos")).to_have_attribute(
             "href", "/todos/?assignee=me"
         )
         # The palette's link too
         self.goto(page, "/todos/?assignee=nobody")
         self.goto(page, "/")
         page.keyboard.press("Control+k")
-        page.locator("#wb-palette-input").fill("my to-dos")
+        page.locator("#wb-palette-input").fill("go to to-dos")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=nobody")
         self.assertEqual(self.errors, [])
@@ -2960,11 +2986,57 @@ class FiltersTest(E2ETestCase):
         page.locator("#id_grouping").select_option("due")
         page.wait_for_url("**grouping=due*")
         self.goto(page, "/")
-        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
         expect(link).to_have_attribute("href", re.compile(r"grouping=due"))
         link.click()
         page.wait_for_url("**grouping=due*")
         expect(page.locator("#id_grouping")).to_have_value("due")
+        self.assertEqual(self.errors, [])
+
+    def test_the_projects_all_todos_button_restores_the_filters(self):
+        page = self.page
+        todos = f"/projects/{self.project.pk}/todos/"
+        # The page's own links keep their query, and the page remembers it
+        self.goto(page, self.project)
+        page.get_by_role("link", name="by due date").click()
+        page.wait_for_url("**/todos/?grouping=due")
+        # The header's button restores what the page remembered
+        self.goto(page, self.project)
+        button = page.locator(".wb-page-actions a.btn", has_text="All to-dos")
+        expect(button).to_have_attribute("href", todos + "?grouping=due")
+        button.click()
+        page.wait_for_url("**grouping=due*")
+        expect(page.locator("#id_grouping")).to_have_value("due")
+        # Not by the link next to the heading
+        self.goto(page, self.project)
+        expect(page.get_by_role("link", name="by list")).to_have_attribute(
+            "href", todos + "?grouping=project"
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_assigned_by_is_remembered_and_the_palette_opens_it_exactly(self):
+        page = self.page
+        self.goto(page, "/todos/")
+        page.locator("#id_assigned_by").select_option("me")
+        page.wait_for_url("**assigned_by=me*")
+        page.wait_for_function("document.activeElement.name === 'assigned_by'")
+        # The top bar's link restores it
+        self.goto(page, "/")
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
+        expect(link).to_have_attribute("href", re.compile(r"assigned_by=me"))
+        link.click()
+        page.wait_for_url("**assigned_by=me*")
+        expect(page.locator("#id_assigned_by")).to_have_value("me")
+        # The palette's "To-dos I assigned" goes to its own query, whatever
+        # is remembered for the page
+        self.goto(page, "/todos/?assignee=nobody")
+        self.goto(page, "/")
+        page.keyboard.press("Control+k")
+        page.locator("#wb-palette-input").fill("to-dos i assigned")
+        page.keyboard.press("Enter")
+        page.wait_for_url("**/todos/?assignee=&assigned_by=me")
+        expect(page.locator("#id_assigned_by")).to_have_value("me")
+        expect(page.locator("#id_assignee")).to_have_value("")
         self.assertEqual(self.errors, [])
 
     def test_search_is_not_remembered(self):

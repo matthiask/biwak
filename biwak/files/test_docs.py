@@ -58,6 +58,15 @@ class Fixture:
 
 
 class DocPageTest(Fixture, TestCase):
+    def test_the_content_is_in_a_card(self):
+        self.client.force_login(self.ada)
+        html = self.client.get(self.shared.get_absolute_url()).content.decode()
+        card = html.index('<div class="card mb-4">')
+        self.assertLess(card, html.index('id="live-text"'))
+        self.assertLess(
+            html.index("<strong>text</strong>"), html.index("</div>", card) + 200
+        )
+
     def test_staff_and_clients_read_visible_docs(self):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)

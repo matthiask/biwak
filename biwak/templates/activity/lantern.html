@@ -21,22 +21,18 @@
     data-autosubmit
     data-remember
     action="{% url 'lantern' %}"
-    class="d-flex flex-wrap gap-3 align-items-center mb-3"
+    class="wb-filters mb-3"
   >
-    <label class="form-check mb-0">
+    <label class="form-check">
       <input type="checkbox" class="form-check-input" name="unread" value="1" {% if unread %}checked{% endif %}>
       {% translate "Unread" %}
     </label>
-    <label class="form-check mb-0">
+    <label class="form-check">
       <input type="checkbox" class="form-check-input" name="mentions" value="1" {% if mentions %}checked{% endif %}>
       {% translate "Mentions only" %}
     </label>
-    <button type="submit" class="btn btn-quiet" data-autosubmit-button>{% translate "Filter" %}</button>
-    {% if filtered %}<a
-        href="{% url 'lantern' %}"
-        class="btn btn-quiet"
-        data-reset-filters
-      >{% translate "Reset filters" %}</a>{% endif %}
+    {% url 'lantern' as lantern_url %}
+    {% include "_filter_buttons.html" with reset_url=lantern_url %}
   </form>
   <div>
     {% if bookmarked_groups %}

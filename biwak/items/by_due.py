@@ -43,6 +43,11 @@ class FilterForm(Form):
         empty_label=_("All projects"),
     )
     assignee = forms.ChoiceField(label=_("assigned to"), required=False)
+    assigned_by = forms.ChoiceField(
+        label=_("assigned by"),
+        required=False,
+        choices=[("", _("Anybody")), ("me", _("Me"))],
+    )
     state = forms.ChoiceField(
         label=_("state"),
         required=False,
@@ -84,6 +89,16 @@ class FilterForm(Form):
 TodoGrouping = type("TodoGrouping", (), {"PROJECT": "project", "DUE": "due"})
 
 
+def _title(data):
+    """What the filters show: mine, the ones I assigned (to others too),
+    or to-dos"""
+    if data.get("assignee") == "me":
+        return _("My to-dos")
+    if data.get("assigned_by") == "me":
+        return _("To-dos I assigned")
+    return _("To-dos")
+
+
 def todos_by_due(request, project=None):
     """Open to-dos by due date across the projects the person sees, or in
     one project; ``?assignee=me`` is "My to-dos". Rows are completed in
@@ -96,6 +111,7 @@ def todos_by_due(request, project=None):
         request.user,
         project=project or data.get("project"),
         assignee=data.get("assignee") or None,
+        assigned_by=data.get("assigned_by") or None,
         completed=completed,
         visible_to_clients={"yes": True, "no": False}.get(data.get("visible")),
     )
@@ -108,7 +124,7 @@ def todos_by_due(request, project=None):
         "form": form,
         "project": project,
         "completed": completed,
-        "title": _("My to-dos") if request.GET.get("assignee") == "me" else _("To-dos"),
+        "title": _title(data),
     }
     if completed:
         page = Paginator(

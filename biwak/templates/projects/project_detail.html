@@ -20,7 +20,8 @@
       <a
         class="btn btn-sm btn-quiet wb-phone-hide"
         href="{% url 'project_todos' project.pk %}"
-      >{% icon "calendar-event" %}<span>{% translate "To-dos by due date" %}</span></a>
+        data-restore-filters
+      >{% icon "calendar-event" %}<span>{% translate "All to-dos" %}</span></a>
       <a
         class="btn btn-sm btn-quiet wb-phone-hide"
         href="{% url 'project_checkins' project.pk %}"
@@ -44,7 +45,8 @@
           <a
             class="dropdown-item wb-phone-only"
             href="{% url 'project_todos' project.pk %}"
-          >{% translate "To-dos by due date" %}</a>
+            data-restore-filters
+          >{% translate "All to-dos" %}</a>
           <a
             class="dropdown-item wb-phone-only"
             href="{% url 'project_checkins' project.pk %}"
@@ -101,6 +103,12 @@
             data-modal
           >{% icon "plus-lg" %}<span>{% translate "New list" %}</span></a>{% endif %}
       </h2>
+      <p class="small text-body-secondary mb-2">
+        {% translate "All to-dos:" %}
+        <a href="{% url 'project_todos' project.pk %}?grouping=project">{% translate "by list" %}</a>
+        ·
+        <a href="{% url 'project_todos' project.pk %}?grouping=due">{% translate "by due date" %}</a>
+      </p>
       <div
         class="list-group mb-3"
         {% if can_manage %}

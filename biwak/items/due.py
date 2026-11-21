@@ -4,11 +4,11 @@ later and no date. Everything goes through ``Item.objects.visible_to()``."""
 
 import datetime as dt
 
-from django.db.models import DateField, F, Value
+from django.db.models import DateField, Exists, F, OuterRef, Value
 from django.db.models.functions import Coalesce
 
 from biwak import schedules
-from biwak.items.models import Item, Kind, Status
+from biwak.items.models import Assignment, Item, Kind, Status
 
 
 OVERDUE, TODAY, THIS_WEEK, LATER, NO_DATE = (
@@ -56,6 +56,7 @@ def todos(
     *,
     project=None,
     assignee=None,
+    assigned_by=None,
     completed=False,
     visible_to_clients=None,
     group=None,
@@ -64,7 +65,9 @@ def todos(
     """To-dos the person sees, annotated with ``due_key`` (the due date,
     far away when there's none). Archived projects and lists are out of the
     way. ``assignee``: ``"me"``, ``"nobody"`` or a person's ID (``None``:
-    anybody); ``visible_to_clients`` ``True`` or ``False`` (clients only
+    anybody); ``assigned_by``: ``"me"`` for those the person assigned
+    (to somebody, or to the ``assignee`` given; ``None``: anybody);
+    ``visible_to_clients`` ``True`` or ``False`` (clients only
     ever see visible to-dos); ``group`` one of ``GROUPS``."""
     qs = (
         Item.objects
@@ -89,7 +92,19 @@ def todos(
     )
     if project is not None:
         qs = qs.filter(project=project)
-    if assignee == "me":
+    if assigned_by == "me":
+        # One assignment both to the assignee and by the person
+        if assignee == "nobody":
+            return qs.none()
+        wanted = {"assigned_by": user}
+        if assignee == "me":
+            wanted["user"] = user
+        elif assignee is not None:
+            wanted["user"] = assignee
+        qs = qs.filter(
+            Exists(Assignment.objects.filter(todo_id=OuterRef("pk"), **wanted))
+        )
+    elif assignee == "me":
         qs = qs.filter(todo__assignees=user)
     elif assignee == "nobody":
         qs = qs.filter(todo__assignees__isnull=True)

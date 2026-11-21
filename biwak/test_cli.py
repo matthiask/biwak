@@ -18,6 +18,7 @@ from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Item
+from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
 
@@ -339,6 +340,29 @@ class CLITest(TestCase):
         self.assertEqual(self.biwak("todos", self.list.pk, "--by-due").exit_code, 1)
         # The list's own to-dos stay
         self.assertIn("Nobodys", self.biwak("todos", self.list.pk).output)
+
+    def test_todos_assigned_by_me(self):
+        ops.create_todo(
+            todolist=self.list, title="Mine", creator=self.ada, assignees=[self.ada]
+        )
+        ops.create_todo(todolist=self.list, title="Nobodys", creator=self.ada)
+        eve = person("Zoe")
+        Membership.objects.create(project=self.project, user=eve)
+        ops.create_todo(
+            todolist=self.list, title="Theirs", creator=eve, assignees=[eve]
+        )
+        output = self.biwak("todos", "--assigned-by-me").output
+        self.assertIn("Mine", output)
+        self.assertNotIn("Theirs", output)
+        self.assertNotIn("Nobodys", output)
+        output = self.biwak("todos", "--assigned-by-me", "--mine").output
+        self.assertIn("Mine", output)
+        data = json.loads(self.biwak("todos", "--assigned-by-me", "--json").stdout)
+        self.assertEqual({t["title"] for t in data}, {"Mine"})
+        self.assertEqual(data[0]["assignees"][0]["assigned_by"]["id"], self.ada.pk)
+        self.assertEqual(
+            self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
+        )
 
     def test_read_only_and_errors(self):
         result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")

@@ -69,8 +69,13 @@ EDIT_URLS = {
 }
 
 
-def link(label, url, shortcut=""):
-    return {"label": label, "type": "link", "url": url, "shortcut": shortcut}
+def link(label, url, shortcut="", *, exact=False):
+    """``exact``: the URL's own query, not the one remembered for the page
+    (frontend/filters.js)"""
+    action = {"label": label, "type": "link", "url": url, "shortcut": shortcut}
+    if exact:
+        action["exact"] = True
+    return action
 
 
 def modal(label, url, shortcut=""):
@@ -114,7 +119,12 @@ def everywhere(user):
     actions = [
         link(_("Go to projects"), reverse("projects"), "g p"),
         link(_("Go to the activity"), reverse("feed"), "g f"),
-        link(_("Go to my to-dos"), reverse("todos") + "?assignee=me", "g t"),
+        link(_("Go to to-dos"), reverse("todos") + "?assignee=me", "g t"),
+        link(
+            _("To-dos I assigned"),
+            reverse("todos") + "?assignee=&assigned_by=me",
+            exact=True,
+        ),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),
         link(_("Go to people"), reverse("people")),
         link(_("Settings"), reverse("settings")),
@@ -154,7 +164,7 @@ def in_project(user, project, folder=None):
         link(_("The project's activity"), reverse("project_feed", args=[project.pk])),
         link(_("People"), reverse("project_people", args=[project.pk])),
         link(_("Docs and files"), reverse("project_files", args=[project.pk])),
-        link(_("To-dos by due date"), reverse("project_todos", args=[project.pk])),
+        link(_("All to-dos"), reverse("project_todos", args=[project.pk])),
     ]
     return actions
 

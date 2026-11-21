@@ -129,6 +129,11 @@ class ImportEveryKindTest(ImportCase):
         self.assertEqual(
             self.names(food.todo.assignees.all()), {"Bob Example", "Cleo Example"}
         )
+        # Basecamp doesn't say who assigned
+        self.assertEqual(
+            list(food.todo.assignment_set.values_list("assigned_by", flat=True)),
+            [None, None],
+        )
         self.assertIn("[@Bob](person:", food.todo.notes)
         self.assertIn("[the announcement](/messages/", food.todo.notes)
         done = self.item("Pick a camp date")

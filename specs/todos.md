@@ -182,7 +182,7 @@ today, this week (until Sunday), later and no date.
 
 `GET /api/v1/todos/?…` with the same filters, `grouping=project|due` and
 the due group per to-do,
-cursor-paginated. `biwak todos --mine|--project ID|--due …` across
+cursor-paginated. `biwak todos --mine|--assigned-by-me|--project ID|--due …` across
 projects (the existing `biwak todos LIST` stays).
 
 ### Decisions made while building stage 2

@@ -12,6 +12,7 @@ biwak project join ID                        # admins: biwak projects --joinable
 biwak lists PROJECT
 biwak todos LIST
 biwak todos --mine --due overdue
+biwak todos --assigned-by-me             # what you assigned to others (or yourself with --mine)
 biwak todo add LIST "Order the tent" --due 2026-12-01 --assign 3
 biwak todo comment TODO "The plan" --attach plan.pdf   # --attach is repeatable
 biwak react TODO 👍                    # again removes it; --comment ID for a comment

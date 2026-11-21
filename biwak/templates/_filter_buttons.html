@@ -1,0 +1,13 @@
+{% load i18n %}
+{% comment %}
+  "Filter" and "Reset filters" of a filter form (the form has class
+  wb-filters, which lines them up with the fields; specs/ui-round-5.md,
+  section 3). ``reset_url`` is where Reset goes, ``filtered`` says whether it
+  shows.
+{% endcomment %}
+<button type="submit" class="btn btn-quiet" data-autosubmit-button>{% translate "Filter" %}</button>
+{% if filtered %}<a
+    href="{{ reset_url }}"
+    class="btn btn-quiet"
+    data-reset-filters
+  >{% translate "Reset filters" %}</a>{% endif %}
