@@ -151,3 +151,19 @@ questions the spec left open, built the safe way until answered:
 - **Rates:** one request per recording for its comments and for its
   subscribers: big accounts take a while (50 requests per 10 seconds at
   most, and 429 is waited out).
+
+## Decided after building (2026-11-21)
+
+- Internal items inside a container visible to clients go into a
+  separate internal folder (for files and docs: a top-level folder
+  "<container> (internal)"; for to-dos: an internal list "<list>
+  (internal)"), so nothing is lost and nothing leaks; the dry run lists
+  them.
+- People without a Biwak account are created inactive, and the
+  operations accept inactive people only inside `importing()`
+  (assigning, subscribing, memberships), so everything still goes
+  through the operations; outside an import they keep refusing them.
+- Imported check-ins stay paused; a project's paused check-ins can be
+  resumed together (a button on the project's check-ins page, `POST
+  /api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume
+  --project ID`).
