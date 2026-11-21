@@ -89,6 +89,8 @@ a narrow one (projects, bookmarks, links).
   bookmarked projects; without bookmarks, in the projects I'm a member
   of. Not my own actions.
 - Clients: what the feed shows them, by the same rules (`access.md`).
+- Updates that are in the lantern too stay here (decided 2026-11-21:
+  the dashboard is the overview, the lantern the inbox).
 - Link: "All activity" (`/feed/`).
 - Empty after the filters: left out.
 
@@ -124,7 +126,10 @@ Plain links in a card, each only for those who can use it:
 Things on the dashboard can be in the lantern too: a to-do due that
 somebody commented on, an update in recent updates, a bookmarked item.
 Decided 2026-11-21 (user): their state is the same on both, kept on the
-server; the browser doesn't need to sync it.
+server; the browser doesn't need to sync it. Whether the dashboard shows
+notifications (unread marks, reading through the lantern) at all isn't
+decided yet (question 12); if it does, as follows. Bookmarks are shared
+either way.
 
 - **One state:** what the lantern has, `Notification.read_at` (and
   `marked_unread_at`), and `Bookmark`. The dashboard keeps no state of
@@ -220,9 +225,7 @@ entry leaves this list.
 10. **"Waiting on others":** only overdue (proposed), or due today too?
 11. **Links (section 7):** anything to add or drop? A link to the
     person's own activity ("My activity")?
-12. **Recent updates and the lantern:** an update about something
-    that's unread in the lantern shows in both (marked unread on the
-    dashboard, see "Shared with the lantern"). Keep it in both
-    (proposed: the dashboard is the overview, the lantern the inbox), or
-    leave updates out of recent updates while they're unread in the
-    lantern?
+12. **Notifications on the dashboard at all?** Rows marked unread and
+    reading through the lantern ("Shared with the lantern"), or a plain
+    overview without notifications, leaving them to the lantern alone
+    (with question 9).
