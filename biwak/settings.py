@@ -60,6 +60,7 @@ INSTALLED_APPS = [
         "biwak.reactions",
         "biwak.checkins",
         "biwak.search",
+        "biwak.palette",
         "biwak.inbound",
         "biwak.audit",
         "debug_toolbar" if DEBUG_TOOLBAR else "",

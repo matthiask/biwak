@@ -10,8 +10,9 @@ from django.utils.translation import gettext as _
 from ninja import Field, Router, Schema
 from ninja.errors import HttpError
 
+from biwak.accounts import operations
 from biwak.accounts.api_auth import user_auth
-from biwak.accounts.models import APIToken
+from biwak.accounts.models import Accent, APIToken, Theme
 from biwak.api_conventions import PersonOut, person_out
 
 
@@ -22,17 +23,48 @@ class MeOut(PersonOut):
     email: str
     is_admin: bool
     access: Literal["read", "write"]
+    keyboard_shortcuts: bool = Field(
+        description="Single-key shortcuts in the web interface (Ctrl+K always works)."
+    )
+    theme: Theme
+    accent: Accent
 
 
-@router.get("me/", response=MeOut)
-def me(request):
-    """The authenticated person and the access of their token"""
+def me_out(request):
     token = getattr(request, "api_token", None)
     return person_out(request.user) | {
         "email": request.user.email,
         "is_admin": request.user.is_admin,
         "access": token.access if token else "write",
+        "keyboard_shortcuts": request.user.keyboard_shortcuts,
+        "theme": request.user.theme,
+        "accent": request.user.accent,
     }
+
+
+@router.get("me/", response=MeOut)
+def me(request):
+    """The authenticated person, the access of their token and their
+    preferences for the web interface"""
+    return me_out(request)
+
+
+class MeIn(Schema):
+    keyboard_shortcuts: bool | None = None
+    theme: Theme | None = None
+    accent: Accent | None = None
+
+
+@router.put("me/", response=MeOut)
+def me_update(request, data: MeIn):
+    """Changes the preferences that are given"""
+    operations.set_preferences(
+        request.user,
+        keyboard_shortcuts=data.keyboard_shortcuts,
+        theme=data.theme,
+        accent=data.accent,
+    )
+    return me_out(request)
 
 
 class APITokenOut(Schema):

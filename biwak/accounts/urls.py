@@ -1,9 +1,23 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from biwak.accounts import views
 
 
 urlpatterns = [
+    path("settings/", views.settings, name="settings"),
+    path(
+        "settings/notifications/",
+        views.settings_notifications,
+        name="settings_notifications",
+    ),
+    path("settings/keyboard/", views.settings_keyboard, name="settings_keyboard"),
+    path("settings/appearance/", views.settings_appearance, name="settings_appearance"),
+    # The notification settings were here before the settings page
+    path(
+        "notifications/",
+        RedirectView.as_view(pattern_name="settings", permanent=True),
+    ),
     path("api-tokens/", views.api_tokens, name="api_tokens"),
     path(
         "api-tokens/<int:pk>/delete/",

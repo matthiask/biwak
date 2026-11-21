@@ -41,7 +41,7 @@ class SettingsBase(TestCase):
 
 class SettingsPagesTest(SettingsBase):
     def test_login_required(self):
-        response = self.client.get("/accounts/notifications/")
+        response = self.client.get("/accounts/settings/")
         self.assertEqual(response.status_code, 302)
         response = self.client.get(f"/items/{self.todo.pk}/mentionable/")
         self.assertEqual(response.status_code, 302)
@@ -50,20 +50,20 @@ class SettingsPagesTest(SettingsBase):
         for user in [self.ada, self.cleo]:
             with self.subTest(user=user):
                 self.client.force_login(user)
-                response = self.client.get("/accounts/notifications/")
+                response = self.client.get("/accounts/settings/")
                 self.assertContains(response, "Only what concerns me")
                 self.assertContains(response, "A daily digest")
                 response = self.client.post(
-                    "/accounts/notifications/",
+                    "/accounts/settings/notifications/",
                     {"notification_level": "concerns_me", "mail_delivery": "digest"},
                 )
-                self.assertRedirects(response, "/accounts/notifications/")
+                self.assertRedirects(response, "/accounts/settings/")
                 user.refresh_from_db()
                 self.assertEqual(user.notification_level, NotificationLevel.CONCERNS_ME)
                 self.assertEqual(user.mail_delivery, MailDelivery.DIGEST)
                 # Invalid values change nothing
                 response = self.client.post(
-                    "/accounts/notifications/",
+                    "/accounts/settings/notifications/",
                     {"notification_level": "always", "mail_delivery": "each"},
                 )
                 self.assertEqual(response.status_code, 200)
@@ -76,7 +76,7 @@ class SettingsPagesTest(SettingsBase):
         # Set while it was visible, e.g.; never shown now
         set_level_override(self.cleo, "everything", item=self.secret)
         self.client.force_login(self.cleo)
-        response = self.client.get("/accounts/notifications/")
+        response = self.client.get("/accounts/settings/")
         self.assertContains(response, "Website")
         self.assertContains(response, "Order the tent")
         self.assertNotContains(response, "Secret plan")
@@ -86,7 +86,7 @@ class SettingsPagesTest(SettingsBase):
         set_level_override(self.bob, "nothing", project=self.project)
         self.project.memberships.filter(user=self.bob).delete()
         self.client.force_login(self.bob)
-        response = self.client.get("/accounts/notifications/")
+        response = self.client.get("/accounts/settings/")
         self.assertNotContains(response, "Website")
         self.assertNotContains(response, f"/projects/{self.project.pk}/")
 
@@ -169,7 +169,14 @@ class SettingsPagesTest(SettingsBase):
 
     def test_user_menu_links_the_settings(self):
         self.client.force_login(self.cleo)
-        self.assertContains(self.client.get("/"), 'href="/accounts/notifications/"')
+        self.assertContains(self.client.get("/"), 'href="/accounts/settings/"')
+
+    def test_the_old_address_redirects(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get("/accounts/notifications/")
+        self.assertRedirects(
+            response, "/accounts/settings/", status_code=301, target_status_code=200
+        )
 
 
 class MentionableTest(SettingsBase):

@@ -9,11 +9,6 @@ urlpatterns = [
     path("items/<int:pk>/history/", views.item_history, name="item_history"),
     path("people/<int:pk>/feed/", views.person_feed, name="person_feed"),
     path(
-        "accounts/notifications/",
-        views.notification_settings,
-        name="notification_settings",
-    ),
-    path(
         "projects/<int:pk>/notifications/",
         views.project_notifications,
         name="project_notifications",

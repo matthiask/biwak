@@ -1,15 +1,27 @@
 {% load biwak i18n rspack_assets static %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}" data-bs-theme="light">
+<html
+  lang="{{ LANGUAGE_CODE }}"
+  data-bs-theme="light"
+  {% if request.user.is_authenticated %}
+    data-theme-mode="{{ request.user.theme }}"
+    data-accent="{{ request.user.accent }}"
+  {% endif %}
+>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Biwak{% endblock %}</title>
     <script>
-      // Set the theme immediately to prevent a flash of the wrong theme, see theme.js
+      // Set the theme immediately to prevent a flash of the wrong theme, see
+      // theme.js: the person's choice, in the browser's storage for those who
+      // aren't logged in
       (function () {
         document.documentElement.classList.add("js")
-        const stored = window.localStorage.getItem("theme")
+        let stored = document.documentElement.dataset.themeMode
+        if (!stored) {
+          try { stored = window.localStorage.getItem("theme") } catch {}
+        }
         document.documentElement.dataset.bsTheme =
           stored === "light" || stored === "dark"
             ? stored
@@ -81,11 +93,8 @@
                     class="dropdown-item"
                     href="{% url 'person_feed' request.user.pk %}"
                   >{% translate "My activity" %}</a>{% endif %}
-                <a class="dropdown-item" href="{% url 'notification_settings' %}">{% translate "Notifications" %}</a>
-                <a class="dropdown-item" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
-                <a class="dropdown-item" href="{% url 'usersessions_list' %}">{% translate "Sessions" %}</a>
+                <a class="dropdown-item" href="{% url 'settings' %}">{% translate "Settings" %}</a>
                 <a class="dropdown-item" href="{% url 'calendar_link' %}">{% translate "Calendar" %}</a>
-                <a class="dropdown-item" href="{% url 'api_tokens' %}">{% translate "API tokens" %}</a>
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
                 {% endif %}

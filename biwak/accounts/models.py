@@ -56,6 +56,34 @@ class MailDelivery(models.TextChoices):
     DIGEST = "digest", _("A daily digest")
 
 
+class Theme(models.TextChoices):
+    """The stored choice follows the person to other devices; AUTO is the
+    system's (specs/keyboard.md)"""
+
+    AUTO = "auto", _("As the system")
+    LIGHT = "light", _("Light")
+    DARK = "dark", _("Dark")
+
+
+class Accent(models.TextChoices):
+    """The accent colors people choose from (specs/keyboard.md, "The
+    palette"); the tokens are ``--wb-palette-<name>-*`` in
+    ``frontend/styles/main.css``. The clients' amber is reserved and not in
+    the palette."""
+
+    HEATHER = "heather", _("Heather")
+    LAKE = "lake", _("Lake")
+    FOREST = "forest", _("Forest")
+    GLACIER = "glacier", _("Glacier")
+    EMBER = "ember", _("Ember")
+    ALPENGLOW = "alpenglow", _("Alpenglow")
+
+
+# The palette's other colors, for projects only (specs/project-colors.md)
+PROJECT_ONLY_COLORS = ["moss", "slate", "bark", "berry"]
+PALETTE = [*Accent.values, *PROJECT_ONLY_COLORS]
+
+
 class User(AbstractBaseUser):
     """Staff or client (specs/access.md). Clients belong to an organization,
     shown beside their name"""
@@ -107,6 +135,16 @@ class User(AbstractBaseUser):
         max_length=10,
         choices=ProjectOrder,
         default=ProjectOrder.ACTIVITY,
+    )
+
+    # Single-key shortcuts, on by default (decided 2026-11-21); Ctrl+K
+    # always works
+    keyboard_shortcuts = models.BooleanField(_("keyboard shortcuts"), default=True)
+    theme = models.CharField(
+        _("theme"), max_length=10, choices=Theme, default=Theme.AUTO
+    )
+    accent = models.CharField(
+        _("accent color"), max_length=10, choices=Accent, default=Accent.HEATHER
     )
 
     objects = UserManager()

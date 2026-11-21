@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Settings" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "Settings" %}</h1>
+  <h2 class="h5" id="notifications">{% translate "Notifications" %}</h2>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="post" action="{% url 'settings_notifications' %}">
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+      </form>
+    </div>
+  </div>
+  {% if project_overrides or item_overrides %}
+    <h2 class="h5">{% translate "Different in some places" %}</h2>
+    <ul class="list-unstyled">
+      {% for override in project_overrides %}
+        <li class="mb-2 d-flex align-items-center gap-2">
+          <a href="{{ override.project.get_absolute_url }}">{{ override.project }}</a>:
+          {{ override.get_level_display }}
+          <form method="post" action="{% url 'project_notifications' override.project.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'settings' %}">
+            <button type="submit" class="btn btn-sm btn-quiet">{% translate "As usual" %}</button>
+          </form>
+        </li>
+      {% endfor %}
+      {% for override in item_overrides %}
+        <li class="mb-2 d-flex align-items-center gap-2">
+          <a href="{{ override.item.get_absolute_url }}">{{ override.item|item_title }}</a>
+          {% client_badge override.item %}:
+          {{ override.get_level_display }}
+          <form method="post" action="{% url 'item_notifications' override.item.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'settings' %}">
+            <button type="submit" class="btn btn-sm btn-quiet">{% translate "As usual" %}</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <h2 class="h5 mt-4" id="keyboard">{% translate "Keyboard" %}</h2>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="post" action="{% url 'settings_keyboard' %}">
+        {% csrf_token %}
+        {{ keyboard_form }}
+        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+      </form>
+      <h3 class="h6 mt-4">{% translate "The shortcuts" %}</h3>
+      <dl class="wb-shortcuts mb-0">
+        {% include "palette/_shortcuts.html" %}
+      </dl>
+    </div>
+  </div>
+  <h2 class="h5 mt-4" id="appearance">{% translate "Appearance" %}</h2>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="post" action="{% url 'settings_appearance' %}">
+        {% csrf_token %}
+        <fieldset class="mb-3">
+          <legend class="fs-6">{% translate "Theme" %}</legend>
+          {% for value, label in themes %}
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="theme"
+                id="theme-{{ value }}"
+                value="{{ value }}"
+                {% if request.user.theme == value %}checked{% endif %}
+              >
+              <label class="form-check-label" for="theme-{{ value }}">{{ label }}</label>
+            </div>
+          {% endfor %}
+        </fieldset>
+        <fieldset class="mb-3">
+          <legend class="fs-6">{% translate "Accent color" %}</legend>
+          <div class="d-flex flex-wrap gap-2">
+            {% for value, label in accents %}
+              <label class="wb-accent-choice">
+                <input
+                  type="radio"
+                  name="accent"
+                  value="{{ value }}"
+                  {% if request.user.accent == value %}checked{% endif %}
+                >
+                <span class="wb-swatch" data-swatch="{{ value }}"></span>
+                <span>{{ label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <div class="form-text">
+            {% translate "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see." %}
+          </div>
+        </fieldset>
+        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+      </form>
+    </div>
+  </div>
+  <h2 class="h5 mt-4" id="sign-in">{% translate "Sign-in" %}</h2>
+  <div class="list-group mb-4">
+    <a class="list-group-item list-group-item-action" href="{% url 'mfa_index' %}">{% translate "Passkeys" %}</a>
+    <a
+      class="list-group-item list-group-item-action"
+      href="{% url 'usersessions_list' %}"
+    >{% translate "Sessions" %}</a>
+    <a class="list-group-item list-group-item-action" href="{% url 'api_tokens' %}">{% translate "API tokens" %}</a>
+  </div>
+{% endblock content %}
