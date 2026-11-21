@@ -8,9 +8,9 @@ out of the way then.
 **Status:** built 2026-11-21 (branch `mail-sending`): the outbox
 (`biwak/outbox/`), sending through Resend's API with `EMAIL_URL=resend:`,
 the delivery events and undeliverable addresses; see "Built", "Setting it
-up" and "Accepted". Not deployed: the From domain's verification and the
-settings are the user's; the "Done when" item about a test mail's
-headers is for after that.
+up" and "Accepted". Deployed and sending through Resend in production
+(2026-11-21, confirmed by the user): `biwak.feinheit.app` verified,
+`EMAIL_URL=resend:`, `REPLY_DOMAIN=biwak.feinheit.app`; done.
 
 **Agent:** a strong model: mail is easy to get subtly wrong (losing
 mail, sending twice, codes arriving late).
