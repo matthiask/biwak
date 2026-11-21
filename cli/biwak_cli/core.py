@@ -171,8 +171,9 @@ def _send(method, url, path, token, **kwargs):
 
 
 def request(method, path, **kwargs):
-    """The API's JSON, or terminate with its error. An expired token is
-    replaced through the browser with the same access, in a terminal."""
+    """The API's JSON (``None`` for an answer without content), or terminate
+    with its error. An expired token is replaced through the browser with
+    the same access, in a terminal."""
     url, token = current()
     response = _send(method, url, path, token, **kwargs)
     access = read_config().get("access")
@@ -202,6 +203,8 @@ def request(method, path, **kwargs):
         terminate(
             f"{response.status_code}: {detail or ' '.join(response.text.split())[:200]}"
         )
+    if response.status_code == 204:
+        return None
     return response.json()
 
 

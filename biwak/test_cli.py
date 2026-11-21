@@ -191,6 +191,13 @@ class CLITest(TestCase):
             ops.reopen(todo, actor=self.ada)
         self.assertEqual(count("todos"), 201)
 
+    def test_no_content(self):
+        """request() decoded every answer as JSON: a 204 crashed"""
+        group = ops.create_group(todolist=self.list.todolist, title="Later")
+        self.biwak("me")  # logs in
+        self.assertIsNone(biwak_cli.core.request("DELETE", f"groups/{group.pk}/"))
+        self.assertFalse(self.list.todolist.groups.exists())
+
     def test_repeat(self):
         result = self.biwak(
             "todo", "add", self.list.pk, "Pay rent", "--due", "2026-11-20",
