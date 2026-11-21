@@ -2,7 +2,6 @@
 projects which aren't items themselves"""
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import models
 from django.db.models import Q
@@ -82,14 +81,11 @@ class Bookmark(models.Model):
 
 class LinkQuerySet(models.QuerySet):
     def visible_to(self, user):
-        """Links of projects the person can open and, for links on items,
-        of items they see; clients only those visible to clients (and
-        a link on a visible item is internal unless switched)"""
+        """Links of projects the person can open; clients only those
+        visible to clients"""
         if not user.is_authenticated or not user.is_active:
             return self.none()
-        qs = self.filter(project__in=Project.objects.accessible_to(user)).filter(
-            Q(item__isnull=True) | Q(item__in=Item.objects.visible_to(user))
-        )
+        qs = self.filter(project__in=Project.objects.accessible_to(user))
         if user.is_client:
             qs = qs.filter(visible_to_clients=True)
         return qs
@@ -99,21 +95,13 @@ validate_url = URLValidator(schemes=["http", "https"])
 
 
 class Link(models.Model):
-    """A link to an outside tool on a project (``item`` empty) or an item"""
+    """A link to an outside tool on a project"""
 
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
         related_name="links",
         verbose_name=_("project"),
-    )
-    item = models.ForeignKey(
-        Item,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="links",
-        verbose_name=_("item"),
     )
     url = models.URLField(_("URL"), max_length=2000, validators=[validate_url])
     title = models.CharField(_("title"), max_length=200)
@@ -129,7 +117,7 @@ class Link(models.Model):
     visible_to_clients = models.BooleanField(
         _("visible to clients"),
         default=False,
-        help_text=_("Internal unless you switch it, also on items clients see."),
+        help_text=_("Internal unless you switch it."),
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -143,7 +131,7 @@ class Link(models.Model):
 
     class Meta:
         ordering = ["position", "pk"]
-        indexes = [models.Index(fields=["project", "item", "position"])]
+        indexes = [models.Index(fields=["project", "position"])]
         verbose_name = _("link")
         verbose_name_plural = _("links")
 
@@ -156,8 +144,3 @@ class Link(models.Model):
             kwargs["update_fields"] = {*kwargs["update_fields"], "kind"}
         self.full_clean(validate_unique=False, validate_constraints=False)
         super().save(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-        if self.item_id and self.item.project_id != self.project_id:
-            raise ValidationError(_("The item belongs to another project."))

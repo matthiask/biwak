@@ -7,8 +7,6 @@ from biwak.audit.models import LoggedAction
 from biwak.bookmarks import operations as ops
 from biwak.bookmarks.models import Link
 from biwak.bookmarks.test_bookmarks import BookmarkBase
-from biwak.checkins.operations import create_question
-from biwak.checkins.support import MONDAY_9, at
 
 
 class KindTest(SimpleTestCase):
@@ -53,40 +51,22 @@ class LinkTest(BookmarkBase):
             (second.kind, second.position, second.url),
             ("github", 2, "https://github.com/example/repo"),
         )
-        on_item = ops.add_link(
-            project=self.project,
-            item=self.todo,
-            url="https://example.org/",
-            created_by=self.ada,
-        )
-        self.assertEqual(on_item.position, 1)
         ops.update_link(second, url="https://gitlab.com/x", title="")
         self.assertEqual((second.kind, second.title), ("gitlab", "gitlab.com"))
         ops.reorder_links(
             [second.pk, self.link.pk], user=self.ada, project=self.project
         )
         self.assertEqual(
-            list(Link.objects.filter(item=None).values_list("pk", flat=True)),
+            list(Link.objects.values_list("pk", flat=True)),
             [second.pk, self.link.pk],
         )
         ops.delete_link(second)
-        self.assertEqual(Link.objects.filter(item=None).count(), 1)
+        self.assertEqual(Link.objects.count(), 1)
 
     def test_only_web_addresses(self):
         for url in ["javascript:alert(1)", "ftp://example.org/x", "not a url", ""]:
             with self.subTest(url=url), self.assertRaises(ValidationError):
                 ops.add_link(project=self.project, url=url, created_by=self.ada)
-
-    def test_item_of_another_project(self):
-        from biwak.test_utils import project
-
-        with self.assertRaises(ValidationError):
-            ops.add_link(
-                project=project("Other"),
-                item=self.todo,
-                url="https://example.org/",
-                created_by=self.ada,
-            )
 
     def test_visibility(self):
         internal = ops.add_link(
@@ -98,85 +78,63 @@ class LinkTest(BookmarkBase):
             visible=True,
             created_by=self.ada,
         )
-        on_visible_item = ops.add_link(
-            project=self.project,
-            item=self.todo,
-            url="https://example.org/c",
-            created_by=self.ada,
-        )
-        switched = ops.add_link(
-            project=self.project,
-            item=self.todo,
-            url="https://example.org/d",
-            visible=True,
-            created_by=self.ada,
-        )
-        # A switched link on an internal item stays hidden from clients
-        hidden_item = ops.add_link(
-            project=self.project,
-            item=self.secret,
-            url="https://example.org/e",
-            visible=True,
-            created_by=self.ada,
-        )
         staff = set(Link.objects.visible_to(self.ada))
-        self.assertEqual(len(staff), 6)
+        self.assertEqual(len(staff), 3)
         client = set(Link.objects.visible_to(self.cleo))
-        self.assertEqual(client, {shown, switched})
+        self.assertEqual(client, {shown})
         self.assertNotIn(internal, client)
-        self.assertNotIn(on_visible_item, client)
-        self.assertNotIn(hidden_item, client)
-        # Trashed items' links are hidden
-        from biwak.items import operations as ops_items
+        # Projects clients aren't in
+        from biwak.test_utils import project
 
-        ops_items.trash(self.todo, actor=self.ada)
+        other = project("Other")
+        ops.add_link(
+            project=other,
+            url="https://example.org/f",
+            visible=True,
+            created_by=self.ada,
+        )
         self.assertEqual(set(Link.objects.visible_to(self.cleo)), {shown})
 
-    def test_question_page_shows_links(self):
-        question = create_question(
-            project=self.project,
-            title="Q",
-            creator=self.ada,
-            people=[self.ada],
-            now=at("2027-03-19 12:00"),
-            **MONDAY_9,
-        )
+    def test_items_show_no_links(self):
         ops.add_link(
             project=self.project,
-            item=question,
             url="https://github.com/example/repo",
-            title="The question link",
+            title="The project link",
             created_by=self.ada,
         )
         self.client.force_login(self.ada)
-        self.assertContains(
-            self.client.get(question.get_absolute_url()), "The question link"
-        )
+        for item in [self.todo, self.shared]:
+            response = self.client.get(item.get_absolute_url())
+            self.assertNotContains(response, "The project link")
+            self.assertNotContains(response, "Add a link")
+            self.assertEqual(
+                self.client.post(
+                    f"/items/{item.pk}/links/", {"url": "https://example.org/x"}
+                ).status_code,
+                404,
+            )
 
     def test_pages_as_staff(self):
-        ops.add_link(
-            project=self.project,
-            item=self.todo,
-            url="https://github.com/example/repo/issues/1",
-            title="The issue",
-            created_by=self.ada,
-        )
         self.client.force_login(self.ada)
         response = self.client.get(self.project.get_absolute_url())
         self.assertContains(response, "figma.com")
         self.assertContains(response, "bi-palette")
         self.assertContains(response, "Add a link")
         self.assertContains(response, "data-sortable-order")
-        response = self.client.get(self.todo.get_absolute_url())
-        self.assertContains(response, "The issue")
-        self.assertContains(response, "bi-github")
-        self.assertNotContains(response, "figma.com")
-        self.assertContains(
-            self.client.get(self.shared.get_absolute_url()), "Add a link"
-        )
+        self.assertNotContains(response, "No links yet.")
+        # After "Docs and files", in a list group of its own
+        content = response.content.decode()
+        self.assertLess(content.index("Docs and files"), content.index("Add a link"))
+        self.assertLess(content.index("Add a link"), content.index("figma.com"))
 
+        # The modal and its page
+        url = f"/projects/{self.project.pk}/links/new/"
+        self.assertContains(self.client.get(url), "<html")
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        self.assertNotContains(response, "<html")
+        self.assertContains(response, 'name="url"')
         response = self.client.post(
-            f"/projects/{self.project.pk}/links/",
+            url,
             {
                 "url": "https://example.org/docs",
                 "title": "Docs",
@@ -186,11 +144,6 @@ class LinkTest(BookmarkBase):
         self.assertRedirects(response, self.project.get_absolute_url())
         added = Link.objects.get(title="Docs")
         self.assertTrue(added.visible_to_clients)
-        self.client.post(
-            f"/items/{self.todo.pk}/links/",
-            {"url": "https://example.org/x", "title": "X"},
-        )
-        self.assertEqual(Link.objects.get(title="X").item, self.todo)
         # Edit, order, delete
         response = self.client.get(f"/links/{added.pk}/edit/")
         self.assertContains(response, "https://example.org/docs")
@@ -203,22 +156,23 @@ class LinkTest(BookmarkBase):
         self.assertEqual((added.title, added.visible_to_clients), ("Docs 2", False))
         ids = [added.pk, self.link.pk]
         self.client.post(f"/projects/{self.project.pk}/links/order/", {"links": ids})
-        self.assertEqual(
-            list(Link.objects.filter(item=None).values_list("pk", flat=True)), ids
-        )
+        self.assertEqual(list(Link.objects.values_list("pk", flat=True)), ids)
         response = self.client.post(
             f"/projects/{self.project.pk}/links/order/", {"links": ids[:1]}
         )
         self.assertEqual(response.status_code, 400)
         self.client.post(f"/links/{added.pk}/delete/")
         self.assertFalse(Link.objects.filter(pk=added.pk).exists())
+        self.client.post(f"/links/{self.link.pk}/delete/")
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertContains(response, "No links yet.")
+        self.assertContains(response, "Add a link")
 
     def test_bad_urls_in_forms(self):
         self.client.force_login(self.ada)
         response = self.client.post(
-            f"/projects/{self.project.pk}/links/",
+            f"/projects/{self.project.pk}/links/new/",
             {"url": "javascript:alert(1)"},
-            follow=True,
         )
         self.assertContains(response, "Enter a valid URL")
         self.assertEqual(Link.objects.count(), 1)
@@ -241,6 +195,7 @@ class LinkTest(BookmarkBase):
         self.assertNotContains(response, "figma.com")
         self.assertNotContains(response, "Add a link")
         self.assertNotContains(response, "data-sortable-order")
+        self.assertNotContains(response, "No links yet.")
         # Can't change, can't even find the internal one
         self.assertEqual(self.client.get(f"/links/{shown.pk}/edit/").status_code, 403)
         self.assertEqual(
@@ -252,22 +207,21 @@ class LinkTest(BookmarkBase):
         self.assertEqual(
             self.client.post(f"/links/{self.link.pk}/delete/").status_code, 404
         )
-        for url in [
-            f"/projects/{self.project.pk}/links/",
-            f"/items/{self.todo.pk}/links/",
-        ]:
-            response = self.client.post(url, {"url": "https://example.org/x"})
-            self.assertEqual(response.status_code, 403)
+        url = f"/projects/{self.project.pk}/links/new/"
+        self.assertEqual(self.client.get(url).status_code, 403)
+        response = self.client.post(url, {"url": "https://example.org/x"})
+        self.assertEqual(response.status_code, 403)
         response = self.client.post(
             f"/projects/{self.project.pk}/links/order/", {"links": [shown.pk]}
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Link.objects.count(), 2)
-        # Items clients can't see: not even a form
-        response = self.client.post(
-            f"/items/{self.secret.pk}/links/", {"url": "https://example.org/x"}
-        )
-        self.assertEqual(response.status_code, 404)
+
+    def test_client_without_visible_links(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertContains(response, "No links yet.")
+        self.assertNotContains(response, "figma.com")
 
     def test_audit_log(self):
         LoggedAction.objects.all().delete()
@@ -299,24 +253,16 @@ class LinkTest(BookmarkBase):
         )
         self.assertEqual(response.status_code, 201)
         data = response.json()
+        self.assertEqual((data["kind"], data["visible_to_clients"]), ("github", True))
+        self.assertNotIn("item_id", data)
+        # Links on items are gone
         self.assertEqual(
-            (data["kind"], data["visible_to_clients"], data["switch"]),
-            ("github", True, True),
-        )
-        response = self.api(
-            "post",
-            f"items/{self.secret.pk}/links/",
-            data={"url": "https://example.org/", "visible_to_clients": True},
-        )
-        item_link = response.json()
-        # Switched on, but the item is internal
-        self.assertEqual(
-            (
-                item_link["item_id"],
-                item_link["visible_to_clients"],
-                item_link["switch"],
-            ),
-            (self.secret.pk, False, True),
+            self.api(
+                "post",
+                f"items/{self.secret.pk}/links/",
+                data={"url": "https://example.org/"},
+            ).status_code,
+            404,
         )
         self.assertEqual(
             self.api(
@@ -327,12 +273,7 @@ class LinkTest(BookmarkBase):
             400,
         )
         listed = self.api("get", f"projects/{self.project.pk}/links/").json()
-        self.assertEqual(
-            [link["title"] for link in listed], ["figma.com", "Code", "example.org"]
-        )
-        self.assertEqual(
-            len(self.api("get", f"items/{self.secret.pk}/links/").json()), 1
-        )
+        self.assertEqual([link["title"] for link in listed], ["figma.com", "Code"])
 
         patched = self.api(
             "patch",
@@ -340,7 +281,8 @@ class LinkTest(BookmarkBase):
             data={"title": "Repository", "visible_to_clients": False},
         )
         self.assertEqual(
-            (patched.json()["title"], patched.json()["switch"]), ("Repository", False)
+            (patched.json()["title"], patched.json()["visible_to_clients"]),
+            ("Repository", False),
         )
         ordered = self.api(
             "put",
@@ -375,12 +317,6 @@ class LinkTest(BookmarkBase):
             "get", f"projects/{self.project.pk}/links/", user=self.cleo
         ).json()
         self.assertEqual([link["id"] for link in listed], [shown.pk])
-        self.assertEqual(
-            self.api(
-                "get", f"items/{self.secret.pk}/links/", user=self.cleo
-            ).status_code,
-            404,
-        )
         for method, path, data in [
             (
                 "post",

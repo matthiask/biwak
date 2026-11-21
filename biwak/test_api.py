@@ -322,7 +322,9 @@ class APITest(TestCase):
         self.assertEqual(response.status_code, 426)
         response = self.get("me/", headers | {"x-biwak-cli": "0.19.0"})
         self.assertEqual(response.status_code, 426, "no doc locks since 0.20.0")
-        response = self.get("me/", headers | {"x-biwak-cli": "0.20.0"})
+        response = self.get("me/", headers | {"x-biwak-cli": "0.29.0"})
+        self.assertEqual(response.status_code, 426, "links on projects only in 0.30")
+        response = self.get("me/", headers | {"x-biwak-cli": "0.30.0"})
         self.assertIn("x-biwak-cli-latest", response.headers)
 
     def test_openapi_schema(self):

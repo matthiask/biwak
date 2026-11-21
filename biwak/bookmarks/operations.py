@@ -39,19 +39,15 @@ def can_manage_links(user):
     return user.is_authenticated and not user.is_client
 
 
-def _scope(project, item):
-    return Link.objects.filter(project=project, item=item)
-
-
 @transaction.atomic
-def add_link(*, project, url, created_by, item=None, title="", visible=False):
-    """On a project, or on an item (of that project). Raises
-    ``ValidationError`` for anything but http(s) URLs."""
+def add_link(*, project, url, created_by, title="", visible=False):
+    """On a project. Raises ``ValidationError`` for anything but http(s) URLs."""
     url = url.strip()
-    position = (_scope(project, item).aggregate(m=Max("position"))["m"] or 0) + 1
+    position = (
+        Link.objects.filter(project=project).aggregate(m=Max("position"))["m"] or 0
+    ) + 1
     link = Link(
         project=project,
-        item=item,
         url=url,
         title=title.strip() or links.host_of(url) or url,
         position=position,
@@ -80,17 +76,16 @@ def delete_link(link):
 
 
 @transaction.atomic
-def reorder_links(ids, *, user, project, item=None):
-    """Puts the links of the project (``item`` None) or of the item in the
-    order of ``ids``, which has to name all the links the person sees
-    there, each once; raises ``ValueError`` otherwise. Returns the links
+def reorder_links(ids, *, user, project):
+    """Puts the links of the project in the order of ``ids``, which has
+    to name all the links the person sees there, each once; raises ``ValueError`` otherwise. Returns the links
     in the new order."""
     found = {
         link.pk: link
         for link in Link.objects
         .visible_to(user)
-        .filter(project=project, item=item)
-        .select_related("item", "created_by", "project")
+        .filter(project=project)
+        .select_related("created_by", "project")
     }
     if sorted(ids) != sorted(found):
         raise ValueError("Name all the links, each once.")

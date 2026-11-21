@@ -10,17 +10,15 @@ urlpatterns = [
         "projects/<int:pk>/bookmark/", views.project_bookmark, name="project_bookmark"
     ),
     path(
-        "projects/<int:pk>/links/",
-        views.project_link_create,
-        name="project_link_create",
+        "projects/<int:pk>/links/new/",
+        views.project_link_new,
+        name="project_link_new",
     ),
     path(
         "projects/<int:pk>/links/order/",
         views.project_link_order,
         name="project_link_order",
     ),
-    path("items/<int:pk>/links/", views.item_link_create, name="item_link_create"),
-    path("items/<int:pk>/links/order/", views.item_link_order, name="item_link_order"),
     path("links/<int:pk>/edit/", views.link_edit, name="link_edit"),
     path("links/<int:pk>/delete/", views.link_delete, name="link_delete"),
 ]

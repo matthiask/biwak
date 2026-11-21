@@ -189,10 +189,31 @@ or staging site is.
 
   No links block at the top of the page and no disclosure anymore.
   Editing, deleting and dragging stay as they are.
-- The rest below (kinds, visibility to clients, staff only) stays.
+- The rest below (kinds, visibility to clients, staff only) stays, except
+  what is about items (below, marked as gone).
+
+**Status: built 2026-11-21 (branch `links`).** `Link.item` is gone
+(migration `bookmarks.0003` deletes the links on items first). The
+section is `bookmarks/_links.html` (`{% show_links project %}`, after
+"Docs and files" in the project page's left column): an `h2.h5` with the
+quiet "Add a link" button (`data-modal`, `project_link_new`), a
+`list-group` with handle (staff), kind icon, client badge, edit
+(`data-modal`) and delete; "No links yet." when empty. `link_edit` is a
+modal form too (`form_response`). Gone: `{% show_links item %}`, the
+`items/<pk>/links/` routes (pages and API), `projects/<pk>/links/` as a
+POST on the page (the modal is `projects/<pk>/links/new/`),
+`LinkOut.item_id` and `switch`, `biwak link add --item`. API
+`GET projects/{id}/links/` returns the project's links in order;
+`visible_to_clients` is the link's own switch. CLI 0.30.0, `MINIMUM`
+0.30.0 (older `biwak links` read `item_id`). The palette has no
+action for adding links, so none was added. Decisions on the way: the
+links list is in the left column under "Docs and files" (not full
+width); the form's help text lost "also on items clients see".
+Open for the user: whether the palette should offer "Add a link" on
+project pages.
 
 
-Links to outside tools on a project or on any item: Figma files,
+Links to outside tools on a project (and, until 2026-11-21, on any item): Figma files,
 repositories and issues, Google Drive documents, staging and production
 sites, a project in a time tracking or accounting tool.
 
