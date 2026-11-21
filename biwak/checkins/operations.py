@@ -225,6 +225,24 @@ def resume(item, *, actor, now=None):
     record(actor=actor, action=Action.EDITED, project=item.project, item=item)
 
 
+@transaction.atomic
+def resume_all(project, *, actor, now=None):
+    """Resumes the project's paused questions together, each one's next
+    date computed as for a single ``resume()`` (the importer leaves them
+    paused, decided 2026-11-21). Returns the questions' items resumed."""
+    now = now or timezone.now()
+    paused = Item.objects.filter(
+        project=project,
+        kind=Kind.QUESTION,
+        trashed_at__isnull=True,
+        question__paused_at__isnull=False,
+    ).order_by("title", "pk")
+    items = list(paused)
+    for item in items:
+        resume(item, actor=actor, now=now)
+    return items
+
+
 # Asking and summarizing ------------------------------------------------------
 
 

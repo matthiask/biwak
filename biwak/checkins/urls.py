@@ -7,6 +7,11 @@ urlpatterns = [
     path(
         "projects/<int:pk>/checkins/", views.project_checkins, name="project_checkins"
     ),
+    path(
+        "projects/<int:pk>/checkins/resume/",
+        views.project_checkins_resume,
+        name="project_checkins_resume",
+    ),
     path("projects/<int:pk>/checkins/new/", views.question_new, name="question_new"),
     path("questions/<int:pk>/", views.question, name="question"),
     path("questions/<int:pk>/edit/", views.question_edit, name="question_edit"),

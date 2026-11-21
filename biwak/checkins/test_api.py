@@ -7,7 +7,7 @@ from django.test.utils import CaptureQueriesContext
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Mention
 from biwak.checkins import operations as ops
-from biwak.checkins.models import Mode, Occurrence, QuestionMail
+from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
@@ -306,6 +306,30 @@ class QuestionsAPITest(APITestCase):
         ).json()
         self.assertFalse(data["paused"])
         self.assertIsNotNone(data["next_at"])
+
+    def test_resuming_all_of_a_project(self):
+        ops.pause(self.item, actor=self.ada)
+        ops.pause(self.shared, actor=self.ada)
+        path = f"projects/{self.project.pk}/checkins/resume/"
+        data = self.post(self.ada, path).json()
+        self.assertEqual(
+            [q["title"] for q in data], ["How are you?", "Shared question"]
+        )
+        self.assertTrue(all(not q["paused"] and q["next_at"] for q in data))
+        self.assertEqual(self.post(self.ada, path).json(), [], "nothing paused")
+
+    def test_resuming_all_needs_staff_and_write_access(self):
+        ops.pause(self.item, actor=self.ada)
+        path = f"projects/{self.project.pk}/checkins/resume/"
+        self.assertEqual(self.post(self.cleo, path).status_code, 403)
+        self.assertEqual(self.post(self.ada, path, access="read").status_code, 403)
+        self.assertTrue(Question.objects.get(item=self.item).is_paused)
+        # A project a client can't see doesn't exist for them
+        other = project("Secret", members=[self.ada])
+        self.assertEqual(
+            self.post(self.cleo, f"projects/{other.pk}/checkins/resume/").status_code,
+            404,
+        )
 
     def test_trashing_through_the_items_endpoint(self):
         response = self.client.delete(

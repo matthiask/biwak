@@ -141,6 +141,29 @@ class CheckinCLITest(test_cli.CLITest):
             self.biwak("checkin", "mail", self.item.pk, "sometimes").exit_code, 2
         )
 
+    def test_resume_all_of_a_project(self):
+        ops.pause(self.item, actor=self.ada)
+        result = self.biwak("checkin", "resume", "--project", self.project.pk)
+        self.assertIn("Resumed 1 check-in", result.output)
+        self.assertFalse(Question.objects.get(item=self.item).is_paused)
+        ops.pause(self.item, actor=self.ada)
+        data = json.loads(
+            self.biwak(
+                "checkin", "resume", "--project", self.project.pk, "--json"
+            ).stdout
+        )
+        self.assertEqual([q["id"] for q in data], [self.item.pk])
+        self.assertEqual(self.biwak("checkin", "resume").exit_code, 2)
+        self.assertEqual(
+            self.biwak("checkin", "resume", self.item.pk, "--project", 1).exit_code, 2
+        )
+        self.assertEqual(
+            self.biwak(
+                "checkin", "resume", "--project", self.project.pk, access="read"
+            ).exit_code,
+            1,
+        )
+
     def test_read_only_and_errors(self):
         result = self.biwak("checkin", "answer", self.item.pk, "Hi", access="read")
         self.assertEqual(result.exit_code, 1)

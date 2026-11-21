@@ -510,6 +510,29 @@ class FormsTest(ViewsTestCase):
             self.client.get(self.url("question_pause", self.item)).status_code, 405
         )
 
+    def test_resuming_all_of_the_projects_check_ins(self):
+        url = reverse("project_checkins_resume", args=[self.project.pk])
+        page = reverse("project_checkins", args=[self.project.pk])
+        self.assertNotContains(self.get(self.ada, page), url)
+        ops.pause(self.item, actor=self.ada)
+        ops.pause(self.shared, actor=self.ada)
+        self.assertContains(self.get(self.ada, page), url)
+        # A client sees neither the button nor can use it
+        self.assertNotContains(self.get(self.cleo, page), url)
+        self.assertEqual(self.post(self.cleo, url).status_code, 403)
+        self.assertTrue(Question.objects.get(item=self.item).is_paused)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        response = self.post(self.ada, url)
+        self.assertRedirects(response, page)
+        for item in (self.item, self.shared):
+            self.assertFalse(Question.objects.get(item=item).is_paused)
+        self.assertNotContains(self.get(self.ada, page), url)
+
+    def test_resuming_all_in_a_project_nobody_sees_is_a_404(self):
+        other = project("Secret", members=[self.ada])
+        url = reverse("project_checkins_resume", args=[other.pk])
+        self.assertEqual(self.post(self.cleo, url).status_code, 404)
+
     def test_trashing_a_question(self):
         response = self.post(self.ada, reverse("item_trash", args=[self.item.pk]))
         self.assertRedirects(
