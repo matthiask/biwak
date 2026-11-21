@@ -78,7 +78,8 @@ it for the first time.
   people about it?", `docs.TellForm`): the same line and "Also tell…"
   with a note; "Tell them too" records `shared` to those told by default
   (not subscribed yet) and those added, "No one else" to those told by
-  default only.
+  default only; without an answer, an hour after the last change, as
+  "No one else" (`files.md`, decided 2026-11-21).
 
 ## Mentions
 

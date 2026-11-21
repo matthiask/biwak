@@ -224,8 +224,19 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   too" records `shared` to both, "No one else" to those told by default
   only (the buttons say that the others are told anyway, decided
   2026-11-21)
-  (nothing when there's nobody), and either way it's never asked again. Escape or Cancel doesn't
-  answer, the next "Done" asks again. Only the creator is asked.
+  (nothing when there's nobody), and either way it's never asked again
+  (`operations.tell()`, the doc's row locked and checked). Escape or
+  Cancel doesn't answer, the next "Done" asks again. Only the creator is
+  asked.
+- **No "Done" still tells** (decided 2026-11-21): a doc begun as a
+  draft whose creator never answered tells those who want to hear once
+  it had no change for an hour (`TELL_AFTER`), as "No one else" would
+  (`shared`, the creator as the actor), and then isn't asked any more.
+  `send_mails` runs `tell_unanswered()` every minute (`fairy_tasks` is
+  daily, too slow); each doc locked with `skip_locked` and checked
+  again, so two runs or the creator's answer can't tell twice; typing
+  not merged yet (`LiveUpdate` rows) waits for the next run; drafts and
+  trashed docs are left alone.
 - The API and CLI create docs with title and text, not as drafts.
 
 ## Files

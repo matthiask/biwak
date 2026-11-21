@@ -60,7 +60,9 @@ With the first text it's a doc (the browser's address becomes the doc's)
 and it's in the folder, telling nobody yet. When you click "Done" the
 first time, you're asked "Tell people about it?": those who want to
 hear about something new are told either way; add others under "Also
-tell…" (and a note) and "Tell them too", or "No one else" to add nobody. You're asked only once; later, add
+tell…" (and a note) and "Tell them too", or "No one else" to add nobody.
+If you never click "Done", those who want to hear are told an hour after
+your last change. You're asked only once; later, add
 people with "Manage…" next to the subscribers.
 
 - **Edit** opens the doc for editing together: everybody who edits it
