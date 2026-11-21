@@ -34,7 +34,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `checkins.md` | | built | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | built | notifications 1, check-ins | strong |
 | `search.md` | | built | every kind of item | cheaper |
-| `api-cli.md` | gaps to the web, passkey offer, Google for staff | foundations built; agent skills: spec first | | cheaper |
+| `api-cli.md` | gaps to the web, passkey offer, Google for staff | foundations built; agent skills postponed | | cheaper |
 | `rule-widget.md` | one control for repeat rules | built | to-dos, check-ins | cheaper, review the round trips |
 | `keyboard.md` | command palette (Ctrl+K), shortcuts | built 2026-11-21 | search | cheaper |
 | `lantern.md` | the lantern (notifications in the app), live updates (built 2026-11-21 on `collaboration`) | built | collaboration (ASGI, Redis), notifications | strong |
@@ -45,7 +45,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `organizations.md` | organizations as a model, domains, starting projects from them, partners | built; later: the people page grouped by organization | the core, the importer | cheaper |
 | `connection.md` | the banner when offline, nothing lost silently | built | live updates, live editor | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
-| `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
+| `api-cli.md` | agent skills | postponed (2026-11-21) | the importer | cheaper |
 | `collaboration.md` | | built (branch `collaboration`, merged into `main` 2026-11-21, not deployed) | everything | strong |
 | `people.md` | 1: profile images, the person's page | built 2026-11-21 (branch `people`) | `organizations.md` | cheaper, review the image's visibility |
 | `people.md` | 2: choosing from drawn images | later | stage 1, the drawings | cheaper |

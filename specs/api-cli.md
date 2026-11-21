@@ -47,7 +47,10 @@ Skills in the CLI package for common work: triaging what changed,
 turning a mail into a to-do or message, writing a weekly summary of a
 project. They tell agents to check visibility before writing anything a
 client could see. Not built yet: their own part after the importer
-(decided 2026-11-20), specified before building.
+(decided 2026-11-20), specified before building. Postponed (decided
+2026-11-21): no skill needed yet; work like activating imported people
+is a script written once in a Claude Code session supervising the
+importer, on top of the API and the CLI (`activation.md`).
 
 ## Closing the gaps to the web (decided 2026-11-20)
 
