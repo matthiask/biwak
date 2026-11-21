@@ -33,7 +33,7 @@
       {% else %}
         <a href="?archived=1" class="btn btn-sm btn-quiet">{% translate "Archive" %}</a>
         {% if not request.user.is_client %}
-          <a href="{% url 'project_create' %}" class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
+          <a href="{% url 'project_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
             >{% translate "New project" %}</span></a>
         {% endif %}
       {% endif %}

@@ -125,6 +125,7 @@ MIDDLEWARE = [
         "django.middleware.locale.LocaleMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "biwak.modals.modal_middleware",
         "biwak.accounts.middleware.LoginRequired",
         "biwak.cli_version.cli_version_middleware",
         "django.contrib.messages.middleware.MessageMiddleware",
@@ -175,6 +176,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "biwak.modals.context",
             ],
         },
     }

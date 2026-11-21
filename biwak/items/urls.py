@@ -19,6 +19,7 @@ urlpatterns = [
     path("todos/<int:pk>/", views.todo, name="todo"),
     path("todos/<int:pk>/peek/", views.todo_peek, name="todo_peek"),
     path("todos/<int:pk>/move/", views.todo_move, name="todo_move"),
+    path("todos/<int:pk>/move-to/", views.todo_move_to, name="todo_move_to"),
     path("todos/<int:pk>/toggle/", views.todo_toggle, name="todo_toggle"),
     path("items/<int:pk>/subscription/", views.subscription, name="subscription"),
     path("items/<int:pk>/switch/", views.switch, name="switch"),

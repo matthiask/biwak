@@ -11,6 +11,8 @@ An action is a dict with ``label``, ``type`` and what the type needs, and
 optionally a ``shortcut`` ("x", or "g p" for two keys):
 
 - ``link``: go to ``url``;
+- ``modal``: open the form at ``url`` in a modal (``frontend/modal.js``);
+  the form's own page where JavaScript isn't there to run it;
 - ``post``: POST ``data`` to ``url``, then follow the answer;
 - ``focus``: focus the first element matching ``selector`` (opening the
   ``<details>`` around it); on another page ``url`` has the page of the
@@ -68,6 +70,10 @@ def link(label, url, shortcut=""):
     return {"label": label, "type": "link", "url": url, "shortcut": shortcut}
 
 
+def modal(label, url, shortcut=""):
+    return {"label": label, "type": "modal", "url": url, "shortcut": shortcut}
+
+
 def post(label, url, data=None, shortcut=""):
     return {
         "label": label,
@@ -95,25 +101,20 @@ def everywhere(user):
         link(_("Go to the activity"), reverse("feed"), "g f"),
         link(_("Go to my to-dos"), reverse("todos") + "?assignee=me", "g t"),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),
-        link(_("Notification settings"), reverse("settings") + "#notifications"),
         link(_("Settings"), reverse("settings")),
         link(_("Search"), reverse("search")),
         {"label": _("Switch the theme"), "type": "theme", "shortcut": ""},
     ]
     if not user.is_client:
-        actions.append(link(_("New project"), reverse("project_create")))
+        actions.append(modal(_("New project"), reverse("project_create")))
     return actions
 
 
-def in_project(user, project, url_name, folder=None):
+def in_project(user, project, folder=None):
     """What a project's pages offer"""
     actions = []
-    here = url_name == "project"
     if ops.can_create(user, Kind.LIST):
-        url = reverse("project", args=[project.pk]) + "#new-list"
-        actions.append(
-            focus(_("New list"), "#new-list", url) if here else link(_("New list"), url)
-        )
+        actions.append(modal(_("New list"), reverse("list_new", args=[project.pk])))
     if ops.can_create(user, Kind.MESSAGE):
         actions.append(
             link(_("New message"), reverse("message_new", args=[project.pk]))
@@ -216,9 +217,7 @@ def for_page(request, context):
     else:
         item = None
     if name in PROJECT_PAGES and isinstance(project, Project):
-        page += in_project(
-            user, project, name, folder=item if name == "folder" else None
-        )
+        page += in_project(user, project, folder=item if name == "folder" else None)
     if item is not None:
         page += on_item(request, item, context)
     return [{**a, "group": "page"} for a in page] + [

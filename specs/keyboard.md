@@ -64,8 +64,8 @@ to do it (the server renders them per page as a JSON script in
 palette never decides permissions itself):
 
 - Everywhere:
-  - go to projects, the feed, my to-dos, bookmarks, notification
-    settings;
+  - go to projects, the feed, my to-dos, bookmarks, settings (the
+    notification settings are a section of it; decided 2026-11-21);
   - search;
   - switch the theme;
   - new project (staff).

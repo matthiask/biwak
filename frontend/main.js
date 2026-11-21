@@ -17,6 +17,8 @@ import "./peek.js"
 import "./checklist.js"
 import "./editing.js"
 import "htmx.org"
+// Forms in a <dialog> (biwak/modals.py)
+import "./modal.js"
 import "./rule-widget.js"
 import "./lantern.js"
 import "./live.js"

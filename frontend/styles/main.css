@@ -555,11 +555,40 @@ h3,
   }
 }
 
-@media (max-width: 575.98px) {
+/* A quiet field on wide screens, the magnifier on phones */
+.wb-nav-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: var(--wb-surface);
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.wb-nav-search:hover {
+  color: var(--bs-body-color);
+  background: var(--bs-tertiary-bg);
+}
+
+.wb-nav-search-label {
+  white-space: nowrap;
+}
+
+@media (min-width: 576px) {
   .wb-nav-search {
-    order: 3;
-    width: 100%;
-    margin: 0 0 0.25rem !important;
+    min-width: 12rem;
+  }
+
+  .wb-nav-search-hint {
+    margin-left: auto;
+    padding: 0 0.3rem;
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
   }
 }
 
@@ -813,7 +842,7 @@ h3,
 }
 
 .wb-group-menu {
-  min-width: 18rem;
+  min-width: 14rem;
   font-weight: normal;
 }
 
@@ -1552,4 +1581,53 @@ button.wb-signal:hover {
 .wb-live-note {
   font-size: 0.875em;
   color: var(--bs-secondary-color);
+}
+
+/* Forms in a modal (modal.js, modal_form.html): the same form as on its
+   own page, in a <dialog> */
+.wb-modal {
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 1.25rem;
+  color: var(--bs-body-color);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: var(--bs-box-shadow-lg);
+}
+
+.wb-modal::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+body:has(.wb-modal[open]) {
+  overflow: hidden;
+}
+
+.wb-form-title {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.wb-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Escape on a changed form: it stays open, pressing again closes it */
+.wb-modal-shake {
+  animation: wb-modal-shake 0.3s;
+}
+
+@keyframes wb-modal-shake {
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-modal-shake {
+    animation: none;
+  }
 }

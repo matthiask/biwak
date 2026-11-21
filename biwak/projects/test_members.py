@@ -16,14 +16,14 @@ class MembersTest(TestCase):
         self.root = person("Root", is_admin=True)
         self.project = project(members=[self.ada, self.cleo])
         self.url = f"/projects/{self.project.pk}/people/"
+        self.add_url = f"{self.url}add/"
+        self.invite_url = f"{self.url}invite/"
 
     def test_add_existing_person(self):
         self.client.force_login(self.ada)
-        response = self.client.get(self.url)
+        response = self.client.get(self.add_url)
         self.assertContains(response, "Bob Example")  # offered
-        self.client.post(
-            self.url, {"form": "add", "notify": "default", "user": self.bob.pk}
-        )
+        self.client.post(self.add_url, {"notify": "default", "user": self.bob.pk})
         self.assertTrue(self.project.is_member(self.bob))
         event = Event.objects.get(action=Action.ADDED)
         self.assertEqual(event.data["name"], "Bob Example")
@@ -36,9 +36,8 @@ class MembersTest(TestCase):
         self.client.force_login(self.ada)
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(
-                self.url,
+                self.invite_url,
                 {
-                    "form": "invite",
                     "notify": "default",
                     "email": "Dora@Example.org",
                     "full_name": "Dora Example",
@@ -54,8 +53,8 @@ class MembersTest(TestCase):
         # Inviting again adds nothing and mails nobody
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(
-                self.url,
-                {"form": "invite", "notify": "default", "email": "dora@example.org"},
+                self.invite_url,
+                {"notify": "default", "email": "dora@example.org"},
             )
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(
@@ -65,11 +64,10 @@ class MembersTest(TestCase):
     def test_only_admins_invite_staff(self):
         self.client.force_login(self.ada)
         # Staff can't even choose: the field isn't there, new people are clients
-        self.assertNotContains(self.client.get(self.url), 'name="is_client"')
+        self.assertNotContains(self.client.get(self.invite_url), 'name="is_client"')
         self.client.post(
-            self.url,
+            self.invite_url,
             {
-                "form": "invite",
                 "notify": "default",
                 "email": "eve@example.org",
                 "is_client": "",
@@ -79,9 +77,8 @@ class MembersTest(TestCase):
 
         self.client.force_login(self.root)
         self.client.post(
-            self.url,
+            self.invite_url,
             {
-                "form": "invite",
                 "notify": "default",
                 "email": "finn@example.org",
                 "is_client": "",
@@ -95,11 +92,9 @@ class MembersTest(TestCase):
         self.assertContains(response, "Ada Example")
         self.assertNotContains(response, "ada@example.org")
         self.assertNotContains(response, 'value="invite"')
+        self.client.post(self.add_url, {"notify": "default", "user": self.bob.pk})
         self.client.post(
-            self.url, {"form": "add", "notify": "default", "user": self.bob.pk}
-        )
-        self.client.post(
-            self.url, {"form": "invite", "notify": "default", "email": "x@example.org"}
+            self.invite_url, {"notify": "default", "email": "x@example.org"}
         )
         self.assertFalse(self.project.is_member(self.bob))
         self.assertFalse(User.objects.filter(email="x@example.org").exists())
@@ -143,7 +138,7 @@ class MembersTest(TestCase):
         url = f"/projects/{limited.pk}/people/"
         self.assertEqual(self.client.get(url).status_code, 404)
         self.client.force_login(self.ada)
-        self.client.post(url, {"form": "add", "notify": "default", "user": self.bob.pk})
+        self.client.post(f"{url}add/", {"notify": "default", "user": self.bob.pk})
         self.client.force_login(self.bob)
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 200)
 
@@ -196,3 +191,70 @@ class LimitingTest(TestCase):
         )
         self.assertFalse(Event.objects.filter(action=Action.EDITED_PROJECT).exists())
         self.assertEqual(self.subscribers(), {"Ada Example", "Bob Example"})
+
+
+class MemberModalsTest(TestCase):
+    """Adding, inviting, creating and editing projects as modals"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.project = project(members=[self.ada])
+        self.client.force_login(self.ada)
+        self.headers = {"HTTP_HX_MODAL": "true"}
+
+    def test_forms_render_without_the_page(self):
+        for url in (
+            f"/projects/{self.project.pk}/people/add/",
+            f"/projects/{self.project.pk}/people/invite/",
+            f"/projects/{self.project.pk}/edit/",
+            "/projects/new/",
+        ):
+            with self.subTest(url=url):
+                page = self.client.get(url)
+                self.assertContains(page, "<nav")
+                response = self.client.get(url, **self.headers)
+                self.assertContains(response, 'id="modal-title"')
+                self.assertContains(response, "data-modal-close")
+                self.assertNotContains(response, "<nav")
+
+    def test_saving_redirects_through_htmx(self):
+        response = self.client.post(
+            f"/projects/{self.project.pk}/people/add/",
+            {"notify": "default", "user": self.bob.pk},
+            **self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["HX-Redirect"], f"/projects/{self.project.pk}/people/"
+        )
+        self.assertTrue(self.project.is_member(self.bob))
+
+    def test_errors_stay_in_the_dialog(self):
+        response = self.client.post(
+            f"/projects/{self.project.pk}/people/invite/",
+            {"notify": "default", "email": "nope"},
+            **self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("HX-Redirect", response)
+        self.assertContains(response, "wb-form-title")
+        response = self.client.post("/projects/new/", {"name": ""}, **self.headers)
+        self.assertContains(response, "invalid-feedback")
+
+    def test_create_as_a_modal(self):
+        response = self.client.post(
+            "/projects/new/", {"name": "Fresh", "color": ""}, **self.headers
+        )
+        self.assertIn("HX-Redirect", response)
+
+    def test_clients_get_no_forms(self):
+        cleo = person("Cleo", client=True)
+        Membership.objects.create(project=self.project, user=cleo)
+        self.client.force_login(cleo)
+        for url in (
+            f"/projects/{self.project.pk}/people/add/",
+            f"/projects/{self.project.pk}/edit/",
+            "/projects/new/",
+        ):
+            self.assertEqual(self.client.get(url, **self.headers).status_code, 403)

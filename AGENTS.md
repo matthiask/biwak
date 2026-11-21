@@ -54,6 +54,27 @@ covers everything else. A change to a script or an htmx interaction gets a
 test there: logged in through a session cookie, Playwright's waiting
 instead of sleeps, at least the client's view where it differs.
 
+# Modals
+
+Forms open in a `<dialog>` (`frontend/modal.js`, `biwak/modals.py`, copied
+from Governance). Every modal form is also a page:
+
+- A view answers with `form_response(request, form, title=, cancel_url=,
+  item=/project=, intro=, submit_label=, destructive=)`, which renders
+  `modal_form.html`: the whole page normally, only the form for a request
+  with the `HX-Modal` header. `form=None` is a question (the trash).
+- Success is a plain `redirect()`: the middleware turns it into
+  `HX-Redirect` for modal requests. Errors render the form again in the
+  dialog, with status 200.
+- A link opens it with `data-modal` (without JavaScript, or with a modifier
+  key, it's the form's page). In JavaScript: `openModal(url, from)`. In the
+  palette: `modal(label, url)` in `biwak/palette/actions.py`.
+- Escape closes an unchanged form, a changed one needs it twice; Cancel
+  has `data-modal-close`; the focus returns to the link (or its menu).
+- Items' "More" menu is `items/_more.html` (Notifications…, Move to…,
+  Trash); the navigation's search field is a link to the search page that
+  opens the palette (`data-palette-open`).
+
 # Code and conventions
 
 The code and conventions come from

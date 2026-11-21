@@ -25,6 +25,7 @@
         <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "broadcast" %}<span
           >{% translate "Watch live" %}</span></a>
       {% endif %}
+      {% include "items/_more.html" %}
     </div>
   </div>
   {% show_links item %}
@@ -49,7 +50,6 @@
     </div>
     <div class="col-lg-4">
       {% include "files/_sidebar.html" %}
-      {% include "files/_move.html" %}
       {% if is_staff %}
         <form method="post" action="{% url 'doc_read_only' item.pk %}" class="mt-4 small">
           {% csrf_token %}

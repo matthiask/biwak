@@ -681,9 +681,10 @@ class NavigationTest(SearchBase):
     def test_the_field_in_the_navigation(self):
         self.client.force_login(self.ada)
         response = self.client.get("/search/", {"q": "tent"})
-        self.assertContains(response, 'role="search"')
+        # The navigation's button opens the palette, the page keeps its field
+        self.assertNotContains(response, 'role="search"')
         self.assertContains(response, 'value="tent"')
-        self.assertContains(self.client.get("/feed/"), 'action="/search/"')
+        self.assertContains(self.client.get("/feed/"), "data-palette-open")
 
     def test_the_empty_page(self):
         self.client.force_login(self.ada)

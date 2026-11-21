@@ -149,17 +149,18 @@ class PageTest(Fixture, TestCase):
 
     def test_add_and_invite_forms_take_the_choice(self):
         self.client.force_login(self.ada)
-        self.assertContains(
-            self.client.get(self.people_url), 'id="id_notify_1"', count=2
-        )
+        for name in ("add", "invite"):
+            self.assertContains(
+                self.client.get(f"{self.people_url}{name}/"), 'id="id_notify_1"'
+            )
         self.client.post(
-            self.people_url, {"form": "add", "user": self.bob.pk, "notify": "tagged"}
+            f"{self.people_url}add/", {"user": self.bob.pk, "notify": "tagged"}
         )
         self.assertEqual(self.level(self.bob), NotificationLevel.CONCERNS_ME)
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(
-                self.people_url,
-                {"form": "invite", "email": "x@example.org", "notify": "tagged"},
+                f"{self.people_url}invite/",
+                {"email": "x@example.org", "notify": "tagged"},
             )
         user = User.objects.get(email="x@example.org")
         self.assertEqual(self.level(user), NotificationLevel.CONCERNS_ME)

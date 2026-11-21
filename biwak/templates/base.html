@@ -80,16 +80,18 @@
               >{% translate "Bookmarks" %}</a>
             </li>
           </ul>
-          <form class="wb-nav-search" role="search" action="{% url 'search' %}">
-            <input
-              type="search"
-              name="q"
-              class="form-control form-control-sm"
-              value="{% if request.resolver_match.url_name == 'search' %}{{ request.GET.q }}{% endif %}"
-              placeholder="{% translate 'Search' %}"
-              aria-label="{% translate 'Search' %}"
-            >
-          </form>
+          {# Opens the palette (frontend/palette.js); the search page without JavaScript #}
+          <a
+            class="wb-nav-search"
+            href="{% url 'search' %}"
+            data-palette-open
+            title="{% translate 'Search or jump to…' %}"
+          >
+            {% icon "search" %}
+            <span class="wb-nav-search-label d-none d-sm-inline">{% translate "Search or jump to…" %}</span>
+            <span class="visually-hidden d-sm-none">{% translate "Search or jump to…" %}</span>
+            <kbd class="wb-nav-search-hint d-none d-sm-inline" data-shortcut-hint>{% translate "Ctrl K" %}</kbd>
+          </a>
           <div class="wb-nav-user d-flex align-items-center gap-2 ms-2">
             {% include "_theme_toggle.html" %}
             <details

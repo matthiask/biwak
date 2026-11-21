@@ -35,6 +35,7 @@
         <a class="btn btn-sm btn-quiet" href="{% url 'message_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
       {% endif %}
+      {% include "items/_more.html" %}
     </div>
   </div>
   <p class="small text-body-secondary">

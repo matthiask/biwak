@@ -22,6 +22,7 @@
           href="{% url 'file_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
         >{% icon "upload" %}<span>{% translate "Upload a file" %}</span></a>
       {% endif %}
+      {% if folder %}{% include "items/_more.html" with item=folder %}{% endif %}
     </div>
   </div>
   {% if folder %}
@@ -71,7 +72,6 @@
   {% if folder %}
     <div class="row mt-4">
       <div class="col-lg-4">
-        {% include "files/_move.html" %}
         {% include "files/_sidebar.html" %}
       </div>
     </div>
