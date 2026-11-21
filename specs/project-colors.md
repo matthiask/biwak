@@ -25,5 +25,5 @@ A color per project, so projects are told apart at a glance.
   `{% project_dot %}` (a small rounded square, not a round dot, which
   reads as "unread", decided 2026-11-21; contrast 3:1 checked) before
   the name in the archived list, the feed across projects, search, the
-  to-dos page across projects, the lantern and the palette. Not in
-  breadcrumbs, mails or bookmarks.
+  to-dos page across projects, the check-ins due, the person's page and
+  the palette. Not in breadcrumbs, mails, bookmarks or the lantern.
