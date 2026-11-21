@@ -6,8 +6,8 @@ answer goes into the spec named, and the entry leaves this file. Kept up
 to date: questions asked in the conversation and answered there are
 recorded in their spec and leave this file too.
 
-1. **Search's archived filter wording** (`search.md`): "Without archived
-   projects", and "Archived" on results.
+Nothing open at the moment.
+
 Decided to wait: the wording of mails, messages and the editor's and the
 lantern's texts is reviewed all at once with the German translation;
 agent skills (`api-cli.md`) later.

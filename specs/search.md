@@ -45,7 +45,11 @@ indexes.
 - The `simple` text search configuration with prefix matching, the same
   for every language; no stemming.
 - Archived projects are searched, their results marked as archived; a
-  filter leaves them out.
+  filter leaves them out. **Changed 2026-11-21:** archived projects and
+  archived lists (with their contents) are left out by default; a
+  checkbox "Include archived" (no negation in the label; `archived=true`
+  in the API, `--archived` in the CLI) brings them in, marked
+  "Archived".
 - Page size and excerpt length like the feed: 50 results, 200
   characters.
 
