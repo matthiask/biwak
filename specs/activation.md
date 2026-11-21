@@ -77,7 +77,7 @@ to both.
   `activation.deactivate()`, so sessions, API tokens and calendar links
   go too). The question says which happens and names the projects the
   withdrawing person can open, counting the others ("2 projects you
-  can't open"); the API answers `removed_from` (those IDs),
+  can't open"; confirmed 2026-11-21: admins see every project anyway); the API answers `removed_from` (those IDs),
   `removed_from_others` (the count), `deleted` and `deactivated`.
 
 ## Activating

@@ -23,13 +23,14 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   invitation too) off the open to-dos of every project, trashed ones
   included, through `unassign()` (`ops.unassign_dropped()`): an
   "unassigned" event per to-do by whoever removed or deactivated them,
-  nobody told. Completed to-dos keep them: they're history (decided while
-  building), so a sweep doesn't fill the feed with old to-dos. Migration
+  nobody told. Completed to-dos keep them: they're history (confirmed by the
+  user 2026-11-21: "historical information and accurate"), so a sweep doesn't fill the feed with old to-dos. Migration
   `items.0015` dropped existing ones the same way (deactivated: the audit
   log has `is_active` cleared, so people the importer created inactive
-  keep the import's assignments), without events.
+  keep the import's assignments; confirmed 2026-11-21), without events.
 - **The edit form** offers who's still assigned but can't be assigned
-  anymore (a client on a to-do made internal, `ops.assignable_or_assigned()`),
+  anymore, without dropping them automatically (confirmed 2026-11-21:
+  a client on a to-do made internal, `ops.assignable_or_assigned()`),
   so saving never drops anybody silently; taking them out unassigns them.
 - **Who assigned** (decided 2026-11-21): `Todo.assignees` goes through
   `Assignment` (todo, user, `assigned_by` nullable, `assigned_at`; the
