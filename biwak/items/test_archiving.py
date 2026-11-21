@@ -49,22 +49,26 @@ class ArchivingTest(TestCase):
         )
 
     def test_the_menus(self):
+        """On the list's page; not on the project page's rows (decided
+        2026-11-21: the list itself is the place)"""
         self.client.force_login(self.ada)
         archive = f"/lists/{self.list.pk}/archive/"
-        for url in [self.list.get_absolute_url(), self.project.get_absolute_url()]:
-            with self.subTest(url=url):
-                self.assertContains(self.client.get(url), f'action="{archive}"')
-                self.assertContains(self.client.get(url), ">Archive</button>")
-        response = self.client.get(self.project.get_absolute_url())
         self.assertContains(
-            response, f'name="next" value="{self.project.get_absolute_url()}"'
+            self.client.get(self.list.get_absolute_url()), f'action="{archive}"'
+        )
+        self.assertContains(
+            self.client.get(self.list.get_absolute_url()), ">Archive</button>"
+        )
+        self.assertNotContains(
+            self.client.get(self.project.get_absolute_url()), f'action="{archive}"'
         )
         self.assertRedirects(
             self.client.post(archive, {"next": self.project.get_absolute_url()}),
             self.project.get_absolute_url(),
         )
-        for url in [self.list.get_absolute_url(), self.project.get_absolute_url()]:
-            self.assertContains(self.client.get(url), ">Unarchive</button>")
+        self.assertContains(
+            self.client.get(self.list.get_absolute_url()), ">Unarchive</button>"
+        )
         # Only local addresses
         response = self.client.post(
             archive, {"unarchive": "1", "next": "https://x.example/"}
@@ -75,9 +79,14 @@ class ArchivingTest(TestCase):
 
     def test_clients_archive_what_they_created(self):
         self.client.force_login(self.cleo)
-        page = self.client.get(self.project.get_absolute_url())
-        self.assertContains(page, f'action="/lists/{self.own.pk}/archive/"')
-        self.assertNotContains(page, f'action="/lists/{self.list.pk}/archive/"')
+        self.assertContains(
+            self.client.get(self.own.get_absolute_url()),
+            f'action="/lists/{self.own.pk}/archive/"',
+        )
+        self.assertNotContains(
+            self.client.get(self.list.get_absolute_url()),
+            f'action="/lists/{self.list.pk}/archive/"',
+        )
         self.assertEqual(
             self.client.post(f"/lists/{self.list.pk}/archive/").status_code, 403
         )

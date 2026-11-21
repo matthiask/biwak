@@ -18,8 +18,8 @@ in the project's "More" menu (`projects-overview.md`).
 ## Lists
 
 - `Item.status` `archived`. "Archive" and "Unarchive" in the list's
-  "More" menu, in the menu of each list row on the project page and as
-  a palette action, with `ops.can_change()` (staff, and clients for
+  "More" menu and as a palette action (not on the project page's rows,
+  decided 2026-11-21: the list itself is the place), with `ops.can_change()` (staff, and clients for
   lists they created). API: `PATCH lists/{id}/ {"archived": …}`, `GET
   projects/{id}/lists/?archived=true`; CLI: `biwak list
   archive|unarchive LIST`, `biwak lists --archived`.

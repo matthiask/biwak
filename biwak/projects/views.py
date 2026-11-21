@@ -527,8 +527,6 @@ def project_detail(request, pk):
     lists = all_lists.filter(status=Status.ACTIVE).select_related("project")
     lists = list(lists)
     archived_lists = list(all_lists.filter(status=Status.ARCHIVED))
-    for todolist in lists + archived_lists:
-        todolist.can_change = ops.can_change(request.user, todolist)
     counts = glance.list_counts(request.user, lists, schedules.today())
     for todolist in lists:
         todolist.open_count, todolist.overdue_count = counts.get(todolist.pk, (0, 0))
