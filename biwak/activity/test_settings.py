@@ -81,6 +81,15 @@ class SettingsPagesTest(SettingsBase):
         self.assertContains(response, "Order the tent")
         self.assertNotContains(response, "Secret plan")
 
+    def test_settings_page_lists_accessible_projects_only(self):
+        """An override of a project one has left stays out of the page"""
+        set_level_override(self.bob, "nothing", project=self.project)
+        self.project.memberships.filter(user=self.bob).delete()
+        self.client.force_login(self.bob)
+        response = self.client.get("/accounts/notifications/")
+        self.assertNotContains(response, "Website")
+        self.assertNotContains(response, f"/projects/{self.project.pk}/")
+
     def test_project_override(self):
         url = f"/projects/{self.project.pk}/notifications/"
         for user in [self.ada, self.cleo]:

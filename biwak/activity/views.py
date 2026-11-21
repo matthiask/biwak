@@ -27,6 +27,7 @@ from biwak.activity.operations import (
 from biwak.forms import Form, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
+from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
 
@@ -238,12 +239,19 @@ def notification_settings(request):
         .filter(pk__in=[o.item_id for o in overrides if o.item_id])
         .values_list("pk", flat=True)
     )
+    # Projects one has left: their overrides stay, but aren't shown
+    projects = set(
+        Project.objects
+        .accessible_to(request.user)
+        .filter(pk__in=[o.project_id for o in overrides if o.project_id])
+        .values_list("pk", flat=True)
+    )
     return render(
         request,
         "activity/notification_settings.html",
         {
             "form": form,
-            "project_overrides": [o for o in overrides if o.project_id],
+            "project_overrides": [o for o in overrides if o.project_id in projects],
             "item_overrides": [o for o in overrides if o.item_id in visible],
         },
     )

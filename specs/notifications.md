@@ -135,7 +135,9 @@ Pages: the person's level and delivery on `/accounts/notifications/`
 (linked from the user menu); a project's override in the project page's
 "More" menu; an item's override next to its subscribe button. The
 settings page also lists the person's overrides, items only while they
-can see them. To-dos, lists, messages, docs, files and the
+can see them, projects only while they have access (an override of a
+project one has left stays, unseen, and counts again on coming back,
+2026-11-21). To-dos, lists, messages, docs, files and the
 library's folders have the subscribe button and the override form
 (`files/_sidebar.html`); a list's override is at the bottom of the list's
 page, also through the API (built 2026-11-20).
