@@ -292,7 +292,11 @@ class FormsTest(ViewsTestCase):
 
     def test_creating_a_question(self):
         url = reverse("question_new", args=[self.project.pk])
-        self.assertContains(self.get(self.ada, url), "New check-in")
+        response = self.get(self.ada, url)
+        self.assertContains(response, "New check-in")
+        # About 400 time zones: a combobox (specs/ui-round-6.md)
+        self.assertContains(response, '<select name="time_zone" data-combobox=""')
+        self.assertContains(response, "data-combobox")
         response = self.post(self.ada, url, self.data())
         item = Item.objects.get(title="What did you read?")
         self.assertRedirects(response, item.get_absolute_url())

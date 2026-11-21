@@ -45,7 +45,10 @@ lists, messages, docs and files, check-ins, members.
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page.
 - **Members** lists who is in the project. Staff add people there or
-  invite them by email.
+  invite them by email. "Add someone" and other long lists of choices
+  (the person filter of the activity, a check-in's time zone) have a
+  search field: type parts of the name, the organization or the address,
+  in any order, then choose with the arrow keys and Enter or a click.
 - Archived projects are out of the way; the projects page has an
   archive.
 

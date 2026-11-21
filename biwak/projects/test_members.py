@@ -32,6 +32,22 @@ class MembersTest(TestCase):
             self.client.get(self.project.get_absolute_url()), "Bob Example"
         )
 
+    def test_add_offers_a_combobox_saying_who_people_are(self):
+        # specs/ui-round-6.md, part A: the plain select without JavaScript,
+        # data-combobox for combobox.js, the organization in the label and
+        # the address to find people by
+        dora = person("Dora", client=True)
+        self.client.force_login(self.ada)
+        response = self.client.get(self.add_url)
+        self.assertContains(response, "data-combobox")
+        self.assertContains(
+            response,
+            f'<option value="{dora.pk}" data-search="dora@example.org">'
+            "Dora Example · Example Client Ltd</option>",
+            html=True,
+        )
+        self.assertContains(response, "Bob Example · Our organization")
+
     def test_invite_client(self):
         self.client.force_login(self.ada)
         with self.captureOnCommitCallbacks(execute=True):

@@ -18,7 +18,7 @@ from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
-from biwak.forms import Form
+from biwak.forms import ComboboxSelect, Form
 from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
@@ -62,6 +62,7 @@ class QuestionForm(RuleFormMixin, Form):
         label=_("Time zone"),
         choices=[(name, name) for name in TIME_ZONES],
         initial=settings.TIME_ZONE,
+        widget=ComboboxSelect,
     )
     people = forms.ModelMultipleChoiceField(
         label=_("People asked"),

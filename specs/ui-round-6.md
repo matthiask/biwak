@@ -3,8 +3,11 @@
 Round 6 of `ui-feedback.md` (2026-11-21), the questions answered the same
 day.
 
-**Status:** spec (2026-11-21), all details confirmed the same day. Not
-built.
+**Status:** spec (2026-11-21), all details confirmed the same day.
+Part A built (2026-11-21): `ComboboxSelect` and `PersonChoiceField`
+(`person_label()`) in `biwak/forms.py`, `frontend/combobox.js`, on "Add
+someone" (found by the address too), the feed's person filter and the
+check-in's time zone; browser test `biwak/test_e2e_combobox.py`.
 
 **Agent:** a cheaper model for part A; parts B and C touch who may do
 what and who's told: a cheaper model with the visibility and
@@ -39,6 +42,12 @@ notification tests reviewed, or a strong one.
   "these people"), the organization field (a text field with a
   `datalist`, which finds already). Same widget, `data-combobox`, one
   script (`frontend/combobox.js`); a new long select gets it too.
+- **Built** (2026-11-21): staff without an organization (individual
+  partners) say "staff"; clients without one only their name. Only "Add
+  someone" finds people by their address (`data-search`, staff managing
+  members see addresses anyway); the feed's filter, which clients have
+  too, doesn't. The list looks like the `@` list (`wb-mentions`) and
+  closes on Escape (not the modal) and when the field loses the focus.
 - 1500 options in the page are fine (decided 2026-11-21: about 100 KB, filtered
   in the browser); a server-side autocomplete only if it gets slow.
 

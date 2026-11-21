@@ -38,7 +38,7 @@ from biwak.activity.operations import (
     subscribable_people,
     unsubscribe as unsubscribe_from,
 )
-from biwak.forms import AssigneeField, Form, next_url
+from biwak.forms import AssigneeField, Form, PersonChoiceField, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
@@ -51,7 +51,7 @@ class FilterForm(Form):
     kind = forms.ChoiceField(
         label=_("Kind"), choices=[("", _("All")), *Kind.choices], required=False
     )
-    person = forms.ModelChoiceField(
+    person = PersonChoiceField(
         label=_("Person"),
         queryset=User.objects.none(),
         required=False,

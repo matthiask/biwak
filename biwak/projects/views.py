@@ -14,7 +14,7 @@ from biwak.accounts.models import Color, User, own_staff
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
 from biwak.files import queries as file_queries
-from biwak.forms import ColorSwatches, Form, ModelForm
+from biwak.forms import ColorSwatches, Form, ModelForm, PersonChoiceField
 from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.modals import form_response
@@ -298,7 +298,9 @@ def notify_field():
 
 
 class AddMemberForm(Form):
-    user = forms.ModelChoiceField(label=_("Person"), queryset=User.objects.none())
+    user = PersonChoiceField(
+        label=_("Person"), queryset=User.objects.none(), with_address=True
+    )
     notify = notify_field()
 
 
