@@ -145,6 +145,17 @@ class MailClientsTest(ReceiveMixin, ReplyTestCase):
         self.assertEqual(mail.outbox, [])
         self.assertIn("Brief v2.pdf", message.error)
 
+    def test_small_inline_images_are_left_out(self):
+        message = self.receive(sample("outlook_logo.eml", self.token()))
+        self.assertEqual(
+            sorted(a.name for a in Attachment.objects.all()),
+            ["Note.pdf", "Screenshot.png"],
+        )
+        self.assertEqual(message.status, InboundStatus.POSTED)
+        self.assertNotIn("](attachment:", message.comment.content.split("[cid:")[0])
+        self.assertEqual(message.comment.content.count("](attachment:"), 2)
+        self.assertIn("Screenshot.png", message.comment.content)
+
     def test_only_quotes_posts_nothing(self):
         message = self.receive(
             sample(
