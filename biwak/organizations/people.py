@@ -86,6 +86,9 @@ def decorate(user, viewer, shared):
     # Activating and deactivating (specs/activation.md)
     user.can_activate = not user.is_active and activation.can_change(viewer, user)
     user.can_deactivate = user.is_active and activation.can_deactivate(viewer, user)
+    # Correcting a name ("NACHNAME VORNAME"), the same split (decided
+    # 2026-11-21); one's own in the settings
+    user.can_rename = user.pk != viewer.pk and activation.can_change(viewer, user)
     return user
 
 
@@ -329,6 +332,29 @@ def person_deactivate(request, pk):
         cancel_url=back(request, who),
         submit_label=_("Deactivate"),
         destructive=True,
+    )
+
+
+def person_name(request, pk):
+    """Edit the name…: staff correct clients' names, admins everybody's
+    (activation.can_change(), specs/activation.md); a modal, also a page"""
+    from biwak.accounts.views import NameForm
+
+    who = person_to_change(request, pk)
+    form = NameForm(
+        request.POST or None,
+        initial={"full_name": who.full_name, "short_name": who.short_name},
+    )
+    if form.is_valid():
+        accounts_ops.set_name(who, **form.cleaned_data)
+        messages.success(request, _("The name has been saved."))
+        return redirect(back(request, who))
+    return form_response(
+        request,
+        form,
+        title=_("Edit the name of %(name)s") % {"name": who.display_name},
+        cancel_url=back(request, who),
+        submit_label=_("Save"),
     )
 
 

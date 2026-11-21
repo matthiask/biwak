@@ -15,6 +15,14 @@ from biwak.accounts.models import Accent, Theme
 
 
 @transaction.atomic
+def set_name(user, *, full_name, short_name):
+    """The person's own name; the short name is optional (empty: the first
+    word of the full name, ``User.get_short_name()``)"""
+    user.full_name = full_name.strip()
+    user.short_name = short_name.strip()
+    user.save(update_fields=["full_name", "short_name"])
+
+
 def set_preferences(user, *, keyboard_shortcuts=None, theme=None, accent=None):
     """The person's keyboard setting, theme and accent color, what's given"""
     fields = []

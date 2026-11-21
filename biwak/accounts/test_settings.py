@@ -293,3 +293,37 @@ class SignInSectionTest(TestCase):
         # The button does what the menu's does
         self.client.post("/accounts/logout/")
         self.assertEqual(self.client.get("/accounts/settings/").status_code, 302)
+
+
+class NameTest(TestCase):
+    """One's own name in the settings"""
+
+    def test_changing_ones_name(self):
+        ada = person("Ada")
+        self.client.force_login(ada)
+        self.assertContains(self.client.get("/accounts/settings/"), 'name="full_name"')
+        response = self.client.post(
+            "/accounts/settings/name/",
+            {"full_name": " Ada Lovelace ", "short_name": ""},
+        )
+        self.assertRedirects(response, "/accounts/settings/")
+        ada.refresh_from_db()
+        self.assertEqual((ada.full_name, ada.short_name), ("Ada Lovelace", ""))
+        self.assertEqual(ada.get_short_name(), "Ada")
+        self.client.post(
+            "/accounts/settings/name/",
+            {"full_name": "Ada Lovelace", "short_name": "Countess"},
+        )
+        ada.refresh_from_db()
+        self.assertEqual(ada.get_short_name(), "Countess")
+
+    def test_the_full_name_is_required(self):
+        ada = person("Ada")
+        self.client.force_login(ada)
+        response = self.client.post(
+            "/accounts/settings/name/", {"full_name": "", "short_name": ""}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required")
+        ada.refresh_from_db()
+        self.assertNotEqual(ada.full_name, "")

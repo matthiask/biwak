@@ -131,7 +131,7 @@ once, all or nothing.
 
 ## Your menu
 
-Your name in the bar opens: My activity, Settings (notifications, the
+Your name in the bar opens: My activity, Settings (your name, notifications, the
 keyboard, appearance, profile image, sign-in: connected accounts,
 passkeys and sessions), Calendar,
 Help and Sign out. Staff also find the link to the administration.

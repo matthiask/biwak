@@ -137,7 +137,7 @@
                 <span class="d-none d-sm-inline">{% short_name request.user %}</span>
                 {% icon "chevron-down" %}
               </summary>
-              <div class="dropdown-menu dropdown-menu-end">
+              <div class="dropdown-menu dropdown-menu-end wb-me-menu">
                 <span class="dropdown-item-text fw-semibold">{{ request.user }}</span>
                 <hr class="dropdown-divider">
                 {% can_open_feed request.user as own_feed %}

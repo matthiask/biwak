@@ -458,3 +458,44 @@ class APITest(Base):
         active = {p["id"] for p in self.api.get("/api/v1/people/").json()}
         self.assertIn(self.ada.pk, active)
         self.assertNotIn(self.cleo.pk, active)
+
+
+class NameTest(TestCase):
+    """Staff correct clients' names, admins everybody's (decided 2026-11-21)"""
+
+    def setUp(self):
+        self.root = person("Root", is_admin=True)
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        project(members=[self.root, self.bob, self.cleo])
+
+    def rename(self, actor, who, name="Lovelace Ada"):
+        self.client.force_login(actor)
+        return self.client.post(
+            f"/people/{who.pk}/name/", {"full_name": name, "short_name": ""}
+        )
+
+    def test_staff_rename_clients(self):
+        self.assertContains(
+            (
+                self.client.force_login(self.bob),
+                self.client.get(f"/people/{self.cleo.pk}/"),
+            )[1],
+            "Edit the name…",
+        )
+        self.assertEqual(
+            self.rename(self.bob, self.cleo, "Cleo Example").status_code, 302
+        )
+        self.cleo.refresh_from_db()
+        self.assertEqual(self.cleo.full_name, "Cleo Example")
+
+    def test_staff_dont_rename_staff_admins_do(self):
+        self.assertEqual(self.rename(self.bob, self.root).status_code, 403)
+        self.assertEqual(
+            self.rename(self.root, self.bob, "Bob Builder").status_code, 302
+        )
+        self.bob.refresh_from_db()
+        self.assertEqual(self.bob.full_name, "Bob Builder")
+
+    def test_clients_dont(self):
+        self.assertEqual(self.rename(self.cleo, self.bob).status_code, 404)

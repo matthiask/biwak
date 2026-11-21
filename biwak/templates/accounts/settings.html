@@ -6,6 +6,18 @@
   <h1 class="mb-3">{% translate "Settings" %}</h1>
   <h2 class="h5" id="appearance">{% translate "Appearance" %}</h2>
   <div class="card mb-4">
+    <div class="card-body border-bottom" id="name">
+      <h3 class="h6">{% translate "Name" %}</h3>
+      <form method="post" action="{% url 'settings_name' %}" class="row">
+        {% csrf_token %}
+        {# Two fields side by side on wide screens, not the page's whole width #}
+        <div class="col-lg-6">{{ name_form.full_name.as_field_group }}</div>
+        <div class="col-lg-6">{{ name_form.short_name.as_field_group }}</div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        </div>
+      </form>
+    </div>
     <div class="card-body border-bottom" id="profile-image">
       <h3 class="h6">{% translate "Profile image" %}</h3>
       <div class="d-flex flex-wrap align-items-center gap-3">

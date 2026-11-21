@@ -39,6 +39,13 @@
           class="btn btn-sm btn-quiet"
         >{% translate "Activate…" %}</a>
       {% endif %}
+      {% if person.can_rename %}
+        <a
+          href="{% url 'person_name' person.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Edit the name…" %}</a>
+      {% endif %}
       {% if person.can_deactivate %}
         <a
           href="{% url 'person_deactivate' person.pk %}"

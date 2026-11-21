@@ -185,6 +185,16 @@ def passkey_offer(request):
 # The settings page (specs/keyboard.md): sections, each saved on its own
 
 
+class NameForm(Form):
+    full_name = forms.CharField(label=_("full name"), max_length=200)
+    short_name = forms.CharField(
+        label=_("short name"),
+        max_length=30,
+        required=False,
+        help_text=_("How you're listed (mentions, assignees); empty: your first name."),
+    )
+
+
 class KeyboardForm(Form):
     keyboard_shortcuts = forms.BooleanField(
         label=_("Single-key shortcuts"),
@@ -238,7 +248,7 @@ def _overrides(user):
     )
 
 
-def _settings_page(request, *, notifications=None):
+def _settings_page(request, *, notifications=None, name_form=None):
     user = request.user
     project_overrides, item_overrides = _overrides(user)
     return render(
@@ -255,6 +265,10 @@ def _settings_page(request, *, notifications=None):
             ),
             "keyboard_form": KeyboardForm(
                 initial={"keyboard_shortcuts": user.keyboard_shortcuts}
+            ),
+            "name_form": name_form
+            or NameForm(
+                initial={"full_name": user.full_name, "short_name": user.short_name}
             ),
             "themes": Theme.choices,
             "image_help": _("JPEG, PNG or WebP, at most 5 MB."),
@@ -284,6 +298,18 @@ def settings_notifications(request):
         favicon=form.cleaned_data["lantern_in_favicon"],
     )
     messages.success(request, _("Your notification settings have been saved."))
+    return redirect("settings")
+
+
+@never_cache
+@require_POST
+def settings_name(request):
+    """One's own name (specs/people.md, "Names")"""
+    form = NameForm(request.POST)
+    if not form.is_valid():
+        return _settings_page(request, name_form=form)
+    operations.set_name(request.user, **form.cleaned_data)
+    messages.success(request, _("Your name has been saved."))
     return redirect("settings")
 
 
