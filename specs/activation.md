@@ -2,8 +2,7 @@
 
 Who gets into Biwak and who leaves: inviting people (several at once),
 the invitations still waiting, activating people the importer created
-inactive, deactivating people who left, and resetting someone's second
-factor. Organizations, the People page and partners are in
+inactive, deactivating people who left, and resetting someone's sign-in. Organizations, the People page and partners are in
 `organizations.md`; sign-in in `access.md`.
 
 **Status:** built (2026-11-21). Inviting several: `biwak/projects/invitations.py`
@@ -68,16 +67,18 @@ to both.
   projects they're in now (not archived); "Sent again."; no limit
   (decided 2026-11-21); `invited_by` and `invited_at` stay.
 - **Withdraw** (staff, only before they signed in, asking first):
-  removes them from the projects the withdrawing person can open
-  (recorded as "removed", the "added" events stay); the account goes when
-  they're in no other project and nothing refers to it (comments, items,
-  events, files, links, assignments, check-ins asking them, mentions,
-  reactions). When something refers to it, the account stays
-  deactivated (decided 2026-11-21: through `activation.deactivate()`, so
-  sessions, API tokens and calendar links go too). While they're in
-  projects the withdrawing person can't open, the account stays as it is,
-  invited to those. The question says which happens; the API answers
-  `deleted` and `deactivated`.
+  removes them from all their projects, also those the withdrawing
+  person can't open (decided 2026-11-21: "withdrawing is withdrawing";
+  it was only the projects the withdrawing person can open), recorded as
+  "removed", the "added" events stay. The account goes when nothing
+  refers to it (comments, items, events, files, links, assignments,
+  check-ins asking them, mentions, reactions); when something does, it
+  stays deactivated (decided 2026-11-21: through
+  `activation.deactivate()`, so sessions, API tokens and calendar links
+  go too). The question says which happens and names the projects the
+  withdrawing person can open, counting the others ("2 projects you
+  can't open"); the API answers `removed_from` (those IDs),
+  `removed_from_others` (the count), `deleted` and `deactivated`.
 
 ## Activating
 
@@ -112,8 +113,10 @@ nobody gets mail or a sign-in before someone decides
   `sso.enforce_required_now_and_after_commit()`), so what other requests
   made meanwhile goes too.
 - Keeps everything they did and what points at them: memberships,
-  subscriptions (no mail goes to inactive people), assignments (their
-  to-dos count under "Nobody active", `todos.md`), comments.
+  subscriptions (no mail goes to inactive people), comments, assignments
+  of completed to-dos. Open to-dos drop them (decided 2026-11-21,
+  `todos.md`: an "unassigned" event per to-do, nobody told); the
+  importer's inactive people aren't deactivated and keep theirs.
 - No mail to the person. Reactivating is "Activate" again.
 - **The Django admin** follows the same rules (fixed 2026-11-21 after a
   review): unticking "is active" deactivates through `deactivate()`
@@ -121,10 +124,11 @@ nobody gets mail or a sign-in before someone decides
   "is active" nor "is admin" can be taken from the last active admin
   (the form says so; `UserAdmin.save_model()` locks the admins first).
 
-## Resetting a second factor
+## Resetting someone's sign-in
 
-"Reset two-factor…" on the person's page, with the split above:
-`two-factor.md` says what it does.
+"Reset sign-in…" on the person's page (it was "Reset two-factor…",
+renamed 2026-11-21), with the split above: `two-factor.md` says what it
+does.
 
 ## Pages, API, CLI
 

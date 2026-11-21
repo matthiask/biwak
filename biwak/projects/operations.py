@@ -102,6 +102,10 @@ def add_member(project, user, *, actor, notify=NOTIFY_DEFAULT):
 
 @transaction.atomic
 def remove_member(project, user, *, actor):
+    """Takes the person out of the project, off its open to-dos too
+    (decided 2026-11-21); records "removed", or "left" for oneself"""
+    from biwak.items import operations as item_ops
+
     deleted, _rows = Membership.objects.filter(project=project, user=user).delete()
     if not deleted:
         return False
@@ -116,6 +120,7 @@ def remove_member(project, user, *, actor):
             name=user.display_name,
         )
     forget_lost_access(user, project=project)
+    item_ops.unassign_dropped(user, actor=actor, project=project)
     return True
 
 
@@ -320,36 +325,43 @@ def _referred_to(user):
 class Withdrawn(NamedTuple):
     """What withdrawing an invitation does (or did)"""
 
-    # The projects the person is removed from (those the actor can open)
+    # The projects the person is removed from: all of theirs (decided
+    # 2026-11-21: "withdrawing is withdrawing")
     projects: list
-    # The account goes: nothing refers to it, no other projects
+    # The account goes: nothing refers to it
     deleted: bool
-    # The account stays but is deactivated: something refers to it, no other
-    # projects (decided 2026-11-21)
+    # The account stays but is deactivated: something refers to it (decided
+    # 2026-11-21)
     deactivated: bool
+
+    def for_actor(self, actor):
+        """The projects the actor can open, and how many others there are
+        (named to nobody who can't open them)"""
+        accessible = set(
+            Project.objects
+            .accessible_to(actor)
+            .filter(pk__in=[p.pk for p in self.projects])
+            .values_list("pk", flat=True)
+        )
+        names = [p for p in self.projects if p.pk in accessible]
+        return names, len(self.projects) - len(names)
 
 
 def withdrawal(user, *, actor):
     """What withdrawing the invitation does (``Withdrawn``): removed from
-    the projects the actor can open; the account deleted when nothing else
-    refers to it (``_referred_to()``) and they're in no other projects,
-    deactivated when something refers to it; while they're in projects the
-    actor can't open, it stays as it is, invited to those"""
-    memberships = Project.objects.filter(memberships__user=user)
+    all their projects, also those the actor can't open (decided
+    2026-11-21); the account deleted when nothing else refers to it
+    (``_referred_to()``), deactivated when something does"""
     projects = list(
-        memberships.filter(
-            pk__in=Project.objects.accessible_to(actor).values("pk")
-        ).order_by(Lower("name"))
+        Project.objects.filter(memberships__user=user).order_by(Lower("name"))
     )
-    if memberships.exclude(pk__in=[p.pk for p in projects]).exists():
-        return Withdrawn(projects, deleted=False, deactivated=False)
     referred_to = _referred_to(user)
     return Withdrawn(projects, deleted=not referred_to, deactivated=referred_to)
 
 
 @transaction.atomic
 def withdraw_invitation(user, *, actor):
-    """Removes the invited person from the projects the actor can open
+    """Removes the invited person from all their projects
     (``withdrawal()``); the account goes too, or is deactivated
     (``activation.deactivate()``, decided 2026-11-21: sessions, tokens and
     calendar links go). Staff for clients, admins

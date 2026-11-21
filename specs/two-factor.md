@@ -1,6 +1,6 @@
 # Passkeys as a way in, authenticator apps as an optional second factor
 
-**Status:** built (2026-11-21, CLI 0.36.0). Sign-in in general (codes,
+**Status:** built (2026-11-21, CLI 0.36.0; "Reset sign-in…" 2026-11-21, CLI 0.38.0). Sign-in in general (codes,
 passkeys, the sign-in page, sessions) is in `access.md`; single sign-on
 in `sso.md`.
 
@@ -34,16 +34,21 @@ below is what prevents that.
   change somebody else made with their session is noticed.
 - **No recovery codes:** losing the app means signing in with a passkey,
   or asking for a reset.
-- **Resetting someone's second factor:** "Reset two-factor…" with the
+- **Resetting someone's sign-in** (decided 2026-11-21: one recovery and
+  incident action, the consistent and secure one, for "lost my phone or
+  laptop" and "someone else may have had access"; it was "Reset
+  two-factor…", only for people with an app): "Reset sign-in…" with the
   split of `activation.md`: staff reset clients, admins also own staff
-  and partners; nobody resets themselves this way (they turn it off in
-  the settings). A reset deletes the person's authenticator app, their
-  passkeys and their API tokens (decided 2026-11-21: whoever took over
-  the account may have added them; it was "passkeys stay"), ends their
-  sessions and mails them ("Ada removed your authenticator app", naming
-  the passkeys and tokens), so a reset they didn't ask for is noticed.
-  They sign in by code then. Without an app nothing happens (no mail,
-  sessions stay). The audit log has it.
+  and partners; nobody resets themselves this way (they change their
+  own in the settings). Offered whenever the person has any of an
+  authenticator app, passkeys or API tokens; it deletes all of them,
+  ends their sessions and mails them what was removed and by whom ("Ada
+  reset your sign-in to Biwak", a line per kind: "your authenticator
+  app", "2 passkeys", "1 API token"), so a reset they didn't ask for is
+  noticed. They sign in by code or through their organization's identity
+  provider then and set up again; where a second factor is required,
+  they're led to the setup page first. With none of them nothing
+  happens (no mail, sessions stay). The audit log has it.
 - **Organizations requiring single sign-on:** no passkeys and no
   authenticator apps (the identity provider does that); existing ones are
   deleted when the organization switches to "required" (`sso.md`).
@@ -105,17 +110,20 @@ below is what prevents that.
   outbox (`accounts/security_change.txt`, `Kind.ACCOUNT`; not to
   inactive people or bounced addresses). allauth's other notifications
   stay off (`ACCOUNT_EMAIL_NOTIFICATIONS` unset).
-- **Resets:** `activation.can_reset_two_factor()` (`can_change()`, not
-  oneself) and `activation.reset_two_factor()` in
+- **Resets:** `activation.can_reset_sign_in()` (`can_change()`, not
+  oneself), `activation.sign_in()` (what the person has: `SignIn(app,
+  passkeys, api_tokens)`) and `activation.reset_sign_in()` in
   `biwak/organizations/activation.py`: deletes the app, the passkeys and
   the API tokens, ends the sessions
   (`UserSession.end()`, `live.check_access()`), mails through the outbox
-  (`accounts/two_factor_reset.txt`, `Kind.ACCOUNT`, from the actor, not
+  (`accounts/sign_in_reset.txt`, `Kind.ACCOUNT`, from the actor, not
   to inactive people or bounced addresses). The page
-  `/people/<id>/reset-two-factor/` (offered on the person's page and in
-  the palette only when the person has an app), `POST
-  /api/v1/people/{id}/reset-two-factor/` (`reset`: whether there was an
-  app), `biwak people reset-two-factor ID`. Migration `accounts.0017`
+  `/people/<id>/reset-sign-in/` (offered on the person's page and in the
+  palette only when there's something to remove), `POST
+  /api/v1/people/{id}/reset-sign-in/` (`reset`: whether there was
+  anything, `removed`: `{app, passkeys, api_tokens}`; the old
+  `…/reset-two-factor/` stays as an alias), `biwak people reset-sign-in
+  ID` (CLI 0.38.0; `reset-two-factor` stays as a hidden alias). Migration `accounts.0017`
   audits `mfa_authenticator` without `data` (the app's secret, the
   passkey's key) and `last_used_at`.
 - **SSO required:** `sso.enforce_required()` deletes every authenticator;

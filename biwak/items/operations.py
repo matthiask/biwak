@@ -489,16 +489,30 @@ def assignable_people(item, by=None):
     who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
     # Inactive people only while importing (they have no account yet)
     people = User.objects.all() if is_importing() else User.objects.active()
-    return (
-        people
-        .filter(who)
-        .distinct()
-        .annotate(
-            is_member=Exists(
-                Membership.objects.filter(project=project, user=OuterRef("pk"))
-            )
+    return _members_first(people.filter(who).distinct(), project)
+
+
+def _members_first(people, project):
+    return people.annotate(
+        is_member=Exists(
+            Membership.objects.filter(project=project, user=OuterRef("pk"))
         )
-        .order_by("-is_member", Lower("full_name"), "email")
+    ).order_by("-is_member", Lower("full_name"), "email")
+
+
+def assignable_or_assigned(item, by=None):
+    """``assignable_people()`` and those assigned already who aren't (a
+    client on a to-do made internal): the to-do's edit form offers them, so
+    saving never drops anybody silently"""
+    assignable = assignable_people(item, by)
+    assigned = item.todo.assignees.exclude(pk__in=assignable.values("pk"))
+    if not assigned.exists():
+        return assignable
+    return _members_first(
+        User.objects.filter(
+            Q(pk__in=assignable.values("pk")) | Q(pk__in=assigned.values("pk"))
+        ),
+        item.project,
     )
 
 
@@ -580,6 +594,23 @@ def unassign(item, users, *, actor):
         assignees=[u.pk for u in removed],
     )
     return removed
+
+
+def unassign_dropped(user, *, actor, project=None):
+    """Takes the person off the open to-dos (trashed ones too) of
+    ``project``, or of every project: removed from the project or
+    deactivated (decided 2026-11-21, specs/todos.md). Through ``unassign()``,
+    so the history shows it and nobody is told; completed to-dos are
+    history and keep them."""
+    items = Item.objects.filter(
+        kind=Kind.TODO,
+        todo__assignees=user,
+        todo__completed_at__isnull=True,
+    ).order_by("pk")
+    if project is not None:
+        items = items.filter(project=project)
+    for item in items.select_related("todo", "project"):
+        unassign(item, [user], actor=actor)
 
 
 _UNCHANGED = object()

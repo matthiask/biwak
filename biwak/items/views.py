@@ -507,6 +507,13 @@ def todo_toggle(request, pk):
 class TodoDetailForm(TodoFieldsForm):
     field_order = ["title", "notes", "due_on", "assignees"]
 
+    def __init__(self, *args, item, user, **kwargs):
+        super().__init__(*args, item=item, user=user, **kwargs)
+        # Who can't be assigned anymore but still is (a client on a to-do
+        # made internal) is offered too, so saving never drops anybody
+        # silently: they stay unless taken out
+        self.fields["assignees"].queryset = ops.assignable_or_assigned(item, user)
+
 
 class CommentForm(Form):
     content = forms.CharField(

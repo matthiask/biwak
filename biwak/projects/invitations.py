@@ -191,6 +191,23 @@ def invitation_resend(request, pk):
     return redirect(back(request, user))
 
 
+def withdrawn_projects(withdrawn, *, actor):
+    """The projects of ``withdrawn`` for the question: the names of those the
+    actor can open, the others counted, not named"""
+    projects, others = withdrawn.for_actor(actor)
+    names = [p.name for p in projects]
+    if others:
+        names.append(
+            ngettext(
+                "%(count)s project you can't open",
+                "%(count)s projects you can't open",
+                others,
+            )
+            % {"count": others}
+        )
+    return ", ".join(names) or _("no projects")
+
+
 def invitation_withdraw(request, pk):
     """The question, then withdrawing: a modal, also a page"""
     user = invitation_for(request, pk)
@@ -205,29 +222,23 @@ def invitation_withdraw(request, pk):
         if withdrawn.deleted:
             return redirect(reverse("people") + "?invited=1")
         return redirect(back(request, user))
-    names = ", ".join(project.name for project in withdrawn.projects)
+    names = withdrawn_projects(withdrawn, actor=request.user)
     if withdrawn.deleted:
         intro = _(
             "%(name)s is removed from %(projects)s and the account is deleted:"
             " nothing else refers to it."
         )
-    elif withdrawn.deactivated:
+    else:
         intro = _(
             "%(name)s is removed from %(projects)s and the account is"
             " deactivated: it stays, since something else refers to it"
             " (comments, assignments)."
         )
-    else:
-        intro = _(
-            "%(name)s is removed from %(projects)s only: the account stays"
-            " invited to other projects."
-        )
     return form_response(
         request,
         None,
         title=_("Withdraw the invitation?"),
-        intro=intro
-        % {"name": user.display_name, "projects": names or _("no projects")},
+        intro=intro % {"name": user.display_name, "projects": names},
         cancel_url=back(request, user),
         submit_label=_("Withdraw"),
         destructive=True,

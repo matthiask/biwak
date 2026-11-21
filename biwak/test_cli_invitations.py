@@ -75,9 +75,12 @@ class InvitationsCLITest(test_cli.CLITest):
                 self.project, email="dora@example.net", actor=self.ada
             )
         ops.create_list(project=self.project, title="Copy", creator=dora)
+        project("Secret", all_access=False, members=[dora])
         output = self.biwak("invitations", "withdraw", dora.pk).output
         self.assertIn(
-            f"removed from {self.project.pk}; the account is deactivated.", output
+            f"removed from {self.project.pk}, 1 other project; the account is"
+            " deactivated.",
+            output,
         )
         dora.refresh_from_db()
         self.assertFalse(dora.is_active)

@@ -444,12 +444,42 @@ class InvitationsVisibleTest(TestCase):
         self.dora.refresh_from_db()
         self.assertFalse(self.website.is_member(self.dora))
 
-    def test_withdraw_keeps_projects_the_actor_cant_open(self):
+    def test_withdraw_removes_from_projects_the_actor_cant_open(self):
+        """Decided 2026-11-21: withdrawing is withdrawing, also from projects
+        the withdrawing person can't open (counted, not named)"""
         secret = project("Secret", all_access=False, members=[self.dora])
         self.client.force_login(self.bob)
-        self.client.post(reverse("invitation_withdraw", args=[self.dora.pk]))
-        self.assertTrue(User.objects.filter(pk=self.dora.pk).exists())
-        self.assertTrue(secret.is_member(self.dora))
+        url = reverse("invitation_withdraw", args=[self.dora.pk])
+        response = self.client.get(url)
+        self.assertContains(
+            response,
+            "removed from Website, 1 project you can&#x27;t open and the account"
+            " is deleted",
+        )
+        self.assertNotContains(response, "Secret")
+        self.client.post(url)
+        self.assertFalse(User.objects.filter(pk=self.dora.pk).exists())
+        self.assertFalse(Membership.objects.filter(project=secret).exists())
+        self.assertTrue(
+            Event.objects.filter(
+                action=Action.REMOVED, project=secret, data__user=self.dora.pk
+            ).exists()
+        )
+
+    def test_withdraw_deactivates_in_projects_the_actor_cant_open(self):
+        secret = project("Secret", all_access=False, members=[self.dora])
+        todolist = ops.create_list(
+            project=secret, title="Launch", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
+        ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        self.client.force_login(self.bob)
+        url = reverse("invitation_withdraw", args=[self.dora.pk])
+        self.assertContains(self.client.get(url), "the account is deactivated")
+        self.client.post(url)
+        self.dora.refresh_from_db()
+        self.assertFalse(self.dora.is_active)
+        self.assertFalse(secret.is_member(self.dora))
         self.assertFalse(self.website.is_member(self.dora))
 
     def test_withdraw_staff_only_and_before_signing_in(self):
@@ -527,14 +557,6 @@ class InvitationsVisibleTest(TestCase):
         self.assertFalse(self.dora.is_active)
         self.assertFalse(APIToken.objects.filter(user=self.dora).exists())
         self.assertFalse(CalendarToken.objects.filter(user=self.dora).exists())
-
-    def test_still_in_other_projects_stays_active(self):
-        """The invitation stays for the projects the actor can't open"""
-        project("Secret", all_access=False, members=[self.dora])
-        self.client.force_login(self.bob)
-        self.client.post(reverse("invitation_withdraw", args=[self.dora.pk]))
-        self.dora.refresh_from_db()
-        self.assertTrue(self.dora.is_active)
 
 
 class APITest(TestCase):
@@ -676,7 +698,12 @@ class APITest(TestCase):
         response = self.call(self.root, "delete", f"invitations/{fay.pk}/")
         self.assertEqual(
             response.json(),
-            {"removed_from": [self.website.pk], "deleted": False, "deactivated": True},
+            {
+                "removed_from": [self.website.pk],
+                "removed_from_others": 0,
+                "deleted": False,
+                "deactivated": True,
+            },
         )
         fay.refresh_from_db()
         self.assertFalse(fay.is_active)
@@ -698,7 +725,12 @@ class APITest(TestCase):
         response = self.call(self.root, "delete", f"invitations/{dora.pk}/")
         self.assertEqual(
             response.json(),
-            {"removed_from": [self.website.pk], "deleted": True, "deactivated": False},
+            {
+                "removed_from": [self.website.pk],
+                "removed_from_others": 0,
+                "deleted": True,
+                "deactivated": False,
+            },
         )
         self.assertFalse(User.objects.filter(pk=dora.pk).exists())
         self.assertEqual(

@@ -112,10 +112,9 @@ which row is wrong.
 **Invitations:** until someone signs in for the first time, staff see
 "Invited, not signed in yet" next to them, with who invited them and
 when. "Resend" sends the invitation again, naming the projects they are
-in now. "Withdraw…" removes them from the projects you can open, and
+in now. "Withdraw…" removes them from all their projects and
 deletes the account if nothing else refers to it (no comments, no
-assignments, no other projects); if something does, the account stays
-but is deactivated. Staff resend and withdraw clients' invitations,
+assignments); if something does, the account stays but is deactivated. Staff resend and withdraw clients' invitations,
 admins everybody's. "Invited" on the People page lists
 everybody who hasn't signed in yet, the oldest invitation first.
 
@@ -125,8 +124,8 @@ page lists them; "Activate…" (there, or on the person's page) activates
 them, with a checkbox to send the invitation mail (not to addresses that
 bounced); nothing else changes. "Deactivate…" is for somebody who left:
 they are signed out everywhere, their API tokens and calendar link are
-deleted and they can't sign in, while what they did stays (their to-dos
-count as unassigned). Staff change clients, admins also staff and
+deleted and they can't sign in, while what they did stays. They're taken
+off their open to-dos (the to-dos' history says so). Staff change clients, admins also staff and
 partners; you can't deactivate yourself or the last active admin.
 `biwak people activate` and `deactivate` do the same for several people at
 once, all or nothing.

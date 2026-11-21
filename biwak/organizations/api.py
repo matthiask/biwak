@@ -292,20 +292,37 @@ def person_activate(request, person_id: int, data: ActivateIn | None = None):
     return activated(request, users, bool(data and data.mail))[0]
 
 
-class TwoFactorResetOut(AccessOut):
-    # Whether there was an authenticator app to remove (and the person was
-    # signed out and mailed)
+class SignInOut(Schema):
+    # The authenticator app
+    app: bool
+    passkeys: int
+    api_tokens: int
+
+
+class SignInResetOut(AccessOut):
+    # Whether there was anything to remove (and the person was signed out
+    # and mailed)
     reset: bool
+    # What was removed
+    removed: SignInOut
 
 
-@router.post("people/{person_id}/reset-two-factor/", response=TwoFactorResetOut)
-def person_reset_two_factor(request, person_id: int):
+@router.post("people/{person_id}/reset-sign-in/", response=SignInResetOut)
+@router.post(
+    "people/{person_id}/reset-two-factor/",
+    response=SignInResetOut,
+    url_name="person_reset_two_factor",
+    include_in_schema=False,
+)
+def person_reset_sign_in(request, person_id: int):
     """Removes the person's authenticator app, passkeys and API tokens, ends
-    their sessions and mails them (specs/two-factor.md); staff reset clients, admins everybody, not
-    oneself. Without an app nothing happens (``reset`` false)."""
+    their sessions and mails them what was removed (specs/two-factor.md);
+    staff reset clients, admins everybody, not oneself. With none of them
+    nothing happens (``reset`` false). ``reset-two-factor/`` is the old
+    URL, kept as an alias."""
     [user] = people_for(request, [person_id])
-    reset = changing(activation.reset_two_factor, user, actor=request.user)
-    return access_out(user) | {"reset": reset}
+    removed = changing(activation.reset_sign_in, user, actor=request.user)
+    return access_out(user) | {"reset": bool(removed), "removed": removed._asdict()}
 
 
 @router.post("people/{person_id}/deactivate/", response=AccessOut)

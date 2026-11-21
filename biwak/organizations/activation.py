@@ -4,14 +4,17 @@ the access of somebody who left. Own staff change clients, admins also own
 staff and partners (decided 2026-11-21); clients never. Both are all or
 nothing for several people."""
 
+from typing import NamedTuple
+
 from allauth.mfa.models import Authenticator
 from allauth.usersessions.models import UserSession
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.items import operations as item_ops
 from biwak.projects import operations as project_ops
 
 
@@ -117,6 +120,8 @@ def deactivate(users, *, actor):
             continue
         user.is_active = False
         user.save(update_fields=["is_active"])
+        # Off their open to-dos (decided 2026-11-21, specs/todos.md)
+        item_ops.unassign_dropped(user, actor=actor)
         done.append(user)
     end_access_now_and_after_commit([user.pk for user in done])
     return done
@@ -151,48 +156,88 @@ def end_access_now_and_after_commit(user_ids):
     transaction.on_commit(run)
 
 
-# Resetting someone's second factor (specs/two-factor.md): the same split
+# Resetting someone's sign-in (specs/two-factor.md): the same split
 
 
-def can_reset_two_factor(actor, user):
-    """``can_change()``, and not oneself: people turn their own app off in
-    the settings, with its code"""
+class SignIn(NamedTuple):
+    """What a person set up for signing in that a reset removes"""
+
+    app: bool  # An authenticator app
+    passkeys: int
+    api_tokens: int
+
+    def __bool__(self):
+        return self.app or bool(self.passkeys) or bool(self.api_tokens)
+
+
+def sign_in(user):
+    """``SignIn``: what the person has that a reset would remove"""
+    types = list(Authenticator.objects.filter(user=user).values_list("type", flat=True))
+    return SignIn(
+        app=Authenticator.Type.TOTP in types,
+        passkeys=types.count(Authenticator.Type.WEBAUTHN),
+        api_tokens=APIToken.objects.filter(user=user).count(),
+    )
+
+
+def can_reset_sign_in(actor, user):
+    """``can_change()``, and not oneself: people change their own in the
+    settings"""
     return can_change(actor, user) and actor.pk != user.pk
 
 
 @transaction.atomic
-def reset_two_factor(user, *, actor):
-    """Deletes the person's authenticator app, their passkeys and API tokens
-    (decided 2026-11-21: whoever took over the account may have added
-    them), ends their sessions and mails them (through the outbox, after
-    the commit) so a reset they didn't ask for is noticed; the audit log
-    has the deleted rows. ``PermissionError`` for people the actor may not
-    change, ``ActivationError`` for oneself. Returns whether there was an
-    app; without one nothing happens."""
+def reset_sign_in(user, *, actor):
+    """One recovery and incident action (decided 2026-11-21: "lost my phone
+    or laptop", "someone else may have had access"): deletes the person's
+    authenticator app, passkeys and API tokens, ends their sessions and
+    mails them what was removed and by whom (through the outbox, after the
+    commit); the audit log has the deleted rows. They sign in by code or
+    through their organization's identity provider then. ``PermissionError``
+    for people the actor may not change, ``ActivationError`` for oneself.
+    Returns the ``SignIn`` removed, false when there was none of them; then
+    nothing happens."""
     from biwak.collab import live
 
     user = User.objects.select_for_update().get(pk=user.pk)
     _check(actor, [user])
     if actor.pk == user.pk:
-        raise ActivationError(
-            _("Turn your own authenticator app off in your settings.")
-        )
-    if not Authenticator.objects.filter(
-        user=user, type=Authenticator.Type.TOTP
-    ).exists():
-        return False
+        raise ActivationError(_("Change your own sign-in in your settings."))
+    removed = sign_in(user)
+    if not removed:
+        return removed
     Authenticator.objects.filter(user=user).delete()
     APIToken.objects.filter(user=user).delete()
     for session in UserSession.objects.filter(user=user):
         session.end()
     live.check_access(user=user.pk)
     if user.is_active and user.mail_undeliverable_at is None:
-        send_two_factor_reset(user, actor=actor)
-    return True
+        send_sign_in_reset(user, removed, actor=actor)
+    return removed
 
 
-def send_two_factor_reset(user, *, actor):
-    """ "Ada removed your authenticator app", from the person who did"""
+def removed_list(removed):
+    """What ``reset_sign_in()`` removed, as words: ["your authenticator app",
+    "2 passkeys", …]"""
+    words = []
+    if removed.app:
+        words.append(_("your authenticator app"))
+    if removed.passkeys:
+        words.append(
+            ngettext("%(count)s passkey", "%(count)s passkeys", removed.passkeys)
+            % {"count": removed.passkeys}
+        )
+    if removed.api_tokens:
+        words.append(
+            ngettext("%(count)s API token", "%(count)s API tokens", removed.api_tokens)
+            % {"count": removed.api_tokens}
+        )
+    return words
+
+
+def send_sign_in_reset(user, removed, *, actor):
+    """ "Ada reset your sign-in to Biwak", from the person who did, naming
+    what was removed"""
     from django.core.mail import EmailMessage
     from django.template.loader import render_to_string
     from django.urls import reverse
@@ -205,12 +250,13 @@ def send_two_factor_reset(user, *, actor):
 
     with translation.override(user.language or translation.get_language()):
         message = EmailMessage(
-            _("%(actor)s removed your authenticator app") % {"actor": actor},
+            _("%(actor)s reset your sign-in to Biwak") % {"actor": actor},
             render_to_string(
-                "accounts/two_factor_reset.txt",
+                "accounts/sign_in_reset.txt",
                 {
                     "user": user,
                     "actor": actor,
+                    "removed": removed_list(removed),
                     "url": absolute(reverse("settings")) + "#sign-in",
                 },
             ),

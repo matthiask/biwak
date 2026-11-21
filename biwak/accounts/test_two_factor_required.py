@@ -193,7 +193,7 @@ class RequiredTest(SignInMixin, SocialTestCase):
 
     def test_after_a_reset(self):
         app(self.cleo)
-        activation.reset_two_factor(self.cleo, actor=self.ada)
+        activation.reset_sign_in(self.cleo, actor=self.ada)
         self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
         response = self.login_by_code(self.cleo)
         self.assertNotEqual(response["Location"], TWO_FACTOR)

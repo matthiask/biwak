@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _, gettext_lazy
 
-from biwak.accounts import operations as accounts_ops, two_factor
+from biwak.accounts import operations as accounts_ops
 from biwak.accounts.models import User, own_staff
 from biwak.activity.feed import people_visible_to
 from biwak.forms import Form, next_url
@@ -232,10 +232,11 @@ def person(request, pk):
     projects = Project.objects.accessible_to(viewer).filter(memberships__user=who)
     if who.pk != viewer.pk:
         projects = projects.filter(memberships__user=viewer)
-    # Reset two-factor… (specs/two-factor.md): only for somebody with an app
-    who.can_reset_two_factor = activation.can_reset_two_factor(
-        viewer, who
-    ) and two_factor.has_app(who)
+    # Reset sign-in… (specs/two-factor.md): only for somebody with an app,
+    # passkeys or API tokens
+    who.can_reset_sign_in = activation.can_reset_sign_in(viewer, who) and bool(
+        activation.sign_in(who)
+    )
     return render(
         request,
         "organizations/person.html",
@@ -363,40 +364,48 @@ def person_name(request, pk):
     )
 
 
-def person_reset_two_factor(request, pk):
-    """Reset two-factor…: the question, then deleting their authenticator
-    app, ending their sessions and mailing them (specs/two-factor.md)"""
+def person_reset_sign_in(request, pk):
+    """Reset sign-in…: the question, then deleting their authenticator app,
+    passkeys and API tokens, ending their sessions and mailing them
+    (specs/two-factor.md)"""
     who = person_to_change(request, pk)
-    if not two_factor.has_app(who):
+    removed = activation.sign_in(who)
+    if not removed:
         messages.info(
             request,
-            _("%(name)s has no authenticator app.") % {"name": who.display_name},
+            _("%(name)s has no authenticator app, passkeys or API tokens.")
+            % {"name": who.display_name},
         )
         return redirect(back(request, who))
     if request.method == "POST":
         try:
-            activation.reset_two_factor(who, actor=request.user)
+            removed = activation.reset_sign_in(who, actor=request.user)
         except activation.ActivationError as exc:
             messages.error(request, str(exc))
         else:
             messages.success(
                 request,
                 _(
-                    "The authenticator app, passkeys and API tokens of"
-                    " %(name)s have been removed; they got a mail about it."
+                    "Removed from %(name)s: %(removed)s. They have been signed"
+                    " out everywhere and got a mail about it."
                 )
-                % {"name": who.display_name},
+                % {
+                    "name": who.display_name,
+                    "removed": ", ".join(activation.removed_list(removed)),
+                },
             )
         return redirect(back(request, who))
     return form_response(
         request,
         None,
-        title=_("Reset two-factor for %(name)s?") % {"name": who.display_name},
+        title=_("Reset the sign-in of %(name)s?") % {"name": who.display_name},
         intro=_(
-            "Removes their authenticator app, their passkeys and their API"
-            " tokens, and signs them out everywhere. They sign in with a code"
-            " then and can set them up again. They get a mail about it."
-        ),
+            "Removes %(removed)s and signs them out everywhere, for a lost"
+            " phone or laptop or when someone else may have had access. They"
+            " sign in with a code or through their organization's sign-in"
+            " then and set things up again. They get a mail about it."
+        )
+        % {"removed": ", ".join(activation.removed_list(removed))},
         cancel_url=back(request, who),
         submit_label=_("Reset"),
         destructive=True,

@@ -410,14 +410,15 @@ class VisibilityTest(TestCase):
         self.assertFalse(limited.is_member(dan))
 
     def test_removing_an_assigned_member(self):
-        """As before: the membership goes, the assignment stays"""
+        """The membership goes, and the assignment of open to-dos too
+        (decided 2026-11-21, recorded as unassigned)"""
         dan = person("Dan")
         todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
         todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
         ops.assign(todo, [dan], actor=self.ada)
         self.assertTrue(project_ops.remove_member(self.project, dan, actor=self.ada))
         self.assertFalse(self.project.is_member(dan))
-        self.assertEqual(list(todo.todo.assignees.all()), [dan])
+        self.assertEqual(list(todo.todo.assignees.all()), [])
 
 
 class SubscriptionTest(TestCase):
