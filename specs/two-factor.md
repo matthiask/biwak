@@ -44,7 +44,19 @@ whom), `mail-sending.md` (the outbox).
   code page, our template), no longer behind "Other sign-in options";
   single sign-on a little out of the way, behind "Sign in through your
   organization" (decided 2026-11-21).
-- Not now: an organization requiring a second factor.
+- **An organization requiring a second factor** (decided 2026-11-21, a
+  fourth level of its sign-in setting beside `sso.md`'s, or a switch
+  next to "codes and passkeys" and "SSO allowed"; admins only, like the
+  sign-in setting):
+  - a passkey sign-in is enough (device plus PIN or fingerprint);
+  - a code alone isn't: the authenticator app's code follows;
+  - a sign-in through the organization's identity provider is enough
+    (its own second factor is its business);
+  - someone with neither a passkey nor an app who signs in by code is led
+    to a page making them add one (a passkey or an app) before anything
+    else; the same after a reset;
+  - API tokens stay as they are (created after such a sign-in);
+  - "SSO required" makes this moot (no codes at all).
 
 ## Done when
 
