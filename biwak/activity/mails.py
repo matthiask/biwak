@@ -382,6 +382,52 @@ def item_mail(user, item, notifications):
     )
 
 
+def _batch(notifications, user):
+    """Files uploaded together (``lantern.Batch``) for a mail: the line and
+    the files, each linked; None when none is left"""
+    from biwak.activity.lantern import Batch
+
+    if not notifications:
+        return None
+    batch = Batch(
+        sorted(notifications, key=lambda n: (n.created_at, n.pk), reverse=True)
+    )
+    return {
+        "batch": batch,
+        "title": batch.title,
+        "url": absolute(batch.url),
+        "project": batch.project,
+        "line": batch.line,
+        "files": [
+            {
+                "title": mentions.plain(item.title, item),
+                "url": absolute(item.get_absolute_url()),
+            }
+            for item in batch.files
+        ],
+        "is_client_visible": any(item.is_client_visible for item in batch.files),
+        "entries": [],
+    }
+
+
+def batch_mail(user, notifications):
+    """One mail about files uploaded together (specs/ui-round-7.md, part
+    4b): "Ada uploaded 5 files to Minutes", the files linked"""
+    context = _batch(notifications, user)
+    if context is None:
+        return None
+    context |= {"user": user, "settings_url": absolute(reverse("settings"))}
+    return build_mail(
+        user,
+        subject=_("[%(project)s] %(title)s") % context,
+        template="mails/batch",
+        context=context,
+        from_name=_("%(name)s (Biwak)") % {"name": notifications[0].event.actor},
+        # No item to unsubscribe from: the settings
+        headers=unsubscribe_headers(context["settings_url"], one_click=False),
+    )
+
+
 def digest_heading(notifications):
     """ "What happened on 19. November 2026", or the days it covers when
     there's more than one (after a downtime, or switching to digests)"""
@@ -398,21 +444,29 @@ def digest_heading(notifications):
 def digest_mail(user, notifications):
     """The notifications before today, grouped by project and item; None
     when there's nothing left to say"""
+
+    def key(notification):
+        batch = notification.event.data.get("batch") or ""
+        return (batch, 0 if batch else notification.event.item_id)
+
     notifications = sorted(
         notifications,
         key=lambda n: (
             str(n.event.item.project).lower(),
             n.event.item.project_id,
-            n.event.item_id,
+            *key(n),
         ),
     )
     projects = []
     for project, by_project in groupby(notifications, lambda n: n.event.item.project):
-        items = [
-            _item(item, user) | {"entries": entries}
-            for item, by_item in groupby(by_project, lambda n: n.event.item)
-            if (entries := _entries(list(by_item), user))
-        ]
+        items = []
+        for (batch, _item_id), by_key in groupby(by_project, key):
+            group = list(by_key)
+            if batch:
+                # Files uploaded together: one entry
+                items.append(_batch(group, user))
+            elif entries := _entries(group, user):
+                items.append(_item(group[0].event.item, user) | {"entries": entries})
         if items:
             projects.append({"project": project, "items": items})
     if not projects:
@@ -480,16 +534,18 @@ def send_mails(*, now=None):
     )
     count = 0
 
-    # Each change: per person and item, once the newest is 2 minutes old
+    # Each change: per person and item (or files uploaded together), once
+    # the newest is 2 minutes old
     groups = {}
-    for pk, user_id, item_id, created_at in unsent.filter(
+    for pk, user_id, item_id, batch, created_at in unsent.filter(
         user__mail_delivery=MailDelivery.EACH
-    ).values_list("pk", "user", "event__item", "created_at"):
-        group = groups.setdefault((user_id, item_id), {"pks": [], "newest": created_at})
+    ).values_list("pk", "user", "event__item", "event__data__batch", "created_at"):
+        key = (user_id, ("batch", batch) if batch else ("item", item_id))
+        group = groups.setdefault(key, {"pks": [], "newest": created_at})
         group["pks"].append(pk)
         group["newest"] = max(group["newest"], created_at)
     users = User.objects.in_bulk({user_id for user_id, _item_id in groups})
-    for (user_id, _item_id), group in groups.items():
+    for (user_id, (kind, _key)), group in groups.items():
         if group["newest"] > now - MERGE_AFTER:
             continue
         user = users[user_id]
@@ -497,8 +553,12 @@ def send_mails(*, now=None):
             user,
             group["pks"],
             now,
-            lambda notifications, user=user: item_mail(
-                user, notifications[0].event.item, notifications
+            (lambda notifications, user=user: batch_mail(user, notifications))
+            if kind == "batch"
+            else (
+                lambda notifications, user=user: item_mail(
+                    user, notifications[0].event.item, notifications
+                )
             ),
             MailKind.NOTIFICATION,
         )

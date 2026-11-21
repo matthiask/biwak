@@ -77,10 +77,13 @@ def create_item(
     return item
 
 
-def created(item, creator):
-    """The creator subscribed and the event recorded (returned)"""
+def created(item, creator, **data):
+    """The creator subscribed and the event recorded (returned), with
+    ``data`` (a ``batch`` of files uploaded together)"""
     subscribe(creator, item)
-    return record(actor=creator, action=Action.CREATED, project=item.project, item=item)
+    return record(
+        actor=creator, action=Action.CREATED, project=item.project, item=item, **data
+    )
 
 
 @transaction.atomic
@@ -279,14 +282,19 @@ def create_upload(
     description="",
     visible=False,
     whom="nobody",
+    title=None,
+    batch=None,
 ):
     """Uploads a file into the root or a folder; its title is the file's
-    name. Raises ``attachments.UploadError`` for files over the limit."""
+    name unless ``title`` is given. ``batch``: files uploaded together
+    share it on their events, which the lantern and the mails merge into
+    one entry (specs/ui-round-7.md, part 4b). Raises
+    ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
     item = create_item(
         project=project,
         kind=Kind.FILE,
-        title=attachments.clean_name(file.name),
+        title=title or attachments.clean_name(file.name),
         creator=creator,
         parent=parent,
         visible=visible and parent is None,
@@ -294,7 +302,7 @@ def create_upload(
     upload = Upload.objects.create(item=item, description=description)
     new_version(upload, file, uploaded_by=creator)
     attachments.link(item, description, actor=creator)
-    event = created(item, creator)
+    event = created(item, creator, **({"batch": batch} if batch else {}))
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item

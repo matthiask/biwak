@@ -1,11 +1,13 @@
 """Folders, docs and files (specs/files.md, stage 2)"""
 
+import uuid
+
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Case, IntegerField, Value, When
 from django.db.models.functions import Lower
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _, ngettext
@@ -430,51 +432,161 @@ class UploadForm(Form):
     file = forms.FileField(label=_("file"))
 
 
-class NewFileForm(NotifyForm, Form):
-    file = forms.FileField(label=_("file"))
-    description = forms.CharField(
-        label=_("description"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 4}),
-        help_text=_("Markdown"),
-    )
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Several files from one input; ``cleaned_data`` is a list"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        if isinstance(data, list | tuple):
+            if not data and self.required:
+                raise forms.ValidationError(self.error_messages["required"])
+            return [super(MultipleFileField, self).clean(one, initial) for one in data]
+        return [super().clean(data, initial)]
+
+
+class UploadSettingsForm(NotifyForm, Form):
+    """What all files of an upload share: whom to notify, and at the top
+    level whether clients see them (in a folder they follow the folder)"""
+
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
-    field_order = ["file", "description", "visible", "notify", "people"]
+    field_order = ["files", "visible", "notify", "people"]
+
+    def __init__(self, *args, folder=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if folder is not None:
+            del self.fields["visible"]
+
+
+class UploadFilesForm(UploadSettingsForm):
+    files = MultipleFileField(label=_("Files"))
+    # frontend/upload.js empties the input, keeping the files in its list
+    use_required_attribute = False
+
+
+class UploadOneForm(UploadSettingsForm):
+    """One file of an upload from the modal (frontend/upload.js): its
+    title (the name without its extension changed) and the batch"""
+
+    file = forms.FileField(label=_("file"))
+    title = forms.CharField(label=_("name"), max_length=500, required=False)
+    batch = forms.RegexField(regex=r"^[0-9a-f]{32}$")
+
+
+def keep_extension(title, name):
+    """The title given for a file, with the file name's extension kept"""
+    title = (title or "").strip()
+    if not title:
+        return name
+    _stem, dot, extension = name.rpartition(".")
+    if dot and _stem and not title.lower().endswith(f".{extension.lower()}"):
+        return f"{title}.{extension}"
+    return title
+
+
+def _uploads(request, project, folder, form, files, *, batch):
+    """Creates the files (one ``batch``), each with the operation of the
+    single upload; returns the items and the errors ``[(name, error)]``"""
+    data = form.cleaned_data
+    created, errors = [], []
+    for file, title in files:
+        try:
+            created.append(
+                ops.create_upload(
+                    project=project,
+                    file=file,
+                    title=keep_extension(title, attachments.clean_name(file.name)),
+                    creator=request.user,
+                    parent=folder,
+                    visible=data.get("visible", False),
+                    whom=form.whom(),
+                    batch=batch,
+                )
+            )
+        except attachments.UploadError as exc:
+            errors.append((file.name, str(exc)))
+    return created, errors
 
 
 def file_new(request, pk):
+    """ "Upload files": a modal on the folder's page (frontend/upload.js
+    sends the files one by one to ``file_upload``), also a page with a
+    file input taking several (specs/ui-round-7.md, part 4b)"""
     project = project_for(request, pk)
     folder = folder_param(request, project)
     if not ops.can_create(request.user, Kind.FILE):
         raise PermissionDenied
-    form = NewFileForm(request.POST or None, request.FILES or None, project=project)
-    form.mention_fields(project, "description", folder=folder)
+    form = UploadFilesForm(
+        request.POST or None, request.FILES or None, project=project, folder=folder
+    )
     if form.is_valid():
-        data = form.cleaned_data
-        try:
-            item = ops.create_upload(
-                project=project,
-                file=data["file"],
-                description=data["description"],
-                creator=request.user,
-                parent=folder,
-                visible=data["visible"],
-                whom=form.whom(),
-            )
-        except attachments.UploadError as exc:
-            form.add_error("file", str(exc))
-        else:
-            return redirect(item)
-    return render(
+        files = [(file, "") for file in form.cleaned_data["files"]]
+        created, errors = _uploads(
+            request, project, folder, form, files, batch=uuid.uuid4().hex
+        )
+        for name, error in errors:
+            messages.error(request, f"{name}: {error}")
+        if len(created) == 1 and not errors:
+            return redirect(created[0])
+        if created or not errors:
+            return redirect(library_url(project, folder))
+        form.add_error("files", [error for _name, error in errors])
+    return form_response(
         request,
-        "files/file_form.html",
-        {
-            "project": project,
+        form,
+        title=_("Upload files"),
+        item=folder,
+        project=project,
+        cancel_url=library_url(project, folder),
+        submit_label=_("Upload"),
+        multipart=True,
+        template="files/upload_form.html",
+        extra={
             "folder": folder,
-            "breadcrumbs": breadcrumbs(folder) + ([folder] if folder else []),
-            "form": form,
-            "item": None,
+            "batch": uuid.uuid4().hex,
+            "upload_url": reverse("file_upload", args=[project.pk])
+            + (f"?folder={folder.pk}" if folder else ""),
+            "done_url": library_url(project, folder),
+            "max_size": attachments.MAX_SIZE,
         },
+    )
+
+
+@require_POST
+def file_upload(request, pk):
+    """One file of the modal's upload, as JSON: 201 with the file, else
+    the errors (413 for a file over the limit)"""
+    project = project_for(request, pk)
+    folder = folder_param(request, project)
+    if not ops.can_create(request.user, Kind.FILE):
+        raise PermissionDenied
+    form = UploadOneForm(request.POST, request.FILES, project=project, folder=folder)
+    if not form.is_valid():
+        return JsonResponse(
+            {
+                "detail": " ".join(
+                    str(error) for errors in form.errors.values() for error in errors
+                )
+            },
+            status=400,
+        )
+    data = form.cleaned_data
+    created, errors = _uploads(
+        request, project, folder, form, [(data["file"], data["title"])],
+        batch=data["batch"],
+    )  # fmt: skip
+    if errors:
+        return JsonResponse({"detail": errors[0][1]}, status=413)
+    item = created[0]
+    return JsonResponse(
+        {"id": item.pk, "title": item.title, "url": item.get_absolute_url()},
+        status=201,
     )
 
 

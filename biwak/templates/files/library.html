@@ -25,7 +25,8 @@
         <a
           class="btn btn-sm btn-quiet"
           href="{% url 'file_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
-        >{% icon "upload" %}<span>{% translate "Upload a file" %}</span></a>
+          data-modal
+        >{% icon "upload" %}<span>{% translate "Upload files" %}</span></a>
       {% endif %}
       {% if folder %}
         {% include "items/_more.html" with item=folder %}

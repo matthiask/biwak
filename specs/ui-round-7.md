@@ -21,7 +21,26 @@ and `files_trash` taking `items`, `files.operations.move_items()` and
 reloads the page; selecting a folder and something in it trashes them
 together (one `trashed`, restored together). Keyboard: Ctrl+Space and
 Shift+arrows (`palette/_shortcuts.html`). The drag's image is the
-browser's (one tile) also when several move.
+browser's (one tile) also when several move. Part 4b
+(`library.file_new` "Upload files", a modal and a page with a multiple
+input, `files/upload_form.html`; `library.file_upload` takes one file of
+the modal's upload as JSON; `frontend/upload.js`, the window's drop zone
+in `frontend/files.js`): the batch is a random ID made with the form,
+stored as `batch` in the files' `created` events
+(`create_upload(batch=, title=)`); `lantern.entry_key()`/`Batch` merge a
+batch into one entry (its folder, "Ada uploaded 5 files to Minutes.",
+the files linked; the unread count counts it once; following it, "Mark
+as read" and "Mark as unread" act on all its files; no bookmark button,
+bookmarks are per item and their entries show items), `send_mails()`
+groups by batch (`mails/batch.*`, one mail; unsubscribing links to the
+settings, there's no one item) and the digest shows a batch as one entry.
+Decisions on the way: whom to notify keeps today's default, everybody
+(as "Upload a file", the spec's "as today"); the description field is
+gone from uploading (set on the file's page); the visibility switch only
+at the top level; after the upload the page reloads (dropped onto a
+folder tile: you stay where you are); without JavaScript the files go up
+at once, a too big one is a message and the others go up; a single file
+uploaded without JavaScript opens its page as before.
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

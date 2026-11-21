@@ -505,7 +505,7 @@ class StorageNameTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         response = self.client.post(
             f"/projects/{self.project.pk}/files/new/",
-            {"file": SimpleUploadedFile("@@", b"x"), "notify": "nobody"},
+            {"files": [SimpleUploadedFile("@@", b"x")], "notify": "nobody"},
         )
         self.assertEqual(response.status_code, 302)
 

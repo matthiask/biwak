@@ -349,7 +349,7 @@ class LibraryTest(Fixture, TestCase):
                 )
                 self.assertNotContains(response, "New folder")
                 self.assertNotContains(response, "New doc")
-                self.assertNotContains(response, "Upload a file")
+                self.assertNotContains(response, "Upload files")
         # A folder clients don't see: 404 first
         response = self.client.post(
             self.new_folder_url(self.private), {"title": "Client folder"}
@@ -360,7 +360,7 @@ class LibraryTest(Fixture, TestCase):
         response = self.client.get(self.root())
         self.assertContains(response, "New folder")
         self.assertContains(response, "New doc")
-        self.assertContains(response, "Upload a file")
+        self.assertContains(response, "Upload files")
 
     def test_the_switch(self):
         self.client.force_login(self.ada)
@@ -662,6 +662,9 @@ class MoveSeveralTest(Fixture, TestCase):
 
 
 class UploadPageTest(Fixture, TestCase):
+    """ "Upload files" (specs/ui-round-7.md, part 4b): a modal, also a page
+    taking several files at once"""
+
     def url(self, folder=None):
         url = reverse("file_new", args=[self.project.pk])
         return f"{url}?folder={folder.pk}" if folder else url
@@ -670,6 +673,24 @@ class UploadPageTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         form = self.client.get(self.url()).context["form"]
         self.assertEqual(form["notify"].value(), "everybody")
+
+    def test_a_modal_and_a_page(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url(self.private), headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Upload files")
+        self.assertContains(response, 'enctype="multipart/form-data"')
+        self.assertContains(response, "multiple")
+        self.assertContains(
+            response,
+            f'data-upload="{reverse("file_upload", args=[self.project.pk])}'
+            f'?folder={self.private.pk}"',
+        )
+        response = self.client.get(self.url())
+        assert_page(self, response, title="Upload files")
+        # The button on the folder's page opens it
+        response = self.client.get(self.private.get_absolute_url())
+        self.assertContains(response, "Upload files")
+        self.assertContains(response, "data-tiles-upload")
 
     def test_the_form_in_a_visible_folder_has_the_client_banner(self):
         self.client.force_login(self.ada)
@@ -684,24 +705,43 @@ class UploadPageTest(Fixture, TestCase):
     def send(self, user, folder=None, **data):
         self.client.force_login(user)
         data = {
-            "file": SimpleUploadedFile("new.txt", b"New"),
+            "files": [SimpleUploadedFile("new.txt", b"New")],
             "notify": "nobody",
         } | data
         return self.client.post(self.url(folder), data)
 
     def test_staff_uploads_into_the_root(self):
-        response = self.send(self.ada, description="About it")
+        response = self.send(self.ada)
         item = Item.objects.get(title="new.txt")
         self.assertRedirects(response, reverse("file", args=[item.pk]))
-        self.assertEqual(item.upload.description, "About it")
         self.assertFalse(item.is_client_visible)
         self.assertEqual(item.upload.versions.get().uploaded_by, self.ada)
+
+    def test_several_at_once_are_a_batch(self):
+        response = self.send(
+            self.ada,
+            folder=self.public,
+            files=[
+                SimpleUploadedFile("one.txt", b"1"),
+                SimpleUploadedFile("two.txt", b"2"),
+            ],
+        )
+        self.assertRedirects(response, self.public.get_absolute_url())
+        events = Event.objects.filter(
+            item__title__in=["one.txt", "two.txt"], action=Action.CREATED
+        )
+        self.assertEqual(len(events), 2)
+        self.assertEqual(len({e.data["batch"] for e in events}), 1)
+        self.assertTrue(all(e.item.is_client_visible for e in events))
 
     def test_staff_chooses_visibility_and_folder(self):
         self.send(self.ada, visible="on")
         self.assertTrue(Item.objects.get(title="new.txt").is_client_visible)
         self.send(
-            self.ada, folder=self.private, file=SimpleUploadedFile("in.txt", b"x")
+            self.ada,
+            folder=self.private,
+            files=[SimpleUploadedFile("in.txt", b"x")],
+            visible="on",
         )
         item = Item.objects.get(title="in.txt")
         self.assertEqual(item.parent, self.private)
@@ -712,6 +752,9 @@ class UploadPageTest(Fixture, TestCase):
         self.assertEqual(self.send(self.cleo).status_code, 403)
         self.assertEqual(self.get(self.cleo, self.url()).status_code, 403)
         self.assertFalse(Item.objects.filter(title="new.txt").exists())
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.public.get_absolute_url())
+        self.assertNotContains(response, "data-tiles-upload")
 
     def test_a_client_cannot_upload_into_an_internal_folder(self):
         response = self.send(self.cleo, folder=self.private)
@@ -722,7 +765,7 @@ class UploadPageTest(Fixture, TestCase):
     def test_whom_to_notify_is_required(self):
         self.client.force_login(self.ada)
         response = self.client.post(
-            self.url(), {"file": SimpleUploadedFile("new.txt", b"New")}
+            self.url(), {"files": [SimpleUploadedFile("new.txt", b"New")]}
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Item.objects.filter(title="new.txt").exists())
@@ -737,9 +780,25 @@ class UploadPageTest(Fixture, TestCase):
     def test_too_large(self):
         big = SimpleUploadedFile("big.bin", b"xxxx")
         with patch.object(attachments, "MAX_SIZE", 3):
-            response = self.send(self.ada, file=big)
+            response = self.send(self.ada, files=[big])
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Files can be at most")
+        self.assertFalse(Item.objects.filter(title="big.bin").exists())
+        # The others go up, the error is said
+        with patch.object(attachments, "MAX_SIZE", 3):
+            response = self.send(
+                self.ada,
+                files=[
+                    SimpleUploadedFile("big.bin", b"xxxx"),
+                    SimpleUploadedFile("ok.txt", b"ok"),
+                ],
+            )
+        self.assertRedirects(
+            response,
+            reverse("project_files", args=[self.project.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(Item.objects.filter(title="ok.txt").exists())
         self.assertFalse(Item.objects.filter(title="big.bin").exists())
 
     def test_no_file(self):
@@ -748,8 +807,61 @@ class UploadPageTest(Fixture, TestCase):
             self.client.post(self.url(), {"notify": "nobody"}).status_code, 200
         )
 
-    def test_the_switch(self):
+    def test_the_switch_only_at_the_top_level(self):
         self.assertContains(self.get(self.ada, self.url()), "Visible to clients")
+        self.assertNotContains(
+            self.get(self.ada, self.url(self.public)), "Visible to clients"
+        )
+
+
+class UploadOneTest(Fixture, TestCase):
+    """One file of the modal's upload (frontend/upload.js)"""
+
+    batch = "0123456789abcdef0123456789abcdef"
+
+    def send(self, user, folder=None, **data):
+        self.client.force_login(user)
+        url = reverse("file_upload", args=[self.project.pk])
+        if folder:
+            url += f"?folder={folder.pk}"
+        data = {
+            "file": SimpleUploadedFile("minutes.pdf", b"%PDF"),
+            "notify": "nobody",
+            "batch": self.batch,
+        } | data
+        return self.client.post(url, data)
+
+    def test_the_name_keeps_its_extension(self):
+        response = self.send(self.ada, folder=self.public, title="Kick-off")
+        self.assertEqual(response.status_code, 201)
+        item = Item.objects.get(pk=response.json()["id"])
+        self.assertEqual(item.title, "Kick-off.pdf")
+        self.assertEqual(response.json()["url"], item.get_absolute_url())
+        self.assertEqual(item.parent, self.public)
+        self.assertTrue(item.is_client_visible)
+        event = Event.objects.get(item=item, action=Action.CREATED)
+        self.assertEqual(event.data["batch"], self.batch)
+        response = self.send(self.ada, title="Agenda.PDF")
+        self.assertEqual(response.json()["title"], "Agenda.PDF")
+        response = self.send(self.ada, title=" ")
+        self.assertEqual(response.json()["title"], "minutes.pdf")
+
+    def test_errors(self):
+        self.assertEqual(self.send(self.ada, batch="nope").status_code, 400)
+        self.assertEqual(self.send(self.ada, notify="").status_code, 400)
+        with patch.object(attachments, "MAX_SIZE", 3):
+            response = self.send(self.ada)
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("Files can be at most", response.json()["detail"])
+        self.assertFalse(Item.objects.filter(title="minutes.pdf").exists())
+
+    def test_clients(self):
+        self.assertEqual(self.send(self.cleo, folder=self.public).status_code, 403)
+        self.assertEqual(self.send(self.cleo, folder=self.private).status_code, 404)
+        self.client.force_login(self.ada)
+        url = reverse("file_upload", args=[self.project.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertFalse(Item.objects.filter(title="minutes.pdf").exists())
 
 
 class FilePageTest(Fixture, TestCase):

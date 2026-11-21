@@ -161,7 +161,7 @@ def in_project(user, project, folder=None):
         )
     if ops.can_create(user, Kind.FILE):
         actions.append(
-            link(_("Upload a file"), reverse("file_new", args=[project.pk]) + where)
+            modal(_("Upload files"), reverse("file_new", args=[project.pk]) + where)
         )
     if not user.is_client:
         actions.append(

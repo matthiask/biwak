@@ -150,7 +150,7 @@ class ProjectActionsTest(ActionsBase):
             "New list",
             "New message",
             "New doc",
-            "Upload a file",
+            "Upload files",
             "New check-in",
             "The project's activity",
             "People",
@@ -181,7 +181,7 @@ class ProjectActionsTest(ActionsBase):
             "New list",
             "New folder",
             "New doc",
-            "Upload a file",
+            "Upload files",
             "New check-in",
             "Add a link",
         ]:

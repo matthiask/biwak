@@ -1,0 +1,4 @@
+{% load i18n %}{% autoescape off %}{% include "mails/_batch.txt" %}
+--
+{% translate "Your notification settings" %}: {{ settings_url }}
+{% endautoescape %}

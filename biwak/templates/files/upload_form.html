@@ -1,0 +1,35 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{% comment %}
+  "Upload files" (library.file_new, specs/ui-round-7.md, part 4b): the file
+  input taking several, then what all of them share. frontend/upload.js
+  lists the files in [data-upload-list] (each with its name and size,
+  removable, more dropped onto the form), sends them one by one to
+  `upload_url` with the `batch` and the fields, a progress row each, and
+  goes to `done_url` at the end. Without it the form posts the files at once.
+{% endcomment %}
+{% block fields %}
+  <div
+    data-upload="{{ upload_url }}"
+    data-upload-done="{{ done_url }}"
+    data-upload-max="{{ max_size }}"
+    data-upload-too-big="{% blocktranslate with size=max_size|filesizeformat %}Files can be at most {{ size }}.{% endblocktranslate %}"
+    data-upload-failed="{% translate 'The upload failed.' %}"
+    data-upload-none="{% translate 'Choose or drop the files to upload.' %}"
+    data-upload-remove="{% translate 'Remove' %}"
+    data-upload-name="{% translate 'Name' %}"
+  >
+    <input type="hidden" name="batch" value="{{ batch }}">
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.files.id_for_label }}">{% translate "Files" %}</label>
+      {{ form.files }}
+      <div class="form-text">{% translate "Or drop them here." %}</div>
+      {% for error in form.files.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <ul class="wb-upload-list" data-upload-list></ul>
+    <div class="alert alert-danger" data-upload-error hidden role="alert"></div>
+  </div>
+  {% for field in form.visible_fields %}
+    {% if field.name != "files" %}{{ field.as_field_group }}{% endif %}
+  {% endfor %}
+{% endblock fields %}

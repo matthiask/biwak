@@ -461,10 +461,16 @@ def unsubscribe(request, token):
 def _lantern_item(request):
     """The item posted (``item``), through ``item_for()``: 404 for what the
     person doesn't see"""
-    value = request.POST.get("item", "")
-    if not value.isdecimal():
+    return _lantern_items(request)[0]
+
+
+def _lantern_items(request):
+    """The items posted (``item``, several for a batch of files), through
+    ``item_for()``: 404 for what the person doesn't see"""
+    values = request.POST.getlist("item")
+    if not values or not all(value.isdecimal() for value in values):
         raise Http404
-    return item_for(request, int(value))
+    return [item_for(request, int(value)) for value in values]
 
 
 @never_cache
@@ -537,7 +543,11 @@ def lantern_open(request, pk):
     notification = lantern_module.notifications_for(request.user).filter(pk=pk).first()
     if notification is None:
         raise Http404
-    lantern_module.read(request.user, item=notification.event.item)
+    if batch := notification.event.data.get("batch"):
+        # The entry stands for the files uploaded together
+        lantern_module.read(request.user, items=lantern_module.batch_items(batch))
+    else:
+        lantern_module.read(request.user, item=notification.event.item)
     if request.headers.get("HX-Request"):
         return HttpResponse(status=204)
     return redirect(lantern_module.anchor(notification))
@@ -549,7 +559,7 @@ def lantern_read(request):
     if request.POST.get("all"):
         lantern_module.read(request.user)
     else:
-        lantern_module.read(request.user, item=_lantern_item(request))
+        lantern_module.read(request.user, items=_lantern_items(request))
     if request.headers.get("HX-Request"):
         return HttpResponse(status=204)
     return redirect(next_url(request) or "lantern")
@@ -557,8 +567,10 @@ def lantern_read(request):
 
 @require_POST
 def lantern_unread(request):
-    """Marks an item's newest notification unread again"""
-    lantern_module.unread(request.user, item=_lantern_item(request))
+    """Marks an item's newest notification unread again (each file's of a
+    batch)"""
+    for item in _lantern_items(request):
+        lantern_module.unread(request.user, item=item)
     if request.headers.get("HX-Request"):
         return HttpResponse(status=204)
     return redirect(next_url(request) or "lantern")

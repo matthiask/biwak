@@ -66,9 +66,20 @@ if (document.querySelector("[data-sortable-order]")) {
   import(/* webpackChunkName: "sortable-order" */ "./sortable-order.js")
 }
 
-// A folder's tiles: selecting, dragging, dropping (specs/ui-round-7.md)
+// A folder's tiles: selecting, dragging, dropping (specs/ui-round-7.md);
+// uploading several files, also on the form's own page
+// (the modal "Upload files" opens from the palette on other pages too)
 if (document.querySelector("[data-tiles]")) {
   import(/* webpackChunkName: "files" */ "./files.js")
+} else if (document.querySelector("[data-upload]")) {
+  import(/* webpackChunkName: "files" */ "./upload.js")
+} else {
+  document.addEventListener("htmx:after:process", function once(event) {
+    if (event.target.querySelector?.("[data-upload]")) {
+      document.removeEventListener("htmx:after:process", once)
+      import(/* webpackChunkName: "files" */ "./upload.js")
+    }
+  })
 }
 
 // Docs edited live (specs/collaboration.md), the doc's editor page only

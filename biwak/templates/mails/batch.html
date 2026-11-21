@@ -1,0 +1,14 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #222">
+    {% include "mails/_batch.html" %}
+    <p style="color: #666; font-size: 13px; margin-top: 24px">
+      <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>
+    </p>
+  </body>
+</html>

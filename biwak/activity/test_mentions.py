@@ -316,7 +316,6 @@ class NewItemMentionsTest(TestCase):
         for url in [
             f"/projects/{self.project.pk}/messages/new/",
             f"/projects/{self.project.pk}/docs/new/",
-            f"/projects/{self.project.pk}/files/new/",
         ]:
             with self.subTest(url=url):
                 response = self.client.get(url)

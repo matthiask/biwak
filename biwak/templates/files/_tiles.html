@@ -15,6 +15,7 @@
   data-tiles
   data-tiles-move="{% url 'files_move' project.pk %}"
   data-tiles-folder="{{ folder.pk|default_if_none:'' }}"
+  {% if can_create %}data-tiles-upload="{% url 'file_new' project.pk %}"{% endif %}
 >
   {% if folder %}
     <li>
@@ -62,6 +63,12 @@
   {% endfor %}
 </ul>
 {% if not rows %}<p class="text-body-secondary">{% translate "Nothing here yet." %}</p>{% endif %}
+{% if can_create %}
+  <div class="wb-drop-hint" aria-hidden="true">
+    {% icon "upload" %}
+    <span>{% translate "Drop the files to upload them here, or onto a folder." %}</span>
+  </div>
+{% endif %}
 {% comment %}
   What to do with the selection; frontend/files.js shows it, counts and
   adds the selected IDs (`items`) to the links.

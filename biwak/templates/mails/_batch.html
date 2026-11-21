@@ -1,0 +1,12 @@
+{% load i18n %}
+{% comment %}Files uploaded together (activity.mails._batch): the line, the files, the folder.{% endcomment %}
+{% if is_client_visible %}
+  <p style="background: #ffe14d; color: #222; padding: 6px 10px; font-weight: 600">
+    {% translate "Clients can see this." %}
+  </p>
+{% endif %}
+<p style="margin: 12px 0 4px"><strong>{{ line }}</strong></p>
+<ul style="margin: 4px 0 12px">
+  {% for file in files %}<li><a href="{{ file.url }}">{{ file.title }}</a></li>{% endfor %}
+</ul>
+<p style="color: #666; font-size: 13px"><a href="{{ url }}">{{ title }}</a></p>

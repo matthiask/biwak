@@ -13,11 +13,11 @@ its mail goes, a notification isn't mailed (``mails.send_mails()``).
 from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, ngettext
 
 from biwak import cursors
 from biwak.activity import feed
-from biwak.activity.models import Action, Notification
+from biwak.activity.models import Action, Event, Notification
 from biwak.items.models import Item
 from biwak.live import announce as live
 
@@ -43,7 +43,10 @@ def notifications_for(user, *, unread=None, mentions=False):
     if mentions:
         notifications = notifications.filter(event__data__mentioned__contains=[user.pk])
     return notifications.select_related(
-        "event__item__project", "event__item__answer", "event__actor"
+        "event__item__project",
+        "event__item__answer",
+        "event__item__parent",
+        "event__actor",
     ).order_by("-created_at", "-pk")
 
 
@@ -55,16 +58,36 @@ def wanted(notifications, user):
     return _deliverable(notifications, user)
 
 
+def entry_key(notification):
+    """What the lantern's entry of a notification is: its item, or the
+    batch of files uploaded together (specs/ui-round-7.md, part 4b)"""
+    event = notification.event
+    if batch := event.data.get("batch"):
+        return ("batch", batch)
+    return ("item", event.item_id)
+
+
+def batch_items(batch):
+    """The IDs of the files uploaded together in ``batch``"""
+    return list(
+        Event.objects.filter(action=Action.CREATED, data__batch=batch).values_list(
+            "item", flat=True
+        )
+    )
+
+
 def unread_counts(user):
-    """``(notifications, items)``: how many unread notifications the person
-    has, and about how many items (the menu groups by item)"""
+    """``(notifications, entries)``: how many unread notifications the
+    person has, and about how many items (the menu groups by item, and a
+    batch of files is one entry)"""
     unread = wanted(list(notifications_for(user, unread=True)), user)
-    return len(unread), len({n.event.item_id for n in unread})
+    return len(unread), len({entry_key(n) for n in unread})
 
 
 def unread_count(user):
-    """The number of entries the menu shows as unread: the items with unread
-    notifications, not the notifications (decided 2026-11-21)"""
+    """The number of entries the menu shows as unread: the items (and
+    batches) with unread notifications, not the notifications (decided
+    2026-11-21)"""
     return unread_counts(user)[1]
 
 
@@ -117,16 +140,61 @@ def unread_by_item(user, item_ids):
     return result
 
 
-def by_item(notifications):
+class Batch:
+    """Files uploaded together, one entry of the lantern in place of an
+    item's: "Ada uploaded 5 files to Minutes", each file linked"""
+
+    is_batch = True
+    kind_icon = "upload"
+
+    def __init__(self, entries):
+        newest = entries[0]
+        files = {}
+        for notification in reversed(entries):
+            item = notification.event.item
+            item.read_url = getattr(notification, "read_url", "")
+            files.setdefault(item.pk, item)
+        self.files = list(files.values())
+        # What frontend/lantern.js tells the entries apart by
+        self.pk = f"{self.files[0].pk}-batch"
+        folder = self.files[0].parent
+        self.project = self.files[0].project
+        self.title = folder.title if folder else _("Docs and files")
+        self.url = (
+            folder.get_absolute_url()
+            if folder
+            else reverse("project_files", args=[self.project.pk])
+        )
+        self.has_unread = any(n.read_at is None for n in entries)
+        self.line = batch_line(newest.event.actor, len(self.files), self.title)
+
+
+def batch_line(actor, count, where):
+    return ngettext(
+        "%(actor)s uploaded a file to %(where)s.",
+        "%(actor)s uploaded %(count)s files to %(where)s.",
+        count,
+    ) % {"actor": actor, "count": count, "where": where}
+
+
+def by_item(notifications, *, batches=True):
     """``[(item, [notification, …])]``, in the order of each item's newest
-    notification (the notifications are newest first)"""
+    notification (the notifications are newest first); files uploaded
+    together are one ``(Batch, [newest notification])`` (unless not
+    ``batches``: the bookmarked items are items)"""
     from biwak.search.views import KIND_ICONS
 
     groups = {}
     for notification in notifications:
-        groups.setdefault(notification.event.item_id, []).append(notification)
+        key = (
+            entry_key(notification) if batches else ("item", notification.event.item_id)
+        )
+        groups.setdefault(key, []).append(notification)
     result = []
-    for entries in groups.values():
+    for (kind, _key), entries in groups.items():
+        if kind == "batch":
+            result.append((Batch(entries), entries[:1]))
+            continue
         item = entries[0].event.item
         item.kind_icon = KIND_ICONS[item.kind]
         item.has_unread = any(n.read_at is None for n in entries)
@@ -162,7 +230,7 @@ def bookmarked(user, items=None):
         user,
     )
     latest.sort(key=lambda n: (n.created_at, n.pk), reverse=True)
-    groups = by_item(prepare(latest, user))
+    groups = by_item(prepare(latest, user), batches=False)
     for item, _entries in groups:
         item.is_bookmarked = True
     return groups

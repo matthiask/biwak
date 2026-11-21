@@ -24,8 +24,8 @@ folder. Its contents show as tiles: folders first, then docs and files,
 in the folder's order; images show a preview, files their size, docs with a task list
 how many are done. Inside a folder the first tile, "..", leads to the
 folder above (or the project's top level); the path above the title
-does too. Staff create what is here: "New folder", "New doc", "Upload a
-file". A folder's "More" menu has "Rename…"; move things between
+does too. Staff create what is here: "New folder", "New doc", "Upload
+files". A folder's "More" menu has "Rename…"; move things between
 folders with "Move to..." in their "More" menu.
 
 **Moving:** drag a tile onto a folder, onto "..", or onto a folder in
@@ -65,6 +65,17 @@ doc" asks for the title and starts the text with it as a heading.
   it until it's made editable again.
 
 ### Files
+
+**Uploading:** "Upload files" opens a list for the files you choose, or
+drop files from your computer anywhere onto a folder's page (onto a
+folder's tile, "..", or a folder in the path above for that folder).
+Each file shows its name, which you can change (the extension stays),
+and its size; remove one with ×, or drop more. Below, once for all of
+them: "Visible to clients" (at the top level; in a folder they follow
+the folder) and whom to notify. "Upload" sends them one after another;
+a file that can't be uploaded (too big) says so on its row while the
+others go on. The people notified get one notification and one mail for
+all of them ("Ada uploaded 5 files to Minutes"), not one per file.
 
 A file's page shows a preview for images and PDFs, its description,
 comments and "Download". "Replace" (or "Upload a new version") puts a

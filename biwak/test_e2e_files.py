@@ -7,6 +7,7 @@ import re
 from django.core.files.base import ContentFile
 from django.urls import reverse
 
+from biwak.activity.models import Event
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.test_e2e import E2ETestCase, expect
@@ -158,3 +159,116 @@ class TilesTest(E2ETestCase):
         expect(self.tile(page, self.inner)).to_be_visible()
         self.assertEqual(self.parent_of(self.inner), self.specs)
         self.assertEqual(self.errors, [])
+
+
+DROP = """([selector, names]) => {
+    const transfer = new DataTransfer()
+    for (const name of names)
+        transfer.items.add(new File(["Plan"], name, { type: "text/plain" }))
+    const target = document.querySelector(selector)
+    for (const type of ["dragenter", "dragover", "drop"])
+        target.dispatchEvent(new DragEvent(type, {
+            bubbles: true, cancelable: true, dataTransfer: transfer,
+        }))
+}"""
+
+
+class UploadTest(E2ETestCase):
+    """Uploading several files (specs/ui-round-7.md, part 4b)"""
+
+    def setUp(self):
+        super().setUp()
+        self.minutes = ops.create_folder(
+            project=self.project, title="Minutes", creator=self.ada, visible=True
+        )
+        self.inner = ops.create_folder(
+            project=self.project, title="Inner", creator=self.ada, parent=self.minutes
+        )
+
+    def files_in(self, folder):
+        return sorted(
+            Item.objects.filter(parent=folder, kind="file").values_list(
+                "title", flat=True
+            )
+        )
+
+    def test_dropping_files_into_the_folder(self):
+        page = self.page
+        self.goto(page, self.minutes)
+        page.wait_for_load_state("networkidle")
+        page.evaluate(DROP, [".wb-tiles", ["one.txt", "two.txt"]])
+        dialog = page.get_by_role("dialog", name="Upload files")
+        expect(dialog).to_be_visible()
+        rows = dialog.locator(".wb-upload-row")
+        expect(rows).to_have_count(2)
+        # More dropped onto the modal, one removed, one renamed
+        page.evaluate(DROP, ["#modal form", ["three.txt"]])
+        expect(rows).to_have_count(3)
+        rows.nth(1).get_by_role("button", name="Remove: two.txt").click()
+        expect(rows).to_have_count(2)
+        rows.nth(0).get_by_label("Name").fill("Kick-off")
+        dialog.get_by_label("Nobody").check()
+        dialog.get_by_role("button", name="Upload").click()
+        expect(page.locator(".wb-tile-file")).to_have_count(2)
+        self.assertEqual(self.files_in(self.minutes), ["Kick-off.txt", "three.txt"])
+        events = {
+            e.data["batch"]
+            for e in Event.objects.filter(
+                item__parent=self.minutes, item__kind="file", action="created"
+            )
+        }
+        self.assertEqual(len(events), 1)
+        self.assertEqual(self.errors, [])
+
+    def test_dropping_onto_a_folder_tile_and_the_button(self):
+        page = self.page
+        self.goto(page, self.minutes)
+        page.wait_for_load_state("networkidle")
+        page.evaluate(DROP, [f'[data-tile="{self.inner.pk}"]', ["deep.txt"]])
+        dialog = page.get_by_role("dialog", name="Upload files")
+        expect(dialog.locator(".wb-upload-row")).to_have_count(1)
+        dialog.get_by_label("Nobody").check()
+        dialog.get_by_role("button", name="Upload").click()
+        expect(dialog).to_be_hidden()
+        page.wait_for_load_state("networkidle")
+        self.assertEqual(self.files_in(self.inner), ["deep.txt"])
+        self.assertTrue(page.url.endswith(self.minutes.get_absolute_url()))
+
+        # The button: a file input taking several
+        page.get_by_role("link", name="Upload files").click()
+        dialog = page.get_by_role("dialog", name="Upload files")
+        dialog.get_by_label("Files").set_input_files([
+            {"name": "a.txt", "mimeType": "text/plain", "buffer": b"A"},
+            {"name": "b.txt", "mimeType": "text/plain", "buffer": b"B"},
+        ])
+        expect(dialog.locator(".wb-upload-row")).to_have_count(2)
+        dialog.get_by_label("Nobody").check()
+        dialog.get_by_role("button", name="Upload").click()
+        expect(page.locator(".wb-tile-file")).to_have_count(2)
+        self.assertEqual(self.files_in(self.minutes), ["a.txt", "b.txt"])
+        self.assertEqual(self.errors, [])
+
+    def test_an_error_stays_on_its_row(self):
+        page = self.page
+        self.goto(page, self.minutes)
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("link", name="Upload files").click()
+        dialog = page.get_by_role("dialog", name="Upload files")
+        # Over the limit the page says (a smaller one for the test)
+        dialog.locator("[data-upload]").evaluate(
+            "(el) => { el.dataset.uploadMax = '3' }"
+        )
+        dialog.get_by_label("Files").set_input_files([
+            {"name": "ok.txt", "mimeType": "text/plain", "buffer": b"OK"},
+            {"name": "big.txt", "mimeType": "text/plain", "buffer": b"Too big"},
+        ])
+        dialog.get_by_label("Nobody").check()
+        dialog.get_by_role("button", name="Upload").click()
+        expect(dialog.locator(".wb-upload-row.is-failed")).to_contain_text(
+            "Files can be at most"
+        )
+        expect(dialog.locator(".wb-upload-row.is-done")).to_have_count(1)
+        self.assertEqual(self.files_in(self.minutes), ["ok.txt"])
+        # Closing shows what went up
+        dialog.get_by_role("button", name="Cancel").click()
+        expect(page.locator(".wb-tile-file")).to_have_count(1)

@@ -50,6 +50,7 @@ urlpatterns = [
     ),
     # Files
     path("projects/<int:pk>/files/new/", library.file_new, name="file_new"),
+    path("projects/<int:pk>/files/upload/", library.file_upload, name="file_upload"),
     path("files/<int:pk>/", library.file, name="file"),
     path("files/<int:pk>/edit/", library.file_edit, name="file_edit"),
     path("files/<int:pk>/replace/", library.file_replace, name="file_replace"),
