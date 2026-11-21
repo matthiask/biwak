@@ -1222,3 +1222,71 @@ class PhoneTest(E2ETestCase):
         box = reactions.locator(".wb-reaction-picker").bounding_box()
         self.assertGreaterEqual(box["x"], 0)
         self.assertLessEqual(box["x"] + box["width"], 360)
+
+
+class MenuPlacementTest(E2ETestCase):
+    """Menus stay on the screen however far from its edge the button is"""
+
+    def settle(self, page):
+        # The toggle event comes after the click
+        page.evaluate(
+            "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
+        )
+
+    def assertMenuFits(self, page, menu):
+        menu.locator("summary").click()
+        popup = menu.locator(".dropdown-menu")
+        expect(popup).to_be_visible()
+        self.settle(page)
+        box = popup.bounding_box()
+        width = page.evaluate("document.documentElement.clientWidth")
+        self.assertGreaterEqual(box["x"], 0, box)
+        self.assertLessEqual(box["x"] + box["width"], width, box)
+
+    def check(self, width):
+        self.page = self.login(self.ada, viewport={"width": width, "height": 740})
+        self.make_list(groups=["Phase one"], todos=[("Plan", "Phase one")])
+        self.goto(self.page, self.project)
+        menus = self.page.locator("details.wb-menu")
+        if width == 360:
+            # The button wrapped onto a line of its own, at the left
+            more = menus.filter(has_text="More").locator("summary")
+            self.assertLess(more.bounding_box()["x"], 40)
+        self.assertMenuFits(self.page, menus.filter(has_text="More"))
+        self.assertMenuFits(self.page, menus.filter(has_text="Ada"))
+        self.goto(self.page, Item.objects.get(title="Launch"))
+        self.assertMenuFits(
+            self.page, self.page.locator("details.wb-menu:has(.wb-group-menu)")
+        )
+
+    def test_menus_fit_on_a_phone(self):
+        self.check(360)
+
+    def test_menus_fit_on_a_narrow_phone(self):
+        self.check(280)
+
+    def test_menus_fit_on_a_desktop(self):
+        self.check(1280)
+
+    def test_menu_follows_a_resize(self):
+        self.page = self.login(self.ada, viewport={"width": 1280, "height": 740})
+        self.goto(self.page, self.project)
+        menu = self.page.locator("details.wb-menu").filter(has_text="More")
+        self.assertMenuFits(self.page, menu)
+        self.page.set_viewport_size({"width": 360, "height": 740})
+        self.page.wait_for_function(
+            """() => document.querySelector(
+                "details.wb-menu[open] > .dropdown-menu"
+            ).getBoundingClientRect().left >= 0"""
+        )
+
+    def test_menu_by_keyboard(self):
+        self.page = self.login(self.ada, viewport={"width": 360, "height": 740})
+        self.goto(self.page, self.project)
+        menu = self.page.locator("details.wb-menu").filter(has_text="More")
+        menu.locator("summary").focus()
+        self.page.keyboard.press("Enter")
+        popup = menu.locator(".dropdown-menu")
+        expect(popup).to_be_visible()
+        self.settle(self.page)
+        self.assertGreaterEqual(popup.bounding_box()["x"], 0)
