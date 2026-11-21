@@ -13,8 +13,9 @@ them when a decision changes (dated: "decided 2026-11-20").
 - `fl dev` runs Django and the rspack dev server; `uv run ./manage.py
   check_visibility` compares the stored visibility with the tree.
   `runserver` is Daphne's (`DEBUG`), serving the websockets of docs
-  edited live too (`asgi.py`, `biwak/collab/`); the rspack dev server
-  passes `/ws/docs/` on. Deployed, the websockets need an ASGI process
+  edited live and of live updates too (`asgi.py`, `biwak/collab/`,
+  `biwak/live/`); the rspack dev server passes `/ws/docs/` and
+  `/ws/live/` on. Deployed, the websockets need an ASGI process
   and Redis (`REDIS_URL`), see `specs/collaboration.md`.
 - `./manage.py fairy_tasks` runs the daily jobs (trash older than 30
   days, expired API tokens, `check_visibility` mailing admins); new daily

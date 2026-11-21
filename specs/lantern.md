@@ -6,7 +6,13 @@ product), and pages
 that update while they're open: comments, reactions and changes by others
 appear without reloading.
 
-**Status:** open.
+**Status:** built (2026-11-21, branch `collaboration`, not merged): the
+lantern (`biwak/activity/lantern.py`, the menu, `/lantern/`, reading,
+pinning, mail delivery "none", the favicon dot, `GET /api/v1/lantern/`,
+`POST /api/v1/lantern/read/`, `biwak lantern`, CLI 0.21.0) and live
+updates (`biwak/live/`, `frontend/live.js`, `frontend/lantern.js`). How
+it was built and what was decided on the way: "Built" below; open
+questions at the end.
 
 **Agent:** a strong model: live updates send changes to many people at
 once, and each must only ever get what they may see.
@@ -151,7 +157,76 @@ setup as `collaboration.md`).
   - a client's open page not receiving an internal change;
   - reconnecting after being offline.
 
-## Questions before building
+## Built (2026-11-21)
+
+- **Model:** `Notification.read_at`; `MailDelivery.NONE` ("No mails");
+  `User.lantern_in_favicon`. `notify()` moving an unsent notification
+  forward (a merged edit) makes it unread again: the change is new.
+- **Mails:** `send_mails` and `_claim()` skip read notifications; they're
+  kept (sent_at stays empty, they never go out later unless marked unread
+  again). A mail or digest with nothing left isn't sent.
+- **Listing** (`lantern.notifications_for()`, `wanted()`): items the
+  person sees now (`visible_to()`), for clients only events of the time
+  clients saw the item, then `_deliverable()`'s level check. Pages of the
+  page and the API may hold fewer entries than asked for (level
+  "nothing" is checked after loading the page).
+- **Reading:** the item pages (to-do, list and board, message, doc, the
+  doc's editor, file, question with the answers it shows) mark the
+  item's notifications read when opened (`lantern.opened()`), not when
+  fetched for a live update (`X-Biwak-Live`). "Mark as unread" brings the
+  item's newest notification back.
+- **Pinning:** pinning bookmarks the item (`lantern.pin()`), unpinning
+  removes the bookmark; a bookmark made on the item's page pins it too.
+  Pinned items are in "Pinned" at the top (latest notification, read or
+  not) and not in the other sections.
+- **The menu:** `frontend/lantern.js` fetches the count
+  (`/lantern/count/`) on every page and when told, the menu
+  (`/lantern/menu/`) when opened; its buttons post without leaving the
+  page. Without JavaScript the menu has the link to `/lantern/`.
+- **The websocket** (`biwak/live/consumers.py`, `/ws/live/?item=ID`, one
+  per tab): joining checks `visible_to()` (4404 like the pages' 404, 4401
+  without a login); the item's group is the staff one or the clients' one
+  (`announce.item_group()`), and an announcement goes to the clients'
+  group only if it happened while clients saw the item and they see the
+  watched item. It joins the live editor's project and person groups and
+  checks again on their `access.check` (and every 60 seconds); made a
+  client meanwhile, it switches groups. Messages carry IDs and the kind
+  of change only, never text or names; the actor's own pages aren't
+  told.
+- **Announcements** (`biwak/live/announce.py`): every event of an item
+  (`record()`) tells the pages of the item and its parent; reordering,
+  the lists a to-do left, groups added, renamed, moved or removed, and
+  reactions removed are told explicitly. After the commit only.
+- **The pages** (`frontend/live.js`): the page fetches itself through
+  its view and takes over its regions: `[data-live]` replaced, children of
+  `[data-live-list]` added, removed, reordered. A region with focus in a
+  field, a changed field, an open `<details>` or an open peek waits with
+  "Changed meanwhile: shown once you save or close this." (no name: names
+  don't go through the websocket) and takes over once left. A page whose
+  item is gone says "This isn’t here anymore: it was trashed, or you
+  can’t see it anymore." with a link back. After reconnecting it fetches
+  once; several changes within 300 ms are fetched once.
+- **The doc's editor page** has no `/ws/live/` (one socket per tab: the
+  editor's); its lantern count is fetched when it loads.
+
+## Questions (built the way described meanwhile)
+
+- The wording of "No mails", "Pin to the top", "Changed meanwhile: …",
+  "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
+  "You were mentioned.").
+- Opening an item reads its notifications; should a live update shown on
+  an open page read them too (now: no, a background tab would swallow
+  mails)?
+- "Mark as unread" makes an unsent notification mailable again (each
+  change: at the next run; digest: in the next one). Wanted?
+- Switching delivery from "none" to "each" or "digest" mails the unread
+  notifications collected meanwhile, all at once.
+- The lantern's pins and pinned messages (staff pin a message for
+  everybody) both say "pin"; another word for one of them?
+- The menu shows at most 100 unread notifications (the page has all):
+  a value the spec didn't fix.
+
+## Questions before building (answered by building)
 
 - How long read notifications stay in the lantern list (proposed: they're
   kept, as decided for the records; the menu shows the latest 30, the
