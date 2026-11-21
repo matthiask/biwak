@@ -91,15 +91,8 @@ one form per section, each posting to its own URL; the old
 - **Notifications** (`notifications.md`).
 - **Keyboard:** `User.keyboard_shortcuts` and "All shortcuts" linking
   the help.
-- **Sign-in** (decided 2026-11-21, `biwak/accounts/signin.py`):
-  passkeys (name, added, last used, Remove, "Add a passkey" through
-  allauth's flow); sessions (browser and device from the User-Agent,
-  IP, last seen with `USERSESSIONS_TRACK_ACTIVITY`, this one first):
-  "Sign out here" on this one, "Sign out" on each other
-  (`session_end`, our view, since allauth only ends all others), "Sign
-  out everywhere else"; a link to the API tokens page. allauth's
-  `/accounts/2fa/…` and `/accounts/sessions/` lead here.
-  "Sign out" in the "Me" menu signs out of this browser.
+- **Sign-in** (decided 2026-11-21): passkeys, the authenticator app,
+  connected accounts, sessions and the API tokens (`access.md`, "Sign-in").
 
 The API's `GET` and `PUT /api/v1/me/` read and change
 `keyboard_shortcuts`, `theme` and `accent`.

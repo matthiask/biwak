@@ -144,7 +144,7 @@ foundations (mentions and mails, storage and attachments, schedules).
 What's built and what's open is in `specs/README.md`. Still to come, in
 this order:
 
-1. The parts being built (`ui-round-7.md`, `two-factor.md`).
+1. The part being built (`ui-round-7.md`).
 2. The German translation, last (texts are marked with `gettext`; the
    wording of mails, the editor and the lantern is reviewed with it).
 
@@ -177,6 +177,10 @@ building it.
   allowed, or required for organizations whose IdP manages their people;
   the own organization allows Google. No passwords. (Replaces 2026-11-20:
   codes and passkeys for everybody, Google optional for staff.)
+- 2026-11-21: Passkeys are a way in, not a second factor; authenticator
+  apps are an optional second factor, without recovery codes (a reset
+  instead); organizations may require a second factor
+  (`specs/two-factor.md`).
 - 2026-11-20: Replying to notification mails posts a comment, from the
   start.
 - 2026-11-20: Check-ins are in scope, the project schedule isn't.

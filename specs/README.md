@@ -7,7 +7,7 @@ user's own feedback notes: `ui-feedback.md`.
 | Part | Status | What |
 |---|---|---|
 | `core.md` | built | projects, items, lists, groups, ordering; conventions shared by every page |
-| `access.md` | built | client visibility and login: one function decides what clients see |
+| `access.md` | built | client visibility (one function decides what clients see) and sign-in: the ways in, the sign-in page, sessions |
 | `api-cli.md` | built; agent skills postponed | the API's conventions, the CLI |
 | `notifications.md` | built | events, subscriptions, mentions, levels, mails and digests, replying by mail |
 | `files.md` | built | attachments, the message board, folders, docs with versions, files |
@@ -37,11 +37,11 @@ user's own feedback notes: `ui-feedback.md`.
 | `pwa.md` | built | installable as an app |
 | `mail-sending.md` | built | the outbox and sending through Resend, bounces |
 | `sso.md` | built | sign-in per organization, single sign-on allowed or required |
-| `activation.md` | built | activating imported people, deactivating people who left |
+| `activation.md` | built | people: inviting several at once, invitations, activating, deactivating, resets |
 | `doc-titles.md` | built | a doc's title is its first line |
+| `two-factor.md` | built | passkeys as a way in, authenticator apps as an optional second factor, organizations requiring one |
 | `ui-round-1.md` … `ui-round-6.md` | built | feedback rounds: where their decisions live now |
 | `ui-round-7.md` | open | files as tiles, folder modals, ordering, drag and drop, new docs opening the editor |
-| `two-factor.md` | open | passkeys as a way in, authenticator apps as an optional second factor |
 
 ## Writing a spec for a new part
 
