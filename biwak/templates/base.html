@@ -104,11 +104,15 @@
               class="dropdown wb-menu"
               data-lantern="{% url 'lantern_menu' %}"
               data-lantern-count-url="{% url 'lantern_count' %}"
+              data-lantern-unread-text="{% translate 'unread' %}"
             >
               <summary class="btn btn-sm btn-quiet wb-lantern-button" title="{% translate 'Lantern' %}">
                 {% icon "lamp" %}
                 <span class="visually-hidden">{% translate "Lantern" %}</span>
-                <span class="badge wb-lantern-count" data-lantern-count hidden></span>
+                <span class="wb-lantern-dot" data-lantern-count hidden><span
+                    class="visually-hidden"
+                    data-lantern-count-text
+                  ></span></span>
               </summary>
               <div class="dropdown-menu dropdown-menu-end wb-lantern-dropdown" data-lantern-menu>
                 <a class="dropdown-item" href="{% url 'lantern' %}">{% translate "All notifications" %}</a>

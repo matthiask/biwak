@@ -9,6 +9,9 @@ import { csrfToken } from "./http.js"
 
 const menu = document.querySelector("[data-lantern]")
 const count = menu?.querySelector("[data-lantern-count]")
+const button = menu?.querySelector("summary")
+const lanternTitle = button?.title
+const countText = menu?.dataset.lanternUnreadText || "unread"
 const content = menu?.querySelector("[data-lantern-menu]")
 const favicon = document.querySelector("link[rel=icon]")
 const withFavicon = "lanternFavicon" in document.body.dataset
@@ -22,8 +25,12 @@ async function updateCount() {
     })
     if (!response.ok) return
     const { unread } = await response.json()
-    count.textContent = unread > 99 ? "99+" : String(unread)
+    // A dot, as on the tab's icon; the number for screen readers and in
+    // the button's tooltip
+    const text = unread ? `${unread > 99 ? "99+" : unread} ${countText}` : ""
+    count.querySelector("[data-lantern-count-text]").textContent = text
     count.hidden = !unread
+    button.title = unread ? `${lanternTitle}: ${text}` : lanternTitle
     menu.dataset.lanternUnread = String(unread)
     if (withFavicon) showDot(unread > 0)
   } catch {
@@ -61,7 +68,11 @@ async function dot() {
   }
   context.beginPath()
   context.arc(48, 16, 14, 0, 2 * Math.PI)
-  context.fillStyle = "#d63384"
+  // The same red as the dot on the lantern's button (--wb-lantern-dot)
+  context.fillStyle =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--wb-lantern-dot")
+      .trim() || "#e03131"
   context.fill()
   dotted = canvas.toDataURL("image/png")
   return dotted

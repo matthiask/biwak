@@ -1552,11 +1552,24 @@ button.wb-signal:hover {
   position: relative;
 }
 
-.wb-lantern-count {
-  background: var(--bs-primary);
-  color: #fff;
-  font-size: 0.7em;
-  margin-inline-start: 0.25em;
+/* Unread notifications: a small red dot on the lantern, the same as on the
+   tab's icon (frontend/lantern.js); no number (decided 2026-11-21) */
+:root {
+  --wb-lantern-dot: #e03131;
+}
+
+.wb-lantern-dot {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--wb-lantern-dot);
+  border-radius: 50%;
+}
+
+.wb-lantern-dot[hidden] {
+  display: none;
 }
 
 .wb-lantern-dropdown {

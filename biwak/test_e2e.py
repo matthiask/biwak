@@ -1335,7 +1335,7 @@ class LiveTest(E2ETestCase):
         expect(count).to_be_hidden()
         bob = self.open(self.bob, self.todo)
         self.comment(bob, "Hi Ada")
-        expect(count).to_have_text("1")
+        expect(count).to_have_text("1 unread")
         ada.locator("[data-lantern] > summary").click()
         menu = ada.locator("[data-lantern-menu]")
         expect(menu).to_contain_text("Order the tent")
@@ -1354,7 +1354,7 @@ class LiveTest(E2ETestCase):
         bob = self.open(self.bob, self.todo)
         ada = self.open(self.ada, reverse("projects"), page=self.page)
         self.comment(bob, "Without the setting")
-        expect(ada.locator("[data-lantern-count]")).to_have_text("1")
+        expect(ada.locator("[data-lantern-count]")).to_have_text("1 unread")
         self.assertTrue(ada.evaluate(icon).endswith("/favicon.svg"))
         # On by default
         User.objects.filter(pk=self.ada.pk).update(lantern_in_favicon=True)
