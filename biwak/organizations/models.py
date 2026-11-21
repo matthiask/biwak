@@ -4,6 +4,8 @@ organization other than the installation's own are partners and see only
 the projects they're members of (specs/access.md)."""
 
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -63,6 +65,52 @@ def domain_of(email):
 # The installation's own organization when none is marked yet; admins
 # rename it
 OWN_NAME = "Our organization"
+
+# The own organization's ID, remembered for a request (``remembering_own()``,
+# the middleware): whether somebody is a partner then costs a query per
+# request, not one per person shown
+_own_pk = ContextVar("own_organization_pk", default=None)
+
+
+def own_values():
+    """``(ID, name)`` of the installation's own organization, ``(None,
+    "")`` if none is marked yet"""
+    memo = _own_pk.get()
+    if memo is not None and "own" in memo:
+        return memo["own"]
+    own = Organization.objects.filter(is_own=True).values_list("pk", "name").first()
+    own = own or (None, "")
+    if memo is not None:
+        memo["own"] = own
+    return own
+
+
+def own_pk():
+    return own_values()[0]
+
+
+def forget_own():
+    """After marking another one"""
+    memo = _own_pk.get()
+    if memo is not None:
+        memo.clear()
+
+
+@contextmanager
+def remembering_own():
+    token = _own_pk.set({})
+    try:
+        yield
+    finally:
+        _own_pk.reset(token)
+
+
+def own_middleware(get_response):
+    def middleware(request):
+        with remembering_own():
+            return get_response(request)
+
+    return middleware
 
 
 class OrganizationQuerySet(models.QuerySet):
@@ -126,7 +174,16 @@ class Organization(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        forget_own()
+
     def get_absolute_url(self):
         from django.urls import reverse
 
         return reverse("organization", kwargs={"pk": self.pk})
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        forget_own()
+        return result

@@ -227,9 +227,15 @@ class User(AbstractBaseUser):
         another one (partner agencies) or of none (individuals, e.g.
         freelancers, decided 2026-11-21). They see only the projects
         they're members of."""
-        return not self.is_client and not (
-            self.organization_id is not None and self.organization.is_own
-        )
+        if self.is_client:
+            return False
+        if self.organization_id is None:
+            return True
+        # The own organization's ID, not the person's organization: no query
+        # per person (``own_pk()`` is remembered for the request)
+        from biwak.organizations.models import own_pk
+
+        return self.organization_id != own_pk()
 
     @property
     def sees_all_access(self):
@@ -239,7 +245,13 @@ class User(AbstractBaseUser):
 
     @property
     def organization_name(self):
-        return self.organization.name if self.organization_id else ""
+        if not self.organization_id:
+            return ""
+        from biwak.organizations.models import own_values
+
+        # The own organization's without a query per person
+        pk, name = own_values()
+        return name if self.organization_id == pk else self.organization.name
 
     @property
     def display_name(self):

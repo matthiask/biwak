@@ -126,6 +126,7 @@ MIDDLEWARE = [
         "django.middleware.locale.LocaleMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "biwak.organizations.models.own_middleware",
         "biwak.modals.modal_middleware",
         "biwak.accounts.middleware.LoginRequired",
         "biwak.cli_version.cli_version_middleware",
