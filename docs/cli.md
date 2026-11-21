@@ -11,7 +11,9 @@ A token is a personal key for scripts. On the API tokens page you give
 it a title and choose "read only" or "read and write". The secret is
 shown once; copy it then. A token sees exactly what you see (a client's
 token only what clients see), it writes under your name, and it expires
-30 days after its last use. "Revoke" ends it at any time.
+30 days after its last use, or 24 hours after creating it where your
+organization requires single sign-on ([Signing in](sign-in.md)).
+"Revoke" ends it at any time.
 
 ## Installing the CLI
 

@@ -30,6 +30,11 @@ urlpatterns = [
         RedirectView.as_view(pattern_name="settings", permanent=True),
     ),
     path("sessions/<int:pk>/end/", signin.end_session, name="session_end"),
+    path(
+        "connected/<int:pk>/disconnect/",
+        signin.disconnect,
+        name="social_disconnect",
+    ),
     path("api-tokens/", views.api_tokens, name="api_tokens"),
     path(
         "api-tokens/<int:pk>/delete/",

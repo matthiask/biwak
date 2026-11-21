@@ -80,7 +80,13 @@ urlpatterns = [
     # Passkeys and sessions are on the settings page
     path("accounts/2fa/", signin.passkeys_page),
     path("accounts/2fa/webauthn/", signin.passkeys_page),
+    path("accounts/2fa/webauthn/add/", signin.add_passkey),
     path("accounts/sessions/", signin.sessions_page),
+    path("accounts/3rdparty/", signin.connections_page),
+    # People whose organization requires single sign-on go there instead
+    # of asking for a code (specs/sso.md)
+    path("accounts/login/", signin.login),
+    path("accounts/login/code/", signin.request_login_code),
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
 ]

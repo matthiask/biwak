@@ -26,13 +26,25 @@ def has_passkey(user):
 
 
 def offer_due(user):
-    return not user.passkey_offer_done and not has_passkey(user)
+    """Not for people whose organization requires single sign-on: they
+    don't use passkeys (specs/sso.md)"""
+    from biwak.accounts import sso
+
+    return (
+        not user.passkey_offer_done
+        and not has_passkey(user)
+        and not sso.requires_sso(user)
+    )
 
 
 @receiver(user_logged_in)
 def remember_offer(sender, request, user, **kwargs):
     """Only logins by code: passkeys don't need the offer, Google is staff's
-    own choice"""
+    own choice. And sessions of people whose organization requires single
+    sign-on expire 24 hours after signing in (specs/sso.md)."""
+    from biwak.accounts import sso
+
+    sso.remember_sign_in(request, user)
     by_code = any(
         r.get("method") == "code" for r in get_authentication_records(request, user)
     )
@@ -42,6 +54,14 @@ def remember_offer(sender, request, user, **kwargs):
 
 @receiver(authenticator_added)
 def passkey_added(sender, user, authenticator, **kwargs):
+    """People whose organization requires single sign-on don't add any
+    (the page refuses, ``signin.add_passkey``); should one come through
+    anyway, it's removed at once"""
+    from biwak.accounts import sso
+
+    if sso.requires_sso(user):
+        authenticator.delete()
+        return
     if authenticator.type == Authenticator.Type.WEBAUTHN:
         dismiss(user)
 

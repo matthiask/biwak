@@ -89,6 +89,10 @@ LOGIN_REDIRECT_URL = "/"
 # django-allauth (specs/access.md): no passwords, no sign up, codes by mail,
 # passkeys, Google for those who want it; only existing, active people
 ACCOUNT_ADAPTER = "biwak.accounts.adapters.AccountAdapter"
+ACCOUNT_FORMS = {
+    "login": "biwak.accounts.forms.SSOLoginForm",
+    "request_login_code": "biwak.accounts.forms.SSORequestLoginCodeForm",
+}
 SOCIALACCOUNT_ADAPTER = "biwak.accounts.adapters.SocialAccountAdapter"
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {"email"}
@@ -160,6 +164,8 @@ MIDDLEWARE = [
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "allauth.account.middleware.AccountMiddleware",
         "allauth.usersessions.middleware.UserSessionsMiddleware",
+        # Sessions of organizations requiring single sign-on (specs/sso.md)
+        "biwak.accounts.sso.session_middleware",
         "biwak.accounts.middleware.user_middleware",
         "biwak.accounts.passkeys.passkey_offer_middleware",
     ]

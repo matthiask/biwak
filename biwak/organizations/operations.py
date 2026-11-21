@@ -216,6 +216,11 @@ def merge(source, target, *, actor):
         target.save(update_fields=["domains"])
     source.delete()
     _access_changed(moved)
+    if target.requires_sso:
+        from biwak.accounts import sso
+        from biwak.accounts.models import User
+
+        sso.enforce_required(User.objects.filter(pk__in=moved))
     return target
 
 
@@ -341,8 +346,13 @@ def set_signin(org, *, signin, idp="", tenant_id="", actor):
     signin, idp, tenant_id = clean_signin(
         org, signin=signin, idp=idp, tenant_id=tenant_id
     )
+    before = (org.signin, org.idp, org.tenant_id)
     org.signin, org.idp, org.tenant_id = signin, idp, tenant_id
     org.save(update_fields=["signin", "idp", "tenant_id"])
+    if org.requires_sso and before != (signin, idp, tenant_id):
+        from biwak.accounts import sso
+
+        sso.enforce_required(org.people.select_related("organization"))
     return org
 
 

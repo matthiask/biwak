@@ -81,6 +81,22 @@ def uses_sso_message(org):
     }
 
 
+def idp_login_url(user, *, next_url=""):
+    """Where people whose organization requires single sign-on go to sign
+    in: the provider's page (allauth asks to continue there), with their
+    address as a hint"""
+    from django.urls import reverse
+    from django.utils.http import urlencode
+
+    org = required_organization(user)
+    if org is None:
+        return reverse("account_login")
+    params = {"process": "login", "auth_params": urlencode({"login_hint": user.email})}
+    if next_url:
+        params["next"] = next_url
+    return f"{reverse(f'{org.idp}_login')}?{urlencode(params)}"
+
+
 # Google and Microsoft
 
 
@@ -259,3 +275,89 @@ def token_expiry(user, *, created_at):
     """When a token of the person made at ``created_at`` expires at the
     latest, or None without a limit"""
     return created_at + SSO_MAX_AGE if requires_sso(user) else None
+
+
+def _stored_session_counts(session_key, user, org):
+    """``session_counts()`` for a stored session"""
+    from importlib import import_module
+
+    store = import_module(settings.SESSION_ENGINE).SessionStore(session_key)
+    try:
+        data = store.load()
+    except Exception:  # noqa: BLE001 (a broken session doesn't count)
+        return False
+    if data.get("account_authentication_methods_user") != str(user.pk):
+        return False
+    records = data.get("account_authentication_methods")
+    now = time.time()
+    return isinstance(records, list) and any(
+        isinstance(r, dict) and _signed_in_with(r, org.idp, now=now) for r in records
+    )
+
+
+def enforce_required(users):
+    """For people whose organization requires single sign-on (after
+    switching to it or moving into it, decided 2026-11-21): their passkeys
+    (and other authenticators) are removed, not only blocked, so switching
+    back can't revive them; API tokens are cut to 24 hours after their
+    creation; calendar links end; sessions that didn't sign in through the
+    provider in the last 24 hours end (the current request's on the next
+    one, ``session_middleware``)"""
+    from allauth.core import context
+    from allauth.mfa.models import Authenticator
+    from allauth.usersessions.models import UserSession
+    from django.db.models import F
+
+    from biwak.accounts.models import APIToken, CalendarToken
+
+    current = getattr(context.request, "session", None)
+    current_key = getattr(current, "session_key", None)
+    for user in users:
+        org = required_organization(user)
+        if org is None:
+            continue
+        Authenticator.objects.filter(user=user).delete()
+        APIToken.objects.filter(
+            user=user, expires_at__gt=F("created_at") + SSO_MAX_AGE
+        ).update(expires_at=F("created_at") + SSO_MAX_AGE)
+        CalendarToken.objects.filter(user=user).delete()
+        for session in UserSession.objects.filter(user=user):
+            if session.session_key == current_key:
+                continue
+            if not _stored_session_counts(session.session_key, user, org):
+                session.end()
+
+
+# The session
+
+
+def remember_sign_in(request, user):
+    """Sessions of people whose organization requires single sign-on expire
+    24 hours after signing in, as a date: saving the session on every request
+    doesn't extend it, and websockets (which read the session but not
+    ``session_middleware``) stop with it too"""
+    if requires_sso(user):
+        request.session.set_expiry(timezone.now() + SSO_MAX_AGE)
+
+
+def session_middleware(get_response):
+    """Signs out people whose organization requires single sign-on when
+    their session didn't sign in through its provider in the last 24 hours
+    (``session_counts()``); ``LoginRequired`` sends them to the login page,
+    the API answers 401"""
+    from django.contrib import messages
+    from django.contrib.auth import logout
+
+    def middleware(request):
+        user = request.user
+        if user.is_authenticated and not session_counts(request, user):
+            org = required_organization(user)
+            logout(request)
+            messages.info(
+                request,
+                _("%(message)s Sign in again, please.")
+                % {"message": uses_sso_message(org)},
+            )
+        return get_response(request)
+
+    return middleware

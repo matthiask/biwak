@@ -4,7 +4,10 @@ and remove passkeys, its usersessions flows end sessions."""
 
 import re
 
+from allauth.account.views import LoginView, RequestLoginCodeView
 from allauth.mfa.models import Authenticator
+from allauth.mfa.webauthn.views import add_webauthn
+from allauth.socialaccount.models import SocialAccount
 from allauth.usersessions.internal import flows
 from allauth.usersessions.models import UserSession
 from allauth.usersessions.views import list_usersessions
@@ -14,6 +17,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
+
+from biwak.accounts import sso
 
 
 BROWSERS = [
@@ -61,8 +66,29 @@ def sessions(request):
     return sorted(ret, key=lambda s: (not s.current, -s.last_seen_at.timestamp()))
 
 
+def connected_accounts(user):
+    """Google and Microsoft accounts connected to the person's"""
+    ret = []
+    for account in SocialAccount.objects.filter(user=user).order_by("pk"):
+        data = account.extra_data or {}
+        account.address = sso.claimed_address(account.provider, data) or data.get(
+            "email", ""
+        )
+        account.provider_name = {"google": "Google", "microsoft": "Microsoft"}.get(
+            account.provider, account.provider
+        )
+        ret.append(account)
+    return ret
+
+
 def context(request):
-    return {"passkeys": passkeys(request.user), "sessions": sessions(request)}
+    org = sso.required_organization(request.user)
+    return {
+        "sso_organization": org,
+        "connected_accounts": connected_accounts(request.user),
+        "passkeys": passkeys(request.user) if org is None else [],
+        "sessions": sessions(request),
+    }
 
 
 def back_to_the_section():
@@ -91,4 +117,72 @@ def end_session(request, pk):
         raise Http404("Not the current session")
     flows.sessions.end_sessions(request, [session])
     messages.info(request, _("That session has been signed out."))
+    return back_to_the_section()
+
+
+class SSOViewMixin:
+    """allauth's sign-in pages send people whose organization requires
+    single sign-on to their identity provider (``biwak.accounts.forms``)"""
+
+    def form_invalid(self, form):
+        if url := getattr(form, "sso_url", None):
+            for error in form.non_field_errors() or [
+                e for errors in form.errors.values() for e in errors
+            ]:
+                messages.info(self.request, error)
+                break
+            return redirect(url)
+        return super().form_invalid(form)
+
+
+class SSOLoginView(SSOViewMixin, LoginView):
+    pass
+
+
+class SSORequestLoginCodeView(SSOViewMixin, RequestLoginCodeView):
+    pass
+
+
+login = SSOLoginView.as_view()
+request_login_code = SSORequestLoginCodeView.as_view()
+
+
+def add_passkey(request):
+    """allauth's page adding a passkey, not for people whose organization
+    requires single sign-on (specs/sso.md)"""
+    if org := sso.required_organization(request.user):
+        messages.error(
+            request,
+            _("%(message)s Passkeys aren't used there.")
+            % {"message": sso.uses_sso_message(org)},
+        )
+        return back_to_the_section()
+    return add_webauthn(request)
+
+
+def connections_page(request):
+    """The connected accounts are on the settings page (``disconnect``)"""
+    return back_to_the_section()
+
+
+@require_POST
+def disconnect(request, pk):
+    """Ends the connection to a Google or Microsoft account; signing in with
+    it again connects it again. allauth's own view refuses the last one of
+    people without passwords, but here codes work. Not for people whose
+    organization requires single sign-on: it's their way in."""
+    account = get_object_or_404(SocialAccount, pk=pk, user=request.user)
+    if org := sso.required_organization(request.user):
+        messages.error(
+            request,
+            _("%(message)s The account stays connected.")
+            % {"message": sso.uses_sso_message(org)},
+        )
+        return back_to_the_section()
+    account.delete()
+    messages.info(
+        request,
+        _("The %(provider)s account has been disconnected.")
+        % {"provider": account.get_provider_account().get_brand()["name"]},
+    )
     return back_to_the_section()

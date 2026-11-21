@@ -53,6 +53,26 @@ class AccountAdapter(DefaultAccountAdapter):
         )
         outbox.send(message, kind)
 
+    def pre_login(self, request, user, **kwargs):
+        """People whose organization requires single sign-on sign in only
+        through its identity provider (specs/sso.md): every way allauth signs
+        somebody in comes here, after recording the method (codes, passkeys,
+        social logins); deactivated people are allauth's (``super()``)"""
+        response = super().pre_login(request, user, **kwargs)
+        if response is not None:
+            return response
+        if (message := sso.refuse_login(request, user)) is not None:
+            from allauth.account.internal.flows.login import (
+                clear_authentication_records,
+            )
+            from allauth.account.internal.stagekit import clear_login
+
+            clear_login(request)
+            clear_authentication_records(request)
+            messages.error(request, message)
+            return redirect(sso.idp_login_url(user))
+        return None
+
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
     """Google and Microsoft sign-in per organization (specs/sso.md): only for

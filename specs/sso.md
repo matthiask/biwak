@@ -148,3 +148,69 @@ the organization's IdP.
 - **Matching:** by the person (`User.organization`), not the domain: an
   Acme address in the own organization counts with the own organization's
   rules.
+- **Single sign-on required** (`biwak/accounts/sso.py`), where each rule
+  is checked:
+  - *Codes:* the login page's address and "Send me a sign-in code"
+    (`ACCOUNT_FORMS`, `biwak/accounts/forms.py`) answer with the message
+    naming the provider ("Acme Ltd signs in with Google.") and send the
+    person to the provider's page (`signin.login`,
+    `signin.request_login_code`; allauth asks to continue there, the
+    address as `login_hint`); no code is sent. A code asked for before the
+    switch is refused when entered: `AccountAdapter.pre_login`, which
+    allauth calls for every way of signing in after recording the method,
+    lets these people in only when the last method is a social login
+    through the organization's provider (`sso.refuse_login()`).
+  - *Passkeys:* signing in with one is refused by the same
+    `pre_login`; "Add a passkey" (`/accounts/2fa/webauthn/add/`,
+    `signin.add_passkey`) sends back to the settings with a message; the
+    offer after a code isn't due; one added anyway is deleted at once
+    (`authenticator_added`). Switching to "required", moving somebody into
+    such an organization (`User.save()` on a changed organization, so the
+    pages, the API, the Django admin and the importer) or merging into
+    one (`merge()`, which moves people with an update) runs
+    `sso.enforce_required()`: authenticators deleted, API tokens cut to 24
+    hours after their creation, calendar links deleted, sessions that
+    didn't sign in through the provider in the last 24 hours ended
+    (`UserSession`, the session data allauth recorded), except the
+    current request's, which the middleware ends on the next one.
+  - *Sessions:* `sso.session_middleware` (after allauth's middleware)
+    signs these people out unless the session recorded a social login
+    through the organization's provider less than 24 hours ago (allauth's
+    `account_authentication_methods` in the session, stored on the server
+    and only for the person it names): "Remember me", the cookie's age and
+    `SESSION_SAVE_EVERY_REQUEST` don't matter, sessions without the
+    record (signed in another way, before the switch) end, the API
+    answers 401. Signing in sets the session's expiry to that date too
+    (`sso.remember_sign_in()`, an absolute date, which saving on every
+    request doesn't extend), so websockets, which read the session but
+    not the middleware, can't open with an older one.
+  - *API tokens:* created with `expires_at` 24 hours after `created_at`,
+    using them doesn't extend that (`APIToken.objects.extend()`), and
+    `for_secret()` refuses them 24 hours after their creation whatever
+    `expires_at` says, so it doesn't depend on `fairy_tasks`. The API
+    tokens and CLI login pages say so.
+  - *Connected accounts:* no "Disconnect" (`signin.disconnect` refuses,
+    the adapter's `validate_disconnect()` too).
+- **The settings page's sign-in card** (`accounts/settings.html`): the
+  connected Google and Microsoft accounts with their address and
+  "Disconnect" (our own view: allauth's refuses the last account of
+  people without passwords, here codes work; the next sign-in through the
+  provider connects it again), passkeys only where allowed, and for
+  "required" the line "You sign in through Acme Ltd's Google Workspace…".
+- **Decided while building (2026-11-21, the most secure reasonable
+  option, to be confirmed):**
+  - *Calendar links* (the iCal feed, `todos.md`) work without signing in
+    and would outlast leaving the company like a passkey: none for people
+    whose organization requires single sign-on (deleted on switching, the
+    feed answers 404, the page says why).
+  - *Sessions end 24 hours after the last sign-in through the provider*,
+    and sessions without one end on the next request after switching to
+    "required" (also the admin's own, who had to sign in through it
+    first).
+  - *A connected account counts only for the person whose address the
+    provider vouches for now*: an account connected earlier whose address
+    changed is refused rather than followed by its ID.
+  - *The address of somebody whose organization requires single sign-on
+    is told on the login page* by sending them to the provider (the spec
+    asks for it); unknown and deactivated addresses look as before (a
+    mail, nothing said on the page).

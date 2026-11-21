@@ -146,54 +146,89 @@
     </div>
   </div>
   <h2 class="h5 mt-4" id="sign-in">{% translate "Sign-in" %}</h2>
-  <div class="card mb-3">
-    <div class="card-body border-bottom">
-      <h3 class="h6">{% translate "Passkeys" %}</h3>
-      <p class="form-text mb-0">
-        {% translate "Sign in with your fingerprint, face or device PIN instead of a code by mail." %}
-      </p>
-    </div>
-    {% if passkeys %}
-      <div class="wb-table-scroll">
-        <table class="wb-table">
-          <thead>
-            <tr>
-              <th>{% translate "Passkey" %}</th>
-              <th>{% translate "Added" %}</th>
-              <th>{% translate "Last used" %}</th>
-              <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for passkey in passkeys %}
-              <tr>
-                <td>{{ passkey }}</td>
-                <td>{{ passkey.created_at|date:"j. M Y" }}</td>
-                <td>
-                  {% if passkey.last_used_at %}
-                    <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|naturaltime }}</span>
-                  {% else %}
-                    <span class="text-body-secondary">{% translate "Never" %}</span>
-                  {% endif %}
-                </td>
-                <td class="text-end">
-                  <form method="post" action="{% url 'mfa_remove_webauthn' passkey.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
-                  </form>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  {% if sso_organization %}
+    <p id="sso-required">
+      {% blocktranslate trimmed with organization=sso_organization provider=sso_organization.get_idp_display %}
+        You sign in through {{ organization }}'s {{ provider }}: there are no codes and passkeys, and you sign in there
+        again every 24 hours.
+      {% endblocktranslate %}
+    </p>
+  {% endif %}
+  {% if connected_accounts or sso_organization %}
+    <div class="card mb-3" id="connected-accounts">
+      <div class="card-body border-bottom">
+        <h3 class="h6 mb-0">{% translate "Connected accounts" %}</h3>
       </div>
-    {% else %}
-      <div class="card-body text-body-secondary">{% translate "No passkeys yet." %}</div>
-    {% endif %}
-    <div class="card-body border-top">
-      <a class="btn btn-sm btn-quiet" href="{% url 'mfa_add_webauthn' %}">{% translate "Add a passkey" %}</a>
+      <div class="list-group list-group-flush">
+        {% for account in connected_accounts %}
+          <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+            <div>
+              {{ account.provider_name }}
+              <div class="small text-body-secondary">{{ account.address }}</div>
+            </div>
+            {% if not sso_organization %}
+              <form method="post" action="{% url 'social_disconnect' account.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-quiet">{% translate "Disconnect" %}</button>
+              </form>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="list-group-item text-body-secondary">{% translate "No connected accounts yet." %}</div>
+        {% endfor %}
+      </div>
     </div>
-  </div>
+  {% endif %}
+  {% if not sso_organization %}
+    <div class="card mb-3">
+      <div class="card-body border-bottom">
+        <h3 class="h6">{% translate "Passkeys" %}</h3>
+        <p class="form-text mb-0">
+          {% translate "Sign in with your fingerprint, face or device PIN instead of a code by mail." %}
+        </p>
+      </div>
+      {% if passkeys %}
+        <div class="wb-table-scroll">
+          <table class="wb-table">
+            <thead>
+              <tr>
+                <th>{% translate "Passkey" %}</th>
+                <th>{% translate "Added" %}</th>
+                <th>{% translate "Last used" %}</th>
+                <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for passkey in passkeys %}
+                <tr>
+                  <td>{{ passkey }}</td>
+                  <td>{{ passkey.created_at|date:"j. M Y" }}</td>
+                  <td>
+                    {% if passkey.last_used_at %}
+                      <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|naturaltime }}</span>
+                    {% else %}
+                      <span class="text-body-secondary">{% translate "Never" %}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <form method="post" action="{% url 'mfa_remove_webauthn' passkey.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="card-body text-body-secondary">{% translate "No passkeys yet." %}</div>
+      {% endif %}
+      <div class="card-body border-top">
+        <a class="btn btn-sm btn-quiet" href="{% url 'mfa_add_webauthn' %}">{% translate "Add a passkey" %}</a>
+      </div>
+    </div>
+  {% endif %}
   <div class="card mb-3">
     <div class="card-body border-bottom">
       <h3 class="h6 mb-0">{% translate "Sessions" %}</h3>
