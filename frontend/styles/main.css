@@ -7,10 +7,10 @@
     "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --bs-body-font-size: 0.9rem;
   --bs-body-line-height: 1.55;
-  --bs-body-bg: #eeebe4;
+  --bs-body-bg: color-mix(in oklab, var(--wb-accent-bar) 5%, #eeebe4);
   --bs-body-color: #22251f;
   --bs-border-color: #e2ddd2;
-  --bs-secondary-color: rgba(34, 37, 31, 0.62);
+  --bs-secondary-color: rgba(34, 37, 31, 0.68);
   --bs-border-radius: 0.5rem;
   --wb-surface: #fff;
   /* Fields on the page's background */
@@ -22,7 +22,7 @@
 }
 
 [data-bs-theme="dark"] {
-  --bs-body-bg: #0e0d11;
+  --bs-body-bg: color-mix(in oklab, var(--wb-accent-bar) 12%, #0e0d11);
   --bs-body-color: #e2e3dc;
   --bs-border-color: #2f2c36;
   --bs-secondary-color: rgba(226, 227, 220, 0.62);
@@ -31,6 +31,18 @@
   --wb-field-border: #474352;
   --wb-surface-border: #2f2c36;
   --wb-shadow: none;
+}
+
+/* Old browsers without color-mix(): the plain stone */
+@supports not (color: color-mix(in oklab, red, blue)) {
+  :root,
+  [data-bs-theme="light"] {
+    --bs-body-bg: #eeebe4;
+  }
+
+  [data-bs-theme="dark"] {
+    --bs-body-bg: #0e0d11;
+  }
 }
 
 /* The palette (specs/keyboard.md, "The palette"): ten named colors, each with

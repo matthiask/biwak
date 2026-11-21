@@ -2342,6 +2342,14 @@ class KeyboardTest(E2ETestCase):
         stored = page.evaluate(f"[{root}.themeMode, {root}.accent]")
         accent = "lake" if stored[1] != "lake" else "berry"
         page.locator(f'input[name="accent"][value="{accent}"]').check()
+        page.wait_for_function(f"() => {root}.accent === '{accent}'")
+        # The page's background takes a hint of the accent color at once
+        background = "getComputedStyle(document.body).backgroundColor"
+        tinted = page.evaluate(background)
+        page.locator(f'input[name="accent"][value="{stored[1]}"]').check()
+        page.wait_for_function(f"() => {root}.accent === '{stored[1]}'")
+        self.assertNotEqual(page.evaluate(background), tinted)
+        page.locator(f'input[name="accent"][value="{accent}"]').check()
         page.locator('input[name="theme"][value="dark"]').check()
         page.wait_for_function(f"() => {root}.accent === '{accent}'")
         self.assertEqual(page.evaluate(f"{root}.themeMode"), "dark")
