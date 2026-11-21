@@ -66,4 +66,7 @@ jobs:
         env:
           DATABASE_URL: "postgres://localhost/unused"
           SECRET_KEY: "unsafe"
+          # The settings require a Redis for the channel layer outside
+          # development and tests; nothing connects to it while checking
+          CACHE_URL: "hiredis://localhost:6379/0"
         run: uvx prek run --all-files --show-diff-on-failure
