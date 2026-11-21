@@ -6,8 +6,11 @@ To-dos are completed, not archived; long runs of completed to-dos are
 already collapsed ("Completed (N)", `todos.md` stage 3).
 
 **Status:** in progress (2026-11-21): lists done (menus, palette action,
-left out of the places listed, silent events); smaller items, the
-importer, API and CLI follow below.
+left out of the places listed, silent events); smaller items refuse
+`archived` in `archive()` (the one place; `Status` keeps the value) and
+migration `items/0011` converts old ones (archived to-dos are completed
+at their `updated_at`, without a "completed by"; trashed ones that were
+archived too); the importer, API and CLI follow.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.

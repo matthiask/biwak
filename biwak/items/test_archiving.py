@@ -1,11 +1,15 @@
 """Archiving (specs/archiving.md): lists only, from the menus, left out of
 the places listed, notifying nobody"""
 
+import datetime as dt
+import importlib
+
+from django.apps import apps
 from django.test import TestCase
 
 from biwak.activity.models import Action, Event
 from biwak.items import operations as ops
-from biwak.items.models import Item, Status
+from biwak.items.models import Item, Status, Todo
 from biwak.test_utils import person, project
 
 
@@ -106,3 +110,46 @@ class ArchivingTest(TestCase):
         ops.reopen(todo, actor=self.ada)
         ops.complete(todo, actor=self.ada)
         self.assertEqual(Item.objects.filter(parent=self.list).count(), 2)
+
+
+class MigrationTest(TestCase):
+    """0011: the function on the real tables"""
+
+    def test_archived_to_dos_are_completed_and_other_items_active(self):
+        ada = person("Ada")
+        camp = project(members=[ada])
+        todolist = ops.create_list(project=camp, title="Old", creator=ada)
+        archived_list = ops.create_list(project=camp, title="Done", creator=ada)
+        todo = ops.create_todo(todolist=todolist, title="Tent", creator=ada)
+        done = ops.create_todo(todolist=todolist, title="Pegs", creator=ada)
+        ops.complete(done, actor=ada)
+        trashed = ops.create_todo(todolist=todolist, title="Rope", creator=ada)
+        message = ops.create_message(project=camp, title="Hello", creator=ada)
+        ops.archive(archived_list, actor=ada)
+        # What the old code allowed
+        when = dt.datetime(2026, 5, 1, tzinfo=dt.UTC)
+        Item.objects.filter(pk__in=[todo.pk, done.pk, message.pk]).update(
+            status=Status.ARCHIVED, updated_at=when
+        )
+        Item.objects.filter(pk=trashed.pk).update(
+            status=Status.TRASHED, archived_when_trashed=True
+        )
+        completed_at = Todo.objects.get(item=done).completed_at
+
+        migration = importlib.import_module(
+            "biwak.items.migrations.0011_archived_lists_only"
+        )
+        migration.convert(apps, None)
+
+        statuses = {i.title: i.status for i in Item.objects.filter(project=camp)}
+        self.assertEqual(statuses["Tent"], Status.ACTIVE)
+        self.assertEqual(statuses["Hello"], Status.ACTIVE)
+        self.assertEqual(statuses["Rope"], Status.TRASHED)
+        self.assertEqual(statuses["Done"], Status.ARCHIVED)
+        todo.todo.refresh_from_db()
+        self.assertEqual(todo.todo.completed_at, when)
+        done.todo.refresh_from_db()
+        self.assertEqual(done.todo.completed_at, completed_at)
+        trashed.todo.refresh_from_db()
+        self.assertIsNotNone(trashed.todo.completed_at)
+        self.assertFalse(Item.objects.get(pk=trashed.pk).archived_when_trashed)
