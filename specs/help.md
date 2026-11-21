@@ -4,8 +4,30 @@ The idea (2026-11-21): a help like Governance's, user documentation as
 pages in the app, and the keyboard shortcuts moved there from the
 settings page, with links to the help where people need it.
 
-**Status:** spec (2026-11-21), the chapters confirmed the same day. Not
-built.
+**Status:** built 2026-11-21 (branch `help`), the chapters confirmed the
+same day. `biwak/help.py` (copied from Governance, the constitution and
+the SVGs dropped, the per-language table kept; `PAGES["de"]` names the
+`*.de.md` files, used once they all exist), `templates/help.html`, `docs/`
+with the nine chapters, tests in `biwak/test_help.py`, the palette's
+in `biwak/palette/test_actions.py`, a browser test for the `?` dialog's
+link (`KeyboardTest`). The texts describe what is built now and still
+have to be read by the user. Decisions on the way:
+- The settings page's "All shortcuts" and the keyboard page's list
+  share the anchor `#shortcuts`. Every page has the list in the `?`
+  dialog anyway (`_palette.html` is in `base.html`), so "only on the
+  keyboard page" means the page's own section.
+- The "?" entry of the list now says "Show the shortcuts" (it no longer
+  is "this list"), and the list gets `g h`.
+- The quiet links: `form_response(help_page=...)` shows "More in the
+  help" in the modal and the page (the visibility modal passes
+  `clients`); the notification settings, the API tokens page and the
+  calendar page link to their chapters. "Help" sits in the "Me" menu
+  above the divider and "Sign out", in Home's "Useful" card and in the
+  palette (with "Keyboard shortcuts").
+- Left out of the texts because they are not built or not settled:
+  archiving lists (`archiving.md` is open), webhooks, agent skills,
+  Google sign-in, passkeys, importing from Basecamp (an admin task),
+  browser notifications.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`. The texts are documentation: short, concrete, describing
