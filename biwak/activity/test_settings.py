@@ -105,7 +105,7 @@ class SettingsPagesTest(SettingsBase):
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
                 self.assertEqual(
-                    self.client.post(url, {"level": "always"}).status_code, 404
+                    self.client.post(url, {"level": "always"}).status_code, 400
                 )
         # Linked from the project page's More menu, for everybody
         self.assertContains(self.client.get(self.project.get_absolute_url()), url)
@@ -136,6 +136,9 @@ class SettingsPagesTest(SettingsBase):
                 )
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
+                self.assertEqual(
+                    self.client.post(url, {"level": "always"}).status_code, 400
+                )
 
     def test_list_override_on_the_list_page(self):
         url = f"/items/{self.shared.pk}/notifications/"

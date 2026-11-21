@@ -4,7 +4,7 @@ unsubscribing from mails (specs/feed.md, specs/notifications.md)"""
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import BadRequest, PermissionDenied
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -261,7 +261,7 @@ def _level(request):
     """The level posted, None for the person's default"""
     level = request.POST.get("level") or None
     if level is not None and level not in NotificationLevel.values:
-        raise Http404
+        raise BadRequest("Invalid level.")
     return level
 
 
