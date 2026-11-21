@@ -44,7 +44,7 @@ goes into internal containers, archived recordings skipped.
 | To-do | To-do (assignees, due dates, completion, notes) |
 | Card table | List with its columns as groups, shown as board |
 | Card | To-do in its column's group; steps as a checklist in the notes |
-| Message board, message | Message board, message (category by name, created when missing) |
+| Message board, message | Message board, message (category by name, ignoring case, in the installation's one list; created when missing, with Basecamp's icon as its emoji; confirmed 2026-11-21) |
 | Vault (folder), document, upload | Folder, doc, file |
 | Questionnaire, question, answer | Check-in question, answer |
 | Comment | Comment |
