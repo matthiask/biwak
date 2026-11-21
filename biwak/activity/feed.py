@@ -168,10 +168,14 @@ def add_target_lists(events, user):
         .filter(pk__in=ids, kind=Kind.LIST)
         .values_list("pk", "title")
     )
+    old_titles = None  # Whether the viewer gets them, asked once if needed
     for event in moves:
         title = lists.get(event.data.get("to_id"))
-        if title is None and user.sees_all_access:
-            title = event.data["to"]
+        if title is None:
+            if old_titles is None:
+                old_titles = user.sees_all_access
+            if old_titles:
+                title = event.data["to"]
         event.target_list = title or ""
     for event in events:
         if not hasattr(event, "target_list"):
