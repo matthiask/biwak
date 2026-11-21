@@ -45,6 +45,13 @@ point.
   all-access projects open only to the installation's own staff
   (`access.md` to be changed accordingly, tests through every entry
   point).
+- **Partners don't create projects, invite or add people, or manage
+  organizations** (decided 2026-11-21): those forms list everybody
+  (organizations and their people), which partners mustn't learn about.
+  Partner admins join nothing either: `joinable_projects()` offers them
+  no limited projects; the installation's own staff add them. They edit
+  and archive the projects they're in and change members' notification
+  choices on the people page, like other staff.
 
 ## Managing organizations
 
@@ -154,12 +161,18 @@ decides who sees all-access projects.
 - **Staff without an organization** count as the installation's own: an
   installation without organizations set up behaves as before. Only staff
   in another organization are partners.
-- **Partners** learn about members only, like clients (the `@` list,
-  mentions, assignees, subscribers), and don't create projects, add or
-  invite people or manage organizations: those forms list everybody.
-  They edit and archive the projects they're in, like other staff.
-- **Managing organizations** is for the installation's own staff (the
-  spec's "all staff", partners left out for the reason above).
+- **Partners** learn about members only, like clients: the `@` list,
+  mentions, assignees, subscribers, the people a check-in asks (they
+  ask members; people already asked stay), names in an item's history,
+  assignees in mails and the feed (others are "somebody" or left out);
+  the feed's old title of a list moved out of sight only for the
+  installation's own staff. Errors naming people by ID say nothing about
+  who exists. The importer assigns and mentions as in Basecamp, also for
+  a creator who's a partner now.
+- **Leaving the installation's own organization** (moved, merged, another
+  one marked, unmarked in the admin) drops the person's subscriptions in
+  projects they can't open anymore, like being removed from a limited
+  project (`forget_lost_access()`).
 - **The new-project modal** adds the project at once without
   organizations involved; people invited there are clients; the staff
   list is the installation's own staff (partners come with their

@@ -22,7 +22,7 @@ from django.utils.translation import gettext as _
 from biwak.accounts.models import User
 from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
-from biwak.activity.operations import subscribe
+from biwak.activity.operations import is_importing, subscribe
 from biwak.projects.models import knows_everybody
 
 
@@ -219,7 +219,7 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
         if user.pk in known:
             continue
         by, by_event = credit.get(user.pk, (actor, event))
-        if not knows_everybody(by):
+        if not knows_everybody(by) and not is_importing():
             if members is None:
                 members = set(item.project.memberships.values_list("user", flat=True))
             if user.pk not in members:

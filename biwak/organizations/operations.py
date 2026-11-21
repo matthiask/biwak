@@ -19,14 +19,18 @@ from biwak.organizations.models import (
 )
 
 
-def _check_access(people):
-    """Open editors and pages of these people (IDs) check their access
-    again after the commit: they may have stopped seeing all-access
-    projects"""
+def _access_changed(people):
+    """These people (IDs) may have stopped seeing all-access projects: their
+    subscriptions in projects they can't open anymore go (like
+    ``remove_member()``), and their open editors and pages check their
+    access again after the commit. Call it after the change."""
+    from biwak.accounts.models import User
     from biwak.collab import live
+    from biwak.projects.operations import forget_lost_access
 
-    for pk in set(people):
-        live.check_access(user=pk)
+    for user in User.objects.filter(pk__in=set(people) - {None}):
+        forget_lost_access(user)
+        live.check_access(user=user.pk)
 
 
 def can_manage(user):
@@ -140,13 +144,14 @@ def merge(source, target, *, actor):
     if source.pk == target.pk:
         raise ValidationError(_("An organization can't be merged into itself."))
     _check_touch(actor, source, target)
-    _check_access(source.people.values_list("pk", flat=True))
+    moved = list(source.people.values_list("pk", flat=True))
     source.people.update(organization=target)
     domains = [d for d in source.domains if d not in target.domains]
     if domains:
         target.domains = [*target.domains, *domains]
         target.save(update_fields=["domains"])
     source.delete()
+    _access_changed(moved)
     return target
 
 
@@ -170,6 +175,7 @@ def set_organization(user, org, *, actor):
     _check_touch(actor, user.organization if user.organization_id else None, org)
     user.organization = org
     user.save(update_fields=["organization"])
+    _access_changed([user.pk])
     return user
 
 
@@ -183,13 +189,14 @@ def mark_own(org, *, actor):
         )
     if org is not None and org.is_own:
         return org
-    _check_access(
+    unmarked = list(
         Organization.objects.filter(is_own=True).values_list("people", flat=True)
     )
     Organization.objects.filter(is_own=True).update(is_own=False)
     if org is not None:
         org.is_own = True
         org.save(update_fields=["is_own"])
+    _access_changed(unmarked)
     return org
 
 

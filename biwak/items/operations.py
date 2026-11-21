@@ -406,8 +406,12 @@ def assignable_people(item, by=None):
     about other staff."""
     project = item.project
     members = Q(memberships__project=project)
-    # Clients and partners (``by``) don't learn about others than members
-    everybody = project.is_all_access and (by is None or by.sees_all_access)
+    # Clients and partners (``by``) don't learn about others than members;
+    # the importer assigns as in Basecamp, also for a creator who's a
+    # partner now
+    everybody = project.is_all_access and (
+        by is None or by.sees_all_access or is_importing()
+    )
     staff = Q(is_client=False) & members
     if everybody:
         # The installation's own staff; partners only as members

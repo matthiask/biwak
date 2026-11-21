@@ -6,6 +6,7 @@ import zoneinfo
 from django import forms
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -21,6 +22,7 @@ from biwak.forms import Form
 from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
+from biwak.projects.models import knows_everybody
 from biwak.projects.views import project_for
 from biwak.reactions.operations import prefetch
 from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
@@ -78,13 +80,20 @@ class QuestionForm(RuleFormMixin, Form):
         "visible",
     ]
 
-    def __init__(self, *args, project, item=None, **kwargs):
+    def __init__(self, *args, project, actor, item=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.item = item
         self.fields["rule"].widget.anchor = self.initial.get("starts_on")
         # Who sees a visible question: clients only on visible ones, checked
-        # by ``clean()`` and ``operations.set_people()``
-        self.fields["people"].queryset = people_who_see(project, visible=True)
+        # by ``clean()`` and ``operations.set_people()``; partners offer
+        # members and those already asked (specs/access.md)
+        people = people_who_see(project, visible=True)
+        if not knows_everybody(actor):
+            asked = item.question.people.all() if item else User.objects.none()
+            people = people.filter(
+                Q(memberships__project=project) | Q(pk__in=asked.values("pk"))
+            ).distinct()
+        self.fields["people"].queryset = people
         if item is not None:
             # The switch is on the page
             del self.fields["visible"]
@@ -167,6 +176,7 @@ def question_new(request, pk):
     form = QuestionForm(
         request.POST or None,
         project=project,
+        actor=request.user,
         initial={"starts_on": dt.date.today(), "people": [request.user]},
     )
     if form.is_valid():
@@ -196,6 +206,7 @@ def question_edit(request, pk):
     form = QuestionForm(
         request.POST or None,
         project=item.project,
+        actor=request.user,
         item=item,
         initial=_form_initial(item),
     )

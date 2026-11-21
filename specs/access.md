@@ -49,12 +49,13 @@ the first client gets a login.
   replies, the API, the CLI and both websockets follow. Partners are
   assigned and mentioned in all-access projects only as members. Like
   clients, they learn about members only (`knows_everybody()`: the `@`
-  list, mentions they write and read, assignees, subscribers), and they
-  don't add or invite people, create projects or manage organizations,
-  whose forms offer everybody (decided meanwhile, 2026-11-21, to be
-  confirmed). Moving people in or out of the installation's own
-  organization is for admins only; open pages and editors check their
-  access again when it happens.
+  list, mentions they write and read, assignees, subscribers, check-in
+  askees, names in histories, mails and the feed). They don't create
+  projects, add or invite people or manage organizations, whose forms
+  offer everybody (decided 2026-11-21). Moving people in or out of the
+  installation's own organization is for admins only; leaving it drops
+  the subscriptions in projects one can't open anymore, and open pages
+  and editors check their access again.
 - **Clients** are never covered by all-access either: they see a project only
   if they're members, and in it only what
   is visible to clients.

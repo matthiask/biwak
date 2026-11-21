@@ -198,7 +198,9 @@ class QuestionIn(Schema):
 def _people(ids):
     people = list(User.objects.active().filter(pk__in=ids))
     if len(people) != len(set(ids)):
-        bad_request(_("Some of these people don't exist."))
+        # The same answer as for people who can't be asked: IDs don't tell
+        # who exists
+        bad_request(_("Only people who can see the check-in can be asked."))
     return people
 
 

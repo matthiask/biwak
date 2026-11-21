@@ -23,7 +23,7 @@ from django.utils.translation import gettext as _
 from biwak.accounts.models import MailDelivery, NotificationLevel, User
 from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Notification
-from biwak.activity.notify import can_see, item_levels
+from biwak.activity.notify import item_levels
 from biwak.activity.operations import is_subscribed
 from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
@@ -118,12 +118,10 @@ def plain_text(text, item):
 
 
 def _names(ids, user, item):
-    people = User.objects.filter(pk__in=ids)
-    return ", ".join(
-        _("you") if person == user else str(person)
-        for person in people
-        if person == user or can_see(person, item)
-    )
+    """The people the reader may know (clients and partners: members,
+    specs/access.md)"""
+    people = item.project.people_known_to(user, User.objects.filter(pk__in=ids))
+    return ", ".join(_("you") if person == user else str(person) for person in people)
 
 
 def _moved(event, user):

@@ -109,10 +109,20 @@ def remove_member(project, user, *, actor):
             user=user.pk,
             name=user.display_name,
         )
-    # Without access, their subscriptions in the project go too
-    if not project.is_accessible_to(user):
-        Subscription.objects.filter(user=user, item__project=project).delete()
+    forget_lost_access(user, project=project)
     return True
+
+
+def forget_lost_access(user, *, project=None):
+    """Without access, the person's subscriptions go (in ``project``, or in
+    every project): removed from a limited project, or no longer the
+    installation's own staff (specs/access.md)"""
+    subscriptions = Subscription.objects.filter(user=user)
+    if project is not None:
+        subscriptions = subscriptions.filter(item__project=project)
+    subscriptions.exclude(
+        item__project__in=Project.objects.accessible_to(user)
+    ).delete()
 
 
 class InvitationError(ValueError):
@@ -269,8 +279,9 @@ def update_project(
 
 def joinable_projects(user):
     """Limited projects an admin isn't in: they see that they exist and can
-    join them (specs/access.md); nobody else does"""
-    if not (user.is_authenticated and user.is_admin):
+    join them (specs/access.md); nobody else does, partners who are admins
+    neither (they're added by the installation's own staff)"""
+    if not (user.is_authenticated and user.is_admin and user.sees_all_access):
         return Project.objects.none()
     return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))
 
