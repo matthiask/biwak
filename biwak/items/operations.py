@@ -9,7 +9,8 @@ don't save items themselves.
 import datetime as dt
 
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Exists, Max, OuterRef, Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from biwak import schedules
@@ -35,6 +36,8 @@ from biwak.items.models import (
     TodoList,
     Upload,
 )
+from biwak.projects import operations as project_ops
+from biwak.projects.models import Membership
 
 
 def _next_position(qs):
@@ -284,32 +287,51 @@ def add_comment(item, *, author, content):
 
 
 def assignable_people(item):
-    """Who can be assigned to the to-do: the project's active members,
-    clients only if it's visible to them (specs/access.md, specs/todos.md).
-    The one rule for the forms, the API and the next to-do of a recurring
+    """Who can be assigned to the to-do: the active people who can see it
+    (specs/access.md, specs/todos.md), the project's members first. Staff
+    of all-access projects whether they're members or not (assigning makes
+    them members), clients only members and only on visible to-dos. The
+    one rule for the forms, the API and the next to-do of a recurring
     one."""
-    people = User.objects.active().filter(memberships__project=item.project)
-    if not item.is_client_visible:
-        people = people.filter(is_client=False)
-    return people.distinct()
+    project = item.project
+    members = Q(memberships__project=project)
+    staff = Q(is_client=False) & (Q() if project.is_all_access else members)
+    who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
+    return (
+        User.objects
+        .active()
+        .filter(who)
+        .distinct()
+        .annotate(
+            is_member=Exists(
+                Membership.objects.filter(project=project, user=OuterRef("pk"))
+            )
+        )
+        .order_by("-is_member", Lower("full_name"), "email")
+    )
 
 
-def _assignable_ids(item):
-    # The stored visibility, not what the object knew when it was loaded
+def _assignable(item):
+    """``{pk: is_member}`` of ``assignable_people()``, with the stored
+    visibility, not what the object knew when it was loaded"""
     item.refresh_from_db(fields=["is_client_visible"])
-    return set(assignable_people(item).values_list("pk", flat=True))
+    return dict(assignable_people(item).values_list("pk", "is_member"))
 
 
 @transaction.atomic
 def assign(item, users, *, actor):
     """Adds assignees (``assignable_people()``, ``ValueError`` for anybody
-    else); returns those newly assigned"""
+    else); staff who aren't members yet become members, recorded as added
+    (decided 2026-11-21). Returns those newly assigned."""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
-    allowed = _assignable_ids(item) if users else set()
+    allowed = _assignable(item) if users else {}
     for user in users:
         if user.pk not in allowed:
             raise ValueError(f"{user} can't be assigned to {item}")
+    for user in users:
+        if not allowed[user.pk]:
+            project_ops.add_member(item.project, user, actor=actor)
     todo.assignees.add(*users)
     for user in users:
         subscribe(user, item, added_by=actor)
@@ -460,8 +482,9 @@ def _create_next(item, todo, *, actor):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
-    allowed = _assignable_ids(following)
-    people = [u for u in todo.assignees.all() if u.pk in allowed]
+    # Assignees removed from the project since aren't brought back
+    allowed = _assignable(following)
+    people = [u for u in todo.assignees.all() if allowed.get(u.pk)]
     if people:
         assign(following, people, actor=actor)
     return following

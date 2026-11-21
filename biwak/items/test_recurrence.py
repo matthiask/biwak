@@ -10,6 +10,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event, Subscription
 from biwak.items import operations as ops
 from biwak.items.models import Item, Todo
+from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project, rule_post
 
 
@@ -216,6 +217,17 @@ class OperationsTest(RecurrenceTestCase):
         ops.set_visibility(self.list, visible=False, actor=self.ada)
         ops.complete(item, actor=self.ada)
         self.assertEqual(list(self.following(item).todo.assignees.all()), [self.ada])
+
+    def test_assignees_removed_from_the_project_arent_brought_back(self):
+        """Assigning makes members; the next to-do doesn't make somebody
+        removed since a member again"""
+        dan = person("Dan")
+        item = self.todo("FREQ=DAILY", assignees=[self.ada, dan])
+        self.assertTrue(self.project.is_member(dan))
+        project_ops.remove_member(self.project, dan, actor=self.ada)
+        ops.complete(item, actor=self.ada)
+        self.assertEqual(list(self.following(item).todo.assignees.all()), [self.ada])
+        self.assertFalse(self.project.is_member(dan))
 
     def test_a_client_completes_a_visible_recurring_todo(self):
         item = self.todo("FREQ=DAILY", "2026-11-20", assignees=[self.cleo])

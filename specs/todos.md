@@ -12,11 +12,13 @@ checklist in `AGENTS.md`.
 
 ## Built
 
-- **Assignees:** any number, the project's members, staff and clients
-  (clients only on visible to-dos), one rule for the forms, the API and
-  the next to-do of a recurring one (`ops.assignable_people()`; decided
-  2026-11-21 after the code review: members only, also in all-access
-  projects, where `assign()` used to take any staff member); completing completes for everybody and
+- **Assignees:** any number, everybody who can see the to-do: staff
+  (in all-access projects every staff member), clients only on visible
+  to-dos. Assigning somebody who isn't a member makes them a member,
+  recorded as added (`add_member()`, decided 2026-11-21). One rule in
+  `ops.assignable_people()` for the forms (members first), the API and
+  the next to-do of a recurring one, which leaves out assignees removed
+  from the project since instead of adding them again; completing completes for everybody and
   records who did it; assigning subscribes the assignee. Notifying them
   is `notifications.md`.
 - **Board view:** a list's groups as columns, ungrouped to-dos in a first
