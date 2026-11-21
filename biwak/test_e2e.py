@@ -1934,7 +1934,7 @@ class NavSearchTest(E2ETestCase):
     def test_desktop_shows_the_magnifier_with_the_hint(self):
         page = self.page
         self.check(page, hint_visible=True)
-        expect(page.locator(".wb-nav-search-hint")).to_have_text("Ctrl K")
+        expect(page.locator(".wb-nav-search-hint")).to_have_text("Ctrl+K")
 
     def test_phone_shows_the_magnifier(self):
         page = self.login(self.ada, viewport={"width": 360, "height": 740})
