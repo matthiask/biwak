@@ -206,13 +206,6 @@ class Entry:
         key = container(self.latest)
         return key[2]
 
-    @property
-    def is_client_visible(self):
-        return all(
-            e.is_client_visible and e.item and e.item.is_client_visible
-            for e in self.events
-        )
-
 
 def container(event):
     """What counts as "the same list or project": a to-do's list, otherwise
