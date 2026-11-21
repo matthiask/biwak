@@ -101,12 +101,6 @@
 
       <section class="mb-4" data-home="links">
         <h2 class="h5">{% translate "Useful" %}</h2>
-        {% if can_create %}
-          <p>
-            <a href="{% url 'project_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
-              >{% translate "New project" %}</span></a>
-          </p>
-        {% endif %}
         <ul class="list-unstyled mb-0">
           {% if not request.user.is_client %}
             <li>
