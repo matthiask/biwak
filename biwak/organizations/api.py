@@ -300,8 +300,8 @@ class TwoFactorResetOut(AccessOut):
 
 @router.post("people/{person_id}/reset-two-factor/", response=TwoFactorResetOut)
 def person_reset_two_factor(request, person_id: int):
-    """Removes the person's authenticator app, ends their sessions and mails
-    them (specs/two-factor.md); staff reset clients, admins everybody, not
+    """Removes the person's authenticator app, passkeys and API tokens, ends
+    their sessions and mails them (specs/two-factor.md); staff reset clients, admins everybody, not
     oneself. Without an app nothing happens (``reset`` false)."""
     [user] = people_for(request, [person_id])
     reset = changing(activation.reset_two_factor, user, actor=request.user)

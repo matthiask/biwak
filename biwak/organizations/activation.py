@@ -162,12 +162,13 @@ def can_reset_two_factor(actor, user):
 
 @transaction.atomic
 def reset_two_factor(user, *, actor):
-    """Deletes the person's authenticator app, ends their sessions and mails
-    them (through the outbox, after the commit) so a reset they didn't ask
-    for is noticed; the audit log has the deleted row. Passkeys stay: they
-    are a way in, not a second factor. ``PermissionError`` for people the
-    actor may not change, ``ActivationError`` for oneself. Returns whether
-    there was an app; without one nothing happens."""
+    """Deletes the person's authenticator app, their passkeys and API tokens
+    (decided 2026-11-21: whoever took over the account may have added
+    them), ends their sessions and mails them (through the outbox, after
+    the commit) so a reset they didn't ask for is noticed; the audit log
+    has the deleted rows. ``PermissionError`` for people the actor may not
+    change, ``ActivationError`` for oneself. Returns whether there was an
+    app; without one nothing happens."""
     from biwak.collab import live
 
     user = User.objects.select_for_update().get(pk=user.pk)
@@ -176,12 +177,12 @@ def reset_two_factor(user, *, actor):
         raise ActivationError(
             _("Turn your own authenticator app off in your settings.")
         )
-    deleted, _rows = Authenticator.objects.filter(
-        user=user,
-        type__in=[Authenticator.Type.TOTP, Authenticator.Type.RECOVERY_CODES],
-    ).delete()
-    if not deleted:
+    if not Authenticator.objects.filter(
+        user=user, type=Authenticator.Type.TOTP
+    ).exists():
         return False
+    Authenticator.objects.filter(user=user).delete()
+    APIToken.objects.filter(user=user).delete()
     for session in UserSession.objects.filter(user=user):
         session.end()
     live.check_access(user=user.pk)

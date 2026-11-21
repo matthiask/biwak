@@ -37,10 +37,13 @@ below is what prevents that.
 - **Resetting someone's second factor:** "Reset two-factor…" with the
   split of `activation.md`: staff reset clients, admins also own staff
   and partners; nobody resets themselves this way (they turn it off in
-  the settings). A reset deletes the person's authenticator app, ends
-  their sessions and mails them ("Ada removed your authenticator app"),
-  so a reset they didn't ask for is noticed. Passkeys stay. Without an
-  app nothing happens (no mail, sessions stay). The audit log has it.
+  the settings). A reset deletes the person's authenticator app, their
+  passkeys and their API tokens (decided 2026-11-21: whoever took over
+  the account may have added them; it was "passkeys stay"), ends their
+  sessions and mails them ("Ada removed your authenticator app", naming
+  the passkeys and tokens), so a reset they didn't ask for is noticed.
+  They sign in by code then. Without an app nothing happens (no mail,
+  sessions stay). The audit log has it.
 - **Organizations requiring single sign-on:** no passkeys and no
   authenticator apps (the identity provider does that); existing ones are
   deleted when the organization switches to "required" (`sso.md`).
@@ -104,7 +107,8 @@ below is what prevents that.
   stay off (`ACCOUNT_EMAIL_NOTIFICATIONS` unset).
 - **Resets:** `activation.can_reset_two_factor()` (`can_change()`, not
   oneself) and `activation.reset_two_factor()` in
-  `biwak/organizations/activation.py`: deletes the app, ends the sessions
+  `biwak/organizations/activation.py`: deletes the app, the passkeys and
+  the API tokens, ends the sessions
   (`UserSession.end()`, `live.check_access()`), mails through the outbox
   (`accounts/two_factor_reset.txt`, `Kind.ACCOUNT`, from the actor, not
   to inactive people or bounced addresses). The page
@@ -136,7 +140,6 @@ below is what prevents that.
 
 - The app's secret is stored as allauth stores it, unencrypted
   (`MFAAdapter.encrypt()` could add it).
-- A reset keeps the person's API tokens.
 - Sessions signed in by code before an organization starts requiring a
   second factor stay for people who have one.
 - Merging or moving people between organizations doesn't look at the

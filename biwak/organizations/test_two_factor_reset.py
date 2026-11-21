@@ -45,17 +45,20 @@ class Base(TestCase):
 
 class OperationTest(Base):
     def test_staff_reset_clients(self):
+        from biwak.accounts.models import APIToken
+
         passkey(self.cleo)
+        APIToken.create_for(user=self.cleo, title="T", access="read")
+        APIToken.create_for(user=self.bob, title="T", access="read")
         key = self.signed_in(self.cleo)
         with self.captureOnCommitCallbacks(execute=False) as callbacks:
             self.assertTrue(activation.reset_two_factor(self.cleo, actor=self.ada))
         self.assertFalse(self.has_app(self.cleo))
-        # The passkey stays: a way in, not a second factor
-        self.assertTrue(
-            Authenticator.objects.filter(
-                user=self.cleo, type=Authenticator.Type.WEBAUTHN
-            ).exists()
-        )
+        # Passkeys and API tokens go too (decided 2026-11-21): whoever
+        # took over the account may have added them
+        self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertTrue(APIToken.objects.filter(user=self.bob).exists())
         # Signed out everywhere
         self.assertFalse(UserSession.objects.filter(user=self.cleo).exists())
         self.assertFalse(sso.session_alive(key, self.cleo))
@@ -68,6 +71,8 @@ class OperationTest(Base):
         self.assertEqual(message.to, [self.cleo.email])
         self.assertEqual(message.subject, "Ada Example removed your authenticator app")
         self.assertIn("signed you out everywhere", message.body)
+        self.assertIn("passkeys", message.body)
+        self.assertIn("API tokens", message.body)
         self.assertIn("/accounts/settings/#sign-in", message.body)
         self.assertIn("Ada Example", message.from_email)
         # Others keep theirs

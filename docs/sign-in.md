@@ -23,8 +23,9 @@ is enough alone: it already needs your device and its PIN or fingerprint.
   the app's code or a passkey then, not for a code by mail.
 - **Turning it off** ("Turn off…") needs a code from the app.
 - **Lost the app?** Sign in with a passkey and turn it off, or ask for a
-  reset: on your page, "Reset two-factor…" removes the app, signs you out
-  everywhere and mails you about it. Staff reset clients, admins reset
+  reset: on your page, "Reset two-factor…" removes the app, your passkeys
+  and your API tokens, signs you out everywhere and mails you about it;
+  you sign in with a code then. Staff reset clients, admins reset
   everybody else; nobody resets themselves. There are no recovery codes.
   The CLI: `biwak people reset-two-factor ID`.
 

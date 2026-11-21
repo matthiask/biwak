@@ -448,7 +448,8 @@ def invite(
 def people(ctx, inactive, as_json):
     """The active people (staff), or with --inactive those who can't sign
     in; `biwak people activate` and `deactivate` change that,
-    `reset-two-factor` removes somebody's authenticator app"""
+    `reset-two-factor` removes somebody's authenticator app, passkeys and
+    API tokens"""
     if ctx.invoked_subcommand is not None:
         return None
     data = request("GET", "people/", params={"inactive": inactive})
@@ -502,8 +503,8 @@ def people_deactivate(ids, as_json):
 @click.argument("person_id", type=int)
 @json_option
 def people_reset_two_factor(person_id, as_json):
-    """Remove the person's authenticator app, sign them out everywhere and
-    mail them; staff reset clients, admins also staff and partners, not
+    """Remove the person's authenticator app, passkeys and API tokens, sign
+    them out everywhere and mail them; staff reset clients, admins also staff and partners, not
     yourself (turn your own off in the settings)"""
     data = request("POST", f"people/{person_id}/reset-two-factor/")
     if as_json:

@@ -382,8 +382,8 @@ def person_reset_two_factor(request, pk):
             messages.success(
                 request,
                 _(
-                    "The authenticator app of %(name)s has been removed; they"
-                    " got a mail about it."
+                    "The authenticator app, passkeys and API tokens of"
+                    " %(name)s have been removed; they got a mail about it."
                 )
                 % {"name": who.display_name},
             )
@@ -393,9 +393,9 @@ def person_reset_two_factor(request, pk):
         None,
         title=_("Reset two-factor for %(name)s?") % {"name": who.display_name},
         intro=_(
-            "Removes their authenticator app and signs them out everywhere."
-            " They sign in with a code or a passkey then and can set up an"
-            " app again. They get a mail about it."
+            "Removes their authenticator app, their passkeys and their API"
+            " tokens, and signs them out everywhere. They sign in with a code"
+            " then and can set them up again. They get a mail about it."
         ),
         cancel_url=back(request, who),
         submit_label=_("Reset"),
