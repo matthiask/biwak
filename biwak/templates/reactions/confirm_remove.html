@@ -10,7 +10,7 @@
         {% csrf_token %}
         <input type="hidden" name="content" value="{{ content }}">
         <input type="hidden" name="next" value="{{ cancel }}">
-        <button type="submit" class="btn btn-danger">{% translate "Remove" %}</button>
+        <button type="submit" class="btn btn-destructive">{% translate "Remove" %}</button>
         <a href="{{ cancel }}" class="btn btn-quiet">{% translate "Cancel" %}</a>
       </form>
     </div>
