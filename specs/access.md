@@ -165,7 +165,9 @@ Like Basecamp's bright yellow:
   what changes: "Makes this list, 12 to-dos and 34 comments visible to 3
   clients." The text is built per kind by the view (`_show_texts()`,
   `visibility.affected()` in `biwak/items/views.py`), so the switch
-  include shows no sentence by the button. The POST with `visible=1`
+  include shows no sentence by the button. It counts neither drafts
+  (anybody's, only their creators see them) nor what's in the trash
+  (decided 2026-11-21). The POST with `visible=1`
   shows the item, without it hides it. Staff only (403 for clients).
 - Notification mails about visible items say so in the first line.
 - API and CLI output include the visibility (`visible_to_clients`); the

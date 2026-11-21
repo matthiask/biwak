@@ -308,6 +308,25 @@ class VisibilityTest(TestCase):
             visibility.affected(todolist), {"items": 1, "comments": 1, "clients": 1}
         )
 
+    def test_affected_leaves_out_drafts_and_the_trash(self):
+        """Somebody's draft and trashed items aren't what the switch shows
+        (and the draft isn't the asker's business)"""
+        folder = ops.create_folder(
+            project=self.project, title="Plans", creator=self.ada
+        )
+        ops.create_doc(
+            project=self.project, title="News", creator=self.ada, parent=folder
+        )
+        ops.create_draft(project=self.project, creator=self.ada, parent=folder)
+        gone = ops.create_doc(
+            project=self.project, title="Old", creator=self.ada, parent=folder
+        )
+        ops.add_comment(gone, author=self.ada, content="Outdated")
+        ops.trash(gone, actor=self.ada)
+        self.assertEqual(
+            visibility.affected(folder), {"items": 1, "comments": 0, "clients": 1}
+        )
+
     def test_assigning_clients(self):
         todolist = ops.create_list(
             project=self.project, title="Launch", creator=self.ada
