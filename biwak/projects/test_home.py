@@ -486,8 +486,8 @@ class BookmarksTest(HomeTestCase):
 class LinksTest(HomeTestCase):
     def test_staff(self):
         links = self.section(self.ada, "links")
+        self.assertNotIn("New project", links)
         for text in [
-            "New project",
             "To-dos I assigned",
             "Search",
             "Subscribe to your to-dos in a calendar",
