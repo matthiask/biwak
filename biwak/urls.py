@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import include, path, re_path
@@ -19,6 +19,37 @@ def favicon(request):
 
 
 @login_not_required
+def manifest(request):
+    """Makes Biwak installable as an app (specs/pwa.md); public, holds
+    nothing secret"""
+    icon = lambda name, size, purpose: {  # noqa: E731
+        "src": static(f"biwak/{name}"),
+        "sizes": f"{size}x{size}",
+        "type": "image/png",
+        "purpose": purpose,
+    }
+    response = JsonResponse(
+        {
+            "name": "Biwak",
+            "short_name": "Biwak",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#eeebe4",
+            "theme_color": "#5b37b0",
+            "icons": [
+                icon("icon-192.png", 192, "any"),
+                icon("icon-512.png", 512, "any"),
+                icon("icon-maskable-512.png", 512, "maskable"),
+            ],
+        },
+        json_dumps_params={"indent": 2},
+    )
+    response["Content-Type"] = "application/manifest+json"
+    return response
+
+
+@login_not_required
 def no_passwords(request, *args, **kwargs):
     """Login is by code and passkeys (specs/access.md): allauth's password
     pages (set, change, reset) don't exist"""
@@ -27,6 +58,7 @@ def no_passwords(request, *args, **kwargs):
 
 urlpatterns = [
     path("favicon.ico", favicon),
+    path("manifest.webmanifest", manifest),
     path("", include("biwak.projects.urls")),
     path("", include("biwak.organizations.urls")),
     path("", include("biwak.items.urls")),

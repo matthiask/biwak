@@ -85,3 +85,15 @@ class AgoTest(TestCase):
             traveller.shift(dt.timedelta(minutes=5))
             html = self.client.get(shared.get_absolute_url()).content.decode()
             self.assertIn("5\xa0minutes ago", html)
+
+
+class ExternalLinksTest(TestCase):
+    def test_links_to_other_sites_open_in_a_new_tab(self):
+        from biwak.templatetags.biwak import render_markdown
+
+        html = render_markdown("[x](https://example.com) and [y](/projects/)")
+        self.assertIn(
+            '<a href="https://example.com" target="_blank" rel="noopener noreferrer">x',
+            html,
+        )
+        self.assertIn('<a href="/projects/">y', html)

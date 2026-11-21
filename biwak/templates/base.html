@@ -29,6 +29,14 @@
       })()
     </script>
     <link rel="icon" href="{% static 'biwak/favicon.svg' %}" type="image/svg+xml">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#5b37b0" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#3a2378" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="{% static 'biwak/apple-touch-icon.png' %}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Biwak">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     {% rspack_assets "main" %}
     {% block extra_head %}{% endblock %}
   </head>

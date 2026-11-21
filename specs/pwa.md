@@ -4,7 +4,20 @@ The idea (2026-11-21): Biwak can be installed as an app (home screen,
 dock), a progressive web app. Push notifications are postponed
 (decided 2026-11-21, `lantern.md` already says "later").
 
-**Status:** spec (2026-11-21). Not built.
+**Status:** built (2026-11-21). `/manifest.webmanifest` (view in
+`biwak/urls.py`, `login_not_required`), icons in `biwak/static/biwak/`
+(`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`,
+`apple-touch-icon.png`), tags in `base.html`, a paragraph in
+`docs/orientation.md`. Checked with headless Chromium: `Page.getAppManifest`
+has no errors and `Page.getInstallabilityErrors` is empty. Not checked:
+a Lighthouse screenshot, iOS (by the user on a phone).
+Decisions on the way: the icons are the logo (80 %, maskable 60 %, inside
+the safe circle) on the light stone `#eeebe4`, opaque, rendered once with
+ImageMagick from `favicon.svg`. `theme_color` and the `theme-color` tags
+use the default accent's bar (`#5b37b0` light, `#3a2378` dark); a person's
+other accent isn't reflected, the manifest is public and static.
+Links to other sites in Markdown texts got `target="_blank"` and
+`rel="noopener noreferrer"` (they had none; the links list had).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.

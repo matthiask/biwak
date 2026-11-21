@@ -77,6 +77,22 @@ def _mentions(state):
 _markdown.core.ruler.push("mentions", _mentions)
 
 
+def _external_links(state):
+    """Links to other sites open in a new tab, so that the installed app
+    (specs/pwa.md) keeps its window"""
+    for block in state.tokens:
+        for token in block.children or ():
+            if token.type == "link_open" and (token.attrGet("href") or "").startswith((
+                "http://",
+                "https://",
+            )):
+                token.attrSet("target", "_blank")
+                token.attrSet("rel", "noopener noreferrer")
+
+
+_markdown.core.ruler.push("external_links", _external_links)
+
+
 def _checkboxes(state):
     """Checkboxes of task lists (``biwak/checklists.py``): numbered, in a
     mail a glyph, disabled unless the page lets the viewer tick them
