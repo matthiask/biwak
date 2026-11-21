@@ -57,7 +57,7 @@
     </div>
   </div>
   {% if message %}
-    <div class="alert alert-secondary d-flex align-items-center gap-2 py-2" role="status">
+    <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="status">
       <span>{{ message.text }}</span>
       {% include "projects/_archive_form.html" with project=message.project unarchive=message.unarchive undo=True %}
     </div>
