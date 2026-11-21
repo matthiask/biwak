@@ -2544,6 +2544,18 @@ main:has([data-hide-title]) [data-edit-open] {
 /* People in the interface (specs/people.md, "The mark") */
 
 /* The "Me" menu: the mark, then the name (phones: the mark only) */
+/* The user menu: wide enough for a long name, which wraps rather than
+   running out of the menu */
+.wb-me-menu {
+  min-width: 15rem;
+  max-width: min(24rem, calc(100vw - 1rem));
+}
+
+.wb-me-menu .dropdown-item-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .wb-me-button {
   display: inline-flex;
   align-items: center;
