@@ -251,6 +251,12 @@ Nothing at the moment.
   interval, weekdays, monthly by day or nth weekday, yearly), no presets
   or raw RRULE in the forms, the description instead of a preview
   (`specs/rule-widget.md`); the API and CLI keep RRULEs and presets.
+- 2026-11-21: Hey!: notifications in the app (a bell with a count, a
+  page), mail optional (each, digest, none), what's read in the app not
+  mailed; item pages, lists and the board update live, reactions
+  included, changes appearing in place; the websocket only says what
+  changed, content comes through the permission-checked views
+  (`specs/hey.md`). Browser notifications later.
 - 2026-11-21: A command palette (Ctrl+K and "/") with jumps and actions,
   search being one of them, and single-key shortcuts inside pages that a
   setting turns off (`specs/keyboard.md`).

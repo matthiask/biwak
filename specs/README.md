@@ -37,6 +37,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
 | `rule-widget.md` | one control for repeat rules | next | to-dos, check-ins | cheaper, review the round trips |
 | `keyboard.md` | command palette (Ctrl+K), shortcuts | next | search | cheaper |
+| `hey.md` | Hey! inbox, live updates | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
 | `import-basecamp.md` | | open | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | last | everything | strong |
