@@ -205,6 +205,26 @@ def request(method, path, **kwargs):
     return response.json()
 
 
+# The API's largest page (biwak/api_conventions.py)
+MAX_PAGE_SIZE = 200
+
+
+def paginate(path, params=None, *, limit=None):
+    """The results of a list with cursor pagination, following ``next``
+    page by page: all of them, or the first ``limit``"""
+    params = dict(params or {})
+    params["page_size"] = min(limit or MAX_PAGE_SIZE, MAX_PAGE_SIZE)
+    results = []
+    while limit is None or len(results) < limit:
+        data = request("GET", path, params=params)
+        results += data["results"]
+        if not data["next"]:
+            break
+        # "next" is the URL of the next page
+        params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
+    return results[:limit]
+
+
 def download(path, target):
     """Saves the API's file download (``path``, following the redirect to
     a presigned URL with a bucket) to ``target``"""

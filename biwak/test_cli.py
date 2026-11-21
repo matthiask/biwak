@@ -165,6 +165,32 @@ class CLITest(TestCase):
             "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
         )
 
+    def test_long_lists_are_complete(self):
+        """Only the first page came: 50 completed to-dos and comments, 200
+        to-dos across projects"""
+        todos = [
+            ops.create_todo(todolist=self.list, title=f"Task {n}", creator=self.ada)
+            for n in range(201)
+        ]
+        for todo in todos[:51]:
+            ops.complete(todo, actor=self.ada)
+        for n in range(51):
+            ops.add_comment(todos[0], author=self.ada, content=f"Comment {n}")
+
+        def count(*args):
+            return len(json.loads(self.biwak(*args, "--json").stdout))
+
+        self.assertEqual(count("todos", self.list.pk, "--completed"), 51)
+        self.assertEqual(count("todos"), 150)
+        self.assertEqual(count("todos", "--completed"), 51)
+        data = json.loads(
+            self.biwak("todo", "show", todos[0].pk, "--comments", "--json").stdout
+        )
+        self.assertEqual(len(data["comments"]), 51)
+        for todo in todos[:60]:
+            ops.reopen(todo, actor=self.ada)
+        self.assertEqual(count("todos"), 201)
+
     def test_repeat(self):
         result = self.biwak(
             "todo", "add", self.list.pk, "Pay rent", "--due", "2026-11-20",

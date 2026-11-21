@@ -35,6 +35,10 @@ a name this short):
   comments, messages, docs, files (upload and download), check-in answers,
   the chronological list ("my to-dos"), the feed, search, bookmarks.
 - Human-readable output by default, `--json` for scripts and agents.
+- Lists with cursor pagination are read page by page (`paginate()` in
+  `cli/biwak_cli/core.py`): complete, or up to `--limit` where a command
+  has one (fixed 2026-11-21, CLI 0.19.0: completed to-dos, comments and
+  `todos` showed only the first page).
 - Versioned with the server; warns when they don't match.
 
 ## Agent skills
