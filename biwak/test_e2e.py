@@ -19,6 +19,7 @@ import json
 import os
 import re
 import socket
+import threading
 import time
 
 from django.conf import settings
@@ -104,12 +105,22 @@ class E2ETestCase(LiveServerTestCase):
         browsers: the editor's websocket saves the doc and tells the others
         when it disconnects, in a thread using the database, and the
         flush after the test would deadlock with it (or delete rows under
-        its feet)"""
+        its feet). The same for the threads of the WSGI server: a request
+        the page made just before closing (the palette's, say) still reads
+        while the flush truncates."""
+        deadline = time.monotonic() + timeout
+        # Django's request threads are daemons, which socketserver doesn't
+        # keep track of
+        for thread in threading.enumerate():
+            if "process_request_thread" not in thread.name:
+                continue
+            thread.join(max(0, deadline - time.monotonic()))
+            if thread.is_alive():  # pragma: no cover
+                raise AssertionError("The live server still handles a request")
         server = getattr(self.server_thread, "server", None)
         state = getattr(server, "server_state", None)
         if state is None:  # Not uvicorn
             return
-        deadline = time.monotonic() + timeout
         while state.connections or state.tasks:
             if time.monotonic() > deadline:  # pragma: no cover
                 raise AssertionError("The live server still has open connections")
@@ -2117,7 +2128,8 @@ class ModalTest(E2ETestCase):
         expect(dialog.locator("h1")).to_have_text("Invite by email")
         dialog.get_by_label("Email").fill("dora@example.org")
         dialog.get_by_role("button", name="Invite").click()
-        expect(page.get_by_text("dora@example.org")).to_be_visible()
+        # Listed: their mark links to their page, the email below the name
+        expect(page.get_by_text("dora@example.org", exact=True)).to_be_visible()
 
 
 class NavSearchTest(E2ETestCase):
@@ -2300,9 +2312,12 @@ class PhoneTest(E2ETestCase):
                 self.assertGreater(group["x"], add["x"] + add["width"])
 
     def test_the_visibility_switch_help_is_below_the_button_on_phones(self):
+        # Only hiding has its help by the button: showing asks in a modal,
+        # which says what becomes visible (section 5.4)
+        ops.set_visibility(self.todolist, visible=True, actor=self.ada)
         page = self.phone()
         page.goto(f"{self.live_server_url}{self.todolist.get_absolute_url()}")
-        button = page.get_by_role("button", name="Show to clients").bounding_box()
+        button = page.get_by_role("button", name="Hide from clients").bounding_box()
         help_ = page.locator(".wb-switch-help").bounding_box()
         self.assertGreaterEqual(help_["y"], button["y"] + button["height"])
 
