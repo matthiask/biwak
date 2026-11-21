@@ -459,7 +459,7 @@ class UploadSettingsForm(NotifyForm, Form):
     field_order = ["files", "visible", "notify", "people"]
 
     def __init__(self, *args, folder=None, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, folder=folder, **kwargs)
         if folder is not None:
             del self.fields["visible"]
 
@@ -523,7 +523,11 @@ def file_new(request, pk):
     if not ops.can_create(request.user, Kind.FILE):
         raise PermissionDenied
     form = UploadFilesForm(
-        request.POST or None, request.FILES or None, project=project, folder=folder
+        request.POST or None,
+        request.FILES or None,
+        project=project,
+        user=request.user,
+        folder=folder,
     )
     if form.is_valid():
         files = [(file, "") for file in form.cleaned_data["files"]]
@@ -566,7 +570,9 @@ def file_upload(request, pk):
     folder = folder_param(request, project)
     if not ops.can_create(request.user, Kind.FILE):
         raise PermissionDenied
-    form = UploadOneForm(request.POST, request.FILES, project=project, folder=folder)
+    form = UploadOneForm(
+        request.POST, request.FILES, project=project, user=request.user, folder=folder
+    )
     if not form.is_valid():
         return JsonResponse(
             {

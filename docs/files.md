@@ -11,7 +11,9 @@ number of comments.
   "Visible to clients" (staff), and whom to notify: everybody in the
   project, only chosen people, or nobody. Everybody is preselected;
   it subscribes the people notified by default, not those who want to
-  hear only when tagged ([Notifications](notifications.md)).
+  hear only when tagged ([Notifications](notifications.md)). "Only
+  these people" shows them: those "Everybody" would reach, to take
+  some away (×) or add others (type a name).
 - Staff **pin** a message (its page or the row's menu) to keep it on
   top for everybody. The categories are set up by an administrator.
 - Messages have comments and reactions like to-dos. Clients can post
@@ -57,8 +59,9 @@ write something it's only yours: nobody else sees it, it isn't in the
 folder, the activity or search, and an empty one is deleted after a day.
 With the first text it's a doc (the browser's address becomes the doc's)
 and it's in the folder, telling nobody yet. When you click "Done" the
-first time, you're asked "Tell people about it?": pick people (and add a
-note) and "Tell them", or "Not now". You're asked only once; later, add
+first time, you're asked "Tell people about it?": the people notified
+by default are already chosen; change them (and add a note) and "Tell
+them", or "Not now". You're asked only once; later, add
 people with "Manage…" next to the subscribers.
 
 - **Edit** opens the doc for editing together: everybody who edits it

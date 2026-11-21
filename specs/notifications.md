@@ -79,6 +79,17 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   for the item is "everything" (decided 2026-11-21, `ui-round-6.md`);
   people chosen by name whatever their level, like adding subscribers
   (built 2026-11-21).
+- **The form** (`files.common.NotifyForm`, decided 2026-11-21): "These
+  people" shows only while "Only these people" is chosen
+  (`frontend/shown-when.js`; without JavaScript always), in the people
+  picker (`PeopleField`, the assignees' and subscribers' one). Preselected
+  are those "Everybody" would reach: `notify.everybody()`, the same
+  function `notify_people()` uses, for the container the item goes into
+  (a folder, or the top level) and the visibility the form starts with
+  (the folder's; at the top internal, a client's visible). The poster is
+  neither preselected nor offered. A form shown again with errors keeps
+  what was chosen. A doc begun as a draft has the same preselection in
+  "Tell people about it?" (those not subscribed yet).
 
 ## Stage 1: mentions, levels, mails, digests
 

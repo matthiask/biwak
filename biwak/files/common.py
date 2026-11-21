@@ -1,13 +1,15 @@
 """What the pages of messages, docs and files share"""
 
 from django import forms
+from django.db.models.functions import Lower
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts.models import User
+from biwak.activity.notify import everybody
 from biwak.activity.operations import is_assigned, is_subscribed
-from biwak.forms import Form
+from biwak.forms import Form, PeopleField, PeopleSelect
 from biwak.items import operations as ops
 from biwak.items.views import CommentForm
 
@@ -17,7 +19,11 @@ class NotifyForm(Form):
     specs/notifications.md): everybody in the project, chosen people or
     nobody. Everybody is preselected (decided 2026-11-20): it subscribes
     only those notified by default, not those who want to hear only when
-    tagged (specs/ui-round-6.md, part C)."""
+    tagged (specs/ui-round-6.md, part C). "These people" is the people
+    picker, shown only with "Only these people" (``shown_when``,
+    ``frontend/shown-when.js``), with those "Everybody" would reach
+    preselected (``notify.everybody()``), never the poster (decided
+    2026-11-21)."""
 
     EVERYBODY, CHOSEN, NOBODY = "everybody", "chosen", "nobody"
 
@@ -31,18 +37,33 @@ class NotifyForm(Form):
         initial=EVERYBODY,
         widget=forms.RadioSelect,
     )
-    people = forms.ModelMultipleChoiceField(
+    people = PeopleField(
         label=_("These people"),
         queryset=User.objects.none(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
+        widget=PeopleSelect(attrs={"data-placeholder": _("Add people…")}),
     )
+    people.shown_when = f"notify={CHOSEN}"
 
-    def __init__(self, *args, project, **kwargs):
+    def __init__(self, *args, project, user, folder=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["people"].queryset = User.objects.active().filter(
-            memberships__project=project
+        field = self.fields["people"]
+        # The members, not the poster: nobody hears about their own posts
+        field.queryset = (
+            User.objects
+            .active()
+            .filter(memberships__project=project)
+            .exclude(pk=user.pk)
+            .order_by(Lower("full_name"), "email")
         )
+        if not self.is_bound:
+            # Who'd see it as the form starts: in a folder as the folder
+            # says, at the top what clients post (``message_visibility()``)
+            visible = folder.is_client_visible if folder else user.is_client
+            field.initial = [
+                person.pk
+                for person in everybody(project, folder, visible=visible)
+                if person != user
+            ]
 
     def mention_fields(self, project, *names, folder=None):
         """The ``@`` list of the fields: whoever will see the new item"""

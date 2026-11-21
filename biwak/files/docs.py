@@ -9,6 +9,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak.activity.history import diff_lines
+from biwak.activity.notify import everybody
 from biwak.activity.operations import share
 from biwak.activity.views import SubscribersForm
 from biwak.collab import live
@@ -112,11 +113,22 @@ def _editor(request, item):
 
 
 class TellForm(SubscribersForm):
-    """ "Tell people about it?": the subscribers' picker, telling them now"""
+    """ "Tell people about it?": the subscribers' picker, telling them now,
+    with those preselected whom posting to everybody would have reached
+    (``notify.everybody()``, decided 2026-11-21)"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, item, user, **kwargs):
+        super().__init__(*args, item=item, user=user, **kwargs)
         del self.fields["notify"]
+        if not self.is_bound:
+            field = self.fields["people"]
+            reached = everybody(item.project, item, visible=item.is_client_visible)
+            # Not those subscribed already nor the creator: not in the queryset
+            field.initial = list(
+                field.queryset.filter(
+                    pk__in=[person.pk for person in reached]
+                ).values_list("pk", flat=True)
+            )
 
 
 @never_cache
