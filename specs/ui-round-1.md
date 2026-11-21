@@ -127,8 +127,7 @@ list's rows; clients get neither. `project_archive` takes `list` (`active` or
 with `undo=1`, which says nothing itself); without htmx it redirects to the
 projects page; without `list` (the project's own menu) it redirects to the
 project as before. The whole content is re-rendered, so Undo puts the card
-back in its sorted place. The messages stay until the next action (decided
-2026-11-21: no timer).
+back in its sorted place. The messages stay until the next action (no timer: open question).
 
 ## Done when
 
