@@ -52,7 +52,10 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   `biwak lantern` prints one row per item ("(+N)" for more), `--json`
   the entries. Digests are unaffected.
 - **A batch of uploaded files is one entry** (`entry_key()`, `Batch`;
-  `files.md`, "Uploading files"): its folder, "Ada uploaded 5 files to
+  `files.md`, "Uploading files"), and so are one person's batches into
+  the same folder (or the top level) each within 10 minutes
+  (`MERGE_AFTER`) of the one before (`group_uploads()`, decided
+  2026-11-21): its folder, "Ada uploaded 5 files to
   Minutes.", the files linked; counted once; following it, "Mark as
   read" and "Mark as unread" act on all its files. No bookmark button:
   bookmarks are per item.

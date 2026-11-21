@@ -861,6 +861,16 @@ class UploadOneTest(Fixture, TestCase):
         response = self.send(self.ada, title=" ")
         self.assertEqual(response.json()["title"], "minutes.pdf")
 
+    def test_more_files_follow(self):
+        """All but the batch's last file say so (frontend/upload.js): its
+        mail waits for the rest (specs/files.md)"""
+        response = self.send(self.ada, more="1")
+        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
+        self.assertTrue(event.data["more"])
+        response = self.send(self.ada)
+        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
+        self.assertNotIn("more", event.data)
+
     def test_errors(self):
         self.assertEqual(self.send(self.ada, batch="nope").status_code, 400)
         self.assertEqual(self.send(self.ada, notify="").status_code, 400)

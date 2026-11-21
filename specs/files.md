@@ -160,6 +160,18 @@ the counts of the top level's folders, docs and files.
   not one per file. The batch is a random ID made with the form, stored
   as `batch` in the files' `created` events (`create_upload(batch=)`);
   the lantern and the mails merge it (`lantern.md`, `notifications.md`).
+  One person's batches into the same folder (or the top level), each
+  within 10 minutes of the one before, merge into one entry and one
+  mail too (decided 2026-11-21, like the feed).
+- **A batch's mail waits until it's complete** (decided 2026-11-21,
+  the simplest robust way): the modal sends `more` with every file but
+  the last it will send (`UploadOneForm`, `create_upload(more=)`,
+  stored in the event); `send_mails` holds a group whose newest file
+  says `more` until the rest arrived, else for `BATCH_WAIT` (an hour:
+  the last file failed or the tab was closed). Without the flag (the
+  page without JavaScript sends all files at once) the 10 minutes
+  after the newest apply as everywhere. No "done" request: the flag
+  rides on the uploads.
 
 ## Docs
 

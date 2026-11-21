@@ -193,7 +193,10 @@ large).
   edits merge. **A batch of
   uploaded files is one mail** (`batch_mail()`, `mails/batch.*`,
   `files.md`), whose unsubscribe link is the settings page (there's no
-  one item).
+  one item); one person's uploads into one folder (or the top level)
+  are one group, so rounds within the 10 minutes merge too (decided
+  2026-11-21). A batch still going up waits: while the newest file's
+  event says `more` follow, up to `BATCH_WAIT` (an hour) after it.
 - **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
   day before, grouped by project and item, a batch as one entry; nothing
   to say, no mail. Subject `[Biwak] What happened on 19. November 2026`

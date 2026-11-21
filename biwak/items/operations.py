@@ -322,11 +322,13 @@ def create_upload(
     whom="nobody",
     title=None,
     batch=None,
+    more=False,
 ):
     """Uploads a file into the root or a folder; its title is the file's
     name unless ``title`` is given. ``batch``: files uploaded together
     share it on their events, which the lantern and the mails merge into
-    one entry (specs/files.md, "Uploading files"). Raises
+    one entry (specs/files.md, "Uploading files"); ``more``: more files
+    of the batch follow, its mail waits for them. Raises
     ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
     item = create_item(
@@ -340,7 +342,10 @@ def create_upload(
     upload = Upload.objects.create(item=item, description=description)
     new_version(upload, file, uploaded_by=creator)
     attachments.link(item, description, actor=creator)
-    event = created(item, creator, **({"batch": batch} if batch else {}))
+    data = {"batch": batch} if batch else {}
+    if batch and more:
+        data["more"] = True
+    event = created(item, creator, **data)
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item

@@ -37,6 +37,10 @@ logger = logging.getLogger(__name__)
 # 10 minutes since 2026-11-21: urgent things get a call, the lantern is
 # immediate)
 MERGE_AFTER = dt.timedelta(minutes=10)
+# Files of a batch still going up (``more`` on the newest one's event):
+# its mail waits for them, but no longer than this after the newest
+# arrived (the rest failed, or the tab was closed)
+BATCH_WAIT = dt.timedelta(hours=1)
 # Digests in the installation's time zone (decided 2026-11-20)
 DIGEST_AT = dt.time(7, 0)
 
@@ -454,10 +458,14 @@ def digest_mail(user, notifications):
     """The notifications before today, grouped by project and item; None
     when there's nothing left to say"""
 
+    from biwak.activity.lantern import group_uploads
+
     def key(notification):
-        batch = notification.event.data.get("batch") or ""
+        entry = getattr(notification, "upload_entry", None)
+        batch = repr(entry) if entry else ""
         return (batch, 0 if batch else notification.event.item_id)
 
+    group_uploads(notifications)
     notifications = sorted(
         notifications,
         key=lambda n: (
@@ -543,19 +551,44 @@ def send_mails(*, now=None):
     )
     count = 0
 
-    # Each change: per person and item (or files uploaded together), once
-    # the newest is 10 minutes old
+    # Each change: per person and item, or one person's files uploaded into
+    # one folder (specs/files.md), once the newest is 10 minutes old
     groups = {}
-    for pk, user_id, item_id, batch, created_at in unsent.filter(
-        user__mail_delivery=MailDelivery.EACH
-    ).values_list("pk", "user", "event__item", "event__data__batch", "created_at"):
-        key = (user_id, ("batch", batch) if batch else ("item", item_id))
-        group = groups.setdefault(key, {"pks": [], "newest": created_at})
+    for (
+        pk,
+        user_id,
+        item_id,
+        batch,
+        more,
+        actor,
+        project,
+        parent,
+        created_at,
+    ) in unsent.filter(user__mail_delivery=MailDelivery.EACH).values_list(
+        "pk",
+        "user",
+        "event__item",
+        "event__data__batch",
+        "event__data__more",
+        "event__actor",
+        "event__project",
+        "event__item__parent",
+        "created_at",
+    ):
+        what = ("batch", (actor, project, parent)) if batch else ("item", item_id)
+        group = groups.setdefault(
+            (user_id, what), {"pks": [], "newest": (created_at, pk), "more": False}
+        )
         group["pks"].append(pk)
-        group["newest"] = max(group["newest"], created_at)
+        if (created_at, pk) >= group["newest"]:
+            group["newest"], group["more"] = (created_at, pk), bool(more)
     users = User.objects.in_bulk({user_id for user_id, _item_id in groups})
     for (user_id, (kind, _key)), group in groups.items():
-        if group["newest"] > now - MERGE_AFTER:
+        newest = group["newest"][0]
+        if newest > now - MERGE_AFTER:
+            continue
+        if group["more"] and newest > now - BATCH_WAIT:
+            # More files of the batch are still going up
             continue
         user = users[user_id]
         count += _mail(

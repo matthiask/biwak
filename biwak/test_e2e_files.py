@@ -221,6 +221,16 @@ class UploadTest(E2ETestCase):
             )
         }
         self.assertEqual(len(events), 1)
+        # All but the last say more follow: the mail waits for the rest
+        self.assertEqual(
+            [
+                e.data.get("more", False)
+                for e in Event.objects.filter(
+                    item__parent=self.minutes, item__kind="file", action="created"
+                ).order_by("pk")
+            ],
+            [True, False],
+        )
         self.assertEqual(self.errors, [])
 
     def test_dropping_onto_a_folder_tile_and_the_button(self):
@@ -312,6 +322,10 @@ class UploadTest(E2ETestCase):
         )
         expect(dialog.locator(".wb-upload-row.is-done")).to_have_count(1)
         self.assertEqual(self.files_in(self.minutes), ["ok.txt"])
+        # The last one sent: nothing more follows (the big one never goes)
+        self.assertNotIn(
+            "more", Event.objects.get(item__title="ok.txt", action="created").data
+        )
         # Closing shows what went up
         dialog.get_by_role("button", name="Cancel").click()
         expect(page.locator(".wb-tile-file")).to_have_count(1)

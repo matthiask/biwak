@@ -1,7 +1,8 @@
 // "Upload files" (files/upload_form.html, specs/files.md, "Uploading files"): the
 // files chosen or dropped are listed with their names (editable, the
 // extension kept) and sizes, removable; "Upload" sends them one after
-// another to [data-upload] with the form's fields and the batch, a
+// another to [data-upload] with the form's fields and the batch (all but
+// the last with "more", so the batch's mail waits for the rest), a
 // progress bar on each row, an error staying on its row while the others
 // go on. When all went up, the page reloads (or the folder's page loads,
 // from elsewhere); the tiles are there.
@@ -87,11 +88,13 @@ function fail(entry, message) {
   entry.li.querySelector("progress").hidden = true
 }
 
-function sendOne(zone, entry) {
+// ``more``: more files of the batch follow, its mail waits for them
+function sendOne(zone, entry, more) {
   const form = formOf(zone)
   const data = new FormData(form)
   data.delete("files")
   data.set("file", entry.file)
+  if (more) data.set("more", "1")
   const stem = entry.li.querySelector("[data-upload-title]").value.trim()
   data.set("title", stem ? stem + entry.extension : "")
   const progress = entry.li.querySelector("progress")
@@ -145,10 +148,14 @@ async function upload(zone) {
   button.disabled = true
   form.classList.add("is-uploading")
   let failed = 0
+  // The last one that will be sent (too big ones fail here)
+  const last = entries.findLast(
+    (entry) => entry.file.size <= Number(zone.dataset.uploadMax),
+  )
   for (const entry of entries) {
     entry.li.classList.remove("is-failed")
     entry.li.querySelector("[data-upload-row-error]").hidden = true
-    if (!(await sendOne(zone, entry))) failed += 1
+    if (!(await sendOne(zone, entry, entry !== last))) failed += 1
   }
   form.classList.remove("is-uploading")
   zone.dataset.uploaded = "true"

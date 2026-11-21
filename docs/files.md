@@ -87,7 +87,9 @@ them: "Visible to clients" (at the top level; in a folder they follow
 the folder) and whom to notify. "Upload" sends them one after another;
 a file that can't be uploaded (too big) says so on its row while the
 others go on. The people notified get one notification and one mail for
-all of them ("Ada uploaded 5 files to Minutes"), not one per file.
+all of them ("Ada uploaded 5 files to Minutes"), not one per file; more
+files uploaded into the same folder within ten minutes join it, and the
+mail waits until all files are up.
 
 A file's page shows a preview for images and PDFs, its description,
 comments and "Download". "Replace" (or "Upload a new version") puts a

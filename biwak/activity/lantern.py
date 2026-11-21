@@ -18,7 +18,7 @@ from django.utils.translation import gettext as _, ngettext
 
 from biwak import cursors
 from biwak.activity import feed
-from biwak.activity.models import Action, Event, Notification
+from biwak.activity.models import Action, Notification
 from biwak.items.models import Item
 from biwak.live import announce as live
 
@@ -60,29 +60,73 @@ def wanted(notifications, user):
     return _deliverable(notifications, user)
 
 
+def upload_key(notification):
+    """For files uploaded in a batch: who uploaded them where (the project
+    and the folder, or the top level); None for anything else"""
+    event = notification.event
+    if not event.data.get("batch"):
+        return None
+    return (event.actor_id, event.project_id, event.item.parent_id)
+
+
+def group_uploads(notifications):
+    """Sets ``upload_entry`` on the notifications of files uploaded in
+    batches: one person's uploads into one folder (or the top level), each
+    within ``mails.MERGE_AFTER`` of the one before, are one entry, also
+    from separate rounds (decided 2026-11-21, like the feed merges).
+    Returns the notifications."""
+    from biwak.activity.mails import MERGE_AFTER
+
+    chains = {}  # upload key -> (number, the latest's time)
+    for notification in sorted(notifications, key=lambda n: (n.created_at, n.pk)):
+        key = upload_key(notification)
+        if key is None:
+            continue
+        number, last = chains.get(key, (0, None))
+        if last is not None and notification.created_at - last > MERGE_AFTER:
+            number += 1
+        chains[key] = (number, notification.created_at)
+        notification.upload_entry = (*key, number)
+    return notifications
+
+
 def entry_key(notification):
     """What the lantern's entry of a notification is: its item, or the
-    batch of files uploaded together (specs/files.md, "Uploading files")"""
-    event = notification.event
-    if batch := event.data.get("batch"):
-        return ("batch", batch)
-    return ("item", event.item_id)
+    files uploaded together (specs/files.md, "Uploading files";
+    ``group_uploads()`` ran)"""
+    if entry := getattr(notification, "upload_entry", None):
+        return ("batch", entry)
+    return ("item", notification.event.item_id)
 
 
-def batch_items(batch):
-    """The IDs of the files uploaded together in ``batch``"""
-    return list(
-        Event.objects.filter(action=Action.CREATED, data__batch=batch).values_list(
-            "item", flat=True
+def entry_items(user, notification):
+    """The items of the notification's entry: its item, or the files
+    uploaded together (``group_uploads()`` among the person's
+    notifications of that person's uploads there)"""
+    key = upload_key(notification)
+    if key is None:
+        return [notification.event.item]
+    actor, project, parent = key
+    same = group_uploads(
+        list(
+            notifications_for(user).filter(
+                event__actor=actor,
+                event__project=project,
+                event__item__parent=parent,
+                event__action=Action.CREATED,
+                event__data__has_key="batch",
+            )
         )
     )
+    entry = next(n.upload_entry for n in same if n.pk == notification.pk)
+    return [n.event.item for n in same if n.upload_entry == entry]
 
 
 def unread_counts(user):
     """``(notifications, entries)``: how many unread notifications the
     person has, and about how many items (the menu groups by item, and a
     batch of files is one entry)"""
-    unread = wanted(list(notifications_for(user, unread=True)), user)
+    unread = group_uploads(wanted(list(notifications_for(user, unread=True)), user))
     return len(unread), len({entry_key(n) for n in unread})
 
 
@@ -143,8 +187,9 @@ def unread_by_item(user, item_ids):
 
 
 class Batch:
-    """Files uploaded together, one entry of the lantern in place of an
-    item's: "Ada uploaded 5 files to Minutes", each file linked"""
+    """Files uploaded together (``group_uploads()``), one entry of the
+    lantern in place of an item's: "Ada uploaded 5 files to Minutes", each
+    file linked"""
 
     is_batch = True
     kind_icon = "upload"
@@ -187,6 +232,8 @@ def by_item(notifications, *, batches=True):
     from biwak.search.views import KIND_ICONS
 
     groups = {}
+    if batches:
+        group_uploads(notifications)
     for notification in notifications:
         key = (
             entry_key(notification) if batches else ("item", notification.event.item_id)
