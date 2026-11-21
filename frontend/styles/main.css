@@ -2064,14 +2064,17 @@ button.wb-signal:hover {
   --wb-lantern-dot: #e03131;
 }
 
+/* On the button's corner, outside the torch's light, ringed in the bar's
+   color so that it stands apart from the button's border */
 .wb-lantern-dot {
   position: absolute;
-  top: 0.2rem;
-  right: 0.2rem;
-  width: 0.55rem;
-  height: 0.55rem;
+  top: -0.3rem;
+  right: -0.3rem;
+  width: 0.6rem;
+  height: 0.6rem;
   background: var(--wb-lantern-dot);
   border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--wb-accent-bar, #5b37b0);
 }
 
 .wb-lantern-dot[hidden] {

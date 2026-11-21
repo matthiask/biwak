@@ -133,7 +133,7 @@
 .bi-grip-vertical::before {
   content: "\f3fe";
 }
-/* Not in Bootstrap Icons: a torch with its light for the lantern
+/* Not in Bootstrap Icons: a torch shining up and ahead, for the lantern
    (specs/lantern.md; a table lamp didn't fit a bivouac, and a drawn
    camping lantern wasn't recognizable at this size), drawn in their
    style, the font's color through a mask */
@@ -145,7 +145,7 @@
   vertical-align: -0.25em;
   background-color: currentColor;
   mask:
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='2.6 0.6 10.8 14.4' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 5.5h7v1.2L9.6 9v5.3H6.4V9L4.5 6.7z'/><path d='M8 10.8v1.2'/><path d='M8 1.2v2M3.6 2.4l1.1 1.5M12.4 2.4l-1.1 1.5'/></svg>")
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='1.65 0.15 14.45 14.45' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'><g transform='rotate(45 8 8.2)'><path d='M4.5 5.5h7v1.2L9.6 9v5.3H6.4V9L4.5 6.7z'/><path d='M8 10.8v1.2'/><path d='M8 1.2v2M3.6 2.4l1.1 1.5M12.4 2.4l-1.1 1.5'/></g></svg>")
     center / contain no-repeat;
 }
 .bi-search::before {
