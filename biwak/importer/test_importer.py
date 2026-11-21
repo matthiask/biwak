@@ -64,8 +64,7 @@ class ImportCase(TestCase):
 
 class ImportEveryKindTest(ImportCase):
     def test_every_row_of_the_mapping(self):
-        report = self.run_import()
-        self.assertEqual(report.problems[0].count("internal in Basecamp"), 1)
+        self.run_import()
         project = self.project
         self.assertEqual(project.name, "Camp kitchen")
         self.assertFalse(project.is_all_access)
@@ -74,7 +73,14 @@ class ImportEveryKindTest(ImportCase):
         # To-do lists, groups, to-dos
         kinds = lambda kind: self.titles(Item.objects.filter(kind=kind))  # noqa: E731
         self.assertEqual(
-            kinds(Kind.LIST), {"Kitchen plan", "Budget", "Old ideas", "Planning board"}
+            kinds(Kind.LIST),
+            {
+                "Kitchen plan",
+                "Kitchen plan (internal)",
+                "Budget",
+                "Old ideas",
+                "Planning board",
+            },
         )
         plan = self.item("Kitchen plan")
         self.assertEqual(plan.todolist.view, TodoList.View.LIST)
@@ -94,6 +100,7 @@ class ImportEveryKindTest(ImportCase):
                 "Whale watching",
                 "New menu",
                 "Order pots",
+                "Raise the rate for Cleo",
             },
         )
         self.assertEqual(
@@ -140,7 +147,10 @@ class ImportEveryKindTest(ImportCase):
         self.assertEqual(MessageCategory.objects.count(), 1)
 
         # Folders, docs, files
-        self.assertEqual(kinds(Kind.FOLDER), {"Public", "Private", "Mixed", "Deeper"})
+        self.assertEqual(
+            kinds(Kind.FOLDER),
+            {"Public", "Private", "Mixed", "Mixed (internal)", "Deeper"},
+        )
         self.assertEqual(self.item("Deeper").parent.title, "Private")
         self.assertEqual(self.item("Public doc").parent.title, "Public")
         self.assertEqual(self.item("Shopping list").parent, None)
@@ -240,7 +250,7 @@ VISIBLE = {
     "We have a camp",  # a visible message
     "Public",  # a visible folder, and what's in it
     "Public doc",
-    "Mixed",  # a visible folder whose internal doc was skipped
+    "Mixed",  # a visible folder, its internal doc is in "Mixed (internal)"
     "map.png",
     "Camp rules",  # a visible doc at the top
     "What did you cook today?",  # a visible check-in with its answers
@@ -253,6 +263,10 @@ INTERNAL = {
     "Planning board",
     "New menu",
     "Order pots",
+    "Kitchen plan (internal)",  # the internal to-do of a visible list
+    "Raise the rate for Cleo",
+    "Mixed (internal)",  # the internal doc of a visible folder
+    "Internal in a public folder",
     "Prices",  # posted by a client, internal in Basecamp
     "Shopping list",
     "plan.png",
@@ -274,15 +288,13 @@ class VisibilityTest(ImportCase):
                     item.title in VISIBLE,
                     f"{item.title}: stored visibility differs from Basecamp's",
                 )
-        # Every title is accounted for, and only the skipped one is missing
+        # Every title is accounted for
         titles = self.titles(Item.objects.exclude(kind=Kind.ANSWER))
         self.assertEqual(titles - VISIBLE - INTERNAL, set())
-        self.assertNotIn("Internal in a public folder", titles)
         self.assertEqual(visibility.check(), [])
-        self.assertIn(
-            "Skipped to-do 3013 ('Raise the rate for Cleo')", " ".join(report.problems)
-        )
-        self.assertIn("Skipped doc 4301", " ".join(report.problems))
+        text = " ".join(report.internal)
+        self.assertIn("to-do 3013 ('Raise the rate for Cleo') into list", text)
+        self.assertIn("doc 4301 ('Internal in a public folder') into folder", text)
         # Answers follow their question
         for answer in Item.objects.filter(kind=Kind.ANSWER):
             self.assertEqual(
@@ -420,7 +432,7 @@ class SecondRunTest(ImportCase):
         # Files aren't downloaded again
         self.assertEqual(len(self.client_.downloads), downloads)
         self.assertEqual(report.counts["to-dos"]["created"], 0)
-        self.assertEqual(report.counts["to-dos"]["updated"], 5)
+        self.assertEqual(report.counts["to-dos"]["updated"], 6)
         self.assertEqual(visibility.check(), [])
 
     def test_a_second_run_updates_what_changed(self):
@@ -456,7 +468,7 @@ class SecondRunTest(ImportCase):
         self.assertEqual(food.todo.notes, "New notes")
         self.assertEqual(food.todo.due_on, dt.date(2026, 7, 1))
         self.assertEqual(self.names(food.todo.assignees.all()), {"Bob Example"})
-        self.assertEqual(Item.objects.filter(kind=Kind.TODO).count(), 7)
+        self.assertEqual(Item.objects.filter(kind=Kind.TODO).count(), 8)
         self.assertEqual(Comment.objects.filter(item=food).count(), 3)
         self.assertFalse(self.item("Pick a camp date").todo.is_completed)
         self.assertEqual(self.item("Camp rules").doc.content, "New rules")
@@ -498,9 +510,9 @@ class SecondRunTest(ImportCase):
         # As after one run: what was there isn't there twice
         self.assertGreater(Item.objects.count(), partial)
         self.assertEqual(Project.objects.count(), 1)
-        self.assertEqual(Item.objects.filter(kind=Kind.TODO).count(), 7)
-        self.assertEqual(Item.objects.filter(kind=Kind.LIST).count(), 4)
-        self.assertEqual(Item.objects.filter(kind=Kind.FOLDER).count(), 4)
+        self.assertEqual(Item.objects.filter(kind=Kind.TODO).count(), 8)
+        self.assertEqual(Item.objects.filter(kind=Kind.LIST).count(), 5)
+        self.assertEqual(Item.objects.filter(kind=Kind.FOLDER).count(), 5)
         self.assertEqual(Membership.objects.count(), 3)
         self.assertEqual(Comment.objects.count(), 4)
 
@@ -529,13 +541,13 @@ class DryRunTest(ImportCase):
         self.assertEqual(counts["projects"], 1)
         self.assertEqual(counts["lists"], 3)
         self.assertEqual(counts["card tables"], 1)
-        self.assertEqual(counts["to-dos"], 5)
+        self.assertEqual(counts["to-dos"], 6)
         self.assertEqual(counts["cards"], 2)
         self.assertEqual(counts["groups"], 1)
         self.assertEqual(counts["columns"], 3)
         self.assertEqual(counts["messages"], 2)
         self.assertEqual(counts["folders"], 4)
-        self.assertEqual(counts["docs"], 4)
+        self.assertEqual(counts["docs"], 5)
         self.assertEqual(counts["files"], 3)
         self.assertEqual(counts["check-in questions"], 2)
         self.assertEqual(counts["check-in answers"], 4)
@@ -547,15 +559,16 @@ class DryRunTest(ImportCase):
                 "Cleo Example <cleo@example.org> (client)",
             ],
         )
-        self.assertEqual(len(report.problems), 2)
+        self.assertEqual(len(report.internal), 2)
         text = report.as_text()
         self.assertIn("Dry run", text)
-        self.assertIn("to-dos: 5 new", text)
+        self.assertIn("Raise the rate for Cleo", text)
+        self.assertIn("to-dos: 6 new", text)
 
     def test_after_a_run_it_counts_existing_ones(self):
         self.run_import()
         report = self.run_import(dry_run=True)
-        self.assertEqual(report.counts["to-dos"]["updated"], 5)
+        self.assertEqual(report.counts["to-dos"]["updated"], 6)
         self.assertEqual(report.counts["to-dos"]["created"], 0)
         self.assertEqual(report.people, [])
 
@@ -702,7 +715,7 @@ class CommandTest(ImportCase):
         text, make = self.call("--account", "1000", "--project", str(support.PROJECT))
         make.assert_called_once_with("1000", "secret")
         self.assertIn("Imported.", text)
-        self.assertIn("to-dos: 5 new", text)
+        self.assertIn("to-dos: 6 new", text)
         self.assertEqual(Project.objects.count(), 1)
         self.assertEqual(
             Project.objects.get().memberships.filter(user=self.ada).count(), 1
@@ -774,7 +787,17 @@ class SearchTest(ImportCase):
         cleo.save()
         self.client.force_login(cleo)
         # Internal titles and texts (an answer, a doc, a message)
-        for word in ["Negotiate", "Shopping", "salaries", "stove", "worries", "Deep"]:
+        for word in [
+            "Negotiate",
+            "Shopping",
+            "salaries",
+            "stove",
+            "worries",
+            "Deep",
+            "Raise",
+            "Internal in",
+            "internal",
+        ]:
             with self.subTest(word):
                 self.assertEqual(self.found(word), set())
         # What is visible is found, and staff find everything
@@ -782,3 +805,96 @@ class SearchTest(ImportCase):
         self.client.force_login(self.ada)
         self.assertEqual(self.found("Negotiate"), {"Negotiate the price"})
         self.assertEqual(self.found("stove"), {"Any worries?"})
+
+
+class InternalInsideVisibleTest(ImportCase):
+    """What was internal inside a container visible to clients goes into an
+    internal container of its own (decided 2026-11-21)"""
+
+    def test_a_todo_goes_into_an_internal_list(self):
+        self.run_import()
+        plan = self.item("Kitchen plan")
+        internal = self.item("Kitchen plan (internal)")
+        self.assertEqual(internal.kind, Kind.LIST)
+        self.assertFalse(internal.is_client_visible)
+        self.assertFalse(internal.visible_to_clients)
+        todo = self.item("Raise the rate for Cleo")
+        self.assertEqual(todo.parent, internal)
+        self.assertFalse(todo.is_client_visible)
+        self.assertEqual(plan.children.filter(title=todo.title).count(), 0)
+
+    def test_a_doc_goes_into_a_top_level_internal_folder(self):
+        self.run_import()
+        internal = self.item("Mixed (internal)")
+        self.assertEqual(internal.kind, Kind.FOLDER)
+        self.assertIsNone(internal.parent)
+        self.assertFalse(internal.is_client_visible)
+        doc = self.item("Internal in a public folder")
+        self.assertEqual(doc.parent, internal)
+        self.assertFalse(doc.is_client_visible)
+
+    def test_a_second_run_reuses_them(self):
+        self.run_import()
+        before = Item.objects.count()
+        self.run_import()
+        self.assertEqual(Item.objects.count(), before)
+        self.assertEqual(
+            ImportedObject.objects.filter(
+                basecamp_type__in=["Vault::Internal", "Todolist::Internal"]
+            ).count(),
+            2,
+        )
+        self.assertEqual(Item.objects.filter(title="Mixed (internal)").count(), 1)
+
+    def test_the_dry_run_lists_them(self):
+        report = self.run_import(dry_run=True)
+        self.assertEqual(Item.objects.count(), 0)
+        self.assertEqual(report.counts["internal folders"]["created"], 1)
+        self.assertEqual(report.counts["internal lists"]["created"], 1)
+        self.assertEqual(len(report.internal), 2)
+        self.assertIn('into folder "Mixed (internal)"', report.as_text())
+
+    def test_clients_see_none_of_it_staff_find_it(self):
+        self.run_import()
+        cleo = User.objects.get(email="cleo@example.org")
+        cleo.is_active = True
+        cleo.save()
+        titles = [
+            "Kitchen plan (internal)",
+            "Raise the rate for Cleo",
+            "Mixed (internal)",
+            "Internal in a public folder",
+        ]
+        self.client.force_login(cleo)
+        for title in titles:
+            item = self.item(title)
+            self.assertEqual(self.client.get(item.get_absolute_url()).status_code, 404)
+            self.assertNotIn(item, Item.objects.visible_to(cleo))
+        for word in ["Raise", "Internal in"]:
+            response = self.client.get("/search/", {"q": word})
+            self.assertEqual(response.context["results"], [])
+        self.client.force_login(self.ada)
+        for title in titles:
+            item = self.item(title)
+            self.assertEqual(self.client.get(item.get_absolute_url()).status_code, 200)
+        response = self.client.get("/search/", {"q": "Raise"})
+        self.assertEqual(
+            {r["item"].title for r in response.context["results"]},
+            {"Raise the rate for Cleo"},
+        )
+
+    def test_a_todo_in_a_group_keeps_its_group(self):
+        data = self.client_.data
+        grouped = data["/todolists/3014/todos.json"]
+        pots = dict(
+            grouped[0], id=3016, title="Wash the pots", visible_to_clients=False
+        )
+        grouped.append(pots)
+        self.run_import()
+        internal = self.item("Kitchen plan (internal)")
+        pots = self.item("Wash the pots")
+        self.assertEqual(pots.parent, internal)
+        self.assertEqual(pots.todo.group.title, "Week 1")
+        self.assertEqual(pots.todo.group.todolist, internal.todolist)
+        self.assertEqual(self.item("Peel potatoes").todo.group.title, "Week 1")
+        self.assertEqual(internal.todolist.groups.count(), 1)

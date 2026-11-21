@@ -27,20 +27,31 @@ EDIT_SESSION = dt.timedelta(minutes=10)
 # the original time
 _quiet = ContextVar("events_quiet", default=False)
 _occurred_at = ContextVar("events_occurred_at", default=None)
+_importing = ContextVar("events_importing", default=False)
 
 
 @contextmanager
 def importing(*, at=None):
     """For the importer (specs/import-basecamp.md): events recorded inside
     notify nobody, and carry ``at`` (when given) instead of now. Nested
-    uses replace ``at``; the quiet part stays."""
+    uses replace ``at``; the quiet part stays. Inside, the operations also
+    accept inactive people (assigning, subscribing, memberships): the
+    importer creates people without an account inactive (decided
+    2026-11-21)."""
     quiet = _quiet.set(True)
+    importer = _importing.set(True)
     occurred = _occurred_at.set(at if at is not None else _occurred_at.get())
     try:
         yield
     finally:
+        _importing.reset(importer)
         _occurred_at.reset(occurred)
         _quiet.reset(quiet)
+
+
+def is_importing():
+    """Whether we're inside ``importing()``: inactive people are accepted"""
+    return _importing.get()
 
 
 def record(*, actor, action, project, item=None, **data):
@@ -108,7 +119,10 @@ def _touch_project(event):
 def subscribe(user, item, *, added_by=None, explicit=True):
     """Subscribes a person. Automatic subscriptions (``explicit=False``,
     e.g. commenting) respect an earlier unsubscribing; explicit ones
-    (subscribing, being assigned or mentioned) override it."""
+    (subscribing, being assigned or mentioned) override it. Inactive people
+    only inside ``importing()``."""
+    if not user.is_active and not is_importing():
+        raise ValueError("Inactive people can't be subscribed.")
     if explicit:
         Unsubscription.objects.filter(user=user, item=item).delete()
     elif Unsubscription.objects.filter(user=user, item=item).exists():

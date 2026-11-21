@@ -13,7 +13,7 @@ from django.utils.translation import gettext as _
 from biwak.accounts.models import NotificationLevel, User
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
-from biwak.activity.operations import record, set_level_override
+from biwak.activity.operations import is_importing, record, set_level_override
 from biwak.api_conventions import absolute
 from biwak.projects.models import Membership, Project
 
@@ -68,7 +68,7 @@ def add_member(project, user, *, actor, notify=NOTIFY_DEFAULT):
     """Returns whether the person was added (False if already a member).
     ``notify`` is stored as the person's override for the project, unless
     they have one already: adding again never changes it."""
-    if not user.is_active:
+    if not user.is_active and not is_importing():
         raise ValueError("Inactive people can't be added.")
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")

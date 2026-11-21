@@ -18,7 +18,7 @@ from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.notify import notify_people
-from biwak.activity.operations import record, subscribe
+from biwak.activity.operations import is_importing, record, subscribe
 from biwak.files import attachments
 from biwak.files.models import FileVersion, content_type_for
 from biwak.items import visibility
@@ -312,9 +312,10 @@ def assignable_people(item, by=None):
     everybody = project.is_all_access and not (by and by.is_client)
     staff = Q(is_client=False) & (Q() if everybody else members)
     who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
+    # Inactive people only while importing (they have no account yet)
+    people = User.objects.all() if is_importing() else User.objects.active()
     return (
-        User.objects
-        .active()
+        people
         .filter(who)
         .distinct()
         .annotate(

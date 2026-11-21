@@ -44,7 +44,7 @@ from biwak.items.models import (
     TodoList,
 )
 from biwak.projects import operations as project_ops
-from biwak.projects.models import Membership, Project
+from biwak.projects.models import Project
 
 
 PERSON, PROJECT, ATTACHMENT = "Person", "Project", "Attachment"
@@ -62,6 +62,8 @@ KINDS = {
     "Kanban::Card": "cards",
     "Message": "messages",
     "Vault": "folders",
+    "Vault::Internal": "internal folders",
+    "Todolist::Internal": "internal lists",
     "Document": "docs",
     "Upload": "files",
     "Question": "check-in questions",
@@ -100,6 +102,9 @@ class Report:
         self.counts = defaultdict(Counter)
         self.people = []  # the people created (or to create)
         self.problems = []
+        # Internal items inside containers visible to clients, which go
+        # into internal containers of their own
+        self.internal = []
 
     def as_text(self):
         lines = ["Dry run, nothing was written." if self.dry_run else "Imported."]
@@ -113,6 +118,9 @@ class Report:
                 "People created inactive:" if not self.dry_run else "People to create:"
             )
             lines += [f"  {person}" for person in self.people]
+        if self.internal:
+            lines.append("Internal inside containers visible to clients, moved:")
+            lines += [f"  {line}" for line in self.internal]
         if self.problems:
             lines.append("Problems:")
             lines += [f"  {problem}" for problem in self.problems]
@@ -137,6 +145,12 @@ class Importer(Resolver):
         # While converting a text: its project, author and file entries
         self._text = None
         self._links_to_fix = []
+        # The list or card table being imported, and the internal lists made
+        # for them in this run
+        self._container = None
+        self._container_is_board = False
+        self._container_project = None
+        self._internal_lists = {}
 
     # Reporting -----------------------------------------------------------
 
@@ -255,12 +269,9 @@ class Importer(Resolver):
         return self._users.get(pid) if pid else None
 
     def _add_member(self, project, user):
-        if user.is_active:
-            project_ops.add_member(project, user, actor=self.actor)
-        else:
-            # The operation refuses inactive people; they become members
-            # (and can sign in as members once somebody activates them)
-            Membership.objects.get_or_create(project=project, user=user)
+        # Inactive people too (``importing()``): once somebody activates
+        # them they are members
+        project_ops.add_member(project, user, actor=self.actor)
 
     # Texts ---------------------------------------------------------------------
 
@@ -403,17 +414,88 @@ class Importer(Resolver):
     # Shared by the kinds --------------------------------------------------------
 
     def _inherits(self, rec, parent_visible, label):
-        """Whether a child of a visible container may be imported: Biwak
-        shows children of visible containers to clients and they have no
-        switch of their own, so what was internal there can't be imported
-        (specs/access.md)"""
-        if parent_visible and not rec.get("visible_to_clients"):
-            self.problem(
-                f"Skipped {label} {rec['id']} ({rec.get('title', '')!r}):"
-                " internal in Basecamp, inside a container visible to clients"
+        """Whether a child of a visible container may be imported as it is:
+        Biwak shows children of visible containers to clients and they have
+        no switch of their own, so what was internal there goes into an
+        internal container of its own (specs/import-basecamp.md)"""
+        return not (parent_visible and not rec.get("visible_to_clients"))
+
+    def _moved(self, label, rec, container, kind):
+        self.report.internal.append(
+            f"{label} {rec['id']} ({rec.get('title', '')!r}) into"
+            f' {kind} "{container["title"]} (internal)"'
+        )
+
+    def _internal_folder(self, container, project, creator):
+        """A function returning the top-level folder "<title> (internal)"
+        for a folder visible to clients, created when first needed (None in
+        a dry run, when it doesn't exist)"""
+        found = []
+
+        def get():
+            if not found:
+
+                def create():
+                    with importing(at=parse_time(container["created_at"])):
+                        item = ops.create_folder(
+                            project=project,
+                            title=f"{container['title']} (internal)",
+                            creator=creator,
+                            parent=None,
+                            visible=False,
+                        )
+                    self._stamp(item, container)
+                    return item
+
+                found.append(self._upsert("Vault::Internal", container, create=create))
+            return found[0]
+
+        get.container = container
+        return get
+
+    def _place(self, rec, label, parent, parent_visible, nested, internal):
+        """Where a folder, doc or file goes: (parent, visible). Internal
+        ones inside a visible folder go to its internal folder."""
+        if not nested:
+            return parent, bool(rec.get("visible_to_clients"))
+        if self._inherits(rec, parent_visible, label):
+            return parent, parent_visible
+        self._moved(label, rec, internal.container, "folder")
+        return internal(), False
+
+    def _internal_list(self, todo_rec, group, creator):
+        """The internal list "<list> (internal)" of the list (or card
+        table) being imported, and the group of that title in it (created
+        when needed); None, None in a dry run"""
+        container = self._container
+        bc_type = "Kanban::Board" if self._container_is_board else "Todolist"
+        key = (bc_type, container["id"])
+        if key not in self._internal_lists:
+
+            def create():
+                with importing(at=parse_time(container["created_at"])):
+                    item = ops.create_list(
+                        project=self._container_project,
+                        title=f"{container['title']} (internal)",
+                        creator=creator,
+                        visible=False,
+                    )
+                    if self._container_is_board:
+                        ops.update_list(item, actor=creator, view=TodoList.View.BOARD)
+                self._stamp(item, container)
+                return item
+
+            self._internal_lists[key] = self._upsert(
+                "Todolist::Internal", container, create=create
             )
-            return False
-        return True
+        item = self._internal_lists[key]
+        self._moved("to-do", todo_rec, container, "list")
+        if item is None or group is None:
+            return item, None
+        found = item.todolist.groups.filter(title=group.title).first()
+        if found is None:
+            found = ops.create_group(todolist=item.todolist, title=group.title)
+        return item, found
 
     def _stamp(self, item, rec):
         """The original times; the operations wrote now"""
@@ -496,9 +578,6 @@ class Importer(Resolver):
         for user in wanted:
             if user in current:
                 continue
-            if not user.is_active:
-                item.todo.assignees.add(user)
-                continue
             try:
                 ops.assign(item, [user], actor=actor)
             except ValueError as exc:
@@ -562,6 +641,8 @@ class Importer(Resolver):
 
     def _list_content(self, rec, item, visible, project):
         """Its to-dos and the groups with theirs"""
+        self._container, self._container_is_board = rec, False
+        self._container_project = project
         self._todos(rec["id"], item, None, visible, project)
         try:
             groups = list(self.client.paginate(f"/todolists/{rec['id']}/groups.json"))
@@ -603,9 +684,11 @@ class Importer(Resolver):
             self._todo(rec, item, group, parent_visible, project, "Todo")
 
     def _todo(self, rec, item, group, parent_visible, project, bc_type):
-        if self._skip(rec) or not self._inherits(rec, parent_visible, "to-do"):
+        if self._skip(rec):
             return
         creator = self._user(rec.get("creator"))
+        if not self._inherits(rec, parent_visible, "to-do"):
+            item, group = self._internal_list(rec, group, creator)
         title = rec["title"]
 
         def notes():
@@ -697,6 +780,8 @@ class Importer(Resolver):
         if item is not None:
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
+        self._container, self._container_is_board = rec, True
+        self._container_project = project
         for column in rec.get("lists", []):
             self._group(column, item, visible, project, rec_type=COLUMN, cards=True)
         if item is not None:
@@ -782,24 +867,25 @@ class Importer(Resolver):
 
     # Docs & Files -------------------------------------------------------------------------------
 
-    def _vault(self, vault_id, project, parent, *, parent_visible, nested):
+    def _vault(
+        self, vault_id, project, parent, *, parent_visible, nested, internal=None
+    ):
         """The children of a vault: the root vault is the project's root"""
         folders = self.client.paginate(f"/vaults/{vault_id}/vaults.json")
         for rec in sorted(folders, key=lambda r: r.get("position", 0)):
-            self._folder(rec, project, parent, parent_visible, nested)
+            self._folder(rec, project, parent, parent_visible, nested, internal)
         for rec in self.client.paginate(f"/vaults/{vault_id}/documents.json"):
-            self._document(rec, project, parent, parent_visible, nested)
+            self._document(rec, project, parent, parent_visible, nested, internal)
         for rec in self.client.paginate(f"/vaults/{vault_id}/uploads.json"):
-            self._upload(rec, project, parent, parent_visible, nested)
+            self._upload(rec, project, parent, parent_visible, nested, internal)
 
-    def _folder(self, rec, project, parent, parent_visible, nested):
-        if nested:
-            if not self._inherits(rec, parent_visible, "folder"):
-                return
-            visible = parent_visible
-        else:
-            visible = bool(rec.get("visible_to_clients"))
+    def _folder(self, rec, project, parent, parent_visible, nested, internal):
+        parent, visible = self._place(
+            rec, "folder", parent, parent_visible, nested, internal
+        )
         creator = self._user(rec.get("creator"))
+        if not nested and visible:
+            internal = self._internal_folder(rec, project, creator)
 
         def create():
             with importing(at=parse_time(rec["created_at"])):
@@ -816,23 +902,21 @@ class Importer(Resolver):
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
             self._subscriptions(rec, item)
-        self._vault(rec["id"], project, item, parent_visible=visible, nested=True)
+        self._vault(
+            rec["id"],
+            project,
+            item,
+            parent_visible=visible,
+            nested=True,
+            internal=internal,
+        )
 
-    def _file_visibility(self, rec, nested, parent_visible, label):
-        """The visibility of a doc or file (its own switch at the top
-        level), or None to skip it"""
-        if nested:
-            return (
-                parent_visible if self._inherits(rec, parent_visible, label) else None
-            )
-        return bool(rec.get("visible_to_clients"))
-
-    def _document(self, rec, project, parent, parent_visible, nested):
+    def _document(self, rec, project, parent, parent_visible, nested, internal):
         if self._skip(rec):
             return
-        visible = self._file_visibility(rec, nested, parent_visible, "doc")
-        if visible is None:
-            return
+        parent, visible = self._place(
+            rec, "doc", parent, parent_visible, nested, internal
+        )
         creator = self._user(rec.get("creator"))
 
         def content():
@@ -869,12 +953,12 @@ class Importer(Resolver):
         self._comments(rec, item)
         self._subscriptions(rec, item)
 
-    def _upload(self, rec, project, parent, parent_visible, nested):
+    def _upload(self, rec, project, parent, parent_visible, nested, internal):
         if self._skip(rec):
             return
-        visible = self._file_visibility(rec, nested, parent_visible, "file")
-        if visible is None:
-            return
+        parent, visible = self._place(
+            rec, "file", parent, parent_visible, nested, internal
+        )
         creator = self._user(rec.get("creator"))
 
         def description():
@@ -981,6 +1065,11 @@ class Importer(Resolver):
 
     def _answer(self, rec, question_rec, question, visible):
         if not self._inherits(rec, visible, "check-in answer"):
+            # Answers can't be moved elsewhere
+            self.problem(
+                f"Skipped check-in answer {rec['id']}: internal in Basecamp,"
+                " inside a question visible to clients"
+            )
             return None
         user = self._user(rec.get("creator"))
         day = dt.date.fromisoformat(rec.get("group_on") or rec["created_at"][:10])
