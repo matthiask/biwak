@@ -163,6 +163,8 @@ class PresetsTest(SimpleTestCase):
         )
         rule = "FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-2"
         self.assertEqual(describe(rule), f"custom schedule ({rule})")
+        rule = "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=-2"
+        self.assertEqual(describe(rule), f"custom schedule ({rule})")
 
 
 def all_widget_fields():

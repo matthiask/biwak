@@ -463,7 +463,12 @@ def _describe_monthly(interval, days, monthdays, parts):
     setpos = parts.get("BYSETPOS", "")
     if parts.keys() - {"FREQ", "INTERVAL", "BYDAY", "BYMONTHDAY", "BYSETPOS", "WKST"}:
         return None
-    if len(days) == 1 and days[0] in names and setpos.lstrip("-").isdigit():
+    if (
+        len(days) == 1
+        and days[0] in names
+        and setpos.lstrip("-").isdigit()
+        and int(setpos) in ORDINALS
+    ):
         return f"the {_ordinal(int(setpos))} {names[days[0]]} of {month}"
     if (
         days == WEEKDAYS.split(",")
