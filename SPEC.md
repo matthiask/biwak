@@ -52,7 +52,7 @@ In scope:
 9. Subscriptions to any item, mail notifications with sensible levels,
    replying by mail.
 10. Activity feed per project, per person and across everything.
-11. Bookmarks, and links to outside tools on projects and items.
+11. Bookmarks, and links to outside tools on projects (not on items).
 12. API, CLI, agent skills.
 13. An importer for Basecamp 4 accounts.
 

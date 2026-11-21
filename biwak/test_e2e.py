@@ -34,7 +34,6 @@ from django.views.static import serve as static_serve
 from biwak import schedules
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.activity.models import LevelOverride, Notification
-from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
@@ -1580,19 +1579,19 @@ class LinksTest(E2ETestCase):
     def test_adding_and_dragging_links(self):
         page = self.page
         self.goto(page, self.project)
-        page.locator(".wb-links details summary").click()
         for url, title in [
             ("https://example.com/one", "One"),
             ("https://example.com/two", "Two"),
         ]:
-            form = page.locator(".wb-links details form")
-            form.locator("[name=url]").fill(url)
-            form.locator("[name=title]").fill(title)
-            form.get_by_role("button", name="Add").click()
+            page.get_by_role("link", name="Add a link").click()
+            dialog = page.locator("dialog#modal")
+            expect(dialog).to_be_visible()
+            dialog.get_by_label("URL").fill(url)
+            dialog.get_by_label("Title").fill(title)
+            dialog.get_by_role("button", name="Add").click()
             page.locator("[data-sortable-item]", has_text=title).wait_for()
+            expect(page.locator("dialog#modal[open]")).to_have_count(0)
             self.wait_for_sortables(page)
-            if title == "One":
-                page.locator(".wb-links details summary").click()
         self.assertEqual(
             list(Link.objects.order_by("position").values_list("title", flat=True)),
             ["One", "Two"],
@@ -1610,35 +1609,6 @@ class LinksTest(E2ETestCase):
             ["Two", "One"],
         )
         self.assertEqual(self.errors, [])
-
-    def test_links_on_an_item(self):
-        todolist = self.make_list()
-        for title in ["One", "Two"]:
-            link_ops.add_link(
-                project=self.project,
-                item=todolist,
-                url=f"https://example.com/{title}",
-                title=title,
-                created_by=self.ada,
-            )
-        page = self.page
-        self.goto(page, todolist)
-        with page.expect_response("**/links/order/"):
-            page.locator("[data-sortable-item]", has_text="Two").locator(
-                "[data-sortable-handle]"
-            ).drag_to(
-                page.locator("[data-sortable-item]", has_text="One"),
-                target_position={"x": 5, "y": 5},
-            )
-        self.assertEqual(
-            list(
-                Link.objects
-                .filter(item=todolist)
-                .order_by("position")
-                .values_list("title", flat=True)
-            ),
-            ["Two", "One"],
-        )
 
 
 class PageTest(E2ETestCase):
@@ -1659,8 +1629,7 @@ class PageTest(E2ETestCase):
         expect(menu.locator("summary")).to_be_focused()
 
     def test_disclosures_close_like_menus(self):
-        """The reaction picker and the form for a link close with a click
-        elsewhere and with Escape"""
+        """The reaction picker closes with a click elsewhere and with Escape"""
         todo = self.make_list(todos=["Plan"])
         todo = Item.objects.get(title="Plan")
         page = self.page
@@ -1676,16 +1645,6 @@ class PageTest(E2ETestCase):
         picker.locator("input[type=text]").press("Escape")
         self.assertFalse(picker.evaluate("el => el.open"))
         expect(picker.locator("summary")).to_be_focused()
-
-        self.goto(page, self.project)
-        link = page.locator(".wb-links details").first
-        link.locator("summary").click()
-        self.assertTrue(link.evaluate("el => el.open"))
-        link.locator("[name=url]").press("Escape")
-        self.assertFalse(link.evaluate("el => el.open"))
-        link.locator("summary").click()
-        page.locator("h1").first.click()
-        self.assertFalse(link.evaluate("el => el.open"))
 
     def test_theme(self):
         page = self.page
@@ -1735,23 +1694,11 @@ class PageTest(E2ETestCase):
 class ClientTest(E2ETestCase):
     def test_client_sees_the_badge_and_banner_but_no_staff_controls(self):
         todolist = self.make_list("Shared", visible=True, groups=["Soon"], todos=["A"])
-        link_ops.add_link(
-            project=self.project,
-            item=todolist,
-            url="https://example.com/",
-            title="Spec",
-            created_by=self.ada,
-            visible=True,
-        )
         # Staff see the switch and the controls
         staff = self.page
         self.goto(staff, todolist)
         self.assertEqual(
             staff.get_by_role("button", name="Hide from clients").count(), 1
-        )
-        self.assertEqual(
-            staff.locator("[data-sortable-field=links] [data-sortable-handle]").count(),
-            1,
         )
         self.assertEqual(staff.locator("[data-group-handle]").count(), 1)
 
@@ -1766,12 +1713,7 @@ class ClientTest(E2ETestCase):
         )
         self.assertEqual(page.get_by_role("button", name="Show to clients").count(), 0)
         self.assertEqual(page.get_by_role("link", name="Edit").count(), 0)
-        self.assertEqual(
-            page.locator("[data-sortable-field=links] [data-sortable-handle]").count(),
-            0,
-        )
         self.assertEqual(page.locator("[data-group-handle]").count(), 0)
-        self.assertEqual(page.get_by_text("Add a link").count(), 0)
         self.assertEqual(page.get_by_role("link", name="New group").count(), 0)
         self.assertEqual(page.locator("details.wb-menu .wb-group-menu").count(), 0)
 

@@ -24,22 +24,14 @@ def bookmark_button(context, target):
 
 
 @register.inclusion_tag("bookmarks/_links.html", takes_context=True)
-def show_links(context, target):
-    """The links of a project (at the top of its page) or an item (under
-    its title) the person sees, with the forms for staff"""
+def show_links(context, project):
+    """The "Links" section of the project page: the links the person
+    sees, with the controls for staff"""
     request = context["request"]
-    is_item = isinstance(target, Item)
-    found = Link.objects.visible_to(request.user)
-    if is_item:
-        found = found.filter(item=target)
-    else:
-        found = found.filter(project=target, item=None)
-    can_manage = ops.can_manage_links(request.user)
     return {
         "request": request,
-        "target": target,
-        "is_item": is_item,
-        "links": list(found),
-        "can_manage": can_manage,
+        "project": project,
+        "links": list(Link.objects.visible_to(request.user).filter(project=project)),
+        "can_manage": ops.can_manage_links(request.user),
         "csrf_token": context.get("csrf_token"),
     }

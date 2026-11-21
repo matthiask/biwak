@@ -36,7 +36,6 @@
   {% if item.status == "archived" %}
     <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
   {% endif %}
-  {% show_links item %}
   {% include "items/_client_banner.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
   {% csrf_token %}

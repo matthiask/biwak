@@ -1779,18 +1779,17 @@ def bookmark_remove(target, is_project):
 @click.argument("project", type=int)
 @json_option
 def links(project, as_json):
-    """The links to outside tools of PROJECT and its items"""
+    """The links to outside tools of PROJECT"""
     data = request("GET", f"projects/{project}/links/")
     if as_json:
         return echo_json(data)
-    t = table("ID", "Title", "Kind", "URL", "On item", "")
+    t = table("ID", "Title", "Kind", "URL", "")
     for link in data:
         t.add_row(
             str(link["id"]),
             link["title"],
             link["kind"],
             link["url"],
-            str(link["item_id"] or ""),
             clients(link),
         )
     console.print(t)
@@ -1806,16 +1805,14 @@ def link():
 @click.argument("project", type=int)
 @click.argument("url")
 @click.option("--title", default="", help="The host if left out.")
-@click.option("--item", type=int, help="On this item instead of the project.")
 @click.option(
     "--clients", is_flag=True, help="Visible to clients (internal otherwise)."
 )
 @json_option
-def link_add(project, url, title, item, clients, as_json):
-    """Add URL to PROJECT, or to --item of it"""
+def link_add(project, url, title, clients, as_json):
+    """Add URL to PROJECT"""
     body = {"url": url, "title": title, "visible_to_clients": clients}
-    path = f"items/{item}/links/" if item else f"projects/{project}/links/"
-    data = request("POST", path, json=body)
+    data = request("POST", f"projects/{project}/links/", json=body)
     if as_json:
         return echo_json(data)
     click.echo(f"Added link #{data['id']} ({data['kind']}).")

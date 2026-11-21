@@ -91,7 +91,6 @@
       {% blocktranslate with when=project.archived_at|date:"j. F Y" %}Archived on {{ when }}. Everything stays readable.{% endblocktranslate %}
     </div>
   {% endif %}
-  {% show_links project %}
   <div class="row g-4">
     <div class="col-lg-8">
       {% checkins_due project %}
@@ -207,6 +206,7 @@
           {% blocktranslate count counter=root_counts.docs %}{{ counter }} doc{% plural %}{{ counter }} docs{% endblocktranslate %},
           {% blocktranslate count counter=root_counts.files %}{{ counter }} file{% plural %}{{ counter }} files{% endblocktranslate %}</a>
       </p>
+      {% show_links project %}
     </div>
     <div class="col-lg-4">
       <h2 class="h5 d-flex justify-content-between align-items-center">
