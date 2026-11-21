@@ -10,6 +10,7 @@ from django.urls import reverse
 from moto import mock_aws
 from PIL import Image
 
+from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event
 from biwak.files import attachments, operations, previews
 from biwak.files.models import preview_name
@@ -669,25 +670,27 @@ class UploadPageTest(Fixture, TestCase):
         url = reverse("file_new", args=[self.project.pk])
         return f"{url}?folder={folder.pk}" if folder else url
 
-    def test_everybody_is_preselected(self):
+    def test_who_is_told_follows_the_folder(self):
+        """The line says who is told by default in the folder, "Also
+        tell…" offers the others who see it (decided 2026-11-21)"""
         self.client.force_login(self.ada)
-        form = self.client.get(self.url()).context["form"]
-        self.assertEqual(form["notify"].value(), "everybody")
-
-    def test_these_people_follow_the_folder(self):
-        """Preselected in "Only these people": whom "Everybody" would reach
-        in the folder (decided 2026-11-21)"""
-        self.client.force_login(self.ada)
-        for folder, people in [
-            (None, [self.bob.pk]),
-            (self.private, [self.bob.pk]),
-            (self.public, [self.bob.pk, self.cleo.pk]),
+        for folder, line, offered in [
+            (None, "Bob will be told.", set()),
+            (self.private, "Bob will be told.", set()),
+            (self.public, "Bob and Cleo will be told.", set()),
         ]:
             response = self.client.get(self.url(folder), headers={"HX-Modal": "true"})
+            self.assertContains(response, line)
             self.assertEqual(
-                sorted(response.context["form"]["people"].value()), sorted(people)
+                set(response.context["form"].fields["also"].queryset), offered
             )
-            self.assertContains(response, 'data-shown-when="notify=chosen"')
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        response = self.client.get(self.url(self.public), headers={"HX-Modal": "true"})
+        self.assertContains(response, "Cleo will be told.")
+        self.assertEqual(
+            set(response.context["form"].fields["also"].queryset), {self.bob}
+        )
 
     def test_a_modal_and_a_page(self):
         self.client.force_login(self.ada)
@@ -721,7 +724,6 @@ class UploadPageTest(Fixture, TestCase):
         self.client.force_login(user)
         data = {
             "files": [SimpleUploadedFile("new.txt", b"New")],
-            "notify": "nobody",
         } | data
         return self.client.post(self.url(folder), data)
 
@@ -777,17 +779,9 @@ class UploadPageTest(Fixture, TestCase):
         self.assertFalse(Item.objects.filter(title="new.txt").exists())
         self.assertEqual(self.get(self.cleo, self.url(self.private)).status_code, 404)
 
-    def test_whom_to_notify_is_required(self):
-        self.client.force_login(self.ada)
-        response = self.client.post(
-            self.url(), {"files": [SimpleUploadedFile("new.txt", b"New")]}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Item.objects.filter(title="new.txt").exists())
-
     def test_notifying(self):
         with self.captureOnCommitCallbacks(execute=True):
-            self.send(self.ada, notify="everybody", visible="on")
+            self.send(self.ada, visible="on")
         item = Item.objects.get(title="new.txt")
         told = {n.user for n in Event.objects.get(item=item).notifications.all()}
         self.assertEqual(told, {self.bob, self.cleo})
@@ -818,9 +812,7 @@ class UploadPageTest(Fixture, TestCase):
 
     def test_no_file(self):
         self.client.force_login(self.ada)
-        self.assertEqual(
-            self.client.post(self.url(), {"notify": "nobody"}).status_code, 200
-        )
+        self.assertEqual(self.client.post(self.url(), {}).status_code, 200)
 
     def test_the_switch_only_at_the_top_level(self):
         self.assertContains(self.get(self.ada, self.url()), "Visible to clients")
@@ -841,7 +833,6 @@ class UploadOneTest(Fixture, TestCase):
             url += f"?folder={folder.pk}"
         data = {
             "file": SimpleUploadedFile("minutes.pdf", b"%PDF"),
-            "notify": "nobody",
             "batch": self.batch,
         } | data
         return self.client.post(url, data)
@@ -873,7 +864,6 @@ class UploadOneTest(Fixture, TestCase):
 
     def test_errors(self):
         self.assertEqual(self.send(self.ada, batch="nope").status_code, 400)
-        self.assertEqual(self.send(self.ada, notify="").status_code, 400)
         with patch.object(attachments, "MAX_SIZE", 3):
             response = self.send(self.ada)
         self.assertEqual(response.status_code, 413)

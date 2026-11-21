@@ -507,7 +507,7 @@ def _uploads(request, project, folder, form, files, *, batch):
                     creator=request.user,
                     parent=folder,
                     visible=data.get("visible", False),
-                    whom=form.whom(),
+                    also=form.also_people(),
                     batch=batch,
                     more=data.get("more", False),
                 )

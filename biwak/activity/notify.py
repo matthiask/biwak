@@ -7,7 +7,8 @@ mails, merged per item or as a daily digest.
 
 from django.db import models, transaction
 from django.utils import timezone
-from django.utils.translation import gettext
+from django.utils.text import get_text_list
+from django.utils.translation import gettext, ngettext
 
 from biwak.accounts.models import NotificationLevel, User, own_staff
 from biwak.activity.models import (
@@ -297,35 +298,83 @@ def _tell(people, event):
 
 
 def everybody(project, item=None, *, visible):
-    """Whom "Everybody in the project" reaches: the project's active
-    members who see an item there (``visible`` to clients or not) and whose
-    level for ``item`` is "everything" (specs/notifications.md, "Subscriptions").
-    ``item`` is the new item or, before it exists, the container it goes
-    into (``None`` at the top): it has no level of its own yet. The one
-    rule for posting (``notify_people()``) and for the people preselected
-    in "Only these people" (``files.common.NotifyForm``, decided
-    2026-11-21)."""
+    """The project's active members who see an item there (``visible`` to
+    clients or not) and whose level for ``item`` is "everything"
+    (specs/notifications.md, "Subscriptions"). ``item`` is the new item
+    or, before it exists, the container it goes into (``None`` at the
+    top): it has no level of its own yet."""
     people = list(people_who_see(project, visible).filter(memberships__project=project))
     levels = effective_levels(people, item, project=project)
     return [user for user in people if levels[user.pk] == NotificationLevel.EVERYTHING]
 
 
-def notify_people(item, *, whom, actor):
-    """Posting a message, doc or file: whom to tell (specs/files.md):
-    ``"everybody"`` (the project's members at this moment), a list of
-    people, or ``"nobody"``. Those chosen who can see the item are
-    subscribed, so the ``created`` event tells them; of everybody only
-    those whose level for the item is "everything" (specs/notifications.md,
-    "Levels": "only what concerns me" and "nothing" aren't subscribed by
-    posts to everybody). People chosen by name are, as when adding
-    subscribers. Returns them."""
-    if whom == "nobody":
-        return []
-    if whom == "everybody":
-        people = everybody(item.project, item, visible=item.is_client_visible)
-    else:
-        people = [user for user in whom if user.is_active]
-    chosen = [user for user in people if user != actor and can_see(user, item)]
+def told_by_default(project, container=None, *, visible, actor=None):
+    """Whom something new posted into ``container`` (a folder, or ``None``
+    at the top) is told about without the poster choosing (decided
+    2026-11-21, notifications are additive): those who want to hear, the
+    container's subscribers and the members whose level for it is
+    "everything" (``everybody()``), of those who see it (``visible`` to
+    clients or not); never the poster. Sorted by name. The one rule for
+    posting (``notify_people()``) and for the forms' line saying who will
+    be told (``files.common.NotifyForm``, ``docs.TellForm``)."""
+    people = {user.pk: user for user in everybody(project, container, visible=visible)}
+    if container is not None:
+        for user in people_who_see(project, visible).filter(
+            subscriptions__item=container
+        ):
+            people.setdefault(user.pk, user)
+    if actor is not None:
+        people.pop(actor.pk, None)
+    return sorted(people.values(), key=lambda u: (u.full_name.lower(), u.email))
+
+
+def told_line(people, project, user):
+    """ "Ada, Bob and 3 others will be told.": the people told by default,
+    by the names ``user`` may know (``people_known_to()``, the others
+    counted)"""
+    from biwak.organizations.names import display_name
+
+    known = {u.pk for u in project.people_known_to(user, people)}
+    names = [display_name(u, user) for u in people if u.pk in known]
+    if not people:
+        return gettext("Nobody is told unless you add people.")
+    shown = names[:3] if len(people) <= 3 else names[:2]
+    rest = len(people) - len(shown)
+    if not rest:
+        return gettext("%(people)s will be told.") % {
+            "people": get_text_list(shown, gettext("and"))
+        }
+    if not shown:
+        return ngettext(
+            "%(count)d person will be told.", "%(count)d people will be told.", rest
+        ) % {"count": rest}
+    return ngettext(
+        "%(people)s and %(count)d other will be told.",
+        "%(people)s and %(count)d others will be told.",
+        rest,
+    ) % {"people": ", ".join(shown), "count": rest}
+
+
+def notify_people(item, *, actor, also=()):
+    """Posting a message, doc or file (specs/notifications.md, decided
+    2026-11-21: additive): subscribes those told by default
+    (``told_by_default()``) and ``also`` (people the poster adds, whatever
+    their level), of those who can see the item, so the ``created`` event
+    tells them. Not inside ``importing()``: the importer brings its own
+    subscriptions. Returns them."""
+    from biwak.activity.operations import is_importing
+
+    people = (
+        []
+        if is_importing()
+        else told_by_default(
+            item.project, item.parent, visible=item.is_client_visible, actor=actor
+        )
+    )
+    people += [user for user in also if user.is_active]
+    chosen = [
+        user for user in dict.fromkeys(people) if user != actor and can_see(user, item)
+    ]
     for user in chosen:
         subscribe(user, item, added_by=actor)
     return chosen

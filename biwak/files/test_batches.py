@@ -35,9 +35,7 @@ class BatchTest(TestCase):
             project=self.project, title="Minutes", creator=self.ada, visible=True
         )
 
-    def upload(
-        self, names, *, batch=BATCH, whom="everybody", parent="minutes", more=False
-    ):
+    def upload(self, names, *, batch=BATCH, parent="minutes", more=False):
         """``more``: more files of the batch follow the last of these"""
         with self.captureOnCommitCallbacks(execute=True):
             return [
@@ -46,7 +44,6 @@ class BatchTest(TestCase):
                     file=SimpleUploadedFile(name, b"x"),
                     creator=self.ada,
                     parent=self.minutes if parent == "minutes" else parent,
-                    whom=whom,
                     batch=batch,
                     more=more or n < len(names) - 1,
                 )

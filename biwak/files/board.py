@@ -97,7 +97,7 @@ def message_new(request, pk):
             category=data["category"],
             creator=request.user,
             visible=data.get("visible", False),
-            whom=form.whom(),
+            also=form.also_people(),
         )
         return redirect(item)
     return render(

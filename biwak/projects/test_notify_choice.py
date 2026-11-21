@@ -99,14 +99,13 @@ class MailsTest(Fixture, TestCase):
                 content=content,
                 creator=self.ada,
                 visible=True,
-                whom="everybody",
             )
         return {
             n.user
             for n in Notification.objects.exclude(pk__in=before).select_related("user")
         }
 
-    def test_posting_to_everybody(self):
+    def test_posting(self):
         self.assertEqual(self.told("Hello"), {self.bob, self.cleo, self.eve})
 
     def test_but_a_mention_gets_through(self):

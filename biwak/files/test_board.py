@@ -152,14 +152,10 @@ class MessageNewTest(Fixture, TestCase):
     def url(self):
         return reverse("message_new", args=[self.project.pk])
 
-    def test_everybody_is_preselected(self):
-        self.client.force_login(self.ada)
-        form = self.client.get(self.url()).context["form"]
-        self.assertEqual(form["notify"].value(), "everybody")
-
-    def test_these_people_are_those_everybody_reaches(self):
-        """Preselected in "Only these people": whom "Everybody" would reach,
-        not the poster (decided 2026-11-21)"""
+    def test_who_is_told_and_also_tell(self):
+        """A line saying who is told by default, "Also tell…" with the
+        others who see it, nothing preselected, not the poster (decided
+        2026-11-21: additive)"""
         dan = person("Dan")
         Membership.objects.create(project=self.project, user=dan)
         dan.notification_level = NotificationLevel.CONCERNS_ME
@@ -167,37 +163,31 @@ class MessageNewTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         response = self.client.get(self.url())
         # An internal message (the switch starts off): not Cleo
-        self.assertEqual(response.context["form"]["people"].value(), [self.bob.pk])
-        # The people picker, shown only with "Only these people"
-        self.assertContains(response, 'data-shown-when="notify=chosen"')
+        self.assertContains(response, "Bob will be told.")
+        self.assertContains(response, "Also tell…")
         self.assertContains(response, "data-people-picker")
-        # Who can be chosen: the members but the poster
+        self.assertNotContains(response, "data-shown-when")
+        self.assertNotContains(response, 'name="notify"')
+        form = response.context["form"]
+        self.assertEqual(form["also"].value(), None)
+        self.assertEqual(set(form.fields["also"].queryset), {dan})
+        response = self.post_form(self.ada, also=[dan.pk])
+        item = Item.objects.get(title="Hello")
         self.assertEqual(
-            set(response.context["form"].fields["people"].queryset),
-            {self.bob, self.cleo, dan},
+            set(item.subscriptions.values_list("user", flat=True)),
+            {self.ada.pk, self.bob.pk, dan.pk},
         )
 
-    def test_these_people_of_a_client(self):
+    def test_who_is_told_of_a_clients_message(self):
         """What clients post is visible: everybody on "everything" but them"""
         self.client.force_login(self.cleo)
-        form = self.client.get(self.url()).context["form"]
-        self.assertEqual(set(form["people"].value()), {self.ada.pk, self.bob.pk})
-
-    def test_these_people_stay_as_chosen(self):
-        self.client.force_login(self.ada)
-        response = self.client.post(
-            self.url(), {"notify": "chosen", "people": [self.cleo.pk]}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.context["form"]["people"].value(), [str(self.cleo.pk)]
-        )
-        response = self.client.post(self.url(), {"notify": "chosen"})
-        self.assertEqual(response.context["form"]["people"].value(), [])
+        response = self.client.get(self.url())
+        self.assertContains(response, "Ada and Bob will be told.")
+        self.assertEqual(set(response.context["form"].fields["also"].queryset), set())
 
     def post_form(self, user, **data):
         self.client.force_login(user)
-        data = {"title": "Hello", "content": "Text", "notify": "nobody"} | data
+        data = {"title": "Hello", "content": "Text"} | data
         return self.client.post(self.url(), data)
 
     def test_staff_posts_an_internal_message_by_default(self):
@@ -213,30 +203,24 @@ class MessageNewTest(Fixture, TestCase):
         self.assertTrue(item.is_client_visible)
         self.assertEqual(item.message.category, self.news)
 
-    def test_notify_is_required(self):
-        self.client.force_login(self.ada)
-        response = self.client.post(self.url(), {"title": "Hello"})
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Item.objects.filter(title="Hello").exists())
-
-    def test_whom_to_notify(self):
+    def test_who_is_told(self):
         with self.captureOnCommitCallbacks(execute=True):
-            self.post_form(self.ada, visible="on", notify="everybody")
+            self.post_form(self.ada, visible="on")
         item = Item.objects.get(title="Hello")
         self.assertEqual(
             {n.user for n in Event.objects.get(item=item).notifications.all()},
             {self.bob, self.cleo},
         )
 
-    def test_chosen_people(self):
+    def test_nobody_and_only_these_people_are_gone(self):
+        """What older pages post can't hide a message from those who want
+        to hear (decided 2026-11-21: additive)"""
         with self.captureOnCommitCallbacks(execute=True):
-            self.post_form(
-                self.ada, visible="on", notify="chosen", people=[self.bob.pk]
-            )
+            self.post_form(self.ada, visible="on", notify="nobody", people=[])
         item = Item.objects.get(title="Hello")
         self.assertEqual(
             {n.user for n in Event.objects.get(item=item).notifications.all()},
-            {self.bob},
+            {self.bob, self.cleo},
         )
 
     def test_a_client_posts_visible_messages(self):

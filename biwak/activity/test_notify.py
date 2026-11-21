@@ -22,6 +22,8 @@ from biwak.activity.notify import (
     everybody,
     notify,
     notify_people,
+    told_by_default,
+    told_line,
     who_can_see,
 )
 from biwak.activity.operations import (
@@ -305,24 +307,26 @@ class NotifyTest(TestCase):
         Notification.objects.create(user=self.bob, event=notification.event)
 
     def test_notify_people(self):
+        """Those told by default, and the people added who can see it"""
         message = ops.create_message(
             project=self.project, title="News", creator=self.ada
         )
-        self.assertEqual(notify_people(message, whom="nobody", actor=self.ada), [])
-        # Cleo can't see the internal message
+        # Bob wants everything; Cleo can't see the internal message
         self.assertEqual(
-            notify_people(message, whom="everybody", actor=self.ada), [self.bob]
+            set(
+                Subscription.objects.filter(item=message).values_list("user", flat=True)
+            ),
+            {self.ada.pk, self.bob.pk},
         )
         unsubscribe(self.bob, message)
         self.assertEqual(
-            notify_people(message, whom=[self.bob, self.cleo], actor=self.ada),
+            notify_people(message, also=[self.bob, self.cleo], actor=self.ada),
             [self.bob],
         )
 
-    def test_posting_to_everybody_per_level(self):
-        """Posting to everybody subscribes those on "everything" only
-        (specs/notifications.md, "Subscriptions"); people chosen by name whatever their
-        level"""
+    def test_posting_per_level(self):
+        """Posting tells those on "everything" (specs/notifications.md,
+        "Subscriptions"); people added by name whatever their level"""
         dan, eve = person("Dan"), person("Eve")
         for user in [dan, eve]:
             project_ops.add_member(self.project, user, actor=self.ada)
@@ -331,29 +335,96 @@ class NotifyTest(TestCase):
         project_ops.set_notify_choice(
             self.project, dan, project_ops.NOTIFY_TAGGED, actor=self.ada
         )
-        message = ops.create_message(
-            project=self.project, title="News", creator=self.ada, visible=True
-        )
         # Bob's own level is "nothing", but the project's choice "notified
         # by default" (adding him stored it) wins
         LevelOverride.objects.filter(user=self.bob).delete()
-        self.assertEqual(
-            set(notify_people(message, whom="everybody", actor=self.ada)),
-            {self.cleo, eve},
-        )
         told = self.told(
-            lambda: ops.add_comment(message, author=self.cleo, content="Hi")
+            lambda: ops.create_message(
+                project=self.project, title="News", creator=self.ada, visible=True
+            )
         )
-        self.assertEqual(told, {self.ada, eve})
+        self.assertEqual(told, {self.cleo, eve})
+        message = Item.objects.get(title="News")
         self.assertEqual(
-            notify_people(message, whom=[self.bob, dan], actor=self.ada),
-            [self.bob, dan],
+            notify_people(message, also=[self.bob, dan], actor=self.ada),
+            [self.cleo, eve, self.bob, dan],
+        )
+
+
+class ToldByDefaultTest(TestCase):
+    """Whom something new tells without the poster choosing (decided
+    2026-11-21: additive): the container's subscribers and those on
+    "everything", who see it, never the poster"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.dan = person("Dan")
+        self.project = project(members=[self.ada, self.bob, self.cleo, self.dan])
+        for user in [self.bob, self.cleo, self.dan]:
+            user.notification_level = NotificationLevel.CONCERNS_ME
+            user.save()
+        self.folder = ops.create_folder(
+            project=self.project, title="Minutes", creator=self.ada, visible=True
+        )
+
+    def test_the_level_and_the_folders_subscribers(self):
+        self.assertEqual(
+            told_by_default(self.project, self.folder, visible=True, actor=self.bob),
+            [self.ada],
+        )
+        subscribe(self.dan, self.folder)
+        subscribe(self.cleo, self.folder)
+        self.assertEqual(
+            told_by_default(self.project, self.folder, visible=True, actor=self.bob),
+            [self.ada, self.cleo, self.dan],
+        )
+        # Never the poster; clients only what they see
+        self.assertEqual(
+            told_by_default(self.project, self.folder, visible=False, actor=self.ada),
+            [self.dan],
+        )
+
+    def test_posting_into_the_folder_tells_them(self):
+        subscribe(self.dan, self.folder)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.create_doc(
+                project=self.project,
+                title="Notes",
+                creator=self.bob,
+                parent=self.folder,
+            )
+        self.assertEqual(
+            set(Notification.objects.values_list("user", flat=True)),
+            {self.ada.pk, self.dan.pk},
+        )
+
+    def test_the_line(self):
+        people = [self.ada, self.bob, self.cleo, self.dan]
+        self.assertEqual(
+            told_line([], self.project, self.ada),
+            "Nobody is told unless you add people.",
+        )
+        self.assertEqual(
+            told_line(people[:3], self.project, self.dan),
+            "Ada, Bob and Cleo will be told.",
+        )
+        self.assertEqual(
+            told_line(people, self.project, self.dan),
+            "Ada, Bob and 2 others will be told.",
+        )
+        # Names the poster may know: a client knows the members only
+        outsider = person("Eve")
+        self.assertEqual(
+            told_line([outsider, self.ada], self.project, self.cleo),
+            "Ada and 1 other will be told.",
         )
 
 
 class EverybodyTest(TestCase):
-    """Whom "Everybody in the project" reaches, also before the item exists
-    (the people preselected in "Only these people", decided 2026-11-21)"""
+    """The members on "everything" who see it, also before the item exists
+    (``told_by_default()``)"""
 
     def setUp(self):
         self.ada = person("Ada")

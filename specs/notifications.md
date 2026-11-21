@@ -50,25 +50,35 @@ it for the first time.
   for the page, the mail link, the API and the CLI). The box says
   "You're assigned, so you hear about it" and offers "Unassign me"; the
   mail's link does nothing and its page says why; the API answers 400.
-- **Posting a message, doc or file** asks whom to notify: everybody in
-  the project (the members at that moment, preselected; decided
-  2026-11-20, replacing "no default"), chosen people, or nobody; the API
-  (`notify`: `everybody`, `nobody` or IDs) and the CLI (`--notify`)
-  default to everybody too; `create_message()`, `create_doc()` and
-  `create_upload()` default to nobody (`notify_people()`). Of everybody,
-  only those whose level for the item is "everything" are subscribed;
-  people chosen by name whatever their level, like adding subscribers.
-- **The form** (`files.common.NotifyForm`, decided 2026-11-21): "These
-  people" shows only while "Only these people" is chosen
-  (`frontend/shown-when.js`; without JavaScript always), in the people
-  picker (`PeopleField`, the assignees' and subscribers' one). Preselected
-  are those "Everybody" would reach: `notify.everybody()`, the same
-  function `notify_people()` uses, for the container the item goes into
-  (a folder, or the top level) and the visibility the form starts with
-  (the folder's; at the top internal, a client's visible). The poster is
-  neither preselected nor offered. A form shown again with errors keeps
-  what was chosen. A doc begun as a draft has the same preselection in
-  "Tell people about it?" (those not subscribed yet).
+- **Notifications are additive** (decided 2026-11-21, replacing
+  "Everybody / Only these people / Nobody"): "Report by default to those
+  who want to hear about it according to their settings, and allow
+  additional people to hear about it." The poster can't hide something
+  new from people who want it ("if people don't want to be notified
+  about files, then upload them to Google Drive or wherever"). Posting a
+  message, doc or file always tells `notify.told_by_default()`: the
+  subscribers of its container (folder) and the members whose level for
+  it is "everything", of those who see it, never the poster; being told
+  subscribes them. The poster can only add people (`also`), whatever
+  their level, subscribed and told like them. `notify_people(item,
+  actor=, also=)` does it for `create_message()`, `create_doc()` and
+  `create_upload()` (not inside `importing()`). Mentions and
+  assignments as before. API: `also` (IDs of members; multipart: comma
+  separated); an older CLI's `notify` is accepted, its IDs count as
+  `also`, `everybody` and `nobody` are ignored. CLI: `--also IDS`
+  (0.37.0).
+- **The form** (`files.common.NotifyForm`, decided 2026-11-21): no
+  choice, a line saying who will be told ("Ada, Bob and 3 others will be
+  told.", `told_line()`: the names the poster may know, the others
+  counted; "Nobody is told unless you add people."), below it "Also
+  tell…", the people picker (`PeopleField`) of the members who see it
+  (the visibility the form starts with: the folder's; at the top
+  internal, a client's visible) and aren't told already, nothing
+  preselected. A doc begun as a draft asks at its first "Done" ("Tell
+  people about it?", `docs.TellForm`): the same line and "Also tell…"
+  with a note; "Tell them" records `shared` to those told by default
+  (not subscribed yet) and those added, "Not now" to those told by
+  default only.
 
 ## Mentions
 

@@ -147,8 +147,8 @@ the counts of the top level's folders, docs and files.
   breadcrumb for that one (`frontend/upload.js`, the drop zone in
   `frontend/files.js`). It lists the files, each with an editable title
   (the extension kept), its size, removable; below, once for all:
-  visible to clients (staff, at the top level only) and whom to notify
-  (everybody by default, as for one file). No description (set on the
+  visible to clients (staff, at the top level only), who is told and
+  "Also tell…" (as for one file, `notifications.md`). No description (set on the
   file's page).
 - **Uploading:** one after another (`library.file_upload`, one file as
   JSON), a progress row each; an error stays on its row, the others go
@@ -219,9 +219,10 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   says.
 - **Telling people once** (decided 2026-11-21): the creator's first
   "Done" saves and asks "Tell people about it?" (`Doc.tell_pending`,
-  `docs.doc_tell`): the subscribers' picker with a note
-  (`subscribers.md`); "Tell them" records `shared`, "Not now" doesn't,
-  and either way it's never asked again. Escape or Cancel doesn't
+  `docs.doc_tell`): who is told by default and "Also tell…" with a
+  note (additive, `notifications.md`, decided 2026-11-21); "Tell them"
+  records `shared` to both, "Not now" to those told by default only
+  (nothing when there's nobody), and either way it's never asked again. Escape or Cancel doesn't
   answer, the next "Done" asks again. Only the creator is asked.
 - The API and CLI create docs with title and text, not as drafts.
 
@@ -262,7 +263,7 @@ versions.
 
 `POST /api/v1/projects/{id}/attachments/` (multipart `file`, answering
 the key and the Markdown), `GET /api/v1/attachments/{key}/`; messages
-(list, create with `notify`, update, pin), folders (contents, create,
+(list, create with `also`, update, pin), folders (contents, create,
 move, `PATCH folders/{id}/` with `title` and `ordering`), the top level
 (`GET`/`PATCH projects/{id}/files/` with `ordering`), docs (get, update
 with `base_version`, versions; a `title` alone is a 400, the title is the

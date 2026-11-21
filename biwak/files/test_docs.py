@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event, Notification
 from biwak.activity.operations import subscribe
 from biwak.collab import live
@@ -369,15 +370,18 @@ class TellTest(Fixture, TestCase):
         )
 
     def test_not_now(self):
+        """Nobody else: those who want to hear are told anyway (decided
+        2026-11-21: additive)"""
         self.write()
         # What was typed is saved first
         response = self.client.get(self.tell, headers={"HX-Modal": "true"})
         assert_modal(self, response, title="Tell people about it?")
         self.assertContains(response, "Not now")
         self.assertContains(response, "Tell them")
-        response = self.client.post(
-            self.tell, {"not_now": "1"}, headers={"HX-Modal": "true"}
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                self.tell, {"not_now": "1"}, headers={"HX-Modal": "true"}
+            )
         assert_modal_redirect(self, response, self.doc.get_absolute_url())
         self.doc.refresh_from_db()
         self.assertFalse(self.doc.doc.tell_pending)
@@ -385,9 +389,16 @@ class TellTest(Fixture, TestCase):
         response = self.client.get(self.url("doc_edit", self.doc))
         self.assertNotContains(response, self.tell)
         self.assertRedirects(self.client.get(self.tell), self.doc.get_absolute_url())
-        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
+        event = Event.objects.get(item=self.doc, action=Action.SHARED)
+        self.assertNotIn("note", event.data)
+        self.assertEqual(
+            [n.user for n in Notification.objects.filter(event=event)], [self.bob]
+        )
 
     def test_tell_them(self):
+        """Those who want to hear and those added, with the note"""
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
         self.write()
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
@@ -401,21 +412,27 @@ class TellTest(Fixture, TestCase):
         )
         self.doc.refresh_from_db()
         self.assertFalse(self.doc.doc.tell_pending)
-        # Somebody to tell is needed
-        self.doc.doc.tell_pending = True
-        self.doc.doc.save()
-        response = self.client.post(self.tell, {"note": "x"})
-        self.assertContains(response, "Pick at least one person.")
 
-    def test_those_everybody_reaches_are_preselected(self):
-        """Whom posting to everybody would have reached (decided
-        2026-11-21): not Cleo (internal), not Ada (its creator)"""
+    def test_nobody_to_tell(self):
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
         self.write()
         response = self.client.get(self.tell, headers={"HX-Modal": "true"})
-        self.assertEqual(response.context["form"]["people"].value(), [self.bob.pk])
-        # After an error what was chosen, here nobody
-        response = self.client.post(self.tell, {"note": "x" * 1000})
-        self.assertEqual(response.context["form"]["people"].value(), [])
+        self.assertContains(response, "Nobody is told unless you add people.")
+        response = self.client.post(self.tell, {"note": "x"})
+        self.assertRedirects(response, self.doc.get_absolute_url())
+        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
+
+    def test_who_is_told_and_also_tell(self):
+        """A line saying who is told (not Cleo: internal; not Ada: its
+        creator), "Also tell…" with the others, nothing preselected"""
+        self.write()
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertContains(response, "Bob will be told.")
+        self.assertContains(response, "Also tell…")
+        form = response.context["form"]
+        self.assertEqual(form["people"].value(), None)
+        self.assertNotIn(self.bob, form.fields["people"].queryset)
 
     def test_only_its_creator_is_asked(self):
         self.write()
@@ -533,7 +550,10 @@ class EditTest(Fixture, TestCase):
             )
         event = Event.objects.filter(item=self.shared, action="edited").get()
         self.assertEqual(event.data["mentioned"], [self.bob.pk])
-        self.assertEqual({n.user for n in event.notifications.all()}, {self.bob})
+        # Cleo was told about it when it was posted (subscribed)
+        self.assertEqual(
+            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
+        )
 
     def test_internal_docs_cannot_be_saved_by_clients(self):
         self.client.force_login(self.cleo)

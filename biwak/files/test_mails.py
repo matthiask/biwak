@@ -5,6 +5,7 @@ from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
+from biwak.accounts.models import NotificationLevel
 from biwak.activity.mails import send_mails
 from biwak.files import operations
 from biwak.items import operations as ops
@@ -41,7 +42,6 @@ class MailsTest(TestCase):
                 content="We start **Monday**",
                 creator=self.ada,
                 visible=True,
-                whom="everybody",
             )
         )
         self.assertEqual(set(mails), {self.bob.email, self.cleo.email})
@@ -56,20 +56,24 @@ class MailsTest(TestCase):
                 project=self.project,
                 title="Internal",
                 creator=self.ada,
-                whom="everybody",
             )
         )
         self.assertEqual(set(mails), {self.bob.email})
         self.assertNotIn("Clients can see this", mails[self.bob.email].body)
 
-    def test_chosen_people_only(self):
+    def test_also_those_added(self):
+        """Bob doesn't want everything, Cleo is added (decided 2026-11-21)"""
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        self.cleo.notification_level = NotificationLevel.CONCERNS_ME
+        self.cleo.save()
         mails = self.send(
             lambda: ops.create_message(
                 project=self.project,
                 title="Hi",
                 creator=self.ada,
                 visible=True,
-                whom=[self.cleo],
+                also=[self.cleo],
             )
         )
         self.assertEqual(set(mails), {self.cleo.email})
@@ -82,7 +86,6 @@ class MailsTest(TestCase):
                 content="Decided: **yes**",
                 creator=self.ada,
                 visible=True,
-                whom="everybody",
             )
         )
         self.assertEqual(set(mails), {self.bob.email, self.cleo.email})
@@ -100,7 +103,6 @@ class MailsTest(TestCase):
                 description="The latest plan",
                 creator=self.ada,
                 parent=folder,
-                whom="everybody",
             )
         )
         self.assertEqual(set(mails), {self.bob.email, self.cleo.email})
@@ -113,7 +115,7 @@ class MailsTest(TestCase):
                 project=self.project,
                 file=ContentFile(b"x", name="plan.pdf"),
                 creator=self.ada,
-                whom=[self.bob, self.cleo],
+                also=[self.bob, self.cleo],
             )
         )
         self.assertEqual(set(mails), {self.bob.email})
@@ -124,7 +126,6 @@ class MailsTest(TestCase):
             title="Hi",
             creator=self.ada,
             visible=True,
-            whom="everybody",
         )
         self.send(lambda: None)
         mails = self.send(lambda: operations.pin_message(message, actor=self.ada))
@@ -136,7 +137,6 @@ class MailsTest(TestCase):
             title="Hi",
             creator=self.ada,
             visible=True,
-            whom="everybody",
         )
         self.send(lambda: None)
         mails = self.send(

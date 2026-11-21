@@ -38,7 +38,7 @@ biwak todo done TODO
 biwak todo comment TODO "The plan" --attach plan.pdf
 biwak checkin due
 biwak checkin answer QUESTION "Busy with the launch"
-biwak message post PROJECT "Kick-off" "We start Monday" --notify nobody
+biwak message post PROJECT "Kick-off" "We start Monday" --also 12
 biwak search tent
 biwak invite dora@example.net eve@example.net --project 4 --project 7
 biwak invitations

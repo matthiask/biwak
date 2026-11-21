@@ -192,10 +192,10 @@ def create_message(
     content="",
     visible=False,
     category=None,
-    whom="nobody",
+    also=(),
 ):
-    """``whom`` to notify: ``"everybody"``, a list of people or
-    ``"nobody"`` (``notify_people()``, specs/files.md)"""
+    """Tells those told by default and ``also`` these people
+    (``notify_people()``, specs/notifications.md)"""
     item = create_item(
         project=project,
         kind=Kind.MESSAGE,
@@ -207,7 +207,7 @@ def create_message(
     attachments.link(item, content, actor=creator)
     event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
-    notify_people(item, whom=whom, actor=creator)
+    notify_people(item, actor=creator, also=also)
     return item
 
 
@@ -235,7 +235,7 @@ def create_doc(
     parent=None,
     content="",
     visible=False,
-    whom="nobody",
+    also=(),
 ):
     """``content`` follows the heading made of ``title``: the doc's text
     starts with ``# title`` and its title is that first line
@@ -259,7 +259,7 @@ def create_doc(
     attachments.link(item, content, actor=creator)
     event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
-    notify_people(item, whom=whom, actor=creator)
+    notify_people(item, actor=creator, also=also)
     return item
 
 
@@ -319,7 +319,7 @@ def create_upload(
     parent=None,
     description="",
     visible=False,
-    whom="nobody",
+    also=(),
     title=None,
     batch=None,
     more=False,
@@ -347,7 +347,7 @@ def create_upload(
         data["more"] = True
     event = created(item, creator, **data)
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
-    notify_people(item, whom=whom, actor=creator)
+    notify_people(item, actor=creator, also=also)
     return item
 
 
