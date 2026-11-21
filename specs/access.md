@@ -164,7 +164,8 @@ Like Basecamp's bright yellow:
   chronological list.
 - A banner on the page of a visible item and above every comment and edit
   form there: "Clients can see this".
-- The switch shows what changes: "Makes 12 to-dos and 34 comments visible
+- Showing to clients asks first, in a modal that says what changes (decided
+  2026-11-21, `ui-round-4.md`); hiding is one click. The switch shows what changes: "Makes 12 to-dos and 34 comments visible
   to 3 clients."
 - Notification mails about visible items say so in the first line.
 - API and CLI output include the visibility; the agent skills tell agents

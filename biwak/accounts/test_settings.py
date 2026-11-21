@@ -289,7 +289,12 @@ class SignInSectionTest(TestCase):
         self.assertTrue(UserSession.objects.filter(pk=bobs.pk).exists())
         self.assertEqual(self.client.get("/accounts/settings/").status_code, 200)
 
-    def test_the_menus_sign_out_says_which(self):
-        self.assertContains(
-            self.client.get("/accounts/settings/"), "Sign out of this browser"
-        )
+    def test_the_menu_says_sign_out_and_the_card_signs_out_here(self):
+        response = self.client.get("/accounts/settings/")
+        self.assertNotContains(response, "Sign out of this browser")
+        self.assertContains(response, 'class="dropdown-item">Sign out</button>')
+        self.assertContains(response, "Sign out here", count=1)
+        self.assertNotContains(response, "is signed out with")
+        # The button does what the menu's does
+        self.client.post("/accounts/logout/")
+        self.assertEqual(self.client.get("/accounts/settings/").status_code, 302)

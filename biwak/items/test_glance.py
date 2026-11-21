@@ -323,17 +323,15 @@ class FeedExcerptsTest(Fixture):
         self.client.force_login(self.ada)
         self.assertNotContains(self.client.get("/feed/?action=created"), "wb-excerpt")
 
-    def test_merged_entries_show_excerpts_only_when_expanded(self):
+    def test_comments_on_one_item_are_a_conversation_with_all_excerpts(self):
         ops.add_comment(self.todo, author=self.ada, content="Second comment")
         ops.add_comment(self.todo, author=self.ada, content="Third comment")
         self.client.force_login(self.ada)
-        response = self.client.get(f"/projects/{self.project.pk}/feed/")
-        html = response.text
-        start = html.index("<details>")
-        summary = html[start : html.index("</summary>", start)]
-        self.assertIn("commented", summary)
-        self.assertNotIn("wb-excerpt", summary)
-        self.assertIn("Third comment", html)
+        html = self.client.get(f"/projects/{self.project.pk}/feed/").text
+        self.assertIn("Conversation on", html)
+        self.assertNotIn("<details>", html)
+        for text in ["A long comment about it", "Second comment", "Third comment"]:
+            self.assertEqual(html.count(f'wb-excerpt">{text}'), 1)
 
     def test_mentions_show_current_names(self):
         ops.add_comment(self.todo, author=self.ada, content=mentions.syntax(self.ada))

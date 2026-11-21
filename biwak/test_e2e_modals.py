@@ -121,6 +121,45 @@ class ModalTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
+class VisibilityModalTest(E2ETestCase):
+    def test_showing_to_clients_asks_first_hiding_doesnt(self):
+        todolist = self.make_list(todos=["Order the tent"])
+        page = self.page
+        self.goto(page, todolist)
+        link = page.get_by_role("link", name="Show to clients")
+        link.click()
+        dialog = page.get_by_role("dialog", name="Show this list to clients?")
+        expect(dialog).to_be_visible()
+        expect(dialog).to_contain_text(
+            "Makes this list, 1 to-do and 0 comments visible to 1 client."
+        )
+        self.assertEqual(dialog.locator("nav").count(), 0)
+        # Cancel changes nothing
+        dialog.get_by_role("button", name="Cancel").click()
+        expect(dialog).to_be_hidden()
+        todolist.refresh_from_db()
+        self.assertFalse(todolist.visible_to_clients)
+        # Escape too
+        link.click()
+        expect(dialog).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(dialog).to_be_hidden()
+        todolist.refresh_from_db()
+        self.assertFalse(todolist.visible_to_clients)
+        # Confirming shows it, and now the page offers one click to hide it
+        link.click()
+        dialog.get_by_role("button", name="Show to clients").click()
+        hide = page.get_by_role("button", name="Hide from clients")
+        expect(hide).to_be_visible()
+        todolist.refresh_from_db()
+        self.assertTrue(todolist.visible_to_clients)
+        hide.click()
+        expect(page.get_by_role("link", name="Show to clients")).to_be_visible()
+        todolist.refresh_from_db()
+        self.assertFalse(todolist.visible_to_clients)
+        self.assertEqual(self.errors, [])
+
+
 class GroupModalsTest(E2ETestCase):
     def test_new_group_and_renaming_it(self):
         todolist = self.make_list(groups=["Later"])

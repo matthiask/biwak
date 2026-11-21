@@ -2,10 +2,16 @@ from django import forms
 from django.contrib import messages
 from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models import Q
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.http import (
+    Http404,
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseNotAllowed,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_POST
 
 from biwak import checklists, cursors, schedules
@@ -257,9 +263,6 @@ def todolist(request, pk):
             "view": view,
             "can_switch": item.has_switch and not request.user.is_client,
             "can_change": ops.can_change(request.user, item),
-            "affected": visibility.affected(item)
-            if item.has_switch and not item.is_client_visible
-            else None,
         },
     )
 
@@ -656,14 +659,74 @@ def subscription(request, pk):
     return redirect(item)
 
 
-@require_POST
+def _show_texts(item):
+    """The question's title and what showing the item to clients makes
+    visible (``visibility.affected()``)"""
+    affected = visibility.affected(item)
+    clients = ngettext("%(count)d client", "%(count)d clients", affected["clients"]) % {
+        "count": affected["clients"]
+    }
+    values = {"comments": affected["comments"], "clients": clients}
+    match item.kind:
+        case Kind.LIST:
+            title = _("Show this list to clients?")
+            intro = ngettext(
+                "Makes this list, %(count)d to-do and %(comments)d comments visible to %(clients)s.",
+                "Makes this list, %(count)d to-dos and %(comments)d comments visible to %(clients)s.",
+                affected["items"],
+            ) % {"count": affected["items"], **values}
+        case Kind.QUESTION:
+            title = _("Show this check-in to clients?")
+            intro = (
+                _(
+                    "Makes the check-in, its answers and their comments visible to %(clients)s."
+                )
+                % values
+            )
+        case _:
+            title = {
+                Kind.MESSAGE: _("Show this message to clients?"),
+                Kind.FOLDER: _("Show this folder to clients?"),
+                Kind.DOC: _("Show this doc to clients?"),
+                Kind.FILE: _("Show this file to clients?"),
+            }[item.kind]
+            intro = _(
+                "Makes it, %(items)d items below it and %(comments)d comments visible to %(clients)s."
+            ) % {"items": affected["items"], **values}
+    return title, intro
+
+
+class ShowForm(forms.Form):
+    """Only carries the switch's value"""
+
+    visible = forms.CharField(widget=forms.HiddenInput, initial="1")
+
+
 def switch(request, pk):
-    """The visibility switch, staff only"""
+    """The visibility switch, staff only. Showing something to clients asks
+    first (a modal, also a page: it can reveal what shouldn't be revealed),
+    hiding it again is one click"""
     if request.user.is_client:
         raise PermissionDenied
     item = item_for(request, pk)
     if not item.has_switch:
         return HttpResponse(status=400)
+    if request.method == "GET":
+        if item.is_client_visible:
+            return redirect(item)
+        title, intro = _show_texts(item)
+        return form_response(
+            request,
+            ShowForm(),
+            title=title,
+            intro=intro,
+            item=item,
+            cancel_url=item.get_absolute_url(),
+            submit_label=_("Show to clients"),
+            destructive=True,
+        )
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["GET", "POST"])
     ops.set_visibility(
         item, visible=bool(request.POST.get("visible")), actor=request.user
     )
