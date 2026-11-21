@@ -1,24 +1,25 @@
-# The dashboard: what needs me, and where things are going on
+# Home: what needs me, and where things are going on
 
-The idea (2026-11-21): `/` becomes a dashboard, the projects page moves
-to `/projects/`. The dashboard shows bookmarked projects, recent
+The idea (2026-11-21): `/` becomes a dashboard, "Home", and the projects
+page moves to `/projects/`. Home shows bookmarked projects, recent
 updates, to-dos due soon or overdue, and links to useful functionality.
 
-**Status:** draft (2026-11-21), the questions at the end wait for
-answers. Not built.
+**Status:** spec (2026-11-21), the questions answered the same day
+(recorded in the sections). Not built.
 
 **Agent:** a cheaper model following this spec and the checklist in
-`AGENTS.md`, once the questions are answered. Every section shows items,
-so the visibility tests matter most: have them reviewed.
+`AGENTS.md`. Every section shows items, so the visibility tests matter
+most: have them reviewed.
 
 **Depends on:** `ui-round-5.md` (the "assigned by" filter, for "Waiting
 on others") and the links part of `feed.md` (the project page's links,
-so nothing here points at item links), both merged.
+so nothing here points at item links), both merged; "Reading by acting"
+in `lantern.md` (completing a to-do on Home reads its notifications).
 
 **Touches:**
 - `biwak/projects/urls.py` (`/` and `/projects/`), the navigation in
   `base.html`, the palette's actions and shortcuts (`biwak/palette/`);
-- a new view and template (`biwak/dashboard/` or in `biwak/projects/`),
+- a new view and template (`biwak/home/` or in `biwak/projects/`),
   reusing `items/_todo.html`'s row, the projects page's card,
   `activity/_entries.html` and `checkins_due`;
 - `frontend/filters.js` only if the remembered order of the projects
@@ -32,6 +33,15 @@ lantern (what's for them) and their projects one by one. The dashboard
 answers "what needs me today, and where is something going on" on one
 page, and leads to the pages that have the rest. It shows little of
 each, newest or most urgent first, and always links to the full page.
+
+## The name and where it is
+
+Decided 2026-11-21: the page is "Home" (its title and the palette's "Go
+home"; "Dashboard" sounds like charts). The brand ("Biwak") in the top
+bar links to it; no entry of its own in the top bar, which stays
+"Projects", "To-dos", "Activity", "People", "Bookmarks". The shortcut is
+`g h`, next to `g p`, `g t`, `g f` and `g b`. Below, "the dashboard" and
+"Home" are the same page.
 
 ## Principles
 
@@ -60,9 +70,11 @@ a narrow one (projects, bookmarks, links).
 
 ### 1. Due: my to-dos (everyone)
 
-- Open to-dos assigned to me, due before the end of the next 7 days:
-  overdue, today, this week (the sections of `biwak.items.due`, with
-  their headings and badges), up to 10 rows, the most urgent first.
+- Open to-dos assigned to me, overdue or due within the next 7 days
+  (decided 2026-11-21: 7 days rather than the end of this week, so a
+  Friday still shows next week's): overdue, today, the days after (the
+  sections of `biwak.items.due`, with their headings and badges), up to
+  10 rows, the most urgent first.
 - Below: "All my to-dos" (`/todos/?assignee=me&grouping=due`), with
   the number when there are more than shown.
 - Empty: "Nothing due this week." (still links to all my to-dos).
@@ -75,19 +87,25 @@ a narrow one (projects, bookmarks, links).
 
 ### 3. Waiting on others (staff, only when there are some)
 
-- To-dos I assigned to somebody else (not to me) that are overdue,
-  up to 5, each with its assignees. "Assigned by" from
-  `ui-round-5.md`. Link: "All to-dos I assigned"
+- To-dos I assigned to somebody else (not to me), in the same window as
+  "Due" (decided 2026-11-21): overdue or due within the next 7 days, up
+  to 10, the most urgent first, each with its assignees. "Assigned by"
+  from `ui-round-5.md`. Link: "All to-dos I assigned"
   (`/todos/?assignee=&assigned_by=me&grouping=due`).
-- Only overdue ones: due soon is the assignee's business, overdue is
-  where a nudge helps.
 
 ### 4. Recent updates (everyone)
 
 - The newest feed entries (`activity/_entries.html`, grouped as on the
-  feed, conversations included), up to 10, from the last 7 days, in my
-  bookmarked projects; without bookmarks, in the projects I'm a member
-  of. Not my own actions.
+  feed, conversations included), up to 10, from the last 7 days, from
+  two sources together (decided 2026-11-21):
+  - **my bookmarked projects:** everything that happens in them,
+    completed to-dos and answered check-ins included;
+  - **what concerns me, in any project:** events that mention me or
+    assign me (the ones whose notification for me is a mention or an
+    assignment).
+  Without bookmarked projects only the second. My own actions show too
+  (decided 2026-11-21: the timeline can hold context I contributed to,
+  like my comment in a conversation).
 - Clients: what the feed shows them, by the same rules (`access.md`).
 - Updates that are in the lantern too stay here (decided 2026-11-21:
   the dashboard is the overview, the lantern the inbox).
@@ -100,10 +118,13 @@ a narrow one (projects, bookmarks, links).
   open and overdue to-dos, last activity), in the bookmarks' order.
 - Without bookmarks: the 6 projects with the most recent activity that
   I'm a member of, with a short hint: "Bookmark projects to keep them
-  here."
+  here." (decided 2026-11-21).
 - Link: "All projects" (`/projects/`).
 - Nobody in any project yet: "You're not in a project yet.", with
   "New project" for those who may create one.
+- Clients get Home too, also with a single project (decided
+  2026-11-21): its to-dos and updates are useful, and the project is
+  one click away.
 
 ### 6. Bookmarks (only when there are some)
 
@@ -112,7 +133,8 @@ a narrow one (projects, bookmarks, links).
 
 ### 7. Links to useful functionality (everyone, short)
 
-Plain links in a card, each only for those who can use it:
+Plain links in a card, each only for those who can use it (decided
+2026-11-21, nothing more):
 - "New project" (who may create one: the page's one primary action);
 - "To-dos I assigned" (staff);
 - "Search" with the shortcut (Ctrl+K), "Keyboard shortcuts" (`?`);
@@ -132,10 +154,12 @@ its rows go away when what they show is done (a to-do completed, a
 check-in answered, a bookmark removed, an update aged out), never by
 being looked at. What can be marked read is the lantern's, and it is
 one state on the server for both views; the browser doesn't need to
-sync it. Whether the dashboard shows
-notifications (unread marks, reading through the lantern) at all isn't
-decided yet (question 12); if it does, as follows. Bookmarks are shared
-either way.
+sync it.
+
+Decided 2026-11-21: Home shows notifications only as the lantern's
+unread mark on its rows, without a section of their own ("Mentioning
+you" would copy the lantern; mentions and assignments are in recent
+updates already).
 
 - **One state:** what the lantern has, `Notification.read_at` (and
   `marked_unread_at`), and `Bookmark`. The dashboard keeps no state of
@@ -175,8 +199,8 @@ either way.
 - The navigation's "Projects" goes to `/projects/`; the brand ("Biwak")
   goes to the dashboard.
 - Old links to `/?archived=1` redirect to `/projects/?archived=1`.
-- The palette: "Go to projects" (`g p`) stays; "Go to the dashboard"
-  is new (question 3).
+- The palette: "Go to projects" (`g p`) stays; "Go home" (`g h`) is
+  new.
 - The remembered order of the projects page is stored per path by
   `frontend/filters.js`; at the new path it starts fresh (no users yet,
   `no-users-yet`), nothing to migrate.
@@ -201,39 +225,3 @@ its own.
 - The page in a fixed number of queries with 200 projects.
 - Screenshots at 1200 and 390 px: a busy staff person, a client, a new
   person without projects, looked at.
-
-## Questions
-
-Proposals in the sections above; answers go into the sections and the
-entry leaves this list.
-
-1. **The page's name and title:** "Dashboard", "Home", or "Today"?
-   (Proposed: "Home" as the page's title and in the palette, since
-   "Dashboard" sounds like charts.)
-2. **A navigation entry?** The brand links to it already. Proposed: no
-   extra entry; "Projects", "To-dos", "Activity", "People",
-   "Bookmarks" stay as they are.
-3. **A shortcut:** `g h` ("home") for the dashboard, next to `g p`,
-   `g t`, `g f` and `g b`?
-4. **Due window:** 7 days ahead and up to 10 rows, as proposed, or the
-   end of this week (as the "this week" section is now)?
-5. **Recent updates:** from bookmarked projects (falling back to my
-   projects), as proposed, or from all projects I see? For staff in
-   all-access projects "all" could be a lot.
-6. **Not my own actions** in recent updates: right, or show everything
-   as the feed does?
-7. **Projects without bookmarks:** the 6 most recently active as
-   proposed, or all my projects when there are few (say up to 6) and
-   only then the most active?
-8. **Clients with exactly one project:** the dashboard too (proposed:
-   yes, the same page; its to-dos and updates are still useful), or
-   straight to that project?
-9. **Mentions:** a section "Mentioning you" duplicates the lantern.
-   Proposed: none; the lantern is where things for me are.
-10. **"Waiting on others":** only overdue (proposed), or due today too?
-11. **Links (section 7):** anything to add or drop? A link to the
-    person's own activity ("My activity")?
-12. **Notifications on the dashboard at all?** Rows marked unread and
-    reading through the lantern ("Shared with the lantern"), or a plain
-    overview without notifications, leaving them to the lantern alone
-    (with question 9). Either way nothing is ticked off twice (above).

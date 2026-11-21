@@ -56,7 +56,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `ui-round-5.md` | feedback round 5: cards on to-dos and docs, the project's to-dos linked, filter buttons, assigned by me | built 2026-11-21 (`ui5`) | ui-round-4 | cheaper |
 | `feed.md` | links: projects only, quieter ("Links", changed 2026-11-21) | after ui-round-4 | ui-round-4 | cheaper |
 | `lantern.md` | reading by acting: completing, editing, commenting, reacting read the item's notifications for the actor | next | lantern | cheaper |
-| `dashboard.md` | `/` shows what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | draft, questions open | ui-round-5, `feed.md` links | cheaper, review the visibility tests |
+| `dashboard.md` | Home at `/`: what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | after ui-round-5, the links and reading by acting | ui-round-5, `feed.md` links, `lantern.md` reading by acting | cheaper, review the visibility tests |
 
 `todos.md` stage 3, `projects-overview.md` and `glance.md` touch
 different files ("Touches" in each) and can run at the same time.

@@ -111,10 +111,10 @@ reasonable doubt, it stays unread.**
   - "mark as read" and "mark all as read";
   - opening the item some other way (the feed, a list, a mail's link, a
     live update) reads nothing;
-  - if the dashboard shows notifications (open, `dashboard.md`
-    question 12), its rows with unread ones are the lantern's entries on
-    another page: they link through the lantern and read the same way
-    (the state is the lantern's, on the server, decided 2026-11-21);
+  - Home's rows with unread notifications (`dashboard.md`) are the
+    lantern's entries on another page: they link through the lantern and
+    read the same way (the state is the lantern's, on the server,
+    decided 2026-11-21);
   - acting on the item reads it ("Reading by acting" below);
   - "mark as unread" per item.
 - **The model:** `Notification.read_at` (null: unread). Mail delivery
