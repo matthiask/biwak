@@ -9,11 +9,7 @@ lives now:
   `activation.md` ("Inviting", "Invitations").
 - **C, subscribing is the switch** (subscribed means notified of
   everything on the item; levels only on projects and lists, deciding
-  who gets subscribed automatically): in `notifications.md` and
-  `subscribers.md`; the check-ins' part in `checkins.md`. One detail to
-  move, below.
-
-## To move after the builds
-
-Into `notifications.md` (part C): folders have no level of their own,
-they follow the project's (confirmed 2026-11-21).
+  who gets subscribed automatically; folders follow the project's
+  level): `notifications.md` ("Subscriptions", "Levels", "Who gets
+  told"); check-in subscribers separate from the people asked, and
+  anybody who sees a check-in answering: `checkins.md`.

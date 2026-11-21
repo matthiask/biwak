@@ -239,9 +239,9 @@ versions.
   A client's item moved to the top level becomes internal.
 - Older versions of docs and files (pages, API, downloads) are staff
   only: they can hold what was internal before the item was shown.
-- Mentions in messages and docs: the edit forms offer `@`, the new
-  forms have no item to ask (the syntax works); the API resolves
-  `@ada@example.org` and an unambiguous `@Ada` (`notifications.md`).
+- Mentions in messages, docs and files: the forms offer `@` (new ones
+  ask the project who will see them, `notifications.md`); the API
+  resolves `@ada@example.org` and an unambiguous `@Ada`.
 
 ## API and CLI
 
