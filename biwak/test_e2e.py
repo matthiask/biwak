@@ -840,6 +840,32 @@ class CollabTest(E2ETestCase):
             time.sleep(0.1)
         self.assertEqual(self.stored(doc), expected)
 
+    def test_a_tick_in_another_browser_arrives_in_the_open_editor(self):
+        """Ticks on docs never wait (specs/editor.md): one browser has the
+        editor open and typed something not stored yet, another ticks the
+        box on the doc's page; the tick appears in the editor, the typing
+        stays"""
+        doc = ops.create_doc(
+            project=self.project,
+            title="Packing",
+            content="- [ ] tent\n- [ ] rope\n",
+            creator=self.ada,
+            visible=True,
+        )
+        editor = self.editor(self.ada, doc, page=self.page)
+        ticking = self.login(self.bob)
+        self.goto(ticking, doc)
+        expect(ticking.locator("p[role=status]")).to_contain_text("Ada is editing this")
+        self.type(editor, "- [ ] fuel")
+        self.wait_for_text(editor, "- [ ] tent\n- [ ] rope\n- [ ] fuel")
+        box = ticking.locator(".wb-checklist input[type=checkbox]").nth(1)
+        box.check()
+        expect(box).to_be_enabled()
+        expect(box).to_be_checked()
+        self.wait_for_text(editor, "- [ ] tent\n- [x] rope\n- [ ] fuel")
+        self.wait_for_stored("- [ ] tent\n- [x] rope\n- [ ] fuel", doc)
+        self.assertFalse(self.errors)
+
     def test_three_people_typing_at_once(self):
         """Ada, Bob and Cleo (a client, in a doc she created) type at the
         same time and see each other's text and cursors"""

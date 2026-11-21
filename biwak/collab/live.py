@@ -112,6 +112,28 @@ def apply_text(doc, content, *, user):
     return True
 
 
+def apply_live_text(doc, content, *, user):
+    """Like ``apply_text()``, but as an edit of the text as it is now: the
+    state plus what people typed and isn't merged yet, so that only the
+    difference between that and ``content`` (a tick: one box) is sent and
+    nothing typed is lost or doubled. Call with the doc's row locked.
+    Returns whether anything changed."""
+    ensure_state(doc)
+    update = ytext.edit(load(doc.pk), content)
+    if not update:
+        return False
+    append(doc.pk, update, user)
+    transaction.on_commit(lambda: send_update(doc.pk, update), robust=True)
+    return True
+
+
+def live_text(doc):
+    """The doc's text as the open editors have it: ``Doc.content`` follows
+    a few seconds after the typing. Call with the doc's row locked."""
+    ensure_state(doc)
+    return ytext.text(load(doc.pk))
+
+
 def may_write(user, item):
     """Whether what the person typed is merged: they still see the doc and
     may change it. Trashing and the read-only option don't count: what was

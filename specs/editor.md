@@ -252,3 +252,30 @@ API edit (a Yjs update), so nothing is overwritten. The live editor's
 presence only gives the heads-up ("Ada is editing this"). Plain edit
 forms (to-dos, messages, files, answers) still block ticks, since saving
 the form would overwrite them.
+
+**Status:** built 2026-11-21 (branch `doc-ticks`).
+
+- `items.operations.tick()` doesn't look at the editing marker for docs
+  and calls `files.operations.tick_doc()`: the box is ticked as an edit
+  like an API edit (`update_doc`'s path), stored as a `LiveUpdate` and sent
+  to the open editors after the commit, so the editors get a Yjs update
+  that changes the one box. Marker rows of docs (the live editors') still
+  exist, for the heads-up only; `RefusedTickTest` has the tests (own and
+  other's editor).
+- **Stored and live text can differ**: `Doc.content` follows the typing
+  after a pause (3 seconds). A page shows the stored text, so its
+  `version` is the stored text's hash. The tick edits the Yjs state the
+  stored text came from (`live.apply_text`: one character) and the typing
+  not stored yet merges around it, so nothing typed is lost or doubled. A
+  page whose version is the editors' live text (e.g. an editor's own page)
+  ticks against the live text (`live.apply_live_text`: state plus pending
+  updates). Any other version is a `ChecklistConflict` as before (the
+  page reloads). Read-only docs refuse as before (`DocReadOnly`).
+- The doc page's heads-up ("Ada is editing this.", not for oneself) is
+  unchanged; to-dos, messages, files and answers keep blocking.
+- Tests: `biwak/items/test_editing.py` (`RefusedTickTest`: docs with
+  someone else's and one's own editor, the heads-up, forms still
+  blocking), `biwak/collab/test_consumers.py` (a tick arrives in the
+  editors, unsaved typing survives, old text refused),
+  `biwak/test_e2e.py` (`CollabTest`: an editor open in one browser, a
+  tick in another).

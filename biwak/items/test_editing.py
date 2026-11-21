@@ -218,13 +218,58 @@ class RefusedTickTest(Fixture):
         self.assertEqual(response.status_code, 409)
         self.assertIn("You have the edit form", response.json()["message"])
 
-    def test_every_kind(self):
+    def test_every_kind_with_a_form(self):
+        upload = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="a.txt"),
+            creator=self.ada,
+            description=TEXT,
+        )
+        (answer,) = check_in_answers(self.project, [self.ada], content=TEXT)
+        for item in [self.message, upload, answer]:
+            editing.start(item, self.ada)
+            self.assertEqual(self.tick(self.bob, item).status_code, 409)
+
+    def test_docs_never_wait_for_the_live_editor(self):
+        # The marker of a doc is the open live editor's (collab.consumers)
         doc = ops.create_doc(
             project=self.project, title="Doc", creator=self.ada, content=TEXT
         )
-        for item in [self.message, doc]:
-            editing.start(item, self.ada)
-            self.assertEqual(self.tick(self.bob, item).status_code, 409)
+        editing.start(doc, self.ada)
+        editing.start(doc, self.bob)
+        # Somebody else's editor, then one's own, then both
+        editing.stop(doc, self.ada)
+        response = self.tick(self.ada, doc)
+        self.assertEqual(response.status_code, 200)
+        editing.start(doc, self.ada)
+        editing.stop(doc, self.bob)
+        response = self.tick(self.ada, doc, index=2, version=response.json()["version"])
+        self.assertEqual(response.status_code, 200)
+        editing.start(doc, self.bob)
+        response = self.tick(
+            self.bob, doc, index=1, checked="0", version=response.json()["version"]
+        )
+        self.assertEqual(response.status_code, 200)
+        doc.doc.refresh_from_db()
+        self.assertEqual(
+            doc.doc.content, "Packing\n\n- [x] tent\n- [ ] stove\n- [x] rope\n"
+        )
+        self.assertEqual(len(editing.holders(doc)), 2)
+
+    def test_the_doc_page_tells_who_has_the_editor_open(self):
+        doc = ops.create_doc(
+            project=self.project, title="Doc", creator=self.ada, content=TEXT
+        )
+        editing.start(doc, self.ada)
+        self.client.force_login(self.bob)
+        self.assertContains(
+            self.client.get(doc.get_absolute_url()), "Ada is editing this."
+        )
+        # Not oneself
+        self.client.force_login(self.ada)
+        self.assertNotContains(
+            self.client.get(doc.get_absolute_url()), "is editing this"
+        )
 
     def test_an_expired_marker_does_not_block(self):
         editing.start(self.todo, self.ada, now=timezone.now() - dt.timedelta(minutes=3))

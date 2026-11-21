@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
+from biwak import checklists
 from biwak.accounts.middleware import set_user_name
 from biwak.activity import mentions
 from biwak.activity.models import Action
@@ -238,6 +239,34 @@ def update_doc(
         new_version=new_version,
     )
     return item
+
+
+@transaction.atomic
+def tick_doc(item, *, actor, index, version, checked=None):
+    """Toggles checkbox ``index`` of the doc's text as an edit of the live
+    text (the open editors' Yjs state, what's typed and not saved yet
+    included), sent to the editors like an API edit: it changes the one box
+    and nothing else (specs/editor.md, "Docs: ticks never wait").
+    ``version`` is the hash of the text the page showed: the stored one
+    (``Doc.content``, which follows the typing after a few seconds: its box
+    is ticked in the state it came from, and the typing since merges
+    around it) or the live one (as the editors have it). ``ChecklistConflict``
+    if it's neither. Returns the new text."""
+    doc = _locked(item)
+    if doc.read_only:
+        raise DocReadOnly
+    if checklists.text_hash(doc.content) == version:
+        changed = live.apply_text(
+            doc, checklists.tick(doc.content, index, checked), user=actor
+        )
+    elif checklists.text_hash(current := live.live_text(doc)) == version:
+        changed = live.apply_live_text(
+            doc, checklists.tick(current, index, checked), user=actor
+        )
+    else:
+        raise ops.ChecklistConflict(*editing.last_change(item))
+    _save(item, doc, actor=actor if changed else None)
+    return doc.content
 
 
 @transaction.atomic
