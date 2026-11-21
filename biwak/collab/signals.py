@@ -1,6 +1,7 @@
 """Changes outside the operations make the open editors and pages
 (``/ws/live/``) check their access again: a person made a client or
-deactivated, a project made limited or archived (the Django admin), and
+deactivated, a project made limited or archived, an organization not the
+installation's own anymore (the Django admin), and
 logging out, here or everywhere"""
 
 from allauth.usersessions.models import UserSession
@@ -10,6 +11,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from biwak.collab import live
+from biwak.organizations.models import Organization
 from biwak.projects.models import Project
 
 
@@ -18,6 +20,14 @@ def user_changed(sender, instance, update_fields=None, **kwargs):
     if update_fields and set(update_fields) <= {"last_login"}:
         return
     live.check_access(user=instance.pk)
+
+
+@receiver(post_save, sender=Organization)
+def organization_changed(sender, instance, **kwargs):
+    """Not the installation's own anymore (the Django admin): its people
+    may not see all-access projects anymore"""
+    for pk in instance.people.values_list("pk", flat=True):
+        live.check_access(user=pk)
 
 
 @receiver(post_save, sender=Project)

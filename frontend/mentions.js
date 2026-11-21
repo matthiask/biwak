@@ -124,7 +124,10 @@ function attach(field) {
         item.setAttribute("aria-selected", index === active ? "true" : "false")
         item.setAttribute("aria-disabled", person.available ? "false" : "true")
         const name = document.createElement("span")
-        name.textContent = person.name
+        // "Ada Example, Example Ltd" (specs/organizations.md)
+        name.textContent = person.organization
+          ? `${person.name}, ${person.organization}`
+          : person.name
         const detail = document.createElement("small")
         detail.className = "wb-mentions-detail"
         detail.textContent = person.available ? person.email : person.reason

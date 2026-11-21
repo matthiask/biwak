@@ -42,7 +42,7 @@ from biwak.items import editing, operations as ops
 from biwak.items.models import Editing, Item
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import person, project
+from biwak.test_utils import organization, person, project
 
 
 application = AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
@@ -355,6 +355,39 @@ class ConsumerTest(TransactionTestCase):
             self.bob.save()
 
         await database_sync_to_async(self.on_commit)(deactivate)
+        await self.assertClosed(bob)
+
+    async def test_a_partner_now(self):
+        """Bob is staff, not a member: in another organization than the
+        installation's own, he's a partner and doesn't see the project"""
+        bob = await self.connect(self.bob, self.shared)
+
+        def make_partner():
+            self.bob.organization = organization("Example Partner Agency")
+            self.bob.save()
+
+        await database_sync_to_async(self.on_commit)(make_partner)
+        await self.assertClosed(bob)
+        bob = await self.connect(self.bob, self.shared, sync=False)
+        await self.assertClosed(bob)
+
+    async def test_no_longer_the_installations_own(self):
+        """Unmarking the organization (the Django admin) shuts its staff
+        out of all-access projects they aren't members of"""
+        own = await database_sync_to_async(organization)("Example Team", is_own=True)
+
+        def join():
+            self.bob.organization = own
+            self.bob.save()
+
+        await database_sync_to_async(join)()
+        bob = await self.connect(self.bob, self.shared)
+
+        def unmark():
+            own.is_own = False
+            own.save()
+
+        await database_sync_to_async(self.on_commit)(unmark)
         await self.assertClosed(bob)
 
     async def test_a_project_made_limited_in_the_admin(self):

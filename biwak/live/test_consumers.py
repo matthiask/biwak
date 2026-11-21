@@ -24,7 +24,7 @@ from biwak.live import announce, consumers
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
 from biwak.reactions.operations import add_reaction, remove_reaction
-from biwak.test_utils import person, project
+from biwak.test_utils import organization, person, project
 
 
 application = AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
@@ -290,6 +290,25 @@ class LiveConsumerTest(TransactionTestCase):
                 await layer.receive(clients)
 
     # Losing access -----------------------------------------------------------
+
+    async def test_partners_only_in_their_projects(self):
+        """Staff of another organization (specs/access.md): all-access
+        projects they aren't members of are refused, and becoming a partner
+        closes the page"""
+        bob = await self.connect(self.bob, self.todo)
+
+        def make_partner():
+            self.bob.organization = organization("Example Partner Agency")
+            self.bob.save()
+
+        await self.run_op(make_partner)
+        await self.assertClosed(bob)
+        bob = await self.connect(self.bob, self.todo, ready=False)
+        await self.assertClosed(bob)
+        await self.run_op(
+            Membership.objects.create, project=self.project, user=self.bob
+        )
+        await self.connect(self.bob, self.todo)
 
     async def test_removed_from_the_project(self):
         cleo = await self.connect(self.cleo, self.shared)

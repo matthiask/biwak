@@ -37,7 +37,25 @@ the first client gets a login.
     `update_project()`, fixed 2026-11-21 after the code review: making a
     project limited kept them).
 - **Staff** with access to a project see everything in it.
-- **Clients** are never covered by all-access: they see a project only
+- **Partners see only their projects** (decided 2026-11-21,
+  `organizations.md`): staff whose organization isn't the installation's
+  own (freelancers, partner agencies) see only the projects they're
+  members of; all-access projects open only to the installation's own
+  staff. Staff without an organization count as the installation's own,
+  so nothing changes before organizations are set up (`User.is_partner`,
+  `User.sees_all_access`, `own_staff()` for querysets).
+  `Project.objects.accessible_to()` and `notify.people_who_see()` decide
+  it, so pages, the feed, search, the palette, the lantern, mails, mail
+  replies, the API, the CLI and both websockets follow. Partners are
+  assigned and mentioned in all-access projects only as members. Like
+  clients, they learn about members only (`knows_everybody()`: the `@`
+  list, mentions they write and read, assignees, subscribers), and they
+  don't add or invite people, create projects or manage organizations,
+  whose forms offer everybody (decided meanwhile, 2026-11-21, to be
+  confirmed). Moving people in or out of the installation's own
+  organization is for admins only; open pages and editors check their
+  access again when it happens.
+- **Clients** are never covered by all-access either: they see a project only
   if they're members, and in it only what
   is visible to clients.
 - Visible to clients is a switch on **containers** (lists, folders) and
@@ -194,5 +212,6 @@ Microsoft account (decided 2026-11-20).
   needed, and back to the item.
 - Rate limits on login codes per address and per IP (allauth has them); the response never
   says whether an address exists.
-- Staff or client is a property of the person, set by admins; clients
-  belong to an organization (for display: "Ada, Example Ltd").
+- Staff or client is a property of the person, set by admins; everybody
+  can belong to an organization (`organizations.md`; shown for clients and
+  partners: "Ada, Example Ltd").

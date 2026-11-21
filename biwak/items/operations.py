@@ -15,7 +15,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 
 from biwak import checklists, schedules
-from biwak.accounts.models import User
+from biwak.accounts.models import User, own_staff
 from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.notify import notify_people
@@ -401,12 +401,17 @@ def assignable_people(item, by=None):
     of all-access projects whether they're members or not (assigning makes
     them members), clients only members and only on visible to-dos. The
     one rule for the forms, the API and the next to-do of a recurring
-    one. Clients (``by``) assign members only: they don't learn about other
-    staff."""
+    one. Partners of all-access projects only as members (specs/access.md).
+    Clients and partners (``by``) assign members only: they don't learn
+    about other staff."""
     project = item.project
     members = Q(memberships__project=project)
-    everybody = project.is_all_access and not (by and by.is_client)
-    staff = Q(is_client=False) & (Q() if everybody else members)
+    # Clients and partners (``by``) don't learn about others than members
+    everybody = project.is_all_access and (by is None or by.sees_all_access)
+    staff = Q(is_client=False) & members
+    if everybody:
+        # The installation's own staff; partners only as members
+        staff |= own_staff()
     who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
     # Inactive people only while importing (they have no account yet)
     people = User.objects.all() if is_importing() else User.objects.active()
@@ -853,9 +858,9 @@ def can_change(user, item):
         return True
     return bool(
         item.kind == Kind.FILE
-        and user.organization
+        and user.organization_id is not None
         and item.creator.is_client
-        and item.creator.organization == user.organization
+        and item.creator.organization_id == user.organization_id
     )
 
 

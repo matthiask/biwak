@@ -9,7 +9,7 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext
 
-from biwak.accounts.models import NotificationLevel, User
+from biwak.accounts.models import NotificationLevel, User, own_staff
 from biwak.activity.models import (
     Action,
     Event,
@@ -37,10 +37,11 @@ def people_who_see(project, visible):
     or not, that isn't trashed (it may not exist yet):
     ``Item.objects.visible_to()`` in reverse, for everybody at once.
     ``test_notify.WhoCanSeeTest`` compares the two so they can't drift."""
-    staff = models.Q(is_client=False)
-    if not project.is_all_access:
-        staff &= models.Q(memberships__project=project)
-    can_see = staff
+    members = models.Q(memberships__project=project)
+    can_see = models.Q(is_client=False) & members
+    if project.is_all_access:
+        # Not partners: the installation's own staff (specs/access.md)
+        can_see |= own_staff()
     if visible:
         can_see |= models.Q(is_client=True, memberships__project=project)
     return User.objects.active().filter(can_see).distinct()

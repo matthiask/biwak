@@ -19,6 +19,16 @@ from biwak.organizations.models import (
 )
 
 
+def _check_access(people):
+    """Open editors and pages of these people (IDs) check their access
+    again after the commit: they may have stopped seeing all-access
+    projects"""
+    from biwak.collab import live
+
+    for pk in set(people):
+        live.check_access(user=pk)
+
+
 def can_manage(user):
     """The installation's own staff; partners and clients don't learn which
     organizations and people there are"""
@@ -130,6 +140,7 @@ def merge(source, target, *, actor):
     if source.pk == target.pk:
         raise ValidationError(_("An organization can't be merged into itself."))
     _check_touch(actor, source, target)
+    _check_access(source.people.values_list("pk", flat=True))
     source.people.update(organization=target)
     domains = [d for d in source.domains if d not in target.domains]
     if domains:
@@ -172,6 +183,9 @@ def mark_own(org, *, actor):
         )
     if org is not None and org.is_own:
         return org
+    _check_access(
+        Organization.objects.filter(is_own=True).values_list("people", flat=True)
+    )
     Organization.objects.filter(is_own=True).update(is_own=False)
     if org is not None:
         org.is_own = True
