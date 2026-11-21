@@ -23,6 +23,7 @@ from biwak.accounts.models import User
 from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
 from biwak.activity.operations import subscribe
+from biwak.projects.models import knows_everybody
 
 
 MENTION = re.compile(r"\[@([^\]\n]*)\]\(person:(\d+)\)")
@@ -57,9 +58,8 @@ def reader():
 
 def known_to(people, project, person):
     """Those of ``people`` (a queryset) the person may learn about:
-    everybody for staff, the project's members for clients and for nobody
-    in particular (like ``Project.people_known_to()``)"""
-    if person is not None and person.is_authenticated and not person.is_client:
+    ``Project.people_known_to()`` for querysets"""
+    if knows_everybody(person):
         return people
     return people.filter(pk__in=project.memberships.values("user"))
 

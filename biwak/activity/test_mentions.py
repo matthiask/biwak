@@ -1,10 +1,11 @@
 import datetime as dt
 
+from django.contrib.auth.models import AnonymousUser
 from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 
-from biwak.accounts.models import APIToken
+from biwak.accounts.models import APIToken, User
 from biwak.activity import mentions
 from biwak.activity.mails import send_mails, unsubscribe_url
 from biwak.activity.models import Action, Event, Mention, Subscription
@@ -51,6 +52,20 @@ class MentionsTest(TestCase):
                     if Item.objects.visible_to(user).filter(pk=item.pk).exists()
                 }
                 self.assertEqual(set(mentions.mentionable_people(item)), expected)
+
+    def test_known_to_the_same_for_lists_and_querysets(self):
+        """One rule: staff learn about everybody, clients and nobody in
+        particular about the members"""
+        people = User.objects.filter(pk__in=[self.ada.pk, self.bob.pk, self.cleo.pk])
+        for viewer in [self.ada, self.cleo, AnonymousUser(), None]:
+            with self.subTest(viewer=viewer):
+                self.assertEqual(
+                    set(self.project.people_known_to(viewer, people)),
+                    set(mentions.known_to(people, self.project, viewer)),
+                )
+        self.assertEqual(
+            set(self.project.people_known_to(None, people)), {self.ada, self.cleo}
+        )
 
     def test_comment_mentions_notify_and_subscribe(self):
         unsubscribe(self.bob, self.todo)
