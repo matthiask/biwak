@@ -58,23 +58,12 @@ async function submit(form) {
   }
 }
 
-// "Repeat": the end and the count only for rules that repeat (the rule
-// widget shows its own parts, rule-widget.js)
-function syncRepeat(form) {
-  const value = form.querySelector("[data-rule-frequency]").value
-  for (const element of form.querySelectorAll("[data-repeat-ends]"))
-    element.hidden = !value
-}
-
 const ready = new WeakSet()
 
 function setUp(details) {
   if (ready.has(details)) return
   ready.add(details)
   const form = details.querySelector("[data-add-todo-form]")
-  syncRepeat(form)
-  form.addEventListener("change", () => syncRepeat(form))
-  form.addEventListener("reset", () => setTimeout(() => syncRepeat(form)))
 
   details.addEventListener("toggle", () => {
     if (!details.open) return

@@ -7,28 +7,30 @@
   {% include "files/_crumbs.html" %}
   <h1 class="mb-3">{% if item %}{% translate "Edit the file" %}{% else %}{% translate "Upload a file" %}{% endif %}</h1>
   {% if item %}{% include "items/_client_banner.html" %}{% else %}{% include "items/_client_banner.html" with item=folder %}{% endif %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <form
-        method="post"
-        enctype="multipart/form-data"
-        {% attachments_attrs project %}
-        {% if item %}data-editing="{% url 'item_editing' item.pk %}"{% endif %}
-      >
-        {% csrf_token %}
-        {% if item %}<input type="hidden" name="base" value="{{ base }}">{% endif %}
-        {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
-        {% include "files/_attach_button.html" %}
-        {{ form }}
-        <button type="submit" class="btn btn-primary">
-          {% if item %}{% translate "Save" %}{% else %}{% translate "Upload" %}{% endif %}
-        </button>
-        <a
-          href="{% if item %}{{ item.get_absolute_url }}{% elif folder %}{{ folder.get_absolute_url }}{% else %}{% url 'project_files' project.pk %}{% endif %}"
-          class="btn btn-quiet"
-          {% if item %}data-editing-release{% endif %}
-        >{% translate "Cancel" %}</a>
-      </form>
+  <div {% if item %}id="live-text" data-live data-view-form data-hide-title{% endif %}>
+    <div class="card mb-4">
+      <div class="card-body">
+        <form
+          method="post"
+          enctype="multipart/form-data"
+          {% attachments_attrs project %}
+          {% if item %}{% include "files/_edit_attrs.html" %}{% endif %}
+        >
+          {% csrf_token %}
+          {% if item %}<input type="hidden" name="base" value="{{ base }}">{% endif %}
+          {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
+          {% include "files/_attach_button.html" %}
+          {{ form }}
+          <button type="submit" class="btn btn-primary" {% if item %}{% include "files/_save_attrs.html" %}{% endif %}>
+            {% if item %}{% translate "Save" %}{% else %}{% translate "Upload" %}{% endif %}
+          </button>
+          <a
+            href="{% if item %}{{ item.get_absolute_url }}{% elif folder %}{{ folder.get_absolute_url }}{% else %}{% url 'project_files' project.pk %}{% endif %}"
+            class="btn btn-quiet"
+            {% if item %}{% include "files/_cancel_attrs.html" %}{% endif %}
+          >{% translate "Cancel" %}</a>
+        </form>
+      </div>
     </div>
   </div>
 {% endblock content %}

@@ -14,6 +14,7 @@ Each test logs in through a session cookie and waits for what it expects
 """
 
 import asyncio
+import datetime as dt
 import json
 import os
 import re
@@ -29,13 +30,15 @@ from django.test.testcases import LiveServerThread
 from django.urls import reverse
 from django.views.static import serve as static_serve
 
+from biwak import schedules
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.activity.models import LevelOverride
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Doc, Item, Kind, Status
+from biwak.items.models import Comment, Doc, Item, Kind, Status, Todo
+from biwak.projects import operations as project_ops
 from biwak.reactions.models import Reaction
 from biwak.test_utils import person, project
 
@@ -210,7 +213,9 @@ class TodosTest(E2ETestCase):
 
         title.fill("Write the brief")
         add.locator("[name=notes]").fill("Two pages, *short*")
-        add.locator(".wb-chip", has_text="Ada").click()
+        picker = add.locator(".wb-picker-input")
+        picker.click()
+        add.locator(".wb-picker-list li", has_text="Ada").click()
         add.locator("[name=due_on]").fill("2026-12-24")
         title.press("Control+Enter")
         rows = page.locator("[data-todo]")
@@ -221,7 +226,7 @@ class TodosTest(E2ETestCase):
         # Ready for the next one
         self.assertEqual(title.input_value(), "")
         self.assertEqual(add.locator("[name=notes]").input_value(), "")
-        self.assertFalse(add.locator(".wb-chip input").first.is_checked())
+        expect(add.locator(".wb-pill")).to_have_count(0)
         expect(title).to_be_focused()
 
         title.fill("Send it")
@@ -803,6 +808,67 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(Attachment.objects.count(), 0)
 
 
+class OverdueTest(E2ETestCase):
+    def test_the_badge_on_a_list(self):
+        """Overdue gets the danger badge, today the quiet one, a completed
+        to-do none (specs/ui-round-1.md, part 5)"""
+        today = schedules.today()
+        todolist = self.make_list(todos=["Late", "Now", "Done", "Soon"])
+        for title, due_on in [
+            ("Late", today - dt.timedelta(days=2)),
+            ("Now", today),
+            ("Done", today - dt.timedelta(days=2)),
+            ("Soon", today + dt.timedelta(days=2)),
+        ]:
+            Todo.objects.filter(item__title=title).update(due_on=due_on)
+        ops.complete(Item.objects.get(title="Done"), actor=self.ada)
+        page = self.page
+        self.goto(page, todolist)
+
+        def badge(title):
+            return page.locator("[data-todo]", has_text=title).locator("[data-due]")
+
+        expect(badge("Late")).to_have_attribute("data-due", "overdue")
+        expect(badge("Late")).to_contain_text("Overdue")
+        expect(badge("Now")).to_have_text("Today")
+        expect(badge("Soon")).to_have_attribute("data-due", "later")
+        expect(page.locator("[data-todo]", has_text="Done")).to_have_count(1)
+        expect(badge("Done").filter(has_text="Overdue")).to_have_count(0)
+        expect(page.locator("[data-due=overdue]")).to_have_count(1)
+
+
+class ProjectsPageTest(E2ETestCase):
+    def test_archiving_with_undo_and_switching(self):
+        self.camp = project("Camp", members=[self.ada])
+        page = self.page
+        self.goto(page, reverse("projects"))
+        # No reload: a marker on the page survives
+        page.evaluate("window.marker = 1")
+        card = page.locator(".wb-project-card", has_text="Camp")
+        card.get_by_role("button", name="Archive the project").click()
+        expect(card).to_have_count(0)
+        status = page.get_by_role("status")
+        expect(status).to_contain_text("Archived.")
+        self.camp.refresh_from_db()
+        self.assertIsNotNone(self.camp.archived_at)
+        status.get_by_role("button", name="Undo").click()
+        expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
+        expect(page.get_by_role("status")).to_have_count(0)
+        self.camp.refresh_from_db()
+        self.assertIsNone(self.camp.archived_at)
+        # Switching to the archived projects and bringing one back
+        page.get_by_role("link", name="Archive", exact=True).click()
+        expect(page.locator("h1")).to_have_text("Archived projects")
+        self.assertIn("archived=1", page.url)
+        self.assertEqual(page.evaluate("window.marker"), 1)
+        project_ops.archive_project(self.camp, actor=self.ada)
+        page.reload()
+        page.get_by_role("button", name="Bring back from the archive").click()
+        expect(page.get_by_role("status")).to_contain_text("Brought back.")
+        page.get_by_role("link", name="Active projects").click()
+        expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
+
+
 class ASGIServerThread(LiveServerThread):
     """The live server through asgi.py with uvicorn, for the websockets of
     docs edited live; static files from STATIC_ROOT like Django's"""
@@ -1176,24 +1242,22 @@ class LiveTest(E2ETestCase):
     def test_a_form_being_edited_isnt_replaced(self):
         ada = self.open(self.ada, self.todo, page=self.page)
         bob = self.open(self.bob, self.todo)
-        title = ada.locator("#live-form input[name=title]")
+        # Ada has the form open (the marker only blocks ticks); Bob saves
+        # the notes
+        ada.get_by_role("link", name="Edit").click()
+        title = ada.locator("#live-text input[name=title]")
         title.fill("Order the big tent")
-        notes = bob.locator("#live-form textarea[name=notes]")
-        notes.fill("Two poles")
-        bob.locator("#live-form").get_by_role("button", name="Save").click()
-        bob.wait_for_load_state()
-        # The notes above the form follow, the form waits
-        expect(ada.locator("#live-text")).to_contain_text("Two poles")
-        expect(ada.locator("#live-form [data-live-note]")).to_be_visible()
+        bob.locator("#live-text .wb-view-text").click()
+        bob.locator("#live-text textarea[name=notes]").fill("Two poles")
+        bob.get_by_role("button", name="Save").click()
+        # The form waits, with a note
+        expect(ada.locator("#live-text [data-live-note]")).to_be_visible()
         expect(title).to_have_value("Order the big tent")
-        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value("")
-        # Put back and left: the form takes over what changed
-        title.fill("Order the tent")
-        title.blur()
-        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value(
-            "Two poles"
-        )
-        expect(ada.locator("#live-form [data-live-note]")).to_have_count(0)
+        expect(ada.locator("#live-text textarea[name=notes]")).to_have_value("")
+        # Cancelled: the view shows what changed
+        ada.get_by_role("link", name="Cancel").click()
+        expect(ada.locator("#live-text")).to_contain_text("Two poles")
+        expect(ada.locator("#live-text form")).to_have_count(0)
         self.assertFalse(self.errors)
 
     def test_a_clients_page_doesnt_hear_of_an_internal_change(self):
@@ -1644,22 +1708,24 @@ class RuleWidgetTest(E2ETestCase):
         )
         page = self.page
         self.goto(page, elsewhere)
+        page.get_by_role("link", name="Edit").click()
         widget = page.locator("[data-rule-widget]")
-        self.assertIn("can't be edited here", widget.inner_text())
+        expect(widget).to_contain_text("can't be edited here")
         self.assertFalse(widget.locator("[data-rule-frequency]").is_visible())
         page.locator("form [name=title][maxlength='500']").fill("Renamed")
         page.locator("form button[type=submit]", has_text="Save").first.click()
-        page.wait_for_url(f"**{elsewhere.get_absolute_url()}")
+        expect(page.locator("[data-rule-widget]")).to_have_count(0)
         elsewhere.todo.refresh_from_db()
         self.assertEqual(elsewhere.todo.recurrence, "FREQ=MONTHLY;BYMONTHDAY=1,15")
         # Replace opens the widget
+        page.get_by_role("link", name="Edit").click()
         page.locator("[data-rule-replace]").check()
         frequency = widget.locator("[data-rule-frequency]")
         expect(frequency).to_be_visible()
         frequency.select_option("daily")
         expect(widget.locator("[data-rule-description]")).to_have_text("every day")
         page.locator("form button[type=submit]", has_text="Save").first.click()
-        page.wait_for_url(f"**{elsewhere.get_absolute_url()}")
+        expect(page.locator("[data-rule-widget]")).to_have_count(0)
         elsewhere.todo.refresh_from_db()
         self.assertEqual(elsewhere.todo.recurrence, "FREQ=DAILY")
 

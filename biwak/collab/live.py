@@ -81,6 +81,14 @@ def prepare(pk):
     return doc.item.project_id
 
 
+def history(pk):
+    """Tells the doc's live state from one made again later (the editors
+    keep unsent changes in their browsers, which only fit the history they
+    were typed in)"""
+    prepare(pk)
+    return str(int(LiveState.objects.get(doc_id=pk).created_at.timestamp() * 1000))
+
+
 def load(pk):
     """The doc's Yjs document as it is now, the updates not merged yet
     included. The updates first: a merge in between moves them into the

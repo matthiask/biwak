@@ -7,27 +7,33 @@
   <h1 class="wb-title">{{ item|item_title }} {% client_badge item %}</h1>
   <p class="text-body-secondary">{{ occurrence.asked_at|date:"l, j. F Y" }}</p>
   {% include "items/_client_banner.html" %}
-  <div class="card mb-3">
-    <div class="card-body">
-      <form
-        method="post"
-        {% attachments_attrs item.project %}
-        {% if existing %}data-editing="{% url 'item_editing' existing.item_id %}"{% endif %}
-      >
-        {% csrf_token %}
-        {% if existing %}<input type="hidden" name="base" value="{{ base }}">{% endif %}
-        <input type="hidden" name="occurrence" value="{{ occurrence.pk }}">
-        {% include "files/_attach_button.html" %}
-        {{ form }}
-        <button type="submit" class="btn btn-primary">
-          {% if existing %}{% translate "Save the answer" %}{% else %}{% translate "Answer" %}{% endif %}
-        </button>
-        <a
-          href="{{ item.get_absolute_url }}"
-          class="btn btn-quiet"
-          {% if existing %}data-editing-release{% endif %}
-        >{% translate "Cancel" %}</a>
-      </form>
+  <div {% if existing %}id="{{ region }}" data-live data-view-form{% endif %}>
+    <div class="card mb-3">
+      <div class="card-body">
+        <form
+          method="post"
+          {% attachments_attrs item.project %}
+          {% if existing %}{% include "files/_edit_attrs.html" with item=existing.item %}{% endif %}
+        >
+          {% csrf_token %}
+          {% if existing %}<input type="hidden" name="base" value="{{ base }}">{% endif %}
+          <input type="hidden" name="occurrence" value="{{ occurrence.pk }}">
+          {% include "files/_attach_button.html" %}
+          {{ form }}
+          <button
+            type="submit"
+            class="btn btn-primary"
+            {% if existing %}{% include "files/_save_attrs.html" with region=region %}{% endif %}
+          >
+            {% if existing %}{% translate "Save the answer" %}{% else %}{% translate "Answer" %}{% endif %}
+          </button>
+          <a
+            href="{{ item.get_absolute_url }}"
+            class="btn btn-quiet"
+            {% if existing %}{% include "files/_cancel_attrs.html" with cancel_url=item.get_absolute_url %}{% endif %}
+          >{% translate "Cancel" %}</a>
+        </form>
+      </div>
     </div>
   </div>
 {% endblock content %}

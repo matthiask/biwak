@@ -10,7 +10,7 @@
         class="text-body-secondary"
       >{% project_dot todo.project %}{{ todo.project }}</a> /{% endif %}
     <a href="{{ todo.parent.get_absolute_url }}" class="text-body-secondary">{{ todo.parent }}</a>
-    {% if todo.todo.due_on %}· {% icon "calendar-event" %} {{ todo.todo.due_on|date:"D, j. M Y" }}{% endif %}
+    {% if todo.todo.due_on %}· {% due_badge todo.todo "D, j. M Y" %}{% endif %}
     {% if todo.todo.is_completed %}·
       {% blocktranslate with day=todo.todo.completed_at|date:"j. M Y" %}completed {{ day }}{% endblocktranslate %}{% endif %}
   </span>

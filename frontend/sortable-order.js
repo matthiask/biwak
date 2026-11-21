@@ -4,13 +4,17 @@
 // with data-sortable-item="ID", dragged by their [data-sortable-handle].
 // The request has the IDs in their new order, as NAME.
 import { Sortable } from "sortablejs"
-import { post } from "./http.js"
+import { post, remember } from "./http.js"
 
 for (const container of document.querySelectorAll("[data-sortable-order]")) {
+  let undo = () => {}
   Sortable.create(container, {
     handle: "[data-sortable-handle]",
     draggable: "[data-sortable-item]",
     animation: 120,
+    onStart() {
+      undo = remember([container])
+    },
     onEnd(event) {
       if (event.oldIndex === event.newIndex) return
       const field = container.dataset.sortableField
@@ -20,6 +24,7 @@ for (const container of document.querySelectorAll("[data-sortable-order]")) {
           field,
           item.dataset.sortableItem,
         ]),
+        undo,
       )
     },
   })

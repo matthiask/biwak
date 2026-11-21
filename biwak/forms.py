@@ -57,3 +57,43 @@ class Form(BootstrapMixin, forms.Form):
 
 class ModelForm(BootstrapMixin, forms.ModelForm):
     pass
+
+
+def assignee_picker_attrs():
+    """What turns a ``<select multiple>`` of people into the picker of
+    ``frontend/assignees.js`` and the texts it shows; without JavaScript
+    the select stays as it is"""
+    return {
+        "data-assignee-picker": "",
+        "data-placeholder": _("Assign…"),
+        "data-empty": _("Nobody found"),
+        "data-remove": _("Remove %(name)s"),
+        "data-new": _("not in the project yet"),
+    }
+
+
+class AssigneeSelect(forms.SelectMultiple):
+    """People to choose from, the project's members first (the order of
+    ``ops.assignable_people()``); each option says whether the person is a
+    member, since assigning staff who aren't makes them one"""
+
+    def __init__(self, attrs=None):
+        super().__init__({**assignee_picker_attrs(), **(attrs or {})})
+
+    def create_option(self, name, value, *args, **kwargs):
+        option = super().create_option(name, value, *args, **kwargs)
+        instance = getattr(value, "instance", None)
+        if instance is not None and hasattr(instance, "is_member"):
+            option["attrs"]["data-member"] = "true" if instance.is_member else "false"
+        return option
+
+
+class AssigneeField(forms.ModelMultipleChoiceField):
+    widget = AssigneeSelect
+
+    def __init__(self, queryset, **kwargs):
+        kwargs.setdefault("required", False)
+        super().__init__(queryset, **kwargs)
+
+    def label_from_instance(self, obj):
+        return obj.get_short_name()

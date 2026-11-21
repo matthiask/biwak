@@ -6,7 +6,7 @@ product), and pages
 that update while they're open: comments, reactions and changes by others
 appear without reloading.
 
-**Status:** built (2026-11-21, branch `collaboration`, not merged): the
+**Status:** built and merged (2026-11-21, with `collaboration`; the follow-ups too): the
 lantern (`biwak/activity/lantern.py`, the menu, `/lantern/`, reading,
 bookmarking, mail delivery "none", the favicon dot, `GET /api/v1/lantern/`,
 `POST /api/v1/lantern/read/`, `biwak lantern`, CLI 0.21.0) and live

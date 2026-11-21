@@ -82,8 +82,11 @@ the first client gets a login.
 - To-dos are shared work: clients change every field of a visible to-do
   (title, notes, assignees, due date, repeat rule), also of to-dos staff
   created (decided 2026-11-20; `can_change()` covers renaming, archiving
-  and trashing, not to-dos' fields). Everything else clients change only
-  if they created it.
+  and trashing, not to-dos' fields). Moving a to-do between lists and
+  groups is part of it: clients move visible to-dos by dragging, with
+  "Move to…" and through the API, only into lists they can see, so a
+  move never hides a to-do from them (confirmed 2026-11-21). Everything
+  else clients change only if they created it.
 - Clients learn about the project's members only, not about staff who
   see the project because it's all-access (decided 2026-11-20 after the
   visibility review): subscribers on item pages, the people asked by a

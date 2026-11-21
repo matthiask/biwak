@@ -456,6 +456,7 @@ def question_answer(request, pk):
             "item": item,
             "occurrence": occurrence,
             "existing": existing,
+            "region": f"answer-{existing.pk}-text" if existing else "",
             "form": form,
             "base": base,
         },

@@ -1,0 +1,11 @@
+{% comment %}
+  The submit button of an edit form shown in place: htmx posts the form and
+  takes the page's text (`region`, default "live-text") and header out of
+  the page the view redirects to. On the button, not the form: a form with
+  a field named "form" (the to-do's) isn't one for htmx (`form.form`).
+{% endcomment %}
+{% if htmx %}
+  hx-post="{{ request.get_full_path }}" hx-target="#{{ region|default:'live-text' }}" hx-swap="outerHTML"
+  hx-select="#{{ region|default:'live-text' }}"
+  {% if not region %}hx-select-oob="#live-header"{% endif %}
+{% endif %}

@@ -2,7 +2,8 @@
 // shared through Yjs with the server's websocket (biwak/collab/), the
 // others' cursors and names (awareness). The server says whether we may
 // type (our message MODE) and closes with 4404 when the doc isn't ours to
-// see anymore. Offline, typing goes on; Yjs merges it on reconnect.
+// see anymore. Offline, typing goes on, kept in the browser (collab-store.js);
+// Yjs merges it on reconnect.
 
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { markdownLanguage } from "@codemirror/lang-markdown"
@@ -17,7 +18,8 @@ import * as decoding from "lib0/decoding"
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next"
 import { WebsocketProvider } from "y-websocket"
 import * as Y from "yjs"
-
+import { keepInBrowser } from "./collab-store.js"
+import { report } from "./connection.js"
 import { csrfToken } from "./http.js"
 
 // biwak/collab/consumers.py
@@ -41,6 +43,7 @@ function setUp(container) {
     // Other tabs go through the server too, which decides what they get
     { disableBc: true },
   )
+  keepInBrowser(ydoc, provider, texts.collabUser, room, texts.collabHistory)
   // The server puts in the name and color
   provider.awareness.setLocalStateField("user", {})
 
@@ -81,6 +84,7 @@ function setUp(container) {
     else if (synced && provider.wsconnected) text = texts.collabConnected
     else if (synced) text = texts.collabOffline
     status.textContent = text
+    report("collab", gone || provider.wsconnected)
     container.dataset.collabState = gone
       ? "gone"
       : !synced

@@ -60,6 +60,9 @@ class RuleWidget(forms.Widget):
         self.default_frequency = default_frequency
         self.label = ""
         self.anchor = None  # The date the defaults come from, set by the form
+        # The end date and count of the form's other fields, shown inside
+        # the fieldset (``RepeatForm.ends()``); None: no such fields
+        self.ends = None
 
     def value_from_datadict(self, data, files, name):
         values = {
@@ -114,6 +117,7 @@ class RuleWidget(forms.Widget):
             description=schedules.describe(rule) if rule else "",
             current=rule if unshowable else "",
             describe_url=reverse("schedules_describe"),
+            ends=self.ends,
             frequencies=[
                 *([("", gettext("Doesn't repeat"))] if self.allow_empty else []),
                 ("daily", gettext("Daily")),
@@ -138,6 +142,20 @@ class RuleWidget(forms.Widget):
 
     def id_for_label(self, id_):
         return f"{id_}_frequency" if id_ else id_
+
+
+class EndsOnInput(forms.DateInput):
+    """The "until" date of a repeating to-do: a field of the form that the
+    rule widget renders inside its fieldset"""
+
+    input_type = "date"
+    in_rule = True
+
+
+class EndsCountInput(forms.NumberInput):
+    """ "Repeats left", rendered by the rule widget like ``EndsOnInput``"""
+
+    in_rule = True
 
 
 def _month_name(n):

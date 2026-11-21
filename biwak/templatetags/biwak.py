@@ -4,12 +4,14 @@ import re
 from django import template
 from django.conf import settings
 from django.urls import reverse
-from django.utils.html import escape, format_html, strip_tags
+from django.utils.html import escape, format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 from mdit_py_plugins.tasklists import tasklists_plugin
+
+from biwak import forms
 
 
 register = template.Library()
@@ -318,6 +320,22 @@ def client_badge(item):
     )
 
 
+@register.inclusion_tag("items/_due_badge.html")
+def due_badge(todo, date_format="j. M"):
+    """A to-do's due date (``todo``: the item's ``Todo`` detail), as a
+    danger badge when it's open and past due, as a quiet "Today" badge on
+    the day, else as plain text; nothing without a date. One place for
+    lists, the board, "my to-dos" and the to-do's page (specs/ui-round-1.md,
+    part 5)."""
+    from biwak.items import due
+
+    return {
+        "due_on": todo.due_on,
+        "state": due.badge_state(todo),
+        "date_format": date_format,
+    }
+
+
 @register.simple_tag
 def project_dot(project):
     """The project's color as a dot before its name (specs/project-colors.md);
@@ -355,11 +373,20 @@ def rule_widget(bound_field, uid, *, posted=False):
     the field's initial value, not what was posted to another one; with
     ``posted``, what was posted to this one."""
     widget = bound_field.field.widget
+    if hasattr(bound_field.form, "ends"):
+        widget.ends = bound_field.form.ends(posted=posted)
     return widget.render(
         bound_field.html_name,
         bound_field.value() if posted else bound_field.initial,
         attrs={"id": f"{bound_field.auto_id}_{uid}"},
     )
+
+
+@register.simple_tag
+def assignee_attrs():
+    """The attributes of the inline form's select of people
+    (``frontend/assignees.js``)"""
+    return format_html_join(" ", '{}="{}"', forms.assignee_picker_attrs().items())
 
 
 @register.simple_tag

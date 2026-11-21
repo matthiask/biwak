@@ -132,8 +132,22 @@ function enhance(container, textarea) {
   })
 }
 
-for (const container of document.querySelectorAll("[data-attachments]")) {
-  for (const textarea of container.querySelectorAll("textarea")) {
-    enhance(container, textarea)
+function setUpAll(root) {
+  const containers = [
+    ...(root.matches?.("[data-attachments]") ? [root] : []),
+    ...(root.querySelectorAll?.("[data-attachments]") ?? []),
+  ]
+  for (const container of containers) {
+    for (const textarea of container.querySelectorAll("textarea")) {
+      if (textarea.dataset.attachReady) continue
+      textarea.dataset.attachReady = "true"
+      enhance(container, textarea)
+    }
   }
 }
+
+setUpAll(document)
+// Forms htmx brings in later (the edit form in place of a view)
+document.addEventListener("htmx:after:process", (event) =>
+  setUpAll(event.target),
+)

@@ -126,7 +126,7 @@ class EditingTest(E2ETestCase):
         self.assertEqual(self.content(), NOTES.replace("[ ] tent", "[x] tent"))
         self.assertEqual(self.errors, [])
 
-    def test_the_to_do_form_announces_itself_at_the_first_focus(self):
+    def test_the_to_do_form_announces_itself_when_shown(self):
         todolist = ops.create_list(
             project=self.project, title="Camp", creator=self.ada, visible=True
         )
@@ -137,7 +137,9 @@ class EditingTest(E2ETestCase):
         self.goto(self.page, todo)
         # Just looking at the to-do doesn't block it
         self.assertFalse(Editing.objects.exists())
-        self.page.locator("textarea[name=notes]").focus()
+        # The form shown in place announces itself
+        self.page.get_by_role("link", name="Edit").click()
+        expect(self.page.locator("textarea[name=notes]")).to_be_visible()
         for _ in range(50):
             if Editing.objects.filter(item=todo).exists():
                 break

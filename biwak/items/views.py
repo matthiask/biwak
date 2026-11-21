@@ -11,12 +11,18 @@ from django.views.decorators.http import require_POST
 from biwak import checklists, cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
-from biwak.forms import Form, next_url
+from biwak.forms import AssigneeField, Form, next_url
 from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
-from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
+from biwak.schedules_forms import (
+    KEEP,
+    EndsCountInput,
+    EndsOnInput,
+    RuleField,
+    RuleFormMixin,
+)
 
 
 def item_for(request, pk, kind=None):
@@ -51,23 +57,36 @@ class RepeatForm(RuleFormMixin, Form):
         label=_("Repeat"),
         help_text=_("The next to-do is created when this one is completed."),
     )
+    # Rendered inside the rule widget's fieldset (forms/rule_widget.html)
     recurrence_ends_on = forms.DateField(
         label=_("Repeats until"),
         required=False,
-        widget=forms.DateInput(attrs={"type": "date"}),
+        widget=EndsOnInput(),
     )
     recurrence_count = forms.IntegerField(
         label=_("Repeats left"),
         required=False,
         min_value=1,
+        widget=EndsCountInput(),
         help_text=_("How many more to-dos to create; empty: no limit."),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["recurrence"].widget.anchor = (
-            self.initial.get("due_on") or schedules.today()
-        )
+        widget = self.fields["recurrence"].widget
+        widget.anchor = self.initial.get("due_on") or schedules.today()
+        widget.ends = self.ends()
+
+    def ends(self, *, posted=True):
+        """The end date and count as the rule widget shows them: what was
+        posted (``posted``) or the initial values"""
+
+        def shown(name):
+            field = self[name]
+            value = field.value() if posted else field.initial
+            return value.isoformat() if hasattr(value, "isoformat") else value or ""
+
+        return {"on": shown("recurrence_ends_on"), "count": shown("recurrence_count")}
 
     def clean(self):
         data = super().clean()
@@ -100,12 +119,7 @@ class TodoFieldsForm(RepeatForm):
         required=False,
         widget=forms.DateInput(attrs={"type": "date"}),
     )
-    assignees = forms.ModelMultipleChoiceField(
-        label=_("assignees"),
-        queryset=User.objects.none(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
+    assignees = AssigneeField(label=_("assignees"), queryset=User.objects.none())
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, **kwargs)
@@ -488,9 +502,13 @@ class CommentForm(Form):
     )
 
 
-def todo(request, pk):
+def todo(request, pk, *, edit=False):
+    """The to-do's page: the to-do to read, or with ``edit`` (its own URL,
+    also a posted form) the form in place of the text; the page's htmx
+    takes the same region out of either (specs/ui-round-1.md)"""
     item = item_for(request, pk, Kind.TODO)
     todo = item.todo
+    edit = edit or request.POST.get("form") == "todo"
     form = TodoDetailForm(
         request.POST if request.POST.get("form") == "todo" else None,
         initial={
@@ -529,6 +547,9 @@ def todo(request, pk):
             )
         else:
             return redirect(item)
+    if edit:
+        # Shown now: nobody ticks the text meanwhile (specs/editor.md)
+        editing.start(item, request.user)
     prefetch(item)
     comment_form = CommentForm(
         request.POST if request.POST.get("form") == "comment" else None
@@ -546,6 +567,8 @@ def todo(request, pk):
             "item": item,
             "todo": todo,
             "form": form,
+            "edit": edit,
+            "can_edit": True,
             "base": base,
             "comment_form": comment_form,
             "comments": item.comments.select_related("author"),

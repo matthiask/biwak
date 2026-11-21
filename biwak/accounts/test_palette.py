@@ -80,7 +80,33 @@ def over(alpha, foreground, background):
     )
 
 
+TONES = ["neutral", "success", "warning", "danger"]
+
+
+def tone_tokens(mode):
+    """The status tones' background and ink: {"danger": {"bg": ..., "ink": ...}}"""
+    result = {}
+    for name, shade, value in re.findall(
+        r"--wb-(" + "|".join(TONES) + r")-(bg|ink):\s*(#[0-9a-f]{6});",
+        _theme_block(mode),
+    ):
+        result.setdefault(name, {})[shade] = _rgb(value)
+    return result
+
+
 class PaletteContrastTest(SimpleTestCase):
+    def test_the_tones_have_contrast(self):
+        """Badges (overdue to-dos, statuses): ink on its background"""
+        for mode in ["light", "dark"]:
+            found = tone_tokens(mode)
+            self.assertEqual(sorted(found), sorted(TONES), mode)
+            for name, shade in found.items():
+                self.check(mode, name, "ink on bg", shade["ink"], shade["bg"], 4.5)
+
+    def test_every_tone_has_a_class(self):
+        for name in TONES[:1] + TONES[2:]:
+            self.assertIn(f".wb-tone-{name} {{", CSS)
+
     def test_the_palette_has_every_color_and_shade(self):
         for mode in ["light", "dark"]:
             palette = tokens(mode)

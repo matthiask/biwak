@@ -291,15 +291,15 @@ class PagesTest(RecurrenceTestCase):
         item.todo.refresh_from_db()
         self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=FR")
         self.assertEqual(item.todo.recurrence_count, 3)
-        response = self.client.get(url)
-        self.assertContains(response, "Repeats: every Friday.")
+        self.assertContains(self.client.get(url), "Every Friday.")
+        response = self.client.get(url + "edit/")
         self.assertContains(response, '<option value="weekly" selected>')
         # Another rule
         data |= {"recurrence_weekdays": ["MO", "TH"]}
         self.client.post(url, data)
         item.todo.refresh_from_db()
         self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH")
-        self.assertContains(self.client.get(url), "every Monday, Thursday")
+        self.assertContains(self.client.get(url), "Every Monday, Thursday")
         # Invalid: no day, no number
         for bad in [{"recurrence_weekdays": []}, {"recurrence_interval": "0"}]:
             response = self.client.post(url, data | bad)
@@ -330,7 +330,7 @@ class PagesTest(RecurrenceTestCase):
         ]:
             item = self.todo(rule, "2026-11-20")
             url = item.get_absolute_url()
-            page = self.client.get(url)
+            page = self.client.get(url + "edit/")
             shown = schedules.rule_fields(rule) is not None
             self.assertEqual(
                 "can't be edited here" in page.content.decode(), not shown, rule
@@ -355,7 +355,7 @@ class PagesTest(RecurrenceTestCase):
             item = self.todo(written, "2026-11-20")
             self.assertEqual(item.todo.recurrence, rule)
             url = item.get_absolute_url()
-            page = self.client.get(url).content.decode()
+            page = self.client.get(url + "edit/").content.decode()
             self.assertNotIn("can't be edited here", page)
             self.assertIn(schedules.describe(rule), page)
             data = rule_post(rule) | {
@@ -475,7 +475,12 @@ class PagesTest(RecurrenceTestCase):
         self.assertEqual(html.count("Enter a valid date."), 1)
         self.assertEqual(html.count("Choose at least one weekday."), 1)
         self.assertEqual(
-            len(re.findall(r'name="assignees"\s+value="\d+"\s+checked', html)), 1
+            len(
+                re.findall(
+                    r'<option\s+value="\d+"\s+data-member="[a-z]+"\s+selected', html
+                )
+            ),
+            1,
         )
         # The open form is the group's
         open_form = html[html.index("data-add-todo open") :]
@@ -501,7 +506,7 @@ class PagesTest(RecurrenceTestCase):
         item = Item.objects.get(title="Client's chore")
         self.assertEqual(item.todo.recurrence, "FREQ=DAILY;INTERVAL=2")
         page = item.get_absolute_url()
-        self.assertContains(self.client.get(page), "every 2 days")
+        self.assertContains(self.client.get(page), "Every 2 days")
         data = {
             "form": "todo",
             "title": "Client's chore",
