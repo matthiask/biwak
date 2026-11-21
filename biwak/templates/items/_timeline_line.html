@@ -16,7 +16,7 @@
     {% endwith %}
   </span>
   {% avatar line.actor %}
-  <span><strong>{% short_name line.actor %}</strong> {{ line.text }}</span>
-  <span class="text-body-secondary" title="{{ line.created_at|date:'j. M Y, H:i' }}">·
-    {{ line.created_at|naturaltime }}</span>
+  <span><strong>{% short_name line.actor %}</strong> {{ line.text }}
+    <span class="text-body-secondary" title="{{ line.created_at|date:'j. M Y, H:i' }}">·
+      {{ line.created_at|naturaltime }}</span></span>
 </div>
