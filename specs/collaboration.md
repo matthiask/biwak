@@ -263,14 +263,18 @@ about 20 seconds).
 - The editor's chunk (about 400 KB) is fine; `MINIMUM` 0.20.0 for the CLI
   is fine (no CLI users yet).
 
-## Questions (built the way described meanwhile)
+## Confirmed 2026-11-21
 
 - The wording of the editor's states and of "Watch live", "Make
-  read-only", "Make editable".
+  read-only", "Make editable" (to be reviewed with the German
+  translation).
 - Versions with several authors: kept by whoever started the version
   within its 10 minutes.
 - No limit on the size of an update or a doc beyond the server's
   websocket frame limit.
+
+## Questions (built the way described meanwhile)
+
 - The limits per connection (added 2026-11-21 after the visibility review
   of the live features, `consumers.py`): awareness 20 messages at once,
   then 10 a second; asking for the others' awareness 2, then one every 10
@@ -278,3 +282,9 @@ about 20 seconds).
   seconds; awareness messages up to 4 KB, the cursor's JSON up to 1 KB,
   a sync's state vector up to 16 KB. More is dropped and logged once per
   connection. Typing isn't limited.
+
+## No locks (decided 2026-11-21)
+
+Docs are never locked again, also not if the live editor is ever turned
+off: people get at most a heads-up that someone else is editing ("Ada is
+editing this"), from the editing marker (`editor.md`).
