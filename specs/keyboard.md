@@ -141,6 +141,9 @@ stores it. Leaving without saving, or "Cancel", shows the stored choice
 again (the next page renders it anyway).
 Status: built; "Reset" next to Save, shown while the preview differs from the
 stored choice (`frontend/appearance-preview.js`).
+Appearance is the settings page's first section, so the navigation bar,
+which shows the accent color most, stays in view while choosing (decided
+2026-11-21; the bar isn't sticky).
 
 **The navigation's search field** (decided 2026-11-21) becomes a button
 opening the palette: the magnifier as a quiet button like its
