@@ -6,8 +6,10 @@ completed and reopened, moved to another list or group, assigned. The
 date on the "Completed by" button can go then (it went, 2026-11-21): the
 timeline says when.
 
-**Status:** spec (2026-11-21), the questions answered the same day.
-Not built.
+**Status:** built (2026-11-21): `biwak/activity/timeline.py` builds the
+lines, `items/_comments.html` shows them on the to-do page (to-dos only,
+live like comments), edit events carry `fields`, `title` and `due_on`,
+unassigning records `UNASSIGNED`. Decisions on the way below.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; the visibility tests reviewed.
@@ -76,6 +78,34 @@ changes, the operations record what changed, from now on (no backfill:
    minutes are one line.
 3. **To-dos first;** other items with comments later.
 4. **Live:** new lines arrive on an open to-do page like new comments.
+
+## Decisions while building (2026-11-21)
+
+- **`UNASSIGNED`** is an action of its own (not `ASSIGNED` with `removed`):
+  the feed, its filter, the API and mails say "removed", and it notifies
+  nobody (`notify.SILENT`: being taken off is on the timeline and in the
+  feed, no mail). It carries `assignees`, like `ASSIGNED`.
+- **`EDITED` data:** `fields` (`title`, `due_on`, `notes`, `recurrence`;
+  merged edits of a session list all of them), `title` (the new one, as
+  every event has) and, if the due date changed, `due_on` (ISO date or
+  `null`). `starts_on` isn't edited by `update_todo()`, so it isn't
+  there. Older edit events have no `fields` and aren't on the timeline.
+- **Visibility lines:** to-dos have no switch of their own; the lines
+  are the switching of the to-do's list since the to-do was added to it
+  (or moved in), shown to staff only, as "made this visible to clients"
+  / "hid this from clients". A move between a visible and an internal
+  list is the move's line.
+- **Merging** looks at neighbours: a line takes in the next change of the
+  same person if it is within ten minutes of the line's last change and
+  no comment is in between; changes the timeline doesn't show (creation,
+  notes, reactions) don't break it.
+- Assignees a client may not know read "someone"; a list that can't be
+  named reads "another list".
+- The history link moved from the sidebar to the end of the timeline
+  (staff); the "More" menu still has it on phones.
+- The timeline's line has id `event-<first event's id>`, a live region
+  like the comments (`data-live`), so a merge updates it in place and an
+  undone completing removes it.
 
 ## Done when
 

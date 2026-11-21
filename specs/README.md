@@ -59,7 +59,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `dashboard.md` | Home at `/`: what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | built 2026-11-21 (`home`) | ui-round-5, `feed.md` links, `lantern.md` reading by acting | cheaper, review the visibility tests |
 | `help.md` | help pages from `docs/` like Governance's, the shortcuts list moves there from settings, links to the help | built 2026-11-21 (`help`), the texts still to be read by the user | `dashboard.md` | cheaper, the texts read by the user |
 | `celebrations.md` | small celebrations (completing a to-do, the last of a list) and animations | built | | cheaper |
-| `timeline.md` | the to-do's comments with what happened between them (completed, moved, assigned, due date, title, visibility, trash) | next | | cheaper, review visibility |
+| `timeline.md` | the to-do's comments with what happened between them (completed, moved, assigned, due date, title, visibility, trash) | built | | cheaper, review visibility |
 | `pwa.md` | installable as an app (manifest, icons), no push and no offline yet | built | | cheaper |
 | `mail-sending.md` | sending through Resend, an outbox with retries, bounces and complaints | next | | strong |
 | `sso.md` | sign-in per organization: codes and passkeys, SSO allowed or required; Google Workspace, Entra ID prepared | next | `organizations.md` | strong, review the checks |

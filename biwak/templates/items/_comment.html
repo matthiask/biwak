@@ -1,0 +1,11 @@
+{% load biwak reactions %}
+<div class="card mb-2" id="comment-{{ comment.pk }}" data-live>
+  <div class="card-body">
+    <div class="small text-body-secondary mb-1 d-flex align-items-center gap-1">
+      {% avatar comment.author %}
+      <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+    </div>
+    <div class="wb-markdown">{% checklist_markdown comment.content item comment %}</div>
+    {% reactions item comment %}
+  </div>
+</div>

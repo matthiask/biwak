@@ -1,0 +1,22 @@
+{% load biwak humanize %}
+<div class="wb-timeline-line" id="event-{{ line.pk }}" data-live>
+  <span class="wb-timeline-icon">
+    {% with kind=line.kind %}
+      {% if kind == "completed" %}{% icon "check-circle" %}
+      {% elif kind == "reopened" or kind == "restored" %}{% icon "arrow-counterclockwise" %}
+      {% elif kind == "moved" %}{% icon "arrow-right" %}
+      {% elif kind == "assigned" %}{% icon "person-plus" %}
+      {% elif kind == "unassigned" %}{% icon "person-dash" %}
+      {% elif kind == "due" %}{% icon "calendar-event" %}
+      {% elif kind == "title" %}{% icon "pencil" %}
+      {% elif kind == "visible" %}{% icon "eye" %}
+      {% elif kind == "hidden" %}{% icon "eye-slash" %}
+      {% elif kind == "trashed" %}{% icon "trash" %}
+      {% endif %}
+    {% endwith %}
+  </span>
+  {% avatar line.actor %}
+  <span><strong>{% short_name line.actor %}</strong> {{ line.text }}</span>
+  <span class="text-body-secondary" title="{{ line.created_at|date:'j. M Y, H:i' }}">·
+    {{ line.created_at|naturaltime }}</span>
+</div>

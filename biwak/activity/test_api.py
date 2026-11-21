@@ -5,6 +5,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.activity.test_feed import FeedBase, event_at
+from biwak.items import operations as ops
 from biwak.projects.operations import archive_project
 from biwak.test_utils import person, project
 
@@ -173,3 +174,43 @@ def ops_list(project, creator):
     from biwak.items import operations as ops
 
     return ops.create_list(project=project, title="Elsewhere", creator=creator)
+
+
+class NewEventDataTest(FeedBase):
+    """Edits carry what changed, unassigning is an event (specs/timeline.md);
+    clients see them as they see any event"""
+
+    def get(self, user):
+        _token, secret = APIToken.create_for(user=user, title="T", access="read")
+        return self.client.get(
+            "/api/v1/feed/", headers={"authorization": f"Bearer {secret}"}
+        ).json()["results"]
+
+    def test_the_events_data_in_the_feed_as_staff_and_client(self):
+        ops.update_todo(
+            self.todo, actor=self.ada, title="Open points", due_on=dt.date(2026, 12, 1)
+        )
+        ops.assign(self.todo, [self.bob], actor=self.ada)
+        ops.unassign(self.todo, [self.bob], actor=self.ada)
+        ops.update_todo(self.secret, actor=self.ada, title="Secret plans")
+        ops.assign(self.secret, [self.bob], actor=self.ada)
+        ops.unassign(self.secret, [self.bob], actor=self.ada)
+        for user, titles in [
+            (self.ada, {"Open points", "Secret plans"}),
+            (self.cleo, {"Open points"}),
+        ]:
+            results = self.get(user)
+            self.assertEqual({e["item"]["title"] for e in results if e["item"]}, titles)
+            edited = next(
+                e
+                for e in results
+                if e["action"] == "edited" and e["item"]["title"] == "Open points"
+            )
+            self.assertEqual(edited["data"]["fields"], ["title", "due_on"])
+            self.assertEqual(edited["data"]["due_on"], "2026-12-01")
+            unassigned = next(
+                e
+                for e in results
+                if e["action"] == "unassigned" and e["item"]["title"] == "Open points"
+            )
+            self.assertEqual(unassigned["data"]["assignees"], [self.bob.pk])

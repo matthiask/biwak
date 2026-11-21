@@ -37,8 +37,14 @@
 .bi-archive::before {
   content: "\f10d";
 }
+.bi-arrow-counterclockwise::before {
+  content: "\f117";
+}
 .bi-arrow-down::before {
   content: "\f128";
+}
+.bi-arrow-right::before {
+  content: "\f138";
 }
 .bi-arrow-up::before {
   content: "\f148";
@@ -96,6 +102,9 @@
 }
 .bi-eye::before {
   content: "\f341";
+}
+.bi-eye-slash::before {
+  content: "\f340";
 }
 .bi-file-earmark::before {
   content: "\f392";
@@ -156,6 +165,9 @@
 }
 .bi-pencil::before {
   content: "\f4cb";
+}
+.bi-person-dash::before {
+  content: "\f4d9";
 }
 .bi-person-plus::before {
   content: "\f4dd";

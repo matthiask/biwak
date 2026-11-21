@@ -154,7 +154,7 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   viewer can't see read "another list".
 - Only changes to the item's own rows; comments have their own place on
   the page, and files' versions come with `files.md`. The to-do page's
-  timeline (`timeline.md`) shows the events between the comments.
+  timeline (`timeline.md`, built) shows the events between the comments.
 
 ## Bookmarks
 
