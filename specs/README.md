@@ -41,6 +41,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
 | `editor.md` | checklists and counts, the toolbar, pasting | built on branch `editor` | | cheaper |
 | `archiving.md` | archiving projects and lists, findable; the importer completes archived to-dos | next (spec only for now) | the core, the importer | cheaper |
+| `ui-round-1.md` | modals, quieter pages, to-do view mode, assignee picker, overdue | after the collaboration merge, questions first | | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | last | everything | strong |
