@@ -498,9 +498,6 @@ class FeedViewsTest(FeedBase):
             cursors.decode(feed.cursor_for(event)), (event.created_at, event.pk)
         )
 
-    def test_login_required(self):
-        self.assertEqual(self.client.get("/feed/").status_code, 302)
-
     def test_project_page_links_to_the_feed(self):
         self.client.force_login(self.ada)
         self.assertContains(

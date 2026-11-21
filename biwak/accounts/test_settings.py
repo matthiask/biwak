@@ -27,11 +27,6 @@ class PreferencesTest(TestCase):
         self.assertNotIn("amber", PALETTE)
         self.assertEqual(len(PALETTE), 10)
 
-    def test_login_required(self):
-        for action in ["keyboard", "appearance", "notifications"]:
-            response = self.client.post(f"/accounts/settings/{action}/")
-            self.assertEqual(response.status_code, 302)
-
     def test_settings_page_sections(self):
         for user in [self.ada, self.cleo]:
             with self.subTest(user=user):

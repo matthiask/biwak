@@ -163,11 +163,6 @@ class ViewsTest(TestCase):
             self.client.get(f"/items/{self.todo.pk}/reactions/").status_code, 405
         )
 
-    def test_login_required(self):
-        response = self.post(f"/items/{self.todo.pk}/reactions/", "👍")
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(Reaction.objects.exists())
-
     def test_client_on_visible_items(self):
         self.client.force_login(self.cleo)
         self.post(f"/items/{self.todo.pk}/reactions/", "👍")

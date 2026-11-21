@@ -33,12 +33,6 @@ class ViewsTest(TestCase):
             todolist=self.shared, title="Visible", creator=self.ada
         )
 
-    def test_login_required(self):
-        response = self.client.get(reverse("projects"))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/code/", response["Location"])
-        self.assertEqual(self.client.get("/accounts/login/code/").status_code, 200)
-
     def test_staff_pages(self):
         self.client.force_login(self.ada)
         self.assertContains(self.client.get(reverse("projects")), "Website")

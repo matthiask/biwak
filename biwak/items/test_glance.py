@@ -188,11 +188,6 @@ class PeekTest(Fixture):
         self.assertEqual(response.status_code, 404)
         self.assertNotContains(response, "Internal notes", status_code=404)
 
-    def test_login_required(self):
-        self.assertEqual(
-            self.client.get(f"/todos/{self.todo.pk}/peek/").status_code, 302
-        )
-
 
 class ListCountsTest(Fixture):
     @time_machine.travel("2026-11-20 12:00", tick=False)

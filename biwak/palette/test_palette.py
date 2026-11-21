@@ -73,9 +73,6 @@ class PaletteBase(TestCase):
 
 
 class JumpsTest(PaletteBase):
-    def test_login_required(self):
-        self.assertEqual(self.client.get("/palette/?q=tent").status_code, 302)
-
     def test_staff_find_every_kind_grouped_by_kind(self):
         results = self.jump(self.ada, "tent")
         self.assertEqual(

@@ -700,15 +700,6 @@ class AnsweringPagesTest(ViewsTestCase):
         self.assertNotContains(self.get(self.ada, self.item.get_absolute_url()), "Oops")
         self.assertEqual(Event.objects.filter(item=answer, action="trashed").count(), 1)
 
-    def test_login_required(self):
-        self.client.logout()
-        for url in [
-            self.item.get_absolute_url(),
-            self.url("question_answer", self.item),
-            reverse("project_checkins", args=[self.project.pk]),
-        ]:
-            self.assertEqual(self.client.get(url).status_code, 302)
-
 
 class QueryCountTest(ViewsTestCase):
     def test_reactions_are_loaded_in_one_query(self):

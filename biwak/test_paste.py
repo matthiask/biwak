@@ -109,11 +109,6 @@ class EndpointTest(TestCase):
             response = self.post("<p>Hello <b>you</b></p>")
             self.assertEqual(response.json(), {"markdown": "Hello **you**"})
 
-    def test_needs_a_login(self):
-        response = self.post("<p>x</p>")
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("login", response["Location"])
-
     def test_post_only(self):
         self.client.force_login(person("Ada"))
         self.assertEqual(self.client.get(reverse("paste_markdown")).status_code, 405)

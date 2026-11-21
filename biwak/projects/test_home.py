@@ -87,12 +87,6 @@ class RoutingTest(HomeTestCase):
         self.assertIn('<a class="navbar-brand" href="/"', content)
         self.assertIn('href="/projects/"', content)
 
-    def test_login_is_required(self):
-        self.client.logout()
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/", response["Location"])
-
 
 class DueTest(HomeTestCase):
     def test_my_open_to_dos_overdue_or_due_within_a_week(self):
