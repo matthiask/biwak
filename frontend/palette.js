@@ -126,9 +126,17 @@ if (data && dialog) {
 
   function entry(
     label,
-    { hint = "", context = "", badge = "", color = null, run, group },
+    {
+      hint = "",
+      context = "",
+      badge = "",
+      due = null,
+      color = null,
+      run,
+      group,
+    },
   ) {
-    return { label, hint, context, badge, color, run, group }
+    return { label, hint, context, badge, due, color, run, group }
   }
 
   // The project's color (specs/project-colors.md): a dot, with the color's
@@ -162,6 +170,7 @@ if (data && dialog) {
         : result.visible_to_clients
           ? data.texts.clients
           : "",
+      due: result.due ?? null,
       color: result.color
         ? { name: result.color, label: result.color_name }
         : null,
@@ -236,6 +245,13 @@ if (data && dialog) {
         const badge = document.createElement("span")
         badge.className = "badge wb-tone-neutral"
         badge.textContent = item.badge
+        row.append(badge)
+      }
+      // An open to-do that's overdue or due today (specs/ui-round-1.md)
+      if (item.due) {
+        const badge = document.createElement("span")
+        badge.className = `badge wb-tone-${item.due.state === "overdue" ? "danger" : "neutral"}`
+        badge.textContent = item.due.label
         row.append(badge)
       }
       if (item.hint || item.context) {
