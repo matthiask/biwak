@@ -13,7 +13,7 @@
           {{ bookmark.item|item_title }}
           {% client_badge bookmark.item %}
           <div class="small text-body-secondary">
-            {{ bookmark.item.get_kind_display }} · {{ bookmark.item.project }}
+            {{ bookmark.item.get_kind_display|capfirst }} · {{ bookmark.item.project }}
           </div>
         </a>
       {% else %}
