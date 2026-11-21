@@ -1,5 +1,6 @@
 import re
 
+from django.contrib.staticfiles import finders
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
@@ -363,3 +364,37 @@ class ViewsTest(TestCase):
         )
         self.assertEqual(response.status_code, 422)
         self.assertFalse(Item.objects.filter(title="Sneaky").exists())
+
+
+class ManifestTest(TestCase):
+    def test_manifest_is_public(self):
+        response = self.client.get("/manifest.webmanifest")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/manifest+json")
+        data = response.json()
+        self.assertEqual(data["name"], "Biwak")
+        self.assertEqual(data["short_name"], "Biwak")
+        self.assertEqual(data["start_url"], "/")
+        self.assertEqual(data["scope"], "/")
+        self.assertEqual(data["display"], "standalone")
+        self.assertEqual(data["theme_color"], "#5b37b0")
+        self.assertEqual(
+            [(i["sizes"], i["purpose"]) for i in data["icons"]],
+            [("192x192", "any"), ("512x512", "any"), ("512x512", "maskable")],
+        )
+        for icon in data["icons"]:
+            name = icon["src"].removeprefix("/static/")
+            self.assertTrue(finders.find(name), name)
+
+    def test_tags_in_base(self):
+        content = self.client.get("/accounts/login/code/").content.decode()
+        for needle in [
+            '<link rel="manifest" href="/manifest.webmanifest">',
+            'name="theme-color" content="#5b37b0" media="(prefers-color-scheme: light)"',
+            'name="theme-color" content="#3a2378" media="(prefers-color-scheme: dark)"',
+            'rel="apple-touch-icon"',
+            "apple-touch-icon.png",
+            'name="apple-mobile-web-app-capable" content="yes"',
+            'name="apple-mobile-web-app-title" content="Biwak"',
+        ]:
+            self.assertIn(needle, content)

@@ -3,6 +3,13 @@
 The bar at the top has the same entries everywhere. On the right are
 search, the lantern (your notifications) and your menu.
 
+## Installing as an app
+
+Chrome and Edge offer to install Biwak (the icon in the address bar);
+on an iPhone or iPad use Share, then "Add to Home Screen". Biwak then
+opens in its own window. It needs a connection like the website; it
+doesn't work offline.
+
 ## Home
 
 The brand ("Biwak") on the left leads to Home. It shows what needs you:
