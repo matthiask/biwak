@@ -113,9 +113,10 @@ EXCERPT_CHARS = 200
 
 def add_excerpts(events):
     """``event.excerpt`` (specs/glance.md): the text as it is now, for
-    events of comments (the comment's) and for the creating and editing of
-    messages (the message's), two queries at most for all events; empty if
-    the comment is gone. The events are the viewer's, so the items are
+    events of comments (the comment's) and for every other event of a
+    message (the message's: created, edited, archived and so on; decided
+    2026-11-20), two queries at most for all events;
+    empty if the comment is gone. The events are the viewer's, so the items are
     visible to them."""
     from biwak.templatetags.biwak import excerpt
 

@@ -8,7 +8,7 @@ import datetime as dt
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from ninja import Router, Schema
+from ninja import Field, Router, Schema
 from ninja.errors import HttpError
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
@@ -42,9 +42,11 @@ class EventOut(Schema):
     data: dict
     created_at: dt.datetime
     visible_to_clients: bool
-    # Comments and messages (created, edited): the start of the text as it
-    # is now (plain text), else empty
-    excerpt: str
+    excerpt: str = Field(
+        description="The start of the text as it is now, as plain text: the"
+        " comment's for comments, the message's for every other event of a"
+        " message; else empty"
+    )
 
 
 def event_out(event, user):
