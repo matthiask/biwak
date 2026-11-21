@@ -203,6 +203,19 @@ form and its widget, CSS.
    - It works with the keyboard as radios do.
    - One include, used on the new-project and edit forms.
 
+**Status (D):** built 2026-11-21. No archive or "Bring back" buttons on the
+projects page; the htmx answers and `_archive_form.html` are gone.
+`project_archive` (the project's menu) redirects to the projects page after
+archiving, which pops `session["archived_project"]` and says "Archived
+Website." with an Undo (`undo=1` posts back, says nothing); bringing back
+from the menu goes to the project. The palette has no archive action, so
+nothing changed there. The picker is `ColorSwatches` (`biwak/forms.py`,
+`forms/color_swatches.html`, one widget for both forms): radios whose
+accessible label and `title` are the color's name, a struck-through None,
+the checked one ringed in the accent color. Tests: `test_archive_page.py`,
+`test_colors.py`, `ProjectsPageTest` and `ColorPickerTest` (keyboard) in
+`test_e2e.py`.
+
 ### Part E: settings, sign-in and sessions
 
 **Touches:** `accounts/settings.html`, the allauth templates for

@@ -76,6 +76,16 @@ class ColorPagesTest(TestCase):
         self.camp = project("Camp", members=[self.ada, self.cleo])
         project_ops.update_project(self.camp, actor=self.ada, color="forest")
 
+    def checked(self, response):
+        import re
+
+        html = response.content.decode()
+        return [
+            m.group(1)
+            for m in re.finditer(r'<input[^>]*value="(\w*)"[^>]*\schecked', html)
+            if 'name="color"' in m.group(0)
+        ]
+
     def test_the_edit_page_sets_the_color_for_staff(self):
         self.client.force_login(self.ada)
         url = reverse("project_edit", args=[self.camp.pk])
@@ -110,7 +120,24 @@ class ColorPagesTest(TestCase):
         self.client.force_login(self.ada)
         response = self.client.get(reverse("project_create"))
         # Forest is taken: the suggestion is the first free one
-        self.assertContains(response, '<option value="heather" selected>')
+        self.assertEqual(self.checked(response), ["heather"])
+        self.assertNotContains(response, "<select")
+
+    def test_the_picker_is_radio_swatches_with_the_names_as_labels(self):
+        self.client.force_login(self.ada)
+        for url in [
+            reverse("project_create"),
+            reverse("project_edit", args=[self.camp.pk]),
+        ]:
+            response = self.client.get(url)
+            self.assertContains(response, 'type="radio"', count=len(Color.values) + 1)
+            self.assertContains(response, 'name="color"', count=len(Color.values) + 1)
+            for color in Color:
+                self.assertContains(response, f'aria-label="{color.label}"')
+                self.assertContains(response, f'title="{color.label}"')
+            self.assertContains(response, 'aria-label="None"')
+        # The project's own color is the checked one
+        self.assertEqual(self.checked(response), ["forest"])
 
     def test_the_new_project_form_saves_the_chosen_color(self):
         self.client.force_login(self.ada)

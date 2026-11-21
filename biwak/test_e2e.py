@@ -39,6 +39,7 @@ from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Doc, Item, Kind, Status, Todo
 from biwak.projects import operations as project_ops
+from biwak.projects.models import Project
 from biwak.reactions.models import Reaction
 from biwak.test_utils import person, project
 
@@ -894,35 +895,66 @@ class OverdueTest(E2ETestCase):
 
 
 class ProjectsPageTest(E2ETestCase):
-    def test_archiving_with_undo_and_switching(self):
+    def test_archiving_from_the_project_with_undo_and_switching(self):
         self.camp = project("Camp", members=[self.ada])
         page = self.page
         self.goto(page, reverse("projects"))
-        # No reload: a marker on the page survives
-        page.evaluate("window.marker = 1")
-        card = page.locator(".wb-project-card", has_text="Camp")
-        card.get_by_role("button", name="Archive the project").click()
-        expect(card).to_have_count(0)
-        status = page.get_by_role("status")
-        expect(status).to_contain_text("Archived.")
+        # No archive buttons on the cards
+        expect(page.get_by_role("button", name="Archive the project")).to_have_count(0)
+        # From the project's own menu, the projects page says so, with Undo
+        self.goto(page, reverse("project", args=[self.camp.pk]))
+        page.locator("summary", has_text="More").click()
+        page.get_by_role("button", name="Archive the project").click()
+        expect(page.locator("h1")).to_have_text("Projects")
+        status = page.locator(".alert", has_text="Archived Camp.")
+        expect(status).to_be_visible()
         self.camp.refresh_from_db()
         self.assertIsNotNone(self.camp.archived_at)
         status.get_by_role("button", name="Undo").click()
         expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
-        expect(page.get_by_role("status")).to_have_count(0)
+        expect(page.locator(".alert", has_text="Archived Camp.")).to_have_count(0)
         self.camp.refresh_from_db()
         self.assertIsNone(self.camp.archived_at)
-        # Switching to the archived projects and bringing one back
+        # The archived list opens projects, without a reload and without buttons
+        page.evaluate("window.marker = 1")
         page.get_by_role("link", name="Archive", exact=True).click()
         expect(page.locator("h1")).to_have_text("Archived projects")
         self.assertIn("archived=1", page.url)
         self.assertEqual(page.evaluate("window.marker"), 1)
-        project_ops.archive_project(self.camp, actor=self.ada)
-        page.reload()
-        page.get_by_role("button", name="Bring back from the archive").click()
-        expect(page.get_by_role("status")).to_contain_text("Brought back.")
+        expect(
+            page.get_by_role("button", name="Bring back from the archive")
+        ).to_have_count(0)
         page.get_by_role("link", name="Active projects").click()
         expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
+
+
+class ColorPickerTest(E2ETestCase):
+    """The project form's color picker: radio swatches, with the keyboard"""
+
+    def test_swatches_work_as_radios_with_the_keyboard(self):
+        page = self.page
+        self.goto(page, reverse("project_create"))
+        radios = page.locator("input[name=color]")
+        expect(radios).to_have_count(11)
+        # Named by their labels, the suggestion is preselected
+        expect(page.get_by_role("radio", name="Heather")).to_be_checked()
+        checked = page.locator(".wb-color-choice:has(input:checked)")
+        self.assertNotEqual(
+            checked.evaluate("el => getComputedStyle(el).borderTopColor"),
+            "rgba(0, 0, 0, 0)",
+        )
+        # Arrow keys move the choice like in any radio group
+        page.get_by_role("radio", name="Heather").focus()
+        page.keyboard.press("ArrowRight")
+        expect(page.get_by_role("radio", name="Lake")).to_be_checked()
+        page.keyboard.press("ArrowRight")
+        expect(page.get_by_role("radio", name="Forest")).to_be_checked()
+        # None, by clicking its swatch, and saving keeps no color
+        page.get_by_role("radio", name="None").check(force=True)
+        page.get_by_label("Name").fill("Plain")
+        page.get_by_role("button", name="Continue").click()
+        page.wait_for_url("**/projects/*/")
+        self.assertEqual(Project.objects.get(name="Plain").color, "")
 
 
 class ASGIServerThread(LiveServerThread):
@@ -2525,7 +2557,6 @@ class ProjectColorTest(E2ETestCase):
 
     def setUp(self):
         super().setUp()
-        from biwak.projects import operations as project_ops
 
         project_ops.update_project(self.project, actor=self.ada, color="lake")
         self.second = project("Wiki", members=[self.ada])

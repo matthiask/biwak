@@ -51,6 +51,14 @@ class BootstrapMixin:
         return super().__getitem__(name)
 
 
+class ColorSwatches(forms.RadioSelect):
+    """A row of radio swatches, one per color, plus "None": the color's name
+    is the accessible label and title (``forms/color_swatches.html``)"""
+
+    template_name = "forms/color_swatches.html"
+    option_template_name = "forms/color_swatch_option.html"
+
+
 class Form(BootstrapMixin, forms.Form):
     pass
 
