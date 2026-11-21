@@ -59,7 +59,7 @@
   <h2 class="h5 mt-4" id="appearance">{% translate "Appearance" %}</h2>
   <div class="card mb-4">
     <div class="card-body">
-      <form method="post" action="{% url 'settings_appearance' %}">
+      <form method="post" action="{% url 'settings_appearance' %}" data-appearance-preview>
         {% csrf_token %}
         <fieldset class="mb-3">
           <legend class="fs-6">{% translate "Theme" %}</legend>
@@ -98,6 +98,7 @@
           </div>
         </fieldset>
         <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        <button type="button" class="btn btn-link" data-appearance-reset hidden>{% translate "Reset" %}</button>
       </form>
     </div>
   </div>

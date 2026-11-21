@@ -32,7 +32,7 @@ const getSystemTheme = () =>
 const getThemeMode = () =>
   person() ? root.dataset.themeMode : storage.get() || "auto"
 
-const setTheme = (mode) => {
+export const setTheme = (mode) => {
   const active = mode === "auto" ? getSystemTheme() : mode
   root.setAttribute("data-bs-theme", active)
   for (const button of document.querySelectorAll("[data-theme-toggle]")) {
