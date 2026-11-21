@@ -15,6 +15,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
 
+from biwak.items.models import Item
+
 
 def item_group(pk, *, clients):
     return f"live-item-{pk}-{'clients' if clients else 'staff'}"
@@ -39,7 +41,9 @@ def changed(item, *, action, actor=None, visible=None, also=()):
     parent (a to-do's list, an answer's question), and ``also`` (IDs of
     more items, e.g. the list a to-do left). ``visible``: whether it
     happened while clients saw the item (an event's
-    ``is_client_visible``); else the item's visibility now. ``actor``'s
+    ``is_client_visible``); else the item's visibility now. Clients'
+    pages hear of it only if that is so and they see the page's item
+    then. ``actor``'s
     own pages aren't told: their change is on them already."""
     if visible is None:
         visible = item.is_client_visible
@@ -52,10 +56,20 @@ def changed(item, *, action, actor=None, visible=None, also=()):
     }
 
     def send():
+        # Clients' pages only of what clients saw, on pages clients see
+        shown = (
+            set(
+                Item.objects.filter(pk__in=pks, is_client_visible=True).values_list(
+                    "pk", flat=True
+                )
+            )
+            if visible
+            else set()
+        )
         for pk in pks:
             _send(
                 [item_group(pk, clients=False)]
-                + ([item_group(pk, clients=True)] if visible else []),
+                + ([item_group(pk, clients=True)] if pk in shown else []),
                 message | {"watched": pk},
             )
 

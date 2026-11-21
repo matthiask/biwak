@@ -36,6 +36,7 @@ from biwak.items.models import (
     TodoList,
     Upload,
 )
+from biwak.live import announce as live
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
 
@@ -86,6 +87,7 @@ def create_list(*, project, title, creator, description="", visible=False):
 
 @transaction.atomic
 def create_group(*, todolist, title):
+    live.changed(todolist.item, action="grouped")
     return Group.objects.create(
         todolist=todolist,
         title=title,
@@ -591,12 +593,20 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     for list_id, group_id in sources:
         if (list_id, group_id) != (todolist.pk, group.pk if group else None):
             _renumber(list(_todos_in(list_id, group_id)))
+    # The lists' open pages: reordered, and the lists the to-dos left
+    live.changed(
+        todolist,
+        action="reordered",
+        actor=actor,
+        also={list_id for list_id, _group in sources},
+    )
 
 
 @transaction.atomic
 def move_group(group, *, index):
     """Moves a group with its to-dos as a block: only its position changes"""
-    TodoList.objects.select_for_update().get(pk=group.todolist_id)
+    todolist = TodoList.objects.select_for_update().get(pk=group.todolist_id)
+    live.changed(todolist.item, action="grouped")
     groups = [g for g in group.todolist.groups.all() if g.pk != group.pk]
     groups.insert(min(index, len(groups)), group)
     for position, g in enumerate(groups, start=1):
@@ -616,6 +626,7 @@ def delete_group(group):
     )
     _renumber(ungrouped + todos)
     group.delete()
+    live.changed(todolist.item, action="grouped")
 
 
 @transaction.atomic
@@ -769,6 +780,7 @@ def unarchive(item, *, actor):
 def rename_group(group, *, title):
     group.title = title
     group.save(update_fields=["title"])
+    live.changed(group.todolist.item, action="grouped")
 
 
 def trashed_roots(items):

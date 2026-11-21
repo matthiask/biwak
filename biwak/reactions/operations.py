@@ -6,8 +6,9 @@ from django.db import transaction
 from django.db.models import Prefetch, prefetch_related_objects
 from django.utils.translation import gettext as _
 
-from biwak.activity.models import Action, Event
+from biwak.activity.models import Action, Event, Notification
 from biwak.activity.operations import record
+from biwak.live import announce as live
 from biwak.reactions.emoji import MAX_LENGTH
 from biwak.reactions.models import Reaction, can_react
 
@@ -77,7 +78,12 @@ def remove_reaction(user, content, *, item=None, comment=None):
             events = events.filter(data__comment__isnull=True)
         else:
             events = events.filter(data__comment=comment.pk)
+        told = Notification.objects.filter(event__in=events).values_list(
+            "user", flat=True
+        )
+        live.lantern_changed(list(told))
         events.delete()
+        live.changed(item, action=Action.REACTED, actor=user)
     return bool(deleted)
 
 

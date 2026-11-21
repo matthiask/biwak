@@ -1,4 +1,5 @@
-"""The websockets (asgi.py); frontend/collab.js connects to /ws/docs/<id>"""
+"""The websockets (asgi.py): frontend/collab.js connects to /ws/docs/<id>,
+frontend/live.js to /ws/live/ (biwak.live, specs/lantern.md)"""
 
 from channels.auth import AuthMiddlewareStack
 from channels.routing import URLRouter
@@ -7,9 +8,13 @@ from django.conf import settings
 from django.urls import path
 
 from biwak.collab.consumers import DocConsumer
+from biwak.live.consumers import LiveConsumer
 
 
-websocket_urlpatterns = [path("ws/docs/<int:pk>", DocConsumer.as_asgi())]
+websocket_urlpatterns = [
+    path("ws/docs/<int:pk>", DocConsumer.as_asgi()),
+    path("ws/live/", LiveConsumer.as_asgi()),
+]
 
 
 class AllowedHostsOriginValidator(OriginValidator):

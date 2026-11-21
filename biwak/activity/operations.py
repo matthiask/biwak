@@ -13,6 +13,7 @@ from biwak.activity.models import (
     Unsubscription,
 )
 from biwak.items.models import Item
+from biwak.live import announce
 from biwak.projects.models import Project
 
 
@@ -84,6 +85,10 @@ def record(*, actor, action, project, item=None, **data):
         from biwak.activity.notify import notify
 
         transaction.on_commit(lambda: notify(event.pk), robust=True)
+        # The open pages of the item and its parent (specs/lantern.md)
+        announce.changed(
+            item, action=action, actor=actor, visible=event.is_client_visible
+        )
     return event
 
 
