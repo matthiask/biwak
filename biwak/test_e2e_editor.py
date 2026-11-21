@@ -278,13 +278,13 @@ class PasteTest(E2ETestCase):
         self.field.press(key)
 
     def test_a_mail_keeps_its_formatting(self):
-        self.copy((FIXTURES / "paste_mail.html").read_text(), "Hi team, plain")
+        self.copy((FIXTURES / "paste_mail.txt").read_text(), "Hi team, plain")
         self.paste()
         expect(self.field).to_have_value(MAIL)
         self.assertEqual(self.errors, [])
 
     def test_google_docs(self):
-        self.copy((FIXTURES / "paste_google_docs.html").read_text(), "Camp plan")
+        self.copy((FIXTURES / "paste_google_docs.txt").read_text(), "Camp plan")
         self.paste()
         expect(self.field).to_have_value(GOOGLE_DOCS)
 

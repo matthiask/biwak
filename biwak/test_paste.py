@@ -10,6 +10,8 @@ from biwak.htmlmarkdown import from_clipboard
 from biwak.test_utils import person
 
 
+# Clipboard HTML as the browsers send it, one line (.txt: formatters leave
+# it alone)
 FIXTURES = Path(__file__).parent / "test_fixtures"
 
 MAIL = """Hi team,
@@ -47,12 +49,12 @@ GOOGLE_DOCS = """# Camp plan
 class ConverterTest(SimpleTestCase):
     def test_a_mail(self):
         self.assertEqual(
-            from_clipboard((FIXTURES / "paste_mail.html").read_text()), MAIL
+            from_clipboard((FIXTURES / "paste_mail.txt").read_text()), MAIL
         )
 
     def test_google_docs(self):
         self.assertEqual(
-            from_clipboard((FIXTURES / "paste_google_docs.html").read_text()),
+            from_clipboard((FIXTURES / "paste_google_docs.txt").read_text()),
             GOOGLE_DOCS,
         )
 
