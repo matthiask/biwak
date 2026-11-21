@@ -327,24 +327,6 @@ class CLITest(TestCase):
         output = self.biwak("todos", "--mine").output
         self.assertIn("Mine", output)
         self.assertNotIn("Nobodys", output)
-        # Assigned by me: ops.assign() by Ada; Bob's own don't count
-        bob = person("Bob")
-        Membership.objects.create(project=self.project, user=bob)
-        ops.create_todo(
-            todolist=self.list, title="Theirs", creator=bob, assignees=[bob]
-        )
-        output = self.biwak("todos", "--assigned-by-me").output
-        self.assertIn("Mine", output)
-        self.assertNotIn("Theirs", output)
-        self.assertNotIn("Nobodys", output)
-        output = self.biwak("todos", "--assigned-by-me", "--mine").output
-        self.assertIn("Mine", output)
-        data = json.loads(self.biwak("todos", "--assigned-by-me", "--json").stdout)
-        self.assertEqual({t["title"] for t in data}, {"Mine"})
-        self.assertEqual(data[0]["assignees"][0]["assigned_by"]["id"], self.ada.pk)
-        self.assertEqual(
-            self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
-        )
         output = self.biwak("todos", "--project", other.pk).output
         self.assertIn("Elsewhere", output)
         self.assertNotIn("Mine", output)
@@ -358,6 +340,29 @@ class CLITest(TestCase):
         self.assertEqual(self.biwak("todos", self.list.pk, "--by-due").exit_code, 1)
         # The list's own to-dos stay
         self.assertIn("Nobodys", self.biwak("todos", self.list.pk).output)
+
+    def test_todos_assigned_by_me(self):
+        ops.create_todo(
+            todolist=self.list, title="Mine", creator=self.ada, assignees=[self.ada]
+        )
+        ops.create_todo(todolist=self.list, title="Nobodys", creator=self.ada)
+        eve = person("Eve")
+        Membership.objects.create(project=self.project, user=eve)
+        ops.create_todo(
+            todolist=self.list, title="Theirs", creator=eve, assignees=[eve]
+        )
+        output = self.biwak("todos", "--assigned-by-me").output
+        self.assertIn("Mine", output)
+        self.assertNotIn("Theirs", output)
+        self.assertNotIn("Nobodys", output)
+        output = self.biwak("todos", "--assigned-by-me", "--mine").output
+        self.assertIn("Mine", output)
+        data = json.loads(self.biwak("todos", "--assigned-by-me", "--json").stdout)
+        self.assertEqual({t["title"] for t in data}, {"Mine"})
+        self.assertEqual(data[0]["assignees"][0]["assigned_by"]["id"], self.ada.pk)
+        self.assertEqual(
+            self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
+        )
 
     def test_read_only_and_errors(self):
         result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")
