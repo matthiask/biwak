@@ -3,12 +3,14 @@
 The same notifications as the mails (``notify()`` writes them), listed
 with the rules of mailing them (``mails._deliverable()``): only about
 items the person sees now, not those whose level is "nothing" now.
-Others stay in the database, unseen. Opening an item reads its
-notifications; read before its mail goes, a notification isn't mailed
-(``mails.send_mails()``).
+Others stay in the database, unseen. Only the lantern reads them
+(decided 2026-11-21): following an entry's link (``views.lantern_open``)
+or marking them read, not opening the item some other way; read before
+its mail goes, a notification isn't mailed (``mails.send_mails()``).
 """
 
 from django.db import models, transaction
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -74,7 +76,8 @@ def prepare(notifications, user):
             if event.action == Action.REACTED
             else describe(event, user)
         )
-        notification.url = anchor(notification)
+        # Through the lantern: following it reads the item's notifications
+        notification.url = reverse("lantern_open", args=[notification.pk])
     return notifications
 
 
@@ -218,13 +221,6 @@ def unread(user, *, item):
     newest.save(update_fields=["read_at"])
     live.lantern_changed([user.pk], item=item)
     return True
-
-
-def opened(request, *items):
-    """A page of the items was opened (not fetched for a live update):
-    their notifications are read"""
-    if request.method == "GET" and not request.headers.get("X-Biwak-Live"):
-        read(request.user, items=items)
 
 
 def page(user, *, unread=None, mentions=False, before=None, size=50):

@@ -414,6 +414,17 @@ def lantern_count(request):
     return JsonResponse({"unread": lantern_module.unread_count(request.user)})
 
 
+def lantern_open(request, pk):
+    """An entry's link: reads the notifications of its item (all of them:
+    the entry stands for the item) and opens the item where the
+    notification applies. A link, so that it works without JavaScript."""
+    notification = lantern_module.notifications_for(request.user).filter(pk=pk).first()
+    if notification is None:
+        raise Http404
+    lantern_module.read(request.user, item=notification.event.item)
+    return redirect(lantern_module.anchor(notification))
+
+
 @require_POST
 def lantern_read(request):
     """Marks the notifications of an item (``item``) or all as read"""

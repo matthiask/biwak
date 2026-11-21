@@ -15,7 +15,6 @@ from biwak.activity import lantern, mentions
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Event, Notification
 from biwak.activity.operations import set_level_override, subscribe
-from biwak.checkins import operations as checkin_ops
 from biwak.files import operations as file_ops
 from biwak.items import operations as ops
 from biwak.live import announce
@@ -244,24 +243,21 @@ class ListingTest(LanternTestCase):
         page = self.client.get(reverse("lantern")).content.decode()
         self.assertIn("Ada Example commented:", page)
         self.assertIn("You were mentioned.", page)
+        # Through the lantern, to the comment
+        commented = Notification.objects.get(user=self.bob, event__action="commented")
+        self.assertIn(reverse("lantern_open", args=[commented.pk]), page)
         comment = self.todo.comments.get()
-        self.assertIn(f"/todos/{self.todo.pk}/#comment-{comment.pk}", page)
+        self.assertEqual(
+            lantern.anchor(commented), f"/todos/{self.todo.pk}/#comment-{comment.pk}"
+        )
         self.assertTrue(notification)
 
 
 class ReadingTest(LanternTestCase):
-    def test_opening_an_item_reads_it_and_its_comments(self):
-        self.comment(self.todo, "One")
-        self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="Two"))
-        self.comment(self.secret, "Three")
-        self.client.force_login(self.bob)
-        # A live update's fetch doesn't count as opening
-        self.client.get(self.todo.get_absolute_url(), headers={"X-Biwak-Live": "1"})
-        self.assertEqual(lantern.unread_count(self.bob), 3)
-        self.client.get(self.todo.get_absolute_url())
-        self.assertEqual(lantern.unread_count(self.bob), 1)
-
-    def test_every_item_page_reads(self):
+    def test_opening_an_item_reads_nothing(self):
+        """Only the lantern reads (decided 2026-11-21): the item's pages
+        opened some other way (the feed, a list, a mail's link, a live
+        update) leave the notifications unread"""
         message = ops.create_message(
             project=self.project, title="News", content="", creator=self.ada
         )
@@ -269,28 +265,65 @@ class ReadingTest(LanternTestCase):
         (answer,) = check_in_answers(self.project, [self.ada])
         for item in [message, doc, answer, self.internal]:
             subscribe(self.bob, item)
+        self.comment(self.todo, "One")
         self.act(
             lambda: file_ops.update_message(message, actor=self.ada, content="New")
         )
         self.act(lambda: file_ops.update_doc(doc, actor=self.ada, content="New"))
         self.comment(answer, "Nice")
         self.act(lambda: ops.update_list(self.internal, actor=self.ada, title="New"))
+        unread = lantern.unread_count(self.bob)
         self.client.force_login(self.bob)
-        for item, url in [
-            (message, message.get_absolute_url()),
-            (doc, doc.get_absolute_url()),
-            (doc, reverse("doc_edit", args=[doc.pk])),
-            (answer, answer.get_absolute_url()),
-            (self.internal, self.internal.get_absolute_url()),
+        for url in [
+            self.todo.get_absolute_url(),
+            message.get_absolute_url(),
+            doc.get_absolute_url(),
+            reverse("doc_edit", args=[doc.pk]),
+            answer.get_absolute_url(),
+            reverse("question", args=[answer.parent_id]),
+            self.internal.get_absolute_url(),
         ]:
             with self.subTest(url=url):
-                Notification.objects.update(read_at=None)
                 self.assertEqual(self.client.get(url).status_code, 200)
-                self.assertFalse(
-                    Notification.objects.filter(
-                        user=self.bob, event__item=item, read_at=None
-                    ).exists()
-                )
+                self.assertEqual(lantern.unread_count(self.bob), unread)
+
+    def test_following_an_entry_reads_its_item(self):
+        """The entry's link reads the item's notifications (its comments'
+        too) and opens the item where it applies; without JavaScript"""
+        comment = self.comment(self.todo, "One")
+        self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="Two"))
+        self.comment(self.secret, "Three")
+        self.client.force_login(self.bob)
+        self.assertEqual(lantern.unread_count(self.bob), 3)
+        menu = self.client.get(reverse("lantern_menu")).content.decode()
+        notification = Notification.objects.get(
+            user=self.bob, event__data__comment=comment.pk
+        )
+        url = reverse("lantern_open", args=[notification.pk])
+        self.assertIn(f'href="{url}"', menu)
+        response = self.client.get(url)
+        self.assertRedirects(
+            response,
+            f"{self.todo.get_absolute_url()}#comment-{comment.pk}",
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+        self.assertIn(
+            f'href="{url}"', self.client.get(reverse("lantern")).content.decode()
+        )
+
+    def test_following_needs_the_notification_and_its_item(self):
+        self.comment(self.todo, "One")
+        notification = Notification.objects.get(user=self.cleo)
+        url = reverse("lantern_open", args=[notification.pk])
+        # Somebody else's
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        # Of an item not seen anymore
+        self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertIsNone(Notification.objects.get(user=self.cleo).read_at)
 
     def test_marking(self):
         self.comment(self.todo, "One")
@@ -339,15 +372,6 @@ class ReadingTest(LanternTestCase):
         internal.refresh_from_db()
         self.assertIsNotNone(internal.read_at)
         self.assertEqual(lantern.unread_count(self.cleo), 1)
-
-    def test_question_page_reads_the_answers_shown(self):
-        (answer,) = check_in_answers(self.project, [self.ada])
-        subscribe(self.bob, answer)
-        self.comment(answer, "Nice")
-        self.client.force_login(self.bob)
-        self.client.get(reverse("question", args=[answer.parent_id]))
-        self.assertEqual(lantern.unread_count(self.bob), 0)
-        self.assertTrue(checkin_ops)
 
 
 class PagesTest(LanternTestCase):

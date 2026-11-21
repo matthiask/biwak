@@ -1150,7 +1150,12 @@ class LiveTest(E2ETestCase):
         User.objects.filter(pk=self.ada.pk).update(lantern_in_favicon=True)
         ada.reload()
         ada.wait_for_function(f"{icon}.startsWith('data:image/png')")
-        self.goto(ada, self.todo)  # Reads it
+        # Opening the item reads nothing, following the lantern's entry does
+        self.goto(ada, self.todo)
+        ada.wait_for_function(f"{icon}.startsWith('data:image/png')")
+        ada.locator("[data-lantern] > summary").click()
+        ada.locator("[data-lantern-menu]").get_by_text("Without the setting").click()
+        ada.wait_for_url(f"**{self.todo.get_absolute_url()}#comment-*")
         ada.wait_for_function(f"{icon}.endsWith('/favicon.svg')")
 
 

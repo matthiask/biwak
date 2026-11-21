@@ -60,11 +60,15 @@ records, levels, `send_mails`), reactions.
   A link to the whole list.
 - **The page** `/lantern/`: the same, paginated like the feed, with filters
   "unread" and "mentions only".
-- **Reading:**
-  - opening an item marks its notifications read, and those of its
-    comments;
-  - clicking an entry opens the item, at the comment where it applies;
-  - "mark as read" and "mark as unread" per item.
+- **Reading** only through the lantern (decided 2026-11-21, replacing
+  "opening an item marks its notifications read"):
+  - clicking an entry in the menu or on the page marks the item's
+    notifications read (those of its comments too) and opens the item, at
+    the comment where it applies;
+  - "mark as read" and "mark all as read";
+  - opening the item some other way (the feed, a list, a mail's link, a
+    live update) reads nothing;
+  - "mark as unread" per item.
 - **The model:** `Notification.read_at` (null: unread). Mail delivery
   gains `none`. `send_mails` leaves out notifications read before
   sending, and deletes nothing it would need for merging.
@@ -135,7 +139,7 @@ setup as `collaboration.md`).
 ## Done when
 
 - **The lantern:**
-  - the menu, the page, reading by opening and by marking;
+  - the menu, the page, reading by following an entry and by marking;
   - the count updating live; the favicon dot with the setting on and
     not without it;
   - pinning and unpinning (the bookmark follows), mark as unread;
@@ -170,11 +174,13 @@ setup as `collaboration.md`).
   clients saw the item, then `_deliverable()`'s level check. Pages of the
   page and the API may hold fewer entries than asked for (level
   "nothing" is checked after loading the page).
-- **Reading:** the item pages (to-do, list and board, message, doc, the
-  doc's editor, file, question with the answers it shows) mark the
-  item's notifications read when opened (`lantern.opened()`), not when
-  fetched for a live update (`X-Biwak-Live`). "Mark as unread" brings the
-  item's newest notification back.
+- **Reading:** an entry's links go through `/lantern/<notification>/`
+  (`views.lantern_open`), which reads the item's notifications (the entry
+  stands for the item) and redirects to the item, at the comment; a link,
+  so it works without JavaScript; 404 for others' notifications and items
+  one doesn't see. The item pages read nothing (decided 2026-11-21; built
+  first as reading when opened). "Mark as unread" brings the item's
+  newest notification back.
 - **Pinning:** pinning bookmarks the item (`lantern.pin()`), unpinning
   removes the bookmark; a bookmark made on the item's page pins it too.
   Pinned items are in "Pinned" at the top (latest notification, read or
@@ -250,9 +256,6 @@ setup as `collaboration.md`).
 - The wording of "No mails", "Pin to the top", "Changed meanwhile: …",
   "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
   "You were mentioned.").
-- Opening an item reads its notifications; should a live update shown on
-  an open page read them too (now: no, a background tab would swallow
-  mails)?
 - "Mark as unread" makes an unsent notification mailable again (each
   change: at the next run; digest: in the next one). Wanted?
 - Switching delivery from "none" to "each" or "digest" mails the unread

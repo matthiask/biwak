@@ -101,7 +101,6 @@ async function refresh() {
   fetching = true
   try {
     const response = await fetch(location.href, {
-      headers: { "X-Biwak-Live": "1" },
       credentials: "same-origin",
     })
     if (!response.ok || response.redirected) {

@@ -10,7 +10,6 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak import cursors
-from biwak.activity import lantern
 from biwak.files import operations
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import board, latest_messages, pinned_messages
@@ -113,7 +112,6 @@ def message(request, pk):
     comment_form, done = comments_context(request, item)
     if done:
         return done
-    lantern.opened(request, item)
     return render(
         request,
         "files/message.html",

@@ -11,7 +11,6 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_GET, require_POST
 
-from biwak.activity import lantern
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.forms import Form
@@ -241,7 +240,6 @@ def file(request, pk):
     upload = item.upload
     versions = list(upload.versions.select_related("uploaded_by"))
     staff = not request.user.is_client
-    lantern.opened(request, item)
     return render(
         request,
         "files/file.html",
