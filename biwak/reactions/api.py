@@ -3,10 +3,8 @@ to-dos and comments; everybody removes only their own."""
 
 from ninja import Router, Schema, Status
 
-from biwak.items.models import Item
 from biwak.items.views import comment_for, item_for
 from biwak.reactions import operations as ops
-from biwak.reactions.operations import prefetch
 from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
@@ -19,19 +17,16 @@ class ReactionIn(Schema):
 
 def _target(request, item_id=None, comment_id=None):
     """``(item, comment)`` as the operations want them, 404 for what the
-    person can't see; the item's reactions loaded"""
+    person can't see"""
     if comment_id is not None:
         comment = comment_for(request, comment_id)
-        item = comment.item
-    else:
-        comment, item = None, item_for(request, item_id)
-    prefetch(item)
-    return item, comment
+        return comment.item, comment
+    return item_for(request, item_id), None
 
 
 def _show(request, item, comment):
-    item = Item.objects.get(pk=item.pk)
-    prefetch(item)
+    """The reactions as they are now: ``summary()`` loads them (one query
+    for one item)"""
     return reactions_out(item, comment, request.user)
 
 
@@ -51,8 +46,7 @@ def _remove(request, data, item, comment):
 
 @router.get("items/{item_id}/reactions/", response=list[ReactionOut])
 def item_reactions(request, item_id: int):
-    item, comment = _target(request, item_id=item_id)
-    return reactions_out(item, comment, request.user)
+    return _show(request, *_target(request, item_id=item_id))
 
 
 @router.post("items/{item_id}/reactions/", response={201: list[ReactionOut]})
@@ -70,8 +64,7 @@ def item_reaction_remove(request, item_id: int, data: ReactionIn):
 
 @router.get("comments/{comment_id}/reactions/", response=list[ReactionOut])
 def comment_reactions(request, comment_id: int):
-    item, comment = _target(request, comment_id=comment_id)
-    return reactions_out(item, comment, request.user)
+    return _show(request, *_target(request, comment_id=comment_id))
 
 
 @router.post("comments/{comment_id}/reactions/", response={201: list[ReactionOut]})
