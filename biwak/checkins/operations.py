@@ -31,7 +31,7 @@ from biwak.checkins.models import (
     mail_mode,
 )
 from biwak.files import attachments
-from biwak.items import operations as items_ops, visibility
+from biwak.items import operations as items_ops
 from biwak.items.models import Item, Kind, Status
 
 
@@ -108,16 +108,14 @@ def create_question(
     """Asks the first time on or after ``starts_on`` at ``time_of_day``
     (later than ``now``)"""
     rule, time_zone = _clean_schedule(rule, time_zone or settings.TIME_ZONE)
-    item = Item(
+    item = items_ops.create_item(
         project=project,
         kind=Kind.QUESTION,
         title=title,
         creator=creator,
-        position=0,
-        visible_to_clients=visible,
+        visible=visible,
+        position=0,  # Questions are ordered by title
     )
-    item.save()
-    visibility.recompute(item)
     _check_people(item, people)
     question = Question.objects.create(
         item=item,
@@ -128,8 +126,7 @@ def create_question(
     )
     question.next_at = schedule.next_fire_of(question, after=now or timezone.now())
     question.save(update_fields=["next_at"])
-    subscribe(creator, item)
-    record(actor=creator, action=Action.CREATED, project=project, item=item)
+    items_ops.created(item, creator)
     set_people(item, people, actor=creator)
     return item
 
@@ -432,21 +429,19 @@ def answer(item, *, user, content, occurrence=None):
 
 
 def _create_answer(question_item, user, content, occurrence):
-    item = Item(
+    item = items_ops.create_item(
         project=question_item.project,
         parent=question_item,
         kind=Kind.ANSWER,
         title=question_item.title,
         creator=user,
+        position=0,  # Answers are ordered by date
     )
-    item.save()
-    visibility.recompute(item)
     Answer.objects.create(
         item=item, content=content, occurrence=occurrence, author=user
     )
     attachments.link(item, content, actor=user)
-    subscribe(user, item)
-    event = record(actor=user, action=Action.CREATED, project=item.project, item=item)
+    event = items_ops.created(item, user)
     mentions.update(item, content, actor=user, event=event)
     return item
 

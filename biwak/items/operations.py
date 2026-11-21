@@ -44,15 +44,23 @@ def _next_position(qs):
     return (qs.aggregate(m=Max("position"))["m"] or 0) + 1
 
 
-def _create_item(*, project, kind, title, creator, parent=None, visible=False):
-    siblings = Item.objects.filter(project=project, parent=parent, kind=kind)
+def create_item(
+    *, project, kind, title, creator, parent=None, visible=False, position=None
+):
+    """The item of a new item with its stored visibility, for the
+    ``create_*`` operations (of every app), which add the detail model and
+    record the event (``created()``). ``position``: at the end of its
+    siblings of the same kind unless given."""
+    if position is None:
+        siblings = Item.objects.filter(project=project, parent=parent, kind=kind)
+        position = _next_position(siblings)
     item = Item(
         project=project,
         parent=parent,
         kind=kind,
         title=title,
         creator=creator,
-        position=_next_position(siblings),
+        position=position,
         visible_to_clients=visible,
     )
     item.save()
@@ -60,18 +68,19 @@ def _create_item(*, project, kind, title, creator, parent=None, visible=False):
     return item
 
 
-def _created(item, creator):
+def created(item, creator):
+    """The creator subscribed and the event recorded (returned)"""
     subscribe(creator, item)
     return record(actor=creator, action=Action.CREATED, project=item.project, item=item)
 
 
 @transaction.atomic
 def create_list(*, project, title, creator, description="", visible=False):
-    item = _create_item(
+    item = create_item(
         project=project, kind=Kind.LIST, title=title, creator=creator, visible=visible
     )
     TodoList.objects.create(item=item, description=description)
-    _created(item, creator)
+    created(item, creator)
     return item
 
 
@@ -124,7 +133,7 @@ def create_todo(
     TodoList.objects.select_for_update().get(item=todolist)
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
-    item = Item(
+    item = create_item(
         project=todolist.project,
         parent=todolist,
         kind=Kind.TODO,
@@ -132,8 +141,6 @@ def create_todo(
         creator=creator,
         position=_next_position(_todos_in(todolist, group)),
     )
-    item.save()
-    visibility.recompute(item)
     Todo.objects.create(
         item=item,
         group=group,
@@ -142,7 +149,7 @@ def create_todo(
         **_recurrence_fields(recurrence, recurrence_ends_on, recurrence_count),
     )
     attachments.link(item, notes, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
     if assignees:
         assign(item, assignees, actor=creator)
@@ -167,7 +174,7 @@ def create_message(
 ):
     """``whom`` to notify: ``"everybody"``, a list of people or
     ``"nobody"`` (``notify_people()``, specs/files.md)"""
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.MESSAGE,
         title=title,
@@ -176,7 +183,7 @@ def create_message(
     )
     Message.objects.create(item=item, content=content, category=category)
     attachments.link(item, content, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -184,7 +191,7 @@ def create_message(
 
 @transaction.atomic
 def create_folder(*, project, title, creator, parent=None, visible=False):
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.FOLDER,
         title=title,
@@ -193,7 +200,7 @@ def create_folder(*, project, title, creator, parent=None, visible=False):
         visible=visible and parent is None,
     )
     Folder.objects.create(item=item)
-    _created(item, creator)
+    created(item, creator)
     return item
 
 
@@ -208,7 +215,7 @@ def create_doc(
     visible=False,
     whom="nobody",
 ):
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.DOC,
         title=title,
@@ -221,7 +228,7 @@ def create_doc(
         doc_id=item.pk, title=title, content=content, created_by=creator
     )
     attachments.link(item, content, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -259,7 +266,7 @@ def create_upload(
     """Uploads a file into the root or a folder; its title is the file's
     name. Raises ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
-    item = _create_item(
+    item = create_item(
         project=project,
         kind=Kind.FILE,
         title=attachments.clean_name(file.name),
@@ -270,7 +277,7 @@ def create_upload(
     upload = Upload.objects.create(item=item, description=description)
     new_version(upload, file, uploaded_by=creator)
     attachments.link(item, description, actor=creator)
-    event = _created(item, creator)
+    event = created(item, creator)
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -464,7 +471,7 @@ def _create_next(item, todo, *, actor):
         return None
     todolist = item.parent
     TodoList.objects.select_for_update().get(item=todolist)
-    following = Item(
+    following = create_item(
         project=item.project,
         parent=todolist,
         kind=Kind.TODO,
@@ -472,8 +479,6 @@ def _create_next(item, todo, *, actor):
         creator=item.creator,
         position=_next_position(_todos_in(todolist, todo.group)),
     )
-    following.save()
-    visibility.recompute(following)
     Todo.objects.create(
         item=following,
         group=todo.group,
