@@ -9,7 +9,7 @@ and renaming means editing everyone.
 **Status:** open (spec, 2026-11-21).
 
 **Agent:** suits a cheaper model following this spec and the checklist
-in `AGENTS.md`, once the questions below are answered. The rules who
+in `AGENTS.md`. The rules who
 sees what (`access.md`) change for partners: tests through every entry
 point.
 
@@ -79,10 +79,10 @@ point.
 - **The importer:** Basecamp's companies become organizations (by name,
   merging as above); people point to theirs.
 
-## Questions before building
+## Managing (decided 2026-11-21)
 
-1. **Who manages organizations:** suggested: all staff create, rename
-   and merge client and partner organizations (audit log); deleting only
-   organizations without people; anything touching the installation's
-   own organization (merging into it, moving people in or out, marking
-   it) only admins, since it decides who sees all-access projects.
+All staff create, rename and merge client and partner organizations
+(recorded in the audit log); deleting only organizations without
+people; anything touching the installation's own organization (merging
+into it, moving people in or out, marking it) only admins, since it
+decides who sees all-access projects.

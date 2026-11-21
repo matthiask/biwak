@@ -6,10 +6,7 @@ answer goes into the spec named, and the entry leaves this file. Kept up
 to date: questions asked in the conversation and answered there are
 recorded in their spec and leave this file too.
 
-1. **Who manages organizations** (`organizations.md`): all staff, or
-   admins only? Suggestion: staff create, rename and merge client and
-   partner organizations; deleting only empty ones; anything touching
-   one's own organization admins only.
+Nothing open at the moment.
 
 Decided to wait: the wording of mails, messages and the editor's and the
 lantern's texts is reviewed all at once with the German translation;
