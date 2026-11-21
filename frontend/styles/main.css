@@ -1159,6 +1159,11 @@ button.wb-signal:hover {
 /* The pills' forms, not the picker's */
 .wb-reactions > form {
   display: flex;
+  align-items: center;
+}
+
+.wb-reaction-people {
+  align-self: center;
 }
 
 .wb-reaction {

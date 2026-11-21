@@ -9,7 +9,7 @@
   >
     {% for reaction in reactions %}
       {% if reaction.mine %}
-        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline wb-reaction-own">
+        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="wb-reaction-own">
           {% csrf_token %}
           <input type="hidden" name="content" value="{{ reaction.content }}">
           <a
@@ -32,7 +32,7 @@
           </button>
         </form>
       {% else %}
-        <form method="post" action="{{ url }}" hx-post="{{ url }}" class="d-inline">
+        <form method="post" action="{{ url }}" hx-post="{{ url }}">
           {% csrf_token %}
           <input type="hidden" name="content" value="{{ reaction.content }}">
           <button
