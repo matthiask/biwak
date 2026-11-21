@@ -312,6 +312,9 @@ class SubscribersForm(Form):
             .order_by(Lower("full_name"), "email")
         )
         field.error_messages["required"] = _("Pick at least one person.")
+        # The picker hides the select: the browser couldn't focus it to say
+        # so, the server does
+        field.widget.use_required_attribute = lambda initial: False
         field.widget.attrs |= {
             "data-placeholder": _("Add people…"),
             "aria-label": _("Add people"),

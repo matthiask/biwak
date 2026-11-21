@@ -2,9 +2,13 @@
 opening, saving, errors, Escape and the focus"""
 
 from biwak.accounts.models import User
+from biwak.activity.models import Action, Event, Notification, Subscription
+from biwak.activity.operations import unsubscribe
+from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.projects.models import Project
 from biwak.test_e2e import E2ETestCase, expect
+from biwak.test_utils import person
 
 
 class ModalTest(E2ETestCase):
@@ -152,4 +156,76 @@ class GroupModalsTest(E2ETestCase):
         page.keyboard.press("Escape")
         expect(page.get_by_role("dialog")).to_be_hidden()
         expect(menu.locator("summary")).to_be_focused()
+        self.assertEqual(self.errors, [])
+
+
+class SubscribersTest(E2ETestCase):
+    """The subscribers modal (specs/subscribers.md): the picker of the
+    assignees, "Tell them now" with a note"""
+
+    def setUp(self):
+        super().setUp()
+        self.dora = person("Dora")  # Staff, not a member
+        self.todolist = ops.create_list(
+            project=self.project, title="Camp", creator=self.ada, visible=True
+        )
+        self.todo = ops.create_todo(
+            todolist=self.todolist, title="Order the tent", creator=self.ada
+        )
+
+    def open_modal(self, page):
+        self.goto(page, self.todo)
+        page.get_by_role("link", name="Manage…").click()
+        dialog = page.get_by_role("dialog", name="Subscribers")
+        expect(dialog).to_be_visible()
+        return dialog
+
+    def pick(self, dialog, name):
+        dialog.locator(".wb-picker-input").click()
+        dialog.locator(".wb-picker-list li", has_text=name).click()
+
+    def test_adding_people_and_telling_them_now(self):
+        page = self.page
+        dialog = self.open_modal(page)
+        expect(dialog.locator("[data-subscribers]")).to_contain_text("Ada")
+        self.pick(dialog, "Cleo")
+        self.pick(dialog, "Dora")
+        expect(dialog.locator(".wb-pill")).to_have_count(2)
+        # Picked people aren't offered again
+        dialog.locator(".wb-picker-input").click()
+        expect(dialog.locator(".wb-picker-list li", has_text="Cleo")).to_have_count(0)
+        page.keyboard.press("Escape")
+        expect(dialog.locator(".wb-picker-list")).to_be_hidden()
+        dialog.get_by_label("Tell them now").check()
+        dialog.get_by_label("Note").fill("Have a look")
+        dialog.get_by_role("button", name="Add").click()
+        # The page loads again, the subscribers box has them
+        expect(page.locator(".wb-person-link", has_text="Dora")).to_be_visible()
+        subscribers = {
+            s.user.get_short_name()
+            for s in Subscription.objects.filter(item=self.todo, added_by=self.ada)
+        }
+        self.assertEqual(subscribers, {"Cleo", "Dora"})
+        event = Event.objects.get(action=Action.SHARED)
+        self.assertEqual(event.data["note"], "Have a look")
+        self.assertEqual(Notification.objects.filter(event=event).count(), 2)
+        self.assertEqual(self.errors, [])
+
+    def test_saving_without_anybody_shows_the_error(self):
+        dialog = self.open_modal(self.page)
+        dialog.get_by_role("button", name="Add").click()
+        expect(dialog.get_by_text("Pick at least one person.")).to_be_visible()
+        self.assertFalse(Subscription.objects.filter(added_by=self.ada))
+
+    def test_a_client_is_offered_only_the_members(self):
+        unsubscribe(self.ada, self.todo)
+        page = self.login(self.cleo)
+        self.goto(page, self.todo)
+        page.get_by_role("link", name="Manage…").click()
+        dialog = page.get_by_role("dialog", name="Subscribers")
+        expect(dialog).to_be_visible()
+        dialog.locator(".wb-picker-input").click()
+        names = dialog.locator(".wb-picker-list li").all_inner_texts()
+        self.assertEqual(len(names), 1)
+        self.assertIn("Ada", names[0])
         self.assertEqual(self.errors, [])

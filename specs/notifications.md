@@ -202,7 +202,8 @@ project's level is that choice, not a new setting.
 
 1. Candidates: subscribers of the event's item; for `created`, also
    subscribers of its parent container; plus people newly mentioned or
-   assigned by this event.
+   assigned by this event. A `shared` event (`subscribers.md`) has only
+   the people it names.
 2. Without the actor, inactive people, and people who can't see the
    item **now** (`Item.objects.visible_to(user)`; for everybody at once
    `who_can_see(item)`, tested against it, 2026-11-21).
