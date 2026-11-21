@@ -40,6 +40,7 @@
           {% if row.version %}<span
               class="small text-body-secondary"
             >{{ row.version.size|filesizeformat }}</span>{% endif %}
+          {% include "items/_checklist_signal.html" with done=row.checklist_done total=row.checklist_total %}
         </span>
         {% client_badge row %}
       </a>

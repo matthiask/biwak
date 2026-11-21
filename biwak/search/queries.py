@@ -17,6 +17,7 @@ from django.db.models import BooleanField, F, Func, Value
 from django.utils.safestring import mark_safe
 
 from biwak.checkins.models import Answer
+from biwak.items.glance import with_checklist
 from biwak.items.models import (
     Comment,
     Doc,
@@ -118,7 +119,9 @@ def search(
     words = prefixes(terms)
     if not words:
         return Item.objects.none()
-    items = Item.objects.visible_to(user).select_related("project", "creator", "answer")
+    items = with_checklist(Item.objects.visible_to(user)).select_related(
+        "project", "creator", "answer"
+    )
     # Every word anywhere in the item: the title can have one, the text
     # another, a comment a third
     for word in words:

@@ -423,6 +423,12 @@ def show_todo(data):
         ("Due", data["due_on"]),
         ("Repeats", data.get("recurrence_description")),
         ("Repeats until", data.get("recurrence_ends_on")),
+        (
+            "Checklist",
+            f"{data['checklist_done']}/{data['checklist_total']}"
+            if data.get("checklist_total")
+            else None,
+        ),
         ("Reactions", show_reactions(data.get("reactions", []))),
         ("URL", data["url"]),
     ]:

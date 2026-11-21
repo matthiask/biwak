@@ -26,6 +26,7 @@
   >
     {% icon "chat-left-text" %}<span>{{ todo.comment_count }}</span>
   </button>{% endif %}
+{% include "items/_checklist_signal.html" with done=todo.todo.checklist_done total=todo.todo.checklist_total %}
 {% if todo.attachment_count %}<span
     class="wb-signal"
     title="{% blocktranslate count count=todo.attachment_count %}{{ count }} attachment{% plural %}{{ count }} attachments{% endblocktranslate %}"

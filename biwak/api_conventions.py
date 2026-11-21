@@ -4,7 +4,9 @@
   web interface; a client's token sees what the client sees. Every item
   carries ``visible_to_clients``.
 - Texts are accepted as Markdown and returned as Markdown and HTML
-  (``notes`` and ``notes_html``).
+  (``notes`` and ``notes_html``). Task lists (``- [ ] a``) render as
+  disabled checkboxes; to-dos, messages, docs and files return the count
+  of their text as ``checklist_done`` and ``checklist_total``.
 - Lists which grow (completed to-dos, comments, events) use cursor
   pagination (``?cursor=``, ``next`` and ``previous`` in the response);
   short ones (projects, a list's open to-dos) are returned complete.

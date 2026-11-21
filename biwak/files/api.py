@@ -207,6 +207,8 @@ def category_out(category):
 class MessageOut(ItemOut):
     content: str
     content_html: str
+    checklist_done: int
+    checklist_total: int
     # The first lines as plain text, like the board shows them
     excerpt: str
     category: CategoryOut | None
@@ -221,6 +223,8 @@ def message_out(item, user):
     return item_out(item) | {
         "content": message.content,
         "content_html": html(message.content, item),
+        "checklist_done": message.checklist_done,
+        "checklist_total": message.checklist_total,
         "excerpt": excerpt(message.content),
         "category": category_out(message.category),
         "pinned": message.pinned_at is not None,
@@ -477,6 +481,8 @@ def item_move(request, item_id: int, data: MoveIn):
 class DocOut(ItemOut):
     content: str
     content_html: str
+    checklist_done: int
+    checklist_total: int
     # The newest version, the ``base_version`` of the next save
     version_id: int
     locked_by: PersonOut | None
@@ -489,6 +495,8 @@ def doc_out(item, user):
     return item_out(item) | {
         "content": doc.content,
         "content_html": html(doc.content, item),
+        "checklist_done": doc.checklist_done,
+        "checklist_total": doc.checklist_total,
         "version_id": doc.versions.first().pk,
         "locked_by": person_out(holder),
         "reactions": reactions_out(item, None, user),
@@ -694,6 +702,8 @@ class FileVersionOut(Schema):
 class FileOut(ItemOut):
     description: str
     description_html: str
+    checklist_done: int
+    checklist_total: int
     # The current version
     name: str
     size: int
@@ -734,6 +744,8 @@ def file_out(item, user):
     return item_out(item) | {
         "description": upload.description,
         "description_html": html(upload.description, item),
+        "checklist_done": upload.checklist_done,
+        "checklist_total": upload.checklist_total,
         "name": current.name,
         "size": current.size,
         "content_type": current.content_type,

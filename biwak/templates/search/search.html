@@ -32,6 +32,7 @@
             {% icon result.icon %}
             {% if hit.title %}{{ hit.title }}{% else %}{{ item|item_title }}{% endif %}
             {% client_badge item %}
+            {% include "items/_checklist_signal.html" with done=item.checklist_done total=item.checklist_total %}
             {% if item.project.archived_at %}<span
                 class="badge wb-tone-neutral"
               >{% translate "Archived" %}</span>{% endif %}

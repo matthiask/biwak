@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.forms import Form
-from biwak.items import operations as ops
+from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.permissions import staff_only
@@ -28,8 +28,8 @@ def contents(user, project, folder):
     """What the person sees in the root (``folder`` None) or in a folder:
     folders first, then docs and files, by title"""
     return (
-        Item.objects
-        .visible_to(user)
+        glance
+        .with_checklist(Item.objects.visible_to(user))
         .filter(project=project, parent=folder, kind__in=CONTAINED)
         .annotate(
             folder_first=Case(

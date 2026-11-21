@@ -224,6 +224,23 @@ class CLITest(TestCase):
         result = self.biwak("todo", "edit", data["id"], "--repeat", "sometimes")
         self.assertEqual(result.exit_code, 1)
 
+    def test_checklists(self):
+        todo = ops.create_todo(
+            todolist=self.list,
+            title="Pack",
+            creator=self.ada,
+            notes="- [x] tent\n- [ ] stove",
+        )
+        self.assertIn("Checklist: 1/2", self.biwak("todo", "show", todo.pk).output)
+        data = json.loads(self.biwak("todo", "show", todo.pk, "--json").stdout)
+        self.assertEqual((data["checklist_done"], data["checklist_total"]), (1, 2))
+        self.assertIn('type="checkbox"', data["notes_html"])
+        # Editing the text changes the count
+        self.biwak("todo", "edit", todo.pk, "--notes", "- [x] a\n- [x] b\n- [x] c")
+        self.assertIn("Checklist: 3/3", self.biwak("todo", "show", todo.pk).output)
+        plain = ops.create_todo(todolist=self.list, title="Plain", creator=self.ada)
+        self.assertNotIn("Checklist", self.biwak("todo", "show", plain.pk).output)
+
     def test_todos_across_projects(self):
         other = project("Other", members=[self.ada])
         other_list = ops.create_list(project=other, title="Chores", creator=self.ada)
