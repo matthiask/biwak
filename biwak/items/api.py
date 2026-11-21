@@ -298,9 +298,9 @@ def todo_out(item, user):
 def _assignees_out(item, todo, user):
     """Those the reader may know (``people_known_to()``: clients and
     partners don't learn about people removed from the project)"""
-    from biwak.projects.models import known_ids_for_item
+    from biwak.projects.models import known_ids_for
 
-    known = known_ids_for_item(user, item)
+    known = known_ids_for(user, item)
     return [
         person_out(a.user) | {"assigned_by": person_out(a.assigned_by)}
         for a in todo.assignment_set.all()

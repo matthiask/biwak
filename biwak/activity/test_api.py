@@ -214,3 +214,50 @@ class NewEventDataTest(FeedBase):
                 if e["action"] == "unassigned" and e["item"]["title"] == "Open points"
             )
             self.assertEqual(unassigned["data"]["assignees"], [self.bob.pk])
+
+    def test_people_the_reader_may_not_know_are_left_out(self):
+        """Clients learn about members only: people who aren't members (any
+        more), assigned or mentioned, don't show in the events' data by ID
+        either (specs/access.md)"""
+        from biwak.activity import mentions
+        from biwak.projects.operations import remove_member
+
+        dan = person("Dan")
+        ops.assign(self.todo, [dan, self.bob], actor=self.ada)
+        ops.add_comment(
+            self.todo,
+            author=self.ada,
+            content=f"{mentions.syntax(dan)} {mentions.syntax(self.bob)}",
+        )
+        ops.unassign(self.todo, [dan], actor=self.ada)
+        record(
+            actor=self.ada,
+            action=Action.SHARED,
+            project=self.project,
+            item=self.todo,
+            people=[dan.pk, self.bob.pk],
+        )
+        # Assigning made Dan a member; removed now
+        remove_member(self.project, dan, actor=self.ada)
+        for user, sees_dan in [(self.ada, True), (self.cleo, False)]:
+            results = self.get(user)
+            with self.subTest(user=user):
+                for event in results:
+                    for key in ["mentioned", "assigned", "people", "assignees"]:
+                        if key in event["data"]:
+                            self.assertEqual(
+                                dan.pk in event["data"][key],
+                                sees_dan,
+                                (event["action"], key),
+                            )
+                keys = {
+                    key
+                    for event in results
+                    for key in ["mentioned", "assigned", "people", "assignees"]
+                    if key in event["data"]
+                }
+                self.assertTrue({"mentioned", "people", "assignees"} <= keys, keys)
+                # Members stay
+                self.assertTrue(
+                    any(self.bob.pk in e["data"].get("people", []) for e in results)
+                )

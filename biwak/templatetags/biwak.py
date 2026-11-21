@@ -393,11 +393,11 @@ def known_in(context, item, people):
     people removed from it), looked up once per project and request"""
     from django.contrib.auth.models import AnonymousUser
 
-    from biwak.projects.models import known_ids_for_item
+    from biwak.projects.models import known_ids_for
 
     request = context.get("request")
     viewer = getattr(request, "user", None) or AnonymousUser()
-    known = known_ids_for_item(viewer, item)
+    known = known_ids_for(viewer, item)
     return [p for p in people if known is None or p.pk in known]
 
 

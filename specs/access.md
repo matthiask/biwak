@@ -92,7 +92,9 @@ through every entry point (`AGENTS.md`).
   People removed from the project who stay assigned to to-dos aren't
   named to clients and partners either: the rows, the to-do's page, the
   API's `assignees` and mails show only the people they may know (fixed
-  2026-11-21 after a review: `{% known_in %}`, `known_ids_for_item()`).
+  2026-11-21 after a review: `{% known_in %}`, `known_ids_for()`). The
+  feed API's event data (`mentioned`, `assigned`, `people`, `assignees`,
+  by ID) lists only those too (`event_out()`).
   Both halves of the rule (after the second visibility review):
   - **People who act in a visible place are shown by name**, members or
     not: comment authors, reactions, presence in the live editor. That

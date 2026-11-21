@@ -202,13 +202,14 @@ class Membership(models.Model):
         return f"{self.user} in {self.project}"
 
 
-def known_ids_for_item(viewer, item):
-    """``Project.known_ids()`` of the item's project, kept on the viewer's
-    object for the rest of the request (pages and API lists of many items,
-    read after any changes); the project is loaded only once"""
+def known_ids_for(viewer, obj):
+    """``Project.known_ids()`` of the project of ``obj`` (an item, an
+    event), kept on the viewer's object for the rest of the request (pages
+    and API lists of many items, read after any changes); the project is
+    loaded only once"""
     cache = getattr(viewer, "_known_ids", None)
     if cache is None:
         cache = viewer._known_ids = {}
-    if item.project_id not in cache:
-        cache[item.project_id] = item.project.known_ids(viewer)
-    return cache[item.project_id]
+    if obj.project_id not in cache:
+        cache[obj.project_id] = obj.project.known_ids(viewer)
+    return cache[obj.project_id]
