@@ -283,6 +283,53 @@ class NewDocTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         self.assertEqual(self.client.get(self.new_url(folder)).status_code, 404)
 
+    def old_draft(self):
+        _response, draft = self.new()
+        Item.objects.filter(pk=draft.pk).update(
+            created_at=timezone.now() - dt.timedelta(days=2)
+        )
+        return draft
+
+    def test_a_draft_with_typing_not_saved_yet_stays(self):
+        """Typed but not merged yet (``save_pending`` failed, or it arrived
+        after it ran): not deleted with what's in it"""
+        draft = self.old_draft()
+        live.apply_text(draft.doc, "# Notes", user=self.ada)
+        self.assertEqual(ops.delete_drafts(), 0)
+        self.assertTrue(Item.objects.filter(pk=draft.pk, is_draft=True).exists())
+
+    def test_a_draft_published_after_listing_stays(self):
+        """Checked again under its lock: published in the meantime, it's a
+        doc and stays"""
+        from django.db.models.signals import post_init
+
+        draft = self.old_draft()
+        published = set()
+
+        def publish(sender, instance, **kwargs):
+            # Published by its editor right after delete_drafts() read it
+            if instance.pk == draft.pk and instance.pk not in published:
+                published.add(instance.pk)
+                Item.objects.filter(pk=draft.pk).update(is_draft=False)
+
+        post_init.connect(publish, sender=Item)
+        try:
+            self.assertEqual(ops.delete_drafts(), 0)
+        finally:
+            post_init.disconnect(publish, sender=Item)
+        self.assertTrue(Item.objects.filter(pk=draft.pk, is_draft=False).exists())
+
+    def test_deleting_a_draft_tells_its_open_editor(self):
+        from unittest import mock
+
+        draft = self.old_draft()
+        with (
+            mock.patch.object(live, "check_access") as check_access,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            self.assertEqual(ops.delete_drafts(), 1)
+        check_access.assert_called_once_with(doc=draft.pk)
+
     def test_empty_drafts_go_after_a_day(self):
         _response, empty = self.new()
         _response, written = self.new()

@@ -198,7 +198,10 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   event (the folder's subscribers aren't told, people mentioned in it
   are), and the browser replaces the address (`data-collab-draft`).
   Empty drafts are deleted after a day (`delete_drafts` in
-  `fairy_tasks`). Nothing reuses drafts (two tabs could share one);
+  `fairy_tasks`), each checked again with its rows locked (decided
+  2026-11-21): one published meanwhile stays, so does one with typing
+  not merged yet (`LiveUpdate` rows; the next run tries again), and an
+  open editor of a deleted draft is told (`live.check_access()`). Nothing reuses drafts (two tabs could share one);
   "Done" on an empty draft goes back to its folder. A draft in a folder
   visible to clients is visible to them once written, as the folder
   says.

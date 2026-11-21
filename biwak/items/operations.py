@@ -1065,13 +1065,30 @@ DRAFT_DAYS = 1
 def delete_drafts(*, now=None):
     """Deletes drafts left empty for a day (specs/files.md, "Docs");
     what was typed and not saved yet is saved first (``save_pending``
-    runs before), making a doc of them. Returns how many."""
+    runs before), making a doc of them. Each is checked again with its
+    rows locked: one published meanwhile stays, so does one with typing
+    not merged yet (``live_updates``); an open editor of a deleted draft
+    is told (``live.check_access()``). Returns how many."""
+    from biwak.collab import live
+    from biwak.collab.models import LiveUpdate
+
     cutoff = (now or timezone.now()) - dt.timedelta(days=DRAFT_DAYS)
     old = Item.objects.filter(is_draft=True, created_at__lt=cutoff)
     count = 0
-    for item in old.order_by("pk"):
-        item.delete()
-        count += 1
+    for draft in old.order_by("pk"):
+        with transaction.atomic():
+            item = old.select_for_update().filter(pk=draft.pk).first()
+            if item is None:
+                continue
+            # Typing arriving now (``live.append()``) waits for this lock
+            # (its foreign key), so none slips in between the check and the
+            # delete
+            Doc.objects.select_for_update().filter(item=item).exists()
+            if LiveUpdate.objects.filter(doc_id=item.pk).exists():
+                continue
+            item.delete()
+            live.check_access(doc=draft.pk)
+            count += 1
     return count
 
 
