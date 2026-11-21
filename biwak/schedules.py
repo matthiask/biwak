@@ -165,11 +165,11 @@ def today(tz=None):
 # Presets ----------------------------------------------------------------
 
 
-def _clamped(day, extra=""):
+def _clamped(day):
     """A day of the month; the 29th to 31st fall on the last day of shorter
-    months"""
+    months (the presets and the widget)"""
     if day <= 28:
-        return f"BYMONTHDAY={day}{extra}"
+        return f"BYMONTHDAY={day}"
     return f"BYMONTHDAY={','.join(str(d) for d in range(28, day + 1))};BYSETPOS=-1"
 
 
@@ -287,12 +287,6 @@ def _int(value, low, high):
     return number if low <= number <= high else None
 
 
-def _clamped_days(day):
-    if day <= 28:
-        return f"BYMONTHDAY={day}"
-    return f"BYMONTHDAY={','.join(str(d) for d in range(28, day + 1))};BYSETPOS=-1"
-
-
 def _build_weekly(fields, errors):
     days = fields.get("weekdays") or []
     if isinstance(days, str):
@@ -321,7 +315,7 @@ def _build_monthly(fields, errors):
             if day is None:
                 errors["month_day"] = _("Enter a day from 1 to 31.")
                 return ""
-            return ";" + _clamped_days(day)
+            return ";" + _clamped(day)
     errors["monthly"] = _("Choose a day or a weekday.")
     return ""
 

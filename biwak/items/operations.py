@@ -13,6 +13,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from biwak import schedules
+from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.notify import notify_people
@@ -282,19 +283,33 @@ def add_comment(item, *, author, content):
     return comment
 
 
-def can_be_assigned(user, item):
-    """Clients only on to-dos visible to them (specs/access.md)"""
-    return Item.objects.visible_to(user).filter(pk=item.pk).exists()
+def assignable_people(item):
+    """Who can be assigned to the to-do: the project's active members,
+    clients only if it's visible to them (specs/access.md, specs/todos.md).
+    The one rule for the forms, the API and the next to-do of a recurring
+    one."""
+    people = User.objects.active().filter(memberships__project=item.project)
+    if not item.is_client_visible:
+        people = people.filter(is_client=False)
+    return people.distinct()
+
+
+def _assignable_ids(item):
+    # The stored visibility, not what the object knew when it was loaded
+    item.refresh_from_db(fields=["is_client_visible"])
+    return set(assignable_people(item).values_list("pk", flat=True))
 
 
 @transaction.atomic
 def assign(item, users, *, actor):
-    """Adds assignees; returns those newly assigned"""
+    """Adds assignees (``assignable_people()``, ``ValueError`` for anybody
+    else); returns those newly assigned"""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
+    allowed = _assignable_ids(item) if users else set()
     for user in users:
-        if not can_be_assigned(user, item):
-            raise ValueError(f"{user} can't see {item}")
+        if user.pk not in allowed:
+            raise ValueError(f"{user} can't be assigned to {item}")
     todo.assignees.add(*users)
     for user in users:
         subscribe(user, item, added_by=actor)
@@ -445,8 +460,8 @@ def _create_next(item, todo, *, actor):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
-    people = [u for u in todo.assignees.all() if u.is_active]
-    people = [u for u in people if can_be_assigned(u, following)]
+    allowed = _assignable_ids(following)
+    people = [u for u in todo.assignees.all() if u.pk in allowed]
     if people:
         assign(following, people, actor=actor)
     return following

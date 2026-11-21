@@ -20,20 +20,13 @@ from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
 def item_for(request, pk, kind=None):
     """The item if the person may see it, else 404: the one check
-    (specs/access.md)"""
-    qs = Item.objects.visible_to(request.user).select_related("project", "parent")
+    (specs/access.md), for the pages and the API"""
+    qs = Item.objects.visible_to(request.user).select_related(
+        "project", "parent", "creator"
+    )
     if kind:
         qs = qs.filter(kind=kind)
     return get_object_or_404(qs, pk=pk)
-
-
-def assignable_people(item):
-    """People who can see the item (clients only if it's visible to them)"""
-    project = item.project
-    people = User.objects.active().filter(memberships__project=project)
-    if not item.is_client_visible:
-        people = people.filter(is_client=False)
-    return people.distinct()
 
 
 class RepeatForm(RuleFormMixin, Form):
@@ -79,13 +72,21 @@ class RepeatForm(RuleFormMixin, Form):
         }
 
 
-class TodoForm(RepeatForm):
-    """Adding a to-do from the list: inline, with everything a to-do has
-    at first (specs/todos.md); without JavaScript a plain form"""
+class TodoFieldsForm(RepeatForm):
+    """A to-do's fields, for adding one (``TodoForm``) and on its page
+    (``TodoDetailForm``); ``item`` is the to-do or its list"""
 
     title = forms.CharField(label=_("title"), max_length=500)
     notes = forms.CharField(
-        label=_("notes"), required=False, widget=forms.Textarea(attrs={"rows": 3})
+        label=_("notes"),
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text=_("Markdown"),
+    )
+    due_on = forms.DateField(
+        label=_("due on"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
     )
     assignees = forms.ModelMultipleChoiceField(
         label=_("assignees"),
@@ -93,17 +94,23 @@ class TodoForm(RepeatForm):
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
-    due_on = forms.DateField(
-        label=_("due on"),
-        required=False,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
-    group = forms.IntegerField(required=False, widget=forms.HiddenInput)
-    field_order = ["title", "notes", "assignees", "due_on", "group"]
 
     def __init__(self, *args, item, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["assignees"].queryset = assignable_people(item)
+        self.fields["assignees"].queryset = ops.assignable_people(item)
+
+
+class TodoForm(TodoFieldsForm):
+    """Adding a to-do from the list: inline, with everything a to-do has
+    at first (specs/todos.md); without JavaScript a plain form"""
+
+    group = forms.IntegerField(required=False, widget=forms.HiddenInput)
+    field_order = ["title", "notes", "assignees", "due_on", "group"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["notes"].widget.attrs["rows"] = 3
+        self.fields["notes"].help_text = ""
 
 
 def wants_fragment(request):
@@ -225,18 +232,24 @@ def todolist(request, pk):
     )
 
 
-def _changeable_list(request, pk):
-    """Groups are changed like their list: clients only in lists they
-    created (``can_change()``)"""
+def changeable_list(request, pk):
+    """The list if the person may change it and its groups: clients only
+    lists they created (``can_change()``, 403); for the pages and the API"""
     item = item_for(request, pk, Kind.LIST)
     if not ops.can_change(request.user, item):
-        raise PermissionDenied
+        raise PermissionDenied(_("You can only change lists you created."))
     return item
+
+
+def changeable_group(request, pk):
+    """The group and its list, changed like the list"""
+    group = get_object_or_404(Group, pk=pk)
+    return group, changeable_list(request, group.todolist_id)
 
 
 @require_POST
 def group_create(request, pk):
-    item = _changeable_list(request, pk)
+    item = changeable_list(request, pk)
     if title := request.POST.get("title", "").strip():
         ops.create_group(todolist=item.todolist, title=title[:200])
     return redirect(item)
@@ -244,16 +257,14 @@ def group_create(request, pk):
 
 @require_POST
 def group_delete(request, pk):
-    group = get_object_or_404(Group, pk=pk)
-    item = _changeable_list(request, group.todolist_id)
+    group, item = changeable_group(request, pk)
     ops.delete_group(group)
     return redirect(item)
 
 
 @require_POST
 def group_rename(request, pk):
-    group = get_object_or_404(Group, pk=pk)
-    item = _changeable_list(request, group.todolist_id)
+    group, item = changeable_group(request, pk)
     if title := request.POST.get("title", "").strip():
         ops.rename_group(group, title=title[:200])
     return redirect(item)
@@ -262,8 +273,7 @@ def group_rename(request, pk):
 @require_POST
 def group_move(request, pk):
     """Dragging (quietly) or the up and down buttons (redirecting back)"""
-    group = get_object_or_404(Group, pk=pk)
-    item = _changeable_list(request, group.todolist_id)
+    group, item = changeable_group(request, pk)
     ops.move_group(group, index=_index(request.POST.get("index", 0)) or 0)
     if request.POST.get("quiet"):
         return HttpResponse(status=204)
@@ -356,25 +366,7 @@ def todo_toggle(request, pk):
     return redirect(next_url(request) or item.parent)
 
 
-class TodoDetailForm(RepeatForm):
-    title = forms.CharField(label=_("title"), max_length=500)
-    notes = forms.CharField(
-        label=_("notes"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 4}),
-        help_text=_("Markdown"),
-    )
-    due_on = forms.DateField(
-        label=_("due on"),
-        required=False,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
-    assignees = forms.ModelMultipleChoiceField(
-        label=_("assignees"),
-        queryset=User.objects.none(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-    )
+class TodoDetailForm(TodoFieldsForm):
     field_order = ["title", "notes", "due_on", "assignees"]
 
 
@@ -387,7 +379,6 @@ class CommentForm(Form):
 def todo(request, pk):
     item = item_for(request, pk, Kind.TODO)
     todo = item.todo
-    people = assignable_people(item)
     form = TodoDetailForm(
         request.POST if request.POST.get("form") == "todo" else None,
         initial={
@@ -399,8 +390,8 @@ def todo(request, pk):
             "recurrence_ends_on": todo.recurrence_ends_on,
             "recurrence_count": todo.recurrence_count,
         },
+        item=item,
     )
-    form.fields["assignees"].queryset = people
     mentions_url = reverse("mentionable", args=[item.pk])
     for field in ["title", "notes"]:
         form.fields[field].widget.attrs["data-mentions"] = mentions_url

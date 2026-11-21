@@ -18,6 +18,7 @@ from biwak.bookmarks.models import Bookmark
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import activity_column, overview
+from biwak.projects.views import project_for
 
 
 router = Router(tags=["projects"])
@@ -36,11 +37,6 @@ class ProjectOut(Schema):
     last_activity_at: dt.datetime | None
     archived_at: dt.datetime | None
     url: str
-
-
-def project_for(request, pk):
-    """The project if the person may open it, else 404, like the web"""
-    return get_object_or_404(Project.objects.accessible_to(request.user), pk=pk)
 
 
 def project_out(project, user):

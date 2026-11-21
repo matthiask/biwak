@@ -303,6 +303,15 @@ class VisibilityTest(TestCase):
         )
         self.assertEqual(ops.assign(todo, [self.cleo], actor=self.ada), [])
 
+    def test_only_members_are_assigned(self):
+        """The forms and the API offered members only, assign() took any
+        staff member of an all-access project (one rule now)"""
+        dan = person("Dan")
+        todolist = ops.create_list(project=self.project, title="L", creator=self.ada)
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        with self.assertRaises(ValueError):
+            ops.assign(todo, [dan], actor=self.ada)
+
 
 class SubscriptionTest(TestCase):
     def test_unsubscribing_sticks_for_automatic_subscriptions(self):

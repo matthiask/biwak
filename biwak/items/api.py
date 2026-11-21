@@ -26,7 +26,11 @@ from biwak.api_conventions import (
 )
 from biwak.items import due, operations as ops
 from biwak.items.models import Group, Item, Kind, Status as ItemStatus
-from biwak.items.views import assignable_people
+from biwak.items.views import (
+    changeable_group,
+    changeable_list,
+    item_for,
+)
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
 from biwak.reactions.operations import prefetch
@@ -34,17 +38,6 @@ from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
 router = Router(tags=["items"])
-
-
-def item_for(request, pk, kind=None):
-    """The item if the person may see it, else 404: the one check
-    (specs/access.md)"""
-    qs = Item.objects.visible_to(request.user).select_related(
-        "project", "parent", "creator"
-    )
-    if kind:
-        qs = qs.filter(kind=kind)
-    return get_object_or_404(qs, pk=pk)
 
 
 def bad_request(message):
@@ -132,9 +125,7 @@ class ListPatch(Schema):
 def list_update(request, list_id: int, data: ListPatch):
     """Changes the fields given; ``archived`` archives the list or brings it
     back. Clients only change lists they created."""
-    item = item_for(request, list_id, Kind.LIST)
-    if not ops.can_change(request.user, item):
-        raise HttpError(403, _("You can only change lists you created."))
+    item = changeable_list(request, list_id)
     given = data.model_fields_set
     changes = {
         f: getattr(data, f) for f in ["title", "description", "view"] if f in given
@@ -178,7 +169,7 @@ class GroupIn(Schema):
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
-    item = _changeable_list(request, list_id)
+    item = changeable_list(request, list_id)
     group = ops.create_group(todolist=item.todolist, title=data.title[:200])
     return Status(
         201, {"id": group.pk, "title": group.title, "position": group.position}
@@ -190,25 +181,10 @@ class GroupPatch(Schema):
     index: int | None = None
 
 
-def _changeable_list(request, list_id):
-    """Groups are changed like their list: clients only in lists they
-    created (403)"""
-    item = item_for(request, list_id, Kind.LIST)
-    if not ops.can_change(request.user, item):
-        raise HttpError(403, _("You can only change lists you created."))
-    return item
-
-
-def _group_for(request, group_id):
-    group = get_object_or_404(Group, pk=group_id)
-    _changeable_list(request, group.todolist_id)
-    return group
-
-
 @router.patch("groups/{group_id}/", response=GroupOut)
 def group_update(request, group_id: int, data: GroupPatch):
     """Renames the group and/or moves it (with its to-dos) to ``index``"""
-    group = _group_for(request, group_id)
+    group = changeable_group(request, group_id)[0]
     if data.title:
         ops.rename_group(group, title=data.title[:200])
     if data.index is not None:
@@ -220,7 +196,7 @@ def group_update(request, group_id: int, data: GroupPatch):
 @router.delete("groups/{group_id}/", response={204: None})
 def group_delete(request, group_id: int):
     """Removes the group; its to-dos stay, ungrouped at the end"""
-    ops.delete_group(_group_for(request, group_id))
+    ops.delete_group(changeable_group(request, group_id)[0])
     return Status(204, None)
 
 
@@ -338,7 +314,7 @@ def _assignees(item, ids):
     """People who can see the to-do, by ID; 400 for anybody else"""
     if ids is None:
         return None
-    people = list(assignable_people(item).filter(pk__in=ids))
+    people = list(ops.assignable_people(item).filter(pk__in=ids))
     if len(people) != len(set(ids)):
         bad_request(_("Only people who can see the to-do can be assigned."))
     return people
