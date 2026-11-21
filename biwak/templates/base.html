@@ -72,6 +72,13 @@
                 href="{{ feed_url }}"
               >{% translate "Activity" %}</a>
             </li>
+            {% url 'people' as people_url %}
+            <li class="nav-item">
+              <a
+                class="nav-link{% if request.path == people_url %} active{% endif %}"
+                href="{{ people_url }}"
+              >{% translate "People" %}</a>
+            </li>
             {% url 'bookmarks' as bookmarks_url %}
             <li class="nav-item">
               <a

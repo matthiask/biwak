@@ -93,6 +93,28 @@ point.
 - **The installation's own organization** is marked (`is_own`), set once
   by an admin.
 
+## The People page (decided 2026-11-21)
+
+- **`/people/`, "People" in the navigation** and "Go to people" in the
+  palette: the way into the organizations pages (which settles where
+  they're linked from).
+- **Order:** the installation's own organization first, then the other
+  organizations by name, each marked as a client or partner organization
+  (partner: it has staff), then people without an organization
+  (freelancers, individual clients). Headings link to the organization's
+  page for the installation's own staff.
+- **Each person:** name, address, role (admin, staff, partner, client),
+  a link to their feed where the viewer may open it; inactive people
+  quietly, marked "inactive", last in their group. The installation's
+  own staff get the existing "Change organization" modal (the own
+  organization for admins only, as everywhere) and links to the
+  organizations; no new operations.
+- **Clients and partners** see the people they share a project with
+  (the members rule), grouped the same way. Partners see addresses as on
+  a project's people page; clients only those of their own organization.
+- **API and CLI:** there's no `GET /api/v1/people/`, so nothing new
+  there (people come with projects' members and `biwak orgs show`).
+
 ## Starting a project with organizations
 
 - **The new-project form** asks for the organizations involved ("this
@@ -143,7 +165,8 @@ decides who sees all-access projects.
   empty field to the address's domain; people who exist keep their
   organization. Everybody can belong to one, staff too.
 - **Pages** (`/organizations/`, the installation's own staff only; linked
-  from a project's people page and the palette's "Go to organizations"):
+  from the People page, a project's people page and the palette's "Go to
+  organizations"):
   the list with people and domains, an organization's page with its
   people, and modals to create, edit (name and domains), merge ("Merge…":
   people and domains move, the other one is deleted), delete (only
