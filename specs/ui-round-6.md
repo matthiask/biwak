@@ -3,7 +3,8 @@
 Round 6 of `ui-feedback.md` (2026-11-21), the questions answered the same
 day.
 
-**Status:** spec (2026-11-21). Not built.
+**Status:** spec (2026-11-21). Not built. Details marked "proposed"
+are the spec writer's: confirm or change them before building.
 
 **Agent:** a cheaper model for part A; parts B and C touch who may do
 what and who's told: a cheaper model with the visibility and
@@ -26,7 +27,7 @@ notification tests reviewed, or a strong one.
   long options. Without JavaScript it stays the plain select.
 - The options say who someone is: "Ada Example · Example Client Ltd"
   (the organization, for staff "staff" or the own organization's name).
-- **Where:** "Add someone" first; then every select of people that can
+- **Where** (proposed): "Add someone" first; then every select of people that can
   get long: the assignee picker in forms (not the filter selects, which
   list a project's members), the person filter of the feed, "Add
   subscribers". Same widget, `data-combobox`, one script
@@ -65,7 +66,7 @@ shown nowhere as such.
   is saved or nothing, the form shows each row's error.
 - Same rules as `invite()` today: only admins invite staff and put
   people into the own organization; clients don't invite.
-- API and CLI: `POST /api/v1/invitations/` with a list of people and
+- API and CLI (proposed): `POST /api/v1/invitations/` with a list of people and
   projects; `biwak invite EMAIL… --project ID…`. The old single-project
   endpoints stay (they call the same operation).
 
@@ -79,10 +80,10 @@ the person, set by `invite()`).
   the person on the project's people page, on `/people/` and their
   person page, with who invited them and when.
 - **Resend** (staff): sends the invitation mail again, naming the
-  projects they're in now; "Sent again." Not more than once a minute.
+  projects they're in now; "Sent again." Not more than once a minute (proposed).
 - **Filter on `/people/`:** "Invited" lists everybody who hasn't signed
   in yet, oldest invitation first.
-- **Withdraw** (the inviter or an admin, only while they haven't signed
+- **Withdraw** (proposed details: the inviter or an admin, only while they haven't signed
   in): removes the person's memberships, and the account itself if
   nothing else refers to it (no comments, no assignments by others, no
   other projects); else only from these projects, with the question
@@ -111,7 +112,7 @@ I will be notified").
   to everybody; "Only what concerns me" ("Only when tagged") doesn't
   subscribe them then, only being mentioned, assigned or their own
   things do; "Nothing" subscribes them only when they act themselves
-  (comment, are assigned). That replaces "the level holds the mails
+  (comment, are assigned) (proposed). That replaces "the level holds the mails
   back" in `notifications.md`, which changes with this part.
 - Mails, digests and the lantern follow the subscriptions; mentions
   still notify on every level except "Nothing" (as today).

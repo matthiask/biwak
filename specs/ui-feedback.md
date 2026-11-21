@@ -60,6 +60,8 @@ spec: `ui-round-5.md`.
 
 ## round 6
 
+Spec: `ui-round-6.md`.
+
 - "add someone" on the people page of a project: the list can get really long really quickly. we need an autocomplete widget here, i think the best candidate is in workbench (good to copy since it's my code even though gpl)
 - i'd expect a invite flow on the people page where i can invite (multiple) people, assign them to organizations, send out the mails and add them to projects directly (all to the same set of projects, if the projects aren't the same i'll start another round of invites). are we seeing invitations anywhere?
 - On a to do item, I'm confused by notifications vs. subscribers. When I'm subscribing, I get notifications. The notification setting is important on projects or list, but on a single issue, when I'm a subscriber, I will be notified.
