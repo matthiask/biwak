@@ -6,7 +6,7 @@ import zoneinfo
 from unittest import mock
 
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -340,8 +340,9 @@ class ReadingTest(LanternTestCase):
             user=self.bob, event__data__comment=comment.pk
         )
         url = reverse("lantern_open", args=[notification.pk])
-        self.assertIn(f'href="{url}"', menu)
-        response = self.client.get(url)
+        self.assertIn(f'<form method="post" action="{url}"', menu)
+        self.assertIn("csrfmiddlewaretoken", menu)
+        response = self.client.post(url)
         self.assertRedirects(
             response,
             f"{self.todo.get_absolute_url()}#comment-{comment.pk}",
@@ -349,8 +350,23 @@ class ReadingTest(LanternTestCase):
         )
         self.assertEqual(lantern.unread_count(self.bob), 1)
         self.assertIn(
-            f'href="{url}"', self.client.get(reverse("lantern")).content.decode()
+            f'action="{url}"', self.client.get(reverse("lantern")).content.decode()
         )
+
+    def test_following_is_a_post_with_a_csrf_token(self):
+        """Another site can't read somebody's notifications: GET answers
+        405 and reads nothing, a POST without the token is refused"""
+        self.comment(self.todo, "One")
+        notification = Notification.objects.get(
+            user=self.bob, event__data__has_key="comment"
+        )
+        url = reverse("lantern_open", args=[notification.pk])
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        checking = Client(enforce_csrf_checks=True)
+        checking.force_login(self.bob)
+        self.assertEqual(checking.post(url).status_code, 403)
+        self.assertEqual(lantern.unread_count(self.bob), 1)
 
     def test_following_needs_the_notification_and_its_item(self):
         self.comment(self.todo, "One")
@@ -358,11 +374,11 @@ class ReadingTest(LanternTestCase):
         url = reverse("lantern_open", args=[notification.pk])
         # Somebody else's
         self.client.force_login(self.bob)
-        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url).status_code, 404)
         # Of an item not seen anymore
         self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
         self.client.force_login(self.cleo)
-        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url).status_code, 404)
         self.assertIsNone(Notification.objects.get(user=self.cleo).read_at)
 
     def test_marking(self):
@@ -593,10 +609,21 @@ class PingTest(LanternTestCase):
 class FaviconTest(LanternTestCase):
     def test_the_setting(self):
         self.client.force_login(self.bob)
+        # On by default
+        self.assertTrue(self.bob.lantern_in_favicon)
         page = self.client.get(reverse("projects"))
-        self.assertNotContains(page, "data-lantern-favicon")
+        self.assertContains(page, "data-lantern-favicon")
         self.assertContains(
             self.client.get(reverse("settings")), 'name="lantern_in_favicon"'
+        )
+        self.client.post(
+            reverse("settings_notifications"),
+            {"notification_level": "everything", "mail_delivery": "each"},
+        )
+        self.bob.refresh_from_db()
+        self.assertFalse(self.bob.lantern_in_favicon)
+        self.assertNotContains(
+            self.client.get(reverse("projects")), "data-lantern-favicon"
         )
         self.client.post(
             reverse("settings_notifications"),
@@ -680,3 +707,99 @@ class APITest(LanternTestCase):
             "post", self.cleo, "lantern/read/", {"item_id": self.secret.pk}
         )
         self.assertEqual(response.status_code, 404)
+
+
+class AssignedAndMentionedTest(LanternTestCase):
+    """One notification for a change which assigns and mentions the same
+    person: the assignment's (decided 2026-11-21)"""
+
+    def told(self, user):
+        return list(
+            Notification.objects
+            .filter(user=user, event__item=self.item)
+            .order_by("pk")
+            .values_list("event__action", flat=True)
+        )
+
+    def create(self, **kwargs):
+        self.item = self.act(
+            lambda: ops.create_todo(
+                todolist=self.shared, title="Pack", creator=self.ada, **kwargs
+            )
+        )
+
+    def test_create_with_both(self):
+        self.create(assignees=[self.bob], notes=f"For {mentions.syntax(self.bob)}")
+        self.assertEqual(self.told(self.bob), ["assigned"])
+        event = Notification.objects.get(user=self.bob, event__item=self.item).event
+        self.assertEqual(event.data["mentioned"], [self.bob.pk])
+        created = Event.objects.get(item=self.item, action="created")
+        self.assertNotIn("mentioned", created.data)
+
+    def test_edit_with_both(self):
+        self.act(
+            lambda: ops.update_todo(
+                self.todo,
+                actor=self.ada,
+                notes=f"For {mentions.syntax(self.bob)}",
+                assignees=[self.bob],
+            )
+        )
+        self.item = self.todo
+        # Bob followed the to-do already, and was told of its creation (a
+        # fixture): only the new ones count
+        Notification.objects.filter(user=self.bob, event__action="created").delete()
+        self.assertEqual(self.told(self.bob), ["assigned"])
+
+    def test_only_a_mention(self):
+        self.create(notes=f"For {mentions.syntax(self.bob)}")
+        self.assertEqual(self.told(self.bob), ["created"])
+        event = Notification.objects.get(user=self.bob, event__item=self.item).event
+        self.assertEqual(event.data["mentioned"], [self.bob.pk])
+
+    def test_only_an_assignment(self):
+        self.create(assignees=[self.bob])
+        self.assertEqual(self.told(self.bob), ["created", "assigned"])
+        assigned = Event.objects.get(item=self.item, action="assigned")
+        self.assertNotIn("mentioned", assigned.data)
+
+    def test_another_mentioned_and_another_assigned(self):
+        self.create(assignees=[self.bob], notes=f"For {mentions.syntax(self.ada)}")
+        self.create(
+            assignees=[self.bob],
+            notes=f"For {mentions.syntax(self.bob)}",
+        )
+        self.assertEqual(self.told(self.bob), ["assigned"])
+
+    def test_a_later_mention_notifies(self):
+        self.create(assignees=[self.bob])
+        self.act(
+            lambda: ops.add_comment(
+                self.item, author=self.ada, content=mentions.syntax(self.bob)
+            )
+        )
+        self.assertEqual(self.told(self.bob), ["created", "assigned", "commented"])
+        self.act(
+            lambda: ops.update_todo(
+                self.item, actor=self.ada, notes=mentions.syntax(self.bob)
+            )
+        )
+        self.assertEqual(self.told(self.bob)[-1], "edited")
+
+    def test_wording_in_the_lantern_and_the_mail(self):
+        self.create(assignees=[self.bob], notes=f"For {mentions.syntax(self.bob)}")
+        self.client.force_login(self.bob)
+        page = self.client.get(reverse("lantern")).content.decode()
+        self.assertIn("Ada Example assigned you (and mentioned you).", page)
+        self.assertNotIn("You were mentioned.", page)
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+        message = next(m for m in mail.outbox if m.to == [self.bob.email])
+        self.assertIn("Ada Example assigned you (and mentioned you).", message.body)
+        self.assertEqual(message.body.count("mentioned you"), 1)
+        # Others are told as before
+        self.create(assignees=[self.bob, self.cleo])
+        self.client.force_login(self.bob)
+        page = self.client.get(reverse("lantern")).content.decode()
+        self.assertIn("assigned you, Cleo Example.", page)

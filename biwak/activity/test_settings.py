@@ -269,7 +269,7 @@ class SettingsAPITest(SettingsBase):
                     {
                         "level": "everything",
                         "delivery": "each",
-                        "lantern_in_favicon": False,
+                        "lantern_in_favicon": True,
                     },
                 )
                 response = self.call(

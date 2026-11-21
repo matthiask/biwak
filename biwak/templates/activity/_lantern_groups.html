@@ -7,11 +7,14 @@
 {% for item, entries in groups %}
   <section class="wb-lantern-item{% if item.has_unread %} is-unread{% endif %}" data-lantern-item="{{ item.pk }}">
     <div class="d-flex align-items-start gap-2">
-      <a class="wb-lantern-title flex-grow-1" href="{{ entries.0.url }}">
-        {% icon item.kind_icon %}
-        {{ item|item_title }}
-        {% client_badge item %}
-      </a>
+      <form method="post" action="{{ entries.0.url }}" class="flex-grow-1" data-lantern-open>
+        {% csrf_token %}
+        <button type="submit" class="wb-lantern-link wb-lantern-title">
+          {% icon item.kind_icon %}
+          {{ item|item_title }}
+          {% client_badge item %}
+        </button>
+      </form>
       <form method="post" action="{% url 'lantern_bookmark' %}">
         {% csrf_token %}
         <input type="hidden" name="item" value="{{ item.pk }}">
@@ -51,13 +54,16 @@
     <ul class="list-unstyled mb-0">
       {% for notification in entries %}
         <li class="wb-lantern-entry{% if not notification.read_at %} is-unread{% endif %}">
-          <a href="{{ notification.url }}" class="text-reset text-decoration-none">
-            {{ notification.line }}
-            {% if notification.mentioned %}<strong>{% translate "You were mentioned." %}</strong>{% endif %}
-            {% if notification.event.excerpt %}<span
-                class="wb-excerpt"
-              >{{ notification.event.excerpt }}</span>{% endif %}
-          </a>
+          <form method="post" action="{{ notification.url }}" class="d-inline" data-lantern-open>
+            {% csrf_token %}
+            <button type="submit" class="wb-lantern-link">
+              {{ notification.line }}
+              {% if notification.mentioned %}<strong>{% translate "You were mentioned." %}</strong>{% endif %}
+              {% if notification.event.excerpt %}<span
+                  class="wb-excerpt"
+                >{{ notification.event.excerpt }}</span>{% endif %}
+            </button>
+          </form>
           <time
             class="small text-body-secondary"
             datetime="{{ notification.created_at|date:'c' }}"

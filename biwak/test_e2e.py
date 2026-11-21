@@ -1170,11 +1170,13 @@ class LiveTest(E2ETestCase):
 
     def test_the_favicon_dot(self):
         icon = "document.querySelector('link[rel=icon]').href"
+        User.objects.filter(pk=self.ada.pk).update(lantern_in_favicon=False)
         bob = self.open(self.bob, self.todo)
         ada = self.open(self.ada, reverse("projects"), page=self.page)
         self.comment(bob, "Without the setting")
         expect(ada.locator("[data-lantern-count]")).to_have_text("1")
         self.assertTrue(ada.evaluate(icon).endswith("/favicon.svg"))
+        # On by default
         User.objects.filter(pk=self.ada.pk).update(lantern_in_favicon=True)
         ada.reload()
         ada.wait_for_function(f"{icon}.startsWith('data:image/png')")

@@ -133,9 +133,10 @@ class User(AbstractBaseUser):
         default=MailDelivery.EACH,
     )
     # A dot on the tab's icon while there are unread notifications
-    # (specs/lantern.md)
+    # (specs/lantern.md),
+    # on by default (decided 2026-11-21)
     lantern_in_favicon = models.BooleanField(
-        _("unread notifications on the tab's icon"), default=False
+        _("unread notifications on the tab's icon"), default=True
     )
 
     # The offer to add a passkey after logging in by code (specs/access.md)

@@ -100,7 +100,8 @@ records, levels, `send_mails`), reactions.
 - **The favicon** (decided 2026-11-21, configurable): with the setting
   on, the browser tab's icon shows a dot when there are unread
   notifications, updated live; the setting (`User.lantern_in_favicon`,
-  off by default) sits in the notifications section of the settings
+  on by default, decided 2026-11-21: nobody has chosen yet, no data
+  migration) sits in the notifications section of the settings
   page. Drawn on a canvas from the normal favicon; without the setting
   or without JavaScript the icon stays as it is.
 
@@ -267,7 +268,11 @@ setup as `collaboration.md`).
 - **Reading through a form button:** following an entry posts a small
   form styled as a link (it marks read and redirects to the item), so
   another site can't mark someone's notifications read by embedding the
-  link; it still works without JavaScript.
+  link; it still works without JavaScript. *Built:* `lantern_open` is
+  `@require_POST`: a GET answers 405 and reads nothing (a redirect without
+  reading would only hide the link's old meaning); the forms carry the
+  CSRF token, `frontend/lantern.js` lets them post as they are instead of
+  fetching them.
 - **Following one entry reads the whole item** (the menu groups by item).
 - **An edit merged into a notification marked unread** stays unmailed; a
   new event is mailed as usual.
@@ -275,6 +280,16 @@ setup as `collaboration.md`).
   assignment, saying "assigned you (and mentioned you)"; the mention adds
   nothing on top of being assigned. Mentions in a later edit or a
   comment notify as usual. Basecamp sends two, which is annoying.
+  *Built:* `items.operations.assign(mentioned=(event, people))`, called by
+  `create_todo()` and `update_todo()` with what `mentions.update()`
+  returned: the assignment event gets `mentioned` for those both assigned
+  and mentioned, and the `created`/`edited` event moves them from its
+  `mentioned` to `assigned`, which `notify.candidates()` leaves out (a
+  merged edit mentioning them again still tells them). Wording in
+  `mails.describe()`: "Ada assigned you (and mentioned you)."; the lantern
+  doesn't add "You were mentioned." to it. Only the mention is
+  deduplicated: assigned-only people still get the `created` and the
+  `assigned` notifications as before.
 
 ## Questions (built the way described meanwhile)
 
