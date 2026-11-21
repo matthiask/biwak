@@ -5,6 +5,7 @@ from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count, Prefetch
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _, gettext_lazy
@@ -29,10 +30,13 @@ def organization_for(request, pk):
 
 def organization_list(request):
     managing(request)
-    organizations = Organization.objects.annotate(
-        people_count=Count("people")
-    ).prefetch_related(
-        Prefetch("people", queryset=User.objects.order_by("full_name", "email"))
+    organizations = (
+        Organization.objects
+        .annotate(people_count=Count("people"))
+        .order_by(Lower("name"))
+        .prefetch_related(
+            Prefetch("people", queryset=User.objects.order_by("full_name", "email"))
+        )
     )
     return render(
         request,

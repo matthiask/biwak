@@ -288,11 +288,12 @@ def members(project, as_json):
     data = request("GET", f"projects/{project}/members/")
     if as_json:
         return echo_json(data)
-    t = table("ID", "Name", "Email", "Notified", "")
+    t = table("ID", "Name", "Organization", "Email", "Notified", "")
     for person in data:
         t.add_row(
             str(person["id"]),
             person["name"],
+            person.get("organization") or "",
             person["email"] or "",
             notify_word(person),
             "client" if person["is_client"] else "",
@@ -329,28 +330,167 @@ def member_add(project, person, only_tagged, as_json):
 @click.argument("project", type=int)
 @click.argument("email")
 @click.option("--name", default="", help="Their name, for new people.")
-@click.option("--organization", default="", help="A client's organization.")
+@click.option(
+    "--organization",
+    default="",
+    help="New people's organization, by name (see biwak orgs); default: the"
+    " one of the address's domain.",
+)
+@click.option("--organization-id", type=int, help="The same by ID.")
 @click.option("--staff", is_flag=True, help="Staff instead of a client (admins).")
 @only_tagged_option
 @json_option
-def member_invite(project, email, name, organization, staff, only_tagged, as_json):
+def member_invite(
+    project, email, name, organization, organization_id, staff, only_tagged, as_json
+):
     """Add the person with this address to PROJECT, creating them (as a
     client) and mailing them how to log in if they're new"""
-    data = request(
-        "POST",
-        f"projects/{project}/members/invite/",
-        json={
-            "email": email,
-            "name": name,
-            "organization": organization,
-            "is_client": not staff,
-            "notify": "tagged" if only_tagged else "default",
-        },
-    )
+    payload = {
+        "email": email,
+        "name": name,
+        "organization": organization,
+        "is_client": not staff,
+        "notify": "tagged" if only_tagged else "default",
+    }
+    if organization_id is not None:
+        payload["organization_id"] = organization_id
+    data = request("POST", f"projects/{project}/members/invite/", json=payload)
     if as_json:
         return echo_json(data)
     click.echo("Invited: ", nl=False)
     show_member(data)
+    return None
+
+
+@cli.group(invoke_without_command=True)
+@json_option
+@click.pass_context
+def orgs(ctx, as_json):
+    """The organizations people belong to (the installation's own staff):
+    without a command, all of them"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    data = request("GET", "organizations/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Organization", "People", "Domains", "")
+    for org in data:
+        t.add_row(
+            str(org["id"]),
+            org["name"],
+            str(org["people_count"]),
+            ", ".join(org["domains"]),
+            "own" if org["is_own"] else "",
+        )
+    console.print(t)
+    return None
+
+
+def show_org(data):
+    own = ", the installation's own" if data["is_own"] else ""
+    click.echo(f"{data['name']} ({data['id']}{own})")
+    if data["domains"]:
+        click.echo(f"Domains: {', '.join(data['domains'])}")
+    for person in data.get("people", []):
+        kind = "client" if person["is_client"] else "staff"
+        click.echo(f"  {person['name']} ({person['id']}, {kind})")
+
+
+@orgs.command("show")
+@click.argument("org", type=int)
+@json_option
+def orgs_show(org, as_json):
+    """The organization with ID ORG, its domains and people"""
+    data = request("GET", f"organizations/{org}/")
+    if as_json:
+        return echo_json(data)
+    show_org(data)
+    return None
+
+
+@orgs.command("add")
+@click.argument("name")
+@click.option(
+    "--domain", "domains", multiple=True, help="e.g. example.org, repeatable."
+)
+@json_option
+def orgs_add(name, domains, as_json):
+    """Create an organization"""
+    data = request(
+        "POST", "organizations/", json={"name": name, "domains": list(domains)}
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo("Created: ", nl=False)
+    show_org(data)
+    return None
+
+
+@orgs.command("edit")
+@click.argument("org", type=int)
+@click.option("--name", help="The new name, for everybody.")
+@click.option(
+    "--domain",
+    "domains",
+    multiple=True,
+    help="Replaces the domains, repeatable.",
+)
+@click.option("--no-domains", is_flag=True, help="Remove all domains.")
+@json_option
+def orgs_edit(org, name, domains, no_domains, as_json):
+    """Rename the organization with ID ORG or replace its domains"""
+    payload = {}
+    if name is not None:
+        payload["name"] = name
+    if domains or no_domains:
+        payload["domains"] = list(domains)
+    data = request("PATCH", f"organizations/{org}/", json=payload)
+    if as_json:
+        return echo_json(data)
+    show_org(data)
+    return None
+
+
+@orgs.command("merge")
+@click.argument("org", type=int)
+@click.argument("into", type=int)
+@json_option
+def orgs_merge(org, into, as_json):
+    """Move the people and domains of ORG into INTO and delete ORG (the
+    typo case)"""
+    data = request("POST", f"organizations/{org}/merge/", json={"into_id": into})
+    if as_json:
+        return echo_json(data)
+    click.echo("Merged into ", nl=False)
+    show_org(data)
+    return None
+
+
+@orgs.command("delete")
+@click.argument("org", type=int)
+@json_option
+def orgs_delete(org, as_json):
+    """Delete the organization with ID ORG, if nobody belongs to it"""
+    data = request("DELETE", f"organizations/{org}/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Deleted {data['name']} ({data['id']}).")
+    return None
+
+
+@orgs.command("move")
+@click.argument("person", type=int)
+@click.argument("org", type=int, required=False)
+@json_option
+def orgs_move(person, org, as_json):
+    """Move the person with ID PERSON to the organization ORG (none without
+    it)"""
+    data = request(
+        "PUT", f"people/{person}/organization/", json={"organization_id": org}
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"{data['name']} ({data['id']}): {data['organization'] or 'none'}")
     return None
 
 

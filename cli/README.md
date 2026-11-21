@@ -24,7 +24,9 @@ biwak checkin add PROJECT "Read any good books?" --schedule weekly --time 09:00
 biwak notifications --level concerns_me --delivery digest
 biwak members PROJECT
 biwak member add PROJECT PERSON --only-tagged      # notified only when tagged
-biwak member invite PROJECT ada@example.org --name "Ada"
+biwak member invite PROJECT ada@example.org --name "Ada" --organization "Example Ltd"
+biwak orgs                                  # organizations (staff); show, add, edit, merge, delete, move
+biwak orgs merge 12 7                       # people and domains of 12 into 7
 biwak member remove PROJECT PERSON          # staff anybody, everybody themselves
 biwak messages PROJECT
 biwak message post PROJECT "Kick-off" "We start Monday" --notify nobody   # default: everybody

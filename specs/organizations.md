@@ -127,3 +127,14 @@ decides who sees all-access projects.
   `modal_form.html` (block `fields`) for the rows.
 - **Display:** "Ada, Example Ltd" for clients and partners (the current
   name), also in the `@` list.
+- **API and CLI** (`biwak/organizations/api.py`, CLI 0.25.0): `GET|POST
+  /api/v1/organizations/`, `GET|PATCH|DELETE /api/v1/organizations/{id}/`
+  (with its people), `POST /api/v1/organizations/{id}/merge/`
+  (`into_id`), `PUT /api/v1/people/{id}/organization/`
+  (`organization_id`, null for none), the installation's own staff only,
+  with the pages' rules; people carry `organization` (the name) and
+  `organization_id`; invitations take `organization_id` or an existing
+  `organization` by name (400 for an unknown one: create it first), else
+  the address's domain decides. `biwak orgs [show|add|edit|merge|delete|move]`,
+  `biwak member invite … --organization NAME | --organization-id ID`,
+  `biwak members` shows the organization.

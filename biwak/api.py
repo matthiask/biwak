@@ -15,6 +15,7 @@ from biwak.bookmarks.api import router as bookmarks_router
 from biwak.checkins.api import router as checkins_router
 from biwak.files.api import router as files_router
 from biwak.items.api import router as items_router
+from biwak.organizations.api import router as organizations_router
 from biwak.projects.api import router as projects_router
 from biwak.reactions.api import router as reactions_router
 from biwak.search.api import router as search_router
@@ -51,6 +52,7 @@ api.add_exception_handler(BadRequest, _shared_check(400))
 
 api.add_router("/", accounts_router)
 api.add_router("/", projects_router)
+api.add_router("/", organizations_router)
 api.add_router("/", items_router)
 api.add_router("/", files_router)
 api.add_router("/", activity_router)
