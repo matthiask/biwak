@@ -156,6 +156,14 @@ class PresetsTest(SimpleTestCase):
                 self.assertEqual(describe(rule), text)
         self.assertEqual(describe(""), "")
 
+    def test_describe_working_day_positions(self):
+        self.assertEqual(
+            describe("FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1"),
+            "the last working day of every month",
+        )
+        rule = "FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-2"
+        self.assertEqual(describe(rule), f"custom schedule ({rule})")
+
 
 def all_widget_fields():
     """Every rule the widget can build, as its fields"""
