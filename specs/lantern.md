@@ -2,400 +2,191 @@
 
 An in-app inbox for notifications, the **lantern** (named 2026-11-21,
 after Biwak's camp theme; avoiding "Hey!", the name of Basecamp's mail
-product), and pages
-that update while they're open: comments, reactions and changes by others
-appear without reloading.
+product; its icon is a torch with its light, `frontend/styles/icons.css`),
+and pages that update while they're open.
 
-**Status:** built and merged (2026-11-21, with `collaboration`; the follow-ups too): the
-lantern (`biwak/activity/lantern.py`, the menu, `/lantern/`, reading,
-bookmarking, mail delivery "none", the favicon dot, `GET /api/v1/lantern/`,
-`POST /api/v1/lantern/read/`, `biwak lantern`, CLI 0.21.0) and live
-updates (`biwak/live/`, `frontend/live.js`, `frontend/lantern.js`). How
-it was built and what was decided on the way: "Built" below; open
-questions at the end.
-
-**Agent:** a strong model: live updates send changes to many people at
-once, and each must only ever get what they may see.
-
-**Depends on:** `collaboration.md` merged (the ASGI server, Channels and
-the Redis channel layer), notifications stage 1 (the `Notification`
-records, levels, `send_mails`), reactions.
-
-**Touches:**
-- `biwak/activity/` (reading, the lantern views, API, mails skipping what
-  was read);
-- a new `biwak/live/` (the websocket consumer and the "changed" signals);
-- `base.html` (the lantern menu);
-- the item, list and board templates (live regions);
-- `frontend/lantern.js` and `frontend/live.js`;
-- the settings page (mail delivery "none");
-- the CLI.
+**Status:** built (2026-11-21). The lantern: `biwak/activity/lantern.py`,
+the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
+`/lantern/count/`), `frontend/lantern.js`, `GET /api/v1/lantern/`,
+`POST /api/v1/lantern/read/`, `biwak lantern`. Live updates:
+`biwak/live/` (`consumers.py`, `announce.py`), `frontend/live.js`.
 
 ## Decided (2026-11-21)
 
-- The lantern shows the same notifications as the mails, with the same levels:
-  whatever you'd be told about. Mail becomes a delivery choice: **each**
-  (as today), **digest**, or **none**.
-- **Read in the lantern, not mailed:** a notification read in the app before its
-  mail goes (the merge window of about 2 minutes, or before the digest)
-  is left out of the mail, and a mail with nothing left isn't sent.
+- The lantern shows the same notifications as the mails, with the same
+  levels: whatever you'd be told about. Mail is a delivery choice:
+  **each**, **digest** or **none** ("No mails", `MailDelivery.NONE`).
+- **Read in the lantern, not mailed:** a notification read before its
+  mail goes (the 2-minute merge window, or before the digest) is left
+  out of it; a mail or digest with nothing left isn't sent.
 - **Live** on item pages (to-dos, messages, docs, files, check-in
-  questions) and on lists and the board, reactions included. Not the
-  feed or the project page.
-- **In place, quietly marked:** what's new slides in with a short
-  highlight; nothing moves what you're reading or typing in.
+  questions), lists and the board, reactions included. Not the feed or
+  the project page. What's new slides in quietly; nothing moves what
+  you're reading or typing in.
 - **Browser notifications** (Web Push) later, not now.
-
-## Reading by acting (decided 2026-11-21, built 2026-11-21 on `reading`)
-
-**Status:** built. `read_by_acting(actor, *items)` in
-`biwak/activity/operations.py` calls `lantern.read()` (the live ping goes
-out after the commit, as `read()` always did) and does nothing inside
-`importing()`, the one place where operations run as somebody who isn't
-acting (the importer's `reopen()` now runs in it too). Called by
-`complete()`, `reopen()` (only when they change something), `update_todo()`
-(only when a field, the title or the assignees actually changed), `tick()` (to-dos, messages, files, check-in
-answers by way of their update operations; docs and comments directly),
-`add_comment()` (pages, the API and mail replies all end there),
-`add_reaction()` (when added: removing a reaction, or adding one that's
-there already, reads nothing; `toggle_reaction()` goes through it, on the
-item or a comment) and the check-in's `answer()`. Tests:
-`biwak/activity/test_reading.py`, the mail reply in
-`biwak/inbound/test_replies.py`.
-
-Decisions on the way:
-
-- Editing reads for every kind, like changing a to-do's fields (decided
-  2026-11-21, "the same for every kind"): `update_message()`,
-  `update_upload()` and `replace_upload()`, `update_doc()`,
-  `update_list()`, `update_answer()` and `update_question()` call
-  `read_by_acting()` where they record an edit, so only when something
-  actually changed (saving the same values reads nothing). Not pausing or
-  resuming a question, pinning a message, changing a project (not item
-  edits).
-- Docs: `_save()`, which every doc save goes through (the API's
-  `update_doc()`, restoring a version, and the live editor's `save_live()`
-  after a pause or when the editor leaves, which has no actor), reads for
-  each author of the saved change, when the text or title changed: the
-  people who typed it edited the doc. Typing alone reads nothing until it
-  is saved (a few seconds); saving a version of an unchanged text reads
-  nothing.
-- Answering a check-in question reads the notifications of the question
-  and of the person's own answer item (the answers are items of their
-  own, with their own comments and edits); other people's answers to the
-  same question stay unread (decided 2026-11-21).
-- Reacting again with a reaction that's there already is no action: it
-  reads nothing (decided 2026-11-21).
-- Mails: nothing to add, `send_mails` skips them like any read ones
-  (tested).
-
-Acting on an item that's in the lantern reads its notifications: having
-done something with it means having dealt with it, so nobody ticks the
-same thing off twice (in the lantern and wherever they acted, the
-dashboard included, `dashboard.md`). Only strong signals count: **when in
-reasonable doubt, it stays unread.**
-
-- **Strong, reads:** what the person does to the item itself:
-  completing or reopening a to-do, changing its fields (title, notes,
-  assignees, due date, repeat), ticking a checklist item in it,
-  commenting on it (on the page, by mail reply, through the API),
-  reacting to it or to one of its comments, answering a check-in
-  question. A direct mention among the notifications is read too: we
-  can't know whether it was noticed, but we can't know that when it's
-  opened from the lantern either.
-- **Not a signal, stays unread:** having the item open (the window may
-  be in the background), scrolling, a live update arriving, opening it
-  from the feed, a list, a mail or a search. Also bookmarking (that's
-  "later", the opposite of dealt with), subscribing or unsubscribing,
-  moving it, and anything done to the list or project around it.
-- **For the person acting only;** the others' notifications stay as they
-  are. And only that item's notifications (with its comments'), like
-  opening its lantern entry.
-- **The same for every kind of item** with these actions (to-dos first;
-  messages, docs, files and check-ins have comments and reactions too),
-  so the rule doesn't depend on the kind.
-- **Built in the operations** (`AGENTS.md`: every change goes through
-  them): `complete()`, `reopen()`, `update_todo()`, `tick()`,
-  `add_comment()`, `toggle_reaction()` and the check-in answer call
-  `lantern.read(actor, item=item)` after the change, so pages, the API,
-  the CLI and mail replies behave alike. Not when the actor isn't the
-  person (the importer, `fairy_tasks`, the next recurring to-do). The
-  live dot follows (`read()` tells the person's tabs).
-- **Mails:** notifications read this way are left out of mails and
-  digests like any read ones.
-- This replaces "opening the item some other way reads nothing" only
-  for these actions: opening still reads nothing.
 
 ## The lantern
 
-- **The menu:** a lantern icon (`bi-lamp` or a lantern of our own) in the navigation with the number of unread
-  notifications, shown as a small red dot like the one on the tab's icon
-  (on a phone the menu spans the screen below the bar),
-  without a number (decided 2026-11-21; the number is in the button's
-  tooltip and read to screen readers). Opening it shows them grouped by item, newest first:
-  - the item's title, kind icon and project (no client badge: calmer,
-    and the item's page shows it, decided 2026-11-21);
-  - what happened ("Ada commented", "Bob completed it", "Cleo reacted
-    👍", "You were mentioned"), with the excerpt where there is one
-    (`|excerpt`);
-  - when.
-
-  Unread ones on top, then the latest 30 read ones. "Mark all as read".
-  A link to the whole list.
-- **The page** `/lantern/`: the same, paginated like the feed, with filters
+- **The menu** (`base.html`, fetched from `/lantern/menu/` when opened;
+  `frontend/lantern.js` fetches the count on every page and when told):
+  bookmarked items first, then the unread entries (at most 100, the page
+  has all), then the latest 30 read ones, newest first, grouped by item
+  ("Mark all as read", a link to the page). No "Read" and "Unread"
+  headings; one divider between groups (the items' borders, no `<hr>`).
+  `min(34rem, 100vw - 2rem)` wide, placed by `menus.js`; on a phone it
+  spans the screen below the bar. Without JavaScript the button links to
+  `/lantern/`.
+- **An entry:** the item's title, kind icon and project (no client badge:
+  calmer, and the item's page shows it, decided 2026-11-21); what
+  happened, in the mails' words (`mails.describe()`), with the excerpt
+  where there is one; when. An item with unread notifications has a red
+  dot before its title (`--wb-lantern-dot`, `.wb-lantern-unread`); read
+  ones are quiet (secondary color, not bold), in the menu and on the
+  page.
+- **The count is the number of items** with unread notifications, not
+  of notifications (decided 2026-11-21: the menu groups by item): the
+  button shows a small red dot without a number, the number is in its
+  tooltip and screen-reader text and `/lantern/count/`
+  (`unread_count()`; `unread_counts()` gives both). The API answers
+  `unread` (notifications) and `unread_items` next to `results`;
+  `biwak lantern` prints one row per item ("(+N)" for more), `--json`
+  the entries. Digests are unaffected.
+- **A batch of uploaded files is one entry** (`entry_key()`, `Batch`;
+  `files.md`, "Uploading files"): its folder, "Ada uploaded 5 files to
+  Minutes.", the files linked; counted once; following it, "Mark as
+  read" and "Mark as unread" act on all its files. No bookmark button:
+  bookmarks are per item.
+- **The page** `/lantern/`: the same, paginated like the feed, filters
   "unread" and "mentions only".
-- **Reading** only through the lantern (decided 2026-11-21, replacing
-  "opening an item marks its notifications read"):
-  - clicking an entry in the menu or on the page marks the item's
-    notifications read (those of its comments too) and opens the item, at
-    the comment where it applies;
-  - "mark as read" and "mark all as read";
-  - opening the item some other way (the feed, a list, a mail's link, a
-    live update) reads nothing;
-  - Home's rows with unread notifications (`dashboard.md`) are the
-    lantern's entries on another page: they link through the lantern and
-    read the same way (the state is the lantern's, on the server,
-    decided 2026-11-21);
-  - acting on the item reads it ("Reading by acting" above);
-  - "mark as unread" per item.
-- **The model:** `Notification.read_at` (null: unread). Mail delivery
-  gains `none`. `send_mails` leaves out notifications read before
-  sending, and deletes nothing it would need for merging.
-- **Visibility:** `_deliverable()`'s rules apply when listing, not only
-  when mailing. A notification about something the person can't see
-  any more isn't shown; it stays in the database, unseen.
-- **API and CLI:**
-  - `GET /api/v1/lantern/` (cursor-paginated, `unread`, `mentions`);
-  - `POST /api/v1/lantern/read/` (all, or by item);
-  - `biwak lantern [--unread] [--read ITEM|--all]`.
+- **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", which
+  stays the board's): an entry's item can be bookmarked (the existing
+  bookmarks, `lantern.bookmark()`, `unbookmark()`); bookmarked items with
+  notifications are in "Bookmarked" at the top of the menu and the page,
+  with their latest notification read or not, and not in the other
+  sections. A bookmark made on the item's page counts too. The API's
+  entries say `bookmarked`.
+- **The favicon** (decided 2026-11-21): with `User.lantern_in_favicon`
+  (on by default, in the settings' notifications section) the tab's icon
+  shows a dot while something is unread, updated live, drawn on a
+  canvas.
+- **Visibility:** listing applies the mails' rules
+  (`notifications_for()`, `wanted()`, `mails._deliverable()`): only items
+  the person sees now, for clients only events of the time clients saw
+  the item, not on the level "nothing". Others stay in the database,
+  unseen. Pages may hold fewer entries than asked for (the level is
+  checked after loading). Reading and marking unread touch only what's
+  listed.
 
-- **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", decided
-  2026-11-21 too: pinned messages on the board keep "Pin"): an entry's
-  item can be bookmarked (the existing bookmarks, no new concept, the
-  bookmark icons `bookmark` and `bookmark-fill` used elsewhere);
-  bookmarked items with notifications appear in a "Bookmarked" section
-  at the top of the menu and the page, read or not, with their latest
-  notification, until the bookmark is removed. The bookmarks page shows
-  the same items.
-- **Mark as unread** per item (also in the menu, next to each entry),
-  bringing the item's notifications that were read together with its
-  latest one back to unread, so the entry is unread as a whole, as
-  "Mark as read" reads it as a whole (decided 2026-11-21; first only the
-  latest one). Marked unread
-  means no mail (decided 2026-11-21): a notification marked unread by
-  hand is never mailed afterwards, neither by each change nor in the
-  digest (`Notification.marked_unread_at`, left out by `send_mails`).
-- **Switching mail back from "none"** (decided 2026-11-21: as built):
-  whatever is unread and wasn't marked unread by hand is mailed with the
-  next mail or digest, all at once; no special case for the time of the
-  switch.
-- **The favicon** (decided 2026-11-21, configurable): with the setting
-  on, the browser tab's icon shows a dot when there are unread
-  notifications, updated live; the setting (`User.lantern_in_favicon`,
-  on by default, decided 2026-11-21: nobody has chosen yet, no data
-  migration) sits in the notifications section of the settings
-  page. Drawn on a canvas from the normal favicon; without the setting
-  or without JavaScript the icon stays as it is.
+### Reading
+
+- **Only the lantern reads** (decided 2026-11-21, replacing "opening an
+  item reads it"): following an entry, "Mark as read", "Mark all as
+  read", and acting on the item (below). Opening the item some other way
+  (the feed, a list, a mail, a live update) reads nothing.
+- **Entries are links** (decided 2026-11-21: the address shows on
+  hovering and opens in a new tab) to the item, at the comment where it
+  applies. A click or middle click posts `/lantern/<id>/`
+  (`views.lantern_open`) in the background (`keepalive`), which reads
+  the whole item's notifications (its comments' too) and answers 204. The
+  view only takes POST with the CSRF token, so another site can't read
+  somebody's notifications. Without JavaScript, or "Open in new tab"
+  from the context menu, nothing is read: "Mark as read" covers that.
+- **Home's rows** with unread notifications (`dashboard.md`) are the
+  lantern's entries on another page and read the same way.
+- **Mark as unread** per item brings back the notifications read
+  together with its latest one, so the entry is unread as a whole.
+  **Marked unread means no mail** (decided 2026-11-21): such a
+  notification is never mailed afterwards
+  (`Notification.marked_unread_at`); an edit merged into it stays
+  unmailed, a new event is mailed as usual.
+- **Switching mail back from "none":** whatever is unread and wasn't
+  marked unread by hand goes with the next mail or digest.
+- A merged edit moving an unsent notification forward makes it unread
+  again: the change is new.
+
+### Reading by acting (decided 2026-11-21)
+
+Acting on an item reads its notifications for the person acting:
+having done something with it means having dealt with it, so nobody
+ticks the same thing off twice. **When in reasonable doubt, it stays
+unread.**
+
+- **Reads:** completing or reopening a to-do; editing any kind of item
+  (only when something actually changed: the to-do's fields,
+  `update_message()`, `update_upload()`, `replace_upload()`,
+  `update_list()`, `update_answer()`, `update_question()`; a doc's saved
+  change reads for each of its authors in `_save()`); ticking a
+  checklist item; commenting (pages, API, mail replies); adding a
+  reaction to the item or one of its comments; answering a check-in
+  question (the question's and the person's own answer's notifications,
+  not other people's answers). A direct mention among them is read too.
+- **Doesn't read:** having the item open, scrolling, a live update,
+  opening it from anywhere but the lantern, bookmarking ("later", the
+  opposite of dealt with), subscribing, moving, reacting with a reaction
+  that's there already, removing one, pausing a question, pinning,
+  changing a project, anything done to the list or project around it.
+- Only that item's notifications (with its comments'); the others'
+  stay as they are. `read_by_acting(actor, *items)` in
+  `biwak/activity/operations.py`, called by the operations, so pages,
+  the API, the CLI and mail replies behave alike; it does nothing inside
+  `importing()` (the importer, `fairy_tasks` and the next recurring
+  to-do aren't the person acting).
+
+### Assigned and mentioned in one change (decided 2026-11-21)
+
+One notification, the assignment: "Ada assigned you (and mentioned
+you)." The mention adds nothing on top (Basecamp sends two, which is
+annoying). `items.operations.assign(mentioned=…)`, called by
+`create_todo()` and `update_todo()`, moves those both assigned and
+mentioned from the event's `mentioned` to `assigned`, which
+`notify.candidates()` leaves out. Mentions in a later edit or a comment
+notify as usual; assigned-only people get `created` and `assigned` as
+before.
 
 ## Live updates
 
-One websocket per browser tab (`/ws/live/`, Channels, the same ASGI
-setup as `collaboration.md`).
+One websocket per browser tab, `/ws/live/?item=ID` (Channels, the same
+ASGI setup as `collaboration.md`). The doc's editor page has none (one
+socket per tab: the editor's); its lantern count is fetched on load.
 
-- **The page says what it shows:** the item, or the list. The consumer
-  checks access on joining (`item_for()` rules: `visible_to()`, for
-  clients only visible items) and again when access changes, through the
-  same `check_access()` mechanism as the live editor.
-- **The person's own group** gets the lantern count and new entries.
-- **Never content through the websocket.** Operations announce "this
-  item changed" (after commit, with the kind of change and the ids). The
-  browser then fetches the changed part through the normal views (htmx
-  GET of a fragment): the comment, the reactions block, the to-do row,
-  the board column. Every fragment goes through the same permission
-  checks as the page. A client is never sent a fragment of something
-  internal, because the fragment views answer 404 for them as for
-  everything else.
-- **What changes live:**
-  - **Item pages:** new or edited comments, reactions (on the item and
-    on comments), completion and reopening, edits of the title and text
-    when not editing them oneself, assignees, the due date, trashing
-    (the page says so and offers to go back).
-  - **Lists and the board:** to-dos added, completed or reopened,
-    renamed, moved between groups and lists, reordered, trashed;
-    reactions on the rows.
-- **Not disturbing:**
-  - new things slide in with a short highlight (`.wb-live-new`, fading
-    out);
-  - the scroll position stays;
-  - a form being edited is never replaced: its block waits, with a small
-    "changed by Ada" note, until the form is saved or closed;
-  - one's own changes don't come back as live updates;
-  - several changes within a second are fetched once.
-- **Offline and reconnecting:** after a reconnect the page fetches what
-  it shows once, so nothing is missed. Without JavaScript or websockets
-  everything works as today.
-- **Load:** the announcements are tiny and only go to tabs showing the
-  item or list. Fragments are fetched by the tabs that need them,
-  through the normal caches. No polling.
-
-## Done when
-
-- **The lantern:**
-  - the menu, the page, reading by following an entry and by marking;
-  - the count updating live; the favicon dot with the setting on and
-    not without it;
-  - bookmarking and removing the bookmark, mark as unread;
-  - mail delivery "none";
-  - read notifications left out of mails and digests (a test for each);
-  - a client never seeing a notification about something internal;
-  - the API and CLI.
-- **Live:**
-  - Django tests of the consumer: joining refused for internal items as
-    a client (and for others' limited projects); access lost while
-    connected; announcements after commit only; nothing announced to
-    tabs not showing the item.
-  - Fragment views for every live region tested as staff and as a
-    client (404 for internal).
-- **Playwright with two browsers:**
-  - a comment, a reaction and a completion appearing for the other;
-  - a to-do added and moved on a board appearing for the other;
-  - a form being edited not replaced;
-  - a client's open page not receiving an internal change;
-  - reconnecting after being offline.
-
-## Built (2026-11-21)
-
-- **Model:** `Notification.read_at`; `MailDelivery.NONE` ("No mails");
-  `User.lantern_in_favicon`. `notify()` moving an unsent notification
-  forward (a merged edit) makes it unread again: the change is new.
-- **Mails:** `send_mails` and `_claim()` skip read notifications; they're
-  kept (sent_at stays empty, they never go out later unless marked unread
-  again). A mail or digest with nothing left isn't sent.
-- **Listing** (`lantern.notifications_for()`, `wanted()`): items the
-  person sees now (`visible_to()`), for clients only events of the time
-  clients saw the item, then `_deliverable()`'s level check. Pages of the
-  page and the API may hold fewer entries than asked for (level
-  "nothing" is checked after loading the page).
-- **Reading:** an entry's links go through `/lantern/<notification>/`
-  (`views.lantern_open`), which reads the item's notifications (the entry
-  stands for the item) and redirects to the item, at the comment; a link,
-  so it works without JavaScript; 404 for others' notifications and items
-  one doesn't see. The item pages read nothing (decided 2026-11-21; built
-  first as reading when opened). "Mark as unread" brings the item's
-  newest notification back.
-- **Bookmarking:** "Bookmark" and "Remove the bookmark" in the lantern
-  (`lantern.bookmark()`, `unbookmark()`, `POST /lantern/bookmark/`); a
-  bookmark made on the item's page counts too. Bookmarked items are in
-  "Bookmarked" at the top (latest notification, read or not) and not in
-  the other sections. The API's entries say `bookmarked` (was `pinned`,
-  never released).
-- **The menu:** `frontend/lantern.js` fetches the count
-  (`/lantern/count/`) on every page and when told, the menu
-  (`/lantern/menu/`) when opened; its buttons post without leaving the
-  page. Without JavaScript the menu has the link to `/lantern/`.
-- **The websocket** (`biwak/live/consumers.py`, `/ws/live/?item=ID`, one
-  per tab): joining checks `visible_to()` (4404 like the pages' 404, 4401
-  without a login); the item's group is the staff one or the clients' one
-  (`announce.item_group()`), and an announcement goes to the clients'
-  group only if it happened while clients saw the item and they see the
-  watched item. It joins the live editor's project and person groups and
-  checks again on their `access.check` (and every 60 seconds); made a
-  client meanwhile, it switches groups. Messages carry IDs and the kind
-  of change only, never text or names; the actor's own pages aren't
-  told.
-- **Announcements** (`biwak/live/announce.py`): every event of an item
-  (`record()`) tells the pages of the item and its parent; reordering,
-  the lists a to-do left, groups added, renamed, moved or removed, and
-  reactions removed are told explicitly. After the commit only.
-- **The pages** (`frontend/live.js`): the page fetches itself through
-  its view and takes over its regions: `[data-live]` replaced, children of
-  `[data-live-list]` added, removed, reordered. A region with focus in a
-  field, a changed field, an open `<details>` or an open peek waits with
-  "Changed meanwhile: shown once you save or close this." (no name: names
-  don't go through the websocket) and takes over once left. A page whose
-  item is gone says "This isn’t here anymore: it was trashed, or you
-  can’t see it anymore." with a link back. After reconnecting it fetches
-  once; several changes within 300 ms are fetched once.
-- **The doc's editor page** has no `/ws/live/` (one socket per tab: the
-  editor's); its lantern count is fetched when it loads.
-
-## Fixed after the visibility review of the live features (2026-11-21)
-
-- **The lantern's ping** (`announce.lantern_changed()`) about an event
-  goes only to those who see its item then, and to clients only if the
-  event happened while clients saw the item: a `notify()` running after
-  another request made an internal item visible pinged the client's tabs.
-  (`notify()` leaving such clients out altogether, and the mails, are
-  fixed on main, branch `mail-race`.)
-- **Logging out** closes the tabs' websockets of that login session at
-  once (4401), and logging out everywhere those of the others: before,
-  they kept hearing changes until the next check (60 seconds). Like the
-  live editor's (`collaboration.md`).
-- **Reading and marking unread** touch only the notifications listed
-  (`notifications_for()`): "Mark all as read" counted (`{"read": N}` in
-  the API) and read those about items the person can't see anymore, and
-  "Mark as unread" could bring back a client's notification of an
-  internal event.
-- **Every ping about an item** goes through the same filter as
-  `notify()`'s: removing a reaction pinged the tabs of everybody notified
-  of it, also of a client who couldn't see the item anymore; now only who
-  sees it, clients only for events of the time they saw it. Bookmarking,
-  removing the bookmark and marking unread pass their item too.
-- **Losing access doesn't depend on one message:** the websocket checks
-  access again before passing on every announcement and ping (a few
-  queries; announcements only go to the tabs showing the item, and are
-  rare), not only on `access.check` and every 60 seconds. A lost
-  `access.check` (Redis evicting it, or a change in the database
-  directly) let a page hear of changes until the next 60-second check.
-  Chosen over a shorter timer: no window at all, and no load from idle
-  tabs.
-- **Limits:** `?item=` longer than 18 digits closes with 4404 (it
-  crashed the consumer); at most 50 websockets per person and process
-  (confirmed 2026-11-21, to be tuned after real use), more close with 4429 and the page reconnects later, backing
-  off like after being offline. The live editor's limits are in
+- **Never content through the websocket.** Messages carry IDs and the
+  kind of change, never text or names. The page fetches itself through
+  its normal view and takes over its regions (`[data-live]` replaced,
+  children of `[data-live-list]` added, removed, reordered), so every
+  fragment goes through the page's permission checks and a client gets
+  404 for anything internal.
+- **Access:** joining checks `visible_to()` (4404 like the pages' 404,
+  4401 without a login). The item's group is the staff one or the
+  clients' one (`announce.item_group()`); an announcement goes to the
+  clients' group only if it happened while clients saw the item. The
+  socket checks access again before passing on every announcement and
+  ping (decided 2026-11-21 after the visibility review: no window at all
+  if an `access.check` message is lost), on `access.check` and every 60
+  seconds; made a client meanwhile, it switches groups. Logging out
+  closes the session's sockets at once (4401), logging out everywhere
+  those of the others.
+- **Announcements** (`biwak/live/announce.py`), after the commit only:
+  every event of an item (`record()`) tells the pages of the item and
+  its parent; reordering, the lists a to-do left, groups changed and
+  reactions removed are told explicitly. The person's own group gets
+  lantern pings (`lantern_changed()`), only for events about items they
+  see then, for clients only of the time clients saw the item (the same
+  filter as `notify()`'s). The actor's own pages aren't told.
+- **What changes:** on item pages comments, reactions, completing and
+  reopening, the title and text (when not editing them oneself),
+  assignees, the due date, trashing ("This isn’t here anymore: it was
+  trashed, or you can’t see it anymore.", with a link back); on lists
+  and the board to-dos added, completed, reopened, renamed, moved,
+  reordered, trashed, and reactions on rows.
+- **Not disturbing:** new things slide in with a short highlight
+  (`.wb-live-new`); the scroll stays; a region with focus in a field, a
+  changed field, an open `<details>` or an open peek waits with "Changed
+  meanwhile: shown once you save or close this." and takes over once
+  left; several changes within 300 ms are fetched once.
+- **Reconnecting** fetches the page once. Without JavaScript or
+  websockets everything works as before. No polling.
+- **Limits:** `?item=` longer than 18 digits closes with 4404; at most 50
+  websockets per person and process (`MAX_PER_PERSON`, confirmed
+  2026-11-21, to be tuned after real use), more close with 4429 and the
+  page reconnects later, backing off. The live editor's limits are in
   `collaboration.md`.
-
-## Decided after the review (2026-11-21)
-
-- **Reading through a form button:** following an entry posts a small
-  form styled as a link (it marks read and redirects to the item), so
-  another site can't mark someone's notifications read by embedding the
-  link; it still works without JavaScript. *Built:* `lantern_open` is
-  `@require_POST`: a GET answers 405 and reads nothing (a redirect without
-  reading would only hide the link's old meaning); the forms carry the
-  CSRF token, `frontend/lantern.js` lets them post as they are instead of
-  fetching them.
-- **Following one entry reads the whole item** (the menu groups by item).
-- **An edit merged into a notification marked unread** stays unmailed; a
-  new event is mailed as usual.
-- **Assigned and mentioned in one change:** one notification, the
-  assignment, saying "assigned you (and mentioned you)"; the mention adds
-  nothing on top of being assigned. Mentions in a later edit or a
-  comment notify as usual. Basecamp sends two, which is annoying.
-  *Built:* `items.operations.assign(mentioned=(event, people))`, called by
-  `create_todo()` and `update_todo()` with what `mentions.update()`
-  returned: the assignment event gets `mentioned` for those both assigned
-  and mentioned, and the `created`/`edited` event moves them from its
-  `mentioned` to `assigned`, which `notify.candidates()` leaves out (a
-  merged edit mentioning them again still tells them). Wording in
-  `mails.describe()`: "Ada assigned you (and mentioned you)."; the lantern
-  doesn't add "You were mentioned." to it. Only the mention is
-  deduplicated: assigned-only people still get the `created` and the
-  `assigned` notifications as before.
-
-## Questions (built the way described meanwhile)
-
-- The wording of "No mails", "Changed meanwhile: …",
-  "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
-  "You were mentioned.").
-- The menu shows at most 100 unread notifications (the page has all):
-  a value the spec didn't fix.
-
-**Entries are links again** (decided 2026-11-21): following one posted a
-form, so its address didn't show on hovering and it couldn't open in a
-new tab. Now each entry is a link to where it applies; a click or a
-middle click posts `lantern/<id>/` in the background (`keepalive`,
-so it survives leaving the page), which reads the item's notifications
-(204). Not read: without JavaScript, or "Open in new tab" from the
-browser's context menu; "Mark as read" covers those. The view still only
-posts, so another site can't read somebody's notifications.

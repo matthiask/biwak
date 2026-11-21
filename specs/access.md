@@ -150,8 +150,15 @@ Like Basecamp's bright yellow:
 - A badge on everything visible to clients wherever it's listed (lists,
   to-dos, messages, docs, files, search results, the to-dos by date); not
   in the feed and the lantern (`feed.md`).
-- A banner on a visible item's page and above every comment and edit
-  form there: "Clients can see this".
+- **The client tab** (decided 2026-11-21, like Basecamp's): the page of
+  something visible to clients shows a slim tab at the window's right
+  edge that stays while scrolling, "Clients can see this."
+  (`items/_client_tab.html`, `.wb-client-tab`), instead of a banner
+  taking a line of the page. No banner above the comment form. Forms in
+  modals keep the banner (`items/_client_banner.html`): the dialog
+  covers the page. Editing a project with active client members says
+  "The clients of this project can see this." (`clients_see` in
+  `project_edit`, `modal_form.html`).
 - **Showing to clients asks first, hiding is one click** (decided
   2026-11-21): `GET /items/<pk>/switch/` is the question (a page, a modal
   for `HX-Modal`; an item already visible redirects to itself), saying

@@ -92,7 +92,7 @@ for or removes somebody else.
   live" for who can't edit. A status line (connecting, saved as you
   type, offline, watching, gone), who else is here, "Save as a
   version", attaching files. Read-only until the first sync. The title
-  is the text's first line (`doc-titles.md`). Without JavaScript the
+  is the text's first line (`files.md`, "Docs"). Without JavaScript the
   page shows the text. Typing `@` doesn't complete names in the editor
   yet (the syntax works).
 - **Read-only** (`Doc.read_only`, staff on the page, `read_only` in

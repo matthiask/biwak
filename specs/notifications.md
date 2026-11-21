@@ -1,497 +1,291 @@
 # Notifications: events, subscriptions, mentions, mails, replies
 
-**Status:** events and subscriptions are built (core, 2026-11-20:
-`biwak/activity/`). Stage 1 (mentions, levels, mails, digests) is built
-(2026-11-20, branch `notifications`): `mentions.py`, `notify.py`,
-`mails.py` and `./manage.py send_mails`, the settings pages, the API
-endpoints and `biwak notifications` (CLI 0.8.0). Stage 2 (replying by
-mail) is built (2026-11-20, branch `replies`): `biwak/inbound/`
-(`ReplyToken` and `InboundMessage`, `tokens.py` for the `Reply-To`,
-`providers.py` with Resend's adapter, `strip.py`, `receive.py`, the
-webhook `/inbound/resend/`, `./manage.py receive_mail`); decisions,
-differences from Resend's documentation and open questions under "Built
-in stage 2". No API or CLI changes. Retention (`prune()` in
-`biwak/inbound/tokens.py`, `RETENTION_DAYS = 90`, run by `fairy_tasks`) and
-the "Reply to this mail to comment/answer." line (`can_reply` in the
-mail templates) built 2026-11-20, branch `reply-extras`.
+**Status:** built (2026-11-20, changed 2026-11-21: subscribing is the
+switch). `biwak/activity/` (`operations.record()`, `mentions.py`,
+`notify.py`, `mails.py`, `./manage.py send_mails`, the settings pages,
+the API, `biwak notifications`); replying by mail in `biwak/inbound/`.
+The lantern (notifications in the app, reading): `lantern.md`. Adding
+others as subscribers: `subscribers.md`. The outbox: `mail-sending.md`.
 
-**Agent:** a strong model for both stages. Stage 1 decides who gets
-told about what, across visibility; stage 2 posts mail as people.
-
-## Events (built)
+## Events
 
 Every change worth telling anybody about writes an `Event`
 (`biwak.activity.operations.record`): created, completed, reopened,
 assigned, commented, moved, edited, visibility changed, archived,
-trashed, restored, and project events (joined, added, removed). Events
-store enough to render without the item (the title at the time, in
-`data`) and respect visibility like their item (`Event.objects
-.visible_to()`). Events feed the activity feed (`feed.md`) and
-notifications.
+trashed, restored, pinned, shared, project events (joined, added,
+removed). Events store enough to render without the item (the title at
+the time, in `data`) and respect visibility like their item
+(`Event.objects.visible_to()`). They feed the activity feed (`feed.md`)
+and notifications.
 
-**Edits merge** (built in stage 1, `record()`): an `edited` event by the
-same person on the same item within 10 minutes of the last one updates
-that event's time instead of creating a new one ("once per editing
-session"). The person's last `edited` event counts, even when others'
-events came in between; a merged edit tells nobody again who was told
-already, except people mentioned in it for the first time (proposed by
-the building agent, 2026-11-20). Changing a to-do's title, notes or due
-date records `edited` (`update_todo()`; assignees record `assigned`).
+**Edits merge:** an `edited` event by the same person on the same item
+within 10 minutes of their last one updates that event's time instead of
+creating a new one, even when others' events came in between; a merged
+edit tells nobody again who was told already, except people mentioned in
+it for the first time.
 
-## Subscriptions (built)
+## Subscriptions
 
-- **Subscribed means notified of everything on the item** (decided
-  2026-11-21, `ui-round-6.md` part C, like Basecamp): every subscription
-  counts the same, also the automatic ones; unsubscribing is how to stop
-  hearing about one item. The levels below decide who gets subscribed
-  automatically, not which mails a subscriber gets.
-- A person subscribes to an item; for containers, also to items created
-  in them later (subscribing to a list means hearing about new to-dos
-  even when not assigned).
-- Automatic: author, assignees, people mentioned (not on the level
-  "nothing"), people commenting.
-  Automatic subscriptions respect an earlier unsubscribing
-  (`Unsubscription`); being assigned or mentioned, or subscribing
-  oneself, overrides it (`subscribe(..., explicit=True)`).
+- **Subscribing is the switch** (decided 2026-11-21, like Basecamp):
+  subscribed means notified of everything on the item, whatever the
+  person's level; every subscription counts the same, also the automatic
+  ones. Unsubscribing is how to stop hearing about one item; the
+  subscribers box ("You're subscribed / Subscribe") is the one setting
+  per item. Levels (below) decide who gets subscribed automatically.
+- Subscribing to a container also means hearing about items created in
+  it later (subscribing to a list: new to-dos, even when not assigned).
+- **Automatic:** the author, assignees, people mentioned (not on
+  "nothing"), people commenting. They respect an earlier unsubscribing
+  (`Unsubscription`); being assigned or mentioned, being added, or
+  subscribing oneself overrides it (`subscribe(..., explicit=True)`).
 - **Joining a project subscribes to nothing that exists already**
-  (decided 2026-11-20). Basecamp subscribes late joiners to every
+  (decided 2026-11-20): Basecamp subscribes late joiners to every
   message, which floods them.
-- **Subscribing without participating**: a "Subscribe" button next to
-  the subscribers on every item (decided 2026-11-20).
-- Everybody can unsubscribe from anything, also from mail with one click,
-  and subscribe others (who see who did it, `Subscription.added_by`).
-- **Assigned means subscribed** (decided 2026-11-21): while someone is
-  assigned to a to-do, they can't unsubscribe from it. The subscribers
-  box says "You're assigned, so you hear about it" and offers "Unassign
-  me" instead. Nobody else can unsubscribe them either.
-  - **Mail:** the one-click unsubscribe link of such a to-do does
-    nothing. Its page explains why and links the to-do.
-  - **API:** unsubscribing answers 400 with that reason.
-  - **Unassigned again**, unsubscribing works as before, and the
-    subscription stays until then.
-  - Assigning subscribes as it always did (`explicit=True`).
-  - In `items.operations`/`activity.subscriptions`, one check used by the
-    page, the mail link, the API and the CLI.
-- Posting a message, doc or file lets the author choose whom to notify:
-  everybody in the project (the members at that moment), chosen people,
-  or nobody; those chosen are subscribed (`files.md` uses
-  `notify_people()` from stage 1). Of everybody, only those whose level
-  for the item is "everything" (decided 2026-11-21, `ui-round-6.md`);
-  people chosen by name whatever their level, like adding subscribers
-  (built 2026-11-21).
+- Everybody can subscribe themselves ("Subscribe" next to the
+  subscribers on every item, decided 2026-11-20), unsubscribe from
+  anything, also from a mail with one click, and add others
+  (`subscribers.md`).
+- **Assigned means subscribed** (decided 2026-11-21): while assigned to a
+  to-do, nobody can unsubscribe the person (`StillAssigned`, one check
+  for the page, the mail link, the API and the CLI). The box says
+  "You're assigned, so you hear about it" and offers "Unassign me"; the
+  mail's link does nothing and its page says why; the API answers 400.
+- **Posting a message, doc or file** asks whom to notify: everybody in
+  the project (the members at that moment, preselected; decided
+  2026-11-20, replacing "no default"), chosen people, or nobody; the API
+  (`notify`: `everybody`, `nobody` or IDs) and the CLI (`--notify`)
+  default to everybody too; `create_message()`, `create_doc()` and
+  `create_upload()` default to nobody (`notify_people()`). Of everybody,
+  only those whose level for the item is "everything" are subscribed;
+  people chosen by name whatever their level, like adding subscribers.
 
-## Stage 1: mentions, levels, mails, digests
+## Mentions
 
-### Mentions
+- **Syntax** in the stored Markdown: `[@Ada](person:12)`, the Basecamp
+  CLI's, so agents know it. The label is only a fallback: pages and
+  mails show the person's **current short name** ("@Ada"; `people.md`,
+  "Names", for people with the same first name), the full name in the
+  `title`, so renaming updates old mentions. Where the reader may not
+  know the person, the label as written (`mentions.visible_people()`;
+  clients read the label for people who aren't members, `access.md`).
+  The `@` list and `syntax()` (also for the API's and mail replies'
+  `@Name`) write the short name as the label.
+- **Mails and plain text** (excerpts) render mentions the same way,
+  through `reader()`, so a mail uses its recipient's view; in mails and
+  the API's `*_html` mentions aren't links.
+- **Where:** every Markdown text of an item (a to-do's title and notes
+  are one text), and comments.
+- **Typing `@`** in a field with `data-mentions="URL"`
+  (`frontend/mentions.js`): a list of people filtered by first, last and
+  short name and email; Up/Down, Enter or a click, Escape. Endpoints:
+  `GET /items/<pk>/mentionable/?q=`, `/lists/<pk>/mentionable/` for new
+  to-dos, `/projects/<pk>/mentionable/?visible=1&folder=<pk>` for new
+  messages, docs and files (who will see them); JSON `[{id, name,
+  short_name, email, available, reason}]`, at most 10. The doc's live
+  editor doesn't complete names yet (the syntax works).
+- **Who is offered** (`mentionable_people(item)`): active people who can
+  see the item; people matching who can't are greyed out with the reason
+  ("can't see internal items", "not a member of this project"). Clients
+  find only the project's members, not by email, and see no addresses.
+- **Saving** (`mentions.update(item, text, comment=None, actor,
+  event=None)`, called by the operations saving texts): ignores people
+  who can't see the item (a hand-typed mention of them stays plain text)
+  and returns those **newly** mentioned into `event.data["mentioned"]`.
+  Only mentions a save adds count (`previous`, decided 2026-11-21: a
+  client's rejected mention of staff doesn't notify them when staff save
+  later); people removed from a text are forgotten, so mentioning them
+  again is new.
+- **A new mention** notifies and subscribes the person (`explicit=True`),
+  except on the level "nothing" (decided 2026-11-21: there only what the
+  person does subscribes them). A mention doesn't come back after
+  unsubscribing unless the person is mentioned again.
+- **The API and mail replies** may write `@ada@example.org`, the syntax,
+  or `@Ada` when exactly one person who can see the item matches. What
+  clients write resolves and notifies the project's members only.
 
-- **Syntax** in the stored Markdown: `[@Ada Lovelace](person:12)`, the
-  same as the Basecamp CLI's, so agents know it. The label is only a
-  fallback: pages and mails always show the person's current name, so
-  renaming someone updates every mention. In mails and plain text:
-  `@Ada Lovelace`. Clients read the label for people who aren't members
-  of the project (`access.md`, decided 2026-11-20 after the second
-  visibility review).
-- **Where:** a to-do's title and notes, comments, messages, docs,
-  check-in answers: every Markdown text of an item, and comments.
-- **Typing `@`** in a text field with `data-mentions="URL"` opens a list
-  of people, filtered as you type (first name, last name, short name,
-  email). Up/Down choose, Enter or a click inserts the syntax above,
-  Escape closes. In `frontend/mentions.js`, plain JavaScript, no editor
-  library.
-- **Who is offered** (`mentionable_people(item)` in
-  `biwak/activity/mentions.py`): active people who can see the item:
-  members of the project, all staff in all-access projects, clients only
-  if they're members and the item is visible to clients. People
-  matching the query who can't see it are listed greyed out with the
-  reason ("can't see internal items", "not a member of this project")
-  and can't be chosen.
-- **Endpoint** for the list: `GET /items/<pk>/mentionable/?q=` (and
-  `GET /lists/<pk>/mentionable/?q=` for to-dos not created yet, and
-  `GET /projects/<pk>/mentionable/?q=&visible=1&folder=<pk>` for new
-  messages, docs and files: who will see them, from the visibility
-  checkbox (`data-mentions-visible`) or the folder, which decides when
-  given; clients always create what clients see), JSON:
-  `[{id, name, short_name, email, available, reason}]`, at most 10.
-- **Model:** `Mention(item, comment null, user, created_at)`, written by
-  the operations that save texts (`create_todo`, `update_todo`,
-  `add_comment`, later messages, docs and answers) via
-  `mentions.update(item, text, comment=None, actor, event=None)`. It
-  parses the text, ignores people who can't see the item (a mention
-  typed by hand for someone without access is shown as plain text, not
-  linked), and returns those **newly** mentioned, adding them to
-  `event.data["mentioned"]` for `notify()`. A to-do's title and notes
-  are one text. People removed from a text are forgotten, so mentioning
-  them again counts as new (proposed by the building agent, confirmed
-  2026-11-20). Only mentions a save adds count: those already in the
-  text before were looked at when written, so a client's rejected
-  mention of staff doesn't notify them when staff save the item later
-  (`previous` of `update()`, decided 2026-11-21).
-- **A new mention** notifies the person (on every level except
-  "nothing") and subscribes them (`explicit=True`; not on "nothing",
-  decided 2026-11-21, `ui-round-6.md`: there only what the person does
-  subscribes them). Editing a text later
-  notifies only people newly mentioned. A mention doesn't come back
-  after unsubscribing unless the person is mentioned again.
-- **Mail replies and the API** may write `@ada@example.org` or the
-  syntax above; plain `@Ada` is resolved only when exactly one person
-  who can see the item matches (stage 2 and `api-cli.md`). What clients
-  write resolves and notifies the project's members only (`access.md`).
+## Levels
 
-### Levels
-
-Changed 2026-11-21 (`ui-round-6.md`, part C): levels decide **who gets
-subscribed automatically** and what's new in a list reaches its
-subscribers; a subscriber hears about everything on the item. Per person
-(`User.notification_level`), overridable per project and per **list**
-(`LevelOverride(user, project null, item null, level)`, one of the two
-set; the list's override wins over the project's). Other items have no
-level (their overrides were deleted by `activity.0015`; no users yet):
-"Notifications…" is in the "More" menu of lists only, the API answers
-400 for other items.
+Per person (`User.notification_level`), overridable per **project** and
+per **list** only (`LevelOverride(user, project null, item null,
+level)`, the list's wins; decided 2026-11-21: other items have no level,
+"Notifications…" is in lists' "More" menu only, the API answers 400 for
+other items). **Folders have no level of their own, they follow the
+project's** (confirmed 2026-11-21).
 
 - **Everything** (the default): posting to everybody subscribes the
   person; subscribed to a list, they hear about every new to-do in it.
 - **Only what concerns me:** posting to everybody doesn't subscribe
-  them; being mentioned, assigned or their own things (creating,
+  them; being mentioned or assigned and their own things (creating,
   commenting) do. New to-dos in a list they follow reach them only when
   they're mentioned or assigned.
-- **Nothing:** only what they do themselves subscribes them (commenting,
-  being assigned); mentions neither notify nor subscribe them. The feed
-  still shows everything.
+- **Nothing:** only what they do themselves (commenting, being
+  assigned) subscribes them; mentions neither notify nor subscribe. The
+  feed still shows everything.
 
 Never a notification about one's own actions.
 
-Pages: the person's level and delivery on `/accounts/notifications/`
-(linked from the user menu); a project's override in the project page's
-"More" menu; a list's in the list's "More" menu. The settings page also
-lists the person's overrides, lists only while they can see them,
-projects only while they have access (an override of a project one has
-left stays, unseen, and counts again on coming back, 2026-11-21).
+**Notified by default or only when tagged** (decided 2026-11-20): how
+someone is in a project is the project's level, not a new setting.
+Whoever adds or invites someone chooses "Notified by default"
+("everything", the default) or "Only when tagged" ("only what concerns
+me"), stored as the person's `LevelOverride` for the project
+(`add_member()`, `invite()`, `set_notify_choice()`,
+`notify_choice()` in `biwak/projects/operations.py`); adding someone
+again doesn't change it. The project's people page shows it next to
+each member ("No mails" for "nothing") to staff; staff change it for
+others, a client only their own. API: `notify` (`default`, `tagged`,
+`nothing`; `null` for clients about others) on the members list, adding
+and inviting; `biwak members`, `biwak member add|invite …
+[--only-tagged]`.
 
-### Notified by default or only when tagged
+Pages: the level and delivery on `/accounts/notifications/`; a project's
+override in its "More" menu, a list's in the list's. The settings page
+lists the overrides, lists only while the person sees them, projects
+only while they have access (an override of a project one left stays,
+unseen, and counts again on coming back).
 
-**Status:** built (2026-11-20, CLI 0.15.0; the API shapes and the choices below confirmed 2026-11-20):
-`add_member()`, `invite()`, `set_notify_choice()` and `notify_choice()`
-in `biwak/projects/operations.py`, the people page with
-`/projects/<pk>/people/<user>/notify/`, `POST projects/ID/members/`,
-`POST projects/ID/members/invite/`, `PATCH projects/ID/members/PERSON/`,
-`biwak members` and `biwak member add|invite`. Tests in
-`biwak/projects/test_notify_choice.py`. Built on the way: the members
-list returns `notify` as `default`, `tagged` or `nothing`, and `null` for
-clients about others; a client can't add or invite (403) nor change
-others' choice (403, 404 for people who aren't members). The CLI has no
-command to change a choice, the API and the page do.
+## Who gets told
 
-Decided 2026-11-20: people are in a project in one of two ways, and the
-project's level is that choice, not a new setting.
+`notify(event)` in `biwak/activity/notify.py`, after the commit
+(`transaction.on_commit`):
 
-- **Notified by default:** the project's level is "everything". They
-  get what they're subscribed to there, including messages, docs and
-  files posted to everybody.
-- **Only when tagged:** the project's level is "only what concerns me".
-  Posting to everybody doesn't subscribe them (changed 2026-11-21,
-  `ui-round-6.md`: it used to subscribe them and the level held the mails
-  back); being mentioned or assigned, or their own things, do.
-- **Who sets it:** whoever adds or invites someone chooses one of the
-  two (default: notified by default), stored as the person's
-  `LevelOverride` for the project. The person changes it later on the
-  project's notification page (built). An existing override isn't
-  changed when someone is added again.
-- **Shown** on the project's people page next to each member ("Notified
-  by default" or "Only when tagged", from their effective level for the
-  project; "nothing" shows as "No mails"), visible to staff. Staff can
-  change it there for others too; a client only their own.
-- **Posting** a message, doc or file therefore preselects "everybody in
-  the project" (decided 2026-11-20, replacing "no default"): the levels
-  already keep the mails away from those who only want them when tagged.
-  The API's and CLI's `notify` defaults to everybody too. Since
-  2026-11-21 that's because "everybody" subscribes only those notified by
-  default.
-- **API and CLI:** adding and inviting take `notify` (`default` or
-  `tagged`); the members list returns it. `biwak members PROJECT` shows
-  it, `biwak member add|invite … [--only-tagged]`.
+1. Candidates: the item's subscribers; for `created` also its
+   container's; plus people newly mentioned or assigned by the event. A
+   `shared` event has only the people it names.
+2. Without the actor, inactive people and people who can't see the item
+   **now** (`visible_to()`; `who_can_see(item)` for everybody at once).
+3. Told (`wanting()`): every subscriber of the item, whatever their
+   level, and the people the event assigns; the newly mentioned and
+   `shared` and reactions except on "nothing"; the container's
+   subscribers about a new item on "everything" (`effective_levels()`,
+   the same number of queries for any number of people). Check-in
+   answers: `checkins.md`.
+4. One `Notification(user, event, created_at, sent_at, read_at)` per
+   person, at most one unsent per person and event (a database
+   constraint: two `notify()` at once can't tell anybody twice).
 
-### Who gets told
+Project events and pinning notify nobody. Notification records are kept
+(decided 2026-11-21: small rows, pruned only if the table actually grows
+large).
 
-`notify(event)` in `biwak/activity/notify.py`, called after the commit
-(`transaction.on_commit`) by `record()`:
-
-1. Candidates: subscribers of the event's item; for `created`, also
-   subscribers of its parent container; plus people newly mentioned or
-   assigned by this event. A `shared` event (`subscribers.md`) has only
-   the people it names.
-2. Without the actor, inactive people, and people who can't see the
-   item **now** (`Item.objects.visible_to(user)`; for everybody at once
-   `who_can_see(item)`, tested against it, 2026-11-21).
-3. Who's told (`wanting()`, changed 2026-11-21, `ui-round-6.md`):
-   everybody subscribed to the item, whatever their level, and the
-   people this event assigns; people newly mentioned on every level
-   except "nothing"; subscribers of the container hear about a new item
-   in it (`created`) on "everything" (their effective level for it, a
-   query for all, `effective_levels()`; `notify()` makes the same number
-   of queries for any number of people). Reactions and `shared` on every
-   level except "nothing"; check-in answers to the question's subscribers
-   with the mode `each`, whatever their level, and the newly mentioned
-   except on "nothing" (`checkins.md`, 2026-11-21).
-4. One `Notification(user, event, created_at, sent_at null)` per person;
-   at most one unsent per person and event, a constraint in the database
-   (two `notify()` at once can't tell anybody twice, 2026-11-21).
-
-Project events (joined, added, removed) notify nobody.
-
-### Mails
-
-- **Notification records are kept** (decided 2026-11-21): they record who
-  was told about which event and when, small rows, never pruned unless
-  the table actually grows large. The history itself is in the events
-  and the audit log, both kept.
+## Mails
 
 - **Delivery** per person (`User.mail_delivery`): each change (the
-  default) or a daily digest.
-- **Each change:** `./manage.py send_mails`, run every minute by cron,
-  sends one mail per person and item once the newest unsent
-  notification for that item is 2 minutes old (decided 2026-11-20), so
-  quick edits and several comments merge into one mail.
-- **Digest:** the same command sends each digest person one mail at
-  07:00 in the installation's time zone (`TIME_ZONE`) with the unsent
-  notifications of the day before, grouped by project and item (decided
-  2026-11-20). Nothing to say, no mail.
-- **Content:** the full text: the comment, the to-do with its notes, the
-  message. Attachments as links. Plain text and HTML (`templates/mails/`),
-  English until the German translation.
-- **Visibility line:** the first line says when the item is visible to
-  clients (`access.md`).
-- **Headers:**
-  - `From: "Ada Lovelace (Biwak)" <DEFAULT_FROM_EMAIL>`.
-  - `Subject: [Project] Item title`, the same for every mail about an
-    item.
-  - `Message-ID` per mail; `In-Reply-To` and `References`
-    `<item-<pk>@<host>>`, so mail clients keep one thread per item.
-  - `List-Unsubscribe` and `List-Unsubscribe-Post` (RFC 8058): a signed
-    URL `/unsubscribe/<token>/` (no login, `django.core.signing`, person
-    and item) that unsubscribes from the item.
-- **Sending** through the outbox (`specs/mail-sending.md`, built
-  2026-11-21): the finished mail is put into it in the transaction that
-  marks the notifications sent, and goes out after the commit, retried
-  until Resend (its API, in production) accepted it.
+  default), a daily digest, or none (`lantern.md`).
+- **Each change:** `send_mails`, every minute by cron, sends one mail
+  per person and item once the newest unsent notification for it is 2
+  minutes old (decided 2026-11-20), so quick edits merge. **A batch of
+  uploaded files is one mail** (`batch_mail()`, `mails/batch.*`,
+  `files.md`), whose unsubscribe link is the settings page (there's no
+  one item).
+- **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
+  day before, grouped by project and item, a batch as one entry; nothing
+  to say, no mail. Subject `[Biwak] What happened on 19. November 2026`
+  (or "from … to …" for more than one day, the first and last day with
+  notifications), from `Biwak <DEFAULT_FROM_EMAIL>`.
+- **Content:** the full text (the comment, the to-do with its notes, the
+  message), plain text and HTML (`templates/mails/`). Attachments are
+  links (the download checks access). The first line says when the item
+  is visible to clients (`access.md`). Clients aren't told where an item
+  moved: the name may be internal.
+- **Headers:** `From: "Ada Lovelace (Biwak)" <DEFAULT_FROM_EMAIL>`;
+  `Subject: [Project] Item title`, the same for every mail about an
+  item; `In-Reply-To` and `References` `<item-<pk>@<host>>` for one
+  thread per item; `Auto-Submitted: auto-generated`;
+  `List-Unsubscribe` and `List-Unsubscribe-Post` (RFC 8058) with a
+  signed `/unsubscribe/<token>/` (no login). A `GET` of it only asks
+  (link checkers), the `POST` unsubscribes; only who still sees the item
+  is shown its title. Through a container, it unsubscribes from the
+  container. Digests: the settings page, no one-click.
+- **Checked again when sending:** inactive people and people who can't
+  see the item any more get nothing (their notifications are deleted),
+  and read ones are left out (`lantern.md`); the level decided who was
+  told, it doesn't hold mails back later. Nothing left to say, no mail.
+- **Once:** notifications are marked sent in the transaction that puts
+  their mail into the outbox (`mail-sending.md`); a mail failing to be
+  built is logged and its notifications stay unsent, the other mails,
+  digests and check-ins go out anyway.
 
-Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
+## API and CLI
 
-- `send_mails` checks again when sending: inactive people and people
-  who can't see the item any more get nothing, and those notifications
-  are deleted. (A level changed since no longer holds mails back, nor
-  hides them in the lantern: the level decided who was told, 2026-11-21,
-  `ui-round-6.md`.) A mail that fails to send is the outbox's to retry;
-  its notifications stay sent.
-- Once: notifications are marked sent in the transaction that puts their
-  mail into the outbox, so a crash loses neither (2026-11-21, replacing
-  "at most once" with the outbox).
-- A mail that fails to be built is logged and its notifications stay
-  unsent; the other mails, the digests and the check-ins go out anyway
-  (each part of `send_mails` on its own, like each task of
-  `fairy_tasks`; 2026-11-21). Nothing left to say (reactions to a
-  comment deleted since): no mail, the notifications are deleted.
-- Clients aren't told where an item moved ("Ada moved it."), like the
-  feed: the name may be internal.
-- Attachments are links with `BASE_URL` in the HTML part and their
-  download URLs in the plain text part; the download checks access.
-- The unsubscribe link of a new item a person hears about through its
-  container unsubscribes from the container. A `GET` of the link only
-  asks (link checkers follow links), the `POST` unsubscribes; only who
-  can still see the item is shown its title.
-- Digests have no one-click unsubscribing (they're about many items):
-  their `List-Unsubscribe` is the settings page, without
-  `List-Unsubscribe-Post`. Their subject: `[Biwak] What happened on
-  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`; a digest of more
-  than one day (after a downtime, or switching to digests) names them:
-  `[Biwak] What happened from 17. November 2026 to 19. November 2026`
-  (the first and the last day with notifications, 2026-11-21).
-- Mails carry `Auto-Submitted: auto-generated`.
-- The `@` list for clients finds only the project's members, not by
-  email, and shows no addresses.
+`GET/PUT /api/v1/me/notifications/` (level, delivery),
+`GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and
+`/api/v1/items/{id}/notifications/` (lists only), `GET
+/api/v1/items/{id}/mentionable/?q=`. `biwak notifications` shows and
+sets the level and delivery, `--project` and `--item` the overrides
+(`--level default` removes one); `biwak subscribe ITEM` and `biwak
+unsubscribe ITEM` for oneself.
 
-### API and CLI
+## Replying by mail (stage 2)
 
-- `GET/PUT /api/v1/me/notifications/` (level, delivery),
-  `GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and
-  `/api/v1/items/{id}/notifications/` (overrides; `level` null without
-  one; lists only since 2026-11-21, 400 for other items), `GET /api/v1/items/{id}/mentionable/?q=`. Texts written through
-  the API (to-dos, comments) resolve `@email` and an unambiguous `@Name`.
-- `biwak notifications` shows and sets the level and delivery;
-  `--project` and `--item` (a list) the overrides (`--level default`
-  removes one). `biwak subscribe ITEM` (without `--people`) and `biwak
-  unsubscribe ITEM` for oneself (CLI 0.32.0).
+Commonly used, especially by clients who rarely open the app; in scope
+from the start (decided 2026-11-20). `biwak/inbound/`: `ReplyToken`,
+`InboundMessage`, `tokens.py`, `providers.py`, `strip.py`, `receive.py`,
+the webhook `/inbound/resend/`, `./manage.py receive_mail`.
 
-### Done when (stage 1)
-
-- Mentions: parsing, rendering with current names, the `@` list with
-  keyboard support, only visible people offered, only the newly
-  mentioned notified, subscribing.
-- `notify()` with tests per event type and level, including: a client
-  isn't told about an internal item, a person who lost access isn't
-  told, the actor isn't told.
-- `send_mails`: merging after 2 minutes, digests at 07:00, headers and
-  threading, the unsubscribe link working without login.
-- Settings pages, API endpoints and the CLI command.
-
-## Stage 2: replying by mail
-
-Commonly used, especially by clients who rarely open the app. In scope
-from the start (decided 2026-11-20).
-
-- **Address:** a receiving subdomain of its own (e.g.
-  `reply.example.org`) with its MX at Resend; the organization's normal
-  mail is untouched. Every notification mail gets `Reply-To:
-  r-<token>@` that subdomain.
+- **Address:** a receiving subdomain of its own (`REPLY_DOMAIN`) with
+  its MX at Resend; the organization's normal mail is untouched. Every
+  notification mail about something commentable (not lists, digests or
+  check-in summaries) and every check-in question mail gets `Reply-To:
+  r-<token>@` it and says "Reply to this mail to comment." (to answer,
+  for check-ins; `can_reply`).
 - **Token:** `ReplyToken(token, item, user, created_at, expires_at,
-  revoked_at, error_sent_at)`: random, 20 lowercase letters and digits
-  (local parts are limited to 64 characters and some servers lowercase
-  them), one per mail, valid 6 months (decided 2026-11-20).
+  revoked_at, error_sent_at)`, 20 lowercase letters and digits (some
+  servers lowercase local parts), one per mail, valid 6 months (decided
+  2026-11-20). Revoked by admins in the Django admin. A reply to a
+  question mail answers that occurrence.
 - **Provider:** Resend (decided 2026-11-20) behind an interface
-  (`biwak/inbound/providers.py`): an adapter turns what the provider
-  delivers into one `InboundMail(sender, recipients, headers, text,
-  html, attachments, spf, dkim, dmarc)`. Resend posts a signed webhook
-  (Svix signatures) with metadata to `/inbound/resend/`; body, headers
-  and attachments are fetched through its API, with SPF, DKIM and DMARC
-  results from its receiving servers. Also `./manage.py receive_mail
-  FILE.eml` for tests and debugging. Verify against Resend's current
-  documentation when building. (Brevo's inbound parsing is set up
-  through its API and reports no SPF/DKIM verdicts, so the sender check
-  below would be ours to do.)
-- **Sender check:** the reply is posted as the token's person only if
-  the `From` address is theirs and the sender's authentication passed
-  (DMARC pass, or SPF or DKIM pass aligned with the `From` domain, as
-  the receiving server reports; never headers the sender could write).
-  The token alone isn't enough: forwarded mails carry it.
-- **Webhooks** are authenticated (the signature) and idempotent
-  (`InboundMessage(provider, provider_id unique, received_at, status,
-  error)`; providers retry).
-- **Cleanup:** quoted text and signatures are stripped
-  (`email-reply-parser`, on our side even when the provider offers its
-  own); attachments become attachments of the comment (`files.md`,
-  stage 1), at most 25 MB each.
-- **Posting** goes through `add_comment()` like everything else, with
-  mentions resolved as described above.
-- **Visibility:** a reply to a visible item is visible; a person can only
-  reply to what they can see **now**, not when the mail was sent.
-- **Loops:** auto-replies, out-of-office and bounces (`Auto-Submitted`,
-  `Precedence: bulk/junk/list`, an empty envelope sender,
-  `X-Autoreply`, `X-Autorespond`) are dropped, never answered. At most
-  20 replies per token and hour.
-- **Rejections:** replies that can't be posted (wrong sender, failed
-  authentication, no access any more, expired token) get a short answer
-  saying why, at most once per token (`error_sent_at`).
-- Check-in questions are answered the same way (`checkins.md`).
+  (`providers.py`, `InboundMail`). Its webhook (`email.received`)
+  carries metadata only, signed by Svix (verified by us, no Svix
+  package, within 5 minutes). `GET /emails/receiving/{id}` gives
+  `authentication: {spf, dkim, dmarc}` and the raw message, which we
+  parse ourselves (one parser for the webhook and `receive_mail`). An
+  answer of its API that isn't a JSON object fails like a network error,
+  so Resend tries again.
+- **Sender check** (decided 2026-11-20): posted as the token's person
+  only if `From` is theirs and DMARC or DKIM passed (Resend's `gray`
+  DKIM means unsigned or not aligned, so `pass` is aligned); SPF alone
+  never (Resend doesn't report its alignment), so a domain without DMARC
+  and DKIM can't reply. If Resend's `from` differs from the `From` we
+  parse, its results count as `unknown`. The token alone isn't enough:
+  forwarded mails carry it. `receive_mail FILE.eml` takes `--spf`,
+  `--dkim`, `--dmarc` (default `unknown`), never from the file.
+- **Order of checks:** each provider ID once (`InboundMessage`, keeping
+  sender and status, not the mail); auto-replies and bounces dropped
+  (`Auto-Submitted` other than `no`, `Precedence: bulk/junk/list`, an
+  empty envelope sender, `X-Autoreply`, `X-Autorespond`,
+  `multipart/report`), never answered; unknown tokens dropped; more than
+  20 mails per token and hour dropped; then sender, authentication,
+  token valid, access. Only these four get a short answer, at most once
+  per token (`error_sent_at`): to `From` only when the receiving server
+  confirmed it, else to the token's person; nothing about the item,
+  `Auto-Submitted: auto-replied`, no `Reply-To`.
+- **Access** means now: active, the item in `visible_to()` (not
+  trashed), commentable; for check-ins `can_answer()`. A reply to a
+  visible item is visible. Replying to a question already answered
+  changes the answer.
+- **Posting** goes through `add_comment()` (or the answer), mentions
+  resolved as above.
+- **Stripping** (`strip.py`): cut at the first quote header ("On …
+  wrote:", "Am … schrieb …:", wrapped over up to three lines but not
+  past a blank line or another line starting with "On"/"Am", so the
+  person's own "On Friday …" stays), Outlook's header block (English and
+  German), "-----Original Message-----", forwarding markers and `-- `;
+  phones' last lines; then `email-reply-parser`. HTML-only mails are
+  turned into text, cut where clients' quotes start. Signatures without
+  a delimiter stay. Nothing written (only quotes, no attachments):
+  nothing posted, no answer.
+- **Attachments** become the comment's (`files.md`): every part with a
+  file name, except inline parts under 20 KB (signature logos, decided
+  2026-11-21). Larger than 25 MB left out, with a line in the comment
+  saying which (decided 2026-11-21; no mail back).
+- **Retention:** `InboundMessage` rows and reply tokens expired or
+  revoked more than 90 days ago are deleted by `fairy_tasks`
+  (`tokens.prune()`, `RETENTION_DAYS`, decided 2026-11-20).
 
-### Built in stage 2
-
-Resend's documentation (checked 2026-11-20) and what that changed:
-
-- The webhook (`email.received`) carries metadata only: `data.email_id`,
-  `from` (the bare address of `From`), `to`, `cc`, `subject`,
-  `message_id`, attachment metadata. Signed by Svix (`svix-id`,
-  `svix-timestamp`, `svix-signature`: HMAC-SHA256 of
-  `id.timestamp.body` with the `whsec_` secret); we verify it ourselves
-  (no Svix package), within 5 minutes like Svix's libraries.
-- `GET /emails/receiving/{id}` returns `authentication: {spf, dkim,
-  dmarc}`, each `pass`, `fail`, `gray`, `processing_failed` or
-  `unknown`, computed by Resend's receiving servers, and
-  `raw.download_url` (a signed URL, valid about an hour) for the
-  original message. We parse that original message ourselves (one parser
-  for the webhook and `receive_mail`) instead of the API's `headers`,
-  `text`, `html` and the attachments API, whose shapes the documentation
-  doesn't fully describe.
-- **Differs from the spec above:** Resend doesn't report SPF alignment,
-  only SPF's result for the envelope sender. So the sender check accepts
-  DMARC `pass`, or DKIM `pass` (Resend: `gray` "means the message is
-  unsigned or the signing domain does not match the From domain", so
-  `pass` is aligned); SPF alone is never enough. A domain without DMARC
-  and without DKIM (rare) can't reply. If Resend's `from` differs from
-  the `From` address we parse, its results count as `unknown` (its `from`
-  compared as an address, also when it comes with a name; an answer of
-  its API that isn't a JSON object fails like a network error and Resend
-  tries again, 2026-11-21).
-
-Decisions made while building (proposed by the building agent,
-confirmed 2026-11-20):
-
-- **Retention:** received mails (`InboundMessage`) and reply tokens
-  expired or revoked more than 90 days ago are deleted by `fairy_tasks`
-  (decided 2026-11-20).
-- **Saying so:** notification mails and check-in question mails that
-  carry a `Reply-To` say "Reply to this mail to comment." (to answer, for
-  check-ins) above the footer (decided 2026-11-20).
-
-- **Which mails get a `Reply-To`:** notification mails about something
-  commentable (to-dos, messages, docs, files, answers; not lists), and
-  check-in question mails, whose reply answers that occurrence (not the
-  latest). Not digests (about many items) nor check-in summaries (a reply
-  isn't an answer).
-- **Order of checks:** each provider ID once; auto-replies and bounces
-  dropped; no known token (or another domain), dropped; more than 20
-  mails per token in the last hour (all mails to the token count,
-  rejected ones too), dropped without answer; then sender, authentication,
-  token valid, access. Only these four get the answer.
-- **Loops** also: `multipart/report` (delivery status notifications);
-  `Auto-Submitted: no` isn't automatic.
-- **The answer** to a rejected reply goes to the `From` address only when
-  the receiving server confirmed it; otherwise to the token's person
-  (never to an address that may be impersonated). It says nothing about
-  the item, carries `Auto-Submitted: auto-replied` and no `Reply-To`.
-- **Access** means now: active, the item in `Item.objects.visible_to()`
-  (so not trashed), commentable; for check-ins asked the question
-  (`can_answer()`). Replying to a question already answered changes the
-  answer, like answering again in the app.
-- **Stripping:** we cut at the first quote header ("On … wrote:", "Am …
-  schrieb …:", also quoted by iOS, wrapped over up to three lines but
-  not past a blank line or another line starting with "On"/"Am", so the
-  person's own "On Friday …" right above it stays; 2026-11-21), Outlook's header block ("From:" with
-  "Sent:"/"To:" below, "Von:" with "Gesendet:"/"An:"), "-----Original
-  Message-----", forwarding markers and `-- `; phones' last lines ("Sent
-  from my iPhone", "Von meinem iPhone gesendet", "Get Outlook for …");
-  then `email-reply-parser`. Mails without a plain text part are turned
-  into text, cut where clients' HTML quotes start. Signatures without a
-  delimiter ("Best regards, Ada") stay.
-- **Attachments:** every part with a file name; inline parts
-  (`Content-Disposition: inline` or with a `Content-ID`) under 20 KB are
-  left out, they're signature logos (decided 2026-11-21), larger inline
-  images and regular attachments stay. Larger than 25 MB left out (noted
-  in `InboundMessage.error`), the text posted anyway with a line in the
-  comment saying which attachment was too large (decided 2026-11-21; no
-  mail back to the person; a reply with only such an attachment is
-  posted too). Their Markdown is appended to the text.
-- **Nothing written** (only quotes, no attachments): nothing posted, no
-  answer.
-- **`receive_mail FILE.eml`** takes `--spf`, `--dkim`, `--dmarc` (default
-  `unknown`): never from the file's headers.
-- **Revoking:** an admin action on reply tokens in the Django admin.
-- `InboundMessage` keeps the sender and status, not the mail.
-
-Open (values and wording the spec doesn't fix):
-
-- Whether tokens are revoked automatically (a person deactivated or
-  removed from a project; access is checked anyway).
-- The wording of the answer to rejected replies (four reasons, in
-  `receive.py`).
-
-### Setting it up
-
-Outside the app:
-
-1. **DNS:** a receiving subdomain (e.g. `reply.example.org`) added to
-   Resend as a domain with receiving enabled; its MX record as Resend
-   shows it. The organization's own MX stays untouched.
-2. **Resend:** a webhook to `https://<host>/inbound/resend/` for the
-   event `email.received`; its signing secret. An API key that can read
-   received mails (full access; a sending-only key can't).
-3. **Environment:** `REPLY_DOMAIN` (the subdomain), `RESEND_API_KEY`,
-   `RESEND_WEBHOOK_SECRET` (`whsec_...`). Without all three replying is
-   off: no `Reply-To`, the webhook answers 404.
-
-### Done when (stage 2)
-
-Tests with `.eml` samples (made up, but shaped like Gmail, Outlook,
-Apple Mail and phone clients, English and German): stripping, sender
-check (forwarded mail, spoofed `From`, failed DMARC), visibility changed
-between sending and replying, loops and rate limits, idempotent
-webhooks, attachments.
+**Setting it up:** a receiving subdomain added to Resend with receiving
+enabled and its MX record; a webhook to `https://<host>/inbound/resend/`
+for `email.received`; an API key that can read received mails (full
+access). `REPLY_DOMAIN`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
+(`whsec_...`): without all three replying is off (no `Reply-To`, the
+webhook answers 404).
