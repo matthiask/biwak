@@ -13,6 +13,23 @@ class ModalMiddlewareTest(TestCase):
         assert_modal_redirect(self, response)
         self.assertIn("/accounts/login/", response.headers["HX-Redirect"])
 
+    def test_messages_survive_the_hx_redirect(self):
+        """The message set before redirecting (a cookie) shows on the page
+        the dialog loads ("Bob Example has been added.")"""
+        ada, bob = person("Ada"), person("Bob")
+        camp = project(members=[ada])
+        self.client.force_login(ada)
+        response = self.client.post(
+            reverse("member_add", args=[camp.pk]),
+            {"user": bob.pk, "notify": "default"},
+            headers=MODAL,
+        )
+        assert_modal_redirect(self, response)
+        self.assertContains(
+            self.client.get(response.headers["HX-Redirect"]),
+            "Bob Example has been added.",
+        )
+
     def test_other_requests_redirect_as_usual(self):
         response = self.client.get("/projects/1/lists/new/")
         self.assertEqual(response.status_code, 302)

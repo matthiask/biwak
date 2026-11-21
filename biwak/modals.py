@@ -21,7 +21,11 @@ def modal_middleware(get_response):
     def middleware(request):
         response = get_response(request)
         if is_modal(request) and response.status_code in {301, 302, 303}:
-            return HttpResponse(headers={"HX-Redirect": response["Location"]})
+            redirect = HttpResponse(headers={"HX-Redirect": response["Location"]})
+            # The cookies set on the way, the messages' above all
+            # (CookieStorage): "… has been added." on the page loaded next
+            redirect.cookies = response.cookies
+            return redirect
         return response
 
     return middleware
