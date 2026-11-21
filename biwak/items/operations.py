@@ -212,7 +212,7 @@ def create_message(
 
 
 @transaction.atomic
-def create_folder(*, project, title, creator, parent=None, visible=False):
+def create_folder(*, project, title, creator, parent=None, visible=False, color=""):
     item = create_item(
         project=project,
         kind=Kind.FOLDER,
@@ -221,7 +221,7 @@ def create_folder(*, project, title, creator, parent=None, visible=False):
         parent=parent,
         visible=visible and parent is None,
     )
-    Folder.objects.create(item=item)
+    Folder.objects.create(item=item, color=color)
     created(item, creator)
     return item
 

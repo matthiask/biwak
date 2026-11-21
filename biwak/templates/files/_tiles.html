@@ -36,6 +36,7 @@
     <li>
       <a
         class="wb-tile wb-tile-{{ row.kind }}"
+        {% if row.kind == "folder" and row.folder.color %}data-folder-color="{{ row.folder.color }}"{% endif %}
         href="{{ row.get_absolute_url }}"
         data-kb-row
         data-kb-open

@@ -1682,14 +1682,18 @@ def folder():
 @click.argument("title")
 @click.option("--folder", "parent", type=int, help="Inside this folder.")
 @visible_option
+@click.option(
+    "--color",
+    type=click.Choice([*PALETTE, "none"]),
+    help="The folder's color; without, it has none.",
+)
 @json_option
-def folder_new(project, title, parent, visible, as_json):
+def folder_new(project, title, parent, visible, color, as_json):
     """Create a folder titled TITLE in PROJECT"""
-    data = request(
-        "POST",
-        f"projects/{project}/folders/",
-        json={"title": title, "parent_id": parent, "visible_to_clients": visible},
-    )
+    body = {"title": title, "parent_id": parent, "visible_to_clients": visible}
+    if color not in (None, "none"):
+        body["color"] = color
+    data = request("POST", f"projects/{project}/folders/", json=body)
     if as_json:
         return echo_json(data)
     click.echo(f"Created #{data['id']}: {data['url']}")
@@ -1719,6 +1723,23 @@ def folder_rename(folder_id, title, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Renamed #{folder_id}: {data['folder']['title']}")
+    return None
+
+
+@folder.command("color")
+@click.argument("folder_id", metavar="FOLDER", type=int)
+@click.argument("color", type=click.Choice([*PALETTE, "none"]))
+@json_option
+def folder_color(folder_id, color, as_json):
+    """Give FOLDER a color (a name of the palette), or 'none'"""
+    data = request(
+        "PATCH",
+        f"folders/{folder_id}/",
+        json={"color": "" if color == "none" else color},
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"#{folder_id}: {data['color_name'] or 'no color'}")
     return None
 
 

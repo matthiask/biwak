@@ -13,9 +13,10 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_GET, require_POST
 
+from biwak.accounts.models import Color
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
-from biwak.forms import Form
+from biwak.forms import ColorSwatches, Form
 from biwak.items import editing, glance, operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
@@ -56,7 +57,7 @@ def contents(user, project, folder):
                 output_field=IntegerField(),
             )
         )
-        .select_related("creator")
+        .select_related("creator", "folder")
         .order_by("folder_first", *ORDER_BY[ordering_of(project, folder)])
     )
 
@@ -117,6 +118,15 @@ def folder_choices(user, project, *, exclude=None):
 
 class FolderForm(Form):
     title = forms.CharField(label=_("title"), max_length=500)
+    # None by default: folders aren't told apart unless somebody chooses
+    # (specs/files.md, "Folder colors")
+    color = forms.ChoiceField(
+        label=_("color"),
+        choices=[("", _("None")), *Color.choices],
+        required=False,
+        initial="",
+        widget=ColorSwatches,
+    )
 
 
 class NewFolderForm(FolderForm):
@@ -177,6 +187,7 @@ def folder_new(request, pk):
             creator=request.user,
             parent=parent,
             visible=form.cleaned_data.get("visible", False),
+            color=form.cleaned_data["color"],
         )
         return redirect(item)
     return form_response(
@@ -228,25 +239,31 @@ def project_files_order(request, pk):
     return _order(request, project_for(request, pk), None)
 
 
-def folder_rename(request, pk):
-    """Renaming a folder: a modal of its "More" menu, also a page"""
+def folder_edit(request, pk):
+    """Renaming a folder and choosing its color: a modal of its "More"
+    menu, also a page"""
     item = item_for(request, pk, Kind.FOLDER)
     if not ops.can_change(request.user, item):
         raise PermissionDenied
-    form = FolderForm(request.POST or None, initial={"title": item.title})
+    form = FolderForm(
+        request.POST or None, initial={"title": item.title, "color": item.folder.color}
+    )
     if form.is_valid():
         operations.update_folder(
-            item, actor=request.user, title=form.cleaned_data["title"]
+            item,
+            actor=request.user,
+            title=form.cleaned_data["title"],
+            color=form.cleaned_data["color"],
         )
         return redirect(item)
     return form_response(
         request,
         form,
-        title=_("Rename…"),
+        title=_("Edit…"),
         item=item,
         parent=item.parent,
         cancel_url=item.get_absolute_url(),
-        submit_label=_("Rename"),
+        submit_label=_("Save"),
     )
 
 

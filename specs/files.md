@@ -107,10 +107,23 @@ the counts of the top level's folders, docs and files.
 - **".."** (decided 2026-11-21): inside a folder the first tile leads to
   the parent (the top level from a first-level folder), also a drop
   target.
-- **Modals:** "New folder" in the header (title, visible to clients for
-  staff), "Rename…" in a folder's "More" menu (`library.folder_new`,
-  `folder_rename`, `operations.update_folder()`; renaming records
-  `edited`).
+- **Modals:** "New folder" in the header (title, color, visible to
+  clients for staff), "Edit…" in a folder's "More" menu (title and color;
+  `library.folder_new`, `folder_edit`, `operations.update_folder()`;
+  renaming records `edited`, a color alone no event).
+- **Colors** (decided 2026-11-21, as for projects,
+  `project-colors.md`): `Folder.color`, a name of the palette or empty,
+  chosen with `ColorSwatches` in both modals by whoever may rename. The
+  tile's icon area takes the color's tint (`--wb-palette-*-tint-bg`) and
+  the folder icon its ink; the folder page's header icon the text color
+  (`data-folder-color`, `main.css`); no color looks as before. Not in
+  breadcrumbs, mails or the feed. **No suggestion** (decided 2026-11-21):
+  new folders start without a color, unlike projects, which are told
+  apart by default; the conservative choice, folders are many and a
+  color is a choice. API: `color` on `POST projects/{id}/folders/` and
+  `PATCH folders/{id}/`; `color` and `color_name` on the folder, `color`
+  on folder entries. CLI: `biwak folder new --color`, `biwak folder
+  color FOLDER NAME|none`.
 - **Ordering per folder** (decided 2026-11-21: stored on the folder):
   alphabetical (the default), reverse alphabetical, newest or oldest
   first, by creation (the last change would reorder while people work).
@@ -271,5 +284,5 @@ text's first line), files (upload, replace, versions, download URL).
 
 CLI: `--attach FILE` on commands writing texts (appended at the end),
 `biwak messages`, `biwak message show|post`, `biwak files [FOLDER]`
-(with "Order:"), `biwak folder new|move|rename|order`, `biwak file
+(with "Order:"), `biwak folder new|move|rename|color|order`, `biwak file
 upload|download`, `biwak doc show|edit` (`$EDITOR`).

@@ -14,7 +14,7 @@ from biwak.activity.operations import subscribe
 from biwak.collab import live
 from biwak.files import attachments, operations
 from biwak.items import operations as ops
-from biwak.items.models import Item, MessageCategory
+from biwak.items.models import Folder, Item, MessageCategory
 from biwak.projects import operations as project_ops
 from biwak.test_utils import bare_doc, organization, person, project
 
@@ -488,6 +488,53 @@ class FolderAPITest(APIFixture, TestCase):
         self.assertEqual(
             self.call(
                 self.ada, "patch", f"folders/{self.secret_doc.pk}/", {"title": "x"}
+            ).status_code,
+            404,
+        )
+
+    def test_folder_colors(self):
+        path = f"folders/{self.public.pk}/"
+        response = self.call(
+            self.ada,
+            "post",
+            f"projects/{self.project.pk}/folders/",
+            {"title": "Tinted", "color": "moss"},
+        )
+        self.assertEqual(response.status_code, 201)
+        tinted = response.json()["id"]
+        response = self.call(
+            self.ada, "post", f"projects/{self.project.pk}/folders/", {"title": "Plain"}
+        )
+        self.assertEqual(Folder.objects.get(pk=response.json()["id"]).color, "")
+        self.assertEqual(
+            self.call(
+                self.ada,
+                "post",
+                f"projects/{self.project.pk}/folders/",
+                {"title": "Bad", "color": "amber"},
+            ).status_code,
+            422,
+        )
+        data = self.call(self.ada, "patch", path, {"color": "lake"}).json()
+        self.assertEqual((data["color"], data["color_name"]), ("lake", "Lake"))
+        self.assertEqual(data["folder"]["title"], "Public")
+        # Clients see it, in the folder and in its parent's entries
+        data = self.files(self.cleo, folder_id=self.public.pk).json()
+        self.assertEqual(data["color"], "lake")
+        entries = {e["title"]: e for e in self.files(self.cleo).json()["entries"]}
+        self.assertEqual(entries["Public"]["color"], "lake")
+        self.assertEqual(self.files(self.ada).json()["color"], "")
+        data = self.call(self.ada, "patch", path, {"color": ""}).json()
+        self.assertEqual(data["color"], "")
+        # Not given: left alone
+        self.call(self.ada, "patch", f"folders/{tinted}/", {"title": "T2"})
+        self.assertEqual(Folder.objects.get(pk=tinted).color, "moss")
+        self.assertEqual(
+            self.call(self.cleo, "patch", path, {"color": "lake"}).status_code, 403
+        )
+        self.assertEqual(
+            self.call(
+                self.cleo, "patch", f"folders/{self.private.pk}/", {"color": "lake"}
             ).status_code,
             404,
         )
