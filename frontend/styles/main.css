@@ -2765,6 +2765,77 @@ main:has([data-hide-title]) [data-edit-open] {
   color: var(--wb-accent-tint-ink);
 }
 
+/* Folder colors (specs/files.md, "Folder colors"): the palette's tint on a
+   folder's tile and its icon, the text color on the page header's icon */
+[data-folder-color="heather"] {
+  --wb-folder-tint-bg: var(--wb-palette-heather-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-heather-tint-ink);
+  --wb-folder-text: var(--wb-palette-heather-text);
+}
+
+[data-folder-color="lake"] {
+  --wb-folder-tint-bg: var(--wb-palette-lake-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-lake-tint-ink);
+  --wb-folder-text: var(--wb-palette-lake-text);
+}
+
+[data-folder-color="forest"] {
+  --wb-folder-tint-bg: var(--wb-palette-forest-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-forest-tint-ink);
+  --wb-folder-text: var(--wb-palette-forest-text);
+}
+
+[data-folder-color="glacier"] {
+  --wb-folder-tint-bg: var(--wb-palette-glacier-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-glacier-tint-ink);
+  --wb-folder-text: var(--wb-palette-glacier-text);
+}
+
+[data-folder-color="ember"] {
+  --wb-folder-tint-bg: var(--wb-palette-ember-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-ember-tint-ink);
+  --wb-folder-text: var(--wb-palette-ember-text);
+}
+
+[data-folder-color="alpenglow"] {
+  --wb-folder-tint-bg: var(--wb-palette-alpenglow-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-alpenglow-tint-ink);
+  --wb-folder-text: var(--wb-palette-alpenglow-text);
+}
+
+[data-folder-color="moss"] {
+  --wb-folder-tint-bg: var(--wb-palette-moss-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-moss-tint-ink);
+  --wb-folder-text: var(--wb-palette-moss-text);
+}
+
+[data-folder-color="slate"] {
+  --wb-folder-tint-bg: var(--wb-palette-slate-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-slate-tint-ink);
+  --wb-folder-text: var(--wb-palette-slate-text);
+}
+
+[data-folder-color="bark"] {
+  --wb-folder-tint-bg: var(--wb-palette-bark-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-bark-tint-ink);
+  --wb-folder-text: var(--wb-palette-bark-text);
+}
+
+[data-folder-color="berry"] {
+  --wb-folder-tint-bg: var(--wb-palette-berry-tint-bg);
+  --wb-folder-tint-ink: var(--wb-palette-berry-tint-ink);
+  --wb-folder-text: var(--wb-palette-berry-text);
+}
+
+.wb-tile-folder[data-folder-color] .wb-tile-visual {
+  background: var(--wb-folder-tint-bg);
+  color: var(--wb-folder-tint-ink);
+}
+
+.wb-folder-icon {
+  color: var(--wb-folder-text);
+}
+
 .wb-tile-visual img {
   width: 100%;
   height: 100%;

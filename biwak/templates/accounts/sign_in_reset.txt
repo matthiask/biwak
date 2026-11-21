@@ -1,0 +1,10 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with actor=actor.display_name %}{{ actor }} reset how you sign in to Biwak: they removed what you set up for signing in and signed you out everywhere.{% endblocktranslate %}
+
+{% translate "Removed:" %}
+{% for what in removed %}- {{ what }}
+{% endfor %}
+{% translate "Sign in with a code sent to your address, or through your organization's sign-in if it uses one. You can add a passkey, set up an authenticator app and create API tokens again in your settings:" %}
+{{ url }}
+
+{% blocktranslate with actor=actor.display_name %}If you didn't ask for this, tell {{ actor }} or an admin of your team right away.{% endblocktranslate %}
+{% endautoescape %}

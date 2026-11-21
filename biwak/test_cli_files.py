@@ -15,7 +15,7 @@ from biwak.accounts.models import APIToken, NotificationLevel
 from biwak.activity.models import Action, Event
 from biwak.files import operations
 from biwak.items import operations as ops
-from biwak.items.models import Item, MessageCategory
+from biwak.items.models import Folder, Item, MessageCategory
 from biwak.projects.models import Membership
 from biwak.test_utils import bare_doc, person
 
@@ -174,6 +174,26 @@ class FilesCLITest(test_cli.CLITest):
         self.assertIn("/ Specs", output)
         data = json.loads(self.biwak("files", self.project.pk, "--json").stdout)
         self.assertEqual([e["title"] for e in data["entries"]], ["Specs"])
+
+    def test_folder_colors(self):
+        data = json.loads(
+            self.biwak(
+                "folder", "new", self.project.pk, "Tinted", "--color", "ember", "--json"
+            ).stdout
+        )
+        self.assertEqual(Folder.objects.get(pk=data["id"]).color, "ember")
+        plain = json.loads(
+            self.biwak("folder", "new", self.project.pk, "Plain", "--json").stdout
+        )
+        self.assertEqual(Folder.objects.get(pk=plain["id"]).color, "")
+        output = self.biwak("folder", "color", plain["id"], "lake").output
+        self.assertIn("Lake", output)
+        self.assertEqual(Folder.objects.get(pk=plain["id"]).color, "lake")
+        output = self.biwak("folder", "color", plain["id"], "none").output
+        self.assertIn("no color", output)
+        self.assertEqual(Folder.objects.get(pk=plain["id"]).color, "")
+        result = self.biwak("folder", "color", plain["id"], "amber")
+        self.assertNotEqual(result.exit_code, 0)
 
     def test_renaming_and_ordering_folders(self):
         """Folders: renaming and ordering (specs/files.md, "Folders")"""

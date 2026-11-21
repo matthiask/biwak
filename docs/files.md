@@ -26,8 +26,13 @@ in the folder's order; images show a preview, files their size, docs with a task
 how many are done. Inside a folder the first tile, "..", leads to the
 folder above (or the project's top level); the path above the title
 does too. Staff create what is here: "New folder", "New doc", "Upload
-files". A folder's "More" menu has "Rename…"; move things between
+files". A folder's "More" menu has "Edit…" (its title and color); move things between
 folders with "Move to..." in their "More" menu.
+
+**Folder colors:** a folder can have a color, chosen as a row of swatches
+in "New folder" and "Edit…" (staff; "None" is the default). Its tile and
+the icon in its page's title take the color, so you find it at a glance.
+Clients see the colors too.
 
 **Moving:** drag a tile onto a folder, onto "..", or onto a folder in
 the path above the title. **Several at once:** Ctrl-click (Cmd-click on

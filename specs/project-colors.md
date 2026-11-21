@@ -17,6 +17,8 @@ A color per project, so projects are told apart at a glance.
   projects/` and `PATCH projects/{id}/`, `color` and `color_name` on
   `ProjectOut` (clients see them). CLI: `biwak project add|edit
   --color NAME|none`.
+- **Folders** have colors too, chosen and never suggested
+  (decided 2026-11-21, `files.md`, "Folders").
 - **Suggested** for new projects (`suggested_color()`): the first color
   no active project has, else the least used; preselected in the form,
   used by the API when `color` is left out. Archiving frees a color.

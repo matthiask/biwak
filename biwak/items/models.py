@@ -16,6 +16,7 @@ from tree_queries.models import TreeNode
 from tree_queries.query import TreeQuerySet
 
 from biwak import schedules
+from biwak.accounts.models import Color
 from biwak.projects.models import FilesOrdering, Project
 
 
@@ -449,6 +450,16 @@ class Folder(Detail):
         choices=FilesOrdering,
         default=FilesOrdering.ALPHABETICAL,
         editable=False,
+    )
+
+    # Tells folders apart on their tile and page; none unless chosen
+    # (specs/files.md, "Folder colors")
+    color = models.CharField(
+        _("color"),
+        max_length=10,
+        blank=True,
+        choices=Color,
+        help_text=_("Tints the folder's tile and icon."),
     )
 
     class Meta:

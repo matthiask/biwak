@@ -15,7 +15,7 @@ from django.utils.translation import gettext as _
 from ninja import File, Form, Router, Schema, Status, UploadedFile
 from ninja.errors import HttpError
 
-from biwak.accounts.models import User
+from biwak.accounts.models import Color, User
 from biwak.activity.mentions import resolve as resolve_mentions
 from biwak.api_conventions import (
     ItemOut,
@@ -383,6 +383,8 @@ def message_unpin(request, message_id: int):
 
 
 class EntryOut(ItemOut):
+    # Folders only: the color's name, "" for none
+    color: Color | Literal[""] | None = None
     # Files only
     size: int | None = None
     content_type: str | None = None
@@ -391,6 +393,8 @@ class EntryOut(ItemOut):
 
 def entry_out(item):
     entry = item_out(item)
+    if item.kind == Kind.FOLDER:
+        entry["color"] = item.folder.color
     if item.kind == Kind.FILE:
         version = current_version(item)
         entry |= {
@@ -417,6 +421,9 @@ class FolderOut(Schema):
     breadcrumbs: list[CrumbOut]
     # The folder's order, or the project's for the root (folders first)
     ordering: Ordering
+    # The folder's color name and label; empty for none and for the root
+    color: Color | Literal[""] = ""
+    color_name: str = ""
     entries: list[EntryOut]
 
 
@@ -429,6 +436,8 @@ def folder_out(request, project, folder):
             for c in breadcrumbs(folder) + ([folder] if folder else [])
         ],
         "ordering": ordering_of(project, folder),
+        "color": folder.folder.color if folder else "",
+        "color_name": folder.folder.get_color_display() if folder else "",
         "entries": [entry_out(row) for row in rows],
     }
 
@@ -459,21 +468,26 @@ def files_update(request, project_id: int, data: OrderingIn):
 class FolderPatch(Schema):
     title: str | None = None
     ordering: Ordering | None = None
+    color: Color | Literal[""] | None = None
 
 
 @router.patch("folders/{folder_id}/", response=FolderOut)
 def folder_update(request, folder_id: int, data: FolderPatch):
-    """Renames a folder (who may change it: staff, clients what they
-    created) or sets the order of its contents (staff)"""
+    """Renames a folder or sets its color (who may change it: staff, clients
+    what they created) or sets the order of its contents (staff)"""
     item = item_for(request, folder_id, Kind.FOLDER)
     given = data.model_fields_set
     if "ordering" in given and data.ordering is not None:
         api_staff_only(request, _("Only staff change the order."))
-    if "title" in given and not ops.can_change(request.user, item):
-        raise HttpError(403, _("You can only rename folders you created."))
-    if "title" in given:
+    changes = "title" in given or ("color" in given and data.color is not None)
+    if changes and not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only change folders you created."))
+    if changes:
         operations.update_folder(
-            item, actor=request.user, title=clean_title(data.title or "")
+            item,
+            actor=request.user,
+            **({"title": clean_title(data.title or "")} if "title" in given else {}),
+            **({"color": data.color} if data.color is not None else {}),
         )
     if "ordering" in given and data.ordering is not None:
         operations.set_ordering(item, data.ordering, actor=request.user)
@@ -483,6 +497,8 @@ def folder_update(request, folder_id: int, data: FolderPatch):
 
 class FolderIn(Schema):
     title: str
+    # Left out: none (folders aren't told apart by default)
+    color: Color | Literal[""] = ""
     parent_id: int | None = None
     visible_to_clients: bool = False
 
@@ -500,6 +516,7 @@ def folder_create(request, project_id: int, data: FolderIn):
         creator=request.user,
         parent=folder,
         visible=data.visible_to_clients,
+        color=data.color,
     )
     return Status(201, item_out(item))
 

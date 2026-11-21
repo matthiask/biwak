@@ -208,8 +208,8 @@ class ProjectActionsTest(ActionsBase):
             actions["New folder"]["url"],
             f"/projects/{self.camp.pk}/folders/new/?folder={folder.pk}",
         )
-        self.assertEqual(actions["Rename…"]["type"], "modal")
-        self.assertEqual(actions["Rename…"]["url"], f"/folders/{folder.pk}/rename/")
+        self.assertEqual(actions["Edit…"]["type"], "modal")
+        self.assertEqual(actions["Edit…"]["url"], f"/folders/{folder.pk}/edit/")
         self.assertEqual(actions["Order…"]["url"], f"/folders/{folder.pk}/order/")
         actions = self.actions(self.ada, f"/projects/{self.camp.pk}/files/")
         self.assertEqual(
@@ -221,7 +221,7 @@ class ProjectActionsTest(ActionsBase):
             project=self.camp, title="Maps", creator=self.ada, visible=True
         )
         actions = self.actions(self.cleo, folder.get_absolute_url())
-        self.assertNotIn("Rename…", actions)
+        self.assertNotIn("Edit…", actions)
         self.assertNotIn("New folder", actions)
         self.assertNotIn("Order…", actions)
         actions = self.actions(self.cleo, f"/projects/{self.camp.pk}/files/")

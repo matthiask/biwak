@@ -71,22 +71,36 @@ class PeopleCLITest(test_cli.CLITest):
         self.assertTrue(self.active(self.cleo))
         self.assertEqual(len(mail.outbox), 0)
 
-    def test_reset_two_factor(self):
+    def test_reset_sign_in(self):
         """specs/two-factor.md"""
         from allauth.mfa.models import Authenticator
 
+        from biwak.accounts.test_two_factor import app, passkey
+
+        User.objects.filter(pk=self.cleo.pk).update(is_active=True)
+        app(self.cleo)
+        passkey(self.cleo)
+        with self.captureOnCommitCallbacks(execute=True):
+            output = self.biwak("people", "reset-sign-in", self.cleo.pk).output
+        self.assertIn(
+            f"Reset: Cleo Example ({self.cleo.pk}), removed authenticator app,"
+            " 1 passkey(s), signed out everywhere",
+            output,
+        )
+        self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
+        self.assertEqual(len(mail.outbox), 1)
+        data = json.loads(
+            self.biwak("people", "reset-sign-in", self.cleo.pk, "--json").stdout
+        )
+        self.assertFalse(data["reset"])
+        result = self.biwak("people", "reset-sign-in", self.ada.pk)
+        self.assertEqual(result.exit_code, 1)
+
+    def test_reset_two_factor_is_an_alias(self):
         from biwak.accounts.test_two_factor import app
 
         User.objects.filter(pk=self.cleo.pk).update(is_active=True)
         app(self.cleo)
-        with self.captureOnCommitCallbacks(execute=True):
-            output = self.biwak("people", "reset-two-factor", self.cleo.pk).output
+        output = self.biwak("people", "reset-two-factor", self.cleo.pk).output
         self.assertIn(f"Reset: Cleo Example ({self.cleo.pk})", output)
-        self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
-        self.assertEqual(len(mail.outbox), 1)
-        data = json.loads(
-            self.biwak("people", "reset-two-factor", self.cleo.pk, "--json").stdout
-        )
-        self.assertFalse(data["reset"])
-        result = self.biwak("people", "reset-two-factor", self.ada.pk)
-        self.assertEqual(result.exit_code, 1)
+        self.assertNotIn("reset-two-factor", self.biwak("people", "--help").output)

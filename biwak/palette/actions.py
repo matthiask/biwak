@@ -213,7 +213,7 @@ def on_item(request, item, context):
                 )
             )
     if item.kind == Kind.FOLDER and ops.can_change(user, item):
-        actions.append(modal(_("Rename…"), reverse("folder_rename", args=[item.pk])))
+        actions.append(modal(_("Edit…"), reverse("folder_edit", args=[item.pk])))
     if item.kind == Kind.FOLDER and not user.is_client:
         actions.append(modal(_("Order…"), reverse("folder_order", args=[item.pk])))
     if item.is_commentable:
@@ -302,9 +302,8 @@ def on_people(user, name):
 
 def on_person(user, name, person):
     """A person's page: Activate… or Deactivate… for those who may
-    (specs/activation.md), Reset two-factor… for somebody with an
-    authenticator app (specs/two-factor.md)"""
-    from biwak.accounts import two_factor
+    (specs/activation.md), Reset sign-in… for somebody with an
+    authenticator app, passkeys or API tokens (specs/two-factor.md)"""
     from biwak.organizations import activation
 
     if name != "person" or not hasattr(person, "is_active"):
@@ -318,11 +317,11 @@ def on_person(user, name, person):
         actions.append(
             modal(_("Deactivate…"), reverse("person_deactivate", args=[person.pk]))
         )
-    if activation.can_reset_two_factor(user, person) and two_factor.has_app(person):
+    if activation.can_reset_sign_in(user, person) and activation.sign_in(person):
         actions.append(
             modal(
-                _("Reset two-factor…"),
-                reverse("person_reset_two_factor", args=[person.pk]),
+                _("Reset sign-in…"),
+                reverse("person_reset_sign_in", args=[person.pk]),
             )
         )
     return actions
