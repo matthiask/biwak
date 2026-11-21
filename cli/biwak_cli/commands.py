@@ -558,19 +558,20 @@ def invitations_resend(person, as_json):
 @click.argument("person", type=int)
 @json_option
 def invitations_withdraw(person, as_json):
-    """Withdraw the invitation of PERSON: removed from the projects you can
-    open, the account deleted if nothing else refers to it, else
-    deactivated (staff for clients, admins for everybody)"""
+    """Withdraw the invitation of PERSON: removed from all their projects,
+    the account deleted if nothing else refers to it, else deactivated
+    (staff for clients, admins for everybody)"""
     data = request("DELETE", f"invitations/{person}/")
     if as_json:
         return echo_json(data)
-    removed = ", ".join(str(pk) for pk in data["removed_from"]) or "no projects"
+    removed = [str(pk) for pk in data["removed_from"]]
+    if others := data.get("removed_from_others"):
+        removed.append(f"{others} other project{'s' if others > 1 else ''}")
+    removed = ", ".join(removed) or "no projects"
     if data["deleted"]:
         account = "the account is deleted."
-    elif data.get("deactivated"):
-        account = "the account is deactivated."
     else:
-        account = "the account stays, invited to other projects."
+        account = "the account is deactivated."
     click.echo(f"Withdrawn: removed from {removed}; {account}")
     return None
 

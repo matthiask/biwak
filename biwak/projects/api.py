@@ -492,8 +492,11 @@ def invitation_resend(request, person_id: int):
 
 
 class WithdrawnOut(Schema):
-    # Removed from these projects (those the withdrawing person can open)
+    # Removed from all their projects (decided 2026-11-21): these are the
+    # ones the withdrawing person can open,
     removed_from: list[int]
+    # and this many others, not named
+    removed_from_others: int
     # The account went too: nothing else referred to it
     deleted: bool
     # The account stays deactivated: something referred to it
@@ -502,11 +505,14 @@ class WithdrawnOut(Schema):
 
 @router.delete("invitations/{person_id}/", response=WithdrawnOut)
 def invitation_withdraw(request, person_id: int):
-    """Withdraws the invitation while the person hasn't signed in"""
+    """Withdraws the invitation while the person hasn't signed in: removed
+    from all their projects, the account deleted or deactivated"""
     user = invitation_for(request, person_id)
     withdrawn = project_ops.withdraw_invitation(user, actor=request.user)
+    removed_from, others = withdrawn.for_actor(request.user)
     return {
-        "removed_from": [p.pk for p in withdrawn.projects],
+        "removed_from": [p.pk for p in removed_from],
+        "removed_from_others": others,
         "deleted": withdrawn.deleted,
         "deactivated": withdrawn.deactivated,
     }

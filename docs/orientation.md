@@ -112,10 +112,9 @@ which row is wrong.
 **Invitations:** until someone signs in for the first time, staff see
 "Invited, not signed in yet" next to them, with who invited them and
 when. "Resend" sends the invitation again, naming the projects they are
-in now. "Withdraw…" removes them from the projects you can open, and
+in now. "Withdraw…" removes them from all their projects and
 deletes the account if nothing else refers to it (no comments, no
-assignments, no other projects); if something does, the account stays
-but is deactivated. Staff resend and withdraw clients' invitations,
+assignments); if something does, the account stays but is deactivated. Staff resend and withdraw clients' invitations,
 admins everybody's. "Invited" on the People page lists
 everybody who hasn't signed in yet, the oldest invitation first.
 

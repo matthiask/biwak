@@ -68,16 +68,18 @@ to both.
   projects they're in now (not archived); "Sent again."; no limit
   (decided 2026-11-21); `invited_by` and `invited_at` stay.
 - **Withdraw** (staff, only before they signed in, asking first):
-  removes them from the projects the withdrawing person can open
-  (recorded as "removed", the "added" events stay); the account goes when
-  they're in no other project and nothing refers to it (comments, items,
-  events, files, links, assignments, check-ins asking them, mentions,
-  reactions). When something refers to it, the account stays
-  deactivated (decided 2026-11-21: through `activation.deactivate()`, so
-  sessions, API tokens and calendar links go too). While they're in
-  projects the withdrawing person can't open, the account stays as it is,
-  invited to those. The question says which happens; the API answers
-  `deleted` and `deactivated`.
+  removes them from all their projects, also those the withdrawing
+  person can't open (decided 2026-11-21: "withdrawing is withdrawing";
+  it was only the projects the withdrawing person can open), recorded as
+  "removed", the "added" events stay. The account goes when nothing
+  refers to it (comments, items, events, files, links, assignments,
+  check-ins asking them, mentions, reactions); when something does, it
+  stays deactivated (decided 2026-11-21: through
+  `activation.deactivate()`, so sessions, API tokens and calendar links
+  go too). The question says which happens and names the projects the
+  withdrawing person can open, counting the others ("2 projects you
+  can't open"); the API answers `removed_from` (those IDs),
+  `removed_from_others` (the count), `deleted` and `deactivated`.
 
 ## Activating
 
