@@ -11,6 +11,7 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from biwak.accounts.models import APIToken
+from biwak.activity.models import Action, Event
 from biwak.audit.models import LoggedAction
 from biwak.items import operations as ops
 from biwak.items.models import Item, Status
@@ -78,6 +79,17 @@ class ManageTest(TestCase):
             project=self.project, title="Wishes", creator=self.cleo, visible=True
         )
         self.assertEqual(self.client.get(f"/lists/{own.pk}/edit/").status_code, 200)
+
+    def test_an_unchanged_list_form_records_nothing(self):
+        """update_list() recorded "edited" for every save"""
+        self.client.force_login(self.ada)
+        url = f"/lists/{self.shared.pk}/edit/"
+        Event.objects.all().delete()
+        data = {"title": "Shared", "description": "", "view": "list"}
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertFalse(Event.objects.exists())
+        self.client.post(url, data | {"description": "New"})
+        self.assertEqual(Event.objects.get().action, Action.EDITED)
 
     def test_archiving_twice(self):
         """A double submit archived an archived list: a 500"""

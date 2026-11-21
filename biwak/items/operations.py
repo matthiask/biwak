@@ -706,21 +706,26 @@ def can_change(user, item):
 def update_list(
     item, *, actor, title=_UNCHANGED, description=_UNCHANGED, view=_UNCHANGED
 ):
+    """Changes what's given and differs; records an edit only then, like
+    ``update_todo()``"""
     todolist = item.todolist
+    edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
         item.updated_at = timezone.now()
         item.save(update_fields=["title", "updated_at"])
-    fields = []
-    if description is not _UNCHANGED:
-        todolist.description = description
-        fields.append("description")
-    if view is not _UNCHANGED:
-        todolist.view = view
-        fields.append("view")
+        edited = True
+    fields = [
+        name
+        for name, value in [("description", description), ("view", view)]
+        if value is not _UNCHANGED and value != getattr(todolist, name)
+    ]
+    for name in fields:
+        setattr(todolist, name, description if name == "description" else view)
     if fields:
         todolist.save(update_fields=fields)
-    record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+    if edited or fields:
+        record(actor=actor, action=Action.EDITED, project=item.project, item=item)
     return item
 
 
