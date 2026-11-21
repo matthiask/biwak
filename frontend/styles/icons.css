@@ -43,6 +43,9 @@
 .bi-arrow-up::before {
   content: "\f148";
 }
+.bi-at::before {
+  content: "\f152";
+}
 .bi-bookmark::before {
   content: "\f1a2";
 }
@@ -72,6 +75,9 @@
 }
 .bi-clock-history::before {
   content: "\f292";
+}
+.bi-code-slash::before {
+  content: "\f2c6";
 }
 .bi-download::before {
   content: "\f30a";
@@ -112,6 +118,12 @@
 .bi-list-check::before {
   content: "\f473";
 }
+.bi-list-ol::before {
+  content: "\f475";
+}
+.bi-list-ul::before {
+  content: "\f478";
+}
 .bi-lock::before {
   content: "\f47b";
 }
@@ -142,8 +154,20 @@
 .bi-plus-lg::before {
   content: "\f64d";
 }
+.bi-quote::before {
+  content: "\f6b0";
+}
 .bi-trash::before {
   content: "\f5de";
+}
+.bi-type-bold::before {
+  content: "\f5f0";
+}
+.bi-type-h2::before {
+  content: "\f5f2";
+}
+.bi-type-italic::before {
+  content: "\f5f4";
 }
 .bi-upload::before {
   content: "\f603";

@@ -7,6 +7,7 @@ from django.apps import apps
 from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.test import TestCase
+from django.urls import reverse
 
 from biwak import checklists
 from biwak.activity.models import Action, Event
@@ -193,3 +194,100 @@ class TickTest(Fixture):
         )
         comment.refresh_from_db()
         self.assertEqual(comment.content, "- [x] one")
+
+
+class TickViewTest(Fixture):
+    def post(self, user, item, index=0, *, version=None, **data):
+        self.client.force_login(user)
+        return self.client.post(
+            reverse("item_tick", args=[item.pk]),
+            {
+                "index": index,
+                "version": self.version(item) if version is None else version,
+                **data,
+            },
+        )
+
+    def test_staff_ticks_and_gets_the_new_version(self):
+        response = self.post(self.ada, self.todo, checked="1")
+        self.assertEqual(response.status_code, 200)
+        notes = Todo.objects.get(pk=self.todo.pk).notes
+        self.assertEqual(response.json(), {"version": checklists.text_hash(notes)})
+        self.assertIn("[x] tent", notes)
+        # Setting, not toggling: sending it again changes nothing
+        again = self.post(
+            self.ada, self.todo, version=response.json()["version"], checked="1"
+        )
+        self.assertEqual(again.status_code, 200)
+        self.assertEqual(Todo.objects.get(pk=self.todo.pk).notes, notes)
+
+    def test_client_on_a_todo(self):
+        self.assertEqual(self.post(self.cleo, self.todo).status_code, 200)
+        self.assertIn("[x] tent", Todo.objects.get(pk=self.todo.pk).notes)
+
+    def test_client_refused_on_somebody_elses_message(self):
+        self.assertEqual(self.post(self.cleo, self.message).status_code, 403)
+        self.assertEqual(Message.objects.get(pk=self.message.pk).content, TEXT)
+
+    def test_client_gets_404_for_internal_items(self):
+        internal = ops.create_list(
+            project=self.project, title="Internal", creator=self.ada
+        )
+        secret = ops.create_todo(
+            todolist=internal, title="Secret", creator=self.ada, notes=TEXT
+        )
+        self.assertEqual(self.post(self.cleo, secret).status_code, 404)
+
+    def test_changed_text_is_409(self):
+        stale = self.version(self.todo)
+        ops.update_todo(self.todo, actor=self.ada, notes="- [ ] new")
+        self.assertEqual(self.post(self.ada, self.todo, version=stale).status_code, 409)
+        self.assertEqual(Todo.objects.get(pk=self.todo.pk).notes, "- [ ] new")
+
+    def test_doc_locked_by_somebody_else_is_409(self):
+        from biwak.files.operations import lock_doc
+
+        bob = person("Bob")
+        doc = ops.create_doc(
+            project=self.project, title="Doc", creator=self.ada, content=TEXT
+        )
+        lock_doc(doc, bob)
+        self.assertEqual(self.post(self.ada, doc).status_code, 409)
+
+    def test_bad_requests(self):
+        self.assertEqual(self.post(self.ada, self.todo, 9).status_code, 400)
+        self.assertEqual(self.post(self.ada, self.todo, "x").status_code, 400)
+
+    def test_comments(self):
+        comment = ops.add_comment(self.todo, author=self.ada, content="- [ ] one")
+        version = checklists.text_hash(comment.content)
+        response = self.post(self.cleo, self.todo, version=version, comment=comment.pk)
+        self.assertEqual(response.status_code, 403)
+        response = self.post(self.ada, self.todo, version=version, comment=comment.pk)
+        self.assertEqual(response.status_code, 200)
+        comment.refresh_from_db()
+        self.assertEqual(comment.content, "- [x] one")
+
+    def test_get_is_not_allowed(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("item_tick", args=[self.todo.pk]))
+        self.assertEqual(response.status_code, 405)
+
+    def test_pages_offer_ticking_to_those_who_may(self):
+        ops.add_comment(self.todo, author=self.ada, content="- [ ] one")
+        for user, page, allowed in [
+            (self.ada, self.todo, True),
+            (self.cleo, self.todo, True),
+            (self.ada, self.message, True),
+            (self.cleo, self.message, False),
+        ]:
+            self.client.force_login(user)
+            html = self.client.get(page.get_absolute_url()).content.decode()
+            self.assertEqual("wb-checklist" in html, allowed, (user, page))
+            if not allowed:
+                self.assertIn("disabled>", html)
+        # The client's own comment on a to-do, not the staff's
+        self.client.force_login(self.cleo)
+        html = self.client.get(self.todo.get_absolute_url()).content.decode()
+        self.assertIn(f'data-tick-url="/items/{self.todo.pk}/tick/"', html)
+        self.assertNotIn("data-comment=", html)

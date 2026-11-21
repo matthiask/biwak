@@ -1,0 +1,74 @@
+{% load biwak i18n %}
+{% comment %}
+  The buttons frontend/toolbar.js puts above every Markdown field
+  (textarea[data-toolbar], specs/editor.md); here so that the icons and
+  texts are in the templates.
+{% endcomment %}
+<template data-toolbar-template>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-toolbar-action="bold"
+    title="{% translate 'Bold' %} (Ctrl+B)"
+    aria-keyshortcuts="Control+B"
+  >
+    {% icon "type-bold" %}<span class="visually-hidden">{% translate "Bold" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-toolbar-action="italic"
+    title="{% translate 'Italic' %} (Ctrl+I)"
+    aria-keyshortcuts="Control+I"
+  >
+    {% icon "type-italic" %}<span class="visually-hidden">{% translate "Italic" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-toolbar-action="link"
+    title="{% translate 'Link' %} (Ctrl+K)"
+    aria-keyshortcuts="Control+K"
+  >
+    {% icon "link-45deg" %}<span class="visually-hidden">{% translate "Link" %}</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="heading" title="{% translate 'Heading' %}">
+    {% icon "type-h2" %}<span class="visually-hidden">{% translate "Heading" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-toolbar-action="bullets"
+    title="{% translate 'Bulleted list' %} (Ctrl+Shift+8)"
+    aria-keyshortcuts="Control+Shift+8"
+  >
+    {% icon "list-ul" %}<span class="visually-hidden">{% translate "Bulleted list" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-toolbar-action="numbers"
+    title="{% translate 'Numbered list' %} (Ctrl+Shift+7)"
+    aria-keyshortcuts="Control+Shift+7"
+  >
+    {% icon "list-ol" %}<span class="visually-hidden">{% translate "Numbered list" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-toolbar-action="tasks"
+    title="{% translate 'Checklist' %} (Ctrl+Shift+9)"
+    aria-keyshortcuts="Control+Shift+9"
+  >
+    {% icon "list-check" %}<span class="visually-hidden">{% translate "Checklist" %}</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="quote" title="{% translate 'Quote' %}">
+    {% icon "quote" %}<span class="visually-hidden">{% translate "Quote" %}</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="code" title="{% translate 'Code' %}">
+    {% icon "code-slash" %}<span class="visually-hidden">{% translate "Code" %}</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="mention" title="{% translate 'Mention' %}">
+    {% icon "at" %}<span class="visually-hidden">{% translate "Mention" %}</span>
+  </button>
+</template>

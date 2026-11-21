@@ -40,7 +40,9 @@
         {{ version.name }} · {{ version.size|filesizeformat }} · {{ version.uploaded_by.get_short_name }},
         {{ version.uploaded_at|date:"j. M Y, H:i" }}
       </p>
-      {% if upload.description %}<div class="wb-markdown mb-4">{{ upload.description|markdown:item }}</div>{% endif %}
+      {% if upload.description %}<div class="wb-markdown mb-4">
+          {% checklist_markdown upload.description item %}
+        </div>{% endif %}
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

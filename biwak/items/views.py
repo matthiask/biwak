@@ -2,13 +2,13 @@ from django import forms
 from django.contrib import messages
 from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
-from biwak import cursors, schedules
+from biwak import checklists, cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
@@ -529,6 +529,41 @@ def switch(request, pk):
         item, visible=bool(request.POST.get("visible")), actor=request.user
     )
     return redirect(item)
+
+
+@require_POST
+def tick(request, pk):
+    """Ticks a checkbox of the item's text, or of one of its comments
+    (``comment``), without opening the editor (specs/editor.md): ``index``
+    is the checkbox, ``version`` the hash of the text the page showed, so
+    the text changed since: 409 and the page reloads. ``checked`` sets the
+    box (1 or 0), so a repeated click can't flip it back. Answers with the
+    new version."""
+    from biwak.files.operations import DocLocked
+
+    item = item_for(request, pk)
+    comment = None
+    if request.POST.get("comment"):
+        comment = get_object_or_404(Comment, pk=request.POST["comment"], item=item)
+    try:
+        index = int(request.POST["index"])
+    except KeyError, ValueError:
+        raise BadRequest("index") from None
+    checked = {"1": True, "0": False}.get(request.POST.get("checked"))
+    try:
+        text = ops.tick(
+            item,
+            actor=request.user,
+            index=index,
+            version=request.POST.get("version", ""),
+            comment=comment,
+            checked=checked,
+        )
+    except ops.ChecklistConflict, DocLocked:
+        return HttpResponse(status=409)
+    except checklists.NoCheckbox:
+        raise BadRequest("index") from None
+    return JsonResponse({"version": checklists.text_hash(text)})
 
 
 @require_POST

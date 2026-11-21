@@ -31,7 +31,7 @@
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div class="wb-markdown mb-4">{{ doc.content|markdown:item }}</div>
+      <div class="wb-markdown mb-4">{% checklist_markdown doc.content item %}</div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

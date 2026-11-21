@@ -37,6 +37,7 @@
       placeholder="{% translate 'Notes (Markdown)' %}"
       aria-label="{% translate 'notes' %}"
       data-mentions="{% url 'mentionable_list' item.pk %}"
+      data-toolbar
     >{% if posted %}{{ form.notes.value|default:"" }}{% endif %}</textarea>
     <div class="wb-add-todo-meta mb-2">
       {% if people %}

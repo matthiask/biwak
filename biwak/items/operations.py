@@ -337,7 +337,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
     like any other. ``version`` is ``checklists.text_hash()`` of the text
     the person saw: ``ChecklistConflict`` if it changed since,
     ``PermissionDenied`` unless they may change that text,
-    ``checklists.NoCheckbox`` if there's no such box."""
+    ``checklists.NoCheckbox`` if there's no such box. Returns the new text."""
     from biwak.checkins import operations as checkin_ops
     from biwak.files import operations as file_ops
 
@@ -350,7 +350,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
         comment.content = checklists.tick(comment.content, index, checked)
         comment.updated_at = timezone.now()
         comment.save(update_fields=["content", "updated_at"])
-        return comment
+        return comment.content
     if not can_tick(actor, item):
         raise PermissionDenied
     if item.kind not in TEXT_FIELDS:
@@ -374,7 +374,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
             file_ops.update_upload(item, actor=actor, description=new)
         case Kind.ANSWER:
             checkin_ops.update_answer(item.answer, new, actor=actor)
-    return item
+    return new
 
 
 def assignable_people(item, by=None):

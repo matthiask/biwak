@@ -96,6 +96,32 @@ def markdown(text, item=None):
     return render_markdown(text, item)
 
 
+@register.simple_tag(takes_context=True)
+def checklist_markdown(context, text, item, comment=None):
+    """Like ``|markdown``, and for people who may change the text its
+    checkboxes can be ticked in place (``frontend/checklist.js`` posts to
+    ``item_tick``); the others see them disabled. ``comment``: the text is
+    that comment's."""
+    from biwak.checklists import text_hash
+    from biwak.items import operations as ops
+
+    user = context["request"].user
+    if comment is not None:
+        allowed = not user.is_client or comment.author_id == user.pk
+    else:
+        allowed = ops.can_tick(user, item)
+    rendered = render_markdown(text, item, tickable=allowed)
+    if not allowed or 'data-index="' not in rendered:
+        return rendered
+    return format_html(
+        '<div class="wb-checklist" data-tick-url="{}" data-version="{}"{}>{}</div>',
+        reverse("item_tick", args=[item.pk]),
+        text_hash(text),
+        format_html(' data-comment="{}"', comment.pk) if comment is not None else "",
+        rendered,
+    )
+
+
 @register.filter
 def mail_markdown(text, item=None):
     """For mails: like ``markdown``, attachment URLs with BASE_URL and
