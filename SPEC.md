@@ -251,6 +251,9 @@ Nothing at the moment.
   interval, weekdays, monthly by day or nth weekday, yearly), no presets
   or raw RRULE in the forms, the description instead of a preview
   (`specs/rule-widget.md`); the API and CLI keep RRULEs and presets.
+- 2026-11-21: A command palette (Ctrl+K and "/") with jumps and actions,
+  search being one of them, and single-key shortcuts inside pages that a
+  setting turns off (`specs/keyboard.md`).
 - 2026-11-20: Reactions: 24 quick emoji and short texts (40
   characters), telling only the author, collected into the next mail
   or the digest (`specs/reactions.md`).
