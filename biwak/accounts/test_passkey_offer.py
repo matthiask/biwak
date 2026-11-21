@@ -84,7 +84,7 @@ class PasskeyOfferTest(TestCase):
         for url, headers in [
             ("/api/v1/me/", {}),
             ("/", {"hx-request": "true"}),
-            ("/accounts/2fa/", {}),
+            ("/accounts/settings/", {}),
         ]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url, headers=headers).status_code, 200)

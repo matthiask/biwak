@@ -7,6 +7,7 @@ from django.templatetags.static import static
 from django.urls import include, path, re_path
 
 from biwak import paste
+from biwak.accounts import signin
 from biwak.api import api
 from biwak.schedules_forms import describe
 
@@ -42,6 +43,10 @@ urlpatterns = [
     path("api/v1/", api.urls),
     path("accounts/", include("biwak.accounts.urls")),
     re_path(r"^accounts/password/", no_passwords),
+    # Passkeys and sessions are on the settings page
+    path("accounts/2fa/", signin.passkeys_page),
+    path("accounts/2fa/webauthn/", signin.passkeys_page),
+    path("accounts/sessions/", signin.sessions_page),
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
 ]

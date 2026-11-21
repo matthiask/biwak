@@ -1,7 +1,12 @@
 """The settings page's keyboard, appearance and sign-in sections and the
 API's ``me/`` preferences (specs/keyboard.md)"""
 
-from django.test import TestCase
+from unittest.mock import patch
+
+from allauth.mfa.models import Authenticator
+from allauth.usersessions.models import UserSession
+from django.contrib.sessions.backends.db import SessionStore
+from django.test import Client, TestCase
 
 from biwak.accounts.models import PALETTE, Accent, APIToken, Theme
 from biwak.test_utils import person
@@ -38,8 +43,7 @@ class PreferencesTest(TestCase):
                     "Appearance",
                     "Heather",
                     "Alpenglow",
-                    "/accounts/2fa/",
-                    "/accounts/sessions/",
+                    "Add a passkey",
                     "/accounts/api-tokens/",
                 ]:
                     self.assertContains(response, text)
@@ -134,4 +138,155 @@ class MeAPITest(TestCase):
                 "/api/v1/me/", {"theme": "dark"}, content_type="application/json"
             ).status_code,
             401,
+        )
+
+
+RECENT = "allauth.account.internal.flows.reauthentication.did_recently_reauthenticate"
+FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
+SAFARI = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+)
+
+
+class SignInSectionTest(TestCase):
+    """Passkeys and sessions inline on the settings page (specs/ui-round-2.md
+    part E); allauth adds, removes and ends"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.client.defaults["HTTP_USER_AGENT"] = FIREFOX
+        self.client.force_login(self.ada)
+        self.client.get("/accounts/settings/")
+
+    def other_session(self, user, user_agent=SAFARI):
+        client = Client()
+        client.force_login(user)
+        key = client.cookies["sessionid"].value
+        return UserSession.objects.create(
+            user=user, session_key=key, ip="10.0.0.2", user_agent=user_agent
+        )
+
+    def passkey(self, name, user=None):
+        return Authenticator.objects.create(
+            user=user or self.ada,
+            type=Authenticator.Type.WEBAUTHN,
+            data={"name": name},
+        )
+
+    def test_passkeys_are_listed_and_removed(self):
+        laptop = self.passkey("Laptop")
+        self.passkey("Phone")
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, "Laptop")
+        self.assertContains(response, "Phone")
+        self.assertContains(response, "Never")
+        self.assertContains(response, "Add a passkey")
+        self.assertContains(
+            response, f"/accounts/2fa/webauthn/keys/{laptop.pk}/remove/"
+        )
+        url = f"/accounts/2fa/webauthn/keys/{laptop.pk}/remove/"
+        # allauth wants a recent confirmation first (and replays the request)
+        response = self.client.post(url)
+        self.assertIn("/accounts/reauthenticate/", response["Location"])
+        self.assertEqual(Authenticator.objects.count(), 2)
+        with patch(RECENT, return_value=True):
+            response = self.client.post(url)
+        self.assertRedirects(
+            response, "/accounts/2fa/webauthn/", fetch_redirect_response=False
+        )
+        self.assertEqual(
+            list(Authenticator.objects.values_list("data__name", flat=True)), ["Phone"]
+        )
+
+    def test_without_passkeys(self):
+        self.assertContains(self.client.get("/accounts/settings/"), "No passkeys yet.")
+
+    def test_only_my_passkeys(self):
+        bob = person("Bob")
+        key = self.passkey("Bobs key", user=bob)
+        self.assertNotContains(self.client.get("/accounts/settings/"), "Bobs key")
+        with patch(RECENT, return_value=True):
+            response = self.client.post(f"/accounts/2fa/webauthn/keys/{key.pk}/remove/")
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Authenticator.objects.filter(pk=key.pk).exists())
+
+    def test_allauths_lists_lead_to_the_settings_page(self):
+        for url in ["/accounts/2fa/", "/accounts/2fa/webauthn/", "/accounts/sessions/"]:
+            self.assertRedirects(
+                self.client.get(url),
+                "/accounts/settings/#sign-in",
+                fetch_redirect_response=False,
+            )
+
+    def test_sessions_with_this_one_first(self):
+        self.other_session(self.ada)
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, "Firefox on Linux")
+        self.assertContains(response, "Safari on iPhone")
+        self.assertContains(response, "This one", count=1)
+        self.assertContains(response, "Sign out everywhere else")
+        self.assertContains(response, "10.0.0.2")
+        self.assertEqual(
+            [s.browser for s in response.context["sessions"]],
+            ["Firefox on Linux", "Safari on iPhone"],
+        )
+        # Every column has a header, also the actions'
+        self.assertContains(response, "<th>", count=4)
+
+    def test_one_session_has_nothing_to_sign_out(self):
+        response = self.client.get("/accounts/settings/")
+        self.assertNotContains(response, "Sign out everywhere else")
+        self.assertNotContains(response, "/end/")
+
+    def test_signing_out_one_session(self):
+        phone = self.other_session(self.ada)
+        tablet = self.other_session(self.ada)
+        response = self.client.post(f"/accounts/sessions/{phone.pk}/end/")
+        self.assertRedirects(
+            response, "/accounts/settings/#sign-in", fetch_redirect_response=False
+        )
+        self.assertFalse(UserSession.objects.filter(pk=phone.pk).exists())
+        self.assertFalse(SessionStore(phone.session_key).exists(phone.session_key))
+        self.assertTrue(UserSession.objects.filter(pk=tablet.pk).exists())
+        # This browser is still signed in
+        self.assertEqual(self.client.get("/accounts/settings/").status_code, 200)
+
+    def test_not_other_peoples_sessions_nor_this_one_nor_by_get(self):
+        bob = person("Bob")
+        theirs = self.other_session(bob)
+        mine = UserSession.objects.get(user=self.ada)
+        self.assertEqual(
+            self.client.post(f"/accounts/sessions/{theirs.pk}/end/").status_code, 404
+        )
+        self.assertEqual(
+            self.client.post(f"/accounts/sessions/{mine.pk}/end/").status_code, 404
+        )
+        self.assertEqual(
+            self.client.get(f"/accounts/sessions/{theirs.pk}/end/").status_code, 405
+        )
+        self.assertEqual(UserSession.objects.count(), 2)
+
+    def test_signing_out_everywhere_else(self):
+        self.other_session(self.ada)
+        self.other_session(self.ada)
+        bobs = self.other_session(person("Bob"))
+        response = self.client.post("/accounts/sessions/")
+        self.assertRedirects(
+            response, "/accounts/sessions/", fetch_redirect_response=False
+        )
+        self.assertEqual(
+            list(
+                UserSession.objects.filter(user=self.ada).values_list(
+                    "user_agent", flat=True
+                )
+            ),
+            [FIREFOX],
+        )
+        self.assertTrue(UserSession.objects.filter(pk=bobs.pk).exists())
+        self.assertEqual(self.client.get("/accounts/settings/").status_code, 200)
+
+    def test_the_menus_sign_out_says_which(self):
+        self.assertContains(
+            self.client.get("/accounts/settings/"), "Sign out of this browser"
         )
