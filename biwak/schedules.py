@@ -358,6 +358,12 @@ def _canonical(rule):
     return sorted(parts.items())
 
 
+def same_rule(a, b):
+    """Whether two valid rules are the same apart from how they're written
+    (order of days, the default interval and week start)"""
+    return _canonical(a) == _canonical(b)
+
+
 def _guess_fields(parts):
     interval = _int(parts.get("INTERVAL", "1"), 1, MAX_INTERVAL)
     fields = {"interval": interval}

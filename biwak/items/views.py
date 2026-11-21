@@ -17,7 +17,7 @@ from biwak.forms import Form, next_url
 from biwak.items import glance, operations as ops, visibility
 from biwak.items.models import Group, Item, Kind, Status, TodoList
 from biwak.reactions.operations import prefetch
-from biwak.schedules_forms import KEEP, RuleField
+from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
 
 def item_for(request, pk, kind=None):
@@ -38,7 +38,7 @@ def assignable_people(item):
     return people.distinct()
 
 
-class RepeatForm(Form):
+class RepeatForm(RuleFormMixin, Form):
     """The "Repeat" fields shared by the inline form and the to-do's page
     (specs/todos.md, specs/rule-widget.md); ``cleaned_data["recurrence"]``
     is the rule. A rule the widget can't show stays as it is (``initial``).
