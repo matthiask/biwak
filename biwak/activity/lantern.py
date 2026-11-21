@@ -98,6 +98,25 @@ def prepare(notifications, user):
     return notifications
 
 
+def unread_by_item(user, item_ids):
+    """``{item ID: newest unread notification}`` of the items among
+    ``item_ids``, with ``read_url`` (following a link to the item posts
+    there, which reads its notifications); the same rules as the menu. Two
+    queries at most, for any number of items. Home marks its rows with it
+    (specs/dashboard.md)."""
+    if not item_ids:
+        return {}
+    found = wanted(
+        list(notifications_for(user, unread=True).filter(event__item__in=item_ids)),
+        user,
+    )
+    result = {}
+    for notification in found:
+        notification.read_url = reverse("lantern_open", args=[notification.pk])
+        result.setdefault(notification.event.item_id, notification)
+    return result
+
+
 def by_item(notifications):
     """``[(item, [notification, …])]``, in the order of each item's newest
     notification (the notifications are newest first)"""

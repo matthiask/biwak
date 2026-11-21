@@ -1,6 +1,12 @@
-{% load biwak %}
+{% load biwak i18n %}
+{% comment %}`todo.unread_notification` (Home): the lantern's unread mark, and following the link reads the notifications (specs/dashboard.md){% endcomment %}
 <a
   href="{{ todo.get_absolute_url }}"
   data-kb-open
+  {% if todo.unread_notification %}data-lantern-read="{{ todo.unread_notification.read_url }}"{% endif %}
   class="wb-todo-title{% if todo.todo.is_completed %} text-decoration-line-through text-body-secondary{% endif %}"
->{{ todo|item_title }}</a>
+>{% if todo.unread_notification %}<span
+      class="wb-lantern-unread"
+      role="img"
+      aria-label="{% translate 'Unread' %}"
+    ></span>{% endif %}{{ todo|item_title }}</a>

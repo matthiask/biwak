@@ -4,8 +4,23 @@ The idea (2026-11-21): `/` becomes a dashboard, "Home", and the projects
 page moves to `/projects/`. Home shows bookmarked projects, recent
 updates, to-dos due soon or overdue, and links to useful functionality.
 
-**Status:** spec (2026-11-21), the questions answered the same day
-(recorded in the sections). Not built.
+**Status:** built 2026-11-21 (branch `home`), the questions answered the
+same day (recorded in the sections). `biwak/projects/home.py`,
+`templates/projects/home.html`; the tests in `biwak/projects/test_home.py`,
+a browser test in `biwak/test_e2e.py` (`HomeTest`). Decisions on the way:
+- The unread rows keep their link to the item and carry
+  `data-lantern-read` with the lantern's `/lantern/<notification>/`, which
+  `frontend/lantern.js` posts to when the link is followed (the lantern's
+  entries work the same; `lantern_open` answers POST only, so the link
+  can't point at it). `lantern.unread_by_item()` finds the notifications.
+- "Due" and "Waiting on others" group by `due.group_of()`, so days after
+  this week are headed "Later"; "All N to-dos" shows the number of all my
+  open to-dos when there are more than the rows shown.
+- Recent updates take the newest 50 events of the last 7 days from the two
+  sources, merge them into entries and show the first 10.
+- "Keyboard shortcuts" in the links card is a hint (`?`), not a link: the
+  help dialog has no address.
+- "New project" is the one primary button, in the links card.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`. Every section shows items, so the visibility tests matter

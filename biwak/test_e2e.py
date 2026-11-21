@@ -972,7 +972,7 @@ class ProjectsOrderTest(E2ETestCase):
         page.wait_for_url("**/?order=name")
         self.goto(page, reverse("project_create"))
         link = page.locator(".wb-nav-links a", has_text="Projects")
-        expect(link).to_have_attribute("href", "/?order=name")
+        expect(link).to_have_attribute("href", "/projects/?order=name")
         link.click()
         page.wait_for_url("**/?order=name")
         expect(page.locator("#id_order")).to_have_value("name")
@@ -2985,4 +2985,25 @@ class FiltersTest(E2ETestCase):
         page = self.page
         self.goto(page, "/search/?q=Plan")
         self.assertIsNone(page.evaluate("localStorage.getItem('filters:/search/')"))
+        self.assertEqual(self.errors, [])
+
+
+class HomeTest(E2ETestCase):
+    """Completing a to-do on Home (specs/dashboard.md): the page stays Home,
+    and the row is gone"""
+
+    def test_completing_a_to_do_stays_on_home(self):
+        page = self.page
+        todolist = self.make_list("Launch", todos=["Plan", "Pack"])
+        for todo in Item.objects.filter(parent=todolist):
+            ops.update_todo(todo, actor=self.ada, due_on=schedules.today())
+            ops.assign(todo, [self.ada], actor=self.ada)
+        self.goto(page, "/")
+        row = page.locator(".wb-todo", has_text="Plan")
+        expect(row).to_be_visible()
+        row.get_by_role("button", name="Complete").click()
+        expect(row).to_have_count(0)
+        self.assertEqual(page.url, f"{self.live_server_url}/")
+        expect(page.locator("[data-home=due]")).to_contain_text("Pack")
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
         self.assertEqual(self.errors, [])

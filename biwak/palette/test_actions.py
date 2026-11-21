@@ -70,6 +70,7 @@ class EverywhereTest(ActionsBase):
         for user in [self.ada, self.cleo]:
             actions = self.actions(user, "/")
             for label in [
+                "Go home",
                 "Go to projects",
                 "Go to the activity",
                 "Go to to-dos",
@@ -79,6 +80,10 @@ class EverywhereTest(ActionsBase):
                 "Switch the theme",
             ]:
                 self.assertIn(label, actions)
+            self.assertEqual(actions["Go home"]["shortcut"], "g h")
+            self.assertEqual(actions["Go home"]["url"], "/")
+            self.assertEqual(actions["Go to projects"]["url"], "/projects/")
+            self.assertEqual(actions["Go to projects"]["shortcut"], "g p")
             self.assertEqual(actions["Go to bookmarks"]["shortcut"], "g b")
             self.assertEqual(actions["Go to to-dos"]["url"], "/todos/?assignee=me")
 

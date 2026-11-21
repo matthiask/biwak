@@ -8,6 +8,7 @@ import json
 
 from django.core import mail
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from biwak import test_cli
@@ -131,7 +132,7 @@ class PagesTest(PartnerTestCase):
         self.client.force_login(self.pia)
 
     def test_projects(self):
-        response = self.client.get("/")
+        response = self.client.get(reverse("projects"))
         self.assertContains(response, "Camp")
         self.assertNotContains(response, "Lodge")
         self.assertNotContains(response, "Salaries")
