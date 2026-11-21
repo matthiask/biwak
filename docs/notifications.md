@@ -76,10 +76,11 @@ first line says when clients can see the item.
 **When mail bounces.** If mail to someone's address is rejected for good
 or marked as spam, Biwak stops sending them notification mails, digests
 and check-in questions; what happens stays in their lantern. Their
-activity page says so (to staff and to themselves), and signing in by
-code warns that the code may not arrive. It starts again once the
-address changes, or an admin clears it in the admin (People, "Mail to
-the selected people works again").
+activity page says so (to staff and to themselves), and so does their
+settings page. It starts again once an admin changes the address or
+clears it in the admin (People, "Mail to the selected people works
+again"); what happened in between isn't mailed afterwards, it's in the
+lantern.
 
 ## Replying by mail
 

@@ -231,18 +231,62 @@ class DeliveryEventsTest(TestCase):
         self.client.force_login(self.cleo)
         self.assertNotContains(self.client.get(f"/people/{self.ada.pk}/feed/"), notice)
 
-    def test_signing_in_by_code_warns(self):
+    def test_signing_in_by_code_says_nothing(self):
+        """The login page doesn't tell whoever types the address that it
+        bounced: that would reveal the account (decided 2026-11-21)"""
         cache.clear()
         self.post(event("email.bounced", bounce=PERMANENT))
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 "/accounts/login/code/", {"email": self.cleo.email}, follow=True
             )
-        self.assertContains(response, "the code may not arrive")
-        # It's sent anyway: the address may work again
+        self.assertNotContains(response, "bounced")
+        # The code is sent anyway: the address may work again
         self.assertEqual([m.to for m in mail.outbox], [[self.cleo.email]])
-        cache.clear()
-        response = self.client.post(
-            "/accounts/login/code/", {"email": self.ada.email}, follow=True
+
+    def test_shown_on_the_settings_page(self):
+        self.post(event("email.bounced", bounce=PERMANENT))
+        notice = "bounced or was marked as spam"
+        self.client.force_login(self.cleo)
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, notice)
+        self.assertContains(response, self.cleo.email)
+        self.client.force_login(self.ada)
+        self.assertNotContains(self.client.get("/accounts/settings/"), notice)
+
+    def test_what_piled_up_is_dropped_when_cleared(self):
+        """In the lantern, never mailed (decided 2026-11-21)"""
+        self.post(event("email.bounced", bounce=PERMANENT))
+        self.assertEqual(self.comment(), 0)
+        self.cleo.refresh_from_db()
+        self.cleo.mail_undeliverable_at = None
+        self.cleo.save(update_fields=["mail_undeliverable_at"])
+        piled = Notification.objects.get(user=self.cleo)
+        self.assertIsNotNone(piled.sent_at)
+        self.assertIsNone(piled.read_at)
+        self.assertEqual(send_mails(now=timezone.now() + dt.timedelta(minutes=10)), 0)
+        # What comes after is mailed again
+        self.assertEqual(self.comment(), 1)
+        self.assertEqual([m.to for m in mail.outbox], [[self.cleo.email]])
+
+    def test_dropped_when_cleared_by_changing_the_address(self):
+        self.post(event("email.bounced", bounce=PERMANENT))
+        self.assertEqual(self.comment(), 0)
+        self.cleo.refresh_from_db()
+        self.cleo.email = "cleo@new.example.org"
+        self.cleo.save()
+        self.assertFalse(
+            Notification.objects.filter(user=self.cleo, sent_at=None).exists()
         )
-        self.assertNotContains(response, "the code may not arrive")
+
+    def test_dropped_when_cleared_by_an_admin(self):
+        self.post(event("email.bounced", bounce=PERMANENT))
+        self.assertEqual(self.comment(), 0)
+        self.client.force_login(person("Root", is_admin=True))
+        self.client.post(
+            "/admin/accounts/user/",
+            {"action": "clear_undeliverable", "_selected_action": [self.cleo.pk]},
+        )
+        self.assertFalse(
+            Notification.objects.filter(user=self.cleo, sent_at=None).exists()
+        )

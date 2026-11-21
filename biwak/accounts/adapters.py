@@ -49,19 +49,6 @@ class AccountAdapter(DefaultAccountAdapter):
             else Kind.ACCOUNT
         )
         outbox.send(message, kind)
-        if template_prefix.endswith("/login_code") and (
-            User.objects.filter(
-                email__iexact=email, mail_undeliverable_at__isnull=False
-            ).exists()
-        ):
-            messages.warning(
-                request,
-                _(
-                    "Mail to this address bounced before, the code may not"
-                    " arrive. Sign in with a passkey, or ask an admin to check"
-                    " your address."
-                ),
-            )
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):

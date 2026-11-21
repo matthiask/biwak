@@ -8,7 +8,7 @@ out of the way then.
 **Status:** built 2026-11-21 (branch `mail-sending`): the outbox
 (`biwak/outbox/`), sending through Resend's API with `EMAIL_URL=resend:`,
 the delivery events and undeliverable addresses; see "Built", "Setting it
-up" and "Open". Not deployed: the From domain's verification and the
+up" and "Accepted". Not deployed: the From domain's verification and the
 settings are the user's; the "Done when" item about a test mail's
 headers is for after that.
 
@@ -175,15 +175,20 @@ conservative choice where the spec was open):
   (`accounts_user` is audited), changes by the webhook as `Resend`.
 - **What it stops:** notification mails, digests and check-in mails
   (check-in questions are the same kind of automatic mail). Their
-  notifications wait, like those of people with "No mails", and stay in
-  the lantern; once cleared, the waiting ones go out with the next run.
+  notifications wait and stay in the lantern; **when the mark clears they
+  are dropped** (marked sent, so they're never mailed and a later change
+  to the same event is a new notification; decided 2026-11-21: they're
+  in the lantern anyway). `User.save()` does it whichever way the mark
+  clears.
   Login codes, invitations and answers to refused replies still go out:
   someone asked for them, and the address may work again.
 - **Shown** on the person's activity page to staff and to the person
-  (not to other clients), in the admin, and as a warning after asking
-  for a login code. That warning tells whoever types the address that
-  it bounced: allauth otherwise doesn't say whether an address has an
-  account (an open question below).
+  (not to other clients), on the person's settings page (Notifications,
+  with the address and "ask an admin to change it": people can't change
+  their address themselves), and in the admin. **Not on the login page**
+  (decided 2026-11-21): a warning after asking for a code would tell
+  whoever types the address that it has an account; the person sees the
+  notice once signed in (by passkey, or the code if it arrives).
 - **No audit log** for `OutgoingMail`: only the system writes it (the
   outbox and Resend's webhooks); the admin is read-only.
 
@@ -213,16 +218,11 @@ conservative choice where the spec was open):
 Rolling back: `EMAIL_URL` back to the SMTP URL; what's in the outbox goes
 out through it.
 
-### Open
+### Accepted
 
-- Whether the login code warning may say that an address bounced to
-  whoever types it (allauth otherwise doesn't reveal whether an address
-  has an account); the alternative is saying it only after signing in.
-- Whether the notifications that waited while an address was
-  undeliverable should go out once it's cleared (they do now, like
-  switching from "No mails" back to mails), or be dropped.
-- Whether the person should see the notice on their settings page too
-  (now their activity page and the login warning).
+- The admins' notice about mails given up goes through Resend too, so it
+  may fail while Resend is down; the error is logged and reaches Sentry
+  (accepted 2026-11-21).
 
 ## Done when
 

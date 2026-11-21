@@ -202,30 +202,50 @@ class User(AbstractBaseUser):
     def __str__(self):
         return self.full_name or self.email
 
-    @classmethod
-    def from_db(cls, db, field_names, values):
-        instance = super().from_db(db, field_names, values)
-        instance._loaded_email = instance.__dict__.get("email")
-        return instance
-
     def save(self, *args, **kwargs):
         fields = kwargs.get("update_fields")
-        loaded = getattr(self, "_loaded_email", None)
+        stored = None
+        if self.pk and (
+            fields is None or {"email", "mail_undeliverable_at"} & set(fields)
+        ):
+            stored = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values("email", "mail_undeliverable_at")
+                .first()
+            )
         if (
-            self.mail_undeliverable_at
-            and loaded is not None
-            and loaded.lower() != self.email.lower()
+            stored
+            and self.mail_undeliverable_at
+            and stored["email"].lower() != self.email.lower()
             and (fields is None or "email" in fields)
         ):
             # A new address may work (specs/mail-sending.md)
             self.mail_undeliverable_at = None
             if fields is not None:
-                kwargs["update_fields"] = [*fields, "mail_undeliverable_at"]
+                fields = kwargs["update_fields"] = [*fields, "mail_undeliverable_at"]
+        cleared = (
+            stored
+            and stored["mail_undeliverable_at"]
+            and not self.mail_undeliverable_at
+            and (fields is None or "mail_undeliverable_at" in fields)
+        )
         super().save(*args, **kwargs)
+        if cleared:
+            self._drop_waiting_mails()
         if fields is None or "email" in fields:
-            self._loaded_email = self.email
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)
+
+    def _drop_waiting_mails(self):
+        """What piled up while the address was undeliverable is never
+        mailed: it's in the lantern (decided 2026-11-21). Marked as sent,
+        so a later change to the same event is a new notification."""
+        from biwak.activity.models import Notification
+
+        Notification.objects.filter(user=self, sent_at__isnull=True).update(
+            sent_at=timezone.now()
+        )
 
     def clean(self):
         super().clean()
