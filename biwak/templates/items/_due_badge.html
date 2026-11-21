@@ -1,0 +1,20 @@
+{% load biwak i18n %}
+{% comment %}
+  A to-do's due date (the `due_badge` tag): overdue and open: a danger badge;
+  due today and open: a quiet badge; else the date as text.
+{% endcomment %}
+{% if due_on %}
+  {% if state == "overdue" %}<span
+      class="badge wb-tone-danger"
+      data-due="overdue"
+      title="{{ due_on|date:'l, j. F Y' }}"
+    >{% blocktranslate with day=due_on|date:"j. M" %}Overdue · {{ day }}{% endblocktranslate %}</span>{% elif state == "today" %}<span
+      class="badge wb-tone-neutral"
+      data-due="today"
+      title="{{ due_on|date:'l, j. F Y' }}"
+    >{% translate "Today" %}</span>{% else %}<span
+      class="small text-body-secondary"
+      data-due="later"
+    >{% icon "calendar-event" %}
+      {{ due_on|date:date_format }}</span>{% endif %}
+{% endif %}

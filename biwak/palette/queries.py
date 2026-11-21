@@ -10,12 +10,14 @@ the members of their projects). Titles are shown as written: mentions with
 the label, never the current name."""
 
 from django.db.models.functions import Lower
+from django.template.defaultfilters import date as date_filter
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from biwak.activity.feed import people_visible_to
 from biwak.activity.mentions import plain
 from biwak.bookmarks.models import Bookmark
+from biwak.items import due
 from biwak.items.models import Item, Kind
 from biwak.projects.models import Project
 from biwak.search.queries import Matches, prefixes, tsquery, vector
@@ -103,6 +105,19 @@ def color_of(project):
     return {"color": project.color, "color_name": project.color_label}
 
 
+def due_label(item):
+    """ "Overdue · 19. Nov" or "Today" for an open to-do that's due, else
+    nothing; the state is ``"overdue"`` or ``"today"`` (the badge's tone)"""
+    todo = getattr(item, "todo", None) if item.kind == Kind.TODO else None
+    state = due.badge_state(todo) if todo else ""
+    if state == due.OVERDUE:
+        day = date_filter(todo.due_on, "j. M")
+        return {"state": state, "label": _("Overdue · %(day)s") % {"day": day}}
+    if state == due.TODAY:
+        return {"state": state, "label": _("Today")}
+    return None
+
+
 def person_url(person):
     return reverse("person_feed", args=[person.pk])
 
@@ -112,7 +127,7 @@ def bookmarks(user):
     (``Bookmark.objects.visible_to()``, like the bookmarks page), at most
     ``LIMIT``"""
     found = Bookmark.objects.visible_to(user).select_related(
-        "item", "item__project", "item__answer", "project"
+        "item", "item__project", "item__answer", "item__todo", "project"
     )
     results = []
     for bookmark in found[:LIMIT]:
@@ -127,6 +142,7 @@ def bookmarks(user):
                 **color_of(item.project),
                 "archived": item.project.archived_at is not None,
                 "visible_to_clients": item.is_client_visible,
+                "due": due_label(item),
             })
         else:
             project = bookmark.project

@@ -27,8 +27,7 @@ def project_for(request, pk):
     return get_object_or_404(Project.objects.accessible_to(request.user), pk=pk)
 
 
-def project_list(request):
-    archived = bool(request.GET.get("archived"))
+def _list_context(request, archived):
     others = Project.objects.none()
     if archived:
         # A plain alphabetical list, without cards
@@ -40,16 +39,21 @@ def project_list(request):
         if request.user.is_admin:
             # Admins see that limited projects exist and can join them
             others = project_ops.joinable_projects(request.user)
+    return {
+        "projects": projects,
+        "others": others,
+        "archived": archived,
+        "can_manage": project_ops.can_manage_project(request.user),
+        "order": request.user.project_order,
+        "orders": User.ProjectOrder.choices,
+    }
+
+
+def project_list(request):
     return render(
         request,
         "projects/project_list.html",
-        {
-            "projects": projects,
-            "others": others,
-            "archived": archived,
-            "order": request.user.project_order,
-            "orders": User.ProjectOrder.choices,
-        },
+        _list_context(request, bool(request.GET.get("archived"))),
     )
 
 
@@ -310,15 +314,34 @@ def project_edit(request, pk):
 
 @require_POST
 def project_archive(request, pk):
-    """Archives or (``unarchive``) brings the project back"""
+    """Archives or (``unarchive``) brings the project back.
+
+    From the projects page (``list`` is ``active`` or ``archived``: which of
+    the two it shows) htmx gets the page's content again, with "Archived. Undo"
+    (``undo`` marks the Undo itself, which says nothing); without htmx the
+    projects page loads again. From the project's page it's a redirect."""
     project = project_for(request, pk)
     if not project_ops.can_manage_project(request.user):
         raise PermissionDenied
-    if request.POST.get("unarchive"):
+    unarchive = bool(request.POST.get("unarchive"))
+    if unarchive:
         project_ops.unarchive_project(project, actor=request.user)
     else:
         project_ops.archive_project(project, actor=request.user)
-    return redirect(project)
+    shown = request.POST.get("list")
+    if shown not in {"active", "archived"}:
+        return redirect(project)
+    archived = shown == "archived"
+    if not request.headers.get("HX-Request"):
+        return redirect(reverse("projects") + ("?archived=1" if archived else ""))
+    context = _list_context(request, archived)
+    if not request.POST.get("undo"):
+        context["message"] = {
+            "text": _("Brought back.") if unarchive else _("Archived."),
+            "project": project,
+            "unarchive": not unarchive,
+        }
+    return render(request, "projects/_page.html", context)
 
 
 @require_POST

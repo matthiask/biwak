@@ -191,6 +191,9 @@ DATABASES["default"] |= {
     # Under ASGI (specs/collaboration.md) requests and websockets run in
     # short-lived threads; persistent connections would stay open in
     # ended threads until garbage-collected. pgbouncer pools instead.
+    # The health checks only act on reused connections: kept for when
+    # CONN_MAX_AGE goes up again.
+    "CONN_HEALTH_CHECKS": True,
     "CONN_MAX_AGE": 0,
     "DISABLE_SERVER_SIDE_CURSORS": True,
 }
