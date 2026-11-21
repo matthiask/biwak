@@ -345,13 +345,14 @@ class LibraryTest(Fixture, TestCase):
         # The grid: only the colored one is tinted
         response = self.client.get(reverse("project_files", args=[self.project.pk]))
         self.assertContains(response, 'data-folder-color="lake"', count=1)
-        self.assertContains(
-            self.client.get(folders["Tinted"].get_absolute_url()),
-            'class="wb-folder-icon" data-folder-color="lake"',
+        self.assertRegex(
+            self.client.get(folders["Tinted"].get_absolute_url()).content.decode(),
+            r'class="wb-folder-icon"\s+data-folder-color="lake"',
         )
-        self.assertNotContains(
-            self.client.get(folders["Plain"].get_absolute_url()), "data-folder-color"
-        )
+        # No color is neutral grey, not the accent (main.css)
+        response = self.client.get(folders["Plain"].get_absolute_url())
+        self.assertNotContains(response, "data-folder-color")
+        self.assertContains(response, 'class="wb-folder-icon"')
         # Edit: the color alone, no event, then none again
         edit = reverse("folder_edit", args=[folders["Plain"].pk])
         response = self.client.get(edit, headers={"HX-Modal": "true"})

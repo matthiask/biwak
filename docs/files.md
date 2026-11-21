@@ -31,7 +31,8 @@ folders with "Move to..." in their "More" menu.
 
 **Folder colors:** a folder can have a color, chosen as a row of swatches
 in "New folder" and "Edit…" (staff; "None" is the default). Its tile and
-the icon in its page's title take the color, so you find it at a glance.
+the icon in its page's title take the color, so you find it at a glance;
+folders without a color are grey.
 Clients see the colors too.
 
 **Moving:** drag a tile onto a folder, onto "..", or onto a folder in

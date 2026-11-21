@@ -116,7 +116,10 @@ the counts of the top level's folders, docs and files.
   chosen with `ColorSwatches` in both modals by whoever may rename. The
   tile's icon area takes the color's tint (`--wb-palette-*-tint-bg`) and
   the folder icon its ink; the folder page's header icon the text color
-  (`data-folder-color`, `main.css`); no color looks as before. Not in
+  (`data-folder-color`, `main.css`). **No color is neutral grey**
+  (decided 2026-11-21): the tile, ".." and the header icon take
+  `--wb-neutral-bg` and `--wb-neutral-ink`, not the accent, so "no color"
+  reads as no color next to colored folders. Not in
   breadcrumbs, mails or the feed. **No suggestion** (decided 2026-11-21):
   new folders start without a color, unlike projects, which are told
   apart by default; the conservative choice, folders are many and a
