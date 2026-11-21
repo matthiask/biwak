@@ -2,6 +2,8 @@
 (specs/two-factor.md): every way in, with and without an app"""
 
 import re
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from allauth.account.models import Login
 from allauth.core.context import request_context
@@ -28,6 +30,7 @@ from biwak.test_utils import person
 
 
 TWO_FACTOR = "/accounts/2fa/authenticate/"
+RECENTLY = "allauth.account.internal.flows.reauthentication.did_recently_reauthenticate"
 
 
 def passkey(user):
@@ -364,3 +367,48 @@ class SSORequiredTest(SignInMixin, SocialTestCase):
         )
         self.assert_signed_in(request, self.cleo)
         self.assertNotEqual(response["Location"], TWO_FACTOR)
+
+
+class PasskeysArePasswordlessTest(TestCase):
+    """ "Add a passkey" registers a passkey: discoverable, with the device's
+    PIN or fingerprint (specs/two-factor.md); no "Passwordless" checkbox"""
+
+    def setUp(self):
+        self.ada = person("Ada", passkey_offer_done=True)
+        self.client.force_login(self.ada)
+
+    def test_the_page_asks_for_a_passkey(self):
+        with patch(RECENTLY, return_value=True):
+            response = self.client.get("/accounts/2fa/webauthn/add/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Passwordless")
+        options = response.context["js_data"]["creation_options"]["publicKey"]
+        selection = options["authenticatorSelection"]
+        self.assertEqual(selection["residentKey"], "required")
+        self.assertEqual(selection["userVerification"], "required")
+        # allauth's script reads the box: always ticked, hidden
+        self.assertInHTML(
+            '<input type="checkbox" id="passkey-passwordless" checked hidden>',
+            response.content.decode(),
+        )
+
+    def test_a_key_without_user_verification_is_refused(self):
+        from biwak.accounts.signin import AddPasskeyForm
+
+        binding = SimpleNamespace(is_user_verified=lambda: False)
+        with (
+            patch("allauth.mfa.webauthn.internal.auth.parse_registration_response"),
+            patch(
+                "allauth.mfa.webauthn.internal.auth.complete_registration",
+                return_value=binding,
+            ),
+        ):
+            form = AddPasskeyForm(
+                user=self.ada, data={"name": "Key", "credential": '{"id": "x"}'}
+            )
+            self.assertFalse(form.is_valid())
+            binding.is_user_verified = lambda: True
+            form = AddPasskeyForm(
+                user=self.ada, data={"name": "Key", "credential": '{"id": "x"}'}
+            )
+            self.assertTrue(form.is_valid(), form.errors)

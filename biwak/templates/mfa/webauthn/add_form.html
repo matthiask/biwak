@@ -1,0 +1,37 @@
+{% extends "mfa/webauthn/base.html" %}
+{% load allauth i18n static %}
+{% comment %}
+allauth's page adding a key, as a passkey only (signin.AddPasskeyView): its
+script reads "passwordless" from a checkbox, always ticked and hidden here.
+{% endcomment %}
+{% block content %}
+  {% element h1 %}
+  {% translate "Add a passkey" %}
+  {% endelement %}
+  {% url 'mfa_add_webauthn' as action_url %}
+  {% element form form=form method="post" action=action_url %}
+  {% slot body %}
+  {% csrf_token %}
+  {% element fields form=form %}
+  {% endelement %}
+  <input type="checkbox" id="passkey-passwordless" checked hidden>
+  {% endslot %}
+  {% slot actions %}
+  {% element button id="mfa_webauthn_add" type="button" %}
+  {% translate "Add" %}
+  {% endelement %}
+  {% endslot %}
+  {% endelement %}
+  {% include "mfa/webauthn/snippets/scripts.html" %}
+  {{ js_data|json_script:"js_data" }}
+  <script data-allauth-onload="allauth.webauthn.forms.addForm" type="application/json">
+    {
+      "ids": {
+        "add": "mfa_webauthn_add",
+        "passwordless": "passkey-passwordless",
+        "credential": "{{ form.credential.auto_id }}",
+        "data": "js_data"
+      }
+    }
+  </script>
+{% endblock content %}

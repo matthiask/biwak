@@ -14,7 +14,9 @@ from allauth.mfa.base.views import AuthenticateView
 from allauth.mfa.models import Authenticator
 from allauth.mfa.totp.forms import ActivateTOTPForm
 from allauth.mfa.totp.internal import flows as totp_flows
-from allauth.mfa.webauthn.views import add_webauthn
+from allauth.mfa.webauthn.forms import AddWebAuthnForm
+from allauth.mfa.webauthn.internal import auth as webauthn_auth
+from allauth.mfa.webauthn.views import AddWebAuthnView
 from allauth.socialaccount.models import SocialAccount
 from allauth.usersessions.internal import flows
 from allauth.usersessions.models import UserSession
@@ -26,6 +28,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.http import require_POST
+from django.views.generic.edit import FormView
 
 from biwak.accounts import sso
 from biwak.forms import BootstrapMixin
@@ -183,6 +186,41 @@ class TwoFactorView(AuthenticateView):
 
 
 two_factor = TwoFactorView.as_view()
+
+
+class AddPasskeyForm(AddWebAuthnForm):
+    """allauth's form without "Passwordless": every key added is a passkey
+    (decided 2026-11-21 after a review), so ``clean()`` refuses a key that
+    didn't verify the person (PIN, fingerprint)"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("passwordless", None)
+
+    def clean(self):
+        self.cleaned_data["passwordless"] = True
+        return super().clean()
+
+
+class AddPasskeyView(AddWebAuthnView):
+    """allauth's view registering passkeys only: a discoverable credential
+    with user verification required (``begin_registration(user, True)``,
+    which the server checks again when the key answers); allauth's script
+    reads the hidden, ticked box of ``mfa/webauthn/add_form.html``"""
+
+    form_class = AddPasskeyForm
+
+    def get_context_data(self, **kwargs):
+        ret = FormView.get_context_data(self, **kwargs)
+        ret["js_data"] = {
+            "creation_options": webauthn_auth.begin_registration(
+                self.request.user, passwordless=True
+            )
+        }
+        return ret
+
+
+add_webauthn = AddPasskeyView.as_view()
 
 
 def add_passkey(request):

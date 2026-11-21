@@ -14,6 +14,9 @@ below is what prevents that.
 - **Passkeys are a way in, not a second factor:** a code, the
   organization's identity provider and a passkey are each enough alone.
   allauth's two-factor step never asks for a passkey.
+- **Every key added is a passkey** (decided 2026-11-21 after a review): a
+  discoverable credential that verifies the person (PIN, fingerprint),
+  never a key that only proves it's present; no "Passwordless" checkbox.
 - **Authenticator apps (TOTP) are an optional second factor:** anybody
   may turn one on in their settings (a QR code and a code to confirm, one
   app per person); then signing in by code or through the identity
@@ -84,6 +87,14 @@ below is what prevents that.
   leaves out the code by mail for people with an app;
   `signin.reauthenticate(…, by_code=True)` sends the code pages to the
   app's.
+- **Adding a passkey:** `signin.AddPasskeyView` (allauth's, at
+  `/accounts/2fa/webauthn/add/` through `signin.add_passkey`) registers
+  with `begin_registration(user, True)`: resident key and user
+  verification required, which the server checks again on the answer
+  (fido2's state, `AddPasskeyForm.clean()`); its template
+  (`mfa/webauthn/add_form.html`) gives allauth's script a hidden, ticked
+  "passwordless" box. Whether the key really is discoverable only the
+  browser knows; one that isn't can't sign in.
 - **Mails on changes:** allauth's notification hook
   (`AccountAdapter.send_notification_mail`, which its passkey and TOTP
   flows call) sends `security_mails.send()` for `webauthn_added`,
