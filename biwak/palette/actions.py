@@ -117,6 +117,7 @@ def click(label, selector, url, shortcut=""):
 def everywhere(user):
     """What every page offers"""
     actions = [
+        link(_("Go home"), reverse("dashboard"), "g h"),
         link(_("Go to projects"), reverse("projects"), "g p"),
         link(_("Go to the activity"), reverse("feed"), "g f"),
         link(_("Go to to-dos"), reverse("todos") + "?assignee=me", "g t"),

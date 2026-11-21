@@ -423,7 +423,7 @@ def todo_create(request, list_id: int, data: TodoIn):
 
 
 class DueTodoOut(TodoOut):
-    due_group: Literal["overdue", "today", "this_week", "later", "none"]
+    due_group: Literal["overdue", "today", "this_week", "next_week", "later", "none"]
     project_name: str
     list_title: str
     list_position: int
@@ -439,7 +439,8 @@ def todo_overview(
     completed: bool = False,
     grouping: Literal["project", "due"] | None = None,
     visible_to_clients: bool | None = None,
-    due_group: Literal["overdue", "today", "this_week", "later", "none"] | None = None,
+    due_group: Literal["overdue", "today", "this_week", "next_week", "later", "none"]
+    | None = None,
     cursor: str | None = None,
     page_size: int | None = None,
 ):

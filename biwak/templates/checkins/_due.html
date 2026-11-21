@@ -10,8 +10,17 @@
         <li>
           <a
             href="{% url 'question_answer' occurrence.question.item_id %}?occurrence={{ occurrence.pk }}"
-          >{{ occurrence.question.item|item_title }}</a>
+            {% if occurrence.question.item.unread_notification %}
+              data-lantern-read="{{ occurrence.question.item.unread_notification.read_url }}"
+            {% endif %}
+          >{% if occurrence.question.item.unread_notification %}<span
+                class="wb-lantern-unread"
+                role="img"
+                aria-label="{% translate 'Unread' %}"
+              ></span>{% endif %}{{ occurrence.question.item|item_title }}</a>
           {% client_badge occurrence.question.item %}
+          {% if with_project %}<span class="small text-body-secondary">·
+              {% project_dot occurrence.question.item.project %}{{ occurrence.question.item.project }}</span>{% endif %}
         </li>
       {% endfor %}
     </ul>

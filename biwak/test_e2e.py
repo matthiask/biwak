@@ -972,7 +972,7 @@ class ProjectsOrderTest(E2ETestCase):
         page.wait_for_url("**/?order=name")
         self.goto(page, reverse("project_create"))
         link = page.locator(".wb-nav-links a", has_text="Projects")
-        expect(link).to_have_attribute("href", "/?order=name")
+        expect(link).to_have_attribute("href", "/projects/?order=name")
         link.click()
         page.wait_for_url("**/?order=name")
         expect(page.locator("#id_order")).to_have_value("name")
@@ -2516,6 +2516,9 @@ class KeyboardTest(E2ETestCase):
         page.wait_for_url("**/todos/?assignee=me")
         page.keyboard.press("g")
         page.keyboard.press("p")
+        page.wait_for_url(f"{self.live_server_url}/projects/")
+        page.keyboard.press("g")
+        page.keyboard.press("h")
         page.wait_for_url(f"{self.live_server_url}/")
 
     def test_a_question_mark_lists_the_shortcuts(self):
@@ -2985,4 +2988,38 @@ class FiltersTest(E2ETestCase):
         page = self.page
         self.goto(page, "/search/?q=Plan")
         self.assertIsNone(page.evaluate("localStorage.getItem('filters:/search/')"))
+        self.assertEqual(self.errors, [])
+
+
+class HomeTest(E2ETestCase):
+    """Completing a to-do on Home (specs/dashboard.md): the page stays Home,
+    and the row is gone"""
+
+    def test_completing_a_to_do_stays_on_home(self):
+        page = self.page
+        todolist = self.make_list("Launch", todos=["Plan", "Pack"])
+        for todo in Item.objects.filter(parent=todolist):
+            ops.update_todo(todo, actor=self.ada, due_on=schedules.today())
+            ops.assign(todo, [self.ada], actor=self.ada)
+        self.goto(page, "/")
+        row = page.locator(".wb-todo", has_text="Plan")
+        expect(row).to_be_visible()
+        row.get_by_role("button", name="Complete").click()
+        expect(row).to_have_count(0)
+        self.assertEqual(page.url, f"{self.live_server_url}/")
+        expect(page.locator("[data-home=due]")).to_contain_text("Pack")
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+        self.assertEqual(self.errors, [])
+
+    def test_the_shortcuts_link_opens_the_help(self):
+        page = self.page
+        self.goto(page, "/")
+        link = page.get_by_role("link", name="Keyboard shortcuts")
+        expect(link).to_be_visible()
+        expect(page.locator("[data-shortcuts-hint]")).to_be_hidden()
+        link.click()
+        expect(page.locator("#wb-shortcuts")).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(page.locator("#wb-shortcuts")).not_to_be_visible()
+        self.assertEqual(page.url, f"{self.live_server_url}/")
         self.assertEqual(self.errors, [])

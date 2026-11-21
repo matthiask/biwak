@@ -9,6 +9,7 @@ import time_machine
 from django.core.management import call_command
 from django.db import close_old_connections, connection
 from django.test import TestCase, TransactionTestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from biwak.accounts.models import APIToken
@@ -52,11 +53,13 @@ class ManageTest(TestCase):
         self.client.post(url + "archive/")
         # Gone from the active projects; the message names it ("Archived
         # Renamed.", with Undo)
-        self.assertNotContains(self.client.get("/"), f'href="{url}"')
-        self.assertContains(self.client.get("/?archived=1"), "Renamed")
+        self.assertNotContains(self.client.get(reverse("projects")), f'href="{url}"')
+        self.assertContains(
+            self.client.get(reverse("projects"), {"archived": 1}), "Renamed"
+        )
         self.assertContains(self.client.get(url), "Archived on")
         self.client.post(url + "archive/", {"unarchive": "1"})
-        self.assertContains(self.client.get("/"), "Renamed")
+        self.assertContains(self.client.get(reverse("projects")), "Renamed")
         # Clients don't
         self.client.force_login(self.cleo)
         self.assertEqual(self.client.get(url + "edit/").status_code, 403)

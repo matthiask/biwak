@@ -567,7 +567,7 @@ def lists(project, as_json):
 @click.option("--project", "project_id", type=int, help="Only this project's ID.")
 @click.option(
     "--due",
-    type=click.Choice(["overdue", "today", "this_week", "later", "none"]),
+    type=click.Choice(["overdue", "today", "this_week", "next_week", "later", "none"]),
     help="Only to-dos in this group by due date.",
 )
 @click.option(

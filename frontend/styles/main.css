@@ -2193,3 +2193,22 @@ main:has([data-hide-title]) [data-edit-open] {
   float: none;
   margin: 0;
 }
+
+/* Home (specs/dashboard.md): one column on phones, the main column and a
+   narrow one on wide screens */
+.wb-home {
+  display: grid;
+  gap: 0 2rem;
+}
+
+.wb-home-main,
+.wb-home-side {
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+  .wb-home {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    align-items: start;
+  }
+}

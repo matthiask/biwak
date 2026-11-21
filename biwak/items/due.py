@@ -6,19 +6,31 @@ import datetime as dt
 
 from django.db.models import DateField, Exists, F, OuterRef, Value
 from django.db.models.functions import Coalesce
+from django.utils import formats
+from django.utils.translation import gettext_lazy as _
 
 from biwak import schedules
 from biwak.items.models import Assignment, Item, Kind, Status
 
 
-OVERDUE, TODAY, THIS_WEEK, LATER, NO_DATE = (
+OVERDUE, TODAY, THIS_WEEK, NEXT_WEEK, LATER, NO_DATE = (
     "overdue",
     "today",
     "this_week",
+    "next_week",
     "later",
     "none",
 )
-GROUPS = [OVERDUE, TODAY, THIS_WEEK, LATER, NO_DATE]
+GROUPS = [OVERDUE, TODAY, THIS_WEEK, NEXT_WEEK, LATER, NO_DATE]
+# ``LATER`` (everything after next week) is shown as one section per month
+# (decided 2026-11-21); the headings of the others
+GROUP_LABELS = {
+    OVERDUE: _("Overdue"),
+    TODAY: _("Today"),
+    THIS_WEEK: _("This week"),
+    NEXT_WEEK: _("Next week"),
+    NO_DATE: _("No date"),
+}
 # Sorts to-dos without a due date last, and is a plain field for cursors
 NO_DATE_SORT = dt.date.max
 
@@ -29,16 +41,46 @@ def week_end(today):
 
 
 def group_of(due_on, today):
-    """The group a to-do is in: ``this_week`` runs until Sunday"""
+    """The group a to-do is in: ``this_week`` runs until Sunday,
+    ``next_week`` from Monday until the Sunday after, ``later`` is the rest"""
     if due_on is None:
         return NO_DATE
     if due_on < today:
         return OVERDUE
     if due_on == today:
         return TODAY
-    if due_on <= week_end(today):
+    sunday = week_end(today)
+    if due_on <= sunday:
         return THIS_WEEK
+    if due_on <= sunday + dt.timedelta(days=7):
+        return NEXT_WEEK
     return LATER
+
+
+def month_label(day, today):
+    """ "December", or "January 2027" outside the current year"""
+    return formats.date_format(day, "F" if day.year == today.year else "F Y")
+
+
+def sections(todos, today):
+    """``[(key, heading, [to-do])]`` for to-dos ordered by due date: the
+    groups, with ``later`` split into one section per month (the key is
+    ``later-2027-01``); empty ones are left out"""
+    found = {}
+    for item in todos:
+        key = group_of(item.todo.due_on, today)
+        if key == LATER:
+            key = f"{LATER}-{item.todo.due_on:%Y-%m}"
+        found.setdefault(key, []).append(item)
+    result = []
+    for key in GROUPS:
+        if key == LATER:
+            for month in sorted(k for k in found if k.startswith(f"{LATER}-")):
+                day = found[month][0].todo.due_on
+                result.append((month, month_label(day, today), found[month]))
+        elif key in found:
+            result.append((key, GROUP_LABELS[key], found[key]))
+    return result
 
 
 def badge_state(todo, today=None):
@@ -124,7 +166,10 @@ def _in_group(qs, group, today):
         OVERDUE: lambda: qs.filter(todo__due_on__lt=today),
         TODAY: lambda: qs.filter(todo__due_on=today),
         THIS_WEEK: lambda: qs.filter(todo__due_on__gt=today, todo__due_on__lte=sunday),
-        LATER: lambda: qs.filter(todo__due_on__gt=sunday),
+        NEXT_WEEK: lambda: qs.filter(
+            todo__due_on__gt=sunday, todo__due_on__lte=sunday + dt.timedelta(days=7)
+        ),
+        LATER: lambda: qs.filter(todo__due_on__gt=sunday + dt.timedelta(days=7)),
         NO_DATE: lambda: qs.filter(todo__due_on__isnull=True),
     }[group]()
 

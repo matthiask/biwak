@@ -51,7 +51,7 @@ other unknown parameter (decided 2026-11-21).
   - Each to-do keeps its due date and the overdue or "Today" badge.
   - Empty projects and lists aren't shown.
 - **By due date:** the sections as today: overdue, today, this week,
-  later, no date.
+  next week, one per month, no date (`todos.md`, changed 2026-11-21).
 - **On a project's page** (`/projects/<pk>/todos/`) "By project" means
   by list and group, without the project heading.
 - **The API and CLI:**

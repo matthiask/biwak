@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Home" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Home" %}</h1>
+  </div>
+  <div class="wb-home">
+    <div class="wb-home-main">
+      <section class="mb-4" data-home="due">
+        <h2 class="h5">{% translate "Due" %}</h2>
+        {% for key, label, todos in sections %}
+          <div class="mb-3" data-section="{{ key }}">
+            <h3 class="h6{% if key == 'overdue' %} text-danger{% endif %}">{{ label }}</h3>
+            {% for todo in todos %}{% include "items/_due_row.html" with keep_page=True %}{% endfor %}
+          </div>
+        {% empty %}
+          <p class="text-body-secondary mb-2">{% translate "Nothing due this week." %}</p>
+        {% endfor %}
+        <a
+          href="{% url 'todos' %}?assignee=me&amp;grouping=due"
+        >{% if open_count %}{% blocktranslate with n=open_count %}All {{ n }} to-dos{% endblocktranslate %}{% else %}{% translate "All my to-dos" %}{% endif %}</a>
+      </section>
+
+      {% if occurrences %}
+        <section class="mb-4" data-home="checkins">
+          {% include "checkins/_due.html" with due=occurrences with_project=True %}
+        </section>
+      {% endif %}
+
+      {% if waiting %}
+        <section class="mb-4" data-home="waiting">
+          <h2 class="h5">{% translate "Waiting on others" %}</h2>
+          {% for key, label, todos in waiting %}
+            <div class="mb-3" data-section="{{ key }}">
+              <h3 class="h6{% if key == 'overdue' %} text-danger{% endif %}">{{ label }}</h3>
+              {% for todo in todos %}{% include "items/_due_row.html" with keep_page=True %}{% endfor %}
+            </div>
+          {% endfor %}
+          <a
+            href="{% url 'todos' %}?assignee=&amp;assigned_by=me&amp;grouping=due"
+          >{% translate "All to-dos I assigned" %}</a>
+        </section>
+      {% endif %}
+
+      {% if days %}
+        <section class="mb-4" data-home="updates">
+          <h2 class="h5">{% translate "Recent updates" %}</h2>
+          {% include "activity/_entries.html" %}
+          <a href="{% url 'feed' %}">{% translate "All activity" %}</a>
+        </section>
+      {% endif %}
+    </div>
+
+    <div class="wb-home-side">
+      <section class="mb-4" data-home="projects">
+        <h2 class="h5">{% translate "Projects" %}</h2>
+        {% if projects %}
+          <div class="d-flex flex-column gap-3 mb-2">
+            {% for project in projects %}{% include "projects/_card.html" %}{% endfor %}
+          </div>
+          {% if bookmark_hint %}<p class="small text-body-secondary">
+              {% translate "Bookmark projects to keep them here." %}
+            </p>{% endif %}
+        {% else %}
+          <p class="text-body-secondary mb-2">{% translate "You're not in a project yet." %}</p>
+        {% endif %}
+        <a href="{% url 'projects' %}">{% translate "All projects" %}</a>
+      </section>
+
+      {% if bookmarks %}
+        <section class="mb-4" data-home="bookmarks">
+          <h2 class="h5">{% translate "Bookmarks" %}</h2>
+          <div class="list-group mb-2">
+            {% for bookmark in bookmarks %}
+              {% with item=bookmark.item %}
+                <a
+                  class="list-group-item list-group-item-action"
+                  href="{{ item.get_absolute_url }}"
+                  {% if item.unread_notification %}
+                    data-lantern-read="{{ item.unread_notification.read_url }}"
+                  {% endif %}
+                >
+                  {% if item.unread_notification %}<span
+                      class="wb-lantern-unread"
+                      role="img"
+                      aria-label="{% translate 'Unread' %}"
+                    ></span>{% endif %}
+                  {% icon item.kind_icon %}
+                  {{ item|item_title }}
+                  {% client_badge item %}
+                  <div class="small text-body-secondary">{{ item.get_kind_display }} · {{ item.project }}</div>
+                </a>
+              {% endwith %}
+            {% endfor %}
+          </div>
+          <a href="{% url 'bookmarks' %}">{% translate "All bookmarks" %}</a>
+        </section>
+      {% endif %}
+
+      <section class="mb-4" data-home="links">
+        <h2 class="h5">{% translate "Useful" %}</h2>
+        {% if can_create %}
+          <p>
+            <a href="{% url 'project_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
+              >{% translate "New project" %}</span></a>
+          </p>
+        {% endif %}
+        <ul class="list-unstyled mb-0">
+          {% if not request.user.is_client %}
+            <li>
+              <a
+                href="{% url 'todos' %}?assignee=&amp;assigned_by=me&amp;grouping=due"
+              >{% translate "To-dos I assigned" %}</a>
+            </li>
+          {% endif %}
+          <li>
+            <a href="{% url 'search' %}" data-palette-open>{% translate "Search" %}</a>
+            <kbd data-shortcut-hint>{% translate "Ctrl+K" %}</kbd>
+          </li>
+          <li>
+            <a href="#wb-shortcuts" data-shortcuts-open hidden>{% translate "Keyboard shortcuts" %}</a>
+            <span class="text-body-secondary" data-shortcuts-hint>{% translate "Keyboard shortcuts:" %}</span>
+            <kbd>?</kbd>
+          </li>
+          <li><a href="{% url 'calendar_link' %}">{% translate "Subscribe to your to-dos in a calendar" %}</a></li>
+          <li><a href="{% url 'settings_notifications' %}">{% translate "Notification settings" %}</a></li>
+          {% if not request.user.is_client %}
+            <li><a href="{% url 'api_tokens' %}">{% translate "API tokens and the CLI" %}</a></li>
+          {% endif %}
+        </ul>
+      </section>
+    </div>
+  </div>
+{% endblock content %}

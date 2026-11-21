@@ -151,7 +151,8 @@ completing a recurring visible to-do.
 ## Stage 2: the list by due date
 
 Instead of a calendar: open to-dos by due date, grouped into overdue,
-today, this week (until Sunday), later and no date.
+today, this week (until Sunday), next week (Monday to Sunday), one
+section per month after that, and no date (changed 2026-11-21, see below).
 
 - `/todos/` across all projects the person can see, `/projects/<pk>/todos/`
   per project; "My to-dos" (`/todos/?assignee=me`) in the navigation.
@@ -192,7 +193,15 @@ All proposed by the building agent, confirmed 2026-11-21.
 - **Left out of the list** (and the API and the feed): to-dos of archived
   projects and of archived lists, besides trashed ones.
 - **This week** runs until Sunday, in the installation's time zone: on
-  a Sunday it's empty, everything after today is "later".
+  a Sunday it's empty, everything after today is next week or later.
+- **Next week and months** (decided 2026-11-21): after "This week" comes
+  "Next week" (the Monday to Sunday after it), then one section per month
+  for everything after ("December", "January 2027" outside the current
+  year; Django's localized month names), then "No date". "Later" is no
+  heading anymore; Home uses the same sections. The group keys of the API
+  (`due_group`) and the CLI (`--due`) are `overdue`, `today`, `this_week`,
+  `next_week` (new), `later` (everything after next week; the months are
+  only headings on the page) and `none`.
 - **Filters:** unknown values (a project the person can't open, a
   non-existent person) show an error and no to-dos, never a silent
   "everything". Assignee choices list people only for staff; clients get

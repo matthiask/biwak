@@ -1,4 +1,9 @@
-{% load biwak %}{% if what %}{{ what }}{% elif event.item %}<a
+{% load biwak i18n %}{% if what %}{{ what }}{% elif event.item %}<a
     href="{{ event.item.get_absolute_url }}"
     data-kb-open
-  >{{ event.data.title|title_text }}</a>{% else %}{{ event.data.title|title_text }}{% endif %}
+    {% if event.unread_notification %}data-lantern-read="{{ event.unread_notification.read_url }}"{% endif %}
+  >{% if event.unread_notification %}<span
+        class="wb-lantern-unread"
+        role="img"
+        aria-label="{% translate 'Unread' %}"
+      ></span>{% endif %}{{ event.data.title|title_text }}</a>{% else %}{{ event.data.title|title_text }}{% endif %}

@@ -2,6 +2,7 @@ import re
 
 from django.core import mail
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from biwak.activity.models import Action, Event, Subscription
@@ -32,14 +33,14 @@ class ViewsTest(TestCase):
         )
 
     def test_login_required(self):
-        response = self.client.get("/")
+        response = self.client.get(reverse("projects"))
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/code/", response["Location"])
         self.assertEqual(self.client.get("/accounts/login/code/").status_code, 200)
 
     def test_staff_pages(self):
         self.client.force_login(self.ada)
-        self.assertContains(self.client.get("/"), "Website")
+        self.assertContains(self.client.get(reverse("projects")), "Website")
         response = self.client.get(self.project.get_absolute_url())
         self.assertContains(response, "Internal")
         self.assertContains(response, "wb-client-badge")
@@ -83,10 +84,10 @@ class ViewsTest(TestCase):
         limited = project("Salaries", members=[self.ada], all_access=False)
         self.client.force_login(self.bob)
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 404)
-        self.assertNotContains(self.client.get("/"), "Salaries")
+        self.assertNotContains(self.client.get(reverse("projects")), "Salaries")
         admin = person("Root", is_admin=True)
         self.client.force_login(admin)
-        self.assertContains(self.client.get("/"), "Salaries")
+        self.assertContains(self.client.get(reverse("projects")), "Salaries")
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 404)
         # Not archived ones, which the list leaves out
         limited.archived_at = timezone.now()

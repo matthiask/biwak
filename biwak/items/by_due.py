@@ -22,13 +22,6 @@ from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
 
-GROUP_LABELS = {
-    due.OVERDUE: _("Overdue"),
-    due.TODAY: _("Today"),
-    due.THIS_WEEK: _("This week"),
-    due.LATER: _("Later"),
-    due.NO_DATE: _("No date"),
-}
 PAGE_SIZE = 50
 
 
@@ -136,13 +129,7 @@ def todos_by_due(request, project=None):
     elif grouping == TodoGrouping.PROJECT:
         context["projects"] = due.by_project(todos)
     else:
-        today = schedules.today()
-        sections = {key: [] for key in due.GROUPS}
-        for item in due.ordered(todos):
-            sections[due.group_of(item.todo.due_on, today)].append(item)
-        context["sections"] = [
-            (key, GROUP_LABELS[key], items) for key, items in sections.items() if items
-        ]
+        context["sections"] = due.sections(due.ordered(todos), schedules.today())
     return render(request, "items/todos_by_due.html", context)
 
 
