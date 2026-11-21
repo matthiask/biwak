@@ -10,7 +10,7 @@ Replaces `access.md`'s "Google only for staff" (decided 2026-11-20)
 once built.
 
 **Status:** spec (2026-11-21), the questions answered the same day.
-Not built.
+Being built (2026-11-21), see "Built".
 
 **Agent:** a strong model: sign-in is security-relevant; have the
 claims checks and the enforcement reviewed.
@@ -97,3 +97,34 @@ the organization's IdP.
   people; the Microsoft path at least with a faked token.
 - `access.md`, the help and the admin docs say how to set it up (the
   Google and Microsoft app registrations are the user's).
+
+## Built
+
+- **The setting** (`biwak/organizations/`): `Organization.signin`
+  (`codes`, `sso_allowed`, `sso_required`), `idp` (`google`,
+  `microsoft`) and `tenant_id` (Entra ID), with database constraints
+  (single sign-on has a provider, Microsoft a tenant).
+  `org_ops.set_signin()` is admins only, also on the organization's page
+  ("Sign-in…", a modal, `/organizations/ID/sign-in/`) and in the Django
+  admin; staff see the setting on the page, the API shows it read-only
+  (`signin`, `idp`; `biwak orgs show`, CLI 0.32.1). `clean_signin()`
+  checks: a provider the installation has set up (`SOCIALACCOUNT_PROVIDERS`
+  with a client ID), Google needs the organization's domains, Microsoft a
+  tenant ID that is a UUID and not the tenant of personal accounts
+  (`9188040d-…`). Switching back to codes keeps the provider for later.
+- **Decided while building (2026-11-21, the most secure reasonable
+  option, to be confirmed):**
+  - The domains of an organization signing in with Google are its
+    Workspace domains, they decide whose Google accounts count: only
+    admins change them (also by merging into it), and it keeps at least
+    one.
+  - An admin requiring single sign-on for their own organization has to
+    have signed in through it in this session, so nobody locks themselves
+    out with a provider that doesn't work for them.
+  - The setting isn't changed through the API: a token is easier to lose
+    than a session, and it's an admin's rare choice.
+- **The own organization** (migration `organizations.0005`, and
+  `Organization.objects.own()` when it creates one): single sign-on
+  allowed, Google. Without domains it gets those of its active staff's
+  addresses (not free-mail domains or other organizations'): check them
+  after deploying.

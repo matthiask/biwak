@@ -13,7 +13,10 @@ from django.utils.translation import gettext as _
 from biwak.organizations.models import (
     DOMAIN,
     FREE_MAIL_DOMAINS,
+    MICROSOFT_CONSUMER_TENANT,
+    IdP,
     Organization,
+    SignIn,
     normalize_domain,
     normalize_name,
 )
@@ -141,6 +144,33 @@ def create_organization(*, name, domains=(), actor):
     return org
 
 
+def can_change_domains(user, org):
+    """The domains of an organization signing in with Google are its
+    Workspace domains: they decide whose Google accounts count (specs/sso.md),
+    so only admins change them"""
+    return can_manage(user) and (user.is_admin or org.sso != IdP.GOOGLE)
+
+
+def _check_domains(actor, org, domains):
+    """Admins only for organizations signing in with Google, and never
+    none"""
+    if not can_change_domains(actor, org):
+        raise PermissionError(
+            _(
+                "Only admins change the domains of an organization signing in"
+                " with Google."
+            )
+        )
+    if org.sso == IdP.GOOGLE and not domains:
+        raise ValidationError(
+            _(
+                "%(organization)s signs in with Google: it needs its Google"
+                " Workspace domains."
+            )
+            % {"organization": org}
+        )
+
+
 @transaction.atomic
 def update_organization(org, *, actor, name=None, domains=None):
     """Renames (once, for everybody) and replaces the domains, what's given"""
@@ -152,6 +182,7 @@ def update_organization(org, *, actor, name=None, domains=None):
     if domains is not None:
         cleaned = clean_domains(domains, instance=org)
         if cleaned != org.domains:
+            _check_domains(actor, org, cleaned)
             org.domains = cleaned
             fields.append("domains")
     if fields:
@@ -175,6 +206,8 @@ def merge(source, target, *, actor):
             % {"organization": target}
         )
     _no_admin_partners(_admins_in(source), own_after=target.is_own)
+    if any(d not in target.domains for d in source.domains):
+        _check_domains(actor, target, [*target.domains, *source.domains])
     moved = list(source.people.values_list("pk", flat=True))
     source.people.update(organization=target)
     domains = [d for d in source.domains if d not in target.domains]
@@ -238,6 +271,78 @@ def mark_own(org, *, actor):
     org.is_own = True
     org.save(update_fields=["is_own"])
     _access_changed(unmarked)
+    return org
+
+
+def can_change_signin(user):
+    """How an organization's people sign in is for admins (specs/sso.md)"""
+    return user.is_authenticated and user.is_active and user.is_admin
+
+
+def clean_signin(org, *, signin, idp="", tenant_id=""):
+    """``(signin, idp, tenant_id)`` checked, ``ValidationError`` otherwise:
+    single sign-on needs a provider the installation has set up, Google the
+    organization's Workspace domains, Microsoft its tenant ID (not the one of
+    personal accounts)"""
+    from biwak.accounts import sso
+
+    try:
+        signin = SignIn(signin)
+        idp = IdP(idp) if idp else ""
+    except ValueError as exc:
+        raise ValidationError(_("Choose one of the options.")) from exc
+    tenant_id = str(tenant_id or "").strip()
+    if tenant_id:
+        try:
+            tenant_id = sso.normalize_tenant(tenant_id)
+        except ValueError as exc:
+            raise ValidationError(
+                _("The tenant ID looks like 00000000-0000-0000-0000-000000000000.")
+            ) from exc
+        if tenant_id == MICROSOFT_CONSUMER_TENANT:
+            raise ValidationError(
+                _(
+                    "That's the tenant of personal Microsoft accounts, not of an organization."
+                )
+            )
+    if idp != IdP.MICROSOFT:
+        tenant_id = ""
+    if signin == SignIn.CODES:
+        return signin, idp if idp != IdP.MICROSOFT or tenant_id else "", tenant_id
+    if not idp:
+        raise ValidationError(_("Choose the identity provider."))
+    if not sso.provider_configured(idp):
+        raise ValidationError(
+            _(
+                "Signing in with %(provider)s isn't set up on this installation"
+                " yet (see the help)."
+            )
+            % {"provider": IdP(idp).label}
+        )
+    if idp == IdP.GOOGLE and not org.domains:
+        raise ValidationError(
+            _(
+                "Add the organization's Google Workspace domains first: Google"
+                " sign-ins count only for them."
+            )
+        )
+    if idp == IdP.MICROSOFT and not tenant_id:
+        raise ValidationError(_("Enter the organization's Microsoft tenant ID."))
+    return signin, idp, tenant_id
+
+
+@transaction.atomic
+def set_signin(org, *, signin, idp="", tenant_id="", actor):
+    """How the organization's people sign in (admins only, specs/sso.md).
+    Requiring single sign-on removes their passkeys, cuts their API tokens
+    and ends their other sessions (``sso.enforce_required()``)."""
+    if not can_change_signin(actor):
+        raise PermissionError(_("Only admins change how an organization signs in."))
+    signin, idp, tenant_id = clean_signin(
+        org, signin=signin, idp=idp, tenant_id=tenant_id
+    )
+    org.signin, org.idp, org.tenant_id = signin, idp, tenant_id
+    org.save(update_fields=["signin", "idp", "tenant_id"])
     return org
 
 

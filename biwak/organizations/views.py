@@ -16,7 +16,7 @@ from biwak.forms import Form
 from biwak.modals import form_response
 from biwak.organizations import operations as org_ops
 from biwak.organizations.forms import OrganizationFieldMixin, organization_field
-from biwak.organizations.models import Organization
+from biwak.organizations.models import IdP, Organization, SignIn
 
 
 def managing(request):
@@ -56,6 +56,7 @@ def organization_detail(request, pk):
             "organization": org,
             "people": people,
             "can_touch": org_ops.can_touch(request.user, org),
+            "can_change_signin": org_ops.can_change_signin(request.user),
             "can_delete": org_ops.can_touch(request.user, org)
             and not org.is_own
             and not people.exists(),
@@ -75,7 +76,7 @@ class OrganizationForm(Form):
         ),
     )
 
-    def __init__(self, *args, instance=None, **kwargs):
+    def __init__(self, *args, instance=None, user=None, **kwargs):
         self.instance = instance
         if instance is not None:
             kwargs.setdefault(
@@ -83,6 +84,12 @@ class OrganizationForm(Form):
                 {"name": instance.name, "domains": " ".join(instance.domains)},
             )
         super().__init__(*args, **kwargs)
+        if instance is not None and not org_ops.can_change_domains(user, instance):
+            # Its Google Workspace domains (specs/sso.md)
+            self.fields["domains"].disabled = True
+            self.fields["domains"].help_text = _(
+                "It signs in with Google: only admins change its domains."
+            )
 
     def clean_name(self):
         return org_ops.clean_name(self.cleaned_data["name"], instance=self.instance)
@@ -110,10 +117,14 @@ def organization_create(request):
 
 def organization_edit(request, pk):
     org = organization_for(request, pk)
-    form = OrganizationForm(request.POST or None, instance=org)
+    form = OrganizationForm(request.POST or None, instance=org, user=request.user)
     if form.is_valid():
-        org_ops.update_organization(org, actor=request.user, **form.cleaned_data)
-        return redirect(org)
+        try:
+            org_ops.update_organization(org, actor=request.user, **form.cleaned_data)
+        except ValidationError as exc:
+            form.add_error("domains", exc)
+        else:
+            return redirect(org)
     return form_response(
         request,
         form,
@@ -149,6 +160,8 @@ def organization_merge(request, pk):
             target = org_ops.merge(org, form.cleaned_data["into"], actor=request.user)
         except ValidationError as exc:
             form.add_error(None, exc)
+        except PermissionError as exc:
+            form.add_error(None, str(exc))
     if target is not None:
         messages.success(
             request,
@@ -248,4 +261,100 @@ def person_organization(request, pk):
             if user.organization_id
             else reverse("organizations")
         ),
+    )
+
+
+class SignInForm(Form):
+    signin = forms.ChoiceField(
+        label=gettext_lazy("Sign-in"), choices=SignIn.choices, widget=forms.RadioSelect
+    )
+    idp = forms.ChoiceField(
+        label=gettext_lazy("Identity provider"),
+        choices=[("", gettext_lazy("None")), *IdP.choices],
+        required=False,
+        widget=forms.RadioSelect,
+        help_text=gettext_lazy(
+            "Google Workspace: sign-ins count for the organization's email"
+            " domains (Google's hd). Microsoft Entra ID: for its tenant."
+        ),
+    )
+    tenant_id = forms.CharField(
+        label=gettext_lazy("Microsoft tenant ID"),
+        required=False,
+        max_length=36,
+        help_text=gettext_lazy(
+            "The Directory (tenant) ID in the Microsoft Entra admin center."
+        ),
+    )
+
+    def __init__(self, *args, organization, request, **kwargs):
+        self.organization = organization
+        self.request = request
+        kwargs.setdefault(
+            "initial",
+            {
+                "signin": organization.signin,
+                "idp": organization.idp,
+                "tenant_id": organization.tenant_id,
+            },
+        )
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        from biwak.accounts import sso
+
+        data = super().clean()
+        if self.errors:
+            return data
+        signin, idp, tenant_id = org_ops.clean_signin(
+            self.organization,
+            signin=data["signin"],
+            idp=data.get("idp", ""),
+            tenant_id=data.get("tenant_id", ""),
+        )
+        user = self.request.user
+        if (
+            signin == SignIn.SSO_REQUIRED
+            and user.organization_id == self.organization.pk
+            and not sso.signed_in_with_idp(
+                self.request,
+                user,
+                Organization(signin=signin, idp=idp, tenant_id=tenant_id),
+            )
+        ):
+            # Not locking oneself out: it works for the one requiring it
+            raise ValidationError(
+                _(
+                    "Sign in with %(provider)s first: requiring it signs you"
+                    " out of sessions that didn't."
+                )
+                % {"provider": IdP(idp).label}
+            )
+        return {"signin": signin, "idp": idp, "tenant_id": tenant_id}
+
+
+def organization_signin(request, pk):
+    """How the organization's people sign in (specs/sso.md): admins only"""
+    org = organization_for(request, pk)
+    if not org_ops.can_change_signin(request.user):
+        raise PermissionDenied
+    form = SignInForm(request.POST or None, organization=org, request=request)
+    if form.is_valid():
+        org_ops.set_signin(org, actor=request.user, **form.cleaned_data)
+        messages.success(
+            request,
+            _("How %(organization)s signs in has been saved.") % {"organization": org},
+        )
+        return redirect(org)
+    return form_response(
+        request,
+        form,
+        title=_("Sign-in of %(organization)s") % {"organization": org},
+        intro=_(
+            "Single sign-on required: its people sign in only through the"
+            " identity provider, their passkeys are removed, sessions and API"
+            " tokens last 24 hours."
+        ),
+        help_page="sign-in",
+        cancel_url=org.get_absolute_url(),
     )

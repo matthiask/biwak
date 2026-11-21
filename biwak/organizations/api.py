@@ -24,6 +24,11 @@ class OrganizationOut(Schema):
     # The own organization: its staff see all-access projects, staff of
     # the others (partners) only the projects they're members of
     is_own: bool
+    # How its people sign in (specs/sso.md): "codes", "sso_allowed" or
+    # "sso_required", and the identity provider ("google", "microsoft" or
+    # empty); changed by admins on the organization's page only
+    signin: str
+    idp: str
     people_count: int
     url: str
 
@@ -41,6 +46,8 @@ def organization_out(org, *, people=False):
         "name": org.name,
         "domains": org.domains,
         "is_own": org.is_own,
+        "signin": org.signin,
+        "idp": org.sso,
         "people_count": count,
         "url": absolute(org.get_absolute_url()),
     }

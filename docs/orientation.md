@@ -92,7 +92,8 @@ organizations from the People page.
 ## Your menu
 
 Your name in the bar opens: My activity, Settings (notifications, the
-keyboard, appearance, profile image, passkeys and sessions), Calendar,
+keyboard, appearance, profile image, sign-in: connected accounts,
+passkeys and sessions), Calendar,
 Help and Sign out. Staff also find the link to the administration.
 
 ## Trash

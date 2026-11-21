@@ -112,3 +112,41 @@ def assert_modal_redirect(test, response, url=None):
     test.assertIn("HX-Redirect", response.headers)
     if url is not None:
         test.assertEqual(response.headers["HX-Redirect"], url)
+
+
+# Both identity providers set up, with made-up apps (specs/sso.md)
+SSO_PROVIDERS = {
+    "google": {
+        "APPS": [{"client_id": "google-id", "secret": "google-secret"}],
+        "SCOPE": ["openid", "profile", "email"],
+    },
+    "microsoft": {
+        "APPS": [
+            {
+                "client_id": "microsoft-id",
+                "secret": "microsoft-secret",
+                "settings": {"tenant": "organizations"},
+            }
+        ],
+        "SCOPE": ["openid", "email", "profile", "User.Read"],
+    },
+}
+
+
+def sign_in_with(client, user, provider="google", *, at=None):
+    """Logged in as somebody who signed in through the identity provider
+    ``at`` (a timestamp, default now), as allauth records it"""
+    import time
+
+    client.force_login(user)
+    session = client.session
+    session["account_authentication_methods"] = [
+        {
+            "method": "socialaccount",
+            "at": time.time() if at is None else at,
+            "provider": provider,
+            "uid": "1234",
+        }
+    ]
+    session["account_authentication_methods_user"] = str(user.pk)
+    session.save()

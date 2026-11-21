@@ -418,11 +418,23 @@ def orgs(ctx, as_json):
     return None
 
 
+SIGN_IN = {
+    "codes": "codes and passkeys",
+    "sso_allowed": "{provider}, codes and passkeys",
+    "sso_required": "only {provider}",
+}
+SIGN_IN_PROVIDERS = {"google": "Google", "microsoft": "Microsoft"}
+
+
 def show_org(data):
     own = ", your own organization" if data["is_own"] else ""
     click.echo(f"{data['name']} ({data['id']}{own})")
     if data["domains"]:
         click.echo(f"Domains: {', '.join(data['domains'])}")
+    signin = data.get("signin")
+    if signin in SIGN_IN:
+        provider = SIGN_IN_PROVIDERS.get(data.get("idp"), "")
+        click.echo(f"Sign-in: {SIGN_IN[signin].format(provider=provider)}")
     for person in data.get("people", []):
         kind = "client" if person["is_client"] else "staff"
         click.echo(f"  {person['name']} ({person['id']}, {kind})")

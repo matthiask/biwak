@@ -15,6 +15,11 @@ urlpatterns = [
         name="organization_edit",
     ),
     path(
+        "organizations/<int:pk>/sign-in/",
+        views.organization_signin,
+        name="organization_signin",
+    ),
+    path(
         "organizations/<int:pk>/merge/",
         views.organization_merge,
         name="organization_merge",

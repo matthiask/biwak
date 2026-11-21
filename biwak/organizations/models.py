@@ -113,14 +113,38 @@ def own_middleware(get_response):
     return middleware
 
 
+class SignIn(models.TextChoices):
+    """How an organization's people sign in (specs/sso.md)"""
+
+    CODES = "codes", _("Codes and passkeys")
+    SSO_ALLOWED = "sso_allowed", _("Single sign-on allowed")
+    SSO_REQUIRED = "sso_required", _("Single sign-on required")
+
+
+class IdP(models.TextChoices):
+    """The identity provider of an organization with single sign-on: the
+    providers' IDs in allauth"""
+
+    GOOGLE = "google", _("Google Workspace")
+    MICROSOFT = "microsoft", _("Microsoft Entra ID")
+
+
+# The tenant of personal Microsoft accounts: anybody can have one, it never
+# stands for an organization
+MICROSOFT_CONSUMER_TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad"
+
+
 class OrganizationQuerySet(models.QuerySet):
     def own(self):
         """The own organization, which always exists
         (decided 2026-11-21): created as "Our organization" if none is
-        marked"""
+        marked, signing in with Google allowed as for staff before
+        (specs/sso.md)"""
         own = self.filter(is_own=True).first()
         if own is None:
-            own = self.named(OWN_NAME) or Organization(name=OWN_NAME)
+            own = self.named(OWN_NAME) or Organization(
+                name=OWN_NAME, signin=SignIn.SSO_ALLOWED, idp=IdP.GOOGLE
+            )
             own.is_own = True
             own.save()
         return own
@@ -154,6 +178,16 @@ class Organization(models.Model):
             " (partners) only the projects they're members of."
         ),
     )
+    # Single sign-on (specs/sso.md): admins only
+    signin = models.CharField(
+        _("sign-in"), max_length=20, choices=SignIn, default=SignIn.CODES
+    )
+    idp = models.CharField(
+        _("identity provider"), max_length=20, choices=IdP, blank=True
+    )
+    # Microsoft Entra ID: the tenant's ID, compared with the tokens' ``tid``;
+    # Google Workspace uses the domains (``hd``)
+    tenant_id = models.CharField(_("Microsoft tenant ID"), max_length=36, blank=True)
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
 
     objects = OrganizationQuerySet.as_manager()
@@ -166,6 +200,14 @@ class Organization(models.Model):
                 fields=["is_own"],
                 condition=Q(is_own=True),
                 name="one_own_organization",
+            ),
+            models.CheckConstraint(
+                condition=Q(signin=SignIn.CODES) | ~Q(idp=""),
+                name="sso_has_an_idp",
+            ),
+            models.CheckConstraint(
+                condition=~Q(idp=IdP.MICROSOFT) | ~Q(tenant_id=""),
+                name="microsoft_has_a_tenant",
             ),
         ]
         verbose_name = _("organization")
@@ -187,3 +229,17 @@ class Organization(models.Model):
         result = super().delete(*args, **kwargs)
         forget_own()
         return result
+
+    @property
+    def sso(self):
+        """The identity provider people may sign in with, or empty"""
+        return "" if self.signin == SignIn.CODES else self.idp
+
+    @property
+    def requires_sso(self):
+        return self.signin == SignIn.SSO_REQUIRED
+
+    @property
+    def idp_name(self):
+        """ "Google", "Microsoft": the button's name"""
+        return {IdP.GOOGLE: "Google", IdP.MICROSOFT: "Microsoft"}.get(self.idp, "")

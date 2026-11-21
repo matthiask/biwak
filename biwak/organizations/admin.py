@@ -27,6 +27,15 @@ class OrganizationForm(forms.ModelForm):
         if data.get("is_own") and not was_own:
             for old in Organization.objects.filter(is_own=True):
                 org_ops._no_admin_partners(org_ops._admins_in(old), own_after=False)
+        if {"signin", "idp", "tenant_id"} & set(self.changed_data):
+            # The same checks as the organization's page (specs/sso.md)
+            org = Organization(domains=data.get("domains") or [])
+            data["signin"], data["idp"], data["tenant_id"] = org_ops.clean_signin(
+                org,
+                signin=data.get("signin"),
+                idp=data.get("idp"),
+                tenant_id=data.get("tenant_id"),
+            )
         return data
 
 
@@ -35,10 +44,10 @@ class OrganizationAdmin(admin.ModelAdmin):
     """Marking the own organization is here (admins only,
     specs/organizations.md); the rest also on the pages for staff"""
 
-    list_display = ["name", "domains", "is_own", "people_count"]
-    list_filter = ["is_own"]
+    list_display = ["name", "domains", "is_own", "signin", "idp", "people_count"]
+    list_filter = ["is_own", "signin", "idp"]
     search_fields = ["name", "domains"]
-    fields = ["name", "domains", "is_own"]
+    fields = ["name", "domains", "is_own", "signin", "idp", "tenant_id"]
     form = OrganizationForm
 
     def get_queryset(self, request):
@@ -49,6 +58,19 @@ class OrganizationAdmin(admin.ModelAdmin):
         return obj.people_count
 
     def save_model(self, request, obj, form, change):
+        if change and {"signin", "idp", "tenant_id"} & set(form.changed_data):
+            # Through the operation, which ends what requiring single
+            # sign-on ends (specs/sso.md)
+            signin = {f: getattr(obj, f) for f in ["signin", "idp", "tenant_id"]}
+            stored = Organization.objects.get(pk=obj.pk)
+            for field in signin:
+                setattr(obj, field, getattr(stored, field))
+            self._save(request, obj, form, change)
+            org_ops.set_signin(obj, actor=request.user, **signin)
+        else:
+            self._save(request, obj, form, change)
+
+    def _save(self, request, obj, form, change):
         # Only one is the own organization: another one loses the mark
         if obj.is_own:
             obj.is_own = False
