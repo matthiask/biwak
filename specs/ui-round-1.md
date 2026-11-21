@@ -183,6 +183,9 @@ projects page; without `list` (the project's own menu) it redirects to the
 project as before. The whole content is re-rendered, so Undo puts the card
 back in its sorted place. The messages stay until the next action (no timer; decided 2026-11-21: consistent with the other messages).
 
+**Superseded 2026-11-21** (`ui-round-2.md` part D): no archiving from the
+projects page; only the switch between active and archived (htmx) remains.
+
 ## Done when
 
 Each part with Django tests for the views (also as a modal: the

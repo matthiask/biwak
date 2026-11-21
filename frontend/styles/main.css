@@ -1470,6 +1470,59 @@ button.wb-signal:hover {
   vertical-align: baseline;
 }
 
+/* The color picker of the project forms (forms/color_swatches.html): a row of
+   radio swatches, the checked one ringed in the accent color */
+.wb-color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.wb-color-choice {
+  position: relative;
+  display: inline-flex;
+  padding: 0.2rem;
+  border: 2px solid transparent;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.wb-color-choice input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.wb-color-choice:has(input:checked) {
+  border-color: var(--wb-accent-fill);
+}
+
+.wb-color-choice:has(input:focus-visible) {
+  outline: 2px solid var(--bs-body-color);
+  outline-offset: 2px;
+}
+
+.wb-color-swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  border-radius: 0.25rem;
+}
+
+/* None: an empty square, struck through */
+.wb-color-none {
+  display: inline-block;
+  border: 1px solid var(--wb-field-border);
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    var(--wb-field-border),
+    transparent calc(50% + 1px)
+  );
+}
+
 .wb-project-card[data-project-color] {
   border-inline-start: 0.3rem solid var(--wb-project-color);
 }

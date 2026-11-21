@@ -14,6 +14,13 @@
     {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </div>
+{% elif field.widget_type == "colorswatches" %}
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6">{{ field.label }}</legend>
+    {{ field }}
+    {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
+    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  </fieldset>
 {% elif field.widget_type == "radioselect" or field.widget_type == "checkboxselectmultiple" %}
   <fieldset class="mb-3">
     <legend class="form-label fs-6">{{ field.label }}</legend>

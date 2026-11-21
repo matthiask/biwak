@@ -1,7 +1,8 @@
 {% load biwak humanize i18n %}
 {% comment %}
-  The projects page's content, which htmx swaps as a whole: switching
-  between active and archived projects, archiving, bringing back and Undo.
+  The projects page's content, which htmx swaps as a whole when switching
+  between active and archived projects. Archiving is in the project's own
+  menu; the page says "Archived Website." with an Undo afterwards.
 {% endcomment %}
 <div id="projects-page">
   <div class="wb-page-header">
@@ -56,10 +57,15 @@
       {% endif %}
     </div>
   </div>
-  {% if message %}
+  {% if archived_project %}
     <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="status">
-      <span>{{ message.text }}</span>
-      {% include "projects/_archive_form.html" with project=message.project unarchive=message.unarchive undo=True %}
+      <span>{% blocktranslate with name=archived_project.name %}Archived {{ name }}.{% endblocktranslate %}</span>
+      <form method="post" action="{% url 'project_archive' archived_project.pk %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="unarchive" value="1">
+        <input type="hidden" name="undo" value="1">
+        <button type="submit" class="btn btn-sm btn-link p-0">{% translate "Undo" %}</button>
+      </form>
     </div>
   {% endif %}
   {% if archived %}
@@ -73,9 +79,6 @@
                 title="{% translate 'Limited: members only' %}"
               >{% icon "lock" %}</span>{% endif %}
           </a>
-          {% if can_manage %}
-            {% include "projects/_archive_form.html" with unarchive=True %}
-          {% endif %}
         </div>
       {% empty %}
         <div class="list-group-item text-body-secondary">{% translate "No archived projects." %}</div>
@@ -99,7 +102,6 @@
                     >{% icon "lock" %}</span>{% endif %}
                 </h2>
                 <div class="d-flex align-items-center gap-1">
-                  {% if can_manage %}{% include "projects/_archive_form.html" with card=True %}{% endif %}
                   {% include "bookmarks/_bookmark_button.html" with target=project is_bookmarked=project.is_bookmarked card=True %}
                 </div>
               </div>

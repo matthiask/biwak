@@ -1,0 +1,10 @@
+{% comment %}
+  The color picker (biwak.forms.ColorSwatches): radio swatches, one per
+  palette color, plus "None". One include for the new project and the edit
+  form; the name is the label and title, not text.
+{% endcomment %}
+<div class="wb-color-picker">
+  {% for group, options, index in widget.optgroups %}
+    {% for option in options %}{% include option.template_name with widget=option %}{% endfor %}
+  {% endfor %}
+</div>
