@@ -908,12 +908,6 @@ html:not(.js) .wb-handle {
   color: var(--bs-body-color);
 }
 
-.wb-person {
-  background: var(--bs-tertiary-bg);
-  color: var(--bs-body-color);
-  font-weight: 500;
-}
-
 /* The mark of a person ({% avatar person size %}, specs/people.md): the
    image, or white initials on the fill of one of the palette's colors,
    chosen from the person's ID */
@@ -2055,4 +2049,10 @@ main:has([data-hide-title]) [data-edit-open] {
 .wb-person-link:hover,
 .wb-person-link:focus-visible {
   text-decoration: underline;
+}
+
+/* Assignees in to-do rows: linked names like on the to-do's page, a name
+   and its mark kept together (decided 2026-11-21) */
+.wb-row-people .wb-person-link {
+  white-space: nowrap;
 }

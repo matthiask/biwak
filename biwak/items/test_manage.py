@@ -50,7 +50,9 @@ class ManageTest(TestCase):
         self.assertEqual(self.project.name, "Renamed")
         self.assertFalse(self.project.is_all_access)
         self.client.post(url + "archive/")
-        self.assertNotContains(self.client.get("/"), "Renamed")
+        # Gone from the active projects; the message names it ("Archived
+        # Renamed.", with Undo)
+        self.assertNotContains(self.client.get("/"), f'href="{url}"')
         self.assertContains(self.client.get("/?archived=1"), "Renamed")
         self.assertContains(self.client.get(url), "Archived on")
         self.client.post(url + "archive/", {"unarchive": "1"})

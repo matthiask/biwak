@@ -1,3 +1,6 @@
 {% load biwak %}
-{% for person in todo.todo.assignees.all %}<span class="badge wb-person">{% avatar person %}
-    {{ person.get_short_name }}</span>{% endfor %}
+{% comment %}The assignees of a to-do's row: linked names with their marks, like the to-do's page (decided 2026-11-21).{% endcomment %}
+{% with people=todo.todo.assignees.all %}{% if people %}<span
+      class="small wb-row-people"
+    >{% for person in people %}{% person_page person %}{% if not forloop.last %},
+        {% endif %}{% endfor %}</span>{% endif %}{% endwith %}

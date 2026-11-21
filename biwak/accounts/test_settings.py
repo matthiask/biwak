@@ -6,7 +6,7 @@ from unittest.mock import patch
 from allauth.mfa.models import Authenticator
 from allauth.usersessions.models import UserSession
 from django.contrib.sessions.backends.db import SessionStore
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 
 from biwak.accounts.models import PALETTE, Accent, APIToken, Theme
 from biwak.test_utils import person
@@ -149,6 +149,9 @@ SAFARI = (
 )
 
 
+# The test client's force_login skips allauth's login flow, which records
+# the session; activity tracking records it on the next request instead
+@override_settings(USERSESSIONS_TRACK_ACTIVITY=True)
 class SignInSectionTest(TestCase):
     """Passkeys and sessions inline on the settings page (specs/ui-round-2.md
     part E); allauth adds, removes and ends"""

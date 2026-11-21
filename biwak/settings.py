@@ -98,8 +98,9 @@ ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 ACCOUNT_PREVENT_ENUMERATION = True
 MFA_SUPPORTED_TYPES = ["webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
-# "Last seen" in the sessions list on the settings page
-USERSESSIONS_TRACK_ACTIVITY = True
+# Off: tracking writes the session's row on every request (decided
+# 2026-11-21); the sessions list shows when each one signed in
+USERSESSIONS_TRACK_ACTIVITY = False
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG and not LIVE
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True

@@ -222,8 +222,8 @@ class TodosTest(E2ETestCase):
         rows = page.locator("[data-todo]")
         rows.filter(has_text="Write the brief").wait_for()
         self.assertEqual(page.evaluate("window.marker"), 1)
-        expect(rows.first.locator(".wb-person")).to_contain_text("Ada")
-        expect(rows.first.locator(".wb-person .wb-avatar")).to_have_count(1)
+        expect(rows.first.locator(".wb-row-people")).to_contain_text("Ada")
+        expect(rows.first.locator(".wb-row-people .wb-avatar")).to_have_count(1)
         self.assertIn("24. Dec", rows.first.inner_text())
         # Ready for the next one
         self.assertEqual(title.input_value(), "")
