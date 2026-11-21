@@ -22,7 +22,7 @@ import time
 
 from django.conf import settings
 from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
-from django.db import connections
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.models import F
 from django.test import Client, LiveServerTestCase, tag
 from django.test.testcases import LiveServerThread
@@ -83,11 +83,31 @@ class E2ETestCase(LiveServerTestCase):
         self.project = project(members=[self.ada, self.cleo])
         self.contexts = []
         self.errors = []
+        # While a test has taken the network away on purpose, the browser
+        # logs the failed requests and reconnects
+        self.offline = False
         self.page = self.login(self.ada)
 
     def tearDown(self):
         for context in self.contexts:
             context.close()
+        self.wait_for_server_idle()
+
+    def wait_for_server_idle(self, timeout=10):
+        """Wait until the ASGI server has finished with the closed
+        browsers: the editor's websocket saves the doc and tells the others
+        when it disconnects, in a thread using the database, and the
+        flush after the test would deadlock with it (or delete rows under
+        its feet)"""
+        server = getattr(self.server_thread, "server", None)
+        state = getattr(server, "server_state", None)
+        if state is None:  # Not uvicorn
+            return
+        deadline = time.monotonic() + timeout
+        while state.connections or state.tasks:
+            if time.monotonic() > deadline:  # pragma: no cover
+                raise AssertionError("The live server still has open connections")
+            time.sleep(0.02)
 
     def login(self, user, **kwargs):
         """A page of a new browser context, logged in as ``user``"""
@@ -118,6 +138,7 @@ class E2ETestCase(LiveServerTestCase):
         if (
             message.type == "error"
             and not message.location["url"].endswith("/favicon.svg")
+            and not (self.offline and "ERR_INTERNET_DISCONNECTED" in message.text)
             and not (
                 "/ws/live/" in message.text
                 and self.server_thread_class is not ASGIServerThread
@@ -782,6 +803,13 @@ class ASGIServerThread(LiveServerThread):
 
     def run(self):
         sock = socket.socket()
+        # The requests and consumers run in threads of their own (asgiref's
+        # thread sensitive contexts) which end without closing their
+        # connections when they're kept open: the test database couldn't be
+        # dropped afterwards. Connections are closed after each use instead.
+        settings_dict = connections.settings[DEFAULT_DB_ALIAS]
+        max_age = settings_dict["CONN_MAX_AGE"]
+        settings_dict["CONN_MAX_AGE"] = 0
         try:
             sock.bind((self.host, self.port))
             self.port = sock.getsockname()[1]
@@ -790,6 +818,7 @@ class ASGIServerThread(LiveServerThread):
         except OSError as exc:  # pragma: no cover
             self.error = exc
         finally:
+            settings_dict["CONN_MAX_AGE"] = max_age
             self.is_ready.set()
             connections.close_all()
 
@@ -964,6 +993,7 @@ class CollabTest(E2ETestCase):
         expect(live).to_have_attribute("data-collab-state", "connected")
         # The network goes, and with it the websocket (which the browser's
         # offline mode leaves open); reconnecting fails until it's back
+        self.offline = True
         ada.context.set_offline(True)
         ada.evaluate(
             "document.querySelector('[data-collab]').collab.provider.ws.close()"
@@ -975,6 +1005,7 @@ class CollabTest(E2ETestCase):
         expect(self.content(bob)).not_to_contain_text("Typed offline")
         ada.context.set_offline(False)
         expect(live).to_have_attribute("data-collab-state", "connected")
+        self.offline = False
         for page in [ada, bob]:
             expect(self.content(page)).to_contain_text("Typed offline")
             expect(self.content(page)).to_contain_text("Typed online.")

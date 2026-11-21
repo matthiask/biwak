@@ -487,9 +487,15 @@ class ConsumerTest(TransactionTestCase):
             await database_sync_to_async(Editing.objects.update)(
                 seen_at=timezone.now() - dt.timedelta(minutes=5)
             )
-            self.assertEqual(await self.holders(self.shared), [])
-            await asyncio.sleep(0.3)
-            self.assertEqual(await self.holders(self.shared), ["Ada"])
+            # Not asserting that it's gone first: the check may renew it
+            # before we look, however slow the machine is. Expired for
+            # five minutes, only the periodic check can bring it back.
+            for _ in range(200):
+                if await self.holders(self.shared) == ["Ada"]:
+                    break
+                await asyncio.sleep(0.05)
+            else:
+                self.fail("The periodic check didn't renew the marker")
 
     # Storing --------------------------------------------------------------
 
