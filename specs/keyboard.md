@@ -134,6 +134,12 @@ The API: `me/` gets `keyboard_shortcuts`, `theme` and `accent` (read and
 change);
 the notification endpoints stay as they are.
 
+**Previewing appearance** (decided 2026-11-21): choosing a theme or an
+accent color on the settings page applies it to the page at once (the
+`data-theme-mode` and `data-accent` attributes on `<html>`); only saving
+stores it. Leaving without saving, or "Cancel", shows the stored choice
+again (the next page renders it anyway).
+
 ## The palette (decided 2026-11-21)
 
 Named after Biwak's mountain and camp world; the names describe the
