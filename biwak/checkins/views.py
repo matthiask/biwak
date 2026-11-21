@@ -348,6 +348,11 @@ def question(request, pk):
             "mode": mail_mode(user, item),
             "modes": Mode.choices,
             "is_subscribed": is_subscribed(user, item),
+            # Who hears about the answers, a list of its own (specs/checkins.md,
+            # decided 2026-11-21); clients only learn about the members
+            "subscribers": item.project.people_known_to(
+                user, [s.user for s in item.subscriptions.select_related("user")]
+            ),
             "can_manage": not user.is_client,
             "can_switch": not user.is_client,
             "is_paused": question.is_paused,

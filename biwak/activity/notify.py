@@ -130,12 +130,12 @@ def wanting(people, event):
         return [u for u in people if levels[u.pk] != NotificationLevel.NOTHING]
     mentioned = set(event.data.get("mentioned", ()))
     if item.kind == Kind.ANSWER and event.action == Action.CREATED:
-        # A check-in's answers: a mail each only for those who chose it
-        # (specs/checkins.md), whatever their level; the others get the
-        # summary the morning after
+        # A check-in's answers: to the question's subscribers whatever their
+        # level (decided 2026-11-21), a mail each only for those who chose
+        # it (specs/checkins.md); the others get the summary the morning
+        # after. Mentioned: on every level except "nothing".
         from biwak.checkins.models import DEFAULT_MODE, Mode, QuestionMail
 
-        people = [u for u in people if levels[u.pk] != NotificationLevel.NOTHING]
         modes = dict(
             QuestionMail.objects.filter(
                 question_id=item.parent_id, user__in=people
@@ -144,8 +144,8 @@ def wanting(people, event):
         return [
             user
             for user in people
-            if user.pk in mentioned
-            or Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+            if Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+            or (user.pk in mentioned and levels[user.pk] != NotificationLevel.NOTHING)
         ]
     subscribed = set(
         Subscription.objects.filter(item=item, user__in=people).values_list(

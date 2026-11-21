@@ -424,13 +424,14 @@ class AnswersAPITest(APITestCase):
             400,
         )
 
-    def test_only_people_asked_and_who_can_see(self):
+    def test_anybody_who_can_see_it(self):
+        """Asked or not (decided 2026-11-21)"""
         dora = person("Dora")
         self.assertEqual(
             self.post(
                 dora, f"checkins/{self.item.pk}/answer/", {"content": "Hi"}
             ).status_code,
-            403,
+            200,
         )
         # A client: the internal question doesn't exist for them
         self.assertEqual(

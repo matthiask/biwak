@@ -26,7 +26,8 @@ check-ins page with "Resume all paused".
 ## Answering
 
 When the question is due, everybody asked gets a mail with a link to
-the answer form. Open the link, write your answer (Markdown, with
+the answer form. Anybody who can see the question may answer too, asked
+or not ("Answer" on the question's page). Open the link, write your answer (Markdown, with
 mentions and attachments) and "Save the answer". When the mail says
 "Reply to this mail to answer.", replying to it answers too. Answering again changes your answer. A check-in waiting for
 you shows on Home and on the project's page.
@@ -43,7 +44,14 @@ answered over time.
 
 ## Mails about answers
 
-Each person chooses on the question's page how they hear about
+The question's **subscribers** hear about the answers; at first they
+are the people asked and whoever created the question. Like on any item,
+"Subscribe" and "Unsubscribe" on the question's page change it, and
+"Manage…" adds others. Your notification level doesn't matter here:
+subscribed means you hear about the answers. Answering subscribes you to
+your own answer (comments on it reach you), not to everybody's.
+
+Each subscriber chooses on the question's page how they hear about
 answers ("Mails about answers"):
 
 - **one summary the morning after** (the default): one mail at 07:00

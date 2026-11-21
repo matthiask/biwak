@@ -6,7 +6,7 @@ from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import LevelOverride
-from biwak.activity.operations import unsubscribe
+from biwak.activity.operations import subscribe, unsubscribe
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Mode, Occurrence
 from biwak.checkins.support import CheckinTestCase, at
@@ -97,7 +97,8 @@ class SummaryTest(CheckinTestCase):
         from biwak.projects import operations as project_ops
 
         project_ops.add_member(self.project, dora, actor=self.ada)
-        ops.set_people(self.item, [self.ada, self.bob, dora], actor=self.ada)
+        # Subscribed (not asked): the subscribers get the answers
+        subscribe(dora, self.item)
         ops.answer(self.item, user=self.ada, content="One")
         self.summarize()
         self.assertEqual([m.to for m in self.summaries()], [[dora.email]])
@@ -108,21 +109,29 @@ class SummaryTest(CheckinTestCase):
         self.summarize()
         self.assertEqual([m.to for m in self.summaries()], [[self.ada.email]])
 
-    def test_not_to_people_with_the_level_nothing(self):
+    def test_whatever_the_level(self):
+        """Subscribing is the switch (decided 2026-11-21): "nothing", also
+        for the project, doesn't hold the summary back"""
         self.bob.notification_level = NotificationLevel.NOTHING
         self.bob.save()
-        ops.answer(self.item, user=self.ada, content="One")
-        self.summarize()
-        self.assertEqual([m.to for m in self.summaries()], [[self.ada.email]])
-
-    def test_not_to_people_with_the_level_nothing_for_the_project(self):
-        # Check-ins have no level of their own (specs/ui-round-6.md, part C)
         LevelOverride.objects.create(
             user=self.ada, project=self.item.project, level=NotificationLevel.NOTHING
         )
         ops.answer(self.item, user=self.ada, content="One")
         self.summarize()
-        self.assertEqual([m.to for m in self.summaries()], [[self.bob.email]])
+        self.assertEqual(
+            sorted(m.to[0] for m in self.summaries()), [self.ada.email, self.bob.email]
+        )
+
+    def test_subscribers_not_asked_get_it_too(self):
+        dora = person("Dora")
+        from biwak.projects import operations as project_ops
+
+        project_ops.add_member(self.project, dora, actor=self.ada)
+        subscribe(dora, self.item)
+        ops.answer(self.item, user=self.ada, content="One")
+        self.summarize()
+        self.assertIn([dora.email], [m.to for m in self.summaries()])
 
     def test_concerns_me_still_gets_the_summary(self):
         self.bob.notification_level = NotificationLevel.CONCERNS_ME
@@ -276,7 +285,8 @@ class QueriesTest(CheckinTestCase):
         question = self.item.question
         few = self.queries(lambda: ops.summary_recipients(question))
         more = [person(f"Staff {n}") for n in range(3)]
-        ops.set_people(self.item, [self.ada, self.bob, *more], actor=self.ada)
+        for user in more:
+            subscribe(user, self.item)
         ops.set_mail_mode(self.item, user=more[0], mode=Mode.EACH)
         self.assertEqual(len(ops.summary_recipients(question)), 4)
         self.assertEqual(self.queries(lambda: ops.summary_recipients(question)), few)

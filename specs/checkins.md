@@ -64,27 +64,42 @@ people with the level "nothing" still asked):
   Decided 2026-11-20: "every two weeks" counts its phase from the first
   date's week, so from a Friday the Monday right after isn't asked, the one
   after it is (the first full interval); that's fine as it is.
-- **People:** adding is from the next occurrence on (those added are
-  subscribed and can answer the latest occurrence, but aren't in its
-  `asked` and aren't "due" for it); removing unsubscribes
-  and keeps their answers. Clients only when the question is visible to
+- **People asked and subscribers are two lists** (decided 2026-11-21,
+  `ui-round-6.md`): the people asked are only who gets asked (the
+  question mail, "due", who hasn't answered); the question's subscribers
+  are who hears about the answers, whatever their level for the project
+  ("subscribing is the switch"). A question has the subscribers card like
+  any item (Subscribe/Unsubscribe, "Manage…" to add others; the
+  subscriber endpoints and `biwak subscribers|subscribe` work for
+  questions). When a question is created its subscribers are the people
+  asked plus its creator (proposed 2026-11-21); changing who's asked later
+  leaves the subscribers alone.
+- **People:** adding is from the next occurrence on (those added
+  aren't in the latest occurrence's `asked` and aren't "due" for it);
+  removing keeps their answers. Clients only when the question is visible to
   clients; if it turns internal they aren't asked or mailed (they stay in
   the list, and saving the form or the API's `people` with them still
   works; only adding clients to an internal question is refused, decided
-  2026-11-20). Only people in the list answer (staff who aren't asked
-  don't), the author edits their own answer (answering again changes it,
+  2026-11-20). **Anybody who can see the question answers**, asked or not
+  (decided 2026-11-21, replacing "only people in the list answer"):
+  `can_answer()` is active and `can_see()`, so clients only on questions
+  visible to them; pages, API, CLI and replies by mail alike. Answering
+  subscribes the author to their own answer (`create_item()`: comments on
+  it reach them), not to the question. The author edits their own answer (answering again changes it,
   also from the trash).
 - **Summary:** 07:00 on the day after the occurrence's date in the
   question's time zone (Open: or the installation's, like the digest), or,
   when it was asked later than its date (after downtime), on the day after
   it was asked (fixed 2026-11-20: a late run used the summary up before
   anyone could answer), to subscribers whose mode is `summary` (the
-  default) who see the question and whose level isn't "nothing"; no mail for an occurrence without answers;
+  default) who see the question, whatever their level (changed
+  2026-11-21: subscribing is the switch); no mail for an occurrence without answers;
   answers after it are not sent; choosing a mode other than `none`
   subscribes.
 - **Answers' mails** (`each`) go through the normal notifications:
-  everybody else gets nothing per answer (unless mentioned); `each` passes
-  the level "concerns me".
+  everybody else gets nothing per answer (unless mentioned, on every
+  level except "nothing"); `each` reaches the question's subscribers
+  whatever their level (changed 2026-11-21).
 - **Not asked:** trashed and archived questions, questions of archived
   projects.
 - **Mails** (question, summary) go out after the commit, one per
@@ -139,8 +154,9 @@ this part.
   `notifications.md`, replying to it posts the answer.
 - **Answering** in the app: `/questions/<pk>/answer/` for the latest
   occurrence (or `?occurrence=` for an older one), Markdown with
-  mentions and attachments. Everybody asked is subscribed to the
-  question.
+  mentions and attachments. Anybody who sees the question answers
+  (changed 2026-11-21); the people asked and the creator are subscribed
+  when it's created.
 - **Answers' mails** per `QuestionMail`: `each` through `notify()`;
   `summary` at 07:00 the morning after the occurrence (in `send_mails`),
   one mail with all answers.

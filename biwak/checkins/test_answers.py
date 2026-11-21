@@ -9,6 +9,7 @@ from biwak.accounts.models import NotificationLevel
 from biwak.activity import mentions
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Action, Event, Notification, Subscription
+from biwak.activity.operations import is_subscribed
 from biwak.audit.models import LoggedAction
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, QuestionMail
@@ -132,20 +133,25 @@ class AnsweringTest(AnswerTestCase):
         with self.assertRaises(ValueError):
             ops.answer(self.item, user=self.ada, content="Wrong", occurrence=elsewhere)
 
-    def test_only_people_asked_answer(self):
+    def test_anybody_who_sees_it_answers(self):
+        """Asked or not (decided 2026-11-21); answering subscribes the
+        author to their own answer, not to the question (whose subscribers
+        are a deliberate list); a client can't answer an internal question"""
         dora = person("Dora")
         project_ops.add_member(self.project, dora, actor=self.ada)
-        for user in [dora, self.cleo]:
-            with self.assertRaises(ops.NotAllowed):
-                ops.answer(self.item, user=user, content="Hi")
-        self.assertFalse(Answer.objects.exists())
+        answer = ops.answer(self.item, user=dora, content="Hi")
+        self.assertTrue(is_subscribed(dora, answer))
+        self.assertFalse(is_subscribed(dora, self.item))
+        self.assertFalse(self.item.question.people.filter(pk=dora.pk).exists())
+        with self.assertRaises(ops.NotAllowed):
+            ops.answer(self.item, user=self.cleo, content="Hi")
+        self.assertEqual([a.author for a in Answer.objects.all()], [dora])
 
-    def test_people_removed_cant_answer_but_their_answers_stay(self):
+    def test_people_removed_still_answer_and_their_answers_stay(self):
         ops.answer(self.item, user=self.bob, content="Before")
         ops.set_people(self.item, [self.ada], actor=self.ada)
-        with self.assertRaises(ops.NotAllowed):
-            ops.answer(self.item, user=self.bob, content="After")
-        self.assertEqual([a.content for a in ops.answers_of(self.second)], ["Before"])
+        ops.answer(self.item, user=self.bob, content="After")
+        self.assertEqual([a.content for a in ops.answers_of(self.second)], ["After"])
 
     def test_clients_stay_in_the_list_of_an_internal_question(self):
         shared = self.question("Shared", visible=True, people=[self.cleo])
@@ -339,7 +345,9 @@ class NotificationsTest(AnswerTestCase):
         )
         self.assertEqual(told, set())
 
-    def test_each_passes_the_level_concerns_me_but_not_nothing(self):
+    def test_each_whatever_the_level(self):
+        """Subscribed to the question means told, whatever the level
+        (decided 2026-11-21, specs/checkins.md)"""
         for user, level in [
             (self.bob, NotificationLevel.CONCERNS_ME),
         ]:
@@ -357,7 +365,26 @@ class NotificationsTest(AnswerTestCase):
                 self.item, user=self.ada, content="Two", occurrence=self.first
             )
         )
-        self.assertEqual(told, set())
+        self.assertEqual(told, {self.bob})
+
+    def test_answering_unasked_doesnt_subscribe_to_the_answers(self):
+        """Dora answers without being asked: subscribed to her answer, not
+        to everybody's (decided 2026-11-21)"""
+        dora = person("Dora")
+        project_ops.add_member(self.project, dora, actor=self.ada)
+        QuestionMail.objects.create(
+            question=self.item.question, user=dora, mode=Mode.EACH
+        )
+        mine = ops.answer(self.item, user=dora, content="Unasked")
+        told = self.notified(
+            lambda: ops.answer(self.item, user=self.ada, content="Mine")
+        )
+        self.assertNotIn(dora, told)
+        # Comments on her answer reach her
+        told = self.notified(
+            lambda: item_ops.add_comment(mine, author=self.bob, content="Nice")
+        )
+        self.assertIn(dora, told)
 
     def test_the_mode_none_and_summary_get_nothing(self):
         ops.set_mail_mode(self.item, user=self.bob, mode=Mode.NONE)

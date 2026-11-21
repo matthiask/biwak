@@ -126,7 +126,7 @@ the person, set by `invite()`).
   saying so. A confirmation modal ("Withdraw the invitation?"). The
   feed's "added" events stay.
 
-### Built (decisions on the way, 2026-11-21, to be confirmed)
+### Built (decisions on the way, 2026-11-21, confirmed the same day)
 
 - **The notify choice** is one for the round, stored for each chosen
   project (the API's `notify`, the CLI's `--only-tagged`), not one per
@@ -193,7 +193,7 @@ I will be notified").
   subscribed doesn't), posting to everybody per level, the item's More
   menu without "Notifications…", the migration.
 
-### Built (decisions on the way, 2026-11-21, to be confirmed)
+### Built (decisions on the way, 2026-11-21, confirmed the same day)
 
 - **Assigned people are told about the assignment on every level**,
   also "nothing" (being assigned is one of the things that subscribe
@@ -203,10 +203,16 @@ I will be notified").
 - **A level changed after a notification was written** no longer holds
   the mail back or hides the lantern entry (`_deliverable()` checks
   visibility only): the level decided who was told.
-- **Folders and check-ins** have no level anymore either (only projects
-  and lists, as the spec says); a check-in's summary still skips people
-  whose level for the project is "nothing" (`checkins.md`, unchanged),
-  and answers reach those on "nothing" only by their mode, as before.
+- **Folders** have no level of their own, they follow the project's
+  (confirmed 2026-11-21).
+- **Check-ins** (decided 2026-11-21): the people asked and the
+  question's subscribers are two lists, neither depending on a level;
+  answers and summaries go to the subscribers whatever their level for
+  the project, by their mode. A question has the subscribers card;
+  created, its subscribers are the people asked plus the creator
+  (proposed). Anybody who can see a question answers it, asked or not;
+  answering subscribes them to their own answer, not to the question
+  (`checkins.md`).
 - **Reactions** still tell the author on every level except "nothing".
 - The CLI gained `biwak unsubscribe ITEM` and `biwak subscribe ITEM`
   without `--people` (oneself), since `--item` of `biwak notifications`

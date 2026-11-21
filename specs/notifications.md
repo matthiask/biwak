@@ -230,7 +230,9 @@ project's level is that choice, not a new setting.
    in it (`created`) on "everything" (their effective level for it, a
    query for all, `effective_levels()`; `notify()` makes the same number
    of queries for any number of people). Reactions and `shared` on every
-   level except "nothing"; check-in answers as `checkins.md` says.
+   level except "nothing"; check-in answers to the question's subscribers
+   with the mode `each`, whatever their level, and the newly mentioned
+   except on "nothing" (`checkins.md`, 2026-11-21).
 4. One `Notification(user, event, created_at, sent_at null)` per person;
    at most one unsent per person and event, a constraint in the database
    (two `notify()` at once can't tell anybody twice, 2026-11-21).

@@ -1,8 +1,6 @@
 """Answering check-in questions by mail (specs/checkins.md,
 specs/notifications.md stage 2)"""
 
-from django.core import mail
-
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Occurrence
 from biwak.checkins.support import CheckinTestCase
@@ -60,13 +58,12 @@ class AnsweringByMailTest(ReceiveMixin, CheckinTestCase):
         self.assertIn("(attachment:", answer.content)
         self.assertEqual(answer.item.attachments.get().name, "Brief v2.pdf")
 
-    def test_removed_from_the_question(self):
+    def test_removed_from_the_question_still_answers(self):
+        """Anybody who sees the question answers (decided 2026-11-21)"""
         token = self.token()
         ops.set_people(self.item, [self.bob], actor=self.ada)
-        message = self.receive(sample("gmail_en.eml", token))
-        self.assertEqual(message.status, InboundStatus.NO_ACCESS)
-        self.assertFalse(Answer.objects.exists())
-        self.assertEqual([m.to for m in mail.outbox], [[self.ada.email]])
+        self.receive(sample("gmail_en.eml", token))
+        self.assertEqual(Answer.objects.get().author, self.ada)
 
     def test_question_trashed(self):
         token = self.token()

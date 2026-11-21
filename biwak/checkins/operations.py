@@ -17,10 +17,10 @@ from django.utils import timezone
 from django.utils.translation import gettext
 
 from biwak import schedules
-from biwak.accounts.models import NotificationLevel, User
+from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
-from biwak.activity.notify import can_see, effective_levels, who_can_see
+from biwak.activity.notify import can_see, who_can_see
 from biwak.activity.operations import (
     is_importing,
     read_by_acting,
@@ -59,13 +59,10 @@ class NotAllowed(Exception):
 
 
 def can_answer(user, item):
-    """People asked who still see the question; staff who aren't asked
-    don't answer"""
-    return (
-        user.is_active
-        and Question.objects.filter(item=item, people=user).exists()
-        and can_see(user, item)
-    )
+    """Anybody who can see the question, asked or not (decided 2026-11-21,
+    specs/checkins.md): the people asked are who gets asked, reminded and
+    has it "due"; clients only questions visible to them"""
+    return user.is_active and can_see(user, item)
 
 
 def _check_people(item, people, *, actor, kept=()):
@@ -140,24 +137,25 @@ def create_question(
     question.save(update_fields=["next_at"])
     items_ops.created(item, creator)
     set_people(item, people, actor=creator)
+    # Its subscribers, who hear about the answers, are a list of their own;
+    # at first the people asked and the creator (proposed 2026-11-21,
+    # specs/checkins.md)
+    for user in people:
+        subscribe(user, item, added_by=creator)
     return item
 
 
 @transaction.atomic
 def set_people(item, people, *, actor):
-    """The complete set of people asked. Those added are subscribed (the
-    answers' mails per ``QuestionMail``), those removed lose their
-    subscription; they are asked from the next occurrence on."""
+    """The complete set of people asked, from the next occurrence on. Only
+    who gets asked: the subscribers, who hear about the answers, are a list
+    of their own (decided 2026-11-21, specs/checkins.md)."""
     question = Question.objects.select_for_update().get(item=item)
     people = list(people)
     old = set(question.people.all())
     _check_people(item, people, actor=actor, kept=old)
     new = set(people)
     question.people.set(new)
-    for user in new - old:
-        subscribe(user, item, added_by=actor)
-    removed = old - new
-    Subscription.objects.filter(item=item, user__in=removed).delete()
     return sorted(new - old, key=lambda u: u.pk)
 
 
@@ -345,9 +343,9 @@ def summary_due_at(occurrence):
 
 
 def summary_recipients(question):
-    """Subscribers of the question who get summaries (the default mode),
-    who see it, and whose level isn't "nothing" (they may have changed
-    since)"""
+    """Subscribers of the question who get summaries (the default mode) and
+    see it, whatever their level: subscribing is the switch (decided
+    2026-11-21, specs/ui-round-6.md)"""
     item = question.item
     people = list(
         User.objects
@@ -360,13 +358,7 @@ def summary_recipients(question):
             "user", "mode"
         )
     )
-    levels = effective_levels(people, item)
-    return [
-        user
-        for user in people
-        if modes.get(user.pk, DEFAULT_MODE) == Mode.SUMMARY
-        and levels[user.pk] != NotificationLevel.NOTHING
-    ]
+    return [user for user in people if modes.get(user.pk, DEFAULT_MODE) == Mode.SUMMARY]
 
 
 def summarize_due(*, now=None):
@@ -448,9 +440,12 @@ def answer(item, *, user, content, occurrence=None, base=None):
     """The person's answer to the occurrence (default: the latest): creates
     it, or changes the one they gave (``Answer`` is unique per occurrence
     and person); answering brings an answer from the trash
-    back. ``NotAllowed`` unless they're asked and see the question."""
+    back. ``NotAllowed`` unless they see the question. The author is
+    subscribed to their own answer (``create_item()``), so comments on it
+    reach them; not to the question, whose subscribers stay the deliberate
+    list (decided 2026-11-21, specs/checkins.md)."""
     if not can_answer(user, item):
-        raise NotAllowed(f"{user} isn't asked {item}")
+        raise NotAllowed(f"{user} can't answer {item}")
     occurrence = _occurrence(item, occurrence)
     # Serializes answers to one occurrence (the constraint would catch a race)
     Occurrence.objects.select_for_update().get(pk=occurrence.pk)
