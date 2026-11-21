@@ -66,8 +66,9 @@ Decided 2026-11-21. The header's "To-dos by due date" opens
 `/projects/<pk>/todos/`, which is grouped by list since round 3, so the
 label is wrong.
 
-- **Next to the "To-do lists" heading:** "All to-dos: by list · by due
-  date", links to `project_todos` with `?grouping=project` and
+- **Below the "To-do lists" heading**, a small line of its own (not in
+  the heading: it wrapped on phones, changed 2026-11-21): "All to-dos:
+  by list · by due date", links to `project_todos` with `?grouping=project` and
   `?grouping=due`. These keep their own query (`frontend/filters.js`
   only rewrites the top bar's links), and the page then remembers it,
   as it does any query it loads with.

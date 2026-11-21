@@ -96,21 +96,19 @@
     <div class="col-lg-8">
       {% checkins_due project %}
       <h2 class="h5 d-flex justify-content-between align-items-center">
-        <span>
-          {% translate "To-do lists" %}
-          <small class="fw-normal text-body-secondary ms-2">
-            {% translate "All to-dos:" %}
-            <a href="{% url 'project_todos' project.pk %}?grouping=project">{% translate "by list" %}</a>
-            ·
-            <a href="{% url 'project_todos' project.pk %}?grouping=due">{% translate "by due date" %}</a>
-          </small>
-        </span>
+        {% translate "To-do lists" %}
         {% if can_create_lists %}<a
             class="btn btn-sm btn-quiet"
             href="{% url 'list_new' project.pk %}"
             data-modal
           >{% icon "plus-lg" %}<span>{% translate "New list" %}</span></a>{% endif %}
       </h2>
+      <p class="small text-body-secondary mb-2">
+        {% translate "All to-dos:" %}
+        <a href="{% url 'project_todos' project.pk %}?grouping=project">{% translate "by list" %}</a>
+        ·
+        <a href="{% url 'project_todos' project.pk %}?grouping=due">{% translate "by due date" %}</a>
+      </p>
       <div
         class="list-group mb-3"
         {% if can_manage %}
