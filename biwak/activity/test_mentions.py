@@ -13,7 +13,7 @@ from biwak.activity.operations import subscribe, unsubscribe
 from biwak.api_conventions import html
 from biwak.items import operations as ops
 from biwak.items.models import Item
-from biwak.templatetags.biwak import item_title, markdown
+from biwak.templatetags.biwak import excerpt, item_title, markdown
 from biwak.test_utils import person, project
 
 
@@ -91,7 +91,7 @@ class MentionsTest(TestCase):
         self.assertFalse(Mention.objects.exists())
         rendered = markdown(mentions.syntax(self.cleo), self.secret)
         self.assertNotIn("wb-mention", rendered)
-        self.assertIn("@Cleo Example", rendered)
+        self.assertIn("@Cleo", rendered)
 
     def test_only_new_mentions(self):
         ops.update_todo(
@@ -128,15 +128,22 @@ class MentionsTest(TestCase):
     def test_rendering_current_names(self):
         text = f"Hi [@Old Name](person:{self.bob.pk})"
         self.bob.full_name = "Bob Renamed"
+        self.bob.short_name = "Bobby"
         self.bob.save()
         with mentions.reading_as(self.ada):
             rendered = markdown(text, self.todo)
-            self.assertIn('<span class="wb-mention">@Bob Renamed</span>', rendered)
+            self.assertIn('title="Bob Renamed">@Bobby</a>', rendered)
+            self.assertIn(f'href="/people/{self.bob.pk}/"', rendered)
+            # Not a link where the text leaves the site (API, mails)
+            self.assertIn(
+                'class="wb-mention" title="Bob Renamed">@Bobby</span>',
+                html(text, self.todo),
+            )
             # Without the item, the label, never a link to person:
             self.assertIn("@Old Name", markdown(text))
             self.assertNotIn("person:", markdown(text))
-            self.assertIn("@Bob Renamed", html(text, self.todo))
-            self.assertEqual(mentions.plain(text, self.todo), "Hi @Bob Renamed")
+            self.assertIn("@Bobby", html(text, self.todo))
+            self.assertEqual(mentions.plain(text, self.todo), "Hi @Bobby")
             self.assertEqual(mentions.plain(text), "Hi @Old Name")
             # Inside code it stays code
             self.assertIn("person:", markdown(f"`{text}`", self.todo))
@@ -145,13 +152,42 @@ class MentionsTest(TestCase):
             self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
         self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
 
+    def test_old_and_new_labels_show_the_short_name(self):
+        """A stored label is only a fallback: the full name or the short
+        one, as written, make no difference; the short name (else the first
+        word of the full name) shows, the full name is the title"""
+        new = mentions.syntax(self.bob)
+        self.assertEqual(new, f"[@Bob](person:{self.bob.pk})")
+        self.bob.short_name = "Bobby"
+        self.assertEqual(mentions.syntax(self.bob), f"[@Bobby](person:{self.bob.pk})")
+        old = f"[@Bob Example](person:{self.bob.pk})"
+        with mentions.reading_as(self.ada):
+            for text in (old, new):
+                rendered = markdown(text, self.todo)
+                self.assertIn(">@Bob</a>", rendered)
+                self.assertIn('title="Bob Example"', rendered)
+                self.assertEqual(mentions.plain(text, self.todo), "@Bob")
+
+    def test_unknown_people_keep_the_written_label(self):
+        """A client doesn't know Bob (not a member): the label as written,
+        without the full name as title, also in excerpts"""
+        text = f"Ask [@Bob Old](person:{self.bob.pk})"
+        with mentions.reading_as(self.cleo):
+            rendered = markdown(text, self.todo)
+            self.assertIn("@Bob Old", rendered)
+            self.assertNotIn("title=", rendered)
+            self.assertNotIn("Example", rendered)
+            self.assertEqual(excerpt(text, 200, self.todo), "Ask @Bob Old")
+        with mentions.reading_as(self.ada):
+            self.assertEqual(excerpt(text, 200, self.todo), "Ask @Bob")
+
     def test_titles(self):
         todo = ops.create_todo(
             todolist=self.shared,
             title=f"Call {mentions.syntax(self.cleo)}",
             creator=self.ada,
         )
-        self.assertEqual(item_title(todo), "Call @Cleo Example")
+        self.assertEqual(item_title(todo), "Call @Cleo")
         self.assertTrue(Mention.objects.filter(user=self.cleo, item=todo).exists())
         self.assertEqual(
             Event.objects.get(item=todo, action=Action.CREATED).data["mentioned"],
@@ -425,7 +461,7 @@ class ClientsKnowMembersTest(TestCase):
         )
         self.bob.full_name = "Bob Renamed"
         self.bob.save()
-        for user, name in [(self.cleo, "Bob Old"), (self.ada, "Bob Renamed")]:
+        for user, name in [(self.cleo, "Bob Old"), (self.ada, "Bob")]:
             with self.subTest(user=user):
                 self.client.force_login(user)
                 pages = [
@@ -440,7 +476,7 @@ class ClientsKnowMembersTest(TestCase):
                 for page in pages:
                     self.assertContains(page, f"@{name}")
                 if user.is_client:
-                    self.assertNotIn("Bob Renamed", html)
+                    self.assertNotIn("Bob", html.replace("Bob Old", ""))
                     for page in pages:
                         self.assertNotContains(page, "Bob Renamed")
 
@@ -461,7 +497,7 @@ class ClientsKnowMembersTest(TestCase):
         messages = {message.to[0]: message for message in mail.outbox}
         for user, name, other in [
             (self.cleo, "Bob Old", "Bob Renamed"),
-            (self.bob, "Bob Renamed", "Bob Old"),
+            (self.bob, "Bob", "Bob Old"),
         ]:
             with self.subTest(user=user):
                 message = messages[user.email]

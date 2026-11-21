@@ -119,11 +119,14 @@
               </div>
             </details>
             <details class="dropdown wb-menu">
-              <summary class="btn btn-sm btn-quiet">
-                {{ request.user.get_short_name }}
+              <summary class="btn btn-sm btn-quiet wb-me-button">
+                {% avatar request.user "sm" %}
+                <span class="d-none d-sm-inline">{{ request.user.get_short_name }}</span>
                 {% icon "chevron-down" %}
               </summary>
               <div class="dropdown-menu dropdown-menu-end">
+                <span class="dropdown-item-text fw-semibold">{{ request.user }}</span>
+                <hr class="dropdown-divider">
                 {% can_open_feed request.user as own_feed %}
                 {% if own_feed %}<a
                     class="dropdown-item"

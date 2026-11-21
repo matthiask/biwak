@@ -202,8 +202,8 @@ class FeedViewsTest(FeedBase):
         )
         self.client.force_login(self.ada)
         response = self.client.get("/feed/")
-        self.assertContains(response, "in For @Bob Example")
-        self.assertRegex(response.content.decode(), r"to\s+For @Bob Example")
+        self.assertContains(response, "in For @Bob")
+        self.assertRegex(response.content.decode(), r"to\s+For @Bob")
         self.assertNotContains(response, "person:")
 
     def test_client_feed_has_no_internal_events(self):
@@ -407,7 +407,8 @@ class PersonFeedLinksTest(FeedBase):
             with self.subTest(url=url):
                 self.assertContains(self.client.get(url), self.link(self.bob))
         page = self.client.get(f"/projects/{self.project.pk}/")
-        self.assertContains(page, self.link(self.cleo))  # members list
+        # The members list links to the person's page
+        self.assertContains(page, f'href="/people/{self.cleo.pk}/"')
         self.assertContains(page, "My activity")
         self.assertContains(page, self.link(self.ada))
 

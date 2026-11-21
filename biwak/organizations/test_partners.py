@@ -278,7 +278,7 @@ class NotificationsTest(PartnerTestCase):
         with mentions.reading_as(self.ada):
             self.assertEqual(
                 mentions.plain(f"[@Somebody](person:{self.bob.pk})", self.camp_todo),
-                "@Bob Example",
+                "@Bob",
             )
 
 

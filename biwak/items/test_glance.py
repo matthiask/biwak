@@ -45,10 +45,11 @@ class Fixture(TestCase):
 
 class MentionsTest(Fixture):
     def test_current_names_with_the_item(self):
-        text = mentions.syntax(self.ada)
+        text = f"[@Ada Example](person:{self.ada.pk})"
         self.ada.full_name = "Ada Renamed"
+        self.ada.short_name = "Addy"
         self.ada.save()
-        self.assertEqual(excerpt(text, 100, self.todo), "@Ada Renamed")
+        self.assertEqual(excerpt(text, 100, self.todo), "@Addy")
         # Without an item, the label as written
         self.assertEqual(excerpt(text, 100), "@Ada Example")
 
@@ -160,7 +161,7 @@ class PeekTest(Fixture):
         self.client.force_login(self.ada)
         response = self.client.get(f"/todos/{self.todo.pk}/peek/")
         self.assertContains(response, "<strong>notes</strong>")
-        self.assertContains(response, "@Ada Example")
+        self.assertContains(response, "@Ada")
         # The latest three, newest first
         self.assertNotContains(response, "Comment number 1")
         self.assertContains(response, "Comment number 2")
@@ -336,11 +337,11 @@ class FeedExcerptsTest(Fixture):
 
     def test_mentions_show_current_names(self):
         ops.add_comment(self.todo, author=self.ada, content=mentions.syntax(self.ada))
-        self.ada.full_name = "Ada Renamed"
+        self.ada.short_name = "Addy"
         self.ada.save()
         self.client.force_login(self.ada)
         self.assertContains(
-            self.client.get("/feed/"), '<div class="wb-excerpt">@Ada Renamed</div>'
+            self.client.get("/feed/"), '<div class="wb-excerpt">@Addy</div>'
         )
 
     def test_long_comments_are_cut(self):

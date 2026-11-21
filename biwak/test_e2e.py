@@ -339,16 +339,14 @@ class TodosTest(E2ETestCase):
         notes.press_sequentially("Ask @Bo")
         page.locator(".wb-mentions:not([hidden])").first.wait_for()
         notes.press("Enter")  # Picks, doesn't save or close
-        self.assertEqual(
-            notes.input_value(), f"Ask [@Bob Example](person:{self.bob.pk}) "
-        )
+        self.assertEqual(notes.input_value(), f"Ask [@Bob](person:{self.bob.pk}) ")
         self.assertTrue(add.evaluate("el => el.open"))
         add.locator("[name=title]").fill("Ask")
         add.locator("[name=title]").press("Control+Enter")
         page.locator("[data-todo]", has_text="Ask").wait_for()
         self.assertEqual(
             Item.objects.get(title="Ask").todo.notes,
-            f"Ask [@Bob Example](person:{self.bob.pk})",
+            f"Ask [@Bob](person:{self.bob.pk})",
         )
 
     def test_dragging_within_and_between_groups(self):
@@ -563,7 +561,7 @@ class TodoPageTest(E2ETestCase):
         textarea.press("Enter")
         self.assertEqual(
             textarea.input_value(),
-            f"Hello @Example and [@Bob Example](person:{self.bob.pk}) ",
+            f"Hello @Example and [@Bob](person:{self.bob.pk}) ",
         )
         textarea.press("Tab")  # blur
         textarea.fill(f"Hello [@Bob Example](person:{self.bob.pk}) ")
@@ -573,6 +571,25 @@ class TodoPageTest(E2ETestCase):
             Comment.objects.get(item=self.todo).content,
             f"Hello [@Bob Example](person:{self.bob.pk})",
         )
+        self.assertEqual(self.errors, [])
+
+    def test_the_mention_list_inserts_the_first_name(self):
+        """Choosing a person inserts ``[@Bob](person:ID)``, the saved
+        comment shows "@Bob" with the full name as title"""
+        page = self.page
+        self.goto(page, self.todo)
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.click()
+        textarea.press_sequentially("Hi @Bob")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        textarea.press("Enter")
+        self.assertEqual(textarea.input_value(), f"Hi [@Bob](person:{self.bob.pk}) ")
+        page.get_by_role("button", name="Add comment").click()
+        mention = page.locator(".wb-markdown .wb-mention")
+        mention.wait_for()
+        self.assertEqual(mention.inner_text(), "@Bob")
+        self.assertEqual(mention.get_attribute("title"), "Bob Example")
         self.assertEqual(self.errors, [])
 
     def test_mentions_of_a_client_are_members_only(self):
@@ -618,9 +635,7 @@ class TodoPageTest(E2ETestCase):
         listbox.wait_for()
         self.assertEqual(listbox.locator("li.is-unavailable").count(), 0)
         content.press("Enter")
-        self.assertEqual(
-            content.input_value(), f"[@Cleo Example](person:{self.cleo.pk}) "
-        )
+        self.assertEqual(content.input_value(), f"[@Cleo](person:{self.cleo.pk}) ")
 
         page = self.login(self.cleo)
         page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))

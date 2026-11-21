@@ -60,10 +60,59 @@ class PlacesTest(TestCase):
         )
         # Assignees: pills with the mark
         self.assertRegex(
-            html, r'class="badge wb-person"[^>]*>\s*<(img|span) class="wb-avatar'
+            html,
+            r'class="badge wb-person"[^>]*>(<a [^>]*>)?\s*<(img|span) class="wb-avatar',
         )
         self.assertContains(response, "Subscribers")
         self.assertGreater(html.count("wb-avatar"), 6)
+
+    def test_the_me_menu_has_the_own_mark_and_the_name(self):
+        """With an image or the initials; the name is the menu's first
+        line, and next to the mark except on phones"""
+        for viewer, image in [(self.ada, True), (self.ben, False)]:
+            with self.subTest(viewer=viewer):
+                html = self.get(viewer, reverse("projects")).content.decode()
+                summary = html.split('class="btn btn-sm btn-quiet wb-me-button"')[1]
+                summary = summary.split("</summary>")[0]
+                self.assertEqual("<img" in summary, image)
+                self.assertIn(f'title="{viewer}"', summary)
+                self.assertIn(viewer.initials if not image else "wb-avatar", summary)
+                self.assertIn(
+                    f'<span class="d-none d-sm-inline">{viewer.get_short_name()}</span>',
+                    summary,
+                )
+                self.assertIn(
+                    f'<span class="dropdown-item-text fw-semibold">{viewer}</span>',
+                    html,
+                )
+
+    def test_names_link_to_the_persons_page_for_those_who_may_know_them(self):
+        """Subscribers, assignee pills, members and mentions: a link for
+        whoever may open the page, plain text for the others"""
+        from biwak.activity import mentions
+        from biwak.activity.operations import subscribe
+
+        stranger = person("Dora", client=True, organization="Other")
+        subscribe(self.ada, self.todo)
+        subscribe(stranger, self.todo)
+        item_ops.add_comment(
+            self.todo, author=self.ada, content=mentions.syntax(self.ada)
+        )
+        ada_page = reverse("person", args=[self.ada.pk])
+        dora = reverse("person", args=[stranger.pk])
+        for viewer in (self.ben, self.cleo):
+            with self.subTest(viewer=viewer):
+                html = self.get(viewer, self.todo.get_absolute_url()).content.decode()
+                self.assertIn(f'<a href="{ada_page}" class="wb-person-link">', html)
+                self.assertIn(
+                    f'<a class="wb-mention wb-person-link" href="{ada_page}"', html
+                )
+                # Own staff know everybody, Cleo doesn't know Dora: no link
+                self.assertEqual(dora in html, viewer == self.ben)
+        members = self.get(self.cleo, reverse("project_people", args=[self.camp.pk]))
+        self.assertContains(members, f'href="{ada_page}"')
+        detail = self.get(self.ada, self.camp.get_absolute_url())
+        self.assertContains(detail, f'href="{reverse("person", args=[self.cleo.pk])}"')
 
     def test_for_a_client_too_with_the_images_of_those_they_may_know(self):
         response = self.get(self.cleo, self.todo.get_absolute_url())

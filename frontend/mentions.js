@@ -5,7 +5,7 @@
 // chosen. For items not created yet, data-mentions-visible="#id" names the
 // "visible to clients" checkbox, whose state is sent as ?visible=1.
 // Up/Down choose, Enter or a click inserts
-// "[@Name](person:ID)", Escape closes. Without JavaScript the fields stay
+// "[@Ada](person:ID)", Escape closes. Without JavaScript the fields stay
 // plain fields. Adapted from Governance's mentions.js.
 
 import { avatar } from "./avatar.js"
@@ -167,7 +167,8 @@ function attach(field) {
   }
 
   const pick = (person) => {
-    const label = person.name.replace(/[[\]]/g, "")
+    // The short name: pages show the current one, the label is a fallback
+    const label = (person.short_name || person.name).replace(/[[\]]/g, "")
     const mention = `[@${label}](person:${person.id}) `
     field.setRangeText(mention, current.start, field.selectionStart, "end")
     field.dispatchEvent(new Event("input", { bubbles: true }))
