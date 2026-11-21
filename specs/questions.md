@@ -13,9 +13,4 @@ below.
    the check-in mails, "Reply to this mail to comment/answer.", the
    editor's and the lantern's texts): reviewed all at once with the
    German translation (decided 2026-11-21).
-3. **The editor** (`editor.md`): a tick while an edit form is open on the
-   same page is overwritten when the form is saved (suggestion: the form
-   carries the text's hash and refuses a stale save, like ticks); ticks
-   on comments recording an event; a tick endpoint in the API.
-
 Not decided, not urgent: agent skills (`api-cli.md`), later.

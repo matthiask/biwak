@@ -159,3 +159,21 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
 - **Known gap:** ticking doesn't update an edit form that's open on the same
   page; saving it later writes its (older) text. The 409 covers ticks, not
   forms.
+
+## Ticking while someone edits (decided 2026-11-21)
+
+An open edit form is more important than a tick:
+
+- While someone has the item's edit form open, ticks are refused. The
+  form announces itself (a small "editing" marker per item and person,
+  renewed by the open form every minute, gone 2 minutes after the last
+  renewal or when the form is saved or cancelled).
+- The person ticking sees why: "Ada is editing this; try again when
+  she's done." With live updates (`lantern.md`), the box re-enables when
+  the form closes.
+- When a tick fails because the text changed since the page was shown,
+  the message says who changed it last ("Changed by Bob a moment ago"),
+  and the page reloads the text.
+- The edit form itself still refuses a stale save (someone else saved
+  meanwhile) and says who; ticks made before the form was opened are
+  in the form's text.
