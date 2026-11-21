@@ -20,9 +20,9 @@ tag), CSS.
 
 ## What
 
-- `Project.color`: one of a fixed palette (the accent colors plus a few
-  more, about ten, each checked for contrast in light and dark), or
-  empty (neutral). Never the clients' amber.
+- `Project.color`: one of the ten names of the palette in
+  `keyboard.md` (Heather, Lake, Forest, Glacier, Ember, Alpenglow, Moss,
+  Slate, Bark, Berry), or empty (neutral). Never the clients' amber.
 - Set by staff on the project's edit page and through the API
   (`PATCH projects/{id}/ {"color": …}`, `biwak project edit ID
   --color …`); new projects get none, or a suggested one not used by
@@ -38,8 +38,3 @@ The field, the form and API with tests (staff only; a client can't set
 it), the tag in the listed places, the contrast test covering the
 palette, and the projects page and a feed page checked in a Playwright
 test at phone and desktop width.
-
-## Questions before building
-
-- The palette's names and values; proposed by whoever builds the accent
-  colors, so both match.

@@ -119,9 +119,8 @@ own:
 - **Appearance:** the theme (light, dark, as the system), moving the
   stored choice from the browser to the person so it follows them to
   other devices; the toggle in the navigation stays and saves there too.
-  And an **accent color** (decided 2026-11-21): violet as today, blue,
-  green, teal, orange, rose, for the navigation, buttons, links and the
-  focus ring, each defined as tokens in `main.css` for light and dark and
+  And an **accent color** (decided 2026-11-21) from the palette below,
+  for the navigation, buttons, links and the focus ring, each defined as tokens in `main.css` for light and dark and
   checked for contrast (WCAG AA for text and controls, a test over the
   token values). The clients' amber is reserved and not offered, so the
   client badge and banner always stand out. `User.accent`, in `me/`
@@ -132,6 +131,31 @@ own:
 The API: `me/` gets `keyboard_shortcuts`, `theme` and `accent` (read and
 change);
 the notification endpoints stay as they are.
+
+## The palette (decided 2026-11-21)
+
+Named after Biwak's mountain and camp world; the names describe the
+character, the exact values are tweaked later. Tokens
+`--wb-palette-<name>` (with the shades the accent needs, for light and
+dark), shared by the accent colors and the project colors
+(`project-colors.md`).
+
+| Name | Character | Accent | Projects |
+| --- | --- | --- | --- |
+| Heather | violet, as today (the default) | yes | yes |
+| Lake | clear blue | yes | yes |
+| Forest | deep green | yes | yes |
+| Glacier | cool teal | yes | yes |
+| Ember | warm orange-red | yes | yes |
+| Alpenglow | rose | yes | yes |
+| Moss | olive green | | yes |
+| Slate | blue-grey | | yes |
+| Bark | earthy brown | | yes |
+| Berry | magenta | | yes |
+
+The clients' amber is not in the palette: the client badge and banner
+always stand out. Stored as the name (`heather`, …), so changing a value
+never touches data.
 
 ## Done when
 
