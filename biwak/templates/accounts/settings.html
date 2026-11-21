@@ -188,10 +188,7 @@
   </div>
   <div class="card mb-3">
     <div class="card-body border-bottom">
-      <h3 class="h6">{% translate "Sessions" %}</h3>
-      <p class="form-text mb-0">
-        {% translate "Where you're signed in. This browser is signed out with “Sign out of this browser” in the menu with your name." %}
-      </p>
+      <h3 class="h6 mb-0">{% translate "Sessions" %}</h3>
     </div>
     <div class="wb-table-scroll">
       <table class="wb-table" id="sessions">
@@ -217,7 +214,12 @@
                 <span title="{{ session.created_at|date:'j. M Y, H:i' }}">{{ session.created_at|naturaltime }}</span>
               </td>
               <td class="text-end">
-                {% if not session.current %}
+                {% if session.current %}
+                  <form method="post" action="{% url 'account_logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Sign out here" %}</button>
+                  </form>
+                {% else %}
                   <form method="post" action="{% url 'session_end' session.pk %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-quiet">{% translate "Sign out" %}</button>
