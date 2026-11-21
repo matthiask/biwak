@@ -81,6 +81,17 @@ class RequiredTest(SignInMixin, SocialTestCase):
                 self.acme, signin="codes", two_factor=False, actor=self.ada
             )
 
+    def test_switching_it_on_tells_open_websockets(self):
+        """They check ``sso.session_alive()`` again, as for "SSO required"
+        (saving the organization tells its people, ``collab.signals``)"""
+        from unittest.mock import patch
+
+        self.require(two_factor=False)
+        with patch("biwak.collab.live.check_access") as check:
+            self.require()
+        check.assert_any_call(user=self.cleo.pk)
+        self.assertNotIn(((), {"user": self.ada.pk}), check.call_args_list)
+
     def test_neither_sets_one_up_first(self):
         response = self.login_by_code(self.cleo)
         self.assertEqual(response.status_code, 302)
