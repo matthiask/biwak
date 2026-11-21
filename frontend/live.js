@@ -24,6 +24,12 @@ const CLOSE_NO_LOGIN = 4401
 const CLOSE_NOT_FOUND = 4404
 // Changes arriving within this time are fetched once (ms)
 const GATHER = 300
+// A ping this often, and a socket without a pong this long after it is
+// dead (ms): nothing else is sent while the page is quiet, and a connection
+// that died without a close (sleep, another network) isn't noticed
+// otherwise
+const PING_EVERY = 30000
+const PONG_WAIT = 10000
 const FIELDS = "input, textarea, select, [contenteditable]"
 
 const texts = {
@@ -39,6 +45,8 @@ let connectedBefore = false
 let retry = 1000
 let timer = null
 let reconnect = null
+let pinger = null
+let pongTimer = null
 let fetching = false
 let again = false
 // Regions waiting while they're edited: id → the new element
@@ -63,8 +71,13 @@ function connect() {
     } catch {
       return
     }
-    if (data.type === "ready") {
+    if (data.type === "pong") {
+      clearTimeout(pongTimer)
+      pongTimer = null
+    } else if (data.type === "ready") {
       state("connected")
+      clearInterval(pinger)
+      pinger = setInterval(ping, PING_EVERY)
       retry = 1000
       // Back after being offline: whatever happened meanwhile
       if (connectedBefore && watched) schedule()
@@ -77,7 +90,10 @@ function connect() {
     }
   })
   socket.addEventListener("close", (event) => {
+    // A socket given up on (``dead()``) has been replaced already
+    if (event.target !== socket) return
     socket = null
+    stopPinging()
     if (event.code === CLOSE_NO_LOGIN) {
       state("closed")
       return
@@ -94,12 +110,46 @@ function connect() {
   })
 }
 
+function ping() {
+  if (socket?.readyState !== WebSocket.OPEN || pongTimer) return
+  socket.send(JSON.stringify({ type: "ping" }))
+  pongTimer = setTimeout(dead, PONG_WAIT)
+}
+
+function stopPinging() {
+  clearInterval(pinger)
+  clearTimeout(pongTimer)
+  pinger = pongTimer = null
+}
+
+// No pong: the connection is gone without a close. A new socket at once;
+// the old one's close (whenever the browser gets to it) is ignored
+function dead() {
+  const old = socket
+  socket = null
+  stopPinging()
+  old?.close()
+  state("offline")
+  retry = 1000
+  clearTimeout(reconnect)
+  connect()
+}
+
 // The browser is back: no waiting for the next try
 addEventListener("online", () => {
-  if (socket || !reconnect) return
+  if (socket) {
+    ping()
+    return
+  }
+  if (!reconnect) return
   clearTimeout(reconnect)
   retry = 1000
   connect()
+})
+
+// Back from sleep or another tab: is the socket still there?
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") ping()
 })
 
 function schedule() {

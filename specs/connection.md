@@ -50,6 +50,14 @@ in `AGENTS.md`.
   reconnects don't flicker.
 - **Back** when the socket is connected again, or the browser is online
   and a request succeeds.
+- **Dead connections** (decided 2026-11-21): `/ws/live/` sends nothing
+  while a page is quiet, so a connection that died without a close (a
+  laptop waking up, another network, an expired NAT entry) went
+  unnoticed. The page pings every 30 seconds (and at once when it becomes
+  visible again or the browser comes online); without a pong within 10
+  seconds it replaces the socket and fetches what it missed. The server
+  only answers (`biwak/live/consumers.py`); the proxy's idle timeout (an
+  hour) is never reached either.
 
 ## The banner
 

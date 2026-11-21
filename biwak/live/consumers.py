@@ -161,7 +161,16 @@ class LiveConsumer(AsyncWebsocketConsumer):
         self.groups_joined = []
 
     async def receive(self, text_data=None, bytes_data=None):
-        """Nothing to receive: the page said what it shows when connecting"""
+        """Only pings (the page said what it shows when connecting): the
+        page sends one every 30 seconds and reconnects when no pong comes
+        (frontend/live.js), so a connection that died without a close is
+        noticed"""
+        try:
+            data = json.loads(text_data or "")
+        except ValueError:
+            return
+        if isinstance(data, dict) and data.get("type") == "ping":
+            await self.send_json({"type": "pong"})
 
     # From the channel layer --------------------------------------------
 

@@ -1341,6 +1341,52 @@ class LiveTest(E2ETestCase):
         expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
         return page
 
+    def test_a_socket_without_pongs_is_replaced(self):
+        """Pings every 30 seconds; no pong within 10 is a dead connection
+        (one without a close), replaced at once. The server's pongs are
+        dropped on the way, the browser's clock is fast-forwarded."""
+        page = self.login(self.ada)
+        page.clock.install()
+        sockets = []
+        page.on("websocket", sockets.append)
+
+        def handler(ws):
+            server = ws.connect_to_server()
+            server.on_message(
+                lambda message: None if '"pong"' in str(message) else ws.send(message)
+            )
+
+        page.route_web_socket("**/ws/live/**", handler)
+        self.goto(page, self.todo)
+        expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
+        self.assertEqual(len(sockets), 1)
+        # The ping, then the wait for its pong
+        page.clock.fast_forward(31000)
+        page.wait_for_timeout(300)
+        page.clock.fast_forward(11000)
+        for _ in range(50):
+            if len(sockets) == 2:
+                break
+            page.wait_for_timeout(100)
+        self.assertEqual(len(sockets), 2)
+        expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
+
+    def test_pongs_keep_the_socket(self):
+        page = self.login(self.ada)
+        page.clock.install()
+        sockets = []
+        page.on("websocket", sockets.append)
+        self.goto(page, self.todo)
+        expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
+        frames = []
+        sockets[0].on("framereceived", frames.append)
+        page.clock.fast_forward(31000)
+        page.wait_for_timeout(300)
+        page.clock.fast_forward(15000)
+        page.wait_for_timeout(300)
+        self.assertEqual(len(sockets), 1)
+        self.assertIn('{"type": "pong"}', frames)
+
     def comment(self, page, text):
         form = page.locator("form:has(input[name=form][value=comment])")
         form.locator("textarea[name=content]").fill(text)
