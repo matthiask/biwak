@@ -27,7 +27,10 @@ how many are done. Inside a folder the first tile, "..", leads to the
 folder above (or the project's top level); the path above the title
 does too. Staff create what is here: "New folder", "New doc", "Upload
 files". A folder's "More" menu has "Edit…" (its title and color); move things between
-folders with "Move to..." in their "More" menu.
+folders with "Move to..." in their "More" menu. Every tile has the same
+menu behind its "…" button in the top-right corner (it shows when you
+point at the tile or reach it with Tab), so you can rename, move or trash
+something without opening it.
 
 **Folder colors:** a folder can have a color, chosen as a row of swatches
 in "New folder" and "Edit…" (staff; "None" is the default). Its tile and

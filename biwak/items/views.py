@@ -829,7 +829,7 @@ def item_trash(request, pk):
             title=_("Move to the trash?"),
             intro=_("It can be restored for %(days)s days.") % {"days": ops.TRASH_DAYS},
             item=item,
-            cancel_url=item.get_absolute_url(),
+            cancel_url=next_url(request) or item.get_absolute_url(),
             submit_label=_("Move to the trash"),
             destructive=True,
         )
@@ -839,7 +839,7 @@ def item_trash(request, pk):
         _("“%(title)s” is in the trash for %(days)s days.")
         % {"title": item.title, "days": ops.TRASH_DAYS},
     )
-    return redirect(item.parent or item.project)
+    return redirect(next_url(request) or item.parent or item.project)
 
 
 @require_POST

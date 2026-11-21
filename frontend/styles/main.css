@@ -2893,6 +2893,57 @@ main:has([data-hide-title]) [data-edit-open] {
   }
 }
 
+/* A tile's "…" menu (files/_tile_menu.html): in its top-right corner
+   beside the tile's link, shown on hover and focus, always on touch
+   screens */
+.wb-tiles > li {
+  position: relative;
+}
+
+.wb-tile-menu {
+  position: absolute;
+  z-index: 1;
+  top: 0.75rem;
+  inset-inline-end: 0.75rem;
+  opacity: 0;
+}
+
+.wb-tiles > li:hover > .wb-tile-menu,
+.wb-tiles > li:focus-within > .wb-tile-menu,
+.wb-tile-menu[open] {
+  opacity: 1;
+}
+
+/* Above the other tiles' buttons */
+.wb-tile-menu[open] {
+  z-index: 2;
+}
+
+@media (hover: none) {
+  .wb-tile-menu {
+    opacity: 1;
+  }
+}
+
+.wb-tile-menu > summary {
+  padding: 0 0.375rem;
+  border: 1px solid var(--wb-surface-border);
+  background: var(--wb-surface);
+  box-shadow: var(--wb-shadow);
+  line-height: 1.5;
+}
+
+@media (max-width: 575.98px) {
+  .wb-tiles > li > .wb-tile {
+    padding-inline-end: 2.75rem;
+  }
+
+  .wb-tile-menu {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
 /* Selecting and dragging tiles (specs/files.md, "Moving and selecting",
    frontend/files.js) */
 .wb-tile.is-selected {

@@ -104,6 +104,18 @@ the counts of the top level's folders, docs and files.
   image's preview, the title, the size (files) or the checklist signal
   (docs), the client badge; two to five columns by width, compact cards
   in one column on a phone. Empty: "Nothing here yet."
+- **A "…" menu on every tile** (decided 2026-11-21: "Folders should
+  have a '...' menu for renaming and editing etc.", docs and files too
+  for consistency; `files/_tile_menu.html`): a small button in the
+  tile's top-right corner, shown on hover and focus, always on touch
+  screens, beside the tile's link (not in it), so clicking it doesn't
+  open, select or drag the tile, and Tab reaches it after the tile. It
+  offers what the item's own "More" menu does, with the same checks
+  (the shared `items/_more_entries.html`): Subscribers…, for folders
+  Edit… and Order…, Move to… and Trash for who may change it; a client
+  without changes gets Subscribers… only. Its modals come back to the
+  grid (`?next=`, `forms.next_url()`, in `folder_edit`, `folder_order`,
+  `item_move`, `item_subscribers`, `item_trash`). ".." has none.
 - **".."** (decided 2026-11-21): inside a folder the first tile leads to
   the parent (the top level from a first-level folder), also a drop
   target.

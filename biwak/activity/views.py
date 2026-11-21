@@ -346,7 +346,7 @@ def item_subscribers(request, pk):
             notify=data["notify"],
             note=data["note"],
         )
-        return redirect(item)
+        return redirect(next_url(request) or item)
     subscriptions = list(
         item.subscriptions.select_related("user", "added_by").order_by(
             Lower("user__full_name"), "user__email"
@@ -367,7 +367,7 @@ def item_subscribers(request, pk):
         title=_("Subscribers"),
         intro=_("They get what happens to this, as their notification level says."),
         item=item,
-        cancel_url=item.get_absolute_url(),
+        cancel_url=next_url(request) or item.get_absolute_url(),
         submit_label=_("Add"),
         template="activity/subscribers.html",
         extra={
