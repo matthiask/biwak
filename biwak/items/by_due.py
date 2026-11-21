@@ -79,6 +79,10 @@ class FilterForm(Form):
             del self.fields["visible"]
 
 
+# The filters "Reset filters" resets
+FILTERS = ["project", "assignee", "assigned_by", "state", "visible"]
+
+
 TodoGrouping = type("TodoGrouping", (), {"PROJECT": "project", "DUE": "due"})
 
 
@@ -112,7 +116,16 @@ def todos_by_due(request, project=None):
         todos = todos.none()
     todos = glance.with_signals(todos)
     grouping = data.get("grouping") or TodoGrouping.PROJECT
+    # "Assigned to me" in the header: the same filters with me as the
+    # assignee (specs/ui-round-5.md)
+    mine = request.GET.copy()
+    mine.pop("page", None)
+    mine["assignee"] = "me"
     context = {
+        "mine_query": mine.urlencode(),
+        "is_mine": data.get("assignee") == "me",
+        # Reset only when a filter is set; the grouping is a view, not a filter
+        "filtered": any(request.GET.get(name) for name in FILTERS),
         "grouping": grouping,
         "form": form,
         "project": project,

@@ -34,8 +34,9 @@ Round 5 of `ui-feedback.md` (2026-11-21).
   to-dos" is "Go to to-dos" (it restores the remembered view too). The
   page's title follows the filters: "My to-dos" (assigned to me),
   "To-dos I assigned" (by me, to anybody else), else "To-dos".
-- Later, to think about (user, 2026-11-21): a quick way to set "Assigned
-  to" to me, e.g. a button next to the filters.
+- "Assigned to me" in the header (decided 2026-11-21, built): a link with
+  the same filters and `assignee=me`, gone when it's set already. "Reset
+  filters" only shows when a filter is set (the grouping isn't one).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; section 4 touches a model and the API, so check its

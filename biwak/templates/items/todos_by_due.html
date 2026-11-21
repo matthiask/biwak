@@ -6,6 +6,13 @@
   {% if project %}{% include "_breadcrumbs.html" %}{% endif %}
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
+    {% if not is_mine %}
+      <div class="wb-page-actions">
+        <a href="?{{ mine_query }}" class="btn btn-sm btn-quiet">{% icon "person" %}<span
+            class="wb-label"
+          >{% translate "Assigned to me" %}</span></a>
+      </div>
+    {% endif %}
   </div>
   <form method="get" data-autosubmit data-remember class="wb-filters mb-4">
     {% for field in form %}
@@ -15,7 +22,7 @@
         {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
       </div>
     {% endfor %}
-    {% include "_filter_buttons.html" with reset_url=request.path filtered=True %}
+    {% include "_filter_buttons.html" with reset_url=request.path %}
   </form>
   {% if completed %}
     {% for todo in page %}

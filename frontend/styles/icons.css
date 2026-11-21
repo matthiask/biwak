@@ -157,6 +157,9 @@
 .bi-pencil::before {
   content: "\f4cb";
 }
+.bi-person::before {
+  content: "\f4e1";
+}
 .bi-person-plus::before {
   content: "\f4dd";
 }

@@ -774,3 +774,27 @@ class ByProjectTest(ByDueTestCase):
             return response.status_code
         self.assertEqual(response.status_code, 200, response.content)
         return response.json()["results"]
+
+
+class HeaderAndResetTest(TestCase):
+    """ "Reset filters" only with a filter set; "Assigned to me" in the
+    header keeps the other filters"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.client.force_login(self.ada)
+
+    def test_reset_only_with_a_filter(self):
+        self.assertNotContains(self.client.get("/todos/"), "Reset filters")
+        self.assertNotContains(self.client.get("/todos/?grouping=due"), "Reset filters")
+        self.assertContains(self.client.get("/todos/?state=completed"), "Reset filters")
+
+    def test_assigned_to_me_keeps_the_other_filters(self):
+        response = self.client.get("/todos/?state=completed&grouping=due&page=2")
+        link = response.context["mine_query"]
+        self.assertEqual(
+            parse_qs(link),
+            {"state": ["completed"], "grouping": ["due"], "assignee": ["me"]},
+        )
+        self.assertContains(response, "Assigned to me")
+        self.assertNotContains(self.client.get("/todos/?assignee=me"), "Assigned to me")

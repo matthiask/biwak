@@ -81,7 +81,8 @@ The filters apply as you change them:
 - **visibility** (staff): visible to clients or internal;
 - **group by**: due date or project.
 
-Your browser remembers the filters; "Reset filters" forgets them. To-dos of archived
+"Assigned to me" at the top shows only your to-dos, with the other filters kept.
+Your browser remembers the filters; "Reset filters" (there when a filter is set) forgets them. To-dos of archived
 projects and archived lists don't show here.
 
 ## The calendar
