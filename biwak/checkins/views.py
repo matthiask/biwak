@@ -405,7 +405,7 @@ def question_answer(request, pk):
     existing = (
         Answer.objects
         .filter(occurrence=occurrence, author=request.user)
-        .exclude(item__status="trashed")
+        .not_trashed()
         .first()
     )
     form = AnswerForm(

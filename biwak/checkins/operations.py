@@ -247,9 +247,7 @@ def _recipients(question, occurrence=None):
 
 def _answered_ids(occurrence):
     """People who answered (an answer in the trash doesn't count)"""
-    answered = Answer.objects.filter(occurrence=occurrence).exclude(
-        item__status=Status.TRASHED
-    )
+    answered = Answer.objects.filter(occurrence=occurrence).not_trashed()
     return set(answered.values_list("author", flat=True))
 
 
@@ -384,7 +382,7 @@ def answers_of(occurrence):
     return list(
         Answer.objects
         .filter(occurrence=occurrence)
-        .exclude(item__status=Status.TRASHED)
+        .not_trashed()
         .select_related("item__creator")
         .order_by("-item__created_at", "-pk")
     )
@@ -499,9 +497,9 @@ def due(user, *, project=None):
         .annotate(
             has_newer=Exists(_newer()),
             answered=Exists(
-                Answer.objects.filter(occurrence=OuterRef("pk"), author=user).exclude(
-                    item__status=Status.TRASHED
-                )
+                Answer.objects.filter(
+                    occurrence=OuterRef("pk"), author=user
+                ).not_trashed()
             ),
         )
         .filter(has_newer=False, answered=False)
