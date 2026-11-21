@@ -8,7 +8,8 @@ and renaming means editing everyone.
 
 **Status:** built (2026-11-21), see "Built" below, including the
 decisions under "Decided meanwhile" (partners know their projects'
-people) and a project's people page grouped by organization.
+people), a project's people page grouped by organization and partner
+organizations managed by admins (see "Managing").
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The rules who
