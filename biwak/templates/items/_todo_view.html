@@ -5,41 +5,44 @@
   edit form, focused on it; without JavaScript the "Edit" link is the form's
   own page. Checklists stay tickable.
 {% endcomment %}
-<div data-edit-url="{% url 'todo_edit' item.pk %}">
-  <dl class="wb-facts">
-    <div class="wb-fact wb-edit-hit" data-edit-focus="assignees">
-      <dt>{% translate "Assigned to" %}</dt>
-      <dd>
-        {% for person in todo.assignees.all %}{% person_page person %}{% if not forloop.last %},
-          {% endif %}{% empty %}<span class="text-body-secondary">{% translate "Nobody" %}</span>{% endfor %}
-      </dd>
+<div class="card mb-4" data-edit-url="{% url 'todo_edit' item.pk %}">
+  <div class="card-body">
+    <dl class="wb-facts">
+      <div class="wb-fact wb-edit-hit" data-edit-focus="assignees">
+        <dt>{% translate "Assigned to" %}</dt>
+        <dd>
+          {% for person in todo.assignees.all %}{% person_page person %}{% if not forloop.last %},
+            {% endif %}{% empty %}<span class="text-body-secondary">{% translate "Nobody" %}</span>{% endfor %}
+        </dd>
+      </div>
+      <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">
+        <dt>{% translate "Due on" %}</dt>
+        <dd>
+          {% if todo.due_on %}{{ todo.due_on|date:"l, j. F Y" }} {% due_badge todo badge_only=True %}{% else %}<span
+              class="text-body-secondary"
+            >{% translate "No date" %}</span>{% endif %}
+        </dd>
+      </div>
+      <div class="wb-fact wb-edit-hit" data-edit-focus="recurrence_frequency">
+        <dt>{% translate "Repeats" %}</dt>
+        <dd>
+          {% if todo.recurrence %}
+            {{ todo.recurrence_description|capfirst }}.
+            {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
+            {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
+          {% else %}
+            <span class="text-body-secondary">{% translate "Doesn't repeat" %}</span>
+          {% endif %}
+        </dd>
+      </div>
+    </dl>
+    <hr class="my-2">
+    <div class="wb-edit-hit wb-view-text" data-edit-focus="notes">
+      {% if todo.notes %}
+        <div class="wb-markdown">{% checklist_markdown todo.notes item %}</div>
+      {% else %}
+        <p class="text-body-secondary mb-0">{% translate "Add notes…" %}</p>
+      {% endif %}
     </div>
-    <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">
-      <dt>{% translate "Due on" %}</dt>
-      <dd>
-        {% if todo.due_on %}{{ todo.due_on|date:"l, j. F Y" }} {% due_badge todo badge_only=True %}{% else %}<span
-            class="text-body-secondary"
-          >{% translate "No date" %}</span>{% endif %}
-      </dd>
-    </div>
-    <div class="wb-fact wb-edit-hit" data-edit-focus="recurrence_frequency">
-      <dt>{% translate "Repeats" %}</dt>
-      <dd>
-        {% if todo.recurrence %}
-          {{ todo.recurrence_description|capfirst }}.
-          {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
-          {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
-        {% else %}
-          <span class="text-body-secondary">{% translate "Doesn't repeat" %}</span>
-        {% endif %}
-      </dd>
-    </div>
-  </dl>
-  <div class="wb-edit-hit wb-view-text mb-3" data-edit-focus="notes">
-    {% if todo.notes %}
-      <div class="wb-markdown">{% checklist_markdown todo.notes item %}</div>
-    {% else %}
-      <p class="text-body-secondary mb-0">{% translate "Add notes…" %}</p>
-    {% endif %}
   </div>
 </div>
