@@ -108,7 +108,9 @@ nobody gets mail or a sign-in before someone decides
 - **Ends access at once:** sessions (`UserSession.end()`), API tokens
   and calendar links are deleted; open websockets close through
   `sso.session_alive()` after `live.check_access(user=…)` told them to
-  check.
+  check. Again after the commit (`end_access_now_and_after_commit()`, as
+  `sso.enforce_required_now_and_after_commit()`), so what other requests
+  made meanwhile goes too.
 - Keeps everything they did and what points at them: memberships,
   subscriptions (no mail goes to inactive people), assignments (their
   to-dos count under "Nobody active", `todos.md`), comments.

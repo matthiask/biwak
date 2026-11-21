@@ -154,6 +154,22 @@ class DeactivateTest(Base):
         self.assertTrue(self.site.is_member(self.cleo))
         self.assertEqual(self.client.get("/").status_code, 302)
 
+    def test_ends_access_again_after_the_commit(self):
+        """What another request made meanwhile (it didn't see the change
+        yet) goes too, like ``sso.enforce_required_now_and_after_commit()``"""
+        with self.captureOnCommitCallbacks() as callbacks:
+            activation.deactivate([self.cleo], actor=self.ada)
+            APIToken.create_for(user=self.cleo, title="Meanwhile", access="read")
+            CalendarToken.renew(self.cleo)
+            UserSession.objects.create(
+                user=self.cleo, session_key="meanwhile", ip="127.0.0.1", user_agent="x"
+            )
+        for callback in callbacks:
+            callback()
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(UserSession.objects.filter(user=self.cleo).exists())
+
     def test_the_sessions_of_others_stay(self):
         other = Client()
         other.force_login(self.ada)

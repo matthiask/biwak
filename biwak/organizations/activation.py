@@ -104,8 +104,6 @@ def deactivate(users, *, actor):
     Everything else stays. Refused (``ActivationError``) for oneself and
     when no active admin would be left; all or nothing. Returns the people
     deactivated."""
-    from biwak.collab import live
-
     users = lock_with_admins([u.pk for u in users])
     _check(actor, users)
     if any(user.pk == actor.pk for user in users):
@@ -119,13 +117,38 @@ def deactivate(users, *, actor):
             continue
         user.is_active = False
         user.save(update_fields=["is_active"])
+        done.append(user)
+    end_access_now_and_after_commit([user.pk for user in done])
+    return done
+
+
+def end_access(users):
+    """Ends the access of these (inactive) people: sessions, API tokens and
+    calendar links go, open websockets check again (``sso.session_alive()``)"""
+    from biwak.collab import live
+
+    for user in users:
         for session in UserSession.objects.filter(user=user):
             session.end()
         APIToken.objects.filter(user=user).delete()
         CalendarToken.objects.filter(user=user).delete()
         live.check_access(user=user.pk)
-        done.append(user)
-    return done
+
+
+def end_access_now_and_after_commit(user_ids):
+    """``end_access()`` now, and again once the transaction committed for
+    those still inactive then: what other requests made meanwhile (they
+    didn't see the change yet) goes too, like
+    ``sso.enforce_required_now_and_after_commit()``"""
+    user_ids = list(user_ids)
+    if not user_ids:
+        return
+
+    def run():
+        end_access(User.objects.filter(pk__in=user_ids, is_active=False))
+
+    run()
+    transaction.on_commit(run)
 
 
 # Resetting someone's second factor (specs/two-factor.md): the same split
