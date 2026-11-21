@@ -2705,10 +2705,10 @@ class FiltersTest(E2ETestCase):
         expect(page.locator("[data-autosubmit-button]")).to_be_hidden()
         page.locator("#id_assignee").select_option("nobody")
         page.wait_for_url("**/todos/?*assignee=nobody*")
-        self.assertEqual(page.evaluate("document.activeElement.name"), "assignee")
+        page.wait_for_function("document.activeElement.name === 'assignee'")
         page.locator("#id_state").select_option("completed")
         page.wait_for_url("**state=completed*")
-        self.assertEqual(page.evaluate("document.activeElement.name"), "state")
+        page.wait_for_function("document.activeElement.name === 'state'")
         expect(page.locator("#id_assignee")).to_have_value("nobody")
         self.assertEqual(self.errors, [])
 
@@ -2718,7 +2718,7 @@ class FiltersTest(E2ETestCase):
         page.locator('input[name="unread"]').check()
         page.wait_for_url("**/lantern/?unread=1")
         expect(page.locator('input[name="unread"]')).to_be_checked()
-        self.assertEqual(page.evaluate("document.activeElement.name"), "unread")
+        page.wait_for_function("document.activeElement.name === 'unread'")
 
     def test_search_keeps_its_button_and_waits_for_enter(self):
         page = self.page

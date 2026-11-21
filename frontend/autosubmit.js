@@ -7,8 +7,12 @@
 const PAUSE = 400
 const KEY = "autosubmit"
 
+// The field that made the form submit: the one the person changed, which
+// has the focus unless a script (or a click on a select's option) changed it
+let changed = null
+
 function remember(form) {
-  const field = document.activeElement
+  const field = changed || document.activeElement
   try {
     sessionStorage.setItem(
       KEY,
@@ -36,7 +40,7 @@ function restore() {
   window.scrollTo(0, saved.y)
   const form = document.querySelectorAll("[data-autosubmit]")[saved.form]
   const field = saved.name && form?.elements[saved.name]
-  const element = field?.length ? field[0] : field
+  const element = field instanceof RadioNodeList ? field[0] : field
   if (!element) return
   element.focus({ preventScroll: true })
   if (element.setSelectionRange && element.type === "text") {
@@ -59,6 +63,7 @@ document.addEventListener("change", (event) => {
     return
   if (field.matches("input[type=text], input[type=search], input:not([type])"))
     return
+  changed = field
   form.requestSubmit()
 })
 
@@ -76,7 +81,10 @@ document.addEventListener("input", (event) => {
   clearTimeout(timers.get(form))
   timers.set(
     form,
-    setTimeout(() => form.requestSubmit(), PAUSE),
+    setTimeout(() => {
+      changed = field
+      form.requestSubmit()
+    }, PAUSE),
   )
 })
 
