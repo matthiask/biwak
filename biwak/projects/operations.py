@@ -14,6 +14,7 @@ from biwak.accounts.models import NotificationLevel, User
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import record, set_level_override
+from biwak.api_conventions import absolute
 from biwak.projects.models import Membership, Project
 
 
@@ -155,7 +156,7 @@ def send_invitation(project, user, *, actor):
         "project": project,
         "user": user,
         "actor": actor,
-        "url": settings.BASE_URL + project.get_absolute_url(),
+        "url": absolute(project.get_absolute_url()),
     }
     # In their language if they have one, else in the inviter's
     with translation.override(user.language or translation.get_language()):

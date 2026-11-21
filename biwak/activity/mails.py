@@ -25,6 +25,7 @@ from biwak.activity import mentions
 from biwak.activity.models import Action, Notification
 from biwak.activity.notify import can_see, effective_level
 from biwak.activity.operations import is_subscribed
+from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
 from biwak.inbound.tokens import reply_to
 from biwak.items.models import Comment, Kind
@@ -67,10 +68,6 @@ def unsubscribe_url(user, item):
 
 
 # What the mails show --------------------------------------------------------
-
-
-def absolute(url):
-    return settings.BASE_URL + url
 
 
 def host():
