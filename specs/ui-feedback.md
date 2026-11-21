@@ -45,3 +45,4 @@ Ad hoc.
 - "Add a to-do" and "New group" should be on the same line.
 - "Show to clients" is a potentially destructive action and needs a warning modal. One click isn't enough for revealing potentially damaging information.
 - The grouping in the activity log is nice. It could go further I think, and for example group conversation happening within an hour or more and show them together. Stop collapsing items, I'd like to try going without <details> here. The individual items themselves should be indented though in groups.
+- todo_grouping shouldn't be a model field but a restored filter for the filter form. The ordering can go into the filter as well.

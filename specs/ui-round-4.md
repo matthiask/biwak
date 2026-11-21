@@ -1,4 +1,4 @@
-# UI round 4: phones
+# UI round 4: phones, and round 4 of the feedback
 
 Feedback (2026-11-21): the to-do list on a phone is "funky": header
 buttons of varying heights, and the checkbox and drag handle alone on
@@ -71,6 +71,48 @@ reachable.
 - **Relative times** say "just now" under a minute, never "0 minutes",
   in the feed and wherever `timesince` is shown.
 
+## 5. Round 4 of `ui-feedback.md` (2026-11-21)
+
+1. **"Sign out" in the "Me" menu**, as before part E, since it's
+   understood to sign out here. The sessions card loses its help text
+   about it and gets a "Sign out here" button instead (this browser's
+   session, the same as the menu's).
+2. **The to-do checkbox is aligned** with the title's first line on wide
+   screens too, as section 2's grid does.
+3. **"Add a to-do" and "New group" sit on one line** under a list, two
+   quiet buttons side by side, wrapping only on phones if needed.
+4. **"Show to clients" asks first.**
+   - Making something visible to clients can reveal what shouldn't be
+     revealed, so the switch opens a modal (`form_response`,
+     `destructive=True` styling for the button): "Show this list to
+     clients?". It says what becomes visible (the existing sentence:
+     "Makes this list, 3 to-dos and 0 comments visible to 1 client.")
+     and offers "Show to clients" and "Cancel".
+   - Without JavaScript it's the form's page.
+   - Hiding from clients ("Make internal") stays one click: it reveals
+     nothing.
+   - The same everywhere the switch is (lists, messages, folders, docs,
+     files, check-ins), through the one include.
+5. **The activity feed groups conversations, and nothing collapses.**
+   - Comments on the same item, by anyone, each within an hour of the one
+     before and on the same day, become one entry: "Conversation on
+     Order the tent", with each comment below it, indented (who, the
+     excerpt, the time).
+   - Other events in between (a completion, a reaction) don't break it
+     up: the conversation's comments gather at the newest one's place.
+   - The existing merged entries ("Ada completed 5 to-dos in Launch") show
+     their single items right away, indented, instead of inside a
+     `<details>`. The feed has no `<details>` anymore.
+   - Clients' feeds follow the same visibility rules per comment
+     (`access.md`); a conversation shows only the comments they may see.
+   - The API keeps its events as they are; the grouping is the page's.
+   - `feed.md` gets the decision.
+6. **"My to-dos" grouping as a filter:** it's a "Group by" field in the
+   filter form, remembered like the other filters, not a field on
+   `User`. The projects page's order is a small filter form the same
+   way. Built separately (branch `view-prefs`), listed here for
+   completeness.
+
 ## Done when
 
 - Browser tests at 390 px:
@@ -79,7 +121,9 @@ reachable.
   - a long to-do title doesn't move below the checkbox;
   - the toolbar doesn't overflow;
   - no horizontal scrolling on these pages.
-- Django tests for "just now".
+- Django tests for "just now", the visibility modal (staff only, what
+  it says, without JavaScript), the feed's conversations (staff and
+  client) and the menu's label.
 - Screenshots of the list, the to-do and the project page at 390 px and
   at 1200 px (nothing broke on wide screens), looked at before
   reporting.
