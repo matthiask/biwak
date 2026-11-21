@@ -80,6 +80,15 @@ browsers (Playwright) typing, a client watching, an internal doc
 
 ## How it works (built)
 
+- **The toolbar** (decided 2026-11-21): the live editor has the toolbar
+  of every Markdown field (`toolbar.js`'s `attachToEditor()`: its
+  buttons work on an object that looks like a textarea to them and
+  change the CodeMirror view, so the Yjs undo undoes them; the keys run
+  before CodeMirror's own, Tab stays CodeMirror's), shown while one may
+  type. Line breaks are LF only everywhere (`biwak/text.py`): CodeMirror
+  counts a line break as one character, Yjs counted CR LF as two, and
+  edits landed off (fixed 2026-11-21).
+
 - **State** (`biwak/collab/models.py`, `live.py`): `LiveState` holds the
   doc's Yjs document as of the last save, `LiveUpdate` every update
   since, stored as it arrives (nothing typed is lost when a process

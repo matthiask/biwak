@@ -1148,6 +1148,30 @@ class CollabTest(E2ETestCase):
             time.sleep(0.1)
         self.assertEqual(self.stored(doc), expected)
 
+    def test_the_toolbar_and_its_keys(self):
+        """The same toolbar as above Markdown fields, working on the live
+        editor's text, undone by its undo"""
+        page = self.editor(self.ada)
+        bar = page.locator("[data-collab] .wb-toolbar")
+        expect(bar).to_be_visible()
+        self.content(page).click()
+        # "Agenda" selected, then bold
+        page.keyboard.press("Control+Home")
+        page.keyboard.press("Shift+End")
+        bar.locator('[data-toolbar-action="bold"]').click()
+        self.wait_for_text(page, "**Agenda**\n")
+        page.keyboard.press("Control+z")
+        self.wait_for_text(page, "Agenda\n")
+        # The keys, before CodeMirror's own
+        page.keyboard.press("Control+Home")
+        page.keyboard.press("Shift+End")
+        page.keyboard.press("Control+i")
+        self.wait_for_text(page, "_Agenda_\n")
+        bar.locator('[data-toolbar-action="heading"]').click()
+        self.wait_for_text(page, "## _Agenda_\n")
+        self.wait_for_stored("## _Agenda_\n")
+        self.assertEqual(self.errors, [])
+
     def test_a_tick_in_another_browser_arrives_in_the_open_editor(self):
         """Ticks on docs never wait (specs/editor.md): one browser has the
         editor open and typed something not stored yet, another ticks the

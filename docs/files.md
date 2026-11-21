@@ -30,8 +30,9 @@ A doc is a page of Markdown text, such as a brief or a set of notes.
 
 - **Edit** opens the doc for editing together: everybody who edits it
   sees the others' changes as they are typed, and changes are saved as
-  you type. You see who else is there. Someone who can see the doc but
-  not change it can "Watch live".
+  you type. You see who else is there. The editor has the same toolbar
+  and keys as every text field (bold, italic, links, headings, lists).
+  Someone who can see the doc but not change it can "Watch live".
 - **Versions** (staff): saving creates a version when the last one is
   older than ten minutes or by somebody else, and "Save as a version"
   makes one on request. Open an older version and "Restore this

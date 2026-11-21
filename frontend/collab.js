@@ -12,7 +12,7 @@ import {
   LanguageSupport,
   syntaxHighlighting,
 } from "@codemirror/language"
-import { Compartment, EditorState } from "@codemirror/state"
+import { Compartment, EditorState, Prec } from "@codemirror/state"
 import { drawSelection, EditorView, keymap } from "@codemirror/view"
 import * as decoding from "lib0/decoding"
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next"
@@ -22,6 +22,7 @@ import { avatar } from "./avatar.js"
 import { keepInBrowser } from "./collab-store.js"
 import { report } from "./connection.js"
 import { csrfToken } from "./http.js"
+import { attachToEditor, editorKeys } from "./toolbar.js"
 
 // biwak/collab/consumers.py
 const MESSAGE_MODE = 100
@@ -58,8 +59,11 @@ function setUp(container) {
     const yes = mayType && synced && !gone
     return [EditorState.readOnly.of(!yes), EditorView.editable.of(yes)]
   }
+  // The toolbar's shortcuts before CodeMirror's own keys
+  let toolbar = null
+  const editorElement = container.querySelector("[data-collab-editor]")
   const view = new EditorView({
-    parent: container.querySelector("[data-collab-editor]"),
+    parent: editorElement,
     state: EditorState.create({
       doc: ytext.toString(),
       extensions: [
@@ -72,13 +76,23 @@ function setUp(container) {
         editable.of(editableNow()),
         yCollab(ytext, provider.awareness),
         EditorView.contentAttributes.of({ "aria-label": document.title }),
+        Prec.highest(
+          EditorView.domEventHandlers({
+            keydown: (event) => editorKeys(toolbar, event),
+          }),
+        ),
       ],
     }),
   })
   container.collab = { provider, view, ydoc }
+  // The same toolbar as above every Markdown field (toolbar.js), shown
+  // while one may type
+  toolbar = attachToEditor(view, editorElement)
+  const bar = toolbar && editorElement.previousElementSibling
 
   const update = () => {
     view.dispatch({ effects: editable.reconfigure(editableNow()) })
+    if (bar) bar.hidden = !(mayType && synced && !gone)
     let text = texts.collabConnecting
     if (gone) text = texts.collabGone
     else if (synced && !mayType) text = texts.collabWatching
