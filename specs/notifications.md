@@ -182,7 +182,9 @@ large).
 ## Mails
 
 - **Delivery** per person (`User.mail_delivery`): each change (the
-  default), a daily digest, or none (`lantern.md`).
+  default), a daily digest, or none (`lantern.md`). None means no mails
+  at all, check-in questions and summaries included (decided
+  2026-11-21, `checkins.md`); digests leave check-in mails alone.
 - **Each change:** `send_mails`, every minute by cron, sends one mail
   per person and item once the newest unsent notification for it is 2
   minutes old (decided 2026-11-20), so quick edits merge. **A batch of

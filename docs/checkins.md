@@ -58,3 +58,7 @@ answers ("Mails about answers"):
   with all the answers of that round;
 - **a mail for each answer**;
 - **no mails**.
+
+With "No mails" in your settings you get no check-in mails at all,
+neither the questions nor the answers; the check-ins waiting for you
+show on Home.

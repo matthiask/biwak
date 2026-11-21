@@ -12,6 +12,7 @@ from django.utils import translation
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
+from biwak.accounts.models import MailDelivery
 from biwak.activity import mentions
 from biwak.activity.mails import (
     absolute,
@@ -34,7 +35,8 @@ logger = logging.getLogger(__name__)
 def after_commit(build, occurrence, people):
     """Sends ``build(person, occurrence)`` to each of the people once the
     transaction has committed, if they're still active and see the question
-    then (like ``biwak.activity.mails._deliverable()``); a mail which can't
+    then (like ``biwak.activity.mails._deliverable()``) and want mails
+    ("No mails" stops these too); a mail which can't
     be sent is logged and doesn't keep the others from going out"""
     pks = [person.pk for person in people]
     transaction.on_commit(lambda: _send_all(build, occurrence, pks), robust=True)
@@ -43,8 +45,13 @@ def after_commit(build, occurrence, people):
 def _send_all(build, occurrence, pks):
     # As it is now, not as it was loaded
     item = Item.objects.select_related("project").get(pk=occurrence.question.item_id)
-    # Not to addresses which bounced (specs/mail-sending.md)
-    people = who_can_see(item).filter(pk__in=pks, mail_undeliverable_at__isnull=True)
+    # Not to addresses which bounced (specs/mail-sending.md), not to people
+    # who want no mails (decided 2026-11-21: check-ins aren't special)
+    people = (
+        who_can_see(item)
+        .filter(pk__in=pks, mail_undeliverable_at__isnull=True)
+        .exclude(mail_delivery=MailDelivery.NONE)
+    )
     for user in people.order_by("pk"):
         try:
             with (

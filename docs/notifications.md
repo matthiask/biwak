@@ -79,7 +79,8 @@ Under Settings, "Mails":
   about two minutes after its last change, so quick edits and several
   comments arrive together;
 - **A daily digest** at 07:00, with what happened the day before;
-- **No mails:** the lantern only.
+- **No mails:** the lantern only, also no check-in questions and
+  summaries.
 
 What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. Mails carry the full text; the

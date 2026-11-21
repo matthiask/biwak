@@ -81,6 +81,15 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(message.extra_headers["Auto-Submitted"], "auto-generated")
         self.assertIn("https://biwak.example.org", message.alternatives[0].content)
 
+    def test_no_question_mail_with_no_mails(self):
+        """ "No mails" stops check-in mails too (decided 2026-11-21)"""
+        from biwak.accounts.models import MailDelivery
+
+        self.bob.mail_delivery = MailDelivery.NONE
+        self.bob.save()
+        self.run_at("2027-03-22 09:00")
+        self.assertEqual([m.to for m in self.sent()], [[self.ada.email]])
+
     def test_one_mail_per_person_even_with_the_same_address_case(self):
         self.run_at("2027-03-22 09:00")
         self.assertEqual(len(self.sent()), 2)
