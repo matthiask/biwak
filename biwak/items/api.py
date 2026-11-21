@@ -143,12 +143,10 @@ def list_update(request, list_id: int, data: ListPatch):
         bad_request(_("Leave out what doesn't change instead of sending null."))
     if changes:
         ops.update_list(item, actor=request.user, **changes)
-    if "archived" in given:
-        archived = item.status == ItemStatus.ARCHIVED
-        if data.archived and not archived:
-            ops.archive(item, actor=request.user)
-        elif archived and not data.archived:
-            ops.unarchive(item, actor=request.user)
+    if data.archived:
+        ops.archive(item, actor=request.user)
+    elif "archived" in given:
+        ops.unarchive(item, actor=request.user)
     return list_out(item_for(request, list_id, Kind.LIST))
 
 

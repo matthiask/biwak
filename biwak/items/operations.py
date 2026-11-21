@@ -669,7 +669,10 @@ def update_list(
 
 @transaction.atomic
 def archive(item, *, actor):
-    """Readable, but out of the way (lists, later folders and messages)"""
+    """Readable, but out of the way (lists, later folders and messages);
+    archiving an archived item again changes nothing (a double submit)"""
+    if item.status == Status.ARCHIVED:
+        return
     if item.status != Status.ACTIVE:
         raise ValueError("Only active items can be archived")
     item.status = Status.ARCHIVED
@@ -679,6 +682,8 @@ def archive(item, *, actor):
 
 @transaction.atomic
 def unarchive(item, *, actor):
+    if item.status == Status.ACTIVE:
+        return
     if item.status != Status.ARCHIVED:
         raise ValueError("The item isn't archived")
     item.status = Status.ACTIVE

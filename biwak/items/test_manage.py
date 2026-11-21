@@ -79,6 +79,15 @@ class ManageTest(TestCase):
         )
         self.assertEqual(self.client.get(f"/lists/{own.pk}/edit/").status_code, 200)
 
+    def test_archiving_twice(self):
+        """A double submit archived an archived list: a 500"""
+        self.client.force_login(self.ada)
+        url = f"/lists/{self.shared.pk}/archive/"
+        for data in [{}, {}, {"unarchive": "1"}, {"unarchive": "1"}]:
+            self.assertEqual(self.client.post(url, data).status_code, 302, data)
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.status, Status.ACTIVE)
+
     def test_groups(self):
         second = ops.create_group(todolist=self.shared.todolist, title="Someday")
         self.client.force_login(self.ada)
