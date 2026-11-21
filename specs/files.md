@@ -193,8 +193,8 @@ top, with category, author, date and the number of comments.
 - Create folders and docs, upload files, move them between folders
   (`move_item()`, which resets the switch when nested), the visibility
   switch on top-level ones (children inherit it).
-- **Docs** (`/docs/<pk>/`): title and Markdown, comments, edited by
-  anyone who can see them.
+- **Docs** (`/docs/<pk>/`): Markdown whose first line is the title
+  (`specs/doc-titles.md`), comments, edited by anyone who can see them.
   - **Versions:** saving creates a version when the last one is older
     than 10 minutes or by someone else, plus "Save as a version" on
     request (decided 2026-11-20). Older versions can be viewed and
