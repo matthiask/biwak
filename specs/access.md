@@ -121,7 +121,12 @@ and review, no recursive query on the hot path.
   people mentioned) and stays visible once it was. Events from before
   this change are not visible to clients (a safe default). The feed's
   "visible to clients" filter, the API's `visible_to_clients` of an
-  event and the badge on feed entries mean the same.
+  event and the badge on feed entries mean the same. Notifications follow
+  the same rule (fixed 2026-11-21): `notify()` leaves clients out of an
+  internal event even if the item became visible before it ran, and
+  `mails._deliverable()` (item mails and digests, so the mail entries too)
+  drops a client's notification of an internal event. The feed and the API
+  already filtered by `Event.visible_to()`.
 - Drift is the risk: tests compare the stored value with the value
   computed from the tree after every kind of change, and a management
   command (`check_visibility`) does the same on real data, also run

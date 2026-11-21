@@ -113,6 +113,55 @@ class MailsTest(TestCase):
         self.assertFalse(Notification.objects.filter(user=self.cleo).exists())
         self.assertNotIn("Clients can see this", mail.outbox[0].body)
 
+    def test_internal_event_not_mailed_to_clients_after_the_item_became_visible(self):
+        """A comment written while the list was internal, notified after
+        another request made it visible"""
+        todo = ops.create_todo(
+            todolist=self.internal, title="Raise the rate", creator=self.ada
+        )
+        subscribe(self.cleo, todo)
+        with self.captureOnCommitCallbacks(execute=False) as pending:
+            ops.add_comment(todo, author=self.ada, content="Secret")
+        self.act(
+            lambda: ops.set_visibility(self.internal, visible=True, actor=self.ada)
+        )
+        for callback in pending:
+            callback()
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.cleo, event__action=Action.COMMENTED
+            ).exists()
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.assertFalse([
+            m for m in mail.outbox if "Secret" in m.body and self.cleo.email in m.to
+        ])
+
+    def test_existing_notification_of_an_internal_event_not_mailed(self):
+        """The second guard: a notification which exists anyway, mailed
+        each or in a digest"""
+        todo = ops.create_todo(
+            todolist=self.internal, title="Raise the rate", creator=self.ada
+        )
+        subscribe(self.cleo, todo)
+        self.act(lambda: ops.add_comment(todo, author=self.ada, content="Secret"))
+        self.act(
+            lambda: ops.set_visibility(self.internal, visible=True, actor=self.ada)
+        )
+        event = Event.objects.get(item=todo, action=Action.COMMENTED)
+        self.assertFalse(event.is_client_visible)
+        for delivery in (MailDelivery.EACH, MailDelivery.DIGEST):
+            self.cleo.mail_delivery = delivery
+            self.cleo.save()
+            Notification.objects.create(user=self.cleo, event=event)
+            self.send(timezone.now() + dt.timedelta(days=1, minutes=3))
+            self.assertFalse([
+                m for m in mail.outbox if "Secret" in m.body and self.cleo.email in m.to
+            ])
+            self.assertFalse(
+                Notification.objects.filter(user=self.cleo, event=event).exists()
+            )
+
     def test_level_changed_before_sending(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         self.bob.notification_level = NotificationLevel.NOTHING

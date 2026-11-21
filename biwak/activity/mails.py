@@ -279,7 +279,10 @@ def _send(message, pks):
 def _deliverable(notifications, user):
     """Those the person may still get: the item visible to them now (which
     excludes the inactive), their level not "nothing" (it may have changed
-    since). The same number of queries for any number of items."""
+    since), and for clients only events which were visible to clients when
+    they happened (the same rule as ``notify()``, in case a notification
+    exists anyway). Item mails and digests both pass here. The same number
+    of queries for any number of items."""
     items = {n.event.item_id: n.event.item for n in notifications if n.event.item}
     visible = set(
         Item.objects.visible_to(user).filter(pk__in=items).values_list("pk", flat=True)
@@ -289,6 +292,7 @@ def _deliverable(notifications, user):
         notification
         for notification in notifications
         if notification.event.item_id in visible
+        and (notification.event.is_client_visible or not user.is_client)
         and levels[notification.event.item_id] != NotificationLevel.NOTHING
     ]
 
