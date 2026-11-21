@@ -43,6 +43,7 @@ from biwak.items.models import (
     Todo,
     TodoList,
 )
+from biwak.organizations.models import Organization, normalize_name
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 
@@ -250,8 +251,18 @@ class Importer(Resolver):
             email,
             full_name=name,
             is_client=client,
-            organization=company if client else "",
+            organization=self._organization(company) if client else None,
             is_active=False,
+        )
+
+    def _organization(self, name):
+        """Basecamp's company as an organization, by name (ignoring case and
+        spaces)"""
+        name = normalize_name(name)
+        if not name:
+            return None
+        return Organization.objects.named(name) or Organization.objects.create(
+            name=name
         )
 
     def user_for_sgid(self, sgid):

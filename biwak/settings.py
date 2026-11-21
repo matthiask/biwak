@@ -57,6 +57,7 @@ INSTALLED_APPS = [
         "allauth.socialaccount.providers.google",
         "allauth.usersessions",
         "biwak.accounts",
+        "biwak.organizations",
         "biwak.projects",
         "biwak.items",
         "biwak.activity",

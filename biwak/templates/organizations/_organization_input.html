@@ -1,0 +1,4 @@
+{% include "django/forms/widgets/input.html" %}
+<datalist id="{{ widget.attrs.list }}">
+  {% for name in widget.names %}<option value="{{ name }}"></option>{% endfor %}
+</datalist>

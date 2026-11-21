@@ -28,6 +28,7 @@ from biwak.activity.operations import is_subscribed
 from biwak.bookmarks.operations import is_bookmarked
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 
 
@@ -105,7 +106,7 @@ def everywhere(user):
         link(_("Search"), reverse("search")),
         {"label": _("Switch the theme"), "type": "theme", "shortcut": ""},
     ]
-    if not user.is_client:
+    if project_ops.can_create_project(user):
         actions.append(modal(_("New project"), reverse("project_create")))
     return actions
 

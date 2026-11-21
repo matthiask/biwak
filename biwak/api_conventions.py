@@ -48,6 +48,7 @@ class PersonOut(Schema):
     short_name: str
     is_client: bool
     organization: str
+    organization_id: int | None
 
 
 def person_out(user):
@@ -58,7 +59,8 @@ def person_out(user):
         "name": str(user),
         "short_name": user.get_short_name(),
         "is_client": user.is_client,
-        "organization": user.organization,
+        "organization": user.organization_name,
+        "organization_id": user.organization_id,
     }
 
 

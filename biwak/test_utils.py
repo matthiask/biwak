@@ -1,17 +1,35 @@
 """Made-up people and projects for the tests (no real data, AGENTS.md)"""
 
 from biwak.accounts.models import User
+from biwak.organizations.models import Organization
 from biwak.projects.models import Membership, Project
 
 
+def organization(name="Example Client Ltd", **kwargs):
+    """The organization of this name, created if needed"""
+    return Organization.objects.get_or_create(name=name, defaults=kwargs)[0]
+
+
 def person(name="Ada", *, client=False, **kwargs):
+    """Clients belong to "Example Client Ltd" unless ``organization`` says
+    otherwise (a name or an organization); staff to none, which makes them
+    the installation's own"""
+    org = kwargs.pop("organization", "Example Client Ltd" if client else None)
+    if isinstance(org, str):
+        org = organization(org) if org else None
     return User.objects.create_user(
         f"{name.lower()}@example.org",
         full_name=f"{name} Example",
         is_client=client,
-        organization="Example Client Ltd" if client else "",
+        organization=org,
         **kwargs,
     )
+
+
+def partner(name="Pia", *, organization_name="Example Partner Agency", **kwargs):
+    """Staff of another organization: sees only the projects they're
+    members of (specs/access.md)"""
+    return person(name, organization=organization_name, **kwargs)
 
 
 def project(name="Website", *, members=(), all_access=True):

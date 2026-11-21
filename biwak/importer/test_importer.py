@@ -206,7 +206,7 @@ class ImportEveryKindTest(ImportCase):
         cleo = User.objects.get(email="cleo@example.org")
         self.assertFalse(cleo.is_active)
         self.assertTrue(cleo.is_client)
-        self.assertEqual(cleo.organization, "Example Client Ltd")
+        self.assertEqual(cleo.organization.name, "Example Client Ltd")
         self.assertEqual(
             self.names(User.objects.filter(memberships__project=self.project)),
             {"Ada Example", "Bob Example", "Cleo Example"},

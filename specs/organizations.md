@@ -86,3 +86,23 @@ All staff create, rename and merge client and partner organizations
 people; anything touching the installation's own organization (merging
 into it, moving people in or out, marking it) only admins, since it
 decides who sees all-access projects.
+
+## Built
+
+- **The model** (`biwak/organizations/`): `Organization(name, domains,
+  is_own)`, names unique ignoring case (stored with single spaces),
+  at most one marked as the installation's own; `User.organization` a
+  foreign key (empty allowed, protected: an organization with people
+  isn't deleted). Migration `accounts.0012` turned the texts into
+  organizations, merging names that differ only in case and spaces (the
+  oldest person's spelling wins). In the audit log.
+- **Domains** are stored lowercase, unique across organizations;
+  free-mail domains (`FREE_MAIL_DOMAINS`: gmail.com, googlemail.com,
+  outlook.com, hotmail.com, yahoo.com, icloud.com, gmx.ch, gmx.net,
+  bluewin.ch and a few more) can't be added and never match.
+- **Picking an organization** (`biwak/organizations/forms.py`): a text
+  field completing the existing names (a `<datalist>`, no JavaScript); a
+  name that doesn't exist asks "Create 'Exmaple Ltd'?" and creates it
+  only once ticked, together with the invitation. Inviting leaves an
+  empty field to the address's domain; people who exist keep their
+  organization. Everybody can belong to one, staff too.

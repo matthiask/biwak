@@ -5,6 +5,7 @@ import secrets
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -95,9 +96,20 @@ Accent.__doc__ = "The accent colors people choose from, a part of ``Color``"
 PALETTE = Color.values
 
 
+def own_staff(prefix=""):
+    """``Q()`` for the people who see all-access projects
+    (``User.sees_all_access``); ``prefix`` for lookups through a relation,
+    e.g. ``"user__"``"""
+    return Q(**{f"{prefix}is_client": False}) & (
+        Q(**{f"{prefix}organization__isnull": True})
+        | Q(**{f"{prefix}organization__is_own": True})
+    )
+
+
 class User(AbstractBaseUser):
-    """Staff or client (specs/access.md). Clients belong to an organization,
-    shown beside their name"""
+    """Staff or client (specs/access.md). Everybody can belong to an
+    organization (specs/organizations.md); staff of an organization other
+    than the installation's own are partners."""
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -118,7 +130,14 @@ class User(AbstractBaseUser):
             " what is visible to clients."
         ),
     )
-    organization = models.CharField(_("organization"), max_length=200, blank=True)
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.PROTECT,
+        related_name="people",
+        verbose_name=_("organization"),
+        null=True,
+        blank=True,
+    )
     # Overridable per project and item (biwak.activity.models.LevelOverride)
     notification_level = models.CharField(
         _("notifications"),
@@ -190,10 +209,33 @@ class User(AbstractBaseUser):
         )
 
     @property
+    def is_partner(self):
+        """Staff of an organization other than the installation's own
+        (freelancers, partner agencies): they see only the projects they're
+        members of. Staff without an organization are the installation's
+        own, so that nothing changes before organizations are set up."""
+        return (
+            not self.is_client
+            and self.organization_id is not None
+            and not self.organization.is_own
+        )
+
+    @property
+    def sees_all_access(self):
+        """Opens all-access projects without being a member: the
+        installation's own staff (``own_staff()`` for querysets)"""
+        return not self.is_client and not self.is_partner
+
+    @property
+    def organization_name(self):
+        return self.organization.name if self.organization_id else ""
+
+    @property
     def display_name(self):
-        """With the organization for clients: "Ada, Example Ltd" """
-        if self.is_client and self.organization:
-            return f"{self}, {self.organization}"
+        """With the organization for clients and partners: "Ada, Example
+        Ltd"; the installation's own staff without it"""
+        if self.organization_id and not self.sees_all_access:
+            return f"{self}, {self.organization.name}"
         return str(self)
 
     @property

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -16,6 +17,7 @@ from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.modals import form_response
+from biwak.organizations.forms import OrganizationFieldMixin, organization_field
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import overview
@@ -47,6 +49,7 @@ def project_list(request):
             "projects": projects,
             "others": others,
             "archived": archived,
+            "can_create": project_ops.can_create_project(request.user),
             "order": request.user.project_order,
             "orders": User.ProjectOrder.choices,
         },
@@ -77,7 +80,7 @@ class ProjectForm(ModelForm):
 
 
 def project_create(request):
-    if request.user.is_client:
+    if not project_ops.can_create_project(request.user):
         raise PermissionDenied
     form = ProjectForm(request.POST or None)
     if form.is_valid():
@@ -132,7 +135,7 @@ class AddMemberForm(Form):
     notify = notify_field()
 
 
-class InviteForm(Form):
+class InviteForm(OrganizationFieldMixin, Form):
     email = forms.EmailField(label=_("Email"))
     full_name = forms.CharField(label=_("Name"), max_length=200, required=False)
     is_client = forms.TypedChoiceField(
@@ -145,11 +148,11 @@ class InviteForm(Form):
         required=False,
     )
     notify = notify_field()
-    organization = forms.CharField(
-        label=_("Organization"),
-        max_length=200,
-        required=False,
-        help_text=_("Shown beside clients' names."),
+    organization = organization_field(
+        help_text=_(
+            "For new people; left empty, the organization of the address's"
+            " domain. Shown beside the names of clients and partners."
+        ),
     )
 
     def __init__(self, *args, actor, **kwargs):
@@ -241,15 +244,17 @@ def member_invite(request, pk):
     if form.is_valid():
         data = form.cleaned_data
         try:
-            user, _changed = project_ops.invite(
-                project,
-                email=data["email"],
-                full_name=data["full_name"],
-                is_client=data.get("is_client", True),
-                organization=data["organization"],
-                notify=data["notify"],
-                actor=request.user,
-            )
+            # A new organization only with the invitation
+            with transaction.atomic():
+                user, _changed = project_ops.invite(
+                    project,
+                    email=data["email"],
+                    full_name=data["full_name"],
+                    is_client=data.get("is_client", True),
+                    organization=form.organization(request.user),
+                    notify=data["notify"],
+                    actor=request.user,
+                )
         except project_ops.InvitationError as exc:
             form.add_error(None, str(exc))
         else:
