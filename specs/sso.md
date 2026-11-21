@@ -128,3 +128,23 @@ the organization's IdP.
   allowed, Google. Without domains it gets those of its active staff's
   addresses (not free-mail domains or other organizations'): check them
   after deploying.
+- **Google and Microsoft** (`biwak/accounts/sso.py`,
+  `SocialAccountAdapter.pre_social_login`, which allauth calls for every
+  social login after looking the person up: its callback, Google's token
+  login, connecting an account): `sso.check_social()` decides. The person
+  is the one allauth found by the connected account or by the address
+  (`authenticate_by_email()`: Google's only when verified, Microsoft's as
+  given, see below), and the provider has to vouch for exactly that
+  person's address; else, and for deactivated or unknown people, it's
+  refused with the same message, back on the login page. Connecting an
+  account to oneself checks the same against the person signed in.
+  Google's scope includes `openid`: the ID token from the code exchange
+  carries `hd` and `email_verified`. Microsoft (`biwak/accounts/microsoft/`,
+  allauth's provider as `provider_class`, the app registration's tenant
+  `organizations`: work and school accounts only) reads the tenant from
+  the ID token of the code exchange (audience, expiry, issuer naming its
+  `tid`, its `oid` the same as Graph's profile) and puts it next to
+  Graph's profile.
+- **Matching:** by the person (`User.organization`), not the domain: an
+  Acme address in the own organization counts with the own organization's
+  rules.
