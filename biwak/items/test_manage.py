@@ -88,6 +88,28 @@ class ManageTest(TestCase):
         self.shared.refresh_from_db()
         self.assertEqual(self.shared.status, Status.ACTIVE)
 
+    def test_bad_numbers_are_400(self):
+        """int() and pk="x" in moves were 500s"""
+        self.client.force_login(self.ada)
+        for url, data in [
+            (f"/groups/{self.group.pk}/move/", {"index": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"list": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"index": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"group": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"target": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"target": f"{self.shared.pk}:x"}),
+            (
+                f"/lists/{self.shared.pk}/todos/move/",
+                {"todos": [self.todo.pk], "index": "x"},
+            ),
+            (
+                f"/lists/{self.shared.pk}/todos/move/",
+                {"todos": [self.todo.pk], "group": "x"},
+            ),
+        ]:
+            with self.subTest(url=url, data=data):
+                self.assertEqual(self.client.post(url, data).status_code, 400)
+
     def test_groups(self):
         second = ops.create_group(todolist=self.shared.todolist, title="Someday")
         self.client.force_login(self.ada)

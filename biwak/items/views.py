@@ -2,7 +2,7 @@ import datetime as dt
 
 from django import forms
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -266,15 +266,23 @@ def group_move(request, pk):
     """Dragging (quietly) or the up and down buttons (redirecting back)"""
     group = get_object_or_404(Group, pk=pk)
     item = _changeable_list(request, group.todolist_id)
-    ops.move_group(group, index=max(0, int(request.POST.get("index", 0))))
+    ops.move_group(group, index=_index(request.POST.get("index", 0)) or 0)
     if request.POST.get("quiet"):
         return HttpResponse(status=204)
     return redirect(item)
 
 
+def _number(value):
+    """A number posted (an ID, an index); 400 for anything else"""
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise BadRequest(f"Not a number: {value!r}") from exc
+
+
 def _index(value):
     """A position, or None for the end"""
-    return None if value in {None, "", "end"} else max(0, int(value))
+    return None if value in {None, "", "end"} else max(0, _number(value))
 
 
 @require_POST
@@ -289,13 +297,13 @@ def todo_move(request, pk):
     )
     if target_value := request.POST.get("target"):
         list_id, _sep, group_id = target_value.partition(":")
-    target = item_for(request, list_id, Kind.LIST)
+    target = item_for(request, _number(list_id), Kind.LIST)
     if target.project_id != item.project_id:
         # To-dos stay in their project
         return HttpResponse(status=400)
     group = None
     if group_id:
-        group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)
+        group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
     ops.move_todo(
         item,
         todolist=target,
@@ -314,10 +322,7 @@ def todos_move(request, pk):
     a ``group`` (empty: ungrouped), next to each other at ``index`` among
     the others there; ``todos`` in their new order"""
     target = item_for(request, pk, Kind.LIST)
-    try:
-        ids = [int(value) for value in request.POST.getlist("todos")]
-    except ValueError:
-        return HttpResponse(status=400)
+    ids = [_number(value) for value in request.POST.getlist("todos")]
     todos = {
         todo.pk: todo
         for todo in Item.objects
@@ -329,7 +334,7 @@ def todos_move(request, pk):
         return HttpResponse(status=404)
     group = None
     if group_id := request.POST.get("group"):
-        group = get_object_or_404(Group, pk=group_id, todolist=target.todolist)
+        group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
     ops.move_todos(
         [todos[pk] for pk in ids],
         todolist=target,
