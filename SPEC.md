@@ -103,7 +103,7 @@ recordings. A few generic building blocks then cover most of the scope;
   rest (`Todo`, `Message`, `Doc`, `Upload`, …). Kinds: list, to-do,
   message, folder, doc, file, check-in question, check-in answer.
   Everything other features point at is an item; comments, events,
-  subscriptions, bookmarks and links point at items but aren't items.
+  subscriptions and bookmarks point at items but aren't items.
 - **Tree**: items form a shallow forest per project. Only folders nest
   without limit; everything else has a fixed parent kind (a to-do's
   parent is its list, an answer's its question).
@@ -126,8 +126,11 @@ containers, checked in one place (`specs/access.md`).
 ## Glossary
 
 - **Staff**: members of the organization running the installation.
-- **Client**: a person outside it, invited to projects. Sees only what is
-  visible to clients.
+- **Partner**: staff outside the own organization (freelancers, other
+  agencies); sees only the projects they're members of
+  (`specs/organizations.md`).
+- **Client**: a person outside the organization, invited to projects.
+  Sees only what is visible to clients.
 - **Visible to clients**: the switch on containers and some items; shown
   with a bright badge and banner everywhere.
 - **Container**: a list or a folder.
