@@ -56,6 +56,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `ui-round-5.md` | feedback round 5: cards on to-dos and docs, the project's to-dos linked, filter buttons, assigned by me | built 2026-11-21 (`ui5`) | ui-round-4 | cheaper |
 | `ui-round-6.md` | a combobox for long people selects, inviting several people to several projects, invitations visible, subscribing is the switch | next | organizations, subscribers | cheaper (A), review B and C |
 | `activation.md` | activating imported people and deactivating people who left: pages, API, CLI, admins only | next | ui-round-6, sso | cheaper, review deactivating |
+| `deploy-checklist.md` | what the next deploy brings, what to set up before and after, what to check | for the next deploy | | |
 | `feed.md` | links: projects only, quieter ("Links", changed 2026-11-21) | built 2026-11-21 (`links`) | ui-round-4 | cheaper |
 | `lantern.md` | reading by acting: completing, editing, commenting, reacting read the item's notifications for the actor | built 2026-11-21 (`reading`) | lantern | cheaper |
 | `dashboard.md` | Home at `/`: what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | built 2026-11-21 (`home`) | ui-round-5, `feed.md` links, `lantern.md` reading by acting | cheaper, review the visibility tests |
