@@ -12,6 +12,11 @@
         class="flex-grow-1 wb-lantern-link wb-lantern-title"
         data-lantern-read="{{ entries.0.read_url }}"
       >
+        {% if item.has_unread %}<span
+            class="wb-lantern-unread"
+            role="img"
+            aria-label="{% translate 'Unread' %}"
+          ></span>{% endif %}
         {% icon item.kind_icon %}
         {{ item|item_title }}
         {% client_badge item %}

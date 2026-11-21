@@ -29,6 +29,17 @@ class LanternCLITest(test_cli.CLITest):
         self.assertIn("Order the tent", output)
         self.assertIn("new @", output)
         self.assertIn("[clients]", output)
+        # Several notifications on one item are one row, as in the menu
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.add_comment(self.todo, author=self.bob, content="Again")
+        output = self.biwak("lantern").output
+        self.assertEqual(output.count("Order the tent"), 1)
+        self.assertIn("(+1)", output)
+        data = json.loads(self.biwak("lantern", "--unread", "--json").stdout)
+        self.assertEqual(len(data), 2)
+        Notification.objects.filter(
+            pk=Notification.objects.order_by("-pk").first().pk
+        ).delete()
         data = json.loads(self.biwak("lantern", "--unread", "--json").stdout)
         self.assertEqual(len(data), 1)
         self.assertTrue(data[0]["mentioned"])

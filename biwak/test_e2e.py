@@ -1352,6 +1352,54 @@ class LiveTest(E2ETestCase):
         self.assertTrue(self.ada.bookmarks.filter(item=self.todo).exists())
         self.assertFalse(self.errors)
 
+    def test_unread_and_read_items_and_one_divider(self):
+        """Unread items have a red dot and bold text, read ones are quiet,
+        and one line (not two) separates the groups (specs/ui-round-2.md)"""
+        from biwak.activity import lantern
+
+        stove = ops.create_todo(
+            todolist=self.todolist, title="Pack the stove", creator=self.ada
+        )
+        for todo in [self.todo, stove]:
+            ops.add_comment(todo, author=self.bob, content="First")
+        lantern.read(self.ada, item=self.todo)
+        ada = self.open(self.ada, reverse("projects"), page=self.page)
+        ada.locator("[data-lantern] > summary").click()
+        menu = ada.locator("[data-lantern-menu]")
+        unread = menu.locator("section.wb-lantern-item.is-unread")
+        read = menu.locator("section.wb-lantern-item:not(.is-unread)")
+        expect(unread).to_have_count(1)
+        expect(read).to_have_count(1)
+        expect(unread).to_contain_text("Pack the stove")
+        expect(unread.locator(".wb-lantern-unread")).to_be_visible()
+        expect(read.locator(".wb-lantern-unread")).to_have_count(0)
+
+        def style(locator, prop):
+            return locator.evaluate(f"el => getComputedStyle(el).{prop}")
+
+        # Quiet: not bold, and not the unread items' color
+        title = read.locator(".wb-lantern-title")
+        self.assertLess(int(style(title, "fontWeight")), 600)
+        self.assertGreaterEqual(
+            int(style(unread.locator(".wb-lantern-title"), "fontWeight")), 600
+        )
+        self.assertNotEqual(
+            style(title, "color"), style(unread.locator(".wb-lantern-title"), "color")
+        )
+        self.assertNotEqual(
+            style(read.locator(".wb-lantern-entry"), "color"),
+            style(unread.locator(".wb-lantern-entry"), "color"),
+        )
+        # One divider: the unread group's border, no rule on top of it
+        expect(menu.locator("hr")).to_have_count(0)
+        self.assertEqual(style(unread, "borderBottomWidth"), "1px")
+        self.assertEqual(style(read, "borderTopWidth"), "0px")
+        # Wide: 34rem, kept on the screen
+        box = menu.bounding_box()
+        self.assertGreater(box["width"], 26 * 16)
+        self.assertLessEqual(box["x"] + box["width"], ada.viewport_size["width"])
+        self.assertFalse(self.errors)
+
     def test_a_lantern_entry_is_a_link_which_reads(self):
         """Its address shows on hovering; a middle click opens a new tab and
         reads the item's notifications all the same"""

@@ -46,6 +46,16 @@ all merged.
    the `<hr>`. Drop the `<hr>` where a group's border already separates
    them, or the last border before an `<hr>`.
 
+**Status (part A):** built (2026-11-21, CLI 0.27.0). Unread items have the
+red dot (`.wb-lantern-unread`), read ones are quiet (secondary color, not
+bold) in the menu and on the page; the menu is 34rem wide; the count,
+its tooltip and `/lantern/count/` count items (`lantern.unread_count()`,
+`unread_counts()` gives both numbers); the `<hr>`s are gone, the items'
+borders separate the groups. Decided on the way: the API's list had no
+`unread` before, so it now answers `unread` (notifications) and
+`unread_items` next to `results`, `biwak lantern` prints one row per item
+("(+N)" for more entries; `--json` stays the entries).
+
 **Done when:**
 - Django tests for the count by items (several notifications on one
   item count once), the API's two numbers, and the markup of read and

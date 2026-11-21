@@ -1786,7 +1786,7 @@ def notifications(level, delivery, project, item, as_json):
 @click.option("--limit", default=50, show_default=True, help="At most this many.")
 @json_option
 def lantern(unread, mentions, read_item, read_all, limit, as_json):
-    """Your notifications, newest first, or mark them read"""
+    """Your notifications by item, newest first, or mark them read"""
     if read_item is not None and read_all:
         terminate("An item or --all, not both.")
     if read_item is not None or read_all:
@@ -1805,18 +1805,24 @@ def lantern(unread, mentions, read_item, read_all, limit, as_json):
     entries = paginate("lantern/", params, limit=limit)
     if as_json:
         return echo_json(entries)
-    t = table("When", "", "Person", "Action", "Item", "What", "")
+    # One row per item with its newest entry first, as the menu groups them
+    groups = {}
     for entry in entries:
+        groups.setdefault((entry["event"]["item"] or {}).get("id"), []).append(entry)
+    t = table("When", "", "Person", "Action", "Item", "What", "")
+    for item_id, group in groups.items():
+        entry = group[0]
         event = entry["event"]
         item = event["item"] or {}
+        more = f" (+{len(group) - 1})" if len(group) > 1 else ""
         t.add_row(
             event["created_at"][:16].replace("T", " "),
-            ("" if entry["read"] else "new")
-            + (" @" if entry["mentioned"] else "")
+            ("new" if any(not e["read"] for e in group) else "")
+            + (" @" if any(e["mentioned"] for e in group) else "")
             + (" bookmarked" if entry["bookmarked"] else ""),
             event["actor"]["short_name"],
-            event["action"].replace("_", " "),
-            str(item.get("id", "")),
+            event["action"].replace("_", " ") + more,
+            str(item_id or ""),
             item.get("title", ""),
             clients(item),
         )

@@ -55,8 +55,17 @@ def wanted(notifications, user):
     return _deliverable(notifications, user)
 
 
+def unread_counts(user):
+    """``(notifications, items)``: how many unread notifications the person
+    has, and about how many items (the menu groups by item)"""
+    unread = wanted(list(notifications_for(user, unread=True)), user)
+    return len(unread), len({n.event.item_id for n in unread})
+
+
 def unread_count(user):
-    return len(wanted(list(notifications_for(user, unread=True)), user))
+    """The number of entries the menu shows as unread: the items with unread
+    notifications, not the notifications (decided 2026-11-21)"""
+    return unread_counts(user)[1]
 
 
 def prepare(notifications, user):

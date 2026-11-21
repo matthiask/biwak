@@ -10,7 +10,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from biwak.accounts.models import MailDelivery, NotificationLevel
+from biwak.accounts.models import APIToken, MailDelivery, NotificationLevel
 from biwak.activity import lantern, mentions
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Event, Notification
@@ -334,7 +334,8 @@ class ReadingTest(LanternTestCase):
         self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="Two"))
         self.comment(self.secret, "Three")
         self.client.force_login(self.bob)
-        self.assertEqual(lantern.unread_count(self.bob), 3)
+        # Three notifications, two items
+        self.assertEqual(lantern.unread_counts(self.bob), (3, 2))
         menu = self.client.get(reverse("lantern_menu")).content.decode()
         notification = Notification.objects.get(
             user=self.bob, event__data__comment=comment.pk
@@ -807,3 +808,64 @@ class AssignedAndMentionedTest(LanternTestCase):
         self.client.force_login(self.bob)
         page = self.client.get(reverse("lantern")).content.decode()
         self.assertIn("assigned you, Cleo Example.", page)
+
+
+class CountByItemsTest(LanternTestCase):
+    """The count is the number of entries the menu shows: the items with
+    unread notifications (decided 2026-11-21)"""
+
+    def test_several_notifications_on_one_item_count_once(self):
+        for text in ["One", "Two", "Three"]:
+            self.comment(self.todo, text)
+        self.comment(self.secret, "Four")
+        self.assertEqual(lantern.unread_counts(self.bob), (4, 2))
+        self.assertEqual(lantern.unread_count(self.bob), 2)
+        # A client only counts what it sees
+        self.assertEqual(lantern.unread_counts(self.cleo), (3, 1))
+        self.client.force_login(self.bob)
+        self.assertEqual(
+            self.client.get(reverse("lantern_count")).json(), {"unread": 2}
+        )
+        lantern.read(self.bob, item=self.todo)
+        self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
+
+    def test_the_api_has_both_numbers(self):
+        for text in ["One", "Two"]:
+            self.comment(self.todo, text)
+        self.comment(self.secret, "Three")
+        _token, secret = APIToken.create_for(user=self.bob, title="T", access="read")
+        data = self.client.get(
+            "/api/v1/lantern/", headers={"authorization": f"Bearer {secret}"}
+        )
+        self.assertEqual(data.status_code, 200)
+        data = data.json()
+        self.assertEqual((data["unread"], data["unread_items"]), (3, 2))
+        self.assertEqual(len(data["results"]), 3)
+
+
+class UnreadMarkupTest(LanternTestCase):
+    """Unread items have a dot and are told apart from read ones"""
+
+    def test_read_and_unread_items_in_the_menu_and_on_the_page(self):
+        self.comment(self.todo, "One")
+        self.comment(self.secret, "Two")
+        lantern.read(self.bob, item=self.todo)
+        self.client.force_login(self.bob)
+        for name in ["lantern_menu", "lantern"]:
+            with self.subTest(name=name):
+                html = self.client.get(reverse(name)).content.decode()
+                # Not the navigation's
+                html = html.split("<main", 1)[-1]
+                sections = html.split('<section class="wb-lantern-item')[1:]
+                self.assertEqual(len(sections), 2)
+                unread = next(s for s in sections if "Budget" in s)
+                read = next(s for s in sections if "Order the tent" in s)
+                self.assertTrue(unread.startswith(" is-unread"))
+                self.assertIn("wb-lantern-unread", unread)
+                self.assertIn("wb-lantern-entry is-unread", unread)
+                self.assertFalse(read.startswith(" is-unread"))
+                self.assertNotIn("wb-lantern-unread", read)
+                self.assertNotIn("wb-lantern-entry is-unread", read)
+                # No headings, and no rule on top of the items' borders
+                self.assertNotIn("<hr", html)
+                self.assertNotIn(">Read<", html)
