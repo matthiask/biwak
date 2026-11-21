@@ -1393,6 +1393,22 @@ class LiveTest(E2ETestCase):
         expect(ada.locator("#live-header")).to_contain_text("Bob")
         self.assertFalse(self.errors)
 
+    def test_the_timelines_lines_appear_and_go(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        lines = ada.locator("#live-comments .wb-timeline-line")
+        expect(lines).to_have_count(0)
+        bob.get_by_role("button", name="Complete").click()
+        bob.wait_for_load_state()
+        expect(lines).to_have_count(1)
+        expect(lines).to_contain_text("Bob completed this")
+        expect(lines).to_have_class(re.compile("wb-live-new"))
+        # Reopened soon after: the completing is gone (feed.md)
+        bob.get_by_role("button", name="Reopen").click()
+        bob.wait_for_load_state()
+        expect(lines).to_have_count(0)
+        self.assertFalse(self.errors)
+
     def test_a_row_slides_in_and_the_lantern_dot_pulses(self):
         ada = self.login(self.ada)
         self.watch_classes(ada)

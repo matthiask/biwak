@@ -1499,6 +1499,28 @@ button.wb-signal:hover {
   margin-top: 0.5rem;
 }
 
+/* The to-do's timeline (specs/timeline.md): what happened, between the comments */
+.wb-timeline-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem 0.25rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+}
+
+.wb-timeline-line strong {
+  color: var(--bs-body-color);
+  font-weight: 600;
+}
+
+.wb-timeline-icon {
+  flex: none;
+  display: inline-flex;
+  width: 1.25rem;
+  justify-content: center;
+}
+
 .wb-excerpt {
   display: -webkit-box;
   -webkit-box-orient: vertical;

@@ -505,7 +505,21 @@ def assign(item, users, *, actor, mentioned=None, assigned_by=None):
 
 @transaction.atomic
 def unassign(item, users, *, actor):
-    item.todo.assignees.remove(*users)
+    """Removes assignees; those who were assigned are recorded
+    (``UNASSIGNED``, "Ada removed Bob" on the timeline, nobody is told)"""
+    todo = item.todo
+    removed = [u for u in users if todo.assignees.filter(pk=u.pk).exists()]
+    if not removed:
+        return []
+    todo.assignees.remove(*removed)
+    record(
+        actor=actor,
+        action=Action.UNASSIGNED,
+        project=item.project,
+        item=item,
+        assignees=[u.pk for u in removed],
+    )
+    return removed
 
 
 _UNCHANGED = object()
@@ -536,6 +550,7 @@ def update_todo(
     todo = Todo.objects.get(item=item)
     item.todo = todo
     previous = f"{item.title}\n\n{todo.notes}"
+    title_was, due_was = item.title, todo.due_on
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -567,9 +582,26 @@ def update_todo(
     if fields:
         todo.save(update_fields=fields)
     if edited or fields:
-        # Edits merge into one event per editing session (record())
+        # Edits merge into one event per editing session (record()); what
+        # changed and the new title and due date, for the timeline
+        # (specs/timeline.md)
+        changed = (["title"] if edited else []) + [
+            "recurrence" if name.startswith("recurrence") else name for name in fields
+        ]
+        extra = {"fields": list(dict.fromkeys(changed))}
+        # What it was before, so the timeline can tell a change which
+        # went back (the first one stays when edits merge, record())
+        if edited:
+            extra["title_was"] = title_was
+        if "due_on" in fields:
+            extra["due_on"] = todo.due_on.isoformat() if todo.due_on else None
+            extra["due_was"] = due_was.isoformat() if due_was else None
         event = record(
-            actor=actor, action=Action.EDITED, project=item.project, item=item
+            actor=actor,
+            action=Action.EDITED,
+            project=item.project,
+            item=item,
+            **extra,
         )
         mentioned = mentions.update(
             item,

@@ -1,0 +1,279 @@
+"""The to-do page's timeline (specs/timeline.md): the comments and what
+happened to the to-do between them, oldest first, one list.
+
+The events come from ``Event.objects.visible_to()``, so a client sees only
+those of the time the to-do was visible to them; the lists' names are
+resolved like the feed's (``feed.add_target_lists()``). Consecutive changes
+of the same person within ten minutes become one line.
+"""
+
+import dataclasses
+import datetime as dt
+
+from django.utils.formats import date_format
+from django.utils.text import get_text_list
+from django.utils.translation import gettext as _
+
+from biwak.activity import feed, mentions
+from biwak.activity.models import Action, Event
+
+
+# Consecutive changes of one person within this time of each other are one
+# line (the editing session of ``record()``, the undo of completing)
+MERGE_WINDOW = dt.timedelta(minutes=10)
+
+# What the timeline tells; edits only when they changed the title or the
+# due date
+ACTIONS = [
+    Action.COMPLETED,
+    Action.REOPENED,
+    Action.MOVED,
+    Action.ASSIGNED,
+    Action.UNASSIGNED,
+    Action.EDITED,
+    Action.TRASHED,
+    Action.RESTORED,
+]
+# What an edit tells
+EDIT_FIELDS = ("title", "due_on")
+
+
+def _edit_fields(event):
+    return [f for f in event.data.get("fields", []) if f in EDIT_FIELDS]
+
+
+def _kind(event):
+    """What the line's icon shows (``_timeline_line.html`` has the icons)"""
+    if event.action == Action.EDITED:
+        return "due" if _edit_fields(event) == ["due_on"] else "title"
+    return str(event.action)
+
+
+def _due(value):
+    if not value:
+        return _("removed the due date")
+    return _("set the due date to %(date)s") % {
+        "date": date_format(dt.date.fromisoformat(value), "j. M Y")
+    }
+
+
+# Pairs which undo each other: group -> value of each action
+TOGGLES = {
+    Action.COMPLETED: ("done", True),
+    Action.REOPENED: ("done", False),
+    Action.TRASHED: ("trash", True),
+    Action.RESTORED: ("trash", False),
+}
+
+
+UNKNOWN = object()
+
+
+class Effect:
+    """One thing an event did: ``key`` says what it was about (a later
+    effect on the same key replaces it), ``value`` what it set,
+    ``make(it)`` the phrase"""
+
+    def __init__(self, kind, key, value, make, was=UNKNOWN):
+        self.kind, self.key, self.value, self.make = kind, key, value, make
+        # What it was before (title, due date), if the event says
+        self.was = was
+
+
+def _move(event, it):
+    data = event.data
+    if "group" in data:
+        if data["group"]:
+            to = mentions.plain(data["group"])
+            return _("moved %(it)s to %(to)s") % {"it": it, "to": to}
+        return _("moved %(it)s out of its group") % {"it": it}
+    # Another list's name only if the viewer may see it
+    to = mentions.plain(event.target_list) or _("another list")
+    return _("moved %(it)s to %(to)s") % {"it": it, "to": to}
+
+
+def effects(event):
+    """What the event did, as a list of ``Effect``"""
+    data = event.data
+    action = event.action
+    if action in TOGGLES:
+        group, value = TOGGLES[action]
+        word = {
+            Action.COMPLETED: _("completed %(it)s"),
+            Action.REOPENED: _("reopened %(it)s"),
+            Action.TRASHED: _("trashed %(it)s"),
+            Action.RESTORED: _("restored %(it)s"),
+        }[action]
+        return [Effect(str(action), group, value, lambda it: word % {"it": it})]
+    match action:
+        case Action.MOVED:
+            key = "group" if "group" in data else "list"
+            return [Effect("moved", key, None, lambda it: _move(event, it))]
+        case Action.ASSIGNED | Action.UNASSIGNED:
+            sign = action == Action.ASSIGNED
+            ids = event.data.get("assignees", [])
+            names = getattr(event, "assignee_by_id", {})
+            # Only those the viewer may know; "someone" if nobody
+            known = [pk for pk in ids if pk in names]
+            if ids and not known:
+                return [Effect(str(action), ("person", None), sign, _("someone"))]
+            return [
+                Effect(str(action), ("person", pk), sign, names[pk]) for pk in known
+            ]
+        case Action.EDITED:
+            result = []
+            fields = _edit_fields(event)
+            if "title" in fields:
+                title = mentions.plain(data.get("title", ""))
+                text = _("changed the title to “%(title)s”") % {"title": title}
+                was = data.get("title_was", UNKNOWN)
+                if was is not UNKNOWN:
+                    was = mentions.plain(was)
+                if was != title:
+                    result.append(Effect("title", "title", title, lambda it: text, was))
+            if "due_on" in fields:
+                value = data.get("due_on")
+                if data.get("due_was", UNKNOWN) != value:
+                    result.append(
+                        Effect(
+                            "due",
+                            "due",
+                            value,
+                            lambda it, v=value: _due(v),
+                            data.get("due_was", UNKNOWN),
+                        )
+                    )
+            return result
+    return []
+
+
+def combine(events):
+    """The effects of several events one after the other, without what
+    cancelled out (assigning then removing the
+    same person, completing then reopening, setting the due date and
+    removing it) and with only the last of what was set several times (the
+    title, the due date, the place it was moved to)"""
+    result = []
+    for event in events:
+        for effect in effects(event):
+            old = next((e for e in result if e.key == effect.key), None)
+            if old is not None:
+                result.remove(old)
+                if effect.key in ("title", "due"):
+                    # Back to what it was before the first change?
+                    effect.was = old.was
+                    if effect.was is not UNKNOWN and effect.was == effect.value:
+                        continue
+                elif effect.key not in ("list", "group") and old.value != effect.value:
+                    continue
+            result.append(effect)
+    return result
+
+
+def phrases(events):
+    """The phrases of ``combine(events)``: people assigned (or removed)
+    together, the first phrase about "this", the later ones "it" """
+    said = []
+    effects_ = combine(events)
+    people = {True: [], False: []}
+    for effect in effects_:
+        if isinstance(effect.key, tuple):
+            people[effect.value].append(effect.make)
+    placed = set()
+    for effect in effects_:
+        if isinstance(effect.key, tuple):
+            if effect.value in placed:
+                continue
+            placed.add(effect.value)
+            verb = _("assigned %(people)s") if effect.value else _("removed %(people)s")
+            names = list(dict.fromkeys(people[effect.value]))
+            said.append(
+                lambda it, verb=verb, names=names: (
+                    verb % {"people": get_text_list(names, _("and"))}
+                )
+            )
+        else:
+            said.append(effect.make)
+    return [make(_("it") if n else _("this")) for n, make in enumerate(said)]
+
+
+@dataclasses.dataclass
+class Line:
+    """One or more events of one person, oldest first"""
+
+    events: list
+
+    @property
+    def is_line(self):
+        return True
+
+    @property
+    def actor(self):
+        return self.events[0].actor
+
+    @property
+    def created_at(self):
+        return self.events[-1].created_at
+
+    @property
+    def pk(self):
+        """Stable while later changes merge in (the live page tells the
+        line by it)"""
+        return self.events[0].pk
+
+    @property
+    def kind(self):
+        kept = combine(self.events)
+        return kept[0].kind if kept else _kind(self.events[0])
+
+    @property
+    def text(self):
+        return get_text_list(phrases(self.events), _("and"))
+
+
+def relevant(events, user):
+    """The events the timeline tells: not edits of anything but the title
+    and the due date"""
+    return [
+        event
+        for event in events
+        if not (event.action == Action.EDITED and not _edit_fields(event))
+    ]
+
+
+def merge(entries):
+    """Comments and lines, oldest first: a line takes in the next change if
+    it's the same person's, right after (no comment in between) and within
+    ``MERGE_WINDOW`` of the line's last"""
+    result = []
+    for entry in entries:
+        if isinstance(entry, Line) and result and isinstance(result[-1], Line):
+            last = result[-1]
+            if (
+                last.events[-1].actor_id == entry.events[0].actor_id
+                and entry.events[0].created_at - last.created_at <= MERGE_WINDOW
+            ):
+                last.events.extend(entry.events)
+                continue
+        result.append(entry)
+    return result
+
+
+def entries_for(item, user, comments):
+    """Comments and event lines of the to-do, oldest first: two queries and
+    what ``feed.attach()`` needs (the people's names, the lists' titles)"""
+    events = list(
+        Event.objects
+        .visible_to(user)
+        .filter(item=item, action__in=ACTIONS)
+        .select_related("actor", "project", "item")
+        .order_by("created_at", "pk")
+    )
+    events = relevant(events, user)
+    feed.attach(events, user)
+    entries = [Line([event]) for event in events]
+    entries.extend(comments)
+    # Comments before events at the same time
+    entries.sort(key=lambda e: (e.created_at, isinstance(e, Line), e.pk))
+    # Lines whose changes cancelled out are gone
+    return [e for e in merge(entries) if not isinstance(e, Line) or e.text]
