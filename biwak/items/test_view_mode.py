@@ -292,7 +292,9 @@ class AssigneePickerTest(ViewModeBase):
     def test_the_inline_form_uses_the_same_select(self):
         page = self.client.get(self.todolist.get_absolute_url())
         self.assertContains(page, "data-assignee-picker")
-        self.assertContains(page, "wb-assignee-select")
+        self.assertRegex(
+            page.content.decode(), r'<select\s+name="assignees"\s+multiple'
+        )
         self.assertNotContains(page, 'type="checkbox" name="assignees"')
         self.client.force_login(self.cleo)
         page = self.client.get(self.todolist.get_absolute_url())

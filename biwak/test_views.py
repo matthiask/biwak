@@ -276,7 +276,7 @@ class ViewsTest(TestCase):
         response = self.client.get(url)
         self.assertContains(response, "data-add-todo-form", count=1)
         self.assertRegex(
-            response.content.decode(), rf'name="assignees"\s+value="{self.cleo.pk}"'
+            response.content.decode(), rf'<option\s+value="{self.cleo.pk}"'
         )
         response = self.client.post(
             url,
