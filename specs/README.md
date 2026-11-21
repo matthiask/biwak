@@ -36,7 +36,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `search.md` | | built | every kind of item | cheaper |
 | `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
 | `rule-widget.md` | one control for repeat rules | next | to-dos, check-ins | cheaper, review the round trips |
-| `keyboard.md` | command palette (Ctrl+K), shortcuts | next | search | cheaper |
+| `keyboard.md` | command palette (Ctrl+K), shortcuts | built 2026-11-21 | search | cheaper |
 | `lantern.md` | the lantern (notifications in the app), live updates | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
 | `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
 | `import-basecamp.md` | | open | every kind of item | cheaper |

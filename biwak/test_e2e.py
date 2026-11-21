@@ -890,13 +890,21 @@ class PageTest(E2ETestCase):
         self.assertEqual(shown.get_attribute("data-theme-icon"), "light")
         toggle.click()
         self.assertEqual(html.get_attribute("data-bs-theme"), "dark")
-        self.assertEqual(page.evaluate("localStorage.getItem('theme')"), "dark")
+        # Saved for the person, not the browser (it follows them)
+        self.wait_for_theme("dark")
+        self.assertIsNone(page.evaluate("localStorage.getItem('theme')"))
         # Remembered on the next page, before it renders
         page.reload()
         self.assertEqual(html.get_attribute("data-bs-theme"), "dark")
         toggle.click()
         self.assertEqual(toggle.get_attribute("title"), "Theme: Auto")
-        self.assertIsNone(page.evaluate("localStorage.getItem('theme')"))
+        self.wait_for_theme("auto")
+
+    def wait_for_theme(self, theme):
+        self.page.wait_for_function(
+            "theme => fetch('/api/v1/me/').then(r => r.json()).then(m => m.theme === theme)",
+            arg=theme,
+        )
 
     def test_copy(self):
         CalendarToken.renew(self.ada)
@@ -1463,7 +1471,7 @@ class KeyboardTest(E2ETestCase):
         page.keyboard.press("?")
         dialog = page.locator("#wb-shortcuts")
         expect(dialog).to_be_visible()
-        expect(dialog).to_contain_text("Command palette")
+        expect(dialog).to_contain_text("command palette")
         page.keyboard.press("Escape")
         expect(dialog).not_to_be_visible()
 

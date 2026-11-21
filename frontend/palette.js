@@ -92,7 +92,7 @@ export function runAction(action, { status } = {}) {
 // A page which opens at a field (#new-list) focuses it
 function focusHash() {
   const id = decodeURIComponent(window.location.hash.slice(1))
-  const element = id && document.getElementById(id)
+  const element = id ? document.getElementById(id) : null
   if (element?.matches("input, textarea, select")) focusElement(element)
 }
 

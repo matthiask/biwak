@@ -115,6 +115,13 @@ What every part does the same way. Look at how the core does it
    `list-group-item` in a list group, else a `text-body-secondary`
    paragraph (decided 2026-11-21). Disclosures that float (menus, the
    reaction picker) close on a click elsewhere and Escape (`data-dismiss`).
+   Rows people move through with j/k (to-dos, messages, feed entries,
+   search results) carry `data-kb-row`, `data-kb-open` and, for to-dos,
+   `data-kb-complete`; what a page offers in the command palette and as
+   shortcuts is decided on the server in `biwak/palette/actions.py` (with
+   the same permission checks as the buttons) and a new kind of page or
+   action goes there, with a test on the rendered JSON. Colors are palette
+   tokens (`--wb-palette-*`, `--wb-accent-*`), never hard-coded violet.
 6. **API.** Endpoints in the app's `api.py`, registered in
    `biwak/api.py`, following `biwak/api_conventions.py`
    (`visible_to_clients` on every item, Markdown plus `*_html`, cursor
