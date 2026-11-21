@@ -6,7 +6,9 @@ organization is a text on each person (`User.organization`): two people
 belong together only if the text matches exactly, nothing prevents typos,
 and renaming means editing everyone.
 
-**Status:** open (spec, 2026-11-21).
+**Status:** built (2026-11-21), see "Built" below; open: the questions
+under "Decided meanwhile". Not built: the people page grouping members by
+organization ("Later").
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The rules who
@@ -143,3 +145,26 @@ decides who sees all-access projects.
   collaborators (staff who aren't Basecamp employees) get theirs, which
   makes collaborators partners; employees the installation's own if one
   is marked, else none. The dry run's list says "partner" and the company.
+- **The admin:** organizations with their people count; marking one as
+  the installation's own moves the mark (`mark_own()`); a person's
+  organization with autocomplete.
+
+## Decided meanwhile (2026-11-21, to be confirmed)
+
+- **Staff without an organization** count as the installation's own: an
+  installation without organizations set up behaves as before. Only staff
+  in another organization are partners.
+- **Partners** learn about members only, like clients (the `@` list,
+  mentions, assignees, subscribers), and don't create projects, add or
+  invite people or manage organizations: those forms list everybody.
+  They edit and archive the projects they're in, like other staff.
+- **Managing organizations** is for the installation's own staff (the
+  spec's "all staff", partners left out for the reason above).
+- **The new-project modal** adds the project at once without
+  organizations involved; people invited there are clients; the staff
+  list is the installation's own staff (partners come with their
+  organization).
+- **Inviting** someone who exists doesn't change their organization; a
+  domain matching the installation's own preselects it for admins only.
+- **Shown with the organization** ("Ada, Example Ltd"): clients and
+  partners, not the installation's own staff.

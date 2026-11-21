@@ -1,8 +1,15 @@
+from django import forms
 from django.contrib import admin
 from django.db.models import Count
 
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
+
+
+class OrganizationForm(forms.ModelForm):
+    def _get_validation_exclusions(self):
+        # Marking another one moves the mark (save_model()): not a clash
+        return super()._get_validation_exclusions() | {"is_own"}
 
 
 @admin.register(Organization)
@@ -14,6 +21,7 @@ class OrganizationAdmin(admin.ModelAdmin):
     list_filter = ["is_own"]
     search_fields = ["name", "domains"]
     fields = ["name", "domains", "is_own"]
+    form = OrganizationForm
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(people_count=Count("people"))

@@ -179,7 +179,7 @@ def project_members(request, project_id: int):
     project = project_for(request, project_id)
     return [
         member_out(project, m.user, request.user)
-        for m in project.memberships.select_related("user").order_by(
+        for m in project.memberships.select_related("user__organization").order_by(
             "user__is_client", "user__full_name"
         )
     ]

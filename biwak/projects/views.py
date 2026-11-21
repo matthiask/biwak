@@ -357,9 +357,9 @@ def project_people(request, pk):
             "project": project,
             "memberships": [
                 (m, notify_row(request.user, project, m.user))
-                for m in project.memberships.select_related("user").order_by(
-                    "user__is_client", "user__full_name"
-                )
+                for m in project.memberships.select_related(
+                    "user__organization"
+                ).order_by("user__is_client", "user__full_name")
             ],
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
