@@ -2365,7 +2365,7 @@ body:has(.wb-modal[open]) {
   border-bottom-color: var(--bs-success-border-subtle);
 }
 
-/* The assignee picker (assignees.js, specs/todos.md, "Assignees"): pills and a field
+/* The people picker (people-picker.js, specs/todos.md, "Assignees"): pills and a field
    with a list below, which is positioned by the picker's own box */
 .wb-picker {
   position: relative;

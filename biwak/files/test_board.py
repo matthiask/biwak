@@ -8,10 +8,12 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
+from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event
 from biwak.files import board, operations, queries
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
+from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
 
@@ -154,6 +156,44 @@ class MessageNewTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         form = self.client.get(self.url()).context["form"]
         self.assertEqual(form["notify"].value(), "everybody")
+
+    def test_these_people_are_those_everybody_reaches(self):
+        """Preselected in "Only these people": whom "Everybody" would reach,
+        not the poster (decided 2026-11-21)"""
+        dan = person("Dan")
+        Membership.objects.create(project=self.project, user=dan)
+        dan.notification_level = NotificationLevel.CONCERNS_ME
+        dan.save()
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url())
+        # An internal message (the switch starts off): not Cleo
+        self.assertEqual(response.context["form"]["people"].value(), [self.bob.pk])
+        # The people picker, shown only with "Only these people"
+        self.assertContains(response, 'data-shown-when="notify=chosen"')
+        self.assertContains(response, "data-people-picker")
+        # Who can be chosen: the members but the poster
+        self.assertEqual(
+            set(response.context["form"].fields["people"].queryset),
+            {self.bob, self.cleo, dan},
+        )
+
+    def test_these_people_of_a_client(self):
+        """What clients post is visible: everybody on "everything" but them"""
+        self.client.force_login(self.cleo)
+        form = self.client.get(self.url()).context["form"]
+        self.assertEqual(set(form["people"].value()), {self.ada.pk, self.bob.pk})
+
+    def test_these_people_stay_as_chosen(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.url(), {"notify": "chosen", "people": [self.cleo.pk]}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["form"]["people"].value(), [str(self.cleo.pk)]
+        )
+        response = self.client.post(self.url(), {"notify": "chosen"})
+        self.assertEqual(response.context["form"]["people"].value(), [])
 
     def post_form(self, user, **data):
         self.client.force_login(user)

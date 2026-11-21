@@ -19,6 +19,7 @@ from biwak.activity.models import (
 from biwak.activity.notify import (
     can_see,
     effective_level,
+    everybody,
     notify,
     notify_people,
     who_can_see,
@@ -348,6 +349,46 @@ class NotifyTest(TestCase):
             notify_people(message, whom=[self.bob, dan], actor=self.ada),
             [self.bob, dan],
         )
+
+
+class EverybodyTest(TestCase):
+    """Whom "Everybody in the project" reaches, also before the item exists
+    (the people preselected in "Only these people", decided 2026-11-21)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.bob, self.cleo])
+        # Own staff see all-access projects, but aren't members
+        person("Dan")
+
+    def test_members_who_see_it(self):
+        self.assertEqual(
+            set(everybody(self.project, visible=False)), {self.ada, self.bob}
+        )
+        self.assertEqual(
+            set(everybody(self.project, visible=True)),
+            {self.ada, self.bob, self.cleo},
+        )
+
+    def test_on_everything_only(self):
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        set_level_override(self.cleo, NotificationLevel.NOTHING, project=self.project)
+        self.assertEqual(everybody(self.project, visible=True), [self.ada])
+
+    def test_the_level_of_the_container(self):
+        todolist = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada
+        )
+        set_level_override(self.bob, NotificationLevel.NOTHING, item=todolist)
+        self.assertEqual(
+            set(everybody(self.project, todolist, visible=False)), {self.ada}
+        )
+        # The same as posting into it
+        todo = ops.create_todo(todolist=todolist, title="One", creator=self.ada)
+        self.assertEqual(everybody(self.project, todo, visible=False), [self.ada])
 
 
 class WhoCanSeeTest(TestCase):

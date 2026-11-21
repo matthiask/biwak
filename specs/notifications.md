@@ -58,6 +58,17 @@ it for the first time.
   `create_upload()` default to nobody (`notify_people()`). Of everybody,
   only those whose level for the item is "everything" are subscribed;
   people chosen by name whatever their level, like adding subscribers.
+- **The form** (`files.common.NotifyForm`, decided 2026-11-21): "These
+  people" shows only while "Only these people" is chosen
+  (`frontend/shown-when.js`; without JavaScript always), in the people
+  picker (`PeopleField`, the assignees' and subscribers' one). Preselected
+  are those "Everybody" would reach: `notify.everybody()`, the same
+  function `notify_people()` uses, for the container the item goes into
+  (a folder, or the top level) and the visibility the form starts with
+  (the folder's; at the top internal, a client's visible). The poster is
+  neither preselected nor offered. A form shown again with errors keeps
+  what was chosen. A doc begun as a draft has the same preselection in
+  "Tell people about it?" (those not subscribed yet).
 
 ## Mentions
 

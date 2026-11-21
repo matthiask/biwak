@@ -11,7 +11,9 @@ from django.urls import reverse
 from biwak.activity.models import Event
 from biwak.items import operations as ops
 from biwak.items.models import Item
+from biwak.projects.models import Membership
 from biwak.test_e2e import ASGIServerThread, E2ETestCase, expect, uvicorn
+from biwak.test_utils import person
 
 
 class TilesTest(E2ETestCase):
@@ -249,6 +251,46 @@ class UploadTest(E2ETestCase):
         self.assertEqual(self.files_in(self.minutes), ["a.txt", "b.txt"])
         self.assertEqual(self.errors, [])
 
+    def test_only_these_people(self):
+        """ "These people" only with "Only these people", in the people
+        picker, those "Everybody" reaches preselected (decided 2026-11-21)"""
+        dan = person("Dan")
+        Membership.objects.create(project=self.project, user=dan)
+        page = self.page
+        self.goto(page, self.minutes)
+        page.get_by_role("link", name="Upload files").click()
+        dialog = page.get_by_role("dialog", name="Upload files")
+        dialog.get_by_label("Files").set_input_files([
+            {"name": "a.txt", "mimeType": "text/plain", "buffer": b"A"},
+        ])
+        people = dialog.locator("[data-shown-when]")
+        expect(people).to_be_hidden()
+        dialog.get_by_label("Only these people").check()
+        expect(people).to_be_visible()
+        # Cleo and Dan see the visible folder; Ada posts
+        pills = dialog.locator(".wb-pill")
+        expect(pills).to_have_text([
+            re.compile("Cleo"),
+            re.compile("Dan"),
+        ])
+        dialog.get_by_role("button", name="Remove Dan").click()
+        dialog.locator(".wb-picker-input").fill("da")
+        dialog.locator(".wb-picker-input").press("Enter")
+        dialog.get_by_role("button", name="Remove Cleo").click()
+        expect(pills).to_have_text([re.compile("Dan")])
+        dialog.get_by_label("Everybody in the project").check()
+        expect(people).to_be_hidden()
+        dialog.get_by_label("Only these people").check()
+        expect(pills).to_have_text([re.compile("Dan")])
+        dialog.get_by_role("button", name="Upload").click()
+        expect(page.locator(".wb-tile-file")).to_have_count(1)
+        upload = Item.objects.get(parent=self.minutes, kind="file")
+        self.assertEqual(
+            set(upload.subscriptions.values_list("user", flat=True)),
+            {self.ada.pk, dan.pk},
+        )
+        self.assertEqual(self.errors, [])
+
     def test_an_error_stays_on_its_row(self):
         page = self.page
         self.goto(page, self.minutes)
@@ -339,13 +381,14 @@ class NewDocTest(E2ETestCase):
         page.get_by_role("link", name="Done").click()
         dialog = page.get_by_role("dialog", name="Tell people about it?")
         expect(dialog).to_be_visible()
-        dialog.locator(".wb-picker-input").click()
-        dialog.locator(".wb-picker-list li", has_text="Cleo").click()
+        # Preselected: whom posting to everybody would have reached
+        expect(dialog.locator(".wb-pill")).to_have_text([re.compile("Cleo")])
         dialog.get_by_label("Note").fill("Our plan")
         dialog.get_by_role("button", name="Tell them").click()
         page.wait_for_url(f"**{draft.get_absolute_url()}")
         event = Event.objects.get(item=draft, action="shared")
         self.assertEqual(event.data["note"], "Our plan")
+        self.assertEqual(event.data["people"], [self.cleo.pk])
         # Asked once: "Done" now just leaves
         page.goto(f"{self.live_server_url}{reverse('doc_edit', args=[draft.pk])}")
         page.get_by_role("link", name="Done").click()

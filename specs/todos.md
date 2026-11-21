@@ -22,7 +22,8 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   actor, or `assigned_by={user pk: assigner}`; the next recurring to-do
   keeps each assignment's assigner, the importer leaves it empty
   (Basecamp doesn't say).
-- **The picker** (`frontend/assignees.js`, `AssigneeField`): pills with
+- **The picker** (`frontend/people-picker.js`, `PeopleField`, also for
+  subscribers and whom to notify): pills with
   ×, a field that opens the list on focus and filters while typing
   (Up/Down, Enter, Escape, Backspace removes the last pill); non-members
   say "not in the project yet". Without JavaScript the `<select

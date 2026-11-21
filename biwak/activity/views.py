@@ -38,7 +38,7 @@ from biwak.activity.operations import (
     subscribable_people,
     unsubscribe as unsubscribe_from,
 )
-from biwak.forms import AssigneeField, Form, PersonChoiceField, next_url
+from biwak.forms import Form, PeopleField, PersonChoiceField, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
@@ -291,7 +291,7 @@ class SubscribersForm(Form):
     people who can see the item and whom the person may know, the picker
     of the assignees; "Tell them now" with a note"""
 
-    people = AssigneeField(
+    people = PeopleField(
         label=_("Add people"), queryset=User.objects.none(), required=True
     )
     notify = forms.BooleanField(

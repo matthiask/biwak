@@ -80,8 +80,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   someone" (also finding the address), the feed's person filter, a
   check-in's time zone; a new long select gets it too. Options say who
   someone is ("Ada Example · Example Client Ltd", "staff" for staff
-  without an organization). Without JavaScript the plain select. The
-  assignee picker is its own widget (`todos.md`, "Assignees").
+  without an organization). Without JavaScript the plain select. Choosing
+  several people (assignees, subscribers, whom to notify) is the people
+  picker, its own widget (`todos.md`, "Assignees").
 - **Form labels show with `capfirst`** in the templates, whatever case
   they're written in (2026-11-21: model `verbose_name`s are lowercase;
   one translation serves both).

@@ -525,8 +525,8 @@ def rule_widget(bound_field, uid, *, posted=False):
 @register.simple_tag
 def assignee_attrs():
     """The attributes of the inline form's select of people
-    (``frontend/assignees.js``)"""
-    return format_html_join(" ", '{}="{}"', forms.assignee_picker_attrs().items())
+    (``frontend/people-picker.js``)"""
+    return format_html_join(" ", '{}="{}"', forms.people_picker_attrs().items())
 
 
 @register.simple_tag

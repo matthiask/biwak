@@ -78,7 +78,7 @@ class MessageForm(NotifyForm, MessageEditForm):
     field_order = ["title", "content", "category", "visible", "notify", "people"]
 
     def __init__(self, *args, user, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, user=user, **kwargs)
         if user.is_client:
             # What clients create is visible to clients (specs/access.md)
             del self.fields["visible"]

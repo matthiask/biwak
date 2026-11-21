@@ -1,5 +1,6 @@
-// The assignee picker (specs/todos.md, "Assignees"): a <select multiple
-// data-assignee-picker> of people becomes pills, each with × to remove, and
+// The people picker (specs/todos.md, "Assignees"): a <select multiple
+// data-people-picker> of people (assignees, subscribers, whom to notify)
+// becomes pills, each with × to remove, and
 // a field which opens the list of the others on focus and click and filters
 // while typing. Up and Down choose, Enter or a click picks, Escape closes,
 // Backspace in the empty field takes the last pill away. The options come
@@ -14,7 +15,7 @@ import { avatar, optionAvatar } from "./avatar.js"
 let counter = 0
 
 function attach(select) {
-  const id = select.id || `assignees-${++counter}`
+  const id = select.id || `people-${++counter}`
   const listId = `${id}-list`
   const inputId = `${id}-picker`
   const texts = {
@@ -221,8 +222,8 @@ function attach(select) {
 
 function attachAll(root) {
   const selects = [
-    ...(root.matches?.("select[data-assignee-picker]") ? [root] : []),
-    ...(root.querySelectorAll?.("select[data-assignee-picker]") ?? []),
+    ...(root.matches?.("select[data-people-picker]") ? [root] : []),
+    ...(root.querySelectorAll?.("select[data-people-picker]") ?? []),
   ]
   for (const select of selects) {
     if (select.dataset.pickerReady) continue

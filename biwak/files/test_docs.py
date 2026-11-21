@@ -360,6 +360,16 @@ class TellTest(Fixture, TestCase):
         response = self.client.post(self.tell, {"note": "x"})
         self.assertContains(response, "Pick at least one person.")
 
+    def test_those_everybody_reaches_are_preselected(self):
+        """Whom posting to everybody would have reached (decided
+        2026-11-21): not Cleo (internal), not Ada (its creator)"""
+        self.write()
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertEqual(response.context["form"]["people"].value(), [self.bob.pk])
+        # After an error what was chosen, here nobody
+        response = self.client.post(self.tell, {"note": "x" * 1000})
+        self.assertEqual(response.context["form"]["people"].value(), [])
+
     def test_only_its_creator_is_asked(self):
         self.write()
         self.client.get(self.tell)  # saves

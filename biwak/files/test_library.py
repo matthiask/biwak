@@ -674,6 +674,21 @@ class UploadPageTest(Fixture, TestCase):
         form = self.client.get(self.url()).context["form"]
         self.assertEqual(form["notify"].value(), "everybody")
 
+    def test_these_people_follow_the_folder(self):
+        """Preselected in "Only these people": whom "Everybody" would reach
+        in the folder (decided 2026-11-21)"""
+        self.client.force_login(self.ada)
+        for folder, people in [
+            (None, [self.bob.pk]),
+            (self.private, [self.bob.pk]),
+            (self.public, [self.bob.pk, self.cleo.pk]),
+        ]:
+            response = self.client.get(self.url(folder), headers={"HX-Modal": "true"})
+            self.assertEqual(
+                sorted(response.context["form"]["people"].value()), sorted(people)
+            )
+            self.assertContains(response, 'data-shown-when="notify=chosen"')
+
     def test_a_modal_and_a_page(self):
         self.client.force_login(self.ada)
         response = self.client.get(self.url(self.private), headers={"HX-Modal": "true"})
