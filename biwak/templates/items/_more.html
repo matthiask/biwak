@@ -1,47 +1,11 @@
 {% load biwak i18n %}
-{% comment %}
-  The "More" menu of an item's page: a list's notification level (other
-  items have none: subscribing is the switch, specs/notifications.md,
-  "Levels"), its subscribers, moving, archiving (lists) and trashing (who
-  may change it); `more_history`: the history too, on phones, where the
-  page's header doesn't show its link; each in a modal (frontend/modal.js)
-  which is also a page. `can_change` comes from the page.
-{% endcomment %}
+{# The "More" menu of an item's page; its entries in items/_more_entries.html #}
 <details class="dropdown wb-menu">
   <summary class="btn btn-sm btn-quiet">
     {% translate "More" %}
     {% icon "chevron-down" %}
   </summary>
   <div class="dropdown-menu dropdown-menu-end">
-    {% if more_history and not request.user.is_client %}
-      <a class="dropdown-item wb-phone-only" href="{% url 'item_history' item.pk %}">{% translate "History" %}</a>
-    {% endif %}
-    {% if item.kind == "list" %}
-      <a
-        class="dropdown-item"
-        href="{% url 'item_notifications' item.pk %}"
-        data-modal
-      >{% translate "Notifications…" %}</a>
-    {% endif %}
-    <a
-      class="dropdown-item"
-      href="{% url 'item_subscribers' item.pk %}"
-      data-modal
-    >{% translate "Subscribers…" %}</a>
-    {% if can_change and item.kind == "folder" %}
-      <a class="dropdown-item" href="{% url 'folder_edit' item.pk %}" data-modal>{% translate "Edit…" %}</a>
-    {% endif %}
-    {% if item.kind == "folder" and not request.user.is_client %}
-      <a class="dropdown-item" href="{% url 'folder_order' item.pk %}" data-modal>{% translate "Order…" %}</a>
-    {% endif %}
-    {% move_url item as move %}
-    {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}
-    {% if move and can_change or move and item.kind == "todo" %}
-      <a class="dropdown-item" href="{{ move }}" data-modal>{% translate "Move to…" %}</a>
-    {% endif %}
-    {% if can_change and item.kind == "list" %}{% include "items/_archive_button.html" %}{% endif %}
-    {% if can_change %}
-      <a class="dropdown-item" href="{% url 'item_trash' item.pk %}" data-modal>{% translate "Trash" %}</a>
-    {% endif %}
+    {% include "items/_more_entries.html" %}
   </div>
 </details>

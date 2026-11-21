@@ -17,7 +17,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Trashing asks:** "Move to the trash? It can be restored for 30
   days."
 - **Items' "More" menu** (`items/_more.html`): Move to…, Trash, and
-  "Notifications…" on lists only (`notifications.md`).
+  "Notifications…" on lists only (`notifications.md`). Its entries
+  (`items/_more_entries.html`) are also the "…" menu of the folders'
+  tiles (`files.md`, "Folders").
 - **Click to edit** (2026-11-21: the to-do's page was an edit form, not
   a page to read): the pages of to-dos, messages, files and check-in
   answers show the item; clicking its title, text or facts (or "Edit",

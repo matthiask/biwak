@@ -16,7 +16,7 @@ from django.views.decorators.http import require_GET, require_POST
 from biwak.accounts.models import Color
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
-from biwak.forms import ColorSwatches, Form
+from biwak.forms import ColorSwatches, Form, next_url
 from biwak.items import editing, glance, operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
@@ -218,14 +218,14 @@ def _order(request, project, folder):
         operations.set_ordering(
             folder or project, form.cleaned_data["ordering"], actor=request.user
         )
-        return redirect(library_url(project, folder))
+        return redirect(next_url(request) or library_url(project, folder))
     return form_response(
         request,
         form,
         title=_("Order…"),
         item=folder,
         project=project,
-        cancel_url=library_url(project, folder),
+        cancel_url=next_url(request) or library_url(project, folder),
         intro=_("Folders come first, in the same order. Everybody sees it."),
     )
 
@@ -255,14 +255,14 @@ def folder_edit(request, pk):
             title=form.cleaned_data["title"],
             color=form.cleaned_data["color"],
         )
-        return redirect(item)
+        return redirect(next_url(request) or item)
     return form_response(
         request,
         form,
         title=_("Edit…"),
         item=item,
         parent=item.parent,
-        cancel_url=item.get_absolute_url(),
+        cancel_url=next_url(request) or item.get_absolute_url(),
         submit_label=_("Save"),
     )
 
@@ -321,14 +321,14 @@ def item_move(request, pk):
         except ValueError:
             form.add_error(None, _("A folder can't be moved into itself."))
         else:
-            return redirect(item)
+            return redirect(next_url(request) or item)
     return form_response(
         request,
         form,
         title=_("Move to…"),
         item=item,
         parent=item.parent,
-        cancel_url=item.get_absolute_url(),
+        cancel_url=next_url(request) or item.get_absolute_url(),
         submit_label=_("Move"),
     )
 

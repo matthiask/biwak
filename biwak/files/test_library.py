@@ -1,6 +1,8 @@
+import html
 import io
+import re
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 
 import boto3
 from django.core.files.base import ContentFile
@@ -345,13 +347,14 @@ class LibraryTest(Fixture, TestCase):
         # The grid: only the colored one is tinted
         response = self.client.get(reverse("project_files", args=[self.project.pk]))
         self.assertContains(response, 'data-folder-color="lake"', count=1)
-        self.assertContains(
-            self.client.get(folders["Tinted"].get_absolute_url()),
-            'class="wb-folder-icon" data-folder-color="lake"',
+        self.assertRegex(
+            self.client.get(folders["Tinted"].get_absolute_url()).content.decode(),
+            r'class="wb-folder-icon"\s+data-folder-color="lake"',
         )
-        self.assertNotContains(
-            self.client.get(folders["Plain"].get_absolute_url()), "data-folder-color"
-        )
+        # No color is neutral grey, not the accent (main.css)
+        response = self.client.get(folders["Plain"].get_absolute_url())
+        self.assertNotContains(response, "data-folder-color")
+        self.assertContains(response, 'class="wb-folder-icon"')
         # Edit: the color alone, no event, then none again
         edit = reverse("folder_edit", args=[folders["Plain"].pk])
         response = self.client.get(edit, headers={"HX-Modal": "true"})
@@ -464,6 +467,135 @@ class LibraryTest(Fixture, TestCase):
             ).status_code,
             404,
         )
+
+
+class TileMenuTest(Fixture, TestCase):
+    """Each tile's "…" menu offers what the item's own "More" menu does,
+    its modals coming back to the grid (specs/files.md, "Folders")"""
+
+    def menus(self, user, url):
+        """{item pk: the menu's entries as {label: href}}"""
+        response = self.get(user, url)
+        self.assertEqual(response.status_code, 200)
+        menus = {}
+        for tile in response.content.decode().split("<li>")[1:]:
+            pk = re.search(r'data-tile="(\d+)"', tile)
+            if pk is None:  # ".."
+                self.assertNotIn("wb-tile-menu", tile)
+                continue
+            menu = tile.split('class="dropdown wb-menu wb-tile-menu"')[1]
+            menus[int(pk[1])] = {
+                label: html.unescape(href)
+                for href, label in re.findall(
+                    r'class="dropdown-item"\s+href="([^"]+)"\s+data-modal\s*>([^<]+)<',
+                    menu,
+                )
+            }
+        return menus
+
+    def test_staff_get_what_the_items_pages_offer(self):
+        doc = ops.create_doc(project=self.project, title="Brief", creator=self.ada)
+        root = reverse("project_files", args=[self.project.pk])
+        menus = self.menus(self.bob, root)
+        self.assertEqual(
+            set(menus),
+            {self.public.pk, self.private.pk, doc.pk, self.root_shared.pk}
+            | {self.root_secret.pk},
+        )
+        back = "?next=" + quote(root)
+        self.assertEqual(
+            menus[self.public.pk],
+            {
+                "Subscribers…": reverse("item_subscribers", args=[self.public.pk])
+                + back,
+                "Edit…": reverse("folder_edit", args=[self.public.pk]) + back,
+                "Order…": reverse("folder_order", args=[self.public.pk]) + back,
+                "Move to…": reverse("item_move", args=[self.public.pk]) + back,
+                "Trash": reverse("item_trash", args=[self.public.pk]) + back,
+            },
+        )
+        for item in [doc, self.root_secret]:
+            self.assertEqual(
+                menus[item.pk],
+                {
+                    "Subscribers…": reverse("item_subscribers", args=[item.pk]) + back,
+                    "Move to…": reverse("item_move", args=[item.pk]) + back,
+                    "Trash": reverse("item_trash", args=[item.pk]) + back,
+                },
+            )
+        # The same entries as on the item's page
+        page = self.get(self.bob, doc.get_absolute_url()).content.decode()
+        for href in menus[doc.pk].values():
+            self.assertIn(href.split("?")[0], page)
+
+    def test_clients_get_what_they_may_do(self):
+        mine = ops.create_doc(
+            project=self.project, title="Notes", creator=self.cleo, parent=self.public
+        )
+        url = self.public.get_absolute_url()
+        menus = self.menus(self.cleo, url)
+        self.assertEqual(set(menus), {self.shared_file.pk, mine.pk})
+        back = "?next=" + quote(url)
+        # Staff's file: only the subscribers
+        self.assertEqual(
+            list(menus[self.shared_file.pk]),
+            ["Subscribers…"],
+        )
+        # Their own doc: moving and trashing too
+        self.assertEqual(
+            menus[mine.pk],
+            {
+                "Subscribers…": reverse("item_subscribers", args=[mine.pk]) + back,
+                "Move to…": reverse("item_move", args=[mine.pk]) + back,
+                "Trash": reverse("item_trash", args=[mine.pk]) + back,
+            },
+        )
+        # A folder: no editing, no ordering, at the top level
+        menus = self.menus(self.cleo, reverse("project_files", args=[self.project.pk]))
+        self.assertEqual(list(menus[self.public.pk]), ["Subscribers…"])
+        self.assertNotIn(self.private.pk, menus)
+
+    def test_the_modals_come_back_to_the_grid(self):
+        root = reverse("project_files", args=[self.project.pk])
+        back = {"next": root}
+        self.client.force_login(self.ada)
+        modal = {"HX-Modal": "true"}
+        url = reverse("folder_edit", args=[self.public.pk])
+        response = self.client.get(url, back)
+        self.assertContains(response, f'href="{root}" class="btn btn-quiet"')
+        response = self.client.post(
+            f"{url}?next={root}", {"title": "Shared"}, headers=modal
+        )
+        assert_modal_redirect(self, response, root)
+        response = self.client.post(
+            f"{reverse('item_move', args=[self.root_secret.pk])}?next={root}",
+            {"folder": self.private.pk},
+            headers=modal,
+        )
+        assert_modal_redirect(self, response, root)
+        response = self.client.post(
+            f"{reverse('folder_order', args=[self.public.pk])}?next={root}",
+            {"ordering": "newest"},
+            headers=modal,
+        )
+        assert_modal_redirect(self, response, root)
+        response = self.client.post(
+            f"{reverse('item_subscribers', args=[self.public.pk])}?next={root}",
+            {"people": [self.bob.pk]},
+            headers=modal,
+        )
+        assert_modal_redirect(self, response, root)
+        response = self.client.post(
+            f"{reverse('item_trash', args=[self.root_shared.pk])}?next={root}",
+            headers=modal,
+        )
+        assert_modal_redirect(self, response, root)
+        # Not elsewhere
+        response = self.client.post(
+            f"{reverse('item_trash', args=[self.private.pk])}?next=https://example.com/",
+            headers=modal,
+        )
+        assert_modal_redirect(self, response, self.project.get_absolute_url())
 
 
 class MoveTest(Fixture, TestCase):

@@ -202,6 +202,9 @@
 .bi-quote::before {
   content: "\f6b0";
 }
+.bi-three-dots::before {
+  content: "\f5d4";
+}
 .bi-trash::before {
   content: "\f5de";
 }

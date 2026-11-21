@@ -1,0 +1,21 @@
+{% load biwak i18n %}
+{% comment %}
+  A tile's "…" menu (files/_tiles.html, specs/files.md, "Folders"): what
+  the item's own "More" menu offers, its modals coming back to this page.
+  Beside the tile's link, not in it: clicking, selecting and dragging the
+  tile leave it alone, and Tab reaches it after the tile.
+{% endcomment %}
+{% with path=request.get_full_path|urlencode %}
+  <details class="dropdown wb-menu wb-tile-menu">
+    <summary
+      class="btn btn-sm btn-quiet"
+      title="{% translate 'More' %}"
+      aria-label="{% blocktranslate with title=row|item_title %}More: {{ title }}{% endblocktranslate %}"
+    >
+      {% icon "three-dots" %}
+    </summary>
+    <div class="dropdown-menu dropdown-menu-end">
+      {% include "items/_more_entries.html" with item=row can_change=row.can_move more_history=False next_query="?next="|add:path %}
+    </div>
+  </details>
+{% endwith %}

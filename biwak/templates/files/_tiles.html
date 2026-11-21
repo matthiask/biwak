@@ -8,7 +8,7 @@
   others carry `data-tile` (frontend/files.js). Tiles the person may move
   can be selected (Ctrl- and Shift-click) and dragged; `data-tiles-move`
   moves them, the bar below acts on the selection (specs/files.md, "Moving and
-  selecting").
+  selecting"). Each tile but ".." has its "…" menu (files/_tile_menu.html).
 {% endcomment %}
 <ul
   class="wb-tiles"
@@ -60,6 +60,7 @@
           </span>
         </span>
       </a>
+      {% include "files/_tile_menu.html" %}
     </li>
   {% endfor %}
 </ul>

@@ -163,6 +163,92 @@ class TilesTest(E2ETestCase):
         self.assertEqual(self.parent_of(self.inner), self.specs)
         self.assertEqual(self.errors, [])
 
+    # The "…" menu of each tile (files/_tile_menu.html) -----------------
+
+    def menu(self, page, item):
+        return page.locator(f'li:has(> [data-tile="{item.pk}"]) > .wb-tile-menu')
+
+    def test_the_menu_opens_without_opening_or_selecting_the_tile(self):
+        page = self.page
+        self.goto(page, self.root())
+        self.wait_for_files(page)
+        a, b, *_ = self.files
+        menu = self.menu(page, self.specs)
+        entries = menu.locator(".dropdown-menu")
+        menu.locator("summary").click()
+        expect(entries).to_be_visible()
+        expect(entries.get_by_role("link")).to_have_text([
+            "Subscribers…",
+            "Edit…",
+            "Order…",
+            "Move to…",
+            "Trash",
+        ])
+        self.assertTrue(page.url.endswith(self.root()))
+        # Inside the window (menus.js places it)
+        box = entries.bounding_box()
+        width = page.evaluate("document.documentElement.clientWidth")
+        self.assertGreaterEqual(box["x"], 0)
+        self.assertLessEqual(box["x"] + box["width"], width)
+        # Escape closes it, back on its button; so does a click elsewhere
+        page.keyboard.press("Escape")
+        expect(entries).to_be_hidden()
+        expect(menu.locator("summary")).to_be_focused()
+        menu.locator("summary").click()
+        page.locator("h1").click()
+        expect(entries).to_be_hidden()
+        # Ctrl-click on the button selects nothing, on a tile it still does
+        bar = page.locator("[data-selection-bar]")
+        self.menu(page, a).locator("summary").click(modifiers=["ControlOrMeta"])
+        expect(bar).to_be_hidden()
+        self.tile(page, b).click(modifiers=["ControlOrMeta"])
+        expect(bar).to_contain_text("1 selected")
+        expect(self.tile(page, a)).not_to_have_class(re.compile("is-selected"))
+        # The menu's button doesn't drag its tile
+        self.menu(page, a).locator("summary").drag_to(self.tile(page, self.specs))
+        page.wait_for_load_state("networkidle")
+        self.assertIsNone(self.parent_of(a))
+        self.assertTrue(page.url.endswith(self.root()))
+        self.assertEqual(self.errors, [])
+
+    def test_tab_reaches_the_menu_after_the_tile(self):
+        page = self.page
+        self.goto(page, self.root())
+        self.wait_for_files(page)
+        summary = self.menu(page, self.specs).locator("summary")
+        self.tile(page, self.specs).focus()
+        page.keyboard.press("Tab")
+        expect(summary).to_be_focused()
+        expect(summary).to_be_visible()
+        page.keyboard.press("Enter")
+        expect(self.menu(page, self.specs).locator(".dropdown-menu")).to_be_visible()
+
+    def test_editing_a_folder_from_its_tile(self):
+        page = self.page
+        self.goto(page, self.root())
+        self.wait_for_files(page)
+        menu = self.menu(page, self.specs)
+        menu.locator("summary").click()
+        menu.get_by_role("link", name="Edit…").click()
+        dialog = page.get_by_role("dialog", name="Edit…")
+        dialog.get_by_label("Title").fill("Requirements")
+        dialog.get_by_role("button", name="Save").click()
+        # Back on the grid, with the new name
+        expect(self.tile(page, self.specs)).to_contain_text("Requirements")
+        self.assertTrue(page.url.endswith(self.root()))
+        self.assertEqual(Item.objects.get(pk=self.specs.pk).title, "Requirements")
+        self.assertEqual(self.errors, [])
+
+    def test_a_client_gets_what_they_may_do(self):
+        page = self.login(self.cleo)
+        self.goto(page, self.specs)
+        self.wait_for_files(page)
+        menu = self.menu(page, self.inner)
+        menu.locator("summary").click()
+        expect(menu.locator(".dropdown-menu").get_by_role("link")).to_have_text([
+            "Subscribers…"
+        ])
+
 
 DROP = """([selector, names]) => {
     const transfer = new DataTransfer()
@@ -230,6 +316,34 @@ class UploadTest(E2ETestCase):
             ],
             [True, False],
         )
+        self.assertEqual(self.errors, [])
+
+    def test_dropping_files_after_selecting(self):
+        """Selecting didn't add another drop handler each time: the files
+        were listed once per click more"""
+        ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"Plan", name="a.txt"),
+            creator=self.ada,
+            parent=self.minutes,
+        )
+        page = self.page
+        self.goto(page, self.minutes)
+        page.wait_for_load_state("networkidle")
+        tile = page.locator(".wb-tile-file")
+        tile.click(modifiers=["ControlOrMeta"])
+        tile.click(modifiers=["ControlOrMeta"])
+        opened = []
+        page.on(
+            "request",
+            lambda request: "/files/new/" in request.url and opened.append(request),
+        )
+        page.evaluate(DROP, [".wb-tiles", ["one.txt"]])
+        rows = page.get_by_role("dialog", name="Upload files").locator(".wb-upload-row")
+        expect(rows.first).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        self.assertEqual(len(opened), 1)
+        self.assertEqual(rows.count(), 1)
         self.assertEqual(self.errors, [])
 
     def test_dropping_onto_a_folder_tile_and_the_button(self):
