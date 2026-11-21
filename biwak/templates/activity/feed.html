@@ -14,24 +14,19 @@
     data-autosubmit
     data-remember
     action="{{ url }}"
-    class="d-flex flex-wrap gap-2 align-items-end mb-3"
+    class="wb-filters mb-3"
   >
     {% for field in form %}
       <div>
         {% if field.field.widget.input_type == "checkbox" %}
-          <label class="form-check mb-2">{{ field }} {{ field.label }}</label>
+          <label class="form-check">{{ field }} {{ field.label }}</label>
         {% else %}
-          <label class="form-label small mb-0" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
         {% endif %}
       </div>
     {% endfor %}
-    <button type="submit" class="btn btn-quiet" data-autosubmit-button>{% translate "Filter" %}</button>
-    {% if filtered %}<a
-        href="{{ url }}"
-        class="btn btn-quiet"
-        data-reset-filters
-      >{% translate "Reset filters" %}</a>{% endif %}
+    {% include "_filter_buttons.html" with reset_url=url %}
   </form>
   {% include "activity/_entries.html" %}
   {% if older %}

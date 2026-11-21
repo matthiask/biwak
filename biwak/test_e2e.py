@@ -2888,6 +2888,32 @@ class FiltersTest(E2ETestCase):
         expect(page.locator("#id_assignee")).to_have_value("nobody")
         self.assertEqual(self.errors, [])
 
+    def test_the_buttons_line_up_with_the_fields(self):
+        page = self.page
+        for path in [
+            "/todos/?assignee=me",
+            f"/projects/{self.project.pk}/todos/",
+            "/feed/?kind=todo",
+            "/lantern/?unread=1",
+        ]:
+            self.goto(page, path)
+            page.evaluate(
+                "document.querySelector('[data-autosubmit-button]').hidden = false"
+            )
+            boxes = page.evaluate(
+                """() => [...document.querySelectorAll(
+                    "form.wb-filters .btn, form.wb-filters select, form.wb-filters .form-check")]
+                    .filter((el) => el.offsetParent)
+                    .map((el) => { const r = el.getBoundingClientRect(); return [r.top, r.bottom] })"""
+            )
+            self.assertGreater(len(boxes), 1, path)
+            self.assertEqual(
+                {round(box[1]) for box in boxes}, {round(boxes[0][1])}, path
+            )
+            self.assertEqual(
+                {round(box[0]) for box in boxes}, {round(boxes[0][0])}, (path, boxes)
+            )
+
     def test_a_checkbox_applies_the_lantern_filter(self):
         page = self.page
         self.goto(page, "/lantern/")
@@ -2950,6 +2976,27 @@ class FiltersTest(E2ETestCase):
         link.click()
         page.wait_for_url("**grouping=due*")
         expect(page.locator("#id_grouping")).to_have_value("due")
+        self.assertEqual(self.errors, [])
+
+    def test_the_projects_all_todos_button_restores_the_filters(self):
+        page = self.page
+        todos = f"/projects/{self.project.pk}/todos/"
+        # The page's own links keep their query, and the page remembers it
+        self.goto(page, self.project)
+        page.get_by_role("link", name="by due date").click()
+        page.wait_for_url("**/todos/?grouping=due")
+        # The header's button restores what the page remembered
+        self.goto(page, self.project)
+        button = page.locator(".wb-page-actions a.btn", has_text="All to-dos")
+        expect(button).to_have_attribute("href", todos + "?grouping=due")
+        button.click()
+        page.wait_for_url("**grouping=due*")
+        expect(page.locator("#id_grouping")).to_have_value("due")
+        # Not by the link next to the heading
+        self.goto(page, self.project)
+        expect(page.get_by_role("link", name="by list")).to_have_attribute(
+            "href", todos + "?grouping=project"
+        )
         self.assertEqual(self.errors, [])
 
     def test_search_is_not_remembered(self):
