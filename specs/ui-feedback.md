@@ -39,6 +39,8 @@ Ad hoc.
 
 ## Round 4
 
+Spec: `ui-round-4.md` (built 2026-11-21).
+
 - "Sign out" in menu. It's understood that this only does the log out here.
 - Instead of the help text, add a button to sign out immediately on the sessions card. "Sign out here" or something like that.
 - The to do checkbox is misaligned.
@@ -49,5 +51,9 @@ Ad hoc.
 
 ## Round 5
 
+Spec: `ui-round-5.md`.
+
 - The detail view of to dos could use more cards, for example for title and description. It seems a bit unstructured now (even though it isn't). Same for docs.
 - The project to do list can also be linked from the project overview since that actually exists and makes sense. To Dos by list, or to dos by due date.
+- The "Reset filters" button shouldn't sit at the bottom of the line, centered with the dropdowns would look better.
+- Basecamp has a "assigned BY me" view, would it make sense to have something like this as well?

@@ -1,0 +1,103 @@
+# UI round 5: cards, the project's to-dos, filters, assigned by me
+
+Round 5 of `ui-feedback.md` (2026-11-21).
+
+**Status:** open (spec, 2026-11-21).
+
+**Agent:** a cheaper model following this spec and the checklist in
+`AGENTS.md`; section 4 touches a model and the API, so check its
+migration and the CLI carefully.
+
+**Depends on:** `ui-round-4.md` merged (the to-do row, the page headers,
+`view-prefs`' filters).
+
+**Touches:**
+- `items/todo.html`, `items/_todo_view.html`, `files/doc.html` and CSS;
+- `projects/project_detail.html`;
+- the filter forms' templates (`items/todos_by_due.html`,
+  `activity/feed.html`, `activity/lantern.html`);
+- `Todo.assignees` (a through model), `items/operations.py`
+  (`assign()`, `update_todo()`, the next recurring to-do),
+  `items/due.py`, `items/by_due.py`, the to-dos' API and CLI, the
+  importer.
+
+## 1. Cards on the to-do and doc pages
+
+Decided 2026-11-21: the facts and the text together in one card.
+
+- **A to-do's page:** one card (`card`, `card-body`) in the main column
+  holding the facts line (assigned to, due on, repeats) and, below a
+  divider, the notes ("Add notes…" when empty). Editing in place swaps
+  the card's content for the form, the form sits in the same card.
+- **A doc's page:** its content in a card the same way.
+- Reactions and comments stay below the card, outside it; the sidebar
+  stays as it is; the title stays in the page header.
+- Both through the same CSS (a `wb-` class if Bootstrap's `card` isn't
+  enough), nothing hard-coded per page. Wide and at 390 px.
+
+## 2. The project's to-dos from the project page
+
+Decided 2026-11-21. The header's "To-dos by due date" opens
+`/projects/<pk>/todos/`, which is grouped by list since round 3, so the
+label is wrong.
+
+- **Next to the "To-do lists" heading:** "All to-dos: by list · by due
+  date", links to `project_todos` with `?grouping=project` and
+  `?grouping=due`. These keep their own query (`frontend/filters.js`
+  only rewrites the top bar's links), and the page then remembers it,
+  as it does any query it loads with.
+- **The header's button** becomes "All to-dos" (still `wb-phone-hide`,
+  and in "More" on phones), without a parameter, and restores the
+  remembered filters like the top bar's links: `filters.js` rewrites
+  links marked `data-restore-filters` too, instead of only
+  `.wb-nav-links a` (one selector, the top bar's links get the
+  attribute).
+- The palette's action for it, if there is one, gets the same label.
+
+## 3. Filter buttons line up with the fields
+
+"Filter" and "Reset filters" sit at the height of the selects, not at
+the bottom of the labels' line: in every filter form ("My to-dos", a
+project's to-dos, the feed, the lantern), through one CSS rule or one
+include, not per page. Same height as the fields (`btn-sm` with
+`form-select-sm`, or the plain sizes on both).
+
+## 4. Assigned by me
+
+Decided 2026-11-21: Biwak stores who assigned someone.
+
+- **The model:** `Todo.assignees` gets a through model `Assignment`
+  (todo, user, `assigned_by`, nullable, `on_delete=SET_NULL`, and
+  `assigned_at`), unique per todo and user, in the audit log
+  (`audit_tables()`). The migration turns the existing table into the
+  through model; existing rows have no assigner (no users yet, no
+  backfill).
+- **Who assigned:** `assign()` sets `assigned_by` to its `actor`; the
+  to-do's form, the API and mail replies go through it already. The next
+  to-do of a repeating one keeps each assignment's `assigned_by`. The
+  importer leaves it empty (Basecamp's API doesn't say who assigned).
+- **The filter:** "My to-dos" and a project's to-dos get "Assigned by"
+  in the filter form: "Anybody" (default) or "Me", remembered like the
+  rest. "Assigned to: Anybody" with "Assigned by: Me" is Basecamp's
+  "assigned by me"; with "Assigned to: Me" it's what I gave myself.
+- **The palette** offers "To-dos I assigned" on every page, the same
+  as "My to-dos" (`?assignee=&assigned_by=me`).
+- **The API:** `GET /api/v1/todos/` takes `assigned_by=me`; each
+  to-do's assignees carry `assigned_by` (a person, or null). **The
+  CLI:** `biwak todos --assigned-by-me`; bump `cli/pyproject.toml`.
+- **The to-do's page** says nothing new (the history already says who
+  assigned whom).
+
+## Done when
+
+- The to-do and doc pages show the card, read and while editing
+  (screenshots wide and at 390 px, looked at).
+- The project page links both groupings, and the header says "All
+  to-dos".
+- The filter buttons line up with the fields on the four pages
+  (screenshots).
+- Django tests: `assign()` records the assigner, the recurring copy
+  keeps it, the filter and the API's `assigned_by` (staff and client: a
+  client sees only to-dos they may see), the palette's JSON, the CLI.
+- Browser tests where JavaScript is involved (editing in place inside
+  the card, the remembered "Assigned by").
