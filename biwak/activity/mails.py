@@ -233,7 +233,7 @@ def _item(item, user):
             "text": todo.notes,
             "todo": todo,
             "assignees": ", ".join(str(a) for a in todo.assignees.all()),
-            "list": item.parent,
+            "list": mentions.plain(item.parent.title, item.parent),
         }
     elif item.kind == Kind.LIST:
         context["text"] = item.todolist.description

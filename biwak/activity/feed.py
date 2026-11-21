@@ -15,6 +15,7 @@ from django.utils.translation import gettext, ngettext
 
 from biwak import cursors
 from biwak.accounts.models import User
+from biwak.activity import mentions
 from biwak.activity.models import Action, Event
 from biwak.items.models import Comment, Kind, Message
 from biwak.projects.models import Project
@@ -218,7 +219,7 @@ def container(event):
     the project; as (kind, id, name)"""
     item = event.item
     if item is not None and item.parent_id is not None:
-        return ("item", item.parent_id, item.parent.title)
+        return ("item", item.parent_id, mentions.plain(item.parent.title, item.parent))
     return ("project", event.project_id, event.project.name)
 
 

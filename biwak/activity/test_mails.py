@@ -284,6 +284,17 @@ class MailsTest(TestCase):
         self.assertIn(f"The [plan]({url})", bob.body)
         self.assertIn(f'href="{url}"', bob.alternatives[0].content)
 
+    def test_mentions_in_the_lists_title(self):
+        ops.update_list(
+            self.shared, actor=self.ada, title=f"For {mentions.syntax(self.bob)}"
+        )
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        message = mail.outbox[0]
+        self.assertIn("List: For @Bob Example", message.body)
+        self.assertIn("For @Bob Example", message.alternatives[0].content)
+        self.assertNotIn("person:", message.body + message.alternatives[0].content)
+
     def test_command(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         Notification.objects.update(created_at=timezone.now() - dt.timedelta(minutes=3))
