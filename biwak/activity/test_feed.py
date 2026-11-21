@@ -1,4 +1,5 @@
 import datetime as dt
+import re
 from zoneinfo import ZoneInfo
 
 from django.db import connection
@@ -31,6 +32,12 @@ def event_at(actor, action, item, when, **data):
 def squash(response):
     """The page's text with whitespace collapsed"""
     return " ".join(response.content.decode().split())
+
+
+def page_text(response):
+    """The text of the page's main part, without tags"""
+    html = response.content.decode().split("<main", 1)[1].split("</main>")[0]
+    return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
 
 class FeedBase(TestCase):
@@ -160,6 +167,126 @@ class MergeTest(FeedBase):
         (entry,) = self.entries()
         self.assertEqual(entry.what, "2 items")
         self.assertEqual(entry.where, "Website")
+
+
+class ConversationTest(FeedBase):
+    def comment(self, author, minutes, item=None, text="Hm"):
+        comment = ops.add_comment(item or self.todo, author=author, content=text)
+        Event.objects.filter(data__comment=comment.pk).update(
+            created_at=NOW - dt.timedelta(minutes=minutes)
+        )
+        return comment
+
+    def entries(self, user=None):
+        user = user or self.ada
+        events = list(feed.feed_events(user))
+        feed.attach(events, user)
+        return feed.merge(events)
+
+    def test_comments_on_one_item_by_anyone_make_a_conversation(self):
+        self.comment(self.ada, 30, text="First")
+        self.comment(self.bob, 20, text="Second")
+        self.comment(self.ada, 10, text="Third")
+        (entry,) = self.entries()
+        self.assertTrue(entry.is_conversation)
+        self.assertEqual(entry.item, self.todo)
+        self.assertEqual(
+            [e.excerpt for e in entry.comments], ["First", "Second", "Third"]
+        )
+
+    def test_other_events_in_between_dont_break_it_up(self):
+        self.comment(self.ada, 40, text="First")
+        event_at(self.bob, Action.COMPLETED, self.todo, NOW - dt.timedelta(minutes=30))
+        self.comment(self.bob, 20, text="Second")
+        reaction = event_at(
+            self.ada, Action.REACTED, self.todo, NOW - dt.timedelta(minutes=10)
+        )
+        entries = self.entries()
+        # The conversation sits where its newest comment is: below the reaction
+        self.assertEqual([e.is_conversation for e in entries], [False, True, False])
+        self.assertEqual(entries[0].latest.pk, reaction.pk)
+        self.assertEqual(entries[1].count, 2)
+        self.assertEqual(entries[2].latest.action, Action.COMPLETED)
+
+    def test_not_across_items_hours_or_midnight(self):
+        other = ops.create_todo(todolist=self.shared, title="Other", creator=self.ada)
+        Event.objects.all().delete()
+        self.comment(self.ada, 5, text="One")
+        self.comment(self.bob, 6, other, text="Two")
+        # A chain of comments within an hour of each other
+        self.comment(self.bob, 60, text="Three")
+        self.comment(self.bob, 119, text="Four")
+        self.comment(self.bob, 181, text="Five")
+        counts = [(e.is_conversation, e.count) for e in self.entries()]
+        # "One" and "Two" are on different items but the same list and merge
+        # as before; "Three" and "Four" are within an hour of the one before
+        # (and of One), "Five" isn't
+        self.assertEqual(counts, [(True, 3), (False, 1), (False, 1)])
+        Event.objects.all().delete()
+        zurich = ZoneInfo("Europe/Zurich")
+        midnight = dt.datetime(2026, 11, 21, 0, 0, tzinfo=zurich)
+        for n, when in enumerate([midnight, midnight - dt.timedelta(minutes=10)]):
+            comment = ops.add_comment(self.todo, author=self.ada, content=str(n))
+            Event.objects.filter(data__comment=comment.pk).update(created_at=when)
+        self.assertEqual([e.is_conversation for e in self.entries()], [False, False])
+
+    def test_the_page(self):
+        self.comment(self.ada, 30, text="Can we do Monday?")
+        self.comment(self.bob, 20, text="Monday works")
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/")
+        self.assertIn("Conversation on Open point", page_text(response))
+        self.assertContains(response, "Can we do Monday?")
+        self.assertContains(response, "Monday works")
+        self.assertNotContains(response, "commented on")
+        self.assertNotContains(response, "<details>")
+        self.assertLess(
+            response.text.index("Can we do Monday?"),
+            response.text.index("Monday works"),
+        )
+
+    def test_clients_see_the_comments_they_may_see(self):
+        # Comments while the list was internal are no events for clients
+        self.comment(self.ada, 50, self.secret, text="Internal one")
+        self.comment(self.ada, 40, self.secret, text="Internal two")
+        ops.set_visibility(self.internal, visible=True, actor=self.ada)
+        self.comment(self.ada, 30, self.secret, text="Now visible")
+        self.comment(self.cleo, 20, self.secret, text="Thanks")
+        self.comment(self.ada, 10, self.secret, text="Welcome")
+        self.client.force_login(self.cleo)
+        response = self.client.get("/feed/")
+        self.assertIn("Conversation on Secret", page_text(response))
+        self.assertNotContains(response, "Internal one")
+        self.assertNotContains(response, "Internal two")
+        for text in ["Now visible", "Thanks", "Welcome"]:
+            self.assertContains(response, text)
+        # Staff see all five in one conversation
+        self.client.force_login(self.ada)
+        days = self.client.get("/feed/").context["days"]
+        entries = [e for _day, _label, es in days for e in es]
+        (entry,) = [e for e in entries if e.is_conversation]
+        self.assertEqual(entry.count, 5)
+        # And a client sees nothing of a list that's internal again
+        ops.set_visibility(self.internal, visible=False, actor=self.ada)
+        self.client.force_login(self.cleo)
+        self.assertNotIn("Conversation on Secret", page_text(self.client.get("/feed/")))
+
+    def test_a_fixed_number_of_queries(self):
+        def queries():
+            self.client.force_login(self.ada)
+            with CaptureQueriesContext(connection) as captured:
+                self.client.get("/feed/")
+            return len(captured)
+
+        self.comment(self.ada, 100, text="Start")
+        self.comment(self.bob, 90, text="Reply")
+        few = queries()
+        for n in range(8):
+            self.comment(self.bob, 80 - n, text=f"More {n}")
+        other = ops.create_todo(todolist=self.shared, title="Other", creator=self.ada)
+        for n in range(4):
+            self.comment(self.ada, 20 - n, other, text=f"Elsewhere {n}")
+        self.assertEqual(queries(), few)
 
 
 class FeedViewsTest(FeedBase):
@@ -381,7 +508,7 @@ class FeedViewsTest(FeedBase):
             f"/projects/{self.project.pk}/feed/",
         )
 
-    def test_merged_entry_is_expandable(self):
+    def test_merged_entry_shows_its_to_dos(self):
         for todo in self.todos(self.shared, 3):
             record(
                 actor=self.ada, action=Action.COMPLETED, project=self.project, item=todo
@@ -389,8 +516,10 @@ class FeedViewsTest(FeedBase):
         self.client.force_login(self.ada)
         response = self.client.get("/feed/")
         self.assertIn("completed 3 to-dos in Shared", " ".join(response.text.split()))
-        self.assertContains(response, "<details>")
-        self.assertContains(response, "Todo 2")
+        # The single to-dos show right away, nothing is hidden in a details
+        self.assertNotContains(response, "<details>")
+        for n in range(3):
+            self.assertContains(response, f"Todo {n}")
         self.assertEqual(timezone.localdate(), response.context["days"][0][0])
 
 

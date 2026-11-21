@@ -217,6 +217,10 @@ class Entry:
     events: list
 
     @property
+    def is_conversation(self):
+        return False
+
+    @property
     def latest(self):
         return self.events[0]
 
@@ -253,6 +257,23 @@ class Entry:
         return key[2]
 
 
+class Conversation(Entry):
+    """Comments on one item by anyone, newest first (``merge()``); the page
+    shows them oldest first, as they were said"""
+
+    @property
+    def is_conversation(self):
+        return True
+
+    @property
+    def item(self):
+        return self.latest.item
+
+    @property
+    def comments(self):
+        return self.events[::-1]
+
+
 def container(event):
     """What counts as "the same list or project": a to-do's list, otherwise
     the project; as (kind, id, name)"""
@@ -274,14 +295,46 @@ def same_place(last, event):
     return container(last)[:2] == container(event)[:2]
 
 
+def conversations(events):
+    """Events newest first, with the comments on one item that follow each
+    other closely (each within an hour of the one before and on the same
+    day) gathered into one ``Conversation`` at the place of the newest;
+    other events in between don't break it up. Comments with no one to talk
+    to stay events. Entries and events, newest first."""
+    open_ones = {}  # item ID -> the entry of the latest comments on it
+    result = []
+    for event in events:
+        if event.action == Action.COMMENTED and event.item_id is not None:
+            entry = open_ones.get(event.item_id)
+            if (
+                entry is not None
+                and local_day(entry.events[-1]) == local_day(event)
+                and entry.events[-1].created_at - event.created_at <= MERGE_WINDOW
+            ):
+                entry.events.append(event)
+                continue
+            entry = open_ones[event.item_id] = Conversation([event])
+            result.append(entry)
+        else:
+            result.append(event)
+    return [
+        e.events[0] if isinstance(e, Conversation) and e.count == 1 else e
+        for e in result
+    ]
+
+
 def merge(events):
-    """Entries from events newest first: consecutive events of the same
+    """Entries from events newest first: comments on the same item become
+    conversations (``conversations()``); consecutive events of the same
     person with the same action in the same list or project (reactions: on
     the same item), each within an hour of the one before and on the same
     day, become one entry"""
     entries = []
-    for event in events:
-        if entries:
+    for event in conversations(events):
+        if isinstance(event, Conversation):
+            entries.append(event)
+            continue
+        if entries and not entries[-1].is_conversation:
             last = entries[-1].events[-1]
             if (
                 last.actor_id == event.actor_id

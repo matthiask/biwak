@@ -23,7 +23,18 @@ From the events (`biwak/activity/`, `notifications.md`):
 - **Grouped by day** (in `TIME_ZONE`), newest first. Consecutive events
   by the same person with the same action in the same list or project
   within an hour are merged into one entry ("Ada completed 5 to-dos in
-  Website relaunch", expandable to the single to-dos).
+  Website relaunch", with the single to-dos below it).
+- **Conversations and nothing collapses** (decided 2026-11-21): comments
+  on the same item, by anyone, each within an hour of the one before and
+  on the same day, become one entry, "Conversation on Order the tent",
+  with each comment below it, indented (who, the excerpt, the time), oldest
+  first as they were said. Other events in between don't break it up: the
+  conversation sits at the place of its newest comment
+  (`feed.conversations()`). One comment alone stays an ordinary event.
+  Merged entries show their single items right away, indented; the feed
+  has no `<details>`. Grouping works on the events the viewer may see, so a
+  client's conversation only has the comments they may see (per event, as
+  above); it needs no queries of its own. The API keeps single events.
 - **Filters** as query parameters: kind of item, person, action, visible
   to clients.
 - **No client badge on entries** (decided 2026-11-21): calmer; the item's

@@ -5,7 +5,19 @@ buttons of varying heights, and the checkbox and drag handle alone on
 their line. Screenshots at 390 px wide of a list, a to-do and a project
 page showed more of the same kind.
 
-**Status:** open (spec, 2026-11-21).
+**Status:** open (spec, 2026-11-21). Built 2026-11-21 (branch
+`ui4-behavior`): 5.1 (sign out), 5.4 (the visibility modal) and 5.5 (the
+feed's conversations). Decisions on the way:
+- 5.1: "Sign out here" sits in the action cell of the sessions table's
+  "This one" row, next to the other rows' "Sign out", and posts to the
+  same `account_logout` as the menu's "Sign out".
+- 5.4: `GET /items/<pk>/switch/` is the question (a page, a modal for
+  `HX-Modal`; an item that is visible already redirects to itself), the
+  POST with `visible=1` shows it; the POST without it hides it, as before.
+  The question's text is built by the view (`_show_texts()`, per kind),
+  so the switch include no longer shows the sentence by the button and the
+  pages' `affected` count is gone.
+- 5.5: see `feed.md`.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`. Every change gets a browser test at 390 px (`PhoneTest`)

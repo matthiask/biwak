@@ -6,21 +6,35 @@
   <ul class="list-unstyled">
     {% for entry in entries %}
       <li class="mb-2" data-kb-row>
-        {% if entry.is_merged %}
-          <details>
-            <summary>
-              {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents %}
-              <span class="small text-body-secondary">· {{ entry.latest.created_at|date:"H:i" }}</span>
-            </summary>
-            <ul class="list-unstyled ms-3 small">
-              {% for event in entry.events %}
-                <li>
-                  {% include "activity/_event.html" %}
-                  <span class="text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-          </details>
+        {% if entry.is_conversation %}
+          {% with event=entry.latest %}
+            <span class="fw-semibold">{% translate "Conversation on" %}</span>
+            {% include "activity/_subject.html" %}
+            <span class="small text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+            {% if not project %}<span class="small text-body-secondary">·
+                {% project_dot event.project %}{{ event.project }}</span>{% endif %}
+          {% endwith %}
+          <ul class="list-unstyled ms-4 small">
+            {% for event in entry.comments %}
+              <li>
+                {% if event.actor %}{% avatar event.actor %}{% endif %}
+                <span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
+                <span class="text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+                {% if event.excerpt %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% elif entry.is_merged %}
+          {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents %}
+          <span class="small text-body-secondary">· {{ entry.latest.created_at|date:"H:i" }}</span>
+          <ul class="list-unstyled ms-4 small">
+            {% for event in entry.events %}
+              <li>
+                {% include "activity/_event.html" %}
+                <span class="text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+              </li>
+            {% endfor %}
+          </ul>
         {% else %}
           {% with event=entry.latest %}
             {% include "activity/_event.html" %}
