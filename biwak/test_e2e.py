@@ -30,11 +30,12 @@ from django.urls import reverse
 from django.views.static import serve as static_serve
 
 from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.activity.models import LevelOverride
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Doc, Item, Kind
+from biwak.items.models import Comment, Doc, Item, Kind, Status
 from biwak.reactions.models import Reaction
 from biwak.test_utils import person, project
 
@@ -1584,6 +1585,194 @@ class HtmxTest(E2ETestCase):
         with page.expect_request("**/nowhere/") as request:
             page.locator("#x").click()
         self.assertTrue(request.value.headers.get("x-csrftoken"))
+
+
+class ModalTest(E2ETestCase):
+    """The "More" menu's forms in the dialog (frontend/modal.js)"""
+
+    def setUp(self):
+        super().setUp()
+        self.todolist = self.make_list("Launch", visible=True, todos=["Plan"])
+        self.make_list("Other")
+
+    def open_more(self, page, entry):
+        page.locator("details.wb-menu", has_text="More").first.locator(
+            "summary"
+        ).click()
+        page.get_by_role("link", name=entry).click()
+        dialog = page.locator("dialog#modal")
+        expect(dialog).to_be_visible()
+        return dialog
+
+    def test_notifications_open_save_and_focus_returns(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        expect(dialog.locator("h1")).to_have_text("Notifications for this list")
+        # No navigation: the page is still the list's
+        self.assertEqual(
+            page.url, f"{self.live_server_url}{self.todolist.get_absolute_url()}"
+        )
+        dialog.get_by_label("Nothing").check()
+        dialog.get_by_role("button", name="Save").click()
+        expect(page.locator("dialog#modal[open]")).to_have_count(0)
+        self.assertEqual(
+            LevelOverride.objects.get(user=self.ada, item=self.todolist).level,
+            "nothing",
+        )
+
+    def test_escape_closes_an_unchanged_form_and_returns_the_focus(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        page.keyboard.press("Escape")
+        expect(dialog).not_to_be_visible()
+        expect(
+            page.locator("details.wb-menu", has_text="More").first.locator("summary")
+        ).to_be_focused()
+
+    def test_a_changed_form_needs_escape_twice(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        dialog.get_by_label("Nothing").check()
+        page.keyboard.press("Escape")
+        expect(dialog).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(dialog).not_to_be_visible()
+
+    def test_cancel_closes(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        dialog.get_by_role("button", name="Cancel").click()
+        expect(dialog).not_to_be_visible()
+
+    def test_the_client_banner_shows_on_visible_items(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        expect(dialog.locator(".wb-client-banner")).to_be_visible()
+
+    def test_trashing_asks_first(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Trash")
+        expect(dialog.locator("h1")).to_have_text("Move to the trash?")
+        dialog.get_by_role("button", name="Cancel").click()
+        self.todolist.refresh_from_db()
+        self.assertEqual(self.todolist.status, Status.ACTIVE)
+        dialog = self.open_more(page, "Trash")
+        dialog.get_by_role("button", name="Move to the trash").click()
+        page.wait_for_url(f"**{self.project.get_absolute_url()}")
+        self.todolist.refresh_from_db()
+        self.assertEqual(self.todolist.status, Status.TRASHED)
+
+    def test_moving_a_todo(self):
+        todo = Item.objects.get(title="Plan")
+        other = Item.objects.get(title="Other")
+        page = self.page
+        self.goto(page, todo)
+        dialog = self.open_more(page, "Move to…")
+        dialog.locator("select").first.select_option(label="Other")
+        # The redirect loads the page again
+        with page.expect_navigation():
+            dialog.get_by_role("button", name="Move", exact=True).click()
+        todo.refresh_from_db()
+        self.assertEqual(todo.parent_id, other.pk)
+
+    def test_a_modifier_key_leaves_the_link_alone(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        page.locator("details.wb-menu", has_text="More").first.locator(
+            "summary"
+        ).click()
+        self.assertFalse(self.modifier_click_is_prevented(page, "a[data-modal]"))
+        expect(page.locator("dialog#modal[open]")).to_have_count(0)
+
+    def modifier_click_is_prevented(self, page, selector):
+        """Whether the page's scripts took a Ctrl+click on ``selector``
+        (the browser would follow the link into a new tab otherwise)"""
+        return page.evaluate(
+            """(selector) => {
+                let prevented = null
+                window.addEventListener("click", (event) => {
+                    prevented = event.defaultPrevented
+                    event.preventDefault()
+                }, { once: true })
+                document.querySelector(selector).dispatchEvent(
+                    new MouseEvent("click", {
+                        bubbles: true, cancelable: true, ctrlKey: true, button: 0,
+                    })
+                )
+                return prevented
+            }""",
+            selector,
+        )
+
+    def test_new_list_from_the_palette_and_members(self):
+        page = self.page
+        self.goto(page, self.project)
+        page.keyboard.press("Control+k")
+        page.get_by_role("combobox").fill("New list")
+        page.keyboard.press("Enter")
+        dialog = page.locator("dialog#modal")
+        expect(dialog.locator("h1")).to_have_text("New list")
+        # Errors stay in the dialog (blanks pass the browser's check)
+        dialog.get_by_label("title").fill("   ")
+        dialog.get_by_role("button", name="Add list").click()
+        expect(dialog.locator(".invalid-feedback")).to_be_visible()
+        expect(dialog.locator("h1")).to_have_text("New list")
+        dialog.get_by_label("title").fill("Fresh")
+        dialog.get_by_role("button", name="Add list").click()
+        page.wait_for_url("**/lists/**")
+        self.assertTrue(Item.objects.filter(title="Fresh").exists())
+
+        self.goto(page, reverse("project_people", args=[self.project.pk]))
+        page.get_by_role("link", name="Invite by email").click()
+        dialog = page.locator("dialog#modal")
+        expect(dialog.locator("h1")).to_have_text("Invite by email")
+        dialog.get_by_label("Email").fill("dora@example.org")
+        dialog.get_by_role("button", name="Invite").click()
+        expect(page.get_by_text("dora@example.org")).to_be_visible()
+
+
+class NavSearchTest(E2ETestCase):
+    def check(self, page, *, label_visible):
+        self.goto(page, self.project)
+        button = page.locator("[data-palette-open]")
+        expect(button).to_be_visible()
+        self.assertEqual(
+            page.locator(".wb-nav-search-label").is_visible(), label_visible
+        )
+        button.click()
+        expect(page.locator("dialog.wb-dialog[open]")).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(button).to_be_focused()
+
+    def test_desktop_shows_a_field_with_the_hint(self):
+        page = self.page
+        self.check(page, label_visible=True)
+        expect(page.locator(".wb-nav-search-hint")).to_have_text("Ctrl K")
+
+    def test_phone_shows_the_magnifier(self):
+        page = self.login(self.ada, viewport={"width": 360, "height": 740})
+        self.check(page, label_visible=False)
+        self.assertEqual(
+            page.evaluate("document.documentElement.scrollWidth - window.innerWidth"),
+            0,
+        )
+
+    def test_a_modifier_click_is_the_link_to_the_search_page(self):
+        page = self.page
+        self.goto(page, self.project)
+        self.assertEqual(
+            page.locator("[data-palette-open]").get_attribute("href"), "/search/"
+        )
+        self.assertFalse(
+            ModalTest.modifier_click_is_prevented(self, page, "[data-palette-open]")
+        )
+        expect(page.locator("dialog.wb-dialog[open]")).to_have_count(0)
 
 
 class PhoneTest(E2ETestCase):

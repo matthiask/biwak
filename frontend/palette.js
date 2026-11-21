@@ -372,6 +372,27 @@ export function openPalette() {
   openFn?.()
 }
 
+// The navigation's search field is a link to the search page which opens
+// the palette instead (with a modifier key it's the link)
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform || "")
+for (const hint of document.querySelectorAll("[data-shortcut-hint]"))
+  if (isMac) hint.textContent = "⌘K"
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("[data-palette-open]")
+  if (
+    !link ||
+    !openFn ||
+    event.button !== 0 ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    event.altKey
+  )
+    return
+  event.preventDefault()
+  openFn()
+})
+
 // Dialogs with a close button and a click on the backdrop
 document.addEventListener("click", (event) => {
   const dialogEl = event.target.closest?.("dialog.wb-dialog")
