@@ -187,7 +187,7 @@ class TodoViewTest(ViewModeBase):
 
     def test_the_form_has_the_regions_live_updates_take(self):
         page = self.client.get(self.edit)
-        for region in ["live-header", "live-status", "live-text", "live-comments"]:
+        for region in ["live-header", "live-text", "live-comments"]:
             self.assertContains(page, f'id="{region}"')
         # Reactions sit right under the text, before the comments
         content = self.client.get(self.url).content.decode()

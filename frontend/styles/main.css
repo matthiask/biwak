@@ -993,15 +993,16 @@ html:not(.js) .wb-handle {
   color: var(--bs-body-color);
 }
 
-/* A completed to-do's page says so, in the success colors (the check of
-   the rows, filled green) */
-.wb-completed {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--wb-success-ink) 30%, transparent);
-  border-radius: var(--bs-border-radius);
+/* A completed to-do's button (its page): who completed it, in the
+   success colors, with the rows' check filled green; it reopens */
+.btn.wb-completed {
+  border-color: color-mix(in srgb, var(--wb-success-ink) 30%, transparent);
+  background: var(--wb-success-bg);
+  color: var(--wb-success-ink);
+}
+
+.btn.wb-completed:hover {
+  border-color: var(--wb-success-ink);
   background: var(--wb-success-bg);
   color: var(--wb-success-ink);
 }
@@ -1013,8 +1014,11 @@ html:not(.js) .wb-handle {
   color: var(--wb-success-bg);
 }
 
-.wb-completed .wb-avatar {
-  vertical-align: -0.2em;
+.wb-completed .wb-check.is-done {
+  flex: none;
+  background: var(--wb-success-ink);
+  border-color: var(--wb-success-ink);
+  color: var(--wb-success-bg);
 }
 
 /* Completing a to-do (frontend/celebrate.js, specs/celebrations.md): the

@@ -58,7 +58,6 @@ class LiveRegionsTest(TestCase):
                 todo,
                 [
                     "live-header",
-                    "live-status",
                     "live-text",
                     "live-comments",
                     f"comment-{comment.pk}",

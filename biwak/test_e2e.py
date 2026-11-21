@@ -1389,9 +1389,8 @@ class LiveTest(E2ETestCase):
         # Completed
         bob.get_by_role("button", name="Complete").click()
         bob.wait_for_load_state()
-        expect(ada.locator("#live-header")).to_contain_text("Reopen")
-        expect(ada.locator("#live-status")).to_contain_text("Completed by")
-        expect(ada.locator("#live-status")).to_contain_text("Bob")
+        expect(ada.locator("#live-header")).to_contain_text("Completed by")
+        expect(ada.locator("#live-header")).to_contain_text("Bob")
         self.assertFalse(self.errors)
 
     def test_a_row_slides_in_and_the_lantern_dot_pulses(self):
@@ -2981,6 +2980,10 @@ class CompletionTest(E2ETestCase):
         expect(page.locator("h1 .wb-todo-title.is-striking")).to_be_visible()
         expect(page.get_by_text("Completed by")).to_be_visible()
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+        # The green button is the toggle: it reopens
+        page.get_by_role("button", name=re.compile("^Reopen")).click()
+        expect(page.get_by_role("button", name="Complete", exact=True)).to_be_visible()
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, False)
 
     def test_with_reduced_motion_nothing_waits(self):
         page = self.login(self.ada, reduced_motion="reduce")

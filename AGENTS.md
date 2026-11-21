@@ -170,6 +170,8 @@ What every part does the same way. Look at how the core does it
    (orderings, groupings) are query parameters remembered by
    `frontend/filters.js`, not fields on `User`. Colors are palette
    tokens (`--wb-palette-*`, `--wb-accent-*`), never hard-coded violet.
+   Template comments: `{# … #}` only on one line (Django prints a
+   multi-line one); longer ones in `{% comment %}…{% endcomment %}`.
 6. **API.** Endpoints in the app's `api.py`, registered in
    `biwak/api.py`, following `biwak/api_conventions.py`
    (`visible_to_clients` on every item, Markdown plus `*_html`, cursor

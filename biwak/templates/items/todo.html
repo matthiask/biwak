@@ -21,6 +21,10 @@
     </h1>
     <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
+      {% comment %}
+        One button, in the same place: the action when open, who completed
+        it (green) when done, which reopens it
+      {% endcomment %}
       <form
         method="post"
         action="{% url 'todo_toggle' item.pk %}"
@@ -28,16 +32,19 @@
       >
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
-        <button
-          type="submit"
-          class="btn btn-sm btn-quiet"
-          title="{% if todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
-        >
-          {# The rows' check, filled by the script before the page follows #}
-          <span class="wb-check{% if todo.is_completed %} is-done{% endif %}">{% icon "check-lg" %}</span><span
-            class="wb-label"
-          >{% if todo.is_completed %}{% translate "Reopen" %}{% else %}{% translate "Complete" %}{% endif %}</span>
-        </button>
+        {% if todo.is_completed %}
+          <button type="submit" class="btn btn-sm wb-completed" title="{% translate 'Reopen' %}">
+            <span class="wb-check is-done">{% icon "check-lg" %}</span><span class="wb-label"><span
+                class="visually-hidden"
+              >{% translate "Reopen:" %}</span>
+              {% if todo.completed_by %}{% short_name todo.completed_by as who %}{% avatar todo.completed_by as mark %}{% blocktranslate %}Completed by {{ mark }} {{ who }}{% endblocktranslate %}{% else %}{% translate "Completed" %}{% endif %}</span>
+          </button>
+        {% else %}
+          <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Complete' %}">
+            {# The rows' check, filled by the script before the page follows #}
+            <span class="wb-check">{% icon "check-lg" %}</span><span class="wb-label">{% translate "Complete" %}</span>
+          </button>
+        {% endif %}
       </form>
       {% if can_edit %}
         <a
@@ -53,22 +60,6 @@
     </div>
   </div>
   {% include "items/_client_banner.html" %}
-  <div id="live-status" data-live>
-    {% if todo.is_completed %}
-      <p class="wb-completed">
-        <span class="wb-check is-done">{% icon "check-lg" %}</span>
-        <span>
-          {% if todo.completed_by %}
-            {% short_name todo.completed_by as who %}
-            {% avatar todo.completed_by as mark %}
-            {% blocktranslate with when=todo.completed_at|date:"j. F Y" %}Completed by {{ mark }} {{ who }} on {{ when }}{% endblocktranslate %}
-          {% else %}
-            {% blocktranslate with when=todo.completed_at|date:"j. F Y" %}Completed on {{ when }}{% endblocktranslate %}
-          {% endif %}
-        </span>
-      </p>
-    {% endif %}
-  </div>
   {% if previous %}
     <p class="small text-body-secondary">
       {% translate "Previous:" %}
