@@ -827,10 +827,25 @@ def checkin_pause(question_id, as_json):
 
 
 @checkin.command("resume")
-@click.argument("question_id", metavar="QUESTION", type=int)
+@click.argument("question_id", metavar="QUESTION", type=int, required=False)
+@click.option(
+    "--project",
+    "project_id",
+    type=int,
+    help="Resume all the paused check-ins of this project",
+)
 @json_option
-def checkin_resume(question_id, as_json):
-    """Ask QUESTION again from the next date; what was missed isn't asked (staff)"""
+def checkin_resume(question_id, project_id, as_json):
+    """Ask QUESTION, or with --project all its paused check-ins, again from
+    the next date; what was missed isn't asked (staff)"""
+    if (question_id is None) == (project_id is None):
+        raise click.UsageError("Give a QUESTION or --project, not both.")
+    if project_id is not None:
+        data = request("POST", f"projects/{project_id}/checkins/resume/")
+        if as_json:
+            return echo_json(data)
+        click.echo(f"Resumed {len(data)} check-in(s).")
+        return None
     data = request("PATCH", f"checkins/{question_id}/", json={"paused": False})
     if as_json:
         return echo_json(data)

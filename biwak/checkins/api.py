@@ -156,6 +156,26 @@ def question_list(request, project_id: int):
     return [question_out(request, item, context) for item in questions]
 
 
+@router.post("projects/{project_id}/checkins/resume/", response=list[QuestionOut])
+def question_resume_all(request, project_id: int):
+    """Staff only. Resumes the project's paused check-ins together, each
+    asked again from its next date on as for a single resume. Returns the
+    ones resumed (none: nothing was paused)."""
+    project = project_for(request, project_id)
+    staff_only(request)
+    items = ops.resume_all(project, actor=request.user)
+    questions = (
+        Item.objects
+        .filter(pk__in=[i.pk for i in items])
+        .select_related("creator", "question", "project")
+        .prefetch_related("question__people")
+        .order_by("title", "pk")
+    )
+    questions = list(questions)
+    context = _question_context(request, questions)
+    return [question_out(request, item, context) for item in questions]
+
+
 class QuestionIn(Schema):
     title: Title
     schedule: str

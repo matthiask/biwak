@@ -135,8 +135,18 @@ def project_checkins(request, pk):
             "project": project,
             "questions": [(q, q.pk in due) for q in questions],
             "can_manage": not request.user.is_client,
+            "any_paused": any(q.question.is_paused for q in questions),
         },
     )
+
+
+@require_POST
+def project_checkins_resume(request, pk):
+    """Asks all the project's paused check-ins again (staff)"""
+    project = project_for(request, pk)
+    staff_only(request)
+    ops.resume_all(project, actor=request.user)
+    return redirect("project_checkins", project.pk)
 
 
 def _form_initial(item):

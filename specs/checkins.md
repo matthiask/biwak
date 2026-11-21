@@ -162,7 +162,7 @@ this part.
   each answer with its comments. `?occurrence=` starts the list at that
   occurrence, `?before=` (a date) at the next older page.
 - `/questions/<pk>/people/<user pk>/`: a person's answers over time.
-- New and edit forms for questions (staff); pause and resume.
+- New and edit forms for questions (staff); pause and resume, and resume all of a project's paused check-ins together (the importer leaves them paused; `POST /api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume --project ID`).
 - The person's open questions ("due") on the project page.
 
 ## API and CLI

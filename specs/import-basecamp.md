@@ -11,6 +11,16 @@ import, `models.py` `ImportedObject`, `management/commands/import_basecamp.py`,
 tests). Not built: `--lazy-files`, Basecamp's bookmarks of people other than
 the one whose token it is (the API only gives one's own). The decisions
 and the questions the spec left open are under "Details of the build".
+Built after (2026-11-21), branch `importer2`: what was internal inside a
+visible container goes into "<container> (internal)" (a top-level folder,
+a list), reused by a second run (`ImportedObject` types `Vault::Internal`
+and `Todolist::Internal`) and listed by the dry run; inactive people go
+through the operations inside `importing()`; the project's paused
+check-ins resume together (page button, `POST
+/api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume
+--project ID`, CLI 0.20.0). Messages never need it (top-level, their own
+switch) and check-in answers can't be moved: an internal answer to a
+visible question is still skipped and reported.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`, with recorded API responses to work against. Recording
@@ -158,7 +168,10 @@ questions the spec left open, built the safe way until answered:
   separate internal folder (for files and docs: a top-level folder
   "<container> (internal)"; for to-dos: an internal list "<list>
   (internal)"), so nothing is lost and nothing leaks; the dry run lists
-  them.
+  them. Built: a nested internal folder moves into the internal folder
+  with its content (deeper levels are flattened into that one folder); a
+  to-do from a group goes into a group of the same title in the internal
+  list; the internal list of a card table is a board.
 - People without a Biwak account are created inactive, and the
   operations accept inactive people only inside `importing()`
   (assigning, subscribing, memberships), so everything still goes

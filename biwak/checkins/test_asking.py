@@ -421,6 +421,30 @@ class AskingTest(CheckinTestCase):
         ops.resume(self.item, actor=self.ada, now=at("2027-03-22 08:00"))
         self.assertEqual(next_at(self.item), "2027-03-22 09:00")
 
+    def test_resuming_all_of_a_project_together(self):
+        other = self.question("Other", visible=True)
+        other_project = project("Other project", members=[self.ada])
+        elsewhere = self.question("Elsewhere", project=other_project)
+        running = self.question("Running")
+        for item in (self.item, other, elsewhere):
+            ops.pause(item, actor=self.ada)
+        now = at("2027-03-31 10:00")
+        resumed = ops.resume_all(self.project, actor=self.ada, now=now)
+        self.assertEqual({i.pk for i in resumed}, {self.item.pk, other.pk})
+        # As for a single resume, from the same moment
+        self.assertEqual(next_at(self.item), "2027-04-05 09:00")
+        self.assertEqual(next_at(other), "2027-04-05 09:00")
+        self.assertEqual(next_at(running), "2027-03-22 09:00")
+        # Other projects and what isn't paused stay as they are
+        self.assertTrue(Question.objects.get(item=elsewhere).is_paused)
+        self.assertEqual(ops.resume_all(self.project, actor=self.ada, now=now), [])
+
+    def test_resuming_all_leaves_trashed_questions_alone(self):
+        ops.pause(self.item, actor=self.ada)
+        item_ops.trash(self.item, actor=self.ada)
+        self.assertEqual(ops.resume_all(self.project, actor=self.ada), [])
+        self.assertTrue(Question.objects.get(item=self.item).is_paused)
+
     def test_pausing_after_the_time_came_but_before_the_run(self):
         ops.pause(self.item, actor=self.ada)
         self.assertEqual(self.run_at("2027-03-22 09:00")["asked"], 0)
