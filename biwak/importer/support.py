@@ -8,7 +8,11 @@ answers like ``BasecampClient`` without a network.
 
 import base64
 import copy
+import io
+import random
 import urllib.parse
+
+from PIL import Image, ImageDraw
 
 from biwak.importer.client import NotFound
 
@@ -22,6 +26,44 @@ PNG = (
     b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff"
     b"?\x00\x05\xfe\x02\xfe\xa7\x9a\xa0\xa0\x00\x00\x00\x00IEND\xaeB`\x82"
 )
+
+
+def _png(image):
+    out = io.BytesIO()
+    image.save(out, "PNG")
+    return out.getvalue()
+
+
+def generated_image():
+    """Like Basecamp's own: a flat colored square with white initials"""
+    image = Image.new("RGB", (200, 200), (0x2F, 0x80, 0xED))
+    ImageDraw.Draw(image).text((70, 90), "AE", fill="white", font_size=60)
+    return _png(image)
+
+
+def photo_image():
+    """A noisy "photo": the corners differ, no color dominates"""
+    rng = random.Random(1)
+    image = Image.new("RGB", (200, 200))
+    image.putdata([tuple(rng.randrange(256) for _ in range(3)) for _ in range(40000)])
+    return _png(image)
+
+
+def detailed_image():
+    """Flat corners, but a lot of detail in the middle"""
+    rng = random.Random(2)
+    image = Image.new("RGB", (200, 200), (250, 250, 250))
+    draw = ImageDraw.Draw(image)
+    for _ in range(1500):
+        x, y = rng.randrange(20, 180), rng.randrange(20, 180)
+        draw.rectangle(
+            (x, y, x + 12, y + 12), fill=tuple(rng.randrange(256) for _ in range(3))
+        )
+    return _png(image)
+
+
+def avatar_url(pid):
+    return f"{BASE}/people/{pid}/avatar"
 
 
 def sgid(pid):
@@ -50,7 +92,8 @@ def person(pid, name, email, *, client=False, admin=False, company=None):
         "client": client,
         "employee": not client,
         "time_zone": "Europe/Zurich",
-        "avatar_url": f"{BASE}/people/{pid}/avatar",
+        # ``people.json`` lists it as null, only ``people/ID.json`` has it
+        "avatar_url": None,
         "company": company,
         "can_ping": True,
         "can_manage_projects": not client,
@@ -188,6 +231,11 @@ def make_data():
         "dock": dock,
     }
     d[f"/projects/{PROJECT}/people.json"] = [ADA, BOB, CLEO]
+    for person_ in (ADA, BOB, CLEO):
+        d[f"/people/{person_['id']}.json"] = {
+            **person_,
+            "avatar_url": avatar_url(person_["id"]),
+        }
 
     # To-do lists ---------------------------------------------------------
     plan = recording(
@@ -688,6 +736,9 @@ def make_data():
     d["/my/profile.json"] = ADA
 
     files = {
+        avatar_url(ADA["id"]): generated_image(),
+        avatar_url(BOB["id"]): photo_image(),
+        avatar_url(CLEO["id"]): detailed_image(),
         f"{BASE}/blobs/7001/download/menu.png": PNG,
         f"{BASE}/buckets/{PROJECT}/uploads/4003/download/plan.png": PNG + b"1",
         f"{BASE}/buckets/{PROJECT}/uploads/4102/download/map.png": PNG + b"2",
@@ -729,7 +780,7 @@ class FakeClient:
         # A collection without that variant is empty, not missing
         return iter(found)
 
-    def download(self, url):
+    def download(self, url, *, accept=None):
         self.downloads.append(url)
         try:
             return self.files[url]

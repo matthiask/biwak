@@ -147,14 +147,5 @@ choosing stores its name. This waits for the drawings.
   wrong file) and `DELETE`, both answer like `GET /api/v1/me/`;
   `biwak me image FILE` and `biwak me image --remove`. The multipart PUT
   needs ninja's `fix_request_files_middleware`.
-- **The importer** (decided 2026-11-21): Basecamp's `avatar_url` is
-  **not imported**. Its URLs (`.../people/<sgid>/avatar`, redirecting to the
-  image) are the same for generated initials and uploaded images, so
-  there's no marker to tell them apart without looking at a real account's
-  answers, and the spec prefers our mark to a generated one. To change
-  that: look at the redirect target and headers of a person with and without
-  an uploaded image in a real account; `test_profile_images_are_not_imported`
-  pins today's behavior.
-
 Basecamp's images are imported after all, telling generated ones by
 their content (`ui-round-2.md`, part C, decided 2026-11-21).
