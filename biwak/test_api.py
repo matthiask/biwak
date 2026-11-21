@@ -233,6 +233,24 @@ class APITest(TestCase):
         add(8)
         self.assertEqual((queries(), queries(completed="true")), few)
 
+    def test_group_titles_are_checked(self):
+        """Empty titles were taken (or ignored), long ones cut silently"""
+        headers = self.api(self.ada)
+        group = ops.create_group(todolist=self.shared.todolist, title="G")
+        for title in ["", "  ", "x" * 201]:
+            with self.subTest(title=title):
+                response = self.send(
+                    "post", f"lists/{self.shared.pk}/groups/", headers, {"title": title}
+                )
+                self.assertEqual(response.status_code, 422)
+                response = self.send(
+                    "patch", f"groups/{group.pk}/", headers, {"title": title}
+                )
+                self.assertEqual(response.status_code, 422)
+        response = self.send("patch", f"groups/{group.pk}/", headers, {"title": None})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.shared.todolist.groups.get().title, "G")
+
     def test_comments_paginate(self):
         headers = self.api(self.ada)
         for n in range(3):

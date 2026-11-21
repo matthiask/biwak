@@ -3,13 +3,14 @@ specs/api-cli.md). The same operations as the web interface, so writes
 create the same events and subscriptions."""
 
 import datetime as dt
-from typing import Literal
+from typing import Annotated, Literal
 
 from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
+from pydantic import StringConstraints
 
 from biwak import schedules
 from biwak.activity.mentions import resolve as resolve_mentions
@@ -163,21 +164,27 @@ def list_order(request, project_id: int, data: ListOrderIn):
     return list_list(request, project_id)
 
 
+# Group.title's length
+GroupTitle = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+]
+
+
 class GroupIn(Schema):
-    title: str
+    title: GroupTitle
 
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
     item = changeable_list(request, list_id)
-    group = ops.create_group(todolist=item.todolist, title=data.title[:200])
+    group = ops.create_group(todolist=item.todolist, title=data.title)
     return Status(
         201, {"id": group.pk, "title": group.title, "position": group.position}
     )
 
 
 class GroupPatch(Schema):
-    title: str | None = None
+    title: GroupTitle | None = None
     index: int | None = None
 
 
@@ -185,8 +192,10 @@ class GroupPatch(Schema):
 def group_update(request, group_id: int, data: GroupPatch):
     """Renames the group and/or moves it (with its to-dos) to ``index``"""
     group = changeable_group(request, group_id)[0]
-    if data.title:
-        ops.rename_group(group, title=data.title[:200])
+    if "title" in data.model_fields_set:
+        if data.title is None:
+            bad_request(_("Leave out what doesn't change instead of sending null."))
+        ops.rename_group(group, title=data.title)
     if data.index is not None:
         ops.move_group(group, index=max(0, data.index))
         group.refresh_from_db()
