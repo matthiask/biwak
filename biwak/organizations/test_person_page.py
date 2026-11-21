@@ -43,15 +43,23 @@ class PersonPageTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No projects in common.")
 
-    def test_a_partner_sees_the_members_of_their_projects_only(self):
+    def test_a_partner_sees_the_people_of_their_projects_only(self):
         response = self.get(self.pia, self.cleo)
         self.assertContains(response, "Cleo Example")
         self.assertContains(response, "Camp")
         self.assertNotContains(response, "Lake")
         self.assertEqual(self.get(self.pia, self.ada).status_code, 200)
         self.assertEqual(self.get(self.pia, self.dora).status_code, 404)
-        self.assertEqual(self.get(self.pia, self.ben).status_code, 404)
+        # Ben opens the all-access Camp: one of its people (decided
+        # 2026-11-21), with no projects in common as members
+        response = self.get(self.pia, self.ben)
+        self.assertContains(response, "No projects in common.")
         self.assertEqual(self.get(self.paul, self.cleo).status_code, 404)
+        self.assertEqual(self.get(self.paul, self.ben).status_code, 404)
+        # Only all-access projects bring the own staff
+        self.camp.is_all_access = False
+        self.camp.save()
+        self.assertEqual(self.get(self.pia, self.ben).status_code, 404)
 
     def test_a_client_sees_the_members_of_their_projects_only(self):
         self.assertEqual(self.get(self.cleo, self.dora).status_code, 200)

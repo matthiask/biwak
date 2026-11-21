@@ -44,7 +44,7 @@ from biwak.items.models import (
 )
 from biwak.live import announce as live
 from biwak.projects import operations as project_ops
-from biwak.projects.models import Membership
+from biwak.projects.models import Membership, knows_people_of
 
 
 def _next_position(qs):
@@ -412,15 +412,15 @@ def assignable_people(item, by=None):
     them members), clients only members and only on visible to-dos. The
     one rule for the forms, the API and the next to-do of a recurring
     one. Partners of all-access projects only as members (specs/access.md).
-    Clients and partners (``by``) assign members only: they don't learn
-    about other staff."""
+    Clients (``by``) assign members only: they don't learn about other
+    staff; partners in the project know its people (decided 2026-11-21).
+    """
     project = item.project
     members = Q(memberships__project=project)
-    # Clients and partners (``by``) don't learn about others than members;
-    # the importer assigns as in Basecamp, also for a creator who's a
-    # partner now
+    # Clients (``by``) don't learn about others than members; the importer
+    # assigns as in Basecamp, also for a creator who's a partner now
     everybody = project.is_all_access and (
-        by is None or by.sees_all_access or is_importing()
+        by is None or knows_people_of(by, project) or is_importing()
     )
     staff = Q(is_client=False) & members
     if everybody:

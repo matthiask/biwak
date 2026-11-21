@@ -71,5 +71,8 @@ Their notification settings work like everybody's
 ## Partners
 
 Staff of another organization (freelancers, partner agencies) are staff
-who see only the projects they are members of, and, like clients, only
-the people in them.
+who see only the projects they are members of. In those projects they
+know everybody, like your own staff: the members and the staff who open
+the project without being members. They can mention, assign and ask
+them, and see their names. They don't learn about people outside their
+projects.

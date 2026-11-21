@@ -6,8 +6,9 @@ organization is a text on each person (`User.organization`): two people
 belong together only if the text matches exactly, nothing prevents typos,
 and renaming means editing everyone.
 
-**Status:** built (2026-11-21), see "Built" below; open: the questions
-under "Decided meanwhile". Not built yet: the people page grouping members by
+**Status:** built (2026-11-21), see "Built" below, including the
+decisions under "Decided meanwhile" (partners know their projects'
+people). Not built yet: the people page grouping members by
 organization (decided 2026-11-21).
 
 **Agent:** suits a cheaper model following this spec and the checklist
@@ -204,6 +205,19 @@ decides who sees all-access projects.
   collaborators (staff who aren't Basecamp employees) get theirs, which
   makes collaborators partners; employees the own organization (it
   always exists). The dry run's list says "partner" and the company.
+- **Partners know their projects' people** (built 2026-11-21, see
+  "Decided meanwhile"): `knows_people_of(viewer, project)` and
+  `Project.people_q()` in `biwak/projects/models.py`, used by
+  `Project.people_known_to()`, `mentions.known_to()` and
+  `mentions.candidates_for()` (the `@` list), mentions written
+  (`mentions.update()`), `assignable_people()`, the check-in form and
+  `_check_people()`; `known_people()` adds the own staff of the
+  all-access projects a partner is in (People page, person pages,
+  images, display names). Conservative choices (not in the decision):
+  a person's feed and the palette's people still go by projects shared
+  as members (`people_visible_to()`), as for own staff; inactive own
+  staff count as the project's people (names in histories); assigning a
+  non-member own staff makes them a member, as when own staff assign.
 - **The admin:** organizations with their people count; marking one as
   the own organization moves the mark (`mark_own()`); a person's
   organization with autocomplete.

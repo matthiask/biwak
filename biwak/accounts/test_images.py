@@ -109,7 +109,7 @@ class ServingTest(TestCase):
         self.paul = partner("Paul")
         self.cleo = person("Cleo", client=True)
         self.dora = person("Dora", client=True, organization="Other Clients")
-        self.camp = project("Camp", members=[self.pia, self.cleo])
+        self.camp = project("Camp", members=[self.pia, self.cleo], all_access=False)
         for user in [self.ada, self.pia, self.cleo]:
             operations.set_image(user, picture(), actor=user)
 
@@ -136,6 +136,18 @@ class ServingTest(TestCase):
         self.assertEqual(self.client.get(self.url(self.pia)).status_code, 200)
         self.client.force_login(self.cleo)
         self.assertEqual(self.client.get(self.url(self.pia)).status_code, 200)
+
+    def test_partners_get_those_of_staff_with_access_to_their_projects(self):
+        # Partners know a project's people (decided 2026-11-21): Ada opens
+        # the all-access project without being a member; clients don't
+        open_camp = project("Open camp", members=[self.pia, self.cleo])
+        self.client.force_login(self.pia)
+        self.assertEqual(self.client.get(self.url(self.ada)).status_code, 200)
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.client.get(self.url(self.ada)).status_code, 404)
+        open_camp.memberships.filter(user=self.pia).delete()
+        self.client.force_login(self.pia)
+        self.assertEqual(self.client.get(self.url(self.ada)).status_code, 404)
 
     def test_not_the_images_of_people_they_do_not_know(self):
         # Ada is staff but in no project with Pia or Cleo

@@ -22,7 +22,7 @@ from biwak.forms import ComboboxSelect, Form
 from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
-from biwak.projects.models import knows_everybody
+from biwak.projects.models import knows_people_of
 from biwak.projects.views import project_for
 from biwak.reactions.operations import prefetch
 from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
@@ -86,10 +86,10 @@ class QuestionForm(RuleFormMixin, Form):
         self.item = item
         self.fields["rule"].widget.anchor = self.initial.get("starts_on")
         # Who sees a visible question: clients only on visible ones, checked
-        # by ``clean()`` and ``operations.set_people()``; partners offer
+        # by ``clean()`` and ``operations.set_people()``; clients offer
         # members and those already asked (specs/access.md)
         people = people_who_see(project, visible=True)
-        if not knows_everybody(actor):
+        if not knows_people_of(actor, project):
             asked = item.question.people.all() if item else User.objects.none()
             people = people.filter(
                 Q(memberships__project=project) | Q(pk__in=asked.values("pk"))

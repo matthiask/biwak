@@ -2,7 +2,9 @@
 organization other than the own one see only the projects
 they're members of, through every entry point. Pia is a partner and a
 member of "Camp"; "Lodge" is all-access, without her; "Salaries" is
-limited."""
+limited. In Camp she knows its people (decided 2026-11-21): the members
+and the own staff, who open it as it's all-access; not Dora, a client of
+Lodge, nor Pat, a partner in no project."""
 
 import json
 
@@ -33,8 +35,9 @@ class PartnerTestCase(TestCase):
         self.cleo = person("Cleo", client=True)
         self.pia = partner("Pia")
         self.pat = partner("Pat")  # a partner in no project
+        self.dora = person("Dora", client=True)  # a client of Lodge only
         self.camp = project("Camp", members=[self.ada, self.pia, self.cleo])
-        self.lodge = project("Lodge", members=[self.ada])
+        self.lodge = project("Lodge", members=[self.ada, self.dora])
         self.salaries = project("Salaries", members=[self.ada], all_access=False)
         self.camp_list = ops.create_list(
             project=self.camp, title="Tents", creator=self.ada
@@ -100,30 +103,65 @@ class QueriesTest(PartnerTestCase):
         self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
 
     def test_assignable_and_mentionable(self):
-        """Partners are assigned and mentioned as members only, and assign
-        and mention members only (like clients, they don't learn about the
-        others)"""
+        """Partners are assigned and mentioned as members only; they assign
+        and mention the project's people, like own staff, nobody else"""
         assignable = set(ops.assignable_people(self.camp_todo, self.ada))
         self.assertEqual(assignable, {self.ada, self.bob, self.pia})
         self.assertEqual(
-            set(ops.assignable_people(self.camp_todo, self.pia)), {self.ada, self.pia}
+            set(ops.assignable_people(self.camp_todo, self.pia)), assignable
         )
         self.assertNotIn(self.pia, set(ops.assignable_people(self.lodge_todo)))
         names = {
             p["name"]
             for p in mentions.candidates(self.camp_todo, "", for_user=self.pia)
         }
-        self.assertEqual(names, {"Ada Example", "Cleo Example", "Pia Example"})
+        self.assertEqual(
+            names, {"Ada Example", "Bob Example", "Cleo Example", "Pia Example"}
+        )
         names = {
             p["name"]
             for p in mentions.candidates(self.camp_todo, "", for_user=self.ada)
         }
         self.assertIn("Bob Example", names)
-        # Pia's @Bob stays plain text
+        self.assertIn("Pat Example", names)
+        # Pia's @Bob resolves, Pat (in no project) and Dora (Lodge) stay
+        # plain text
         text = mentions.resolve(
-            self.camp_todo, "@bob@example.org @Ada", author=self.pia
+            self.camp_todo,
+            "@bob@example.org @pat@example.org @dora@example.org @Ada",
+            author=self.pia,
         )
-        self.assertEqual(text, f"@bob@example.org {mentions.syntax(self.ada)}")
+        self.assertEqual(
+            text,
+            f"{mentions.syntax(self.bob)} @pat@example.org @dora@example.org"
+            f" {mentions.syntax(self.ada)}",
+        )
+
+    def test_clients_still_know_members_only(self):
+        names = {
+            p["name"]
+            for p in mentions.candidates(self.camp_todo, "", for_user=self.cleo)
+        }
+        self.assertEqual(names, {"Ada Example", "Cleo Example", "Pia Example"})
+        self.assertEqual(
+            self.camp.people_known_to(self.cleo, [self.bob, self.ada]), [self.ada]
+        )
+        self.assertEqual(
+            self.camp.people_known_to(self.pia, [self.bob, self.ada, self.dora]),
+            [self.bob, self.ada],
+        )
+
+    def test_mentions_by_partners_reach_the_project_s_people(self):
+        # Bob is own staff, not a member: he sees Camp's internal to-do
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.add_comment(
+                self.camp_todo,
+                author=self.pia,
+                content=f"{mentions.syntax(self.bob)} {mentions.syntax(self.pat)}",
+            )
+        told = {n.user for n in Notification.objects.all()}
+        self.assertIn(self.bob, told)
+        self.assertNotIn(self.pat, told)
 
 
 class PagesTest(PartnerTestCase):
@@ -175,9 +213,13 @@ class PagesTest(PartnerTestCase):
         self.assertContains(response, "Pitch the tents")
         self.assertNotContains(response, "Book the lodge")
         self.assertNotContains(response, "Payroll")
-        # Bob shares no project with Pia
+        # The person's feed goes by projects shared as members, as for own
+        # staff: Bob opens Camp without being a member
         self.assertEqual(
             self.client.get(f"/people/{self.bob.pk}/feed/").status_code, 404
+        )
+        self.assertEqual(
+            self.client.get(f"/people/{self.dora.pk}/feed/").status_code, 404
         )
 
     def test_search_and_palette(self):
@@ -203,7 +245,9 @@ class PagesTest(PartnerTestCase):
     def test_mentionable(self):
         response = self.client.get(f"/items/{self.camp_todo.pk}/mentionable/")
         names = {p["name"] for p in response.json()}
-        self.assertNotIn("Bob Example", names)
+        self.assertIn("Bob Example", names)
+        self.assertNotIn("Pat Example", names)
+        self.assertNotIn("Dora Example", names)
         self.assertEqual(
             self.client.get(f"/items/{self.lodge_todo.pk}/mentionable/").status_code,
             404,
@@ -265,22 +309,17 @@ class NotificationsTest(PartnerTestCase):
         self.assertIn(self.pia, told)
 
     def test_names_mentioned_outside_the_members(self):
-        """Pia reads Bob's mention as the label written"""
-        ops.add_comment(
-            self.camp_todo,
-            author=self.ada,
-            content=f"[@Somebody](person:{self.bob.pk}) knows",
-        )
-        with mentions.reading_as(self.pia):
-            self.assertEqual(
-                mentions.plain(f"[@Somebody](person:{self.bob.pk})", self.camp_todo),
-                "@Somebody",
-            )
-        with mentions.reading_as(self.ada):
-            self.assertEqual(
-                mentions.plain(f"[@Somebody](person:{self.bob.pk})", self.camp_todo),
-                "@Bob",
-            )
+        """Pia reads Bob's mention (own staff with access) with his name,
+        Pat's (in no project) as the label written; Cleo, a client, both as
+        written"""
+        text = f"[@Somebody](person:{self.bob.pk}) [@Else](person:{self.pat.pk})"
+        for reader, expected in [
+            (self.pia, "@Bob @Else"),
+            (self.cleo, "@Somebody @Else"),
+            (self.ada, "@Bob @Else"),
+        ]:
+            with self.subTest(reader=reader), mentions.reading_as(reader):
+                self.assertEqual(mentions.plain(text, self.camp_todo), expected)
 
 
 class APITest(PartnerTestCase):
@@ -325,8 +364,85 @@ class APITest(PartnerTestCase):
         self.assertEqual(member["organization"], "Example Partner Agency")
         self.assertEqual(member["organization_id"], self.pia.organization_id)
 
+    def send(self, method, path, data):
+        return getattr(self.client, method)(
+            f"/api/v1/{path}",
+            data,
+            content_type="application/json",
+            headers=self.headers,
+        )
+
+    def test_the_project_s_people(self):
+        """Pia assigns, subscribes and mentions Bob (own staff, not a
+        member) and sees him named; Dora (another project) and an ID nobody
+        has get the same answer"""
+        todo = f"todos/{self.camp_todo.pk}/"
+        response = self.send("patch", todo, {"assignees": [self.bob.pk]})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([a["id"] for a in response.json()["assignees"]], [self.bob.pk])
+        dora = self.send("patch", todo, {"assignees": [self.dora.pk]})
+        nobody = self.send("patch", todo, {"assignees": [999999]})
+        self.assertEqual(dora.status_code, 400)
+        self.assertEqual(dora.json(), nobody.json())
+        self.assertNotIn("Dora", dora.content.decode())
+        subscribers = f"items/{self.camp_todo.pk}/subscribers/"
+        response = self.send("post", subscribers, {"people": [self.ada.pk]})
+        self.assertEqual(response.status_code, 200)
+        names = {
+            s["person"]["name"] for s in self.get(subscribers).json()["subscribers"]
+        }
+        self.assertIn("Bob Example", names)
+        dora = self.send("post", subscribers, {"people": [self.dora.pk]})
+        nobody = self.send("post", subscribers, {"people": [999999]})
+        self.assertEqual(dora.status_code, 400)
+        self.assertEqual(dora.json(), nobody.json())
+        response = self.send(
+            "post",
+            f"items/{self.camp_todo.pk}/comments/",
+            {"content": "@bob@example.org @dora@example.org look"},
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        html = response.json()["content_html"]
+        self.assertIn("@Bob", html)
+        self.assertIn("@dora@example.org", html)
+
+    def test_clients_still_learn_about_members_only(self):
+        shared = ops.create_list(
+            project=self.camp, title="Shared", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=shared, title="Shared", creator=self.ada)
+        subscribe(self.bob, todo)
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="write")
+        response = self.client.get(
+            f"/api/v1/items/{todo.pk}/subscribers/",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        names = {s["person"]["name"] for s in response.json()["subscribers"]}
+        self.assertEqual(names, {"Ada Example"})
+
 
 class CLITest(test_cli.CLITest):
+    def test_partners_assign_the_project_s_people(self):
+        """Ada, a partner now, assigns Bob (own staff with access to the
+        all-access project) by ID, not Dora of another project"""
+        bob = person("Bob")
+        dora = person("Dora", client=True)
+        project("Lodge", members=[dora])
+        org_ops.set_organization(
+            self.ada,
+            organization("Example Partner Agency"),
+            actor=person("Root", is_admin=True),
+        )
+        result = self.biwak(
+            "todo", "add", self.list.pk, "Pitch", "--assign", bob.pk, "--json"
+        )
+        self.assertEqual(result.exit_code, 0, result.output)
+        todo = json.loads(result.stdout)
+        self.assertEqual([a["name"] for a in todo["assignees"]], ["Bob Example"])
+        result = self.biwak("todo", "add", self.list.pk, "Pack", "--assign", dora.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertNotIn("Dora", result.output)
+
     def test_projects(self):
         lodge = project("Lodge")
         org_ops.set_organization(

@@ -6,14 +6,30 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from biwak.accounts.models import Color
+from biwak.accounts.models import Color, User, own_staff
 
 
 def knows_everybody(viewer):
-    """Whether the viewer may learn about people who aren't members of the
-    project: own staff, not partners, not clients and
-    not nobody (mails rendered for nobody in particular)"""
+    """Whether the viewer may learn about everybody, in any project: own
+    staff, not partners, not clients and not nobody (mails rendered for
+    nobody in particular)"""
     return viewer is not None and viewer.is_authenticated and viewer.sees_all_access
+
+
+def knows_people_of(viewer, project):
+    """Whether the viewer may learn about all the project's people
+    (``Project.people()``: the members and the staff with access), not only
+    its members: own staff, and partners in the projects they're in, like
+    staff of a limited project (decided 2026-11-21, specs/access.md).
+    Clients and nobody learn about members only."""
+    if knows_everybody(viewer):
+        return True
+    return (
+        viewer is not None
+        and viewer.is_authenticated
+        and not viewer.is_client
+        and project.is_accessible_to(viewer)
+    )
 
 
 class ProjectQuerySet(models.QuerySet):
@@ -93,17 +109,31 @@ class Project(models.Model):
     def is_member(self, user):
         return self.memberships.filter(user=user).exists()
 
+    def people_q(self):
+        """``Q()`` for the project's people: its members and, in an
+        all-access project, the own staff, who open it without being
+        members (active or not)"""
+        people = Q(pk__in=self.memberships.values("user"))
+        if self.is_all_access:
+            people |= own_staff()
+        return people
+
     def people_known_to(self, viewer, people):
         """Those of ``people`` the viewer may see named: everybody for the
-        own staff, the members for clients, partners and for
-        nobody in particular (as on the project page; staff of all-access
-        projects needn't be members).
+        own staff, the project's people (``people_q()``) for partners in it
+        (decided 2026-11-21), the members for clients and for nobody in
+        particular (as on the project page; staff of all-access projects
+        needn't be members).
         ``biwak.activity.mentions.known_to()`` is the same for querysets."""
         people = list(people)
         if knows_everybody(viewer):
             return people
-        members = set(self.memberships.values_list("user", flat=True))
-        return [user for user in people if user.pk in members]
+        if knows_people_of(viewer, self):
+            known = User.objects.filter(self.people_q()).values_list("pk", flat=True)
+        else:
+            known = self.memberships.values_list("user", flat=True)
+        known = set(known)
+        return [user for user in people if user.pk in known]
 
     @property
     def description_first_line(self):

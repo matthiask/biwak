@@ -89,8 +89,9 @@ archived". You only find what you may see. See [Keyboard](keyboard.md).
 
 **People** lists everybody you may know, with their organization. A
 person's page shows the projects you have in common and what they did.
-Clients and partners only see members of their projects. Staff manage
-organizations from the People page.
+Clients only see members of their projects; partners see the people of
+their projects, including staff who open them without being members.
+Staff manage organizations from the People page.
 
 **Inviting people:** "Invite people" on the People page, or "Invite by
 email" on a project's people page (with that project chosen), opens one

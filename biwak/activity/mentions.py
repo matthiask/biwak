@@ -7,7 +7,9 @@ shown as plain text.
 
 Clients learn about the project's members only (specs/access.md): their
 ``@`` resolves and notifies members only, and they read the label as
-written for anybody else, never the current name. Who reads is
+written for anybody else, never the current name. Partners learn about the
+project's people (members and the staff with access) in the projects
+they're in (``known_to()``). Who reads is
 ``reader()``: the person of the request (the middleware, also for API
 tokens) or of the mail (``reading_as()``); nobody set reads like a client.
 """
@@ -24,7 +26,7 @@ from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_importing, subscribe
 from biwak.organizations.names import display_name, display_names
-from biwak.projects.models import knows_everybody
+from biwak.projects.models import knows_everybody, knows_people_of
 
 
 MENTION = re.compile(r"\[@([^\]\n]*)\]\(person:(\d+)\)")
@@ -62,6 +64,8 @@ def known_to(people, project, person):
     ``Project.people_known_to()`` for querysets"""
     if knows_everybody(person):
         return people
+    if knows_people_of(person, project):
+        return people.filter(project.people_q())
     return people.filter(pk__in=project.memberships.values("user"))
 
 
@@ -118,10 +122,12 @@ def candidates_for(project, visible, query, *, for_user):
     """The same for a new item of ``project``, visible to clients or not"""
     people = User.objects.active().filter(memberships__project=project)
     if knows_everybody(for_user):
-        # Not partners: they learn about members only, like clients
         people = User.objects.active().filter(
             models.Q(memberships__project=project) | models.Q(is_client=False)
         )
+    elif knows_people_of(for_user, project):
+        # Partners: the project's people, nobody from outside it
+        people = User.objects.active().filter(project.people_q())
     fields = ["full_name", "short_name"] + ([] if for_user.is_client else ["email"])
     for word in query.split():
         q = models.Q()
@@ -223,17 +229,26 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
     mentions.exclude(user__in=ids).delete()
     known = set(mentions.values_list("user", flat=True)) | mentioned_ids(previous)
     credit = credit or {}
-    members = None
+    known_ids = {}
+
+    def known_by(by, user):
+        """Whether ``by`` may know ``user`` (``known_to()``), once per ``by``"""
+        key = by.pk if by is not None else None
+        if key not in known_ids:
+            known_ids[key] = set(
+                known_to(User.objects.filter(pk__in=ids), item.project, by).values_list(
+                    "pk", flat=True
+                )
+            )
+        return user.pk in known_ids[key]
+
     people = []
     for user in mentionable_people(item).filter(pk__in=ids):
         if user.pk in known:
             continue
         by, by_event = credit.get(user.pk, (actor, event))
-        if not knows_everybody(by) and not is_importing():
-            if members is None:
-                members = set(item.project.memberships.values_list("user", flat=True))
-            if user.pk not in members:
-                continue
+        if not is_importing() and not known_by(by, user):
+            continue
         people.append((user, by, by_event))
     Mention.objects.bulk_create([
         Mention(item=item, comment=comment, user=user) for user, _by, _e in people

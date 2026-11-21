@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
 
 from biwak.accounts import operations as accounts_ops
-from biwak.accounts.models import User
+from biwak.accounts.models import User, own_staff
 from biwak.activity.feed import people_visible_to
 from biwak.organizations import operations as org_ops
 from biwak.projects import operations as project_ops
@@ -40,12 +40,22 @@ def role(user):
 def known_people(viewer):
     """The people the viewer may know (specs/people.md): everybody for the
     installation's own staff, else those they share a project with, and
-    themselves. The People page, the person's page and the images use it."""
+    themselves; for partners also the own staff of the all-access projects
+    they're in, who are among those projects' people (decided 2026-11-21,
+    ``Project.people_q()``). The People page, the person's page, the
+    images and the names use it."""
     people = User.objects.select_related("organization")
     if knows_everybody(viewer):
         return people
     shared = people_visible_to(viewer).values("pk")
-    return people.filter(Q(pk__in=shared) | Q(pk=viewer.pk))
+    known = Q(pk__in=shared) | Q(pk=viewer.pk)
+    if (
+        viewer.is_authenticated
+        and viewer.is_partner
+        and Project.objects.accessible_to(viewer).filter(is_all_access=True).exists()
+    ):
+        known |= own_staff()
+    return people.filter(known)
 
 
 def decorate(user, viewer, shared):
