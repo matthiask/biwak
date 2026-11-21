@@ -121,6 +121,13 @@ class LiveConsumerTest(TransactionTestCase):
             await self.connect(self.ada, query="item=999999", ready=False)
         )
 
+    async def test_huge_item_ids_are_refused(self):
+        for value in [str(2**63), "9" * 5000]:
+            with self.subTest(value=value[:10]):
+                await self.assertClosed(
+                    await self.connect(self.ada, query=f"item={value}", ready=False)
+                )
+
     async def test_trashed_items_are_refused(self):
         await self.run_op(ops.trash, self.todo, actor=self.ada)
         await self.assertClosed(await self.connect(self.ada, self.todo, ready=False))

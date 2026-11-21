@@ -36,6 +36,8 @@ from biwak.live import announce
 CLOSE_NO_LOGIN = 4401
 # The item doesn't exist for the person (anymore), like the pages' 404
 CLOSE_NOT_FOUND = 4404
+# The most digits of an item's ID (fits a bigint)
+MAX_ID_DIGITS = 18
 # Access is checked this often besides the changes telling the pages
 # (seconds, as in the live editor)
 CHECK_EVERY = 60
@@ -62,7 +64,12 @@ class LiveConsumer(AsyncWebsocketConsumer):
             if "=" in pair
         ).get("item", "")
         if value:
-            if not value.isdecimal():
+            # IDs are positive bigints: anything longer doesn't exist (and
+            # would raise in int() or the database)
+            if (
+                not (value.isascii() and value.isdecimal())
+                or len(value) > MAX_ID_DIGITS
+            ):
                 await self.refuse(CLOSE_NOT_FOUND)
                 return
             self.item = int(value)
