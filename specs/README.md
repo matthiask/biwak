@@ -58,7 +58,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `feed.md` | links: projects only, quieter ("Links", changed 2026-11-21) | built 2026-11-21 (`links`) | ui-round-4 | cheaper |
 | `lantern.md` | reading by acting: completing, editing, commenting, reacting read the item's notifications for the actor | built 2026-11-21 (`reading`) | lantern | cheaper |
 | `dashboard.md` | Home at `/`: what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | built 2026-11-21 (`home`) | ui-round-5, `feed.md` links, `lantern.md` reading by acting | cheaper, review the visibility tests |
-| `help.md` | help pages from `docs/` like Governance's, the shortcuts list moves there from settings, links to the help | built 2026-11-21 (`help`), the texts still to be read by the user | `dashboard.md` | cheaper, the texts read by the user |
+| `help.md` | help pages from `docs/` like Governance's, the shortcuts list moves there from settings, links to the help | built 2026-11-21 (`help`), the texts read by the user | `dashboard.md` | cheaper, the texts read by the user |
 | `celebrations.md` | small celebrations (completing a to-do, the last of a list) and animations | built | | cheaper |
 | `timeline.md` | the to-do's comments with what happened between them (completed, moved, assigned, due date, title, visibility, trash) | next | | cheaper, review visibility |
 | `pwa.md` | installable as an app (manifest, icons), no push and no offline yet | built | | cheaper |
