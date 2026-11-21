@@ -1249,3 +1249,73 @@ button.wb-signal:hover {
 .wb-shortcuts dd {
   margin: 0;
 }
+
+/* The current row of the keyboard shortcuts (frontend/shortcuts.js) */
+.wb-kb-current {
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+  border-radius: var(--bs-border-radius-sm);
+}
+
+/* Dialogs: the command palette and the list of shortcuts */
+.wb-dialog {
+  width: min(38rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
+  padding: 1rem;
+  color: var(--bs-body-color);
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
+  border-radius: var(--bs-border-radius-lg, 0.75rem);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+}
+
+.wb-dialog::backdrop {
+  background: rgba(20, 16, 30, 0.45);
+}
+
+.wb-palette {
+  margin-top: 12vh;
+  padding: 0.75rem;
+}
+
+.wb-palette-list {
+  max-height: 55vh;
+  margin: 0.5rem 0 0;
+  overflow-y: auto;
+}
+
+.wb-palette-group {
+  padding: 0.5rem 0.5rem 0.15rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.wb-palette-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--bs-border-radius-sm);
+  cursor: pointer;
+}
+
+.wb-palette-option.is-active {
+  background: var(--wb-primary-bg);
+  color: var(--wb-primary-ink);
+}
+
+.wb-palette-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-palette-hint {
+  flex: none;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}

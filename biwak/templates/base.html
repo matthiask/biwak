@@ -1,4 +1,4 @@
-{% load biwak i18n rspack_assets static %}
+{% load biwak i18n palette rspack_assets static %}
 <!DOCTYPE html>
 <html
   lang="{{ LANGUAGE_CODE }}"
@@ -113,6 +113,7 @@
       {% block messages %}{% include "_messages.html" %}{% endblock %}
       {% block content %}{% endblock %}
     </main>
+    {% if request.user.is_authenticated %}{% palette %}{% endif %}
     {% block scripts %}{% endblock %}
   </body>
 </html>

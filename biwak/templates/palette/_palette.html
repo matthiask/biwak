@@ -1,0 +1,51 @@
+{% load i18n %}
+{% comment %}
+  The command palette and the list of shortcuts (specs/keyboard.md), driven
+  by frontend/palette.js and frontend/shortcuts.js. The actions of the page,
+  which the server decided, are the JSON script.
+{% endcomment %}
+<dialog
+  id="wb-palette"
+  class="wb-dialog wb-palette"
+  aria-labelledby="wb-palette-title"
+>
+  <h2 id="wb-palette-title" class="visually-hidden">{% translate "Command palette" %}</h2>
+  <input
+    id="wb-palette-input"
+    type="text"
+    class="form-control"
+    role="combobox"
+    aria-expanded="true"
+    aria-controls="wb-palette-list"
+    aria-autocomplete="list"
+    aria-label="{% translate 'Search or run a command' %}"
+    placeholder="{% translate 'Search or run a command…' %}"
+    autocomplete="off"
+    spellcheck="false"
+  >
+  <ul
+    id="wb-palette-list"
+    class="wb-palette-list list-unstyled"
+    role="listbox"
+    aria-label="{% translate 'Results' %}"
+  >
+  </ul>
+  <div id="wb-palette-status" class="visually-hidden" role="status" aria-live="polite"></div>
+</dialog>
+<dialog
+  id="wb-shortcuts"
+  class="wb-dialog"
+  aria-labelledby="wb-shortcuts-title"
+>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 id="wb-shortcuts-title" class="h5 mb-0">{% translate "Keyboard shortcuts" %}</h2>
+    <button type="button" class="btn btn-sm btn-quiet" data-close-dialog>{% translate "Close" %}</button>
+  </div>
+  <h3 class="h6">{% translate "On this page" %}</h3>
+  <dl class="wb-shortcuts" data-shortcuts-page></dl>
+  <h3 class="h6 mt-3">{% translate "Everywhere" %}</h3>
+  <dl class="wb-shortcuts">
+    {% include "palette/_shortcuts.html" %}
+  </dl>
+</dialog>
+{{ data|json_script:"wb-palette-data" }}

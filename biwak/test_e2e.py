@@ -1290,3 +1290,251 @@ class MenuPlacementTest(E2ETestCase):
         expect(popup).to_be_visible()
         self.settle(self.page)
         self.assertGreaterEqual(popup.bounding_box()["x"], 0)
+
+
+class KeyboardTest(E2ETestCase):
+    """The command palette and the shortcuts (specs/keyboard.md)"""
+
+    def open_palette(self, page, key="Control+k"):
+        page.keyboard.press(key)
+        expect(page.locator("#wb-palette")).to_be_visible()
+        expect(page.locator("#wb-palette-input")).to_be_focused()
+
+    def options(self, page):
+        return page.locator("#wb-palette-list [role=option]")
+
+    def test_ctrl_k_and_slash_open_the_palette(self):
+        page = self.page
+        self.goto(page, self.project)
+        self.open_palette(page)
+        # The actions of the page come first, and it has a role for screen
+        # readers
+        expect(self.options(page).first).to_contain_text("New list")
+        self.assertEqual(
+            page.locator("#wb-palette-input").get_attribute("role"), "combobox"
+        )
+        page.keyboard.press("Escape")
+        expect(page.locator("#wb-palette")).not_to_be_visible()
+        self.open_palette(page, "/")
+        # "/" typed into the open palette is just a character
+        page.keyboard.type("/")
+        self.assertEqual(page.locator("#wb-palette-input").input_value(), "/")
+        self.assertEqual(self.errors, [])
+
+    def test_focus_returns_where_it_was(self):
+        page = self.page
+        self.goto(page, self.project)
+        page.locator("a.navbar-brand").focus()
+        self.open_palette(page)
+        page.keyboard.press("Escape")
+        expect(page.locator("a.navbar-brand")).to_be_focused()
+
+    def test_jumping_by_typing(self):
+        self.make_list("Launch plan", todos=["Pack"])
+        self.make_list("Secret plan")  # visible to nobody but staff
+        page = self.page
+        self.goto(page, self.project)
+        self.open_palette(page)
+        page.keyboard.type("laun")
+        option = self.options(page).filter(has_text="Launch plan")
+        expect(option).to_be_visible()
+        # The search is always the last entry
+        expect(self.options(page).last).to_contain_text("Search for “laun”")
+        # Arrow keys move, Enter runs
+        page.keyboard.press("ArrowDown")
+        expect(option).to_have_attribute("aria-selected", "true")
+        page.keyboard.press("Enter")
+        page.wait_for_url("**/lists/*/")
+        expect(page.locator("h1")).to_contain_text("Launch plan")
+
+    def test_search_is_an_entry(self):
+        page = self.page
+        self.goto(page, self.project)
+        self.open_palette(page)
+        page.keyboard.type("zebra")
+        expect(self.options(page).last).to_contain_text("Search for “zebra”")
+        page.keyboard.press("Enter")
+        page.wait_for_url("**/search/?q=zebra")
+
+    def test_a_client_does_not_find_internal_items(self):
+        self.make_list("Launch plan", visible=True)
+        self.make_list("Secret plan")
+        page = self.login(self.cleo)
+        self.goto(page, self.project)
+        self.open_palette(page)
+        page.keyboard.type("plan")
+        expect(self.options(page).filter(has_text="Launch plan")).to_be_visible()
+        self.assertEqual(self.options(page).filter(has_text="Secret").count(), 0)
+        # And no "New list" for them
+        page.locator("#wb-palette-input").fill("new")
+        expect(self.options(page).filter(has_text="New message")).to_be_visible()
+        self.assertEqual(self.options(page).filter(has_text="New list").count(), 0)
+
+    def test_a_new_to_do_through_the_palette(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        self.open_palette(page)
+        page.keyboard.type("new to-do")
+        page.keyboard.press("Enter")
+        title = page.locator("[data-add-todo] [name=title]").first
+        expect(title).to_be_focused()
+        title.fill("From the palette")
+        title.press("Control+Enter")
+        page.locator("[data-todo]").filter(has_text="From the palette").wait_for()
+        self.assertTrue(
+            Item.objects.filter(title="From the palette", creator=self.ada).exists()
+        )
+
+    def test_completing_a_to_do_through_the_palette(self):
+        todo = ops.create_todo(
+            todolist=self.make_list(), title="Pack the tent", creator=self.ada
+        )
+        page = self.page
+        self.goto(page, todo)
+        self.open_palette(page)
+        page.keyboard.type("complete")
+        page.keyboard.press("Enter")
+        expect(page.locator("main")).to_contain_text("Completed by")
+        todo.todo.refresh_from_db()
+        self.assertTrue(todo.todo.is_completed)
+
+    def test_rows_with_j_k_o_and_x(self):
+        todolist = self.make_list(todos=["One", "Two", "Three"])
+        page = self.page
+        self.goto(page, todolist)
+        current = page.locator(".wb-kb-current")
+        page.keyboard.press("j")
+        expect(current).to_contain_text("One")
+        # Focus follows, to the row's link
+        expect(page.locator("[data-todo] a[data-kb-open]").first).to_be_focused()
+        page.keyboard.press("j")
+        expect(current).to_contain_text("Two")
+        page.keyboard.press("j")
+        page.keyboard.press("j")  # The last row stays
+        expect(current).to_contain_text("Three")
+        page.keyboard.press("k")
+        expect(current).to_contain_text("Two")
+        page.keyboard.press("Escape")
+        self.assertEqual(current.count(), 0)
+        # x completes the current row
+        page.keyboard.press("j")
+        page.keyboard.press("j")
+        expect(current).to_contain_text("Two")
+        page.keyboard.press("x")
+        page.wait_for_function("() => !!document.querySelector('.wb-check.is-done')")
+        self.assertEqual(Item.objects.get(title="Two").todo.is_completed, True)
+        self.assertEqual(Item.objects.get(title="One").todo.is_completed, False)
+        # o opens it
+        page.keyboard.press("j")
+        page.keyboard.press("o")
+        page.wait_for_url("**/todos/*/")
+
+    def test_rows_of_my_todos_and_the_feed_and_search(self):
+        ops.create_todo(todolist=self.make_list(), title="Alpha", creator=self.ada)
+        page = self.page
+        for url, row in [
+            ("/todos/", "[data-kb-row]"),
+            ("/feed/", "[data-kb-row]"),
+            ("/search/?q=alpha", "[data-kb-row]"),
+        ]:
+            self.goto(page, url)
+            page.keyboard.press("j")
+            expect(page.locator(".wb-kb-current")).to_have_count(1)
+            self.assertTrue(
+                page.locator(".wb-kb-current").first.evaluate(
+                    "el => el.matches('" + row + "')"
+                )
+            )
+
+    def test_g_then_t_goes_to_my_todos(self):
+        page = self.page
+        self.goto(page, self.project)
+        page.keyboard.press("g")
+        page.keyboard.press("t")
+        page.wait_for_url("**/todos/?assignee=me")
+        page.keyboard.press("g")
+        page.keyboard.press("p")
+        page.wait_for_url(f"{self.live_server_url}/")
+
+    def test_a_question_mark_lists_the_shortcuts(self):
+        page = self.page
+        self.goto(page, self.project)
+        page.keyboard.press("?")
+        dialog = page.locator("#wb-shortcuts")
+        expect(dialog).to_be_visible()
+        expect(dialog).to_contain_text("Command palette")
+        page.keyboard.press("Escape")
+        expect(dialog).not_to_be_visible()
+
+    def test_shortcuts_of_an_item_page(self):
+        todo = ops.create_todo(
+            todolist=self.make_list(), title="Pack", creator=self.ada
+        )
+        page = self.page
+        self.goto(page, todo)
+        page.keyboard.press("c")
+        expect(page.locator("#comments ~ form textarea")).to_be_focused()
+        page.locator("h1").click()
+        page.keyboard.press("b")
+        page.wait_for_function(
+            "() => !!document.querySelector('[title=\"Remove the bookmark\"]')"
+        )
+
+    def test_nothing_fires_while_typing(self):
+        todolist = self.make_list(todos=["One", "Two"])
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        title = add.locator("[name=title]")
+        expect(title).to_be_focused()
+        page.keyboard.type("jkx?/gt c")
+        self.assertEqual(title.input_value(), "jkx?/gt c")
+        self.assertEqual(page.locator(".wb-kb-current").count(), 0)
+        expect(page.locator("#wb-palette")).not_to_be_visible()
+        expect(page.locator("#wb-shortcuts")).not_to_be_visible()
+        self.assertEqual(
+            page.url, f"{self.live_server_url}{todolist.get_absolute_url()}"
+        )
+        # Ctrl+K works while typing
+        self.open_palette(page)
+
+    def test_with_the_setting_off_only_ctrl_k_works(self):
+        self.ada.keyboard_shortcuts = False
+        self.ada.save()
+        todolist = self.make_list(todos=["One"])
+        page = self.page
+        self.goto(page, todolist)
+        for key in ["j", "/", "?", "x"]:
+            page.keyboard.press(key)
+        self.assertEqual(page.locator(".wb-kb-current").count(), 0)
+        expect(page.locator("#wb-palette")).not_to_be_visible()
+        expect(page.locator("#wb-shortcuts")).not_to_be_visible()
+        page.keyboard.press("g")
+        page.keyboard.press("t")
+        self.assertEqual(
+            page.url, f"{self.live_server_url}{todolist.get_absolute_url()}"
+        )
+        self.open_palette(page)
+        # The actions still run from the palette
+        page.keyboard.type("my to-dos")
+        page.keyboard.press("Enter")
+        page.wait_for_url("**/todos/?assignee=me")
+
+    def test_the_theme_action_and_the_stored_theme(self):
+        page = self.page
+        self.goto(page, self.project)
+        self.open_palette(page)
+        page.keyboard.type("switch the theme")
+        page.keyboard.press("Enter")
+        page.wait_for_function(
+            "() => document.documentElement.dataset.themeMode === 'light'"
+        )
+        # Saved for the person, so that it follows them
+        page.wait_for_function(
+            "() => fetch('/api/v1/me/').then(r => r.json()).then(m => m.theme === 'light')"
+        )
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.theme, "light")
+        self.assertEqual(self.errors, [])

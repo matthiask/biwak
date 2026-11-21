@@ -15,6 +15,7 @@ from django.utils.translation import gettext as _
 
 from biwak.activity.feed import people_visible_to
 from biwak.activity.mentions import plain
+from biwak.bookmarks.models import Bookmark
 from biwak.items.models import Item, Kind
 from biwak.projects.models import Project
 from biwak.search.queries import Matches, prefixes, tsquery, vector
@@ -97,3 +98,37 @@ def jumps(user, terms):
 
 def person_url(person):
     return reverse("person_feed", args=[person.pk])
+
+
+def bookmarks(user):
+    """The person's bookmarks, newest first, of what they may still open
+    (``Bookmark.objects.visible_to()``, like the bookmarks page), at most
+    ``LIMIT``"""
+    found = Bookmark.objects.visible_to(user).select_related(
+        "item", "item__project", "item__answer", "project"
+    )
+    results = []
+    for bookmark in found[:LIMIT]:
+        if bookmark.item_id:
+            item = bookmark.item
+            results.append({
+                "kind": item.kind,
+                "label": item.get_kind_display(),
+                "title": plain(item.title),
+                "url": item.get_absolute_url(),
+                "context": item.project.name,
+                "archived": item.project.archived_at is not None,
+                "visible_to_clients": item.is_client_visible,
+            })
+        else:
+            project = bookmark.project
+            results.append({
+                "kind": "project",
+                "label": _("Project"),
+                "title": project.name,
+                "url": project.get_absolute_url(),
+                "context": "",
+                "archived": project.archived_at is not None,
+                "visible_to_clients": False,
+            })
+    return results

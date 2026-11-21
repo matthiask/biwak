@@ -1,7 +1,7 @@
 {% load i18n %}
 <ul class="list-unstyled">
   {% for event in events %}
-    <li class="mb-2">
+    <li class="mb-2" data-kb-row>
       {% include "activity/_event.html" %}
       <div class="small text-body-secondary">{{ event.created_at|timesince }}</div>
     </li>
