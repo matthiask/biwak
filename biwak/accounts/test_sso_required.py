@@ -91,6 +91,16 @@ class CodesTest(RequiredTestCase):
         # The provider's page asks to continue there
         self.assertContains(self.client.get(response["Location"]), "Google")
 
+    def test_staff_too(self):
+        """The own organization is an organization like the others"""
+        own = self.ada.organization
+        own.domains = ["example.org"]
+        own.save()
+        self.require(own)
+        response = self.request_code(self.ada.email)
+        self.assertIn("/accounts/google/login/", response["Location"])
+        self.assertIn("Our organization signs in with Google.", self.messages(response))
+
     def test_others_get_codes(self):
         for user in [self.ada, self.cleo]:
             self.client = Client()

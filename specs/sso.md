@@ -6,11 +6,12 @@ prepared. SSO is safer than codes for people whose company manages their
 accounts: leaving the company ends their access there. And people
 managed by an IdP shouldn't get around it with a passkey or a code.
 
-Replaces `access.md`'s "Google only for staff" (decided 2026-11-20)
-once built.
+Replaces `access.md`'s "Google only for staff" (decided 2026-11-20).
 
-**Status:** spec (2026-11-21), the questions answered the same day.
-Being built (2026-11-21), see "Built".
+**Status:** built (2026-11-21), see "Built" and "Threats considered";
+Microsoft tested with made-up tokens only, not against a real tenant.
+Open: the choices under "Decided while building" (to be confirmed), a
+separate review of the claims checks and the enforcement (see "Agent").
 
 **Agent:** a strong model: sign-in is security-relevant; have the
 claims checks and the enforcement reviewed.
@@ -221,3 +222,96 @@ the organization's IdP.
     is told on the login page* by sending them to the provider (the spec
     asks for it); unknown and deactivated addresses look as before (a
     mail, nothing said on the page).
+
+## Threats considered (2026-11-21)
+
+How each is handled; the tests are in `biwak/accounts/test_sso_social.py`,
+`test_sso_required.py` and `biwak/organizations/test_signin.py`.
+
+- **An unverified address** (Google's `email_verified` false or missing,
+  a string other than "true"): never matched or accepted. Microsoft's
+  addresses are never verified, see the domains rule.
+- **A personal Google account registered with a company address** (no
+  `hd`, possibly made before the person left): doesn't count for the
+  organization; only Gmail addresses count without `hd`.
+- **Another Workspace** (`hd` of a lookalike, a suffix like
+  `example.org.evil.example`, a subdomain, spaces, a trailing dot, a list,
+  `true`): `hd` must equal one of the organization's domains, ignoring
+  case only.
+- **A Workspace asserting addresses of another organization:** the
+  address must be the person's own, and `hd` the person's
+  organization's; a Workspace issues verified addresses only of domains
+  it verified.
+- **Another Entra tenant, or personal Microsoft accounts:** `tid` must
+  be the organization's tenant (the tenant of personal accounts can't be
+  set); the app registration's endpoint is `organizations`.
+- **An Entra tenant claiming any address** (`mail` and the user principal
+  name are set by its administrators, "nOAuth"): counts only for
+  addresses of the organization's domains, which only admins change while
+  it has single sign-on.
+- **A forged or replayed Microsoft ID token:** only from the code
+  exchange (`did_fetch_access_token`), audience the app, not expired,
+  issued by its own tenant, its `oid` Graph's profile; the TLS connection
+  to the token endpoint stands in for the signature, as allauth does for
+  Google.
+- **Google for an address whose organization requires Microsoft** (also
+  Gmail): refused with the message naming Microsoft; codes and passkeys
+  too.
+- **A connected account outliving its address** (allauth finds people by
+  the provider's ID first): it counts only when the provider vouches for
+  the person's current address now.
+- **Connecting an account to oneself** (allauth's connect flow) as a way
+  around the rules: the same checks against the person signed in.
+- **Codes for people who must use the IdP:** not sent (the address
+  leads to the provider), and refused when entered (a code asked for
+  before the switch), in `pre_login`, which every allauth login passes.
+- **Passkeys reviving access after leaving the company:** removed on
+  switching to required, moving in or merging in, refused at sign-in,
+  not addable, not offered; switching back revives nothing.
+- **Sessions outliving leaving the company:** 24 hours after the last
+  sign-in through the provider, checked on every request from the time
+  allauth stored in the server-side session; "Remember me", saving on
+  every request and the cookie's age don't extend it; sessions without
+  that record (codes, passkeys, before the switch, `force_login`) end;
+  the session's own expiry is set to the same date for websockets; on
+  switching, stored sessions that don't count are ended at once.
+- **API tokens outliving it:** checked when authenticating (24 hours
+  after creation, whatever `expires_at` says or `fairy_tasks` did), not
+  extended by use, existing ones cut on switching.
+- **Calendar links outliving it:** none for these people (see above).
+- **Deactivated people:** refused by every way (allauth's `pre_login`,
+  `check_social()`, Django's backend for sessions, `for_secret()` for
+  tokens).
+- **Locking everybody out:** single sign-on only with a provider the
+  installation has set up and the organization's domains (and tenant);
+  an admin requires it for their own organization only after signing in
+  through it in that session; switching back to codes is always possible
+  (also in the Django admin, and `./manage.py shell` as a last resort).
+- **Staff loosening the rules:** the setting and the domains of an
+  organization with single sign-on are admins only (pages, merging, the
+  API shows the setting read-only). Staff moving a person out of an
+  organization requiring single sign-on does let them use codes again:
+  people are moved by staff today, and their access to projects is the
+  members' anyway.
+- **Learning about addresses:** an address of an organization requiring
+  single sign-on is sent to its provider with the organization's name
+  (asked for by the spec); unknown and deactivated addresses look as
+  before.
+- **Not handled:** websockets already open when a session ends stay open
+  until they close (they only push what the person may see); there is no
+  sign-out at the provider and no sync with it (the 24 hours, decided).
+
+## Production setup (the user's)
+
+- Google: the existing OAuth client (`GOOGLE_CLIENT_ID`,
+  `GOOGLE_CLIENT_SECRET`) keeps working; its consent screen gets the
+  `openid` scope next to `email` and `profile`, and is "External" if
+  clients' Workspaces sign in too. Redirect URI
+  `https://BIWAK/accounts/google/login/callback/` (unchanged).
+- Microsoft (when the first organization needs it): an app registration
+  for "Accounts in any organizational directory", the web redirect URI
+  `https://BIWAK/accounts/microsoft/login/callback/`, a client secret;
+  `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` in the deployment's
+  secrets. Each organization's tenant ID goes into its setting.
+- After deploying: check the own organization's domains (migration
+  `organizations.0005` filled them from staff addresses if it had none).
