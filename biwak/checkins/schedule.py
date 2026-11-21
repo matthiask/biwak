@@ -70,18 +70,6 @@ def next_occurrence_of(question, *, after):
     )
 
 
-def next_fire(*, rule, starts_on, time_of_day, time_zone, after):
-    """The first moment strictly after ``after`` the rule asks, or None"""
-    found = next_occurrence(
-        rule=rule,
-        starts_on=starts_on,
-        time_of_day=time_of_day,
-        time_zone=time_zone,
-        after=after,
-    )
-    return found and found[1]
-
-
 def next_fire_of(question, *, after):
     found = next_occurrence_of(question, after=after)
     return found and found[1]

@@ -18,12 +18,18 @@ def local(moment, tz=ZURICH):
     return moment.astimezone(tz).replace(tzinfo=None).isoformat(" ")
 
 
+def next_fire(**kwargs):
+    """The moment of ``schedule.next_occurrence()``"""
+    found = schedule.next_occurrence(**kwargs)
+    return found and found[1]
+
+
 def fires(rule, after, *, at=dt.time(9, 0), tz="Europe/Zurich", starts_on, count=3):
     """The next ``count`` moments, in local wall clock time"""
     result = []
     moment = utc(after)
     for _n in range(count):
-        moment = schedule.next_fire(
+        moment = next_fire(
             rule=rule, starts_on=starts_on, time_of_day=at, time_zone=tz, after=moment
         )
         result.append(local(moment, ZoneInfo(tz)))
@@ -138,7 +144,7 @@ class NextFireTest(SimpleTestCase):
 
     def test_the_gaps_between_utc_times_are_23_and_25_hours(self):
         before = schedule.fire_at(dt.date(2027, 3, 27), dt.time(9), "Europe/Zurich")
-        after = schedule.next_fire(
+        after = next_fire(
             rule="FREQ=DAILY",
             starts_on=dt.date(2027, 1, 1),
             time_of_day=dt.time(9),
@@ -147,7 +153,7 @@ class NextFireTest(SimpleTestCase):
         )
         self.assertEqual(after - before, dt.timedelta(hours=23))
         before = schedule.fire_at(dt.date(2027, 10, 30), dt.time(9), "Europe/Zurich")
-        after = schedule.next_fire(
+        after = next_fire(
             rule="FREQ=DAILY",
             starts_on=dt.date(2027, 1, 1),
             time_of_day=dt.time(9),
@@ -263,7 +269,7 @@ class NextFireTest(SimpleTestCase):
         moments = []
         moment = utc("2027-10-30 12:00")
         for _n in range(3):
-            moment = schedule.next_fire(
+            moment = next_fire(
                 rule="FREQ=DAILY",
                 starts_on=dt.date(2027, 1, 1),
                 time_of_day=dt.time(2, 30),
@@ -332,7 +338,7 @@ class StoredRuleTest(SimpleTestCase):
     def test_a_stored_rule_which_isnt_valid_is_never_asked(self):
         """INTERVAL=0 made send_mails loop forever"""
         self.assertIsNone(
-            schedule.next_fire(
+            next_fire(
                 rule="FREQ=DAILY;INTERVAL=0",
                 starts_on=dt.date(2027, 3, 22),
                 time_of_day=dt.time(9, 0),
