@@ -37,6 +37,12 @@ point.
 - **Everyone can belong to one:** clients, staff, and partners. Clients
   come from any number of organizations per project, so Basecamp's
   limit doesn't apply.
+- **Partners see only their projects:** staff whose organization isn't
+  the installation's own (freelancers, partner agencies, Basecamp's
+  non-client collaborators) see only the projects they're members of;
+  all-access projects open only to the installation's own staff
+  (`access.md` to be changed accordingly, tests through every entry
+  point).
 
 ## Managing organizations
 
@@ -75,12 +81,8 @@ point.
 
 ## Questions before building
 
-1. **Partners** (people from another company working like staff, e.g. a
-   freelancer, Basecamp's non-client collaborators): staff with an
-   organization other than the installation's own. Should they see only
-   the projects they're members of, not every all-access project?
-   Suggested: yes, partners are staff limited to their projects (a
-   project being all-access opens it to the installation's own staff
-   only).
-2. **Who manages organizations:** all staff, or admins only? Suggested:
-   all staff create and rename; admins merge and delete.
+1. **Who manages organizations:** suggested: all staff create, rename
+   and merge client and partner organizations (audit log); deleting only
+   organizations without people; anything touching the installation's
+   own organization (merging into it, moving people in or out, marking
+   it) only admins, since it decides who sees all-access projects.
