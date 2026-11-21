@@ -249,7 +249,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   daily, too slow); each doc locked with `skip_locked` and checked
   again, so two runs or the creator's answer can't tell twice; typing
   not merged yet (`LiveUpdate` rows) waits for the next run; drafts and
-  trashed docs are left alone.
+  trashed docs are left alone. Restoring one from the trash counts as a
+  change, so it's told an hour later (decided 2026-11-21: trash is
+  trash, but not a way around telling).
 - The API and CLI create docs with title and text, not as drafts.
 
 ## Files

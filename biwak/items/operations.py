@@ -986,7 +986,12 @@ def restore(item, *, actor):
     item.status = Status.ARCHIVED if item.archived_when_trashed else Status.ACTIVE
     item.trashed_at = None
     item.archived_when_trashed = False
-    item.save(update_fields=["status", "trashed_at", "archived_when_trashed"])
+    # A change: a doc whose "Tell people about it?" is unanswered is told an
+    # hour after this, not at once (trashing isn't a way around telling)
+    item.updated_at = timezone.now()
+    item.save(
+        update_fields=["status", "trashed_at", "archived_when_trashed", "updated_at"]
+    )
     item.refresh_from_db()
     record(actor=actor, action=Action.RESTORED, project=item.project, item=item)
 

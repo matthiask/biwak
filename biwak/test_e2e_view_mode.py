@@ -238,6 +238,18 @@ class PickerTest(E2ETestCase):
         page.get_by_role("link", name="Edit").click()
         return page.locator(".wb-picker-input")
 
+    def test_focus_alone_doesnt_open_the_list(self):
+        """A modal or a label focusing the field leaves the list closed; a
+        click, typing or Down opens it (decided 2026-11-21)"""
+        page = self.page
+        field = self.open_form(page)
+        listbox = page.locator(".wb-picker-list")
+        field.focus()
+        expect(field).to_be_focused()
+        expect(listbox).to_be_hidden()
+        field.press("ArrowDown")
+        expect(listbox).to_be_visible()
+
     def test_choosing_filtering_and_removing(self):
         page = self.page
         field = self.open_form(page)

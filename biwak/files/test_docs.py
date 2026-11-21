@@ -515,6 +515,17 @@ class TellTest(Fixture, TestCase):
         self.assertEqual(self.unanswered(61), 0)
         self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
 
+    def test_restoring_counts_as_a_change(self):
+        """Trash is trash, but not a way around telling (decided
+        2026-11-21): restored, the hour starts again"""
+        self.published()
+        ops.trash(Item.objects.get(pk=self.doc.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(61), 0)
+        with time_machine.travel(timezone.now() + dt.timedelta(minutes=120)):
+            ops.restore(Item.objects.get(pk=self.doc.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(150), 0)
+        self.assertEqual(self.unanswered(181), 1)
+
     def test_telling_is_claimed_once(self):
         """The creator's answer and the run every minute lock and check the
         doc: the second one tells nobody"""

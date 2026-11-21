@@ -40,7 +40,8 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   (Basecamp doesn't say).
 - **The picker** (`frontend/people-picker.js`, `PeopleField`, also for
   subscribers and whom to notify): pills with
-  ×, a field that opens the list on focus and filters while typing
+  ×, a field that opens the list on a click, typing or Down (not on focus
+  alone, decided 2026-11-21) and filters while typing
   (Up/Down, Enter, Escape, Backspace removes the last pill); non-members
   say "not in the project yet". The list floats over what's below, so it
   closes after a pick (typing or Down opens it again), when nobody is
