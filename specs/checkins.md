@@ -147,8 +147,9 @@ this part.
 - Clients only learn about the project's members among the people asked
   (staff of all-access projects needn't be members): the question page's
   people and "hasn't answered yet", the API's `people` and `missing`,
-  and a person's answers (`/questions/<pk>/people/<user pk>/` is 404 for
-  a client asking about a non-member) (decided 2026-11-20 after the
+  and a person's answers (`/questions/<pk>/people/<user pk>/` and the
+  API's `occurrences/?person_id=` are 404 for a client asking about a
+  non-member; the API since 2026-11-21) (decided 2026-11-20 after the
   visibility review, `Project.people_known_to()`).
 
 ## Pages

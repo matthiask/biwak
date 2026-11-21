@@ -447,6 +447,21 @@ class AnswersAPITest(APITestCase):
             [a["content"] for a in data["results"][0]["answers"]], ["Bob's"]
         )
 
+    def test_clients_ask_only_about_members(self):
+        outsider = person("Dora")  # all-access projects: staff need no membership
+        ops.set_people(self.shared, [self.ada, self.cleo, outsider], actor=self.ada)
+        ops.answer(self.shared, user=outsider, content="Dora's")
+        path = f"checkins/{self.shared.pk}/occurrences/"
+        self.assertEqual(
+            self.get(self.cleo, path, person_id=outsider.pk).status_code, 404
+        )
+        self.assertEqual(
+            self.get(self.ada, path, person_id=outsider.pk).status_code, 200
+        )
+        self.assertEqual(
+            self.get(self.cleo, path, person_id=self.ada.pk).status_code, 200
+        )
+
     def test_clients_dont_see_internal_answers(self):
         ops.answer(self.shared, user=self.cleo, content="Client answer")
         ops.answer(self.item, user=self.ada, content="Internal answer")

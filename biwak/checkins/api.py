@@ -6,6 +6,7 @@ import datetime as dt
 from typing import Literal
 
 from django.db.models import Prefetch
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -261,8 +262,13 @@ def occurrence_list(
 ):
     """The question's occurrences with their answers (newest first, as on
     the page), the latest first; ``person_id``: only that person's answers
-    (and the occurrences they answered)"""
+    (and the occurrences they answered), 404 for clients asking about
+    somebody who isn't a member"""
     item = question_for(request, question_id)
+    if person_id is not None:
+        person = get_object_or_404(User, pk=person_id)
+        if not item.project.people_known_to(request.user, [person]):
+            raise Http404("Not a member")
     latest = ops.latest_occurrence(item)
     visible = Item.objects.visible_to(request.user)
     occurrences = Occurrence.objects.filter(question__item=item)
