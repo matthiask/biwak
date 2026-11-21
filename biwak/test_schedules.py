@@ -3,6 +3,7 @@ import itertools
 from zoneinfo import ZoneInfo
 
 from django.test import SimpleTestCase
+from django.utils import translation
 
 from biwak import schedules
 from biwak.schedules import InvalidRule, describe, next_date, validate
@@ -177,6 +178,14 @@ class PresetsTest(SimpleTestCase):
             with self.subTest(rule=rule):
                 self.assertEqual(describe(rule), text)
         self.assertEqual(describe(""), "")
+
+    def test_describe_is_translated(self):
+        """Hard-coded English and strftime("%B") before; Django's catalogs
+        have the month names and ordinals already"""
+        with translation.override("de"):
+            text = describe("FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=14")
+            self.assertIn("März", text)
+            self.assertIn("5.", describe("FREQ=MONTHLY;BYMONTHDAY=5"))
 
     def test_describe_working_day_positions(self):
         self.assertEqual(

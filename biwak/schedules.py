@@ -19,8 +19,10 @@ from zoneinfo import ZoneInfo
 
 from dateutil import rrule
 from django.conf import settings
+from django.contrib.humanize.templatetags.humanize import ordinal
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.dates import MONTHS
+from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 
 class InvalidRule(ValueError):
@@ -444,19 +446,26 @@ def rule_fields(rule):
 
 
 # Describing -------------------------------------------------------------
+#
+# Every text goes through gettext (whole phrases with placeholders, so
+# that a translation can order them); month names and ordinal numbers come
+# from Django's catalogs.
 
 
 def _ordinal(n):
     if n in ORDINALS:
         return str(ORDINALS[n])
-    suffix = (
-        "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    )
-    return f"{n}{suffix}"
+    return ordinal(n)
 
 
 def _every(interval, unit):
-    return f"every {unit}" if interval == 1 else f"every {interval} {unit}s"
+    texts = {
+        "day": lambda: ngettext("every day", "every %(n)s days", interval),
+        "week": lambda: ngettext("every week", "every %(n)s weeks", interval),
+        "month": lambda: ngettext("every month", "every %(n)s months", interval),
+        "year": lambda: ngettext("every year", "every %(n)s years", interval),
+    }
+    return texts[unit]() % {"n": interval}
 
 
 def _describe_weekly(interval, days, parts):
@@ -468,17 +477,18 @@ def _describe_weekly(interval, days, parts):
     if not all(day in names for day in days):
         return None
     if days == WEEKDAYS.split(","):
-        return (
-            "every weekday"
-            if interval == 1
-            else f"{_every(interval, 'week')} on weekdays"
-        )
+        if interval == 1:
+            return gettext("every weekday")
+        return gettext("%(every)s on weekdays") % {"every": _every(interval, "week")}
     listed = ", ".join(names[day] for day in days)
     if interval == 1:
-        return f"every {listed}"
+        return gettext("every %(days)s") % {"days": listed}
     if len(days) == 1 and interval == 2:
-        return f"every other {listed}"
-    return f"{_every(interval, 'week')} on {listed}"
+        return gettext("every other %(day)s") % {"day": listed}
+    return gettext("%(every)s on %(days)s") % {
+        "every": _every(interval, "week"),
+        "days": listed,
+    }
 
 
 def _describe_monthly(interval, days, monthdays, parts):
@@ -487,25 +497,30 @@ def _describe_monthly(interval, days, monthdays, parts):
     setpos = parts.get("BYSETPOS", "")
     if parts.keys() - {"FREQ", "INTERVAL", "BYDAY", "BYMONTHDAY", "BYSETPOS", "WKST"}:
         return None
-    if (
-        len(days) == 1
-        and days[0] in names
-        and setpos.lstrip("-").isdigit()
-        and int(setpos) in ORDINALS
-    ):
-        return f"the {_ordinal(int(setpos))} {names[days[0]]} of {month}"
-    if (
-        days == WEEKDAYS.split(",")
-        and setpos.lstrip("-").isdigit()
-        and int(setpos) in ORDINALS
-    ):
-        return f"the {_ordinal(int(setpos))} working day of {month}"
+    nth = setpos.lstrip("-").isdigit() and int(setpos) in ORDINALS
+    if len(days) == 1 and days[0] in names and nth:
+        return gettext("the %(nth)s %(day)s of %(every)s") % {
+            "nth": _ordinal(int(setpos)),
+            "day": names[days[0]],
+            "every": month,
+        }
+    if days == WEEKDAYS.split(",") and nth:
+        return gettext("the %(nth)s working day of %(every)s") % {
+            "nth": _ordinal(int(setpos)),
+            "every": month,
+        }
     if len(monthdays) == 1 and not days and not setpos:
-        return f"the {_ordinal(int(monthdays[0]))} of {month}"
+        return gettext("the %(day)s of %(every)s") % {
+            "day": _ordinal(int(monthdays[0])),
+            "every": month,
+        }
     if monthdays and not days and setpos == "-1":
         last = int(monthdays[-1])
         if monthdays == [str(d) for d in range(28, last + 1)]:
-            return f"the {_ordinal(last)} (or the last day) of {month}"
+            return gettext("the %(day)s (or the last day) of %(every)s") % {
+                "day": _ordinal(last),
+                "every": month,
+            }
     return None
 
 
@@ -523,17 +538,24 @@ def _describe_yearly(interval, parts, monthdays):
         return None
     if not (month_number.isdigit() and 1 <= int(month_number) <= 12):
         return None
-    month_name = dt.date(2028, int(month_number), 1).strftime("%B")
+    month_name = str(MONTHS[int(month_number)])
     if len(monthdays) == 1 and not setpos:
-        return f"{year} on {month_name} {monthdays[0]}"
+        return gettext("%(every)s on %(month)s %(day)s") % {
+            "every": year,
+            "month": month_name,
+            "day": monthdays[0],
+        }
     if monthdays == ["28", "29"] and setpos == "-1":
-        return f"{year} on {month_name} 29 (or the last day)"
+        return gettext("%(every)s on %(month)s 29 (or the last day)") % {
+            "every": year,
+            "month": month_name,
+        }
     return None
 
 
 def describe(rule):
-    """A short English text: "every Monday", "the first Monday of every
-    month"; unusual rules show the rule itself"""
+    """A short text: "every Monday", "the first Monday of every month";
+    unusual rules show the rule itself. In the active language."""
     if not rule:
         return ""
     parts = _parts(rule)
@@ -554,4 +576,6 @@ def describe(rule):
             text = _describe_monthly(interval, days, monthdays, parts)
         case "YEARLY":
             text = _describe_yearly(interval, parts, monthdays)
-    return text if text and interval else f"custom schedule ({rule})"
+    if text and interval:
+        return text
+    return gettext("custom schedule (%(rule)s)") % {"rule": rule}
