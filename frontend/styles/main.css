@@ -2212,3 +2212,45 @@ main:has([data-hide-title]) [data-edit-open] {
     align-items: start;
   }
 }
+
+/* The chapters above the help pages, the current one marked (biwak/help.py,
+   copied from Governance) */
+.wb-help-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+.wb-help-chapters a {
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+}
+.wb-help-chapters a:hover {
+  color: var(--bs-link-hover-color);
+}
+.wb-help-chapters a[aria-current="page"] {
+  color: var(--bs-body-color);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--wb-accent-fill);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.35em;
+}
+
+/* Help pages (docs/): readable line length */
+.wb-help {
+  max-width: 48rem;
+}
+.wb-help h2 {
+  font-size: 1.1rem;
+  margin-top: 1.5rem;
+}
+.wb-help h3,
+.wb-help h4 {
+  font-size: 1rem;
+  margin-top: 1.25rem;
+}
+.wb-help li {
+  margin-bottom: 0.25rem;
+}
