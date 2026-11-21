@@ -23,7 +23,12 @@ from biwak.activity import (
 )
 from biwak.activity.mails import read_unsubscribe_token
 from biwak.activity.models import Action, LevelOverride
-from biwak.activity.notify import can_see, level_choices
+from biwak.activity.notify import (
+    can_see,
+    effective_level,
+    item_level_context,
+    level_choices,
+)
 from biwak.activity.operations import (
     set_level_override,
     unsubscribe as unsubscribe_from,
@@ -31,6 +36,7 @@ from biwak.activity.operations import (
 from biwak.forms import Form, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
+from biwak.modals import form_response
 from biwak.projects.views import project_for
 
 
@@ -229,9 +235,22 @@ def _level(request):
     return level
 
 
+class LevelForm(Form):
+    """A project's or an item's level, instead of the person's own"""
+
+    level = forms.ChoiceField(
+        label=_("Notify me about"), required=False, widget=forms.RadioSelect
+    )
+
+    def __init__(self, *args, default, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["level"].choices = level_choices(default)
+
+
 @never_cache
 def project_notifications(request, pk):
-    """A project's override (the project page's "More" menu)"""
+    """A project's override (the project page's "More" menu): a modal, also
+    a page"""
     project = project_for(request, pk)
     if request.method == "POST":
         set_level_override(request.user, _level(request), project=project)
@@ -240,23 +259,60 @@ def project_notifications(request, pk):
         )
         return redirect(next_url(request) or project)
     override = LevelOverride.objects.filter(user=request.user, project=project).first()
-    return render(
+    form = LevelForm(
+        initial={"level": override.level if override else ""},
+        default=request.user.notification_level,
+    )
+    return form_response(
         request,
-        "activity/project_notifications.html",
-        {
-            "project": project,
-            "current": override.level if override else "",
-            "choices": level_choices(request.user.notification_level),
-        },
+        form,
+        title=_("Notifications for this project"),
+        intro=_(
+            "Your own level for this project instead of the one in your"
+            " settings. The activity feed always shows everything."
+        ),
+        project=project,
+        cancel_url=project.get_absolute_url(),
     )
 
 
-@require_POST
+NOTIFICATIONS_TITLES = {
+    Kind.LIST: _("Notifications for this list"),
+    Kind.TODO: _("Notifications for this to-do"),
+    Kind.MESSAGE: _("Notifications for this message"),
+    Kind.FOLDER: _("Notifications for this folder"),
+    Kind.DOC: _("Notifications for this doc"),
+    Kind.FILE: _("Notifications for this file"),
+    Kind.QUESTION: _("Notifications for this check-in"),
+}
+
+
+@never_cache
 def item_notifications(request, pk):
-    """An item's override (next to its subscribe button)"""
+    """An item's override ("Notifications…" in its "More" menu): a modal,
+    also a page; the settings page posts here too"""
     item = item_for(request, pk)
-    set_level_override(request.user, _level(request), item=item)
-    return redirect(next_url(request) or item)
+    if request.method == "POST":
+        set_level_override(request.user, _level(request), item=item)
+        return redirect(next_url(request) or item)
+    context = item_level_context(request.user, item)
+    # The level it'd have without the override is the first choice's label
+    form = LevelForm(
+        initial={"level": context["level"]},
+        default=effective_level(request.user, item.parent, project=item.project),
+    )
+    return form_response(
+        request,
+        form,
+        title=NOTIFICATIONS_TITLES.get(item.kind, _("Notifications for this item")),
+        intro=_(
+            "Your own level for this one instead of the one of the project."
+            " The activity feed always shows everything."
+        ),
+        item=item,
+        parent=item.parent,
+        cancel_url=item.get_absolute_url(),
+    )
 
 
 @login_not_required

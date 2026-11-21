@@ -335,15 +335,17 @@ def project_dot(project):
     )
 
 
-@register.inclusion_tag("activity/_item_notifications.html", takes_context=True)
-def item_notifications(context, item):
-    """The person's level for an item, next to its subscribe button"""
-    from biwak.activity.notify import item_level_context
-
-    user = context["request"].user
-    return {"item": item, "csrf_token": context.get("csrf_token")} | (
-        item_level_context(user, item)
-    )
+@register.simple_tag
+def move_url(item):
+    """The form for moving an item (an entry of its "More" menu), empty for
+    what doesn't move: completed to-dos, lists, messages"""
+    if item.kind == "todo":
+        if item.todo.is_completed:
+            return ""
+        return reverse("todo_move_to", args=[item.pk])
+    if item.kind in {"folder", "doc", "file"}:
+        return reverse("item_move", args=[item.pk])
+    return ""
 
 
 @register.simple_tag
