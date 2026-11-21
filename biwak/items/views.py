@@ -14,6 +14,7 @@ from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
 from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
+from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
 from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
@@ -258,12 +259,26 @@ def changeable_group(request, pk):
     return group, changeable_list(request, group.todolist_id)
 
 
-@require_POST
+class GroupForm(Form):
+    title = forms.CharField(label=_("title"), max_length=200)
+
+
 def group_create(request, pk):
+    """A new group: a modal on the list's page, also a page of its own"""
     item = changeable_list(request, pk)
-    if title := request.POST.get("title", "").strip():
-        ops.create_group(todolist=item.todolist, title=title[:200])
-    return redirect(item)
+    form = GroupForm(request.POST or None)
+    if form.is_valid():
+        ops.create_group(todolist=item.todolist, title=form.cleaned_data["title"])
+        return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("New group"),
+        item=item,
+        parent=item,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Add group"),
+    )
 
 
 @require_POST
@@ -273,12 +288,22 @@ def group_delete(request, pk):
     return redirect(item)
 
 
-@require_POST
 def group_rename(request, pk):
+    """Renaming a group: a modal on the list's page, also a page"""
     group, item = changeable_group(request, pk)
-    if title := request.POST.get("title", "").strip():
-        ops.rename_group(group, title=title[:200])
-    return redirect(item)
+    form = GroupForm(request.POST or None, initial={"title": group.title})
+    if form.is_valid():
+        ops.rename_group(group, title=form.cleaned_data["title"])
+        return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("Rename the group"),
+        item=item,
+        parent=item,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Rename"),
+    )
 
 
 @require_POST

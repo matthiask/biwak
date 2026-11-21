@@ -74,7 +74,7 @@ class EverywhereTest(ActionsBase):
                 "Go to the activity",
                 "Go to my to-dos",
                 "Go to bookmarks",
-                "Notification settings",
+                "Settings",
                 "Search",
                 "Switch the theme",
             ]:

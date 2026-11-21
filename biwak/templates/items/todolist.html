@@ -100,23 +100,15 @@
                 <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
                   {% icon "pencil" %}
                 </summary>
-                <div class="dropdown-menu dropdown-menu-end p-2 wb-group-menu">
-                  <form method="post" action="{% url 'group_rename' group.pk %}" class="d-flex gap-2 mb-2">
-                    {% csrf_token %}
-                    <input
-                      type="text"
-                      name="title"
-                      value="{{ group.title }}"
-                      class="form-control form-control-sm"
-                      aria-label="{% translate 'title' %}"
-                      required
-                      maxlength="200"
-                    >
-                    <button type="submit" class="btn btn-sm btn-primary">{% translate "Rename" %}</button>
-                  </form>
+                <div class="dropdown-menu dropdown-menu-end wb-group-menu">
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'group_rename' group.pk %}"
+                    data-modal
+                  >{% translate "Rename the group" %}</a>
                   <form method="post" action="{% url 'group_delete' group.pk %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-destructive w-100">
+                    <button type="submit" class="dropdown-item">
                       {% translate "Remove the group; its to-dos stay" %}
                     </button>
                   </form>
@@ -141,20 +133,10 @@
     {% endfor %}
   </div>
   {% if can_change %}
-    <form method="post" action="{% url 'group_create' item.pk %}" class="d-flex gap-2 my-3">
-      {% csrf_token %}
-      <input
-        type="text"
-        name="title"
-        class="form-control form-control-sm w-auto"
-        placeholder="{% translate 'New group' %}"
-        required
-        maxlength="200"
-      >
-      <button type="submit" class="btn btn-sm btn-quiet">
-        {% icon "plus-lg" %}<span>{% translate "Add group" %}</span>
-      </button>
-    </form>
+    <p class="my-3">
+      <a class="btn btn-sm btn-quiet" href="{% url 'group_create' item.pk %}" data-modal>{% icon "plus-lg" %}<span
+        >{% translate "New group" %}</span></a>
+    </p>
   {% endif %}
   <div id="live-completed" data-live>
     {% if completed_count %}

@@ -101,7 +101,6 @@ def everywhere(user):
         link(_("Go to the activity"), reverse("feed"), "g f"),
         link(_("Go to my to-dos"), reverse("todos") + "?assignee=me", "g t"),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),
-        link(_("Notification settings"), reverse("settings") + "#notifications"),
         link(_("Settings"), reverse("settings")),
         link(_("Search"), reverse("search")),
         {"label": _("Switch the theme"), "type": "theme", "shortcut": ""},

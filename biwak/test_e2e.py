@@ -1379,7 +1379,7 @@ class ClientTest(E2ETestCase):
         )
         self.assertEqual(page.locator("[data-group-handle]").count(), 0)
         self.assertEqual(page.get_by_text("Add a link").count(), 0)
-        self.assertEqual(page.get_by_role("button", name="Add group").count(), 0)
+        self.assertEqual(page.get_by_role("link", name="New group").count(), 0)
         self.assertEqual(page.locator("details.wb-menu .wb-group-menu").count(), 0)
 
         # Adding to-dos inline works and what the client creates is
