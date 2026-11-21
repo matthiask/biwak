@@ -106,3 +106,12 @@ decides who sees all-access projects.
   only once ticked, together with the invitation. Inviting leaves an
   empty field to the address's domain; people who exist keep their
   organization. Everybody can belong to one, staff too.
+- **Pages** (`/organizations/`, the installation's own staff only; linked
+  from a project's people page and the palette's "Go to organizations"):
+  the list with people and domains, an organization's page with its
+  people, and modals to create, edit (name and domains), merge ("Merge…":
+  people and domains move, the other one is deleted), delete (only
+  without people) and move a person to another organization ("Change
+  organization", `/people/ID/organization/`). The installation's own is
+  marked in the Django admin; merging into or out of it, moving people in
+  or out of it and deleting it are admins only, also on these pages.

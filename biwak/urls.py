@@ -27,6 +27,7 @@ def no_passwords(request, *args, **kwargs):
 urlpatterns = [
     path("favicon.ico", favicon),
     path("", include("biwak.projects.urls")),
+    path("", include("biwak.organizations.urls")),
     path("", include("biwak.items.urls")),
     path("", include("biwak.files.urls")),
     path("", include("biwak.activity.urls")),
