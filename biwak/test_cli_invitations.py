@@ -1,4 +1,4 @@
-"""``biwak invite`` and ``biwak invitations`` (specs/ui-round-6.md, part B)"""
+"""``biwak invite`` and ``biwak invitations`` (specs/activation.md, "Inviting")"""
 
 import json
 

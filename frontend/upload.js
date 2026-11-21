@@ -1,4 +1,4 @@
-// "Upload files" (files/upload_form.html, specs/ui-round-7.md, part 4b): the
+// "Upload files" (files/upload_form.html, specs/files.md, "Uploading files"): the
 // files chosen or dropped are listed with their names (editable, the
 // extension kept) and sizes, removable; "Upload" sends them one after
 // another to [data-upload] with the form's fields and the batch, a

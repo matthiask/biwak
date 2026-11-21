@@ -164,7 +164,7 @@ def library_url(project, folder):
 
 def folder_new(request, pk):
     """A new folder in the top level or ``?folder=``: a modal of the
-    folder's page, also a page (specs/ui-round-7.md, part 2)"""
+    folder's page, also a page (specs/files.md, "Folders")"""
     project = project_for(request, pk)
     parent = folder_param(request, project)
     if not ops.can_create(request.user, Kind.FOLDER):
@@ -198,7 +198,7 @@ class OrderForm(Form):
 
 def _order(request, project, folder):
     """How a folder's contents (or the top level's) are ordered, for
-    everybody; staff set it (specs/ui-round-7.md, part 3)"""
+    everybody; staff set it (specs/files.md, "Folders")"""
     staff_only(request)
     form = OrderForm(
         request.POST or None, initial={"ordering": ordering_of(project, folder)}
@@ -349,7 +349,7 @@ def files_move(request, pk):
     """Moves several folders, docs and files at once (the selection's
     "Move to…", a modal, also a page; dropping them onto a folder posts
     here with ``folder``) with the operation of "Move to…"
-    (specs/ui-round-7.md, part 4)"""
+    (specs/files.md, "Moving and selecting")"""
     project = project_for(request, pk)
     items = selected(request, project)
     current = items[0].parent
@@ -517,7 +517,7 @@ def _uploads(request, project, folder, form, files, *, batch):
 def file_new(request, pk):
     """ "Upload files": a modal on the folder's page (frontend/upload.js
     sends the files one by one to ``file_upload``), also a page with a
-    file input taking several (specs/ui-round-7.md, part 4b)"""
+    file input taking several (specs/files.md, "Uploading files")"""
     project = project_for(request, pk)
     folder = folder_param(request, project)
     if not ops.can_create(request.user, Kind.FILE):

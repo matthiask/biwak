@@ -275,7 +275,7 @@ def is_blank(content):
 @transaction.atomic
 def create_draft(*, project, creator, parent=None):
     """ "New doc": a doc to write in at once, the editor needs one to sync
-    (specs/ui-round-7.md, part 5). Nobody's business until it has text
+    (specs/files.md, "Docs"). Nobody's business until it has text
     beyond ``# `` (``files.operations._save()`` makes it a doc then): no
     event, only its creator sees it, its creator the only subscriber.
     Internal at the top level, in a folder as the folder says."""
@@ -326,7 +326,7 @@ def create_upload(
     """Uploads a file into the root or a folder; its title is the file's
     name unless ``title`` is given. ``batch``: files uploaded together
     share it on their events, which the lantern and the mails merge into
-    one entry (specs/ui-round-7.md, part 4b). Raises
+    one entry (specs/files.md, "Uploading files"). Raises
     ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
     item = create_item(
@@ -1063,7 +1063,7 @@ DRAFT_DAYS = 1
 
 
 def delete_drafts(*, now=None):
-    """Deletes drafts left empty for a day (specs/ui-round-7.md, part 5);
+    """Deletes drafts left empty for a day (specs/files.md, "Docs");
     what was typed and not saved yet is saved first (``save_pending``
     runs before), making a doc of them. Returns how many."""
     cutoff = (now or timezone.now()) - dt.timedelta(days=DRAFT_DAYS)

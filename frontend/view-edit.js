@@ -1,4 +1,4 @@
-// Click to edit (specs/ui-round-1.md, part 3): an item's page shows the
+// Click to edit (specs/ui.md, "Click to edit"): an item's page shows the
 // item to read. Clicking what says [data-edit-focus] (the title, the text, a
 // field) inside an element with [data-edit-url] fetches the item's edit
 // page and swaps the form in place of the view's region

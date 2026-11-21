@@ -1,4 +1,4 @@
-// Filter forms apply themselves (specs/ui-round-3.md): a form with
+// Filter forms apply themselves (specs/ui.md, "Filters and view choices"): a form with
 // data-autosubmit (GET only) submits when a select, checkbox or radio
 // changes and, after a short pause, when a text field does (Enter submits as
 // always). The button stays for people without JavaScript (hidden by CSS

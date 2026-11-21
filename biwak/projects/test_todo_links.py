@@ -1,4 +1,4 @@
-"""The project page's links to its to-dos (specs/ui-round-5.md, section 2)"""
+"""The project page's links to its to-dos (specs/todos.md, "The to-dos page")"""
 
 from django.test import TestCase
 

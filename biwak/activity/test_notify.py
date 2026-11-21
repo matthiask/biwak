@@ -165,7 +165,7 @@ class NotifyTest(TestCase):
         self.assertEqual(notify(event.pk), [])
 
     def test_subscribed_means_everything(self):
-        """Subscribing is the switch (specs/ui-round-6.md, part C): whatever
+        """Subscribing is the switch (specs/notifications.md, "Subscriptions"): whatever
         the level, a subscriber is told about everything on the item; not
         subscribed, nothing but a mention"""
         comment = lambda: ops.add_comment(self.todo, author=self.ada, content="x")  # noqa: E731
@@ -320,7 +320,7 @@ class NotifyTest(TestCase):
 
     def test_posting_to_everybody_per_level(self):
         """Posting to everybody subscribes those on "everything" only
-        (specs/ui-round-6.md, part C); people chosen by name whatever their
+        (specs/notifications.md, "Subscriptions"); people chosen by name whatever their
         level"""
         dan, eve = person("Dan"), person("Eve")
         for user in [dan, eve]:
@@ -450,7 +450,7 @@ class QueriesTest(TestCase):
 
 class OnlyListsHaveLevelsMigrationTest(TestCase):
     def test_overrides_of_other_items_go(self):
-        """specs/ui-round-6.md, part C: projects' and lists' stay"""
+        """specs/notifications.md, "Subscriptions": projects' and lists' stay"""
         from importlib import import_module
 
         from django.apps import apps

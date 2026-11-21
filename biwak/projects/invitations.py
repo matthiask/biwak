@@ -1,5 +1,5 @@
 """Inviting several people at once, and invitations visible
-(specs/ui-round-6.md, part B): one form with a row per person and the
+(specs/activation.md, "Inviting"): one form with a row per person and the
 projects for all of them, from "Invite people" on the People page and from
 "Invite by email" on a project's people page; resending and withdrawing an
 invitation while the person hasn't signed in."""

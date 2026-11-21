@@ -33,7 +33,7 @@ from biwak.projects.views import project_for
 
 def doc_new(request, pk):
     """ "New doc": a draft opened in the editor at once, its text ``# ``
-    with the cursor after it (specs/ui-round-7.md, part 5). The address
+    with the cursor after it (specs/files.md, "Docs"). The address
     stays this one until the draft has text (frontend/collab.js puts the
     doc's into the history then); every visit makes a new draft, empty
     ones go after a day (``fairy_tasks``)."""
@@ -121,9 +121,9 @@ class TellForm(SubscribersForm):
 
 @never_cache
 def doc_tell(request, pk):
-    """The first "Done" of a doc begun as a draft (specs/ui-round-7.md,
-    part 5): its creator is asked once whom to tell, "Tell them" or "Not
-    now", never again either way. A modal of the editor, also a page.
+    """The first "Done" of a doc begun as a draft (specs/files.md, "Docs"): its
+    creator is asked once whom to tell, "Tell them" or "Not now",
+    never again either way. A modal of the editor, also a page.
     What was typed is saved first; a draft still empty goes back to its
     folder."""
     item = item_for(request, pk, Kind.DOC, drafts=True)

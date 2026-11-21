@@ -1,4 +1,4 @@
-"""Files uploaded together tell once (specs/ui-round-7.md, part 4b): one
+"""Files uploaded together tell once (specs/files.md, "Uploading files"): one
 entry in the lantern, one mail, one entry of the digest"""
 
 import datetime as dt

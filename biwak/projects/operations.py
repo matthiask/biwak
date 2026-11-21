@@ -186,7 +186,7 @@ def _invitee(email, *, actor, full_name, is_client, organization):
 def invite_people(projects, people, *, actor, notify=NOTIFY_DEFAULT):
     """Invites ``people`` (dicts of ``email`` and optionally ``full_name``,
     ``is_client``, default True, and ``organization``) to every one of
-    ``projects`` (specs/ui-round-6.md, part B). New people are created and
+    ``projects`` (specs/activation.md, "Inviting"). New people are created and
     mailed one invitation naming the projects, after the commit; people who
     have an account are added (``add_member()``, which records it), no
     invitation. ``notify`` is the choice for every project. All or nothing:

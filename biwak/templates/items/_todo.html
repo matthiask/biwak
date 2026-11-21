@@ -2,7 +2,7 @@
 {% comment %}
   A to-do's row, a grid: handle | check | body. The body has the title,
   then a line with the assignees, the due date and the signals; the title
-  wraps inside it (specs/ui-round-4.md).
+  wraps inside it (specs/todos.md, "Lists and the board").
 {% endcomment %}
 <div class="wb-todo" data-todo="{{ todo.pk }}" id="todo-{{ todo.pk }}" data-live data-kb-row>
   {% if not todo.todo.is_completed %}<span

@@ -1,4 +1,4 @@
-"""Basecamp's profile images (specs/ui-round-2.md, part C)"""
+"""Basecamp's profile images (specs/people.md, "Profile images")"""
 
 import io
 

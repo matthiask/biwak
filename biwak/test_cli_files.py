@@ -162,7 +162,7 @@ class FilesCLITest(test_cli.CLITest):
         self.assertEqual([e["title"] for e in data["entries"]], ["Specs"])
 
     def test_renaming_and_ordering_folders(self):
-        """specs/ui-round-7.md, parts 2 and 3"""
+        """Folders: renaming and ordering (specs/files.md, "Folders")"""
         folder = ops.create_folder(
             project=self.project, title="Specs", creator=self.ada
         )

@@ -256,8 +256,8 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
     newly = []
     # Event ID: (event, IDs of those it newly mentions)
     told = {}
-    # Being mentioned subscribes, except on "nothing" (specs/ui-round-6.md,
-    # part C), where only what the person does subscribes them
+    # Being mentioned subscribes, except on "nothing" (specs/notifications.md,
+    # "Subscriptions"), where only what the person does subscribes them
     from biwak.activity.notify import effective_levels
 
     levels = (

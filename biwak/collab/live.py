@@ -41,7 +41,7 @@ def access(user, pk, *, session_key=None):
 
         if not sso.session_alive(session_key, user):
             return None
-    # A draft is its creator's alone (specs/ui-round-7.md, part 5)
+    # A draft is its creator's alone (specs/files.md, "Docs")
     item = (
         Item.objects
         .visible_to(user, drafts=True)

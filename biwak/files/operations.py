@@ -173,8 +173,8 @@ def _save(item, doc, *, actor=None, new_version=False):
                 doc.content = content
                 doc.save(update_fields=["content"])
             return False
-        # The doc exists from its first save with text (specs/ui-round-7.md,
-        # part 5): created now, telling nobody but who it mentions
+        # The doc exists from its first save with text (specs/files.md,
+        # "Docs"): created now, telling nobody but who it mentions
         published = True
         item.is_draft = False
         item.created_at = _now()
@@ -410,7 +410,7 @@ def trash_items(items, *, actor):
 def set_ordering(target, ordering, *, actor):
     """The order of a folder's contents (``target`` its item) or of the
     project's top level (``target`` the project), for everybody; staff
-    only. Just a setting: no event (specs/ui-round-7.md, part 3)."""
+    only. Just a setting: no event (specs/files.md, "Folders")."""
     if actor.is_client:
         raise PermissionDenied
     ordering = FilesOrdering(ordering)

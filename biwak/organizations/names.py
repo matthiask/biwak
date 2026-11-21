@@ -1,5 +1,5 @@
-"""How a person's short name is shown to a viewer (specs/ui-round-2.md,
-part F): "Moritz", but "Moritz F." when somebody else the viewer may know
+"""How a person's short name is shown to a viewer (specs/people.md, "Names"):
+"Moritz", but "Moritz F." when somebody else the viewer may know
 has the same short name, and the full name when that is still the same.
 The rule lives here, nowhere else; everything that prints a short name
 (templates, mentions, the ``@`` list, mails) asks ``display_name()``."""

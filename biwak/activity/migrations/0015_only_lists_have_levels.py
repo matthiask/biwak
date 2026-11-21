@@ -1,4 +1,4 @@
-"""Subscribing is the switch (specs/ui-round-6.md, part C): items other than
+"""Subscribing is the switch (specs/notifications.md, "Subscriptions"): items other than
 lists have no notification level anymore. Their overrides go; no users yet,
 so nothing to tell anybody."""
 

@@ -451,8 +451,8 @@ def due_badge(todo, date_format="j. M", *, badge_only=False):
     the day, else as plain text; nothing without a date. ``badge_only``:
     just the badge, without the day, and nothing when it would be plain
     text (next to the date, on the to-do's page). One place for
-    lists, the board, "my to-dos" and the to-do's page (specs/ui-round-1.md,
-    part 5)."""
+    lists, the board, "my to-dos" and the to-do's page (specs/todos.md, "The
+    to-do's page")."""
     from biwak.items import due
 
     return {

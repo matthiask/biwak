@@ -15,7 +15,7 @@
     </div>
     <div class="wb-page-actions">
       {% if ask_to_tell %}
-        {# The first "Done" asks whom to tell, once (specs/ui-round-7.md, part 5) #}
+        {# The first "Done" asks whom to tell, once (specs/files.md, "Docs") #}
         <a class="btn btn-sm btn-quiet" href="{% url 'doc_tell' item.pk %}" data-modal>{% translate "Done" %}</a>
       {% else %}
         <a class="btn btn-sm btn-quiet" href="{{ item.get_absolute_url }}">{% translate "Done" %}</a>
@@ -28,7 +28,7 @@
     the editor into [data-collab-editor]; the server says whether it may
     type (specs/collaboration.md). The texts are the states it shows. A
     draft (data-collab-draft) starts with the cursor after its `# `; its
-    address becomes the doc's once it has text (specs/ui-round-7.md).
+    address becomes the doc's once it has text (specs/files.md, "Docs").
   {% endcomment %}
   <div
     class="mb-3"

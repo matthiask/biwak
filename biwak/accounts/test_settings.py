@@ -148,8 +148,8 @@ SAFARI = (
 # the session; activity tracking records it on the next request instead
 @override_settings(USERSESSIONS_TRACK_ACTIVITY=True)
 class SignInSectionTest(TestCase):
-    """Passkeys and sessions inline on the settings page (specs/ui-round-2.md
-    part E); allauth adds, removes and ends"""
+    """Passkeys and sessions inline on the settings page
+    (specs/access.md, "Sign-in"); allauth adds, removes and ends"""
 
     def setUp(self):
         self.ada = person("Ada")

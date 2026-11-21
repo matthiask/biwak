@@ -337,7 +337,7 @@ class FormsTest(ViewsTestCase):
         url = reverse("question_new", args=[self.project.pk])
         response = self.get(self.ada, url)
         self.assertContains(response, "New check-in")
-        # About 400 time zones: a combobox (specs/ui-round-6.md)
+        # About 400 time zones: a combobox (specs/ui.md, "Forms")
         self.assertContains(response, '<select name="time_zone" data-combobox=""')
         self.assertContains(response, "data-combobox")
         response = self.post(self.ada, url, self.data())

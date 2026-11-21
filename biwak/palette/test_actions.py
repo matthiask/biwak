@@ -202,7 +202,7 @@ class ProjectActionsTest(ActionsBase):
             f"/projects/{self.camp.pk}/docs/new/?folder={folder.pk}",
         )
         self.assertIn("Bookmark", actions)
-        # Folders through modals (specs/ui-round-7.md, part 2)
+        # Folders through modals (specs/files.md, "Folders")
         self.assertEqual(actions["New folder"]["type"], "modal")
         self.assertEqual(
             actions["New folder"]["url"],

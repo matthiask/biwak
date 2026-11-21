@@ -164,7 +164,7 @@ class DocPageTest(Fixture, TestCase):
 
 class NewDocTest(Fixture, TestCase):
     """New docs are drafts opening the editor at once, nobody's business
-    until they have text (specs/ui-round-7.md, part 5)"""
+    until they have text (specs/files.md, "Docs")"""
 
     def new_url(self, folder=None):
         url = reverse("doc_new", args=[self.project.pk])
@@ -302,7 +302,7 @@ class NewDocTest(Fixture, TestCase):
 
 class TellTest(Fixture, TestCase):
     """Telling people about a new doc, asked once at the first "Done"
-    (specs/ui-round-7.md, part 5)"""
+    (specs/files.md, "Docs")"""
 
     def setUp(self):
         super().setUp()

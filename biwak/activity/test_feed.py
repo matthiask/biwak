@@ -435,7 +435,7 @@ class FeedViewsTest(FeedBase):
         self.assertEqual(titles(kind="todo", person=self.bob.pk), {"Secret"})
         # Garbage is ignored
         self.assertEqual(self.client.get("/feed/?kind=nope&person=x").status_code, 200)
-        # The person filter is a combobox (specs/ui-round-6.md), saying who
+        # The person filter is a combobox (specs/ui.md, "Forms"), saying who
         # people are but not finding them by their address
         response = self.client.get("/feed/")
         self.assertContains(response, 'data-combobox=""')

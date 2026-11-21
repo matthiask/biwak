@@ -1,4 +1,4 @@
-"""People with the same first name (specs/ui-round-2.md, part F)"""
+"""People with the same first name (specs/people.md, "Names")"""
 
 from django.db import connection
 from django.template import Context, Template

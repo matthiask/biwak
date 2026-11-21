@@ -72,7 +72,7 @@ class SubscribersCLITest(test_cli.CLITest):
         self.assertFalse(Subscription.objects.filter(user=self.bob))
 
     def test_subscribing_and_unsubscribing_oneself(self):
-        """Subscribing is the switch (specs/ui-round-6.md, part C)"""
+        """Subscribing is the switch (specs/notifications.md, "Subscriptions")"""
         self.make()
         Subscription.objects.filter(user=self.ada).delete()
         output = self.biwak("subscribe", self.todo.pk).output

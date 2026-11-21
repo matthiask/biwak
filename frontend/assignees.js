@@ -1,4 +1,4 @@
-// The assignee picker (specs/ui-round-1.md, part 4): a <select multiple
+// The assignee picker (specs/todos.md, "Assignees"): a <select multiple
 // data-assignee-picker> of people becomes pills, each with × to remove, and
 // a field which opens the list of the others on focus and click and filters
 // while typing. Up and Down choose, Enter or a click picks, Escape closes,

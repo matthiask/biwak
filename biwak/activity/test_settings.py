@@ -116,7 +116,7 @@ class SettingsPagesTest(SettingsBase):
         self.assertFalse(LevelOverride.objects.exists())
 
     def test_only_lists_have_a_level(self):
-        """Subscribing is the switch (specs/ui-round-6.md, part C): a to-do
+        """Subscribing is the switch (specs/notifications.md, "Subscriptions"): a to-do
         (message, doc, file, folder) has no level, nor "Notifications…" in
         its "More" menu"""
         message = ops.create_message(
@@ -349,7 +349,7 @@ class SettingsAPITest(SettingsBase):
                 )
                 self.call("delete", user, path)
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
-        # Other items have none (specs/ui-round-6.md, part C)
+        # Other items have none (specs/notifications.md, "Subscriptions")
         path = f"items/{self.todo.pk}/notifications/"
         for method in ["get", "put", "delete"]:
             response = self.call(method, self.ada, path, {"level": "nothing"})

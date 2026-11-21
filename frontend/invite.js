@@ -1,4 +1,4 @@
-// Inviting several people at once (specs/ui-round-6.md, part B,
+// Inviting several people at once (specs/activation.md, "Inviting",
 // projects/invite.html): "Add another" adds a row to the formset from its
 // <template>, numbered after the others, and focuses its address. Without
 // JavaScript the button stays hidden and the form has a few empty rows.

@@ -136,7 +136,8 @@ class TrashModalTest(ItemModalBase):
         response = self.client.get(self.todo.get_absolute_url())
         self.assertContains(response, f'href="{self.url}" data-modal')
         self.assertContains(response, f'href="/todos/{self.todo.pk}/move-to/"')
-        # No level of its own: subscribing is the switch (specs/ui-round-6.md)
+        # No level of its own: subscribing is the switch
+        # (specs/notifications.md, "Levels")
         self.assertNotContains(response, f"/items/{self.todo.pk}/notifications/")
         self.assertNotContains(response, "Move to trash")
 

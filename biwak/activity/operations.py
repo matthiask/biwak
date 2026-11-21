@@ -325,7 +325,7 @@ def set_notification_settings(user, *, level=None, delivery=None, favicon=None):
 def set_level_override(user, level, *, project=None, item=None):
     """Overrides the person's level for a project or a list (and what's new
     in it); ``level`` None removes the override. Other items have no level:
-    subscribing is the switch (specs/ui-round-6.md, part C)."""
+    subscribing is the switch (specs/notifications.md, "Subscriptions")."""
     if (project is None) == (item is None):
         raise ValueError("A project or an item, not both")
     if item is not None and item.kind != Kind.LIST:

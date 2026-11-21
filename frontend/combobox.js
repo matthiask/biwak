@@ -1,4 +1,4 @@
-// A search field in front of a long select (specs/ui-round-6.md, part A),
+// A search field in front of a long select (specs/ui.md, "Forms"),
 // adapted from Workbench's initCombobox: <select data-combobox>
 // (ComboboxSelect in biwak/forms.py) gets a field which lists the options
 // on a click or the arrow keys and finds the typed words anywhere in an

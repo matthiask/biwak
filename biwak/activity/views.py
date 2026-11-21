@@ -387,7 +387,7 @@ def item_subscribers(request, pk):
 def item_notifications(request, pk):
     """A list's override ("Notifications…" in its "More" menu): a modal,
     also a page; the settings page posts here too. Other items have no
-    level (specs/ui-round-6.md, part C): 404."""
+    level (specs/notifications.md, "Subscriptions"): 404."""
     item = item_for(request, pk)
     if item.kind != Kind.LIST:
         raise Http404
