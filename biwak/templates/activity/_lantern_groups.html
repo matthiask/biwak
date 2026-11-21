@@ -19,7 +19,6 @@
           ></span>{% endif %}
         {% icon item.kind_icon %}
         {{ item|item_title }}
-        {% client_badge item %}
       </a>
       <form method="post" action="{% url 'lantern_bookmark' %}">
         {% csrf_token %}

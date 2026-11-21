@@ -26,6 +26,9 @@ From the events (`biwak/activity/`, `notifications.md`):
   Website relaunch", expandable to the single to-dos).
 - **Filters** as query parameters: kind of item, person, action, visible
   to clients.
+- **No client badge on entries** (decided 2026-11-21): calmer; the item's
+  page shows it where something is done, and the filter above finds
+  what clients see.
 - **Visibility:** every entry through `Event.objects.visible_to()`; a
   client's feed only shows what they can see now, and only events of the
   time the item was visible to clients (decided 2026-11-20,

@@ -134,7 +134,8 @@ What every part does the same way. Look at how the core does it
    switches are staff only.
 5. **Pages.** Server-rendered templates extending `base.html`, the
    client badge (`{% client_badge item %}`) on everything visible to
-   clients and the banner (`items/_client_banner.html`) above forms on
+   clients (not in the feed and the lantern, which tell what happened:
+   the item's page shows it, decided 2026-11-21) and the banner (`items/_client_banner.html`) above forms on
    visible items. Icons with `{% icon %}`; a new icon goes into
    `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
    only for interaction, in `frontend/`, loaded from `main.js`. Every

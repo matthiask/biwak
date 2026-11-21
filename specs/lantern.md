@@ -52,7 +52,8 @@ records, levels, `send_mails`), reactions.
   notifications, shown as a small red dot like the one on the tab's icon,
   without a number (decided 2026-11-21; the number is in the button's
   tooltip and read to screen readers). Opening it shows them grouped by item, newest first:
-  - the item's title, kind icon, project and client badge;
+  - the item's title, kind icon and project (no client badge: calmer,
+    and the item's page shows it, decided 2026-11-21);
   - what happened ("Ada commented", "Bob completed it", "Cleo reacted
     👍", "You were mentioned"), with the excerpt where there is one
     (`|excerpt`);

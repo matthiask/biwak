@@ -66,6 +66,5 @@
   {{ event.get_action_display }} {% include "activity/_subject.html" %}
 {% endif %}
 {% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
-{# Clients see the event: the item now, and the event of its time #}
-{% if event.item and event.is_client_visible %}{% client_badge event.item %}{% endif %}
+{# No client badge in the feed and the lantern (decided 2026-11-21) #}
 {% if event.excerpt and not what %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}
