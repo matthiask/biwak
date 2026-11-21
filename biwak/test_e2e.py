@@ -2650,7 +2650,8 @@ class FiltersTest(E2ETestCase):
         # Without JavaScript's help the button would be the way; here it's gone
         expect(page.locator("[data-autosubmit-button]")).to_be_hidden()
         page.locator("#id_assignee").select_option("nobody")
-        page.wait_for_url("**/todos/?*assignee=nobody*")
+        # Without the empty values (the defaults)
+        page.wait_for_url("**/todos/?assignee=nobody")
         page.wait_for_function("document.activeElement.name === 'assignee'")
         page.locator("#id_state").select_option("completed")
         page.wait_for_url("**state=completed*")
@@ -2763,9 +2764,9 @@ class FiltersTest(E2ETestCase):
         page.keyboard.press("Control+k")
         page.locator("#wb-palette-input").fill("to-dos i assigned")
         page.keyboard.press("Enter")
-        page.wait_for_url("**/todos/?assignee=&assigned_by=me")
+        page.wait_for_url("**/todos/?assignee=anybody&assigned_by=me")
         expect(page.locator("#id_assigned_by")).to_have_value("me")
-        expect(page.locator("#id_assignee")).to_have_value("")
+        expect(page.locator("#id_assignee")).to_have_value("anybody")
         self.assertEqual(self.errors, [])
 
     def test_search_is_not_remembered(self):

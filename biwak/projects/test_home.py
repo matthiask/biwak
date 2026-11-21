@@ -198,7 +198,8 @@ class WaitingTest(HomeTestCase):
         self.assertEqual(found, ["Bobs job"])
         self.assertContains(response, "Waiting on others")
         self.assertContains(
-            response, 'href="/todos/?assignee=&amp;assigned_by=me&amp;grouping=due"'
+            response,
+            'href="/todos/?assignee=anybody&amp;assigned_by=me&amp;grouping=due"',
         )
 
     def test_not_the_ones_assigned_to_me_too(self):

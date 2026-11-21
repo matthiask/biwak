@@ -2,8 +2,8 @@
 // data-autosubmit (GET only) submits when a select, checkbox or radio
 // changes and, after a short pause, when a text field does (Enter submits as
 // always). The button stays for people without JavaScript (hidden by CSS
-// under .js). The page reloads with the new query; the focused field and the
-// scroll position come back after the reload.
+// under .js). The page reloads with the new query, without empty values;
+// the focused field and the scroll position come back after the reload.
 const PAUSE = 400
 const KEY = "autosubmit"
 
@@ -49,8 +49,25 @@ function restore() {
   }
 }
 
+// The query without empty values (like Workbench's): an empty choice is
+// the page's default, and the URL stays short
+export function query(form, submitter) {
+  const params = new URLSearchParams()
+  for (const [name, value] of new FormData(form, submitter)) {
+    if (typeof value === "string" && value) params.append(name, value)
+  }
+  return params.toString()
+}
+
 document.addEventListener("submit", (event) => {
-  if (event.target.matches?.("[data-autosubmit]")) remember(event.target)
+  const form = event.target
+  if (!form.matches?.("[data-autosubmit]")) return
+  remember(form)
+  if (form.method !== "get") return
+  event.preventDefault()
+  const url = new URL(form.action || location.href)
+  url.search = query(form, event.submitter)
+  location.assign(url)
 })
 
 document.addEventListener("change", (event) => {

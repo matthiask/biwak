@@ -60,7 +60,8 @@ class FilterForm(Form):
     grouping = forms.ChoiceField(
         label=_("group by"),
         required=False,
-        choices=[("project", _("Project")), ("due", _("Due date"))],
+        # The default is the empty choice, so it stays out of the URL
+        choices=[("", _("Project")), ("due", _("Due date"))],
     )
 
     def __init__(self, data, *, user, project=None):
@@ -109,10 +110,16 @@ def todos_by_due(request, project=None):
     one project; ``?assignee=me`` is "My to-dos". Rows are completed in
     place (``todo_toggle``)."""
     query = request.GET
-    if project is None and query.get("assignee") == "me":
-        # Links from before (and Home's): me is the empty choice here
+    if (project is None and query.get("assignee") == "me") or query.get(
+        "grouping"
+    ) == TodoGrouping.PROJECT:
+        # Links from before: me (across projects) and grouping by project
+        # are the empty choices
         query = query.copy()
-        query["assignee"] = ""
+        if project is None and query.get("assignee") == "me":
+            query["assignee"] = ""
+        if query.get("grouping") == TodoGrouping.PROJECT:
+            query["grouping"] = ""
     form = FilterForm(query, user=request.user, project=project)
     valid = form.is_valid()
     data = dict(form.cleaned_data) if valid else {}

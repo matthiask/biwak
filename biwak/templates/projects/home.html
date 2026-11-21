@@ -39,7 +39,7 @@
             </div>
           {% endfor %}
           <a
-            href="{% url 'todos' %}?assignee=&amp;assigned_by=me&amp;grouping=due"
+            href="{% url 'todos' %}?assignee=anybody&amp;assigned_by=me&amp;grouping=due"
           >{% translate "All to-dos I assigned" %}</a>
         </section>
       {% endif %}
@@ -105,7 +105,7 @@
           {% if not request.user.is_client %}
             <li>
               <a
-                href="{% url 'todos' %}?assignee=&amp;assigned_by=me&amp;grouping=due"
+                href="{% url 'todos' %}?assignee=anybody&amp;assigned_by=me&amp;grouping=due"
               >{% translate "To-dos I assigned" %}</a>
             </li>
           {% endif %}

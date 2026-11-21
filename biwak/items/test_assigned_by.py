@@ -293,7 +293,9 @@ class PaletteTest(AssignedByTestCase):
                 actions = {a["label"]: a for a in data["actions"]}
                 action = actions["To-dos I assigned"]
                 self.assertEqual(action["type"], "link")
-                self.assertEqual(action["url"], "/todos/?assignee=&assigned_by=me")
+                self.assertEqual(
+                    action["url"], "/todos/?assignee=anybody&assigned_by=me"
+                )
                 # Exactly this, not the remembered filters
                 self.assertTrue(action["exact"])
                 self.assertNotIn("exact", actions["Go to to-dos"])
