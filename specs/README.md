@@ -39,7 +39,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `keyboard.md` | command palette (Ctrl+K), shortcuts | built 2026-11-21 | search | cheaper |
 | `lantern.md` | the lantern (notifications in the app), live updates | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
 | `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
-| `editor.md` | checklists and counts, the toolbar, pasting | next | | cheaper |
+| `editor.md` | checklists and counts, the toolbar, pasting | built on branch `editor` | | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | last | everything | strong |

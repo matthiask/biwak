@@ -83,14 +83,14 @@
                     >{% translate "Edit" %}</a>
                   {% endif %}
                 </div>
-                <div class="wb-markdown">{{ answer.content|markdown:answer.item }}</div>
+                <div class="wb-markdown">{% checklist_markdown answer.content answer.item %}</div>
                 {% reactions answer.item %}
                 {% for comment in comments %}
                   <div class="border-top mt-2 pt-2" id="comment-{{ comment.pk }}">
                     <div class="small text-body-secondary">
                       <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
                     </div>
-                    <div class="wb-markdown">{{ comment.content|markdown:answer.item }}</div>
+                    <div class="wb-markdown">{% checklist_markdown comment.content answer.item comment %}</div>
                     {% reactions answer.item comment %}
                   </div>
                 {% endfor %}

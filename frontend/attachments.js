@@ -89,7 +89,16 @@ function enhance(container, textarea) {
       input.value = ""
       textarea.focus()
     })
-    wrapper.append(button, input)
+    // The toolbar above the field has the button (specs/editor.md)
+    const bar = textarea.previousElementSibling
+    if (bar?.matches(".wb-toolbar")) {
+      button.tabIndex = -1
+      bar.append(button)
+      bar.append(input)
+    } else {
+      wrapper.append(button)
+      wrapper.append(input)
+    }
   }
   const error = document.createElement("div")
   error.className = "small text-danger"

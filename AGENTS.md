@@ -107,7 +107,12 @@ What every part does the same way. Look at how the core does it
    clients and the banner (`items/_client_banner.html`) above forms on
    visible items. Icons with `{% icon %}`; a new icon goes into
    `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
-   only for interaction, in `frontend/`, loaded from `main.js`.
+   only for interaction, in `frontend/`, loaded from `main.js`. Every
+   `Textarea` is a Markdown field with the toolbar (`data-toolbar`); texts
+   shown with `{% checklist_markdown text item %}` can be ticked in place,
+   and a detail model with a text that may have a task list inherits
+   `Checklist` (stored counts, shown on rows with
+   `items/_checklist_signal.html`).
    What several pages show comes from an include (comments, subscribers,
    the visibility switch, breadcrumbs, the to-do row), not a copy. A class
    in a template needs CSS in the bundle (`biwak/test_css.py`: Bootstrap

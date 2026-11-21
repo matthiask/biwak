@@ -14,6 +14,7 @@
       {{ item.creator.get_short_name }} · {{ item.created_at|date:"j. M Y" }}
       {% if item.comment_count %}·
         {% blocktranslate count counter=item.comment_count %}{{ counter }} comment{% plural %}{{ counter }} comments{% endblocktranslate %}{% endif %}
+      {% include "items/_checklist_signal.html" with done=item.message.checklist_done total=item.message.checklist_total %}
     </div>
     {% if item.message.content %}<div class="small wb-excerpt">{{ item.message.content|excerpt:200 }}</div>{% endif %}
   </a>

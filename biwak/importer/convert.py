@@ -7,10 +7,9 @@ stays readable text. Links to other Basecamp recordings are rewritten by
 ``Resolver.link()``.
 """
 
-import re
-
 from bs4 import BeautifulSoup
-from markdownify import MarkdownConverter
+
+from biwak.htmlmarkdown import Converter, tidy
 
 
 MENTION = "application/vnd.basecamp.mention"
@@ -32,9 +31,9 @@ class Resolver:
         return href
 
 
-class _Converter(MarkdownConverter):
+class _Converter(Converter):
     def __init__(self, resolver, **options):
-        super().__init__(heading_style="ATX", bullets="-", **options)
+        super().__init__(**options)
         self.resolver = resolver
 
     def convert_bc_attachment(self, el, text, parent_tags):
@@ -67,6 +66,4 @@ def to_markdown(html, resolver=None):
     # Basecamp writes paragraphs as divs
     for div in soup.find_all("div"):
         div.name = "p"
-    text = _Converter(resolver or Resolver()).convert_soup(soup)
-    text = re.sub(r"[ \t]+\n", "\n", text)
-    return re.sub(r"\n{3,}", "\n\n", text).strip()
+    return tidy(_Converter(resolver or Resolver()).convert_soup(soup))

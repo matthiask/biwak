@@ -5,7 +5,7 @@ descriptions, check-in answers). Three things make writing them easier:
 checklists that can be ticked and counted, a small toolbar, and pasting
 that keeps bold, emphasis, links and lists.
 
-**Status:** open.
+**Status:** built 2026-11-21 (branch `editor`), see "Built" below.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. Ticking a checkbox changes a text: through the item's
@@ -98,3 +98,64 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
 - **Pasting:** in Playwright, HTML from a fixture (a mail, a Google Docs
   fragment) becoming the expected Markdown; URL over selection; plain
   paste.
+
+## Built (2026-11-21)
+
+- **Checklists** (`biwak/checklists.py`, `render_markdown` with
+  `mdit-py-plugins`' `tasklists`): counting, ticking and rendering use the
+  same parser, so a checkbox is what the page shows as one (not one in a
+  code block). A box is named by its position in reading order. Pages,
+  `*_html` (disabled boxes) and mails (HTML and plain text with ☐ and ☑).
+- **Counts** are stored by `Checklist.save()` (`checklist_done`,
+  `checklist_total` on `Todo`, `Message`, `Doc`, `Upload`; migration
+  `items.0007` counts the texts that exist). Rows read them
+  (`items/_checklist_signal.html`, `glance.with_checklist()` for items of
+  every kind in one query): to-do rows (lists, board, my to-dos), the
+  message board and project page, the docs and files list, search results;
+  the API returns both numbers (`checklist_done`, `checklist_total`), the
+  CLI shows them in `todo show`. Answers have no stored counts (the spec
+  doesn't list them on rows).
+- **Ticking** (`items.operations.tick()`, `POST /items/<id>/tick/`,
+  `frontend/checklist.js`): the page sends the box's index, the hash of
+  the text it rendered (`checklists.text_hash()`) and the state to set
+  (`checked`, so a repeated click can't flip it back). The operation locks
+  the detail row, refuses (409) when the text changed or a doc is locked
+  by somebody else, and edits through the item's own operation
+  (`update_todo`, `update_message`, `update_doc`, `update_upload`,
+  `update_answer`), so it's an edit event (merging like other edits), an
+  audit entry and, for docs, a version. Whoever may change the text ticks
+  (`can_tick()`: to-dos everybody who sees them, else `can_change()`), 403
+  otherwise; others see disabled boxes. Comments: their author and staff,
+  an audit entry but no event (comments have no edit events). The peek
+  below a row and old doc versions stay read-only. The API has no tick
+  endpoint; `PATCH` the text.
+- **The toolbar** (`frontend/toolbar.js`, buttons in
+  `forms/_toolbar.html`, `data-toolbar` set on every `Textarea` by
+  `BootstrapMixin`): one script, edits through
+  `execCommand("insertText")` (undo works) and only touches the range it
+  changes. Buttons toggle (bold on bold takes it off), line buttons
+  replace each other (bullets, numbers, checklist). Roving tab stop, arrows
+  move; the attach button moves into the bar (`attachments.js`); the
+  mention button only where the field has mentions. Keys as above; Tab
+  and Shift+Tab indent only on list lines, elsewhere Tab leaves the
+  field. **Ctrl+K** in a field is a link (`palette.js` ignores
+  `textarea[data-toolbar]`); Escape leaves the field, so Ctrl+K opens the
+  palette again.
+- **Pasting** (`frontend/paste.js`, `POST /paste/markdown/`,
+  `biwak/htmlmarkdown.py`): the converter moved to `biwak/htmlmarkdown.py`
+  (the importer's `Converter` subclasses it). Pasted HTML is cleaned first:
+  Google Docs' styled spans become bold, emphasis, strikethrough and code,
+  its redirect links are unwrapped, links other than http(s) and mailto,
+  images, scripts and styles are dropped, a table's first row becomes the
+  header. HTML without anything worth keeping (an editor's div per line)
+  pastes as text, so code stays as it is. Files on the clipboard stay
+  `attachments.js`'s; Ctrl+Shift+V pastes plain text; a failing endpoint
+  pastes the text.
+- Tests: `biwak/test_checklists.py`, `biwak/items/test_checklists.py`,
+  `test_checklist_rows.py`, `test_checklist_api.py`, `biwak/test_paste.py`
+  (fixtures in `biwak/test_fixtures/`), `biwak/test_e2e_editor.py`
+  (Playwright: ticking, every toolbar button and key, undo, Ctrl+K, a phone
+  width, pasting).
+- **Known gap:** ticking doesn't update an edit form that's open on the same
+  page; saving it later writes its (older) text. The 409 covers ticks, not
+  forms.

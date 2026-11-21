@@ -114,6 +114,7 @@
       {% block content %}{% endblock %}
     </main>
     {% if request.user.is_authenticated %}{% palette %}{% endif %}
+    {% include "forms/_toolbar.html" %}
     {% block scripts %}{% endblock %}
   </body>
 </html>

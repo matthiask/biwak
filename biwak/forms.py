@@ -46,6 +46,8 @@ class BootstrapMixin:
         if isinstance(widget, forms.Textarea):
             # Autocompleting @mentions of roles, see mentions.js
             widget.attrs.setdefault("data-mentions", "")
+            # Every text is Markdown: the toolbar of toolbar.js
+            widget.attrs.setdefault("data-toolbar", "")
         return super().__getitem__(name)
 
 

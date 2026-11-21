@@ -43,7 +43,7 @@
   {% include "items/_client_banner.html" %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div class="wb-markdown mb-4">{{ message.content|markdown:item }}</div>
+      <div class="wb-markdown mb-4">{% checklist_markdown message.content item %}</div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

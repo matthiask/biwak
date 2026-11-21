@@ -1,0 +1,6 @@
+{% load biwak i18n %}
+{% comment %}"2/5" with a checklist icon, where a text has a task list (specs/editor.md); the counts are stored with the text{% endcomment %}
+{% if total %}<span
+    class="wb-signal"
+    title="{% blocktranslate %}{{ done }} of {{ total }} done{% endblocktranslate %}"
+  >{% icon "list-check" %}<span>{{ done }}/{{ total }}</span></span>{% endif %}

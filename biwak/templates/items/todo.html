@@ -47,7 +47,7 @@
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown:item }}</div>{% endif %}
+      {% if todo.notes %}<div class="wb-markdown mb-3">{% checklist_markdown todo.notes item %}</div>{% endif %}
       {% reactions item %}
       <div class="card mb-4">
         <div class="card-body">

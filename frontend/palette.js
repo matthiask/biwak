@@ -349,8 +349,9 @@ if (data && dialog) {
   focusHash()
 
   // Ctrl+K (Cmd+K on a Mac) always opens, also while typing and with the
-  // shortcuts turned off
+  // shortcuts turned off; in a Markdown field it's "link" (toolbar.js)
   document.addEventListener("keydown", (event) => {
+    if (event.target.matches?.("textarea[data-toolbar]")) return
     if (
       (event.ctrlKey || event.metaKey) &&
       !event.altKey &&

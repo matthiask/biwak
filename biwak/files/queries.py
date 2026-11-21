@@ -3,6 +3,7 @@ everything through ``Item.objects.visible_to()``"""
 
 from django.db.models import Count, Q
 
+from biwak.items.glance import with_checklist
 from biwak.items.models import Item, Kind
 
 
@@ -50,8 +51,7 @@ def front_files(project, user):
     """The project page's docs and files: the latest three changed ones, at
     any depth"""
     return list(
-        Item.objects
-        .visible_to(user)
+        with_checklist(Item.objects.visible_to(user))
         .filter(project=project, kind__in=[Kind.DOC, Kind.FILE])
         .select_related("creator")
         .order_by("-updated_at", "-pk")[:FRONT_FILES]

@@ -167,6 +167,7 @@
             {% client_badge item %}
             <span class="small text-body-secondary">· {{ item.creator.get_short_name }} ·
               {{ item.updated_at|date:"j. M Y" }}</span>
+            {% include "items/_checklist_signal.html" with done=item.checklist_done total=item.checklist_total %}
           </a>
         {% empty %}
           <div class="list-group-item text-body-secondary">{% translate "No docs or files yet." %}</div>

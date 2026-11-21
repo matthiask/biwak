@@ -225,6 +225,9 @@ class TodoOut(ItemOut):
     position: int
     notes: str
     notes_html: str
+    # The task list in the notes (specs/editor.md)
+    checklist_done: int
+    checklist_total: int
     starts_on: dt.date | None
     due_on: dt.date | None
     completed_at: dt.datetime | None
@@ -259,6 +262,8 @@ def todo_out(item, user):
         "position": item.position,
         "notes": todo.notes,
         "notes_html": html(todo.notes, item),
+        "checklist_done": todo.checklist_done,
+        "checklist_total": todo.checklist_total,
         "starts_on": todo.starts_on,
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,

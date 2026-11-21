@@ -1384,3 +1384,38 @@ button.wb-signal:hover {
   font-size: 0.8rem;
   opacity: 0.8;
 }
+
+/* Task lists (specs/editor.md): the checkbox takes the bullet's place */
+.wb-markdown .contains-task-list {
+  list-style: none;
+  padding-inline-start: 0.25rem;
+}
+
+.wb-markdown .contains-task-list .contains-task-list {
+  padding-inline-start: 1.5rem;
+}
+
+.wb-markdown .task-list-item-checkbox {
+  margin-inline-end: 0.4rem;
+}
+
+.wb-checklist .task-list-item-checkbox:not(:disabled) {
+  cursor: pointer;
+}
+
+/* The toolbar above Markdown fields (toolbar.js, specs/editor.md): always
+   visible; on phones it scrolls sideways instead of wrapping */
+.wb-toolbar {
+  /* The visually hidden labels are positioned: keep them inside */
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.125rem;
+  margin-bottom: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.wb-toolbar .btn {
+  flex: none;
+}
