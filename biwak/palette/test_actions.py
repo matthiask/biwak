@@ -143,12 +143,24 @@ class ProjectActionsTest(ActionsBase):
         self.assertEqual(
             actions["New message"]["url"], f"/projects/{self.camp.pk}/messages/new/"
         )
+        # The form of a link opens in a modal, as the section's button does
+        self.assertEqual(actions["Add a link"]["group"], "page")
+        self.assertEqual(actions["Add a link"]["type"], "modal")
+        self.assertEqual(
+            actions["Add a link"]["url"], f"/projects/{self.camp.pk}/links/new/"
+        )
 
     def test_a_client_gets_what_clients_may_do(self):
         actions = self.actions(self.cleo, f"/projects/{self.camp.pk}/")
         self.assertIn("New message", actions)
         self.assertIn("All to-dos", actions)
-        for label in ["New list", "New doc", "Upload a file", "New check-in"]:
+        for label in [
+            "New list",
+            "New doc",
+            "Upload a file",
+            "New check-in",
+            "Add a link",
+        ]:
             self.assertNotIn(label, actions)
 
     def test_other_project_pages_open_the_same_modal(self):

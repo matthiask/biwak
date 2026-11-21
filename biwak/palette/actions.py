@@ -25,7 +25,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from biwak.activity.operations import is_assigned, is_subscribed
-from biwak.bookmarks.operations import is_bookmarked
+from biwak.bookmarks.operations import can_manage_links, is_bookmarked
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.organizations import operations as org_ops
@@ -159,6 +159,10 @@ def in_project(user, project, folder=None):
     if not user.is_client:
         actions.append(
             link(_("New check-in"), reverse("question_new", args=[project.pk]))
+        )
+    if can_manage_links(user):
+        actions.append(
+            modal(_("Add a link"), reverse("project_link_new", args=[project.pk]))
         )
     actions += [
         link(_("The project's activity"), reverse("project_feed", args=[project.pk])),
