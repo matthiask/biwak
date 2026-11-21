@@ -552,9 +552,20 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
         if changed_list:
             item.parent = todolist
             item.save(update_fields=["parent"])
-        if item.todo.group_id != (group.pk if group else None):
+        changed_group = item.todo.group_id != (group.pk if group else None)
+        if changed_group:
             item.todo.group = group
             item.todo.save(update_fields=["group"])
+        if changed_group and not changed_list:
+            # A board column; merged like edits (record())
+            record(
+                actor=actor,
+                action=Action.MOVED,
+                project=item.project,
+                item=item,
+                group=group.title if group else "",
+                list=todolist.title,
+            )
         if changed_list:
             visibility.recompute(item)
             record(

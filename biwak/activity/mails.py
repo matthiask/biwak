@@ -122,6 +122,7 @@ def describe(event, user):
     """The line saying what happened"""
     data = event.data
     actor = str(event.actor)
+    to = data.get("to", "")
     match event.action:
         case Action.CREATED if event.item.kind == Kind.ANSWER:
             text = _("%(actor)s answered.")
@@ -142,10 +143,10 @@ def describe(event, user):
             text = _("%(actor)s commented:")
         case Action.MOVED:
             # Not to clients: the name may be internal (like the feed)
+            # A group of its own list is as visible as the to-do
+            to = data.get("group") or ("" if user.is_client else data.get("to"))
             text = (
-                _("%(actor)s moved it to %(to)s.")
-                if data.get("to") and not user.is_client
-                else _("%(actor)s moved it.")
+                _("%(actor)s moved it to %(to)s.") if to else _("%(actor)s moved it.")
             )
         case Action.VISIBILITY_CHANGED:
             text = (
@@ -161,7 +162,7 @@ def describe(event, user):
             text = _("%(actor)s restored it from the trash.")
         case _:
             text = "%(actor)s " + event.get_action_display() + "."
-    return text % {"actor": actor, "to": mentions.plain(data.get("to", ""))}
+    return text % {"actor": actor, "to": mentions.plain(to or "")}
 
 
 def _reactions(notifications, user):

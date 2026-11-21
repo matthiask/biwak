@@ -58,7 +58,8 @@ the first client gets a login.
 - Assigning a client to a to-do requires the to-do to be visible. Staff
   can be assigned wherever they can see the to-do; assigning someone who
   isn't a member adds them to the project (recorded as added, decided
-  2026-11-21, `ops.assignable_people()`).
+  2026-11-21, `ops.assignable_people()`). Clients assign members only:
+  they don't learn about other staff.
 - To-dos are shared work: clients change every field of a visible to-do
   (title, notes, assignees, due date, repeat rule), also of to-dos staff
   created (decided 2026-11-20; `can_change()` covers renaming, archiving

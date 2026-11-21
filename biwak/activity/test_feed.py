@@ -7,6 +7,7 @@ from django.utils import timezone
 from biwak import cursors
 from biwak.accounts.models import APIToken
 from biwak.activity import feed
+from biwak.activity.mails import describe
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.items import operations as ops
@@ -509,3 +510,64 @@ class EventsBeforeVisibleTest(TestCase):
                     "assigned", [e["action"] for e in results]
                 )  # Bob's ID while internal
                 self.assertTrue(results)
+
+
+class GroupMoveTest(FeedBase):
+    """Moving a to-do to another group of its list (a board column) is an
+    event, merged like edits (decided 2026-11-21)"""
+
+    def setUp(self):
+        super().setUp()
+        self.doing = ops.create_group(todolist=self.shared.todolist, title="Doing")
+        self.done = ops.create_group(todolist=self.shared.todolist, title="Done")
+
+    def move(self, group, item=None, actor=None):
+        item = item or self.todo
+        ops.move_todo(item, todolist=item.parent, group=group, actor=actor or self.ada)
+
+    def moves(self):
+        return list(
+            Event.objects.filter(action=Action.MOVED).values_list("data", flat=True)
+        )
+
+    def test_one_event_with_the_group(self):
+        self.move(self.done)
+        [data] = self.moves()
+        self.assertEqual((data["group"], data["list"]), ("Done", "Shared"))
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/")
+        self.assertContains(response, "to Done")
+
+    def test_back_and_forth_is_one_event_with_the_last_group(self):
+        self.move(self.done)
+        self.move(self.doing)
+        self.move(self.done)
+        self.assertEqual([data["group"] for data in self.moves()], ["Done"])
+        # Somebody else, or later: an event of its own
+        self.move(self.doing, actor=self.bob)
+        self.assertEqual(len(self.moves()), 2)
+        Event.objects.update(created_at=timezone.now() - dt.timedelta(minutes=11))
+        self.move(self.done, actor=self.bob)
+        self.assertEqual(len(self.moves()), 3)
+
+    def test_reordering_within_the_group_records_nothing(self):
+        other = ops.create_todo(todolist=self.shared, title="Other", creator=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(other, todolist=self.shared, index=0, actor=self.ada)
+        self.assertEqual(self.moves(), [])
+
+    def test_clients_see_it_on_visible_todos_only(self):
+        self.move(self.done)
+        group = ops.create_group(todolist=self.internal.todolist, title="Hidden")
+        self.move(group, item=self.secret)
+        self.client.force_login(self.cleo)
+        response = self.client.get("/feed/")
+        self.assertContains(response, "to Done")
+        self.assertNotContains(response, "Secret")
+        self.assertNotContains(response, "Hidden")
+
+    def test_mails_name_the_group_for_clients_too(self):
+        self.move(self.done)
+        event = Event.objects.get(action=Action.MOVED)
+        for user in [self.bob, self.cleo]:
+            self.assertEqual(describe(event, user), "Ada Example moved it to Done.")

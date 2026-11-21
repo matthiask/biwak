@@ -33,19 +33,20 @@ def record(*, actor, action, project, item=None, **data):
         visible = Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
     now = timezone.now()
     event = None
-    if action == Action.EDITED and item is not None:
-        event = (
-            Event.objects
-            .filter(
-                item=item,
-                actor=actor,
-                action=Action.EDITED,
-                is_client_visible=visible,
-                created_at__gte=now - EDIT_SESSION,
-            )
-            .order_by("-created_at", "-pk")
-            .first()
+    # Edits merge, and so do moves between the groups of a list (board
+    # columns, decided 2026-11-21): dragging back and forth is one event
+    group_move = action == Action.MOVED and "group" in data
+    if (action == Action.EDITED or group_move) and item is not None:
+        events = Event.objects.filter(
+            item=item,
+            actor=actor,
+            action=action,
+            is_client_visible=visible,
+            created_at__gte=now - EDIT_SESSION,
         )
+        if group_move:
+            events = events.filter(data__has_key="group")
+        event = events.order_by("-created_at", "-pk").first()
     if event is not None:
         event.created_at = now
         event.data |= data
