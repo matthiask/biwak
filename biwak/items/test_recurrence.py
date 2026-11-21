@@ -9,7 +9,7 @@ from biwak import schedules
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event, Subscription
 from biwak.items import operations as ops
-from biwak.items.models import Item
+from biwak.items.models import Item, Todo
 from biwak.test_utils import person, project, rule_post
 
 
@@ -97,6 +97,18 @@ class OperationsTest(RecurrenceTestCase):
         self.assertTrue(
             Event.objects.filter(item=item, action=Action.COMPLETED).exists()
         )
+
+    def test_a_stored_rule_which_isnt_valid_makes_no_next(self):
+        """INTERVAL=0 hung completing (dateutil looped forever), -1 was an
+        error; rules stored before they were refused just stop"""
+        for rule in ["FREQ=DAILY;INTERVAL=0", "FREQ=DAILY;INTERVAL=-1"]:
+            with self.subTest(rule=rule):
+                item = self.todo("FREQ=DAILY", "2026-11-20")
+                Todo.objects.filter(item=item).update(recurrence=rule)
+                ops.complete(item, actor=self.ada)
+                item.todo.refresh_from_db()
+                self.assertTrue(item.todo.is_completed)
+                self.assertIsNone(self.following(item))
 
     def test_without_a_rule_nothing_happens(self):
         item = self.todo("")
@@ -302,7 +314,6 @@ class PagesTest(RecurrenceTestCase):
             "FREQ=WEEKLY",
             "FREQ=MONTHLY;BYDAY=MO,WE;BYSETPOS=1",
             "FREQ=YEARLY;BYMONTH=1,7;BYMONTHDAY=1",
-            "FREQ=DAILY;INTERVAL=100",
             "FREQ=WEEKLY;WKST=SU;BYDAY=MO",
         ]:
             item = self.todo(rule, "2026-11-20")
@@ -559,6 +570,9 @@ class APITest(RecurrenceTestCase):
             {"recurrence": "sometimes"},
             {"recurrence": "FREQ=WEEKLY;COUNT=3"},
             {"recurrence_count": 0, "recurrence": "daily"},
+            {"recurrence": "FREQ=DAILY;INTERVAL=0"},
+            {"recurrence": "FREQ=DAILY;INTERVAL=-1"},
+            {"recurrence": "FREQ=MONTHLY;BYMONTHDAY=0"},
         ]:
             with self.subTest(body=body):
                 response = self.send(
@@ -573,6 +587,25 @@ class APITest(RecurrenceTestCase):
             "patch", f"todos/{item.pk}/", self.ada, {"recurrence": "x"}
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_a_client_cant_store_a_rule_which_hangs(self):
+        response = self.send(
+            "post",
+            f"lists/{self.list.pk}/todos/",
+            self.cleo,
+            {"title": "Water", "recurrence": "FREQ=DAILY;INTERVAL=0"},
+        )
+        self.assertEqual(response.status_code, 400)
+        item = self.todo("")
+        response = self.send(
+            "patch",
+            f"todos/{item.pk}/",
+            self.cleo,
+            {"recurrence": "FREQ=DAILY;INTERVAL=0"},
+        )
+        self.assertEqual(response.status_code, 400)
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "")
 
     def test_client_completes_and_doesnt_learn_internal_ids(self):
         item = self.todo("FREQ=DAILY", "2026-11-20")

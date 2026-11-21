@@ -33,10 +33,14 @@ checklist in `AGENTS.md`.
 A small module of its own, `biwak/schedules.py`, used here and by
 check-ins (`checkins.md`):
 
-- A rule as an RRULE string (`python-dateutil`), validated on save.
+- A rule as an RRULE string (`python-dateutil`), validated on save:
+  `INTERVAL` from 1 to 99 (the widget's maximum), no day 0 in
+  `BYMONTHDAY` or `BYSETPOS`, at least two dates (decided 2026-11-21:
+  `INTERVAL=0` made dateutil loop forever).
 - `next_date(rule, after, tz)`: the next date of the rule after a date,
   in the installation's time zone (`TIME_ZONE`); check-ins add a time of
-  day.
+  day. A stored rule which isn't valid gives no date, never an error or
+  a hang.
 - Presets for the forms, each with a human description: every weekday,
   every week on a chosen day, every two weeks, every month on the same
   day, the first (or last) weekday of the month, every three months,

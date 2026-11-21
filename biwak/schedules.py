@@ -63,6 +63,8 @@ PARTS = {
     "BYSETPOS",
     "WKST",
 }
+# The longest interval: the rule widget's maximum too
+MAX_INTERVAL = 99
 
 
 def _tz(tz=None):
@@ -79,11 +81,33 @@ def _parts(rule):
     return parts
 
 
+def _is_number(value):
+    return value.removeprefix("-").removeprefix("+").isdecimal()
+
+
+def _check_numbers(parts):
+    """dateutil loops forever for ``INTERVAL=0``, fails for negative ones
+    and reads a day 0 as every day"""
+    interval = parts.get("INTERVAL", "1")
+    if not (interval.isdecimal() and 1 <= int(interval) <= MAX_INTERVAL):
+        raise InvalidRule(
+            _("The interval is a number from 1 to %(max)s.") % {"max": MAX_INTERVAL}
+        )
+    for name in ["BYMONTHDAY", "BYSETPOS"]:
+        if name in parts and not all(
+            _is_number(value) and int(value) != 0 for value in parts[name].split(",")
+        ):
+            raise InvalidRule(
+                _("Not a valid schedule: %(rule)s") % {"rule": f"{name}={parts[name]}"}
+            )
+
+
 def validate(rule):
     """The rule normalized (upper case, without ``RRULE:``); raises
     ``InvalidRule`` for anything we can't use: unknown or unsupported
-    parts, intervals shorter than a day, ``COUNT``/``UNTIL``/``DTSTART``,
-    rules without any date"""
+    parts, intervals shorter than a day or longer than ``MAX_INTERVAL``,
+    ``COUNT``/``UNTIL``/``DTSTART``, rules without a date or with only
+    one"""
     rule = (rule or "").strip().removeprefix("RRULE:").removeprefix("rrule:")
     rule = rule.strip().upper()
     if not rule:
@@ -100,12 +124,14 @@ def validate(rule):
             _("Not supported in a schedule: %(parts)s. Ends are set separately.")
             % {"parts": ", ".join(sorted(unknown))}
         )
+    _check_numbers(parts)
     try:
         parsed = rrule.rrulestr(rule, dtstart=dt.datetime(2028, 1, 1))
         first = parsed.after(dt.datetime(2028, 1, 1), inc=True)
+        second = first and parsed.after(first)
     except (ValueError, TypeError, KeyError) as exc:
         raise InvalidRule(_("Not a valid schedule: %(rule)s") % {"rule": rule}) from exc
-    if first is None:
+    if first is None or second is None:
         raise InvalidRule(_("The schedule never produces a date."))
     return rule
 
@@ -115,14 +141,19 @@ def next_date(rule, after, tz=None, *, anchor=None):
     taken as the date in ``tz``, default ``TIME_ZONE``); ``None`` when
     there's none. ``anchor`` is the date the rule starts counting from
     (default ``after``): "every two weeks" depends on it, a to-do's due
-    date keeps the phase."""
+    date keeps the phase. A stored rule which isn't valid (any more)
+    produces no date: no next to-do, no next check-in."""
     if isinstance(after, dt.datetime):
         after = (
             timezone.localtime(after, _tz(tz)).date() if after.tzinfo else after.date()
         )
     anchor = anchor or after
     start = dt.datetime.combine(anchor, dt.time())
-    parsed = rrule.rrulestr(validate(rule), dtstart=start)
+    try:
+        rule = validate(rule)
+    except InvalidRule:
+        return None
+    parsed = rrule.rrulestr(rule, dtstart=start)
     found = parsed.after(dt.datetime.combine(after, dt.time.max))
     return found.date() if found else None
 
@@ -229,7 +260,6 @@ FREQUENCY_FIELDS = {
 }
 ORDINAL_VALUES = [1, 2, 3, 4, -1]
 WORKING_DAY = "WD"
-MAX_INTERVAL = 99
 
 
 def default_fields(anchor, frequency=""):
