@@ -193,12 +193,17 @@ class InviteRow(Form):
 
     def clean(self):
         data = super().clean()
-        if data.get("email") and not data.get("organization"):
-            # The domain's, else the only one involved
-            found = org_ops.for_new_person(data["email"])
-            if found is None and len(self.chosen) == 1:
-                found = self.chosen[0]
-            data["organization"] = found
+        if (
+            data.get("email")
+            and not data.get("organization")
+            and org_ops.for_new_person(data["email"]) is None
+            and len(self.chosen) == 1
+        ):
+            # No domain matching: the only one involved. The domain's is
+            # ``invite()``'s, which drops it where the actor may not put
+            # people (the own or a partner organization, for staff), as on
+            # the invite page and in the API
+            data["organization"] = self.chosen[0]
         return data
 
 
