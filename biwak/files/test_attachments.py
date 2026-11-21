@@ -445,3 +445,106 @@ class BucketTest(Fixture, TestCase):
             Bucket="biwak-test"
         )
         self.assertNotIn("Contents", objects)
+
+
+def stored_files(project):
+    """Every file stored for the project"""
+    found = []
+    todo = [f"files/{project.pk}"]
+    while todo:
+        folder = todo.pop()
+        try:
+            folders, files = default_storage.listdir(folder)
+        except FileNotFoundError:
+            continue
+        todo += [f"{folder}/{f}" for f in folders]
+        found += [f"{folder}/{f}" for f in files]
+    return found
+
+
+class StorageNameTest(Fixture, TestCase):
+    def test_a_long_name_with_umlauts_is_stored(self):
+        name = "ä" * 200 + ".txt"
+        attachment = upload(self.project, self.ada, name=name, content=b"x")
+        self.assertEqual(attachment.name, name)
+        self.assertTrue(attachment.file.name.endswith(".txt"))
+        self.assertLessEqual(len(attachment.file.name.rsplit("/", 1)[1].encode()), 255)
+
+    def test_a_long_name_of_a_file_version_is_stored(self):
+        item = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="ä" * 200 + ".txt"),
+            creator=self.ada,
+        )
+        version = item.upload.versions.get()
+        self.assertEqual(version.name, "ä" * 200 + ".txt")
+        self.assertTrue(version.file.name.endswith(".txt"))
+
+    def test_a_name_of_symbols_is_stored(self):
+        for name in ["@@", "📄", "📄.png", ".."]:
+            with self.subTest(name=name):
+                attachment = upload(self.project, self.ada, name=name, content=b"x")
+                self.assertEqual(attachment.name, name)
+                self.assertTrue(attachment.file.name.startswith("files/"))
+
+    def test_the_upload_endpoint_takes_odd_names(self):
+        self.client.force_login(self.ada)
+        for name in ["ä" * 200 + ".txt", "@@", "📄"]:
+            with self.subTest(name=name):
+                response = self.client.post(
+                    f"/projects/{self.project.pk}/attachments/",
+                    {"file": SimpleUploadedFile(name, b"x")},
+                )
+                self.assertEqual(response.status_code, 201)
+
+    def test_the_new_file_form_takes_odd_names(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            f"/projects/{self.project.pk}/files/new/",
+            {"file": SimpleUploadedFile("@@", b"x"), "notify": "nobody"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_the_extension_survives_shortening(self):
+        attachment = upload(self.project, self.ada, name="a" * 300 + ".pdf")
+        self.assertTrue(attachment.file.name.endswith(".pdf"))
+
+
+class RollbackTest(Fixture, TestCase):
+    def test_a_failed_upload_leaves_no_file(self):
+        with (
+            patch.object(Attachment, "save", side_effect=RuntimeError),
+            self.assertRaises(RuntimeError),
+        ):
+            upload(self.project, self.ada)
+        self.assertEqual(stored_files(self.project), [])
+
+    def test_a_failed_new_file_leaves_no_file(self):
+        with (
+            patch.object(attachments, "link", side_effect=RuntimeError),
+            self.assertRaises(RuntimeError),
+        ):
+            ops.create_upload(
+                project=self.project,
+                file=ContentFile(b"x", name="a.txt"),
+                creator=self.ada,
+            )
+        self.assertEqual(stored_files(self.project), [])
+
+    def test_a_failed_replacement_keeps_only_the_old_file(self):
+        from biwak.files import operations as file_ops
+
+        item = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="a.txt"),
+            creator=self.ada,
+        )
+        before = stored_files(self.project)
+        with (
+            patch.object(file_ops, "record", side_effect=RuntimeError),
+            self.assertRaises(RuntimeError),
+        ):
+            file_ops.replace_upload(
+                item, ContentFile(b"y", name="b.txt"), actor=self.ada
+            )
+        self.assertEqual(stored_files(self.project), before)

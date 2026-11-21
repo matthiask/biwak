@@ -1,12 +1,13 @@
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import APIToken
 from biwak.audit.models import LoggedAction
 from biwak.bookmarks import operations as ops
 from biwak.bookmarks.models import Bookmark
 from biwak.items import operations as ops_items
-from biwak.test_utils import person, project
+from biwak.test_utils import check_in_answers, person, project
 
 
 class BookmarkBase(TestCase):
@@ -149,3 +150,28 @@ class BookmarkTest(BookmarkBase):
         response = call("put", f"items/{self.secret.pk}/bookmark/", user=self.cleo)
         self.assertEqual(response.status_code, 404)
         self.assertEqual(call("get", "bookmarks/", user=self.cleo).json(), [])
+
+
+class QueryCountTest(BookmarkBase):
+    def test_answers_cost_no_query_each(self):
+        self.client.force_login(self.ada)
+
+        def count(url):
+            with CaptureQueriesContext(connection) as queries_:
+                response = self.client.get(url, headers=self.api(self.ada))
+            self.assertEqual(response.status_code, 200)
+            return len(queries_)
+
+        def counts():
+            return count("/bookmarks/"), count("/api/v1/bookmarks/")
+
+        answers = check_in_answers(self.project, [self.ada])
+        ops.add_bookmark(self.ada, item=answers[0])
+        one = counts()
+        for answer in check_in_answers(self.project, [self.ada, self.bob]):
+            ops.add_bookmark(self.ada, item=answer)
+        self.assertEqual(counts(), one)
+
+    def api(self, user):
+        _token, secret = APIToken.create_for(user=user, title="T", access="read")
+        return {"authorization": f"Bearer {secret}"}

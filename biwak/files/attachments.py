@@ -4,7 +4,10 @@ The operations of attachments: views and the API call these. The item
 operations saving texts call ``link()``.
 """
 
+import contextlib
+import contextvars
 import datetime as dt
+import functools
 from pathlib import PurePath
 
 from django.db import transaction
@@ -40,6 +43,43 @@ def clean_name(name):
     return name[-255:] or "file"
 
 
+# The files stored by the operation running (see ``cleans_up_files``)
+_stored = contextvars.ContextVar("stored_files", default=None)
+
+
+def store(fieldfile, name, file):
+    """Saves ``file`` through the model's file field. If the running
+    operation fails afterwards, ``cleans_up_files`` deletes it."""
+    fieldfile.save(name, file, save=False)
+    if (stored := _stored.get()) is not None:
+        stored.append((fieldfile.storage, fieldfile.name))
+
+
+def cleans_up_files(function):
+    """For operations storing files (``store()``) inside a transaction: a
+    rolled back transaction doesn't take the files back, so the files
+    stored are deleted when the operation raises. Put it outside of
+    ``@transaction.atomic``."""
+
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        if _stored.get() is not None:  # nested: the outer one cleans up
+            return function(*args, **kwargs)
+        stored = []
+        token = _stored.set(stored)
+        try:
+            return function(*args, **kwargs)
+        except BaseException:
+            for storage, name in stored:
+                with contextlib.suppress(OSError):
+                    storage.delete(name)
+            raise
+        finally:
+            _stored.reset(token)
+
+    return wrapper
+
+
 def check_size(file):
     if file.size > MAX_SIZE:
         raise UploadError(
@@ -47,6 +87,7 @@ def check_size(file):
         )
 
 
+@cleans_up_files
 @transaction.atomic
 def upload(*, project, file, uploaded_by):
     """Stores the file as an attachment without item; the caller checked
@@ -61,7 +102,7 @@ def upload(*, project, file, uploaded_by):
         content_type=content_type_for(name),
         uploaded_by=uploaded_by,
     )
-    attachment.file.save(name, file, save=False)
+    store(attachment.file, name, file)
     attachment.save()
     return attachment
 

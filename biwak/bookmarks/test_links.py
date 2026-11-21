@@ -62,7 +62,9 @@ class LinkTest(BookmarkBase):
         self.assertEqual(on_item.position, 1)
         ops.update_link(second, url="https://gitlab.com/x", title="")
         self.assertEqual((second.kind, second.title), ("gitlab", "gitlab.com"))
-        ops.reorder_links([second, self.link])
+        ops.reorder_links(
+            [second.pk, self.link.pk], user=self.ada, project=self.project
+        )
         self.assertEqual(
             list(Link.objects.filter(item=None).values_list("pk", flat=True)),
             [second.pk, self.link.pk],

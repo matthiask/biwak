@@ -2,7 +2,7 @@
 
 A WebP thumbnail 400 pixels wide (images smaller than that keep their
 size), made on the first request and stored next to the file
-(``files/<project>/<key>/preview.webp``). PDFs show their first page
+(``files/<project>/<key>/preview/preview.webp``). PDFs show their first page
 (pypdfium2, no system packages). Like downloads, previews are only served
 after the visibility check.
 """
@@ -15,7 +15,7 @@ from django.core.files.base import ContentFile
 from PIL import Image, ImageOps
 
 from biwak.files import attachments
-from biwak.files.models import preview_name
+from biwak.files.models import failed_preview_name, preview_name
 
 
 logger = logging.getLogger(__name__)
@@ -70,17 +70,26 @@ def render(version):
 
 def preview_for(version):
     """The storage name of the version's preview, made if it doesn't exist
-    yet; None for files without one"""
+    yet; None for files without one, or when making it failed once"""
     if not version.has_preview:
         return None
     storage = version.file.storage
     name = preview_name(version.file.name)
     if storage.exists(name):
         return name
+    failed = failed_preview_name(version.file.name)
+    if storage.exists(failed):
+        return None
     data = render(version)
     if data is None:
+        # Remember it: rendering reads and parses the whole file
+        storage.save(failed, ContentFile(b""))
         return None
-    return storage.save(name, ContentFile(data))
+    saved = storage.save(name, ContentFile(data))
+    if saved != name:
+        # A request at the same time was faster: keep its preview only
+        storage.delete(saved)
+    return name
 
 
 def serve(version):

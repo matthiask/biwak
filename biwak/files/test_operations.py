@@ -52,6 +52,11 @@ class MessageTest(Fixture, TestCase):
         self.assertEqual(str(category), "📣 Announcement")
         self.assertTrue(item.is_commentable)
 
+    def test_what_clients_post_is_visible_to_clients(self):
+        item = ops.create_message(project=self.project, title="Hi", creator=self.cleo)
+        self.assertTrue(item.visible_to_clients)
+        self.assertTrue(item.is_client_visible)
+
     def test_whom_to_notify(self):
         def post(whom):
             return self.told(

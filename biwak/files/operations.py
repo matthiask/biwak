@@ -265,6 +265,7 @@ def restore_doc_version(item, version, *, actor):
 # Files ------------------------------------------------------------------
 
 
+@attachments.cleans_up_files
 @transaction.atomic
 def replace_upload(item, file, *, actor):
     """Uploads a new version: the URL, the comments and the earlier
