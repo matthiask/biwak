@@ -61,7 +61,7 @@ leaves them out. They need the production bundle in `static/`, which
 the JavaScript in `frontend/` and htmx (decided 2026-11-20); the test client
 covers everything else. A change to a script or an htmx interaction gets a
 test there: logged in through a session cookie, Playwright's waiting
-instead of sleeps, at least the client's view where it differs. No tests
+instead of sleeps, `ControlOrMeta` for shortcuts (so they run on a Mac too), at least the client's view where it differs. No tests
 of plain CSS layout (sizes, positions, alignment, wrapping, fitting the
 screen): they're slow, break on font differences between machines and
 test the browser, not our code; look at screenshots instead (decided
@@ -151,8 +151,10 @@ What every part does the same way. Look at how the core does it
 5. **Pages.** Server-rendered templates extending `base.html`, the
    client badge (`{% client_badge item %}`) on everything visible to
    clients (not in the feed and the lantern, which tell what happened:
-   the item's page shows it, decided 2026-11-21) and the banner (`items/_client_banner.html`) above forms on
-   visible items. Icons with `{% icon %}`; a new icon goes into
+   the item's page shows it, decided 2026-11-21); on the page of something
+   visible to clients the tab at the window's edge (`items/_client_tab.html`,
+   sticky, decided 2026-11-21: a banner was too imposing), and the banner
+   (`items/_client_banner.html`) only above forms in modals. Icons with `{% icon %}`; a new icon goes into
    `frontend/styles/icons.css` (`biwak/test_icons.py` checks). JavaScript
    only for interaction, in `frontend/`, loaded from `main.js`. Every
    `Textarea` is a Markdown field with the toolbar (`data-toolbar`); texts
