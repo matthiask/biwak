@@ -11,7 +11,8 @@ import { post } from "./http.js"
 // Clicking grips selects several to-dos, dragging one of them moves them
 // all; one request with the to-dos in their new order and where the first
 // one is among the others
-for (const container of document.querySelectorAll("[data-todos]")) {
+function sortTodos(container) {
+  if (Sortable.get(container)) return
   Sortable.create(container, {
     group: `todos-${container.dataset.list}`,
     handle: "[data-handle]",
@@ -42,7 +43,8 @@ for (const container of document.querySelectorAll("[data-todos]")) {
   })
 }
 
-for (const container of document.querySelectorAll("[data-groups]")) {
+function sortGroups(container) {
+  if (Sortable.get(container)) return
   Sortable.create(container, {
     handle: "[data-group-handle]",
     draggable: "[data-group-item]",
@@ -58,3 +60,15 @@ for (const container of document.querySelectorAll("[data-groups]")) {
     },
   })
 }
+
+for (const container of document.querySelectorAll("[data-todos]"))
+  sortTodos(container)
+for (const container of document.querySelectorAll("[data-groups]"))
+  sortGroups(container)
+
+// Groups a live update brings (frontend/live.js)
+document.addEventListener("biwak:live", (event) => {
+  const node = event.detail
+  for (const container of [node, ...node.querySelectorAll("[data-todos]")])
+    if (container.matches("[data-todos]")) sortTodos(container)
+})

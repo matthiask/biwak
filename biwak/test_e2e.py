@@ -14,7 +14,9 @@ Each test logs in through a session cookie and waits for what it expects
 """
 
 import asyncio
+import json
 import os
+import re
 import socket
 import time
 
@@ -27,7 +29,7 @@ from django.test.testcases import LiveServerThread
 from django.urls import reverse
 from django.views.static import serve as static_serve
 
-from biwak.accounts.models import APIToken, CalendarToken
+from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
@@ -110,9 +112,15 @@ class E2ETestCase(LiveServerTestCase):
 
     def console(self, message):
         # The favicon lives in an app's static files, the test server
-        # serves only the bundle in static/
-        if message.type == "error" and not message.location["url"].endswith(
-            "/favicon.svg"
+        # serves only the bundle in static/. Live updates need the ASGI
+        # server (LiveTest), the others' pages try in vain.
+        if (
+            message.type == "error"
+            and not message.location["url"].endswith("/favicon.svg")
+            and not (
+                "/ws/live/" in message.text
+                and self.server_thread_class is not ASGIServerThread
+            )
         ):
             self.errors.append(f"{message.text} {message.location['url']}")
 
@@ -620,7 +628,7 @@ class TodoPageTest(E2ETestCase):
         ops.add_comment(self.todo, author=self.bob, content="Hello")
         page = self.page
         self.goto(page, self.todo)
-        reactions = page.locator("#comments ~ .card .wb-reactions")
+        reactions = page.locator("#live-comments .card .wb-reactions")
         reactions.locator(".wb-reaction-add summary").click()
         reactions.locator("button", has_text="👍").click()
         reactions.locator("button.wb-reaction.is-mine").wait_for()
@@ -956,6 +964,194 @@ class CollabTest(E2ETestCase):
         expect(self.content(ada)).to_contain_text("Agenda for Monday")
         expect(self.content(ada)).to_contain_text("Typed live")
         self.assertFalse(self.errors)
+
+
+class LiveTest(E2ETestCase):
+    """Live updates and the lantern (specs/lantern.md): two browsers, the
+    other's changes appearing without reloading"""
+
+    host = "127.0.0.1"
+    server_thread_class = ASGIServerThread
+
+    @classmethod
+    def setUpClass(cls):
+        if uvicorn is None:  # pragma: no cover
+            raise cls.skipTest(cls, "uvicorn isn't installed")
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.todolist = self.make_list(
+            "Shared", visible=True, groups=["Doing"], todos=["Order the tent"]
+        )
+        self.todo = Item.objects.get(title="Order the tent")
+        self.frames = {}
+
+    def open(self, user, target, *, page=None):
+        """A page of the person, its websocket connected"""
+        page = page or self.login(user)
+        frames = self.frames.setdefault(page, [])
+
+        def received(payload):
+            # Playwright marks handlers: a function of our own, not a
+            # builtin method
+            frames.append(payload)
+
+        page.on("websocket", lambda ws: ws.on("framereceived", received))
+        self.goto(page, target)
+        expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
+        return page
+
+    def comment(self, page, text):
+        form = page.locator("form:has(input[name=form][value=comment])")
+        form.locator("textarea[name=content]").fill(text)
+        form.get_by_role("button", name="Add comment").click()
+        page.wait_for_load_state()
+
+    def test_a_comment_a_reaction_and_a_completion_appear(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        self.comment(bob, "Ordered!")
+        comment = ada.locator("#live-comments .card", has_text="Ordered!")
+        expect(comment).to_have_count(1)
+        expect(comment).to_have_class(re.compile("wb-live-new"))
+        # A reaction, on the to-do
+        reactions = bob.locator(".wb-reactions").first
+        reactions.locator(".wb-reaction-add summary").click()
+        reactions.locator("button", has_text="🎉").click()
+        bob.locator("button.wb-reaction.is-mine").first.wait_for()
+        expect(ada.locator(".wb-reactions").first).to_contain_text("🎉")
+        # Completed
+        bob.get_by_role("button", name="Complete").click()
+        bob.wait_for_load_state()
+        expect(ada.locator("#live-header")).to_contain_text("Reopen")
+        expect(ada.locator("#live-status")).to_contain_text("Completed by Bob")
+        self.assertFalse(self.errors)
+
+    def test_a_todo_added_and_moved_on_the_board(self):
+        board = f"{self.todolist.get_absolute_url()}?view=board"
+        ada = self.open(self.ada, board, page=self.page)
+        bob = self.open(self.bob, board)
+        section = bob.locator("section.wb-group[data-group-item]", has_text="Doing")
+        section.locator(".wb-add-todo summary").click()
+        title = section.locator("[data-add-todo-form] input[name=title]")
+        title.fill("Pack the stove")
+        title.press("Control+Enter")
+        bob.locator("[data-todo]", has_text="Pack the stove").wait_for()
+        doing = ada.locator("section.wb-group[data-group-item]", has_text="Doing")
+        expect(doing.locator("[data-todo]", has_text="Pack the stove")).to_have_count(1)
+        # Bob moves the tent into "Doing", on the to-do's page
+        self.goto(bob, self.todo)
+        bob.locator("select[name=target]").select_option(label="Shared / Doing")
+        bob.get_by_role("button", name="To the top").click()
+        bob.wait_for_load_state()
+        expect(doing.locator("[data-todo]").first).to_contain_text("Order the tent")
+        expect(ada.locator("#todos-none [data-todo]")).to_have_count(0)
+        # Still draggable: the new rows are in a Sortable
+        self.wait_for_sortables(ada)
+        self.assertFalse(self.errors)
+
+    def test_a_form_being_edited_isnt_replaced(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        title = ada.locator("#live-form input[name=title]")
+        title.fill("Order the big tent")
+        notes = bob.locator("#live-form textarea[name=notes]")
+        notes.fill("Two poles")
+        bob.locator("#live-form").get_by_role("button", name="Save").click()
+        bob.wait_for_load_state()
+        # The notes above the form follow, the form waits
+        expect(ada.locator("#live-text")).to_contain_text("Two poles")
+        expect(ada.locator("#live-form [data-live-note]")).to_be_visible()
+        expect(title).to_have_value("Order the big tent")
+        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value("")
+        # Put back and left: the form takes over what changed
+        title.fill("Order the tent")
+        title.blur()
+        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value(
+            "Two poles"
+        )
+        expect(ada.locator("#live-form [data-live-note]")).to_have_count(0)
+        self.assertFalse(self.errors)
+
+    def test_a_clients_page_doesnt_hear_of_an_internal_change(self):
+        internal = self.make_list("Internal", todos=["Budget"])
+        budget = Item.objects.get(title="Budget")
+        cleo = self.open(self.cleo, self.todolist)
+        ada = self.open(self.ada, budget, page=self.page)
+        self.comment(ada, "Internal remark")
+        self.goto(ada, internal)
+        section = ada.locator("section.wb-group").first
+        section.locator(".wb-add-todo summary").click()
+        section.locator("input[name=title]").fill("Secret plan")
+        section.locator("input[name=title]").press("Control+Enter")
+        ada.locator("[data-todo]", has_text="Secret plan").wait_for()
+        # Then something clients see: it arrives, the internal changes
+        # didn't (not even as a "changed")
+        self.goto(ada, self.todolist)
+        section = ada.locator("section.wb-group").first
+        section.locator(".wb-add-todo summary").click()
+        section.locator("input[name=title]").fill("Buy pegs")
+        section.locator("input[name=title]").press("Control+Enter")
+        expect(cleo.locator("[data-todo]", has_text="Buy pegs")).to_have_count(1)
+        received = [json.loads(frame) for frame in self.frames[cleo]]
+        changed = {m["item"] for m in received if m["type"] == "changed"}
+        self.assertNotIn(budget.pk, changed)
+        self.assertNotIn(internal.pk, changed)
+        self.assertFalse(
+            set(changed)
+            - set(
+                Item.objects.filter(is_client_visible=True).values_list("pk", flat=True)
+            )
+        )
+        expect(cleo.locator("body")).not_to_contain_text("Secret plan")
+        expect(cleo.locator("body")).not_to_contain_text("Internal remark")
+        self.assertFalse(self.errors)
+
+    def test_reconnecting_after_being_offline(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        ada.context.set_offline(True)
+        ada.evaluate("document.body.live.socket.close()")
+        expect(ada.locator("body")).to_have_attribute("data-live-state", "offline")
+        self.comment(bob, "While you were away")
+        ada.context.set_offline(False)
+        expect(ada.locator("body")).to_have_attribute(
+            "data-live-state", "connected", timeout=15000
+        )
+        expect(ada.locator("#live-comments")).to_contain_text("While you were away")
+
+    def test_the_lantern_count_and_menu(self):
+        ada = self.open(self.ada, reverse("projects"), page=self.page)
+        count = ada.locator("[data-lantern-count]")
+        expect(count).to_be_hidden()
+        bob = self.open(self.bob, self.todo)
+        self.comment(bob, "Hi Ada")
+        expect(count).to_have_text("1")
+        ada.locator("[data-lantern] > summary").click()
+        menu = ada.locator("[data-lantern-menu]")
+        expect(menu).to_contain_text("Order the tent")
+        expect(menu).to_contain_text("Bob Example commented:")
+        menu.get_by_role("button", name="Mark as read").click()
+        expect(count).to_be_hidden()
+        expect(menu.get_by_role("button", name="Mark as unread")).to_have_count(1)
+        menu.get_by_role("button", name="Pin to the top").click()
+        expect(menu).to_contain_text("Pinned")
+        self.assertTrue(self.ada.bookmarks.filter(item=self.todo).exists())
+        self.assertFalse(self.errors)
+
+    def test_the_favicon_dot(self):
+        icon = "document.querySelector('link[rel=icon]').href"
+        bob = self.open(self.bob, self.todo)
+        ada = self.open(self.ada, reverse("projects"), page=self.page)
+        self.comment(bob, "Without the setting")
+        expect(ada.locator("[data-lantern-count]")).to_have_text("1")
+        self.assertTrue(ada.evaluate(icon).endswith("/favicon.svg"))
+        User.objects.filter(pk=self.ada.pk).update(lantern_in_favicon=True)
+        ada.reload()
+        ada.wait_for_function(f"{icon}.startsWith('data:image/png')")
+        self.goto(ada, self.todo)  # Reads it
+        ada.wait_for_function(f"{icon}.endsWith('/favicon.svg')")
 
 
 class LinksTest(E2ETestCase):

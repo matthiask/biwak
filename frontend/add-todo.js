@@ -3,7 +3,8 @@
 // next one. Ctrl+Enter (or Cmd+Enter) saves, Escape or a click elsewhere
 // closes; what was typed stays until it's saved.
 
-const forms = document.querySelectorAll("[data-add-todo]")
+// Every form on the page, also those live updates bring (frontend/live.js)
+const forms = () => document.querySelectorAll("[data-add-todo]")
 
 function close(details, { focus = false } = {}) {
   if (!details.open) return
@@ -65,7 +66,11 @@ function syncRepeat(form) {
     element.hidden = !value
 }
 
-for (const details of forms) {
+const ready = new WeakSet()
+
+function setUp(details) {
+  if (ready.has(details)) return
+  ready.add(details)
   const form = details.querySelector("[data-add-todo-form]")
   syncRepeat(form)
   form.addEventListener("change", () => syncRepeat(form))
@@ -74,7 +79,7 @@ for (const details of forms) {
   details.addEventListener("toggle", () => {
     if (!details.open) return
     // One open at a time
-    for (const other of forms) if (other !== details) close(other)
+    for (const other of forms()) if (other !== details) close(other)
     form.querySelector("[name=title]").focus()
   })
 
@@ -98,8 +103,18 @@ for (const details of forms) {
     .addEventListener("click", () => close(details, { focus: true }))
 }
 
+for (const details of forms()) setUp(details)
+document.addEventListener("biwak:live", (event) => {
+  const node = event.detail
+  for (const details of [
+    ...(node.matches("[data-add-todo]") ? [node] : []),
+    ...node.querySelectorAll("[data-add-todo]"),
+  ])
+    setUp(details)
+})
+
 document.addEventListener("click", (event) => {
-  for (const details of forms) {
+  for (const details of forms()) {
     if (details.open && !details.contains(event.target)) close(details)
   }
 })

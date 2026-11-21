@@ -2,6 +2,9 @@
 {% load attachments biwak i18n %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
+{# One websocket per tab: here the editor's (frontend/collab.js) #}
+{% block live_socket %}{% endblock %}
+
 {% block content %}
   {% include "files/_crumbs.html" %}
   <div class="wb-page-header">

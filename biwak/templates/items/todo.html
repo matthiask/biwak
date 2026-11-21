@@ -2,9 +2,11 @@
 {% load attachments biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
+{% block live_item %}{{ item.pk }}{% endblock %}
+
 {% block content %}
   {% include "_breadcrumbs.html" with project=item.project parent=item.parent %}
-  <div class="wb-page-header">
+  <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
       {{ item|item_title }}
@@ -24,19 +26,21 @@
   </div>
   {% show_links item %}
   {% include "items/_client_banner.html" %}
-  {% if todo.is_completed %}
-    <p class="text-body-secondary">
-      {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
-    </p>
-  {% endif %}
-  {% if todo.recurrence %}
-    <p class="small text-body-secondary">
-      {% icon "calendar-event" %}
-      {% blocktranslate with rule=todo.recurrence_description %}Repeats: {{ rule }}.{% endblocktranslate %}
-      {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
-      {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
-    </p>
-  {% endif %}
+  <div id="live-status" data-live>
+    {% if todo.is_completed %}
+      <p class="text-body-secondary">
+        {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
+      </p>
+    {% endif %}
+    {% if todo.recurrence %}
+      <p class="small text-body-secondary">
+        {% icon "calendar-event" %}
+        {% blocktranslate with rule=todo.recurrence_description %}Repeats: {{ rule }}.{% endblocktranslate %}
+        {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
+        {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
+      </p>
+    {% endif %}
+  </div>
   {% if previous %}
     <p class="small text-body-secondary">
       {% translate "Previous:" %}
@@ -47,9 +51,11 @@
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown:item }}</div>{% endif %}
+      <div id="live-text" data-live>
+        {% if todo.notes %}<div class="wb-markdown mb-3">{{ todo.notes|markdown:item }}</div>{% endif %}
+      </div>
       {% reactions item %}
-      <div class="card mb-4">
+      <div class="card mb-4" id="live-form" data-live>
         <div class="card-body">
           <form method="post" {% attachments_attrs item.project %}>
             {% csrf_token %}

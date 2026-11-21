@@ -11,6 +11,8 @@ import "./mentions.js"
 import "./peek.js"
 import "htmx.org"
 import "./rule-widget.js"
+import "./lantern.js"
+import "./live.js"
 
 // The script is deferred, the page is parsed already; dragging to-dos and
 // groups

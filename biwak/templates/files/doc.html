@@ -2,9 +2,11 @@
 {% load biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
+{% block live_item %}{{ item.pk }}{% endblock %}
+
 {% block content %}
   {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
-  <div class="wb-page-header">
+  <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">
       {% icon "file-earmark-text" %}
       {{ item|item_title }}
@@ -35,7 +37,7 @@
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div class="wb-markdown mb-4">{{ doc.content|markdown:item }}</div>
+      <div class="wb-markdown mb-4" id="live-text" data-live>{{ doc.content|markdown:item }}</div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

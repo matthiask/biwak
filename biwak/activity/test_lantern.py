@@ -370,7 +370,7 @@ class PagesTest(LanternTestCase):
         self.client.force_login(self.cleo)
         page = self.client.get(reverse("projects"))
         self.assertContains(page, 'data-lantern="/lantern/menu/"')
-        self.assertContains(page, 'data-live="/ws/live/"')
+        self.assertContains(page, 'data-live-socket="/ws/live/"')
 
     def test_mail_delivery_none_in_the_settings(self):
         self.client.force_login(self.bob)

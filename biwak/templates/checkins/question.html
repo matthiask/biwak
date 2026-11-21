@@ -2,9 +2,11 @@
 {% load attachments biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
+{% block live_item %}{{ item.pk }}{% endblock %}
+
 {% block content %}
   {% url 'project_checkins' item.project.pk as area_url %}{% translate "Check-ins" as area %}{% include "_breadcrumbs.html" with project=item.project %}
-  <div class="wb-page-header">
+  <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">
       {{ item|item_title }}
       {% client_badge item %}
@@ -69,51 +71,55 @@
                 {% endif %}{% endfor %}
             </p>
           {% endif %}
-          {% for answer, comments, comment_form in answers %}
-            <div class="card mb-2" id="answer-{{ answer.pk }}">
-              <div class="card-body">
-                <div class="small text-body-secondary mb-1">
-                  <a href="{% url 'question_person' item.pk answer.author_id %}"><strong
-                    >{{ answer.author.display_name }}</strong></a>
-                  · {{ answer.item.created_at|date:"j. M Y, H:i" }}
-                  {% if answer.author_id == request.user.pk %}
-                    ·
-                    <a
-                      href="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
-                    >{% translate "Edit" %}</a>
-                  {% endif %}
-                </div>
-                <div class="wb-markdown">{{ answer.content|markdown:answer.item }}</div>
-                {% reactions answer.item %}
-                {% for comment in comments %}
-                  <div class="border-top mt-2 pt-2" id="comment-{{ comment.pk }}">
-                    <div class="small text-body-secondary">
-                      <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
-                    </div>
-                    <div class="wb-markdown">{{ comment.content|markdown:answer.item }}</div>
-                    {% reactions answer.item comment %}
+          <div id="answers-{{ occurrence.pk }}" data-live-list>
+            {% for answer, comments, comment_form in answers %}
+              <div class="card mb-2" id="answer-{{ answer.pk }}" data-live>
+                <div class="card-body">
+                  <div class="small text-body-secondary mb-1">
+                    <a href="{% url 'question_person' item.pk answer.author_id %}"><strong
+                      >{{ answer.author.display_name }}</strong></a>
+                    · {{ answer.item.created_at|date:"j. M Y, H:i" }}
+                    {% if answer.author_id == request.user.pk %}
+                      ·
+                      <a
+                        href="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
+                      >{% translate "Edit" %}</a>
+                    {% endif %}
                   </div>
-                {% endfor %}
-                <details class="mt-2">
-                  <summary class="small">{% translate "Comment" %}</summary>
-                  <form
-                    method="post"
-                    action="{% url 'answer_comment' answer.pk %}"
-                    class="mt-2"
-                    {% attachments_attrs item.project %}
-                  >
-                    {% csrf_token %}
-                    {% include "items/_client_banner.html" with item=answer.item %}
-                    {% include "files/_attach_button.html" %}
-                    {{ comment_form }}
-                    <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
-                  </form>
-                </details>
+                  <div class="wb-markdown">{{ answer.content|markdown:answer.item }}</div>
+                  {% reactions answer.item %}
+                  {% for comment in comments %}
+                    <div class="border-top mt-2 pt-2" id="comment-{{ comment.pk }}">
+                      <div class="small text-body-secondary">
+                        <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+                      </div>
+                      <div class="wb-markdown">{{ comment.content|markdown:answer.item }}</div>
+                      {% reactions answer.item comment %}
+                    </div>
+                  {% endfor %}
+                  <details class="mt-2">
+                    <summary class="small">{% translate "Comment" %}</summary>
+                    <form
+                      method="post"
+                      action="{% url 'answer_comment' answer.pk %}"
+                      class="mt-2"
+                      {% attachments_attrs item.project %}
+                    >
+                      {% csrf_token %}
+                      {% include "items/_client_banner.html" with item=answer.item %}
+                      {% include "files/_attach_button.html" %}
+                      {{ comment_form }}
+                      <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
+                    </form>
+                  </details>
+                </div>
               </div>
-            </div>
-          {% empty %}
-            <p class="text-body-secondary">{% translate "No answers yet." %}</p>
-          {% endfor %}
+            {% empty %}
+              <p class="text-body-secondary" id="answers-{{ occurrence.pk }}-none" data-live>
+                {% translate "No answers yet." %}
+              </p>
+            {% endfor %}
+          </div>
         </section>
       {% empty %}
         <p class="text-body-secondary">{% translate "Not asked yet." %}</p>

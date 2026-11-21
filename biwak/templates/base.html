@@ -23,10 +23,13 @@
   <body
     hx-headers:inherited='{"X-CSRFToken": "{{ csrf_token }}"}'
     {% if request.user.is_authenticated %}
-      data-live="/ws/live/"
+      {% block live_socket %}data-live-socket="/ws/live/"{% endblock %}
       {% if request.user.lantern_in_favicon %}data-lantern-favicon{% endif %}
     {% endif %}
     data-live-item="{% block live_item %}{% endblock %}"
+    data-live-changed="{% translate 'Changed meanwhile: shown once you save or close this.' %}"
+    data-live-gone="{% translate 'This isn’t here anymore: it was trashed, or you can’t see it anymore.' %}"
+    data-live-back="{% translate 'Back' %}"
   >
     <nav class="navbar navbar-expand wb-navbar mb-4">
       <div class="container-xl">

@@ -2,9 +2,11 @@
 {% load biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
+{% block live_item %}{{ item.pk }}{% endblock %}
+
 {% block content %}
   {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
-  <div class="wb-page-header">
+  <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">
       {% icon "file-earmark" %}
       {{ item|item_title }}
@@ -40,7 +42,9 @@
         {{ version.name }} · {{ version.size|filesizeformat }} · {{ version.uploaded_by.get_short_name }},
         {{ version.uploaded_at|date:"j. M Y, H:i" }}
       </p>
-      {% if upload.description %}<div class="wb-markdown mb-4">{{ upload.description|markdown:item }}</div>{% endif %}
+      <div id="live-text" data-live>
+        {% if upload.description %}<div class="wb-markdown mb-4">{{ upload.description|markdown:item }}</div>{% endif %}
+      </div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

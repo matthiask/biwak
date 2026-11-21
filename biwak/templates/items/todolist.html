@@ -2,9 +2,11 @@
 {% load biwak bookmarks i18n %}
 {% block title %}{{ item }} – Biwak{% endblock %}
 
+{% block live_item %}{{ item.pk }}{% endblock %}
+
 {% block content %}
   {% include "_breadcrumbs.html" with project=item.project %}
-  <div class="wb-page-header">
+  <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">{{ item }} {% client_badge item %}</h1>
     <div class="wb-page-actions">
       {% bookmark_button item %}
@@ -30,10 +32,23 @@
   {% include "items/_client_banner.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
   {% csrf_token %}
-  <div class="wb-todolist{% if view == 'board' %} is-board{% endif %}" data-groups="{{ item.pk }}">
+  {# Live updates (frontend/live.js): every child of a data-live-list has an id #}
+  <div
+    class="wb-todolist{% if view == 'board' %} is-board{% endif %}"
+    data-groups="{{ item.pk }}"
+    id="live-groups"
+    data-live-list
+  >
     {# On the board, the ungrouped to-dos get a column only if there are any #}
-    <section class="wb-group" {% if view == "board" and groups and not ungrouped %}hidden{% endif %}>
+    <section
+      class="wb-group"
+      id="group-none"
+      data-live-list
+      {% if view == "board" and groups and not ungrouped %}hidden{% endif %}
+    >
       <div
+        id="todos-none"
+        data-live-list
         class="wb-todos"
         data-todos
         data-list="{{ item.pk }}"
@@ -42,15 +57,17 @@
       >
         {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
       </div>
-      {% include "items/_add_todo.html" with group=None %}
+      <div id="add-none" data-live>{% include "items/_add_todo.html" with group=None %}</div>
     </section>
     {% for group, todos in groups %}
       <section
         class="wb-group"
+        id="group-{{ group.pk }}"
+        data-live-list
         data-group-item="{{ group.pk }}"
         {% if can_change %}data-move-url="{% url 'group_move' group.pk %}"{% endif %}
       >
-        <h2 class="h6 wb-group-title">
+        <h2 class="h6 wb-group-title" id="group-{{ group.pk }}-title" data-live>
           {% if can_change %}
             <span
               class="wb-handle"
@@ -109,6 +126,8 @@
           {% endif %}
         </h2>
         <div
+          id="todos-{{ group.pk }}"
+          data-live-list
           class="wb-todos"
           data-todos
           data-list="{{ item.pk }}"
@@ -117,7 +136,7 @@
         >
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
         </div>
-        {% include "items/_add_todo.html" %}
+        <div id="add-{{ group.pk }}" data-live>{% include "items/_add_todo.html" %}</div>
       </section>
     {% endfor %}
   </div>
@@ -137,14 +156,16 @@
       </button>
     </form>
   {% endif %}
-  {% if completed_count %}
-    <details class="mt-4 wb-completed">
-      <summary class="text-body-secondary">
-        {% blocktranslate %}Completed ({{ completed_count }}){% endblocktranslate %}
-      </summary>
-      <div class="mt-2">{% include "items/_completed.html" with cursor=completed_cursor %}</div>
-    </details>
-  {% endif %}
+  <div id="live-completed" data-live>
+    {% if completed_count %}
+      <details class="mt-4 wb-completed">
+        <summary class="text-body-secondary">
+          {% blocktranslate %}Completed ({{ completed_count }}){% endblocktranslate %}
+        </summary>
+        <div class="mt-2">{% include "items/_completed.html" with cursor=completed_cursor %}</div>
+      </details>
+    {% endif %}
+  </div>
   <div class="mt-4">{% item_notifications item %}</div>
   {% include "items/_switch.html" with kind="list" %}
 {% endblock content %}
