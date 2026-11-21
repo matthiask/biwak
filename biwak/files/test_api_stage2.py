@@ -437,6 +437,53 @@ class FolderAPITest(APIFixture, TestCase):
         self.assertEqual([c["title"] for c in data["breadcrumbs"]], ["Public"])
         self.assertTrue(data["entries"][0]["visible_to_clients"])
 
+    def test_ordering_and_renaming(self):
+        """specs/ui-round-7.md, parts 2 and 3"""
+        self.assertEqual(self.files(self.ada).json()["ordering"], "alphabetical")
+        path = f"projects/{self.project.pk}/files/"
+        response = self.call(self.ada, "patch", path, {"ordering": "reverse"})
+        self.assertEqual(response.status_code, 200)
+        titles = [e["title"] for e in response.json()["entries"]]
+        self.assertEqual(titles[:2], ["Public", "Private"])
+        self.assertEqual(
+            self.call(self.ada, "patch", path, {"ordering": "sideways"}).status_code,
+            422,
+        )
+        self.assertEqual(
+            self.call(self.cleo, "patch", path, {"ordering": "newest"}).status_code,
+            403,
+        )
+        path = f"folders/{self.public.pk}/"
+        response = self.call(
+            self.ada, "patch", path, {"title": " Shared ", "ordering": "oldest"}
+        )
+        data = response.json()
+        self.assertEqual(data["folder"]["title"], "Shared")
+        self.assertEqual(data["ordering"], "oldest")
+        self.assertEqual(
+            self.files(self.cleo, folder_id=self.public.pk).json()["ordering"],
+            "oldest",
+        )
+        self.assertEqual(
+            self.call(self.ada, "patch", path, {"title": ""}).status_code, 400
+        )
+        # Clients neither order nor rename what they didn't create, nor see
+        # internal folders
+        for data in [{"ordering": "newest"}, {"title": "Mine"}]:
+            self.assertEqual(self.call(self.cleo, "patch", path, data).status_code, 403)
+        self.assertEqual(
+            self.call(
+                self.cleo, "patch", f"folders/{self.private.pk}/", {"title": "Mine"}
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.call(
+                self.ada, "patch", f"folders/{self.secret_doc.pk}/", {"title": "x"}
+            ).status_code,
+            404,
+        )
+
     def test_internal_folders_are_404_for_clients(self):
         self.assertEqual(
             self.files(self.cleo, folder_id=self.private.pk).status_code, 404

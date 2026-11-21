@@ -1,7 +1,8 @@
 {% load i18n %}{% autoescape off %}{{ heading }}
 {% for group in projects %}
 == {{ group.project }} ==
-{% for item in group.items %}{% with title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text_plain=item.text_plain url=item.url %}
+{% for item in group.items %}{% if item.batch %}
+{% with title=item.title url=item.url line=item.line files=item.files is_client_visible=item.is_client_visible %}{% include "mails/_batch.txt" %}{% endwith %}{% else %}{% with title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text_plain=item.text_plain url=item.url %}
 {% if item.item.is_client_visible %}{% translate "Clients can see this." %}
 
 {% endif %}{% for entry in item.entries %}{{ entry.line }}{% if entry.comment_text %}
@@ -11,7 +12,7 @@
 
 {% endfor %}{% include "mails/_item.txt" %}
 {% translate "Unsubscribe from this" %}: {{ item.unsubscribe_url }}
-{% endwith %}{% endfor %}{% endfor %}
+{% endwith %}{% endif %}{% endfor %}{% endfor %}
 --
 {% translate "Your notification settings" %}: {{ settings_url }}
 {% endautoescape %}

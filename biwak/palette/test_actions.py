@@ -150,7 +150,7 @@ class ProjectActionsTest(ActionsBase):
             "New list",
             "New message",
             "New doc",
-            "Upload a file",
+            "Upload files",
             "New check-in",
             "The project's activity",
             "People",
@@ -179,8 +179,9 @@ class ProjectActionsTest(ActionsBase):
         self.assertIn("All to-dos", actions)
         for label in [
             "New list",
+            "New folder",
             "New doc",
-            "Upload a file",
+            "Upload files",
             "New check-in",
             "Add a link",
         ]:
@@ -201,6 +202,30 @@ class ProjectActionsTest(ActionsBase):
             f"/projects/{self.camp.pk}/docs/new/?folder={folder.pk}",
         )
         self.assertIn("Bookmark", actions)
+        # Folders through modals (specs/ui-round-7.md, part 2)
+        self.assertEqual(actions["New folder"]["type"], "modal")
+        self.assertEqual(
+            actions["New folder"]["url"],
+            f"/projects/{self.camp.pk}/folders/new/?folder={folder.pk}",
+        )
+        self.assertEqual(actions["Rename…"]["type"], "modal")
+        self.assertEqual(actions["Rename…"]["url"], f"/folders/{folder.pk}/rename/")
+        self.assertEqual(actions["Order…"]["url"], f"/folders/{folder.pk}/order/")
+        actions = self.actions(self.ada, f"/projects/{self.camp.pk}/files/")
+        self.assertEqual(
+            actions["Order…"]["url"], f"/projects/{self.camp.pk}/files/order/"
+        )
+
+    def test_clients_dont_rename_folders(self):
+        folder = ops.create_folder(
+            project=self.camp, title="Maps", creator=self.ada, visible=True
+        )
+        actions = self.actions(self.cleo, folder.get_absolute_url())
+        self.assertNotIn("Rename…", actions)
+        self.assertNotIn("New folder", actions)
+        self.assertNotIn("Order…", actions)
+        actions = self.actions(self.cleo, f"/projects/{self.camp.pk}/files/")
+        self.assertNotIn("Order…", actions)
 
     def test_staff_without_access_to_a_limited_project_get_nothing(self):
         self.client.force_login(self.bob)

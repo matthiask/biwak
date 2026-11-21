@@ -1,0 +1,7 @@
+{% load i18n %}{% if is_client_visible %}{% translate "Clients can see this." %}
+
+{% endif %}{{ line }}
+{% for file in files %}
+- {{ file.title }}: {{ file.url }}{% endfor %}
+
+{{ title }}: {{ url }}

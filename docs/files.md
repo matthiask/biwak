@@ -20,17 +20,46 @@ number of comments.
 ## Docs and files
 
 **Docs and files** on the project's page opens the project's root
-folder. Folders come first, then docs and files, by title. Staff create
-what is here: "Add folder", "New doc", "Upload a file". Move things
-between folders with "Move to..." in their "More" menu.
+folder. Its contents show as tiles: folders first, then docs and files,
+in the folder's order; images show a preview, files their size, docs with a task list
+how many are done. Inside a folder the first tile, "..", leads to the
+folder above (or the project's top level); the path above the title
+does too. Staff create what is here: "New folder", "New doc", "Upload
+files". A folder's "More" menu has "Rename…"; move things between
+folders with "Move to..." in their "More" menu.
+
+**Moving:** drag a tile onto a folder, onto "..", or onto a folder in
+the path above the title. **Several at once:** Ctrl-click (Cmd-click on
+a Mac) adds a tile to the selection or takes it out, Shift-click selects
+all tiles from the last one clicked; with the keyboard, Ctrl+Space
+selects the current tile and Shift with the arrow keys selects on to the
+next one. A plain click opens the tile as always. With a selection a bar
+shows "Move to…", "Move to trash" and "Deselect" (or press Escape);
+dragging one of the selected tiles moves them all. You move what you may
+change; clients only what they added.
+
+Staff choose the order of a folder's contents with "Order…" in its
+"More" menu (for the top level in the "More" menu of "Docs and files"):
+alphabetical (the default), reverse alphabetical, newest first or oldest
+first, by when they were created. Folders always come first, in the
+same order. Everybody sees the order chosen.
 
 ### Docs
 
 A doc is a page of Markdown text, such as a brief or a set of notes.
 Its title is the first line of the text: a heading such as `# Brief`, or
 else the line itself. Change the first line to rename the doc; lists,
-search and the activity feed follow. An empty doc is "Untitled". "New
-doc" asks for the title and starts the text with it as a heading.
+search and the activity feed follow. An empty doc is "Untitled".
+
+**New doc** opens the editor at once, the text starting with `# ` and
+the cursor after it: type the title first, then the text. Until you
+write something it's only yours: nobody else sees it, it isn't in the
+folder, the activity or search, and an empty one is deleted after a day.
+With the first text it's a doc (the browser's address becomes the doc's)
+and it's in the folder, telling nobody yet. When you click "Done" the
+first time, you're asked "Tell people about it?": pick people (and add a
+note) and "Tell them", or "Not now". You're asked only once; later, add
+people with "Manage…" next to the subscribers.
 
 - **Edit** opens the doc for editing together: everybody who edits it
   sees the others' changes as they are typed, and changes are saved as
@@ -45,6 +74,17 @@ doc" asks for the title and starts the text with it as a heading.
   it until it's made editable again.
 
 ### Files
+
+**Uploading:** "Upload files" opens a list for the files you choose, or
+drop files from your computer anywhere onto a folder's page (onto a
+folder's tile, "..", or a folder in the path above for that folder).
+Each file shows its name, which you can change (the extension stays),
+and its size; remove one with ×, or drop more. Below, once for all of
+them: "Visible to clients" (at the top level; in a folder they follow
+the folder) and whom to notify. "Upload" sends them one after another;
+a file that can't be uploaded (too big) says so on its row while the
+others go on. The people notified get one notification and one mail for
+all of them ("Ada uploaded 5 files to Minutes"), not one per file.
 
 A file's page shows a preview for images and PDFs, its description,
 comments and "Download". "Replace" (or "Upload a new version") puts a

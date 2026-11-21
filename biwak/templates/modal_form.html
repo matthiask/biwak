@@ -45,6 +45,7 @@
         >
           {{ submit_label|default:_("Save") }}
         </button>
+        {% block extra_actions %}{% endblock %}
         {% if modal %}
           <button type="button" class="btn btn-quiet" data-modal-close>{% translate "Cancel" %}</button>
         {% else %}

@@ -6,7 +6,10 @@
 {% endcomment %}
 <nav class="small mb-2">
   <a href="{{ project.get_absolute_url }}">{{ project }}</a>
-  {% if area_url %}/ <a href="{{ area_url }}">{{ area }}</a>{% endif %}
-  {% for crumb in crumbs %}/ <a href="{{ crumb.get_absolute_url }}">{{ crumb|item_title }}</a>{% endfor %}
+  {% if area_url %}/ <a href="{{ area_url }}" {% if drop %}data-drop-folder=""{% endif %}>{{ area }}</a>{% endif %}
+  {% for crumb in crumbs %}/ <a
+      href="{{ crumb.get_absolute_url }}"
+      {% if drop %}data-drop-folder="{{ crumb.pk }}"{% endif %}
+    >{{ crumb|item_title }}</a>{% endfor %}
   {% if parent %}/ <a href="{{ parent.get_absolute_url }}">{{ parent|item_title }}</a>{% endif %}
 </nav>

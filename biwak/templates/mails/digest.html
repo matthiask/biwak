@@ -12,18 +12,22 @@
     {% for group in projects %}
       <h2 style="font-size: 18px; margin-top: 24px">{{ group.project }}</h2>
       {% for item in group.items %}
-        {% with item_obj=item.item title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text=item.text url=item.url entries=item.entries %}
-          {% if item_obj.is_client_visible %}
-            <p style="background: #ffe14d; color: #222; padding: 6px 10px; font-weight: 600; margin-top: 16px">
-              {% translate "Clients can see this." %}
+        {% if item.batch %}
+          {% include "mails/_batch.html" with title=item.title url=item.url line=item.line files=item.files is_client_visible=item.is_client_visible %}
+        {% else %}
+          {% with item_obj=item.item title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text=item.text url=item.url entries=item.entries %}
+            {% if item_obj.is_client_visible %}
+              <p style="background: #ffe14d; color: #222; padding: 6px 10px; font-weight: 600; margin-top: 16px">
+                {% translate "Clients can see this." %}
+              </p>
+            {% endif %}
+            {% include "mails/_entries.html" %}
+            {% include "mails/_item.html" %}
+            <p style="font-size: 13px">
+              <a href="{{ item.unsubscribe_url }}">{% translate "Unsubscribe from this" %}</a>
             </p>
-          {% endif %}
-          {% include "mails/_entries.html" %}
-          {% include "mails/_item.html" %}
-          <p style="font-size: 13px">
-            <a href="{{ item.unsubscribe_url }}">{% translate "Unsubscribe from this" %}</a>
-          </p>
-        {% endwith %}
+          {% endwith %}
+        {% endif %}
       {% endfor %}
     {% endfor %}
     <p style="color: #666; font-size: 13px; margin-top: 24px">

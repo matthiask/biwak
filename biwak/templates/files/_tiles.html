@@ -1,0 +1,93 @@
+{% load biwak i18n %}
+{% comment %}
+  A folder's contents as a grid of cards (specs/ui-round-7.md, part 1):
+  `rows` (folders first, in the folder's order), `folder` (inside one, the
+  first tile ".." leads to `up_url`, its parent). Every tile is a row of
+  the keyboard (j/k); folders and ".." are drop targets
+  (`data-drop-folder`, the folder's ID, empty for the top level), the
+  others carry `data-tile` (frontend/files.js). Tiles the person may move
+  can be selected (Ctrl- and Shift-click) and dragged; `data-tiles-move`
+  moves them, the bar below acts on the selection (specs/ui-round-7.md,
+  part 4).
+{% endcomment %}
+<ul
+  class="wb-tiles"
+  data-tiles
+  data-tiles-move="{% url 'files_move' project.pk %}"
+  data-tiles-folder="{{ folder.pk|default_if_none:'' }}"
+  {% if can_create %}data-tiles-upload="{% url 'file_new' project.pk %}"{% endif %}
+>
+  {% if folder %}
+    <li>
+      <a
+        class="wb-tile wb-tile-up"
+        href="{{ up_url }}"
+        data-kb-row
+        data-kb-open
+        data-drop-folder="{{ folder.parent_id|default_if_none:'' }}"
+        title="{% translate 'Up to the folder above' %}"
+      >
+        <span class="wb-tile-visual">{% icon "arrow-90deg-up" %}</span>
+        <span class="wb-tile-body"><span class="wb-tile-title">..</span></span>
+      </a>
+    </li>
+  {% endif %}
+  {% for row in rows %}
+    <li>
+      <a
+        class="wb-tile wb-tile-{{ row.kind }}"
+        href="{{ row.get_absolute_url }}"
+        data-kb-row
+        data-kb-open
+        data-tile="{{ row.pk }}"
+        {% if row.can_move %}data-tile-movable draggable="true"{% endif %}
+        {% if row.kind == "folder" %}data-drop-folder="{{ row.pk }}"{% endif %}
+      >
+        <span class="wb-tile-visual">
+          {% if row.kind == "folder" %}{% icon "folder" %}
+          {% elif row.kind == "doc" %}{% icon "file-earmark-text" %}
+          {% elif row.version.is_image %}<img src="{% url 'file_preview' row.pk %}" alt="" loading="lazy">
+          {% elif row.version.content_type == "application/pdf" %}{% icon "file-earmark-pdf" %}
+          {% else %}{% icon "file-earmark" %}{% endif %}
+        </span>
+        <span class="wb-tile-body">
+          <span class="wb-tile-title">{{ row|item_title }}</span>
+          <span class="wb-tile-meta">
+            {% if row.version %}<span>{{ row.version.size|filesizeformat }}</span>{% endif %}
+            {% include "items/_checklist_signal.html" with done=row.checklist_done total=row.checklist_total %}
+            {% client_badge row %}
+          </span>
+        </span>
+      </a>
+    </li>
+  {% endfor %}
+</ul>
+{% if not rows %}<p class="text-body-secondary">{% translate "Nothing here yet." %}</p>{% endif %}
+{% if can_create %}
+  <div class="wb-drop-hint" aria-hidden="true">
+    {% icon "upload" %}
+    <span>{% translate "Drop the files to upload them here, or onto a folder." %}</span>
+  </div>
+{% endif %}
+{% comment %}
+  What to do with the selection; frontend/files.js shows it, counts and
+  adds the selected IDs (`items`) to the links.
+{% endcomment %}
+<div class="wb-selection-bar" data-selection-bar hidden>
+  <span
+    data-selection-count
+    data-one="{% translate '1 selected' %}"
+    data-many="{% translate '%(count)s selected' %}"
+  ></span>
+  <a
+    class="btn btn-sm btn-quiet"
+    href="{% url 'files_move' project.pk %}"
+    data-selection-action
+  >{% translate "Move to…" %}</a>
+  <a
+    class="btn btn-sm btn-quiet"
+    href="{% url 'files_trash' project.pk %}"
+    data-selection-action
+  >{% icon "trash" %}<span>{% translate "Move to trash" %}</span></a>
+  <button type="button" class="btn btn-sm btn-quiet" data-selection-clear>{% translate "Deselect" %}</button>
+</div>

@@ -41,9 +41,10 @@ def access(user, pk, *, session_key=None):
 
         if not sso.session_alive(session_key, user):
             return None
+    # A draft is its creator's alone (specs/ui-round-7.md, part 5)
     item = (
         Item.objects
-        .visible_to(user)
+        .visible_to(user, drafts=True)
         .filter(pk=pk, kind=Kind.DOC)
         .select_related("doc")
         .first()
@@ -149,7 +150,10 @@ def may_write(user, item):
     typed before is kept."""
     return (
         ops.can_change(user, item)
-        and Item.objects.visible_to(user, with_trashed=True).filter(pk=item.pk).exists()
+        and Item.objects
+        .visible_to(user, with_trashed=True, drafts=True)
+        .filter(pk=item.pk)
+        .exists()
     )
 
 

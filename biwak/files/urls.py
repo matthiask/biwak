@@ -21,11 +21,22 @@ urlpatterns = [
     # Folders
     path("projects/<int:pk>/files/", library.project_files, name="project_files"),
     path("folders/<int:pk>/", library.folder, name="folder"),
+    path("projects/<int:pk>/folders/new/", library.folder_new, name="folder_new"),
+    path("folders/<int:pk>/rename/", library.folder_rename, name="folder_rename"),
+    path("folders/<int:pk>/order/", library.folder_order, name="folder_order"),
+    path(
+        "projects/<int:pk>/files/order/",
+        library.project_files_order,
+        name="project_files_order",
+    ),
     path("items/<int:pk>/move/", library.item_move, name="item_move"),
+    path("projects/<int:pk>/files/move/", library.files_move, name="files_move"),
+    path("projects/<int:pk>/files/trash/", library.files_trash, name="files_trash"),
     # Docs
     path("projects/<int:pk>/docs/new/", docs.doc_new, name="doc_new"),
     path("docs/<int:pk>/", docs.doc, name="doc"),
     path("docs/<int:pk>/edit/", docs.doc_edit, name="doc_edit"),
+    path("docs/<int:pk>/tell/", docs.doc_tell, name="doc_tell"),
     path("docs/<int:pk>/read-only/", docs.doc_read_only, name="doc_read_only"),
     path("docs/<int:pk>/versions/", docs.doc_versions, name="doc_versions"),
     path(
@@ -40,6 +51,7 @@ urlpatterns = [
     ),
     # Files
     path("projects/<int:pk>/files/new/", library.file_new, name="file_new"),
+    path("projects/<int:pk>/files/upload/", library.file_upload, name="file_upload"),
     path("files/<int:pk>/", library.file, name="file"),
     path("files/<int:pk>/edit/", library.file_edit, name="file_edit"),
     path("files/<int:pk>/replace/", library.file_replace, name="file_replace"),

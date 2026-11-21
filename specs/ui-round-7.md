@@ -3,8 +3,68 @@
 Round 7 of `ui-feedback.md` (2026-11-21), the questions answered the same
 day.
 
-**Status:** spec (2026-11-21). Not built. Details marked "proposed" are
-the spec writer's.
+**Status:** built (2026-11-21, branch `ui7`, CLI 0.36.0). Details marked
+"proposed" are the spec writer's, accepted and built. What was built:
+part 1 (`files/_tiles.html`, `.wb-tiles` in `main.css`); part 2
+(`library.folder_new` and `folder_rename`, `files.operations.update_folder()`,
+renaming records `edited` like any edit, in the palette too); part 3
+(`Folder.ordering`, `Project.files_ordering`, `files.operations.set_ordering()`,
+the "Order…" modals; API: `ordering` in `GET projects/{id}/files/`,
+`PATCH projects/{id}/files/` and `PATCH folders/{id}/` with `title` and
+`ordering`; CLI 0.36.0: `biwak folder rename`, `biwak folder order`,
+"Order:" in `biwak files`). The ordering is just a setting: no event;
+the audit trigger still records the column like any other (not left
+out, nothing to gain). Part 4 (`frontend/files.js`; `library.files_move`
+and `files_trash` taking `items`, `files.operations.move_items()` and
+`trash_items()`): only tiles the person may move (`can_change()`, as
+"Move to…") are draggable and selectable; a refused or failed drop
+reloads the page; selecting a folder and something in it trashes them
+together (one `trashed`, restored together). Keyboard: Ctrl+Space and
+Shift+arrows (`palette/_shortcuts.html`). The drag's image is the
+browser's (one tile) also when several move. Part 4b
+(`library.file_new` "Upload files", a modal and a page with a multiple
+input, `files/upload_form.html`; `library.file_upload` takes one file of
+the modal's upload as JSON; `frontend/upload.js`, the window's drop zone
+in `frontend/files.js`): the batch is a random ID made with the form,
+stored as `batch` in the files' `created` events
+(`create_upload(batch=, title=)`); `lantern.entry_key()`/`Batch` merge a
+batch into one entry (its folder, "Ada uploaded 5 files to Minutes.",
+the files linked; the unread count counts it once; following it, "Mark
+as read" and "Mark as unread" act on all its files; no bookmark button,
+bookmarks are per item and their entries show items), `send_mails()`
+groups by batch (`mails/batch.*`, one mail; unsubscribing links to the
+settings, there's no one item) and the digest shows a batch as one entry.
+Decisions on the way: whom to notify keeps today's default, everybody
+(as "Upload a file", the spec's "as today"); the description field is
+gone from uploading (set on the file's page); the visibility switch only
+at the top level; after the upload the page reloads (dropped onto a
+folder tile: you stay where you are); without JavaScript the files go up
+at once, a too big one is a message and the others go up; a single file
+uploaded without JavaScript opens its page as before. Part 5:
+`Item.is_draft` (`visible_to()` leaves drafts out, `drafts=True` lets
+their creator's own in: the editor's pages and its websocket, nothing
+else), `items.operations.create_draft()` (text `# `, title "Untitled", no
+event, no version, its creator subscribed), `files.operations._save()`
+makes a doc of it with the first text beyond `#`s and blanks
+(`is_blank()`; `created_at` then, a quiet `created` event: the folder's
+subscribers aren't told, people mentioned in that first text are),
+`Doc.tell_pending` and `files.docs.doc_tell` (the subscribers' picker
+with a note, "Tell them" records `shared` like "Tell them now", "Not
+now"; either way never again), `delete_drafts` in `fairy_tasks` after
+`save_pending`, `data-collab-draft` in `frontend/collab.js`. The old
+"New doc" form (text, whom to notify) is gone. Decisions on the way:
+"New doc" is a link (GET) making a new draft each time it's opened
+(reloading the empty editor makes another; the empty ones go after a
+day; a link prefetched by a browser would make one too, conservative:
+nothing reuses drafts, which could put two tabs into one doc); the
+address is replaced by the browser when the text it has stops being
+blank (it doesn't wait for the server's save, a reload before that
+opens the doc's editor, which is the creator's); "Done" on an empty
+draft goes back to its folder; "Done" saves what was typed before asking;
+a draft in a folder visible to clients is visible to them once written,
+as the folder says (the spec's "internal" holds at the top level);
+Escape or Cancel in "Tell people about it?" doesn't answer it, the next
+"Done" asks again; only the creator is asked.
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

@@ -1,14 +1,16 @@
 """Folders, docs and files (specs/files.md, stage 2)"""
 
+import uuid
+
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Case, IntegerField, Value, When
 from django.db.models.functions import Lower
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak.files import attachments, operations, previews
@@ -19,15 +21,30 @@ from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
 from biwak.permissions import staff_only
+from biwak.projects.models import FilesOrdering
 from biwak.projects.views import project_for
 
 
 CONTAINED = [Kind.FOLDER, Kind.DOC, Kind.FILE]
 
 
+# The order of a folder's contents after its folders
+ORDER_BY = {
+    FilesOrdering.ALPHABETICAL: [Lower("title"), "pk"],
+    FilesOrdering.REVERSE: [Lower("title").desc(), "-pk"],
+    FilesOrdering.NEWEST: ["-created_at", "-pk"],
+    FilesOrdering.OLDEST: ["created_at", "pk"],
+}
+
+
+def ordering_of(project, folder):
+    """The order chosen for the folder, or for the project's top level"""
+    return folder.folder.ordering if folder is not None else project.files_ordering
+
+
 def contents(user, project, folder):
     """What the person sees in the root (``folder`` None) or in a folder:
-    folders first, then docs and files, by title"""
+    folders first, then docs and files, both in the folder's order"""
     return (
         glance
         .with_checklist(Item.objects.visible_to(user))
@@ -40,7 +57,7 @@ def contents(user, project, folder):
             )
         )
         .select_related("creator")
-        .order_by("folder_first", Lower("title"), "pk")
+        .order_by("folder_first", *ORDER_BY[ordering_of(project, folder)])
     )
 
 
@@ -70,7 +87,7 @@ def version_for(request, item, version_pk=None, *, deny=staff_only):
 
 def folder_choices(user, project, *, exclude=None):
     """The folders a person can move something to, as (item, path): those
-    they see, not the item itself or what's in it"""
+    they see, not the item itself (or the items, a list) or what's in it"""
     folders = list(
         Item.objects
         .visible_to(user)
@@ -80,10 +97,12 @@ def folder_choices(user, project, *, exclude=None):
     )
     by_pk = {f.pk: f for f in folders}
     skip = set()
-    if exclude is not None and exclude.kind == Kind.FOLDER:
-        skip = {exclude.pk} | set(
-            Item.objects.descendants(exclude).values_list("pk", flat=True)
-        )
+    excluded = exclude if isinstance(exclude, list) else [exclude]
+    for item in excluded:
+        if item is not None and item.kind == Kind.FOLDER:
+            skip |= {item.pk} | set(
+                Item.objects.descendants(item).values_list("pk", flat=True)
+            )
 
     def path(folder):
         parts = [folder.title]
@@ -100,21 +119,14 @@ class FolderForm(Form):
     title = forms.CharField(label=_("title"), max_length=500)
 
 
+class NewFolderForm(FolderForm):
+    # Only folders at the top level have the switch (specs/access.md)
+    visible = forms.BooleanField(label=_("Visible to clients"), required=False)
+
+
 def library(request, project, folder=None):
     # Folders, docs and files are created by staff (specs/access.md)
     can_create = ops.can_create(request.user, Kind.FOLDER)
-    if request.method == "POST" and not can_create:
-        raise PermissionDenied
-    form = FolderForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        item = ops.create_folder(
-            project=project,
-            title=form.cleaned_data["title"],
-            creator=request.user,
-            parent=folder,
-            visible=bool(request.POST.get("visible")),
-        )
-        return redirect(item)
     rows = list(contents(request.user, project, folder))
     versions = {
         row.pk: current_version(row)
@@ -124,19 +136,118 @@ def library(request, project, folder=None):
     }
     for row in rows:
         row.version = versions.get(row.pk)
+        row.can_move = ops.can_change(request.user, row)
     context = {
         "project": project,
         "folder": folder,
         "breadcrumbs": breadcrumbs(folder) + ([folder] if folder else []),
         "rows": rows,
-        "form": form,
+        # ".." leads to the folder above, or the project's top level
+        "up_url": (
+            reverse("folder", args=[folder.parent_id])
+            if folder and folder.parent_id
+            else reverse("project_files", args=[project.pk])
+        ),
         "can_create": can_create,
-        "can_create_switch": folder is None and can_create,
     }
     if folder is not None:
         context |= {"item": folder} | sidebar_context(request, folder)
         context["move_choices"] = folder_choices(request.user, project, exclude=folder)
     return render(request, "files/library.html", context)
+
+
+def library_url(project, folder):
+    if folder is not None:
+        return folder.get_absolute_url()
+    return reverse("project_files", args=[project.pk])
+
+
+def folder_new(request, pk):
+    """A new folder in the top level or ``?folder=``: a modal of the
+    folder's page, also a page (specs/ui-round-7.md, part 2)"""
+    project = project_for(request, pk)
+    parent = folder_param(request, project)
+    if not ops.can_create(request.user, Kind.FOLDER):
+        raise PermissionDenied
+    form = (FolderForm if parent else NewFolderForm)(request.POST or None)
+    if form.is_valid():
+        item = ops.create_folder(
+            project=project,
+            title=form.cleaned_data["title"],
+            creator=request.user,
+            parent=parent,
+            visible=form.cleaned_data.get("visible", False),
+        )
+        return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("New folder"),
+        item=parent,
+        project=project,
+        cancel_url=library_url(project, parent),
+        submit_label=_("Add folder"),
+    )
+
+
+class OrderForm(Form):
+    ordering = forms.ChoiceField(
+        label=_("Order"), choices=FilesOrdering.choices, widget=forms.RadioSelect
+    )
+
+
+def _order(request, project, folder):
+    """How a folder's contents (or the top level's) are ordered, for
+    everybody; staff set it (specs/ui-round-7.md, part 3)"""
+    staff_only(request)
+    form = OrderForm(
+        request.POST or None, initial={"ordering": ordering_of(project, folder)}
+    )
+    if form.is_valid():
+        operations.set_ordering(
+            folder or project, form.cleaned_data["ordering"], actor=request.user
+        )
+        return redirect(library_url(project, folder))
+    return form_response(
+        request,
+        form,
+        title=_("Order…"),
+        item=folder,
+        project=project,
+        cancel_url=library_url(project, folder),
+        intro=_("Folders come first, in the same order. Everybody sees it."),
+    )
+
+
+def folder_order(request, pk):
+    item = item_for(request, pk, Kind.FOLDER)
+    return _order(request, item.project, item)
+
+
+def project_files_order(request, pk):
+    return _order(request, project_for(request, pk), None)
+
+
+def folder_rename(request, pk):
+    """Renaming a folder: a modal of its "More" menu, also a page"""
+    item = item_for(request, pk, Kind.FOLDER)
+    if not ops.can_change(request.user, item):
+        raise PermissionDenied
+    form = FolderForm(request.POST or None, initial={"title": item.title})
+    if form.is_valid():
+        operations.update_folder(
+            item, actor=request.user, title=form.cleaned_data["title"]
+        )
+        return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("Rename…"),
+        item=item,
+        parent=item.parent,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Rename"),
+    )
 
 
 def project_files(request, pk):
@@ -205,6 +316,102 @@ def item_move(request, pk):
     )
 
 
+def selected(request, project):
+    """The folders, docs and files of a selection (``items``, posted or in
+    the query): those the person sees in the project (else 404), and may
+    move or trash (else 403), as with "Move to…" one by one"""
+    pks = request.POST.getlist("items") or request.GET.getlist("items")
+    if not pks or not all(pk.isdecimal() for pk in pks):
+        raise Http404
+    items = list(
+        Item.objects
+        .visible_to(request.user)
+        .filter(project=project, kind__in=CONTAINED, pk__in=pks)
+        .select_related("parent", "creator")
+        .order_by(Lower("title"), "pk")
+    )
+    if len(items) != len(set(pks)):
+        raise Http404
+    if not all(ops.can_change(request.user, item) for item in items):
+        raise PermissionDenied
+    return items
+
+
+def _selection_title(items):
+    if len(items) == 1:
+        return items[0].title
+    return ngettext("%(count)s item", "%(count)s items", len(items)) % {
+        "count": len(items)
+    }
+
+
+def files_move(request, pk):
+    """Moves several folders, docs and files at once (the selection's
+    "Move to…", a modal, also a page; dropping them onto a folder posts
+    here with ``folder``) with the operation of "Move to…"
+    (specs/ui-round-7.md, part 4)"""
+    project = project_for(request, pk)
+    items = selected(request, project)
+    current = items[0].parent
+    form = MoveForm(
+        request.POST or None,
+        choices=folder_choices(request.user, project, exclude=items),
+        current=current.pk if current else None,
+    )
+    if request.method == "POST":
+        target = folder_param(request, project)
+        try:
+            operations.move_items(items, parent=target, actor=request.user)
+        except ValueError:
+            form.add_error(None, _("A folder can't be moved into itself."))
+        else:
+            return redirect(library_url(project, current))
+    return form_response(
+        request,
+        form,
+        title=_("Move to…"),
+        intro=_selection_title(items),
+        project=project,
+        cancel_url=library_url(project, current),
+        submit_label=_("Move"),
+    )
+
+
+def files_trash(request, pk):
+    """Moves several folders, docs and files to the trash: asks first (a
+    modal, also a page), the POST does it"""
+    project = project_for(request, pk)
+    items = selected(request, project)
+    current = items[0].parent
+    if request.method != "POST":
+        return form_response(
+            request,
+            None,
+            title=_("Move to the trash?"),
+            intro=ngettext(
+                "“%(title)s” can be restored for %(days)s days.",
+                "%(count)s items can be restored for %(days)s days.",
+                len(items),
+            )
+            % {"title": items[0].title, "count": len(items), "days": ops.TRASH_DAYS},
+            project=project,
+            cancel_url=library_url(project, current),
+            submit_label=_("Move to the trash"),
+            destructive=True,
+        )
+    operations.trash_items(items, actor=request.user)
+    messages.success(
+        request,
+        ngettext(
+            "“%(title)s” is in the trash for %(days)s days.",
+            "%(count)s items are in the trash for %(days)s days.",
+            len(items),
+        )
+        % {"title": items[0].title, "count": len(items), "days": ops.TRASH_DAYS},
+    )
+    return redirect(library_url(project, current))
+
+
 def folder_param(request, project):
     """The folder a new doc or file goes to (``?folder=``, ``folder`` of
     the form): one the person sees, or the root"""
@@ -225,51 +432,161 @@ class UploadForm(Form):
     file = forms.FileField(label=_("file"))
 
 
-class NewFileForm(NotifyForm, Form):
-    file = forms.FileField(label=_("file"))
-    description = forms.CharField(
-        label=_("description"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 4}),
-        help_text=_("Markdown"),
-    )
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Several files from one input; ``cleaned_data`` is a list"""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        if isinstance(data, list | tuple):
+            if not data and self.required:
+                raise forms.ValidationError(self.error_messages["required"])
+            return [super(MultipleFileField, self).clean(one, initial) for one in data]
+        return [super().clean(data, initial)]
+
+
+class UploadSettingsForm(NotifyForm, Form):
+    """What all files of an upload share: whom to notify, and at the top
+    level whether clients see them (in a folder they follow the folder)"""
+
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
-    field_order = ["file", "description", "visible", "notify", "people"]
+    field_order = ["files", "visible", "notify", "people"]
+
+    def __init__(self, *args, folder=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if folder is not None:
+            del self.fields["visible"]
+
+
+class UploadFilesForm(UploadSettingsForm):
+    files = MultipleFileField(label=_("Files"))
+    # frontend/upload.js empties the input, keeping the files in its list
+    use_required_attribute = False
+
+
+class UploadOneForm(UploadSettingsForm):
+    """One file of an upload from the modal (frontend/upload.js): its
+    title (the name without its extension changed) and the batch"""
+
+    file = forms.FileField(label=_("file"))
+    title = forms.CharField(label=_("name"), max_length=500, required=False)
+    batch = forms.RegexField(regex=r"^[0-9a-f]{32}$")
+
+
+def keep_extension(title, name):
+    """The title given for a file, with the file name's extension kept"""
+    title = (title or "").strip()
+    if not title:
+        return name
+    _stem, dot, extension = name.rpartition(".")
+    if dot and _stem and not title.lower().endswith(f".{extension.lower()}"):
+        return f"{title}.{extension}"
+    return title
+
+
+def _uploads(request, project, folder, form, files, *, batch):
+    """Creates the files (one ``batch``), each with the operation of the
+    single upload; returns the items and the errors ``[(name, error)]``"""
+    data = form.cleaned_data
+    created, errors = [], []
+    for file, title in files:
+        try:
+            created.append(
+                ops.create_upload(
+                    project=project,
+                    file=file,
+                    title=keep_extension(title, attachments.clean_name(file.name)),
+                    creator=request.user,
+                    parent=folder,
+                    visible=data.get("visible", False),
+                    whom=form.whom(),
+                    batch=batch,
+                )
+            )
+        except attachments.UploadError as exc:
+            errors.append((file.name, str(exc)))
+    return created, errors
 
 
 def file_new(request, pk):
+    """ "Upload files": a modal on the folder's page (frontend/upload.js
+    sends the files one by one to ``file_upload``), also a page with a
+    file input taking several (specs/ui-round-7.md, part 4b)"""
     project = project_for(request, pk)
     folder = folder_param(request, project)
     if not ops.can_create(request.user, Kind.FILE):
         raise PermissionDenied
-    form = NewFileForm(request.POST or None, request.FILES or None, project=project)
-    form.mention_fields(project, "description", folder=folder)
+    form = UploadFilesForm(
+        request.POST or None, request.FILES or None, project=project, folder=folder
+    )
     if form.is_valid():
-        data = form.cleaned_data
-        try:
-            item = ops.create_upload(
-                project=project,
-                file=data["file"],
-                description=data["description"],
-                creator=request.user,
-                parent=folder,
-                visible=data["visible"],
-                whom=form.whom(),
-            )
-        except attachments.UploadError as exc:
-            form.add_error("file", str(exc))
-        else:
-            return redirect(item)
-    return render(
+        files = [(file, "") for file in form.cleaned_data["files"]]
+        created, errors = _uploads(
+            request, project, folder, form, files, batch=uuid.uuid4().hex
+        )
+        for name, error in errors:
+            messages.error(request, f"{name}: {error}")
+        if len(created) == 1 and not errors:
+            return redirect(created[0])
+        if created or not errors:
+            return redirect(library_url(project, folder))
+        form.add_error("files", [error for _name, error in errors])
+    return form_response(
         request,
-        "files/file_form.html",
-        {
-            "project": project,
+        form,
+        title=_("Upload files"),
+        item=folder,
+        project=project,
+        cancel_url=library_url(project, folder),
+        submit_label=_("Upload"),
+        multipart=True,
+        template="files/upload_form.html",
+        extra={
             "folder": folder,
-            "breadcrumbs": breadcrumbs(folder) + ([folder] if folder else []),
-            "form": form,
-            "item": None,
+            "batch": uuid.uuid4().hex,
+            "upload_url": reverse("file_upload", args=[project.pk])
+            + (f"?folder={folder.pk}" if folder else ""),
+            "done_url": library_url(project, folder),
+            "max_size": attachments.MAX_SIZE,
         },
+    )
+
+
+@require_POST
+def file_upload(request, pk):
+    """One file of the modal's upload, as JSON: 201 with the file, else
+    the errors (413 for a file over the limit)"""
+    project = project_for(request, pk)
+    folder = folder_param(request, project)
+    if not ops.can_create(request.user, Kind.FILE):
+        raise PermissionDenied
+    form = UploadOneForm(request.POST, request.FILES, project=project, folder=folder)
+    if not form.is_valid():
+        return JsonResponse(
+            {
+                "detail": " ".join(
+                    str(error) for errors in form.errors.values() for error in errors
+                )
+            },
+            status=400,
+        )
+    data = form.cleaned_data
+    created, errors = _uploads(
+        request, project, folder, form, [(data["file"], data["title"])],
+        batch=data["batch"],
+    )  # fmt: skip
+    if errors:
+        return JsonResponse({"detail": errors[0][1]}, status=413)
+    item = created[0]
+    return JsonResponse(
+        {"id": item.pk, "title": item.title, "url": item.get_absolute_url()},
+        status=201,
     )
 
 

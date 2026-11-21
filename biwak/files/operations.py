@@ -20,7 +20,8 @@ from biwak.collab import live
 from biwak.files import attachments
 from biwak.files.titles import doc_title
 from biwak.items import editing, operations as ops
-from biwak.items.models import Doc, DocVersion, Message, Upload
+from biwak.items.models import Doc, DocVersion, Folder, Message, Status, Upload
+from biwak.projects.models import FilesOrdering, Project
 
 
 _UNCHANGED = ops._UNCHANGED
@@ -164,6 +165,20 @@ def _save(item, doc, *, actor=None, new_version=False):
     content, authors, typed = live.merge(doc)
     if actor is not None and actor not in authors:
         authors.append(actor)
+    published = False
+    if item.is_draft:
+        if ops.is_blank(content):
+            # Still nobody's business: the text only, no event, no version
+            if content != doc.content:
+                doc.content = content
+                doc.save(update_fields=["content"])
+            return False
+        # The doc exists from its first save with text (specs/ui-round-7.md,
+        # part 5): created now, telling nobody but who it mentions
+        published = True
+        item.is_draft = False
+        item.created_at = _now()
+        item.save(update_fields=["is_draft", "created_at"])
     title = doc_title(content) if content != doc.content else item.title
     renamed = title != item.title
     if not authors or not (renamed or content != doc.content or new_version):
@@ -182,10 +197,24 @@ def _save(item, doc, *, actor=None, new_version=False):
         doc.save(update_fields=["content"])
         for author in authors:
             attachments.link(item, content, actor=author)
-    events = [
-        record(actor=author, action=Action.EDITED, project=item.project, item=item)
-        for author in authors
-    ]
+    if published:
+        # Only its creator typed in it; quiet: the subscribers of its
+        # folder aren't told, the creator tells people at "Done"
+        events = [
+            record(
+                actor=author,
+                action=Action.CREATED,
+                project=item.project,
+                item=item,
+                quiet=True,
+            )
+            for author in authors
+        ]
+    else:
+        events = [
+            record(actor=author, action=Action.EDITED, project=item.project, item=item)
+            for author in authors
+        ]
     # Mentions to who typed them, the rest (a title, an API edit) to the
     # first author
     by_author = dict(zip(authors, events, strict=True))
@@ -322,6 +351,12 @@ def restore_doc_version(item, version, *, actor):
     return doc.versions.first()
 
 
+def told(item, *, actor):
+    """The creator of a doc begun as a draft answered "Tell people about
+    it?" (either way): never asked again"""
+    Doc.objects.filter(pk=item.pk, tell_pending=True).update(tell_pending=False)
+
+
 @transaction.atomic
 def set_read_only(item, *, read_only, actor):
     """Staff make a doc read-only for everybody, or editable again; the
@@ -335,6 +370,57 @@ def set_read_only(item, *, read_only, actor):
     doc.save(update_fields=["read_only"])
     live.check_access(doc=item.pk)
     return True
+
+
+# Folders ----------------------------------------------------------------
+
+
+@transaction.atomic
+def update_folder(item, *, actor, title=_UNCHANGED):
+    """Renames a folder: an edit like any other"""
+    if title is _UNCHANGED or title == item.title:
+        return item
+    item.title = title
+    item.updated_at = _now()
+    item.save(update_fields=["title", "updated_at"])
+    record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+    return item
+
+
+@transaction.atomic
+def move_items(items, *, parent, actor):
+    """Moves several folders, docs and files (dragged, or the selection's
+    "Move to…") with ``move_item()``; those already there stay. All or
+    none: a folder into itself raises ``ValueError``."""
+    for item in items:
+        if item.parent_id != (parent.pk if parent else None):
+            ops.move_item(item, parent=parent, actor=actor)
+
+
+@transaction.atomic
+def trash_items(items, *, actor):
+    """The selection's "Move to trash" (``trash()`` each; what's inside a
+    trashed folder follows it)"""
+    for item in items:
+        item.refresh_from_db(fields=["status"])
+        if item.status != Status.TRASHED:
+            ops.trash(item, actor=actor)
+
+
+def set_ordering(target, ordering, *, actor):
+    """The order of a folder's contents (``target`` its item) or of the
+    project's top level (``target`` the project), for everybody; staff
+    only. Just a setting: no event (specs/ui-round-7.md, part 3)."""
+    if actor.is_client:
+        raise PermissionDenied
+    ordering = FilesOrdering(ordering)
+    if isinstance(target, Project):
+        Project.objects.filter(pk=target.pk).update(files_ordering=ordering)
+        target.files_ordering = ordering
+    else:
+        Folder.objects.filter(pk=target.pk).update(ordering=ordering)
+        target.folder.ordering = ordering
+    return ordering
 
 
 # Files ------------------------------------------------------------------

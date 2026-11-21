@@ -114,11 +114,32 @@ function setUp(container) {
   provider.messageHandlers[MESSAGE_MODE] = (_encoder, decoder) => {
     mayType = decoding.readVarUint(decoder) === 1
     update()
+    if (synced) startDraft()
   }
   provider.on("sync", (isSynced) => {
     if (isSynced) synced = true
     update()
+    if (isSynced) startDraft()
   })
+
+  // A new doc (specs/ui-round-7.md, part 5): the cursor after its "# ",
+  // the title is typed first; once there's text the doc exists and its
+  // address replaces the draft's ("New doc") in the history
+  let draft = container.dataset.collabDraft
+  let started = false
+  const startDraft = () => {
+    if (!draft || started || !mayType) return
+    started = true
+    view.dispatch({ selection: { anchor: view.state.doc.length } })
+    view.focus()
+  }
+  const written = () => {
+    if (!draft || !ytext.toString().replace(/#/g, "").trim()) return
+    history.replaceState(history.state, "", draft)
+    draft = null
+    ytext.unobserve(written)
+  }
+  ytext.observe(written)
   provider.on("status", update)
   provider.on("closed", ({ code }) => {
     if (code !== CLOSE_NOT_FOUND) return

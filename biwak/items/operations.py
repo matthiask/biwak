@@ -54,7 +54,15 @@ def _next_position(qs):
 
 
 def create_item(
-    *, project, kind, title, creator, parent=None, visible=False, position=None
+    *,
+    project,
+    kind,
+    title,
+    creator,
+    parent=None,
+    visible=False,
+    position=None,
+    draft=False,
 ):
     """The item of a new item with its stored visibility, for the
     ``create_*`` operations (of every app), which add the detail model and
@@ -71,16 +79,20 @@ def create_item(
         creator=creator,
         position=position,
         visible_to_clients=visible,
+        is_draft=draft,
     )
     item.save()
     visibility.recompute(item)
     return item
 
 
-def created(item, creator):
-    """The creator subscribed and the event recorded (returned)"""
+def created(item, creator, **data):
+    """The creator subscribed and the event recorded (returned), with
+    ``data`` (a ``batch`` of files uploaded together)"""
     subscribe(creator, item)
-    return record(actor=creator, action=Action.CREATED, project=item.project, item=item)
+    return record(
+        actor=creator, action=Action.CREATED, project=item.project, item=item, **data
+    )
 
 
 @transaction.atomic
@@ -251,6 +263,35 @@ def create_doc(
     return item
 
 
+# A draft has nothing beyond headings' "#"s (``is_blank()``)
+DRAFT_TEXT = "# "
+
+
+def is_blank(content):
+    """Whether a draft's text is still nothing but ``# ``"""
+    return not content.replace("#", "").strip()
+
+
+@transaction.atomic
+def create_draft(*, project, creator, parent=None):
+    """ "New doc": a doc to write in at once, the editor needs one to sync
+    (specs/ui-round-7.md, part 5). Nobody's business until it has text
+    beyond ``# `` (``files.operations._save()`` makes it a doc then): no
+    event, only its creator sees it, its creator the only subscriber.
+    Internal at the top level, in a folder as the folder says."""
+    item = create_item(
+        project=project,
+        kind=Kind.DOC,
+        title=doc_title(DRAFT_TEXT),
+        creator=creator,
+        parent=parent,
+        draft=True,
+    )
+    Doc.objects.create(item=item, content=DRAFT_TEXT, tell_pending=True)
+    subscribe(creator, item)
+    return item
+
+
 def new_version(upload, file, *, uploaded_by):
     """Stores ``file`` (an uploaded file) as the newest version of the
     upload; raises ``attachments.UploadError`` for files over the limit"""
@@ -279,14 +320,19 @@ def create_upload(
     description="",
     visible=False,
     whom="nobody",
+    title=None,
+    batch=None,
 ):
     """Uploads a file into the root or a folder; its title is the file's
-    name. Raises ``attachments.UploadError`` for files over the limit."""
+    name unless ``title`` is given. ``batch``: files uploaded together
+    share it on their events, which the lantern and the mails merge into
+    one entry (specs/ui-round-7.md, part 4b). Raises
+    ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
     item = create_item(
         project=project,
         kind=Kind.FILE,
-        title=attachments.clean_name(file.name),
+        title=title or attachments.clean_name(file.name),
         creator=creator,
         parent=parent,
         visible=visible and parent is None,
@@ -294,7 +340,7 @@ def create_upload(
     upload = Upload.objects.create(item=item, description=description)
     new_version(upload, file, uploaded_by=creator)
     attachments.link(item, description, actor=creator)
-    event = created(item, creator)
+    event = created(item, creator, **({"batch": batch} if batch else {}))
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
     notify_people(item, whom=whom, actor=creator)
     return item
@@ -1010,6 +1056,23 @@ def trashed_roots(items):
         .exclude(parent__status=Status.TRASHED)
         .order_by("-trashed_at", "-pk")
     )
+
+
+# Drafts nobody wrote in are deleted after this (fairy_tasks)
+DRAFT_DAYS = 1
+
+
+def delete_drafts(*, now=None):
+    """Deletes drafts left empty for a day (specs/ui-round-7.md, part 5);
+    what was typed and not saved yet is saved first (``save_pending``
+    runs before), making a doc of them. Returns how many."""
+    cutoff = (now or timezone.now()) - dt.timedelta(days=DRAFT_DAYS)
+    old = Item.objects.filter(is_draft=True, created_at__lt=cutoff)
+    count = 0
+    for item in old.order_by("pk"):
+        item.delete()
+        count += 1
+    return count
 
 
 def purge_trash(*, now=None):

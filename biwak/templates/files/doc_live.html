@@ -14,20 +14,28 @@
       {% client_badge item %}
     </div>
     <div class="wb-page-actions">
-      <a class="btn btn-sm btn-quiet" href="{{ item.get_absolute_url }}">{% translate "Done" %}</a>
+      {% if ask_to_tell %}
+        {# The first "Done" asks whom to tell, once (specs/ui-round-7.md, part 5) #}
+        <a class="btn btn-sm btn-quiet" href="{% url 'doc_tell' item.pk %}" data-modal>{% translate "Done" %}</a>
+      {% else %}
+        <a class="btn btn-sm btn-quiet" href="{{ item.get_absolute_url }}">{% translate "Done" %}</a>
+      {% endif %}
     </div>
   </div>
   {% include "items/_client_banner.html" %}
   {% comment %}
     frontend/collab.js connects to the websocket in data-collab and puts
     the editor into [data-collab-editor]; the server says whether it may
-    type (specs/collaboration.md). The texts are the states it shows.
+    type (specs/collaboration.md). The texts are the states it shows. A
+    draft (data-collab-draft) starts with the cursor after its `# `; its
+    address becomes the doc's once it has text (specs/ui-round-7.md).
   {% endcomment %}
   <div
     class="mb-3"
     data-collab="/ws/docs/{{ item.pk }}"
     data-collab-user="{{ request.user.pk }}"
     data-collab-history="{{ history }}"
+    {% if item.is_draft %}data-collab-draft="{% url 'doc_edit' item.pk %}"{% endif %}
     data-collab-connecting="{% translate 'Connecting…' %}"
     data-collab-connected="{% translate 'Changes are saved as you type.' %}"
     data-collab-offline="{% translate 'Offline. Your changes are kept and merged when the connection is back.' %}"

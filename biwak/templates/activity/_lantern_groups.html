@@ -2,13 +2,14 @@
 {% comment %}
   The lantern's notifications grouped by item (specs/lantern.md): `groups`
   is [(item, notifications)], newest first; `next` where the buttons come
-  back to.
+  back to. Files uploaded together are one entry (`item.is_batch`,
+  lantern.Batch): its folder, a line and the files.
 {% endcomment %}
 {% for item, entries in groups %}
   <section class="wb-lantern-item{% if item.has_unread %} is-unread{% endif %}" data-lantern-item="{{ item.pk }}">
     <div class="d-flex align-items-start gap-2">
       <a
-        href="{{ entries.0.url }}"
+        href="{% if item.is_batch %}{{ item.url }}{% else %}{{ entries.0.url }}{% endif %}"
         class="flex-grow-1 wb-lantern-link wb-lantern-title"
         data-lantern-read="{{ entries.0.read_url }}"
       >
@@ -18,30 +19,34 @@
             aria-label="{% translate 'Unread' %}"
           ></span>{% endif %}
         {% icon item.kind_icon %}
-        {{ item|item_title }}
+        {% if item.is_batch %}{{ item.title }}{% else %}{{ item|item_title }}{% endif %}
       </a>
-      <form method="post" action="{% url 'lantern_bookmark' %}">
-        {% csrf_token %}
-        <input type="hidden" name="item" value="{{ item.pk }}">
-        <input type="hidden" name="next" value="{{ next }}">
-        {% if item.is_bookmarked %}<input type="hidden" name="remove" value="1">{% endif %}
-        <button
-          type="submit"
-          class="btn btn-sm btn-quiet"
-          title="{% if item.is_bookmarked %}{% translate 'Remove the bookmark' %}{% else %}{% translate 'Bookmark' %}{% endif %}"
-        >
-          {% if item.is_bookmarked %}{% icon "bookmark-fill" %}{% else %}{% icon "bookmark" %}{% endif %}
-          <span
-            class="visually-hidden"
-          >{% if item.is_bookmarked %}{% translate "Remove the bookmark" %}{% else %}{% translate "Bookmark" %}{% endif %}</span>
-        </button>
-      </form>
+      {% if not item.is_batch %}<form method="post" action="{% url 'lantern_bookmark' %}">
+          {% csrf_token %}
+          <input type="hidden" name="item" value="{{ item.pk }}">
+          <input type="hidden" name="next" value="{{ next }}">
+          {% if item.is_bookmarked %}<input type="hidden" name="remove" value="1">{% endif %}
+          <button
+            type="submit"
+            class="btn btn-sm btn-quiet"
+            title="{% if item.is_bookmarked %}{% translate 'Remove the bookmark' %}{% else %}{% translate 'Bookmark' %}{% endif %}"
+          >
+            {% if item.is_bookmarked %}{% icon "bookmark-fill" %}{% else %}{% icon "bookmark" %}{% endif %}
+            <span
+              class="visually-hidden"
+            >{% if item.is_bookmarked %}{% translate "Remove the bookmark" %}{% else %}{% translate "Bookmark" %}{% endif %}</span>
+          </button>
+        </form>{% endif %}
       <form
         method="post"
         action="{% if item.has_unread %}{% url 'lantern_read' %}{% else %}{% url 'lantern_unread' %}{% endif %}"
       >
         {% csrf_token %}
-        <input type="hidden" name="item" value="{{ item.pk }}">
+        {% if item.is_batch %}
+          {% for file in item.files %}<input type="hidden" name="item" value="{{ file.pk }}">{% endfor %}
+        {% else %}
+          <input type="hidden" name="item" value="{{ item.pk }}">
+        {% endif %}
         <input type="hidden" name="next" value="{{ next }}">
         <button
           type="submit"
@@ -61,7 +66,7 @@
         <li class="wb-lantern-entry{% if not notification.read_at %} is-unread{% endif %}">
           <a href="{{ notification.url }}" class="wb-lantern-link" data-lantern-read="{{ notification.read_url }}">
             {% if notification.event.actor %}{% avatar notification.event.actor %}{% endif %}
-            {{ notification.line }}
+            {% if item.is_batch %}{{ item.line }}{% else %}{{ notification.line }}{% endif %}
             {% if notification.mentioned %}<strong>{% translate "You were mentioned." %}</strong>{% endif %}
             {% if notification.event.excerpt %}<span
                 class="wb-excerpt"
@@ -71,6 +76,19 @@
             class="small text-body-secondary"
             datetime="{{ notification.created_at|date:'c' }}"
           >{{ notification.created_at|date:"j. M, H:i" }}</time>
+          {% if item.is_batch %}
+            <ul class="list-unstyled mb-0">
+              {% for file in item.files %}
+                <li>
+                  <a
+                    href="{{ file.get_absolute_url }}"
+                    class="wb-lantern-link"
+                    data-lantern-read="{{ file.read_url }}"
+                  >{% icon "file-earmark" %} {{ file|item_title }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>

@@ -32,6 +32,17 @@ def knows_people_of(viewer, project):
     )
 
 
+class FilesOrdering(models.TextChoices):
+    """The order of a folder's contents (specs/ui-round-7.md, part 3),
+    folders first either way; by creation, not by the last change, which
+    would reorder while people work"""
+
+    ALPHABETICAL = "alphabetical", _("Alphabetical")
+    REVERSE = "reverse", _("Reverse alphabetical")
+    NEWEST = "newest", _("Newest first")
+    OLDEST = "oldest", _("Oldest first")
+
+
 class ProjectQuerySet(models.QuerySet):
     def accessible_to(self, user):
         """The projects a person may open (specs/access.md): the
@@ -68,6 +79,15 @@ class Project(models.Model):
         blank=True,
         choices=Color,
         help_text=_("Tells projects apart on cards, headers and next to names."),
+    )
+    # The order of the docs and files at the top level; folders have their
+    # own (``Folder.ordering``)
+    files_ordering = models.CharField(
+        _("order of docs and files"),
+        max_length=20,
+        choices=FilesOrdering,
+        default=FilesOrdering.ALPHABETICAL,
+        editable=False,
     )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)

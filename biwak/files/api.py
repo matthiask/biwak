@@ -33,6 +33,7 @@ from biwak.files.library import (
     breadcrumbs,
     contents,
     current_version,
+    ordering_of,
     version_for,
 )
 from biwak.files.models import Attachment
@@ -405,11 +406,29 @@ class CrumbOut(Schema):
     title: str
 
 
+Ordering = Literal["alphabetical", "reverse", "newest", "oldest"]
+
+
 class FolderOut(Schema):
     # None for the root
     folder: ItemOut | None
     breadcrumbs: list[CrumbOut]
+    # The folder's order, or the project's for the root (folders first)
+    ordering: Ordering
     entries: list[EntryOut]
+
+
+def folder_out(request, project, folder):
+    rows = contents(request.user, project, folder).prefetch_related("upload__versions")
+    return {
+        "folder": item_out(folder) if folder else None,
+        "breadcrumbs": [
+            {"id": c.pk, "title": c.title}
+            for c in breadcrumbs(folder) + ([folder] if folder else [])
+        ],
+        "ordering": ordering_of(project, folder),
+        "entries": [entry_out(row) for row in rows],
+    }
 
 
 @router.get("projects/{project_id}/files/", response=FolderOut)
@@ -418,15 +437,46 @@ def folder_contents(request, project_id: int, folder_id: int | None = None):
     first, then docs and files by title"""
     project = project_for(request, project_id)
     folder = parent_folder(request, project, folder_id)
-    rows = contents(request.user, project, folder).prefetch_related("upload__versions")
-    return {
-        "folder": item_out(folder) if folder else None,
-        "breadcrumbs": [
-            {"id": c.pk, "title": c.title}
-            for c in breadcrumbs(folder) + ([folder] if folder else [])
-        ],
-        "entries": [entry_out(row) for row in rows],
-    }
+    return folder_out(request, project, folder)
+
+
+class OrderingIn(Schema):
+    ordering: Ordering
+
+
+@router.patch("projects/{project_id}/files/", response=FolderOut)
+def files_update(request, project_id: int, data: OrderingIn):
+    """The order of the project's top level, for everybody; staff only
+    (specs/ui-round-7.md, part 3)"""
+    project = project_for(request, project_id)
+    api_staff_only(request, _("Only staff change the order."))
+    operations.set_ordering(project, data.ordering, actor=request.user)
+    return folder_out(request, project, None)
+
+
+class FolderPatch(Schema):
+    title: str | None = None
+    ordering: Ordering | None = None
+
+
+@router.patch("folders/{folder_id}/", response=FolderOut)
+def folder_update(request, folder_id: int, data: FolderPatch):
+    """Renames a folder (who may change it: staff, clients what they
+    created) or sets the order of its contents (staff)"""
+    item = item_for(request, folder_id, Kind.FOLDER)
+    given = data.model_fields_set
+    if "ordering" in given and data.ordering is not None:
+        api_staff_only(request, _("Only staff change the order."))
+    if "title" in given and not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only rename folders you created."))
+    if "title" in given:
+        operations.update_folder(
+            item, actor=request.user, title=clean_title(data.title or "")
+        )
+    if "ordering" in given and data.ordering is not None:
+        operations.set_ordering(item, data.ordering, actor=request.user)
+    item = item_for(request, folder_id, Kind.FOLDER)
+    return folder_out(request, item.project, item)
 
 
 class FolderIn(Schema):

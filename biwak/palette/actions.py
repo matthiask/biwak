@@ -151,13 +151,17 @@ def in_project(user, project, folder=None):
             link(_("New message"), reverse("message_new", args=[project.pk]))
         )
     where = f"?folder={folder.pk}" if folder else ""
+    if ops.can_create(user, Kind.FOLDER):
+        actions.append(
+            modal(_("New folder"), reverse("folder_new", args=[project.pk]) + where)
+        )
     if ops.can_create(user, Kind.DOC):
         actions.append(
             link(_("New doc"), reverse("doc_new", args=[project.pk]) + where)
         )
     if ops.can_create(user, Kind.FILE):
         actions.append(
-            link(_("Upload a file"), reverse("file_new", args=[project.pk]) + where)
+            modal(_("Upload files"), reverse("file_new", args=[project.pk]) + where)
         )
     if not user.is_client:
         actions.append(
@@ -208,6 +212,10 @@ def on_item(request, item, context):
                     {"unarchive": "1", "next": url} if archived else {"next": url},
                 )
             )
+    if item.kind == Kind.FOLDER and ops.can_change(user, item):
+        actions.append(modal(_("Rename…"), reverse("folder_rename", args=[item.pk])))
+    if item.kind == Kind.FOLDER and not user.is_client:
+        actions.append(modal(_("Order…"), reverse("folder_order", args=[item.pk])))
     if item.is_commentable:
         actions.append(focus(_("Comment"), COMMENT_FORM, shortcut="c"))
     if item.kind == Kind.TODO:
@@ -333,6 +341,11 @@ def for_page(request, context):
         item = None
     if name in PROJECT_PAGES and isinstance(project, Project):
         page += in_project(user, project, folder=item if name == "folder" else None)
+    if name == "project_files" and isinstance(project, Project) and not user.is_client:
+        # The top level's order, the project's (specs/ui-round-7.md, part 3)
+        page.append(
+            modal(_("Order…"), reverse("project_files_order", args=[project.pk]))
+        )
     if item is not None:
         page += on_item(request, item, context)
     page += on_organizations(user, name, context.get("organization"))

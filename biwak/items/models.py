@@ -16,7 +16,7 @@ from tree_queries.models import TreeNode
 from tree_queries.query import TreeQuerySet
 
 from biwak import schedules
-from biwak.projects.models import Project
+from biwak.projects.models import FilesOrdering, Project
 
 
 class Kind(models.TextChoices):
@@ -71,14 +71,21 @@ class Status(models.TextChoices):
 
 
 class ItemQuerySet(TreeQuerySet):
-    def visible_to(self, user, *, with_trashed=False):
+    def visible_to(self, user, *, with_trashed=False, drafts=False):
         """The only place deciding who sees which item (specs/access.md):
         items of accessible projects, not trashed (unless ``with_trashed``,
         for the trash), and for clients only those visible to clients. A
-        filter on stored columns, no recursive query."""
+        filter on stored columns, no recursive query. Drafts (new docs
+        nobody wrote in yet, specs/ui-round-7.md, part 5) are nobody's
+        business: only with ``drafts``, and then only the person's own (the
+        editor's page and its websocket)."""
         if not user.is_authenticated or not user.is_active:
             return self.none()
         qs = self.filter(project__in=Project.objects.accessible_to(user))
+        if drafts:
+            qs = qs.filter(models.Q(is_draft=False) | models.Q(creator=user))
+        else:
+            qs = qs.filter(is_draft=False)
         if not with_trashed:
             qs = qs.exclude(status=Status.TRASHED)
         if user.is_client:
@@ -119,6 +126,9 @@ class Item(TreeNode):
     is_client_visible = models.BooleanField(
         _("is visible to clients"), default=False, editable=False
     )
+    # A new doc until somebody writes in it: only its creator's
+    # (``visible_to()``, specs/ui-round-7.md, part 5)
+    is_draft = models.BooleanField(_("draft"), default=False, editable=False)
 
     objects = ItemQuerySet.as_manager()
 
@@ -432,6 +442,15 @@ class Message(Checklist, Detail):
 
 
 class Folder(Detail):
+    # The order of its contents for everybody (specs/ui-round-7.md, part 3)
+    ordering = models.CharField(
+        _("order"),
+        max_length=20,
+        choices=FilesOrdering,
+        default=FilesOrdering.ALPHABETICAL,
+        editable=False,
+    )
+
     class Meta:
         verbose_name = _("folder")
         verbose_name_plural = _("folders")
@@ -442,6 +461,11 @@ class Doc(Checklist, Detail):
     # Edited live (specs/collaboration.md); read-only for everybody until
     # staff turn it off
     read_only = models.BooleanField(_("read-only"), default=False)
+    # A doc begun as a draft asks its creator once, at the first "Done",
+    # whom to tell (specs/ui-round-7.md, part 5)
+    tell_pending = models.BooleanField(
+        _("telling people pending"), default=False, editable=False
+    )
 
     class Meta:
         verbose_name = _("doc")

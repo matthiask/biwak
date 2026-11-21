@@ -37,6 +37,9 @@
 .bi-archive::before {
   content: "\f10d";
 }
+.bi-arrow-90deg-up::before {
+  content: "\f111";
+}
 .bi-arrow-counterclockwise::before {
   content: "\f117";
 }
@@ -105,6 +108,9 @@
 }
 .bi-file-earmark::before {
   content: "\f392";
+}
+.bi-file-earmark-pdf::before {
+  content: "\f63e";
 }
 .bi-file-earmark-plus::before {
   content: "\f37d";

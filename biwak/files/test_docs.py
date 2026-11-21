@@ -2,16 +2,24 @@ import datetime as dt
 
 import time_machine
 from django.core.files.base import ContentFile
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from biwak.activity.models import Event
+from biwak.activity.models import Action, Event, Notification
+from biwak.activity.operations import subscribe
 from biwak.collab import live
 from biwak.files import operations
 from biwak.items import operations as ops
 from biwak.items.models import Item
-from biwak.test_utils import bare_doc, person, project
+from biwak.test_utils import (
+    assert_modal,
+    assert_modal_redirect,
+    bare_doc,
+    person,
+    project,
+)
 
 
 POST_ONLY = {"doc_read_only", "doc_version_restore", "item_move"}
@@ -155,72 +163,217 @@ class DocPageTest(Fixture, TestCase):
 
 
 class NewDocTest(Fixture, TestCase):
-    def url(self, folder=None):
+    """New docs are drafts opening the editor at once, nobody's business
+    until they have text (specs/ui-round-7.md, part 5)"""
+
+    def new_url(self, folder=None):
         url = reverse("doc_new", args=[self.project.pk])
         return f"{url}?folder={folder.pk}" if folder else url
 
-    def test_everybody_is_preselected(self):
-        self.client.force_login(self.ada)
-        form = self.client.get(self.url()).context["form"]
-        self.assertEqual(form["notify"].value(), "everybody")
+    def new(self, user=None, folder=None):
+        self.client.force_login(user or self.ada)
+        response = self.client.get(self.new_url(folder))
+        self.assertEqual(response.status_code, 200)
+        return response, Item.objects.filter(is_draft=True).latest("pk")
 
-    def test_the_form_in_a_visible_folder_has_the_client_banner(self):
-        self.client.force_login(self.ada)
+    def type(self, item, text, user=None):
+        with self.captureOnCommitCallbacks(execute=True):
+            live.apply_text(item.doc, text, user=user or self.ada)
+            operations.save_live(item.pk)
+        item.refresh_from_db()
+        return item
+
+    def test_the_editor_opens_with_a_draft(self):
+        response, draft = self.new(folder=self.private)
+        self.assertEqual(draft.doc.content, "# ")
+        self.assertEqual(draft.parent, self.private)
+        self.assertContains(response, f'data-collab="/ws/docs/{draft.pk}"')
         self.assertContains(
-            self.client.get(self.url(self.public)), "Clients can see this"
+            response, f'data-collab-draft="{self.url("doc_edit", draft)}"'
         )
-        self.assertNotContains(
-            self.client.get(self.url(self.private)), "Clients can see this"
+        # "Done" asks whom to tell
+        self.assertContains(response, f'href="{self.url("doc_tell", draft)}"')
+        self.assertEqual(live.access(self.ada, draft.pk), live.WRITE)
+        # No event, no version; its creator the only subscriber
+        self.assertFalse(Event.objects.filter(item=draft).exists())
+        self.assertEqual(draft.doc.versions.count(), 0)
+        self.assertEqual([s.user for s in draft.subscriptions.all()], [self.ada])
+        # Every visit is a new one
+        _response, other = self.new(folder=self.private)
+        self.assertNotEqual(other, draft)
+
+    def test_a_draft_is_nobodys_business(self):
+        _response, draft = self.new(folder=self.public)
+        self.assertTrue(draft.is_client_visible)  # as the folder says
+        for user in [self.ada, self.bob, self.cleo]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                for url in [
+                    self.public.get_absolute_url(),
+                    reverse("project", args=[self.project.pk]),
+                    reverse("feed"),
+                    reverse("search") + "?q=Untitled",
+                ]:
+                    self.assertNotContains(self.client.get(url), f"/docs/{draft.pk}/")
+                self.assertNotIn(
+                    draft.pk,
+                    [
+                        e["id"]
+                        for e in self.client.get(
+                            f"/api/v1/projects/{self.project.pk}/files/",
+                            {"folder_id": self.public.pk},
+                        ).json()["entries"]
+                    ],
+                )
+        # Others don't get it at all, its creator only its editor
+        for user in [self.bob, self.cleo]:
+            self.client.force_login(user)
+            for name in ["doc", "doc_edit", "doc_tell", "item_subscribers"]:
+                self.assertEqual(
+                    self.client.get(self.url(name, draft)).status_code, 404, name
+                )
+            self.assertIsNone(live.access(user, draft.pk))
+        self.client.force_login(self.ada)
+        self.assertEqual(self.client.get(f"/api/v1/docs/{draft.pk}/").status_code, 404)
+        # "Done" before writing: back to the folder
+        self.assertRedirects(
+            self.client.get(draft.get_absolute_url()),
+            self.public.get_absolute_url(),
         )
-        self.assertNotContains(self.client.get(self.url()), "Clients can see this")
 
-    def send(self, user, folder=None, **data):
-        self.client.force_login(user)
-        data = {"title": "Minutes", "content": "Text", "notify": "nobody"} | data
-        return self.client.post(self.url(folder), data)
+    def test_it_becomes_a_doc_with_text(self):
+        subscribe(self.bob, self.private)
+        _response, draft = self.new(folder=self.private)
+        draft = self.type(draft, "#  \n")
+        self.assertTrue(draft.is_draft)
+        self.assertFalse(Event.objects.filter(item=draft).exists())
+        before = draft.created_at
+        draft = self.type(draft, "# Minutes\n\nWe met, @Bob too")
+        self.assertFalse(draft.is_draft)
+        self.assertEqual(draft.title, "Minutes")
+        self.assertGreater(draft.created_at, before)
+        self.assertEqual(draft.doc.versions.count(), 1)
+        event = Event.objects.get(item=draft)
+        self.assertEqual(event.action, Action.CREATED)
+        # Quiet: the folder's subscribers aren't told
+        self.assertFalse(Notification.objects.filter(event=event).exists())
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(self.private.get_absolute_url()), "Minutes")
 
-    def test_staff_creates_an_internal_doc(self):
-        response = self.send(self.ada)
-        doc = Item.objects.get(title="Minutes")
-        self.assertRedirects(response, reverse("doc_edit", args=[doc.pk]))
-        self.assertEqual(doc.doc.content, "# Minutes\n\nText")
-        self.assertFalse(doc.is_client_visible)
-        self.assertEqual(doc.doc.versions.count(), 1)
-
-    def test_in_a_folder_and_visibility(self):
-        self.send(self.ada, folder=self.public)
-        self.assertTrue(Item.objects.get(title="Minutes").is_client_visible)
-        self.send(self.ada, title="Top", visible="on")
-        self.assertTrue(Item.objects.get(title="Top").is_client_visible)
+    def test_mentions_in_the_first_text_tell(self):
+        _response, draft = self.new()
+        draft = self.type(draft, f"# Minutes\n\n[@Bob](person:{self.bob.pk})")
+        event = Event.objects.get(item=draft)
+        self.assertEqual(
+            [n.user for n in Notification.objects.filter(event=event)], [self.bob]
+        )
 
     def test_clients_dont_create_docs(self):
         """Clients create to-dos, comments and messages (specs/access.md)"""
-        self.assertEqual(self.send(self.cleo, folder=self.public).status_code, 403)
-        self.assertEqual(self.send(self.cleo).status_code, 403)
         self.client.force_login(self.cleo)
-        self.assertEqual(self.client.get(self.url()).status_code, 403)
-        self.assertFalse(Item.objects.filter(title="Minutes").exists())
+        self.assertEqual(self.client.get(self.new_url()).status_code, 403)
+        self.assertEqual(self.client.get(self.new_url(self.public)).status_code, 403)
         # Internal folders stay 404
-        self.assertEqual(self.send(self.cleo, folder=self.private).status_code, 404)
-
-    def test_whom_to_notify(self):
-        with self.captureOnCommitCallbacks(execute=True):
-            self.send(self.ada, folder=self.public, notify="everybody")
-        doc = Item.objects.get(title="Minutes")
-        told = {n.user for n in Event.objects.get(item=doc).notifications.all()}
-        self.assertEqual(told, {self.bob, self.cleo})
-        self.assertEqual(self.client.get(self.url()).status_code, 200)
+        self.assertEqual(self.client.get(self.new_url(self.private)).status_code, 404)
+        self.assertFalse(Item.objects.filter(is_draft=True).exists())
 
     def test_a_folder_of_another_project_is_404(self):
         other = project("Other", members=[self.ada])
         folder = ops.create_folder(project=other, title="Elsewhere", creator=self.ada)
-        self.assertEqual(self.send(self.ada, folder=folder).status_code, 404)
-
-    def test_the_form_asks_whom_to_notify(self):
         self.client.force_login(self.ada)
-        response = self.client.post(self.url(), {"title": "x"})
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Item.objects.filter(title="x").exists())
+        self.assertEqual(self.client.get(self.new_url(folder)).status_code, 404)
+
+    def test_empty_drafts_go_after_a_day(self):
+        _response, empty = self.new()
+        _response, written = self.new()
+        _response, fresh = self.new()
+        Item.objects.filter(pk__in=[empty.pk, written.pk]).update(
+            created_at=timezone.now() - dt.timedelta(days=2)
+        )
+        # Typed, not saved yet (the server stopped): saved first, a doc
+        live.apply_text(written.doc, "# Notes", user=self.ada)
+        call_command("fairy_tasks")
+        self.assertFalse(Item.objects.filter(pk=empty.pk).exists())
+        self.assertTrue(Item.objects.filter(pk=fresh.pk, is_draft=True).exists())
+        written.refresh_from_db()
+        self.assertFalse(written.is_draft)
+        self.assertEqual(written.title, "Notes")
+
+
+class TellTest(Fixture, TestCase):
+    """Telling people about a new doc, asked once at the first "Done"
+    (specs/ui-round-7.md, part 5)"""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.ada)
+        self.client.get(reverse("doc_new", args=[self.project.pk]))
+        self.doc = Item.objects.get(is_draft=True)
+        self.tell = self.url("doc_tell", self.doc)
+
+    def write(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            live.apply_text(self.doc.doc, "# Plan\n\nText", user=self.ada)
+
+    def test_done_on_an_empty_draft_goes_back(self):
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        assert_modal_redirect(
+            self, response, reverse("project_files", args=[self.project.pk])
+        )
+
+    def test_not_now(self):
+        self.write()
+        # What was typed is saved first
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Tell people about it?")
+        self.assertContains(response, "Not now")
+        self.assertContains(response, "Tell them")
+        response = self.client.post(
+            self.tell, {"not_now": "1"}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(self, response, self.doc.get_absolute_url())
+        self.doc.refresh_from_db()
+        self.assertFalse(self.doc.doc.tell_pending)
+        # Never again
+        response = self.client.get(self.url("doc_edit", self.doc))
+        self.assertNotContains(response, self.tell)
+        self.assertRedirects(self.client.get(self.tell), self.doc.get_absolute_url())
+        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
+
+    def test_tell_them(self):
+        self.write()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                self.tell, {"people": [self.bob.pk], "note": "Have a look"}
+            )
+        self.assertRedirects(response, self.doc.get_absolute_url())
+        event = Event.objects.get(item=self.doc, action=Action.SHARED)
+        self.assertEqual(event.data["note"], "Have a look")
+        self.assertEqual(
+            [n.user for n in Notification.objects.filter(event=event)], [self.bob]
+        )
+        self.doc.refresh_from_db()
+        self.assertFalse(self.doc.doc.tell_pending)
+        # Somebody to tell is needed
+        self.doc.doc.tell_pending = True
+        self.doc.doc.save()
+        response = self.client.post(self.tell, {"note": "x"})
+        self.assertContains(response, "Pick at least one person.")
+
+    def test_only_its_creator_is_asked(self):
+        self.write()
+        self.client.get(self.tell)  # saves
+        self.client.force_login(self.bob)
+        response = self.client.get(self.url("doc_edit", self.doc))
+        self.assertNotContains(response, self.tell)
+        self.assertRedirects(self.client.get(self.tell), self.doc.get_absolute_url())
+        self.doc.refresh_from_db()
+        self.assertTrue(self.doc.doc.tell_pending)
+
+    def test_docs_made_otherwise_dont_ask(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url("doc_edit", self.shared))
+        self.assertNotContains(response, self.url("doc_tell", self.shared))
 
 
 class EditTest(Fixture, TestCase):

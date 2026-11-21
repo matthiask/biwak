@@ -1,26 +1,29 @@
 """Docs: versions (specs/files.md, stage 2), edited live
 (specs/collaboration.md)"""
 
-from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak.activity.history import diff_lines
+from biwak.activity.operations import share
+from biwak.activity.views import SubscribersForm
 from biwak.collab import live
 from biwak.files import operations, queries
-from biwak.files.common import NotifyForm, comments_context, sidebar_context
+from biwak.files.common import comments_context, sidebar_context
 from biwak.files.library import (
     breadcrumbs,
     folder_choices,
     folder_param,
+    library_url,
 )
-from biwak.forms import Form
 from biwak.items import editing, operations as ops
 from biwak.items.models import Kind
 from biwak.items.views import item_for
+from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.views import project_for
 
@@ -28,52 +31,18 @@ from biwak.projects.views import project_for
 # Docs -------------------------------------------------------------------
 
 
-class DocForm(Form):
-    title = forms.CharField(label=_("title"), max_length=500)
-    content = forms.CharField(
-        label=_("content"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 20}),
-        help_text=_("Markdown"),
-    )
-
-
-class NewDocForm(NotifyForm, DocForm):
-    visible = forms.BooleanField(label=_("Visible to clients"), required=False)
-    field_order = ["title", "content", "visible", "notify", "people"]
-
-
 def doc_new(request, pk):
+    """ "New doc": a draft opened in the editor at once, its text ``# ``
+    with the cursor after it (specs/ui-round-7.md, part 5). The address
+    stays this one until the draft has text (frontend/collab.js puts the
+    doc's into the history then); every visit makes a new draft, empty
+    ones go after a day (``fairy_tasks``)."""
     project = project_for(request, pk)
     folder = folder_param(request, project)
     if not ops.can_create(request.user, Kind.DOC):
         raise PermissionDenied
-    form = NewDocForm(request.POST or None, project=project)
-    form.mention_fields(project, "title", "content", folder=folder)
-    if form.is_valid():
-        data = form.cleaned_data
-        item = ops.create_doc(
-            project=project,
-            title=data["title"],
-            content=data["content"],
-            creator=request.user,
-            parent=folder,
-            visible=data["visible"],
-            whom=form.whom(),
-        )
-        # The text starts with the title as its heading: on to the editor
-        return redirect("doc_edit", item.pk)
-    return render(
-        request,
-        "files/doc_form.html",
-        {
-            "project": project,
-            "folder": folder,
-            "breadcrumbs": breadcrumbs(folder) + ([folder] if folder else []),
-            "form": form,
-            "item": None,
-        },
-    )
+    item = ops.create_draft(project=project, creator=request.user, parent=folder)
+    return _editor(request, item)
 
 
 def _doc_context(request, item):
@@ -93,7 +62,10 @@ def _doc_context(request, item):
 
 
 def doc(request, pk):
-    item = item_for(request, pk, Kind.DOC)
+    item = item_for(request, pk, Kind.DOC, drafts=True)
+    if item.is_draft:
+        # "Done" before writing anything: nothing to show
+        return redirect(library_url(item.project, item.parent))
     comment_form, done = comments_context(request, item)
     if done:
         return done
@@ -112,14 +84,19 @@ def doc_edit(request, pk):
     """The doc edited live: everybody who can see it opens the editor,
     those who can't change it (or a read-only doc) watch. Posting saves
     what's typed as a version."""
-    item = item_for(request, pk, Kind.DOC)
-    can_edit = live.access(request.user, item.pk) == live.WRITE
+    item = item_for(request, pk, Kind.DOC, drafts=True)
     if request.method == "POST":
-        if not can_edit:
+        if live.access(request.user, item.pk) != live.WRITE:
             raise PermissionDenied
         operations.save_version(item, actor=request.user)
         messages.success(request, _("Saved as a version."))
         return redirect("doc_edit", item.pk)
+    return _editor(request, item)
+
+
+def _editor(request, item):
+    """The live editor's page; a draft's creator is asked whom to tell at
+    the first "Done" (``doc_tell``)"""
     return render(
         request,
         "files/doc_live.html",
@@ -127,9 +104,61 @@ def doc_edit(request, pk):
             "project": item.project,
             "item": item,
             "breadcrumbs": breadcrumbs(item),
-            "can_edit": can_edit,
+            "can_edit": live.access(request.user, item.pk) == live.WRITE,
             "history": live.history(item.pk),
+            "ask_to_tell": item.doc.tell_pending and item.creator_id == request.user.pk,
         },
+    )
+
+
+class TellForm(SubscribersForm):
+    """ "Tell people about it?": the subscribers' picker, telling them now"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        del self.fields["notify"]
+
+
+@never_cache
+def doc_tell(request, pk):
+    """The first "Done" of a doc begun as a draft (specs/ui-round-7.md,
+    part 5): its creator is asked once whom to tell, "Tell them" or "Not
+    now", never again either way. A modal of the editor, also a page.
+    What was typed is saved first; a draft still empty goes back to its
+    folder."""
+    item = item_for(request, pk, Kind.DOC, drafts=True)
+    if item.creator_id != request.user.pk:
+        return redirect(item)
+    operations.save_live(item.pk, request.user)
+    item.refresh_from_db()
+    if item.is_draft:
+        return redirect(library_url(item.project, item.parent))
+    if not item.doc.tell_pending:
+        return redirect(item)
+    if request.method == "POST" and request.POST.get("not_now"):
+        operations.told(item, actor=request.user)
+        return redirect(item)
+    form = TellForm(request.POST or None, item=item, user=request.user)
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        share(
+            item,
+            list(data["people"]),
+            actor=request.user,
+            notify=True,
+            note=data["note"],
+        )
+        operations.told(item, actor=request.user)
+        return redirect(item)
+    return form_response(
+        request,
+        form,
+        title=_("Tell people about it?"),
+        intro=_("Nobody has heard of this doc yet. You're asked once."),
+        item=item,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Tell them"),
+        template="files/doc_tell.html",
     )
 
 

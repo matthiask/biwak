@@ -313,20 +313,8 @@ class NewItemMentionsTest(TestCase):
 
     def test_the_forms_use_it(self):
         self.client.force_login(self.ada)
-        for url in [
-            f"/projects/{self.project.pk}/messages/new/",
-            f"/projects/{self.project.pk}/docs/new/",
-            f"/projects/{self.project.pk}/files/new/",
-        ]:
-            with self.subTest(url=url):
-                response = self.client.get(url)
-                self.assertContains(response, f'data-mentions="{self.url}"')
-        response = self.client.get(
-            f"/projects/{self.project.pk}/docs/new/", {"folder": self.shared.pk}
-        )
-        self.assertContains(
-            response, f'data-mentions="{self.url}?folder={self.shared.pk}"'
-        )
+        response = self.client.get(f"/projects/{self.project.pk}/messages/new/")
+        self.assertContains(response, f'data-mentions="{self.url}"')
 
 
 class ClientsKnowMembersTest(TestCase):

@@ -14,9 +14,16 @@ from biwak.activity.models import Action, Event
 from biwak.files import attachments, operations, previews
 from biwak.files.models import preview_name
 from biwak.items import operations as ops, visibility
-from biwak.items.models import Item, Kind
+from biwak.items.models import Folder, Item, Kind
 from biwak.projects import operations as project_ops
-from biwak.test_utils import organization, person, project
+from biwak.test_utils import (
+    assert_modal,
+    assert_modal_redirect,
+    assert_page,
+    organization,
+    person,
+    project,
+)
 
 
 def png(width=800, height=400, color="red"):
@@ -130,6 +137,120 @@ class LibraryTest(Fixture, TestCase):
         )
         self.assertContains(response, self.public.get_absolute_url())
 
+    def test_tiles_with_up_to_the_parent(self):
+        """A grid of tiles; inside a folder ".." leads to the folder above,
+        from a first-level folder to the project's top level
+        (specs/ui-round-7.md, part 1)"""
+        inner = ops.create_folder(
+            project=self.project, title="Inner", creator=self.ada, parent=self.public
+        )
+        response = self.get(self.ada, self.root())
+        self.assertNotContains(response, "wb-tile-up")
+        self.assertContains(response, 'class="wb-tile wb-tile-folder"', count=2)
+        self.assertContains(response, 'class="wb-tile wb-tile-file"', count=2)
+        response = self.get(self.cleo, self.public.get_absolute_url())
+        self.assertEqual(response.context["up_url"], self.root())
+        self.assertContains(response, "wb-tile-up")
+        self.assertContains(response, 'data-drop-folder=""')
+        response = self.get(self.cleo, inner.get_absolute_url())
+        self.assertEqual(response.context["up_url"], self.public.get_absolute_url())
+        self.assertContains(response, f'data-drop-folder="{self.public.pk}"')
+        self.assertContains(response, "Nothing here yet.")
+
+    def test_tiles_show_previews_of_images_sizes_and_checklists(self):
+        image = self.upload("photo.png", content=png(), parent=self.private)
+        ops.create_doc(
+            project=self.project,
+            title="Tasks",
+            content="- [x] one\n- [ ] two",
+            creator=self.ada,
+            parent=self.private,
+        )
+        response = self.get(self.ada, self.private.get_absolute_url())
+        self.assertContains(response, reverse("file_preview", args=[image.pk]))
+        self.assertContains(response, "1/2")
+        self.assertContains(response, "4\xa0bytes")  # secret.txt
+        # Only images have a preview
+        self.assertNotContains(
+            response, reverse("file_preview", args=[self.secret_file.pk])
+        )
+
+    def test_ordering(self):
+        """Stored on the folder, the project's for the top level; folders
+        first, in the same order (specs/ui-round-7.md, part 3)"""
+        ops.create_folder(project=self.project, title="Archive", creator=self.ada)
+        names = lambda: self.names(self.get(self.ada, self.root()))  # noqa: E731
+        self.assertEqual(
+            names(),
+            ["Archive", "Private", "Public", "root-secret.txt", "root-shared.txt"],
+        )
+        url = reverse("project_files_order", args=[self.project.pk])
+        self.client.force_login(self.ada)
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Order…")
+        self.assertContains(
+            response,
+            'value="alphabetical" class="form-check-input" id="id_ordering_0" required checked',
+        )
+        response = self.client.post(
+            url, {"ordering": "reverse"}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(self, response, self.root())
+        self.assertEqual(
+            names(),
+            ["Public", "Private", "Archive", "root-shared.txt", "root-secret.txt"],
+        )
+        self.client.post(url, {"ordering": "newest"})
+        self.assertEqual(
+            names(),
+            ["Archive", "Private", "Public", "root-secret.txt", "root-shared.txt"],
+        )
+        self.client.post(url, {"ordering": "oldest"})
+        self.assertEqual(
+            names(),
+            ["Public", "Private", "Archive", "root-shared.txt", "root-secret.txt"],
+        )
+        # A folder has its own, everybody sees it; no event
+        self.upload("a.txt", parent=self.public)
+        url = reverse("folder_order", args=[self.public.pk])
+        self.client.post(url, {"ordering": "reverse"})
+        self.assertEqual(
+            self.names(self.get(self.cleo, self.public.get_absolute_url())),
+            ["shared.txt", "a.txt"],
+        )
+        self.assertEqual(Folder.objects.get(pk=self.public.pk).ordering, "reverse")
+        self.assertFalse(
+            Event.objects
+            .filter(item=self.public)
+            .exclude(action=Action.CREATED)
+            .exists()
+        )
+        # The menus offer it
+        self.assertContains(
+            self.get(self.ada, self.root()),
+            reverse("project_files_order", args=[self.project.pk]),
+        )
+        self.assertContains(self.get(self.ada, self.public.get_absolute_url()), url)
+
+    def test_clients_dont_order(self):
+        self.client.force_login(self.cleo)
+        for url in [
+            reverse("project_files_order", args=[self.project.pk]),
+            reverse("folder_order", args=[self.public.pk]),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(
+                    self.client.post(url, {"ordering": "newest"}).status_code, 403
+                )
+        url = reverse("folder_order", args=[self.private.pk])
+        self.assertEqual(self.client.post(url, {"ordering": "newest"}).status_code, 404)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.files_ordering, "alphabetical")
+        self.assertNotContains(self.get(self.cleo, self.root()), "Order…")
+        self.assertNotContains(
+            self.get(self.cleo, self.public.get_absolute_url()), "Order…"
+        )
+
     def test_non_members_get_404(self):
         outsider = person("Dan", client=True)
         self.assertEqual(self.get(outsider, self.root()).status_code, 404)
@@ -148,34 +269,98 @@ class LibraryTest(Fixture, TestCase):
             self.get(self.cleo, self.shared_file.get_absolute_url()).status_code, 404
         )
 
+    def new_folder_url(self, folder=None):
+        url = reverse("folder_new", args=[self.project.pk])
+        return f"{url}?folder={folder.pk}" if folder else url
+
     def test_creating_folders(self):
+        """Through a modal (specs/ui-round-7.md, part 2), also a page"""
         self.client.force_login(self.ada)
-        self.client.post(self.root(), {"title": "Staff folder"})
-        self.client.post(self.root(), {"title": "Shown", "visible": "on"})
-        self.client.post(self.private.get_absolute_url(), {"title": "Nested"})
+        response = self.client.get(self.new_folder_url(), headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="New folder")
+        self.assertContains(response, "Visible to clients")
+        # The switch only at the top level
+        response = self.client.get(self.new_folder_url(self.private))
+        assert_page(self, response, title="New folder")
+        self.assertNotContains(response, "Visible to clients")
+        response = self.client.post(
+            self.new_folder_url(),
+            {"title": "Staff folder"},
+            headers={"HX-Modal": "true"},
+        )
+        staff_folder = Item.objects.get(title="Staff folder")
+        assert_modal_redirect(self, response, staff_folder.get_absolute_url())
+        self.client.post(self.new_folder_url(), {"title": "Shown", "visible": "on"})
+        self.client.post(
+            self.new_folder_url(self.private), {"title": "Nested", "visible": "on"}
+        )
         folders = {i.title: i for i in Item.objects.filter(kind=Kind.FOLDER)}
         self.assertFalse(folders["Staff folder"].is_client_visible)
         self.assertTrue(folders["Shown"].is_client_visible)
         self.assertEqual(folders["Nested"].parent, self.private)
+        self.assertFalse(folders["Nested"].visible_to_clients)
+        # Errors stay in the dialog
+        response = self.client.post(
+            self.new_folder_url(), {"title": " "}, headers={"HX-Modal": "true"}
+        )
+        assert_modal(self, response, title="New folder")
+        # The button in the header opens it
+        response = self.client.get(self.private.get_absolute_url())
+        self.assertContains(response, f'href="{self.new_folder_url(self.private)}"')
+
+    def test_renaming_a_folder(self):
+        url = reverse("folder_rename", args=[self.public.pk])
+        self.client.force_login(self.ada)
+        response = self.client.get(self.public.get_absolute_url())
+        self.assertContains(response, f'href="{url}"')
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Rename…")
+        self.assertContains(response, 'value="Public"')
+        response = self.client.post(
+            url, {"title": "Shared"}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(self, response, self.public.get_absolute_url())
+        self.public.refresh_from_db()
+        self.assertEqual(self.public.title, "Shared")
+        self.assertTrue(
+            Event.objects.filter(item=self.public, action=Action.EDITED).exists()
+        )
+
+    def test_clients_dont_rename_folders(self):
+        url = reverse("folder_rename", args=[self.public.pk])
+        self.client.force_login(self.cleo)
+        self.assertNotContains(self.client.get(self.public.get_absolute_url()), url)
+        self.assertEqual(self.client.post(url, {"title": "Mine"}).status_code, 403)
+        url = reverse("folder_rename", args=[self.private.pk])
+        self.assertEqual(self.client.post(url, {"title": "Mine"}).status_code, 404)
+        self.assertFalse(Item.objects.filter(title="Mine").exists())
 
     def test_clients_dont_create_folders_docs_or_files(self):
         """Clients create to-dos, comments and messages, not folders, docs
         or files (specs/access.md)"""
         self.client.force_login(self.cleo)
-        for url in [self.root(), self.public.get_absolute_url()]:
-            with self.subTest(url=url):
+        for folder in [None, self.public]:
+            with self.subTest(folder=folder):
+                url = self.new_folder_url(folder)
                 response = self.client.post(url, {"title": "Client folder"})
                 self.assertEqual(response.status_code, 403)
-                response = self.client.get(url)
-                self.assertNotContains(response, "Add folder")
+                response = self.client.get(
+                    folder.get_absolute_url() if folder else self.root()
+                )
+                self.assertNotContains(response, "New folder")
                 self.assertNotContains(response, "New doc")
-                self.assertNotContains(response, "Upload a file")
+                self.assertNotContains(response, "Upload files")
+        # A folder clients don't see: 404 first
+        response = self.client.post(
+            self.new_folder_url(self.private), {"title": "Client folder"}
+        )
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(Item.objects.filter(title="Client folder").exists())
         self.client.force_login(self.ada)
         response = self.client.get(self.root())
-        self.assertContains(response, "Add folder")
+        self.assertContains(response, "New folder")
         self.assertContains(response, "New doc")
-        self.assertContains(response, "Upload a file")
+        self.assertContains(response, "Upload files")
 
     def test_the_switch(self):
         self.client.force_login(self.ada)
@@ -329,7 +514,157 @@ class MoveTest(Fixture, TestCase):
         return reverse("project_files", args=[self.project.pk])
 
 
+class MoveSeveralTest(Fixture, TestCase):
+    """Moving and trashing a selection, dragging onto folders
+    (specs/ui-round-7.md, part 4): the operation of "Move to…" for each"""
+
+    def setUp(self):
+        super().setUp()
+        self.move_url = reverse("files_move", args=[self.project.pk])
+        self.trash_url = reverse("files_trash", args=[self.project.pk])
+
+    def items(self, *items):
+        return "&".join(f"items={item.pk}" for item in items)
+
+    def test_the_tiles_offer_it(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("project_files", args=[self.project.pk]))
+        self.assertContains(response, f'data-tiles-move="{self.move_url}"')
+        self.assertContains(response, "data-tile-movable", count=4)
+        self.assertContains(response, "data-selection-bar")
+        # Clients drag only what they may move
+        self.client.force_login(self.cleo)
+        response = self.client.get(reverse("project_files", args=[self.project.pk]))
+        self.assertNotContains(response, "data-tile-movable")
+
+    def test_dropping_onto_a_folder(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.move_url,
+            {
+                "folder": self.public.pk,
+                "items": [self.root_secret.pk, self.private.pk],
+            },
+        )
+        self.assertRedirects(response, reverse("project_files", args=[self.project.pk]))
+        for item in [self.root_secret, self.private, self.secret_file]:
+            item.refresh_from_db()
+            self.assertTrue(item.is_client_visible, item)
+        self.assertEqual(self.private.parent, self.public)
+        self.assertEqual(Event.objects.filter(action=Action.MOVED).count(), 2)
+        # Back to the top level (an empty folder: "..", the breadcrumbs)
+        response = self.client.post(
+            self.move_url, {"folder": "", "items": [self.private.pk]}
+        )
+        self.assertRedirects(response, self.public.get_absolute_url())
+        self.private.refresh_from_db()
+        self.assertIsNone(self.private.parent)
+        self.assertFalse(self.private.is_client_visible)
+
+    def test_the_modal_of_the_selection(self):
+        self.client.force_login(self.ada)
+        url = f"{self.move_url}?{self.items(self.root_secret, self.private)}"
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Move to…")
+        self.assertContains(response, "2 items")
+        # Not into a folder that is moved itself
+        self.assertNotContains(response, f'value="{self.private.pk}"')
+        self.assertContains(response, f'value="{self.public.pk}"')
+        response = self.client.post(
+            url, {"folder": self.public.pk}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(
+            self, response, reverse("project_files", args=[self.project.pk])
+        )
+        self.root_secret.refresh_from_db()
+        self.assertEqual(self.root_secret.parent, self.public)
+        # A folder into itself: the error, nothing moved
+        response = self.client.post(
+            f"{self.move_url}?{self.items(self.root_shared, self.private)}",
+            {"folder": self.private.pk},
+            headers={"HX-Modal": "true"},
+        )
+        self.assertContains(response, "A folder can&#x27;t be moved into itself.")
+        self.root_shared.refresh_from_db()
+        self.assertIsNone(self.root_shared.parent)
+
+    def test_trashing_several(self):
+        self.client.force_login(self.ada)
+        url = f"{self.trash_url}?{self.items(self.private, self.secret_file)}"
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Move to the trash?")
+        self.assertContains(response, "2 items can be restored for 30 days.")
+        response = self.client.post(url, headers={"HX-Modal": "true"})
+        assert_modal_redirect(
+            self, response, reverse("project_files", args=[self.project.pk])
+        )
+        self.private.refresh_from_db()
+        self.secret_file.refresh_from_db()
+        self.assertEqual(self.private.status, "trashed")
+        # Trashed with its folder, restored with it
+        self.assertEqual(self.secret_file.trashed_at, self.private.trashed_at)
+        self.assertEqual(Event.objects.filter(action=Action.TRASHED).count(), 1)
+
+    def test_clients_move_only_what_they_may(self):
+        mine = ops.create_upload(
+            project=self.project,
+            file=file("mine.txt"),
+            creator=self.cleo,
+            parent=self.public,
+        )
+        inner = ops.create_folder(
+            project=self.project, title="Inner", creator=self.ada, parent=self.public
+        )
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.public.get_absolute_url())
+        self.assertContains(response, "data-tile-movable", count=1)
+        # Their own file into a folder they see, not what staff made
+        response = self.client.post(
+            self.move_url, {"folder": inner.pk, "items": [mine.pk]}
+        )
+        self.assertEqual(response.status_code, 302)
+        mine.refresh_from_db()
+        self.assertEqual(mine.parent, inner)
+        for items in [[self.shared_file.pk], [mine.pk, self.shared_file.pk]]:
+            with self.subTest(items=items):
+                response = self.client.post(
+                    self.move_url, {"folder": "", "items": items}
+                )
+                self.assertEqual(response.status_code, 403)
+                response = self.client.post(self.trash_url, {"items": items})
+                self.assertEqual(response.status_code, 403)
+        # Not into folders or with items they don't see
+        response = self.client.post(
+            self.move_url, {"folder": self.private.pk, "items": [mine.pk]}
+        )
+        self.assertEqual(response.status_code, 404)
+        response = self.client.post(
+            self.move_url, {"folder": inner.pk, "items": [self.secret_file.pk]}
+        )
+        self.assertEqual(response.status_code, 404)
+        for item in [mine, self.shared_file, self.secret_file]:
+            before = item.parent_id
+            item.refresh_from_db()
+            self.assertEqual(item.parent_id, before)
+            self.assertEqual(item.status, "active")
+
+    def test_nothing_or_nonsense_is_404(self):
+        self.client.force_login(self.ada)
+        for query in ["", "items=x", f"items={self.project.pk + 10**6}"]:
+            with self.subTest(query=query):
+                response = self.client.get(f"{self.move_url}?{query}")
+                self.assertEqual(response.status_code, 404)
+        other = project("Elsewhere", members=[self.ada])
+        response = self.client.get(
+            reverse("files_move", args=[other.pk]) + f"?items={self.private.pk}"
+        )
+        self.assertEqual(response.status_code, 404)
+
+
 class UploadPageTest(Fixture, TestCase):
+    """ "Upload files" (specs/ui-round-7.md, part 4b): a modal, also a page
+    taking several files at once"""
+
     def url(self, folder=None):
         url = reverse("file_new", args=[self.project.pk])
         return f"{url}?folder={folder.pk}" if folder else url
@@ -338,6 +673,24 @@ class UploadPageTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         form = self.client.get(self.url()).context["form"]
         self.assertEqual(form["notify"].value(), "everybody")
+
+    def test_a_modal_and_a_page(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url(self.private), headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Upload files")
+        self.assertContains(response, 'enctype="multipart/form-data"')
+        self.assertContains(response, "multiple")
+        self.assertContains(
+            response,
+            f'data-upload="{reverse("file_upload", args=[self.project.pk])}'
+            f'?folder={self.private.pk}"',
+        )
+        response = self.client.get(self.url())
+        assert_page(self, response, title="Upload files")
+        # The button on the folder's page opens it
+        response = self.client.get(self.private.get_absolute_url())
+        self.assertContains(response, "Upload files")
+        self.assertContains(response, "data-tiles-upload")
 
     def test_the_form_in_a_visible_folder_has_the_client_banner(self):
         self.client.force_login(self.ada)
@@ -352,24 +705,43 @@ class UploadPageTest(Fixture, TestCase):
     def send(self, user, folder=None, **data):
         self.client.force_login(user)
         data = {
-            "file": SimpleUploadedFile("new.txt", b"New"),
+            "files": [SimpleUploadedFile("new.txt", b"New")],
             "notify": "nobody",
         } | data
         return self.client.post(self.url(folder), data)
 
     def test_staff_uploads_into_the_root(self):
-        response = self.send(self.ada, description="About it")
+        response = self.send(self.ada)
         item = Item.objects.get(title="new.txt")
         self.assertRedirects(response, reverse("file", args=[item.pk]))
-        self.assertEqual(item.upload.description, "About it")
         self.assertFalse(item.is_client_visible)
         self.assertEqual(item.upload.versions.get().uploaded_by, self.ada)
+
+    def test_several_at_once_are_a_batch(self):
+        response = self.send(
+            self.ada,
+            folder=self.public,
+            files=[
+                SimpleUploadedFile("one.txt", b"1"),
+                SimpleUploadedFile("two.txt", b"2"),
+            ],
+        )
+        self.assertRedirects(response, self.public.get_absolute_url())
+        events = Event.objects.filter(
+            item__title__in=["one.txt", "two.txt"], action=Action.CREATED
+        )
+        self.assertEqual(len(events), 2)
+        self.assertEqual(len({e.data["batch"] for e in events}), 1)
+        self.assertTrue(all(e.item.is_client_visible for e in events))
 
     def test_staff_chooses_visibility_and_folder(self):
         self.send(self.ada, visible="on")
         self.assertTrue(Item.objects.get(title="new.txt").is_client_visible)
         self.send(
-            self.ada, folder=self.private, file=SimpleUploadedFile("in.txt", b"x")
+            self.ada,
+            folder=self.private,
+            files=[SimpleUploadedFile("in.txt", b"x")],
+            visible="on",
         )
         item = Item.objects.get(title="in.txt")
         self.assertEqual(item.parent, self.private)
@@ -380,6 +752,9 @@ class UploadPageTest(Fixture, TestCase):
         self.assertEqual(self.send(self.cleo).status_code, 403)
         self.assertEqual(self.get(self.cleo, self.url()).status_code, 403)
         self.assertFalse(Item.objects.filter(title="new.txt").exists())
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.public.get_absolute_url())
+        self.assertNotContains(response, "data-tiles-upload")
 
     def test_a_client_cannot_upload_into_an_internal_folder(self):
         response = self.send(self.cleo, folder=self.private)
@@ -390,7 +765,7 @@ class UploadPageTest(Fixture, TestCase):
     def test_whom_to_notify_is_required(self):
         self.client.force_login(self.ada)
         response = self.client.post(
-            self.url(), {"file": SimpleUploadedFile("new.txt", b"New")}
+            self.url(), {"files": [SimpleUploadedFile("new.txt", b"New")]}
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Item.objects.filter(title="new.txt").exists())
@@ -405,9 +780,25 @@ class UploadPageTest(Fixture, TestCase):
     def test_too_large(self):
         big = SimpleUploadedFile("big.bin", b"xxxx")
         with patch.object(attachments, "MAX_SIZE", 3):
-            response = self.send(self.ada, file=big)
+            response = self.send(self.ada, files=[big])
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Files can be at most")
+        self.assertFalse(Item.objects.filter(title="big.bin").exists())
+        # The others go up, the error is said
+        with patch.object(attachments, "MAX_SIZE", 3):
+            response = self.send(
+                self.ada,
+                files=[
+                    SimpleUploadedFile("big.bin", b"xxxx"),
+                    SimpleUploadedFile("ok.txt", b"ok"),
+                ],
+            )
+        self.assertRedirects(
+            response,
+            reverse("project_files", args=[self.project.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(Item.objects.filter(title="ok.txt").exists())
         self.assertFalse(Item.objects.filter(title="big.bin").exists())
 
     def test_no_file(self):
@@ -416,8 +807,61 @@ class UploadPageTest(Fixture, TestCase):
             self.client.post(self.url(), {"notify": "nobody"}).status_code, 200
         )
 
-    def test_the_switch(self):
+    def test_the_switch_only_at_the_top_level(self):
         self.assertContains(self.get(self.ada, self.url()), "Visible to clients")
+        self.assertNotContains(
+            self.get(self.ada, self.url(self.public)), "Visible to clients"
+        )
+
+
+class UploadOneTest(Fixture, TestCase):
+    """One file of the modal's upload (frontend/upload.js)"""
+
+    batch = "0123456789abcdef0123456789abcdef"
+
+    def send(self, user, folder=None, **data):
+        self.client.force_login(user)
+        url = reverse("file_upload", args=[self.project.pk])
+        if folder:
+            url += f"?folder={folder.pk}"
+        data = {
+            "file": SimpleUploadedFile("minutes.pdf", b"%PDF"),
+            "notify": "nobody",
+            "batch": self.batch,
+        } | data
+        return self.client.post(url, data)
+
+    def test_the_name_keeps_its_extension(self):
+        response = self.send(self.ada, folder=self.public, title="Kick-off")
+        self.assertEqual(response.status_code, 201)
+        item = Item.objects.get(pk=response.json()["id"])
+        self.assertEqual(item.title, "Kick-off.pdf")
+        self.assertEqual(response.json()["url"], item.get_absolute_url())
+        self.assertEqual(item.parent, self.public)
+        self.assertTrue(item.is_client_visible)
+        event = Event.objects.get(item=item, action=Action.CREATED)
+        self.assertEqual(event.data["batch"], self.batch)
+        response = self.send(self.ada, title="Agenda.PDF")
+        self.assertEqual(response.json()["title"], "Agenda.PDF")
+        response = self.send(self.ada, title=" ")
+        self.assertEqual(response.json()["title"], "minutes.pdf")
+
+    def test_errors(self):
+        self.assertEqual(self.send(self.ada, batch="nope").status_code, 400)
+        self.assertEqual(self.send(self.ada, notify="").status_code, 400)
+        with patch.object(attachments, "MAX_SIZE", 3):
+            response = self.send(self.ada)
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("Files can be at most", response.json()["detail"])
+        self.assertFalse(Item.objects.filter(title="minutes.pdf").exists())
+
+    def test_clients(self):
+        self.assertEqual(self.send(self.cleo, folder=self.public).status_code, 403)
+        self.assertEqual(self.send(self.cleo, folder=self.private).status_code, 404)
+        self.client.force_login(self.ada)
+        url = reverse("file_upload", args=[self.project.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertFalse(Item.objects.filter(title="minutes.pdf").exists())
 
 
 class FilePageTest(Fixture, TestCase):
