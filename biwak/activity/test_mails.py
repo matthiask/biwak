@@ -75,12 +75,12 @@ class MailsTest(TestCase):
         )
         self.assertTrue(message.body.startswith("Clients can see this."))
         self.assertIn("Ada Example commented:\n\nOne", message.body)
-        self.assertIn("Two, @Bob Example", message.body)
+        self.assertIn("Two, @Bob", message.body)
         self.assertIn("Two **poles**", message.body)
         self.assertIn(f"https://biwak.example.org/todos/{self.todo.pk}/", message.body)
         html = message.alternatives[0].content
         self.assertIn("<strong>poles</strong>", html)
-        self.assertIn('<span class="wb-mention">@Bob Example</span>', html)
+        self.assertIn('<span class="wb-mention" title="Bob Example">@Bob</span>', html)
         thread = f"<item-{self.todo.pk}@biwak.example.org>"
         self.assertEqual(message.extra_headers["In-Reply-To"], thread)
         self.assertEqual(message.extra_headers["References"], thread)
@@ -395,8 +395,8 @@ class MailsTest(TestCase):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         self.send(timezone.now() + dt.timedelta(minutes=3))
         message = mail.outbox[0]
-        self.assertIn("List: For @Bob Example", message.body)
-        self.assertIn("For @Bob Example", message.alternatives[0].content)
+        self.assertIn("List: For @Bob", message.body)
+        self.assertIn("For @Bob", message.alternatives[0].content)
         self.assertNotIn("person:", message.body + message.alternatives[0].content)
 
     def test_command(self):

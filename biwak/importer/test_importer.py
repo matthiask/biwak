@@ -129,7 +129,7 @@ class ImportEveryKindTest(ImportCase):
         self.assertEqual(
             self.names(food.todo.assignees.all()), {"Bob Example", "Cleo Example"}
         )
-        self.assertIn("[@Bob Example](person:", food.todo.notes)
+        self.assertIn("[@Bob](person:", food.todo.notes)
         self.assertIn("[the announcement](/messages/", food.todo.notes)
         done = self.item("Pick a camp date")
         self.assertEqual(done.todo.completed_at, at("2026-01-08T16:30:00+00:00"))
@@ -140,7 +140,7 @@ class ImportEveryKindTest(ImportCase):
         announcement = self.item("We have a camp")
         self.assertEqual(announcement.message.category.name, "Announcement")
         self.assertIn(
-            f"[@Cleo Example](person:{User.objects.get(email='cleo@example.org').pk})",
+            f"[@Cleo](person:{User.objects.get(email='cleo@example.org').pk})",
             announcement.message.content,
         )
         self.assertIn(f"](/todos/{food.pk}/)", announcement.message.content)

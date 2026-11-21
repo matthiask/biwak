@@ -10,8 +10,9 @@
     <div class="wb-fact wb-edit-hit" data-edit-focus="assignees">
       <dt>{% translate "Assigned to" %}</dt>
       <dd>
-        {% for person in todo.assignees.all %}<span class="badge wb-person">{% avatar person %}
-            {{ person.get_short_name }}</span>{% empty %}<span
+        {% for person in todo.assignees.all %}<span
+            class="badge wb-person"
+          >{% person_page person %}</span>{% empty %}<span
             class="text-body-secondary"
           >{% translate "Nobody" %}</span>{% endfor %}
       </dd>

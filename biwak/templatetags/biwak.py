@@ -26,9 +26,10 @@ _PERSON = re.compile(r"person:(\d+)")
 
 def _mentions(state):
     """Mentions (``[@Ada](person:12)``, biwak/activity/mentions.py) are
-    links to ``person:``: shown with the current name of people who can see
-    the item (``env["names"]``), as plain text otherwise"""
-    names = state.env.get("names") or {}
+    links to ``person:``: shown with the current short name of people who
+    can see the item (``env["people"]``), the full name as ``title``, as
+    plain text otherwise"""
+    people = state.env.get("people") or {}
     for block in state.tokens:
         if block.type != "inline" or not block.children:
             continue
@@ -47,13 +48,22 @@ def _mentions(state):
             while children[end].type != "link_close":
                 end += 1
             label = "".join(t.content for t in children[index + 1 : end])
-            name = names.get(int(match[1]))
+            user = people.get(int(match[1]))
             mention = Token("html_inline", "", 0)
-            mention.content = (
-                f'<span class="wb-mention">@{escape(name)}</span>'
-                if name
-                else escape(f"@{label.removeprefix('@')}")
-            )
+            if user:
+                text = f'title="{escape(str(user))}">@{escape(user.get_short_name())}'
+                # A link to the page where the person's page is open to the
+                # reader (visible_people() are those they may know); not in
+                # mails and the API, whose texts leave the site
+                if state.env.get("links"):
+                    url = reverse("person", args=[user.pk])
+                    mention.content = (
+                        f'<a class="wb-mention wb-person-link" href="{url}" {text}</a>'
+                    )
+                else:
+                    mention.content = f'<span class="wb-mention" {text}</span>'
+            else:
+                mention.content = escape(f"@{label.removeprefix('@')}")
             result.append(mention)
             index = end + 1
         block.children = result
@@ -144,11 +154,16 @@ def render_markdown(
     ``attachment_urls=False`` skips looking them up (excerpts don't show
     them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
     turns them into ☐ and ☑ (mails)."""
-    from biwak.activity.mentions import mentioned_ids, visible_names
+    from biwak.activity.mentions import mentioned_ids, visible_people
 
     text = str(text or "")
-    names = visible_names(item, mentioned_ids(text)) if item is not None else {}
-    env = {"names": names, "tickable": tickable, "glyphs": glyphs}
+    people = visible_people(item, mentioned_ids(text)) if item is not None else {}
+    env = {
+        "people": people,
+        "links": not absolute and not glyphs,
+        "tickable": tickable,
+        "glyphs": glyphs,
+    }
     tokens = _markdown.parse(text, env)
     if attachment_urls:
         _attachment_urls(tokens, item, absolute=absolute)
@@ -295,6 +310,25 @@ def person_link(context, person, *, name=None, css=""):
             label,
         )
     return label
+
+
+@register.simple_tag(takes_context=True)
+def person_page(context, person, *, size="sm", name=None):
+    """The mark and the short name (or ``name``) of a person, linked to
+    their page (``/people/<id>/``) when the viewer may open it
+    (``known_people()``, as the page itself), else plain text; a quiet link
+    (no underline until hover). The one place lists of people use."""
+    label = name if name is not None else person.get_short_name()
+    inner = format_html("{} {}", avatar(context, person, size), label)
+    request = context.get("request")
+    known = _known_people(request) if request is not None else set()
+    if known is None or person.pk in known:
+        return format_html(
+            '<a href="{}" class="wb-person-link">{}</a>',
+            reverse("person", args=[person.pk]),
+            inner,
+        )
+    return inner
 
 
 def _known_people(request):

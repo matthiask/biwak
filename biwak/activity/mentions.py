@@ -65,7 +65,7 @@ def known_to(people, project, person):
 
 
 def syntax(user):
-    return f"[@{user}](person:{user.pk})"
+    return f"[@{user.get_short_name()}](person:{user.pk})"
 
 
 def mentioned_ids(text):
@@ -79,23 +79,28 @@ def mentionable_people(item):
     return people_who_see(item.project, item.is_client_visible)
 
 
-def visible_names(item, ids):
-    """The current names of those people who can see the item and whom the
-    reader may know, by ID"""
+def visible_people(item, ids):
+    """Those people who can see the item and whom the reader may know, by ID"""
     if not ids:
         return {}
     people = known_to(
         mentionable_people(item).filter(pk__in=ids), item.project, reader()
     )
-    return {user.pk: str(user) for user in people}
+    return {user.pk: user for user in people}
 
 
 def plain(text, item=None):
-    """The mentions as ``@`` and the current name, for mails, titles and
-    plain text; without an item (or for people who can't see it) the label"""
+    """The mentions as ``@`` and the current short name ("@Ada"), for
+    mails, titles and plain text; without an item (or for people who can't
+    see it) the label"""
     text = str(text or "")
-    names = visible_names(item, mentioned_ids(text)) if item is not None else {}
-    return MENTION.sub(lambda m: f"@{names.get(int(m[2]), m[1])}", text)
+    people = visible_people(item, mentioned_ids(text)) if item is not None else {}
+
+    def show(match):
+        user = people.get(int(match[2]))
+        return f"@{user.get_short_name() if user else match[1]}"
+
+    return MENTION.sub(show, text)
 
 
 def candidates(item, query, *, for_user):

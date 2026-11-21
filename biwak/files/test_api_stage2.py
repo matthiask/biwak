@@ -347,16 +347,12 @@ class MentionsAPITest(APIFixture, TestCase):
             {"title": "N", "content": "Hi @bob@example.org", "notify": "nobody"},
         )
         self.assertEqual(response.status_code, 201, response.content)
-        self.assertEqual(
-            response.json()["content"], f"Hi [@Bob Example](person:{self.bob.pk})"
-        )
+        self.assertEqual(response.json()["content"], f"Hi [@Bob](person:{self.bob.pk})")
         pk = response.json()["id"]
         response = self.call(
             self.ada, "patch", f"messages/{pk}/", {"content": "Hi @Bob"}
         )
-        self.assertEqual(
-            response.json()["content"], f"Hi [@Bob Example](person:{self.bob.pk})"
-        )
+        self.assertEqual(response.json()["content"], f"Hi [@Bob](person:{self.bob.pk})")
         self.assertTrue(Mention.objects.filter(item_id=pk, user=self.bob).exists())
         # A client can't see an internal message: stays as written
         response = self.call(
@@ -387,7 +383,7 @@ class MentionsAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(
-            response.json()["content"], f"See [@Bob Example](person:{self.bob.pk})"
+            response.json()["content"], f"See [@Bob](person:{self.bob.pk})"
         )
         pk = response.json()["id"]
         response = self.call(
@@ -395,7 +391,7 @@ class MentionsAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(
-            response.json()["content"], f"Then [@Bob Example](person:{self.bob.pk})"
+            response.json()["content"], f"Then [@Bob](person:{self.bob.pk})"
         )
         self.assertTrue(Mention.objects.filter(item_id=pk, user=self.bob).exists())
 
@@ -999,7 +995,7 @@ class ReviewFixesAPITest(APIFixture, TestCase):
             headers=self.headers(self.ada),
         )
         self.assertEqual(response.status_code, 201, response.content)
-        mention = f"[@Bob Example](person:{self.bob.pk})"
+        mention = f"[@Bob](person:{self.bob.pk})"
         self.assertEqual(response.json()["description"], f"Ask {mention}")
         pk = response.json()["id"]
         self.assertTrue(Mention.objects.filter(item_id=pk, user=self.bob).exists())

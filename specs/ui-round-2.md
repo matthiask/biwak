@@ -93,12 +93,29 @@ borders separate the groups. Decided on the way: the API's list had no
    - The same in mails and in the plain-text excerpts (the lantern, the
      feed).
 
+4. **Names and marks link to the person's page** (decided 2026-11-21).
+   Wherever a person's mark and name are listed (subscribers, the assignee
+   pills of a to-do in view mode, the members on the project and its
+   people page) and in mentions, they link to `/people/<id>/` when the
+   viewer may open it (`known_people()`, the page's own rule), else stay
+   plain text. `{% person_page person %}` is the one place for lists; the
+   link is quiet (`.wb-person-link`: no underline until hover). Mentions
+   in mails and in the API's `*_html` are not links (the text leaves the
+   site). Assignee pills have a `gap` of 0.25rem in the facts line.
+
 **Done when:**
 - Tests for rendering old and new mentions, a renamed person, a mention
   of someone the reader doesn't know, and mails and excerpts.
 - A browser test inserting a mention through the `@` list.
 - The "Me" menu with an image and with initials.
 - A screenshot of the facts line in the report.
+
+**Status:** part B built (2026-11-21): the "Me" menu with the mark (and
+the full name as its first line), the aligned facts line, mentions by
+short name (`mentions.visible_people()`; `syntax()` and the `@` list write
+the short name as the label), and `{% person_page %}` links. Mentions in
+mails keep the plain look. Decided on the way: `syntax()` (the API's and
+mail replies' `@Name` resolution) writes the short name as label too.
 
 ## Part C: Basecamp's profile images
 

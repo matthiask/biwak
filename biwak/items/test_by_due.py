@@ -487,7 +487,8 @@ class FeedTest(ByDueTestCase):
         )
         response = self.feed(self.link(self.ada))
         event = next(iter(Calendar.from_ical(response.content).walk("VEVENT")))
-        self.assertEqual(str(event["summary"]), f"Call @{self.bob}")
+        self.assertEqual(str(event["summary"]), f"Call @{self.bob.get_short_name()}")
         self.assertEqual(
-            str(event["description"]), f"{self.project} / Shared with @{self.bob}"
+            str(event["description"]),
+            f"{self.project} / Shared with @{self.bob.get_short_name()}",
         )
