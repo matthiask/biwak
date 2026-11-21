@@ -293,6 +293,38 @@ def _claim(pks, now):
     return claimed
 
 
+def build_mail(user, *, subject, template, context, from_name="Biwak", headers=None):
+    """A mail to the person, plain text and HTML (``template`` plus ``.txt``
+    and ``.html``), from ``"from_name" <DEFAULT_FROM_EMAIL>``, with a
+    ``Message-ID`` (unless ``headers`` bring one) and ``Auto-Submitted``.
+    The templates' ``can_reply`` says whether it has a ``Reply-To``."""
+    headers = {
+        "Message-ID": make_msgid(domain=host()),
+        "Auto-Submitted": "auto-generated",
+    } | (headers or {})
+    context = context | {"can_reply": "Reply-To" in headers}
+    message = EmailMultiAlternatives(
+        subject,
+        render_to_string(f"{template}.txt", context),
+        sender(from_name),
+        [user.email],
+        headers=headers,
+    )
+    message.attach_alternative(
+        render_to_string(f"{template}.html", context), "text/html"
+    )
+    return message
+
+
+def unsubscribe_headers(url, *, one_click=True):
+    """``List-Unsubscribe``, with ``List-Unsubscribe-Post`` (RFC 8058) when
+    a POST to the URL unsubscribes"""
+    headers = {"List-Unsubscribe": f"<{url}>"}
+    if one_click:
+        headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+    return headers
+
+
 def item_mail(user, item, notifications):
     """One mail about one item, threaded per item; None when there's nothing
     left to say (reactions to comments deleted since)"""
@@ -304,30 +336,17 @@ def item_mail(user, item, notifications):
         "entries": entries,
         "settings_url": absolute(reverse("notification_settings")),
     }
-    subject = f"[{item.project}] {context['title']}"
-    actor = entries[-1]["event"].actor
     thread = f"<item-{item.pk}@{host()}>"
-    headers = {
-        "Message-ID": make_msgid(domain=host()),
-        "In-Reply-To": thread,
-        "References": thread,
-        "List-Unsubscribe": f"<{context['unsubscribe_url']}>",
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        "Auto-Submitted": "auto-generated",
-    } | (reply_to(user, item) if item.is_commentable else {})
-    # The mail says so only when replying works
-    context["can_reply"] = "Reply-To" in headers
-    message = EmailMultiAlternatives(
-        subject,
-        render_to_string("mails/notification.txt", context),
-        sender(_("%(name)s (Biwak)") % {"name": actor}),
-        [user.email],
-        headers=headers,
+    return build_mail(
+        user,
+        subject=f"[{item.project}] {context['title']}",
+        template="mails/notification",
+        context=context,
+        from_name=_("%(name)s (Biwak)") % {"name": entries[-1]["event"].actor},
+        headers={"In-Reply-To": thread, "References": thread}
+        | unsubscribe_headers(context["unsubscribe_url"])
+        | (reply_to(user, item) if item.is_commentable else {}),
     )
-    message.attach_alternative(
-        render_to_string("mails/notification.html", context), "text/html"
-    )
-    return message
 
 
 def digest_heading(notifications):
@@ -371,22 +390,14 @@ def digest_mail(user, notifications):
         "projects": projects,
         "settings_url": absolute(reverse("notification_settings")),
     }
-    message = EmailMultiAlternatives(
-        _("[Biwak] %(heading)s") % context,
-        render_to_string("mails/digest.txt", context),
-        sender("Biwak"),
-        [user.email],
-        headers={
-            "Message-ID": make_msgid(domain=host()),
-            # No one-click unsubscribing from everything: the settings page
-            "List-Unsubscribe": f"<{context['settings_url']}>",
-            "Auto-Submitted": "auto-generated",
-        },
+    return build_mail(
+        user,
+        subject=_("[Biwak] %(heading)s") % context,
+        template="mails/digest",
+        context=context,
+        # No one-click unsubscribing from everything: the settings page
+        headers=unsubscribe_headers(context["settings_url"], one_click=False),
     )
-    message.attach_alternative(
-        render_to_string("mails/digest.html", context), "text/html"
-    )
-    return message
 
 
 def _mail(user, pks, now, build):
