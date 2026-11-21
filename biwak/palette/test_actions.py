@@ -132,7 +132,7 @@ class ProjectActionsTest(ActionsBase):
             "The project's activity",
             "People",
             "Docs and files",
-            "To-dos by due date",
+            "All to-dos",
         ]:
             self.assertEqual(actions[label]["group"], "page", label)
         # The form opens in a modal
@@ -147,7 +147,7 @@ class ProjectActionsTest(ActionsBase):
     def test_a_client_gets_what_clients_may_do(self):
         actions = self.actions(self.cleo, f"/projects/{self.camp.pk}/")
         self.assertIn("New message", actions)
-        self.assertIn("To-dos by due date", actions)
+        self.assertIn("All to-dos", actions)
         for label in ["New list", "New doc", "Upload a file", "New check-in"]:
             self.assertNotIn(label, actions)
 

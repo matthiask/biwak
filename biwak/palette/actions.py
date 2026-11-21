@@ -154,7 +154,7 @@ def in_project(user, project, folder=None):
         link(_("The project's activity"), reverse("project_feed", args=[project.pk])),
         link(_("People"), reverse("project_people", args=[project.pk])),
         link(_("Docs and files"), reverse("project_files", args=[project.pk])),
-        link(_("To-dos by due date"), reverse("project_todos", args=[project.pk])),
+        link(_("All to-dos"), reverse("project_todos", args=[project.pk])),
     ]
     return actions
 

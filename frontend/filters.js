@@ -2,7 +2,8 @@
 // form or page has data-remember; view choices like the grouping and the
 // order are query parameters too) stores its query in the browser, per
 // path, when it
-// loads with one. The links of the top bar (and the palette's links, through
+// loads with one. The links marked data-restore-filters (the top bar's, the
+// project page's "All to-dos") and the palette's links (through
 // withFilters()) go to such a page with the stored query. "Reset filters"
 // (data-reset-filters) forgets it. Other links keep their own query.
 const PREFIX = "filters:"
@@ -49,6 +50,6 @@ document.addEventListener("click", (event) => {
   if (link) write(new URL(link.href, window.location.href).pathname, "")
 })
 
-for (const link of document.querySelectorAll(".wb-nav-links a[href]")) {
+for (const link of document.querySelectorAll("a[data-restore-filters][href]")) {
   link.setAttribute("href", withFilters(link.getAttribute("href")))
 }

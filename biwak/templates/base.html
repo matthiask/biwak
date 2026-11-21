@@ -54,6 +54,7 @@
             {% url 'projects' as projects_url %}
             <li class="nav-item">
               <a
+                data-restore-filters
                 class="nav-link{% if request.path == projects_url %} active{% endif %}"
                 href="{{ projects_url }}"
               >{% translate "Projects" %}</a>
@@ -61,6 +62,7 @@
             {% url 'todos' as todos_url %}
             <li class="nav-item">
               <a
+                data-restore-filters
                 class="nav-link{% if request.path == todos_url and request.GET.assignee == 'me' %} active{% endif %}"
                 href="{{ todos_url }}?assignee=me"
               >{% translate "My to-dos" %}</a>
@@ -68,6 +70,7 @@
             {% url 'feed' as feed_url %}
             <li class="nav-item">
               <a
+                data-restore-filters
                 class="nav-link{% if request.path == feed_url %} active{% endif %}"
                 href="{{ feed_url }}"
               >{% translate "Activity" %}</a>
@@ -75,6 +78,7 @@
             {% url 'people' as people_url %}
             <li class="nav-item">
               <a
+                data-restore-filters
                 class="nav-link{% if request.path == people_url %} active{% endif %}"
                 href="{{ people_url }}"
               >{% translate "People" %}</a>
@@ -82,6 +86,7 @@
             {% url 'bookmarks' as bookmarks_url %}
             <li class="nav-item">
               <a
+                data-restore-filters
                 class="nav-link{% if request.path == bookmarks_url %} active{% endif %}"
                 href="{{ bookmarks_url }}"
               >{% translate "Bookmarks" %}</a>
