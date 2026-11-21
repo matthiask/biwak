@@ -776,3 +776,14 @@ class ProjectPageTest(Fixture, TestCase):
         url = reverse("project", args=[self.project.pk])
         self.assertContains(self.get(self.ada, url), "2 folders, 0 docs, 2 files")
         self.assertContains(self.get(self.cleo, url), "1 folders, 0 docs, 1 files")
+
+
+class FolderParamTest(TestCase):
+    def test_a_folder_which_is_no_number(self):
+        from biwak.test_utils import person, project
+
+        ada = person("Ada")
+        website = project(members=[ada])
+        self.client.force_login(ada)
+        response = self.client.get(f"/projects/{website.pk}/docs/new/?folder=x")
+        self.assertEqual(response.status_code, 404)

@@ -161,6 +161,8 @@ def folder_param(request, project):
     """The folder a new doc or file goes to (``?folder=``, ``folder`` of
     the form): one the person sees, or the root"""
     if pk := request.POST.get("folder") or request.GET.get("folder"):
+        if not pk.isdecimal():
+            raise Http404
         folder = item_for(request, pk, Kind.FOLDER)
         if folder.project_id != project.pk:
             raise Http404
