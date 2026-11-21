@@ -115,6 +115,11 @@ nobody gets mail or a sign-in before someone decides
   subscriptions (no mail goes to inactive people), assignments (their
   to-dos count under "Nobody active", `todos.md`), comments.
 - No mail to the person. Reactivating is "Activate" again.
+- **The Django admin** follows the same rules (fixed 2026-11-21 after a
+  review): unticking "is active" deactivates through `deactivate()`
+  (sessions, tokens, calendar links end), not oneself, and neither
+  "is active" nor "is admin" can be taken from the last active admin
+  (the form says so; `UserAdmin.save_model()` locks the admins first).
 
 ## Resetting a second factor
 

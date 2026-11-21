@@ -535,3 +535,64 @@ class NameTest(TestCase):
 
     def test_clients_dont(self):
         self.assertEqual(self.rename(self.cleo, self.bob).status_code, 404)
+
+
+class DjangoAdminTest(TestCase):
+    """The Django admin's ``is_active`` and ``is_admin`` go through the same
+    rules: unticking ``is_active`` deactivates (sessions, tokens, calendar
+    links end), and the last active admin stays one"""
+
+    def setUp(self):
+        self.root = person("Root", is_admin=True)
+        self.cleo = person("Cleo", client=True)
+        self.client.force_login(self.root)
+
+    def post(self, user, **changes):
+        data = {
+            "email": user.email,
+            "full_name": user.full_name,
+            "short_name": user.short_name,
+            "language": user.language,
+            "organization": user.organization_id or "",
+            "is_client": "on" if user.is_client else "",
+            "is_active": "on" if user.is_active else "",
+            "is_admin": "on" if user.is_admin else "",
+            "mail_undeliverable_at_0": "",
+            "mail_undeliverable_at_1": "",
+        } | changes
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(f"/admin/accounts/user/{user.pk}/change/", data)
+
+    def test_unticking_is_active_deactivates(self):
+        other = Client()
+        other.force_login(self.cleo)
+        UserSession.objects.create(
+            user=self.cleo,
+            session_key=other.session.session_key,
+            ip="127.0.0.1",
+            user_agent="Firefox",
+        )
+        APIToken.create_for(user=self.cleo, title="T", access="read")
+        CalendarToken.renew(self.cleo)
+        response = self.post(self.cleo, is_active="")
+        self.assertEqual(response.status_code, 302)
+        self.cleo.refresh_from_db()
+        self.assertFalse(self.cleo.is_active)
+        self.assertFalse(UserSession.objects.filter(user=self.cleo).exists())
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.cleo).exists())
+
+    def test_the_last_active_admin(self):
+        for changes in [{"is_active": ""}, {"is_admin": ""}]:
+            with self.subTest(changes=changes):
+                response = self.post(self.root, **changes)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "last active admin")
+                self.root.refresh_from_db()
+                self.assertTrue(self.root.is_active)
+                self.assertTrue(self.root.is_admin)
+        # With another admin, an admin may stop being one
+        otto = person("Otto", is_admin=True)
+        self.assertEqual(self.post(otto, is_admin="").status_code, 302)
+        otto.refresh_from_db()
+        self.assertFalse(otto.is_admin)
