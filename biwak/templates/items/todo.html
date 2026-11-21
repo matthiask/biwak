@@ -47,7 +47,8 @@
     {% if todo.due_on %}<p class="mb-2">{% due_badge todo %}</p>{% endif %}
     {% if todo.is_completed %}
       <p class="text-body-secondary">
-        {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
+        {% short_name todo.completed_by as who %}
+        {% blocktranslate with when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
       </p>
     {% endif %}
   </div>
@@ -56,7 +57,7 @@
       {% translate "Previous:" %}
       <a
         href="{{ previous.get_absolute_url }}"
-      >{% if previous.todo.is_completed %}{% blocktranslate with who=previous.todo.completed_by.get_short_name when=previous.todo.completed_at|date:"j. F Y" %}completed on {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous|item_title }}{% endif %}</a>
+      >{% if previous.todo.is_completed %}{% short_name previous.todo.completed_by as who %}{% blocktranslate with when=previous.todo.completed_at|date:"j. F Y" %}completed on {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous|item_title }}{% endif %}</a>
     </p>
   {% endif %}
   <div class="row g-4">

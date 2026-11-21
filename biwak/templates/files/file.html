@@ -52,7 +52,7 @@
         </p>
       {% endif %}
       <p class="small text-body-secondary">
-        {{ version.name }} · {{ version.size|filesizeformat }} · {{ version.uploaded_by.get_short_name }},
+        {{ version.name }} · {{ version.size|filesizeformat }} · {% short_name version.uploaded_by %},
         {{ version.uploaded_at|date:"j. M Y, H:i" }}
       </p>
       <div id="live-text" data-live>
@@ -90,7 +90,7 @@
           {% for old in older_versions %}
             <li>
               <a href="{% url 'file_version_download' item.pk old.pk %}">{{ old.name }}</a>
-              · {{ old.size|filesizeformat }} · {{ old.uploaded_by.get_short_name }},
+              · {{ old.size|filesizeformat }} · {% short_name old.uploaded_by %},
               {{ old.uploaded_at|date:"j. M Y" }}
             </li>
           {% endfor %}

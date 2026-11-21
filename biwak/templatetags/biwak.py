@@ -12,6 +12,7 @@ from markdown_it.token import Token
 from mdit_py_plugins.tasklists import tasklists_plugin
 
 from biwak import forms
+from biwak.organizations.names import display_name
 
 
 register = template.Library()
@@ -30,6 +31,7 @@ def _mentions(state):
     can see the item (``env["people"]``), the full name as ``title``, as
     plain text otherwise"""
     people = state.env.get("people") or {}
+    reader = state.env.get("reader")
     for block in state.tokens:
         if block.type != "inline" or not block.children:
             continue
@@ -51,7 +53,9 @@ def _mentions(state):
             user = people.get(int(match[1]))
             mention = Token("html_inline", "", 0)
             if user:
-                text = f'title="{escape(str(user))}">@{escape(user.get_short_name())}'
+                text = (
+                    f'title="{escape(str(user))}">@{escape(display_name(user, reader))}'
+                )
                 # A link to the page where the person's page is open to the
                 # reader (visible_people() are those they may know); not in
                 # mails and the API, whose texts leave the site
@@ -154,12 +158,13 @@ def render_markdown(
     ``attachment_urls=False`` skips looking them up (excerpts don't show
     them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
     turns them into ☐ and ☑ (mails)."""
-    from biwak.activity.mentions import mentioned_ids, visible_people
+    from biwak.activity.mentions import mentioned_ids, reader, visible_people
 
     text = str(text or "")
     people = visible_people(item, mentioned_ids(text)) if item is not None else {}
     env = {
         "people": people,
+        "reader": reader(),
         "links": not absolute and not glyphs,
         "tickable": tickable,
         "glyphs": glyphs,
@@ -297,11 +302,28 @@ def can_open_feed(context, person):
     return person.pk in _feed_people(context["request"])
 
 
+def _viewer(context):
+    """Who looks at the page: the request's user, else whoever reads now
+    (a template rendered for a mail)"""
+    from biwak.activity.mentions import reader
+
+    request = context.get("request")
+    return request.user if request is not None else reader()
+
+
+@register.simple_tag(takes_context=True)
+def short_name(context, person):
+    """The person's short name as the viewer sees it (``display_name()``:
+    "Moritz F." when somebody else they may know is a Moritz too). The one
+    way templates print a short name."""
+    return display_name(person, _viewer(context))
+
+
 @register.simple_tag(takes_context=True)
 def person_link(context, person, *, name=None, css=""):
     """A person's name, linked to their feed (specs/feed.md) when the
     viewer would not get a 404 there, else plain text"""
-    label = name if name is not None else person.get_short_name()
+    label = name if name is not None else short_name(context, person)
     if can_open_feed(context, person):
         return format_html(
             '<a href="{}" class="{}">{}</a>',
@@ -318,7 +340,7 @@ def person_page(context, person, *, size="sm", name=None):
     their page (``/people/<id>/``) when the viewer may open it
     (``known_people()``, as the page itself), else plain text; a quiet link
     (no underline until hover). The one place lists of people use."""
-    label = name if name is not None else person.get_short_name()
+    label = name if name is not None else short_name(context, person)
     inner = format_html("{} {}", avatar(context, person, size), label)
     request = context.get("request")
     known = _known_people(request) if request is not None else set()
