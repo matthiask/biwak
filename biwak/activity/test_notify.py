@@ -134,8 +134,6 @@ class NotifyTest(TestCase):
             lambda: ops.move_todo(self.todo, todolist=self.internal, actor=self.ada),
             lambda: ops.move_todo(self.todo, todolist=self.shared, actor=self.ada),
             lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada),
-            lambda: ops.archive(self.shared, actor=self.ada),
-            lambda: ops.unarchive(self.shared, actor=self.ada),
         ]:
             with self.subTest(action=action):
                 self.assertTrue(self.told(action))
@@ -143,6 +141,15 @@ class NotifyTest(TestCase):
         self.assertEqual(self.told(lambda: ops.trash(self.todo, actor=self.ada)), set())
         self.assertEqual(
             self.told(lambda: ops.restore(self.todo, actor=self.ada)), {self.bob}
+        )
+
+    def test_archiving_a_list_notifies_nobody(self):
+        subscribe(self.bob, self.shared)
+        self.assertEqual(
+            self.told(lambda: ops.archive(self.shared, actor=self.ada)), set()
+        )
+        self.assertEqual(
+            self.told(lambda: ops.unarchive(self.shared, actor=self.ada)), set()
         )
 
     def test_project_events_notify_nobody(self):

@@ -9,6 +9,7 @@ people, ``people_visible_to()`` (the members rule: clients only learn about
 the members of their projects). Titles are shown as written: mentions with
 the label, never the current name."""
 
+from django.db.models import BooleanField, Case, Q, When
 from django.db.models.functions import Lower
 from django.template.defaultfilters import date as date_filter
 from django.urls import reverse
@@ -18,7 +19,7 @@ from biwak.activity.feed import people_visible_to
 from biwak.activity.mentions import plain
 from biwak.bookmarks.models import Bookmark
 from biwak.items import due
-from biwak.items.models import Item, Kind
+from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
 from biwak.search.queries import Matches, prefixes, tsquery, vector
 
@@ -69,7 +70,21 @@ def jumps(user, terms):
     items = has_words(
         Item.objects.visible_to(user).filter(kind__in=ITEM_KINDS), "title", words
     ).select_related("project")
-    for item in items.order_by("project__archived_at", Lower("title"))[:LIMIT]:
+    # Archived projects and lists (and what is in them) last, so they don't
+    # crowd out the rest
+    items = items.select_related("parent").annotate(
+        out_of_the_way=Case(
+            When(project__archived_at__isnull=False, then=True),
+            When(
+                Q(kind=Kind.LIST, status=Status.ARCHIVED)
+                | Q(parent__kind=Kind.LIST, parent__status=Status.ARCHIVED),
+                then=True,
+            ),
+            default=False,
+            output_field=BooleanField(),
+        )
+    )
+    for item in items.order_by("out_of_the_way", Lower("title"))[:LIMIT]:
         results.append({
             "kind": item.kind,
             "label": item.get_kind_display(),
@@ -77,7 +92,7 @@ def jumps(user, terms):
             "url": item.get_absolute_url(),
             "context": item.project.name,
             **color_of(item.project),
-            "archived": item.project.archived_at is not None,
+            "archived": item.out_of_the_way,
             "visible_to_clients": item.is_client_visible,
         })
     people = people_visible_to(user).filter(is_active=True)

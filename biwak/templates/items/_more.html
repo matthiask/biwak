@@ -1,7 +1,7 @@
 {% load biwak i18n %}
 {% comment %}
-  The "More" menu of an item's page: its notification level, its subscribers, moving and
-  trashing (who may change it); `more_history`: the history too, on phones, where the page's
+  The "More" menu of an item's page: its notification level, its subscribers, moving,
+  archiving (lists) and trashing (who may change it); `more_history`: the history too, on phones, where the page's
   header doesn't show its link; each in a modal (frontend/modal.js) which
   is also a page. `can_change` comes from the page.
 {% endcomment %}
@@ -29,6 +29,7 @@
     {% if move and can_change or move and item.kind == "todo" %}
       <a class="dropdown-item" href="{{ move }}" data-modal>{% translate "Move to…" %}</a>
     {% endif %}
+    {% if can_change and item.kind == "list" %}{% include "items/_archive_button.html" %}{% endif %}
     {% if can_change %}
       <a class="dropdown-item" href="{% url 'item_trash' item.pk %}" data-modal>{% translate "Trash" %}</a>
     {% endif %}

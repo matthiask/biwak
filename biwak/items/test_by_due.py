@@ -495,6 +495,13 @@ class FeedTest(ByDueTestCase):
         self.client.logout()
         self.assertEqual(self.client.get("/accounts/calendar/").status_code, 302)
 
+    def test_archived_lists_are_out_of_the_feed(self):
+        self.todo("Old", "2026-11-20", assignees=[self.ada], todolist=self.other_list)
+        link = self.link(self.ada)
+        self.assertEqual(len(self.events(self.feed(link))), 1)
+        ops.archive(self.other_list, actor=self.ada)
+        self.assertEqual(self.events(self.feed(link)), [])
+
     def test_the_feed_needs_no_login(self):
         self.todo("Mine", "2026-11-20", assignees=[self.ada])
         self.todo("Bobs", "2026-11-20", assignees=[self.bob])

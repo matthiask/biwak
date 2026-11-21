@@ -5,8 +5,9 @@ Putting finished things out of the way without deleting them. Decided
 To-dos are completed, not archived; long runs of completed to-dos are
 already collapsed ("Completed (N)", `todos.md` stage 3).
 
-**Status:** open (spec only, written 2026-11-21 after archived to-dos
-from a Basecamp import showed up as open).
+**Status:** in progress (2026-11-21): lists done (menus, palette action,
+left out of the places listed, silent events); smaller items, the
+importer, API and CLI follow below.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`.
