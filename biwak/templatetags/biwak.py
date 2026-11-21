@@ -259,13 +259,24 @@ def item_notifications(context, item):
 
 
 @register.simple_tag
-def rule_widget(bound_field, uid):
+def rule_widget(bound_field, uid, *, posted=False):
     """The rule widget of a form field with ids of its own (``uid``): the
     list page has one inline form per group, all from the same form. Shows
-    the field's initial value, not what was posted to another one."""
+    the field's initial value, not what was posted to another one; with
+    ``posted``, what was posted to this one."""
     widget = bound_field.field.widget
     return widget.render(
         bound_field.html_name,
-        bound_field.initial,
+        bound_field.value() if posted else bound_field.initial,
         attrs={"id": f"{bound_field.auto_id}_{uid}"},
+    )
+
+
+@register.simple_tag
+def posted_here(form, group):
+    """Whether the bound inline form of the list page was sent from this
+    group's section (``None``: the ungrouped one), and came back with its
+    errors"""
+    return form.is_bound and str(form.data.get("group") or "") == (
+        str(group.pk) if group else ""
     )
