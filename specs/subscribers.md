@@ -5,7 +5,32 @@ for oneself. `notifications.md` says everybody may subscribe others, but
 the page offers no way to. And sometimes subscribing isn't enough: the
 person should look at the item now, not only hear about its next comment.
 
-**Status:** open (spec, 2026-11-21).
+**Status:** built (2026-11-21, CLI 0.28.0). Assigned means subscribed
+(`activity.operations.unsubscribe()` raises `StillAssigned`; the page,
+the mail link, the API and the palette use it; "Unassign me" posts
+`unassign=1` to the subscription view). The modal
+(`activity.views.item_subscribers`, `/items/<id>/subscribers/`,
+`activity/subscribers.html`) reuses the assignee picker; "Manage…" in the
+subscribers box, "Subscribers…" in the "More" menu and the palette (which
+also reaches lists and check-ins, whose pages have no subscribers box).
+`activity.operations.share()` subscribes (`subscribable_people()` is the
+one rule for who may be added) and, with "Tell them now", records
+`shared`. Decisions made on the way:
+- The `shared` event is recorded only with "Tell them now"; quiet adding
+  writes no event, so the feed doesn't show it (as subscribing oneself).
+- `shared` tells only the people it names, never the item's other
+  subscribers, and concerns them for "only what concerns me".
+- The note is one line (whitespace collapsed), at most 200 characters;
+  without "Tell them now" it's ignored. The feed doesn't show it.
+- Adding someone who unsubscribed before overrides that (explicit, like
+  assigning and mentioning). The picker offers people not subscribed yet.
+- The subscribers aren't in the item history: the audit log doesn't cover
+  subscriptions.
+- API: `GET`/`POST /api/v1/items/{id}/subscribers/` answer
+  `{item_id, visible_to_clients, subscribers: [{person, added_by,
+  created_at}]}`; people and `added_by` the viewer may not know are left
+  out (null for `added_by`). `biwak subscribe ITEM --people … [--notify]
+  [--note]` and `biwak subscribers ITEM`.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; visibility needs tests through every entry point.

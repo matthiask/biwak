@@ -415,7 +415,9 @@ class SubscriptionTest(TestCase):
         # Being assigned subscribes again
         ops.assign(todo, [bob], actor=ada)
         self.assertTrue(Subscription.objects.filter(user=bob, item=todo).exists())
-        # Explicit subscribing too, and records who did it
+        # Explicit subscribing too, and records who did it (while assigned,
+        # unsubscribing isn't possible)
+        ops.unassign(todo, [bob], actor=ada)
         unsubscribe(bob, todo)
         subscribe(bob, todo, added_by=ada)
         self.assertEqual(Subscription.objects.get(user=bob, item=todo).added_by, ada)

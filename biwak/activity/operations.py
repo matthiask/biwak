@@ -14,7 +14,7 @@ from biwak.activity.models import (
     Subscription,
     Unsubscription,
 )
-from biwak.items.models import Item
+from biwak.items.models import Item, Kind, Todo
 from biwak.live import announce
 from biwak.projects.models import Project
 
@@ -162,7 +162,79 @@ def subscribe(user, item, *, added_by=None, explicit=True):
     return subscription
 
 
+class StillAssigned(ValueError):
+    """Somebody assigned to a to-do can't unsubscribe from it"""
+
+    def __init__(self):
+        super().__init__(
+            "You're assigned, so you hear about it. Unassign yourself first."
+        )
+
+
+def is_assigned(user, item):
+    """Whether the person is assigned to the to-do (specs/notifications.md,
+    "Assigned means subscribed")"""
+    return (
+        item.kind == Kind.TODO
+        and Todo.assignees.through.objects.filter(todo_id=item.pk, user=user).exists()
+    )
+
+
+# The note of "Tell them now" is one line
+NOTE_LENGTH = 200
+
+
+def subscribable_people(item, by):
+    """Whom ``by`` may subscribe to the item: the active people who can see
+    it (``mentions.mentionable_people()``), and for clients and partners
+    only those they may know (``mentions.known_to()``), as everywhere;
+    not ``by`` themselves, who has their own button"""
+    from biwak.activity import mentions
+
+    people = mentions.known_to(mentions.mentionable_people(item), item.project, by)
+    return people.exclude(pk=by.pk)
+
+
+@transaction.atomic
+def share(item, people, *, actor, notify=False, note=""):
+    """Subscribes people to the item, ``added_by`` the actor (explicitly: it
+    overrides an earlier unsubscribing, like assigning); ``ValueError`` for
+    anybody who isn't in ``subscribable_people()``. With ``notify`` ("Tell
+    them now") the ``shared`` event tells each of them at once, with the
+    note (one line, ``NOTE_LENGTH`` characters at most). Returns the
+    people, newly subscribed or not."""
+    note = " ".join(note.split())
+    if len(note) > NOTE_LENGTH:
+        raise ValueError(f"The note has at most {NOTE_LENGTH} characters.")
+    people = list(dict.fromkeys(people))
+    allowed = set(
+        subscribable_people(item, actor)
+        .filter(pk__in=[u.pk for u in people])
+        .values_list("pk", flat=True)
+    )
+    for user in people:
+        if user.pk not in allowed:
+            raise ValueError(f"{user} can't be subscribed to {item}")
+    for user in people:
+        subscribe(user, item, added_by=actor)
+    if people and notify:
+        record(
+            actor=actor,
+            action=Action.SHARED,
+            project=item.project,
+            item=item,
+            people=[u.pk for u in people],
+            **({"note": note} if note else {}),
+        )
+    return people
+
+
 def unsubscribe(user, item):
+    """The one check (decided 2026-11-21): ``StillAssigned`` while the
+    person is assigned to the to-do; the pages, the mail link, the API and
+    the CLI all come through here"""
+    if is_assigned(user, item):
+        raise StillAssigned
     Subscription.objects.filter(user=user, item=item).delete()
     Unsubscription.objects.get_or_create(user=user, item=item)
 

@@ -1,5 +1,6 @@
 {% load biwak i18n %}
-{% comment %}Who gets mails about an item, and the person's own subscription and level.{% endcomment %}
+{% comment %}Who gets mails about an item, and the person's own subscription and level.
+  `assigned`: the person is assigned to the to-do, which means subscribed.{% endcomment %}
 <h2 class="h6">{% translate "Subscribers" %}</h2>
 <p class="small">
   {% for person in subscribers %}{% person_page person %}{% if not forloop.last %},
@@ -7,10 +8,19 @@
 </p>
 <form method="post" action="{% url 'subscription' item.pk %}">
   {% csrf_token %}
-  {% if is_subscribed %}
+  {% if is_assigned %}
+    <p class="small text-body-secondary mb-2">{% translate "You're assigned, so you hear about it." %}</p>
+    <input type="hidden" name="unassign" value="1">
+    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Unassign me" %}</button>
+  {% elif is_subscribed %}
     <button type="submit" class="btn btn-sm btn-quiet">{% translate "Unsubscribe" %}</button>
   {% else %}
     <input type="hidden" name="subscribe" value="1">
     <button type="submit" class="btn btn-sm btn-quiet">{% translate "Subscribe" %}</button>
   {% endif %}
+  <a
+    href="{% url 'item_subscribers' item.pk %}"
+    class="btn btn-sm btn-quiet"
+    data-modal
+  >{% translate "Manage…" %}</a>
 </form>

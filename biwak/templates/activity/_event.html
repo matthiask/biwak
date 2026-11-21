@@ -17,6 +17,11 @@
   {% if what %}{{ what }}{% else %}{{ event.assignee_names|join:", " }}
     {% translate "to" %}
     {% include "activity/_subject.html" %}{% endif %}
+{% elif event.action == "shared" %}
+  {% translate "shared" %}
+  {% if what %}{{ what }}{% else %}{% include "activity/_subject.html" %}
+    {% if event.assignee_names %}{% translate "with" %}
+      {{ event.assignee_names|join:", " }}{% endif %}{% endif %}
 {% elif event.action == "commented" %}
   {% translate "commented on" %} {% include "activity/_subject.html" %}
 {% elif event.action == "reacted" %}

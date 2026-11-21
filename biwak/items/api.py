@@ -8,13 +8,21 @@ from typing import Annotated, Literal
 from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
-from ninja import Router, Schema, Status
+from ninja import Field, Router, Schema, Status
 from ninja.errors import HttpError
 from pydantic import StringConstraints
 
 from biwak import schedules
 from biwak.activity.mentions import resolve as resolve_mentions
-from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
+from biwak.activity.operations import (
+    NOTE_LENGTH,
+    StillAssigned,
+    is_subscribed,
+    share,
+    subscribable_people,
+    subscribe,
+    unsubscribe,
+)
 from biwak.api_conventions import (
     ItemOut,
     PersonOut,
@@ -652,8 +660,90 @@ def subscription_create(request, item_id: int):
 @router.delete("items/{item_id}/subscription/", response=SubscriptionOut)
 def subscription_delete(request, item_id: int):
     item = item_for(request, item_id)
-    unsubscribe(request.user, item)
+    try:
+        unsubscribe(request.user, item)
+    except StillAssigned as exc:
+        bad_request(str(exc))
     return {"item_id": item.pk, "subscribed": False}
+
+
+class SubscriberOut(Schema):
+    person: PersonOut
+    added_by: PersonOut | None = Field(
+        description="Who subscribed them, if somebody else (and you may know them)"
+    )
+    created_at: dt.datetime
+
+
+class SubscribersOut(Schema):
+    item_id: int
+    visible_to_clients: bool
+    subscribers: list[SubscriberOut]
+
+
+def subscribers_out(item, user):
+    """The item's subscribers the person may know (clients and partners:
+    the members), by name"""
+    subscriptions = list(
+        item.subscriptions.select_related("user", "added_by").order_by(
+            "created_at", "pk"
+        )
+    )
+    known = {
+        person.pk
+        for person in item.project.people_known_to(
+            user,
+            [s.user for s in subscriptions]
+            + [s.added_by for s in subscriptions if s.added_by],
+        )
+    }
+    return {
+        "item_id": item.pk,
+        "visible_to_clients": item.is_client_visible,
+        "subscribers": [
+            {
+                "person": person_out(s.user),
+                "added_by": person_out(s.added_by) if s.added_by_id in known else None,
+                "created_at": s.created_at,
+            }
+            for s in subscriptions
+            if s.user_id in known
+        ],
+    }
+
+
+@router.get("items/{item_id}/subscribers/", response=SubscribersOut)
+def subscriber_list(request, item_id: int):
+    """Everybody who gets what happens to the item, with who added them"""
+    return subscribers_out(item_for(request, item_id), request.user)
+
+
+class SubscribersIn(Schema):
+    people: list[int] = Field(description="The IDs of the people to subscribe")
+    notify: bool = Field(
+        default=False, description="Tell them now (the `shared` event)"
+    )
+    note: Annotated[str, StringConstraints(max_length=NOTE_LENGTH)] = Field(
+        default="", description="One line sent with it when you tell them now"
+    )
+
+
+@router.post("items/{item_id}/subscribers/", response=SubscribersOut)
+def subscriber_add(request, item_id: int, data: SubscribersIn):
+    """Subscribes others: people who can see the item and whom you may
+    know. With `notify` each gets a notification at once (the `shared`
+    event: "Ada wants you to see this"); otherwise they hear about the next
+    change. Answers with all subscribers."""
+    item = item_for(request, item_id)
+    if not data.people:
+        bad_request(_("Send at least one person."))
+    users = list(
+        subscribable_people(item, request.user).filter(pk__in=set(data.people))
+    )
+    if len(users) != len(set(data.people)):
+        bad_request(_("Some of them can't be subscribed to this."))
+    share(item, users, actor=request.user, notify=data.notify, note=data.note)
+    return subscribers_out(item, request.user)
 
 
 class SwitchIn(Schema):

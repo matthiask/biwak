@@ -58,10 +58,11 @@ class PlacesTest(TestCase):
         self.assertIn(
             f'data-avatar-color="{self.cleo.avatar_color}" title="Cleo Example"', html
         )
-        # Assignees: pills with the mark
+        # Assignees: a list with commas, each with the mark, linked
+        facts = html[html.index('class="wb-facts"') :]
         self.assertRegex(
-            html,
-            r'class="badge wb-person"[^>]*>(<a [^>]*>)?\s*<(img|span) class="wb-avatar',
+            facts[: facts.index("</dl>")],
+            r'class="wb-person-link"[^>]*>\s*<(img|span) class="wb-avatar',
         )
         self.assertContains(response, "Subscribers")
         self.assertGreater(html.count("wb-avatar"), 6)

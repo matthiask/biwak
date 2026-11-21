@@ -1,6 +1,6 @@
 {% load biwak i18n %}
 {% comment %}
-  The "More" menu of an item's page: its notification level, moving and
+  The "More" menu of an item's page: its notification level, its subscribers, moving and
   trashing (who may change it), each in a modal (frontend/modal.js) which
   is also a page. `can_change` comes from the page.
 {% endcomment %}
@@ -15,6 +15,11 @@
       href="{% url 'item_notifications' item.pk %}"
       data-modal
     >{% translate "Notifications…" %}</a>
+    <a
+      class="dropdown-item"
+      href="{% url 'item_subscribers' item.pk %}"
+      data-modal
+    >{% translate "Subscribers…" %}</a>
     {% move_url item as move %}
     {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}
     {% if move and can_change or move and item.kind == "todo" %}

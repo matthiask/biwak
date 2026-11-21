@@ -38,6 +38,7 @@ class Action(models.TextChoices):
     LEFT = "left", _("left")
     PINNED = "pinned", _("pinned")
     UNPINNED = "unpinned", _("unpinned")
+    SHARED = "shared", _("shared")
 
 
 class EventQuerySet(models.QuerySet):
