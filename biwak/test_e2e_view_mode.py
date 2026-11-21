@@ -1,5 +1,5 @@
 """View mode with click to edit, and the assignee picker in the browser
-(frontend/view-edit.js, frontend/assignees.js, specs/ui-round-1.md)"""
+(frontend/view-edit.js, frontend/people-picker.js, specs/ui-round-1.md)"""
 
 from django.core.files.base import ContentFile
 

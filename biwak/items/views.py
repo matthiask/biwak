@@ -24,7 +24,7 @@ from biwak.activity.operations import (
     subscribe,
     unsubscribe,
 )
-from biwak.forms import AssigneeField, Form, next_url
+from biwak.forms import Form, PeopleField, next_url
 from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
@@ -133,7 +133,7 @@ class TodoFieldsForm(RepeatForm):
         required=False,
         widget=forms.DateInput(attrs={"type": "date"}),
     )
-    assignees = AssigneeField(label=_("assignees"), queryset=User.objects.none())
+    assignees = PeopleField(label=_("assignees"), queryset=User.objects.none())
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, **kwargs)

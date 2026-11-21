@@ -145,6 +145,7 @@ Decided in the UI rounds (2026-11-21, `ui-round-1.md` to
   person filter, a check-in's time zone; a new long select gets it too.
   Options say who someone is ("Ada Example · Example Client Ltd",
   "staff" for staff without an organization). Without JavaScript the
-  plain select. The assignee picker is its own widget (`todos.md`).
+  plain select. Choosing several people (assignees, subscribers, whom to
+  notify) is the people picker, its own widget (`todos.md`).
 - **Relative times** use the `ago` filter ("just now" under a minute).
 - **Overdue and today** are badges (`todos.md`).

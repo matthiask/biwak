@@ -309,7 +309,7 @@ class ModalTest(SubscribersTestCase):
         self.client.force_login(self.ada)
         response = self.client.get(self.url(self.todo), headers=MODAL)
         assert_modal(self, response, title="Subscribers")
-        self.assertContains(response, "data-assignee-picker")
+        self.assertContains(response, "data-people-picker")
         self.assertContains(response, "Tell them now")
         self.assertContains(response, "added by Ada")
         self.assertContains(response, f'href="/people/{self.cleo.pk}/"')

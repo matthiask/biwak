@@ -298,7 +298,7 @@ class AssigneePickerTest(ViewModeBase):
 
     def test_the_select_stays_with_members_first(self):
         page = self.client.get(self.edit)
-        self.assertContains(page, "data-assignee-picker")
+        self.assertContains(page, "data-people-picker")
         self.assertContains(page, "<select")
         options = self.options(page)
         self.assertLess(options.index("Ada"), options.index("Bob"))
@@ -317,7 +317,7 @@ class AssigneePickerTest(ViewModeBase):
 
     def test_the_inline_form_uses_the_same_select(self):
         page = self.client.get(self.todolist.get_absolute_url())
-        self.assertContains(page, "data-assignee-picker")
+        self.assertContains(page, "data-people-picker")
         self.assertRegex(
             page.content.decode(), r'<select\s+name="assignees"\s+multiple'
         )
