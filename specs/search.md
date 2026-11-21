@@ -102,7 +102,8 @@ words anywhere in an item; "only mine" changed to created or assigned)
 
 - Order: newest first by `updated_at`, not by relevance (the spec says
   "paginated like the feed" and shows a date).
-- "Only mine": items you created.
+- "Only mine": items you created and to-dos assigned to you (decided
+  2026-11-21); still within `visible_to()`.
 - Words match anywhere in the item (title, text, comments together).
 - The filter for archived projects is "without archived projects" (the
   default includes them, marked "Archived").

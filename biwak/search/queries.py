@@ -13,7 +13,7 @@ can't see.
 import html
 
 from django.db import connection
-from django.db.models import BooleanField, F, Func, Value
+from django.db.models import BooleanField, F, Func, Q, Value
 from django.utils.safestring import mark_safe
 
 from biwak.checkins.models import Answer
@@ -114,8 +114,8 @@ def search(
     exclude_archived=False,
 ):
     """The items the person can see with all the words, newest first.
-    ``project`` and ``kind`` narrow it down, ``mine`` leaves what others
-    created, ``exclude_archived`` the archived projects."""
+    ``project`` and ``kind`` narrow it down, ``mine`` keeps what the person
+    created and the to-dos assigned to them, ``exclude_archived`` the archived projects."""
     words = prefixes(terms)
     if not words:
         return Item.objects.none()
@@ -131,7 +131,7 @@ def search(
     if kind:
         items = items.filter(kind=kind)
     if mine:
-        items = items.filter(creator=user)
+        items = items.filter(Q(creator=user) | Q(todo__assignees=user)).distinct()
     if exclude_archived:
         items = items.filter(project__archived_at__isnull=True)
     return items.order_by("-updated_at", "-pk")

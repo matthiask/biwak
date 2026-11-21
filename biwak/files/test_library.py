@@ -15,6 +15,7 @@ from biwak.files import attachments, operations, previews
 from biwak.files.models import preview_name
 from biwak.items import operations as ops, visibility
 from biwak.items.models import Item, Kind
+from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
 
@@ -499,6 +500,61 @@ class FilePageTest(Fixture, TestCase):
         self.assertEqual(
             self.client.get(reverse("file_edit", args=[mine.pk])).status_code, 200
         )
+
+    def test_clients_of_the_same_organization_change_each_others_files(self):
+        colleague = person("Cora", client=True)
+        stranger = person("Dan", client=True)
+        stranger.organization = "Other Ltd"
+        stranger.save()
+        nobody = person("Eve", client=True)
+        nobody.organization = ""
+        nobody.save()
+        no_org = person("Finn", client=True)
+        no_org.organization = ""
+        no_org.save()
+        for user in [colleague, stranger, nobody, no_org]:
+            project_ops.add_member(self.project, user, actor=self.ada)
+        theirs = ops.create_upload(
+            project=self.project,
+            file=file("cleo.txt"),
+            creator=self.cleo,
+            parent=self.public,
+        )
+        # Finn and Eve both have no organization: they don't match each other
+        by_nobody = ops.create_upload(
+            project=self.project,
+            file=file("eve.txt"),
+            creator=nobody,
+            parent=self.public,
+        )
+        for user, item, allowed in [
+            (colleague, theirs, True),
+            (stranger, theirs, False),
+            (nobody, theirs, False),
+            (no_org, by_nobody, False),
+            (colleague, self.shared_file, False),
+            (self.ada, theirs, True),
+        ]:
+            self.client.force_login(user)
+            for name, method in [("file_edit", "get"), ("file_replace", "post")]:
+                with self.subTest(user=user.email, item=item.title, name=name):
+                    response = getattr(self.client, method)(
+                        reverse(name, args=[item.pk])
+                    )
+                    self.assertEqual(response.status_code != 403, allowed)
+        self.client.force_login(colleague)
+        response = self.client.post(
+            reverse("file_edit", args=[theirs.pk]), {"title": "Renamed"}
+        )
+        self.assertRedirects(response, theirs.get_absolute_url())
+        response = self.client.post(
+            reverse("file_replace", args=[theirs.pk]),
+            {"file": SimpleUploadedFile("two.txt", b"Two")},
+        )
+        self.assertRedirects(response, theirs.get_absolute_url())
+        theirs.refresh_from_db()
+        self.assertEqual(theirs.title, "Renamed")
+        self.assertEqual(theirs.upload.versions.count(), 2)
 
     def test_replacing_keeps_the_url_comments_and_versions(self):
         ops.add_comment(self.shared_file, author=self.bob, content="Comment")

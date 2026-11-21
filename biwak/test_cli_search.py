@@ -5,7 +5,7 @@ import json
 from biwak import test_cli
 from biwak.items import operations as ops
 from biwak.projects.operations import archive_project
-from biwak.test_utils import project
+from biwak.test_utils import person, project
 
 
 class SearchCLITest(test_cli.CLITest):
@@ -51,6 +51,13 @@ class SearchCLITest(test_cli.CLITest):
         self.assertEqual([r["title"] for r in data], ["Camp pegs"])
         data = json.loads(self.biwak("search", "pegs", "--mine", "--json").stdout)
         self.assertEqual(len(data), 3)
+        bob = person("Bob")
+        theirs = ops.create_list(project=other, title="Gear", creator=bob)
+        ops.create_todo(todolist=theirs, title="Camp pegs, not mine", creator=bob)
+        assigned = ops.create_todo(todolist=theirs, title="Camp pegs list", creator=bob)
+        ops.assign(assigned, [self.ada], actor=bob)
+        data = json.loads(self.biwak("search", "pegs", "--mine", "--json").stdout)
+        self.assertEqual(len(data), 4)
         archive_project(other, actor=self.ada)
         self.assertIn("(archived)", self.biwak("search", "camp").output)
         data = json.loads(

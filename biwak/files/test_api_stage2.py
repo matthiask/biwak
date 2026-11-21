@@ -15,6 +15,7 @@ from biwak.collab import live
 from biwak.files import attachments, operations
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
+from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
 
@@ -838,6 +839,53 @@ class FileAPITest(APIFixture, TestCase):
             ).status_code,
             200,
         )
+
+    def test_clients_of_the_same_organization_change_each_others_files(self):
+        colleague = person("Cora", client=True)
+        stranger = person("Dan", client=True)
+        stranger.organization = "Other Ltd"
+        stranger.save()
+        nobody = person("Eve", client=True)
+        nobody.organization = ""
+        nobody.save()
+        no_org = person("Finn", client=True)
+        no_org.organization = ""
+        no_org.save()
+        for user in [colleague, stranger, nobody, no_org]:
+            project_ops.add_member(self.project, user, actor=self.ada)
+        theirs = ops.create_upload(
+            project=self.project,
+            file=SimpleUploadedFile("cleo.txt", b"Plan"),
+            creator=self.cleo,
+            parent=self.public,
+        )
+        by_nobody = ops.create_upload(
+            project=self.project,
+            file=SimpleUploadedFile("eve.txt", b"Plan"),
+            creator=nobody,
+            parent=self.public,
+        )
+        for user, item, allowed in [
+            (colleague, theirs, True),
+            (stranger, theirs, False),
+            (nobody, theirs, False),
+            (no_org, by_nobody, False),
+            (colleague, self.shared_file, False),
+            (self.ada, theirs, True),
+        ]:
+            with self.subTest(user=user.email, item=item.title):
+                patched = self.call(
+                    user, "patch", f"files/{item.pk}/", {"title": "New"}
+                )
+                replaced = self.client.post(
+                    f"/api/v1/files/{item.pk}/versions/",
+                    {"file": SimpleUploadedFile("x.txt", b"x")},
+                    headers=self.headers(user),
+                )
+                self.assertEqual(patched.status_code, 200 if allowed else 403)
+                self.assertEqual(replaced.status_code, 201 if allowed else 403)
+        theirs.refresh_from_db()
+        self.assertEqual(theirs.title, "New")
 
     def test_replace_keeps_the_item_and_lists_the_versions_for_staff(self):
         fid = self.shared_file.pk

@@ -274,7 +274,10 @@ Proposed by the building agent (2026-11-20), confirmed 2026-11-21.
 - **Files:** the title is the file's name when uploaded and stays when a
   new version is uploaded (**?**), the version has its own name.
   Staff upload (clients don't, `access.md`); clients replace or rename
-  only what they uploaded before that; staff everything. Replacing records `edited` (with the new
+  only what they uploaded before that, and what clients of the same
+  organization uploaded (`User.organization` set and equal, an empty one
+  never matches; files only, in `can_change()`, so moving follows;
+  decided 2026-11-21); staff everything. Replacing records `edited` (with the new
   version's name).
 - **Previews:** stored as `preview/preview.webp` in the file's own
   directory (a file can't be named like that, decided 2026-11-20); 400 pixels wide as specified, images already smaller are

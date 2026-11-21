@@ -27,6 +27,16 @@ from urllib.parse import quote
 from django.conf import settings
 
 
+# Inline parts below this size are signature logos and the like, not
+# attachments (decided 2026-11-21)
+MIN_INLINE_SIZE = 20 * 1000
+
+
+def _is_small_inline(part, content):
+    inline = part.get_content_disposition() == "inline" or part["Content-ID"]
+    return bool(inline) and len(content) < MIN_INLINE_SIZE
+
+
 @dataclasses.dataclass
 class Attachment:
     name: str
@@ -122,12 +132,11 @@ def parse(raw, **kwargs):
         name = part.get_filename()
         if not name:
             continue
+        content = part.get_payload(decode=True) or b""
+        if _is_small_inline(part, content):
+            continue
         attachments.append(
-            Attachment(
-                name=name,
-                content_type=part.get_content_type(),
-                content=part.get_payload(decode=True) or b"",
-            )
+            Attachment(name=name, content_type=part.get_content_type(), content=content)
         )
     return InboundMail(
         sender=from_address(message),

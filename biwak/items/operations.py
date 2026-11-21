@@ -803,8 +803,16 @@ def can_create(user, kind):
 def can_change(user, item):
     """Staff change everything they see; clients what they created
     (renaming, archiving, trashing; to-dos' fields stay open to everybody
-    who sees them)"""
-    return not user.is_client or item.creator_id == user.pk
+    who sees them). Files also what a client of the same organization
+    uploaded; an empty organization never matches (decided 2026-11-21)."""
+    if not user.is_client or item.creator_id == user.pk:
+        return True
+    return bool(
+        item.kind == Kind.FILE
+        and user.organization
+        and item.creator.is_client
+        and item.creator.organization == user.organization
+    )
 
 
 @transaction.atomic

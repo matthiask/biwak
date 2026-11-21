@@ -412,9 +412,14 @@ confirmed 2026-11-20):
   then `email-reply-parser`. Mails without a plain text part are turned
   into text, cut where clients' HTML quotes start. Signatures without a
   delimiter ("Best regards, Ada") stay.
-- **Attachments:** every part with a file name, inline images included;
-  larger than 25 MB left out (noted in `InboundMessage.error`), the text
-  posted anyway. Their Markdown is appended to the text.
+- **Attachments:** every part with a file name; inline parts
+  (`Content-Disposition: inline` or with a `Content-ID`) under 20 KB are
+  left out, they're signature logos (decided 2026-11-21), larger inline
+  images and regular attachments stay. Larger than 25 MB left out (noted
+  in `InboundMessage.error`), the text posted anyway with a line in the
+  comment saying which attachment was too large (decided 2026-11-21; no
+  mail back to the person; a reply with only such an attachment is
+  posted too). Their Markdown is appended to the text.
 - **Nothing written** (only quotes, no attachments): nothing posted, no
   answer.
 - **`receive_mail FILE.eml`** takes `--spf`, `--dkim`, `--dmarc` (default
@@ -428,10 +433,6 @@ Open (values and wording the spec doesn't fix):
   removed from a project; access is checked anyway).
 - The wording of the answer to rejected replies (four reasons, in
   `receive.py`).
-- Oversized attachments silently left out: tell the person (in the
-  comment or by mail)?
-- Signature images (Outlook's logos) become attachments; leave out small
-  inline images?
 
 ### Setting it up
 
