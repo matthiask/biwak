@@ -6,7 +6,6 @@ import datetime as dt
 from typing import Literal
 
 from django.db import transaction
-from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -27,11 +26,17 @@ from biwak.api_conventions import (
     person_out,
 )
 from biwak.checkins import mails, operations as ops, schedule
-from biwak.checkins.models import Answer, Occurrence, mail_mode
+from biwak.checkins.models import (
+    DEFAULT_MODE,
+    Answer,
+    Occurrence,
+    QuestionMail,
+    mail_mode,
+)
 from biwak.items.api import item_for as any_item_for
 from biwak.items.models import Item, Kind
 from biwak.projects.api import project_for
-from biwak.reactions.models import Reaction
+from biwak.reactions.operations import prefetch
 from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
@@ -85,9 +90,38 @@ class QuestionOut(ItemOut):
     mail: Literal["each", "summary", "none"]
 
 
-def question_out(request, item):
+def _question_context(request, items):
+    """What ``question_out()`` needs, for many questions at once: their
+    latest occurrences, the person's mail modes and the people asked the
+    person may learn about (clients: members only)"""
+    pks = [item.pk for item in items]
+    latest = dict(
+        Occurrence.objects
+        .filter(question__in=pks)
+        .order_by("question", "-date", "-pk")
+        .distinct("question")
+        .values_list("question", "pk")
+    )
+    modes = dict(
+        QuestionMail.objects.filter(question__in=pks, user=request.user).values_list(
+            "question", "mode"
+        )
+    )
+    known = set()
+    for project in {item.project for item in items}:
+        people = {
+            user
+            for item in items
+            if item.project == project
+            for user in item.question.people.all()
+        }
+        known |= {user.pk for user in project.people_known_to(request.user, people)}
+    return {"latest": latest, "modes": modes, "known": known}
+
+
+def question_out(request, item, context=None):
     question = item.question
-    latest = ops.latest_occurrence(item)
+    context = context or _question_context(request, [item])
     return item_out(item) | {
         "rule": question.rule,
         "schedule_description": question.schedule_description,
@@ -97,29 +131,29 @@ def question_out(request, item):
         # Clients only learn about the project's members
         "people": [
             person_out(user)
-            for user in item.project.people_known_to(
-                request.user, question.people.all()
-            )
+            for user in question.people.all()
+            if user.pk in context["known"]
         ],
         "paused": question.is_paused,
         "next_at": question.next_at,
-        "latest_occurrence_id": latest.pk if latest else None,
-        "mail": str(mail_mode(request.user, item)),
+        "latest_occurrence_id": context["latest"].get(item.pk),
+        "mail": context["modes"].get(item.pk, DEFAULT_MODE),
     }
 
 
 @router.get("projects/{project_id}/checkins/", response=list[QuestionOut])
 def question_list(request, project_id: int):
     project = project_for(request, project_id)
-    questions = (
+    questions = list(
         Item.objects
         .visible_to(request.user)
         .filter(project=project, kind=Kind.QUESTION)
-        .select_related("creator", "question")
+        .select_related("creator", "question", "project")
         .prefetch_related("question__people")
         .order_by("title", "pk")
     )
-    return [question_out(request, item) for item in questions]
+    context = _question_context(request, questions)
+    return [question_out(request, item, context) for item in questions]
 
 
 class QuestionIn(Schema):
@@ -277,26 +311,29 @@ def occurrence_list(
     if person_id is not None:
         answers = answers.filter(author=person_id)
         occurrences = occurrences.filter(answers__in=answers).distinct()
+    found = {}
 
-    def out(occurrence):
-        found = (
+    def prepare(page):
+        """The page's answers with their reactions, newest first"""
+        page_answers = list(
             answers
-            .filter(occurrence=occurrence)
+            .filter(occurrence__in=page)
             .select_related("item__creator", "author")
-            .prefetch_related(
-                Prefetch(
-                    "item__reactions",
-                    queryset=Reaction.objects.select_related("user"),
-                )
-            )
             .order_by("-item__created_at", "-pk")
         )
+        prefetch(*[answer.item for answer in page_answers])
+        for answer in page_answers:
+            found.setdefault(answer.occurrence_id, []).append(answer)
+
+    def out(occurrence):
         return {
             "id": occurrence.pk,
             "question_id": item.pk,
             "date": occurrence.date,
             "asked_at": occurrence.asked_at,
-            "answers": [answer_out(a, request.user) for a in found],
+            "answers": [
+                answer_out(a, request.user) for a in found.get(occurrence.pk, [])
+            ],
             "missing": (
                 [
                     person_out(u)
@@ -316,6 +353,7 @@ def occurrence_list(
         ordering=("-date", "-pk"),
         cursor=cursor,
         page_size=page_size,
+        prepare=prepare,
     )
 
 

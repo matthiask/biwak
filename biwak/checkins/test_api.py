@@ -1,6 +1,9 @@
 import datetime as dt
 from unittest import mock
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Mention
 from biwak.checkins import operations as ops
@@ -8,6 +11,7 @@ from biwak.checkins.models import Mode, Occurrence, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
+from biwak.reactions import operations as reactions_ops
 from biwak.test_utils import person, project
 
 
@@ -562,3 +566,39 @@ class AnswersAPITest(APITestCase):
             Item.objects.get(pk=self.shared.pk), visible=False, actor=self.ada
         )
         self.assertEqual(self.get(self.cleo, "me/checkins/due/").json(), [])
+
+
+class QueriesTest(APITestCase):
+    """The lists take the same number of queries for any number of rows"""
+
+    def queries(self, user, path):
+        headers = self.api(user)
+        with CaptureQueriesContext(connection) as context:
+            response = self.client.get(f"/api/v1/{path}", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        return len(context)
+
+    def test_question_list(self):
+        path = f"projects/{self.project.pk}/checkins/"
+        few = {user: self.queries(user, path) for user in [self.ada, self.cleo]}
+        for n in range(3):
+            item = self.question(
+                f"More {n}", visible=True, people=[self.ada, self.bob, self.cleo]
+            )
+            ops.set_mail_mode(item, user=self.ada, mode=Mode.EACH)
+            ops.set_mail_mode(item, user=self.cleo, mode=Mode.EACH)
+        self.run_at("2027-03-29 09:00")
+        for user, count in few.items():
+            self.assertEqual(self.queries(user, path), count, user)
+
+    def test_occurrence_list(self):
+        path = f"checkins/{self.shared.pk}/occurrences/"
+        ops.answer(self.shared, user=self.ada, content="One")
+        few = {user: self.queries(user, path) for user in [self.ada, self.cleo]}
+        for date in ["2027-03-29", "2027-04-05", "2027-04-12"]:
+            self.run_at(f"{date} 09:00")
+            answer = ops.answer(self.shared, user=self.ada, content="Again")
+            ops.answer(self.shared, user=self.cleo, content="Me too")
+            reactions_ops.add_reaction(self.cleo, "👍", item=answer)
+        for user, count in few.items():
+            self.assertEqual(self.queries(user, path), count, user)
