@@ -2056,6 +2056,8 @@ button.wb-signal:hover {
 /* The lantern (specs/lantern.md): the menu beside the user menu, the page */
 .wb-lantern-button {
   position: relative;
+  /* Square-ish with the larger torch */
+  --bs-btn-padding-x: 6px;
 }
 
 /* Unread notifications: a small red dot on the lantern, the same as on the
