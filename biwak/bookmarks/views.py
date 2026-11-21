@@ -20,7 +20,20 @@ def bookmarks(request):
     found = Bookmark.objects.visible_to(request.user).select_related(
         "item", "item__project", "item__answer", "project"
     )
-    return render(request, "bookmarks/bookmarks.html", {"bookmarks": found})
+    # Bookmarked projects first (places to go to), then the items grouped
+    # by project, the project with the newest bookmark first (decided
+    # 2026-11-21: by project, not by kind)
+    projects, groups = [], {}
+    for bookmark in found:
+        if bookmark.item_id is None:
+            projects.append(bookmark)
+        else:
+            groups.setdefault(bookmark.item.project, []).append(bookmark)
+    return render(
+        request,
+        "bookmarks/bookmarks.html",
+        {"projects": projects, "groups": list(groups.items())},
+    )
 
 
 def _back(request, target):

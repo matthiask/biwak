@@ -72,7 +72,11 @@ class BookmarkTest(BookmarkBase):
         response = self.client.get("/bookmarks/")
         self.assertContains(response, "Open point")
         self.assertContains(response, "Website")
-        self.assertContains(response, "to-do · Website")
+        # Projects first, then the items under their project's heading
+        content = response.content.decode()
+        self.assertContains(response, "To-do")
+        self.assertLess(content.index(">Projects<"), content.index("Open point"))
+        self.assertEqual(response.context["groups"][0][0], self.project)
         self.client.post(f"/items/{self.todo.pk}/bookmark/")
         self.assertNotContains(self.client.get("/bookmarks/"), "Open point")
         # Private

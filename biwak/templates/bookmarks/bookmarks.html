@@ -6,26 +6,32 @@
   <div class="wb-page-header">
     <h1 class="wb-title">{% translate "Bookmarks" %}</h1>
   </div>
-  <div class="list-group">
-    {% for bookmark in bookmarks %}
-      {% if bookmark.item %}
+  {% if not projects and not groups %}
+    <p class="text-body-secondary">
+      {% translate "Nothing bookmarked yet. Use the bookmark icon on a project or an item." %}
+    </p>
+  {% endif %}
+  {% if projects %}
+    <h2 class="h5">{% translate "Projects" %}</h2>
+    <div class="list-group mb-4">
+      {% for bookmark in projects %}
+        <a
+          class="list-group-item list-group-item-action"
+          href="{{ bookmark.project.get_absolute_url }}"
+        >{{ bookmark.project }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% for project, bookmarks in groups %}
+    <h2 class="h5"><a href="{{ project.get_absolute_url }}" class="text-reset">{{ project }}</a></h2>
+    <div class="list-group mb-4">
+      {% for bookmark in bookmarks %}
         <a class="list-group-item list-group-item-action" href="{{ bookmark.item.get_absolute_url }}">
           {{ bookmark.item|item_title }}
           {% client_badge bookmark.item %}
-          <div class="small text-body-secondary">
-            {{ bookmark.item.get_kind_display|capfirst }} · {{ bookmark.item.project }}
-          </div>
+          <div class="small text-body-secondary">{{ bookmark.item.get_kind_display|capfirst }}</div>
         </a>
-      {% else %}
-        <a class="list-group-item list-group-item-action" href="{{ bookmark.project.get_absolute_url }}">
-          {{ bookmark.project }}
-          <div class="small text-body-secondary">{% translate "Project" %}</div>
-        </a>
-      {% endif %}
-    {% empty %}
-      <div class="list-group-item text-body-secondary">
-        {% translate "Nothing bookmarked yet. Use the bookmark icon on a project or an item." %}
-      </div>
-    {% endfor %}
-  </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
 {% endblock content %}

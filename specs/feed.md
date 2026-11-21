@@ -129,8 +129,10 @@ item; the to-do page links to it.
   page; pages of new kinds add it themselves. `POST
   /items/<pk>/bookmark/` and `/projects/<pk>/bookmark/` (`bookmark=1`
   adds, otherwise removes).
-- `/bookmarks/` (in the navigation), newest first, with the item's
-  current title, kind and project. Bookmarks of what the person can't
+- `/bookmarks/` (in the navigation): bookmarked projects first, then the
+  items grouped by project, the project with the newest bookmark first,
+  each item with its current title and kind (decided 2026-11-21: by
+  project, not by kind: one looks for "that thing in project X"). Bookmarks of what the person can't
   see anymore are hidden, not deleted, and come back when they see it
   again.
 - API: `GET /bookmarks/`, `PUT`/`DELETE` `items/{id}/bookmark/` and
