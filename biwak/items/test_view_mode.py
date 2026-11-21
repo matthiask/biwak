@@ -66,6 +66,25 @@ class TodoViewTest(ViewModeBase):
             self.assertContains(page, f'data-edit-url="{self.edit}"')
             self.assertContains(page, f'href="{self.edit}"')
 
+    def test_the_facts_and_the_notes_share_one_card(self):
+        # Reactions and comments are below it, the sidebar beside it
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            html = self.client.get(self.url).content.decode()
+            start = html.index('<div class="card mb-4" data-edit-url')
+            card = html[start : html.index("Subscribers", start)]
+            self.assertIn("Assigned to", card)
+            self.assertIn("<hr", card)
+            self.assertIn("<em>poles</em>", card)
+            self.assertLess(card.index("Assigned to"), card.index("<hr"))
+            self.assertLess(card.index("<hr"), card.index("<em>poles</em>"))
+            self.assertEqual(card.count('class="card '), 1)
+            self.assertNotIn("Comments", card[: card.index("<em>poles</em>")])
+
+    def test_the_form_in_place_sits_in_a_card_too(self):
+        response = self.client.get(self.edit, headers=HTMX)
+        self.assertContains(response, '<div class="card mb-4">')
+
     def test_the_view_sets_no_marker(self):
         self.client.get(self.url)
         self.assertFalse(self.marker())

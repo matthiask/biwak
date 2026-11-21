@@ -440,7 +440,7 @@ def _assignable(item, by=None):
 
 
 @transaction.atomic
-def assign(item, users, *, actor, mentioned=None):
+def assign(item, users, *, actor, mentioned=None, assigned_by=None):
     """Adds assignees (``assignable_people()``, ``ValueError`` for anybody
     else); staff who aren't members yet become members, recorded as added
     (decided 2026-11-21). Returns those newly assigned.
@@ -449,7 +449,12 @@ def assign(item, users, *, actor, mentioned=None):
     those it newly mentions (what ``mentions.update()`` returned). Those
     both assigned and mentioned get one notification, the assignment's
     (decided 2026-11-21): the assignment event says it mentions them, the
-    other event stops telling them (``notify.candidates()``)."""
+    other event stops telling them (``notify.candidates()``).
+
+    ``assigned_by`` is who gets stored as the assigner: the actor by
+    default, or ``{user pk: assigner or None}`` to say otherwise (the next
+    to-do of a repeating one keeps the assigners, the importer leaves them
+    empty; decided 2026-11-21)."""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
     allowed = _assignable(item, actor) if users else {}
@@ -459,7 +464,9 @@ def assign(item, users, *, actor, mentioned=None):
     for user in users:
         if not allowed[user.pk]:
             project_ops.add_member(item.project, user, actor=actor)
-    todo.assignees.add(*users)
+    for user in users:
+        by = actor if assigned_by is None else assigned_by.get(user.pk)
+        todo.assignees.add(user, through_defaults={"assigned_by": by})
     for user in users:
         subscribe(user, item, added_by=actor)
     if users:
@@ -634,9 +641,15 @@ def _create_next(item, todo, *, actor):
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
     # Assignees removed from the project since aren't brought back
     allowed = _assignable(following)
-    people = [u for u in todo.assignees.all() if allowed.get(u.pk)]
+    assignments = list(todo.assignment_set.select_related("user", "assigned_by"))
+    people = [a.user for a in assignments if allowed.get(a.user_id)]
     if people:
-        assign(following, people, actor=actor)
+        assign(
+            following,
+            people,
+            actor=actor,
+            assigned_by={a.user_id: a.assigned_by for a in assignments},
+        )
     return following
 
 

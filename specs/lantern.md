@@ -72,6 +72,10 @@ records, levels, `send_mails`), reactions.
   - "mark as read" and "mark all as read";
   - opening the item some other way (the feed, a list, a mail's link, a
     live update) reads nothing;
+  - the dashboard's rows with unread notifications are the lantern's
+    entries on another page: they link through the lantern and read the
+    same way (`dashboard.md`, "Shared with the lantern", decided
+    2026-11-21);
   - "mark as unread" per item.
 - **The model:** `Notification.read_at` (null: unread). Mail delivery
   gains `none`. `send_mails` leaves out notifications read before

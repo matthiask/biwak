@@ -129,7 +129,7 @@ class PageTest(ByDueTestCase):
         self.assertContains(response, "Elsewhere")
         self.assertNotContains(response, "Secret")
         self.assertContains(response, "wb-client-badge")
-        self.assertContains(response, "My to-dos")
+        self.assertContains(response, '<h1 class="wb-title">To-dos</h1>')
 
     def test_a_client_sees_only_visible_todos(self):
         self.todo("Visible")

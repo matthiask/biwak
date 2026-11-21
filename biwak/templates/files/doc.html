@@ -43,7 +43,11 @@
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div class="wb-markdown mb-4" id="live-text" data-live>{% checklist_markdown doc.content item %}</div>
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="wb-markdown" id="live-text" data-live>{% checklist_markdown doc.content item %}</div>
+        </div>
+      </div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

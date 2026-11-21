@@ -32,6 +32,23 @@ class ViewModeTest(E2ETestCase):
     def form(self, page):
         return page.locator("#live-text form[data-view-edit-form]")
 
+    def test_editing_happens_inside_the_card(self):
+        page = self.page
+        self.goto(page, self.todo)
+        card = page.locator("main .card").first
+        expect(card.locator(".wb-facts")).to_be_visible()
+        expect(card.locator(".wb-markdown em")).to_be_visible()
+        page.locator("#live-text .wb-markdown em").click()
+        # The form replaces the card's content: one card, the form inside
+        expect(page.locator("#live-text .card")).to_have_count(1)
+        expect(
+            page.locator("#live-text .card form[data-view-edit-form]")
+        ).to_be_visible()
+        expect(page.locator("#live-text .wb-facts")).to_have_count(0)
+        page.get_by_role("link", name="Cancel").click()
+        expect(page.locator("#live-text .card .wb-facts")).to_be_visible()
+        expect(page.locator("#live-text .card")).to_have_count(1)
+
     def test_the_page_shows_the_to_do_and_a_click_edits(self):
         page = self.page
         self.goto(page, self.todo)

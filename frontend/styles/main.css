@@ -2170,3 +2170,26 @@ main:has([data-hide-title]) [data-edit-open] {
 .js [data-autosubmit] [data-autosubmit-button] {
   display: none;
 }
+
+/* UI round 5, section 3: the buttons of a filter form (_filter_buttons.html)
+   sit at the height of the fields, whatever the labels above them */
+.wb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.wb-filters .form-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: calc(1.5rem + 0.75rem + var(--bs-border-width) * 2);
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.wb-filters .form-check .form-check-input {
+  float: none;
+  margin: 0;
+}

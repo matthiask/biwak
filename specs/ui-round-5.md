@@ -2,7 +2,40 @@
 
 Round 5 of `ui-feedback.md` (2026-11-21).
 
-**Status:** open (spec, 2026-11-21).
+**Status:** built 2026-11-21 (branch `ui5`). Decisions on the way:
+- 1: the card is Bootstrap's `card` / `card-body`, which the edit form used
+  already; the view's root is the card (inside `#live-text`, so editing in
+  place swaps card for card), the doc's `#live-text` sits in a card.
+- 2: the palette's "To-dos by due date" is now "All to-dos".
+  `data-restore-filters` is on each top bar link and the project header's
+  button (and its "More" entry).
+- 3: `wb-filters` (`main.css`) on the form, `_filter_buttons.html` for the
+  buttons; plain sizes everywhere (the by-due form's buttons were `btn-sm`
+  next to normal selects), the checkboxes of the feed and the lantern are
+  as high as the fields. Filter on the to-dos page is quiet now, like the
+  others (it's hidden with JavaScript anyway).
+- 4: `Assignment` keeps the old table name (`items_todo_assignees`), so
+  existing rows and the audit trigger stay; the migration adds the columns
+  and renames the unique constraint with SQL inside
+  `SeparateDatabaseAndState`, `audit_tables()` runs again (idempotent) in
+  it, and a test migrates back and forth with rows. `assign()` takes
+  `assigned_by={user pk: assigner or None}` (default: the actor); the next
+  recurring to-do and the importer use it. The filter is one `Exists` on
+  `Assignment`, so "Assigned to: X" and "Assigned by: Me" mean the same
+  assignment; "Nobody" with "Me" shows nothing. The form's labels are
+  lowercase like the others ("assigned by"). The palette action
+  "To-dos I assigned" is marked `exact`: unlike "Go to to-dos" it opens
+  its own query, not the one remembered for the page (which would defeat
+  it); the page then remembers that. The API's `assigned_by` other than
+  `me` is a 400. CLI 0.30.0.
+- 4, decided 2026-11-21 (user): the top bar's entry is "To-dos" (was "My
+  to-dos"), active on every view of the page; it starts at
+  `?assignee=me` until a view is remembered. The palette's "Go to my
+  to-dos" is "Go to to-dos" (it restores the remembered view too). The
+  page's title follows the filters: "My to-dos" (assigned to me),
+  "To-dos I assigned" (by me, to anybody else), else "To-dos".
+- Later, to think about (user, 2026-11-21): a quick way to set "Assigned
+  to" to me, e.g. a button next to the filters.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; section 4 touches a model and the API, so check its
@@ -41,8 +74,9 @@ Decided 2026-11-21. The header's "To-dos by due date" opens
 `/projects/<pk>/todos/`, which is grouped by list since round 3, so the
 label is wrong.
 
-- **Next to the "To-do lists" heading:** "All to-dos: by list · by due
-  date", links to `project_todos` with `?grouping=project` and
+- **Below the "To-do lists" heading**, a small line of its own (not in
+  the heading: it wrapped on phones, changed 2026-11-21): "All to-dos:
+  by list · by due date", links to `project_todos` with `?grouping=project` and
   `?grouping=due`. These keep their own query (`frontend/filters.js`
   only rewrites the top bar's links), and the page then remembers it,
   as it does any query it loads with.

@@ -61,7 +61,9 @@ export function focusElement(element) {
 export function runAction(action, { status } = {}) {
   switch (action.type) {
     case "link":
-      window.location.assign(withFilters(action.url))
+      window.location.assign(
+        action.exact ? action.url : withFilters(action.url),
+      )
       break
     case "modal":
       openModal(action.url)

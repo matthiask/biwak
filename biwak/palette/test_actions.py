@@ -72,7 +72,7 @@ class EverywhereTest(ActionsBase):
             for label in [
                 "Go to projects",
                 "Go to the activity",
-                "Go to my to-dos",
+                "Go to to-dos",
                 "Go to bookmarks",
                 "Settings",
                 "Search",
@@ -80,7 +80,7 @@ class EverywhereTest(ActionsBase):
             ]:
                 self.assertIn(label, actions)
             self.assertEqual(actions["Go to bookmarks"]["shortcut"], "g b")
-            self.assertEqual(actions["Go to my to-dos"]["url"], "/todos/?assignee=me")
+            self.assertEqual(actions["Go to to-dos"]["url"], "/todos/?assignee=me")
 
     def test_new_project_is_for_staff(self):
         self.assertEqual(self.actions(self.ada, "/")["New project"]["type"], "modal")
@@ -132,7 +132,7 @@ class ProjectActionsTest(ActionsBase):
             "The project's activity",
             "People",
             "Docs and files",
-            "To-dos by due date",
+            "All to-dos",
         ]:
             self.assertEqual(actions[label]["group"], "page", label)
         # The form opens in a modal
@@ -147,7 +147,7 @@ class ProjectActionsTest(ActionsBase):
     def test_a_client_gets_what_clients_may_do(self):
         actions = self.actions(self.cleo, f"/projects/{self.camp.pk}/")
         self.assertIn("New message", actions)
-        self.assertIn("To-dos by due date", actions)
+        self.assertIn("All to-dos", actions)
         for label in ["New list", "New doc", "Upload a file", "New check-in"]:
             self.assertNotIn(label, actions)
 

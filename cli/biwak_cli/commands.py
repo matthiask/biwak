@@ -559,6 +559,11 @@ def lists(project, as_json):
 @click.argument("list_id", metavar="LIST", type=int, required=False)
 @click.option("--completed", is_flag=True, help="Completed to-dos, latest first.")
 @click.option("--mine", is_flag=True, help="Only to-dos assigned to you.")
+@click.option(
+    "--assigned-by-me",
+    is_flag=True,
+    help="Only to-dos you assigned (to somebody, or to you with --mine).",
+)
 @click.option("--project", "project_id", type=int, help="Only this project's ID.")
 @click.option(
     "--due",
@@ -571,11 +576,13 @@ def lists(project, as_json):
     help="Order by due date instead of by project, list and group.",
 )
 @json_option
-def todos(list_id, completed, mine, project_id, due, by_due, as_json):
+def todos(list_id, completed, mine, assigned_by_me, project_id, due, by_due, as_json):
     """The open to-dos of LIST, by group; without LIST across all projects by
-    due date (--mine, --project, --due)"""
-    if list_id and (mine or project_id or due or by_due):
-        terminate("--mine, --project, --due and --by-due go without LIST.")
+    due date (--mine, --assigned-by-me, --project, --due)"""
+    if list_id and (mine or assigned_by_me or project_id or due or by_due):
+        terminate(
+            "--mine, --assigned-by-me, --project, --due and --by-due go without LIST."
+        )
     if list_id and completed:
         data = paginate(f"lists/{list_id}/todos/completed/")
     elif list_id:
@@ -584,6 +591,8 @@ def todos(list_id, completed, mine, project_id, due, by_due, as_json):
         params = {"completed": completed, "grouping": "due" if by_due else "project"}
         if mine:
             params["assignee"] = "me"
+        if assigned_by_me:
+            params["assigned_by"] = "me"
         if project_id:
             params["project_id"] = project_id
         if due:
