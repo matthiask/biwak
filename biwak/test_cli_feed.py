@@ -73,15 +73,12 @@ class FeedCLITest(test_cli.CLITest):
             "add",
             self.project.pk,
             "https://github.com/example/repo",
-            "--item",
-            self.list.pk,
             "--clients",
         )
         output = self.biwak("links", self.project.pk).output
         self.assertIn("Design", output)
         self.assertIn("figma", output)
         self.assertIn("github", output)
-        self.assertIn(str(self.list.pk), output)
         self.assertEqual(
             len(json.loads(self.biwak("links", self.project.pk, "--json").stdout)), 2
         )
