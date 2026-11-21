@@ -28,3 +28,23 @@ class ChannelsRedisURLTest(SimpleTestCase):
 
     def test_neither(self):
         self.assertEqual(channels_redis_url(), "")
+
+
+class ChannelLayerTimeoutTest(SimpleTestCase):
+    def test_reads_outlast_the_blocking_pop(self):
+        """redis-py 8 times out reads after 5 seconds by default, as long
+        as channels_redis blocks on BZPOPMIN waiting for messages: every
+        websocket without traffic died after 5 seconds (and the page
+        reconnected, every 6 seconds)"""
+        from channels_redis.core import RedisChannelLayer
+
+        from biwak.redis_url import channel_layer
+
+        config = channel_layer("redis://redis:6379/1")
+        layer = RedisChannelLayer(**config["CONFIG"])
+        pool = layer.create_pool(0)
+        timeout = pool.connection_kwargs.get("socket_timeout")
+        self.assertIsNotNone(timeout)
+        self.assertGreater(timeout, layer.brpop_timeout)
+        self.assertEqual(pool.connection_kwargs["host"], "redis")
+        self.assertEqual(config["CONFIG"]["prefix"], "biwak")

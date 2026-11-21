@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from speckenv import env
 from speckenv_django import django_database_url, django_mailer_url
 
-from biwak.redis_url import channels_redis_url
+from biwak.redis_url import channel_layer, channels_redis_url
 from biwak.storage_url import storage_from_url
 
 
@@ -163,10 +163,7 @@ if not (REDIS_URL or DEBUG or TESTING):
         "Set CACHE_URL (the shared Redis) or REDIS_URL for the channel layer."
     )
 CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [REDIS_URL], "prefix": "biwak"},
-    }
+    "default": channel_layer(REDIS_URL)
     if REDIS_URL and not TESTING
     else {"BACKEND": "channels.layers.InMemoryChannelLayer"}
 }

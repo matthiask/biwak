@@ -458,7 +458,7 @@ class CommentFieldLabelTest(TestCase):
         )
         self.client.force_login(ada)
         html = self.client.get(todo.get_absolute_url()).content.decode()
-        self.assertRegex(
+        self.assertInHTML(
+            '<label class="form-label visually-hidden" for="id_content">Comment</label>',
             html,
-            r'<label class="form-label visually-hidden" for="id_content">Comment</label>',
         )
