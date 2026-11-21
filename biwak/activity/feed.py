@@ -332,7 +332,19 @@ def merge(events):
     conversations (``conversations()``); consecutive events of the same
     person with the same action in the same list or project (reactions: on
     the same item), each within an hour of the one before and on the same
-    day, become one entry"""
+    day, become one entry. A person's completing and reopening an item
+    back and forth (each within an hour of the one before, on the same
+    day) shows as the net change (``timeline.cancelled()``)."""
+    from biwak.activity.timeline import cancelled
+
+    hidden = cancelled(
+        events,
+        together=lambda older, newer: (
+            local_day(older) == local_day(newer)
+            and newer.created_at - older.created_at <= MERGE_WINDOW
+        ),
+    )
+    events = [event for event in events if event.pk not in hidden]
     entries = []
     for event in conversations(events):
         if isinstance(event, Conversation):

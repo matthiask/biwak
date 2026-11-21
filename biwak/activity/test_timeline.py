@@ -237,6 +237,18 @@ class CancellingTest(TimelineBase):
         ops.unassign(self.todo, [self.ada], actor=self.ada)
         self.assertEqual(self.lines(), [])
 
+    def test_completed_and_reopened(self):
+        """Every one is recorded (decided 2026-11-21), the line is the net
+        change"""
+        ops.complete(self.todo, actor=self.ada)
+        ops.reopen(self.todo, actor=self.ada)
+        self.assertEqual(Event.objects.count(), 2)
+        self.assertEqual(self.lines(), [])
+        ops.complete(self.todo, actor=self.ada)
+        (line,) = self.lines()
+        self.assertIn("completed this", line)
+        self.assertNotIn("reopened", line)
+
     def test_completed_and_reopened_by_the_other_way_round(self):
         ops.trash(self.todo, actor=self.ada)
         ops.restore(self.todo, actor=self.ada)

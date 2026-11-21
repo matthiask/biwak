@@ -69,6 +69,45 @@ TOGGLES = {
 UNKNOWN = object()
 
 
+def _always(older, newer):
+    return True
+
+
+def cancelled(events, *, together=_always):
+    """The IDs of the completing and reopening events (of ``events``, in
+    any order) a later one undoes: each person's consecutive completing
+    and reopening of an item (other events don't break it up, another
+    person's completing or reopening does; ``together(older, newer)``
+    for neighbours) is its net change, the last one or nothing when the
+    item is back where it started (decided 2026-11-21, replacing deleting
+    the earlier event when recording). For the feed, the lantern and the
+    mails; the timeline's lines do the same through ``combine()``."""
+    done = {Action.COMPLETED, Action.REOPENED}
+    runs = {}  # item ID -> the runs of its completing and reopening
+    for event in sorted(
+        (e for e in events if e.action in done and e.item_id),
+        key=lambda e: (e.created_at, e.pk),
+    ):
+        item_runs = runs.setdefault(event.item_id, [])
+        last = item_runs[-1][-1] if item_runs else None
+        if (
+            last is not None
+            and last.actor_id == event.actor_id
+            and together(last, event)
+        ):
+            item_runs[-1].append(event)
+        else:
+            item_runs.append([event])
+    result = set()
+    for item_runs in runs.values():
+        for run in item_runs:
+            if run[0].action != run[-1].action:
+                result.update(e.pk for e in run)
+            else:
+                result.update(e.pk for e in run[:-1])
+    return result
+
+
 class Effect:
     """One thing an event did: ``key`` says what it was about (a later
     effect on the same key replaces it), ``value`` what it set,

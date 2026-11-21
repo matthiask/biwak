@@ -869,10 +869,11 @@ class MoveOutOfGroupTest(FeedBase):
             )
 
 
-class ToggleUndoTest(FeedBase):
-    """Completing and reopening again soon after is nothing to tell
-    (decided 2026-11-21): the same person undoing their last one within ten
-    minutes removes that event instead of recording the opposite"""
+class ToggleNetTest(FeedBase):
+    """Completing and reopening back and forth (decided 2026-11-21): every
+    one is recorded; the feed shows a person's consecutive ones on an item
+    (each within an hour of the one before, on the same day) as the net
+    change, nothing when the to-do is back where it started"""
 
     def actions(self):
         return list(
@@ -882,40 +883,44 @@ class ToggleUndoTest(FeedBase):
             .values_list("action", flat=True)
         )
 
-    def test_back_and_forth_leaves_the_net_change(self):
-        ops.complete(self.todo, actor=self.ada)
-        ops.reopen(self.todo, actor=self.ada)
-        self.assertEqual(self.actions(), [])
-        for _ in range(3):
-            ops.complete(self.todo, actor=self.ada)
-            ops.reopen(self.todo, actor=self.ada)
-        ops.complete(self.todo, actor=self.ada)
-        self.assertEqual(self.actions(), [Action.COMPLETED])
+    def shown(self):
+        events = list(feed.feed_events(self.ada))
+        feed.attach(events, self.ada)
+        return [event.action for entry in feed.merge(events) for event in entry.events]
 
-    def test_reopening_an_old_completion_is_told(self):
+    def test_back_and_forth_is_recorded_and_shows_the_net_change(self):
         ops.complete(self.todo, actor=self.ada)
-        Event.objects.update(created_at=timezone.now() - dt.timedelta(minutes=11))
         ops.reopen(self.todo, actor=self.ada)
         self.assertEqual(self.actions(), [Action.COMPLETED, Action.REOPENED])
+        self.assertEqual(self.shown(), [])
+        ops.complete(self.todo, actor=self.ada)
+        self.assertEqual(self.shown(), [Action.COMPLETED])
+        self.client.force_login(self.bob)
+        text = page_text(self.client.get("/feed/"))
+        self.assertEqual(text.count("completed Open point"), 1)
+        self.assertNotIn("reopened Open point", text)
 
-    def test_someone_else_reopening_is_told(self):
+    def test_other_events_in_between_dont_break_it_up(self):
+        ops.complete(self.todo, actor=self.ada)
+        ops.add_comment(self.todo, author=self.bob, content="Really?")
+        ops.reopen(self.todo, actor=self.ada)
+        self.assertEqual(self.shown(), [Action.COMMENTED])
+
+    def test_someone_else_reopening_shows(self):
         ops.complete(self.todo, actor=self.ada)
         ops.reopen(self.todo, actor=self.bob)
-        self.assertEqual(self.actions(), [Action.COMPLETED, Action.REOPENED])
-        # Ada completing again doesn't undo Bob's
         ops.complete(self.todo, actor=self.ada)
         self.assertEqual(
-            self.actions(), [Action.COMPLETED, Action.REOPENED, Action.COMPLETED]
+            self.shown(), [Action.COMPLETED, Action.REOPENED, Action.COMPLETED]
         )
 
-    def test_the_notifications_go_with_the_event(self):
-        from biwak.activity.models import Notification
-        from biwak.activity.operations import subscribe
+    def test_more_than_an_hour_apart_shows(self):
+        event_at(self.ada, Action.COMPLETED, self.todo, NOW - dt.timedelta(minutes=61))
+        event_at(self.ada, Action.REOPENED, self.todo, NOW)
+        self.assertEqual(self.shown(), [Action.REOPENED, Action.COMPLETED])
 
-        subscribe(self.bob, self.todo)
-        with self.captureOnCommitCallbacks(execute=True):
-            ops.complete(self.todo, actor=self.ada)
-        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)
-        with self.captureOnCommitCallbacks(execute=True):
-            ops.reopen(self.todo, actor=self.ada)
-        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 0)
+    def test_chains_each_within_an_hour(self):
+        event_at(self.ada, Action.COMPLETED, self.todo, NOW - dt.timedelta(minutes=100))
+        event_at(self.ada, Action.REOPENED, self.todo, NOW - dt.timedelta(minutes=50))
+        event_at(self.ada, Action.COMPLETED, self.todo, NOW)
+        self.assertEqual(self.shown(), [Action.COMPLETED])
