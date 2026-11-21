@@ -4,6 +4,7 @@ import secrets
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -199,6 +200,17 @@ class User(AbstractBaseUser):
         if fields is None or "email" in fields:
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)
+
+    def clean(self):
+        super().clean()
+        if self.is_admin and self.is_partner:
+            # Admins are the installation's own staff (decided 2026-11-21)
+            raise ValidationError(
+                _(
+                    "Admins belong to the installation's own organization, a"
+                    " partner can't be an admin: move them into it first."
+                )
+            )
 
     def get_full_name(self):
         return str(self)

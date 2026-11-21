@@ -14,7 +14,6 @@ from biwak.checkins import operations as checkin_ops
 from biwak.checkins.support import MONDAY_9
 from biwak.items import operations as ops
 from biwak.organizations import operations as org_ops
-from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
 from biwak.test_utils import organization, partner, person, project, rule_post
 
@@ -202,12 +201,6 @@ class SubscriptionsTest(ReviewTestCase):
         org_ops.set_organization(self.bob, self.own, actor=self.root)
         org_ops.mark_own(organization("Example Agency"), actor=self.root)
         self.assertEqual(self.subscribed(), set())
-
-    def test_partner_admins_join_nothing(self):
-        org_ops.set_organization(
-            self.root, organization("Example Agency"), actor=self.root
-        )
-        self.assertFalse(project_ops.joinable_projects(self.root).exists())
 
 
 class ImporterTest(ReviewTestCase):

@@ -4,6 +4,7 @@ installation's own staff, the forms as modals and pages (``biwak/modals.py``)"""
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 from django.db.models import Count, Prefetch
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, redirect, render
@@ -140,8 +141,13 @@ def organization_merge(request, pk):
     if not org_ops.can_touch(request.user, org):
         raise PermissionDenied
     form = MergeForm(request.POST or None, organization=org, user=request.user)
+    target = None
     if form.is_valid():
-        target = org_ops.merge(org, form.cleaned_data["into"], actor=request.user)
+        try:
+            target = org_ops.merge(org, form.cleaned_data["into"], actor=request.user)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+    if target is not None:
         messages.success(
             request,
             _("%(source)s has been merged into %(target)s.")
@@ -214,14 +220,20 @@ def person_organization(request, pk):
                 ),
             )
         else:
-            org_ops.set_organization(
-                user, form.organization(request.user), actor=request.user
-            )
-            messages.success(
-                request,
-                _("%(name)s's organization has been saved.") % {"name": user},
-            )
-            return redirect(user.organization or "organizations")
+            try:
+                # A new organization only with the move
+                with transaction.atomic():
+                    org_ops.set_organization(
+                        user, form.organization(request.user), actor=request.user
+                    )
+            except ValidationError as exc:
+                form.add_error("organization", exc)
+            else:
+                messages.success(
+                    request,
+                    _("%(name)s's organization has been saved.") % {"name": user},
+                )
+                return redirect(user.organization or "organizations")
     return form_response(
         request,
         form,

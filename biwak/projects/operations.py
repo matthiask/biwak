@@ -279,9 +279,9 @@ def update_project(
 
 def joinable_projects(user):
     """Limited projects an admin isn't in: they see that they exist and can
-    join them (specs/access.md); nobody else does, partners who are admins
-    neither (they're added by the installation's own staff)"""
-    if not (user.is_authenticated and user.is_admin and user.sees_all_access):
+    join them (specs/access.md); nobody else does. Admins are always the
+    installation's own staff (decided 2026-11-21)"""
+    if not (user.is_authenticated and user.is_admin):
         return Project.objects.none()
     return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))
 

@@ -45,11 +45,18 @@ point.
   all-access projects open only to the installation's own staff
   (`access.md` to be changed accordingly, tests through every entry
   point).
+- **Admins are always the installation's own staff** (decided
+  2026-11-21): every change that would make an admin a partner is
+  refused, and the message says what to do first: ticking "is admin" on
+  a partner (`User.clean()`, the Django admin), moving an admin into
+  another organization, merging an organization with admins into one
+  that isn't the own, unmarking or moving the own mark while admins
+  would be left out (`_no_admin_partners()`, the pages, the API and the
+  Django admin).
 - **Partners don't create projects, invite or add people, or manage
   organizations** (decided 2026-11-21): those forms list everybody
   (organizations and their people), which partners mustn't learn about.
-  Partner admins join nothing either: `joinable_projects()` offers them
-  no limited projects; the installation's own staff add them. They edit
+  They edit
   and archive the projects they're in and change members' notification
   choices on the people page, like other staff.
 

@@ -49,6 +49,28 @@ def can_touch(user, *organizations):
     return not any(org is not None and org.is_own for org in organizations)
 
 
+def _no_admin_partners(admins, *, own_after):
+    """Admins are always the installation's own staff (decided 2026-11-21):
+    ``ValidationError`` if any of these admins would be in another
+    organization than the own one (``own_after``) afterwards"""
+    if admins and not own_after:
+        names = ", ".join(sorted(str(user) for user in admins))
+        raise ValidationError(
+            _(
+                "Admins are always the installation's own staff: make %(names)s"
+                " no admin first."
+            )
+            % {"names": names}
+        )
+
+
+def _admins_in(org):
+    """The admins of the organization; of none: the admins without one"""
+    from biwak.accounts.models import User
+
+    return list(User.objects.filter(is_admin=True, organization=org))
+
+
 def _check_manage(actor):
     if not can_manage(actor):
         raise PermissionError("Only staff manage organizations.")
@@ -144,6 +166,7 @@ def merge(source, target, *, actor):
     if source.pk == target.pk:
         raise ValidationError(_("An organization can't be merged into itself."))
     _check_touch(actor, source, target)
+    _no_admin_partners(_admins_in(source), own_after=target.is_own)
     moved = list(source.people.values_list("pk", flat=True))
     source.people.update(organization=target)
     domains = [d for d in source.domains if d not in target.domains]
@@ -173,6 +196,9 @@ def set_organization(user, org, *, actor):
     if user.organization_id == (org.pk if org else None):
         return user
     _check_touch(actor, user.organization if user.organization_id else None, org)
+    if user.is_admin:
+        # Without an organization, staff are the installation's own
+        _no_admin_partners([user], own_after=org is None or org.is_own)
     user.organization = org
     user.save(update_fields=["organization"])
     _access_changed([user.pk])
@@ -189,6 +215,8 @@ def mark_own(org, *, actor):
         )
     if org is not None and org.is_own:
         return org
+    for old in Organization.objects.filter(is_own=True):
+        _no_admin_partners(_admins_in(old), own_after=False)
     unmarked = list(
         Organization.objects.filter(is_own=True).values_list("people", flat=True)
     )

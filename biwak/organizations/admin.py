@@ -11,6 +11,23 @@ class OrganizationForm(forms.ModelForm):
         # Marking another one moves the mark (save_model()): not a clash
         return super()._get_validation_exclusions() | {"is_own"}
 
+    def clean(self):
+        """Admins stay the installation's own staff (decided 2026-11-21):
+        not unmarking or moving the mark while admins would be left out"""
+        data = super().clean()
+        was_own = (
+            bool(self.instance.pk)
+            and Organization.objects.filter(pk=self.instance.pk, is_own=True).exists()
+        )
+        if was_own and not data.get("is_own"):
+            org_ops._no_admin_partners(
+                org_ops._admins_in(self.instance), own_after=False
+            )
+        if data.get("is_own") and not was_own:
+            for old in Organization.objects.filter(is_own=True):
+                org_ops._no_admin_partners(org_ops._admins_in(old), own_after=False)
+        return data
+
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
