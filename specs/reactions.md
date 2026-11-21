@@ -135,3 +135,14 @@ templates), `items/todo.html` and the comment template, the CLI.
   reacting to yourself; a removed reaction before sending isn't mailed;
   the digest lists them; the levels respected.
 - The feed's merged line.
+
+## Adjusted after testing (2026-11-21)
+
+- **The button opening the picker** shows a smiling face
+  (`emoji-smile`), not a plus: a plus reads as a generic "add", and
+  Basecamp's rocket shouldn't be copied.
+- **Removing one's own reaction asks first:** clicking one's own pill
+  doesn't remove it at once; it shows a trash icon in the pill, and
+  clicking that removes the reaction. A click elsewhere or Escape
+  cancels. Clicking someone else's pill still adds the same reaction
+  at once.
