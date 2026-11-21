@@ -43,7 +43,7 @@ goes into internal containers, archived recordings skipped.
 | To-do list group | Group of the list |
 | To-do | To-do (assignees, due dates, completion, notes) |
 | Card table | List with its columns as groups, shown as board |
-| Card | To-do in its column's group; steps as a checklist in the notes |
+| Card | To-do in its column's group; steps as a checklist in the notes (confirmed 2026-11-21: the reason for checklists in Markdown) |
 | Message board, message | Message board, message (category by name, ignoring case, in the installation's one list; created when missing, with Basecamp's icon as its emoji; confirmed 2026-11-21) |
 | Vault (folder), document, upload | Folder, doc, file |
 | Questionnaire, question, answer | Check-in question, answer |
@@ -91,8 +91,9 @@ goes into internal containers, archived recordings skipped.
 - **Check-ins:** the schedule becomes a rule through
   `schedules.validate()` (`every_day` with days weekly on those,
   `every_other_week` interval 2, `every_month` by day or by
-  `week_instance`), in the installation's time zone (Basecamp's has
-  none), `start_date` the first date. Imported **paused**, so Biwak
+  `week_instance`: "the 2nd Monday", and "the last Monday" as the last
+  one whether Basecamp says -1 or 5), in the installation's time zone
+  (Basecamp's has none; confirmed 2026-11-21), `start_date` the first date. Imported **paused**, so Biwak
   doesn't start mailing people unasked. Occurrences come from the
   answers' `group_on`.
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
@@ -100,6 +101,7 @@ goes into internal containers, archived recordings skipped.
   person unless Basecamp names who completed it, with their comments;
   archived lists and projects stay archived; archived messages, docs,
   files and questions are skipped and listed in the report.
-- **Not imported:** trashed recordings, to-dos' start dates, pins of
+- **Not imported:** trashed recordings (anything in Basecamp's trash:
+  to-dos, messages, docs, files, comments; confirmed 2026-11-21), to-dos' start dates, pins of
   messages (not in the API), older versions of files, docs' history.
   Basecamp's API has no repeating to-dos.

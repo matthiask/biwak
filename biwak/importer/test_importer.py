@@ -843,6 +843,16 @@ class ScheduleTest(ImportCase):
             self.schedule(frequency="every_month", week_instance=2, days=[1])[0],
             "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2",
         )
+        # "The last Monday": whether Basecamp says -1 or 5, it's the last
+        # one, also in months with only four Mondays
+        for last in (-1, 5):
+            with self.subTest(week_instance=last):
+                self.assertEqual(
+                    self.schedule(
+                        frequency="every_month", week_instance=last, days=[1]
+                    )[0],
+                    "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=-1",
+                )
 
     def test_unknown_frequencies_are_a_problem_not_a_crash(self):
         self.client_.data["/questionnaires/500/questions.json"][0]["schedule"][

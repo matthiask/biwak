@@ -1307,9 +1307,12 @@ def schedule_of(schedule):
     elif frequency == "every_month":
         interval = schedule.get("month_interval") or 1
         if schedule.get("week_instance") is not None:
+            # "The last Monday of the month" may come as -1 or as 5: the last
+            # one either way (a 5th Monday doesn't exist every month)
+            instance = int(schedule["week_instance"])
+            instance = -1 if instance < 0 or instance >= 5 else instance
             rule = (
-                f"FREQ=MONTHLY;INTERVAL={interval};BYDAY={days[0]};"
-                f"BYSETPOS={schedule['week_instance']}"
+                f"FREQ=MONTHLY;INTERVAL={interval};BYDAY={days[0]};BYSETPOS={instance}"
             )
         elif start.day >= 29:
             rule = (
