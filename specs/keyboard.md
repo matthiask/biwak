@@ -26,8 +26,10 @@ attributes), the settings page (`biwak/accounts/`, the notification settings vie
   turns off (accessibility: single-key shortcuts must be switchable,
   WCAG 2.1.4).
 - **Ctrl+K** (Cmd+K on Macs) opens the palette, and so does **/** when not
-  typing in a field. Ctrl+K always works, also with shortcuts turned off;
-  "/" is a single key and goes with the setting.
+  typing in a field. Ctrl+K works also with shortcuts turned off; "/" is
+  a single key and goes with the setting. Inside a Markdown field Ctrl+K
+  inserts a link instead (decided 2026-11-21, `editor.md`); Escape and
+  then Ctrl+K, or a click outside, reach the palette.
 
 ## The palette
 

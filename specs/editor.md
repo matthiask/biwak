@@ -52,7 +52,8 @@ the toolbar and pasting when it's merged; until then, the textareas.
 
 ## The toolbar
 
-A small row of buttons above every Markdown field: bold, italic, link,
+A small row of buttons, always visible above every Markdown field
+(decided 2026-11-21): bold, italic, link,
 heading, bulleted list, numbered list, checklist, quote, code, mention
 (@), attach (the existing button moves into it).
 
@@ -62,7 +63,8 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
   never replaces the whole field.
 - Keyboard: Ctrl+B, Ctrl+I, Ctrl+Shift+7 (numbered), Ctrl+Shift+8
   (bulleted), Ctrl+Shift+9 (checklist), Tab and Shift+Tab indenting list
-  items. Links: see the questions.
+  items, and **Ctrl+K** for a link inside a field (decided 2026-11-21:
+  in text fields Ctrl+K is "link", elsewhere it opens the palette).
 - On phones the toolbar scrolls sideways instead of wrapping.
 - One script for all fields (`data-toolbar` on the textarea). The live
   editor gets the same buttons through CodeMirror's commands once it's
@@ -96,12 +98,3 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
 - **Pasting:** in Playwright, HTML from a fixture (a mail, a Google Docs
   fragment) becoming the expected Markdown; URL over selection; plain
   paste.
-
-## Questions before building
-
-- **Ctrl+K in a text field:** the command palette takes Ctrl+K
-  everywhere (`keyboard.md`), but many editors use it for "link". Keep
-  the palette (and use Ctrl+Shift+K or the button for links), or make
-  Ctrl+K "link" inside text fields?
-- **Toolbar:** always visible above the field, or only while the field
-  has focus (quieter pages, but it moves the text when it appears)?
