@@ -177,4 +177,32 @@
       {% if not widget.unshowable %}{{ widget.description }}{% endif %}
     </p>
   </div>
+  {% if widget.ends %}
+    {# The end of a repeating to-do: only for rules that repeat (rule-widget.js) #}
+    <div class="wb-rule-line wb-rule-ends" data-rule-ends>
+      <label class="wb-due">
+        <span>{% translate "until" %}</span>
+        <input
+          type="date"
+          name="{{ widget.name }}_ends_on"
+          class="form-control form-control-sm"
+          aria-label="{% translate 'Repeats until' %}"
+          value="{{ widget.ends.on }}"
+        >
+      </label>
+      <label class="wb-due">
+        <span>{% translate "left" %}</span>
+        <input
+          type="number"
+          name="{{ widget.name }}_count"
+          min="1"
+          class="form-control form-control-sm"
+          style="width: 5rem"
+          aria-label="{% translate 'Repeats left' %}"
+          title="{% translate 'How many more to-dos to create; empty: no limit.' %}"
+          value="{{ widget.ends.count }}"
+        >
+      </label>
+    </div>
+  {% endif %}
 </fieldset>

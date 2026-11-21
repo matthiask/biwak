@@ -41,20 +41,24 @@
     >{% if posted %}{{ form.notes.value|default:"" }}{% endif %}</textarea>
     <div class="wb-add-todo-meta mb-2">
       {% if people %}
-        <fieldset class="wb-assignees">
-          <legend class="visually-hidden">{% translate "assignees" %}</legend>
+        {# Pills and a list to choose from with JavaScript (frontend/assignees.js) #}
+        <select
+          name="assignees"
+          multiple
+          class="form-select form-select-sm wb-assignee-select"
+          aria-label="{% translate 'assignees' %}"
+          {% assignee_attrs %}
+        >
           {% for person in people %}
-            <label class="wb-chip">
-              <input
-                type="checkbox"
-                name="assignees"
-                value="{{ person.pk }}"
-                {% if posted and person.pk|stringformat:"s" in form.assignees.value %}checked{% endif %}
-              >
-              <span>{{ person.get_short_name }}</span>
-            </label>
+            <option
+              value="{{ person.pk }}"
+              data-member="{{ person.is_member|yesno:'true,false' }}"
+              {% if posted and person.pk|stringformat:"s" in form.assignees.value %}selected{% endif %}
+            >
+              {{ person.get_short_name }}
+            </option>
           {% endfor %}
-        </fieldset>
+        </select>
       {% endif %}
       <label class="wb-due">
         {% icon "calendar-event" %}
@@ -75,30 +79,6 @@
           {% for error in field.errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
         {% endfor %}
       {% endif %}
-    </div>
-    <div class="wb-add-todo-meta mb-2" data-repeat-ends>
-      <label class="wb-due">
-        <span>{% translate "until" %}</span>
-        <input
-          type="date"
-          name="recurrence_ends_on"
-          class="form-control form-control-sm"
-          aria-label="{% translate 'Repeats until' %}"
-          {% if posted %}value="{{ form.recurrence_ends_on.value|default:'' }}"{% endif %}
-        >
-      </label>
-      <label class="wb-due">
-        <span>{% translate "left" %}</span>
-        <input
-          type="number"
-          name="recurrence_count"
-          min="1"
-          class="form-control form-control-sm"
-          style="width: 5rem"
-          aria-label="{% translate 'Repeats left' %}"
-          {% if posted %}value="{{ form.recurrence_count.value|default:'' }}"{% endif %}
-        >
-      </label>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
       <button type="submit" class="btn btn-sm btn-primary">{% translate "Add this to-do" %}</button>

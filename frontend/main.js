@@ -20,6 +20,8 @@ import "htmx.org"
 // Forms in a <dialog> (biwak/modals.py)
 import "./modal.js"
 import "./rule-widget.js"
+import "./assignees.js"
+import "./view-edit.js"
 import "./lantern.js"
 import "./live.js"
 
@@ -35,8 +37,21 @@ if (document.querySelector("[data-appearance-preview]")) {
 }
 
 // Attaching files to texts (specs/files.md)
-if (document.querySelector("[data-attachments]")) {
+// (also forms htmx brings in: the chunk is loaded when the first one appears)
+function loadAttachments() {
   import(/* webpackChunkName: "attachments" */ "./attachments.js")
+}
+if (document.querySelector("[data-attachments]")) loadAttachments()
+else {
+  document.addEventListener("htmx:after:process", function once(event) {
+    if (
+      event.target.matches?.("[data-attachments]") ||
+      event.target.querySelector?.("[data-attachments]")
+    ) {
+      document.removeEventListener("htmx:after:process", once)
+      loadAttachments()
+    }
+  })
 }
 
 // Dragging the lists of a project, the links of a project or an item

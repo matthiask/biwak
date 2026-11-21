@@ -1,0 +1,48 @@
+{% load biwak i18n %}
+{% comment %}
+  The to-do to read (specs/ui-round-1.md, part 3): assignees, due date,
+  repeat rule and notes. Clicking one (frontend/view-edit.js) swaps in the
+  edit form, focused on it; without JavaScript the "Edit" link is the form's
+  own page. Checklists stay tickable.
+{% endcomment %}
+<div class="wb-view" data-edit-url="{% url 'todo_edit' item.pk %}">
+  <dl class="wb-facts">
+    <div class="wb-fact wb-edit-hit" data-edit-focus="assignees">
+      <dt>{% translate "Assigned to" %}</dt>
+      <dd>
+        {% for person in todo.assignees.all %}<span
+            class="badge wb-person"
+          >{{ person.get_short_name }}</span>{% empty %}<span
+            class="text-body-secondary"
+          >{% translate "Nobody" %}</span>{% endfor %}
+      </dd>
+    </div>
+    <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">
+      <dt>{% translate "Due on" %}</dt>
+      <dd>
+        {% if todo.due_on %}{{ todo.due_on|date:"l, j. F Y" }}{% else %}<span
+            class="text-body-secondary"
+          >{% translate "No date" %}</span>{% endif %}
+      </dd>
+    </div>
+    <div class="wb-fact wb-edit-hit" data-edit-focus="recurrence_frequency">
+      <dt>{% translate "Repeats" %}</dt>
+      <dd>
+        {% if todo.recurrence %}
+          {{ todo.recurrence_description|capfirst }}.
+          {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
+          {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
+        {% else %}
+          <span class="text-body-secondary">{% translate "Doesn't repeat" %}</span>
+        {% endif %}
+      </dd>
+    </div>
+  </dl>
+  <div class="wb-edit-hit wb-view-text mb-3" data-edit-focus="notes">
+    {% if todo.notes %}
+      <div class="wb-markdown">{% checklist_markdown todo.notes item %}</div>
+    {% else %}
+      <p class="text-body-secondary mb-0">{% translate "Add notes…" %}</p>
+    {% endif %}
+  </div>
+</div>

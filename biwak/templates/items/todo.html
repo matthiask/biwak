@@ -7,7 +7,14 @@
 {% block content %}
   {% include "_breadcrumbs.html" with project=item.project parent=item.parent %}
   <div class="wb-page-header" id="live-header" data-live>
-    <h1 class="wb-title">
+    <h1
+      class="wb-title{% if can_edit %} wb-edit-hit{% endif %}"
+      {% if can_edit %}
+        data-edit-url="{% url 'todo_edit' item.pk %}"
+        data-edit-focus="title"
+        title="{% translate 'Click to edit' %}"
+      {% endif %}
+    >
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
       {{ item|item_title }}
       {% client_badge item %}
@@ -22,6 +29,15 @@
             >{% translate "Complete" %}</span>{% endif %}
         </button>
       </form>
+      {% if can_edit %}
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'todo_edit' item.pk %}"
+          data-edit-url="{% url 'todo_edit' item.pk %}"
+          data-edit-focus="title"
+          data-edit-open
+        >{% icon "pencil" %}<span>{% translate "Edit" %}</span></a>
+      {% endif %}
       {% include "items/_more.html" %}
     </div>
   </div>
@@ -31,14 +47,6 @@
     {% if todo.is_completed %}
       <p class="text-body-secondary">
         {% blocktranslate with who=todo.completed_by.get_short_name when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
-      </p>
-    {% endif %}
-    {% if todo.recurrence %}
-      <p class="small text-body-secondary">
-        {% icon "calendar-event" %}
-        {% blocktranslate with rule=todo.recurrence_description %}Repeats: {{ rule }}.{% endblocktranslate %}
-        {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
-        {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
       </p>
     {% endif %}
   </div>
@@ -52,27 +60,14 @@
   {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div id="live-text" data-live>
-        {% if todo.notes %}<div class="wb-markdown mb-3">{% checklist_markdown todo.notes item %}</div>{% endif %}
+      <div id="live-text" data-live {% if edit %}data-view-form data-hide-title{% endif %}>
+        {% if edit %}
+          {% include "items/_todo_form.html" %}
+        {% else %}
+          {% include "items/_todo_view.html" %}
+        {% endif %}
       </div>
       {% reactions item %}
-      <div class="card mb-4" id="live-form" data-live>
-        <div class="card-body">
-          <form
-            method="post"
-            {% attachments_attrs item.project %}
-            data-editing="{% url 'item_editing' item.pk %}"
-            data-editing-lazy
-          >
-            {% csrf_token %}
-            <input type="hidden" name="form" value="todo">
-            <input type="hidden" name="base" value="{{ base }}">
-            {% include "files/_attach_button.html" %}
-            {{ form }}
-            <button type="submit" class="btn btn-primary btn-sm">{% translate "Save" %}</button>
-          </form>
-        </div>
-      </div>
       {% include "items/_comments.html" %}
     </div>
     <div class="col-lg-4">

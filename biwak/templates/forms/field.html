@@ -1,4 +1,7 @@
-{% if field.widget_type == "checkbox" %}
+{% if field.field.widget.in_rule %}
+  {# Inside the rule widget's fieldset #}
+  {% for error in field.errors %}<div class="invalid-feedback d-block mb-3">{{ error }}</div>{% endfor %}
+{% elif field.widget_type == "checkbox" %}
   <div class="form-check mb-3">
     {{ field }}
     <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label }}</label>

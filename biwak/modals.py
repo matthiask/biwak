@@ -27,8 +27,14 @@ def modal_middleware(get_response):
     return middleware
 
 
+def is_htmx(request):
+    return request.headers.get("HX-Request") == "true"
+
+
 def context(request):
-    return {"modal": is_modal(request)}
+    # ``htmx``: the page is fetched by htmx, which takes a region out of it
+    # (forms in place of a view, frontend/view-edit.js)
+    return {"modal": is_modal(request), "htmx": is_htmx(request)}
 
 
 def form_response(

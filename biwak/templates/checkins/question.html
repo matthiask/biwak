@@ -83,10 +83,24 @@
                       ·
                       <a
                         href="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
+                        data-edit-url="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
+                        data-edit-region="answer-{{ answer.pk }}-text"
+                        data-edit-focus="content"
                       >{% translate "Edit" %}</a>
                     {% endif %}
                   </div>
-                  <div class="wb-markdown">{% checklist_markdown answer.content answer.item %}</div>
+                  <div id="answer-{{ answer.pk }}-text">
+                    <div
+                      class="wb-markdown{% if answer.author_id == request.user.pk %} wb-edit-hit{% endif %}"
+                      {% if answer.author_id == request.user.pk %}
+                        data-edit-url="{% url 'question_answer' item.pk %}?occurrence={{ occurrence.pk }}"
+                        data-edit-region="answer-{{ answer.pk }}-text"
+                        data-edit-focus="content"
+                      {% endif %}
+                    >
+                      {% checklist_markdown answer.content answer.item %}
+                    </div>
+                  </div>
                   {% reactions answer.item %}
                   {% for comment in comments %}
                     <div class="border-top mt-2 pt-2" id="comment-{{ comment.pk }}">

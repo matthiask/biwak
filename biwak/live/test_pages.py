@@ -60,7 +60,6 @@ class LiveRegionsTest(TestCase):
                     "live-header",
                     "live-status",
                     "live-text",
-                    "live-form",
                     "live-comments",
                     f"comment-{comment.pk}",
                     f"reactions-item-{todo.pk}",

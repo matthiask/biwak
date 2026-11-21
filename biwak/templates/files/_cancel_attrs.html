@@ -1,0 +1,6 @@
+{% comment %}The Cancel link of ``_edit_attrs.html``: the item's page, its text swapped back{% endcomment %}
+{% if htmx %}
+  hx-get="{{ cancel_url|default:item.get_absolute_url }}" hx-target="#{{ region|default:'live-text' }}"
+  hx-swap="outerHTML" hx-select="#{{ region|default:'live-text' }}"
+{% endif %}
+data-editing-release

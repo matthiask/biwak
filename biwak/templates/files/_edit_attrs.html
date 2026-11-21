@@ -1,0 +1,9 @@
+{% comment %}
+  Attributes of the edit form of an item shown in place of its text
+  (frontend/view-edit.js): it announces itself as being edited and, fetched
+  by htmx (`htmx`, biwak/modals.py), is the one view-edit.js watches. Its
+  submit button has `_save_attrs.html`; as a page of its own it's a plain
+  form. `item` is the item.
+{% endcomment %}
+data-editing="{% url 'item_editing' item.pk %}"
+{% if htmx %}data-view-edit-form{% endif %}
