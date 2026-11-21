@@ -135,6 +135,18 @@
         {% endif %}
       </div>
     </nav>
+    {# The connection banner (frontend/connection.js, specs/connection.md) #}
+    <div
+      class="wb-connection"
+      role="status"
+      aria-live="polite"
+      data-connection
+      data-connection-editor="{% translate 'You’re offline. What you type is kept and merged when you’re back.' %}"
+      data-connection-page="{% translate 'You’re offline. This page isn’t updating, and changes can’t be saved until you’re back.' %}"
+      data-connection-back="{% translate 'Back online.' %}"
+      data-connection-not-sent="{% translate 'Not sent: you’re offline.' %}"
+    >
+    </div>
     <main class="container-xl wb-main{% block main_class %}{% endblock %}">
       {% block messages %}{% include "_messages.html" %}{% endblock %}
       {% block content %}{% endblock %}

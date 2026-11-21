@@ -20,6 +20,8 @@ import "htmx.org"
 // Forms in a <dialog> (biwak/modals.py)
 import "./modal.js"
 import "./rule-widget.js"
+import "./connection.js"
+import "./stored-docs.js"
 import "./lantern.js"
 import "./live.js"
 

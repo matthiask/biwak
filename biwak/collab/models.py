@@ -26,6 +26,10 @@ class LiveState(models.Model):
     )
     state = models.BinaryField(_("state"))
     updated_at = models.DateTimeField(_("updated at"), default=timezone.now)
+    # Tells this history from one made later for the same doc (a row
+    # deleted and made again): what editors keep in their browsers belongs
+    # to one history (specs/connection.md)
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
 
     class Meta:
         verbose_name = _("live state")

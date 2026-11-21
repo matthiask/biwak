@@ -41,6 +41,11 @@ logger = logging.getLogger(__name__)
 # Ours: whether the editor may type (a varuint, 1 or 0) after connecting
 # and whenever it changes
 MESSAGE_MODE = 100
+# The editor asks (the message alone) whether the server has what it typed;
+# the answer is the server's state vector as the Yjs clients and their
+# clocks (specs/connection.md): the editor clears the copy it keeps in the
+# browser once the vector covers its own
+MESSAGE_HAVE = 101
 QUERY_AWARENESS = 3
 EMPTY_UPDATE = b"\x00\x00"
 # The doc doesn't exist for the person, or not anymore: like the pages'
@@ -70,6 +75,7 @@ RECHECK_AFTER = 5
 AWARENESS_RATE = (20, 10)
 QUERY_AWARENESS_RATE = (2, 0.1)
 SYNC_RATE = (3, 0.1)
+HAVE_RATE = (2, 1)
 # Bytes of an awareness message, of the cursor's JSON in it, and of the
 # state vector of a sync (a few bytes per Yjs client that ever edited the
 # doc); bigger ones are dropped
@@ -149,6 +155,7 @@ class DocConsumer(AsyncWebsocketConsumer):
             YMessageType.AWARENESS: Bucket(*AWARENESS_RATE),
             QUERY_AWARENESS: Bucket(*QUERY_AWARENESS_RATE),
             YMessageType.SYNC: Bucket(*SYNC_RATE),
+            MESSAGE_HAVE: Bucket(*HAVE_RATE),
         }
         self.dropped = set()
         self.marked = False
@@ -232,6 +239,8 @@ class DocConsumer(AsyncWebsocketConsumer):
                 self.drop("an awareness message too big")
             elif self.allowed(kind):
                 await self.receive_awareness(read_message(data[1:]))
+        elif kind == MESSAGE_HAVE and self.allowed(kind):
+            await self.send_have()
         elif kind == QUERY_AWARENESS and self.allowed(kind):
             await self.group_send("doc.query_awareness")
 
@@ -385,6 +394,18 @@ class DocConsumer(AsyncWebsocketConsumer):
         # The person as they are now: deactivated, a client now
         self.user.refresh_from_db()
         return live.access(self.user, self.pk, session_key=self.session_key)
+
+    async def send_have(self):
+        """The state vector of the doc as the server has it now"""
+        doc = await database_sync_to_async(live.load)(self.pk)
+        clocks = ytext.clocks(doc)
+        encoder = Encoder()
+        encoder.write_var_uint(MESSAGE_HAVE)
+        encoder.write_var_uint(len(clocks))
+        for client, clock in clocks.items():
+            encoder.write_var_uint(client)
+            encoder.write_var_uint(clock)
+        await self.send(bytes_data=encoder.to_bytes())
 
     async def send_mode(self):
         await self.send(
