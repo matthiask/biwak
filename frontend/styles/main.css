@@ -847,3 +847,68 @@ button.wb-signal:hover {
 .wb-rule-description {
   min-height: 1.5em;
 }
+
+/* The lantern (specs/lantern.md): the menu beside the user menu, the page */
+.wb-lantern-button {
+  position: relative;
+}
+
+.wb-lantern-count {
+  background: var(--bs-primary);
+  color: #fff;
+  font-size: 0.7em;
+  margin-inline-start: 0.25em;
+}
+
+.wb-lantern-dropdown {
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+.wb-lantern-item {
+  padding-block: 0.5rem;
+  border-bottom: 1px solid var(--wb-surface-border);
+}
+
+.wb-lantern-item:last-child {
+  border-bottom: 0;
+}
+
+.wb-lantern-title {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.wb-lantern-entry {
+  margin-top: 0.25rem;
+}
+
+.wb-lantern-entry.is-unread {
+  font-weight: 600;
+}
+
+.wb-lantern-entry .wb-excerpt {
+  display: block;
+  font-weight: normal;
+}
+
+/* Live updates (specs/lantern.md): what's new slides in, quietly marked */
+@keyframes wb-live-new {
+  from {
+    background-color: var(--wb-client-bg);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.wb-live-new {
+  animation: wb-live-new 2.5s ease-out;
+}
+
+.wb-live-note {
+  font-size: 0.875em;
+  color: var(--bs-secondary-color);
+}

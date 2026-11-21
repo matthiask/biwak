@@ -67,6 +67,7 @@ INSTALLED_APPS = [
         "biwak.audit",
         "channels",
         "biwak.collab",
+        "biwak.live",
         "debug_toolbar" if DEBUG_TOOLBAR else "",
     ]
     if a

@@ -1483,7 +1483,9 @@ LEVELS = ["everything", "concerns_me", "nothing"]
     type=click.Choice([*LEVELS, "default"]),
     help="What to be told about; 'default' removes a project's or item's own.",
 )
-@click.option("--delivery", type=click.Choice(["each", "digest"]), help="Mails.")
+@click.option(
+    "--delivery", type=click.Choice(["each", "digest", "none"]), help="Mails."
+)
 @click.option("--project", type=int, help="Show or set the level for PROJECT.")
 @click.option("--item", type=int, help="Show or set the level for an item.")
 @json_option

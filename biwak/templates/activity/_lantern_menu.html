@@ -1,0 +1,31 @@
+{% load i18n %}
+<div>
+  <div class="d-flex align-items-center gap-2 mb-2">
+    <strong class="flex-grow-1">{% translate "Lantern" %}</strong>
+    {% if unread_groups %}
+      <form method="post" action="{% url 'lantern_read' %}">
+        {% csrf_token %}
+        <input type="hidden" name="all" value="1">
+        <button type="submit" class="btn btn-sm btn-quiet">{% translate "Mark all as read" %}</button>
+      </form>
+    {% endif %}
+  </div>
+  {% if pinned_groups or unread_groups or read_groups %}
+    {% if pinned_groups %}
+      <h2 class="h6 small text-body-secondary mb-1">{% translate "Pinned" %}</h2>
+      {% include "activity/_lantern_groups.html" with groups=pinned_groups next="" %}
+      {% if unread_groups or read_groups %}<hr class="dropdown-divider">{% endif %}
+    {% endif %}
+    {% include "activity/_lantern_groups.html" with groups=unread_groups next="" %}
+    {% if more_unread %}
+      <p class="small text-body-secondary">{% translate "More unread notifications are on the lantern's page." %}</p>
+    {% endif %}
+    {% if read_groups %}
+      {% if unread_groups %}<hr class="dropdown-divider">{% endif %}
+      {% include "activity/_lantern_groups.html" with groups=read_groups next="" %}
+    {% endif %}
+  {% else %}
+    <p class="text-body-secondary mb-2">{% translate "Nothing to tell you about." %}</p>
+  {% endif %}
+  <a class="d-block mt-2" href="{% url 'lantern' %}">{% translate "All notifications" %}</a>
+</div>

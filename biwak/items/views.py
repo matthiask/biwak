@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from biwak import cursors, schedules
 from biwak.accounts.models import User
+from biwak.activity import lantern
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
 from biwak.items import glance, operations as ops, visibility
@@ -220,6 +221,7 @@ def todolist(request, pk):
             return redirect(item)
     view = request.GET.get("view") or todolist.view
     completed, completed_cursor = _completed_page(todos, size=COMPLETED_FIRST)
+    lantern.opened(request, item)
     return render(
         request,
         "items/todolist.html",
@@ -439,6 +441,7 @@ def todo(request, pk):
             item, author=request.user, content=comment_form.cleaned_data["content"]
         )
         return redirect(f"{item.get_absolute_url()}#comments")
+    lantern.opened(request, item)
     return render(
         request,
         "items/todo.html",

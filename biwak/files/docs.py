@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from biwak.activity import lantern
 from biwak.activity.history import diff_lines
 from biwak.collab import live
 from biwak.files import operations, queries
@@ -92,6 +93,7 @@ def doc(request, pk):
     comment_form, done = comments_context(request, item)
     if done:
         return done
+    lantern.opened(request, item)
     return render(
         request,
         "files/doc.html",
@@ -126,6 +128,7 @@ def doc_edit(request, pk):
                 item, actor=request.user, title=form.cleaned_data["title"]
             )
             return redirect("doc_edit", item.pk)
+    lantern.opened(request, item)
     return render(
         request,
         "files/doc_live.html",

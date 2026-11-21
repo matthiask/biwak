@@ -54,6 +54,8 @@ class NotificationLevel(models.TextChoices):
 class MailDelivery(models.TextChoices):
     EACH = "each", _("A mail for each change")
     DIGEST = "digest", _("A daily digest")
+    # In the lantern only (specs/lantern.md)
+    NONE = "none", _("No mails")
 
 
 class User(AbstractBaseUser):
@@ -92,6 +94,11 @@ class User(AbstractBaseUser):
         max_length=20,
         choices=MailDelivery,
         default=MailDelivery.EACH,
+    )
+    # A dot on the tab's icon while there are unread notifications
+    # (specs/lantern.md)
+    lantern_in_favicon = models.BooleanField(
+        _("unread notifications on the tab's icon"), default=False
     )
 
     # The offer to add a passkey after logging in by code (specs/access.md)

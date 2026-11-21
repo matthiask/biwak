@@ -124,9 +124,13 @@ def is_subscribed(user, item):
 
 
 @transaction.atomic
-def set_notification_settings(user, *, level=None, delivery=None):
-    """The person's level and mail delivery, what's given"""
+def set_notification_settings(user, *, level=None, delivery=None, favicon=None):
+    """The person's level, mail delivery and whether the tab's icon shows
+    unread notifications, what's given"""
     fields = []
+    if favicon is not None:
+        user.lantern_in_favicon = favicon
+        fields.append("lantern_in_favicon")
     if level is not None:
         user.notification_level = NotificationLevel(level)
         fields.append("notification_level")

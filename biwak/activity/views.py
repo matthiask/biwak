@@ -5,7 +5,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import BadRequest, PermissionDenied
-from django.http import Http404, HttpResponseBadRequest, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -15,7 +15,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from biwak.accounts.models import MailDelivery, NotificationLevel, User
-from biwak.activity import feed as feed_module, history, mentions
+from biwak.activity import (
+    feed as feed_module,
+    history,
+    lantern as lantern_module,
+    mentions,
+)
 from biwak.activity.mails import read_unsubscribe_token
 from biwak.activity.models import Action, LevelOverride
 from biwak.activity.notify import can_see, level_choices
@@ -208,8 +213,13 @@ class SettingsForm(Form):
         widget=forms.RadioSelect,
         help_text=_(
             "A mail about an item comes two minutes after its last change;"
-            " the digest at 07:00 with what happened the day before."
+            " the digest at 07:00 with what happened the day before. What"
+            " you read in the lantern before isn't mailed."
         ),
+    )
+    lantern_in_favicon = forms.BooleanField(
+        label=_("A dot on the tab's icon while there are unread notifications"),
+        required=False,
     )
 
 
@@ -220,6 +230,7 @@ def notification_settings(request):
         initial={
             "notification_level": request.user.notification_level,
             "mail_delivery": request.user.mail_delivery,
+            "lantern_in_favicon": request.user.lantern_in_favicon,
         },
     )
     if form.is_valid():
@@ -227,6 +238,7 @@ def notification_settings(request):
             request.user,
             level=form.cleaned_data["notification_level"],
             delivery=form.cleaned_data["mail_delivery"],
+            favicon=form.cleaned_data["lantern_in_favicon"],
         )
         messages.success(
             request, gettext("Your notification settings have been saved.")
@@ -329,3 +341,109 @@ def unsubscribe(request, token):
             "item": item,
         },
     )
+
+
+# The lantern (specs/lantern.md) ----------------------------------------------
+
+
+def _lantern_item(request):
+    """The item posted (``item``), through ``item_for()``: 404 for what the
+    person doesn't see"""
+    value = request.POST.get("item", "")
+    if not value.isdecimal():
+        raise Http404
+    return item_for(request, int(value))
+
+
+@never_cache
+def lantern(request):
+    """The lantern's page: everything, newest first, grouped by item; the
+    filters "unread" and "mentions only"; pages like the feed"""
+    unread = bool(request.GET.get("unread"))
+    mentioned = bool(request.GET.get("mentions"))
+    try:
+        groups, cursor = lantern_module.page(
+            request.user,
+            unread=True if unread else None,
+            mentions=mentioned,
+            before=request.GET.get("before"),
+        )
+    except ValueError:
+        return HttpResponseBadRequest("Invalid cursor.")
+    query = request.GET.copy()
+    query.pop("before", None)
+    older = None
+    if cursor:
+        query["before"] = cursor
+        older = f"{reverse('lantern')}?{query.urlencode()}"
+    return render(
+        request,
+        "activity/lantern.html",
+        {
+            "pinned_groups": []
+            if request.GET.get("before")
+            else lantern_module.pinned(request.user),
+            "groups": groups,
+            "older": older,
+            "unread": unread,
+            "mentions": mentioned,
+            "filtered": unread or mentioned,
+        },
+    )
+
+
+@never_cache
+def lantern_menu(request):
+    """The menu's content (frontend/lantern.js fetches it when opened)"""
+    pinned, unread, read, more = lantern_module.menu(request.user)
+    return render(
+        request,
+        "activity/_lantern_menu.html",
+        {
+            "pinned_groups": pinned,
+            "unread_groups": unread,
+            "read_groups": read,
+            "more_unread": more,
+        },
+    )
+
+
+@never_cache
+def lantern_count(request):
+    """The number of unread notifications, for the menu's button"""
+    return JsonResponse({"unread": lantern_module.unread_count(request.user)})
+
+
+@require_POST
+def lantern_read(request):
+    """Marks the notifications of an item (``item``) or all as read"""
+    if request.POST.get("all"):
+        lantern_module.read(request.user)
+    else:
+        lantern_module.read(request.user, item=_lantern_item(request))
+    if request.headers.get("HX-Request"):
+        return HttpResponse(status=204)
+    return redirect(next_url(request) or "lantern")
+
+
+@require_POST
+def lantern_unread(request):
+    """Marks an item's newest notification unread again"""
+    lantern_module.unread(request.user, item=_lantern_item(request))
+    if request.headers.get("HX-Request"):
+        return HttpResponse(status=204)
+    return redirect(next_url(request) or "lantern")
+
+
+@require_POST
+def lantern_pin(request):
+    """Pins an item's notifications to the top (bookmarks it), or unpins
+    them (``unpin``: removes the bookmark)"""
+    item = _lantern_item(request)
+    if request.POST.get("unpin"):
+        lantern_module.unpin(request.user, item)
+    else:
+        lantern_module.pin(request.user, item)
+    if request.headers.get("HX-Request"):
+        return HttpResponse(status=204)
+    return redirect(next_url(request) or "lantern")

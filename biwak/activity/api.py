@@ -271,28 +271,40 @@ notifications_router = Router(tags=["notifications"])
 class SettingsOut(Schema):
     level: NotificationLevel
     delivery: MailDelivery
+    lantern_in_favicon: bool
 
 
 class SettingsIn(Schema):
     level: NotificationLevel | None = None
     delivery: MailDelivery | None = None
+    lantern_in_favicon: bool | None = None
 
 
 def settings_out(user):
-    return {"level": user.notification_level, "delivery": user.mail_delivery}
+    return {
+        "level": user.notification_level,
+        "delivery": user.mail_delivery,
+        "lantern_in_favicon": user.lantern_in_favicon,
+    }
 
 
 @notifications_router.get("me/notifications/", response=SettingsOut)
 def settings_detail(request):
-    """Your level (everything, only what concerns you, nothing) and how mails
-    come (each change, or a daily digest)"""
+    """Your level (everything, only what concerns you, nothing), how mails
+    come (each change, a daily digest, or none: the lantern only) and
+    whether the tab's icon shows unread notifications"""
     return settings_out(request.user)
 
 
 @notifications_router.put("me/notifications/", response=SettingsOut)
 def settings_update(request, data: SettingsIn):
     """Changes what's given"""
-    set_notification_settings(request.user, level=data.level, delivery=data.delivery)
+    set_notification_settings(
+        request.user,
+        level=data.level,
+        delivery=data.delivery,
+        favicon=data.lantern_in_favicon,
+    )
     return settings_out(request.user)
 
 

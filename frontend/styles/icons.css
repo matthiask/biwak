@@ -70,11 +70,17 @@
 .bi-check-lg::before {
   content: "\f633";
 }
+.bi-check2-all::before {
+  content: "\f26f";
+}
 .bi-chevron-down::before {
   content: "\f282";
 }
 .bi-clock-history::before {
   content: "\f292";
+}
+.bi-dot::before {
+  content: "\f309";
 }
 .bi-download::before {
   content: "\f30a";
@@ -108,6 +114,9 @@
 }
 .bi-grip-vertical::before {
   content: "\f3fe";
+}
+.bi-lamp::before {
+  content: "\f454";
 }
 .bi-link-45deg::before {
   content: "\f470";

@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak.accounts.models import User
+from biwak.activity import lantern
 from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
@@ -306,6 +307,11 @@ def question(request, pk):
         key=lambda u: (u.full_name or u.email).lower(),
     )
     missing = ops.missing(latest) if is_latest_page and latest else []
+    lantern.opened(
+        request,
+        item,
+        *[answer.item for shown in answers.values() for answer, _c, _f in shown],
+    )
     return render(
         request,
         "checkins/question.html",

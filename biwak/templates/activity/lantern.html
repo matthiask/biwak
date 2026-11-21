@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Lantern" %} – Biwak{% endblock %}
+
+{% block content %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "Lantern" %}</h1>
+    <div class="wb-page-actions">
+      <form method="post" action="{% url 'lantern_read' %}">
+        {% csrf_token %}
+        <input type="hidden" name="all" value="1">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-sm btn-quiet">
+          {% icon "check2-all" %}<span>{% translate "Mark all as read" %}</span>
+        </button>
+      </form>
+    </div>
+  </div>
+  <form method="get" action="{% url 'lantern' %}" class="d-flex flex-wrap gap-3 align-items-center mb-3">
+    <label class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" name="unread" value="1" {% if unread %}checked{% endif %}>
+      {% translate "Unread" %}
+    </label>
+    <label class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" name="mentions" value="1" {% if mentions %}checked{% endif %}>
+      {% translate "Mentions only" %}
+    </label>
+    <button type="submit" class="btn btn-quiet">{% translate "Filter" %}</button>
+    {% if filtered %}<a href="{% url 'lantern' %}" class="btn btn-quiet">{% translate "Clear" %}</a>{% endif %}
+  </form>
+  <div>
+    {% if pinned_groups %}
+      <h2 class="h6 text-body-secondary">{% translate "Pinned" %}</h2>
+      {% include "activity/_lantern_groups.html" with groups=pinned_groups next=request.get_full_path %}
+      <hr>
+    {% endif %}
+    {% include "activity/_lantern_groups.html" with next=request.get_full_path %}
+    {% if not groups and not pinned_groups %}<p class="text-body-secondary">
+        {% translate "Nothing to tell you about." %}
+      </p>{% endif %}
+  </div>
+  {% if older %}
+    <p class="mt-4"><a class="btn btn-quiet" href="{{ older }}">{% translate "Older" %}</a></p>
+  {% endif %}
+{% endblock content %}
