@@ -56,6 +56,17 @@ except ImportError:  # pragma: no cover
 
 @tag("e2e")
 class E2ETestCase(LiveServerTestCase):
+    def _callTestMethod(self, method):
+        # Playwright's errors can't be pickled: a parallel worker couldn't
+        # report the failure and the whole run would end in a
+        # MaybeEncodingError. An AssertionError with the message can.
+        try:
+            method()
+        except Exception as exc:
+            if type(exc).__module__.startswith("playwright."):
+                raise AssertionError(f"{type(exc).__name__}: {exc}") from None
+            raise
+
     @classmethod
     def setUpClass(cls):
         if sync_playwright is None:  # pragma: no cover
