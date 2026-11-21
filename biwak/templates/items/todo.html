@@ -66,7 +66,7 @@
       {% include "items/_subscribers.html" %}
       {% if not todo.is_completed %}
         <h2 class="h6 mt-4">{% translate "Move to…" %}</h2>
-        <form method="post" action="{% url 'todo_move' item.pk %}" class="wb-move-form">
+        <form method="post" action="{% url 'todo_move' item.pk %}">
           {% csrf_token %}
           <select name="target" class="form-select form-select-sm mb-2" aria-label="{% translate 'list and group' %}">
             {% for target, target_groups in move_targets %}

@@ -106,7 +106,7 @@ $enable-grid-classes: false;
 @import "~bootstrap/scss/forms/validation";
 $theme-colors: map-get-multiple($all-theme-colors, ("primary"));
 @import "~bootstrap/scss/buttons";
-// The constitution's languages (help.html)
+// The sort buttons of the projects page
 @import "~bootstrap/scss/button-group";
 @import "~bootstrap/scss/nav";
 // The menus of what isn't needed often (details.wb-menu)
@@ -118,7 +118,6 @@ $grid-breakpoints: (
 @import "~bootstrap/scss/navbar";
 $grid-breakpoints: $all-grid-breakpoints;
 @import "~bootstrap/scss/card";
-@import "~bootstrap/scss/breadcrumb";
 @import "~bootstrap/scss/badge";
 $theme-colors: map-get-multiple(
   $all-theme-colors,

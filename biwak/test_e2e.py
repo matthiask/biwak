@@ -848,6 +848,34 @@ class PageTest(E2ETestCase):
         self.assertFalse(menu.evaluate("el => el.open"))
         expect(menu.locator("summary")).to_be_focused()
 
+    def test_disclosures_close_like_menus(self):
+        """The reaction picker and the form for a link close with a click
+        elsewhere and with Escape"""
+        todo = self.make_list(todos=["Plan"])
+        todo = Item.objects.get(title="Plan")
+        page = self.page
+        self.goto(page, todo)
+        picker = page.locator("details.wb-reaction-add").first
+        picker.locator("summary").click()
+        self.assertTrue(picker.evaluate("el => el.open"))
+        page.locator("h1").first.click()
+        self.assertFalse(picker.evaluate("el => el.open"))
+        picker.locator("summary").click()
+        picker.locator("input[type=text]").focus()
+        picker.locator("input[type=text]").press("Escape")
+        self.assertFalse(picker.evaluate("el => el.open"))
+        expect(picker.locator("summary")).to_be_focused()
+
+        self.goto(page, self.project)
+        link = page.locator(".wb-links details").first
+        link.locator("summary").click()
+        self.assertTrue(link.evaluate("el => el.open"))
+        link.locator("[name=url]").press("Escape")
+        self.assertFalse(link.evaluate("el => el.open"))
+        link.locator("summary").click()
+        page.locator("h1").first.click()
+        self.assertFalse(link.evaluate("el => el.open"))
+
     def test_theme(self):
         page = self.page
         self.goto(page, self.project)
@@ -1104,6 +1132,17 @@ class RuleWidgetTest(E2ETestCase):
             "of every month"
         )
         self.assertEqual(self.errors, [])
+
+
+class NoScriptTest(E2ETestCase):
+    def test_drag_handles_are_hidden_without_javascript(self):
+        todolist = self.make_list(groups=["Soon"], todos=["A"])
+        page = self.login(self.ada, java_script_enabled=False)
+        page.goto(f"{self.live_server_url}{todolist.get_absolute_url()}")
+        self.assertEqual(page.locator("[data-todo]").count(), 1)
+        for handle in page.locator(".wb-handle").all():
+            self.assertFalse(handle.is_visible())
+        self.assertGreater(page.locator(".wb-handle").count(), 1)
 
 
 class HtmxTest(E2ETestCase):

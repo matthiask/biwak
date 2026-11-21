@@ -7,7 +7,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
   </div>
-  <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-4" data-filters>
+  <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-4">
     {% for field in form %}
       <div>
         <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>

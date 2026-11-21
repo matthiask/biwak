@@ -13,27 +13,12 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 
-# Classes without CSS: selectors of scripts and tests, markers
+# Classes without CSS: selectors of tests, markers
 HOOKS = {
     "wb-group-name",
     "wb-links",
     "wb-completed",
-    "wb-project-card",
     "wb-peek",
-    # Unstyled classes, removed with the dead code
-    "wb-add-group",
-    "wb-brand",
-    "wb-card-bookmark",
-    "wb-events",
-    "wb-feed-day",
-    "wb-form-card",
-    "wb-message-row",
-    "wb-move-form",
-    "wb-reaction-contents",
-    "wb-rule-elsewhere",
-    "wb-rule-monthly",
-    "wb-rule-parts",
-    "wb-signal-count",
 }
 
 TAG = re.compile(r"\{%.*?%\}|\{\{.*?\}\}", re.DOTALL)

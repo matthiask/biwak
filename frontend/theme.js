@@ -1,4 +1,4 @@
-// The theme toggle from Workbench (workbench/static/workbench/main.js):
+// The theme toggle, from Governance:
 // auto -> light -> dark -> auto, stored in localStorage. The inline script
 // in base.html sets the theme before the page renders.
 const getStoredTheme = () => window.localStorage.getItem("theme")

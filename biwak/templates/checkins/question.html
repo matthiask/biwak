@@ -128,7 +128,7 @@
         {% for person in people %}
           <li><a href="{% url 'question_person' item.pk person.pk %}">{{ person.display_name }}</a></li>
         {% empty %}
-          <li>–</li>
+          <li class="text-body-secondary">{% translate "Nobody yet." %}</li>
         {% endfor %}
       </ul>
       <h2 class="h6 mt-4">{% translate "Mails about answers" %}</h2>

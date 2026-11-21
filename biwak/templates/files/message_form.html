@@ -9,7 +9,7 @@
     {% if item %}{% translate "Edit the message" %}{% else %}{% translate "New message" %}{% endif %}
   </h1>
   {% include "items/_client_banner.html" %}
-  <div class="card wb-form-card mb-4">
+  <div class="card mb-4">
     <div class="card-body">
       <form method="post" {% attachments_attrs project %}>
         {% csrf_token %}

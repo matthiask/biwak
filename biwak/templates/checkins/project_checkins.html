@@ -8,7 +8,7 @@
     <h1 class="wb-title">{% translate "Check-ins" %}</h1>
     <div class="wb-page-actions">
       {% if can_manage %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'question_new' project.pk %}">{% icon "plus-lg" %}<span
+        <a class="btn btn-sm btn-primary" href="{% url 'question_new' project.pk %}">{% icon "plus-lg" %}<span
           >{% translate "New check-in" %}</span></a>
       {% endif %}
     </div>
