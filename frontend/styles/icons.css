@@ -34,9 +34,6 @@
   margin-inline-start: 0.35em;
 }
 
-.bi-archive::before {
-  content: "\f10d";
-}
 .bi-arrow-90deg-up::before {
   content: "\f111";
 }
