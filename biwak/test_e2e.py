@@ -1377,7 +1377,13 @@ class LiveTest(E2ETestCase):
         page = self.login(self.ada)
         page.clock.install()
         sockets = []
-        page.on("websocket", sockets.append)
+
+        def opened(ws):
+            # A function of our own: Playwright marks handlers, which a
+            # builtin method (sockets.append) can't be
+            sockets.append(ws)
+
+        page.on("websocket", opened)
 
         def handler(ws):
             server = ws.connect_to_server()
@@ -1404,11 +1410,21 @@ class LiveTest(E2ETestCase):
         page = self.login(self.ada)
         page.clock.install()
         sockets = []
-        page.on("websocket", sockets.append)
+
+        def opened(ws):
+            # A function of our own: Playwright marks handlers, which a
+            # builtin method (sockets.append) can't be
+            sockets.append(ws)
+
+        page.on("websocket", opened)
         self.goto(page, self.todo)
         expect(page.locator("body")).to_have_attribute("data-live-state", "connected")
         frames = []
-        sockets[0].on("framereceived", frames.append)
+
+        def framed(payload):
+            frames.append(payload)
+
+        sockets[0].on("framereceived", framed)
         page.clock.fast_forward(31000)
         page.wait_for_timeout(300)
         page.clock.fast_forward(15000)
