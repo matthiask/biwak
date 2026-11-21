@@ -144,6 +144,9 @@ def concerned(event, people):
         case Action.REACTED:
             # Only the author is a candidate, and it's their text
             return set(people)
+        case Action.SHARED:
+            # Told on purpose, like a mention
+            return set(people)
         case Action.COMPLETED:
             ids |= {item.creator_id} | set(
                 item.todo.assignees.filter(pk__in=people).values_list("pk", flat=True)
@@ -206,6 +209,11 @@ def candidates(event):
         if author is None or author == event.actor_id:
             return User.objects.none()
         return User.objects.active().filter(pk=author)
+    if event.action == Action.SHARED:
+        # Only those it was shared with, never the other subscribers
+        ids = set(event.data.get("people", ()))
+        ids.discard(event.actor_id)
+        return User.objects.active().filter(pk__in=ids)
     items = [item.pk]
     if event.action == Action.CREATED and item.parent_id:
         items.append(item.parent_id)

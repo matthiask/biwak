@@ -864,6 +864,71 @@ def react(todo_id, content, comment_id, as_json):
     return None
 
 
+# Subscribers ----------------------------------------------------------------
+
+
+def show_subscribers(data):
+    marker = " [clients]" if data["visible_to_clients"] else ""
+    click.echo(f"Subscribers of #{data['item_id']}{marker}:")
+    t = table("ID", "Name", "Added by")
+    for row in data["subscribers"]:
+        added_by = row["added_by"]
+        t.add_row(
+            str(row["person"]["id"]),
+            row["person"]["name"],
+            added_by["name"] if added_by else "",
+        )
+    console.print(t)
+
+
+@cli.command()
+@click.argument("item", type=int)
+@json_option
+def subscribers(item, as_json):
+    """Who gets what happens to ITEM (any kind of item), and who added them"""
+    data = request("GET", f"items/{item}/subscribers/")
+    if as_json:
+        return echo_json(data)
+    show_subscribers(data)
+    return None
+
+
+@cli.command()
+@click.argument("item", type=int)
+@click.option(
+    "--people",
+    required=True,
+    help="The IDs of the people to subscribe, separated by commas.",
+)
+@click.option(
+    "--notify", is_flag=True, help="Tell them now, with a notification at once."
+)
+@click.option(
+    "--note", default="", help="One line sent with --notify, at most 200 characters."
+)
+@json_option
+def subscribe(item, people, notify, note, as_json):
+    """Subscribe other people to ITEM: people who can see it (clients and
+    partners: whom they may know). Quietly, or with --notify: "Ada wants
+    you to see this". Marked [clients] if clients can see it."""
+    try:
+        ids = [int(part) for part in people.split(",") if part.strip()]
+    except ValueError:
+        raise click.UsageError("--people takes IDs separated by commas.") from None
+    data = request(
+        "POST",
+        f"items/{item}/subscribers/",
+        json={"people": ids, "notify": notify, "note": note},
+    )
+    if as_json:
+        return echo_json(data)
+    if data["visible_to_clients"]:
+        click.secho("Clients can see this.", fg="yellow", err=True)
+    click.echo(f"Subscribed {len(ids)} to #{item}{' and told them' if notify else ''}.")
+    show_subscribers(data)
+    return None
+
+
 # Check-ins ------------------------------------------------------------------
 
 

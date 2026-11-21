@@ -1,0 +1,23 @@
+{% extends "modal_form.html" %}
+{% load biwak i18n %}
+{% comment %}
+  An item's subscribers and the form adding people (activity.views.item_subscribers):
+  who's subscribed, linked to their pages and who added them, then the picker.
+{% endcomment %}
+{% block fields %}
+  <ul class="list-group mb-3" data-subscribers>
+    {% for subscription in subscriptions %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{% person_page subscription.user %}</span>
+        {% if subscription.added_by %}
+          <small
+            class="text-body-secondary"
+          >{% blocktranslate with name=subscription.added_by.get_short_name %}added by {{ name }}{% endblocktranslate %}</small>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="list-group-item text-body-secondary">{% translate "Nobody yet." %}</li>
+    {% endfor %}
+  </ul>
+  {% for field in form.visible_fields %}{{ field.as_field_group }}{% endfor %}
+{% endblock fields %}

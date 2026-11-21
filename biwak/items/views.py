@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import messages
 from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models import Q
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -10,7 +10,13 @@ from django.views.decorators.http import require_POST
 
 from biwak import checklists, cursors, schedules
 from biwak.accounts.models import User
-from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
+from biwak.activity.operations import (
+    StillAssigned,
+    is_assigned,
+    is_subscribed,
+    subscribe,
+    unsubscribe,
+)
 from biwak.forms import AssigneeField, Form, next_url
 from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
@@ -578,6 +584,7 @@ def todo(request, pk, *, edit=False):
                 [s.user for s in item.subscriptions.select_related("user")],
             ),
             "is_subscribed": is_subscribed(request.user, item),
+            "is_assigned": is_assigned(request.user, item),
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),
             "previous": _previous(request, todo),
@@ -634,10 +641,18 @@ def _move_targets(request, item):
 @require_POST
 def subscription(request, pk):
     item = item_for(request, pk)
-    if request.POST.get("subscribe"):
+    if request.POST.get("unassign"):
+        # "You're assigned, so you hear about it": the way out is
+        # unassigning oneself
+        if is_assigned(request.user, item):
+            ops.unassign(item, [request.user], actor=request.user)
+    elif request.POST.get("subscribe"):
         subscribe(request.user, item)
     else:
-        unsubscribe(request.user, item)
+        try:
+            unsubscribe(request.user, item)
+        except StillAssigned as exc:
+            return HttpResponseBadRequest(str(exc))
     return redirect(item)
 
 

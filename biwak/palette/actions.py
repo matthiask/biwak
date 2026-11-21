@@ -24,7 +24,7 @@ optionally a ``shortcut`` ("x", or "g p" for two keys):
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from biwak.activity.operations import is_subscribed
+from biwak.activity.operations import is_assigned, is_subscribed
 from biwak.bookmarks.operations import is_bookmarked
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
@@ -205,13 +205,27 @@ def on_item(request, item, context):
         )
     )
     subscribed = is_subscribed(user, item)
-    actions.append(
-        post(
-            _("Unsubscribe") if subscribed else _("Subscribe"),
-            reverse("subscription", args=[item.pk]),
-            {} if subscribed else {"subscribe": "1"},
-            "s",
+    if is_assigned(user, item):
+        # Assigned means subscribed: the way out is unassigning
+        actions.append(
+            post(
+                _("Unassign me"),
+                reverse("subscription", args=[item.pk]),
+                {"unassign": "1"},
+                "s",
+            )
         )
+    else:
+        actions.append(
+            post(
+                _("Unsubscribe") if subscribed else _("Subscribe"),
+                reverse("subscription", args=[item.pk]),
+                {} if subscribed else {"subscribe": "1"},
+                "s",
+            )
+        )
+    actions.append(
+        modal(_("Subscribers…"), reverse("item_subscribers", args=[item.pk]))
     )
     if not user.is_client:
         actions.append(link(_("History"), reverse("item_history", args=[item.pk])))

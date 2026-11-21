@@ -18,6 +18,11 @@ urlpatterns = [
         views.item_notifications,
         name="item_notifications",
     ),
+    path(
+        "items/<int:pk>/subscribers/",
+        views.item_subscribers,
+        name="item_subscribers",
+    ),
     path("items/<int:pk>/mentionable/", views.mentionable, name="mentionable"),
     path(
         "lists/<int:pk>/mentionable/",

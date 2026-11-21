@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts.models import User
-from biwak.activity.operations import is_subscribed
+from biwak.activity.operations import is_assigned, is_subscribed
 from biwak.forms import Form
 from biwak.items import operations as ops, visibility
 from biwak.items.views import CommentForm
@@ -83,6 +83,7 @@ def sidebar_context(request, item):
             request.user, [s.user for s in item.subscriptions.select_related("user")]
         ),
         "is_subscribed": is_subscribed(request.user, item),
+        "is_assigned": is_assigned(request.user, item),
         "can_change": ops.can_change(request.user, item),
         "can_switch": item.has_switch and not request.user.is_client,
         "affected": visibility.affected(item)

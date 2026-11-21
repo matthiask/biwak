@@ -5,7 +5,20 @@
 {% block content %}
   <div class="card">
     <div class="card-body">
-      {% if done %}
+      {% if assigned %}
+        <h1 class="h4">{% translate "You're assigned" %}</h1>
+        <p>
+          {% translate "You're assigned to this to-do, so you hear about it. Unassign yourself to stop getting mails about it." %}
+        </p>
+        {% if can_open %}
+          <p>
+            <a
+              href="{{ item.get_absolute_url }}"
+              class="btn btn-primary"
+            >{% if title %}{{ title }}{% else %}{% translate "Open the to-do" %}{% endif %}</a>
+          </p>
+        {% endif %}
+      {% elif done %}
         <h1 class="h4">{% translate "Unsubscribed" %}</h1>
         <p>
           {% if title %}

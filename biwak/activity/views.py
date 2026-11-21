@@ -5,6 +5,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import BadRequest, PermissionDenied
+from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -30,10 +31,14 @@ from biwak.activity.notify import (
     level_choices,
 )
 from biwak.activity.operations import (
+    NOTE_LENGTH,
+    is_assigned,
     set_level_override,
+    share,
+    subscribable_people,
     unsubscribe as unsubscribe_from,
 )
-from biwak.forms import Form, next_url
+from biwak.forms import AssigneeField, Form, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
@@ -276,6 +281,100 @@ def project_notifications(request, pk):
     )
 
 
+class SubscribersForm(Form):
+    """Adding people to an item's subscribers (specs/subscribers.md): the
+    people who can see the item and whom the person may know, the picker
+    of the assignees; "Tell them now" with a note"""
+
+    people = AssigneeField(
+        label=_("Add people"), queryset=User.objects.none(), required=True
+    )
+    notify = forms.BooleanField(
+        label=_("Tell them now"),
+        required=False,
+        help_text=_("Otherwise they hear about the next change."),
+    )
+    note = forms.CharField(
+        label=_("Note"),
+        required=False,
+        max_length=NOTE_LENGTH,
+        help_text=_("One line, sent with “Tell them now”."),
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
+    )
+
+    def __init__(self, *args, item, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields["people"]
+        # Those not subscribed yet; the first come first by name
+        field.queryset = (
+            subscribable_people(item, user)
+            .exclude(subscriptions__item=item)
+            .order_by(Lower("full_name"), "email")
+        )
+        field.error_messages["required"] = _("Pick at least one person.")
+        field.widget.attrs |= {
+            "data-placeholder": _("Add people…"),
+            "aria-label": _("Add people"),
+        }
+
+
+@never_cache
+def item_subscribers(request, pk):
+    """Who gets mails about an item, and adding others ("Manage…" next to
+    the subscribers): a modal, also a page. Everybody who sees the item may
+    add people they may know; removing is each person's own business."""
+    item = item_for(request, pk)
+    form = SubscribersForm(
+        request.POST or None,
+        item=item,
+        user=request.user,
+    )
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        share(
+            item,
+            list(data["people"]),
+            actor=request.user,
+            notify=data["notify"],
+            note=data["note"],
+        )
+        return redirect(item)
+    subscriptions = list(
+        item.subscriptions.select_related("user", "added_by").order_by(
+            Lower("user__full_name"), "user__email"
+        )
+    )
+    # Clients and partners only learn about the members
+    known = {
+        user.pk
+        for user in item.project.people_known_to(
+            request.user,
+            [s.user for s in subscriptions]
+            + [s.added_by for s in subscriptions if s.added_by],
+        )
+    }
+    return form_response(
+        request,
+        form,
+        title=_("Subscribers"),
+        intro=_("They get what happens to this, as their notification level says."),
+        item=item,
+        cancel_url=item.get_absolute_url(),
+        submit_label=_("Add"),
+        template="activity/subscribers.html",
+        extra={
+            "subscriptions": [
+                {
+                    "user": s.user,
+                    "added_by": s.added_by if s.added_by_id in known else None,
+                }
+                for s in subscriptions
+                if s.user_id in known
+            ],
+        },
+    )
+
+
 NOTIFICATIONS_TITLES = {
     Kind.LIST: _("Notifications for this list"),
     Kind.TODO: _("Notifications for this to-do"),
@@ -329,13 +428,16 @@ def unsubscribe(request, token):
     if user is None or item is None:
         raise Http404
     done = False
-    if request.method == "POST":
+    assigned = is_assigned(user, item)
+    # Still assigned: the link does nothing and the page says why
+    if request.method == "POST" and not assigned:
         unsubscribe_from(user, item)
         done = True
     title = ""
     # Only who may still see it learns the title, with the names the
     # mail's recipient may know (not who's logged in, if anybody)
-    if can_see(user, item):
+    seen = can_see(user, item)
+    if seen:
         with mentions.reading_as(user):
             title = mentions.plain(item.title, item)
     return render(
@@ -343,8 +445,10 @@ def unsubscribe(request, token):
         "activity/unsubscribe.html",
         {
             "done": done,
+            "assigned": assigned,
             "title": title,
             "item": item,
+            "can_open": seen,
         },
     )
 

@@ -90,32 +90,36 @@ def page(events, before=None, *, user):
     return found, cursor_for(found[-1]) if more else None
 
 
+def _people_of(event):
+    """The people an event is about: those assigned, those it was shared
+    with"""
+    match event.action:
+        case Action.ASSIGNED:
+            return event.data.get("assignees", [])
+        case Action.SHARED:
+            return event.data.get("people", [])
+    return []
+
+
 def attach(events, user):
     """What rendering needs besides the event: the assigned people's names
-    (``event.assignee_names``), the target list of moves the viewer may
+    (``event.assignee_names``, also those something was shared with), the target list of moves the viewer may
     see (``event.target_list``) and the project on the item, which saves a
     query per link"""
-    ids = {
-        pk
-        for event in events
-        if event.action == Action.ASSIGNED
-        for pk in event.data.get("assignees", [])
-    }
+    ids = {pk for event in events for pk in _people_of(event)}
     people = list(User.objects.filter(pk__in=ids))
     # Whom the viewer may know, per project (clients and partners: members)
     known = {}
     for event in events:
         if event.item is not None:
             event.item.project = event.project
-        if event.project_id not in known and event.action == Action.ASSIGNED:
+        if event.project_id not in known and _people_of(event):
             known[event.project_id] = {
                 u.pk: u.get_short_name()
                 for u in event.project.people_known_to(user, people)
             }
         names = known.get(event.project_id, {})
-        event.assignee_names = [
-            names[pk] for pk in event.data.get("assignees", []) if pk in names
-        ]
+        event.assignee_names = [names[pk] for pk in _people_of(event) if pk in names]
     add_excerpts(events)
     add_target_lists(events, user)
 
