@@ -70,3 +70,23 @@ class PeopleCLITest(test_cli.CLITest):
             self.biwak("people", "activate", self.cleo.pk, "--mail")
         self.assertTrue(self.active(self.cleo))
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_reset_two_factor(self):
+        """specs/two-factor.md"""
+        from allauth.mfa.models import Authenticator
+
+        from biwak.accounts.test_two_factor import app
+
+        User.objects.filter(pk=self.cleo.pk).update(is_active=True)
+        app(self.cleo)
+        with self.captureOnCommitCallbacks(execute=True):
+            output = self.biwak("people", "reset-two-factor", self.cleo.pk).output
+        self.assertIn(f"Reset: Cleo Example ({self.cleo.pk})", output)
+        self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
+        self.assertEqual(len(mail.outbox), 1)
+        data = json.loads(
+            self.biwak("people", "reset-two-factor", self.cleo.pk, "--json").stdout
+        )
+        self.assertFalse(data["reset"])
+        result = self.biwak("people", "reset-two-factor", self.ada.pk)
+        self.assertEqual(result.exit_code, 1)

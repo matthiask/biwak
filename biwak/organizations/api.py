@@ -289,6 +289,22 @@ def person_activate(request, person_id: int, data: ActivateIn | None = None):
     return activated(request, users, bool(data and data.mail))[0]
 
 
+class TwoFactorResetOut(AccessOut):
+    # Whether there was an authenticator app to remove (and the person was
+    # signed out and mailed)
+    reset: bool
+
+
+@router.post("people/{person_id}/reset-two-factor/", response=TwoFactorResetOut)
+def person_reset_two_factor(request, person_id: int):
+    """Removes the person's authenticator app, ends their sessions and mails
+    them (specs/two-factor.md); staff reset clients, admins everybody, not
+    oneself. Without an app nothing happens (``reset`` false)."""
+    [user] = people_for(request, [person_id])
+    reset = changing(activation.reset_two_factor, user, actor=request.user)
+    return access_out(user) | {"reset": reset}
+
+
 @router.post("people/{person_id}/deactivate/", response=AccessOut)
 def person_deactivate(request, person_id: int):
     """Deactivates the person (see ``people/deactivate/``)"""

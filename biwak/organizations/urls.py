@@ -12,6 +12,11 @@ urlpatterns = [
         people.person_deactivate,
         name="person_deactivate",
     ),
+    path(
+        "people/<int:pk>/reset-two-factor/",
+        people.person_reset_two_factor,
+        name="person_reset_two_factor",
+    ),
     path("organizations/", views.organization_list, name="organizations"),
     path("organizations/new/", views.organization_create, name="organization_create"),
     path("organizations/<int:pk>/", views.organization_detail, name="organization"),

@@ -1,0 +1,7 @@
+{% load i18n %}{% autoescape off %}{% blocktranslate with actor=actor.display_name %}{{ actor }} removed the authenticator app from your Biwak account and signed you out everywhere.{% endblocktranslate %}
+
+{% translate "You sign in with a code sent to your address or with a passkey now. You can set up an authenticator app again in your settings:" %}
+{{ url }}
+
+{% blocktranslate with actor=actor.display_name %}If you didn't ask for this, tell {{ actor }} or an admin of your team right away.{% endblocktranslate %}
+{% endautoescape %}
