@@ -759,3 +759,26 @@ class CommandTest(ImportCase):
                 "--user",
                 "cleo@example.org",
             )
+
+
+class SearchTest(ImportCase):
+    def found(self, word):
+        response = self.client.get("/search/", {"q": word})
+        self.assertEqual(response.status_code, 200)
+        return {result["item"].title for result in response.context["results"]}
+
+    def test_clients_find_nothing_internal(self):
+        self.run_import()
+        cleo = User.objects.get(email="cleo@example.org")
+        cleo.is_active = True
+        cleo.save()
+        self.client.force_login(cleo)
+        # Internal titles and texts (an answer, a doc, a message)
+        for word in ["Negotiate", "Shopping", "salaries", "stove", "worries", "Deep"]:
+            with self.subTest(word):
+                self.assertEqual(self.found(word), set())
+        # What is visible is found, and staff find everything
+        self.assertEqual(self.found("giraffe"), {"Buy giraffe food"})
+        self.client.force_login(self.ada)
+        self.assertEqual(self.found("Negotiate"), {"Negotiate the price"})
+        self.assertEqual(self.found("stove"), {"Any worries?"})
