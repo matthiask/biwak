@@ -146,14 +146,21 @@ class Project(models.Model):
         needn't be members).
         ``biwak.activity.mentions.known_to()`` is the same for querysets."""
         people = list(people)
-        if knows_everybody(viewer):
+        known = self.known_ids(viewer)
+        if known is None:
             return people
+        return [user for user in people if user.pk in known]
+
+    def known_ids(self, viewer):
+        """The IDs of the people the viewer may see named in the project
+        (``people_known_to()``), None for everybody"""
+        if knows_everybody(viewer):
+            return None
         if knows_people_of(viewer, self):
             known = User.objects.filter(self.people_q()).values_list("pk", flat=True)
         else:
             known = self.memberships.values_list("user", flat=True)
-        known = set(known)
-        return [user for user in people if user.pk in known]
+        return set(known)
 
     @property
     def description_first_line(self):
@@ -193,3 +200,15 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.user} in {self.project}"
+
+
+def known_ids_for_item(viewer, item):
+    """``Project.known_ids()`` of the item's project, kept on the viewer's
+    object for the rest of the request (pages and API lists of many items,
+    read after any changes); the project is loaded only once"""
+    cache = getattr(viewer, "_known_ids", None)
+    if cache is None:
+        cache = viewer._known_ids = {}
+    if item.project_id not in cache:
+        cache[item.project_id] = item.project.known_ids(viewer)
+    return cache[item.project_id]

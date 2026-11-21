@@ -11,7 +11,8 @@
       <div class="wb-fact wb-edit-hit" data-edit-focus="assignees">
         <dt>{% translate "Assigned to" %}</dt>
         <dd>
-          {% for person in todo.assignees.all %}{% person_page person %}{% if not forloop.last %},
+          {% known_in item todo.assignees.all as assignees %}
+          {% for person in assignees %}{% person_page person %}{% if not forloop.last %},
             {% endif %}{% empty %}<span class="text-body-secondary">{% translate "Nobody" %}</span>{% endfor %}
         </dd>
       </div>
