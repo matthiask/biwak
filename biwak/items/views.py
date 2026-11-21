@@ -725,6 +725,7 @@ def switch(request, pk):
             ShowForm(),
             title=title,
             intro=intro,
+            help_page="clients",
             item=item,
             cancel_url=item.get_absolute_url(),
             submit_label=_("Show to clients"),

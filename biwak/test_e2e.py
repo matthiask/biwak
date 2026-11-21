@@ -2530,6 +2530,13 @@ class KeyboardTest(E2ETestCase):
         expect(dialog).to_contain_text("command palette")
         page.keyboard.press("Escape")
         expect(dialog).not_to_be_visible()
+        # The dialog ends with a link to the help
+        page.keyboard.press("?")
+        expect(dialog).to_be_visible()
+        dialog.get_by_role("link", name="Help").click()
+        page.wait_for_url(f"{self.live_server_url}/help/keyboard/")
+        expect(page.locator("#shortcuts")).to_contain_text("command palette")
+        self.assertEqual(self.errors, [])
 
     def test_shortcuts_of_an_item_page(self):
         todo = ops.create_todo(

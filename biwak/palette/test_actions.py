@@ -87,6 +87,24 @@ class EverywhereTest(ActionsBase):
             self.assertEqual(actions["Go to bookmarks"]["shortcut"], "g b")
             self.assertEqual(actions["Go to to-dos"]["url"], "/todos/?assignee=me")
 
+    def test_help_everywhere(self):
+        """Also for clients, on every page (specs/help.md)"""
+        for user in [self.ada, self.cleo]:
+            for url in [
+                "/",
+                "/todos/",
+                f"/projects/{self.camp.pk}/",
+                self.todo.get_absolute_url(),
+            ]:
+                actions = self.actions(user, url)
+                self.assertEqual(actions["Help"]["type"], "link")
+                self.assertEqual(actions["Help"]["url"], "/help/")
+                self.assertEqual(actions["Keyboard shortcuts"]["type"], "link")
+                self.assertEqual(
+                    actions["Keyboard shortcuts"]["url"], "/help/keyboard/"
+                )
+                self.assertEqual(actions["Help"]["group"], "everywhere")
+
     def test_new_project_is_for_staff(self):
         self.assertEqual(self.actions(self.ada, "/")["New project"]["type"], "modal")
         self.assertNotIn("New project", self.actions(self.cleo, "/"))

@@ -129,6 +129,7 @@
           {% if not request.user.is_client %}
             <li><a href="{% url 'api_tokens' %}">{% translate "API tokens and the CLI" %}</a></li>
           {% endif %}
+          <li><a href="{% url 'help' %}">{% translate "Help" %}</a></li>
         </ul>
       </section>
     </div>
