@@ -1,11 +1,10 @@
 """Reactions (specs/reactions.md): anybody who sees the item reacts, to
 to-dos and comments; everybody removes only their own."""
 
-from django.shortcuts import get_object_or_404
 from ninja import Router, Schema, Status
 
-from biwak.items.api import item_for
-from biwak.items.models import Comment, Item
+from biwak.items.models import Item
+from biwak.items.views import comment_for, item_for
 from biwak.reactions import operations as ops
 from biwak.reactions.operations import prefetch
 from biwak.reactions.schemas import ReactionOut, reactions_out
@@ -16,15 +15,6 @@ router = Router(tags=["reactions"])
 
 class ReactionIn(Schema):
     content: str
-
-
-def comment_for(request, comment_id):
-    return get_object_or_404(
-        Comment.objects.filter(
-            item__in=Item.objects.visible_to(request.user)
-        ).select_related("item", "item__project"),
-        pk=comment_id,
-    )
 
 
 def _target(request, item_id=None, comment_id=None):

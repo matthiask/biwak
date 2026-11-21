@@ -1,12 +1,12 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from biwak.forms import next_url
-from biwak.items.models import Comment, Item
-from biwak.items.views import item_for
+from biwak.items.models import Item
+from biwak.items.views import comment_for, item_for
 from biwak.reactions import operations as ops
 from biwak.reactions.emoji import MAX_LENGTH, QUICK
 
@@ -31,16 +31,6 @@ def reaction_url(item, comment=None):
     if comment:
         return reverse("comment_reactions", args=[comment.pk])
     return reverse("item_reactions", args=[item.pk])
-
-
-def comment_for(request, pk):
-    """The comment if the person may see its item, else 404"""
-    return get_object_or_404(
-        Comment.objects.filter(
-            item__in=Item.objects.visible_to(request.user)
-        ).select_related("item", "item__project"),
-        pk=pk,
-    )
 
 
 def _toggle(request, item, comment=None):
