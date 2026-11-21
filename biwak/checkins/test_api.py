@@ -246,6 +246,21 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.item.question.people.count(), 2)
 
+    def test_clients_get_404_before_403(self):
+        """A client can't learn that a project or question exists"""
+        other = project("Secret", members=[self.ada])
+        body = {"title": "x", "schedule": "weekly", "time_of_day": "09:00"}
+        self.assertEqual(
+            self.post(self.cleo, f"projects/{other.pk}/checkins/", body).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.patch(
+                self.cleo, f"checkins/{self.item.pk}/", {"title": "x"}
+            ).status_code,
+            404,
+        )
+
     def test_pause_and_resume(self):
         data = self.patch(
             self.ada, f"checkins/{self.item.pk}/", {"paused": True}

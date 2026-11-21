@@ -43,6 +43,8 @@ def bad_request(message):
 
 
 def staff_only(request):
+    """After looking up what's changed: a client gets 404 for what they
+    don't see, not 403"""
     if request.user.is_client:
         raise HttpError(403, _("Only staff can change check-ins."))
 
@@ -143,8 +145,8 @@ def question_create(request, project_id: int, data: QuestionIn):
     monthly, monthly-first, monthly-last, quarterly, yearly: counting from
     ``starts_on``, default today) or an RRULE (at most daily), asked at
     ``time_of_day`` in ``time_zone`` (default: the installation's)."""
-    staff_only(request)
     project = project_for(request, project_id)
+    staff_only(request)
     starts_on = data.starts_on or schedules.today()
     try:
         item = ops.create_question(
@@ -182,8 +184,8 @@ class QuestionPatch(Schema):
 def question_update(request, question_id: int, data: QuestionPatch):
     """Staff only. Changes the fields given; ``people`` is the complete new
     set; ``paused`` pauses or resumes. A new schedule counts from now."""
-    staff_only(request)
     item = question_for(request, question_id)
+    staff_only(request)
     given = data.model_fields_set
     changes = {}
     # ``"people": []`` asks nobody; null is a mistake, as for the others
