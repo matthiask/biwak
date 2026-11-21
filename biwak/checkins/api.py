@@ -186,18 +186,27 @@ def question_update(request, question_id: int, data: QuestionPatch):
     item = question_for(request, question_id)
     given = data.model_fields_set
     changes = {}
-    for field in ["title", "starts_on", "time_of_day", "time_zone", "schedule"]:
+    # ``"people": []`` asks nobody; null is a mistake, as for the others
+    for field in [
+        "title",
+        "starts_on",
+        "time_of_day",
+        "time_zone",
+        "schedule",
+        "people",
+    ]:
         if field in given:
-            if getattr(data, field) in {None, ""}:
+            value = getattr(data, field)
+            if value in (None, ""):
                 bad_request(_("Leave out what doesn't change instead of sending null."))
-            changes[field] = getattr(data, field)
+            changes[field] = value
     if "schedule" in changes:
         anchor = changes.get("starts_on", item.question.starts_on)
         changes["rule"] = _rule(changes.pop("schedule"), anchor)
     if "time_zone" in changes:
         changes["time_zone"] = _zone(changes["time_zone"])
-    if "people" in given:
-        changes["people"] = _people(data.people or [])
+    if "people" in changes:
+        changes["people"] = _people(changes["people"])
     try:
         ops.update_question(item, actor=request.user, **changes)
         if data.paused is not None:

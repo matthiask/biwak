@@ -241,6 +241,11 @@ class QuestionsAPITest(APITestCase):
                 body,
             )
 
+    def test_people_null_is_refused(self):
+        response = self.patch(self.ada, f"checkins/{self.item.pk}/", {"people": None})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.item.question.people.count(), 2)
+
     def test_pause_and_resume(self):
         data = self.patch(
             self.ada, f"checkins/{self.item.pk}/", {"paused": True}
