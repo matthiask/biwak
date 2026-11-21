@@ -28,6 +28,9 @@ is enough alone: it already needs your device and its PIN or fingerprint.
   everybody else; nobody resets themselves. There are no recovery codes.
   The CLI: `biwak people reset-two-factor ID`.
 
+Adding or removing a passkey and turning the app on or off sends you a
+mail saying what changed and when: if it wasn't you, tell an admin.
+
 People whose organization requires single sign-on have no authenticator
 app: their identity provider asks for a second step if it wants one.
 
@@ -38,7 +41,8 @@ Admins can require a second factor for an organization (its page,
 enough for its people:
 
 - a passkey is enough, and so is a sign-in through the organization's
-  identity provider;
+  identity provider (its own Google Workspace or Microsoft tenant, not a
+  personal Gmail account);
 - after a code, the authenticator app's code follows;
 - people with a passkey but no app sign in with the passkey (a code alone
   is refused);

@@ -55,6 +55,15 @@ class AccountAdapter(DefaultAccountAdapter):
         )
         outbox.send(message, kind)
 
+    def send_notification_mail(self, template_prefix, user, context=None, email=None):
+        """allauth's notifications of changes to how somebody signs in: a
+        passkey added or removed, the authenticator app turned on or off
+        (specs/two-factor.md, decided 2026-11-21); the others stay off
+        (``ACCOUNT_EMAIL_NOTIFICATIONS`` is unset)"""
+        from biwak.accounts import security_mails
+
+        security_mails.send(template_prefix.rsplit("/", 1)[-1], user)
+
     def get_reauthentication_methods(self, user):
         """Confirming who one is: not by a code by mail for people with an
         authenticator app (specs/two-factor.md), the app or a passkey"""

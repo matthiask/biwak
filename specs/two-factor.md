@@ -25,6 +25,10 @@ below is what prevents that.
   code by mail: a code by mail could otherwise add a passkey, which signs
   in alone, or turn the app off (built 2026-11-21, the most secure
   reading).
+- **A mail on every change** (decided 2026-11-21 after a review): adding
+  or removing a passkey and turning the app on or off mail the person
+  what changed and when, with "if it wasn't you, tell an admin", so a
+  change somebody else made with their session is noticed.
 - **No recovery codes:** losing the app means signing in with a passkey,
   or asking for a reset.
 - **Resetting someone's second factor:** "Reset two-factor…" with the
@@ -80,6 +84,13 @@ below is what prevents that.
   leaves out the code by mail for people with an app;
   `signin.reauthenticate(…, by_code=True)` sends the code pages to the
   app's.
+- **Mails on changes:** allauth's notification hook
+  (`AccountAdapter.send_notification_mail`, which its passkey and TOTP
+  flows call) sends `security_mails.send()` for `webauthn_added`,
+  `webauthn_removed`, `totp_activated`, `totp_deactivated` through the
+  outbox (`accounts/security_change.txt`, `Kind.ACCOUNT`; not to
+  inactive people or bounced addresses). allauth's other notifications
+  stay off (`ACCOUNT_EMAIL_NOTIFICATIONS` unset).
 - **Resets:** `activation.can_reset_two_factor()` (`can_change()`, not
   oneself) and `activation.reset_two_factor()` in
   `biwak/organizations/activation.py`: deletes the app, ends the sessions
