@@ -9,9 +9,9 @@ and deliberately not more.
 This file describes what the app does and why, the shared model and the
 decisions. The parts are specified in `specs/`, one file each, small
 enough to hand to one agent; `specs/README.md` lists them with their
-status and dependencies and says how to hand one to an agent. When a decision changes, update the spec in
-the same commit and date the decision ("decided 2026-11-20"), so later
-sessions don't reopen it.
+status. When a decision changes, update the spec in the same commit and
+date the decision ("decided 2026-11-20"), so later sessions don't reopen
+it.
 
 ## Principles
 
@@ -44,8 +44,8 @@ In scope:
 4. A chronological list of to-dos by due date, filterable, per project
    and across projects ("my to-dos").
 5. Message boards with comments.
-6. Docs (Markdown) and uploaded files in folders; later, docs edited
-   together in real time.
+6. Docs (Markdown, edited together in real time) and uploaded files in
+   folders.
 7. Check-ins: questions asked on a schedule, answers collected with
    comments.
 8. Client access per list, folder, message or doc.
@@ -117,8 +117,8 @@ recordings. A few generic building blocks then cover most of the scope;
   cancellable any time.
 - **Event** (who, what, which item, when): one table feeds the activity
   feed and the notifications (events × subscriptions).
-- **Bookmark** (person, item). **Link** (project or item, URL, title,
-  kind).
+- **Bookmark** (person, item or project). **Link** (project, URL,
+  title, kind; not on items since 2026-11-21).
 
 Customer visibility is a property computed from the item and its
 containers, checked in one place (`specs/access.md`).
@@ -136,74 +136,25 @@ containers, checked in one place (`specs/access.md`).
 
 ## Build order
 
-The core has to exist before anything else; some parts need pieces of
-others, so the order below is fixed. Each step is one branch, merged
-before the steps that depend on it. `AGENTS.md` has the checklist every
-part follows; each spec has a "Done when" list and says whether it suits
-a cheaper model ("Agent").
+The core came first; every part since builds on it and on the shared
+foundations (mentions and mails, storage and attachments, schedules).
+What's built and what's open is in `specs/README.md`. Still to come, in
+this order:
 
-1. **Core** (done 2026-11-20): `core.md`, `access.md`, events and
-   subscriptions from `notifications.md`, the API foundations from
-   `api-cli.md`.
-2. **Shared foundations, one after another**, because later parts build
-   on them:
-   1. `notifications.md`, stage 1: mentions, levels, outgoing mails,
-      digests.
-   2. `files.md`, stage 1: storage, uploads, attachments in texts,
-      downloads.
-   3. `todos.md`, stage 1: schedules (`biwak/schedules.py`) and
-      recurring to-dos.
-3. **In parallel:**
-   - `todos.md`, stage 2: the list by due date, the iCal feed.
-   - `files.md`, stage 2: message board, folders, docs with versions,
-     file pages, previews.
-   - `feed.md`: activity feed, item history, bookmarks, links.
-   - `todos.md`, stage 3: long lists of completed to-dos.
-   - Once `feed.md` is merged: `projects-overview.md` (favorites,
-     ordering by activity, cards) and, after `notifications.md` stage 1
-     too, `glance.md` (more content without opening every page).
-   - Once `notifications.md` stage 1 is merged: `reactions.md` (to-dos
-     and comments; later parts add their kinds).
-4. `checkins.md` (needs schedules, mails and attachments).
-5. `notifications.md`, stage 2: replying by mail, to comments and to
-   check-in questions (a strong model: sender checks and mail loops are
-   easy to get subtly wrong).
-6. `search.md` (decided 2026-11-20), and the gaps to the web from
-   `api-cli.md` (API and CLI for projects and members, moving to-dos,
-   the passkey offer, Google sign-in for staff only).
-7. `import-basecamp.md` (needs every kind of item), then the agent skills
-   (`api-cli.md`).
-8. **Last and separately:** `collaboration.md` (real-time editing,
-   brings websockets and ASGI; built 2026-11-20, not deployed), then the
-   German translation.
+1. The parts being built (`ui-round-7.md`, `two-factor.md`).
+2. The German translation, last (texts are marked with `gettext`; the
+   wording of mails, the editor and the lantern is reviewed with it).
 
 Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
-same branch.
-
-Before the first client gets a login, a separate review of the
-visibility checks (done 2026-11-20, its findings fixed) (another person, or a fresh agent given only the code
-and `specs/access.md`).
+same branch. `AGENTS.md` has the checklist every part follows.
 
 ## Backlog
 
-Wanted, not specified in detail yet and not in the build order; give
-each a spec (or a section in one) before building it.
-
-- **Sending through Resend** (added 2026-11-21): mail goes out through
-  the cluster's postfix and Gmail today (`biwak@feinheit.ch`, passing
-  SPF and DKIM); Resend only receives replies. Moving sending to Resend
-  (`EMAIL_URL` to its SMTP, a From domain verified there, e.g.
-  `biwak.feinheit.app`) as decided for both directions, when there's a
-  reason to. Specified 2026-11-21 in `specs/mail-sending.md` (the API
-  through django-anymail, an outbox); built 2026-11-21, switched on with
-  `EMAIL_URL=resend:` once the domain is verified.
-- **Activating people through the API and CLI** (added 2026-11-21): the
-  importer creates people without an account inactive on purpose, so
-  nobody gets mail or a login before someone decides. Activating them
-  (one or several, optionally with the login mail) through the API and
-  `biwak people activate`: staff activate clients, admins also staff and
-  partners. Specified 2026-11-21 in `specs/activation.md` (with
-  deactivating); built 2026-11-21.
+Nothing waiting for a spec at the moment. What's deliberately "later"
+stays in its part's spec: webhooks and agent skills (`api-cli.md`),
+browser notifications (`lantern.md`), drawn profile images
+(`people.md`). Give a new wish a spec (or a section in one) before
+building it.
 
 ## Decisions
 
@@ -218,12 +169,11 @@ each a spec (or a section in one) before building it.
 - 2026-11-20: No comments on lists, groups or folders; no to-dos outside
   lists.
 - 2026-11-20: No internal comments on items visible to clients.
-- 2026-11-20: No single sign-on as the only way in; login by mail code
-  or passkey (django-allauth) for everybody, Google sign-in optional for
-  staff. Replaced 2026-11-21 by single sign-on per organization
-  (`specs/sso.md`): codes and passkeys, Google Workspace or Microsoft
-  Entra ID allowed, or required for organizations whose IdP manages
-  their people; the own organization allows Google.
+- 2026-11-21: Sign-in per organization (`specs/sso.md`): codes by mail
+  and passkeys (django-allauth), Google Workspace or Microsoft Entra ID
+  allowed, or required for organizations whose IdP manages their people;
+  the own organization allows Google. No passwords. (Replaces 2026-11-20:
+  codes and passkeys for everybody, Google optional for staff.)
 - 2026-11-20: Replying to notification mails posts a comment, from the
   start.
 - 2026-11-20: Check-ins are in scope, the project schedule isn't.
@@ -247,13 +197,12 @@ each a spec (or a section in one) before building it.
   edited by admins.
 - 2026-11-20: Notification mails about 2 minutes after the last change
   to an item (merging quick edits), digests at 07:00.
-- 2026-11-20 (proposed when tightening the specs, change them there if
-  wrong): reply tokens valid 6 months; files up to 100 MB; a doc
-  version per 10 minutes or author; doc locks expire 5 minutes after
-  the last renewal; answers to check-ins as one summary mail by
-  default; links internal by default; previews made on first request.
-- 2026-11-20: No reminders for missed check-ins (replaces the reminder
-  after 24 hours proposed above).
+- 2026-11-20: Reply tokens valid 6 months; files up to 100 MB; a doc
+  version per 10 minutes or author; answers to check-ins as one summary
+  mail by default; links internal by default; previews made on first
+  request.
+- 2026-11-20: No reminders for missed check-ins, and no skipping
+  (`specs/checkins.md`).
 - 2026-11-20: Favorites are bookmarked projects, first on the projects
   page; projects ordered by activity (stored per project, a separate
   time for clients) or by name, switchable and remembered per person;
@@ -275,24 +224,37 @@ each a spec (or a section in one) before building it.
 - 2026-11-21: An accent color per person in the settings (the clients'
   amber reserved), and a color per project set by staff
   (`specs/keyboard.md`, `specs/project-colors.md`).
-- 2026-11-21: The lantern (named so, not "Hey!"): notifications in the app (an icon with a count, a
-  page), mail optional (each, digest, none), what's read in the app not
-  mailed; item pages, lists and the board update live, reactions
+- 2026-11-21: The lantern (named so, not "Hey!"): notifications in the
+  app (an icon with a count, a page), mail optional (each, digest,
+  none), what's read in the app not mailed; item pages, lists and the board update live, reactions
   included, changes appearing in place; the websocket only says what
   changed, content comes through the permission-checked views
   (`specs/lantern.md`). Browser notifications later.
 - 2026-11-21: A command palette (Ctrl+K and "/") with jumps and actions,
   search being one of them, and single-key shortcuts inside pages that a
   setting turns off (`specs/keyboard.md`).
-- 2026-11-20: Reactions: 24 quick emoji and short texts (40
-  characters), telling only the author, collected into the next mail
-  or the digest (`specs/reactions.md`).
+- 2026-11-20: Reactions: quick emoji (32 since 2026-11-21) and short
+  texts (40 characters), telling only the author, collected into the
+  next mail or the digest (`specs/reactions.md`).
 - 2026-11-20: Docs are edited live with Yjs and CodeMirror; the server
   side is Channels with pycrdt inside Django, not a Hocuspocus service
-  (the spike, `specs/collaboration.md`). The doc locks are gone; docs can
-  be made read-only by staff.
+  (the spike, `specs/collaboration.md`). No doc locks (2026-11-21), at
+  most a heads-up; docs can be made read-only by staff.
 - 2026-11-21: People have a mark: their profile image (cut to a 256 pixel
   square, WebP, served only to whoever may know the person) or their
   initials on a palette color chosen from the ID; a page per person with
-  the projects in common. Basecamp's images aren't imported (generated and
-  uploaded ones look alike) (`specs/people.md`).
+  the projects in common. Basecamp's images are imported, those it
+  generated skipped (`specs/people.md`).
+- 2026-11-21: Only projects and lists are archived; to-dos are
+  completed, nothing smaller is archived (`specs/archiving.md`).
+- 2026-11-21: Home at `/` shows what needs the person and where things
+  are going on; the projects page moves to `/projects/`
+  (`specs/dashboard.md`).
+- 2026-11-21: Subscribing is the switch: a subscriber hears about
+  everything on the item; levels (projects and lists only) decide who
+  gets subscribed automatically (`specs/notifications.md`).
+- 2026-11-21: Outgoing mail goes through an outbox in the app and
+  Resend's API (`specs/mail-sending.md`).
+- 2026-11-21: View choices (groupings, orderings) and filters are query
+  parameters remembered in the browser, never fields on `User`
+  (`specs/core.md`, "Pages").
