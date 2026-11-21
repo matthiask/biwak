@@ -286,6 +286,20 @@ def _tell(people, event):
     return told
 
 
+def everybody(project, item=None, *, visible):
+    """Whom "Everybody in the project" reaches: the project's active
+    members who see an item there (``visible`` to clients or not) and whose
+    level for ``item`` is "everything" (specs/ui-round-6.md, part C).
+    ``item`` is the new item or, before it exists, the container it goes
+    into (``None`` at the top): it has no level of its own yet. The one
+    rule for posting (``notify_people()``) and for the people preselected
+    in "Only these people" (``files.common.NotifyForm``, decided
+    2026-11-21)."""
+    people = list(people_who_see(project, visible).filter(memberships__project=project))
+    levels = effective_levels(people, item, project=project)
+    return [user for user in people if levels[user.pk] == NotificationLevel.EVERYTHING]
+
+
 def notify_people(item, *, whom, actor):
     """Posting a message, doc or file: whom to tell (specs/files.md):
     ``"everybody"`` (the project's members at this moment), a list of
@@ -298,11 +312,7 @@ def notify_people(item, *, whom, actor):
     if whom == "nobody":
         return []
     if whom == "everybody":
-        people = list(User.objects.active().filter(memberships__project=item.project))
-        levels = effective_levels(people, item)
-        people = [
-            user for user in people if levels[user.pk] == NotificationLevel.EVERYTHING
-        ]
+        people = everybody(item.project, item, visible=item.is_client_visible)
     else:
         people = [user for user in whom if user.is_active]
     chosen = [user for user in people if user != actor and can_see(user, item)]
