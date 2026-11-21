@@ -9,6 +9,7 @@ from biwak.items.models import Item
 from biwak.items.views import comment_for, item_for
 from biwak.reactions import operations as ops
 from biwak.reactions.emoji import MAX_LENGTH, QUICK
+from biwak.reactions.models import Reaction
 
 
 def block_context(request, item, comment=None, *, error=""):
@@ -20,6 +21,10 @@ def block_context(request, item, comment=None, *, error=""):
         "comment": comment,
         "dom_id": f"reactions-{'comment' if comment else 'item'}-{(comment or item).pk}",
         "url": reaction_url(item, comment),
+        "target": comment or item,
+        "remove_url_name": "comment_reaction_remove"
+        if comment
+        else "item_reaction_remove",
         "reactions": ops.summary(item, comment, request.user),
         "quick": QUICK,
         "max_length": MAX_LENGTH,
@@ -69,3 +74,33 @@ def item_reactions(request, pk):
 def comment_reactions(request, pk):
     comment = comment_for(request, pk)
     return _toggle(request, comment.item, comment)
+
+
+def _confirm_removal(request, item, comment=None):
+    """Without JavaScript clicking one's own reaction lands here: a form
+    removing it"""
+    content = request.GET.get("content", "")
+    mine = Reaction.objects.filter(
+        item=item, comment=comment, user=request.user, content=content
+    )
+    if not mine.exists():
+        return redirect(item.get_absolute_url())
+    return render(
+        request,
+        "reactions/confirm_remove.html",
+        {
+            "content": content,
+            "url": reaction_url(item, comment),
+            "cancel": next_url(request)
+            or f"{item.get_absolute_url()}{f'#comment-{comment.pk}' if comment else ''}",
+        },
+    )
+
+
+def item_reaction_remove(request, pk):
+    return _confirm_removal(request, item_for(request, pk))
+
+
+def comment_reaction_remove(request, pk):
+    comment = comment_for(request, pk)
+    return _confirm_removal(request, comment.item, comment)

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Remove reaction" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% blocktranslate %}Remove your {{ content }}?{% endblocktranslate %}</h1>
+  <div class="card">
+    <div class="card-body">
+      <form method="post" action="{{ url }}">
+        {% csrf_token %}
+        <input type="hidden" name="content" value="{{ content }}">
+        <input type="hidden" name="next" value="{{ cancel }}">
+        <button type="submit" class="btn btn-danger">{% translate "Remove" %}</button>
+        <a href="{{ cancel }}" class="btn btn-quiet">{% translate "Cancel" %}</a>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

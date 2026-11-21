@@ -79,6 +79,42 @@ class ViewsTest(TestCase):
         self.assertFalse(Reaction.objects.exists())
         self.assertContains(response, "You can&#x27;t react to this.")
 
+    def test_removing_without_javascript_asks_first(self):
+        operations.add_reaction(self.bob, "👍", item=self.todo)
+        operations.add_reaction(self.bob, "Thanks!", comment=self.comment)
+        self.client.force_login(self.bob)
+        page = self.client.get(self.todo.get_absolute_url())
+        link = f"/items/{self.todo.pk}/reactions/remove/?content=%F0%9F%91%8D"
+        self.assertContains(page, f'href="{link}"')
+
+        response = self.client.get(link)
+        self.assertContains(response, "Remove your 👍?")
+        self.assertContains(response, f'action="/items/{self.todo.pk}/reactions/"')
+        self.assertEqual(Reaction.objects.count(), 2)
+        response = self.post(f"/items/{self.todo.pk}/reactions/", "👍", follow=True)
+        self.assertEqual(Reaction.objects.count(), 1)
+
+        response = self.client.get(
+            f"/comments/{self.comment.pk}/reactions/remove/?content=Thanks!"
+        )
+        self.assertContains(response, "Remove your Thanks!?")
+        self.assertContains(
+            response, f'action="/comments/{self.comment.pk}/reactions/"'
+        )
+
+    def test_confirmation_only_for_one_s_own_reactions(self):
+        operations.add_reaction(self.ada, "👍", item=self.todo)
+        url = f"/items/{self.todo.pk}/reactions/remove/?content=%F0%9F%91%8D"
+        self.client.force_login(self.bob)
+        self.assertRedirects(self.client.get(url), self.todo.get_absolute_url())
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.client.get(url).status_code, 302)
+        self.client.force_login(self.cleo)
+        internal = self.client.get(
+            f"/items/{self.secret.pk}/reactions/remove/?content=x"
+        )
+        self.assertEqual(internal.status_code, 404)
+
     def test_get_not_allowed(self):
         self.client.force_login(self.bob)
         self.assertEqual(
