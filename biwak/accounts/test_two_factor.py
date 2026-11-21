@@ -183,3 +183,184 @@ class GoogleTest(SignInMixin, SocialTestCase):
         response = self.client.post(TWO_FACTOR, {"code": code_for(secret)})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.signed_in_as(), self.ada)
+
+
+class SettingsTest(SignInMixin, TestCase):
+    """Turning the app on and off in the settings' sign-in section"""
+
+    def setUp(self):
+        cache.clear()
+        # Not the passkey offer after signing in by code
+        self.ada = person("Ada", passkey_offer_done=True)
+
+    def confirm_by_code(self, response):
+        """allauth's reauthentication by a code by mail, then back"""
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/reauthenticate/code/", response["Location"])
+        mail.outbox.clear()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                response["Location"], {"recipient": self.ada.email}
+            )
+        code = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", mail.outbox[-1].body).group(
+            1
+        )
+        self.assertIn("/accounts/reauthenticate/code/confirm/", response["Location"])
+        return self.client.post(response["Location"], {"code": code}, follow=True)
+
+    def test_turning_it_on(self):
+        self.login_by_code(self.ada)
+        page = self.client.get("/accounts/settings/")
+        self.assertContains(page, 'id="authenticator-app"')
+        self.assertContains(page, "/accounts/2fa/totp/activate/")
+        # allauth confirms who it is first (by code or passkey)
+        response = self.confirm_by_code(self.client.get("/accounts/2fa/totp/activate/"))
+        self.assertContains(response, "data:image/svg+xml;base64,")
+        response = self.client.get("/accounts/2fa/totp/activate/")
+        self.assertContains(response, "data:image/svg+xml;base64,")
+        secret = response.context["secret"]
+        self.assertContains(response, secret)
+        # A modal too
+        modal = self.client.get(
+            "/accounts/2fa/totp/activate/", headers={"HX-Modal": "true"}
+        )
+        self.assertNotContains(modal, "<html")
+        secret = modal.context["secret"]
+        response = self.client.post(
+            "/accounts/2fa/totp/activate/", {"code": wrong_code(secret)}
+        )
+        self.assertContains(response, "Incorrect code.")
+        self.assertFalse(Authenticator.objects.filter(user=self.ada).exists())
+        response = self.client.post(
+            "/accounts/2fa/totp/activate/", {"code": code_for(secret)}
+        )
+        self.assertRedirects(
+            response, "/accounts/settings/#sign-in", fetch_redirect_response=False
+        )
+        authenticator = Authenticator.objects.get(user=self.ada)
+        self.assertEqual(authenticator.type, Authenticator.Type.TOTP)
+        # No recovery codes
+        self.assertEqual(Authenticator.objects.filter(user=self.ada).count(), 1)
+        self.assertContains(self.client.get("/accounts/settings/"), "Turn off…")
+        # One app per person: the page leads back
+        response = self.client.get("/accounts/2fa/totp/activate/")
+        self.assertEqual(response.status_code, 302)
+        # The next sign-in by code asks for it
+        self.client.logout()
+        cache.clear()
+        response = self.login_by_code(self.ada)
+        self.assertRedirects(response, TWO_FACTOR, fetch_redirect_response=False)
+
+    def test_confirming_who_it_is_first(self):
+        """allauth's reauthentication (by code or passkey), also right after
+        signing in"""
+        self.client.force_login(self.ada)
+        response = self.client.get("/accounts/2fa/totp/activate/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/reauthenticate/", response["Location"])
+        response = self.client.post("/accounts/2fa/totp/activate/", {"code": "1"})
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Authenticator.objects.filter(user=self.ada).exists())
+
+    def test_turning_it_off_needs_its_code(self):
+        secret = app(self.ada)
+        passkey(self.ada)
+        self.client.force_login(self.ada)
+        url = "/accounts/2fa/totp/deactivate/"
+        self.assertContains(self.client.get(url), 'name="code"')
+        for data in [{}, {"code": wrong_code(secret)}]:
+            with self.subTest(data=data):
+                self.assertEqual(self.client.post(url, data).status_code, 200)
+                self.assertTrue(
+                    Authenticator.objects.filter(
+                        user=self.ada, type=Authenticator.Type.TOTP
+                    ).exists()
+                )
+        response = self.client.post(url, {"code": code_for(secret)})
+        self.assertRedirects(
+            response, "/accounts/settings/#sign-in", fetch_redirect_response=False
+        )
+        # The passkey stays
+        self.assertEqual(
+            list(
+                Authenticator.objects.filter(user=self.ada).values_list(
+                    "type", flat=True
+                )
+            ),
+            [Authenticator.Type.WEBAUTHN],
+        )
+        self.assertContains(self.client.get("/accounts/settings/"), "Set up…")
+        # Without an app, the page leads back
+        self.assertEqual(self.client.get(url).status_code, 302)
+
+    def test_with_an_app_a_code_by_mail_doesnt_confirm(self):
+        """Or a code by mail would turn the app off or add a passkey"""
+        secret = app(self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get("/accounts/2fa/webauthn/add/")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response["Location"].startswith("/accounts/2fa/reauthenticate/")
+        )
+        for url in [
+            "/accounts/reauthenticate/code/",
+            "/accounts/reauthenticate/code/confirm/",
+        ]:
+            with self.subTest(url=url):
+                mail.outbox.clear()
+                response = self.client.post(f"{url}?next=/accounts/settings/", {})
+                self.assertRedirects(
+                    response,
+                    "/accounts/2fa/reauthenticate/?next=%2Faccounts%2Fsettings%2F",
+                    fetch_redirect_response=False,
+                )
+                self.assertEqual(mail.outbox, [])
+        page = self.client.get("/accounts/2fa/reauthenticate/")
+        self.assertNotContains(page, "/accounts/reauthenticate/code/")
+        response = self.client.post(
+            "/accounts/2fa/reauthenticate/?next=/accounts/2fa/webauthn/add/",
+            {"code": code_for(secret)},
+        )
+        self.assertRedirects(
+            response, "/accounts/2fa/webauthn/add/", fetch_redirect_response=False
+        )
+
+
+class SSORequiredTest(SignInMixin, SocialTestCase):
+    """Organizations requiring single sign-on: no authenticator apps (the
+    identity provider does that)"""
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
+    def test_switching_deletes_apps_and_never_offers_them(self):
+        app(self.cleo)
+        self.set_signin(self.acme, "sso_required", "google")
+        self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
+        request, response = self.sign_in(
+            "google", google_claims("cleo@acme.example", hd="acme.example")
+        )
+        self.assert_signed_in(request, self.cleo)
+        request.session.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = request.session.session_key
+        page = self.client.get("/accounts/settings/")
+        self.assertEqual(page.status_code, 200)
+        self.assertNotContains(page, 'id="authenticator-app"')
+        response = self.client.get("/accounts/2fa/totp/activate/")
+        self.assertRedirects(
+            response, "/accounts/settings/#sign-in", fetch_redirect_response=False
+        )
+        self.client.post("/accounts/2fa/totp/activate/", {"code": "123456"})
+        self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())
+
+    def test_no_second_step_for_them(self):
+        """Should an app come through anyway (made before the switch, by a
+        request that didn't see it yet), the identity provider is enough"""
+        self.set_signin(self.acme, "sso_required", "google")
+        app(self.cleo)
+        request, response = self.sign_in(
+            "google", google_claims("cleo@acme.example", hd="acme.example")
+        )
+        self.assert_signed_in(request, self.cleo)
+        self.assertNotEqual(response["Location"], TWO_FACTOR)

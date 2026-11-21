@@ -1,0 +1,11 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{# Setting up an authenticator app (biwak/accounts/signin.py): the QR code, the secret, the code #}
+{% block fields %}
+  <img class="wb-qr d-block mb-2" src="{{ qr_code }}" alt="{% translate 'QR code for the authenticator app' %}">
+  <p class="small text-body-secondary">
+    {% translate "Can't scan it? Enter this key in the app:" %}
+    <code id="totp-secret">{{ secret }}</code>
+  </p>
+  {{ block.super }}
+{% endblock fields %}

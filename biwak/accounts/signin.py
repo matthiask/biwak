@@ -1,12 +1,19 @@
 """The settings page's sign-in section (specs/ui-round-2.md part E): the
-passkeys and sessions inline. allauth does the work: its webauthn views add
-and remove passkeys, its usersessions flows end sessions."""
+passkeys, the authenticator app and sessions inline. allauth does the work:
+its webauthn views add and remove passkeys, its TOTP flows turn the app on
+and off (specs/two-factor.md), its usersessions flows end sessions."""
 
+import base64
 import re
 
+from allauth.account.decorators import reauthentication_required
 from allauth.account.views import LoginView, RequestLoginCodeView
+from allauth.mfa.adapter import get_adapter as get_mfa_adapter
+from allauth.mfa.base.forms import ReauthenticateForm
 from allauth.mfa.base.views import AuthenticateView
 from allauth.mfa.models import Authenticator
+from allauth.mfa.totp.forms import ActivateTOTPForm
+from allauth.mfa.totp.internal import flows as totp_flows
 from allauth.mfa.webauthn.views import add_webauthn
 from allauth.socialaccount.models import SocialAccount
 from allauth.usersessions.internal import flows
@@ -17,10 +24,12 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.http import require_POST
 
 from biwak.accounts import sso
+from biwak.forms import BootstrapMixin
+from biwak.modals import form_response
 
 
 BROWSERS = [
@@ -58,6 +67,11 @@ def passkeys(user):
     ).order_by("created_at")
 
 
+def authenticator_app(user):
+    """The person's authenticator app (one at most), or None"""
+    return Authenticator.objects.filter(user=user, type=Authenticator.Type.TOTP).first()
+
+
 def sessions(request):
     """The person's live sessions, the current one first"""
     ret = []
@@ -89,6 +103,7 @@ def context(request):
         "sso_organization": org,
         "connected_accounts": connected_accounts(request.user),
         "passkeys": passkeys(request.user) if org is None else [],
+        "authenticator_app": authenticator_app(request.user) if org is None else None,
         "sessions": sessions(request),
     }
 
@@ -211,12 +226,24 @@ def disconnect(request, pk):
     return back_to_the_section()
 
 
-def reauthenticate(allauth_view):
+def reauthenticate(allauth_view, *, by_code=False):
     """allauth's page confirming who somebody is (by code, passkey);
     people whose organization requires single sign-on sign in through it
-    again instead (specs/sso.md)"""
+    again instead (specs/sso.md). People with an authenticator app confirm
+    with it or a passkey, not by code (``by_code``, specs/two-factor.md)."""
 
     def view(request, *args, **kwargs):
+        from biwak.accounts import two_factor
+
+        if (
+            by_code
+            and request.user.is_authenticated
+            and not two_factor.code_confirms(request.user)
+        ):
+            query = request.GET.urlencode()
+            return redirect(
+                reverse("mfa_reauthenticate") + (f"?{query}" if query else "")
+            )
         if request.user.is_authenticated and (
             org := sso.required_organization(request.user)
         ):
@@ -236,3 +263,99 @@ def reauthenticate(allauth_view):
         return allauth_view(request, *args, **kwargs)
 
     return view
+
+
+# The authenticator app (specs/two-factor.md): optional, one per person, not
+# for people whose organization requires single sign-on
+
+
+class ActivateAppForm(BootstrapMixin, ActivateTOTPForm):
+    """allauth's: the code the app shows for the secret in the session"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["code"].label = gettext_lazy("Code from the app")
+
+
+class DeactivateAppForm(BootstrapMixin, ReauthenticateForm):
+    """allauth's reauthentication with the app: turning it off needs its
+    code once more, not only a code by mail"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["code"].label = gettext_lazy("Code from the app")
+
+
+def activate_app(request):
+    """Set up an authenticator app: a QR code and the code it shows to
+    confirm; allauth asks to confirm who somebody is first when the sign-in
+    is older than five minutes"""
+    if org := sso.required_organization(request.user):
+        messages.error(
+            request,
+            _("%(message)s Authenticator apps aren't used there.")
+            % {"message": sso.uses_sso_message(org)},
+        )
+        return back_to_the_section()
+    if authenticator_app(request.user):
+        return back_to_the_section()
+    return _activate_app(request)
+
+
+@reauthentication_required(app="allauth.mfa")
+def _activate_app(request):
+    form = ActivateAppForm(
+        user=request.user, data=request.POST if request.method == "POST" else None
+    )
+    if form.is_valid():
+        totp_flows.activate_totp(request, form)
+        return back_to_the_section()
+    adapter = get_mfa_adapter()
+    totp_url = adapter.build_totp_url(request.user, form.secret)
+    svg = adapter.build_totp_svg(totp_url)
+    return form_response(
+        request,
+        form,
+        title=_("Set up an authenticator app"),
+        intro=_(
+            "Scan the QR code with an authenticator app on your phone, then"
+            " enter the code it shows. From then on, signing in by code or"
+            " through Google or Microsoft asks for the app's code too; a"
+            " passkey stays enough alone."
+        ),
+        cancel_url=reverse("settings") + "#sign-in",
+        submit_label=_("Turn on"),
+        template="accounts/totp_activate.html",
+        help_page="sign-in",
+        extra={
+            "qr_code": "data:image/svg+xml;base64,"
+            + base64.b64encode(svg.encode()).decode(),
+            "secret": form.secret,
+        },
+    )
+
+
+def deactivate_app(request):
+    """Turn the authenticator app off, with a code from it"""
+    authenticator = authenticator_app(request.user)
+    if authenticator is None:
+        return back_to_the_section()
+    form = DeactivateAppForm(
+        user=request.user, data=request.POST if request.method == "POST" else None
+    )
+    if form.is_valid():
+        form.save()
+        totp_flows.deactivate_totp(request, authenticator)
+        return back_to_the_section()
+    return form_response(
+        request,
+        form,
+        title=_("Turn off the authenticator app?"),
+        intro=_(
+            "Signing in by code or through Google or Microsoft won't ask for"
+            " its code anymore. Confirm with a code from the app."
+        ),
+        cancel_url=reverse("settings") + "#sign-in",
+        submit_label=_("Turn off"),
+        destructive=True,
+    )

@@ -55,6 +55,16 @@ class AccountAdapter(DefaultAccountAdapter):
         )
         outbox.send(message, kind)
 
+    def get_reauthentication_methods(self, user):
+        """Confirming who one is: not by a code by mail for people with an
+        authenticator app (specs/two-factor.md), the app or a passkey"""
+        from biwak.accounts import two_factor
+
+        methods = super().get_reauthentication_methods(user)
+        if user.is_authenticated and not two_factor.code_confirms(user):
+            methods = [m for m in methods if m["id"] != "reauthenticate_by_code"]
+        return methods
+
     def pre_login(self, request, user, **kwargs):
         """People whose organization requires single sign-on sign in only
         through its identity provider (specs/sso.md): every way allauth signs

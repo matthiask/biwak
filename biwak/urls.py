@@ -93,11 +93,15 @@ urlpatterns = [
     ),
     path(
         "accounts/reauthenticate/code/",
-        signin.reauthenticate(account_views.request_reauthentication_code),
+        signin.reauthenticate(
+            account_views.request_reauthentication_code, by_code=True
+        ),
     ),
     path(
         "accounts/reauthenticate/code/confirm/",
-        signin.reauthenticate(account_views.confirm_reauthentication_code),
+        signin.reauthenticate(
+            account_views.confirm_reauthentication_code, by_code=True
+        ),
     ),
     path(
         "accounts/2fa/reauthenticate/", signin.reauthenticate(mfa_views.reauthenticate)
@@ -113,6 +117,8 @@ urlpatterns = [
     path("accounts/2fa/", signin.passkeys_page),
     path("accounts/2fa/webauthn/", signin.passkeys_page),
     path("accounts/2fa/webauthn/add/", signin.add_passkey),
+    path("accounts/2fa/totp/activate/", signin.activate_app),
+    path("accounts/2fa/totp/deactivate/", signin.deactivate_app),
     path("accounts/sessions/", signin.sessions_page),
     path("accounts/3rdparty/", signin.connections_page),
     # People whose organization requires single sign-on go there instead
