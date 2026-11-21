@@ -153,6 +153,8 @@ in a time tracking tool. **On projects only** (decided 2026-11-21): items
 have Markdown texts where a link is clickable in context, so a link block
 there only duplicated it.
 
+- **Adding** from the project page's section and from the palette on
+  project pages ("Add a link", a modal; confirmed 2026-11-21).
 - `Link(project, url, title, kind, position, visible_to_clients,
   created_by, created_at)`. Only `http` and `https`; the title defaults
   to the host.

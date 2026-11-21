@@ -272,7 +272,9 @@ the webhook `/inbound/resend/`, `./manage.py receive_mail`.
 - **Token:** `ReplyToken(token, item, user, created_at, expires_at,
   revoked_at, error_sent_at)`, 20 lowercase letters and digits (some
   servers lowercase local parts), one per mail, valid 6 months (decided
-  2026-11-20). Revoked by admins in the Django admin. A reply to a
+  2026-11-20). Revoked by admins in the Django admin; not revoked
+  automatically when someone is deactivated or removed from a project
+  (decided 2026-11-21: access is checked on every reply anyway). A reply to a
   question mail answers that occurrence.
 - **Provider:** Resend (decided 2026-11-20) behind an interface
   (`providers.py`, `InboundMail`). Its webhook (`email.received`)
