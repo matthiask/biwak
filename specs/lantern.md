@@ -87,7 +87,10 @@ records, levels, `send_mails`), reactions.
   notification, until unpinned (which removes the bookmark). The
   bookmarks page shows the same pins.
 - **Mark as unread** per item (also in the menu, next to each entry),
-  bringing the item's latest notification back to unread.
+  bringing the item's latest notification back to unread. Marked unread
+  means no mail (decided 2026-11-21): a notification marked unread by
+  hand is never mailed afterwards, neither by each change nor in the
+  digest (`Notification.marked_unread_at`, left out by `send_mails`).
 - **The favicon** (decided 2026-11-21, configurable): with the setting
   on, the browser tab's icon shows a dot when there are unread
   notifications, updated live; the setting (`User.lantern_in_favicon`,
@@ -256,8 +259,6 @@ setup as `collaboration.md`).
 - The wording of "No mails", "Pin to the top", "Changed meanwhile: …",
   "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
   "You were mentioned.").
-- "Mark as unread" makes an unsent notification mailable again (each
-  change: at the next run; digest: in the next one). Wanted?
 - Switching delivery from "none" to "each" or "digest" mails the unread
   notifications collected meanwhile, all at once.
 - The lantern's pins and pinned messages (staff pin a message for

@@ -290,6 +290,11 @@ class Notification(models.Model):
     sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
     # Read in the lantern, or the item opened (null: unread)
     read_at = models.DateTimeField(_("read at"), null=True, blank=True)
+    # Marked unread by hand in the lantern: never mailed afterwards
+    # (decided 2026-11-21)
+    marked_unread_at = models.DateTimeField(
+        _("marked unread at"), null=True, blank=True
+    )
 
     class Meta:
         ordering = ["created_at", "pk"]

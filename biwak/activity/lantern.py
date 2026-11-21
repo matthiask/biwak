@@ -213,12 +213,15 @@ def read(user, *, item=None, items=None):
 @transaction.atomic
 def unread(user, *, item):
     """Marks the item's newest notification the person sees
-    (``notifications_for()``) unread again; returns whether there was one"""
+    (``notifications_for()``) unread again, and never to be mailed;
+    returns whether there was one"""
     newest = notifications_for(user, unread=False).filter(event__item=item).first()
     if newest is None:
         return False
     newest.read_at = None
-    newest.save(update_fields=["read_at"])
+    # Marked by hand: never mailed (decided 2026-11-21)
+    newest.marked_unread_at = timezone.now()
+    newest.save(update_fields=["read_at", "marked_unread_at"])
     live.lantern_changed([user.pk], item=item)
     return True
 

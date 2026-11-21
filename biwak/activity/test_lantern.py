@@ -154,6 +154,21 @@ class ReadNotMailedTest(LanternTestCase):
         notification = Notification.objects.get(user=self.bob)
         self.assertIsNone(notification.read_at)
 
+    def test_marked_unread_isnt_mailed(self):
+        """Marked unread by hand (decided 2026-11-21): kept for the lantern,
+        never mailed afterwards, by each change or the digest"""
+        self.comment(self.todo, "One")
+        self.comment(self.secret, "Two")
+        lantern.read(self.bob)
+        self.assertTrue(lantern.unread(self.bob, item=self.todo))
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.send(timezone.now() + dt.timedelta(days=1))
+        self.assertEqual([m for m in mail.outbox if m.to == [self.bob.email]], [])
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+
 
 @override_settings(BASE_URL="https://biwak.example.org")
 class ListingTest(LanternTestCase):
