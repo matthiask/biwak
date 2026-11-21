@@ -6,7 +6,7 @@ import zoneinfo
 from unittest import mock
 
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -340,8 +340,9 @@ class ReadingTest(LanternTestCase):
             user=self.bob, event__data__comment=comment.pk
         )
         url = reverse("lantern_open", args=[notification.pk])
-        self.assertIn(f'href="{url}"', menu)
-        response = self.client.get(url)
+        self.assertIn(f'<form method="post" action="{url}"', menu)
+        self.assertIn("csrfmiddlewaretoken", menu)
+        response = self.client.post(url)
         self.assertRedirects(
             response,
             f"{self.todo.get_absolute_url()}#comment-{comment.pk}",
@@ -349,8 +350,23 @@ class ReadingTest(LanternTestCase):
         )
         self.assertEqual(lantern.unread_count(self.bob), 1)
         self.assertIn(
-            f'href="{url}"', self.client.get(reverse("lantern")).content.decode()
+            f'action="{url}"', self.client.get(reverse("lantern")).content.decode()
         )
+
+    def test_following_is_a_post_with_a_csrf_token(self):
+        """Another site can't read somebody's notifications: GET answers
+        405 and reads nothing, a POST without the token is refused"""
+        self.comment(self.todo, "One")
+        notification = Notification.objects.get(
+            user=self.bob, event__data__has_key="comment"
+        )
+        url = reverse("lantern_open", args=[notification.pk])
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        checking = Client(enforce_csrf_checks=True)
+        checking.force_login(self.bob)
+        self.assertEqual(checking.post(url).status_code, 403)
+        self.assertEqual(lantern.unread_count(self.bob), 1)
 
     def test_following_needs_the_notification_and_its_item(self):
         self.comment(self.todo, "One")
@@ -358,11 +374,11 @@ class ReadingTest(LanternTestCase):
         url = reverse("lantern_open", args=[notification.pk])
         # Somebody else's
         self.client.force_login(self.bob)
-        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url).status_code, 404)
         # Of an item not seen anymore
         self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
         self.client.force_login(self.cleo)
-        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url).status_code, 404)
         self.assertIsNone(Notification.objects.get(user=self.cleo).read_at)
 
     def test_marking(self):

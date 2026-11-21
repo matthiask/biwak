@@ -1471,9 +1471,28 @@ button.wb-signal:hover {
   border-bottom: 0;
 }
 
+/* A button which looks like the link it replaces: following an entry posts
+   (it reads), so another site can't read for you */
+.wb-lantern-link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
 .wb-lantern-title {
   font-weight: 600;
   text-decoration: none;
+  color: var(--bs-link-color);
+}
+
+.wb-lantern-link:hover,
+.wb-lantern-link:focus-visible {
+  text-decoration: underline;
 }
 
 .wb-lantern-entry {

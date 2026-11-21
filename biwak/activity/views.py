@@ -364,10 +364,13 @@ def lantern_count(request):
     return JsonResponse({"unread": lantern_module.unread_count(request.user)})
 
 
+@require_POST
 def lantern_open(request, pk):
-    """An entry's link: reads the notifications of its item (all of them:
-    the entry stands for the item) and opens the item where the
-    notification applies. A link, so that it works without JavaScript."""
+    """Following an entry: reads the notifications of its item (all of
+    them: the entry stands for the item) and opens the item where the
+    notification applies. A form posting, so that it works without
+    JavaScript and another site can't read somebody's notifications by
+    linking here (decided 2026-11-21); GET answers 405."""
     notification = lantern_module.notifications_for(request.user).filter(pk=pk).first()
     if notification is None:
         raise Http404

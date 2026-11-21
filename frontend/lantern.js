@@ -2,7 +2,8 @@
 // on its button, the menu's content fetched when it opens, its buttons
 // (read, unread, bookmark) without leaving the page, and with the setting on a
 // dot on the tab's icon. frontend/live.js says when something changed
-// ("biwak:lantern"). Without JavaScript the menu links to the page.
+// ("biwak:lantern"). Without JavaScript the menu links to the page, and following an entry
+// is a form which posts.
 
 import { csrfToken } from "./http.js"
 
@@ -89,6 +90,8 @@ if (menu) {
   // Reading, marking as unread and bookmarking stay in the menu
   content.addEventListener("submit", async (event) => {
     const form = event.target
+    // Following an entry leaves the page: the form posts as it is
+    if (form.hasAttribute("data-lantern-open")) return
     event.preventDefault()
     try {
       // The views answer 204 instead of redirecting
