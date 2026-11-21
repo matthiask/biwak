@@ -60,15 +60,27 @@ visibility tests reviewed.
 
 ## 4b. Uploading by dropping files (decided 2026-11-21)
 
-- Files dragged from the computer onto a folder's grid upload into that
-  folder, onto a folder tile (or "..", a breadcrumb) into that one;
-  several at once. A drop zone shows while dragging, each file gets a
-  progress row, and its tile appears when it's done; an error (too big,
-  refused) says so on its row.
-- The same upload operation as "Upload a file", with its defaults
-  (proposed): no description, visible as the folder decides today,
-  nobody notified; changing that afterwards on the file's page. Only for
-  who may upload there.
+- **Dropping files** from the computer anywhere into the window of a
+  folder (or the project's "Docs and files") opens an "Upload files"
+  modal for that folder; dropping onto a folder tile, ".." or a
+  breadcrumb picks that folder instead. "Upload a file" becomes "Upload
+  files" (a file input taking several) opening the same modal.
+- **The modal** lists the files: each with its name (editable: the
+  title, the file name's extension kept) and its size, removable; more
+  can be dropped onto it. Below, once for all of them: visible to
+  clients (staff, as the folder decides today) and **whom to notify**,
+  the choice of "Upload a file" today (nobody, everybody, these people).
+- **Uploading:** "Upload" sends them one after another with a progress
+  row per file; an error (too big, refused) stays on its row, the others
+  go on. The tiles appear when done.
+- **One notification for the batch** (decided 2026-11-21): the people
+  chosen get one entry in the lantern and one mail, "Ada uploaded 5 files
+  to Minutes", listing them (each linking to its file), not one per file.
+  The upload's files share a batch (an ID on their events); the lantern
+  and the mails merge a batch's events into one entry; the feed merges
+  them anyway (same person, action and folder).
+- Only for who may upload there; without JavaScript "Upload files" is a
+  page with a multiple file input and the same fields.
 
 ## 5. New docs (decided 2026-11-21)
 
