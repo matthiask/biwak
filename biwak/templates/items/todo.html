@@ -55,9 +55,17 @@
   {% include "items/_client_banner.html" %}
   <div id="live-status" data-live>
     {% if todo.is_completed %}
-      <p class="text-body-secondary">
-        {% short_name todo.completed_by as who %}
-        {% blocktranslate with when=todo.completed_at|date:"j. F Y" %}Completed by {{ who }} on {{ when }}.{% endblocktranslate %}
+      <p class="wb-completed">
+        <span class="wb-check is-done">{% icon "check-lg" %}</span>
+        <span>
+          {% if todo.completed_by %}
+            {% short_name todo.completed_by as who %}
+            {% avatar todo.completed_by as mark %}
+            {% blocktranslate with when=todo.completed_at|date:"j. F Y" %}Completed by {{ mark }} {{ who }} on {{ when }}{% endblocktranslate %}
+          {% else %}
+            {% blocktranslate with when=todo.completed_at|date:"j. F Y" %}Completed on {{ when }}{% endblocktranslate %}
+          {% endif %}
+        </span>
       </p>
     {% endif %}
   </div>

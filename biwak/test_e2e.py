@@ -1390,7 +1390,8 @@ class LiveTest(E2ETestCase):
         bob.get_by_role("button", name="Complete").click()
         bob.wait_for_load_state()
         expect(ada.locator("#live-header")).to_contain_text("Reopen")
-        expect(ada.locator("#live-status")).to_contain_text("Completed by Bob")
+        expect(ada.locator("#live-status")).to_contain_text("Completed by")
+        expect(ada.locator("#live-status")).to_contain_text("Bob")
         self.assertFalse(self.errors)
 
     def test_a_row_slides_in_and_the_lantern_dot_pulses(self):

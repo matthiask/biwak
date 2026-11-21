@@ -993,6 +993,30 @@ html:not(.js) .wb-handle {
   color: var(--bs-body-color);
 }
 
+/* A completed to-do's page says so, in the success colors (the check of
+   the rows, filled green) */
+.wb-completed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--wb-success-ink) 30%, transparent);
+  border-radius: var(--bs-border-radius);
+  background: var(--wb-success-bg);
+  color: var(--wb-success-ink);
+}
+
+.wb-completed .wb-check.is-done {
+  flex: none;
+  background: var(--wb-success-ink);
+  border-color: var(--wb-success-ink);
+  color: var(--wb-success-bg);
+}
+
+.wb-completed .wb-avatar {
+  vertical-align: -0.2em;
+}
+
 /* Completing a to-do (frontend/celebrate.js, specs/celebrations.md): the
    check pops, the title is struck through, then the row fades and
    collapses; the last open one of a list bursts into dots. The icon is
