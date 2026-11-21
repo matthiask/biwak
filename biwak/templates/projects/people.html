@@ -57,32 +57,19 @@
     </div>
     {% if can_manage %}
       <div class="col-lg-5">
-        {% if add_form.fields.user.queryset.exists %}
-          <div class="card mb-4">
-            <div class="card-body">
-              <h2 class="h6">{% translate "Add someone" %}</h2>
-              <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="form" value="add">
-                {{ add_form }}
-                <button type="submit" class="btn btn-primary btn-sm">{% translate "Add" %}</button>
-              </form>
-            </div>
-          </div>
-        {% endif %}
-        <div class="card">
-          <div class="card-body">
-            <h2 class="h6">{% translate "Invite by email" %}</h2>
-            <p class="small text-body-secondary">
-              {% translate "New people get a mail and log in with a code sent to their address. Adding someone subscribes them to nothing that exists already." %}
-            </p>
-            <form method="post">
-              {% csrf_token %}
-              <input type="hidden" name="form" value="invite">
-              {{ invite_form }}
-              <button type="submit" class="btn btn-primary btn-sm">{% translate "Invite" %}</button>
-            </form>
-          </div>
+        <div class="d-flex gap-2">
+          {% if can_add %}
+            <a
+              class="btn btn-quiet"
+              href="{% url 'member_add' project.pk %}"
+              data-modal
+            >{% translate "Add someone" %}</a>
+          {% endif %}
+          <a
+            class="btn btn-quiet"
+            href="{% url 'member_invite' project.pk %}"
+            data-modal
+          >{% translate "Invite by email" %}</a>
         </div>
       </div>
     {% endif %}

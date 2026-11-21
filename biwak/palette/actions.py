@@ -106,7 +106,7 @@ def everywhere(user):
         {"label": _("Switch the theme"), "type": "theme", "shortcut": ""},
     ]
     if not user.is_client:
-        actions.append(link(_("New project"), reverse("project_create")))
+        actions.append(modal(_("New project"), reverse("project_create")))
     return actions
 
 

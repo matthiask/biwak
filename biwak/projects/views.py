@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
@@ -82,10 +83,12 @@ def project_create(request):
     if form.is_valid():
         project = project_ops.create_project(actor=request.user, **form.cleaned_data)
         return redirect(project)
-    return render(
+    return form_response(
         request,
-        "generic/form.html",
-        {"form": form, "title": _("New project"), "cancel": "/"},
+        form,
+        title=_("New project"),
+        cancel_url=reverse("projects"),
+        submit_label=_("Add project"),
     )
 
 
@@ -180,49 +183,8 @@ def member_notify(request, pk, user_pk):
 
 
 def project_people(request, pk):
-    """Members; staff add, invite and remove people"""
+    """Members; staff add, invite (modals) and remove people"""
     project = project_for(request, pk)
-    can_manage = project_ops.can_manage_members(request.user)
-    add_form = invite_form = None
-    if can_manage:
-        which = request.POST.get("form")
-        add_form = AddMemberForm(request.POST if which == "add" else None)
-        add_form.fields["user"].queryset = project_ops.addable_people(project)
-        invite_form = InviteForm(
-            request.POST if which == "invite" else None, actor=request.user
-        )
-        if add_form.is_valid():
-            user = add_form.cleaned_data["user"]
-            project_ops.add_member(
-                project,
-                user,
-                actor=request.user,
-                notify=add_form.cleaned_data["notify"],
-            )
-            messages.success(
-                request, _("%(name)s has been added.") % {"name": user.display_name}
-            )
-            return redirect("project_people", pk=project.pk)
-        if invite_form.is_valid():
-            data = invite_form.cleaned_data
-            try:
-                user, _changed = project_ops.invite(
-                    project,
-                    email=data["email"],
-                    full_name=data["full_name"],
-                    is_client=data.get("is_client", True),
-                    organization=data["organization"],
-                    notify=data["notify"],
-                    actor=request.user,
-                )
-            except project_ops.InvitationError as exc:
-                invite_form.add_error(None, str(exc))
-            else:
-                messages.success(
-                    request,
-                    _("%(name)s has been invited.") % {"name": user.display_name},
-                )
-                return redirect("project_people", pk=project.pk)
     return render(
         request,
         "projects/people.html",
@@ -237,10 +199,76 @@ def project_people(request, pk):
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
             ],
-            "can_manage": can_manage,
-            "add_form": add_form,
-            "invite_form": invite_form,
+            "can_manage": project_ops.can_manage_members(request.user),
+            "can_add": project_ops.can_manage_members(request.user)
+            and project_ops.addable_people(project).exists(),
         },
+    )
+
+
+def member_add(request, pk):
+    """Adds somebody who has an account: a modal, also a page"""
+    project = project_for(request, pk)
+    if not project_ops.can_manage_members(request.user):
+        raise PermissionDenied
+    form = AddMemberForm(request.POST or None)
+    form.fields["user"].queryset = project_ops.addable_people(project)
+    if form.is_valid():
+        user = form.cleaned_data["user"]
+        project_ops.add_member(
+            project, user, actor=request.user, notify=form.cleaned_data["notify"]
+        )
+        messages.success(
+            request, _("%(name)s has been added.") % {"name": user.display_name}
+        )
+        return redirect("project_people", pk=project.pk)
+    return form_response(
+        request,
+        form,
+        title=_("Add someone"),
+        project=project,
+        cancel_url=reverse("project_people", args=[project.pk]),
+        submit_label=_("Add"),
+    )
+
+
+def member_invite(request, pk):
+    """Invites by email: a modal, also a page"""
+    project = project_for(request, pk)
+    if not project_ops.can_manage_members(request.user):
+        raise PermissionDenied
+    form = InviteForm(request.POST or None, actor=request.user)
+    if form.is_valid():
+        data = form.cleaned_data
+        try:
+            user, _changed = project_ops.invite(
+                project,
+                email=data["email"],
+                full_name=data["full_name"],
+                is_client=data.get("is_client", True),
+                organization=data["organization"],
+                notify=data["notify"],
+                actor=request.user,
+            )
+        except project_ops.InvitationError as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(
+                request,
+                _("%(name)s has been invited.") % {"name": user.display_name},
+            )
+            return redirect("project_people", pk=project.pk)
+    return form_response(
+        request,
+        form,
+        title=_("Invite by email"),
+        intro=_(
+            "New people get a mail and log in with a code sent to their address."
+            " Adding someone subscribes them to nothing that exists already."
+        ),
+        project=project,
+        cancel_url=reverse("project_people", args=[project.pk]),
+        submit_label=_("Invite"),
     )
 
 
@@ -271,10 +299,12 @@ def project_edit(request, pk):
     if form.is_valid():
         project_ops.update_project(project, actor=request.user, **form.cleaned_data)
         return redirect(project)
-    return render(
+    return form_response(
         request,
-        "projects/project_edit.html",
-        {"form": form, "project": project},
+        form,
+        title=_("Edit the project"),
+        project=project,
+        cancel_url=project.get_absolute_url(),
     )
 
 

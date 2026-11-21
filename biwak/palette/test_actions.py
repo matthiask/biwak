@@ -83,7 +83,7 @@ class EverywhereTest(ActionsBase):
             self.assertEqual(actions["Go to my to-dos"]["url"], "/todos/?assignee=me")
 
     def test_new_project_is_for_staff(self):
-        self.assertIn("New project", self.actions(self.ada, "/"))
+        self.assertEqual(self.actions(self.ada, "/")["New project"]["type"], "modal")
         self.assertNotIn("New project", self.actions(self.cleo, "/"))
 
     def test_only_for_people_who_are_logged_in(self):
