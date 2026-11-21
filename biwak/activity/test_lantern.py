@@ -20,7 +20,7 @@ from biwak.files import operations as file_ops
 from biwak.items import operations as ops
 from biwak.live import announce
 from biwak.projects.models import Membership
-from biwak.reactions.operations import add_reaction
+from biwak.reactions.operations import add_reaction, remove_reaction
 from biwak.test_utils import check_in_answers, person, project
 
 
@@ -495,6 +495,22 @@ class PingTest(LanternTestCase):
                 callback()
 
         self.assertNotIn(self.cleo.pk, self.pinged(run))
+
+    def test_removed_reaction_of_an_internal_event_doesnt_ping_a_client(self):
+        """Reacted while the item was internal, removed once it's visible:
+        a notification of the internal event (one nobody should have
+        written) doesn't make the client's tabs hear of it"""
+        comment = self.comment(self.todo, "Hello", author=self.cleo)
+        self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
+        self.act(lambda: add_reaction(self.ada, "👍", comment=comment))
+        self.act(lambda: ops.set_visibility(self.shared, visible=True, actor=self.ada))
+        event = Event.objects.get(action="reacted")
+        self.assertFalse(event.is_client_visible)
+        Notification.objects.create(user=self.cleo, event=event)
+        self.assertEqual(
+            self.pinged(lambda: remove_reaction(self.ada, "👍", comment=comment)),
+            set(),
+        )
 
 
 class FaviconTest(LanternTestCase):

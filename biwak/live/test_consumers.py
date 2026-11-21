@@ -338,3 +338,17 @@ class LiveConsumerTest(TransactionTestCase):
         ada = await self.connect(self.ada)
         await self.run_op(ops.add_comment, self.secret, author=self.ada, content="Hi")
         await self.assertQuiet(ada)
+
+    async def test_no_lantern_ping_about_items_one_cant_see(self):
+        """A reaction removed on an item the client can't see anymore: her
+        tabs aren't told"""
+        comment = await self.run_op(
+            ops.add_comment, self.todo, author=self.cleo, content="Hello"
+        )
+        await self.run_op(add_reaction, self.ada, "👍", comment=comment)
+        await self.run_op(
+            ops.set_visibility, self.shared, visible=False, actor=self.ada
+        )
+        cleo = await self.connect(self.cleo)
+        await self.run_op(remove_reaction, self.ada, "👍", comment=comment)
+        await self.assertQuiet(cleo)

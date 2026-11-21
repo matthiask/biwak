@@ -226,6 +226,11 @@ setup as `collaboration.md`).
   the API) and read those about items the person can't see anymore, and
   "Mark as unread" could bring back a client's notification of an
   internal event.
+- **Every ping about an item** goes through the same filter as
+  `notify()`'s: removing a reaction pinged the tabs of everybody notified
+  of it, also of a client who couldn't see the item anymore; now only who
+  sees it, clients only for events of the time they saw it. Pinning,
+  unpinning and marking unread pass their item too.
 
 ## Questions (built the way described meanwhile)
 

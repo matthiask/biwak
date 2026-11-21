@@ -165,7 +165,7 @@ def pin(user, item):
     from biwak.bookmarks.operations import add_bookmark
 
     added = add_bookmark(user, item=item)
-    live.lantern_changed([user.pk])
+    live.lantern_changed([user.pk], item=item)
     return added
 
 
@@ -175,7 +175,7 @@ def unpin(user, item):
     from biwak.bookmarks.operations import remove_bookmark
 
     removed = remove_bookmark(user, item=item)
-    live.lantern_changed([user.pk])
+    live.lantern_changed([user.pk], item=item)
     return removed
 
 
@@ -202,6 +202,7 @@ def read(user, *, item=None, items=None):
         pk__in=notifications.order_by().values("pk")
     ).update(read_at=timezone.now())
     if count:
+        # Only notifications the person sees were read: no item to check
         live.lantern_changed([user.pk])
     return count
 
@@ -215,7 +216,7 @@ def unread(user, *, item):
         return False
     newest.read_at = None
     newest.save(update_fields=["read_at"])
-    live.lantern_changed([user.pk])
+    live.lantern_changed([user.pk], item=item)
     return True
 
 
