@@ -202,6 +202,7 @@ each a spec (or a section in one) before building it.
   nobody gets mail or a login before someone decides. Activating them
   (one or several, optionally with the login mail) through the API and
   `biwak people activate`, admins only. Until then the Django admin.
+  Specified 2026-11-21 in `specs/activation.md` (with deactivating).
 
 ## Decisions
 
