@@ -425,15 +425,29 @@ def answer(item, *, user, content, occurrence=None):
         .first()
     )
     if existing is None:
-        return _create_answer(item, user, content, occurrence)
+        return create_answer(item, user, content, occurrence)
     answer_item = existing.item
     if answer_item.status == Status.TRASHED:
         items_ops.restore(answer_item, actor=user)
-    _update_answer(existing, content, actor=user)
+    update_answer(existing, content, actor=user)
     return answer_item
 
 
-def _create_answer(question_item, user, content, occurrence):
+@transaction.atomic
+def add_occurrence(item, *, date, asked_at, people=()):
+    """A time the question was asked in the past (the importer), without
+    asking anybody: no mails. Returns the occurrence, which exists already
+    for the date when it was added before."""
+    question = Question.objects.get(item=item)
+    occurrence, was_created = Occurrence.objects.get_or_create(
+        question=question, date=date, defaults={"asked_at": asked_at}
+    )
+    if was_created:
+        occurrence.asked.set(people)
+    return occurrence
+
+
+def create_answer(question_item, user, content, occurrence):
     item = items_ops.create_item(
         project=question_item.project,
         parent=question_item,
@@ -451,7 +465,7 @@ def _create_answer(question_item, user, content, occurrence):
     return item
 
 
-def _update_answer(answer, content, *, actor):
+def update_answer(answer, content, *, actor):
     item = answer.item
     if content == answer.content:
         return

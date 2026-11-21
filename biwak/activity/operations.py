@@ -1,4 +1,6 @@
 import datetime as dt
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.db import transaction
 from django.db.models.functions import Greatest
@@ -21,6 +23,26 @@ from biwak.projects.models import Project
 EDIT_SESSION = dt.timedelta(minutes=10)
 
 
+# What an import switches (``importing()``): nobody is told, and events carry
+# the original time
+_quiet = ContextVar("events_quiet", default=False)
+_occurred_at = ContextVar("events_occurred_at", default=None)
+
+
+@contextmanager
+def importing(*, at=None):
+    """For the importer (specs/import-basecamp.md): events recorded inside
+    notify nobody, and carry ``at`` (when given) instead of now. Nested
+    uses replace ``at``; the quiet part stays."""
+    quiet = _quiet.set(True)
+    occurred = _occurred_at.set(at if at is not None else _occurred_at.get())
+    try:
+        yield
+    finally:
+        _occurred_at.reset(occurred)
+        _quiet.reset(quiet)
+
+
 def record(*, actor, action, project, item=None, **data):
     """Writes the event; after the commit, ``notify()`` decides who's told
     (project events notify nobody). The event stores whether the item is
@@ -31,7 +53,7 @@ def record(*, actor, action, project, item=None, **data):
     if item is not None:
         data.setdefault("title", item.title)
         visible = Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
-    now = timezone.now()
+    now = _occurred_at.get() or timezone.now()
     event = None
     # Edits merge, and so do moves between the groups of a list (board
     # columns, decided 2026-11-21): dragging back and forth is one event
@@ -59,12 +81,13 @@ def record(*, actor, action, project, item=None, **data):
             action=action,
             data=data,
             is_client_visible=visible,
+            created_at=now,
         )
     if action != Action.REACTED:
         # A reaction isn't activity of the project (decided by the building
         # agent, 2026-11-20)
         _touch_project(event)
-    if item is not None:
+    if item is not None and not _quiet.get():
         from biwak.activity.notify import notify
 
         transaction.on_commit(lambda: notify(event.pk), robust=True)

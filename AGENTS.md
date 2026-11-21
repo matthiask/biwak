@@ -22,6 +22,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by
   hand. Off unless `REPLY_DOMAIN`, `RESEND_API_KEY` and
   `RESEND_WEBHOOK_SECRET` are set (`specs/notifications.md`).
+- `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
+  [--dry-run]` imports a Basecamp 4 project (`specs/import-basecamp.md`);
+  a second run updates. Always dry-run first.
 - The audit log (`biwak/audit/`) is a trigger on the main tables; new
   tables people change get `audit_tables()` in a migration. Requests,
   API tokens and `fairy_tasks` set who changes things (`set_user_name()`).
