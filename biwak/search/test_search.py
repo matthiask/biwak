@@ -15,7 +15,7 @@ from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.projects.operations import archive_project
 from biwak.search import queries
-from biwak.test_utils import person, project
+from biwak.test_utils import check_in_answers, person, project
 
 
 class SearchBase(TestCase):
@@ -570,6 +570,21 @@ class PagingTest(SearchBase):
             self.client.get("/search/", {"q": "pegs", "before": "x"}).status_code, 400
         )
 
+    def test_answers_cost_no_query_each(self):
+        self.client.force_login(self.ada)
+
+        def count():
+            with CaptureQueriesContext(connection) as queries_:
+                response = self.client.get("/search/", {"q": "giraffes"})
+            return len(queries_), len(response.context["results"])
+
+        check_in_answers(self.project, [self.ada])
+        one = count()
+        check_in_answers(self.project, [self.ada, self.bob, person("Carl")])
+        many = count()
+        self.assertEqual((one[1], many[1]), (1, 4))
+        self.assertEqual(one[0], many[0])
+
     def test_a_page_costs_a_fixed_number_of_queries(self):
         self.client.force_login(self.ada)
         with CaptureQueriesContext(connection) as queries_:
@@ -595,12 +610,15 @@ class NavigationTest(SearchBase):
 
 class QueryTextTest(TestCase):
     def test_lexemes(self):
-        self.assertEqual(queries.prefixes("Tent PEGS"), ["'pegs':*", "'tent':*"])
+        # In the order typed
+        self.assertEqual(queries.prefixes("Tent PEGS"), ["'tent':*", "'pegs':*"])
         self.assertEqual(queries.prefixes("&&"), [])
         self.assertEqual(queries.prefixes("it's"), ["'it':*", "'s':*"])
         self.assertEqual(queries.prefixes("it\\'s")[0], "'it':*")
+        # The first ten words typed count, not the first alphabetically
+        words = [f"w{n}" for n in range(30, 0, -1)]
         self.assertEqual(
-            len(queries.prefixes(" ".join(f"w{n}" for n in range(30)))), 10
+            queries.prefixes(" ".join(words)), [f"'{w}':*" for w in words[:10]]
         )
 
 
