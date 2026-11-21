@@ -6,6 +6,12 @@ from biwak.organizations import people, views
 urlpatterns = [
     path("people/", people.people, name="people"),
     path("people/<int:pk>/", people.person, name="person"),
+    path("people/<int:pk>/activate/", people.person_activate, name="person_activate"),
+    path(
+        "people/<int:pk>/deactivate/",
+        people.person_deactivate,
+        name="person_deactivate",
+    ),
     path("organizations/", views.organization_list, name="organizations"),
     path("organizations/new/", views.organization_create, name="organization_create"),
     path("organizations/<int:pk>/", views.organization_detail, name="organization"),

@@ -10,8 +10,9 @@ from ninja.errors import HttpError
 
 from biwak.accounts.models import User
 from biwak.api_conventions import PersonOut, absolute, person_out
-from biwak.organizations import operations as org_ops
+from biwak.organizations import activation, operations as org_ops
 from biwak.organizations.models import Organization
+from biwak.projects import operations as project_ops
 
 
 router = Router(tags=["organizations"])
@@ -176,3 +177,122 @@ def person_organization(request, person_id: int, data: PersonOrganizationIn):
         org = organization_for(request, data.organization_id)
     allowed(org_ops.set_organization, user, org, actor=request.user)
     return person_out(user)
+
+
+# Activating and deactivating (specs/activation.md): own staff change
+# clients, admins everybody; several at once are all or nothing
+
+
+class AccessOut(PersonOut):
+    email: str
+    is_active: bool
+    # Activated with the invitation mail, and it was sent: not to an
+    # address that bounced
+    mailed: bool = False
+
+
+def access_out(user, *, mailed=False):
+    return person_out(user) | {
+        "email": user.email,
+        "is_active": user.is_active,
+        "mailed": mailed,
+    }
+
+
+class ActivateIn(Schema):
+    # Send the invitation mail (not to addresses that bounced)
+    mail: bool = False
+
+
+class ActivateManyIn(ActivateIn):
+    ids: list[int]
+
+
+class DeactivateManyIn(Schema):
+    ids: list[int]
+
+
+def people_for(request, ids):
+    """The people with these IDs for changing their access: 404 if one
+    doesn't exist, 403 for clients; the operation checks who may"""
+    if not project_ops.can_manage_members(request.user):
+        raise HttpError(403, _("Only staff activate and deactivate people."))
+    if not ids:
+        raise HttpError(400, _("Nobody given."))
+    ids = list(dict.fromkeys(ids))
+    users = list(User.objects.filter(pk__in=ids).select_related("organization"))
+    if len(users) != len(ids):
+        raise HttpError(404, _("Not found."))
+    return users
+
+
+def changing(function, *args, **kwargs):
+    """The operation: ``PermissionError`` a 403, a refusal a 400"""
+    try:
+        return function(*args, **kwargs)
+    except PermissionError as exc:
+        raise HttpError(403, str(exc)) from exc
+    except activation.ActivationError as exc:
+        raise HttpError(400, str(exc)) from exc
+
+
+def activated(request, users, mail):
+    done = {
+        user.pk: mailed
+        for user, mailed in changing(
+            activation.activate, users, actor=request.user, mail=mail
+        )
+    }
+    for user in users:
+        user.refresh_from_db()
+    return [access_out(user, mailed=done.get(user.pk, False)) for user in users]
+
+
+@router.get("people/", response=list[AccessOut])
+def people_list(request, *, inactive: bool = False):
+    """The active people, or with ``inactive`` those who can't sign in,
+    by name (own staff)"""
+    if not project_ops.can_manage_members(request.user):
+        raise HttpError(403, _("Only staff list people."))
+    return [
+        access_out(user)
+        for user in User.objects
+        .filter(is_active=not inactive)
+        .select_related("organization")
+        .order_by(Lower("full_name"), "email")
+    ]
+
+
+@router.post("people/activate/", response=list[AccessOut])
+def people_activate(request, data: ActivateManyIn):
+    """Activates several people, optionally mailing the invitation; all or
+    nothing: staff change clients, admins everybody"""
+    return activated(request, people_for(request, data.ids), data.mail)
+
+
+@router.post("people/deactivate/", response=list[AccessOut])
+def people_deactivate(request, data: DeactivateManyIn):
+    """Deactivates several people and ends their access (sessions, API
+    tokens, calendar links); all or nothing, not oneself, not the last
+    active admin"""
+    users = people_for(request, data.ids)
+    changing(activation.deactivate, users, actor=request.user)
+    for user in users:
+        user.refresh_from_db()
+    return [access_out(user) for user in users]
+
+
+@router.post("people/{person_id}/activate/", response=AccessOut)
+def person_activate(request, person_id: int, data: ActivateIn | None = None):
+    """Activates the person (see ``people/activate/``)"""
+    users = people_for(request, [person_id])
+    return activated(request, users, bool(data and data.mail))[0]
+
+
+@router.post("people/{person_id}/deactivate/", response=AccessOut)
+def person_deactivate(request, person_id: int):
+    """Deactivates the person (see ``people/deactivate/``)"""
+    [user] = people_for(request, [person_id])
+    changing(activation.deactivate, [user], actor=request.user)
+    user.refresh_from_db()
+    return access_out(user)

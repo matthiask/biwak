@@ -111,6 +111,18 @@ deletes the account if nothing else refers to it (no comments, no
 assignments, no other projects). "Invited" on the People page lists
 everybody who hasn't signed in yet, the oldest invitation first.
 
+**Activating and deactivating:** people the import created can't sign in
+and get no mail until someone activates them. "Inactive" on the People
+page lists them; "Activate…" (there, or on the person's page) activates
+them, with a checkbox to send the invitation mail (not to addresses that
+bounced); nothing else changes. "Deactivate…" is for somebody who left:
+they are signed out everywhere, their API tokens and calendar link are
+deleted and they can't sign in, while what they did stays (their to-dos
+count as unassigned). Staff change clients, admins also staff and
+partners; you can't deactivate yourself or the last active admin.
+`biwak people activate` and `deactivate` do the same for several people at
+once, all or nothing.
+
 ## Your menu
 
 Your name in the bar opens: My activity, Settings (notifications, the

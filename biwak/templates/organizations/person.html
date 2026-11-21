@@ -32,6 +32,20 @@
           class="btn btn-sm btn-quiet"
         >{% translate "Remove image" %}</a>
       {% endif %}
+      {% if person.can_activate %}
+        <a
+          href="{% url 'person_activate' person.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Activate…" %}</a>
+      {% endif %}
+      {% if person.can_deactivate %}
+        <a
+          href="{% url 'person_deactivate' person.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Deactivate…" %}</a>
+      {% endif %}
       {% if person.can_move %}
         <a
           href="{% url 'person_organization' person.pk %}"

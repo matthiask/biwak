@@ -290,6 +290,20 @@ def on_people(user, name):
     return [modal(_("Invite people"), reverse("invite_people"))]
 
 
+def on_person(user, name, person):
+    """A person's page: Activate… or Deactivate… for those who may
+    (specs/activation.md)"""
+    from biwak.organizations import activation
+
+    if name != "person" or not hasattr(person, "is_active"):
+        return []
+    if not person.is_active and activation.can_change(user, person):
+        return [modal(_("Activate…"), reverse("person_activate", args=[person.pk]))]
+    if person.is_active and activation.can_deactivate(user, person):
+        return [modal(_("Deactivate…"), reverse("person_deactivate", args=[person.pk]))]
+    return []
+
+
 def for_page(request, context):
     """The actions of the page: ``[{..., "group": "page"|"everywhere"}]``,
     those of the page first. ``context`` is the template's: the page's
@@ -309,6 +323,7 @@ def for_page(request, context):
         page += on_item(request, item, context)
     page += on_organizations(user, name, context.get("organization"))
     page += on_people(user, name)
+    page += on_person(user, name, context.get("person"))
     return [{**a, "group": "page"} for a in page] + [
         {**a, "group": "everywhere"} for a in everywhere(user)
     ]
