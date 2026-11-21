@@ -130,6 +130,13 @@ class MembersTest(TestCase):
         self.assertFalse(self.project.is_member(self.cleo))
         self.assertEqual(self.client.get(self.url).status_code, 404)
 
+    def test_removing_says_nothing_about_who_exists(self):
+        """Non-members answer 404 like IDs nobody has, as in the API"""
+        self.client.force_login(self.cleo)
+        for pk in [self.bob.pk, 0]:
+            response = self.client.post(f"{self.url}{pk}/remove/")
+            self.assertEqual(response.status_code, 404, pk)
+
     def test_removing_drops_subscriptions_without_access(self):
         visible = ops.create_list(
             project=self.project, title="Shared", creator=self.ada, visible=True

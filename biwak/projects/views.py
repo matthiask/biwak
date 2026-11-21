@@ -401,9 +401,10 @@ def member_add(request, pk):
 
 @require_POST
 def member_remove(request, pk, user_pk):
-    """Staff remove anybody; everybody can leave"""
+    """Staff remove anybody; everybody can leave. Non-members are 404 like
+    IDs nobody has (as in the API): nothing said about who exists"""
     project = project_for(request, pk)
-    user = get_object_or_404(User, pk=user_pk)
+    user = get_object_or_404(User, pk=user_pk, memberships__project=project)
     if user != request.user and not project_ops.can_manage_members(request.user):
         raise PermissionDenied
     project_ops.remove_member(project, user, actor=request.user)
