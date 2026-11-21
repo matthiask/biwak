@@ -38,9 +38,7 @@ class SearchForm(Form):
         label=_("Kind"), choices=[("", _("All")), *Kind.choices], required=False
     )
     mine = forms.BooleanField(label=_("Only mine"), required=False)
-    exclude_archived = forms.BooleanField(
-        label=_("Without archived projects"), required=False
-    )
+    archived = forms.BooleanField(label=_("Include archived"), required=False)
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,7 +57,7 @@ def search(request):
             project=data["project"],
             kind=data["kind"],
             mine=data["mine"],
-            exclude_archived=data["exclude_archived"],
+            archived=data["archived"],
         )
         if before := request.GET.get("before"):
             try:
@@ -74,7 +72,12 @@ def search(request):
         page = page[: queries.PAGE_SIZE]
         hits = queries.hits(page, terms)
         results = [
-            {"item": item, "hit": hits[item.pk], "icon": KIND_ICONS[item.kind]}
+            {
+                "item": item,
+                "hit": hits[item.pk],
+                "icon": KIND_ICONS[item.kind],
+                "archived": queries.is_archived(item),
+            }
             for item in page
         ]
         if more:
@@ -91,7 +94,7 @@ def search(request):
             "older": older,
             "filtered": any(
                 request.GET.get(name)
-                for name in ["project", "kind", "mine", "exclude_archived"]
+                for name in ["project", "kind", "mine", "archived"]
             ),
         },
     )

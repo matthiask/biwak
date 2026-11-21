@@ -1398,10 +1398,14 @@ def feed(project, person, kind, action, since, limit, as_json):
 @click.option(
     "--mine", is_flag=True, help="Only what you created or is assigned to you."
 )
-@click.option("--no-archived", is_flag=True, help="Leave out archived projects.")
+@click.option(
+    "--archived",
+    is_flag=True,
+    help="Include archived projects and lists, which are left out otherwise.",
+)
 @click.option("--limit", default=50, show_default=True, help="At most this many.")
 @json_option
-def search(terms, project, kind, mine, no_archived, limit, as_json):
+def search(terms, project, kind, mine, archived, limit, as_json):
     """Find items by words in their title, text or comments, newest first.
     Every word also matches as the start of a word."""
     params = {"q": " ".join(terms)}
@@ -1411,8 +1415,8 @@ def search(terms, project, kind, mine, no_archived, limit, as_json):
         params["kind"] = kind
     if mine:
         params["mine"] = "true"
-    if no_archived:
-        params["exclude_archived"] = "true"
+    if archived:
+        params["archived"] = "true"
     results = paginate("search/", params, limit=limit)
     if as_json:
         return echo_json(results)
@@ -1425,8 +1429,7 @@ def search(terms, project, kind, mine, no_archived, limit, as_json):
             str(result["id"]),
             result["kind"],
             result["title"],
-            result["project_name"]
-            + (" (archived)" if result["project_archived"] else ""),
+            result["project_name"] + (" (archived)" if result["archived"] else ""),
             found,
             clients(result),
         )

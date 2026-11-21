@@ -14,6 +14,8 @@ router = Router(tags=["search"])
 class ResultOut(ItemOut):
     project_name: str
     project_archived: bool
+    # The project, the list or the list it is in is archived
+    archived: bool
     # Escaped HTML with the matched words in <mark>; empty if only the title
     # has them
     title_html: str
@@ -28,6 +30,7 @@ def result_out(item):
     return item_out(item) | {
         "project_name": item.project.name,
         "project_archived": item.project.archived_at is not None,
+        "archived": queries.is_archived(item),
         "title_html": hit.title,
         "excerpt": hit.text,
         "excerpt_html": hit.excerpt_html,
@@ -43,14 +46,15 @@ def search(
     project_id: int | None = None,
     kind: Kind | None = None,
     mine: bool = False,
-    exclude_archived: bool = False,
+    archived: bool = False,
     cursor: str | None = None,
     page_size: int | None = None,
 ):
     """Items with all the words (each also as the start of a word) in their
     title, text or comments, newest first; ``mine`` only what you
     created or what is assigned to you.
-    Archived projects are included unless ``exclude_archived``."""
+    Archived projects and lists (with their contents) are left out unless
+    ``archived``."""
     project = project_for(request, project_id) if project_id else None
     found = queries.search(
         request.user,
@@ -58,7 +62,7 @@ def search(
         project=project,
         kind=kind,
         mine=mine,
-        exclude_archived=exclude_archived,
+        archived=archived,
     )
 
     def prepare(items):
