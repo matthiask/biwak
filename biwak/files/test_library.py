@@ -829,6 +829,27 @@ class ProjectPageTest(Fixture, TestCase):
             self.assertIn(counts, " ".join(html.split()))
 
 
+class BreadcrumbsTest(Fixture, TestCase):
+    def test_two_queries_however_deep(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from biwak.files.library import breadcrumbs
+
+        folder = self.public
+        for title in ["One", "Two", "Three", "Four"]:
+            folder = ops.create_folder(
+                project=self.project, title=title, creator=self.ada, parent=folder
+            )
+        folder = Item.objects.get(pk=folder.pk)
+        with CaptureQueriesContext(connection) as queries:
+            crumbs = breadcrumbs(folder)
+        self.assertEqual([c.title for c in crumbs], ["Public", "One", "Two", "Three"])
+        self.assertLessEqual(len(queries), 2)
+        self.assertEqual(breadcrumbs(self.public), [])
+        self.assertEqual(breadcrumbs(None), [])
+
+
 class FolderParamTest(TestCase):
     def test_a_folder_which_is_no_number(self):
         from biwak.test_utils import person, project
