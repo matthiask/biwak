@@ -13,12 +13,7 @@ below.
    the check-in mails, "Reply to this mail to comment/answer.", the
    editor's and the lantern's texts): reviewed all at once with the
    German translation (decided 2026-11-21).
-3. **The lantern** (`lantern.md`): marking as unread making a
-   notification mailable again (suggestion: no); switching mail back
-   from "none" mailing what's unread (suggestion: only what comes
-   after); "Pin" for both pinned messages and lantern bookmarks
-   (suggestion: "Bookmark" in the lantern).
-4. **The editor** (`editor.md`): a tick while an edit form is open on the
+3. **The editor** (`editor.md`): a tick while an edit form is open on the
    same page is overwritten when the form is saved (suggestion: the form
    carries the text's hash and refuses a stale save, like ticks); ticks
    on comments recording an event; a tick endpoint in the API.
