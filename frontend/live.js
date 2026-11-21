@@ -200,6 +200,9 @@ function editing(el) {
   const active = document.activeElement
   if (active && el.contains(active) && active.matches(FIELDS)) return true
   if (el.querySelector("details[open]")) return true
+  // An edit form shown in place of the view (frontend/view-edit.js)
+  if (el.matches("[data-view-form]") || el.querySelector("[data-view-form]"))
+    return true
   // A to-do's peek opened on its row
   if (el.querySelector(".wb-peek:not(:empty)")) return true
   return [...el.querySelectorAll("input, textarea, select")].some(dirty)
@@ -301,7 +304,9 @@ function wait(current, fresh) {
 function release() {
   for (const [id, fresh] of [...waiting]) {
     const current = document.getElementById(id)
-    if (!current) {
+    if (!current?.hasAttribute("data-live-waiting")) {
+      // Gone, or swapped meanwhile (the form saved or cancelled in place by
+      // htmx): what it waited for is old
       waiting.delete(id)
     } else if (!editing(current)) {
       replace(current, fresh)

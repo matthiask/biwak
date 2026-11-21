@@ -11,7 +11,7 @@ from django.utils import timezone
 from biwak import checklists
 from biwak.checkins import operations as checkin_ops
 from biwak.items import editing, operations as ops
-from biwak.items.models import Editing
+from biwak.items.models import Editing, Kind
 from biwak.test_utils import check_in_answers, person, project
 
 
@@ -168,10 +168,13 @@ class MarkerTest(Fixture):
         response = self.client.get(reverse("question_answer", args=[answer.parent_id]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(editing.holders(answer), [self.ada])
-        # The to-do page announces its always open form with the first focus
+        # The to-do page shows the to-do: no form, no marker; the form
+        # (its edit URL, or in place of the view) announces itself
         response = self.client.get(self.todo.get_absolute_url())
-        self.assertContains(response, "data-editing-lazy")
+        self.assertNotContains(response, "data-editing=")
         self.assertEqual(editing.holders(self.todo), [])
+        self.client.get(self.todo.get_absolute_url() + "edit/")
+        self.assertEqual(editing.holders(self.todo), [self.ada])
 
 
 class RefusedTickTest(Fixture):
@@ -381,7 +384,8 @@ class StaleSaveTest(Fixture):
         """The page of the form, and what its hidden ``base`` field carries"""
         self.client.force_login(user)
         url, _ = self.post_to(item)
-        response = self.client.get(url)
+        # The to-do's form is the page of its own edit URL
+        response = self.client.get(url + "edit/" if item.kind == Kind.TODO else url)
         self.assertContains(response, 'name="base')
         return response
 

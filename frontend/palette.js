@@ -81,6 +81,12 @@ export function runAction(action, { status } = {}) {
       else if (action.url) window.location.assign(action.url)
       break
     }
+    case "click": {
+      const element = document.querySelector(action.selector)
+      if (element) element.click()
+      else window.location.assign(action.url)
+      break
+    }
     case "copy":
       navigator.clipboard.writeText(action.text).then(
         () => status?.(data.texts.copied),

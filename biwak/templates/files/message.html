@@ -7,7 +7,14 @@
 {% block content %}
   {% url 'project_messages' item.project_id as area_url %}{% translate "Messages" as area %}{% include "_breadcrumbs.html" with project=item.project %}
   <div class="wb-page-header" id="live-header" data-live>
-    <h1 class="wb-title">
+    <h1
+      class="wb-title{% if can_change %} wb-edit-hit{% endif %}"
+      {% if can_change %}
+        data-edit-url="{% url 'message_edit' item.pk %}"
+        data-edit-focus="title"
+        title="{% translate 'Click to edit' %}"
+      {% endif %}
+    >
       {% if message.pinned_at %}<span
           class="text-body-secondary"
           title="{% translate 'Pinned' %}"
@@ -32,8 +39,13 @@
         </form>
       {% endif %}
       {% if can_change %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'message_edit' item.pk %}">{% icon "pencil" %}<span
-          >{% translate "Edit" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'message_edit' item.pk %}"
+          data-edit-url="{% url 'message_edit' item.pk %}"
+          data-edit-focus="title"
+          data-edit-open
+        >{% icon "pencil" %}<span>{% translate "Edit" %}</span></a>
       {% endif %}
       {% include "items/_more.html" %}
     </div>
@@ -46,7 +58,14 @@
   {% include "items/_client_banner.html" %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div class="wb-markdown mb-4" id="live-text" data-live>{% checklist_markdown message.content item %}</div>
+      <div id="live-text" data-live>
+        <div
+          class="wb-markdown mb-4{% if can_change %} wb-edit-hit{% endif %}"
+          {% if can_change %}data-edit-url="{% url 'message_edit' item.pk %}" data-edit-focus="content"{% endif %}
+        >
+          {% checklist_markdown message.content item %}
+        </div>
+      </div>
       {% reactions item %}
       {% include "items/_comments.html" %}
     </div>

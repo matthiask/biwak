@@ -54,10 +54,10 @@ ITEM_PAGES = {
 }
 
 COMMENT_FORM = 'form:has(> input[name="form"][value="comment"]) textarea'
-TODO_FORM_TITLE = 'form:has(> input[name="form"][value="todo"]) [name="title"]'
+EDIT_OPEN = "[data-edit-open]"
 ADD_TODO = ".wb-add-todo-form [name=title]"
 
-# Kinds with an edit page (to-dos edit on the page itself)
+# Kinds with an edit page (to-dos, messages and files edit on their page)
 EDIT_URLS = {
     Kind.LIST: "list_edit",
     Kind.MESSAGE: "message_edit",
@@ -88,6 +88,18 @@ def focus(label, selector, url="", shortcut=""):
     return {
         "label": label,
         "type": "focus",
+        "selector": selector,
+        "url": url,
+        "shortcut": shortcut,
+    }
+
+
+def click(label, selector, url, shortcut=""):
+    """Clicks the page's element (the "Edit" link, which swaps in the form
+    in place, frontend/view-edit.js) or, without one, opens ``url``"""
+    return {
+        "label": label,
+        "type": "click",
         "selector": selector,
         "url": url,
         "shortcut": shortcut,
@@ -167,11 +179,14 @@ def on_item(request, item, context):
     if item.is_commentable:
         actions.append(focus(_("Comment"), COMMENT_FORM, shortcut="c"))
     if item.kind == Kind.TODO:
-        actions.append(focus(_("Edit"), TODO_FORM_TITLE, shortcut="e"))
+        edit_url = reverse("todo_edit", args=[item.pk])
+        actions.append(click(_("Edit"), EDIT_OPEN, edit_url, "e"))
     elif item.kind in EDIT_URLS and ops.can_change(user, item):
-        actions.append(
-            link(_("Edit"), reverse(EDIT_URLS[item.kind], args=[item.pk]), "e")
-        )
+        edit_url = reverse(EDIT_URLS[item.kind], args=[item.pk])
+        if item.kind in {Kind.MESSAGE, Kind.FILE}:
+            actions.append(click(_("Edit"), EDIT_OPEN, edit_url, "e"))
+        else:
+            actions.append(link(_("Edit"), edit_url, "e"))
     elif item.kind == Kind.QUESTION and not user.is_client:
         actions.append(link(_("Edit"), reverse("question_edit", args=[item.pk]), "e"))
     bookmarked = is_bookmarked(user, item=item)

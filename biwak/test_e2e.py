@@ -213,7 +213,9 @@ class TodosTest(E2ETestCase):
 
         title.fill("Write the brief")
         add.locator("[name=notes]").fill("Two pages, *short*")
-        add.locator(".wb-chip", has_text="Ada").click()
+        picker = add.locator(".wb-picker-input")
+        picker.click()
+        add.locator(".wb-picker-list li", has_text="Ada").click()
         add.locator("[name=due_on]").fill("2026-12-24")
         title.press("Control+Enter")
         rows = page.locator("[data-todo]")
@@ -224,7 +226,7 @@ class TodosTest(E2ETestCase):
         # Ready for the next one
         self.assertEqual(title.input_value(), "")
         self.assertEqual(add.locator("[name=notes]").input_value(), "")
-        self.assertFalse(add.locator(".wb-chip input").first.is_checked())
+        expect(add.locator(".wb-pill")).to_have_count(0)
         expect(title).to_be_focused()
 
         title.fill("Send it")
@@ -1235,24 +1237,22 @@ class LiveTest(E2ETestCase):
     def test_a_form_being_edited_isnt_replaced(self):
         ada = self.open(self.ada, self.todo, page=self.page)
         bob = self.open(self.bob, self.todo)
-        title = ada.locator("#live-form input[name=title]")
+        # Ada has the form open (the marker only blocks ticks); Bob saves
+        # the notes
+        ada.get_by_role("link", name="Edit").click()
+        title = ada.locator("#live-text input[name=title]")
         title.fill("Order the big tent")
-        notes = bob.locator("#live-form textarea[name=notes]")
-        notes.fill("Two poles")
-        bob.locator("#live-form").get_by_role("button", name="Save").click()
-        bob.wait_for_load_state()
-        # The notes above the form follow, the form waits
-        expect(ada.locator("#live-text")).to_contain_text("Two poles")
-        expect(ada.locator("#live-form [data-live-note]")).to_be_visible()
+        bob.locator("#live-text .wb-view-text").click()
+        bob.locator("#live-text textarea[name=notes]").fill("Two poles")
+        bob.get_by_role("button", name="Save").click()
+        # The form waits, with a note
+        expect(ada.locator("#live-text [data-live-note]")).to_be_visible()
         expect(title).to_have_value("Order the big tent")
-        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value("")
-        # Put back and left: the form takes over what changed
-        title.fill("Order the tent")
-        title.blur()
-        expect(ada.locator("#live-form textarea[name=notes]")).to_have_value(
-            "Two poles"
-        )
-        expect(ada.locator("#live-form [data-live-note]")).to_have_count(0)
+        expect(ada.locator("#live-text textarea[name=notes]")).to_have_value("")
+        # Cancelled: the view shows what changed
+        ada.get_by_role("link", name="Cancel").click()
+        expect(ada.locator("#live-text")).to_contain_text("Two poles")
+        expect(ada.locator("#live-text form")).to_have_count(0)
         self.assertFalse(self.errors)
 
     def test_a_clients_page_doesnt_hear_of_an_internal_change(self):
@@ -1703,22 +1703,24 @@ class RuleWidgetTest(E2ETestCase):
         )
         page = self.page
         self.goto(page, elsewhere)
+        page.get_by_role("link", name="Edit").click()
         widget = page.locator("[data-rule-widget]")
-        self.assertIn("can't be edited here", widget.inner_text())
+        expect(widget).to_contain_text("can't be edited here")
         self.assertFalse(widget.locator("[data-rule-frequency]").is_visible())
         page.locator("form [name=title][maxlength='500']").fill("Renamed")
         page.locator("form button[type=submit]", has_text="Save").first.click()
-        page.wait_for_url(f"**{elsewhere.get_absolute_url()}")
+        expect(page.locator("[data-rule-widget]")).to_have_count(0)
         elsewhere.todo.refresh_from_db()
         self.assertEqual(elsewhere.todo.recurrence, "FREQ=MONTHLY;BYMONTHDAY=1,15")
         # Replace opens the widget
+        page.get_by_role("link", name="Edit").click()
         page.locator("[data-rule-replace]").check()
         frequency = widget.locator("[data-rule-frequency]")
         expect(frequency).to_be_visible()
         frequency.select_option("daily")
         expect(widget.locator("[data-rule-description]")).to_have_text("every day")
         page.locator("form button[type=submit]", has_text="Save").first.click()
-        page.wait_for_url(f"**{elsewhere.get_absolute_url()}")
+        expect(page.locator("[data-rule-widget]")).to_have_count(0)
         elsewhere.todo.refresh_from_db()
         self.assertEqual(elsewhere.todo.recurrence, "FREQ=DAILY")
 

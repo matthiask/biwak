@@ -1,0 +1,30 @@
+{% load attachments i18n %}
+{% comment %}
+  The to-do's edit form, in place of its view (frontend/view-edit.js) or as
+  the page's form without JavaScript. Announces itself as being edited
+  (frontend/editing.js) for as long as it's shown.
+{% endcomment %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form
+      method="post"
+      action="{% url 'todo_edit' item.pk %}"
+      {% attachments_attrs item.project %}
+      {% include "files/_edit_attrs.html" with region="" %}
+    >
+      {% csrf_token %}
+      <input type="hidden" name="form" value="todo">
+      <input type="hidden" name="base" value="{{ base }}">
+      {% include "files/_attach_button.html" %}
+      {{ form }}
+      <button type="submit" class="btn btn-primary btn-sm" {% include "files/_save_attrs.html" %}>
+        {% translate "Save" %}
+      </button>
+      <a
+        href="{{ item.get_absolute_url }}"
+        class="btn btn-quiet btn-sm"
+        {% include "files/_cancel_attrs.html" %}
+      >{% translate "Cancel" %}</a>
+    </form>
+  </div>
+</div>
