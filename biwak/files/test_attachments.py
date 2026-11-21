@@ -228,7 +228,11 @@ class OperationsTest(Fixture, TestCase):
         )
         self.assertIn(f'<a href="/attachments/{pdf.key}/plan.pdf">plan.pdf</a>', html)
         self.assertIn("<p>attachment <a", html)  # gone
-        self.assertIn('<a href="https://example.org">web</a>', html)
+        self.assertIn(
+            '<a href="https://example.org" target="_blank" rel="noopener noreferrer">'
+            "web</a>",
+            html,
+        )
         self.assertIn(
             f'src="http://127.0.0.1:8000/attachments/{image.key}/',
             str(render_markdown(image.markdown, self.todo, absolute=True)),
