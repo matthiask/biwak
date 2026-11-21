@@ -14,6 +14,7 @@ Each test logs in through a session cookie and waits for what it expects
 """
 
 import asyncio
+import datetime as dt
 import json
 import os
 import re
@@ -29,13 +30,15 @@ from django.test.testcases import LiveServerThread
 from django.urls import reverse
 from django.views.static import serve as static_serve
 
+from biwak import schedules
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.activity.models import LevelOverride
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Doc, Item, Kind, Status
+from biwak.items.models import Comment, Doc, Item, Kind, Status, Todo
+from biwak.projects import operations as project_ops
 from biwak.reactions.models import Reaction
 from biwak.test_utils import person, project
 
@@ -796,6 +799,67 @@ class TodoPageTest(E2ETestCase):
         })
         form.locator("[role=alert]").filter(has_text="at most").wait_for()
         self.assertEqual(Attachment.objects.count(), 0)
+
+
+class OverdueTest(E2ETestCase):
+    def test_the_badge_on_a_list(self):
+        """Overdue gets the danger badge, today the quiet one, a completed
+        to-do none (specs/ui-round-1.md, part 5)"""
+        today = schedules.today()
+        todolist = self.make_list(todos=["Late", "Now", "Done", "Soon"])
+        for title, due_on in [
+            ("Late", today - dt.timedelta(days=2)),
+            ("Now", today),
+            ("Done", today - dt.timedelta(days=2)),
+            ("Soon", today + dt.timedelta(days=2)),
+        ]:
+            Todo.objects.filter(item__title=title).update(due_on=due_on)
+        ops.complete(Item.objects.get(title="Done"), actor=self.ada)
+        page = self.page
+        self.goto(page, todolist)
+
+        def badge(title):
+            return page.locator("[data-todo]", has_text=title).locator("[data-due]")
+
+        expect(badge("Late")).to_have_attribute("data-due", "overdue")
+        expect(badge("Late")).to_contain_text("Overdue")
+        expect(badge("Now")).to_have_text("Today")
+        expect(badge("Soon")).to_have_attribute("data-due", "later")
+        expect(page.locator("[data-todo]", has_text="Done")).to_have_count(1)
+        expect(badge("Done").filter(has_text="Overdue")).to_have_count(0)
+        expect(page.locator("[data-due=overdue]")).to_have_count(1)
+
+
+class ProjectsPageTest(E2ETestCase):
+    def test_archiving_with_undo_and_switching(self):
+        self.camp = project("Camp", members=[self.ada])
+        page = self.page
+        self.goto(page, reverse("projects"))
+        # No reload: a marker on the page survives
+        page.evaluate("window.marker = 1")
+        card = page.locator(".wb-project-card", has_text="Camp")
+        card.get_by_role("button", name="Archive the project").click()
+        expect(card).to_have_count(0)
+        status = page.get_by_role("status")
+        expect(status).to_contain_text("Archived.")
+        self.camp.refresh_from_db()
+        self.assertIsNotNone(self.camp.archived_at)
+        status.get_by_role("button", name="Undo").click()
+        expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
+        expect(page.get_by_role("status")).to_have_count(0)
+        self.camp.refresh_from_db()
+        self.assertIsNone(self.camp.archived_at)
+        # Switching to the archived projects and bringing one back
+        page.get_by_role("link", name="Archive", exact=True).click()
+        expect(page.locator("h1")).to_have_text("Archived projects")
+        self.assertIn("archived=1", page.url)
+        self.assertEqual(page.evaluate("window.marker"), 1)
+        project_ops.archive_project(self.camp, actor=self.ada)
+        page.reload()
+        page.get_by_role("button", name="Bring back from the archive").click()
+        expect(page.get_by_role("status")).to_contain_text("Brought back.")
+        page.get_by_role("link", name="Active projects").click()
+        expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
 
 
 class ASGIServerThread(LiveServerThread):

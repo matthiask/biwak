@@ -1,0 +1,156 @@
+{% load biwak humanize i18n %}
+{% comment %}
+  The projects page's content, which htmx swaps as a whole: switching
+  between active and archived projects, archiving, bringing back and Undo.
+{% endcomment %}
+<div id="projects-page">
+  <div class="wb-page-header">
+    <h1>{% if archived %}{% translate "Archived projects" %}{% else %}{% translate "Projects" %}{% endif %}</h1>
+    <div class="wb-page-actions">
+      {% if not archived %}
+        <form
+          method="post"
+          action="{% url 'project_order' %}"
+          class="btn-group btn-group-sm"
+          role="group"
+          aria-label="{% translate 'Order' %}"
+        >
+          {% csrf_token %}
+          {% for value, label in orders %}
+            <button
+              type="submit"
+              name="order"
+              value="{{ value }}"
+              class="btn btn-sm {% if value == order %}btn-primary{% else %}btn-quiet{% endif %}"
+              {% if value == order %}aria-pressed="true"{% endif %}
+            >
+              {{ label }}
+            </button>
+          {% endfor %}
+        </form>
+      {% endif %}
+      {% if archived %}
+        <a
+          href="{% url 'projects' %}"
+          hx-get="{% url 'projects' %}"
+          hx-target="#projects-page"
+          hx-select="#projects-page"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          class="btn btn-sm btn-quiet"
+        >{% translate "Active projects" %}</a>
+      {% else %}
+        <a
+          href="{% url 'projects' %}?archived=1"
+          hx-get="{% url 'projects' %}?archived=1"
+          hx-target="#projects-page"
+          hx-select="#projects-page"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          class="btn btn-sm btn-quiet"
+        >{% translate "Archive" %}</a>
+        {% if not request.user.is_client %}
+          <a href="{% url 'project_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
+            >{% translate "New project" %}</span></a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {% if message %}
+    <div class="alert alert-secondary d-flex align-items-center gap-2 py-2" role="status">
+      <span>{{ message.text }}</span>
+      {% include "projects/_archive_form.html" with project=message.project unarchive=message.unarchive undo=True %}
+    </div>
+  {% endif %}
+  {% if archived %}
+    <div class="list-group mb-4">
+      {% for project in projects %}
+        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2">
+          <a class="stretched-link text-decoration-none" href="{{ project.get_absolute_url }}">
+            {% project_dot project %}{{ project }}
+            {% if not project.is_all_access %}<span
+                class="text-body-secondary ms-1"
+                title="{% translate 'Limited: members only' %}"
+              >{% icon "lock" %}</span>{% endif %}
+          </a>
+          {% if can_manage %}
+            <span
+              class="position-relative"
+              style="z-index: 2"
+            >{% include "projects/_archive_form.html" with unarchive=True %}</span>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="list-group-item text-body-secondary">{% translate "No archived projects." %}</div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="wb-project-grid mb-4">
+      {% for project in projects %}
+        <div>
+          <div class="card wb-project-card" {% if project.color %}data-project-color="{{ project.color }}"{% endif %}>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <h2 class="h6 mb-0 text-truncate">
+                  <a
+                    href="{{ project.get_absolute_url }}"
+                    class="text-decoration-none"
+                  >{% project_dot project %}{{ project }}</a>
+                  {% if not project.is_all_access %}<span
+                      class="text-body-secondary ms-1"
+                      title="{% translate 'Limited: members only' %}"
+                    >{% icon "lock" %}</span>{% endif %}
+                </h2>
+                <div class="d-flex align-items-center gap-1">
+                  {% if can_manage %}{% include "projects/_archive_form.html" with card=True %}{% endif %}
+                  {% include "bookmarks/_bookmark_button.html" with target=project is_bookmarked=project.is_bookmarked card=True %}
+                </div>
+              </div>
+              {% if project.description_first_line %}
+                <p class="small text-body-secondary text-truncate mb-1">
+                  {{ project.description_first_line|excerpt:160 }}
+                </p>
+              {% endif %}
+              <div class="small d-flex flex-wrap align-items-center gap-2">
+                {% if project.has_clients %}
+                  <span
+                    class="badge wb-client-badge"
+                    title="{% translate 'Has client members' %}"
+                  >{% translate "Clients" %}</span>
+                {% endif %}
+                {% if project.activity %}
+                  <span class="text-body-secondary">{{ project.activity|naturaltime }}</span>
+                {% endif %}
+                {% if project.open_count %}
+                  <span
+                  >{% blocktranslate count n=project.open_count %}{{ n }} open{% plural %}{{ n }} open{% endblocktranslate %}</span>
+                {% endif %}
+                {% if project.overdue_count %}
+                  <span
+                    class="text-danger"
+                  >{% blocktranslate count n=project.overdue_count %}{{ n }} overdue{% plural %}{{ n }} overdue{% endblocktranslate %}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% if not projects %}<p class="text-body-secondary">{% translate "No projects yet." %}</p>{% endif %}
+  {% endif %}
+  {% if others %}
+    <h2 class="h5">{% translate "Limited projects you're not a member of" %}</h2>
+    <p class="text-body-secondary">{% translate "As admin you can join them; joining is recorded in the project." %}</p>
+    <div class="list-group">
+      {% for project in others %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{% icon "lock" %} {{ project }}</span>
+          <form method="post" action="{% url 'project_join' project.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-elevated">{% translate "Join" %}</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
