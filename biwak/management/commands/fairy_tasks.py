@@ -6,6 +6,7 @@ from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import prune_api_tokens
 from biwak.files.attachments import delete_unlinked
 from biwak.inbound.tokens import prune as prune_replies
+from biwak.items.editing import prune as prune_editing
 from biwak.items.operations import purge_trash
 from biwak.projects.operations import recompute_activity
 
@@ -28,6 +29,7 @@ class Command(BaseCommand):
             "prune_api_tokens": prune_api_tokens,
             "delete_unlinked": delete_unlinked,
             "prune_replies": prune_replies,
+            "prune_editing": prune_editing,
             "recompute_activity": recompute_activity,
             "check_visibility": lambda: call_command(
                 "check_visibility", mail=True, stdout=self.stdout

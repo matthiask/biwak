@@ -156,9 +156,8 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
   (fixtures in `biwak/test_fixtures/`), `biwak/test_e2e_editor.py`
   (Playwright: ticking, every toolbar button and key, undo, Ctrl+K, a phone
   width, pasting).
-- **Known gap:** ticking doesn't update an edit form that's open on the same
-  page; saving it later writes its (older) text. The 409 covers ticks, not
-  forms.
+- **Known gap (closed 2026-11-21):** ticking didn't update an edit form
+  that's open; see "Ticking while someone edits".
 
 ## Ticking while someone edits (decided 2026-11-21)
 
@@ -177,3 +176,54 @@ An open edit form is more important than a tick:
 - The edit form itself still refuses a stale save (someone else saved
   meanwhile) and says who; ticks made before the form was opened are
   in the form's text.
+
+**Status:** built 2026-11-21 (branch `tick-editing`).
+
+Built as decided, with these details:
+
+- **The marker** is the table `items.Editing` (migration `items.0008`;
+  one row per item and person, not audited: it's transient). Not the
+  cache: Django's default cache is per process, so tests and production
+  would differ. `biwak/items/editing.py` has `start()`, `stop()`,
+  `holders()` (rows renewed within `TTL`, 2 minutes) and `prune()` (the
+  daily `fairy_tasks` job deletes the expired rows). `POST
+  /items/<id>/editing/` starts or renews it, with `release` ends it.
+- **Who sets it:** the edit pages of messages, files and answers set it
+  when they render the form (and again when a save is refused); docs set it
+  with their lock (`lock_doc()`, `unlock_doc()`). The to-do page shows its
+  form all the time, so the form announces itself with the first focus or
+  input (`data-editing-lazy`) and ends when the page is left. All of it in
+  `frontend/editing.js`: the open form renews every minute, Cancel
+  (`data-editing-release`) gives up. Saving ends the person's marker in the
+  operations (`update_todo`, `update_message`, `update_doc`,
+  `update_upload`, `update_answer`).
+- **Ticks** (`items.operations.tick()`) raise `editing.BeingEdited` while
+  anybody's marker is current, the ticker's own included (one rule). Ticks
+  of comments don't wait: comments have no edit form. The 409 answers
+  `{"message": ..., "reload": bool}`; `frontend/checklist.js` shows the
+  message in a `role="status"` span next to the box. "Ada is editing this;
+  try again when they're done." (neutral wording instead of "she's", the
+  names are of all genders); two or more: "Several people are editing
+  this"; the ticker's own form: "You have the edit form of this open; save
+  or cancel it first."
+- **Names follow the visibility rules:** `editing.name_for()` uses
+  `Project.people_known_to()`; clients get "Someone is editing this" and
+  "Changed by someone a moment ago" for staff they may not know.
+- **A text that changed** (`ChecklistConflict`) carries who changed it last
+  (the latest `edited` event of the item, for comments their author) and
+  when: "Changed by Bob a moment ago." (or "5 minutes ago"). The page loads
+  the page again in the background and replaces the text in place (no
+  navigation), the message beside the box.
+- **Stale saves:** docs always refused them (`base_version`, newest
+  version). Now the to-do, message, file and answer forms carry `base` (the
+  hash of title and text, `editing.version()`) and the operations take
+  `base=`: somebody else's save meanwhile raises `editing.StaleEdit`, the
+  form shows who and when above the user's text ("Bob changed this a moment
+  ago, while you were editing, so your changes weren't saved. Copy your
+  text, then reload the page."). A save without `base` (the API, the CLI,
+  older forms) isn't checked; the API's `PATCH` has no `base` yet.
+- Tests: `biwak/items/test_editing.py` (the marker and its expiry, saving
+  and cancelling, refused ticks with names for staff and clients, changed
+  texts, the stale save for every kind), `biwak/test_e2e_editor.py`
+  (`EditingTest`: two browsers, one editing, one ticking; the reloaded text
+  with the message).

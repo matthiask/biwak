@@ -18,7 +18,7 @@ from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
 from biwak.forms import Form
-from biwak.items import operations as item_ops
+from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
 from biwak.projects.views import project_for
@@ -417,14 +417,27 @@ def question_answer(request, pk):
     form.fields["content"].widget.attrs["data-mentions"] = reverse(
         "mentionable", args=[item.pk]
     )
+    base = request.POST.get("base") or (
+        editing.version(existing.item) if existing else ""
+    )
     if form.is_valid():
-        answer = ops.answer(
-            item,
-            user=request.user,
-            content=form.cleaned_data["content"],
-            occurrence=occurrence,
-        )
-        return redirect(answer)
+        try:
+            answer = ops.answer(
+                item,
+                user=request.user,
+                content=form.cleaned_data["content"],
+                occurrence=occurrence,
+                base=request.POST.get("base"),
+            )
+        except editing.StaleEdit as exc:
+            form.add_error(
+                None,
+                editing.stale_message(request.user, item.project, exc.who, exc.when),
+            )
+        else:
+            return redirect(answer)
+    if existing:
+        editing.start(existing.item, request.user)
     return render(
         request,
         "checkins/answer.html",
@@ -433,6 +446,7 @@ def question_answer(request, pk):
             "occurrence": occurrence,
             "existing": existing,
             "form": form,
+            "base": base,
         },
     )
 

@@ -51,9 +51,15 @@
       {% reactions item %}
       <div class="card mb-4">
         <div class="card-body">
-          <form method="post" {% attachments_attrs item.project %}>
+          <form
+            method="post"
+            {% attachments_attrs item.project %}
+            data-editing="{% url 'item_editing' item.pk %}"
+            data-editing-lazy
+          >
             {% csrf_token %}
             <input type="hidden" name="form" value="todo">
+            <input type="hidden" name="base" value="{{ base }}">
             {% include "files/_attach_button.html" %}
             {{ form }}
             <button type="submit" class="btn btn-primary btn-sm">{% translate "Save" %}</button>

@@ -12,7 +12,7 @@ from biwak import checklists, cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.forms import Form, next_url
-from biwak.items import glance, operations as ops, visibility
+from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.reactions.operations import prefetch
 from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
@@ -417,18 +417,27 @@ def todo(request, pk):
     mentions_url = reverse("mentionable", args=[item.pk])
     for field in ["title", "notes"]:
         form.fields[field].widget.attrs["data-mentions"] = mentions_url
+    base = request.POST.get("base") or editing.version(item)
     if form.is_valid():
         data = form.cleaned_data
-        ops.update_todo(
-            item,
-            actor=request.user,
-            title=data["title"],
-            notes=data["notes"],
-            due_on=data["due_on"],
-            assignees=data["assignees"],
-            **form.recurrence_kwargs(),
-        )
-        return redirect(item)
+        try:
+            ops.update_todo(
+                item,
+                actor=request.user,
+                title=data["title"],
+                notes=data["notes"],
+                due_on=data["due_on"],
+                assignees=data["assignees"],
+                base=request.POST.get("base"),
+                **form.recurrence_kwargs(),
+            )
+        except editing.StaleEdit as exc:
+            form.add_error(
+                None,
+                editing.stale_message(request.user, item.project, exc.who, exc.when),
+            )
+        else:
+            return redirect(item)
     prefetch(item)
     comment_form = CommentForm(
         request.POST if request.POST.get("form") == "comment" else None
@@ -446,6 +455,7 @@ def todo(request, pk):
             "item": item,
             "todo": todo,
             "form": form,
+            "base": base,
             "comment_form": comment_form,
             "comments": item.comments.select_related("author"),
             # Clients only learn about the project's members
@@ -559,11 +569,42 @@ def tick(request, pk):
             comment=comment,
             checked=checked,
         )
-    except ops.ChecklistConflict, DocLocked:
-        return HttpResponse(status=409)
+    except editing.BeingEdited as exc:
+        return _refused(
+            editing.being_edited_message(request.user, item.project, exc.users)
+        )
+    except DocLocked as exc:
+        return _refused(
+            editing.being_edited_message(request.user, item.project, [exc.user])
+        )
+    except ops.ChecklistConflict as exc:
+        return _refused(
+            editing.changed_message(request.user, item.project, exc.who, exc.when),
+            reload=True,
+        )
     except checklists.NoCheckbox:
         raise BadRequest("index") from None
     return JsonResponse({"version": checklists.text_hash(text)})
+
+
+def _refused(message, *, reload=False):
+    """A tick that didn't happen: ``reload`` says the page's text is old"""
+    return JsonResponse({"message": str(message), "reload": reload}, status=409)
+
+
+@require_POST
+def item_editing(request, pk):
+    """The item's edit form is open (renewed every minute, frontend/editing.js)
+    or, with ``release``, closed; while it's open nobody ticks the item's
+    text (specs/editor.md)"""
+    item = item_for(request, pk)
+    if item.kind not in editing.EDITABLE or not ops.can_tick(request.user, item):
+        raise PermissionDenied
+    if request.POST.get("release"):
+        editing.stop(item, request.user)
+    else:
+        editing.start(item, request.user)
+    return HttpResponse(status=204)
 
 
 @require_POST

@@ -14,7 +14,7 @@ from biwak.files import operations
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import board, latest_messages, pinned_messages
 from biwak.forms import Form, next_url
-from biwak.items import operations as ops
+from biwak.items import editing, operations as ops
 from biwak.items.models import Kind, MessageCategory
 from biwak.items.views import item_for
 from biwak.projects.views import project_for
@@ -140,13 +140,27 @@ def message_edit(request, pk):
     )
     form.fields["content"].widget.attrs["data-mentions"] = _mentions_url(item)
     form.fields["title"].widget.attrs["data-mentions"] = _mentions_url(item)
+    base = request.POST.get("base") or editing.version(item)
     if form.is_valid():
-        operations.update_message(item, actor=request.user, **form.cleaned_data)
-        return redirect(item)
+        try:
+            operations.update_message(
+                item,
+                actor=request.user,
+                base=request.POST.get("base"),
+                **form.cleaned_data,
+            )
+        except editing.StaleEdit as exc:
+            form.add_error(
+                None,
+                editing.stale_message(request.user, item.project, exc.who, exc.when),
+            )
+        else:
+            return redirect(item)
+    editing.start(item, request.user)
     return render(
         request,
         "files/message_form.html",
-        {"project": item.project, "form": form, "item": item},
+        {"project": item.project, "form": form, "item": item, "base": base},
     )
 
 

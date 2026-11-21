@@ -212,6 +212,28 @@ class Detail(models.Model):
         return str(self.item)
 
 
+class Editing(models.Model):
+    """Somebody has the item's edit form open (specs/editor.md): set when
+    the form opens, renewed by it every minute, gone when it's saved or
+    cancelled; it counts for ``biwak.items.editing.TTL`` after the last
+    renewal. Transient, so not in the audit log."""
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="editing")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
+    )
+    seen_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["item", "user"], name="editing_unique")
+        ]
+        indexes = [models.Index(fields=["seen_at"])]
+
+    def __str__(self):
+        return f"{self.user} edits {self.item}"
+
+
 class Checklist(models.Model):
     """For details whose text may have a task list (specs/editor.md): the
     count is stored when the text is saved, so rows show it without parsing

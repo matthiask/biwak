@@ -100,8 +100,12 @@ class E2ETestCase(LiveServerTestCase):
     def console(self, message):
         # The favicon lives in an app's static files, the test server
         # serves only the bundle in static/
-        if message.type == "error" and not message.location["url"].endswith(
-            "/favicon.svg"
+        # A refused tick (409) is part of the pages' dealings, the browser
+        # logs it anyway
+        if (
+            message.type == "error"
+            and not message.location["url"].endswith("/favicon.svg")
+            and "status of 409" not in message.text
         ):
             self.errors.append(f"{message.text} {message.location['url']}")
 
