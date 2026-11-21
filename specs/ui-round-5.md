@@ -24,10 +24,18 @@ Round 5 of `ui-feedback.md` (2026-11-21).
   `Assignment`, so "Assigned to: X" and "Assigned by: Me" mean the same
   assignment; "Nobody" with "Me" shows nothing. The form's labels are
   lowercase like the others ("assigned by"). The palette action
-  "To-dos I assigned" is marked `exact`: unlike "Go to my to-dos" it opens
+  "To-dos I assigned" is marked `exact`: unlike "Go to to-dos" it opens
   its own query, not the one remembered for the page (which would defeat
-  it); the page then remembers that. The page's title stays "To-dos". The
-  API's `assigned_by` other than `me` is a 400. CLI 0.30.0.
+  it); the page then remembers that. The API's `assigned_by` other than
+  `me` is a 400. CLI 0.30.0.
+- 4, decided 2026-11-21 (user): the top bar's entry is "To-dos" (was "My
+  to-dos"), active on every view of the page; it starts at
+  `?assignee=me` until a view is remembered. The palette's "Go to my
+  to-dos" is "Go to to-dos" (it restores the remembered view too). The
+  page's title follows the filters: "My to-dos" (assigned to me),
+  "To-dos I assigned" (by me, to anybody else), else "To-dos".
+- Later, to think about (user, 2026-11-21): a quick way to set "Assigned
+  to" to me, e.g. a button next to the filters.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; section 4 touches a model and the API, so check its

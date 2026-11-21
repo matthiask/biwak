@@ -72,7 +72,7 @@ class EverywhereTest(ActionsBase):
             for label in [
                 "Go to projects",
                 "Go to the activity",
-                "Go to my to-dos",
+                "Go to to-dos",
                 "Go to bookmarks",
                 "Settings",
                 "Search",
@@ -80,7 +80,7 @@ class EverywhereTest(ActionsBase):
             ]:
                 self.assertIn(label, actions)
             self.assertEqual(actions["Go to bookmarks"]["shortcut"], "g b")
-            self.assertEqual(actions["Go to my to-dos"]["url"], "/todos/?assignee=me")
+            self.assertEqual(actions["Go to to-dos"]["url"], "/todos/?assignee=me")
 
     def test_new_project_is_for_staff(self):
         self.assertEqual(self.actions(self.ada, "/")["New project"]["type"], "modal")

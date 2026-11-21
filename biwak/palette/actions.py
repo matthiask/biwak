@@ -119,7 +119,7 @@ def everywhere(user):
     actions = [
         link(_("Go to projects"), reverse("projects"), "g p"),
         link(_("Go to the activity"), reverse("feed"), "g f"),
-        link(_("Go to my to-dos"), reverse("todos") + "?assignee=me", "g t"),
+        link(_("Go to to-dos"), reverse("todos") + "?assignee=me", "g t"),
         link(
             _("To-dos I assigned"),
             reverse("todos") + "?assignee=&assigned_by=me",

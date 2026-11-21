@@ -2637,7 +2637,7 @@ class KeyboardTest(E2ETestCase):
         )
         self.open_palette(page)
         # The actions still run from the palette
-        page.keyboard.type("my to-dos")
+        page.keyboard.type("go to to-dos")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=me")
 
@@ -2954,7 +2954,7 @@ class FiltersTest(E2ETestCase):
         self.goto(page, "/todos/?assignee=nobody&state=completed")
         # The link of the top bar goes to the stored filters
         self.goto(page, "/")
-        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
         expect(link).to_have_attribute(
             "href", "/todos/?assignee=nobody&state=completed"
         )
@@ -2968,14 +2968,14 @@ class FiltersTest(E2ETestCase):
         page.get_by_role("link", name="Reset filters").click()
         page.wait_for_url("**/todos/")
         self.goto(page, "/")
-        expect(page.locator(".wb-nav-links a", has_text="My to-dos")).to_have_attribute(
+        expect(page.locator(".wb-nav-links a", has_text="To-dos")).to_have_attribute(
             "href", "/todos/?assignee=me"
         )
         # The palette's link too
         self.goto(page, "/todos/?assignee=nobody")
         self.goto(page, "/")
         page.keyboard.press("Control+k")
-        page.locator("#wb-palette-input").fill("my to-dos")
+        page.locator("#wb-palette-input").fill("go to to-dos")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=nobody")
         self.assertEqual(self.errors, [])
@@ -2986,7 +2986,7 @@ class FiltersTest(E2ETestCase):
         page.locator("#id_grouping").select_option("due")
         page.wait_for_url("**grouping=due*")
         self.goto(page, "/")
-        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
         expect(link).to_have_attribute("href", re.compile(r"grouping=due"))
         link.click()
         page.wait_for_url("**grouping=due*")
@@ -3022,7 +3022,7 @@ class FiltersTest(E2ETestCase):
         page.wait_for_function("document.activeElement.name === 'assigned_by'")
         # The top bar's link restores it
         self.goto(page, "/")
-        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
         expect(link).to_have_attribute("href", re.compile(r"assigned_by=me"))
         link.click()
         page.wait_for_url("**assigned_by=me*")

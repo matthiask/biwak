@@ -89,6 +89,16 @@ class FilterForm(Form):
 TodoGrouping = type("TodoGrouping", (), {"PROJECT": "project", "DUE": "due"})
 
 
+def _title(data):
+    """What the filters show: mine, the ones I assigned (to others too),
+    or to-dos"""
+    if data.get("assignee") == "me":
+        return _("My to-dos")
+    if data.get("assigned_by") == "me":
+        return _("To-dos I assigned")
+    return _("To-dos")
+
+
 def todos_by_due(request, project=None):
     """Open to-dos by due date across the projects the person sees, or in
     one project; ``?assignee=me`` is "My to-dos". Rows are completed in
@@ -114,7 +124,7 @@ def todos_by_due(request, project=None):
         "form": form,
         "project": project,
         "completed": completed,
-        "title": _("My to-dos") if request.GET.get("assignee") == "me" else _("To-dos"),
+        "title": _title(data),
     }
     if completed:
         page = Paginator(

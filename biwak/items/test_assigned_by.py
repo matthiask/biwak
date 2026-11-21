@@ -6,6 +6,7 @@ import datetime as dt
 from django.db import IntegrityError, connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase
+from django.urls import reverse
 
 from biwak.accounts.models import APIToken
 from biwak.items import operations as ops
@@ -185,6 +186,33 @@ class FilterTest(AssignedByTestCase):
             self.assertContains(self.client.get("/todos/"), "assigned by")
 
 
+class TitleTest(AssignedByTestCase):
+    """The page's title follows the filters; the navigation says "To-dos"
+    and is active on every view of the page (decided 2026-11-21)"""
+
+    def test_titles(self):
+        self.client.force_login(self.ada)
+        for params, title in [
+            ({"assignee": "me"}, "My to-dos"),
+            ({"assignee": "me", "assigned_by": "me"}, "My to-dos"),
+            ({"assignee": "", "assigned_by": "me"}, "To-dos I assigned"),
+            ({"assignee": ""}, "To-dos"),
+        ]:
+            with self.subTest(params=params):
+                response = self.client.get("/todos/", params)
+                self.assertContains(response, f'<h1 class="wb-title">{title}</h1>')
+                self.assertRegex(
+                    response.content.decode(),
+                    r'class="nav-link active"\s+href="/todos/\?assignee=me"',
+                )
+
+    def test_the_navigation_says_to_dos(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("projects"))
+        self.assertContains(response, ">To-dos</a>")
+        self.assertNotContains(response, ">My to-dos</a>")
+
+
 class APITest(AssignedByTestCase):
     def get(self, user, **params):
         _token, secret = APIToken.create_for(user=user, title="T", access="read")
@@ -266,7 +294,7 @@ class PaletteTest(AssignedByTestCase):
                 self.assertEqual(action["url"], "/todos/?assignee=&assigned_by=me")
                 # Exactly this, not the remembered filters
                 self.assertTrue(action["exact"])
-                self.assertNotIn("exact", actions["Go to my to-dos"])
+                self.assertNotIn("exact", actions["Go to to-dos"])
 
 
 class MigrationTest(TransactionTestCase):
