@@ -447,12 +447,22 @@ a.wb-row-title:hover {
 }
 
 /* Markdown texts: purposes, accountabilities, policies */
+.wb-markdown {
+  overflow-wrap: anywhere;
+}
+
 .wb-markdown > :last-child {
   margin-bottom: 0;
 }
 
 .wb-markdown p {
   margin-bottom: 0.5rem;
+}
+
+.wb-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .wb-markdown ul,
@@ -787,6 +797,11 @@ a.wb-row-title:hover {
   border-bottom: 0;
 }
 
+/* A table wider than the screen scrolls inside its card */
+.wb-table-scroll {
+  overflow-x: auto;
+}
+
 .wb-table th {
   font-weight: 600;
   text-align: start;
@@ -935,6 +950,23 @@ button.wb-signal:hover {
   max-width: 80vw;
 }
 
+/* On a phone the picker is as wide as the reactions, below them */
+@media (max-width: 575.98px) {
+  .wb-reactions {
+    position: relative;
+  }
+
+  .wb-reaction-add {
+    position: static;
+  }
+
+  .wb-reaction-picker {
+    inset-inline: 0;
+    width: auto;
+    max-width: none;
+  }
+}
+
 .wb-reaction-quick {
   display: flex;
   flex-wrap: wrap;
@@ -946,7 +978,40 @@ button.wb-signal:hover {
 }
 
 .wb-file-preview {
+  max-width: 100%;
+  height: auto;
   max-height: 24rem;
+  border-radius: var(--bs-border-radius);
+}
+
+.wb-rounded {
+  border-radius: var(--bs-border-radius);
+}
+
+/* Diffs of texts (activity/history.html, files/doc_version.html); long
+   lines wrap */
+.wb-diff {
+  font-family: var(--bs-font-monospace);
+  overflow-wrap: anywhere;
+}
+
+.wb-diff-add {
+  background: var(--wb-success-bg);
+}
+
+.wb-diff-del {
+  background: var(--wb-danger-bg);
+}
+
+/* The project cards: as many columns as fit */
+.wb-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.wb-project-card {
+  height: 100%;
 }
 
 .min-w-0 {

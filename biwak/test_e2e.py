@@ -996,3 +996,67 @@ class RuleWidgetTest(E2ETestCase):
             "of every month"
         )
         self.assertEqual(self.errors, [])
+
+
+class PhoneTest(E2ETestCase):
+    """What runs off the edge of a phone's screen"""
+
+    def setUp(self):
+        super().setUp()
+        self.page = self.login(self.ada, viewport={"width": 360, "height": 740})
+        self.todolist = self.make_list(todos=["Plan"])
+        self.todo = Item.objects.get(title="Plan")
+
+    def assertFits(self, path):
+        self.page.goto(f"{self.live_server_url}{path}")
+        self.assertEqual(
+            self.page.evaluate(
+                "document.documentElement.scrollWidth - window.innerWidth"
+            ),
+            0,
+            path,
+        )
+
+    def test_pages_fit_the_screen(self):
+        from biwak.accounts.models import APIToken
+
+        APIToken.create_for(
+            user=self.ada, title="A token for the build", access=APIToken.Access.READ
+        )
+        self.assertFits(reverse("api_tokens"))
+
+        # A diff with a line without spaces
+        doc = ops.create_doc(
+            project=self.project,
+            title="Notes",
+            creator=self.ada,
+            content="x" * 200,
+        )
+        from biwak.files import operations as file_ops
+
+        file_ops.update_doc(
+            doc, actor=self.ada, content="y" * 200 + " a", new_version=True
+        )
+        self.assertFits(reverse("item_history", args=[doc.pk]))
+        self.assertFits(
+            reverse(
+                "doc_version", args=[doc.pk, doc.doc.versions.order_by("pk").last().pk]
+            )
+        )
+
+        # A project with a long name
+        project("A" * 80, members=[self.ada])
+        self.assertFits(reverse("projects"))
+
+    def test_the_reaction_picker_stays_on_the_screen(self):
+        from biwak.reactions import operations as reaction_ops
+
+        # Enough reactions to push the button to the right
+        for word in ["Looks good", "On it", "Thanks a lot", "Agreed"]:
+            reaction_ops.add_reaction(self.ada, word, item=self.todo)
+        self.goto(self.page, self.todo)
+        reactions = self.page.locator(".wb-reactions").first
+        reactions.locator(".wb-reaction-add summary").click()
+        box = reactions.locator(".wb-reaction-picker").bounding_box()
+        self.assertGreaterEqual(box["x"], 0)
+        self.assertLessEqual(box["x"] + box["width"], 360)

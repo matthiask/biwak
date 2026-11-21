@@ -20,7 +20,7 @@
           <span>
             {% icon "chat-square-text" %} {{ question|item_title }}
             {% if is_due %}<span
-                class="badge text-bg-warning"
+                class="badge wb-tone-warning"
               >{% translate "Waiting for your answer" %}</span>{% endif %}
           </span>
           {% client_badge question %}

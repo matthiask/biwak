@@ -26,6 +26,7 @@ $utilities: map-get-multiple(
     "border-bottom",
     "color",
     "display",
+    "flex-direction",
     "flex-grow",
     "flex-shrink",
     "flex-wrap",
@@ -49,6 +50,7 @@ $utilities: map-get-multiple(
     "padding-bottom",
     "padding-start",
     "position",
+    "text-align",
     "text-decoration",
     "user-select",
     "visibility",
@@ -130,6 +132,7 @@ $theme-colors: $all-theme-colors;
 // The helpers in use, no text-bg-* (main.css has the badges' tones), no
 // link-* etc.
 @import "~bootstrap/scss/helpers/visually-hidden";
+@import "~bootstrap/scss/helpers/text-truncation";
 // Responsive utilities only for the breakpoints in use (d-sm-inline-block,
 // d-lg-none, order-lg-1)
 $grid-breakpoints: map-get-multiple($all-grid-breakpoints, ("xs", "sm", "lg"));
