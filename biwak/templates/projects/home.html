@@ -119,7 +119,11 @@
             <a href="{% url 'search' %}" data-palette-open>{% translate "Search" %}</a>
             <kbd data-shortcut-hint>{% translate "Ctrl+K" %}</kbd>
           </li>
-          <li><span class="text-body-secondary">{% translate "Keyboard shortcuts:" %}</span> <kbd>?</kbd></li>
+          <li>
+            <a href="#wb-shortcuts" data-shortcuts-open hidden>{% translate "Keyboard shortcuts" %}</a>
+            <span class="text-body-secondary" data-shortcuts-hint>{% translate "Keyboard shortcuts:" %}</span>
+            <kbd>?</kbd>
+          </li>
           <li><a href="{% url 'calendar_link' %}">{% translate "Subscribe to your to-dos in a calendar" %}</a></li>
           <li><a href="{% url 'settings_notifications' %}">{% translate "Notification settings" %}</a></li>
           {% if not request.user.is_client %}

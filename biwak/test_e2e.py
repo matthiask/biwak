@@ -2516,6 +2516,9 @@ class KeyboardTest(E2ETestCase):
         page.wait_for_url("**/todos/?assignee=me")
         page.keyboard.press("g")
         page.keyboard.press("p")
+        page.wait_for_url(f"{self.live_server_url}/projects/")
+        page.keyboard.press("g")
+        page.keyboard.press("h")
         page.wait_for_url(f"{self.live_server_url}/")
 
     def test_a_question_mark_lists_the_shortcuts(self):
@@ -3006,4 +3009,17 @@ class HomeTest(E2ETestCase):
         self.assertEqual(page.url, f"{self.live_server_url}/")
         expect(page.locator("[data-home=due]")).to_contain_text("Pack")
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+        self.assertEqual(self.errors, [])
+
+    def test_the_shortcuts_link_opens_the_help(self):
+        page = self.page
+        self.goto(page, "/")
+        link = page.get_by_role("link", name="Keyboard shortcuts")
+        expect(link).to_be_visible()
+        expect(page.locator("[data-shortcuts-hint]")).to_be_hidden()
+        link.click()
+        expect(page.locator("#wb-shortcuts")).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(page.locator("#wb-shortcuts")).not_to_be_visible()
+        self.assertEqual(page.url, f"{self.live_server_url}/")
         self.assertEqual(self.errors, [])

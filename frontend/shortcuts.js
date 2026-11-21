@@ -87,6 +87,19 @@ const stopWaiting = () => {
 }
 
 if (data) {
+  // A link opening the help ("Keyboard shortcuts" on Home); the hint next to
+  // it is what shows without JavaScript
+  for (const link of document.querySelectorAll("[data-shortcuts-open]")) {
+    link.hidden = false
+    for (const hint of document.querySelectorAll("[data-shortcuts-hint]"))
+      hint.hidden = true
+  }
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest?.("[data-shortcuts-open]")
+    if (!link || event.button !== 0) return
+    event.preventDefault()
+    showHelp()
+  })
   document.addEventListener("keydown", (event) => {
     if (!data.shortcuts || event.defaultPrevented) return
     if (event.ctrlKey || event.altKey || event.metaKey || event.isComposing)
