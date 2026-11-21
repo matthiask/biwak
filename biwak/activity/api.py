@@ -53,10 +53,15 @@ def event_out(event, user):
     item = event.item
     if not hasattr(event, "excerpt"):
         feed.add_excerpts([event])
+    if not hasattr(event, "target_list"):
+        feed.add_target_lists([event], user)
     data = dict(event.data)
-    if user.is_client:
-        # A list's name may be internal even if the to-do is visible now
-        data.pop("to", None)
+    # The list a to-do moved to: only if the viewer may see it now
+    if "to" in data:
+        data["to"] = event.target_list
+        if not event.target_list:
+            del data["to"]
+            data.pop("to_id", None)
     return {
         "id": event.pk,
         "action": event.action,
@@ -108,7 +113,10 @@ def _feed(
         request,
         events,
         lambda event: event_out(event, request.user),
-        prepare=feed.add_excerpts,
+        prepare=lambda events: (
+            feed.add_excerpts(events),
+            feed.add_target_lists(events, request.user),
+        ),
         ordering=("-created_at", "-pk"),
         cursor=cursor,
         page_size=page_size,

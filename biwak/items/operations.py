@@ -580,6 +580,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 project=item.project,
                 item=item,
                 to=todolist.title,
+                to_id=todolist.pk,
             )
     _renumber(siblings)
     for list_id, group_id in sources:

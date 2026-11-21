@@ -1,7 +1,9 @@
 import datetime as dt
 from zoneinfo import ZoneInfo
 
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from biwak import cursors
@@ -11,6 +13,7 @@ from biwak.activity.mails import describe
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.items import operations as ops
+from biwak.items.models import Item
 from biwak.projects.operations import archive_project
 from biwak.test_utils import person, project
 
@@ -23,6 +26,11 @@ def event_at(actor, action, item, when, **data):
     event = record(actor=actor, action=action, project=item.project, item=item, **data)
     Event.objects.filter(pk=event.pk).update(created_at=when)
     return Event.objects.get(pk=event.pk)
+
+
+def squash(response):
+    """The page's text with whitespace collapsed"""
+    return " ".join(response.content.decode().split())
 
 
 class FeedBase(TestCase):
@@ -66,7 +74,7 @@ class ArchivedProjectTest(FeedBase):
 class MergeTest(FeedBase):
     def entries(self):
         events = list(feed.feed_events(self.ada))
-        feed.attach(events)
+        feed.attach(events, self.ada)
         return feed.merge(events)
 
     def test_consecutive_events_merge(self):
@@ -558,7 +566,7 @@ class GroupMoveTest(FeedBase):
         self.assertEqual((data["group"], data["list"]), ("Done", "Shared"))
         self.client.force_login(self.ada)
         response = self.client.get("/feed/")
-        self.assertContains(response, "to Done")
+        self.assertIn("to Done", squash(response))
 
     def test_back_and_forth_is_one_event_with_the_last_group(self):
         self.move(self.done)
@@ -584,7 +592,7 @@ class GroupMoveTest(FeedBase):
         self.move(group, item=self.secret)
         self.client.force_login(self.cleo)
         response = self.client.get("/feed/")
-        self.assertContains(response, "to Done")
+        self.assertIn("to Done", squash(response))
         self.assertNotContains(response, "Secret")
         self.assertNotContains(response, "Hidden")
 
@@ -593,3 +601,134 @@ class GroupMoveTest(FeedBase):
         event = Event.objects.get(action=Action.MOVED)
         for user in [self.bob, self.cleo]:
             self.assertEqual(describe(event, user), "Ada Example moved it to Done.")
+
+
+class MoveTargetTest(FeedBase):
+    """Clients see the target list of a move between lists if the list is
+    visible to them now (decided 2026-11-21)"""
+
+    def setUp(self):
+        super().setUp()
+        self.plans = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada, visible=True
+        )
+        self.drafts = ops.create_list(
+            project=self.project, title="Drafts", creator=self.ada
+        )
+        self.second = ops.create_todo(
+            todolist=self.shared, title="Second point", creator=self.ada
+        )
+        Event.objects.all().delete()
+
+    def move(self, todolist, todo=None):
+        ops.move_todo(todo or self.todo, todolist=todolist, actor=self.ada)
+
+    def feed(self, user):
+        self.client.force_login(user)
+        return self.client.get("/feed/")
+
+    def keep_visible(self, *todos):
+        """A to-do in an internal list is internal as well, which hides its
+        events from clients anyway; to test the target list's own check the
+        stored visibility stays"""
+        Item.objects.filter(pk__in=[t.pk for t in todos]).update(is_client_visible=True)
+        Event.objects.filter(item__in=todos).update(is_client_visible=True)
+
+    def test_stores_the_lists_id(self):
+        self.move(self.plans)
+        [data] = Event.objects.values_list("data", flat=True)
+        self.assertEqual((data["to"], data["to_id"]), ("Plans", self.plans.pk))
+
+    def test_client_sees_a_visible_list_but_not_an_internal_one(self):
+        self.move(self.plans)
+        self.move(self.drafts, self.second)
+        self.keep_visible(self.second)
+        response = self.feed(self.cleo)
+        self.assertIn("to Plans", squash(response))
+        self.assertContains(response, "Second point")
+        self.assertNotContains(response, "Drafts")
+        for user in [self.ada, self.bob]:
+            response = self.feed(user)
+            self.assertIn("to Plans", squash(response))
+            self.assertIn("to Drafts", squash(response))
+
+    def test_a_list_made_internal_later_disappears(self):
+        self.move(self.plans)
+        self.assertIn("to Plans", squash(self.feed(self.cleo)))
+        ops.set_visibility(self.plans, visible=False, actor=self.ada)
+        self.keep_visible(self.todo)
+        response = self.feed(self.cleo)
+        self.assertContains(response, "Open point")
+        self.assertNotContains(response, "Plans")
+        self.assertIn("to Plans", squash(self.feed(self.ada)))
+
+    def test_the_current_title_is_shown(self):
+        self.move(self.plans)
+        ops.update_list(self.plans, actor=self.ada, title="Roadmap")
+        self.assertIn("to Roadmap", squash(self.feed(self.cleo)))
+        self.assertNotIn("to Plans", squash(self.feed(self.cleo)))
+
+    def test_old_events_without_the_id_stay_staff_only(self):
+        record(
+            actor=self.ada,
+            action=Action.MOVED,
+            project=self.project,
+            item=self.todo,
+            to="Plans",
+        )
+        self.assertIn("to Plans", squash(self.feed(self.ada)))
+        self.assertNotContains(self.feed(self.cleo), "Plans")
+
+    def test_api(self):
+        def moved(user):
+            _token, secret = APIToken.create_for(user=user, title="T", access="read")
+            response = self.client.get(
+                "/api/v1/feed/",
+                {"action": "moved"},
+                headers={"authorization": f"Bearer {secret}"},
+            )
+            [event] = response.json()["results"]
+            return event["data"]
+
+        self.move(self.plans)
+        self.assertEqual(moved(self.cleo)["to"], "Plans")
+        self.assertEqual(moved(self.cleo)["to_id"], self.plans.pk)
+        ops.update_list(self.plans, actor=self.ada, title="Roadmap")
+        self.assertEqual(moved(self.ada)["to"], "Roadmap")
+        ops.set_visibility(self.plans, visible=False, actor=self.ada)
+        self.keep_visible(self.todo)
+        self.assertNotIn("to", moved(self.cleo))
+        self.assertNotIn("to_id", moved(self.cleo))
+        self.assertEqual(moved(self.ada)["to"], "Roadmap")
+
+    def test_a_fixed_number_of_queries(self):
+        def count(user):
+            events = list(feed.feed_events(user))
+            with CaptureQueriesContext(connection) as queries:
+                feed.add_target_lists(events, user)
+            return len(queries)
+
+        self.move(self.plans)
+        few = count(self.cleo)
+        for n in range(5):
+            todo = ops.create_todo(
+                todolist=self.shared, title=f"More {n}", creator=self.ada
+            )
+            self.move(self.plans, todo)
+        self.assertEqual((count(self.cleo), count(self.ada)), (few, few))
+        self.assertEqual(few, 1)
+
+
+class MoveOutOfGroupTest(FeedBase):
+    def test_reads_out_of_its_group(self):
+        group = ops.create_group(todolist=self.shared.todolist, title="Done")
+        ops.move_todo(self.todo, todolist=self.shared, group=group, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=None, actor=self.ada)
+        [event] = Event.objects.filter(action=Action.MOVED)
+        self.assertEqual(event.data["group"], "")
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            self.assertIn("out of its group", squash(self.client.get("/feed/")))
+            self.assertEqual(
+                describe(event, user), "Ada Example moved it out of its group."
+            )

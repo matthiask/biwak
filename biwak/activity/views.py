@@ -81,7 +81,9 @@ def feed_page(request, *, title, url, project=None, person=None):
         visible_to_clients=filters.get("clients", False),
     )
     try:
-        found, more = feed_module.page(events, request.GET.get("before"))
+        found, more = feed_module.page(
+            events, request.GET.get("before"), user=request.user
+        )
     except ValueError:
         return HttpResponseBadRequest("Invalid cursor.")
     today = timezone.localdate()
