@@ -438,6 +438,7 @@ class Folder(Detail):
         max_length=20,
         choices=FilesOrdering,
         default=FilesOrdering.ALPHABETICAL,
+        editable=False,
     )
 
     class Meta:

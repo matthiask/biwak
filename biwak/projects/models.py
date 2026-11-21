@@ -87,6 +87,7 @@ class Project(models.Model):
         max_length=20,
         choices=FilesOrdering,
         default=FilesOrdering.ALPHABETICAL,
+        editable=False,
     )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)

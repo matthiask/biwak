@@ -20,6 +20,7 @@ class Migration(migrations.Migration):
                     ("oldest", "Oldest first"),
                 ],
                 default="alphabetical",
+                editable=False,
                 max_length=20,
                 verbose_name="order of docs and files",
             ),
