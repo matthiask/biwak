@@ -166,10 +166,18 @@ or staging site is.
   and to-dos, `{% show_links item %}`, and the item part of the API and
   CLI all go. A migration removes the field; there are no links on
   items in any database worth keeping.
-- **On the project page:** "Add a link…" in the project's "More" menu,
-  opening a modal (`form_response`). The links block at the top appears
-  only when the project has links, with no disclosure otherwise. Editing,
-  deleting and dragging stay as they are.
+- **On the project page, a section of its own:** "Links", after
+  "Docs and files", built like the sections above it (decided
+  2026-11-21):
+  - a heading with a quiet "Add a link" button opening a modal
+    (`form_response`);
+  - the links as a list group, draggable for staff, each with its
+    kind's icon;
+  - "No links yet." when empty (a `list-group-item`, as the other
+    sections).
+
+  No links block at the top of the page and no disclosure anymore.
+  Editing, deleting and dragging stay as they are.
 - The rest below (kinds, visibility to clients, staff only) stays.
 
 
