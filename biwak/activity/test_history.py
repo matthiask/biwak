@@ -1,9 +1,14 @@
+import datetime as dt
+from unittest import mock
+
 from django.test import TestCase
 
 from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import APIToken
 from biwak.activity import history
 from biwak.audit.models import LoggedAction
+from biwak.checkins import operations as checkins
+from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.test_utils import person, project
@@ -177,3 +182,54 @@ class HistoryTest(TestCase):
         self.assertEqual(get(self.cleo, self.todo.pk).status_code, 404)
         visible = ops.create_todo(todolist=self.shared, title="Open", creator=self.ada)
         self.assertEqual(get(self.cleo, visible.pk).status_code, 403)
+
+
+class FolderHistoryTest(TestCase):
+    def test_moving_a_doc(self):
+        ada = person("Ada")
+        p = project(members=[ada])
+        folder = ops.create_folder(project=p, title="Contracts", creator=ada)
+        doc = ops.create_doc(project=p, title="Offer", creator=ada)
+        LoggedAction.objects.all().delete()
+        ops.move_item(doc, parent=folder, actor=ada)
+        (change,) = history.history(Item.objects.get(pk=doc.pk), ada)
+        self.assertEqual((change.label, change.new), ("Folder", "Contracts"))
+
+
+class CheckinHistoryTest(CheckinTestCase):
+    """The audited tables of check-ins: answers' texts, the questions'
+    schedules and people"""
+
+    def test_answer(self):
+        self.run_at("2027-03-22 09:00")
+        answer = checkins.answer(self.item, user=self.bob, content="Fine")
+        LoggedAction.objects.all().delete()
+        checkins.answer(self.item, user=self.bob, content="Fine, thanks")
+        (change,) = history.history(Item.objects.get(pk=answer.pk), self.ada)
+        self.assertEqual(
+            (change.label, change.old, change.new), ("Content", "Fine", "Fine, thanks")
+        )
+
+    def test_question(self):
+        LoggedAction.objects.all().delete()
+        checkins.update_question(
+            self.item,
+            actor=self.ada,
+            rule="FREQ=WEEKLY;BYDAY=TU",
+            time_of_day=dt.time(10, 0),
+        )
+        checkins.pause(self.item, actor=self.ada)
+        checkins.set_people(self.item, [self.ada], actor=self.ada)
+        changes = [
+            (c.label, c.old, c.new)
+            for c in reversed(history.history(self.item, self.ada))
+        ]
+        self.assertEqual(
+            changes,
+            [
+                ("Schedule", "every Monday", "every Tuesday"),
+                ("Time of day", "09:00", "10:00"),
+                ("Paused", None, mock.ANY),
+                ("No longer asked", None, "Bob Example"),
+            ],
+        )
