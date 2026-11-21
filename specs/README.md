@@ -2,11 +2,13 @@
 
 One spec per part: what it does, the decisions in force and where it
 lives in the code. Open questions across all parts: `questions.md`. The
-user's own feedback notes: `ui-feedback.md`.
+rules every page follows: `ui.md`; the user's feedback notes, round by
+round: `ui-feedback.md`.
 
 | Part | Status | What |
 |---|---|---|
-| `core.md` | built | projects, items, lists, groups, ordering; conventions shared by every page |
+| `core.md` | built | projects, items, lists, groups, ordering |
+| `ui.md` | built | the rules every page follows: modals, quiet pages, filters, phones, motion |
 | `access.md` | built | client visibility (one function decides what clients see) and sign-in: the ways in, the sign-in page, sessions |
 | `api-cli.md` | built; agent skills postponed | the API's conventions, the CLI |
 | `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, mails and digests, replying by mail |
@@ -40,7 +42,6 @@ user's own feedback notes: `ui-feedback.md`.
 | `activation.md` | built | people: inviting several at once, invitations, activating, deactivating, resets |
 | `doc-titles.md` | built | pointer: a doc's title is its first line, now in `files.md` |
 | `two-factor.md` | built | passkeys as a way in, authenticator apps as an optional second factor, organizations requiring one |
-| `ui-round-1.md` … `ui-round-7.md` | built | feedback rounds: where their decisions live now |
 
 ## Writing a spec for a new part
 

@@ -34,7 +34,7 @@ Decided 2026-11-20: by activity by default, or alphabetical.
   reactions, events of trashed items and, for clients, of items not
   visible now don't count). Projects without events sort last, by name.
 - **The switch:** "Activity" and "A–Z", `?order=activity|name`, a small
-  filter form remembered in the browser (`core.md`; decided 2026-11-21,
+  filter form remembered in the browser (`ui.md`; decided 2026-11-21,
   not a field on `User`).
 
 ## Cards

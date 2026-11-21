@@ -262,4 +262,4 @@ building it.
   Resend's API (`specs/mail-sending.md`).
 - 2026-11-21: View choices (groupings, orderings) and filters are query
   parameters remembered in the browser, never fields on `User`
-  (`specs/core.md`, "Pages").
+  (`specs/ui.md`, "Filters and view choices").

@@ -57,7 +57,7 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   to the date) and, below a divider, the notes ("Add notes…" when
   empty; checklists tickable). Reactions and the timeline (`timeline.md`)
   below the card. Clicking the facts or the notes edits in place
-  (`core.md`, "Click to edit"; `/todos/<id>/edit/`).
+  (`ui.md`, "Click to edit"; `/todos/<id>/edit/`).
 - **Overdue** (decided 2026-11-21): an open to-do due before today shows
   a danger badge "Overdue · 18. Nov", due today a neutral "Today"; later
   dates stay plain, completed to-dos are never overdue. `{% due_badge %}`
@@ -124,7 +124,7 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
 
 - **The title follows the filters:** "My to-dos" (assigned to me),
   "To-dos I assigned" (by me, to anybody else), else "To-dos".
-- **Filters** (GET, applying themselves and remembered, `core.md`):
+- **Filters** (GET, applying themselves and remembered, `ui.md`):
   project, assigned to (across projects the empty choice is "Me", since
   everybody's open to-dos get huge, and "Anybody" is
   `assignee=anybody`; in a project the default is anybody's; "Nobody

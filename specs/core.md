@@ -97,57 +97,7 @@ own (`notifications.md`); checklists, the toolbar and pasting are
 - A list has a description but no comments; lists are ordered on the
   project page and can be archived (`archiving.md`).
 
-## Pages: conventions shared by every part
+## Pages
 
-Decided in the UI rounds (2026-11-21, `ui-round-1.md` to
-`ui-round-7.md`); `AGENTS.md` has the how-to.
-
-- **Forms open in modals** and every modal form is also a page
-  (`AGENTS.md`, "Modals"). Pages show content, not forms: "New list",
-  "New group", renaming, members, editing a project or a list
-  (2026-11-21) are buttons or "More" entries opening a modal. Trashing asks: "Move to the trash?
-  It can be restored for 30 days." `form_response(help_page=…)` adds a
-  quiet "More in the help" link.
-- **Items' "More" menu** (`items/_more.html`): Move to…, Trash, and
-  "Notifications…" on lists only (`notifications.md`).
-- **Click to edit:** the pages of to-dos, messages, files and check-in
-  answers show the item; clicking its title, text or facts (or "Edit",
-  or `e`) swaps in the edit form in place (`frontend/view-edit.js`:
-  `data-edit-url`, `data-edit-focus`, region `#live-text`), Save and
-  Cancel swap back. No special views: htmx takes the region out of the
-  item's edit page (`hx-select`); without JavaScript "Edit" is that
-  page. Escape cancels an unchanged form, a changed one needs it twice
-  within 1.5 seconds. Docs have the live editor instead.
-- **Page headers:** all actions in one row at the `btn-sm` height. On
-  phones (under 576 px) they show icons only (`.wb-label` hidden, label
-  as `title`) and what isn't needed often moves into "More"
-  (`.wb-phone-hide`, `.wb-phone-only`); on lists the bookmark, Edit and
-  List/Board stay, on to-dos Complete, Edit and the bookmark.
-- **Filter forms** (GET) apply themselves (`data-autosubmit`,
-  `frontend/autosubmit.js`): selects, checkboxes and radios at once,
-  text after 400 ms and on Enter; the button is hidden with JavaScript;
-  the changed field keeps the focus. Forms that change things never
-  autosubmit. Filter buttons sit at the height of the fields
-  (`wb-filters`, `_filter_buttons.html`).
-- **Filters are remembered** per path in the browser
-  (`frontend/filters.js`, `data-remember`; for to-dos, the feed and the
-  lantern's page, not search): links marked `data-restore-filters` (the
-  top bar, the project's "All to-dos") go to the stored query; "Reset
-  filters" clears it and shows only when a filter is set. Other links
-  keep their own query. Adapted from Workbench (decided 2026-11-21).
-- **View choices** (groupings, orderings) are query parameters
-  remembered like filters, never fields on `User` (decided 2026-11-21:
-  no row, no audit entry per click). Empty values stay out of the URL
-  and every default is the empty choice.
-- **Long selects** get a search field: `data-combobox`
-  (`ComboboxSelect`, `frontend/combobox.js`, from Workbench's, decided
-  2026-11-21): "Add someone" (also finding the address), the feed's
-  person filter, a check-in's time zone; a new long select gets it too.
-  Options say who someone is ("Ada Example · Example Client Ltd",
-  "staff" for staff without an organization). Without JavaScript the
-  plain select. The assignee picker is its own widget (`todos.md`).
-- **Visible to clients:** the badge on rows, the tab at the window's
-  edge on pages, the banner only above forms in modals (`access.md`,
-  "Making it obvious").
-- **Relative times** use the `ago` filter ("just now" under a minute).
-- **Overdue and today** are badges (`todos.md`).
+The rules every page follows (modals, quiet pages, click to edit,
+filters, the combobox, phones and more) are in `ui.md`.
