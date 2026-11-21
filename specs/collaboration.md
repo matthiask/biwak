@@ -215,7 +215,11 @@ browsers (Playwright) typing, a client watching, an internal doc
     (`conf/_env`) has a placeholder `CACHE_URL`. The shared Redis evicts
     with `allkeys-lru` at 200 MB; channel messages live seconds, so
     eviction would only drop a message under memory pressure (the editors
-    resync on reconnect).
+    resync on reconnect). The layer's Redis reads time out after 10
+    seconds, above the 5 seconds it blocks waiting for the next message
+    (decided 2026-11-21: redis-py 8's default read timeout of 5 seconds
+    closed every quiet websocket after 5 seconds, and the pages
+    reconnected every 6 seconds in production).
   - **Websockets through the ingress**: HAProxy ingress passes
     websockets on without configuration; its tunnel timeout (1 hour by
     default) is far above the editors' 15-second awareness heartbeat. The
