@@ -3,6 +3,7 @@ import itertools
 from zoneinfo import ZoneInfo
 
 from django.test import SimpleTestCase
+from django.utils import translation
 
 from biwak import schedules
 from biwak.schedules import InvalidRule, describe, next_date, validate
@@ -29,9 +30,23 @@ class ValidateTest(SimpleTestCase):
             "FREQ=MONTHLY;BYMONTHDAY=31;BYMONTH=2",
             "FREQ=WEEKLY;FREQ=DAILY",
             "FREQ=" + "X" * 300,
+            # INTERVAL=0 made dateutil loop forever, -1 raise, a huge one
+            # produce a single date
+            "FREQ=DAILY;INTERVAL=0",
+            "FREQ=DAILY;INTERVAL=-1",
+            "FREQ=DAILY;INTERVAL=x",
+            "FREQ=DAILY;INTERVAL=100",
+            "FREQ=DAILY;INTERVAL=99999999999",
+            # dateutil reads 0 as "every day"
+            "FREQ=MONTHLY;BYMONTHDAY=0",
+            "FREQ=MONTHLY;BYMONTHDAY=0,5",
+            "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=0",
         ]:
             with self.subTest(rule=rule), self.assertRaises(InvalidRule):
                 validate(rule)
+
+    def test_intervals_up_to_the_widgets_maximum(self):
+        self.assertEqual(validate("FREQ=WEEKLY;INTERVAL=99"), "FREQ=WEEKLY;INTERVAL=99")
 
 
 class NextDateTest(SimpleTestCase):
@@ -106,8 +121,16 @@ class NextDateTest(SimpleTestCase):
 
     def test_rule_without_dates(self):
         # 30 February never exists
-        with self.assertRaises(InvalidRule):
+        self.assertIsNone(
             next_date("FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=30", d("2026-01-01"))
+        )
+
+    def test_a_stored_rule_which_isnt_valid_has_no_next_date(self):
+        """Rules stored before validate() refused them (completing a to-do,
+        asking a check-in): no date instead of a hang or an error"""
+        for rule in ["FREQ=DAILY;INTERVAL=0", "FREQ=DAILY;INTERVAL=-1"]:
+            with self.subTest(rule=rule):
+                self.assertIsNone(next_date(rule, d("2026-01-01")))
 
 
 class PresetsTest(SimpleTestCase):
@@ -155,6 +178,14 @@ class PresetsTest(SimpleTestCase):
             with self.subTest(rule=rule):
                 self.assertEqual(describe(rule), text)
         self.assertEqual(describe(""), "")
+
+    def test_describe_is_translated(self):
+        """Hard-coded English and strftime("%B") before; Django's catalogs
+        have the month names and ordinals already"""
+        with translation.override("de"):
+            text = describe("FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=14")
+            self.assertIn("März", text)
+            self.assertIn("5.", describe("FREQ=MONTHLY;BYMONTHDAY=5"))
 
     def test_describe_working_day_positions(self):
         self.assertEqual(

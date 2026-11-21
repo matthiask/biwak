@@ -54,6 +54,10 @@ SWITCHABLE = {
     Kind.QUESTION,
 }
 
+SWITCH_MESSAGE = _(
+    "Only top-level lists, folders, messages, docs, files and check-ins have a switch."
+)
+
 # Kinds people can comment on (no comments on lists and folders)
 COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
@@ -103,6 +107,10 @@ class Item(TreeNode):
         _("status"), max_length=20, choices=Status, default=Status.ACTIVE
     )
     trashed_at = models.DateTimeField(_("trashed at"), null=True, blank=True)
+    # Restoring brings an archived item back archived (ops.restore())
+    archived_when_trashed = models.BooleanField(
+        _("archived when trashed"), default=False, editable=False
+    )
     # The switch, only meaningful on SWITCHABLE kinds at the top level
     visible_to_clients = models.BooleanField(_("visible to clients"), default=False)
     # The effective visibility, stored (biwak.items.visibility)
@@ -163,17 +171,25 @@ class Item(TreeNode):
         if self.parent_id and self.parent.project_id != self.project_id:
             raise ValidationError(_("The parent belongs to another project."))
         if self.visible_to_clients and not self.has_switch:
-            raise ValidationError(
-                _(
-                    "Only top-level lists, folders, messages, docs and files have"
-                    " a switch."
-                )
-            )
+            raise ValidationError(SWITCH_MESSAGE)
 
-    def save(self, *args, **kwargs):
-        # Enforced in the model, not only in forms (specs/core.md)
-        self.full_clean(validate_unique=False, validate_constraints=False)
-        super().save(*args, **kwargs)
+    # What clean() checks: the tree and the switch
+    TREE_FIELDS = {"project", "parent", "kind", "visible_to_clients"}
+
+    def save(self, *args, update_fields=None, **kwargs):
+        # Enforced in the model, not only in forms (specs/core.md). Saving
+        # some fields (status, position) checks only those, the tree only
+        # when it's among them: no query per save for the parent.
+        if update_fields is None:
+            self.full_clean(validate_unique=False, validate_constraints=False)
+        else:
+            fields = set(update_fields)
+            self.clean_fields(
+                exclude=[f.name for f in self._meta.fields if f.name not in fields]
+            )
+            if fields & self.TREE_FIELDS:
+                self.clean()
+        super().save(*args, update_fields=update_fields, **kwargs)
 
 
 class Detail(models.Model):

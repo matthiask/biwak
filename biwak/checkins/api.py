@@ -18,6 +18,7 @@ from biwak.activity.mentions import resolve as resolve_mentions
 from biwak.api_conventions import (
     ItemOut,
     PersonOut,
+    Title,
     absolute,
     html,
     item_out,
@@ -120,7 +121,7 @@ def question_list(request, project_id: int):
 
 
 class QuestionIn(Schema):
-    title: str
+    title: Title
     schedule: str
     time_of_day: dt.time
     starts_on: dt.date | None = None
@@ -168,7 +169,7 @@ def question_detail(request, question_id: int):
 
 
 class QuestionPatch(Schema):
-    title: str | None = None
+    title: Title | None = None
     schedule: str | None = None
     starts_on: dt.date | None = None
     time_of_day: dt.time | None = None

@@ -1,7 +1,6 @@
 """The commands; output for people by default, --json for scripts"""
 
 import os
-from urllib.parse import parse_qs, urlsplit
 
 import click
 from rich.console import Console
@@ -15,6 +14,7 @@ from biwak_cli.core import (
     current,
     download,
     echo_json,
+    paginate,
     read_config,
     request,
     save_login,
@@ -354,18 +354,18 @@ def todos(list_id, completed, mine, project_id, due, as_json):
     if list_id and (mine or project_id or due):
         terminate("--mine, --project and --due go without LIST.")
     if list_id and completed:
-        data = request("GET", f"lists/{list_id}/todos/completed/")["results"]
+        data = paginate(f"lists/{list_id}/todos/completed/")
     elif list_id:
         data = request("GET", f"lists/{list_id}/todos/")
     else:
-        params = {"completed": completed, "page_size": 200}
+        params = {"completed": completed}
         if mine:
             params["assignee"] = "me"
         if project_id:
             params["project_id"] = project_id
         if due:
             params["due_group"] = due
-        data = request("GET", "todos/", params=params)["results"]
+        data = paginate("todos/", params)
     if as_json:
         return echo_json(data)
     t = table(
@@ -440,7 +440,7 @@ def todo_show(todo_id, comments, as_json):
     """Show TODO"""
     data = request("GET", f"todos/{todo_id}/")
     if comments:
-        data["comments"] = request("GET", f"items/{todo_id}/comments/")["results"]
+        data["comments"] = paginate(f"items/{todo_id}/comments/")
     if as_json:
         return echo_json(data)
     show_todo(data)
@@ -690,9 +690,7 @@ def show_answers(occurrence):
 def checkin_show(question_id, limit, as_json):
     """Show QUESTION with the answers of its latest occurrences"""
     data = request("GET", f"checkins/{question_id}/")
-    occurrences = request(
-        "GET", f"checkins/{question_id}/occurrences/", params={"page_size": limit}
-    )["results"][:limit]
+    occurrences = paginate(f"checkins/{question_id}/occurrences/", limit=limit)
     if as_json:
         return echo_json(data | {"occurrences": occurrences})
     marker = " [clients]" if data["visible_to_clients"] else ""
@@ -955,7 +953,7 @@ def message_show(message_id, comments, as_json):
     """Show MESSAGE"""
     data = request("GET", f"messages/{message_id}/")
     if comments:
-        data["comments"] = request("GET", f"items/{message_id}/comments/")["results"]
+        data["comments"] = paginate(f"items/{message_id}/comments/")
     if as_json:
         return echo_json(data)
     show_message(data)
@@ -1181,7 +1179,7 @@ def doc_show(doc_id, comments, version, as_json):
             "version_id": version,
         }
     if comments:
-        data["comments"] = request("GET", f"items/{doc_id}/comments/")["results"]
+        data["comments"] = paginate(f"items/{doc_id}/comments/")
     if as_json:
         return echo_json(data)
     marker = " [clients]" if data["visible_to_clients"] else ""
@@ -1292,16 +1290,7 @@ def feed(project, person, kind, action, since, limit, as_json):
         }.items()
         if value is not None
     }
-    params["page_size"] = min(limit, 200)
-    events = []
-    while len(events) < limit:
-        data = request("GET", "feed/", params=params)
-        events += data["results"]
-        if not data["next"]:
-            break
-        # "next" is the URL of the next page
-        params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
-    events = events[:limit]
+    events = paginate("feed/", params, limit=limit)
     if as_json:
         return echo_json(events)
     t = table("When", "Person", "Action", "What", "Project", "")
@@ -1336,7 +1325,7 @@ def feed(project, person, kind, action, since, limit, as_json):
 def search(terms, project, kind, mine, no_archived, limit, as_json):
     """Find items by words in their title, text or comments, newest first.
     Every word also matches as the start of a word."""
-    params = {"q": " ".join(terms), "page_size": min(limit, 200)}
+    params = {"q": " ".join(terms)}
     if project is not None:
         params["project_id"] = project
     if kind:
@@ -1345,14 +1334,7 @@ def search(terms, project, kind, mine, no_archived, limit, as_json):
         params["mine"] = "true"
     if no_archived:
         params["exclude_archived"] = "true"
-    results = []
-    while len(results) < limit:
-        data = request("GET", "search/", params=params)
-        results += data["results"]
-        if not data["next"]:
-            break
-        params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
-    results = results[:limit]
+    results = paginate("search/", params, limit=limit)
     if as_json:
         return echo_json(results)
     t = table("ID", "Kind", "Title", "Project", "Found", "")

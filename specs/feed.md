@@ -63,6 +63,14 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   older one of the entry (chains merge), and never across midnight.
 - A moved to-do's target list is not shown to clients (its name may be
   internal even when the to-do is visible now).
+- Moving a to-do to another group of its list (a board column) is a
+  `moved` event with the group and the list: "Ada moved 'Order the tent'
+  to Done", shown to everybody who sees the to-do (the group is as
+  visible as the to-do), in mails too. Like edits, the same person
+  moving the same to-do within 10 minutes updates that event, so
+  dragging back and forth is one event with the last group. Reordering
+  within a group is no event (decided 2026-11-21). Moving it out of every
+  group says "moved" without a target.
 - Merging applies to every action; the entry says "completed 5 to-dos in
   Launch", with "items" for mixed kinds.
 

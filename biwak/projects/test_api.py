@@ -52,6 +52,15 @@ class ProjectGapsAPITest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Project.objects.count(), 2)
 
+    def test_update_validates_and_strips(self):
+        """A name too long for the model was a 500; update didn't strip"""
+        path = f"projects/{self.open.pk}/"
+        response = self.api("patch", path, self.bob, {"name": "x" * 201})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        response = self.api("patch", path, self.bob, {"name": "  Renamed  "})
+        self.assertEqual(response.json()["name"], "Renamed")
+
     def test_clients_dont_create(self):
         response = self.api("post", "projects/", self.cleo, {"name": "New"})
         self.assertEqual(response.status_code, 403)

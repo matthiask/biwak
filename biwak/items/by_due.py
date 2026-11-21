@@ -6,7 +6,7 @@ from django import forms
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from icalendar import Calendar, Event as CalendarEvent
@@ -18,6 +18,7 @@ from biwak.forms import Form
 from biwak.items import due, glance
 from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
+from biwak.projects.views import project_for
 
 
 GROUP_LABELS = {
@@ -134,8 +135,7 @@ def todos_by_due(request, project=None):
 
 
 def project_todos(request, pk):
-    project = get_object_or_404(Project.objects.accessible_to(request.user), pk=pk)
-    return todos_by_due(request, project=project)
+    return todos_by_due(request, project=project_for(request, pk))
 
 
 # The iCal feed ----------------------------------------------------------

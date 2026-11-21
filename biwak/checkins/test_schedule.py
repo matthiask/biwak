@@ -328,3 +328,17 @@ class NextFireTest(SimpleTestCase):
             schedule.next_occurrence_of(Q, after=saturday - dt.timedelta(minutes=1)),
             (dt.date(2027, 3, 27), saturday),
         )
+
+
+class StoredRuleTest(SimpleTestCase):
+    def test_a_stored_rule_which_isnt_valid_is_never_asked(self):
+        """INTERVAL=0 made send_mails loop forever"""
+        self.assertIsNone(
+            schedule.next_fire(
+                rule="FREQ=DAILY;INTERVAL=0",
+                starts_on=dt.date(2027, 3, 22),
+                time_of_day=dt.time(9, 0),
+                time_zone="Europe/Zurich",
+                after=utc("2027-03-22 12:00"),
+            )
+        )

@@ -1,7 +1,7 @@
 from django.core import mail
 from django.test import TestCase
 
-from biwak.accounts.models import User
+from biwak.accounts.models import APIToken, User
 from biwak.activity.models import Action, Event, Subscription
 from biwak.items import operations as ops
 from biwak.projects.models import Membership
@@ -146,3 +146,53 @@ class MembersTest(TestCase):
         self.client.post(url, {"form": "add", "notify": "default", "user": self.bob.pk})
         self.client.force_login(self.bob)
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 200)
+
+
+class LimitingTest(TestCase):
+    """Making a project limited takes access from staff who aren't members:
+    their subscriptions go, as when they're removed (``update_project()``)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.project = project(members=[self.ada])
+        self.list = ops.create_list(project=self.project, title="L", creator=self.ada)
+        self.todo = ops.create_todo(todolist=self.list, title="T", creator=self.bob)
+
+    def subscribers(self):
+        return set(
+            Subscription.objects.filter(item__project=self.project).values_list(
+                "user__full_name", flat=True
+            )
+        )
+
+    def test_web(self):
+        self.assertEqual(self.subscribers(), {"Ada Example", "Bob Example"})
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            f"/projects/{self.project.pk}/edit/",
+            {"name": "Website", "description": "", "is_all_access": ""},
+        )
+        self.assertRedirects(response, self.project.get_absolute_url())
+        self.assertEqual(self.subscribers(), {"Ada Example"})
+        self.assertEqual(Event.objects.filter(action=Action.EDITED_PROJECT).count(), 1)
+
+    def test_api(self):
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        response = self.client.patch(
+            f"/api/v1/projects/{self.project.pk}/",
+            {"is_all_access": False},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.subscribers(), {"Ada Example"})
+
+    def test_an_unchanged_form_records_nothing(self):
+        self.client.force_login(self.ada)
+        self.client.post(
+            f"/projects/{self.project.pk}/edit/",
+            {"name": "Website", "description": "", "is_all_access": "1"},
+        )
+        self.assertFalse(Event.objects.filter(action=Action.EDITED_PROJECT).exists())
+        self.assertEqual(self.subscribers(), {"Ada Example", "Bob Example"})

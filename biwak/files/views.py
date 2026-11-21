@@ -5,7 +5,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from biwak.files import attachments
 from biwak.files.models import Attachment
-from biwak.projects.models import Project
+from biwak.projects.views import project_for
 
 
 def attachment_json(attachment):
@@ -23,7 +23,7 @@ def attachment_json(attachment):
 def attachment_upload(request, pk):
     """Dropping, pasting or attaching a file in a text field
     (frontend/attachments.js): the attachment and the Markdown to insert"""
-    project = get_object_or_404(Project.objects.accessible_to(request.user), pk=pk)
+    project = project_for(request, pk)
     if not (file := request.FILES.get("file")):
         return JsonResponse({"detail": _("No file.")}, status=400)
     try:

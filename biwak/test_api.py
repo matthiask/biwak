@@ -1,6 +1,8 @@
 import datetime as dt
 
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from biwak.accounts.models import APIToken
@@ -187,6 +189,68 @@ class APITest(TestCase):
             ["Visible"],
         )
 
+    def test_titles_are_checked(self):
+        """Empty and long titles reached the model's full_clean(): a 500"""
+        headers = self.api(self.ada)
+        targets = [
+            ("post", f"lists/{self.shared.pk}/todos/"),
+            ("patch", f"todos/{self.todo.pk}/"),
+            ("post", f"projects/{self.project.pk}/lists/"),
+            ("patch", f"lists/{self.shared.pk}/"),
+        ]
+        for method, path in targets:
+            for title in ["", "   ", "x" * 501]:
+                with self.subTest(path=path, title=title):
+                    response = self.send(method, path, headers, {"title": title})
+                    self.assertEqual(response.status_code, 422)
+        self.assertEqual(Item.objects.count(), 4)
+        response = self.send(
+            "post", f"lists/{self.shared.pk}/todos/", headers, {"title": " Tea "}
+        )
+        self.assertEqual(response.json()["title"], "Tea")
+
+    def test_todo_overview_queries(self):
+        """A query per to-do for its group, who completed it and reactions"""
+        headers = self.api(self.ada)
+        group = ops.create_group(todolist=self.shared.todolist, title="G")
+
+        def queries(**params):
+            with CaptureQueriesContext(connection) as context:
+                response = self.get("todos/", headers, **params)
+            self.assertEqual(response.status_code, 200)
+            return len(context)
+
+        def add(count):
+            for n in range(count):
+                todo = ops.create_todo(
+                    todolist=self.shared, title=f"T{n}", creator=self.ada, group=group
+                )
+                if n % 2:
+                    ops.complete(todo, actor=self.ada)
+
+        add(4)
+        few = queries(), queries(completed="true")
+        add(8)
+        self.assertEqual((queries(), queries(completed="true")), few)
+
+    def test_group_titles_are_checked(self):
+        """Empty titles were taken (or ignored), long ones cut silently"""
+        headers = self.api(self.ada)
+        group = ops.create_group(todolist=self.shared.todolist, title="G")
+        for title in ["", "  ", "x" * 201]:
+            with self.subTest(title=title):
+                response = self.send(
+                    "post", f"lists/{self.shared.pk}/groups/", headers, {"title": title}
+                )
+                self.assertEqual(response.status_code, 422)
+                response = self.send(
+                    "patch", f"groups/{group.pk}/", headers, {"title": title}
+                )
+                self.assertEqual(response.status_code, 422)
+        response = self.send("patch", f"groups/{group.pk}/", headers, {"title": None})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.shared.todolist.groups.get().title, "G")
+
     def test_comments_paginate(self):
         headers = self.api(self.ada)
         for n in range(3):
@@ -225,6 +289,8 @@ class APITest(TestCase):
             {"visible_to_clients": False},
         )
         self.assertEqual(response.status_code, 400)
+        # Files and check-ins have switches too
+        self.assertIn("files and check-ins", response.json()["detail"])
 
     def test_subscription(self):
         headers = self.api(self.ada)

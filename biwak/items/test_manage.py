@@ -11,6 +11,7 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from biwak.accounts.models import APIToken
+from biwak.activity.models import Action, Event
 from biwak.audit.models import LoggedAction
 from biwak.items import operations as ops
 from biwak.items.models import Item, Status
@@ -78,6 +79,87 @@ class ManageTest(TestCase):
             project=self.project, title="Wishes", creator=self.cleo, visible=True
         )
         self.assertEqual(self.client.get(f"/lists/{own.pk}/edit/").status_code, 200)
+
+    def test_an_unchanged_list_form_records_nothing(self):
+        """update_list() recorded "edited" for every save"""
+        self.client.force_login(self.ada)
+        url = f"/lists/{self.shared.pk}/edit/"
+        Event.objects.all().delete()
+        data = {"title": "Shared", "description": "", "view": "list"}
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertFalse(Event.objects.exists())
+        self.client.post(url, data | {"description": "New"})
+        self.assertEqual(Event.objects.get().action, Action.EDITED)
+
+    def test_archiving_twice(self):
+        """A double submit archived an archived list: a 500"""
+        self.client.force_login(self.ada)
+        url = f"/lists/{self.shared.pk}/archive/"
+        for data in [{}, {}, {"unarchive": "1"}, {"unarchive": "1"}]:
+            self.assertEqual(self.client.post(url, data).status_code, 302, data)
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.status, Status.ACTIVE)
+
+    def test_bad_numbers_are_400(self):
+        """int() and pk="x" in moves were 500s"""
+        self.client.force_login(self.ada)
+        for url, data in [
+            (f"/groups/{self.group.pk}/move/", {"index": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"list": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"index": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"group": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"target": "x"}),
+            (f"/todos/{self.todo.pk}/move/", {"target": f"{self.shared.pk}:x"}),
+            (
+                f"/lists/{self.shared.pk}/todos/move/",
+                {"todos": [self.todo.pk], "index": "x"},
+            ),
+            (
+                f"/lists/{self.shared.pk}/todos/move/",
+                {"todos": [self.todo.pk], "group": "x"},
+            ),
+        ]:
+            with self.subTest(url=url, data=data):
+                self.assertEqual(self.client.post(url, data).status_code, 400)
+
+    def test_negative_index_and_the_same_todo_twice(self):
+        """The API took index -1 as one from the end; [a, a] left a gap"""
+        b = ops.create_todo(todolist=self.shared, title="B", creator=self.ada)
+        ops.create_todo(todolist=self.shared, title="C", creator=self.ada)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        h = {"authorization": f"Bearer {secret}"}
+
+        def titles():
+            return list(
+                Item.objects
+                .filter(parent=self.shared, todo__group=None)
+                .order_by("position")
+                .values_list("title", "position")
+            )
+
+        response = self.client.post(
+            f"/api/v1/todos/{b.pk}/move/",
+            {"index": -1},
+            content_type="application/json",
+            headers=h,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(titles(), [("B", 1), ("Visible", 2), ("C", 3)])
+        response = self.client.post(
+            f"/api/v1/lists/{self.shared.pk}/todos/move/",
+            {"todo_ids": [b.pk, b.pk], "index": 1},
+            content_type="application/json",
+            headers=h,
+        )
+        self.assertEqual(response.status_code, 400)
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            f"/lists/{self.shared.pk}/todos/move/", {"todos": [b.pk, b.pk]}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(titles(), [("B", 1), ("Visible", 2), ("C", 3)])
+        with self.assertRaises(ValueError):
+            ops.move_todos([b, b], todolist=self.shared, actor=self.ada)
 
     def test_groups(self):
         second = ops.create_group(todolist=self.shared.todolist, title="Someday")
@@ -190,6 +272,29 @@ class ManageTest(TestCase):
             headers={"authorization": f"Bearer {secret}"},
         )
         self.assertEqual(response.status_code, 400)
+        # Several at once: the same 400 (was 404), 404 for to-dos nobody
+        # may know about
+        response = self.client.post(
+            f"/api/v1/lists/{there.pk}/todos/move/",
+            {"todo_ids": [self.todo.pk]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(), {"detail": "To-dos can't move to another project."}
+        )
+        response = self.client.post(
+            f"/lists/{there.pk}/todos/move/", {"todos": [self.todo.pk]}
+        )
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post(
+            f"/api/v1/lists/{there.pk}/todos/move/",
+            {"todo_ids": [999999999]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 404)
         self.todo.refresh_from_db()
         self.assertEqual(self.todo.parent, self.shared)
 
@@ -279,6 +384,22 @@ class ManageTest(TestCase):
         self.client.post(f"/items/{own.pk}/trash/")
         own.refresh_from_db()
         self.assertEqual(own.status, Status.TRASHED)
+
+    def test_an_archived_list_comes_back_archived(self):
+        """Restoring made an archived list active: the archive was lost"""
+        ops.archive(self.shared, actor=self.ada)
+        ops.trash(self.shared, actor=self.ada)
+        ops.restore(Item.objects.get(pk=self.shared.pk), actor=self.ada)
+        self.shared.refresh_from_db()
+        self.assertEqual(self.shared.status, Status.ARCHIVED)
+        # Its to-dos are back too
+        self.todo.refresh_from_db()
+        self.assertEqual(self.todo.status, Status.ACTIVE)
+        # Active ones stay active
+        ops.trash(self.internal, actor=self.ada)
+        ops.restore(Item.objects.get(pk=self.internal.pk), actor=self.ada)
+        self.internal.refresh_from_db()
+        self.assertEqual(self.internal.status, Status.ACTIVE)
 
     def test_purge_and_fairy_tasks(self):
         ops.trash(self.secret, actor=self.ada)

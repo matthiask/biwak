@@ -3,13 +3,14 @@ specs/api-cli.md). The same operations as the web interface, so writes
 create the same events and subscriptions."""
 
 import datetime as dt
-from typing import Literal
+from typing import Annotated, Literal
 
 from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
+from pydantic import StringConstraints
 
 from biwak import schedules
 from biwak.activity.mentions import resolve as resolve_mentions
@@ -17,6 +18,7 @@ from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.api_conventions import (
     ItemOut,
     PersonOut,
+    Title,
     html,
     item_out,
     page_of,
@@ -24,8 +26,19 @@ from biwak.api_conventions import (
     person_out,
 )
 from biwak.items import due, operations as ops
-from biwak.items.models import Group, Item, Kind, Status as ItemStatus
-from biwak.items.views import assignable_people
+from biwak.items.models import (
+    SWITCH_MESSAGE,
+    Group,
+    Item,
+    Kind,
+    Status as ItemStatus,
+)
+from biwak.items.views import (
+    changeable_group,
+    changeable_list,
+    item_for,
+    todos_to_move,
+)
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
 from biwak.reactions.operations import prefetch
@@ -33,17 +46,6 @@ from biwak.reactions.schemas import ReactionOut, reactions_out
 
 
 router = Router(tags=["items"])
-
-
-def item_for(request, pk, kind=None):
-    """The item if the person may see it, else 404: the one check
-    (specs/access.md)"""
-    qs = Item.objects.visible_to(request.user).select_related(
-        "project", "parent", "creator"
-    )
-    if kind:
-        qs = qs.filter(kind=kind)
-    return get_object_or_404(qs, pk=pk)
 
 
 def bad_request(message):
@@ -94,7 +96,7 @@ def list_list(request, project_id: int, *, archived: bool = False):
 
 
 class ListIn(Schema):
-    title: str
+    title: Title
     description: str = ""
     visible_to_clients: bool = False
 
@@ -121,7 +123,7 @@ def list_detail(request, list_id: int):
 
 
 class ListPatch(Schema):
-    title: str | None = None
+    title: Title | None = None
     description: str | None = None
     view: Literal["list", "board"] | None = None
     archived: bool | None = None
@@ -131,24 +133,19 @@ class ListPatch(Schema):
 def list_update(request, list_id: int, data: ListPatch):
     """Changes the fields given; ``archived`` archives the list or brings it
     back. Clients only change lists they created."""
-    item = item_for(request, list_id, Kind.LIST)
-    if not ops.can_change(request.user, item):
-        raise HttpError(403, _("You can only change lists you created."))
+    item = changeable_list(request, list_id)
     given = data.model_fields_set
     changes = {
         f: getattr(data, f) for f in ["title", "description", "view"] if f in given
     }
-    empty_title = "title" in changes and not changes["title"]
-    if empty_title or any(value is None for value in changes.values()):
+    if any(value is None for value in changes.values()):
         bad_request(_("Leave out what doesn't change instead of sending null."))
     if changes:
         ops.update_list(item, actor=request.user, **changes)
-    if "archived" in given:
-        archived = item.status == ItemStatus.ARCHIVED
-        if data.archived and not archived:
-            ops.archive(item, actor=request.user)
-        elif archived and not data.archived:
-            ops.unarchive(item, actor=request.user)
+    if data.archived:
+        ops.archive(item, actor=request.user)
+    elif "archived" in given:
+        ops.unarchive(item, actor=request.user)
     return list_out(item_for(request, list_id, Kind.LIST))
 
 
@@ -174,45 +171,38 @@ def list_order(request, project_id: int, data: ListOrderIn):
     return list_list(request, project_id)
 
 
+# Group.title's length
+GroupTitle = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+]
+
+
 class GroupIn(Schema):
-    title: str
+    title: GroupTitle
 
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
-    item = _changeable_list(request, list_id)
-    group = ops.create_group(todolist=item.todolist, title=data.title[:200])
+    item = changeable_list(request, list_id)
+    group = ops.create_group(todolist=item.todolist, title=data.title)
     return Status(
         201, {"id": group.pk, "title": group.title, "position": group.position}
     )
 
 
 class GroupPatch(Schema):
-    title: str | None = None
+    title: GroupTitle | None = None
     index: int | None = None
-
-
-def _changeable_list(request, list_id):
-    """Groups are changed like their list: clients only in lists they
-    created (403)"""
-    item = item_for(request, list_id, Kind.LIST)
-    if not ops.can_change(request.user, item):
-        raise HttpError(403, _("You can only change lists you created."))
-    return item
-
-
-def _group_for(request, group_id):
-    group = get_object_or_404(Group, pk=group_id)
-    _changeable_list(request, group.todolist_id)
-    return group
 
 
 @router.patch("groups/{group_id}/", response=GroupOut)
 def group_update(request, group_id: int, data: GroupPatch):
     """Renames the group and/or moves it (with its to-dos) to ``index``"""
-    group = _group_for(request, group_id)
-    if data.title:
-        ops.rename_group(group, title=data.title[:200])
+    group = changeable_group(request, group_id)[0]
+    if "title" in data.model_fields_set:
+        if data.title is None:
+            bad_request(_("Leave out what doesn't change instead of sending null."))
+        ops.rename_group(group, title=data.title)
     if data.index is not None:
         ops.move_group(group, index=max(0, data.index))
         group.refresh_from_db()
@@ -222,7 +212,7 @@ def group_update(request, group_id: int, data: GroupPatch):
 @router.delete("groups/{group_id}/", response={204: None})
 def group_delete(request, group_id: int):
     """Removes the group; its to-dos stay, ungrouped at the end"""
-    ops.delete_group(_group_for(request, group_id))
+    ops.delete_group(changeable_group(request, group_id)[0])
     return Status(204, None)
 
 
@@ -283,11 +273,10 @@ def todo_out(item, user):
     }
 
 
-def _todos(request, list_item):
+def _for_todo_out(qs):
+    """What ``todo_out()`` reads, without a query per to-do"""
     return (
-        Item.objects
-        .visible_to(request.user)
-        .filter(parent=list_item, kind=Kind.TODO)
+        qs
         .select_related(
             "creator", "todo__group", "todo__completed_by", "todo__previous"
         )
@@ -295,6 +284,12 @@ def _todos(request, list_item):
         .prefetch_related(
             Prefetch("reactions", queryset=Reaction.objects.select_related("user"))
         )
+    )
+
+
+def _todos(request, list_item):
+    return _for_todo_out(
+        Item.objects.visible_to(request.user).filter(parent=list_item, kind=Kind.TODO)
     )
 
 
@@ -336,18 +331,18 @@ def todo_list_completed(
     )
 
 
-def _assignees(item, ids):
+def _assignees(request, item, ids):
     """People who can see the to-do, by ID; 400 for anybody else"""
     if ids is None:
         return None
-    people = list(assignable_people(item).filter(pk__in=ids))
+    people = list(ops.assignable_people(item, request.user).filter(pk__in=ids))
     if len(people) != len(set(ids)):
         bad_request(_("Only people who can see the to-do can be assigned."))
     return people
 
 
 class TodoIn(Schema):
-    title: str
+    title: Title
     notes: str = ""
     due_on: dt.date | None = None
     assignees: list[int] = []
@@ -385,7 +380,7 @@ def todo_create(request, list_id: int, data: TodoIn):
         group=group,
         notes=resolve_mentions(item, data.notes, author=request.user),
         due_on=data.due_on,
-        assignees=_assignees(item, data.assignees),
+        assignees=_assignees(request, item, data.assignees),
         recurrence=_rule(data.recurrence, data.due_on),
         recurrence_ends_on=data.recurrence_ends_on,
         recurrence_count=_count(data.recurrence_count),
@@ -421,14 +416,16 @@ def todo_overview(
     todolist = item_for(request, list_id, Kind.LIST) if list_id is not None else None
     if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
         bad_request(_("assignee is me, nobody or a person's ID."))
-    qs = due.todos(
-        request.user,
-        project=project,
-        todolist=todolist,
-        assignee=assignee or None,
-        completed=completed,
-        visible_to_clients=visible_to_clients,
-        group=due_group,
+    qs = _for_todo_out(
+        due.todos(
+            request.user,
+            project=project,
+            todolist=todolist,
+            assignee=assignee or None,
+            completed=completed,
+            visible_to_clients=visible_to_clients,
+            group=due_group,
+        )
     )
     today = schedules.today()
     ordering = ("-completed_key", "-pk") if completed else ("due_key", "pk")
@@ -457,7 +454,7 @@ def todo_detail(request, todo_id: int):
 
 
 class TodoPatch(Schema):
-    title: str | None = None
+    title: Title | None = None
     notes: str | None = None
     due_on: dt.date | None = None
     assignees: list[int] | None = None
@@ -479,14 +476,14 @@ def todo_update(request, todo_id: int, data: TodoPatch):
         for field in ["title", "notes", "due_on"]
         if field in given
     }
-    if changes.get("title", "x") in {None, ""}:
+    if "title" in changes and changes["title"] is None:
         bad_request(_("The title can't be empty."))
     if "notes" in changes and changes["notes"] is None:
         changes["notes"] = ""
     for field in {"title", "notes"} & changes.keys():
         changes[field] = resolve_mentions(item, changes[field], author=request.user)
     if "assignees" in given:
-        changes["assignees"] = _assignees(item, data.assignees or [])
+        changes["assignees"] = _assignees(request, item, data.assignees or [])
     if "recurrence" in given:
         anchor = changes.get("due_on", item.todo.due_on)
         changes["recurrence"] = _rule(data.recurrence, anchor)
@@ -547,25 +544,20 @@ def todos_move(request, list_id: int, data: MoveManyIn):
     """Moves several to-dos together into the list's group (or ungrouped),
     next to each other in the given order at ``index`` (default: the end)"""
     target = item_for(request, list_id, Kind.LIST)
-    todos = {
-        todo.pk: todo
-        for todo in Item.objects
-        .visible_to(request.user)
-        .filter(pk__in=data.todo_ids, kind=Kind.TODO, project=target.project_id)
-        .select_related("todo")
-    }
-    if not data.todo_ids or len(todos) != len(set(data.todo_ids)):
-        raise HttpError(404, _("Not all of these to-dos were found."))
+    todos = todos_to_move(request, target, data.todo_ids)
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
-    ops.move_todos(
-        [todos[pk] for pk in data.todo_ids],
-        todolist=target,
-        group=group,
-        index=data.index,
-        actor=request.user,
-    )
+    try:
+        ops.move_todos(
+            [todos[pk] for pk in data.todo_ids],
+            todolist=target,
+            group=group,
+            index=data.index,
+            actor=request.user,
+        )
+    except ValueError:
+        bad_request(_("Send each to-do once."))
     return [
         todo_out(item_for(request, pk, Kind.TODO), request.user) for pk in data.todo_ids
     ]
@@ -670,9 +662,7 @@ def visibility_switch(request, item_id: int, data: SwitchIn):
         raise HttpError(403, _("Only staff can change what clients see."))
     item = item_for(request, item_id)
     if not item.has_switch:
-        bad_request(
-            _("Only top-level lists, folders, messages and docs have a switch.")
-        )
+        bad_request(str(SWITCH_MESSAGE))
     ops.set_visibility(item, visible=data.visible_to_clients, actor=request.user)
     return item_out(item_for(request, item_id))
 

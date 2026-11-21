@@ -29,6 +29,8 @@
   {# Only staff: the list's name may be internal #}
   {% if event.data.to and not what and not request.user.is_client %}{% translate "to" %}
     {{ event.data.to|title_text }}{% endif %}
+  {# A group of the to-do's own list: as visible as the to-do #}
+  {% if event.data.group and not what %}{% translate "to" %} {{ event.data.group|title_text }}{% endif %}
 {% elif event.action == "visibility_changed" %}
   {% if what %}
     {% translate "changed the visibility of" %} {{ what }}
