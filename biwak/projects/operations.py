@@ -102,6 +102,10 @@ def add_member(project, user, *, actor, notify=NOTIFY_DEFAULT):
 
 @transaction.atomic
 def remove_member(project, user, *, actor):
+    """Takes the person out of the project, off its open to-dos too
+    (decided 2026-11-21); records "removed", or "left" for oneself"""
+    from biwak.items import operations as item_ops
+
     deleted, _rows = Membership.objects.filter(project=project, user=user).delete()
     if not deleted:
         return False
@@ -116,6 +120,7 @@ def remove_member(project, user, *, actor):
             name=user.display_name,
         )
     forget_lost_access(user, project=project)
+    item_ops.unassign_dropped(user, actor=actor, project=project)
     return True
 
 

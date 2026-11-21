@@ -113,8 +113,10 @@ nobody gets mail or a sign-in before someone decides
   `sso.enforce_required_now_and_after_commit()`), so what other requests
   made meanwhile goes too.
 - Keeps everything they did and what points at them: memberships,
-  subscriptions (no mail goes to inactive people), assignments (their
-  to-dos count under "Nobody active", `todos.md`), comments.
+  subscriptions (no mail goes to inactive people), comments, assignments
+  of completed to-dos. Open to-dos drop them (decided 2026-11-21,
+  `todos.md`: an "unassigned" event per to-do, nobody told); the
+  importer's inactive people aren't deactivated and keep theirs.
 - No mail to the person. Reactivating is "Activate" again.
 - **The Django admin** follows the same rules (fixed 2026-11-21 after a
   review): unticking "is active" deactivates through `deactivate()`

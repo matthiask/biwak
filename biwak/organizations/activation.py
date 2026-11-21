@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.items import operations as item_ops
 from biwak.projects import operations as project_ops
 
 
@@ -119,6 +120,8 @@ def deactivate(users, *, actor):
             continue
         user.is_active = False
         user.save(update_fields=["is_active"])
+        # Off their open to-dos (decided 2026-11-21, specs/todos.md)
+        item_ops.unassign_dropped(user, actor=actor)
         done.append(user)
     end_access_now_and_after_commit([user.pk for user in done])
     return done
