@@ -4,8 +4,8 @@ Builds on `core.md` and `access.md`.
 
 **Status:** assignees, the board view, moving several to-dos at once and
 adding to-dos inline are built (core, 2026-11-20). Stage 1 (schedules
-and recurrence) and stage 2 (the list by due date, the iCal feed) are
-built (2026-11-20).
+and recurrence), stage 2 (the list by due date, the iCal feed) and
+stage 3 (long lists of completed to-dos) are built (2026-11-20).
 
 **Agent:** both stages suit a cheaper model following this spec and the
 checklist in `AGENTS.md`.
