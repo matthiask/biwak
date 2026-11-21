@@ -134,7 +134,12 @@ class NotifyingTest(TestCase):
         self.ada.save()
         self.react(self.bob, "👍", item=self.todo)
         self.react(self.carl, "Thanks!", item=self.todo)
-        self.assertEqual(self.send(minutes=60 * 48), 1)
+        # 07:30 two days later: digests go out after 07:00, whatever the
+        # time the test runs at
+        local = timezone.localtime()
+        at = local.replace(hour=7, minute=30, second=0, microsecond=0)
+        at += dt.timedelta(days=2)
+        self.assertEqual(self.send(minutes=(at - local).total_seconds() / 60), 1)
         body = mail.outbox[0].body
         self.assertIn("Order the tent", body)
         self.assertIn("Bob Example: 👍", body)
