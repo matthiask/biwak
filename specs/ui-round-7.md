@@ -5,7 +5,9 @@ day.
 
 **Status:** being built (2026-11-21, branch `ui7`). Details marked
 "proposed" are the spec writer's, accepted unless noted. Built so far:
-part 1 (`files/_tiles.html`, `.wb-tiles` in `main.css`).
+part 1 (`files/_tiles.html`, `.wb-tiles` in `main.css`); part 2
+(`library.folder_new` and `folder_rename`, `files.operations.update_folder()`,
+renaming records `edited` like any edit, in the palette too).
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

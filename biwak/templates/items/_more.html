@@ -27,6 +27,9 @@
       href="{% url 'item_subscribers' item.pk %}"
       data-modal
     >{% translate "Subscribers…" %}</a>
+    {% if can_change and item.kind == "folder" %}
+      <a class="dropdown-item" href="{% url 'folder_rename' item.pk %}" data-modal>{% translate "Rename…" %}</a>
+    {% endif %}
     {% move_url item as move %}
     {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}
     {% if move and can_change or move and item.kind == "todo" %}

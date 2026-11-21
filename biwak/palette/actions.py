@@ -151,6 +151,10 @@ def in_project(user, project, folder=None):
             link(_("New message"), reverse("message_new", args=[project.pk]))
         )
     where = f"?folder={folder.pk}" if folder else ""
+    if ops.can_create(user, Kind.FOLDER):
+        actions.append(
+            modal(_("New folder"), reverse("folder_new", args=[project.pk]) + where)
+        )
     if ops.can_create(user, Kind.DOC):
         actions.append(
             link(_("New doc"), reverse("doc_new", args=[project.pk]) + where)
@@ -208,6 +212,8 @@ def on_item(request, item, context):
                     {"unarchive": "1", "next": url} if archived else {"next": url},
                 )
             )
+    if item.kind == Kind.FOLDER and ops.can_change(user, item):
+        actions.append(modal(_("Rename…"), reverse("folder_rename", args=[item.pk])))
     if item.is_commentable:
         actions.append(focus(_("Comment"), COMMENT_FORM, shortcut="c"))
     if item.kind == Kind.TODO:

@@ -337,6 +337,21 @@ def set_read_only(item, *, read_only, actor):
     return True
 
 
+# Folders ----------------------------------------------------------------
+
+
+@transaction.atomic
+def update_folder(item, *, actor, title=_UNCHANGED):
+    """Renames a folder: an edit like any other"""
+    if title is _UNCHANGED or title == item.title:
+        return item
+    item.title = title
+    item.updated_at = _now()
+    item.save(update_fields=["title", "updated_at"])
+    record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+    return item
+
+
 # Files ------------------------------------------------------------------
 
 

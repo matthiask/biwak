@@ -16,7 +16,14 @@ from biwak.files.models import preview_name
 from biwak.items import operations as ops, visibility
 from biwak.items.models import Item, Kind
 from biwak.projects import operations as project_ops
-from biwak.test_utils import organization, person, project
+from biwak.test_utils import (
+    assert_modal,
+    assert_modal_redirect,
+    assert_page,
+    organization,
+    person,
+    project,
+)
 
 
 def png(width=800, height=400, color="red"):
@@ -186,32 +193,96 @@ class LibraryTest(Fixture, TestCase):
             self.get(self.cleo, self.shared_file.get_absolute_url()).status_code, 404
         )
 
+    def new_folder_url(self, folder=None):
+        url = reverse("folder_new", args=[self.project.pk])
+        return f"{url}?folder={folder.pk}" if folder else url
+
     def test_creating_folders(self):
+        """Through a modal (specs/ui-round-7.md, part 2), also a page"""
         self.client.force_login(self.ada)
-        self.client.post(self.root(), {"title": "Staff folder"})
-        self.client.post(self.root(), {"title": "Shown", "visible": "on"})
-        self.client.post(self.private.get_absolute_url(), {"title": "Nested"})
+        response = self.client.get(self.new_folder_url(), headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="New folder")
+        self.assertContains(response, "Visible to clients")
+        # The switch only at the top level
+        response = self.client.get(self.new_folder_url(self.private))
+        assert_page(self, response, title="New folder")
+        self.assertNotContains(response, "Visible to clients")
+        response = self.client.post(
+            self.new_folder_url(),
+            {"title": "Staff folder"},
+            headers={"HX-Modal": "true"},
+        )
+        staff_folder = Item.objects.get(title="Staff folder")
+        assert_modal_redirect(self, response, staff_folder.get_absolute_url())
+        self.client.post(self.new_folder_url(), {"title": "Shown", "visible": "on"})
+        self.client.post(
+            self.new_folder_url(self.private), {"title": "Nested", "visible": "on"}
+        )
         folders = {i.title: i for i in Item.objects.filter(kind=Kind.FOLDER)}
         self.assertFalse(folders["Staff folder"].is_client_visible)
         self.assertTrue(folders["Shown"].is_client_visible)
         self.assertEqual(folders["Nested"].parent, self.private)
+        self.assertFalse(folders["Nested"].visible_to_clients)
+        # Errors stay in the dialog
+        response = self.client.post(
+            self.new_folder_url(), {"title": " "}, headers={"HX-Modal": "true"}
+        )
+        assert_modal(self, response, title="New folder")
+        # The button in the header opens it
+        response = self.client.get(self.private.get_absolute_url())
+        self.assertContains(response, f'href="{self.new_folder_url(self.private)}"')
+
+    def test_renaming_a_folder(self):
+        url = reverse("folder_rename", args=[self.public.pk])
+        self.client.force_login(self.ada)
+        response = self.client.get(self.public.get_absolute_url())
+        self.assertContains(response, f'href="{url}"')
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Rename…")
+        self.assertContains(response, 'value="Public"')
+        response = self.client.post(
+            url, {"title": "Shared"}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(self, response, self.public.get_absolute_url())
+        self.public.refresh_from_db()
+        self.assertEqual(self.public.title, "Shared")
+        self.assertTrue(
+            Event.objects.filter(item=self.public, action=Action.EDITED).exists()
+        )
+
+    def test_clients_dont_rename_folders(self):
+        url = reverse("folder_rename", args=[self.public.pk])
+        self.client.force_login(self.cleo)
+        self.assertNotContains(self.client.get(self.public.get_absolute_url()), url)
+        self.assertEqual(self.client.post(url, {"title": "Mine"}).status_code, 403)
+        url = reverse("folder_rename", args=[self.private.pk])
+        self.assertEqual(self.client.post(url, {"title": "Mine"}).status_code, 404)
+        self.assertFalse(Item.objects.filter(title="Mine").exists())
 
     def test_clients_dont_create_folders_docs_or_files(self):
         """Clients create to-dos, comments and messages, not folders, docs
         or files (specs/access.md)"""
         self.client.force_login(self.cleo)
-        for url in [self.root(), self.public.get_absolute_url()]:
-            with self.subTest(url=url):
+        for folder in [None, self.public]:
+            with self.subTest(folder=folder):
+                url = self.new_folder_url(folder)
                 response = self.client.post(url, {"title": "Client folder"})
                 self.assertEqual(response.status_code, 403)
-                response = self.client.get(url)
-                self.assertNotContains(response, "Add folder")
+                response = self.client.get(
+                    folder.get_absolute_url() if folder else self.root()
+                )
+                self.assertNotContains(response, "New folder")
                 self.assertNotContains(response, "New doc")
                 self.assertNotContains(response, "Upload a file")
+        # A folder clients don't see: 404 first
+        response = self.client.post(
+            self.new_folder_url(self.private), {"title": "Client folder"}
+        )
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(Item.objects.filter(title="Client folder").exists())
         self.client.force_login(self.ada)
         response = self.client.get(self.root())
-        self.assertContains(response, "Add folder")
+        self.assertContains(response, "New folder")
         self.assertContains(response, "New doc")
         self.assertContains(response, "Upload a file")
 
