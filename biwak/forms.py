@@ -3,6 +3,8 @@ from django.forms.renderers import TemplatesSetting
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 
+from biwak.text import line_breaks
+
 
 # Django 6.1's label of empty choices (``BLANK_CHOICE_LABEL``) has no German
 # translation yet: ours, kept in the catalog because it appears here
@@ -49,6 +51,14 @@ class BootstrapMixin:
             # Every text is Markdown: the toolbar of toolbar.js
             widget.attrs.setdefault("data-toolbar", "")
         return super().__getitem__(name)
+
+    def _clean_fields(self):
+        super()._clean_fields()
+        # Texts with \n line breaks only, as the live editor counts them
+        for name, field in self.fields.items():
+            value = self.cleaned_data.get(name)
+            if isinstance(field.widget, forms.Textarea) and isinstance(value, str):
+                self.cleaned_data[name] = line_breaks(value)
 
 
 class ColorSwatches(forms.RadioSelect):

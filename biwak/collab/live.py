@@ -20,6 +20,7 @@ from biwak.collab import ytext
 from biwak.collab.models import LiveState, LiveUpdate
 from biwak.items import operations as ops
 from biwak.items.models import Doc, Item, Kind
+from biwak.text import line_breaks
 
 
 # Who may do what in a doc's live session
@@ -64,7 +65,7 @@ def ensure_state(doc):
         return LiveState.objects.create(doc=doc, state=ytext.initial_state(doc.content))
     if not doc.live_updates.exists():
         y = ytext.ydoc(state.state)
-        if ytext.text(y) != doc.content:
+        if ytext.text(y) != line_breaks(doc.content):
             ytext.edit(y, doc.content)
             state.state = y.get_update()
             state.updated_at = timezone.now()

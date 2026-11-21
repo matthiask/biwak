@@ -5,6 +5,8 @@ from difflib import SequenceMatcher
 
 from pycrdt import Decoder, Doc, Text
 
+from biwak.text import line_breaks
+
 
 TEXT = "content"
 
@@ -25,7 +27,7 @@ def text(doc):
 def initial_state(content):
     """The state of a doc edited live for the first time"""
     doc = Doc()
-    doc.get(TEXT, type=Text).insert(0, content)
+    doc.get(TEXT, type=Text).insert(0, line_breaks(content))
     return doc.get_update()
 
 
@@ -33,6 +35,7 @@ def edit(doc, new):
     """Changes the text to ``new`` with as few edits as possible, so that
     what others type at the same time stays; returns the update (empty
     when nothing changed)"""
+    new = line_breaks(new)
     ytext = doc.get(TEXT, type=Text)
     old = str(ytext)
     if old == new:

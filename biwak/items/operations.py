@@ -45,6 +45,7 @@ from biwak.items.models import (
 from biwak.live import announce as live
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, knows_people_of
+from biwak.text import line_breaks
 
 
 def _next_position(qs):
@@ -231,6 +232,8 @@ def create_doc(
         parent=parent,
         visible=visible and parent is None,
     )
+    # The live editor counts a line break as one character (biwak/text.py)
+    content = line_breaks(content)
     Doc.objects.create(item=item, content=content)
     DocVersion.objects.create(
         doc_id=item.pk, title=title, content=content, created_by=creator

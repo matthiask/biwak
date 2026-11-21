@@ -38,6 +38,33 @@ class YTextTest(TestCase):
         merged = ytext.ydoc(state, [mine, theirs])
         self.assertEqual(ytext.text(merged), "One 2 three four")
 
+    def test_line_breaks_are_one_character(self):
+        """Browsers send a textarea's line breaks as CR LF; the editor
+        (CodeMirror) counts a line break as one character, Yjs counted two,
+        so every edit landed one character off per line break before it"""
+        doc = ytext.ydoc(ytext.initial_state("One\r\ntwo\rthree"))
+        self.assertEqual(ytext.text(doc), "One\ntwo\nthree")
+        ytext.edit(doc, "One\r\n2\r\nthree")
+        self.assertEqual(ytext.text(doc), "One\n2\nthree")
+
+    def test_docs_and_forms_store_one_character_line_breaks(self):
+        from django import forms
+
+        from biwak.forms import Form
+
+        ada = person("Ada")
+        doc = ops.create_doc(
+            project=project(members=[ada]), title="Notes", content="a\r\nb", creator=ada
+        )
+        self.assertEqual(doc.doc.content, "a\nb")
+
+        class TextForm(Form):
+            text = forms.CharField(widget=forms.Textarea)
+
+        form = TextForm({"text": "a\r\nb"})
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["text"], "a\nb")
+
     def test_validity(self):
         self.assertTrue(ytext.is_valid(ytext.initial_state("x")))
         self.assertFalse(ytext.is_valid(b"\x05broken"))
