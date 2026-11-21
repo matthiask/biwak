@@ -6,7 +6,7 @@ specs/access.md), own staff everybody."""
 
 from dataclasses import dataclass, field
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
@@ -25,6 +25,7 @@ class Group:
     kind: str  # "own", "client", "partner" or "none"
     label: str
     people: list = field(default_factory=list)
+    addable: int = 0  # project_groups(): active people who aren't members
 
 
 def role(user):
@@ -108,6 +109,54 @@ def groups_for(viewer):
             group.label = _("Client organization")
     ordered = sorted(others.values(), key=lambda g: g.organization.name.lower())
     return [g for g in [own, *ordered, without] if g is not None and g.people]
+
+
+def project_groups(project, rows, *, can_add):
+    """A project's members by organization (specs/organizations.md, decided
+    2026-11-21): the own staff first, then the client organizations, then
+    the partner organizations (by name; partner: a member is staff), then
+    people without one. ``rows`` are ``(membership, anything)`` pairs in
+    the order shown within a group. With ``can_add`` each organization's
+    group says how many of its active people aren't members yet
+    (``group.addable``, for "Add people from …")."""
+    own, clients, partners = None, {}, {}
+    without = Group(None, "none", _("Without an organization"))
+    for row in rows:
+        org = row[0].user.organization
+        if org is None:
+            without.people.append(row)
+        elif org.is_own:
+            if own is None:
+                own = Group(org, "own", _("Your own organization"))
+            own.people.append(row)
+        else:
+            clients.setdefault(org.pk, Group(org, "client", "")).people.append(row)
+    for pk, group in list(clients.items()):
+        if any(not m.user.is_client for m, *_rest in group.people):
+            group.kind, group.label = "partner", _("Partner organization")
+            partners[pk] = clients.pop(pk)
+        else:
+            group.label = _("Client organization")
+
+    def by_name(groups):
+        return sorted(groups.values(), key=lambda g: g.organization.name.lower())
+
+    groups = [own, *by_name(clients), *by_name(partners)]
+    groups = [g for g in groups if g is not None]
+    if can_add and groups:
+        addable = dict(
+            project_ops
+            .addable_people(project)
+            .filter(organization__in=[g.organization for g in groups])
+            .values_list("organization")
+            .annotate(count=Count("pk"))
+            .order_by()
+        )
+        for group in groups:
+            group.addable = addable.get(group.organization.pk, 0)
+    if without.people:
+        groups.append(without)
+    return groups
 
 
 def invitations_for(viewer):

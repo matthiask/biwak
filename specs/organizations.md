@@ -8,8 +8,7 @@ and renaming means editing everyone.
 
 **Status:** built (2026-11-21), see "Built" below, including the
 decisions under "Decided meanwhile" (partners know their projects'
-people). Not built yet: the people page grouping members by
-organization (decided 2026-11-21).
+people) and a project's people page grouped by organization.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The rules who
@@ -125,7 +124,7 @@ point.
   are invited from the same step (name, address; the domain preselects
   the organization).
 - **A project's people page groups members by organization** (decided
-  2026-11-21, to build): own staff first, then each client organization,
+  2026-11-21, built): own staff first, then each client organization,
   then partners' organizations, each with its heading and "add people
   from …" (the organization's people who aren't members yet).
 
@@ -218,6 +217,17 @@ decides who sees all-access projects.
   as members (`people_visible_to()`), as for own staff; inactive own
   staff count as the project's people (names in histories); assigning a
   non-member own staff makes them a member, as when own staff assign.
+- **A project's people page by organization** (`project_groups()` in
+  `biwak/organizations/people.py`): own staff, client organizations,
+  partner organizations (by name; partner: a member of it is staff, as
+  on the People page), then people without an organization (no "Add
+  from"); within a group by name; the full name without the
+  organization under its heading. For own staff (who add people) each
+  organization with active people who aren't members gets "Add people
+  from …": the existing "Add someone" modal with `?organization=ID`,
+  offering only them, preselected when there's one. Clients and
+  partners see the same groups of members, without actions (clients
+  without addresses, as before).
 - **The admin:** organizations with their people count; marking one as
   the own organization moves the mark (`mark_own()`); a person's
   organization with autocomplete.

@@ -44,7 +44,9 @@ lists, messages, docs and files, check-ins, members.
   the trash; each list has a menu with "Archive".
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page.
-- **Members** lists who is in the project. Staff add people there or
+- **Members** lists who is in the project, by organization: your own
+  first, then the clients' organizations, then partners'. Staff add
+  people there, "Add people from …" an organization in the project, or
   invite them by email (see [People](#people)). "Add someone" and other long lists of choices
   (the person filter of the activity, a check-in's time zone) have a
   search field: type parts of the name, the organization or the address,
