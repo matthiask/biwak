@@ -95,8 +95,10 @@ What every part does the same way. Look at how the core does it
    get their stored visibility with `visibility.recompute(item)` in the
    creating operation.
 4. **Who may change what.** Staff change everything they see; clients
-   create where they can see and change only what they created
-   (`ops.can_change()`). Visibility switches are staff only.
+   create to-dos, comments and messages where they can see and change
+   only what they created (`ops.can_change()`), except the fields of
+   visible to-dos, which are shared work (`specs/access.md`). Visibility
+   switches are staff only.
 5. **Pages.** Server-rendered templates extending `base.html`, the
    client badge (`{% client_badge item %}`) on everything visible to
    clients and the banner (`items/_client_banner.html`) above forms on

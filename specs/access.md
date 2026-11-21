@@ -51,6 +51,11 @@ the first client gets a login.
   `ops.can_create()`). What clients created before stays theirs to change
   (`can_change()`).
 - Assigning a client to a to-do requires the to-do to be visible.
+- To-dos are shared work: clients change every field of a visible to-do
+  (title, notes, assignees, due date, repeat rule), also of to-dos staff
+  created (decided 2026-11-20; `can_change()` covers renaming, archiving
+  and trashing, not to-dos' fields). Everything else clients change only
+  if they created it.
 - Clients learn about the project's members only, not about staff who
   see the project because it's all-access (decided 2026-11-20 after the
   visibility review): subscribers on item pages, the people asked by a
