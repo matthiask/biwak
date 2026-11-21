@@ -219,14 +219,20 @@ def candidates(event):
 
 def notify(event_pk):
     """Writes the notifications of an event; returns the people told.
-    Never the actor, inactive people or people who can't see the item now.
+    Never the actor, inactive people, people who can't see the item now or
+    clients when the event is internal.
     A merged edit (``record()``) notifies again: unsent notifications move
     forward, sent ones only get a new one for people mentioned since. The
     same number of queries for any number of people."""
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
     if event is None or event.item is None or event.action in SILENT:
         return []
-    people = list(candidates(event).filter(pk__in=who_can_see(event.item).values("pk")))
+    seeing = who_can_see(event.item)
+    if not event.is_client_visible:
+        # The event happened while the item was internal: clients never
+        # hear of it, whatever the item's visibility is now (specs/access.md)
+        seeing = seeing.filter(is_client=False)
+    people = list(candidates(event).filter(pk__in=seeing.values("pk")))
     if not people:
         return []
     return _tell(wanting(people, event), event)
