@@ -20,7 +20,8 @@ from biwak.collab import live
 from biwak.files import attachments
 from biwak.files.titles import doc_title
 from biwak.items import editing, operations as ops
-from biwak.items.models import Doc, DocVersion, Message, Upload
+from biwak.items.models import Doc, DocVersion, Folder, Message, Upload
+from biwak.projects.models import FilesOrdering, Project
 
 
 _UNCHANGED = ops._UNCHANGED
@@ -350,6 +351,22 @@ def update_folder(item, *, actor, title=_UNCHANGED):
     item.save(update_fields=["title", "updated_at"])
     record(actor=actor, action=Action.EDITED, project=item.project, item=item)
     return item
+
+
+def set_ordering(target, ordering, *, actor):
+    """The order of a folder's contents (``target`` its item) or of the
+    project's top level (``target`` the project), for everybody; staff
+    only. Just a setting: no event (specs/ui-round-7.md, part 3)."""
+    if actor.is_client:
+        raise PermissionDenied
+    ordering = FilesOrdering(ordering)
+    if isinstance(target, Project):
+        Project.objects.filter(pk=target.pk).update(files_ordering=ordering)
+        target.files_ordering = ordering
+    else:
+        Folder.objects.filter(pk=target.pk).update(ordering=ordering)
+        target.folder.ordering = ordering
+    return ordering
 
 
 # Files ------------------------------------------------------------------

@@ -161,6 +161,38 @@ class FilesCLITest(test_cli.CLITest):
         data = json.loads(self.biwak("files", self.project.pk, "--json").stdout)
         self.assertEqual([e["title"] for e in data["entries"]], ["Specs"])
 
+    def test_renaming_and_ordering_folders(self):
+        """specs/ui-round-7.md, parts 2 and 3"""
+        folder = ops.create_folder(
+            project=self.project, title="Specs", creator=self.ada
+        )
+        for title in ["b.md", "a.md"]:
+            ops.create_doc(
+                project=self.project, title=title, creator=self.ada, parent=folder
+            )
+        output = self.biwak("folder", "rename", folder.pk, "Briefs").output
+        self.assertIn("Renamed", output)
+        self.assertEqual(Item.objects.get(pk=folder.pk).title, "Briefs")
+        output = self.biwak("files", self.project.pk, folder.pk).output
+        self.assertIn("Order: alphabetical", output)
+        data = json.loads(
+            self.biwak(
+                "folder", "order", self.project.pk, "newest", "--folder", folder.pk,
+                "--json",
+            ).stdout
+        )  # fmt: skip
+        self.assertEqual(data["ordering"], "newest")
+        self.assertEqual([e["title"] for e in data["entries"]], ["a.md", "b.md"])
+        output = self.biwak("folder", "order", self.project.pk, "reverse").output
+        self.assertIn("Order: reverse", output)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.files_ordering, "reverse")
+        # Staff only
+        output = self.cli_as(self.cleo, "folder", "order", self.project.pk, "oldest")
+        self.assertIn("403", output)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.files_ordering, "reverse")
+
     def test_upload_download_and_replace(self):
         plan = self.directory / "plan.txt"
         plan.write_bytes(b"One")

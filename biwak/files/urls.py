@@ -23,6 +23,12 @@ urlpatterns = [
     path("folders/<int:pk>/", library.folder, name="folder"),
     path("projects/<int:pk>/folders/new/", library.folder_new, name="folder_new"),
     path("folders/<int:pk>/rename/", library.folder_rename, name="folder_rename"),
+    path("folders/<int:pk>/order/", library.folder_order, name="folder_order"),
+    path(
+        "projects/<int:pk>/files/order/",
+        library.project_files_order,
+        name="project_files_order",
+    ),
     path("items/<int:pk>/move/", library.item_move, name="item_move"),
     # Docs
     path("projects/<int:pk>/docs/new/", docs.doc_new, name="doc_new"),

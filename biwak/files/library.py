@@ -19,15 +19,30 @@ from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
 from biwak.permissions import staff_only
+from biwak.projects.models import FilesOrdering
 from biwak.projects.views import project_for
 
 
 CONTAINED = [Kind.FOLDER, Kind.DOC, Kind.FILE]
 
 
+# The order of a folder's contents after its folders
+ORDER_BY = {
+    FilesOrdering.ALPHABETICAL: [Lower("title"), "pk"],
+    FilesOrdering.REVERSE: [Lower("title").desc(), "-pk"],
+    FilesOrdering.NEWEST: ["-created_at", "-pk"],
+    FilesOrdering.OLDEST: ["created_at", "pk"],
+}
+
+
+def ordering_of(project, folder):
+    """The order chosen for the folder, or for the project's top level"""
+    return folder.folder.ordering if folder is not None else project.files_ordering
+
+
 def contents(user, project, folder):
     """What the person sees in the root (``folder`` None) or in a folder:
-    folders first, then docs and files, by title"""
+    folders first, then docs and files, both in the folder's order"""
     return (
         glance
         .with_checklist(Item.objects.visible_to(user))
@@ -40,7 +55,7 @@ def contents(user, project, folder):
             )
         )
         .select_related("creator")
-        .order_by("folder_first", Lower("title"), "pk")
+        .order_by("folder_first", *ORDER_BY[ordering_of(project, folder)])
     )
 
 
@@ -169,6 +184,44 @@ def folder_new(request, pk):
         cancel_url=library_url(project, parent),
         submit_label=_("Add folder"),
     )
+
+
+class OrderForm(Form):
+    ordering = forms.ChoiceField(
+        label=_("Order"), choices=FilesOrdering.choices, widget=forms.RadioSelect
+    )
+
+
+def _order(request, project, folder):
+    """How a folder's contents (or the top level's) are ordered, for
+    everybody; staff set it (specs/ui-round-7.md, part 3)"""
+    staff_only(request)
+    form = OrderForm(
+        request.POST or None, initial={"ordering": ordering_of(project, folder)}
+    )
+    if form.is_valid():
+        operations.set_ordering(
+            folder or project, form.cleaned_data["ordering"], actor=request.user
+        )
+        return redirect(library_url(project, folder))
+    return form_response(
+        request,
+        form,
+        title=_("Order…"),
+        item=folder,
+        project=project,
+        cancel_url=library_url(project, folder),
+        intro=_("Folders come first, in the same order. Everybody sees it."),
+    )
+
+
+def folder_order(request, pk):
+    item = item_for(request, pk, Kind.FOLDER)
+    return _order(request, item.project, item)
+
+
+def project_files_order(request, pk):
+    return _order(request, project_for(request, pk), None)
 
 
 def folder_rename(request, pk):

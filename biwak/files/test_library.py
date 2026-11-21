@@ -14,7 +14,7 @@ from biwak.activity.models import Action, Event
 from biwak.files import attachments, operations, previews
 from biwak.files.models import preview_name
 from biwak.items import operations as ops, visibility
-from biwak.items.models import Item, Kind
+from biwak.items.models import Folder, Item, Kind
 from biwak.projects import operations as project_ops
 from biwak.test_utils import (
     assert_modal,
@@ -173,6 +173,82 @@ class LibraryTest(Fixture, TestCase):
         # Only images have a preview
         self.assertNotContains(
             response, reverse("file_preview", args=[self.secret_file.pk])
+        )
+
+    def test_ordering(self):
+        """Stored on the folder, the project's for the top level; folders
+        first, in the same order (specs/ui-round-7.md, part 3)"""
+        ops.create_folder(project=self.project, title="Archive", creator=self.ada)
+        names = lambda: self.names(self.get(self.ada, self.root()))  # noqa: E731
+        self.assertEqual(
+            names(),
+            ["Archive", "Private", "Public", "root-secret.txt", "root-shared.txt"],
+        )
+        url = reverse("project_files_order", args=[self.project.pk])
+        self.client.force_login(self.ada)
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Order…")
+        self.assertContains(
+            response,
+            'value="alphabetical" class="form-check-input" id="id_ordering_0" required checked',
+        )
+        response = self.client.post(
+            url, {"ordering": "reverse"}, headers={"HX-Modal": "true"}
+        )
+        assert_modal_redirect(self, response, self.root())
+        self.assertEqual(
+            names(),
+            ["Public", "Private", "Archive", "root-shared.txt", "root-secret.txt"],
+        )
+        self.client.post(url, {"ordering": "newest"})
+        self.assertEqual(
+            names(),
+            ["Archive", "Private", "Public", "root-secret.txt", "root-shared.txt"],
+        )
+        self.client.post(url, {"ordering": "oldest"})
+        self.assertEqual(
+            names(),
+            ["Public", "Private", "Archive", "root-shared.txt", "root-secret.txt"],
+        )
+        # A folder has its own, everybody sees it; no event
+        self.upload("a.txt", parent=self.public)
+        url = reverse("folder_order", args=[self.public.pk])
+        self.client.post(url, {"ordering": "reverse"})
+        self.assertEqual(
+            self.names(self.get(self.cleo, self.public.get_absolute_url())),
+            ["shared.txt", "a.txt"],
+        )
+        self.assertEqual(Folder.objects.get(pk=self.public.pk).ordering, "reverse")
+        self.assertFalse(
+            Event.objects
+            .filter(item=self.public)
+            .exclude(action=Action.CREATED)
+            .exists()
+        )
+        # The menus offer it
+        self.assertContains(
+            self.get(self.ada, self.root()),
+            reverse("project_files_order", args=[self.project.pk]),
+        )
+        self.assertContains(self.get(self.ada, self.public.get_absolute_url()), url)
+
+    def test_clients_dont_order(self):
+        self.client.force_login(self.cleo)
+        for url in [
+            reverse("project_files_order", args=[self.project.pk]),
+            reverse("folder_order", args=[self.public.pk]),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(
+                    self.client.post(url, {"ordering": "newest"}).status_code, 403
+                )
+        url = reverse("folder_order", args=[self.private.pk])
+        self.assertEqual(self.client.post(url, {"ordering": "newest"}).status_code, 404)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.files_ordering, "alphabetical")
+        self.assertNotContains(self.get(self.cleo, self.root()), "Order…")
+        self.assertNotContains(
+            self.get(self.cleo, self.public.get_absolute_url()), "Order…"
         )
 
     def test_non_members_get_404(self):

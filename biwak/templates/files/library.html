@@ -27,7 +27,24 @@
           href="{% url 'file_new' project.pk %}{% if folder %}?folder={{ folder.pk }}{% endif %}"
         >{% icon "upload" %}<span>{% translate "Upload a file" %}</span></a>
       {% endif %}
-      {% if folder %}{% include "items/_more.html" with item=folder %}{% endif %}
+      {% if folder %}
+        {% include "items/_more.html" with item=folder %}
+      {% elif not request.user.is_client %}
+        {# The top level's order is the project's (specs/ui-round-7.md, part 3) #}
+        <details class="dropdown wb-menu">
+          <summary class="btn btn-sm btn-quiet">
+            {% translate "More" %}
+            {% icon "chevron-down" %}
+          </summary>
+          <div class="dropdown-menu dropdown-menu-end">
+            <a
+              class="dropdown-item"
+              href="{% url 'project_files_order' project.pk %}"
+              data-modal
+            >{% translate "Order…" %}</a>
+          </div>
+        </details>
+      {% endif %}
     </div>
   </div>
   {% if folder %}

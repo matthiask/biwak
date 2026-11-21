@@ -210,6 +210,11 @@ class ProjectActionsTest(ActionsBase):
         )
         self.assertEqual(actions["Rename…"]["type"], "modal")
         self.assertEqual(actions["Rename…"]["url"], f"/folders/{folder.pk}/rename/")
+        self.assertEqual(actions["Order…"]["url"], f"/folders/{folder.pk}/order/")
+        actions = self.actions(self.ada, f"/projects/{self.camp.pk}/files/")
+        self.assertEqual(
+            actions["Order…"]["url"], f"/projects/{self.camp.pk}/files/order/"
+        )
 
     def test_clients_dont_rename_folders(self):
         folder = ops.create_folder(
@@ -218,6 +223,9 @@ class ProjectActionsTest(ActionsBase):
         actions = self.actions(self.cleo, folder.get_absolute_url())
         self.assertNotIn("Rename…", actions)
         self.assertNotIn("New folder", actions)
+        self.assertNotIn("Order…", actions)
+        actions = self.actions(self.cleo, f"/projects/{self.camp.pk}/files/")
+        self.assertNotIn("Order…", actions)
 
     def test_staff_without_access_to_a_limited_project_get_nothing(self):
         self.client.force_login(self.bob)

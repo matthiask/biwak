@@ -16,7 +16,7 @@ from tree_queries.models import TreeNode
 from tree_queries.query import TreeQuerySet
 
 from biwak import schedules
-from biwak.projects.models import Project
+from biwak.projects.models import FilesOrdering, Project
 
 
 class Kind(models.TextChoices):
@@ -432,6 +432,14 @@ class Message(Checklist, Detail):
 
 
 class Folder(Detail):
+    # The order of its contents for everybody (specs/ui-round-7.md, part 3)
+    ordering = models.CharField(
+        _("order"),
+        max_length=20,
+        choices=FilesOrdering,
+        default=FilesOrdering.ALPHABETICAL,
+    )
+
     class Meta:
         verbose_name = _("folder")
         verbose_name_plural = _("folders")

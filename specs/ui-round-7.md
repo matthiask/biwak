@@ -7,7 +7,14 @@ day.
 "proposed" are the spec writer's, accepted unless noted. Built so far:
 part 1 (`files/_tiles.html`, `.wb-tiles` in `main.css`); part 2
 (`library.folder_new` and `folder_rename`, `files.operations.update_folder()`,
-renaming records `edited` like any edit, in the palette too).
+renaming records `edited` like any edit, in the palette too); part 3
+(`Folder.ordering`, `Project.files_ordering`, `files.operations.set_ordering()`,
+the "Order…" modals; API: `ordering` in `GET projects/{id}/files/`,
+`PATCH projects/{id}/files/` and `PATCH folders/{id}/` with `title` and
+`ordering`; CLI 0.36.0: `biwak folder rename`, `biwak folder order`,
+"Order:" in `biwak files`). The ordering is just a setting: no event;
+the audit trigger still records the column like any other (not left
+out, nothing to gain).
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

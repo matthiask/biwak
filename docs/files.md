@@ -21,12 +21,18 @@ number of comments.
 
 **Docs and files** on the project's page opens the project's root
 folder. Its contents show as tiles: folders first, then docs and files,
-by title; images show a preview, files their size, docs with a task list
+in the folder's order; images show a preview, files their size, docs with a task list
 how many are done. Inside a folder the first tile, "..", leads to the
 folder above (or the project's top level); the path above the title
 does too. Staff create what is here: "New folder", "New doc", "Upload a
 file". A folder's "More" menu has "Rename…"; move things between
 folders with "Move to..." in their "More" menu.
+
+Staff choose the order of a folder's contents with "Order…" in its
+"More" menu (for the top level in the "More" menu of "Docs and files"):
+alphabetical (the default), reverse alphabetical, newest first or oldest
+first, by when they were created. Folders always come first, in the
+same order. Everybody sees the order chosen.
 
 ### Docs
 

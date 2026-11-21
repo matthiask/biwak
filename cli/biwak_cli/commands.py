@@ -1608,6 +1608,7 @@ def files(project, folder, as_json):
         return echo_json(data)
     if data["breadcrumbs"]:
         click.echo("/ " + " / ".join(c["title"] for c in data["breadcrumbs"]))
+    click.echo(f"Order: {data['ordering']}")
     t = table("ID", "Kind", "Name", "Size", "")
     for entry in data["entries"]:
         t.add_row(
@@ -1655,6 +1656,42 @@ def folder_move(item, folder, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Moved #{item}.{' [clients]' if data['visible_to_clients'] else ''}")
+    return None
+
+
+@folder.command("rename")
+@click.argument("folder_id", metavar="FOLDER", type=int)
+@click.argument("title")
+@json_option
+def folder_rename(folder_id, title, as_json):
+    """Rename FOLDER to TITLE"""
+    data = request("PATCH", f"folders/{folder_id}/", json={"title": title})
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Renamed #{folder_id}: {data['folder']['title']}")
+    return None
+
+
+ORDERINGS = ["alphabetical", "reverse", "newest", "oldest"]
+
+
+@folder.command("order")
+@click.argument("project", type=int)
+@click.argument("ordering", type=click.Choice(ORDERINGS))
+@click.option("--folder", "folder_id", type=int, help="This folder's contents.")
+@json_option
+def folder_order(project, ordering, folder_id, as_json):
+    """Order the docs and files of PROJECT's top level, or of a folder, for
+    everybody; folders come first (staff)"""
+    if folder_id:
+        data = request("PATCH", f"folders/{folder_id}/", json={"ordering": ordering})
+    else:
+        data = request(
+            "PATCH", f"projects/{project}/files/", json={"ordering": ordering}
+        )
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Order: {data['ordering']}")
     return None
 
 
