@@ -46,7 +46,48 @@ records, levels, `send_mails`), reactions.
   highlight; nothing moves what you're reading or typing in.
 - **Browser notifications** (Web Push) later, not now.
 
-## Reading by acting (decided 2026-11-21, not built yet)
+## Reading by acting (decided 2026-11-21, built 2026-11-21 on `reading`)
+
+**Status:** built. `read_by_acting(actor, *items)` in
+`biwak/activity/operations.py` calls `lantern.read()` (the live ping goes
+out after the commit, as `read()` always did) and does nothing inside
+`importing()`, the one place where operations run as somebody who isn't
+acting (the importer's `reopen()` now runs in it too). Called by
+`complete()`, `reopen()` (only when they change something), `update_todo()`
+(only when a field, the title or the assignees actually changed), `tick()` (to-dos, messages, files, check-in
+answers by way of their update operations; docs and comments directly),
+`add_comment()` (pages, the API and mail replies all end there),
+`add_reaction()` (when added: removing a reaction, or adding one that's
+there already, reads nothing; `toggle_reaction()` goes through it, on the
+item or a comment) and the check-in's `answer()`. Tests:
+`biwak/activity/test_reading.py`, the mail reply in
+`biwak/inbound/test_replies.py`.
+
+Decisions on the way:
+
+- Editing reads for every kind, like changing a to-do's fields (decided
+  2026-11-21, "the same for every kind"): `update_message()`,
+  `update_upload()` and `replace_upload()`, `update_doc()`,
+  `update_list()`, `update_answer()` and `update_question()` call
+  `read_by_acting()` where they record an edit, so only when something
+  actually changed (saving the same values reads nothing). Not pausing or
+  resuming a question, pinning a message, changing a project (not item
+  edits).
+- Docs: `_save()`, which every doc save goes through (the API's
+  `update_doc()`, restoring a version, and the live editor's `save_live()`
+  after a pause or when the editor leaves, which has no actor), reads for
+  each author of the saved change, when the text or title changed: the
+  people who typed it edited the doc. Typing alone reads nothing until it
+  is saved (a few seconds); saving a version of an unchanged text reads
+  nothing.
+- Answering a check-in question reads the notifications of the question
+  and of the person's own answer item (the answers are items of their
+  own, with their own comments and edits); other people's answers to the
+  same question stay unread (decided 2026-11-21).
+- Reacting again with a reaction that's there already is no action: it
+  reads nothing (decided 2026-11-21).
+- Mails: nothing to add, `send_mails` skips them like any read ones
+  (tested).
 
 Acting on an item that's in the lantern reads its notifications: having
 done something with it means having dealt with it, so nobody ticks the
@@ -115,7 +156,7 @@ reasonable doubt, it stays unread.**
     lantern's entries on another page: they link through the lantern and
     read the same way (the state is the lantern's, on the server,
     decided 2026-11-21);
-  - acting on the item reads it ("Reading by acting" below);
+  - acting on the item reads it ("Reading by acting" above);
   - "mark as unread" per item.
 - **The model:** `Notification.read_at` (null: unread). Mail delivery
   gains `none`. `send_mails` leaves out notifications read before

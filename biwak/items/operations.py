@@ -19,7 +19,12 @@ from biwak.accounts.models import User, own_staff
 from biwak.activity import mentions
 from biwak.activity.models import Action
 from biwak.activity.notify import notify_people
-from biwak.activity.operations import is_importing, record, subscribe
+from biwak.activity.operations import (
+    is_importing,
+    read_by_acting,
+    record,
+    subscribe,
+)
 from biwak.files import attachments
 from biwak.files.models import FileVersion, content_type_for
 from biwak.items import editing, visibility
@@ -299,6 +304,7 @@ def add_comment(item, *, author, content):
         comment=comment.pk,
     )
     mentions.update(item, content, comment=comment, actor=author, event=event)
+    read_by_acting(author, item)
     return comment
 
 
@@ -362,6 +368,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
         comment.content = checklists.tick(comment.content, index, checked)
         comment.updated_at = timezone.now()
         comment.save(update_fields=["content", "updated_at"])
+        read_by_acting(actor, item)
         return comment.content
     if not can_tick(actor, item):
         raise PermissionDenied
@@ -374,9 +381,11 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
     if item.kind == Kind.DOC:
         # Docs are edited live: ticks go into the open editors
         # (specs/editor.md, "Docs: ticks never wait")
-        return file_ops.tick_doc(
+        text = file_ops.tick_doc(
             item, actor=actor, index=index, version=version, checked=checked
         )
+        read_by_acting(actor, item)
+        return text
     if users := editing.holders(item):
         raise editing.BeingEdited(users)
     text = text_of(item)
@@ -392,6 +401,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
             file_ops.update_upload(item, actor=actor, description=new)
         case Kind.ANSWER:
             checkin_ops.update_answer(item.answer, new, actor=actor)
+    read_by_acting(actor, item)
     return new
 
 
@@ -577,6 +587,8 @@ def update_todo(
             mentioned=(event, mentioned) if edited or fields else None,
         )
         unassign(item, list(old - new), actor=actor)
+    if edited or fields or (assignees is not _UNCHANGED and new != old):
+        read_by_acting(actor, item)
     return item
 
 
@@ -592,6 +604,7 @@ def complete(item, *, actor):
     record(actor=actor, action=Action.COMPLETED, project=item.project, item=item)
     if todo.recurrence:
         _create_next(item, todo, actor=actor)
+    read_by_acting(actor, item)
 
 
 def _create_next(item, todo, *, actor):
@@ -665,6 +678,7 @@ def reopen(item, *, actor):
     todo.completed_by = None
     todo.save(update_fields=["completed_at", "completed_by"])
     record(actor=actor, action=Action.REOPENED, project=item.project, item=item)
+    read_by_acting(actor, item)
 
 
 def _renumber(items):
@@ -905,6 +919,7 @@ def update_list(
         todolist.save(update_fields=fields)
     if edited or fields:
         record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+        read_by_acting(actor, item)
     return item
 
 

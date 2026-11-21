@@ -7,7 +7,7 @@ from django.db.models import Prefetch, Q, prefetch_related_objects
 from django.utils.translation import gettext as _
 
 from biwak.activity.models import Action, Event, Notification
-from biwak.activity.operations import record
+from biwak.activity.operations import read_by_acting, record
 from biwak.live import announce as live
 from biwak.reactions.emoji import MAX_LENGTH
 from biwak.reactions.models import Reaction, can_react
@@ -56,6 +56,7 @@ def add_reaction(user, content, *, item=None, comment=None):
             item=item,
             **_event_data(content, comment),
         )
+        read_by_acting(user, item)
     return created
 
 

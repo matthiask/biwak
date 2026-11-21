@@ -21,7 +21,12 @@ from biwak.accounts.models import NotificationLevel, User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
 from biwak.activity.notify import can_see, effective_levels, who_can_see
-from biwak.activity.operations import is_importing, record, subscribe
+from biwak.activity.operations import (
+    is_importing,
+    read_by_acting,
+    record,
+    subscribe,
+)
 from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
     DEFAULT_MODE,
@@ -207,6 +212,7 @@ def update_question(
         question.save(update_fields=fields)
     if changed:
         record(actor=actor, action=Action.EDITED, project=item.project, item=item)
+        read_by_acting(actor, item)
     if people is not _UNCHANGED:
         set_people(item, people, actor=actor)
     return item
@@ -455,11 +461,14 @@ def answer(item, *, user, content, occurrence=None, base=None):
         .first()
     )
     if existing is None:
-        return create_answer(item, user, content, occurrence)
+        answer_item = create_answer(item, user, content, occurrence)
+        read_by_acting(user, item, answer_item)
+        return answer_item
     answer_item = existing.item
     if answer_item.status == Status.TRASHED:
         items_ops.restore(answer_item, actor=user)
     update_answer(existing, content, actor=user, base=base)
+    read_by_acting(user, item, answer_item)
     return answer_item
 
 
@@ -512,6 +521,7 @@ def update_answer(answer, content, *, actor, base=None):
     attachments.link(item, content, actor=actor)
     event = record(actor=actor, action=Action.EDITED, project=item.project, item=item)
     mentions.update(item, content, actor=actor, event=event, previous=previous)
+    read_by_acting(actor, item)
 
 
 @transaction.atomic

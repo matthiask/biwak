@@ -813,7 +813,8 @@ class Importer(Resolver):
                 ops.complete(todo, actor=by)
             Todo.objects.filter(pk=todo.pk).update(completed_at=when)
         elif not rec.get("completed") and done:
-            ops.reopen(todo, actor=todo.creator)
+            with importing():
+                ops.reopen(todo, actor=todo.creator)
 
     # Card tables -----------------------------------------------------------------------
 

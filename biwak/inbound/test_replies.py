@@ -41,6 +41,24 @@ class EndToEndTest(ReceiveMixin, ReplyTestCase):
         self.assertEqual(message.comment, comment)
         self.assertTrue(comment.content.startswith("Thanks, I'll update the copy"))
 
+    def test_the_reply_reads_the_repliers_notifications_of_the_item(self):
+        """Reading by acting (specs/lantern.md): the mail reply goes through
+        ``add_comment()``; Cleo's notifications stay unread"""
+        from biwak.activity import lantern
+
+        messages = self.notify()
+        token = (
+            messages[self.ada.email]
+            .extra_headers["Reply-To"]
+            .removeprefix("r-")
+            .split("@")[0]
+        )
+        self.assertEqual(lantern.unread_count(self.ada), 1)
+        self.assertEqual(lantern.unread_count(self.cleo), 1)
+        self.receive(sample("gmail_en.eml", token))
+        self.assertEqual(lantern.unread_count(self.ada), 0)
+        self.assertEqual(lantern.unread_count(self.cleo), 1)
+
 
 class MailClientsTest(ReceiveMixin, ReplyTestCase):
     """What people wrote, without quotes and signatures, from the mail
