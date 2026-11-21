@@ -208,6 +208,19 @@ class FormTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="fay@example.net").exists())
 
+    def test_the_only_when_tagged_help_says_what_it_does(self):
+        """Not subscribed to posts to everybody (specs/ui-round-6.md, part
+        C), in the invite and the add form"""
+        self.client.force_login(self.ada)
+        for url in [self.url, reverse("member_add", args=[self.website.pk])]:
+            response = self.client.get(url)
+            self.assertContains(
+                response,
+                "Only when tagged: posts to everybody don't subscribe the"
+                " person; mentions and assignments still reach them.",
+            )
+            self.assertNotContains(response, "held back")
+
     def test_palette(self):
         from biwak.palette.test_actions import palette_data
 

@@ -15,8 +15,9 @@ from biwak.items.views import CommentForm
 class NotifyForm(Form):
     """ "Whom to notify" when posting (``notify_people()``,
     specs/notifications.md): everybody in the project, chosen people or
-    nobody. Everybody is preselected (decided 2026-11-20): the levels keep
-    mails away from those who want them only when tagged."""
+    nobody. Everybody is preselected (decided 2026-11-20): it subscribes
+    only those notified by default, not those who want to hear only when
+    tagged (specs/ui-round-6.md, part C)."""
 
     EVERYBODY, CHOSEN, NOBODY = "everybody", "chosen", "nobody"
 

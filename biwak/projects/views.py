@@ -291,7 +291,7 @@ def notify_field():
         widget=forms.RadioSelect,
         help_text=_(
             "Only when tagged: posts to everybody don't subscribe the person;"
-            " being mentioned or assigned does."
+            " mentions and assignments still reach them."
         ),
     )
 
