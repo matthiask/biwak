@@ -8,12 +8,13 @@ don't save items themselves.
 
 import datetime as dt
 
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Exists, Max, OuterRef, Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
-from biwak import schedules
+from biwak import checklists, schedules
 from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action
@@ -297,6 +298,83 @@ def add_comment(item, *, author, content):
     )
     mentions.update(item, content, comment=comment, actor=author, event=event)
     return comment
+
+
+class ChecklistConflict(Exception):
+    """The text changed since the page showed it"""
+
+
+def can_tick(user, item):
+    """Whoever may change the text; to-dos are shared work, so everybody
+    who sees one (specs/access.md)"""
+    return item.kind == Kind.TODO or can_change(user, item)
+
+
+# Where each kind keeps the text that may have a task list: the name of the
+# detail row (``Detail``'s related name) and the field
+TEXT_FIELDS = {
+    Kind.TODO: ("todo", "notes"),
+    Kind.MESSAGE: ("message", "content"),
+    Kind.DOC: ("doc", "content"),
+    Kind.FILE: ("upload", "description"),
+    Kind.ANSWER: ("answer", "content"),
+}
+
+
+def text_of(item):
+    """The text of an item that may have a task list; its hash is the
+    version a page sends back when ticking"""
+    if item.kind not in TEXT_FIELDS:
+        return ""
+    name, field = TEXT_FIELDS[item.kind]
+    return getattr(getattr(item, name), field)
+
+
+@transaction.atomic
+def tick(item, *, actor, index, version, comment=None, checked=None):
+    """Toggles checkbox ``index`` of the item's text (or of ``comment``, one
+    of its comments) through the operation that edits it, so it's an edit
+    like any other. ``version`` is ``checklists.text_hash()`` of the text
+    the person saw: ``ChecklistConflict`` if it changed since,
+    ``PermissionDenied`` unless they may change that text,
+    ``checklists.NoCheckbox`` if there's no such box."""
+    from biwak.checkins import operations as checkin_ops
+    from biwak.files import operations as file_ops
+
+    if comment is not None:
+        comment = Comment.objects.select_for_update().get(pk=comment.pk, item=item)
+        if actor.is_client and comment.author_id != actor.pk:
+            raise PermissionDenied
+        if checklists.text_hash(comment.content) != version:
+            raise ChecklistConflict
+        comment.content = checklists.tick(comment.content, index, checked)
+        comment.updated_at = timezone.now()
+        comment.save(update_fields=["content", "updated_at"])
+        return comment
+    if not can_tick(actor, item):
+        raise PermissionDenied
+    if item.kind not in TEXT_FIELDS:
+        raise checklists.NoCheckbox(index)
+    # Lock the detail row, so that two ticks can't both be based on one text
+    name = TEXT_FIELDS[item.kind][0]
+    getattr(item, name).__class__.objects.select_for_update().get(item=item)
+    item = Item.objects.select_related(name).get(pk=item.pk)
+    text = text_of(item)
+    if checklists.text_hash(text) != version:
+        raise ChecklistConflict
+    new = checklists.tick(text, index, checked)
+    match item.kind:
+        case Kind.TODO:
+            update_todo(item, actor=actor, notes=new)
+        case Kind.MESSAGE:
+            file_ops.update_message(item, actor=actor, content=new)
+        case Kind.DOC:
+            file_ops.update_doc(item, actor=actor, content=new)
+        case Kind.FILE:
+            file_ops.update_upload(item, actor=actor, description=new)
+        case Kind.ANSWER:
+            checkin_ops.update_answer(item.answer, new, actor=actor)
+    return item
 
 
 def assignable_people(item, by=None):

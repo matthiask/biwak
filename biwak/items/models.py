@@ -212,6 +212,34 @@ class Detail(models.Model):
         return str(self.item)
 
 
+class Checklist(models.Model):
+    """For details whose text may have a task list (specs/editor.md): the
+    count is stored when the text is saved, so rows show it without parsing
+    anything. ``checklist_text`` names the text field."""
+
+    checklist_text = "content"
+    checklist_done = models.PositiveSmallIntegerField(default=0, editable=False)
+    checklist_total = models.PositiveSmallIntegerField(default=0, editable=False)
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, update_fields=None, **kwargs):
+        from biwak import checklists
+
+        if update_fields is None or self.checklist_text in update_fields:
+            self.checklist_done, self.checklist_total = checklists.count(
+                getattr(self, self.checklist_text)
+            )
+            if update_fields is not None:
+                update_fields = [
+                    *update_fields,
+                    "checklist_done",
+                    "checklist_total",
+                ]
+        super().save(*args, update_fields=update_fields, **kwargs)
+
+
 class TodoList(Detail):
     class View(models.TextChoices):
         LIST = "list", _("list")
@@ -249,7 +277,8 @@ class Group(models.Model):
         return self.title
 
 
-class Todo(Detail):
+class Todo(Checklist, Detail):
+    checklist_text = "notes"
     notes = models.TextField(_("notes"), blank=True)
     group = models.ForeignKey(
         Group,
@@ -322,7 +351,7 @@ class MessageCategory(models.Model):
         return f"{self.emoji} {self.name}".strip()
 
 
-class Message(Detail):
+class Message(Checklist, Detail):
     content = models.TextField(_("content"), blank=True)
     category = models.ForeignKey(
         MessageCategory,
@@ -351,7 +380,7 @@ class Folder(Detail):
         verbose_name_plural = _("folders")
 
 
-class Doc(Detail):
+class Doc(Checklist, Detail):
     content = models.TextField(_("content"), blank=True)
     # The lock until real-time editing (specs/files.md): who is editing,
     # renewed every minute, expiring 5 minutes after the last renewal
@@ -398,9 +427,11 @@ class DocVersion(models.Model):
         return f"{self.title} ({self.created_at:%Y-%m-%d %H:%M})"
 
 
-class Upload(Detail):
+class Upload(Checklist, Detail):
     """The detail of a file; its versions (``biwak.files.models.FileVersion``)
     hold the files themselves, the newest is the current one"""
+
+    checklist_text = "description"
 
     description = models.TextField(_("description"), blank=True)
 
