@@ -23,7 +23,7 @@ from biwak.activity.models import Action, Event
 MERGE_WINDOW = dt.timedelta(minutes=10)
 
 # What the timeline tells; edits only when they changed the title or the
-# due date, visibility switches only to staff
+# due date
 ACTIONS = [
     Action.COMPLETED,
     Action.REOPENED,
@@ -31,7 +31,6 @@ ACTIONS = [
     Action.ASSIGNED,
     Action.UNASSIGNED,
     Action.EDITED,
-    Action.VISIBILITY_CHANGED,
     Action.TRASHED,
     Action.RESTORED,
 ]
@@ -47,8 +46,6 @@ def _kind(event):
     """What the line's icon shows (``_timeline_line.html`` has the icons)"""
     if event.action == Action.EDITED:
         return "due" if _edit_fields(event) == ["due_on"] else "title"
-    if event.action == Action.VISIBILITY_CHANGED:
-        return "visible" if event.data.get("visible") else "hidden"
     return str(event.action)
 
 
@@ -60,48 +57,144 @@ def _due(value):
     }
 
 
-def phrases(event, it):
-    """What the event says, as a list of phrases (an edit may say two);
-    ``it``: "this" for the first of a line, "it" after that"""
+# Pairs which undo each other: group -> value of each action
+TOGGLES = {
+    Action.COMPLETED: ("done", True),
+    Action.REOPENED: ("done", False),
+    Action.TRASHED: ("trash", True),
+    Action.RESTORED: ("trash", False),
+}
+
+
+UNKNOWN = object()
+
+
+class Effect:
+    """One thing an event did: ``key`` says what it was about (a later
+    effect on the same key replaces it), ``value`` what it set,
+    ``make(it)`` the phrase"""
+
+    def __init__(self, kind, key, value, make, was=UNKNOWN):
+        self.kind, self.key, self.value, self.make = kind, key, value, make
+        # What it was before (title, due date), if the event says
+        self.was = was
+
+
+def _move(event, it):
     data = event.data
-    match event.action:
-        case Action.COMPLETED:
-            return [_("completed %(it)s") % {"it": it}]
-        case Action.REOPENED:
-            return [_("reopened %(it)s") % {"it": it}]
-        case Action.MOVED if "group" in data:
-            if data["group"]:
-                to = mentions.plain(data["group"])
-                return [_("moved %(it)s to %(to)s") % {"it": it, "to": to}]
-            return [_("moved %(it)s out of its group") % {"it": it}]
+    if "group" in data:
+        if data["group"]:
+            to = mentions.plain(data["group"])
+            return _("moved %(it)s to %(to)s") % {"it": it, "to": to}
+        return _("moved %(it)s out of its group") % {"it": it}
+    # Another list's name only if the viewer may see it
+    to = mentions.plain(event.target_list) or _("another list")
+    return _("moved %(it)s to %(to)s") % {"it": it, "to": to}
+
+
+def effects(event):
+    """What the event did, as a list of ``Effect``"""
+    data = event.data
+    action = event.action
+    if action in TOGGLES:
+        group, value = TOGGLES[action]
+        word = {
+            Action.COMPLETED: _("completed %(it)s"),
+            Action.REOPENED: _("reopened %(it)s"),
+            Action.TRASHED: _("trashed %(it)s"),
+            Action.RESTORED: _("restored %(it)s"),
+        }[action]
+        return [Effect(str(action), group, value, lambda it: word % {"it": it})]
+    match action:
         case Action.MOVED:
-            # Another list's name only if the viewer may see it
-            to = mentions.plain(event.target_list) or _("another list")
-            return [_("moved %(it)s to %(to)s") % {"it": it, "to": to}]
-        case Action.ASSIGNED:
-            names = get_text_list(event.assignee_names, _("and")) or _("someone")
-            return [_("assigned %(people)s") % {"people": names}]
-        case Action.UNASSIGNED:
-            names = get_text_list(event.assignee_names, _("and")) or _("someone")
-            return [_("removed %(people)s") % {"people": names}]
+            key = "group" if "group" in data else "list"
+            return [Effect("moved", key, None, lambda it: _move(event, it))]
+        case Action.ASSIGNED | Action.UNASSIGNED:
+            sign = action == Action.ASSIGNED
+            ids = event.data.get("assignees", [])
+            names = getattr(event, "assignee_by_id", {})
+            # Only those the viewer may know; "someone" if nobody
+            known = [pk for pk in ids if pk in names]
+            if ids and not known:
+                return [Effect(str(action), ("person", None), sign, _("someone"))]
+            return [
+                Effect(str(action), ("person", pk), sign, names[pk]) for pk in known
+            ]
         case Action.EDITED:
             result = []
             fields = _edit_fields(event)
             if "title" in fields:
                 title = mentions.plain(data.get("title", ""))
-                result.append(_("changed the title to “%(title)s”") % {"title": title})
+                text = _("changed the title to “%(title)s”") % {"title": title}
+                was = data.get("title_was", UNKNOWN)
+                if was is not UNKNOWN:
+                    was = mentions.plain(was)
+                if was != title:
+                    result.append(Effect("title", "title", title, lambda it: text, was))
             if "due_on" in fields:
-                result.append(_due(data.get("due_on")))
+                value = data.get("due_on")
+                if data.get("due_was", UNKNOWN) != value:
+                    result.append(
+                        Effect(
+                            "due",
+                            "due",
+                            value,
+                            lambda it, v=value: _due(v),
+                            data.get("due_was", UNKNOWN),
+                        )
+                    )
             return result
-        case Action.VISIBILITY_CHANGED:
-            if data.get("visible"):
-                return [_("made %(it)s visible to clients") % {"it": it}]
-            return [_("hid %(it)s from clients") % {"it": it}]
-        case Action.TRASHED:
-            return [_("trashed %(it)s") % {"it": it}]
-        case Action.RESTORED:
-            return [_("restored %(it)s") % {"it": it}]
     return []
+
+
+def combine(events):
+    """The effects of several events one after the other, without what
+    cancelled out (assigning then removing the
+    same person, completing then reopening, setting the due date and
+    removing it) and with only the last of what was set several times (the
+    title, the due date, the place it was moved to)"""
+    result = []
+    for event in events:
+        for effect in effects(event):
+            old = next((e for e in result if e.key == effect.key), None)
+            if old is not None:
+                result.remove(old)
+                if effect.key in ("title", "due"):
+                    # Back to what it was before the first change?
+                    effect.was = old.was
+                    if effect.was is not UNKNOWN and effect.was == effect.value:
+                        continue
+                elif effect.key not in ("list", "group") and old.value != effect.value:
+                    continue
+            result.append(effect)
+    return result
+
+
+def phrases(events):
+    """The phrases of ``combine(events)``: people assigned (or removed)
+    together, the first phrase about "this", the later ones "it" """
+    said = []
+    effects_ = combine(events)
+    people = {True: [], False: []}
+    for effect in effects_:
+        if isinstance(effect.key, tuple):
+            people[effect.value].append(effect.make)
+    placed = set()
+    for effect in effects_:
+        if isinstance(effect.key, tuple):
+            if effect.value in placed:
+                continue
+            placed.add(effect.value)
+            verb = _("assigned %(people)s") if effect.value else _("removed %(people)s")
+            names = list(dict.fromkeys(people[effect.value]))
+            said.append(
+                lambda it, verb=verb, names=names: (
+                    verb % {"people": get_text_list(names, _("and"))}
+                )
+            )
+        else:
+            said.append(effect.make)
+    return [make(_("it") if n else _("this")) for n, make in enumerate(said)]
 
 
 @dataclasses.dataclass
@@ -130,25 +223,21 @@ class Line:
 
     @property
     def kind(self):
-        return _kind(self.events[0])
+        kept = combine(self.events)
+        return kept[0].kind if kept else _kind(self.events[0])
 
     @property
     def text(self):
-        said = []
-        for event in self.events:
-            said.extend(phrases(event, _("it") if said else _("this")))
-        return get_text_list(said, _("and"))
+        return get_text_list(phrases(self.events), _("and"))
 
 
 def relevant(events, user):
-    """The events the timeline tells: not what the person may not see
-    (visibility switches: staff), not edits of anything but the title and
-    the due date"""
+    """The events the timeline tells: not edits of anything but the title
+    and the due date"""
     return [
         event
         for event in events
-        if not (event.action == Action.VISIBILITY_CHANGED and user.is_client)
-        and not (event.action == Action.EDITED and not _edit_fields(event))
+        if not (event.action == Action.EDITED and not _edit_fields(event))
     ]
 
 
@@ -170,37 +259,6 @@ def merge(entries):
     return result
 
 
-def _order(event):
-    return (event.created_at, event.pk)
-
-
-def list_switches(item, user, events):
-    """To-dos have no visibility switch, their list has: for staff, the
-    list's switching since the to-do is in it (since it was added, or
-    moved in) are lines of the to-do's too, "made this visible to clients"
-    (decided 2026-11-21, specs/timeline.md). ``events``: the to-do's own."""
-    if item.parent_id is None:
-        return []
-    arrived = max(
-        [item.created_at]
-        + [
-            e.created_at
-            for e in events
-            if e.action == Action.MOVED and e.data.get("to_id") == item.parent_id
-        ]
-    )
-    return list(
-        Event.objects
-        .visible_to(user)
-        .filter(
-            item=item.parent_id,
-            action=Action.VISIBILITY_CHANGED,
-            created_at__gte=arrived,
-        )
-        .select_related("actor", "project", "item")
-    )
-
-
 def entries_for(item, user, comments):
     """Comments and event lines of the to-do, oldest first: two queries and
     what ``feed.attach()`` needs (the people's names, the lists' titles)"""
@@ -211,12 +269,11 @@ def entries_for(item, user, comments):
         .select_related("actor", "project", "item")
         .order_by("created_at", "pk")
     )
-    if not user.is_client:
-        events = sorted(events + list_switches(item, user, events), key=_order)
     events = relevant(events, user)
     feed.attach(events, user)
     entries = [Line([event]) for event in events]
     entries.extend(comments)
     # Comments before events at the same time
     entries.sort(key=lambda e: (e.created_at, isinstance(e, Line), e.pk))
-    return merge(entries)
+    # Lines whose changes cancelled out are gone
+    return [e for e in merge(entries) if not isinstance(e, Line) or e.text]

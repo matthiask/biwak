@@ -71,9 +71,9 @@ changes, the operations record what changed, from now on (no backfill:
 ## Decided (2026-11-21)
 
 1. **Which changes:** completed and reopened, moved (list and group),
-   assigned and unassigned, the due date, the title, the visibility
-   switch (staff only: clients don't see "hidden from clients" lines),
-   trashed and restored.
+   assigned and unassigned, the due date, the title, trashed and
+   restored. No visibility lines (decided 2026-11-21: to-dos have no
+   switch of their own; the list's switching isn't shown).
 2. **Merging:** the same person's changes one after the other within ten
    minutes are one line.
 3. **To-dos first;** other items with comments later.
@@ -90,15 +90,16 @@ changes, the operations record what changed, from now on (no backfill:
   every event has) and, if the due date changed, `due_on` (ISO date or
   `null`). `starts_on` isn't edited by `update_todo()`, so it isn't
   there. Older edit events have no `fields` and aren't on the timeline.
-- **Visibility lines:** to-dos have no switch of their own; the lines
-  are the switching of the to-do's list since the to-do was added to it
-  (or moved in), shown to staff only, as "made this visible to clients"
-  / "hid this from clients". A move between a visible and an internal
-  list is the move's line.
 - **Merging** looks at neighbours: a line takes in the next change of the
   same person if it is within ten minutes of the line's last change and
   no comment is in between; changes the timeline doesn't show (creation,
-  notes, reactions) don't break it.
+  notes, reactions) don't break it. Changes in a line which undo each
+  other (completing and reopening, trashing and restoring, assigning and
+  removing the same person, the title or due date back to what it was)
+  are left out, and the line goes if nothing is left; what was set several
+  times (title, due date, the place moved to) says its last value. Edit
+  events store `title_was` and `due_was` (the first of a merged session)
+  for this.
 - Assignees a client may not know read "someone"; a list that can't be
   named reads "another list".
 - The history link moved from the sidebar to the end of the timeline

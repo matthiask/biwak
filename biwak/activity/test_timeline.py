@@ -145,23 +145,6 @@ class LinesTest(TimelineBase):
         self.assertIn("trashed this", first)
         self.assertIn("restored this", second)
 
-    def test_visibility_for_staff(self):
-        # Of the list the to-do is in, since it was added
-        Item.objects.filter(pk=self.todo.pk).update(
-            created_at=timezone.now() - dt.timedelta(hours=3)
-        )
-        ops.set_visibility(self.shared, visible=False, actor=self.ada)
-        self.age(Action.VISIBILITY_CHANGED, 60)
-        ops.set_visibility(self.shared, visible=True, actor=self.bob)
-        first, second = self.lines()
-        self.assertIn("hid this from clients", first)
-        self.assertIn("made this visible to clients", second)
-
-    def test_the_lists_switching_before_the_to_do_was_there_is_not_shown(self):
-        ops.set_visibility(self.shared, visible=False, actor=self.ada)
-        Event.objects.update(created_at=timezone.now() - dt.timedelta(hours=3))
-        self.assertEqual(self.lines(), [])
-
     def test_comments_and_lines_in_one_list_oldest_first(self):
         ops.complete(self.todo, actor=self.ada)
         self.age(Action.COMPLETED, 120)
@@ -221,18 +204,65 @@ class MergeTest(TimelineBase):
         # A chain of changes, each within ten minutes of the one before
         ops.complete(self.todo, actor=self.ada)
         ops.assign(self.todo, [self.bob], actor=self.ada)
-        ops.unassign(self.todo, [self.bob], actor=self.ada)
+        group = ops.create_group(todolist=self.shared.todolist, title="Done")
+        ops.move_todo(self.todo, todolist=self.shared, group=group, actor=self.ada)
         now = timezone.now()
         for minutes, action in [
             (18, Action.COMPLETED),
             (9, Action.ASSIGNED),
-            (0, Action.UNASSIGNED),
+            (0, Action.MOVED),
         ]:
             Event.objects.filter(action=action).update(
                 created_at=now - dt.timedelta(minutes=minutes)
             )
         (line,) = self.lines()
-        self.assertIn("completed this, assigned Bob and removed Bob", line)
+        self.assertIn("completed this, assigned Bob and moved it to Done", line)
+
+
+class CancellingTest(TimelineBase):
+    """Changes in one line which undo each other are left out, what was set
+    several times says its last value"""
+
+    def test_the_due_date_set_and_removed(self):
+        ops.update_todo(self.todo, actor=self.ada, due_on=dt.date(2026, 12, 1))
+        ops.update_todo(self.todo, actor=self.ada, due_on=None)
+        self.assertEqual(self.lines(), [])
+
+    def test_the_same_person_assigned_and_removed(self):
+        ops.assign(self.todo, [self.bob, self.ada], actor=self.ada)
+        ops.unassign(self.todo, [self.bob], actor=self.ada)
+        (line,) = self.lines()
+        self.assertIn("assigned Ada", line)
+        self.assertNotIn("Bob", line)
+        ops.unassign(self.todo, [self.ada], actor=self.ada)
+        self.assertEqual(self.lines(), [])
+
+    def test_completed_and_reopened_by_the_other_way_round(self):
+        ops.trash(self.todo, actor=self.ada)
+        ops.restore(self.todo, actor=self.ada)
+        self.assertEqual(self.lines(), [])
+
+    def test_the_title_changed_and_back(self):
+        ops.update_todo(self.todo, actor=self.ada, title="Order tents")
+        ops.update_todo(self.todo, actor=self.ada, title="Order the tent")
+        self.assertEqual(self.lines(), [])
+
+    def test_the_title_changed_twice_says_the_last(self):
+        ops.update_todo(self.todo, actor=self.ada, title="Order tents")
+        # Past the editing session, so two events
+        Event.objects.update(created_at=timezone.now() - dt.timedelta(minutes=9))
+        ops.update_todo(self.todo, actor=self.ada, title="Order two tents")
+        (line,) = self.lines()
+        self.assertIn("changed the title to “Order two tents”", line)
+        self.assertNotIn("Order tents", line)
+
+    def test_the_due_date_set_twice_says_the_last(self):
+        ops.update_todo(self.todo, actor=self.ada, due_on=dt.date(2026, 12, 1))
+        Event.objects.update(created_at=timezone.now() - dt.timedelta(minutes=9))
+        ops.update_todo(self.todo, actor=self.ada, due_on=dt.date(2026, 12, 8))
+        (line,) = self.lines()
+        self.assertIn("set the due date to 8. Dec 2026", line)
+        self.assertNotIn("1. Dec", line)
 
 
 class ClientTest(TimelineBase):
@@ -255,16 +285,6 @@ class ClientTest(TimelineBase):
         self.assertIn("reopened this", client[1])
         self.assertFalse(any("completed" in line for line in client))
         self.assertFalse(any("assigned" in line for line in client))
-
-    def test_no_visibility_lines_for_clients(self):
-        ops.set_visibility(self.shared, visible=False, actor=self.ada)
-        ops.set_visibility(self.shared, visible=True, actor=self.ada)
-        ops.complete(self.todo, actor=self.bob)
-        self.assertEqual(len(self.lines(self.ada)), 2)
-        client = self.lines(self.cleo)
-        self.assertEqual(len(client), 1)
-        self.assertNotIn("visible", client[0])
-        self.assertNotIn("hid", client[0])
 
     def test_no_internal_list_names(self):
         ops.move_todo(self.todo, todolist=self.internal, actor=self.ada)

@@ -550,6 +550,7 @@ def update_todo(
     todo = Todo.objects.get(item=item)
     item.todo = todo
     previous = f"{item.title}\n\n{todo.notes}"
+    title_was, due_was = item.title, todo.due_on
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -588,8 +589,13 @@ def update_todo(
             "recurrence" if name.startswith("recurrence") else name for name in fields
         ]
         extra = {"fields": list(dict.fromkeys(changed))}
+        # What it was before, so the timeline can tell a change which
+        # went back (the first one stays when edits merge, record())
+        if edited:
+            extra["title_was"] = title_was
         if "due_on" in fields:
             extra["due_on"] = todo.due_on.isoformat() if todo.due_on else None
+            extra["due_was"] = due_was.isoformat() if due_was else None
         event = record(
             actor=actor,
             action=Action.EDITED,

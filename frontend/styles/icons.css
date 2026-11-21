@@ -103,9 +103,6 @@
 .bi-eye::before {
   content: "\f341";
 }
-.bi-eye-slash::before {
-  content: "\f340";
-}
 .bi-file-earmark::before {
   content: "\f392";
 }

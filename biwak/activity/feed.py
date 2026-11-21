@@ -121,6 +121,10 @@ def attach(events, user):
             }
         names = known.get(event.project_id, {})
         event.assignee_names = [names[pk] for pk in _people_of(event) if pk in names]
+        # By ID, for what puts several events together (specs/timeline.md)
+        event.assignee_by_id = {
+            pk: names[pk] for pk in _people_of(event) if pk in names
+        }
     add_excerpts(events)
     add_target_lists(events, user)
 
