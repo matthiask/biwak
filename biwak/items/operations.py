@@ -145,6 +145,11 @@ def create_todo(
     return item
 
 
+def message_visibility(creator, visible):
+    """What clients post is visible to clients (specs/access.md)"""
+    return bool(visible) or creator.is_client
+
+
 @transaction.atomic
 def create_message(
     *,
@@ -163,7 +168,7 @@ def create_message(
         kind=Kind.MESSAGE,
         title=title,
         creator=creator,
-        visible=visible,
+        visible=message_visibility(creator, visible),
     )
     Message.objects.create(item=item, content=content, category=category)
     attachments.link(item, content, actor=creator)

@@ -3,7 +3,7 @@
 from django import forms
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import Http404
+from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -34,8 +34,8 @@ def project_messages(request, pk):
     if before:
         try:
             at, last = cursors.decode(before)
-        except ValueError as error:
-            raise Http404("Bad cursor") from error
+        except ValueError:
+            return HttpResponseBadRequest("Invalid cursor.")
         latest = latest.filter(Q(created_at__lt=at) | Q(created_at=at, pk__lt=last))
     else:
         pinned = list(pinned_messages(messages))
@@ -96,7 +96,7 @@ def message_new(request, pk):
             content=data["content"],
             category=data["category"],
             creator=request.user,
-            visible=data.get("visible", False) or request.user.is_client,
+            visible=data.get("visible", False),
             whom=form.whom(),
         )
         return redirect(item)

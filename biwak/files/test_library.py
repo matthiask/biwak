@@ -821,8 +821,12 @@ class BucketTest(Fixture, TestCase):
 class ProjectPageTest(Fixture, TestCase):
     def test_the_docs_and_files_section_counts_what_the_person_sees(self):
         url = reverse("project", args=[self.project.pk])
-        self.assertContains(self.get(self.ada, url), "2 folders, 0 docs, 2 files")
-        self.assertContains(self.get(self.cleo, url), "1 folders, 0 docs, 1 files")
+        for user, counts in [
+            (self.ada, "2 folders, 0 docs, 2 files"),
+            (self.cleo, "1 folder, 0 docs, 1 file"),
+        ]:
+            html = self.get(user, url).content.decode()
+            self.assertIn(counts, " ".join(html.split()))
 
 
 class FolderParamTest(TestCase):

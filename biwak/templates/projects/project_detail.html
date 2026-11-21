@@ -170,7 +170,9 @@
       <p class="small">
         <a
           href="{% url 'project_files' project.pk %}"
-        >{% blocktranslate with folders=root_counts.folders docs=root_counts.docs files=root_counts.files %}{{ folders }} folders, {{ docs }} docs, {{ files }} files{% endblocktranslate %}</a>
+        >{% blocktranslate count counter=root_counts.folders %}{{ counter }} folder{% plural %}{{ counter }} folders{% endblocktranslate %},
+          {% blocktranslate count counter=root_counts.docs %}{{ counter }} doc{% plural %}{{ counter }} docs{% endblocktranslate %},
+          {% blocktranslate count counter=root_counts.files %}{{ counter }} file{% plural %}{{ counter }} files{% endblocktranslate %}</a>
       </p>
     </div>
     <div class="col-lg-4">

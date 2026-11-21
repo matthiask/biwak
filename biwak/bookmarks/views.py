@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
@@ -10,6 +10,7 @@ from biwak.bookmarks import operations as ops
 from biwak.bookmarks.models import Bookmark, Link
 from biwak.forms import Form, next_url
 from biwak.items.views import item_for
+from biwak.permissions import staff_only
 from biwak.projects.views import project_for
 
 
@@ -17,7 +18,7 @@ def bookmarks(request):
     """The person's bookmarks, newest first, with what they point at now;
     those they can't see any more are hidden, not deleted"""
     found = Bookmark.objects.visible_to(request.user).select_related(
-        "item", "item__project", "project"
+        "item", "item__project", "item__answer", "project"
     )
     return render(request, "bookmarks/bookmarks.html", {"bookmarks": found})
 
@@ -72,13 +73,8 @@ class LinkForm(Form):
     )
 
 
-def _staff_only(request):
-    if not ops.can_manage_links(request.user):
-        raise PermissionDenied
-
-
 def _create_link(request, *, project, item=None):
-    _staff_only(request)
+    staff_only(request)
     form = LinkForm(request.POST)
     target = (item or project).get_absolute_url()
     if form.is_valid():
@@ -120,7 +116,7 @@ def link_for(request, pk):
 
 def link_edit(request, pk):
     link = link_for(request, pk)
-    _staff_only(request)
+    staff_only(request)
     target = (link.item or link.project).get_absolute_url()
     form = LinkForm(
         request.POST or None,
@@ -153,7 +149,7 @@ def link_edit(request, pk):
 @require_POST
 def link_delete(request, pk):
     link = link_for(request, pk)
-    _staff_only(request)
+    staff_only(request)
     target = (link.item or link.project).get_absolute_url()
     ops.delete_link(link)
     return redirect(target)
@@ -162,20 +158,12 @@ def link_delete(request, pk):
 def _order(request, *, project, item=None):
     """The links in the dragged order (frontend/links.js); ``links`` are
     the IDs of all the links of the project or item the person sees"""
-    _staff_only(request)
-    found = {
-        link.pk: link
-        for link in Link.objects.visible_to(request.user).filter(
-            project=project, item=item
-        )
-    }
+    staff_only(request)
     try:
         ids = [int(pk) for pk in request.POST.getlist("links")]
+        ops.reorder_links(ids, user=request.user, project=project, item=item)
     except ValueError:
-        ids = []
-    if sorted(ids) != sorted(found):
         return HttpResponse(status=400)
-    ops.reorder_links([found[pk] for pk in ids])
     return HttpResponse(status=204)
 
 

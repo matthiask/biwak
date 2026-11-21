@@ -28,11 +28,18 @@ from biwak.api_conventions import (
     person_out,
 )
 from biwak.files import attachments, operations, queries
-from biwak.files.library import breadcrumbs, contents
+from biwak.files.library import (
+    CONTAINED,
+    breadcrumbs,
+    contents,
+    current_version,
+    version_for,
+)
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.api import item_for
 from biwak.items.models import Kind, MessageCategory
+from biwak.permissions import api_staff_only
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
 from biwak.reactions.schemas import ReactionOut, reactions_out
@@ -182,11 +189,6 @@ def resolve_for_new(project, visible, text, *, author):
     return resolve_mentions(stand_in, text, author=author)
 
 
-def switch(request, visible):
-    """What clients create is visible to clients (specs/access.md)"""
-    return visible or request.user.is_client
-
-
 # Messages ---------------------------------------------------------------
 
 
@@ -216,9 +218,6 @@ class MessageOut(ItemOut):
 
 def message_out(item, user):
     message = item.message
-    count = getattr(item, "comment_count", None)
-    if count is None:
-        count = item.comments.count()
     return item_out(item) | {
         "content": message.content,
         "content_html": html(message.content, item),
@@ -226,7 +225,7 @@ def message_out(item, user):
         "category": category_out(message.category),
         "pinned": message.pinned_at is not None,
         "pinned_at": message.pinned_at,
-        "comment_count": count,
+        "comment_count": item.comment_count,
         "reactions": reactions_out(item, None, user),
     }
 
@@ -308,7 +307,7 @@ def message_create(request, project_id: int, data: MessageIn):
     are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
     project = project_for(request, project_id)
     title = clean_title(data.title)
-    visible = switch(request, data.visible_to_clients)
+    visible = ops.message_visibility(request.user, data.visible_to_clients)
     item = ops.create_message(
         project=project,
         title=title,
@@ -386,7 +385,7 @@ class EntryOut(ItemOut):
 def entry_out(item):
     entry = item_out(item)
     if item.kind == Kind.FILE:
-        version = item.upload.versions.all()[0]
+        version = current_version(item)
         entry |= {
             "size": version.size,
             "content_type": version.content_type,
@@ -460,7 +459,7 @@ def item_move(request, item_id: int, data: MoveIn):
     visibility follows the new place. Clients only move what they created,
     into folders they see."""
     item = item_for(request, item_id)
-    if item.kind not in {Kind.FOLDER, Kind.DOC, Kind.FILE}:
+    if item.kind not in CONTAINED:
         raise HttpError(400, _("Only folders, docs and files can be moved."))
     if not ops.can_change(request.user, item):
         raise HttpError(403, _("You can only move what you created."))
@@ -576,11 +575,14 @@ def doc_update(request, doc_id: int, data: DocPatch):
         )
     except operations.DocLocked as exc:
         raise HttpError(
-            409, _("%(name)s is editing this doc.") % {"name": exc.user}
+            409,
+            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
         ) from exc
     except operations.DocConflict as exc:
         raise HttpError(
-            409, _("%(name)s saved a newer version.") % {"name": exc.version.created_by}
+            409,
+            _("%(name)s saved a newer version.")
+            % {"name": exc.version.created_by.get_short_name()},
         ) from exc
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
@@ -594,7 +596,8 @@ def doc_lock(request, doc_id: int):
         operations.lock_doc(item, request.user)
     except operations.DocLocked as exc:
         raise HttpError(
-            409, _("%(name)s is editing this doc.") % {"name": exc.user}
+            409,
+            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
         ) from exc
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
@@ -622,17 +625,16 @@ class DocVersionDetailOut(DocVersionOut):
 def _staff_only(request):
     """Older versions can hold what was meant to be internal, also of docs
     clients see now (like the history): staff only"""
-    if request.user.is_client:
-        raise HttpError(403, _("Only staff see the versions."))
+    api_staff_only(request, _("Only staff see the versions."))
 
 
-def version_out(version, item, *, current):
+def version_out(version, *, is_current):
     return {
         "id": version.pk,
         "title": version.title,
         "created_by": person_out(version.created_by),
         "created_at": version.created_at,
-        "is_current": version.pk == current,
+        "is_current": is_current,
     }
 
 
@@ -642,7 +644,7 @@ def doc_versions(request, doc_id: int):
     item = item_for(request, doc_id, Kind.DOC)
     _staff_only(request)
     versions = list(item.doc.versions.select_related("created_by"))
-    return [version_out(v, item, current=versions[0].pk) for v in versions]
+    return [version_out(v, is_current=v.pk == versions[0].pk) for v in versions]
 
 
 @router.get("docs/{doc_id}/versions/{version_id}/", response=DocVersionDetailOut)
@@ -652,7 +654,8 @@ def doc_version(request, doc_id: int, version_id: int):
     version = get_object_or_404(
         item.doc.versions.select_related("created_by"), pk=version_id
     )
-    return version_out(version, item, current=item.doc.versions.first().pk) | {
+    _before, is_latest = queries.neighbours(item.doc.versions, version)
+    return version_out(version, is_current=is_latest) | {
         "content": version.content,
         "content_html": html(version.content, item),
     }
@@ -668,7 +671,8 @@ def doc_version_restore(request, doc_id: int, version_id: int):
         operations.restore_doc_version(item, version, actor=request.user)
     except operations.DocLocked as exc:
         raise HttpError(
-            409, _("%(name)s is editing this doc.") % {"name": exc.user}
+            409,
+            _("%(name)s is editing this doc.") % {"name": exc.user.get_short_name()},
         ) from exc
     return doc_out(item_for(request, doc_id, Kind.DOC), request.user)
 
@@ -833,7 +837,7 @@ def file_download(request, file_id: int):
     """The current version: the file, or a redirect to a presigned URL
     valid 5 minutes with a bucket"""
     item = item_for(request, file_id, Kind.FILE)
-    return attachments.serve(item.upload.versions.all()[0])
+    return attachments.serve(version_for(request, item))
 
 
 @router.get(
@@ -842,5 +846,4 @@ def file_download(request, file_id: int):
 )
 def file_version_download(request, file_id: int, version_id: int):
     item = item_for(request, file_id, Kind.FILE)
-    _staff_only(request)
-    return attachments.serve(get_object_or_404(item.upload.versions, pk=version_id))
+    return attachments.serve(version_for(request, item, version_id, deny=_staff_only))

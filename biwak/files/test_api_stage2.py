@@ -992,3 +992,28 @@ class ReviewFixesAPITest(APIFixture, TestCase):
         )
         self.assertTrue(response.json()["visible_to_clients"])
         self.assertIn(f"(person:{self.cleo.pk})", response.json()["content"])
+
+    def test_lock_messages_name_people_by_their_short_name(self):
+        operations.lock_doc(self.shared_doc, self.bob)
+        path = f"docs/{self.shared_doc.pk}/"
+        for method, data in [("patch", {"content": "x"}), ("put", None)]:
+            with self.subTest(method=method):
+                response = self.call(
+                    self.ada, method, path + ("lock/" if data is None else ""), data
+                )
+                self.assertEqual(response.status_code, 409)
+                self.assertEqual(response.json()["detail"], "Bob is editing this doc.")
+
+    def test_conflict_messages_name_people_by_their_short_name(self):
+        base = self.shared_doc.doc.versions.first().pk
+        operations.update_doc(
+            self.shared_doc, actor=self.bob, content="Bob was here", new_version=True
+        )
+        response = self.call(
+            self.ada,
+            "patch",
+            f"docs/{self.shared_doc.pk}/",
+            {"content": "x", "base_version": base},
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["detail"], "Bob saved a newer version.")

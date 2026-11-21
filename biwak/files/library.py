@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Case, IntegerField, Value, When
 from django.db.models.functions import Lower
-from django.http import Http404, HttpResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -17,6 +17,7 @@ from biwak.forms import Form
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
+from biwak.permissions import staff_only
 from biwak.projects.views import project_for
 
 
@@ -44,16 +45,26 @@ def contents(user, project, folder):
 
 def breadcrumbs(item):
     """The folders above ``item``, the top one first"""
-    chain = []
-    while item is not None and item.parent_id:
-        item = item.parent
-        chain.append(item)
-    return chain[::-1]
+    if item is None or not item.parent_id:
+        return []
+    # Two queries however deep the folder is
+    return list(Item.objects.ancestors(item))
 
 
 def current_version(item):
     """A file's current version (the prefetched ones if there are)"""
     return item.upload.versions.all()[0]
+
+
+def version_for(request, item, version_pk=None, *, deny=staff_only):
+    """The file's current version, or the older one ``version_pk``: older
+    versions can hold what was meant to be internal, also of files clients
+    see now (like the history), so only staff get them (``deny`` raises
+    for clients)"""
+    if version_pk is None:
+        return current_version(item)
+    deny(request)
+    return get_object_or_404(item.upload.versions, pk=version_pk)
 
 
 def folder_choices(user, project, *, exclude=None):
@@ -164,13 +175,6 @@ def folder_param(request, project):
             raise Http404
         return folder
     return None
-
-
-def staff_only(request):
-    """Older versions can hold what was meant to be internal, also of docs
-    and files clients see now (like the history): staff only"""
-    if request.user.is_client:
-        raise PermissionDenied
 
 
 # Files ------------------------------------------------------------------
@@ -313,26 +317,14 @@ def file_download(request, pk, version_pk=None):
     """The current version; older ones (staff) by ``version_pk``. Visible
     exactly when the file's item is, else 404."""
     item = item_for(request, pk, Kind.FILE)
-    versions = item.upload.versions.all()
-    if version_pk is None:
-        version = versions[0]
-    else:
-        staff_only(request)
-        version = get_object_or_404(versions, pk=version_pk)
-    return attachments.serve(version)
+    return attachments.serve(version_for(request, item, version_pk))
 
 
 @require_GET
 def file_preview(request, pk, version_pk=None):
     """A WebP thumbnail of images and PDFs, made on the first request"""
     item = item_for(request, pk, Kind.FILE)
-    versions = item.upload.versions.all()
-    if version_pk is None:
-        version = versions[0]
-    else:
-        staff_only(request)
-        version = get_object_or_404(versions, pk=version_pk)
-    response = previews.serve(version)
+    response = previews.serve(version_for(request, item, version_pk))
     if response is None:
-        return HttpResponse(status=404)
+        raise Http404("No preview")
     return response

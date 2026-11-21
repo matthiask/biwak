@@ -40,6 +40,21 @@ IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/avif
 INLINE_TYPES = IMAGE_TYPES | {"application/pdf"}
 
 
+class ContentTypeMixin:
+    """What attachments and file versions share: how their content type
+    is shown"""
+
+    content_type: str
+
+    @property
+    def is_image(self):
+        return self.content_type in IMAGE_TYPES
+
+    @property
+    def is_inline(self):
+        return self.content_type in INLINE_TYPES
+
+
 def new_key():
     return get_random_string(KEY_LENGTH, KEY_CHARS)
 
@@ -97,7 +112,7 @@ class AttachmentQuerySet(models.QuerySet):
         )
 
 
-class Attachment(models.Model):
+class Attachment(ContentTypeMixin, models.Model):
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -140,14 +155,6 @@ class Attachment(models.Model):
         return reverse("attachment", kwargs={"key": self.key, "name": self.name})
 
     @property
-    def is_image(self):
-        return self.content_type in IMAGE_TYPES
-
-    @property
-    def is_inline(self):
-        return self.content_type in INLINE_TYPES
-
-    @property
     def markdown(self):
         """What the text gets: an image or a link"""
         name = re.sub(r"([\\\[\]])", r"\\\1", " ".join(self.name.split()))
@@ -170,7 +177,7 @@ def version_path(version, filename):
     return f"files/{project_id}/{new_key()}/{storage_name(filename)}"
 
 
-class FileVersion(models.Model):
+class FileVersion(ContentTypeMixin, models.Model):
     """A version of an uploaded file (kind ``file``); the newest is the
     current one. Visible exactly when its file's item is."""
 
@@ -201,17 +208,10 @@ class FileVersion(models.Model):
         return self.name
 
     @property
-    def is_image(self):
-        return self.content_type in IMAGE_TYPES
-
-    @property
-    def is_inline(self):
-        return self.content_type in INLINE_TYPES
-
-    @property
     def has_preview(self):
-        """Images and PDFs get a preview (``biwak.files.previews``)"""
-        return self.content_type in IMAGE_TYPES | {"application/pdf"}
+        """Images and PDFs get a preview (``biwak.files.previews``): what
+        browsers show"""
+        return self.is_inline
 
 
 @receiver(post_delete, sender=FileVersion)

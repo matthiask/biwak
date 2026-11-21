@@ -14,6 +14,7 @@ from biwak.api_conventions import ItemOut, PersonOut, item_out, person_out
 from biwak.bookmarks import operations as ops
 from biwak.bookmarks.models import Bookmark, Link
 from biwak.items.api import item_for
+from biwak.permissions import api_staff_only
 from biwak.projects.api import ProjectOut, project_for, project_out
 
 
@@ -34,7 +35,7 @@ class BookmarkOut(Schema):
 def bookmark_list(request):
     """The person's own bookmarks of what they can see, newest first"""
     found = Bookmark.objects.visible_to(request.user).select_related(
-        "item", "item__project", "item__creator", "project"
+        "item", "item__project", "item__creator", "item__answer", "project"
     )
     return [
         {
@@ -118,8 +119,7 @@ def _links(request):
 
 
 def _staff_only(request):
-    if not ops.can_manage_links(request.user):
-        raise HttpError(403, _("Only staff change links."))
+    api_staff_only(request, _("Only staff change links."))
 
 
 @router.get("projects/{project_id}/links/", response=list[LinkOut])
@@ -209,13 +209,15 @@ class LinkOrderIn(Schema):
 
 def _order(request, data, *, project, item=None):
     _staff_only(request)
-    found = {
-        link.pk: link for link in _links(request).filter(project=project, item=item)
-    }
-    if sorted(data.links) != sorted(found):
-        raise HttpError(400, _("Send the IDs of all the links, in the new order."))
-    ops.reorder_links([found[pk] for pk in data.links])
-    return [link_out(found[pk]) for pk in data.links]
+    try:
+        ordered = ops.reorder_links(
+            data.links, user=request.user, project=project, item=item
+        )
+    except ValueError as exc:
+        raise HttpError(
+            400, _("Send the IDs of all the links, in the new order.")
+        ) from exc
+    return [link_out(link) for link in ordered]
 
 
 @router.put("projects/{project_id}/links/order/", response=list[LinkOut])
