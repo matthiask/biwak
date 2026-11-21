@@ -151,6 +151,36 @@ conservative choice where the spec was open):
   delivery state). `fairy_tasks` deletes rows 30 days after they were
   queued. Attachments are stored in the row too (base64); none of our
   mails have any today.
+- **Delivery events** come to the existing `/inbound/resend/` (the same
+  Svix secret; `biwak/outbox/events.py`): `email.delivered`,
+  `email.bounced`, `email.complained`, matched to the row by Resend's ID
+  (events about mails we don't know are ignored). The row keeps the worst
+  state so far (delivered < bounced < complained), so a late `delivered`
+  doesn't hide a bounce. The webhook answers them whenever
+  `RESEND_WEBHOOK_SECRET` is set, also while replying is off (received
+  mails still answer 404 then).
+- **Hard** means a complaint, or a bounce of `type` `Permanent` (Resend:
+  `Permanent` or `Temporary`); a temporary bounce is noted on the row
+  only. The addresses marked are those of the event's `to` that are the
+  row's recipients (all of the row's if none match).
+- **`User.mail_undeliverable_at`,** not allauth's `EmailAddress`: a person
+  has one address (`User.email`, mirrored into `EmailAddress`), the mails
+  go to it, and the queries that pick who gets mail are on `User`. It's
+  cleared when `User.email` changes (`User.save()`), by editing the field
+  in the admin, or with the admin action "Mail to the selected people
+  works again" (the People list filters by it). The audit log records it
+  (`accounts_user` is audited), changes by the webhook as `Resend`.
+- **What it stops:** notification mails, digests and check-in mails
+  (check-in questions are the same kind of automatic mail). Their
+  notifications wait, like those of people with "No mails", and stay in
+  the lantern; once cleared, the waiting ones go out with the next run.
+  Login codes, invitations and answers to refused replies still go out:
+  someone asked for them, and the address may work again.
+- **Shown** on the person's activity page to staff and to the person
+  (not to other clients), in the admin, and as a warning after asking
+  for a login code. That warning tells whoever types the address that
+  it bounced: allauth otherwise doesn't say whether an address has an
+  account (an open question below).
 - **No audit log** for `OutgoingMail`: only the system writes it (the
   outbox and Resend's webhooks); the admin is read-only.
 

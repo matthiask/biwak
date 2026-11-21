@@ -165,6 +165,19 @@ class User(AbstractBaseUser):
     # stops for good once the person dismissed it or added a passkey
     passkey_offer_done = models.BooleanField(_("passkey offer done"), default=False)
 
+    # Resend reported a hard bounce or a complaint for the address
+    # (specs/mail-sending.md): no notification mails, digests and check-in
+    # mails go to it; cleared when the address changes, or by an admin
+    mail_undeliverable_at = models.DateTimeField(
+        _("mail undeliverable since"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "Mail to the address bounced or was marked as spam. Clear it once"
+            " the address works again."
+        ),
+    )
+
     # Single-key shortcuts, on by default (decided 2026-11-21); Ctrl+K
     # always works
     keyboard_shortcuts = models.BooleanField(_("keyboard shortcuts"), default=True)
@@ -189,10 +202,28 @@ class User(AbstractBaseUser):
     def __str__(self):
         return self.full_name or self.email
 
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_email = instance.__dict__.get("email")
+        return instance
+
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
         fields = kwargs.get("update_fields")
+        loaded = getattr(self, "_loaded_email", None)
+        if (
+            self.mail_undeliverable_at
+            and loaded is not None
+            and loaded.lower() != self.email.lower()
+            and (fields is None or "email" in fields)
+        ):
+            # A new address may work (specs/mail-sending.md)
+            self.mail_undeliverable_at = None
+            if fields is not None:
+                kwargs["update_fields"] = [*fields, "mail_undeliverable_at"]
+        super().save(*args, **kwargs)
         if fields is None or "email" in fields:
+            self._loaded_email = self.email
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)
 

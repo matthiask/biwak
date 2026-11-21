@@ -699,6 +699,13 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(Occurrence.objects.count(), 1)
         self.assertEqual(len(self.sent()), 2)
 
+    def test_not_to_addresses_which_bounced(self):
+        """specs/mail-sending.md"""
+        self.bob.mail_undeliverable_at = at("2027-03-20 12:00")
+        self.bob.save()
+        self.run_at("2027-03-22 09:00")
+        self.assertEqual(self.recipients(), [self.ada.email])
+
     def test_failing_mail_doesnt_keep_the_others(self):
         from biwak.checkins import mails
 

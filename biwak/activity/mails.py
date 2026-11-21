@@ -469,7 +469,11 @@ def send_mails(*, now=None):
     lantern before they're due are left out (and kept, the lantern lists
     them); a mail with nothing left isn't sent (specs/lantern.md)."""
     now = now or timezone.now()
-    unsent = Notification.objects.filter(**MAILABLE)
+    # Not to addresses which bounced (specs/mail-sending.md): their
+    # notifications wait, like those of people who want no mails
+    unsent = Notification.objects.filter(
+        **MAILABLE, user__mail_undeliverable_at__isnull=True
+    )
     count = 0
 
     # Each change: per person and item, once the newest is 2 minutes old

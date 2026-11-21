@@ -43,7 +43,9 @@ def after_commit(build, occurrence, people):
 def _send_all(build, occurrence, pks):
     # As it is now, not as it was loaded
     item = Item.objects.select_related("project").get(pk=occurrence.question.item_id)
-    for user in who_can_see(item).filter(pk__in=pks).order_by("pk"):
+    # Not to addresses which bounced (specs/mail-sending.md)
+    people = who_can_see(item).filter(pk__in=pks, mail_undeliverable_at__isnull=True)
+    for user in people.order_by("pk"):
         try:
             with (
                 translation.override(user.language or settings.LANGUAGE_CODE),
