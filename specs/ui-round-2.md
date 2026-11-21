@@ -251,6 +251,22 @@ the first name only, so it must stay clear who's who.
 - **The marks** (colored initials and images) help too. The full name
   stays in every `title`.
 
+**Status:** part F built (2026-11-21). The rule is `display_names(viewer)`
+in `biwak/organizations/names.py` (one query per viewer object, kept on it:
+a request's user, a mail's recipient, over `known_people()`), and
+`display_name(person, viewer)` for one. Everything that printed
+`get_short_name()` for a viewer asks it: `{% short_name person %}` in the
+templates (and `person_page`, `person_link`), mentions (rendering, plain
+text and excerpts through `reader()`, so mails use the recipient; `syntax()`
+and the `@` list write the form unique for the one typing, which the picker
+inserts), the lantern's and feed's assignee names, the message lines and
+the assignee picker's labels. Decided on the way: when the first letter of
+the last name still collides, everybody involved gets the full name (not
+only the later one); a person without a last name gets the full name only
+when that is all there is. Left as they were, since they aren't the
+viewer's lists: the API's and CLI's `short_name` (data), the live editor's
+names (one label for all who see it), the audit log's name.
+
 ### Done when (D, E, F)
 
 - **Tests:**

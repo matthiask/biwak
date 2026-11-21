@@ -554,7 +554,7 @@ class QueryCountTest(OverviewTestCase):
             number, response = self.count(user)
             self.assertEqual(len(response.context["projects"]), 200)
             self.assertEqual(number, small[user])
-            self.assertLessEqual(number, 12)
+            self.assertLessEqual(number, 13)  # one for the names (display_names)
         self.client.force_login(self.ada)
         with self.assertNumQueries(small[self.ada]):
             self.client.get(reverse("projects"))

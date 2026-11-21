@@ -8,7 +8,7 @@
     <h1 class="wb-title">
       {{ version.title }}
       <span class="text-body-secondary fs-6">{{ version.created_at|date:"j. M Y, H:i" }} ·
-        {{ version.created_by.get_short_name }}</span>
+        {% short_name version.created_by %}</span>
     </h1>
     <div class="wb-page-actions">
       <a class="btn btn-sm btn-quiet" href="{% url 'doc_versions' item.pk %}">{% translate "All versions" %}</a>

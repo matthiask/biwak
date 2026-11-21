@@ -98,4 +98,8 @@ class AssigneeField(forms.ModelMultipleChoiceField):
         super().__init__(queryset, **kwargs)
 
     def label_from_instance(self, obj):
-        return obj.get_short_name()
+        # Who is looking: the request's user (biwak.activity.mentions)
+        from biwak.activity.mentions import reader
+        from biwak.organizations.names import display_name
+
+        return display_name(obj, reader())

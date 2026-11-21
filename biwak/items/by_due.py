@@ -18,6 +18,7 @@ from biwak.api_conventions import absolute
 from biwak.forms import Form
 from biwak.items import due, glance
 from biwak.items.models import Item, Kind, Status
+from biwak.organizations.names import display_name
 from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
@@ -86,7 +87,7 @@ class FilterForm(Form):
         choices = [("", _("Anybody")), ("me", _("Me")), ("nobody", _("Nobody"))]
         if not user.is_client:
             people = User.objects.active().filter(memberships__project__in=projects)
-            choices += [(str(p.pk), p.get_short_name()) for p in people.distinct()]
+            choices += [(str(p.pk), display_name(p, user)) for p in people.distinct()]
         self.fields["assignee"].choices = choices
         if user.is_client:
             del self.fields["visible"]

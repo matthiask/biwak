@@ -38,6 +38,7 @@ from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Doc, Item, Kind, Status, Todo
+from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.reactions.models import Reaction
 from biwak.test_utils import person, project
@@ -590,6 +591,30 @@ class TodoPageTest(E2ETestCase):
         mention.wait_for()
         self.assertEqual(mention.inner_text(), "@Bob")
         self.assertEqual(mention.get_attribute("title"), "Bob Example")
+        self.assertEqual(self.errors, [])
+
+    def test_the_mention_list_tells_two_first_names_apart(self):
+        """Two Bobs: the list inserts "Bob E." and "Bob Z.", the saved
+        comment shows the one the viewer sees, the full name as title"""
+        bob_z = User.objects.create_user(
+            "bob.zed@example.org",
+            full_name="Bob Zed",
+            organization=Organization.objects.own(),
+        )
+        page = self.page
+        self.goto(page, self.todo)
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.click()
+        textarea.press_sequentially("Hi @Bob Z")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        textarea.press("Enter")
+        self.assertEqual(textarea.input_value(), f"Hi [@Bob Z.](person:{bob_z.pk}) ")
+        page.get_by_role("button", name="Add comment").click()
+        mention = page.locator(".wb-markdown .wb-mention")
+        mention.wait_for()
+        self.assertEqual(mention.inner_text(), "@Bob Z.")
+        self.assertEqual(mention.get_attribute("title"), "Bob Zed")
         self.assertEqual(self.errors, [])
 
     def test_mentions_of_a_client_are_members_only(self):

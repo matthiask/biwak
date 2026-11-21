@@ -17,6 +17,7 @@ from django.utils.translation import gettext as _
 from biwak import checklists
 from biwak.activity.models import Action, Event
 from biwak.items.models import Editing, Item, Kind
+from biwak.organizations.names import display_name
 
 
 TTL = dt.timedelta(minutes=2)
@@ -122,7 +123,7 @@ def name_for(viewer, project, person):
     project's members), else None"""
     if person is None or not project.people_known_to(viewer, [person]):
         return None
-    return person.get_short_name()
+    return display_name(person, viewer)
 
 
 def ago(when, *, now=None):

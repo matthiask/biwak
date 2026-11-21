@@ -121,7 +121,7 @@
             <details class="dropdown wb-menu">
               <summary class="btn btn-sm btn-quiet wb-me-button">
                 {% avatar request.user "sm" %}
-                <span class="d-none d-sm-inline">{{ request.user.get_short_name }}</span>
+                <span class="d-none d-sm-inline">{% short_name request.user %}</span>
                 {% icon "chevron-down" %}
               </summary>
               <div class="dropdown-menu dropdown-menu-end">

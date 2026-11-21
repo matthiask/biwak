@@ -18,6 +18,7 @@ from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event
 from biwak.items.models import Comment, Item, Kind, Message
+from biwak.organizations.names import display_name
 from biwak.projects.models import Project
 
 
@@ -115,7 +116,7 @@ def attach(events, user):
             event.item.project = event.project
         if event.project_id not in known and _people_of(event):
             known[event.project_id] = {
-                u.pk: u.get_short_name()
+                u.pk: display_name(u, user)
                 for u in event.project.people_known_to(user, people)
             }
         names = known.get(event.project_id, {})

@@ -1,3 +1,3 @@
 {% load biwak %}
 {% for person in todo.todo.assignees.all %}<span class="badge wb-person">{% avatar person %}
-    {{ person.get_short_name }}</span>{% endfor %}
+    {% short_name person %}</span>{% endfor %}

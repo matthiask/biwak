@@ -159,7 +159,7 @@
             {% if item.kind == "doc" %}{% icon "file-earmark-text" %}{% else %}{% icon "file-earmark" %}{% endif %}
             <span class="fw-semibold">{{ item|item_title }}</span>
             {% client_badge item %}
-            <span class="small text-body-secondary">· {{ item.creator.get_short_name }} ·
+            <span class="small text-body-secondary">· {% short_name item.creator %} ·
               {{ item.updated_at|date:"j. M Y" }}</span>
             {% include "items/_checklist_signal.html" with done=item.checklist_done total=item.checklist_total %}
           </a>

@@ -23,6 +23,7 @@ from biwak.accounts.models import User
 from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_importing, subscribe
+from biwak.organizations.names import display_name, display_names
 from biwak.projects.models import knows_everybody
 
 
@@ -64,8 +65,9 @@ def known_to(people, project, person):
     return people.filter(pk__in=project.memberships.values("user"))
 
 
-def syntax(user):
-    return f"[@{user.get_short_name()}](person:{user.pk})"
+def syntax(user, viewer=None):
+    """The mention with the name the viewer (the one typing) sees"""
+    return f"[@{display_name(user, viewer)}](person:{user.pk})"
 
 
 def mentioned_ids(text):
@@ -98,7 +100,7 @@ def plain(text, item=None):
 
     def show(match):
         user = people.get(int(match[2]))
-        return f"@{user.get_short_name() if user else match[1]}"
+        return f"@{display_name(user, reader()) if user else match[1]}"
 
     return MENTION.sub(show, text)
 
@@ -141,6 +143,8 @@ def candidates_for(project, visible, query, *, for_user):
         project.memberships.filter(user__in=people).values_list("user", flat=True)
     )
 
+    names = display_names(for_user)
+
     def reason(user):
         if user.pk in available:
             return ""
@@ -154,7 +158,7 @@ def candidates_for(project, visible, query, *, for_user):
             "id": user.pk,
             "name": str(user),
             "organization": user.organization_name,
-            "short_name": user.get_short_name(),
+            "short_name": names.get(user.pk) or user.get_short_name(),
             "avatar": user.avatar_data,
             "email": "" if for_user.is_client else user.email,
             "available": user.pk in available,
@@ -175,7 +179,7 @@ def resolve(item, text, *, author):
 
     def email(match):
         user = by_email.get(match[1].lower())
-        return syntax(user) if user else match[0]
+        return syntax(user, author) if user else match[0]
 
     def name(match):
         word = match[1].lower()
@@ -188,7 +192,7 @@ def resolve(item, text, *, author):
                 (user.full_name.split(" ")[0] if user.full_name else "").lower(),
             }
         ]
-        return syntax(found[0]) if len(found) == 1 else match[0]
+        return syntax(found[0], author) if len(found) == 1 else match[0]
 
     # Not inside the syntax: split it out first
     parts = MENTION.split(text)

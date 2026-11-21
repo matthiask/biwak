@@ -67,7 +67,7 @@
               {% translate "Hasn't answered yet:" %}
               {% for person in missing %}<a
                   href="{% url 'question_person' item.pk person.pk %}"
-                >{{ person.get_short_name }}</a>{% if not forloop.last %},
+                >{% short_name person %}</a>{% if not forloop.last %},
                 {% endif %}{% endfor %}
             </p>
           {% endif %}

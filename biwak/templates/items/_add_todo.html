@@ -56,7 +56,7 @@
               {% if posted and person.pk|stringformat:"s" in form.assignees.value %}selected{% endif %}
               data-avatar="{{ person.avatar_json }}"
             >
-              {{ person.get_short_name }}
+              {% short_name person %}
             </option>
           {% endfor %}
         </select>
