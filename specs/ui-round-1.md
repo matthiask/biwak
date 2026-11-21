@@ -63,8 +63,12 @@ Like Basecamp: a to-do's page shows the to-do, not an edit form.
   back. Without JavaScript, "Edit" opens the form as its own page.
 - **The editing marker** (`editor.md`) is set only while the form is
   shown, so ticking is blocked only while someone really edits.
-- Messages, docs and files already have separate edit pages; they keep
-  them (docs edit live with the live editor).
+- **The same click to edit** (decided 2026-11-21) for messages, files and
+  check-in answers: their pages show them, clicking the title or text
+  switches to the edit form in place. Docs keep the live editor.
+- **Repeat** (decided 2026-11-21): the end fields ("until", "repeats
+  left") move into the rule widget's fieldset and show only when a
+  repeat is chosen, everywhere.
 
 ## 4. The assignee picker
 
@@ -84,7 +88,7 @@ For projects with dozens of people:
   shows its date as a small danger-toned badge ("Overdue · 18. Nov"),
   on lists, the board, "my to-dos", the list by due date, the to-do's
   page and the palette's results; due today gets a quieter "Today"
-  badge (proposed). Completed to-dos are never overdue.
+  badge (decided 2026-11-21). Completed to-dos are never overdue.
 - A danger tone in the palette tokens (`--wb-tone-danger`), checked for
   contrast with the others.
 
@@ -102,14 +106,3 @@ Each part with Django tests for the views (also as a modal: the
 tests for the interaction; everything also working without JavaScript;
 clients seeing only what they may (no member lists beyond members in
 the picker, no staff-only menu entries).
-
-## Questions before building
-
-1. **Due today:** a quieter "Today" badge too, or only overdue?
-2. **View mode beyond to-dos:** check-in answers and messages have their
-   own edit pages; leave them, or give them the same click-to-edit?
-3. **Repeat in the to-do form** (feedback point 8): the rule widget's
-   end fields ("until", "repeats left") show only when a repeat is
-   chosen, on the inline form today; on the to-do's page they always
-   show. Fold them into the rule widget's fieldset, shown only when
-   repeating, everywhere (proposed).

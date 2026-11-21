@@ -62,3 +62,9 @@ Docs are locked while someone edits them (`files.md`).
 Two and more clients editing concurrently (end-to-end, Playwright),
 reconnecting after being offline, permission changes during a session,
 API edits during a live session.
+
+## No locks (decided 2026-11-21)
+
+Docs are never locked again, also not if the live editor is ever turned
+off: people get at most a heads-up that someone else is editing ("Ada is
+editing this"), from the editing marker (`editor.md`).
