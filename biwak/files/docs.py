@@ -9,8 +9,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak.activity.history import diff_lines
-from biwak.activity.notify import everybody
-from biwak.activity.operations import share
+from biwak.activity.notify import told_by_default, told_line
+from biwak.activity.operations import share, subscribable_people
 from biwak.activity.views import SubscribersForm
 from biwak.collab import live
 from biwak.files import operations, queries
@@ -113,29 +113,43 @@ def _editor(request, item):
 
 
 class TellForm(SubscribersForm):
-    """ "Tell people about it?": the subscribers' picker, telling them now,
-    with those preselected whom posting to everybody would have reached
-    (``notify.everybody()``, decided 2026-11-21)"""
+    """ "Tell people about it?" (decided 2026-11-21, additive like posting,
+    ``files.common.NotifyForm``): a line saying who is told by default
+    (``default_told()``), "Also tell…" the subscribers' picker of the
+    others, nothing preselected, and the note"""
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, item=item, user=user, **kwargs)
         del self.fields["notify"]
-        if not self.is_bound:
-            field = self.fields["people"]
-            reached = everybody(item.project, item, visible=item.is_client_visible)
-            # Not those subscribed already nor the creator: not in the queryset
-            field.initial = list(
-                field.queryset.filter(
-                    pk__in=[person.pk for person in reached]
-                ).values_list("pk", flat=True)
-            )
+        self.told = default_told(item, user)
+        field = self.fields["people"]
+        field.label = _("Also tell…")
+        field.required = False
+        field.intro = told_line(self.told, item.project, user)
+        field.queryset = field.queryset.exclude(pk__in=[u.pk for u in self.told])
+
+
+def default_told(item, user):
+    """Those the doc tells by default (``notify.told_by_default()``) who
+    aren't subscribed yet (people mentioned in its first text were told
+    then) and whom ``user`` may subscribe"""
+    told = told_by_default(
+        item.project, item.parent, visible=item.is_client_visible, actor=user
+    )
+    allowed = set(
+        subscribable_people(item, user)
+        .exclude(subscriptions__item=item)
+        .filter(pk__in=[u.pk for u in told])
+        .values_list("pk", flat=True)
+    )
+    return [u for u in told if u.pk in allowed]
 
 
 @never_cache
 def doc_tell(request, pk):
     """The first "Done" of a doc begun as a draft (specs/files.md, "Docs"): its
-    creator is asked once whom to tell, "Tell them" or "Not now",
-    never again either way. A modal of the editor, also a page.
+    creator is asked once whom to tell besides those told by default,
+    "Tell them" or "Not now" (only those), never again either way. A modal of the editor, also a page.
     What was typed is saved first; a draft still empty goes back to its
     folder."""
     item = item_for(request, pk, Kind.DOC, drafts=True)
@@ -148,18 +162,25 @@ def doc_tell(request, pk):
     if not item.doc.tell_pending:
         return redirect(item)
     if request.method == "POST" and request.POST.get("not_now"):
+        # Nobody else, but those who want to hear are told anyway
+        # (decided 2026-11-21: additive)
+        people = default_told(item, request.user)
+        if people:
+            share(item, people, actor=request.user, notify=True)
         operations.told(item, actor=request.user)
         return redirect(item)
     form = TellForm(request.POST or None, item=item, user=request.user)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        share(
-            item,
-            list(data["people"]),
-            actor=request.user,
-            notify=True,
-            note=data["note"],
-        )
+        people = [*form.told, *data["people"]]
+        if people:
+            share(
+                item,
+                people,
+                actor=request.user,
+                notify=True,
+                note=data["note"],
+            )
         operations.told(item, actor=request.user)
         return redirect(item)
     return form_response(

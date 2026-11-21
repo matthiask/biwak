@@ -35,7 +35,8 @@ class BatchTest(TestCase):
             project=self.project, title="Minutes", creator=self.ada, visible=True
         )
 
-    def upload(self, names, *, batch=BATCH, whom="everybody", parent="minutes"):
+    def upload(self, names, *, batch=BATCH, parent="minutes", more=False):
+        """``more``: more files of the batch follow the last of these"""
         with self.captureOnCommitCallbacks(execute=True):
             return [
                 ops.create_upload(
@@ -43,10 +44,10 @@ class BatchTest(TestCase):
                     file=SimpleUploadedFile(name, b"x"),
                     creator=self.ada,
                     parent=self.minutes if parent == "minutes" else parent,
-                    whom=whom,
                     batch=batch,
+                    more=more or n < len(names) - 1,
                 )
-                for name in names
+                for n, name in enumerate(names)
             ]
 
     def send(self, now):
@@ -88,11 +89,68 @@ class BatchTest(TestCase):
 
     def test_other_uploads_and_other_events_stay_apart(self):
         files = self.upload(["a.txt", "b.txt"])
-        self.upload(["c.txt"], batch="b" * 32)
+        # Another folder
+        self.upload(["c.txt"], batch="b" * 32, parent=None)
         self.upload(["d.txt"], batch=None)
         with self.captureOnCommitCallbacks(execute=True):
             ops.add_comment(files[0], author=self.ada, content="Look")
         self.assertEqual(lantern.unread_count(self.bob), 4)
+
+    def test_rounds_within_ten_minutes_are_one_entry_and_one_mail(self):
+        """One person's uploads into one folder, each round within 10
+        minutes of the one before (``MERGE_AFTER``), are one entry and one
+        mail (decided 2026-11-21), like the feed merges"""
+        first = self.upload(["a.txt", "b.txt"])
+        Notification.objects.update(created_at=timezone.now() - dt.timedelta(minutes=8))
+        second = self.upload(["c.txt"], batch="b" * 32)
+        self.assertEqual(lantern.unread_counts(self.bob), (3, 1))
+        _marks, [(batch, _entries)], _read, _more = lantern.menu(self.bob)
+        self.assertEqual(batch.line, "Ada Example uploaded 3 files to Minutes.")
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 2)
+        message = next(m for m in mail.outbox if m.to == [self.bob.email])
+        self.assertIn("Ada Example uploaded 3 files to Minutes.", message.body)
+        # Following the entry reads all of it
+        self.client.force_login(self.bob)
+        self.client.post(
+            reverse("lantern_open", args=[Notification.objects.filter(
+                user=self.bob, event__item=second[0]
+            ).get().pk]),
+            headers={"HX-Request": "true"},
+        )  # fmt: skip
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.bob, event__item__in=first, read_at=None
+            ).exists()
+        )
+
+    def test_rounds_further_apart_are_two_entries(self):
+        self.upload(["a.txt"])
+        Notification.objects.update(
+            created_at=timezone.now() - dt.timedelta(minutes=11)
+        )
+        self.upload(["b.txt"], batch="b" * 32)
+        self.assertEqual(lantern.unread_count(self.bob), 2)
+
+    def test_a_batch_still_going_up_waits(self):
+        """The modal says when more files of the batch follow (``more``):
+        the mail waits for them, however long one takes to go up"""
+        self.upload(["a.txt"], more=True)
+        Notification.objects.update(
+            created_at=timezone.now() - dt.timedelta(minutes=30)
+        )
+        self.assertEqual(self.send(timezone.now()), 0)
+        self.upload(["b.txt"])
+        now = timezone.now()
+        self.assertEqual(self.send(now + dt.timedelta(minutes=5)), 0)
+        self.assertEqual(self.send(now + dt.timedelta(minutes=11)), 2)
+        message = next(m for m in mail.outbox if m.to == [self.bob.email])
+        self.assertIn("Ada Example uploaded 2 files to Minutes.", message.body)
+
+    def test_a_batch_whose_last_file_never_came_goes_after_an_hour(self):
+        self.upload(["a.txt"], more=True)
+        now = timezone.now()
+        self.assertEqual(self.send(now + dt.timedelta(minutes=59)), 0)
+        self.assertEqual(self.send(now + dt.timedelta(minutes=61)), 2)
 
     def test_a_client_gets_only_what_clients_see(self):
         private = ops.create_folder(
@@ -104,7 +162,7 @@ class BatchTest(TestCase):
 
     def test_one_mail(self):
         files = self.upload(["a.txt", "b.txt", "c.txt"])
-        later = timezone.now() + dt.timedelta(minutes=3)
+        later = timezone.now() + dt.timedelta(minutes=11)
         self.assertEqual(self.send(later), 2)  # Bob and Cleo
         message = next(m for m in mail.outbox if m.to == [self.bob.email])
         self.assertEqual(message.subject, "[Website] Minutes")

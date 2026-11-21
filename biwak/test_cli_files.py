@@ -11,7 +11,7 @@ import biwak_cli
 import click
 
 from biwak import test_cli
-from biwak.accounts.models import APIToken
+from biwak.accounts.models import APIToken, NotificationLevel
 from biwak.activity.models import Action, Event
 from biwak.files import operations
 from biwak.items import operations as ops
@@ -64,8 +64,6 @@ class FilesCLITest(test_cli.CLITest):
             "Hello",
             "--category",
             "News",
-            "--notify",
-            "nobody",
             "--visible",
             "--json",
         )
@@ -75,19 +73,35 @@ class FilesCLITest(test_cli.CLITest):
         self.assertIn("Clients can see this message.", result.output)
         item = Item.objects.get(pk=data["id"])
         self.assertEqual(item.message.content, "Hello")
-        # Standard input, notifying chosen people
+        # Standard input, telling somebody too
         result = self.biwak(
             "message",
             "post",
             self.project.pk,
             "Piped",
-            "--notify",
+            "--also",
             f"{self.bob.pk}",
             input="From stdin\n",
         )
         self.assertIn("Posted #", result.output)
         self.assertEqual(
             Item.objects.get(title="Piped").message.content, "From stdin\n"
+        )
+
+    def test_post_tells_who_wants_and_also(self):
+        """Those who want to hear, ``--also`` those added (decided
+        2026-11-21: additive)"""
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            result = self.biwak(
+                "message", "post", self.project.pk, "Some", "Text", "--visible",
+                "--also", str(self.bob.pk),
+            )  # fmt: skip
+        self.assertEqual(result.exit_code, 0, result.output)
+        event = Event.objects.get(item__title="Some", action=Action.CREATED)
+        self.assertEqual(
+            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
         )
 
     def test_post_notifies_everybody_by_default(self):
@@ -103,13 +117,13 @@ class FilesCLITest(test_cli.CLITest):
 
     def test_post_needs_a_known_category(self):
         result = self.biwak(
-            "message", "post", self.project.pk, "No", "Text", "--notify", "nobody",
+            "message", "post", self.project.pk, "No", "Text",
             "--category", "Nope",
         )  # fmt: skip
         self.assertEqual(result.exit_code, 1)
         self.assertIn("No category", result.output)
         result = self.biwak(
-            "message", "post", self.project.pk, "No", "Text", "--notify", "some"
+            "message", "post", self.project.pk, "No", "Text", "--also", "some"
         )
         self.assertEqual(result.exit_code, 1)
         self.assertFalse(Item.objects.filter(title="No").exists())
@@ -128,7 +142,7 @@ class FilesCLITest(test_cli.CLITest):
         plan.write_bytes(b"%PDF-1.7")
         result = self.biwak(
             "message", "post", self.project.pk, "With a plan", "See",
-            "--notify", "nobody", "--attach", plan, "--json",
+            "--attach", plan, "--json",
         )  # fmt: skip
         item = Item.objects.get(pk=json.loads(result.stdout)["id"])
         self.assertEqual(item.attachments.count(), 1)
@@ -145,7 +159,7 @@ class FilesCLITest(test_cli.CLITest):
         plan.write_bytes(b"The plan")
         result = self.biwak(
             "file", "upload", self.project.pk, plan, "--folder", folder,
-            "--description", "About it", "--notify", "nobody", "--json",
+            "--description", "About it", "--json",
         )  # fmt: skip
         uploaded = json.loads(result.stdout)
         self.assertEqual(uploaded["parent_id"], folder)
@@ -197,9 +211,7 @@ class FilesCLITest(test_cli.CLITest):
         plan = self.directory / "plan.txt"
         plan.write_bytes(b"One")
         uploaded = json.loads(
-            self.biwak(
-                "file", "upload", self.project.pk, plan, "--notify", "nobody", "--json"
-            ).stdout
+            self.biwak("file", "upload", self.project.pk, plan, "--json").stdout
         )
         fid = uploaded["id"]
         self.assertFalse(uploaded["visible_to_clients"])
@@ -246,7 +258,7 @@ class FilesCLITest(test_cli.CLITest):
         data = json.loads(
             self.biwak(
                 "doc", "new", self.project.pk, "Minutes", "Decided",
-                "--notify", "nobody", "--json",
+                "--json",
             ).stdout
         )  # fmt: skip
         did = data["id"]

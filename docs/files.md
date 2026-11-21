@@ -8,12 +8,11 @@ first, pinned messages on top, each with its category, author, date and
 number of comments.
 
 - **New message:** title, text (Markdown), an optional category,
-  "Visible to clients" (staff), and whom to notify: everybody in the
-  project, only chosen people, or nobody. Everybody is preselected;
-  it subscribes the people notified by default, not those who want to
-  hear only when tagged ([Notifications](notifications.md)). "Only
-  these people" shows them: those "Everybody" would reach, to take
-  some away (×) or add others (type a name).
+  "Visible to clients" (staff). A line says who will be told: whoever
+  wants to hear about something new (notified of everything, or
+  subscribed to the folder; [Notifications](notifications.md)). You
+  can't leave them out, only add others under "Also tell…" (type a
+  name), for example people who hear only when tagged.
 - Staff **pin** a message (its page or the row's menu) to keep it on
   top for everybody. The categories are set up by an administrator.
 - Messages have comments and reactions like to-dos. Clients can post
@@ -59,9 +58,9 @@ write something it's only yours: nobody else sees it, it isn't in the
 folder, the activity or search, and an empty one is deleted after a day.
 With the first text it's a doc (the browser's address becomes the doc's)
 and it's in the folder, telling nobody yet. When you click "Done" the
-first time, you're asked "Tell people about it?": the people notified
-by default are already chosen; change them (and add a note) and "Tell
-them", or "Not now". You're asked only once; later, add
+first time, you're asked "Tell people about it?": those who want to
+hear about something new are told either way; add others under "Also
+tell…" (and a note) and "Tell them", or "Not now" to add nobody. You're asked only once; later, add
 people with "Manage…" next to the subscribers.
 
 - **Edit** opens the doc for editing together: everybody who edits it
@@ -84,10 +83,12 @@ folder's tile, "..", or a folder in the path above for that folder).
 Each file shows its name, which you can change (the extension stays),
 and its size; remove one with ×, or drop more. Below, once for all of
 them: "Visible to clients" (at the top level; in a folder they follow
-the folder) and whom to notify. "Upload" sends them one after another;
+the folder) and whom to tell too ("Also tell…"). "Upload" sends them one after another;
 a file that can't be uploaded (too big) says so on its row while the
 others go on. The people notified get one notification and one mail for
-all of them ("Ada uploaded 5 files to Minutes"), not one per file.
+all of them ("Ada uploaded 5 files to Minutes"), not one per file; more
+files uploaded into the same folder within ten minutes join it, and the
+mail waits until all files are up.
 
 A file's page shows a preview for images and PDFs, its description,
 comments and "Download". "Replace" (or "Upload a new version") puts a

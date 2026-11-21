@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = (
         "Sends the notification mails which are due (specs/notifications.md):"
-        " per person and item 2 minutes after the newest change, digests at"
+        " per person and item 10 minutes after the newest change, digests at"
         " 07:00; and what check-ins do (specs/checkins.md): asking the"
         " questions due, the summaries of the answers; and sending again what"
         " failed to go out (specs/mail-sending.md). Run every minute by cron."

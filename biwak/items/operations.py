@@ -192,10 +192,10 @@ def create_message(
     content="",
     visible=False,
     category=None,
-    whom="nobody",
+    also=(),
 ):
-    """``whom`` to notify: ``"everybody"``, a list of people or
-    ``"nobody"`` (``notify_people()``, specs/files.md)"""
+    """Tells those told by default and ``also`` these people
+    (``notify_people()``, specs/notifications.md)"""
     item = create_item(
         project=project,
         kind=Kind.MESSAGE,
@@ -207,7 +207,7 @@ def create_message(
     attachments.link(item, content, actor=creator)
     event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
-    notify_people(item, whom=whom, actor=creator)
+    notify_people(item, actor=creator, also=also)
     return item
 
 
@@ -235,7 +235,7 @@ def create_doc(
     parent=None,
     content="",
     visible=False,
-    whom="nobody",
+    also=(),
 ):
     """``content`` follows the heading made of ``title``: the doc's text
     starts with ``# title`` and its title is that first line
@@ -259,7 +259,7 @@ def create_doc(
     attachments.link(item, content, actor=creator)
     event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
-    notify_people(item, whom=whom, actor=creator)
+    notify_people(item, actor=creator, also=also)
     return item
 
 
@@ -319,14 +319,16 @@ def create_upload(
     parent=None,
     description="",
     visible=False,
-    whom="nobody",
+    also=(),
     title=None,
     batch=None,
+    more=False,
 ):
     """Uploads a file into the root or a folder; its title is the file's
     name unless ``title`` is given. ``batch``: files uploaded together
     share it on their events, which the lantern and the mails merge into
-    one entry (specs/files.md, "Uploading files"). Raises
+    one entry (specs/files.md, "Uploading files"); ``more``: more files
+    of the batch follow, its mail waits for them. Raises
     ``attachments.UploadError`` for files over the limit."""
     attachments.check_size(file)
     item = create_item(
@@ -340,9 +342,12 @@ def create_upload(
     upload = Upload.objects.create(item=item, description=description)
     new_version(upload, file, uploaded_by=creator)
     attachments.link(item, description, actor=creator)
-    event = created(item, creator, **({"batch": batch} if batch else {}))
+    data = {"batch": batch} if batch else {}
+    if batch and more:
+        data["more"] = True
+    event = created(item, creator, **data)
     mentions.update(item, f"{item.title}\n\n{description}", actor=creator, event=event)
-    notify_people(item, whom=whom, actor=creator)
+    notify_people(item, actor=creator, also=also)
     return item
 
 
@@ -1065,13 +1070,30 @@ DRAFT_DAYS = 1
 def delete_drafts(*, now=None):
     """Deletes drafts left empty for a day (specs/files.md, "Docs");
     what was typed and not saved yet is saved first (``save_pending``
-    runs before), making a doc of them. Returns how many."""
+    runs before), making a doc of them. Each is checked again with its
+    rows locked: one published meanwhile stays, so does one with typing
+    not merged yet (``live_updates``); an open editor of a deleted draft
+    is told (``live.check_access()``). Returns how many."""
+    from biwak.collab import live
+    from biwak.collab.models import LiveUpdate
+
     cutoff = (now or timezone.now()) - dt.timedelta(days=DRAFT_DAYS)
     old = Item.objects.filter(is_draft=True, created_at__lt=cutoff)
     count = 0
-    for item in old.order_by("pk"):
-        item.delete()
-        count += 1
+    for draft in old.order_by("pk"):
+        with transaction.atomic():
+            item = old.select_for_update().filter(pk=draft.pk).first()
+            if item is None:
+                continue
+            # Typing arriving now (``live.append()``) waits for this lock
+            # (its foreign key), so none slips in between the check and the
+            # delete
+            Doc.objects.select_for_update().filter(item=item).exists()
+            if LiveUpdate.objects.filter(doc_id=item.pk).exists():
+                continue
+            item.delete()
+            live.check_access(doc=draft.pk)
+            count += 1
     return count
 
 

@@ -282,7 +282,7 @@ class MailsTest(ReadingTestCase):
         self.prime(self.secret)
         self.act(lambda: ops.complete(self.todo, actor=self.bob))
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         from django.core import mail
 
         bobs = [m for m in mail.outbox if m.to == [self.bob.email]]

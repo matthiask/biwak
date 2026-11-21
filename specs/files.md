@@ -147,8 +147,8 @@ the counts of the top level's folders, docs and files.
   breadcrumb for that one (`frontend/upload.js`, the drop zone in
   `frontend/files.js`). It lists the files, each with an editable title
   (the extension kept), its size, removable; below, once for all:
-  visible to clients (staff, at the top level only) and whom to notify
-  (everybody by default, as for one file). No description (set on the
+  visible to clients (staff, at the top level only), who is told and
+  "Also tell…" (as for one file, `notifications.md`). No description (set on the
   file's page).
 - **Uploading:** one after another (`library.file_upload`, one file as
   JSON), a progress row each; an error stays on its row, the others go
@@ -160,6 +160,18 @@ the counts of the top level's folders, docs and files.
   not one per file. The batch is a random ID made with the form, stored
   as `batch` in the files' `created` events (`create_upload(batch=)`);
   the lantern and the mails merge it (`lantern.md`, `notifications.md`).
+  One person's batches into the same folder (or the top level), each
+  within 10 minutes of the one before, merge into one entry and one
+  mail too (decided 2026-11-21, like the feed).
+- **A batch's mail waits until it's complete** (decided 2026-11-21,
+  the simplest robust way): the modal sends `more` with every file but
+  the last it will send (`UploadOneForm`, `create_upload(more=)`,
+  stored in the event); `send_mails` holds a group whose newest file
+  says `more` until the rest arrived, else for `BATCH_WAIT` (an hour:
+  the last file failed or the tab was closed). Without the flag (the
+  page without JavaScript sends all files at once) the 10 minutes
+  after the newest apply as everywhere. No "done" request: the flag
+  rides on the uploads.
 
 ## Docs
 
@@ -198,15 +210,19 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   event (the folder's subscribers aren't told, people mentioned in it
   are), and the browser replaces the address (`data-collab-draft`).
   Empty drafts are deleted after a day (`delete_drafts` in
-  `fairy_tasks`). Nothing reuses drafts (two tabs could share one);
+  `fairy_tasks`), each checked again with its rows locked (decided
+  2026-11-21): one published meanwhile stays, so does one with typing
+  not merged yet (`LiveUpdate` rows; the next run tries again), and an
+  open editor of a deleted draft is told (`live.check_access()`). Nothing reuses drafts (two tabs could share one);
   "Done" on an empty draft goes back to its folder. A draft in a folder
   visible to clients is visible to them once written, as the folder
   says.
 - **Telling people once** (decided 2026-11-21): the creator's first
   "Done" saves and asks "Tell people about it?" (`Doc.tell_pending`,
-  `docs.doc_tell`): the subscribers' picker with a note
-  (`subscribers.md`); "Tell them" records `shared`, "Not now" doesn't,
-  and either way it's never asked again. Escape or Cancel doesn't
+  `docs.doc_tell`): who is told by default and "Also tell…" with a
+  note (additive, `notifications.md`, decided 2026-11-21); "Tell them"
+  records `shared` to both, "Not now" to those told by default only
+  (nothing when there's nobody), and either way it's never asked again. Escape or Cancel doesn't
   answer, the next "Done" asks again. Only the creator is asked.
 - The API and CLI create docs with title and text, not as drafts.
 
@@ -247,7 +263,7 @@ versions.
 
 `POST /api/v1/projects/{id}/attachments/` (multipart `file`, answering
 the key and the Markdown), `GET /api/v1/attachments/{key}/`; messages
-(list, create with `notify`, update, pin), folders (contents, create,
+(list, create with `also`, update, pin), folders (contents, create,
 move, `PATCH folders/{id}/` with `title` and `ordering`), the top level
 (`GET`/`PATCH projects/{id}/files/` with `ordering`), docs (get, update
 with `base_version`, versions; a `title` alone is a 400, the title is the

@@ -79,32 +79,6 @@ def read_by_acting(actor, *items):
     lantern.read(actor, items=items)
 
 
-# Completing and reopening: the same person undoing their last one within
-# EDIT_SESSION removes it instead of recording the opposite
-TOGGLES = {Action.COMPLETED: Action.REOPENED, Action.REOPENED: Action.COMPLETED}
-
-
-def _undoes(item, actor, action, now):
-    """Whether this undoes the item's latest completing or reopening, the
-    same person's within ``EDIT_SESSION``: then that event is deleted (its
-    notifications with it)"""
-    latest = (
-        Event.objects
-        .filter(item=item, action__in=list(TOGGLES))
-        .order_by("-created_at", "-pk")
-        .first()
-    )
-    if (
-        latest is None
-        or latest.actor_id != actor.pk
-        or latest.action != TOGGLES[action]
-        or latest.created_at < now - EDIT_SESSION
-    ):
-        return False
-    latest.delete()
-    return True
-
-
 def record(*, actor, action, project, item=None, **data):
     """Writes the event; after the commit, ``notify()`` decides who's told
     (project events notify nobody). The event stores whether the item is
@@ -116,18 +90,6 @@ def record(*, actor, action, project, item=None, **data):
         data.setdefault("title", item.title)
         visible = Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
     now = _occurred_at.get() or timezone.now()
-    if (
-        action in TOGGLES
-        and item is not None
-        and not is_importing()
-        and _undoes(item, actor, action, now)
-    ):
-        # Completing and reopening again soon after is nothing to tell
-        # (decided 2026-11-21): the earlier event goes, with what it
-        # notified, and the pages hear of the change as usual
-        if not _quiet.get():
-            announce.changed(item, action=action, actor=actor, visible=visible)
-        return None
     event = None
     # Edits merge, and so do moves between the groups of a list (board
     # columns, decided 2026-11-21): dragging back and forth is one event

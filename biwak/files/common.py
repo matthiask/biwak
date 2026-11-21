@@ -1,13 +1,12 @@
 """What the pages of messages, docs and files share"""
 
-from django import forms
 from django.db.models.functions import Lower
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts.models import User
-from biwak.activity.notify import everybody
+from biwak.activity.notify import people_who_see, told_by_default, told_line
 from biwak.activity.operations import is_assigned, is_subscribed
 from biwak.forms import Form, PeopleField, PeopleSelect
 from biwak.items import operations as ops
@@ -15,55 +14,33 @@ from biwak.items.views import CommentForm
 
 
 class NotifyForm(Form):
-    """ "Whom to notify" when posting (``notify_people()``,
-    specs/notifications.md): everybody in the project, chosen people or
-    nobody. Everybody is preselected (decided 2026-11-20): it subscribes
-    only those notified by default, not those who want to hear only when
-    tagged (specs/notifications.md, "Subscriptions"). "These people" is the people
-    picker, shown only with "Only these people" (``shown_when``,
-    ``frontend/shown-when.js``), with those "Everybody" would reach
-    preselected (``notify.everybody()``), never the poster (decided
-    2026-11-21)."""
+    """Who is told when posting (``notify_people()``, specs/notifications.md,
+    decided 2026-11-21: additive): a line saying whom the post tells by
+    default (``notify.told_by_default()``, ``told_line()``, the field's
+    ``intro``), and "Also tell…", the people picker of those who see it
+    and aren't told already, nothing preselected. The poster is neither
+    told nor offered."""
 
-    EVERYBODY, CHOSEN, NOBODY = "everybody", "chosen", "nobody"
-
-    notify = forms.ChoiceField(
-        label=_("Notify"),
-        choices=[
-            (EVERYBODY, _("Everybody in the project")),
-            (CHOSEN, _("Only these people")),
-            (NOBODY, _("Nobody")),
-        ],
-        initial=EVERYBODY,
-        widget=forms.RadioSelect,
-    )
-    people = PeopleField(
-        label=_("These people"),
+    also = PeopleField(
+        label=_("Also tell…"),
         queryset=User.objects.none(),
         widget=PeopleSelect(attrs={"data-placeholder": _("Add people…")}),
     )
-    people.shown_when = f"notify={CHOSEN}"
 
     def __init__(self, *args, project, user, folder=None, **kwargs):
         super().__init__(*args, **kwargs)
-        field = self.fields["people"]
-        # The members, not the poster: nobody hears about their own posts
+        # Who'd see it: in a folder as the folder says, at the top what
+        # clients post (``message_visibility()``)
+        visible = folder.is_client_visible if folder else user.is_client
+        told = told_by_default(project, folder, visible=visible, actor=user)
+        field = self.fields["also"]
+        field.intro = told_line(told, project, user)
         field.queryset = (
-            User.objects
-            .active()
+            people_who_see(project, visible)
             .filter(memberships__project=project)
-            .exclude(pk=user.pk)
+            .exclude(pk__in=[user.pk, *(person.pk for person in told)])
             .order_by(Lower("full_name"), "email")
         )
-        if not self.is_bound:
-            # Who'd see it as the form starts: in a folder as the folder
-            # says, at the top what clients post (``message_visibility()``)
-            visible = folder.is_client_visible if folder else user.is_client
-            field.initial = [
-                person.pk
-                for person in everybody(project, folder, visible=visible)
-                if person != user
-            ]
 
     def mention_fields(self, project, *names, folder=None):
         """The ``@`` list of the fields: whoever will see the new item"""
@@ -76,12 +53,9 @@ class NotifyForm(Form):
             if "visible" in self.fields and not folder:
                 attrs["data-mentions-visible"] = "#id_visible"
 
-    def whom(self):
+    def also_people(self):
         """What ``notify_people()`` takes"""
-        data = self.cleaned_data
-        if data["notify"] == self.CHOSEN:
-            return list(data["people"])
-        return data["notify"]
+        return list(self.cleaned_data["also"])
 
 
 def comments_context(request, item):

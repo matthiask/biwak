@@ -477,6 +477,8 @@ class UploadOneForm(UploadSettingsForm):
     file = forms.FileField(label=_("file"))
     title = forms.CharField(label=_("name"), max_length=500, required=False)
     batch = forms.RegexField(regex=r"^[0-9a-f]{32}$")
+    # More files of the batch follow this one: its mail waits for them
+    more = forms.BooleanField(required=False)
 
 
 def keep_extension(title, name):
@@ -505,8 +507,9 @@ def _uploads(request, project, folder, form, files, *, batch):
                     creator=request.user,
                     parent=folder,
                     visible=data.get("visible", False),
-                    whom=form.whom(),
+                    also=form.also_people(),
                     batch=batch,
+                    more=data.get("more", False),
                 )
             )
         except attachments.UploadError as exc:

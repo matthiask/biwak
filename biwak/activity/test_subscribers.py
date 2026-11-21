@@ -241,7 +241,7 @@ class ToldTest(SubscribersTestCase):
     def test_mail(self):
         self.share(self.bob, self.cleo)
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         self.assertEqual(
             {m.to[0] for m in mail.outbox}, {self.bob.email, self.cleo.email}
         )
@@ -259,7 +259,7 @@ class ToldTest(SubscribersTestCase):
         self.bob.save()
         self.share(self.bob)
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         self.assertEqual(mail.outbox, [])
         # The lantern has it anyway
         self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)

@@ -224,7 +224,7 @@ class SettingsForm(Form):
         choices=MailDelivery.choices,
         widget=forms.RadioSelect,
         help_text=_(
-            "A mail about an item comes two minutes after its last change;"
+            "A mail about an item comes ten minutes after its last change;"
             " the digest at 07:00 with what happened the day before. What"
             " you read in the lantern before isn't mailed."
         ),
@@ -543,11 +543,10 @@ def lantern_open(request, pk):
     notification = lantern_module.notifications_for(request.user).filter(pk=pk).first()
     if notification is None:
         raise Http404
-    if batch := notification.event.data.get("batch"):
-        # The entry stands for the files uploaded together
-        lantern_module.read(request.user, items=lantern_module.batch_items(batch))
-    else:
-        lantern_module.read(request.user, item=notification.event.item)
+    # The entry stands for its item, or the files uploaded together
+    lantern_module.read(
+        request.user, items=lantern_module.entry_items(request.user, notification)
+    )
     if request.headers.get("HX-Request"):
         return HttpResponse(status=204)
     return redirect(lantern_module.anchor(notification))

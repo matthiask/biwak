@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
-from biwak.activity import mails as mails_module, mentions
+from biwak.activity import lantern, mails as mails_module, mentions
 from biwak.activity.mails import send_mails, unsubscribe_token
 from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.activity.operations import record, subscribe
@@ -28,7 +28,7 @@ ZURICH = zoneinfo.ZoneInfo("Europe/Zurich")
 @override_settings(
     BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
 )
-class MailsTest(TestCase):
+class MailsBase(TestCase):
     def setUp(self):
         self.ada = person("Ada")
         self.bob = person("Bob")
@@ -56,7 +56,11 @@ class MailsTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             return send_mails(now=now)
 
-    def test_merged_after_two_minutes(self):
+
+class MailsTest(MailsBase):
+    def test_merged_after_ten_minutes(self):
+        """Mails wait 10 minutes after the newest change (decided
+        2026-11-21: urgent things get a call; the lantern is immediate)"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
         self.act(
             lambda: ops.add_comment(
@@ -66,8 +70,9 @@ class MailsTest(TestCase):
             )
         )
         now = timezone.now()
-        self.assertEqual(self.send(now + dt.timedelta(minutes=1)), 0)
-        self.assertEqual(self.send(now + dt.timedelta(minutes=3)), 2)
+        self.assertEqual(self.send(now + dt.timedelta(minutes=9)), 0)
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+        self.assertEqual(self.send(now + dt.timedelta(minutes=11)), 2)
         # Ada gets Cleo's comment, Bob both in one mail
         self.assertEqual(len(mail.outbox), 2)
         message = next(m for m in mail.outbox if m.to == [self.bob.email])
@@ -94,14 +99,14 @@ class MailsTest(TestCase):
         self.assertEqual(message.extra_headers["Auto-Submitted"], "auto-generated")
         self.assertFalse(Notification.objects.filter(sent_at__isnull=True).exists())
         # Nothing twice
-        self.assertEqual(self.send(now + dt.timedelta(minutes=10)), 0)
+        self.assertEqual(self.send(now + dt.timedelta(minutes=20)), 0)
 
     def test_newest_change_delays(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
         Notification.objects.update(created_at=timezone.now() - dt.timedelta(minutes=5))
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Two"))
         self.assertEqual(self.send(timezone.now()), 0)
-        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 1)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 1)
         self.assertIn("One", mail.outbox[0].body)
         self.assertIn("Two", mail.outbox[0].body)
 
@@ -110,7 +115,7 @@ class MailsTest(TestCase):
         subscribe(self.cleo, self.todo)
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         self.assertEqual([m.to for m in mail.outbox], [[self.bob.email]])
         self.assertFalse(Notification.objects.filter(user=self.cleo).exists())
         self.assertNotIn("Clients can see this", mail.outbox[0].body)
@@ -134,7 +139,7 @@ class MailsTest(TestCase):
                 user=self.cleo, event__action=Action.COMMENTED
             ).exists()
         )
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         self.assertFalse([
             m for m in mail.outbox if "Secret" in m.body and self.cleo.email in m.to
         ])
@@ -156,7 +161,7 @@ class MailsTest(TestCase):
             self.cleo.mail_delivery = delivery
             self.cleo.save()
             Notification.objects.create(user=self.cleo, event=event)
-            self.send(timezone.now() + dt.timedelta(days=1, minutes=3))
+            self.send(timezone.now() + dt.timedelta(days=1, minutes=11))
             self.assertFalse([
                 m for m in mail.outbox if "Secret" in m.body and self.cleo.email in m.to
             ])
@@ -170,7 +175,7 @@ class MailsTest(TestCase):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         self.bob.notification_level = NotificationLevel.NOTHING
         self.bob.save()
-        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 1)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 1)
 
     def test_deactivated_before_sending(self):
         """Inactive people get nothing; their notifications are deleted"""
@@ -178,7 +183,7 @@ class MailsTest(TestCase):
         self.assertTrue(Notification.objects.filter(user=self.bob).exists())
         self.bob.is_active = False
         self.bob.save()
-        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 0)
         self.assertEqual(mail.outbox, [])
         self.assertFalse(Notification.objects.filter(user=self.bob).exists())
 
@@ -186,7 +191,7 @@ class MailsTest(TestCase):
         """The outbox has the mail (specs/mail-sending.md): the notifications
         are sent, the mail goes out with a later try"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
-        later = timezone.now() + dt.timedelta(minutes=3)
+        later = timezone.now() + dt.timedelta(minutes=11)
         with (
             patch.object(
                 mail.mailers.default.__class__, "send_messages", side_effect=OSError
@@ -204,7 +209,7 @@ class MailsTest(TestCase):
     def test_failed_building_retries(self):
         """A mail which can't be built leaves its notifications unsent"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
-        later = timezone.now() + dt.timedelta(minutes=3)
+        later = timezone.now() + dt.timedelta(minutes=11)
         with (
             patch.object(mails_module, "item_mail", side_effect=ValueError),
             self.assertLogs("biwak.activity.mails", "ERROR"),
@@ -219,7 +224,7 @@ class MailsTest(TestCase):
         both or neither (no mail lost to a crash in between)"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         with self.captureOnCommitCallbacks() as callbacks:
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         (row,) = OutgoingMail.objects.all()
         self.assertEqual(row.kind, "notification")
         self.assertEqual(row.recipients, [self.bob.email])
@@ -292,7 +297,7 @@ class MailsTest(TestCase):
     def test_sent_after_the_commit(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         with self.captureOnCommitCallbacks() as callbacks:
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
             self.assertEqual(mail.outbox, [])
         self.assertEqual(len(callbacks), 1)
         callbacks[0]()
@@ -304,7 +309,7 @@ class MailsTest(TestCase):
                 self.todo, author=self.ada, content="- [x] Poles\n- [ ] Pegs"
             )
         )
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         message = next(m for m in mail.outbox if m.to == [self.bob.email])
         self.assertIn("- \u2611 Poles", message.body)
         self.assertIn("- \u2610 Pegs", message.body)
@@ -329,7 +334,7 @@ class MailsTest(TestCase):
                 content=f"See [the table](attachment:{salaries.key})",
             )
         )
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         cleo = next(m for m in mail.outbox if m.to == [self.cleo.email])
         for text in [cleo.body, cleo.alternatives[0].content]:
             self.assertIn("See attachment", text)
@@ -361,7 +366,7 @@ class MailsTest(TestCase):
                 content=f"The [plan](attachment:{attachment.key})",
             )
         )
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         by = {m.to[0]: m for m in mail.outbox}
         url = f"https://biwak.example.org{attachment.get_absolute_url()}"
         bob, cleo = by[self.bob.email], by[self.cleo.email]
@@ -378,7 +383,7 @@ class MailsTest(TestCase):
             project=self.project, title="Plans", creator=self.ada, visible=True
         )
         self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         by = {m.to[0]: m for m in mail.outbox}
         for user in [self.bob, self.cleo]:
             self.assertIn("Ada Example moved it to Plans.", by[user.email].body)
@@ -391,7 +396,7 @@ class MailsTest(TestCase):
         self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
         ops.set_visibility(plans, visible=False, actor=self.ada)
         Item.objects.filter(pk=self.todo.pk).update(is_client_visible=True)
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         by = {m.to[0]: m for m in mail.outbox}
         self.assertIn("moved it to Plans.", by[self.bob.email].body)
         self.assertIn("Ada Example moved it.", by[self.cleo.email].body)
@@ -407,7 +412,7 @@ class MailsTest(TestCase):
                 self.todo, todolist=self.shared, group=None, actor=self.ada
             )
         )
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         for message in mail.outbox:
             self.assertIn("Ada Example moved it out of its group.", message.body)
 
@@ -416,7 +421,7 @@ class MailsTest(TestCase):
             self.shared, actor=self.ada, title=f"For {mentions.syntax(self.bob)}"
         )
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         message = mail.outbox[0]
         self.assertIn("List: For @Bob", message.body)
         self.assertIn("For @Bob", message.alternatives[0].content)
@@ -424,7 +429,9 @@ class MailsTest(TestCase):
 
     def test_command(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
-        Notification.objects.update(created_at=timezone.now() - dt.timedelta(minutes=3))
+        Notification.objects.update(
+            created_at=timezone.now() - dt.timedelta(minutes=11)
+        )
         with self.captureOnCommitCallbacks(execute=True):
             call_command("send_mails", verbosity=0)
         self.assertEqual(len(mail.outbox), 1)
@@ -443,7 +450,7 @@ class MailsTest(TestCase):
                 raise RuntimeError("Broken")
             return real(user, item, notifications)
 
-        later = timezone.now() + dt.timedelta(minutes=3)
+        later = timezone.now() + dt.timedelta(minutes=11)
         with (
             patch.object(mails_module, "item_mail", failing),
             self.assertLogs("biwak.activity.mails", "ERROR"),
@@ -461,7 +468,7 @@ class MailsTest(TestCase):
         comment = ops.add_comment(self.todo, author=self.bob, content="Hi")
         self.act(lambda: add_reaction(self.ada, "👍", comment=comment))
         comment.delete()
-        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 0)
         self.assertEqual(mail.outbox, [])
         self.assertFalse(Notification.objects.filter(user=self.bob).exists())
 
@@ -505,7 +512,7 @@ class MailsTest(TestCase):
         self.act(
             lambda: ops.create_todo(todolist=self.shared, title="New", creator=self.ada)
         )
-        self.send(timezone.now() + dt.timedelta(minutes=3))
+        self.send(timezone.now() + dt.timedelta(minutes=11))
         message = mail.outbox[0]
         self.assertIn("Ada Example added it.", message.body)
         url = message.extra_headers["List-Unsubscribe"].strip("<>")
@@ -513,3 +520,50 @@ class MailsTest(TestCase):
         self.assertFalse(
             Subscription.objects.filter(user=self.bob, item=self.shared).exists()
         )
+
+
+class BackAndForthTest(MailsBase):
+    """Completing and reopening back and forth (decided 2026-11-21): what
+    cancels out among the unsent notifications isn't mailed; once the
+    completion went out, the reopening does too"""
+
+    def test_what_cancels_out_isnt_mailed(self):
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 0)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(user=self.bob).exists())
+
+    def test_the_net_change_is_mailed_once(self):
+        for run in [ops.complete, ops.reopen, ops.complete]:
+            self.act(lambda run=run: run(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 1)
+        (message,) = mail.outbox
+        self.assertEqual(message.body.count("completed"), 1)
+        self.assertNotIn("reopened", message.body)
+
+    def test_a_mailed_completion_is_followed_by_the_reopening(self):
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        now = timezone.now()
+        self.assertEqual(self.send(now + dt.timedelta(minutes=11)), 1)
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        self.assertEqual(self.send(now + dt.timedelta(minutes=22)), 1)
+        self.assertIn("completed", mail.outbox[0].body)
+        self.assertIn("reopened", mail.outbox[1].body)
+
+    def test_digests_too(self):
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Oops"))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        mail.outbox.clear()
+        tomorrow = timezone.localtime() + dt.timedelta(days=1)
+        self.assertEqual(self.send(tomorrow.replace(hour=8)), 1)
+        (message,) = mail.outbox
+        self.assertIn("Oops", message.body)
+        self.assertNotIn("completed", message.body)
+        self.assertNotIn("reopened", message.body)

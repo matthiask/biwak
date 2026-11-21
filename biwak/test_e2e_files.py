@@ -210,7 +210,6 @@ class UploadTest(E2ETestCase):
         rows.nth(1).get_by_role("button", name="Remove: two.txt").click()
         expect(rows).to_have_count(2)
         rows.nth(0).get_by_label("Name").fill("Kick-off")
-        dialog.get_by_label("Nobody").check()
         dialog.get_by_role("button", name="Upload").click()
         expect(page.locator(".wb-tile-file")).to_have_count(2)
         self.assertEqual(self.files_in(self.minutes), ["Kick-off.txt", "three.txt"])
@@ -221,6 +220,16 @@ class UploadTest(E2ETestCase):
             )
         }
         self.assertEqual(len(events), 1)
+        # All but the last say more follow: the mail waits for the rest
+        self.assertEqual(
+            [
+                e.data.get("more", False)
+                for e in Event.objects.filter(
+                    item__parent=self.minutes, item__kind="file", action="created"
+                ).order_by("pk")
+            ],
+            [True, False],
+        )
         self.assertEqual(self.errors, [])
 
     def test_dropping_onto_a_folder_tile_and_the_button(self):
@@ -230,7 +239,6 @@ class UploadTest(E2ETestCase):
         page.evaluate(DROP, [f'[data-tile="{self.inner.pk}"]', ["deep.txt"]])
         dialog = page.get_by_role("dialog", name="Upload files")
         expect(dialog.locator(".wb-upload-row")).to_have_count(1)
-        dialog.get_by_label("Nobody").check()
         dialog.get_by_role("button", name="Upload").click()
         expect(dialog).to_be_hidden()
         page.wait_for_load_state("networkidle")
@@ -245,16 +253,17 @@ class UploadTest(E2ETestCase):
             {"name": "b.txt", "mimeType": "text/plain", "buffer": b"B"},
         ])
         expect(dialog.locator(".wb-upload-row")).to_have_count(2)
-        dialog.get_by_label("Nobody").check()
         dialog.get_by_role("button", name="Upload").click()
         expect(page.locator(".wb-tile-file")).to_have_count(2)
         self.assertEqual(self.files_in(self.minutes), ["a.txt", "b.txt"])
         self.assertEqual(self.errors, [])
 
-    def test_only_these_people(self):
-        """ "These people" only with "Only these people", in the people
-        picker, those "Everybody" reaches preselected (decided 2026-11-21)"""
+    def test_also_tell(self):
+        """A line saying who will be told, "Also tell…" adds others, nothing
+        preselected (decided 2026-11-21: additive)"""
         dan = person("Dan")
+        dan.notification_level = "concerns_me"
+        dan.save()
         Membership.objects.create(project=self.project, user=dan)
         page = self.page
         self.goto(page, self.minutes)
@@ -263,31 +272,21 @@ class UploadTest(E2ETestCase):
         dialog.get_by_label("Files").set_input_files([
             {"name": "a.txt", "mimeType": "text/plain", "buffer": b"A"},
         ])
-        people = dialog.locator("[data-shown-when]")
-        expect(people).to_be_hidden()
-        dialog.get_by_label("Only these people").check()
-        expect(people).to_be_visible()
-        # Cleo and Dan see the visible folder; Ada posts
+        # Cleo sees the visible folder and hears of everything; Ada posts
+        expect(dialog.get_by_text("Cleo will be told.")).to_be_visible()
         pills = dialog.locator(".wb-pill")
-        expect(pills).to_have_text([
-            re.compile("Cleo"),
-            re.compile("Dan"),
-        ])
-        dialog.get_by_role("button", name="Remove Dan").click()
+        expect(pills).to_have_count(0)
         dialog.locator(".wb-picker-input").fill("da")
         dialog.locator(".wb-picker-input").press("Enter")
-        dialog.get_by_role("button", name="Remove Cleo").click()
         expect(pills).to_have_text([re.compile("Dan")])
-        dialog.get_by_label("Everybody in the project").check()
-        expect(people).to_be_hidden()
-        dialog.get_by_label("Only these people").check()
-        expect(pills).to_have_text([re.compile("Dan")])
+        # The picker's list closes on a click elsewhere
+        dialog.get_by_text("Cleo will be told.").click()
         dialog.get_by_role("button", name="Upload").click()
         expect(page.locator(".wb-tile-file")).to_have_count(1)
         upload = Item.objects.get(parent=self.minutes, kind="file")
         self.assertEqual(
             set(upload.subscriptions.values_list("user", flat=True)),
-            {self.ada.pk, dan.pk},
+            {self.ada.pk, self.cleo.pk, dan.pk},
         )
         self.assertEqual(self.errors, [])
 
@@ -305,13 +304,16 @@ class UploadTest(E2ETestCase):
             {"name": "ok.txt", "mimeType": "text/plain", "buffer": b"OK"},
             {"name": "big.txt", "mimeType": "text/plain", "buffer": b"Too big"},
         ])
-        dialog.get_by_label("Nobody").check()
         dialog.get_by_role("button", name="Upload").click()
         expect(dialog.locator(".wb-upload-row.is-failed")).to_contain_text(
             "Files can be at most"
         )
         expect(dialog.locator(".wb-upload-row.is-done")).to_have_count(1)
         self.assertEqual(self.files_in(self.minutes), ["ok.txt"])
+        # The last one sent: nothing more follows (the big one never goes)
+        self.assertNotIn(
+            "more", Event.objects.get(item__title="ok.txt", action="created").data
+        )
         # Closing shows what went up
         dialog.get_by_role("button", name="Cancel").click()
         expect(page.locator(".wb-tile-file")).to_have_count(1)
@@ -381,8 +383,9 @@ class NewDocTest(E2ETestCase):
         page.get_by_role("link", name="Done").click()
         dialog = page.get_by_role("dialog", name="Tell people about it?")
         expect(dialog).to_be_visible()
-        # Preselected: whom posting to everybody would have reached
-        expect(dialog.locator(".wb-pill")).to_have_text([re.compile("Cleo")])
+        # Who wants to hear is told; nobody preselected to add
+        expect(dialog.get_by_text("Cleo will be told.")).to_be_visible()
+        expect(dialog.locator(".wb-pill")).to_have_count(0)
         dialog.get_by_label("Note").fill("Our plan")
         dialog.get_by_role("button", name="Tell them").click()
         page.wait_for_url(f"**{draft.get_absolute_url()}")
@@ -412,5 +415,8 @@ class NewDocTest(E2ETestCase):
         dialog.get_by_role("button", name="Not now").click()
         page.wait_for_url(f"**{draft.get_absolute_url()}")
         self.assertFalse(Item.objects.get(pk=draft.pk).doc.tell_pending)
-        self.assertFalse(Event.objects.filter(action="shared").exists())
+        # Nobody else: Cleo, who wants to hear, is told anyway
+        event = Event.objects.get(action="shared")
+        self.assertEqual(event.data["people"], [self.cleo.pk])
+        self.assertNotIn("note", event.data)
         self.assertEqual(self.errors, [])
