@@ -72,7 +72,7 @@ def decorate(user, viewer, shared):
         viewer.organization_id is not None
         and user.organization_id == viewer.organization_id
     )
-    user.can_move = org_ops.can_touch(viewer, user.organization)
+    user.can_move = org_ops.can_touch(viewer, user.organization, person=user)
     # Invited, not signed in yet (specs/ui-round-6.md): for the staff who
     # resend and withdraw invitations, with who invited them and when
     user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
@@ -84,11 +84,12 @@ def groups_for(viewer):
     ``feed`` (whether the viewer may open their feed), ``show_email`` and
     ``can_move`` (the existing "Change organization" modal)"""
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
-    people = (
+    people = list(
         known_people(viewer)
         .select_related("invited_by")
         .order_by("-is_active", Lower("full_name"), "email")
     )
+    _note_partners(viewer, people)
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))
     for user in people:
         decorate(user, viewer, shared)
@@ -163,10 +164,16 @@ def invitations_for(viewer):
     """The "Invited" filter: everybody invited who hasn't signed in yet,
     the oldest invitation first (own staff, who manage members)"""
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
-    return [
-        decorate(user, viewer, shared)
-        for user in User.objects.invited().select_related("organization", "invited_by")
-    ]
+    people = list(User.objects.invited().select_related("organization", "invited_by"))
+    _note_partners(viewer, people)
+    return [decorate(user, viewer, shared) for user in people]
+
+
+def _note_partners(viewer, people):
+    """Which of their organizations are partners', one query instead of
+    one per person for ``can_move`` (staff who aren't admins)"""
+    if org_ops.can_manage(viewer) and not viewer.is_admin:
+        org_ops.note_partners([user.organization for user in people])
 
 
 def people(request):

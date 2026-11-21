@@ -60,8 +60,12 @@ the first client gets a login.
   the palette's people go by the projects shared as members, as for own
   staff (`people_visible_to()`). They don't create
   projects, add or invite people or manage organizations, whose forms
-  offer everybody (decided 2026-11-21). Moving people in or out of the
-  own organization is for admins only; leaving it drops
+  offer everybody (decided 2026-11-21). Admins manage the internal team
+  and partners, staff the clients (decided 2026-11-21): moving people in
+  or out of the own organization or a partner organization (one with
+  staff), moving staff at all, inviting into them, merging them and their
+  domains are for admins only (`org_ops.can_touch()`). Leaving the own
+  organization drops
   the subscriptions in projects one can't open anymore, and open pages
   and editors check their access again.
 - **Clients** are never covered by all-access either: they see a project only

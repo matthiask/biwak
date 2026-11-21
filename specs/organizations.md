@@ -141,11 +141,18 @@ point.
 
 ## Managing (decided 2026-11-21)
 
-All staff create, rename and merge client and partner organizations
-(recorded in the audit log); deleting only organizations without
-people; anything touching the own organization (merging
-into it, moving people in or out, marking it) only admins, since it
-decides who sees all-access projects.
+All staff create, rename and merge client organizations (recorded in
+the audit log); deleting only organizations without people; anything
+touching the own organization (merging into it, moving people in or out,
+marking it) only admins, since it decides who sees all-access projects.
+
+**Admins manage the internal team and partners, staff the clients**
+(decided by the user 2026-11-21, it was "all staff, but the own
+organization"): who belongs to a partner organization (moving people in
+or out, inviting people into it, the domain's suggestion), merging into
+or out of it and its domains are for admins too, and so is moving any
+staff member (which is how an organization becomes a partner's).
+Staff keep everything for client organizations.
 
 ## Built
 
@@ -228,6 +235,20 @@ decides who sees all-access projects.
   offering only them, preselected when there's one. Clients and
   partners see the same groups of members, without actions (clients
   without addresses, as before).
+- **Admins for partner organizations** (built 2026-11-21, see
+  "Managing"): a partner organization is one with staff that isn't the
+  own (`is_partner_organization()`, `partner_organizations()`, as on the
+  People page; no stored mark). `can_touch(user, *organizations,
+  person=)` refuses others than admins for the own and partner
+  organizations and for moving staff; it guards moving people (pages,
+  API, CLI), merging (the merge modal doesn't offer partner organizations
+  as targets to staff, nor the palette "Merge…" on them), deleting,
+  inviting (the multi-row form, the new-project rows, the API's
+  `organization_id`; the domain's suggestion of a partner organization is
+  dropped for staff, as for the own) and, through `can_change_domains()`,
+  the domains (the field disabled for staff). Conservative choice:
+  renaming a partner organization stays all staff's, like renaming the
+  own; "Change organization" shows only where it's allowed.
 - **The admin:** organizations with their people count; marking one as
   the own organization moves the mark (`mark_own()`); a person's
   organization with autocomplete.

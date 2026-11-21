@@ -93,7 +93,10 @@ archived". You only find what you may see. See [Keyboard](keyboard.md).
 person's page shows the projects you have in common and what they did.
 Clients only see members of their projects; partners see the people of
 their projects, including staff who open them without being members.
-Staff manage organizations from the People page.
+Staff manage organizations from the People page: clients' organizations
+and who belongs to them. Admins manage your own organization and
+partners' (organizations with staff): who belongs to them, inviting
+people into them, merging them and their email domains.
 
 **Inviting people:** "Invite people" on the People page, or "Invite by
 email" on a project's people page (with that project chosen), opens one
