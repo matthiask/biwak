@@ -69,8 +69,13 @@ EDIT_URLS = {
 }
 
 
-def link(label, url, shortcut=""):
-    return {"label": label, "type": "link", "url": url, "shortcut": shortcut}
+def link(label, url, shortcut="", *, exact=False):
+    """``exact``: the URL's own query, not the one remembered for the page
+    (frontend/filters.js)"""
+    action = {"label": label, "type": "link", "url": url, "shortcut": shortcut}
+    if exact:
+        action["exact"] = True
+    return action
 
 
 def modal(label, url, shortcut=""):
@@ -115,6 +120,11 @@ def everywhere(user):
         link(_("Go to projects"), reverse("projects"), "g p"),
         link(_("Go to the activity"), reverse("feed"), "g f"),
         link(_("Go to my to-dos"), reverse("todos") + "?assignee=me", "g t"),
+        link(
+            _("To-dos I assigned"),
+            reverse("todos") + "?assignee=&assigned_by=me",
+            exact=True,
+        ),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),
         link(_("Go to people"), reverse("people")),
         link(_("Settings"), reverse("settings")),

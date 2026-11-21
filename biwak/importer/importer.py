@@ -642,7 +642,8 @@ class Importer(Resolver):
             if user in current:
                 continue
             try:
-                ops.assign(item, [user], actor=actor)
+                # Basecamp doesn't say who assigned
+                ops.assign(item, [user], actor=actor, assigned_by={})
             except ValueError as exc:
                 self.problem(f"Not assigned: {exc}")
         removed = current - set(wanted)

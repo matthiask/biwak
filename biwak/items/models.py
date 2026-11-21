@@ -299,6 +299,37 @@ class Group(models.Model):
         return self.title
 
 
+class Assignment(models.Model):
+    """Somebody assigned to a to-do, and who assigned them
+    (specs/ui-round-5.md, section 4). ``assigned_by`` is empty for
+    assignments from before it was stored, imported ones and people who
+    were deleted since."""
+
+    todo = models.ForeignKey("Todo", on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("assigned by"),
+    )
+    assigned_at = models.DateTimeField(_("assigned at"), default=timezone.now)
+
+    class Meta:
+        # The table the automatic many-to-many one had
+        db_table = "items_todo_assignees"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["todo", "user"], name="items_assignment_todo_user_uniq"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} on {self.todo_id}"
+
+
 class Todo(Checklist, Detail):
     checklist_text = "notes"
     notes = models.TextField(_("notes"), blank=True)
@@ -323,6 +354,8 @@ class Todo(Checklist, Detail):
     )
     assignees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
+        through="Assignment",
+        through_fields=("todo", "user"),
         blank=True,
         related_name="assigned_todos",
         verbose_name=_("assignees"),

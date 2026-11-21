@@ -18,6 +18,7 @@ from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Item
+from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
 
@@ -326,6 +327,24 @@ class CLITest(TestCase):
         output = self.biwak("todos", "--mine").output
         self.assertIn("Mine", output)
         self.assertNotIn("Nobodys", output)
+        # Assigned by me: ops.assign() by Ada; Bob's own don't count
+        bob = person("Bob")
+        Membership.objects.create(project=self.project, user=bob)
+        ops.create_todo(
+            todolist=self.list, title="Theirs", creator=bob, assignees=[bob]
+        )
+        output = self.biwak("todos", "--assigned-by-me").output
+        self.assertIn("Mine", output)
+        self.assertNotIn("Theirs", output)
+        self.assertNotIn("Nobodys", output)
+        output = self.biwak("todos", "--assigned-by-me", "--mine").output
+        self.assertIn("Mine", output)
+        data = json.loads(self.biwak("todos", "--assigned-by-me", "--json").stdout)
+        self.assertEqual({t["title"] for t in data}, {"Mine"})
+        self.assertEqual(data[0]["assignees"][0]["assigned_by"]["id"], self.ada.pk)
+        self.assertEqual(
+            self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
+        )
         output = self.biwak("todos", "--project", other.pk).output
         self.assertIn("Elsewhere", output)
         self.assertNotIn("Mine", output)

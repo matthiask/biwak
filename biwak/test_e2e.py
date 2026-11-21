@@ -2999,6 +2999,31 @@ class FiltersTest(E2ETestCase):
         )
         self.assertEqual(self.errors, [])
 
+    def test_assigned_by_is_remembered_and_the_palette_opens_it_exactly(self):
+        page = self.page
+        self.goto(page, "/todos/")
+        page.locator("#id_assigned_by").select_option("me")
+        page.wait_for_url("**assigned_by=me*")
+        page.wait_for_function("document.activeElement.name === 'assigned_by'")
+        # The top bar's link restores it
+        self.goto(page, "/")
+        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        expect(link).to_have_attribute("href", re.compile(r"assigned_by=me"))
+        link.click()
+        page.wait_for_url("**assigned_by=me*")
+        expect(page.locator("#id_assigned_by")).to_have_value("me")
+        # The palette's "To-dos I assigned" goes to its own query, whatever
+        # is remembered for the page
+        self.goto(page, "/todos/?assignee=nobody")
+        self.goto(page, "/")
+        page.keyboard.press("Control+k")
+        page.locator("#wb-palette-input").fill("to-dos i assigned")
+        page.keyboard.press("Enter")
+        page.wait_for_url("**/todos/?assignee=&assigned_by=me")
+        expect(page.locator("#id_assigned_by")).to_have_value("me")
+        expect(page.locator("#id_assignee")).to_have_value("")
+        self.assertEqual(self.errors, [])
+
     def test_search_is_not_remembered(self):
         page = self.page
         self.goto(page, "/search/?q=Plan")

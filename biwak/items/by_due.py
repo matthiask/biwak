@@ -43,6 +43,11 @@ class FilterForm(Form):
         empty_label=_("All projects"),
     )
     assignee = forms.ChoiceField(label=_("assigned to"), required=False)
+    assigned_by = forms.ChoiceField(
+        label=_("assigned by"),
+        required=False,
+        choices=[("", _("Anybody")), ("me", _("Me"))],
+    )
     state = forms.ChoiceField(
         label=_("state"),
         required=False,
@@ -96,6 +101,7 @@ def todos_by_due(request, project=None):
         request.user,
         project=project or data.get("project"),
         assignee=data.get("assignee") or None,
+        assigned_by=data.get("assigned_by") or None,
         completed=completed,
         visible_to_clients={"yes": True, "no": False}.get(data.get("visible")),
     )
