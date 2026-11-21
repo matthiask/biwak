@@ -85,6 +85,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Form labels show with `capfirst`** in the templates, whatever case
   they're written in (2026-11-21: model `verbose_name`s are lowercase;
   one translation serves both).
+- **A field right under a heading saying the same** keeps its label for
+  screen readers, visually hidden: the comment field's "Comment" under
+  "Comments".
 - **Every `Textarea` is a Markdown field** with the toolbar
   (`data-toolbar`, `editor.md`).
 - **Destructive or revealing actions ask first:** trashing, and showing
