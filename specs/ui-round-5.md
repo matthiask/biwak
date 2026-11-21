@@ -45,6 +45,10 @@ Round 5 of `ui-feedback.md` (2026-11-21).
   project's to-dos show anybody's by default. "Nobody" is "Nobody
   active": to-dos assigned to nobody or only to deactivated people (the
   API's `assignee=nobody` too).
+- **Empty values stay out of the URL** (decided 2026-11-21, like
+  Workbench): filter forms submit without empty fields, and every
+  default is the empty choice (grouping by project too; `grouping=project`
+  and `assignee=me` in older links still work).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; section 4 touches a model and the API, so check its
