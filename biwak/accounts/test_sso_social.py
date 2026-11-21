@@ -278,14 +278,18 @@ class GoogleTest(SocialTestCase):
         self.assert_refused(request, response, "Acme Ltd signs in with Microsoft.")
 
     def test_gmail(self):
-        """Google owns the mailbox: whatever the organization allows,
-        unless it requires another provider"""
+        """Google owns the mailbox: where single sign-on is allowed or off,
+        not where it's required, also Google (decided 2026-11-21: its
+        Workspace accounts only)"""
         gus = self.client_person("Gus", self.acme, "gus@gmail.com")
         request, _response = self.sign_in("google", google_claims("gus@gmail.com"))
         self.assert_signed_in(request, gus)
-        self.set_signin(self.acme, "sso_required", "google")
+        self.set_signin(self.acme, "sso_allowed", "microsoft", TENANT)
         request, _response = self.sign_in("google", google_claims("gus@gmail.com"))
         self.assert_signed_in(request, gus)
+        self.set_signin(self.acme, "sso_required", "google")
+        request, response = self.sign_in("google", google_claims("gus@gmail.com"))
+        self.assert_refused(request, response, "Google Workspace of Acme Ltd")
         self.set_signin(self.acme, "sso_required", "microsoft", TENANT)
         request, response = self.sign_in("google", google_claims("gus@gmail.com"))
         self.assert_refused(request, response, "signs in with Microsoft")

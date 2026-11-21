@@ -498,11 +498,20 @@ def orgs_edit(org, name, domains, no_domains, as_json):
 @orgs.command("merge")
 @click.argument("org", type=int)
 @click.argument("into", type=int)
+@click.option(
+    "--confirm",
+    is_flag=True,
+    help="INTO signs in more strictly: change how ORG's people sign in (admins).",
+)
 @json_option
-def orgs_merge(org, into, as_json):
+def orgs_merge(org, into, confirm, as_json):
     """Move the people and domains of ORG into INTO and delete ORG (the
     typo case)"""
-    data = request("POST", f"organizations/{org}/merge/", json={"into_id": into})
+    data = request(
+        "POST",
+        f"organizations/{org}/merge/",
+        json={"into_id": into, "confirm": confirm},
+    )
     if as_json:
         return echo_json(data)
     click.echo("Merged into ", nl=False)

@@ -10,8 +10,9 @@ Replaces `access.md`'s "Google only for staff" (decided 2026-11-20).
 
 **Status:** built (2026-11-21), see "Built" and "Threats considered";
 Microsoft tested with made-up tokens only, not against a real tenant.
-Open: the choices under "Decided while building" (to be confirmed), a
-separate review of the claims checks and the enforcement (see "Agent").
+The choices made while building and the review's fixes confirmed
+2026-11-21. Open: a further review of the claims checks and the
+enforcement (see "Agent").
 
 **Agent:** a strong model: sign-in is security-relevant; have the
 claims checks and the enforcement reviewed.
@@ -74,10 +75,25 @@ changes for staff, codes and passkeys keep working).
     daily, usually one click while its own session lasts (decided
     2026-11-21: there's no sync with the IdP, leaving the company
     wouldn't end a session otherwise).
-- **Gmail:** people with a `gmail.com` address may use Google whatever
-  their organization's setting allows otherwise (Google owns that
-  mailbox: no weaker than a code), unless their organization requires
-  another IdP.
+- **Gmail:** people with a `gmail.com` address may use Google where
+  their organization's single sign-on is allowed or off (Google owns
+  that mailbox: no weaker than a code), not where it's required, also
+  not where Google is required: that means its Workspace accounts only
+  (decided 2026-11-21).
+- **Moving people out** of an organization requiring single sign-on
+  loosens how they sign in: admins only (decided 2026-11-21; other moves
+  as before, `org_ops.set_organization()`, the pages and the API).
+- **Merging organizations** (decided 2026-11-21, `org_ops.merge()`,
+  `merge_direction()`): staff merge organizations with the same sign-in
+  setting (level, provider and Microsoft's tenant). Towards a stricter
+  one (a higher level, or the same level with another provider or
+  tenant): admins only, after confirming a warning saying what happens to
+  the merged people (passkeys removed, codes refused, tokens cut,
+  sessions ended, calendar links deleted; on the page a box to tick, the
+  API's `confirm`, `biwak orgs merge --confirm`, CLI 0.33.0). Towards a
+  looser one: refused for everybody, change the setting first. The
+  domains move with the people without the admins-only rule for domains:
+  between the same settings they counted the same way already.
 - **Deactivated** people can't sign in by any way (as today).
 
 ## Settings page
@@ -114,11 +130,11 @@ the organization's IdP.
   tenant ID that is a UUID and not the tenant of personal accounts
   (`9188040d-…`). Switching back to codes keeps the provider for later.
 - **Decided while building (2026-11-21, the most secure reasonable
-  option, to be confirmed):**
+  option; confirmed 2026-11-21):**
   - The domains of an organization with single sign-on decide whose
     sign-ins count (Google's Workspace domains, the addresses Microsoft's
-    tenant speaks for): only admins change them (also by merging into
-    it), it keeps at least one, and single sign-on needs them.
+    tenant speaks for): only admins change them, it keeps at least one,
+    and single sign-on needs them (merging: see above).
   - *Microsoft counts only for addresses of the organization's domains*:
     Entra ID doesn't verify addresses (its administrators set `mail` and
     the user principal name, the "nOAuth" problem), so a tenant matching
@@ -227,7 +243,7 @@ the organization's IdP.
   provider connects it again), passkeys only where allowed, and for
   "required" the line "You sign in through Acme Ltd's Google Workspace…".
 - **Decided while building (2026-11-21, the most secure reasonable
-  option, to be confirmed):**
+  option; confirmed 2026-11-21):**
   - *Calendar links* (the iCal feed, `todos.md`) work without signing in
     and would outlast leaving the company like a passkey: none for people
     whose organization requires single sign-on (deleted on switching, the
@@ -241,8 +257,8 @@ the organization's IdP.
     changed is refused rather than followed by its ID.
   - *The address of somebody whose organization requires single sign-on
     is told on the login page* by sending them to the provider (the spec
-    asks for it); unknown and deactivated addresses look as before (a
-    mail, nothing said on the page).
+    asks for it, confirmed 2026-11-21); unknown and deactivated addresses
+    look as before (a mail, nothing said on the page).
 
 ## Threats considered (2026-11-21)
 
@@ -315,22 +331,20 @@ How each is handled; the tests are in `biwak/accounts/test_sso_social.py`,
   possible (also in the Django admin, and `./manage.py shell` as a last
   resort).
 - **Staff loosening the rules:** the setting and the domains of an
-  organization with single sign-on are admins only (pages, merging, the
-  API shows the setting read-only). Staff moving a person out of an
-  organization requiring single sign-on does let them use codes again:
-  people are moved by staff today, and their access to projects is the
-  members' anyway.
+  organization with single sign-on are admins only (the API shows the
+  setting read-only); moving people out of an organization requiring it
+  is admins only, merging into a stricter setting too, into a looser one
+  refused (decided 2026-11-21).
 - **Learning about addresses:** an address of an organization requiring
   single sign-on is sent to its provider with the organization's name
-  (asked for by the spec); unknown and deactivated addresses look as
-  before.
+  (asked for by the spec, confirmed 2026-11-21); unknown and deactivated
+  addresses look as before.
 - **Not handled:** there is no sign-out at the provider and no sync with
   it (the 24 hours, decided). Open websockets close at their next access
   check (at most a minute, or at once when told).
-- **Open question (asked 2026-11-21):** the Gmail exception lets a Gmail
-  address sign in with Google whatever the organization allows; with
-  addresses changed only by admins it can't be added to get around the
-  provider.
+- **Gmail where single sign-on is required:** refused, also where Google
+  is required (decided 2026-11-21); addresses are changed by admins only,
+  so none can be added to get around the provider.
 
 ## Production setup (the user's)
 

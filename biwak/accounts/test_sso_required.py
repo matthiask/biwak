@@ -382,7 +382,7 @@ class SwitchingTest(RequiredTestCase):
             "fred@example.org", is_client=True, organization=other
         )
         passkey(fred)
-        org_ops.merge(other, self.acme, actor=self.ada)
+        org_ops.merge(other, self.acme, actor=self.root, confirmed=True)
         self.assert_enforced(fred)
 
     def test_the_django_admin_setting(self):

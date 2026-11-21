@@ -161,7 +161,7 @@ def check_social(person, provider, data):
     - the provider vouches for the person's own address (Google: verified);
     - Google: the organization uses Google (allowed or required) and ``hd``
       is one of its domains, or the address is a Gmail address and the
-      organization doesn't require another provider;
+      organization doesn't require single sign-on;
     - Microsoft: the organization uses Microsoft, ``tid`` is its tenant and
       the address is of one of its domains: Entra ID doesn't verify
       addresses, its administrators set them, so a tenant speaks only for
@@ -190,7 +190,13 @@ def provider_counts(person, org, provider, data):
     if provider == "google":
         if sso == "google" and hd_matches(data.get("hd"), org):
             return
-        if is_google_mail(person.email) and not data.get("hd"):
+        if (
+            is_google_mail(person.email)
+            and not data.get("hd")
+            and not (org is not None and org.requires_sso)
+        ):
+            # Only where single sign-on is allowed or off: an organization
+            # requiring Google means its Workspace (decided 2026-11-21)
             return
         if sso == "google":
             raise Refused(

@@ -105,7 +105,7 @@ class SessionClaimsTest(RequiredTestCase):
         org_ops.set_signin(other, signin="sso_required", idp="google", actor=self.root)
         # A session of Acme's Workspace (hd acme.example)
         sign_in_with(self.client, self.cleo)
-        org_ops.set_organization(self.cleo, other, actor=self.ada)
+        org_ops.set_organization(self.cleo, other, actor=self.root)
         self.assertEqual(self.client.get("/").status_code, 302)
 
     def test_stored_sessions_of_another_tenant_end(self):

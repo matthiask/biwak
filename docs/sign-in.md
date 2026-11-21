@@ -28,8 +28,8 @@ organization's page, "Sign-in…"):
 
 A Google sign-in counts only for an account managed by the organization's
 Google Workspace (its email domains), with your address in Biwak. A
-Gmail address may always sign in with Google, unless the organization
-requires Microsoft. A Microsoft sign-in counts only for the organization's
+Gmail address may sign in with Google where the organization allows
+single sign-on or doesn't use it, not where it requires it. A Microsoft sign-in counts only for the organization's
 own tenant and addresses of its email domains. Deactivated people can't
 sign in at all.
 
@@ -70,4 +70,8 @@ Then, on the organization's page:
    provider first.
 
 While an organization signs in through single sign-on, only admins
-change its email domains.
+change its email domains. Only admins move people out of an organization
+requiring it. Staff merge organizations signing in the same way; merging
+into one signing in more strictly is for admins, who confirm what
+happens to the people moving; merging into one signing in less strictly
+isn't possible: change its sign-in first.

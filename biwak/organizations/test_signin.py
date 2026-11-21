@@ -173,7 +173,7 @@ class SignInSettingTest(TestCase):
         response = self.client.post(
             f"/organizations/{other.pk}/merge/", {"into": self.example.pk}
         )
-        self.assertContains(response, "Only admins change the domains")
+        self.assertContains(response, "only admins merge them")
         self.assertTrue(Organization.objects.filter(pk=other.pk).exists())
         # Admins do, but not to none
         self.client.force_login(self.root)

@@ -95,7 +95,7 @@ class QueriesTest(PartnerTestCase):
         org_ops.set_organization(self.pia, organization("Other Agency"), actor=root)
         self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
         # Their organization merged into the own organization
-        org_ops.merge(self.pia.organization, self.own, actor=root)
+        org_ops.merge(self.pia.organization, self.own, actor=root, confirmed=True)
         self.pia.refresh_from_db()
         self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
 

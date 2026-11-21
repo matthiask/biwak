@@ -211,8 +211,8 @@ Microsoft account (decided 2026-11-20).
   addition, or required instead. The own organization allows Google, so
   nothing changed for staff. A Google sign-in counts only with Google's
   verified address of the person and `hd` one of the organization's
-  domains (Gmail addresses always, unless the organization requires
-  another provider), a Microsoft one only with the organization's tenant
+  domains (Gmail addresses where single sign-on is allowed or off), a
+  Microsoft one only with the organization's tenant
   (`tid`); `biwak/accounts/sso.py` decides, the adapters ask it.
 - No passwords at first; add them only if somebody really needs them
   (allauth's password pages answer 404, `biwak/urls.py`).

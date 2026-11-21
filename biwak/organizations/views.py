@@ -138,6 +138,12 @@ class MergeForm(Form):
     into = forms.ModelChoiceField(
         label=gettext_lazy("Merge into"), queryset=Organization.objects.none()
     )
+    # Merging into a stricter sign-in (admins only, specs/sso.md)
+    confirm = forms.BooleanField(
+        label=gettext_lazy("Yes, change how they sign in"),
+        required=False,
+        widget=forms.HiddenInput,
+    )
 
     def __init__(self, *args, organization, user, **kwargs):
         super().__init__(*args, **kwargs)
@@ -157,8 +163,16 @@ def organization_merge(request, pk):
     target = None
     if form.is_valid():
         try:
-            target = org_ops.merge(org, form.cleaned_data["into"], actor=request.user)
+            target = org_ops.merge(
+                org,
+                form.cleaned_data["into"],
+                actor=request.user,
+                confirmed=form.cleaned_data["confirm"],
+            )
         except ValidationError as exc:
+            if getattr(exc, "code", None) == "confirm":
+                # The warning, and the box confirming it
+                form.fields["confirm"].widget = forms.CheckboxInput()
             form.add_error(None, exc)
         except PermissionError as exc:
             form.add_error(None, str(exc))
@@ -246,6 +260,8 @@ def person_organization(request, pk):
                     )
             except ValidationError as exc:
                 form.add_error("organization", exc)
+            except PermissionError as exc:
+                form.add_error("organization", str(exc))
             else:
                 messages.success(
                     request,
