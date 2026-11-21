@@ -153,9 +153,9 @@ def create_todo(
     )
     attachments.link(item, notes, actor=creator)
     event = created(item, creator)
-    mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
+    mentioned = mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
     if assignees:
-        assign(item, assignees, actor=creator)
+        assign(item, assignees, actor=creator, mentioned=(event, mentioned))
     return item
 
 
@@ -427,10 +427,16 @@ def _assignable(item, by=None):
 
 
 @transaction.atomic
-def assign(item, users, *, actor):
+def assign(item, users, *, actor, mentioned=None):
     """Adds assignees (``assignable_people()``, ``ValueError`` for anybody
     else); staff who aren't members yet become members, recorded as added
-    (decided 2026-11-21). Returns those newly assigned."""
+    (decided 2026-11-21). Returns those newly assigned.
+
+    ``mentioned``: ``(event, people)``, the event of the same change and
+    those it newly mentions (what ``mentions.update()`` returned). Those
+    both assigned and mentioned get one notification, the assignment's
+    (decided 2026-11-21): the assignment event says it mentions them, the
+    other event stops telling them (``notify.candidates()``)."""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
     allowed = _assignable(item, actor) if users else {}
@@ -444,13 +450,26 @@ def assign(item, users, *, actor):
     for user in users:
         subscribe(user, item, added_by=actor)
     if users:
+        both = set()
+        if mentioned is not None:
+            event, people = mentioned
+            both = {u.pk for u in users} & {u.pk for u in people}
+        extra = {"mentioned": sorted(both)} if both else {}
         record(
             actor=actor,
             action=Action.ASSIGNED,
             project=item.project,
             item=item,
             assignees=[u.pk for u in users],
+            **extra,
         )
+        if both:
+            left = set(event.data.get("mentioned", ())) - both
+            event.data["mentioned"] = sorted(left)
+            if not left:
+                del event.data["mentioned"]
+            event.data["assigned"] = sorted(set(event.data.get("assigned", ())) | both)
+            event.save(update_fields=["data"])
     return users
 
 
@@ -522,7 +541,7 @@ def update_todo(
         event = record(
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
-        mentions.update(
+        mentioned = mentions.update(
             item,
             f"{item.title}\n\n{todo.notes}",
             actor=actor,
@@ -531,7 +550,12 @@ def update_todo(
         )
     if assignees is not _UNCHANGED:
         new, old = set(assignees), set(todo.assignees.all())
-        assign(item, list(new - old), actor=actor)
+        assign(
+            item,
+            list(new - old),
+            actor=actor,
+            mentioned=(event, mentioned) if edited or fields else None,
+        )
         unassign(item, list(old - new), actor=actor)
     return item
 

@@ -157,7 +157,13 @@ def describe(event, user):
         case Action.REOPENED:
             text = _("%(actor)s reopened it.")
         case Action.ASSIGNED:
-            return _("%(actor)s assigned %(people)s.") % {
+            # Assigned and mentioned by the same change: one line
+            text = (
+                _("%(actor)s assigned %(people)s (and mentioned you).")
+                if user.pk in data.get("mentioned", ())
+                else _("%(actor)s assigned %(people)s.")
+            )
+            return text % {
                 "actor": actor,
                 "people": _names(data.get("assignees", ()), user, event.item),
             }

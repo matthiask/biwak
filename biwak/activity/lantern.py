@@ -68,7 +68,11 @@ def prepare(notifications, user):
     feed.add_target_lists(events, user)
     for notification in notifications:
         event = notification.event
-        notification.mentioned = user.pk in event.data.get("mentioned", ())
+        # An assignment's line says it itself ("and mentioned you")
+        notification.mentioned = (
+            user.pk in event.data.get("mentioned", ())
+            and event.action != Action.ASSIGNED
+        )
         # The mails' wording, a reaction with what it says
         notification.line = (
             _("%(actor)s reacted %(content)s")

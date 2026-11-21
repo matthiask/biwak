@@ -214,6 +214,13 @@ def candidates(event):
     ids |= set(event.data.get("mentioned", ()))
     if event.action == Action.ASSIGNED:
         ids |= set(event.data.get("assignees", ()))
+    else:
+        # Assigned and mentioned by the same change: the assignment tells
+        # them (``items.operations.assign()``)
+        # (unless mentioned again since: a merged edit)
+        ids -= set(event.data.get("assigned", ())) - set(
+            event.data.get("mentioned", ())
+        )
     ids.discard(event.actor_id)
     return User.objects.active().filter(pk__in=ids)
 

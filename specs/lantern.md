@@ -279,6 +279,16 @@ setup as `collaboration.md`).
   assignment, saying "assigned you (and mentioned you)"; the mention adds
   nothing on top of being assigned. Mentions in a later edit or a
   comment notify as usual. Basecamp sends two, which is annoying.
+  *Built:* `items.operations.assign(mentioned=(event, people))`, called by
+  `create_todo()` and `update_todo()` with what `mentions.update()`
+  returned: the assignment event gets `mentioned` for those both assigned
+  and mentioned, and the `created`/`edited` event moves them from its
+  `mentioned` to `assigned`, which `notify.candidates()` leaves out (a
+  merged edit mentioning them again still tells them). Wording in
+  `mails.describe()`: "Ada assigned you (and mentioned you)."; the lantern
+  doesn't add "You were mentioned." to it. Only the mention is
+  deduplicated: assigned-only people still get the `created` and the
+  `assigned` notifications as before.
 
 ## Questions (built the way described meanwhile)
 
