@@ -18,6 +18,11 @@ API first: everything the web interface does is possible through the API
 - Rich text accepted as Markdown, returned as HTML and Markdown.
 - Cursor pagination; filters matching the web interface's.
 - Writes create the same events and notifications as the web interface.
+- Errors (decided 2026-11-21, after the code review): `{"detail": ...}`;
+  what the schema refuses is ninja's 422 list (titles: `Title` in
+  `biwak/api_conventions.py`, stripped, 1 to 500 characters), what the
+  models refuse (`ValidationError`) a 400 from one handler in
+  `biwak/api.py`, 404 where an object's existence mustn't leak.
 - Webhooks for events (later): signed, retried, per project or
   installation.
 

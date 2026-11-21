@@ -144,6 +144,9 @@ class QuestionsAPITest(APITestCase):
             {"schedule": "FREQ=DAILY;INTERVAL=0"},
             {"schedule": "FREQ=DAILY;INTERVAL=99999999999"},
             {"schedule": "FREQ=MONTHLY;BYMONTHDAY=0"},
+            # A 500 (DataError) or an empty title
+            {"title": "x" * 501},
+            {"title": "   "},
         ]:
             response = self.post(
                 self.ada, f"projects/{self.project.pk}/checkins/", base | changes
@@ -195,6 +198,15 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(data["time_of_day"], "10:00:00")
         self.assertEqual(data["time_zone"], "Asia/Tokyo")
         self.assertEqual([p["short_name"] for p in data["people"]], ["Bob"])
+
+    def test_update_checks_the_title(self):
+        for title in ["", "   ", "x" * 501]:
+            response = self.patch(
+                self.ada, f"checkins/{self.item.pk}/", {"title": title}
+            )
+            self.assertIn(response.status_code, {400, 422}, title)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, "How are you?")
 
     def test_update_refuses_a_schedule_which_hangs(self):
         for schedule in ["FREQ=DAILY;INTERVAL=0", "FREQ=DAILY;INTERVAL=-1"]:

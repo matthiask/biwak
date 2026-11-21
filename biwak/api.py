@@ -2,6 +2,7 @@
 does. Conventions in biwak/api_conventions.py."""
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from ninja import NinjaAPI
 
 from biwak.accounts.api import router as accounts_router
@@ -26,6 +27,14 @@ api = NinjaAPI(
     docs_decorator=login_required,
     urls_namespace="api",
 )
+
+
+@api.exception_handler(ValidationError)
+def validation_error(request, exc):
+    """What the models refuse (``full_clean()``) is the request's mistake"""
+    return api.create_response(request, {"detail": " ".join(exc.messages)}, status=400)
+
+
 api.add_router("/", accounts_router)
 api.add_router("/", projects_router)
 api.add_router("/", items_router)

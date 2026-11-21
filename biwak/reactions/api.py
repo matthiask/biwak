@@ -1,10 +1,8 @@
 """Reactions (specs/reactions.md): anybody who sees the item reacts, to
 to-dos and comments; everybody removes only their own."""
 
-from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from ninja import Router, Schema, Status
-from ninja.errors import HttpError
 
 from biwak.items.api import item_for
 from biwak.items.models import Comment, Item
@@ -48,22 +46,16 @@ def _show(request, item, comment):
 
 
 def _add(request, data, item, comment):
-    try:
-        ops.add_reaction(
-            request.user, data.content, item=None if comment else item, comment=comment
-        )
-    except ValidationError as exc:
-        raise HttpError(400, " ".join(exc.messages)) from exc
+    ops.add_reaction(
+        request.user, data.content, item=None if comment else item, comment=comment
+    )
     return Status(201, _show(request, item, comment))
 
 
 def _remove(request, data, item, comment):
-    try:
-        ops.remove_reaction(
-            request.user, data.content, item=None if comment else item, comment=comment
-        )
-    except ValidationError as exc:
-        raise HttpError(400, " ".join(exc.messages)) from exc
+    ops.remove_reaction(
+        request.user, data.content, item=None if comment else item, comment=comment
+    )
     return _show(request, item, comment)
 
 

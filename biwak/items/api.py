@@ -17,6 +17,7 @@ from biwak.activity.operations import is_subscribed, subscribe, unsubscribe
 from biwak.api_conventions import (
     ItemOut,
     PersonOut,
+    Title,
     html,
     item_out,
     page_of,
@@ -94,7 +95,7 @@ def list_list(request, project_id: int, *, archived: bool = False):
 
 
 class ListIn(Schema):
-    title: str
+    title: Title
     description: str = ""
     visible_to_clients: bool = False
 
@@ -121,7 +122,7 @@ def list_detail(request, list_id: int):
 
 
 class ListPatch(Schema):
-    title: str | None = None
+    title: Title | None = None
     description: str | None = None
     view: Literal["list", "board"] | None = None
     archived: bool | None = None
@@ -138,8 +139,7 @@ def list_update(request, list_id: int, data: ListPatch):
     changes = {
         f: getattr(data, f) for f in ["title", "description", "view"] if f in given
     }
-    empty_title = "title" in changes and not changes["title"]
-    if empty_title or any(value is None for value in changes.values()):
+    if any(value is None for value in changes.values()):
         bad_request(_("Leave out what doesn't change instead of sending null."))
     if changes:
         ops.update_list(item, actor=request.user, **changes)
@@ -347,7 +347,7 @@ def _assignees(item, ids):
 
 
 class TodoIn(Schema):
-    title: str
+    title: Title
     notes: str = ""
     due_on: dt.date | None = None
     assignees: list[int] = []
@@ -457,7 +457,7 @@ def todo_detail(request, todo_id: int):
 
 
 class TodoPatch(Schema):
-    title: str | None = None
+    title: Title | None = None
     notes: str | None = None
     due_on: dt.date | None = None
     assignees: list[int] | None = None
@@ -479,7 +479,7 @@ def todo_update(request, todo_id: int, data: TodoPatch):
         for field in ["title", "notes", "due_on"]
         if field in given
     }
-    if changes.get("title", "x") in {None, ""}:
+    if "title" in changes and changes["title"] is None:
         bad_request(_("The title can't be empty."))
     if "notes" in changes and changes["notes"] is None:
         changes["notes"] = ""

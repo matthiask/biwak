@@ -121,15 +121,12 @@ def project_create(request, data: ProjectIn):
     """Creates the project (staff); the creator becomes a member"""
     if not project_ops.can_manage_project(request.user):
         raise HttpError(403, _("Only staff can create projects."))
-    try:
-        project = project_ops.create_project(
-            name=data.name,
-            description=data.description,
-            is_all_access=data.is_all_access,
-            actor=request.user,
-        )
-    except ValidationError as exc:
-        raise HttpError(400, " ".join(exc.messages)) from exc
+    project = project_ops.create_project(
+        name=data.name,
+        description=data.description,
+        is_all_access=data.is_all_access,
+        actor=request.user,
+    )
     return Status(201, project_out(project, request.user))
 
 
@@ -291,7 +288,7 @@ def project_update(request, project_id: int, data: ProjectPatch):
         value = getattr(data, field)
         if value is None or (field == "name" and not value.strip()):
             raise HttpError(400, _("%(field)s can't be empty.") % {"field": field})
-        setattr(project, field, value)
+        setattr(project, field, value.strip() if field == "name" else value)
     if fields:
         project.full_clean()
         project.save(update_fields=fields)

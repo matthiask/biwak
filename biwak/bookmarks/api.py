@@ -3,7 +3,6 @@ bookmarks what they see."""
 
 import datetime as dt
 
-from django.core.exceptions import ValidationError
 from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -145,17 +144,14 @@ class LinkIn(Schema):
 
 def _create(request, data, *, project, item=None):
     _staff_only(request)
-    try:
-        link = ops.add_link(
-            project=project,
-            item=item,
-            url=data.url,
-            title=data.title,
-            visible=data.visible_to_clients,
-            created_by=request.user,
-        )
-    except ValidationError as exc:
-        raise HttpError(400, " ".join(exc.messages)) from exc
+    link = ops.add_link(
+        project=project,
+        item=item,
+        url=data.url,
+        title=data.title,
+        visible=data.visible_to_clients,
+        created_by=request.user,
+    )
     return Status(201, link_out(link))
 
 
@@ -184,12 +180,9 @@ class LinkPatch(Schema):
 def link_update(request, link_id: int, data: LinkPatch):
     link = _link_for(request, link_id)
     _staff_only(request)
-    try:
-        ops.update_link(
-            link, url=data.url, title=data.title, visible=data.visible_to_clients
-        )
-    except ValidationError as exc:
-        raise HttpError(400, " ".join(exc.messages)) from exc
+    ops.update_link(
+        link, url=data.url, title=data.title, visible=data.visible_to_clients
+    )
     return link_out(link)
 
 

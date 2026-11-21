@@ -9,16 +9,25 @@
   pagination (``?cursor=``, ``next`` and ``previous`` in the response);
   short ones (projects, a list's open to-dos) are returned complete.
 - URLs are absolute, pointing at the web interface.
-- Errors are ``{"detail": "..."}``, validation errors ninja's list.
+- Errors are ``{"detail": "..."}``, validation errors ninja's list (422);
+  the model's ``ValidationError`` is a 400 (``biwak/api.py``).
 """
 
 import datetime as dt
+from typing import Annotated
 
 from django.conf import settings
 from ninja import Schema
 from ninja.pagination import CursorPagination
+from pydantic import StringConstraints
 
 from biwak.templatetags.biwak import render_markdown
+
+
+# The title of an item: stripped, not empty, as long as ``Item.title`` allows
+Title = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
+]
 
 
 def absolute(url):

@@ -187,6 +187,26 @@ class APITest(TestCase):
             ["Visible"],
         )
 
+    def test_titles_are_checked(self):
+        """Empty and long titles reached the model's full_clean(): a 500"""
+        headers = self.api(self.ada)
+        targets = [
+            ("post", f"lists/{self.shared.pk}/todos/"),
+            ("patch", f"todos/{self.todo.pk}/"),
+            ("post", f"projects/{self.project.pk}/lists/"),
+            ("patch", f"lists/{self.shared.pk}/"),
+        ]
+        for method, path in targets:
+            for title in ["", "   ", "x" * 501]:
+                with self.subTest(path=path, title=title):
+                    response = self.send(method, path, headers, {"title": title})
+                    self.assertEqual(response.status_code, 422)
+        self.assertEqual(Item.objects.count(), 4)
+        response = self.send(
+            "post", f"lists/{self.shared.pk}/todos/", headers, {"title": " Tea "}
+        )
+        self.assertEqual(response.json()["title"], "Tea")
+
     def test_comments_paginate(self):
         headers = self.api(self.ada)
         for n in range(3):
