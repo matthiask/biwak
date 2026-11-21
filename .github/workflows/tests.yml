@@ -56,9 +56,8 @@ jobs:
           uv run coverage run ./manage.py test -v2 --exclude-tag e2e
           uv run coverage report -m
 
-  # The browser tests (Playwright), only once the fast tests passed
+  # The browser tests (Playwright), next to the Django tests
   e2e:
-    needs: tests
     runs-on: ubuntu-latest
 
     services:
