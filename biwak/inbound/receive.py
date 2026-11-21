@@ -163,7 +163,7 @@ def _post(message, mail, token):
             skipped.append(attachment.name)
             continue
         files.append(attachment)
-    if not text and not files:
+    if not text and not files and not skipped:
         return InboundStatus.EMPTY
 
     set_user_name(user)
@@ -175,11 +175,18 @@ def _post(message, mail, token):
         )
         for attachment in files
     ]
+    with translation.override(user.language or settings.LANGUAGE_CODE):
+        too_large = [
+            _("An attachment was too large and is not included: %(name)s")
+            % {"name": name}
+            for name in skipped
+        ]
     content = "\n\n".join(
         part
         for part in [
             mentions.resolve(item, text, author=user),
             "\n".join(upload.markdown for upload in uploaded),
+            "\n".join(too_large),
         ]
         if part
     )

@@ -136,7 +136,13 @@ class MailClientsTest(ReceiveMixin, ReplyTestCase):
             message = self.receive(sample("apple_mail_en.eml", self.token()))
         self.assertEqual(message.status, InboundStatus.POSTED)
         self.assertFalse(Attachment.objects.exists())
-        self.assertEqual(message.comment.content, "Here’s the brief with the new copy.")
+        # The comment says so; no mail goes back
+        self.assertEqual(
+            message.comment.content,
+            "Here’s the brief with the new copy.\n\n"
+            "An attachment was too large and is not included: Brief v2.pdf",
+        )
+        self.assertEqual(mail.outbox, [])
         self.assertIn("Brief v2.pdf", message.error)
 
     def test_only_quotes_posts_nothing(self):
