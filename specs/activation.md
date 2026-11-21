@@ -59,9 +59,11 @@ to both.
   `invited_at`, set by `invite()`) and has never signed in
   (`User.objects.invited()`). Marked "Invited, not signed in yet" with
   who and when on the project's people page, `/people/` and the person's
-  page; `/people/?invited=1` lists them oldest first. The mark, Resend
-  and Withdraw are for own staff only (clients and partners don't learn
-  who invited whom).
+  page; `/people/?invited=1` lists them oldest first. The mark is for own
+  staff only (clients and partners don't learn who invited whom); Resend
+  and Withdraw follow the split above (`can_manage_invitation()`: staff
+  for clients, admins for everybody, decided 2026-11-21 after a review),
+  on the pages, the API and the CLI.
 - **Resend** sends the mail again from the person resending, naming the
   projects they're in now (not archived); "Sent again."; no limit
   (decided 2026-11-21); `invited_by` and `invited_at` stay.
@@ -70,7 +72,12 @@ to both.
   (recorded as "removed", the "added" events stay); the account goes when
   they're in no other project and nothing refers to it (comments, items,
   events, files, links, assignments, check-ins asking them, mentions,
-  reactions). The question says which of the two happens.
+  reactions). When something refers to it, the account stays
+  deactivated (decided 2026-11-21: through `activation.deactivate()`, so
+  sessions, API tokens and calendar links go too). While they're in
+  projects the withdrawing person can't open, the account stays as it is,
+  invited to those. The question says which happens; the API answers
+  `deleted` and `deactivated`.
 
 ## Activating
 

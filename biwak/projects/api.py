@@ -461,10 +461,13 @@ def invitation_out(user):
 def invitation_for(request, person_id):
     if not project_ops.can_manage_members(request.user):
         raise HttpError(403, _("Only staff manage invitations."))
-    return get_object_or_404(
+    user = get_object_or_404(
         User.objects.invited().select_related("organization", "invited_by"),
         pk=person_id,
     )
+    if not project_ops.can_manage_invitation(request.user, user):
+        raise HttpError(403, _("Only admins manage invitations of staff."))
+    return user
 
 
 @router.get("invitations/", response=list[InvitationOut])
@@ -493,12 +496,17 @@ class WithdrawnOut(Schema):
     removed_from: list[int]
     # The account went too: nothing else referred to it
     deleted: bool
+    # The account stays deactivated: something referred to it
+    deactivated: bool
 
 
 @router.delete("invitations/{person_id}/", response=WithdrawnOut)
 def invitation_withdraw(request, person_id: int):
     """Withdraws the invitation while the person hasn't signed in"""
     user = invitation_for(request, person_id)
-    projects, _delete = project_ops.withdrawal(user, actor=request.user)
-    deleted = project_ops.withdraw_invitation(user, actor=request.user)
-    return {"removed_from": [p.pk for p in projects], "deleted": deleted}
+    withdrawn = project_ops.withdraw_invitation(user, actor=request.user)
+    return {
+        "removed_from": [p.pk for p in withdrawn.projects],
+        "deleted": withdrawn.deleted,
+        "deactivated": withdrawn.deactivated,
+    }

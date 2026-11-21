@@ -83,6 +83,8 @@ def decorate(user, viewer, shared):
     # Invited, not signed in yet (specs/activation.md, "Invitations"): for the staff who
     # resend and withdraw invitations, with who invited them and when
     user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
+    # Resend and Withdraw: staff for clients, admins for everybody
+    user.manage_invitation = project_ops.can_manage_invitation(viewer, user)
     # Activating and deactivating (specs/activation.md)
     user.can_activate = not user.is_active and activation.can_change(viewer, user)
     user.can_deactivate = user.is_active and activation.can_deactivate(viewer, user)

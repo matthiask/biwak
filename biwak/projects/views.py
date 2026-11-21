@@ -340,6 +340,9 @@ def project_people(request, pk):
     )
     for m in memberships:
         m.user.show_invitation = can_manage and m.user.is_invited
+        m.user.manage_invitation = project_ops.can_manage_invitation(
+            request.user, m.user
+        )
     rows = [(m, notify_row(request.user, project, m.user)) for m in memberships]
     return render(
         request,

@@ -438,7 +438,7 @@ class InvitationsVisibleTest(TestCase):
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
         url = reverse("invitation_withdraw", args=[self.dora.pk])
         self.client.force_login(self.bob)
-        self.assertContains(self.client.get(url), "the account stays")
+        self.assertContains(self.client.get(url), "the account is deactivated")
         response = self.client.post(url, {"next": "/people/"})
         self.assertRedirects(response, "/people/")
         self.dora.refresh_from_db()
@@ -467,6 +467,74 @@ class InvitationsVisibleTest(TestCase):
         self.dora.save()
         self.assertEqual(self.client.post(url).status_code, 404)
         self.assertTrue(self.website.is_member(self.dora))
+
+    def test_staff_manage_clients_invitations_admins_everybodys(self):
+        """The split of activation.can_change() (specs/activation.md)"""
+        root = person("Root", is_admin=True)
+        with self.captureOnCommitCallbacks(execute=True):
+            [fay] = [
+                i.user
+                for i in project_ops.invite_people(
+                    [self.website],
+                    [row("fay@example.org", is_client=False)],
+                    actor=root,
+                )
+            ]
+        resend = reverse("invitation_resend", args=[fay.pk])
+        withdraw = reverse("invitation_withdraw", args=[fay.pk])
+        self.client.force_login(self.bob)
+        # Marked, without the buttons
+        response = self.client.get(reverse("person", args=[fay.pk]))
+        self.assertContains(response, "Invited, not signed in yet")
+        self.assertNotContains(response, resend)
+        self.assertNotContains(response, withdraw)
+        self.assertContains(
+            self.client.get(reverse("person", args=[self.dora.pk])),
+            reverse("invitation_resend", args=[self.dora.pk]),
+        )
+        self.assertEqual(self.client.post(resend).status_code, 403)
+        self.assertEqual(self.client.get(withdraw).status_code, 403)
+        self.assertEqual(self.client.post(withdraw).status_code, 403)
+        with self.assertRaises(PermissionError):
+            project_ops.withdraw_invitation(fay, actor=self.bob)
+        with self.assertRaises(PermissionError):
+            project_ops.resend_invitation(fay, actor=self.bob)
+        self.assertTrue(self.website.is_member(fay))
+        # Admins may
+        self.client.force_login(root)
+        self.assertContains(self.client.get(reverse("person", args=[fay.pk])), withdraw)
+        self.client.post(withdraw)
+        self.assertFalse(User.objects.filter(pk=fay.pk).exists())
+
+    def test_a_kept_account_is_deactivated(self):
+        """Decided 2026-11-21: withdrawing an invitation whose account stays
+        (something refers to it) deactivates it, ending its sessions, tokens
+        and calendar links like deactivating does"""
+        from biwak.accounts.models import CalendarToken
+
+        todolist = ops.create_list(
+            project=self.website, title="Launch", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
+        ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        APIToken.create_for(user=self.dora, title="T", access="write")
+        CalendarToken.objects.create(user=self.dora)
+        url = reverse("invitation_withdraw", args=[self.dora.pk])
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(url), "deactivated")
+        self.client.post(url)
+        self.dora.refresh_from_db()
+        self.assertFalse(self.dora.is_active)
+        self.assertFalse(APIToken.objects.filter(user=self.dora).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.dora).exists())
+
+    def test_still_in_other_projects_stays_active(self):
+        """The invitation stays for the projects the actor can't open"""
+        project("Secret", all_access=False, members=[self.dora])
+        self.client.force_login(self.bob)
+        self.client.post(reverse("invitation_withdraw", args=[self.dora.pk]))
+        self.dora.refresh_from_db()
+        self.assertTrue(self.dora.is_active)
 
 
 class APITest(TestCase):
@@ -590,6 +658,29 @@ class APITest(TestCase):
                 self.assertEqual(response.status_code, 403, (user, method, path))
         self.assertTrue(User.objects.filter(pk=dora.pk).exists())
 
+    def test_staff_only_for_clients_invitations(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            fay, _created = project_ops.invite(
+                self.website, email="fay@example.org", is_client=False, actor=self.root
+            )
+        self.assertEqual(
+            self.call(self.ada, "post", f"invitations/{fay.pk}/resend/").status_code,
+            403,
+        )
+        self.assertEqual(
+            self.call(self.ada, "delete", f"invitations/{fay.pk}/").status_code, 403
+        )
+        self.assertTrue(User.objects.filter(pk=fay.pk).exists())
+        # A kept account is deactivated
+        ops.create_list(project=self.website, title="Launch", creator=fay, visible=True)
+        response = self.call(self.root, "delete", f"invitations/{fay.pk}/")
+        self.assertEqual(
+            response.json(),
+            {"removed_from": [self.website.pk], "deleted": False, "deactivated": True},
+        )
+        fay.refresh_from_db()
+        self.assertFalse(fay.is_active)
+
     def test_list_resend_withdraw(self):
         with self.captureOnCommitCallbacks(execute=True):
             dora, _created = project_ops.invite(
@@ -606,7 +697,8 @@ class APITest(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         response = self.call(self.root, "delete", f"invitations/{dora.pk}/")
         self.assertEqual(
-            response.json(), {"removed_from": [self.website.pk], "deleted": True}
+            response.json(),
+            {"removed_from": [self.website.pk], "deleted": True, "deactivated": False},
         )
         self.assertFalse(User.objects.filter(pk=dora.pk).exists())
         self.assertEqual(

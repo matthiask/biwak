@@ -169,11 +169,14 @@ def member_invite(request, pk):
 
 
 def invitation_for(request, pk):
-    """An invitation the person may manage, else 404 (for people who can't
-    know about it) or 403"""
+    """An invitation the person may manage, else 404 (for people who aren't
+    invitations) or 403 (clients, partners, staff for staff's)"""
     if not project_ops.can_manage_members(request.user):
         raise PermissionDenied
-    return get_object_or_404(User.objects.invited(), pk=pk)
+    user = get_object_or_404(User.objects.invited(), pk=pk)
+    if not project_ops.can_manage_invitation(request.user, user):
+        raise PermissionDenied
+    return user
 
 
 def back(request, user):
@@ -191,28 +194,33 @@ def invitation_resend(request, pk):
 def invitation_withdraw(request, pk):
     """The question, then withdrawing: a modal, also a page"""
     user = invitation_for(request, pk)
-    projects, delete = project_ops.withdrawal(user, actor=request.user)
+    withdrawn = project_ops.withdrawal(user, actor=request.user)
     if request.method == "POST":
-        deleted = project_ops.withdraw_invitation(user, actor=request.user)
+        withdrawn = project_ops.withdraw_invitation(user, actor=request.user)
         messages.success(
             request,
             _("The invitation of %(name)s has been withdrawn.")
             % {"name": user.display_name},
         )
-        if deleted:
+        if withdrawn.deleted:
             return redirect(reverse("people") + "?invited=1")
         return redirect(back(request, user))
-    names = ", ".join(project.name for project in projects)
-    if delete:
+    names = ", ".join(project.name for project in withdrawn.projects)
+    if withdrawn.deleted:
         intro = _(
             "%(name)s is removed from %(projects)s and the account is deleted:"
             " nothing else refers to it."
         )
+    elif withdrawn.deactivated:
+        intro = _(
+            "%(name)s is removed from %(projects)s and the account is"
+            " deactivated: it stays, since something else refers to it"
+            " (comments, assignments)."
+        )
     else:
         intro = _(
-            "%(name)s is removed from %(projects)s only: the account stays,"
-            " since something else refers to it (other projects, comments,"
-            " assignments)."
+            "%(name)s is removed from %(projects)s only: the account stays"
+            " invited to other projects."
         )
     return form_response(
         request,
