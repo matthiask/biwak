@@ -120,7 +120,7 @@ class RowsTest(Fixture):
         urls = [
             self.shared.get_absolute_url(),
             self.shared.get_absolute_url() + "?view=board",
-            "/todos/",
+            "/todos/?assignee=anybody",
             f"/projects/{self.project.pk}/todos/",
         ]
         before = {url: self.count_queries(url) for url in urls}
@@ -149,7 +149,7 @@ class RowsTest(Fixture):
         self.todo.todo.due_on = dt.date(2026, 1, 1)
         self.todo.todo.save()
         ops.add_comment(self.todo, author=self.ada, content="Hi")
-        response = self.client.get("/todos/")
+        response = self.client.get("/todos/?assignee=anybody")
         self.assertContains(response, 'title="1 comment"')
         self.assertContains(response, f"/todos/{self.todo.pk}/peek/")
 

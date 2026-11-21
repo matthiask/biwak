@@ -48,7 +48,7 @@ class DueBadgeTest(Base):
         yield self.todolist.get_absolute_url()
         yield self.todolist.get_absolute_url() + "?view=board"
         yield item.get_absolute_url()
-        yield reverse("todos")
+        yield reverse("todos") + "?assignee=anybody"
         yield reverse("project_todos", args=[self.project.pk])
 
     def assert_badge(self, item, expected):
