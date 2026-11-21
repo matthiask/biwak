@@ -232,6 +232,11 @@ Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
   can't see the item any more and people whose level is now "nothing"
   get nothing, and those notifications are deleted. A mail that fails to
   send leaves its notifications unsent for the next run.
+- A mail that fails to be built is logged and its notifications stay
+  unsent; the other mails, the digests and the check-ins go out anyway
+  (each part of `send_mails` on its own, like each task of
+  `fairy_tasks`; 2026-11-21). Nothing left to say (reactions to a
+  comment deleted since): no mail, the notifications are deleted.
 - Clients aren't told where an item moved ("Ada moved it."), like the
   feed: the name may be internal.
 - Attachments are links with `BASE_URL` in the HTML part and their

@@ -9,12 +9,13 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
-from biwak.activity import mentions
+from biwak.activity import mails as mails_module, mentions
 from biwak.activity.mails import send_mails, unsubscribe_token
 from biwak.activity.models import Action, Notification, Subscription
 from biwak.activity.operations import record, subscribe
 from biwak.files import attachments
 from biwak.items import operations as ops
+from biwak.reactions.operations import add_reaction
 from biwak.test_utils import person, project
 
 
@@ -246,6 +247,54 @@ class MailsTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             call_command("send_mails", verbosity=0)
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_one_failing_mail_stops_nobody_else(self):
+        """Logged, its notifications stay unsent for the next run"""
+        carl = person("Carl")
+        other = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
+        subscribe(carl, other)
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
+        self.act(lambda: ops.add_comment(other, author=self.ada, content="Two"))
+        real = mails_module.item_mail
+
+        def failing(user, item, notifications):
+            if user == self.bob:
+                raise RuntimeError("Broken")
+            return real(user, item, notifications)
+
+        later = timezone.now() + dt.timedelta(minutes=3)
+        with (
+            patch.object(mails_module, "item_mail", failing),
+            self.assertLogs("biwak.activity.mails", "ERROR"),
+        ):
+            self.assertEqual(self.send(later), 1)
+        self.assertEqual([m.to for m in mail.outbox], [[carl.email]])
+        self.assertTrue(
+            Notification.objects.filter(user=self.bob, sent_at=None).exists()
+        )
+        self.assertEqual(self.send(later), 1)
+        self.assertEqual(mail.outbox[1].to, [self.bob.email])
+
+    def test_nothing_left_to_say(self):
+        """Reactions to a comment deleted since: no mail, nothing breaks"""
+        comment = ops.add_comment(self.todo, author=self.bob, content="Hi")
+        self.act(lambda: add_reaction(self.ada, "👍", comment=comment))
+        comment.delete()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(user=self.bob).exists())
+
+    def test_command_runs_check_ins_when_mails_fail(self):
+        with (
+            patch(
+                "biwak.activity.management.commands.send_mails.send_mails",
+                side_effect=RuntimeError,
+            ),
+            patch("biwak.checkins.operations.run") as run,
+            self.assertLogs("biwak.activity.management.commands.send_mails", "ERROR"),
+        ):
+            call_command("send_mails", verbosity=0)
+        run.assert_called_once()
 
     def test_unsubscribe(self):
         url = f"/unsubscribe/{unsubscribe_token(self.bob, self.todo)}/"

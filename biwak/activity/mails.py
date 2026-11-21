@@ -286,8 +286,11 @@ def _claim(pks, now):
 
 
 def item_mail(user, item, notifications):
-    """One mail about one item, threaded per item"""
+    """One mail about one item, threaded per item; None when there's nothing
+    left to say (reactions to comments deleted since)"""
     entries = _entries(notifications, user)
+    if not entries:
+        return None
     context = _item(item, user) | {
         "user": user,
         "entries": entries,
@@ -320,7 +323,8 @@ def item_mail(user, item, notifications):
 
 
 def digest_mail(user, notifications, *, day):
-    """The day's notifications, grouped by project and item"""
+    """The day's notifications, grouped by project and item; None when
+    there's nothing left to say"""
     notifications = sorted(
         notifications,
         key=lambda n: (
@@ -332,10 +336,14 @@ def digest_mail(user, notifications, *, day):
     projects = []
     for project, by_project in groupby(notifications, lambda n: n.event.item.project):
         items = [
-            _item(item, user) | {"entries": _entries(list(by_item), user)}
+            _item(item, user) | {"entries": entries}
             for item, by_item in groupby(by_project, lambda n: n.event.item)
+            if (entries := _entries(list(by_item), user))
         ]
-        projects.append({"project": project, "items": items})
+        if items:
+            projects.append({"project": project, "items": items})
+    if not projects:
+        return None
     context = {
         "user": user,
         "day": day,
@@ -362,25 +370,35 @@ def digest_mail(user, notifications, *, day):
 
 def _mail(user, pks, now, build):
     """Claims the notifications, drops those the person mustn't get any
-    more, builds the mail and sends it after the commit"""
-    with transaction.atomic():
-        claimed = _claim(pks, now)
-        if not claimed:
-            return False
-        deliverable = _deliverable(claimed, user)
-        # Never sent: gone
-        Notification.objects.filter(
-            pk__in={n.pk for n in claimed} - {n.pk for n in deliverable}
-        ).delete()
-        if not deliverable:
-            return False
+    more, builds the mail and sends it after the commit. A mail which can't
+    be built is logged and rolled back: its notifications stay unsent, and
+    the others go out."""
+    try:
+        with transaction.atomic():
+            return _prepare(user, pks, now, build)
+    except Exception:
+        logger.exception("Building a notification mail failed")
+        return False
+
+
+def _prepare(user, pks, now, build):
+    claimed = _claim(pks, now)
+    if not claimed:
+        return False
+    deliverable = _deliverable(claimed, user)
+    message = None
+    if deliverable:
         with (
             translation.override(user.language or settings.LANGUAGE_CODE),
             mentions.reading_as(user),
         ):
             message = build(deliverable)
-        sent = [n.pk for n in deliverable]
-        transaction.on_commit(lambda: _send(message, sent))
+    sent = [n.pk for n in deliverable] if message else []
+    # Never sent: gone
+    Notification.objects.filter(pk__in={n.pk for n in claimed} - set(sent)).delete()
+    if message is None:
+        return False
+    transaction.on_commit(lambda: _send(message, sent))
     return True
 
 
