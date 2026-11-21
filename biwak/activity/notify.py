@@ -273,7 +273,9 @@ def _tell(people, event):
         ignore_conflicts=True,
     )
     told = [user for user in people if user.pk in unsent or user in new]
-    live.lantern_changed([user.pk for user in told])
+    live.lantern_changed(
+        [user.pk for user in told], item=event.item, visible=event.is_client_visible
+    )
     return told
 
 

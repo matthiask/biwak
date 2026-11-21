@@ -3,6 +3,7 @@ leaving out what was read (specs/lantern.md)"""
 
 import datetime as dt
 import zoneinfo
+from unittest import mock
 
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -17,6 +18,7 @@ from biwak.activity.operations import set_level_override, subscribe
 from biwak.checkins import operations as checkin_ops
 from biwak.files import operations as file_ops
 from biwak.items import operations as ops
+from biwak.live import announce
 from biwak.projects.models import Membership
 from biwak.reactions.operations import add_reaction
 from biwak.test_utils import check_in_answers, person, project
@@ -437,6 +439,40 @@ class PinningTest(LanternTestCase):
         lantern.read(self.bob)
         menu = self.client.get(reverse("lantern_menu")).content.decode()
         self.assertIn("Mark as unread", menu)
+
+
+class PingTest(LanternTestCase):
+    """The ping telling a person's tabs that their lantern changed
+    (``announce.lantern_changed()``) follows the rules of what they see"""
+
+    def pinged(self, run):
+        """The people whose tabs ``run`` pings"""
+        sent = []
+
+        def send(groups, message):
+            if message["type"] == "lantern.changed":
+                sent.extend(groups)
+
+        with mock.patch.object(announce, "_send", send):
+            self.act(run)
+        return {int(group.removeprefix("live-person-")) for group in sent}
+
+    def test_internal_event_doesnt_ping_a_client(self):
+        """An internal comment whose notify() runs after another request
+        made the item visible: the client's tabs aren't pinged (and
+        ``notify()`` leaves them out on main, branch mail-race)"""
+        subscribe(self.cleo, self.secret)  # e.g. from when it was visible
+        with self.captureOnCommitCallbacks() as callbacks:
+            ops.add_comment(self.secret, author=self.ada, content="Psst")
+        self.act(
+            lambda: ops.set_visibility(self.internal, visible=True, actor=self.bob)
+        )
+
+        def run():
+            for callback in callbacks:
+                callback()
+
+        self.assertNotIn(self.cleo.pk, self.pinged(run))
 
 
 class FaviconTest(LanternTestCase):

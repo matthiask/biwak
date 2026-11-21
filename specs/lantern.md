@@ -209,6 +209,15 @@ setup as `collaboration.md`).
 - **The doc's editor page** has no `/ws/live/` (one socket per tab: the
   editor's); its lantern count is fetched when it loads.
 
+## Fixed after the visibility review of the live features (2026-11-21)
+
+- **The lantern's ping** (`announce.lantern_changed()`) about an event
+  goes only to those who see its item then, and to clients only if the
+  event happened while clients saw the item: a `notify()` running after
+  another request made an internal item visible pinged the client's tabs.
+  (`notify()` leaving such clients out altogether, and the mails, are
+  fixed on main, branch `mail-race`.)
+
 ## Questions (built the way described meanwhile)
 
 - The wording of "No mails", "Pin to the top", "Changed meanwhile: …",

@@ -76,14 +76,28 @@ def changed(item, *, action, actor=None, visible=None, also=()):
     transaction.on_commit(send, robust=True)
 
 
-def lantern_changed(people):
+def lantern_changed(people, *, item=None, visible=True):
     """After the commit: the lantern of these people (IDs) changed, their
-    tabs fetch the count"""
+    tabs fetch the count. About ``item``: only to those who see it then
+    (``notify.who_can_see()``), and to clients only if ``visible`` (it
+    happened while clients saw the item, an event's
+    ``is_client_visible``): not even a ping tells of what one can't see."""
     people = set(people)
-    if people:
-        transaction.on_commit(
-            lambda: _send(
-                [person_group(pk) for pk in people], {"type": "lantern.changed"}
-            ),
-            robust=True,
-        )
+    if not people:
+        return
+
+    def send():
+        told = people
+        if item is not None:
+            from biwak.activity.notify import who_can_see
+
+            now = Item.objects.select_related("project").filter(pk=item.pk).first()
+            if now is None:
+                return
+            seeing = who_can_see(now)
+            if not visible:
+                seeing = seeing.filter(is_client=False)
+            told = set(seeing.filter(pk__in=people).values_list("pk", flat=True))
+        _send([person_group(pk) for pk in told], {"type": "lantern.changed"})
+
+    transaction.on_commit(send, robust=True)
