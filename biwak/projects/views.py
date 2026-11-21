@@ -349,7 +349,7 @@ def project_detail(request, pk):
         .visible_to(request.user)
         .filter(project=project)
         .exclude(action=Action.REACTED)
-        .select_related("actor", "item")[:20]
+        .select_related("actor", "project", "item")[:20]
     )
     feed.attach(events)
     return render(

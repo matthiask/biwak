@@ -17,7 +17,7 @@ from biwak import cursors
 from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event
-from biwak.items.models import Comment, Kind, Message
+from biwak.items.models import Comment, Kind, Message, load_links
 from biwak.projects.models import Project
 
 
@@ -91,8 +91,8 @@ def page(events, before=None):
 
 def attach(events):
     """What rendering needs besides the event: the assigned people's names
-    (``event.assignee_names``) and the project on the item, which saves a
-    query per link"""
+    (``event.assignee_names``), the project on the item and the answers'
+    occurrences (``load_links()``), which saves queries per link"""
     ids = {
         pk
         for event in events
@@ -106,6 +106,7 @@ def attach(events):
         event.assignee_names = [
             names[pk] for pk in event.data.get("assignees", []) if pk in names
         ]
+    load_links([event.item for event in events if event.item is not None])
     add_excerpts(events)
 
 
