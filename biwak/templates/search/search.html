@@ -10,9 +10,9 @@
     {% for field in form %}
       <div {% if field.name == "q" %}class="flex-grow-1"{% endif %}>
         {% if field.field.widget.input_type == "checkbox" %}
-          <label class="form-check mb-2">{{ field }} {{ field.label }}</label>
+          <label class="form-check mb-2">{{ field }} {{ field.label|capfirst }}</label>
         {% else %}
-          <label class="form-label small mb-0" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <label class="form-label small mb-0" for="{{ field.id_for_label }}">{{ field.label|capfirst }}</label>
           {{ field }}
         {% endif %}
         {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}

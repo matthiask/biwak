@@ -5,12 +5,12 @@
     {{ bound_field }}
   {% elif bound_field.field.widget.input_type == "checkbox" %}
     {% element field type="checkbox" name=bound_field.html_name id=bound_field.auto_id checked=bound_field.value required=bound_field.field.required errors=bound_field.errors %}
-    {% slot label %}{{ bound_field.label }}{% endslot %}
+    {% slot label %}{{ bound_field.label|capfirst }}{% endslot %}
     {% if bound_field.help_text %}{% slot help_text %}{{ bound_field.help_text }}{% endslot %}{% endif %}
     {% endelement %}
   {% else %}
     {% element field unlabeled=attrs.unlabeled type=bound_field.field.widget.input_type name=bound_field.html_name id=bound_field.auto_id value=bound_field.value required=bound_field.field.required errors=bound_field.errors placeholder=bound_field.field.widget.attrs.placeholder autocomplete=bound_field.field.widget.attrs.autocomplete %}
-    {% slot label %}{{ bound_field.label }}{% endslot %}
+    {% slot label %}{{ bound_field.label|capfirst }}{% endslot %}
     {% if bound_field.help_text %}{% slot help_text %}{{ bound_field.help_text }}{% endslot %}{% endif %}
     {% endelement %}
   {% endif %}

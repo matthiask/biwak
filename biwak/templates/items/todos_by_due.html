@@ -17,7 +17,7 @@
   <form method="get" data-autosubmit data-remember class="wb-filters mb-4">
     {% for field in form %}
       <div>
-        <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label|capfirst }}</label>
         {{ field }}
         {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
       </div>

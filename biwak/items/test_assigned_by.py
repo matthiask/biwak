@@ -184,7 +184,7 @@ class FilterTest(AssignedByTestCase):
     def test_the_filter_has_a_form_field_for_everybody(self):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
-            self.assertContains(self.client.get("/todos/"), "assigned by")
+            self.assertContains(self.client.get("/todos/"), "Assigned by")
 
 
 class TitleTest(AssignedByTestCase):

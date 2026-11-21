@@ -21,7 +21,7 @@
         <div class="d-flex flex-wrap gap-2 mb-2">
           {% for field in row %}
             <div class="flex-grow-1">
-              <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label }}</label>
+              <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
               {{ field }}
               {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
             </div>

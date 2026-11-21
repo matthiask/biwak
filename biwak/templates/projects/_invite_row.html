@@ -8,11 +8,11 @@
       {% if field.widget_type == "checkbox" %}
         <div class="form-check wb-invite-confirm">
           {{ field }}
-          <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+          <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
         </div>
       {% else %}
         <div>
-          <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label }}</label>
+          <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
           {{ field }}
           {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </div>

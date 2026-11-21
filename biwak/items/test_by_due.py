@@ -695,7 +695,7 @@ class ByProjectTest(ByDueTestCase):
         form = response.context["form"]
         self.assertEqual(form["grouping"].value(), "due")
         self.assertContains(response, 'name="grouping"')
-        self.assertContains(response, "group by")
+        self.assertContains(response, "Group by")
         self.assertNotContains(response, 'aria-label="Grouping"')
         self.assertIn("sections", response.context)
         # An invalid value is an error and shows no to-dos

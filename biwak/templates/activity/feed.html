@@ -27,9 +27,9 @@
     {% for field in form %}
       <div>
         {% if field.field.widget.input_type == "checkbox" %}
-          <label class="form-check">{{ field }} {{ field.label }}</label>
+          <label class="form-check">{{ field }} {{ field.label|capfirst }}</label>
         {% else %}
-          <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label|capfirst }}</label>
           {{ field }}
         {% endif %}
       </div>

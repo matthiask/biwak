@@ -4,7 +4,7 @@
 {% elif field.widget_type == "checkbox" %}
   <div class="form-check mb-3">
     {{ field }}
-    <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+    <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
     {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </div>
@@ -16,14 +16,14 @@
   </div>
 {% elif field.widget_type == "colorswatches" %}
   <fieldset class="mb-3">
-    <legend class="form-label fs-6">{{ field.label }}</legend>
+    <legend class="form-label fs-6">{{ field.label|capfirst }}</legend>
     {{ field }}
     {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </fieldset>
 {% elif field.widget_type == "radioselect" or field.widget_type == "checkboxselectmultiple" %}
   <fieldset class="mb-3">
-    <legend class="form-label fs-6">{{ field.label }}</legend>
+    <legend class="form-label fs-6">{{ field.label|capfirst }}</legend>
     {% for choice in field %}
       <div class="form-check">
         {{ choice.tag }}
@@ -38,7 +38,7 @@
     {% if field.label %}<label
         class="form-label{% if field.field.hide_label %} visually-hidden{% endif %}"
         for="{{ field.id_for_label }}"
-      >{{ field.label }}</label>{% endif %}
+      >{{ field.label|capfirst }}</label>{% endif %}
     {{ field }}
     {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
