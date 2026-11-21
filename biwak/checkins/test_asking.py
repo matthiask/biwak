@@ -699,20 +699,27 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(Occurrence.objects.count(), 1)
         self.assertEqual(len(self.sent()), 2)
 
-    def test_failing_mail_doesnt_keep_the_others(self):
-        from django.core.mail import EmailMultiAlternatives
+    def test_not_to_addresses_which_bounced(self):
+        """specs/mail-sending.md"""
+        self.bob.mail_undeliverable_at = at("2027-03-20 12:00")
+        self.bob.save()
+        self.run_at("2027-03-22 09:00")
+        self.assertEqual(self.recipients(), [self.ada.email])
 
-        real = EmailMultiAlternatives.send
+    def test_failing_mail_doesnt_keep_the_others(self):
+        from biwak.checkins import mails
+
+        real = mails.question_mail
         calls = []
 
-        def flaky(message, *args, **kwargs):
-            calls.append(message.to)
+        def flaky(user, occurrence):
+            calls.append(user)
             if len(calls) == 1:
-                raise OSError("down")
-            return real(message, *args, **kwargs)
+                raise OSError("broken")
+            return real(user, occurrence)
 
         with (
-            patch.object(EmailMultiAlternatives, "send", flaky),
+            patch.object(mails, "question_mail", flaky),
             self.assertLogs("biwak.checkins.mails", "ERROR"),
         ):
             self.run_at("2027-03-22 09:00")

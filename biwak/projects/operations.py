@@ -4,8 +4,7 @@ already (specs/notifications.md)."""
 
 from collections import Counter
 
-from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.db import connection, transaction
 from django.db.models import Q
 from django.template.loader import render_to_string
@@ -13,11 +12,14 @@ from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import Color, NotificationLevel, User
+from biwak.activity.mails import sender
 from biwak.activity.models import Action, LevelOverride, Subscription
 from biwak.activity.notify import effective_level
 from biwak.activity.operations import is_importing, record, set_level_override
 from biwak.api_conventions import absolute
 from biwak.organizations import operations as org_ops
+from biwak.outbox import sending as outbox
+from biwak.outbox.models import Kind as MailKind
 from biwak.projects.models import Membership, Project
 
 
@@ -170,7 +172,8 @@ def invite(
         raise InvitationError(_("This person has been deactivated."))
     added = add_member(project, user, actor=actor, notify=notify)
     if created:
-        transaction.on_commit(lambda: send_invitation(project, user, actor=actor))
+        # Through the outbox: sent once this commits
+        send_invitation(project, user, actor=actor)
     return user, created or added
 
 
@@ -183,13 +186,15 @@ def send_invitation(project, user, *, actor):
     }
     # In their language if they have one, else in the inviter's
     with translation.override(user.language or translation.get_language()):
-        send_mail(
+        message = EmailMessage(
             _("%(actor)s invited you to %(project)s")
             % {"actor": actor, "project": project},
             render_to_string("projects/invitation.txt", context),
-            settings.DEFAULT_FROM_EMAIL,
+            # From the person inviting, like notification mails
+            sender(_("%(name)s (Biwak)") % {"name": actor}),
             [user.email],
         )
+    outbox.send(message, MailKind.INVITATION)
 
 
 def can_manage_project(user):

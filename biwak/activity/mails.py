@@ -13,7 +13,6 @@ from django.conf import settings
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.db.models import Exists, OuterRef
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -29,6 +28,8 @@ from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
 from biwak.inbound.tokens import reply_to
 from biwak.items.models import Comment, Item, Kind
+from biwak.outbox import sending as outbox
+from biwak.outbox.models import Kind as MailKind
 
 
 logger = logging.getLogger(__name__)
@@ -282,26 +283,6 @@ def _item(item, user):
     return context
 
 
-def _send(message, pks):
-    """After the commit; on failure the notifications wait for the next
-    run"""
-    try:
-        message.send()
-    except Exception:
-        logger.exception("Sending a notification mail failed")
-        failed = Notification.objects.filter(pk__in=pks)
-        # Unsent again, except where a newer unsent one carries the event
-        # (one per person and event)
-        failed.filter(
-            Exists(
-                Notification.objects.filter(
-                    user=OuterRef("user"), event=OuterRef("event"), sent_at=None
-                )
-            )
-        ).delete()
-        failed.update(sent_at=None)
-
-
 def _deliverable(notifications, user):
     """Those the person may still get: the item visible to them now (which
     excludes the inactive), their level not "nothing" (it may have changed
@@ -453,20 +434,21 @@ def digest_mail(user, notifications):
     )
 
 
-def _mail(user, pks, now, build):
+def _mail(user, pks, now, build, kind):
     """Claims the notifications, drops those the person mustn't get any
-    more, builds the mail and sends it after the commit. A mail which can't
-    be built is logged and rolled back: its notifications stay unsent, and
-    the others go out."""
+    more, builds the mail and puts it into the outbox in the same
+    transaction, which sends it after the commit (specs/mail-sending.md).
+    A mail which can't be built is logged and rolled back: its
+    notifications stay unsent, and the others go out."""
     try:
         with transaction.atomic():
-            return _prepare(user, pks, now, build)
+            return _prepare(user, pks, now, build, kind)
     except Exception:
         logger.exception("Building a notification mail failed")
         return False
 
 
-def _prepare(user, pks, now, build):
+def _prepare(user, pks, now, build, kind):
     claimed = _claim(pks, now)
     if not claimed:
         return False
@@ -483,7 +465,7 @@ def _prepare(user, pks, now, build):
     Notification.objects.filter(pk__in={n.pk for n in claimed} - set(sent)).delete()
     if message is None:
         return False
-    transaction.on_commit(lambda: _send(message, sent))
+    outbox.send(message, kind)
     return True
 
 
@@ -492,7 +474,11 @@ def send_mails(*, now=None):
     lantern before they're due are left out (and kept, the lantern lists
     them); a mail with nothing left isn't sent (specs/lantern.md)."""
     now = now or timezone.now()
-    unsent = Notification.objects.filter(**MAILABLE)
+    # Not to addresses which bounced (specs/mail-sending.md): their
+    # notifications wait, like those of people who want no mails
+    unsent = Notification.objects.filter(
+        **MAILABLE, user__mail_undeliverable_at__isnull=True
+    )
     count = 0
 
     # Each change: per person and item, once the newest is 2 minutes old
@@ -515,6 +501,7 @@ def send_mails(*, now=None):
             lambda notifications, user=user: item_mail(
                 user, notifications[0].event.item, notifications
             ),
+            MailKind.NOTIFICATION,
         )
 
     # Digests: at 07:00, the unsent notifications of the days before
@@ -534,5 +521,6 @@ def send_mails(*, now=None):
                 pks,
                 now,
                 lambda notifications, user=user: digest_mail(user, notifications),
+                MailKind.DIGEST,
             )
     return count

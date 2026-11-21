@@ -34,6 +34,8 @@ from biwak.files import attachments
 from biwak.inbound.models import InboundMessage, InboundStatus, ReplyToken
 from biwak.inbound.strip import reply_text
 from biwak.inbound.tokens import token_in
+from biwak.outbox import sending as outbox
+from biwak.outbox.models import Kind as MailKind
 
 
 logger = logging.getLogger(__name__)
@@ -249,11 +251,5 @@ def _reject(token, mail, status, *, authenticated, now):
         )
     token.error_sent_at = now
     token.save(update_fields=["error_sent_at"])
-    transaction.on_commit(lambda: _send(message), robust=True)
-
-
-def _send(message):
-    try:
-        message.send()
-    except Exception:
-        logger.exception("Sending the answer to a reply failed")
+    # Through the outbox: sent once this commits
+    outbox.send(message, MailKind.REPLY_REFUSED)

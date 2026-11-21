@@ -165,6 +165,19 @@ class User(AbstractBaseUser):
     # stops for good once the person dismissed it or added a passkey
     passkey_offer_done = models.BooleanField(_("passkey offer done"), default=False)
 
+    # Resend reported a hard bounce or a complaint for the address
+    # (specs/mail-sending.md): no notification mails, digests and check-in
+    # mails go to it; cleared when the address changes, or by an admin
+    mail_undeliverable_at = models.DateTimeField(
+        _("mail undeliverable since"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "Mail to the address bounced or was marked as spam. Clear it once"
+            " the address works again."
+        ),
+    )
+
     # Single-key shortcuts, on by default (decided 2026-11-21); Ctrl+K
     # always works
     keyboard_shortcuts = models.BooleanField(_("keyboard shortcuts"), default=True)
@@ -190,11 +203,49 @@ class User(AbstractBaseUser):
         return self.full_name or self.email
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
         fields = kwargs.get("update_fields")
+        stored = None
+        if self.pk and (
+            fields is None or {"email", "mail_undeliverable_at"} & set(fields)
+        ):
+            stored = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values("email", "mail_undeliverable_at")
+                .first()
+            )
+        if (
+            stored
+            and self.mail_undeliverable_at
+            and stored["email"].lower() != self.email.lower()
+            and (fields is None or "email" in fields)
+        ):
+            # A new address may work (specs/mail-sending.md)
+            self.mail_undeliverable_at = None
+            if fields is not None:
+                fields = kwargs["update_fields"] = [*fields, "mail_undeliverable_at"]
+        cleared = (
+            stored
+            and stored["mail_undeliverable_at"]
+            and not self.mail_undeliverable_at
+            and (fields is None or "mail_undeliverable_at" in fields)
+        )
+        super().save(*args, **kwargs)
+        if cleared:
+            self._drop_waiting_mails()
         if fields is None or "email" in fields:
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)
+
+    def _drop_waiting_mails(self):
+        """What piled up while the address was undeliverable is never
+        mailed: it's in the lantern (decided 2026-11-21). Marked as sent,
+        so a later change to the same event is a new notification."""
+        from biwak.activity.models import Notification
+
+        Notification.objects.filter(user=self, sent_at__isnull=True).update(
+            sent_at=timezone.now()
+        )
 
     def clean(self):
         super().clean()

@@ -288,7 +288,11 @@ class ViewsTest(TestCase):
         url = self.todo.get_absolute_url()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
-        response = self.client.post(response["Location"], {"email": "ada@example.org"})
+        # The code goes out once the request's transaction commits
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                response["Location"], {"email": "ada@example.org"}
+            )
         code = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", mail.outbox[-1].body)[1]
         response = self.client.post(response["Location"], {"code": code})
         self.assertRedirects(response, url, fetch_redirect_response=False)

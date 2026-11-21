@@ -87,6 +87,12 @@
   <h2 class="h5 mt-4" id="notifications">{% translate "Notifications" %}</h2>
   <div class="card mb-4">
     <div class="card-body">
+      {% if request.user.mail_undeliverable_at %}
+        {# Resend reported a hard bounce or a complaint (specs/mail-sending.md) #}
+        <div class="alert alert-warning">
+          {% blocktranslate with since=request.user.mail_undeliverable_at|date:"j. F Y" email=request.user.email %}Mail to your address {{ email }} bounced or was marked as spam on {{ since }}, so you get no notification mails. Ask an admin to change the address or to clear this once it works again.{% endblocktranslate %}
+        </div>
+      {% endif %}
       <form method="post" action="{% url 'settings_notifications' %}">
         {% csrf_token %}
         {{ form }}

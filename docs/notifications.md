@@ -73,6 +73,15 @@ What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. Mails carry the full text; the
 first line says when clients can see the item.
 
+**When mail bounces.** If mail to someone's address is rejected for good
+or marked as spam, Biwak stops sending them notification mails, digests
+and check-in questions; what happens stays in their lantern. Their
+activity page says so (to staff and to themselves), and so does their
+settings page. It starts again once an admin changes the address or
+clears it in the admin (People, "Mail to the selected people works
+again"); what happened in between isn't mailed afterwards, it's in the
+lantern.
+
 ## Replying by mail
 
 When a mail ends with "Reply to this mail to comment." or "Reply to

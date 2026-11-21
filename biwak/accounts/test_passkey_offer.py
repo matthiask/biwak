@@ -23,7 +23,9 @@ class PasskeyOfferTest(TestCase):
 
     def login_by_code(self):
         mail.outbox.clear()
-        self.client.post("/accounts/login/code/", {"email": self.ada.email})
+        # The code goes out once the request's transaction commits
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post("/accounts/login/code/", {"email": self.ada.email})
         code = re.search(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b", mail.outbox[-1].body).group(
             1
         )
