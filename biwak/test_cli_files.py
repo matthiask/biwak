@@ -17,7 +17,7 @@ from biwak.files import operations
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
 from biwak.projects.models import Membership
-from biwak.test_utils import person
+from biwak.test_utils import bare_doc, person
 
 
 class FilesCLITest(test_cli.CLITest):
@@ -222,9 +222,22 @@ class FilesCLITest(test_cli.CLITest):
         self.assertIn("Minutes", output)
         self.assertIn("Decided", output)
         self.assertNotIn("[clients]", output)
+        self.assertEqual(Item.objects.get(pk=did).doc.content, "# Minutes\n\nDecided")
+
+    def test_the_title_is_the_first_line(self):
+        doc = ops.create_doc(
+            project=self.project, title="Minutes", content="One", creator=self.ada
+        )
+        with patch.object(click, "edit", return_value="# Notes\n\nOne"):
+            self.biwak("doc", "edit", doc.pk)
+        doc.refresh_from_db()
+        self.assertEqual(doc.title, "Notes")
+        self.assertNotEqual(
+            self.biwak("doc", "edit", doc.pk, "--title", "x").exit_code, 0
+        )
 
     def test_editing_a_doc(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="One",
@@ -241,7 +254,7 @@ class FilesCLITest(test_cli.CLITest):
         self.assertEqual(doc.doc.content, "Two")
 
     def test_editing_without_changes(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Minutes", content="One", creator=self.ada
         )
         with patch.object(click, "edit", return_value="One"):

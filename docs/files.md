@@ -27,6 +27,10 @@ between folders with "Move to..." in their "More" menu.
 ### Docs
 
 A doc is a page of Markdown text, such as a brief or a set of notes.
+Its title is the first line of the text: a heading such as `# Brief`, or
+else the line itself. Change the first line to rename the doc; lists,
+search and the activity feed follow. An empty doc is "Untitled". "New
+doc" asks for the title and starts the text with it as a heading.
 
 - **Edit** opens the doc for editing together: everybody who edits it
   sees the others' changes as they are typed, and changes are saved as

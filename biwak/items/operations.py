@@ -27,6 +27,7 @@ from biwak.activity.operations import (
 )
 from biwak.files import attachments
 from biwak.files.models import FileVersion, content_type_for
+from biwak.files.titles import doc_title, with_heading
 from biwak.items import editing, visibility
 from biwak.items.models import (
     Comment,
@@ -224,6 +225,11 @@ def create_doc(
     visible=False,
     whom="nobody",
 ):
+    """``content`` follows the heading made of ``title``: the doc's text
+    starts with ``# title`` and its title is that first line
+    (specs/doc-titles.md)"""
+    content = with_heading(title, content)
+    title = doc_title(content)
     item = create_item(
         project=project,
         kind=Kind.DOC,

@@ -61,7 +61,8 @@ def doc_new(request, pk):
             visible=data["visible"],
             whom=form.whom(),
         )
-        return redirect(item)
+        # The text starts with the title as its heading: on to the editor
+        return redirect("doc_edit", item.pk)
     return render(
         request,
         "files/doc_form.html",
@@ -107,36 +108,24 @@ def doc(request, pk):
     )
 
 
-class TitleForm(Form):
-    title = forms.CharField(label=_("title"), max_length=500)
-
-
 def doc_edit(request, pk):
     """The doc edited live: everybody who can see it opens the editor,
-    those who can't change it (or a read-only doc) watch. Posting renames
-    the doc or saves what's typed as a version."""
+    those who can't change it (or a read-only doc) watch. Posting saves
+    what's typed as a version."""
     item = item_for(request, pk, Kind.DOC)
     can_edit = live.access(request.user, item.pk) == live.WRITE
-    form = TitleForm(request.POST or None, initial={"title": item.title})
     if request.method == "POST":
         if not can_edit:
             raise PermissionDenied
-        if request.POST.get("new_version"):
-            operations.save_version(item, actor=request.user)
-            messages.success(request, _("Saved as a version."))
-            return redirect("doc_edit", item.pk)
-        if form.is_valid():
-            operations.update_doc(
-                item, actor=request.user, title=form.cleaned_data["title"]
-            )
-            return redirect("doc_edit", item.pk)
+        operations.save_version(item, actor=request.user)
+        messages.success(request, _("Saved as a version."))
+        return redirect("doc_edit", item.pk)
     return render(
         request,
         "files/doc_live.html",
         {
             "project": item.project,
             "item": item,
-            "form": form,
             "breadcrumbs": breadcrumbs(item),
             "can_edit": can_edit,
             "history": live.history(item.pk),

@@ -1787,7 +1787,9 @@ def doc_show(doc_id, comments, version, as_json):
 @attach_option
 @json_option
 def doc_new(project, title, text, parent, notify, visible, attach, as_json):
-    """Create a doc titled TITLE in PROJECT; TEXT (Markdown) or standard input"""
+    """Create a doc titled TITLE in PROJECT; TEXT (Markdown) or standard input
+
+    TITLE becomes the first line of the doc, a heading before TEXT."""
     if text is None:
         text = click.get_text_stream("stdin").read()
     if visible:
@@ -1811,13 +1813,15 @@ def doc_new(project, title, text, parent, notify, visible, attach, as_json):
 
 @doc.command("edit")
 @click.argument("doc_id", metavar="DOC", type=int)
-@click.option("--title", help="Rename the doc too.")
 @click.option(
     "--new-version", is_flag=True, help="Make a version now, not only after 10 minutes."
 )
 @json_option
-def doc_edit(doc_id, title, new_version, as_json):
+def doc_edit(doc_id, new_version, as_json):
     """Edit DOC in $EDITOR and save when you quit
+
+    The doc's title is the first line of its text: change the heading to
+    rename it.
 
     People editing the doc in the browser meanwhile see your changes
     arrive; saving over a newer version somebody else made meanwhile is
@@ -1828,7 +1832,7 @@ def doc_edit(doc_id, title, new_version, as_json):
     if doc["visible_to_clients"]:
         click.secho("Clients can see this doc.", fg="yellow", err=True)
     text = click.edit(doc["content"], extension=".md")
-    if text is None or (text == doc["content"] and not title):
+    if text is None or text == doc["content"]:
         click.echo("No changes.")
         return None
     changes = {
@@ -1836,8 +1840,6 @@ def doc_edit(doc_id, title, new_version, as_json):
         "new_version": new_version,
         "base_version": doc["version_id"],
     }
-    if title:
-        changes["title"] = title
     data = request("PATCH", f"docs/{doc_id}/", json=changes)
     if as_json:
         return echo_json(data)

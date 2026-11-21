@@ -163,7 +163,9 @@ class ImportEveryKindTest(ImportCase):
         self.assertEqual(self.item("Deeper").parent.title, "Private")
         self.assertEqual(self.item("Public doc").parent.title, "Public")
         self.assertEqual(self.item("Shopping list").parent, None)
-        self.assertEqual(self.item("Shopping list").doc.content, "Text")
+        self.assertEqual(
+            self.item("Shopping list").doc.content, "# Shopping list\n\nText"
+        )
         self.assertEqual(kinds(Kind.FILE), {"plan.png", "map.png", "salaries.png"})
         upload = self.item("map.png").upload
         self.assertEqual(upload.description, "Check this")
@@ -527,7 +529,9 @@ class SecondRunTest(ImportCase):
         self.assertEqual(Item.objects.filter(kind=Kind.TODO).count(), 8)
         self.assertEqual(Comment.objects.filter(item=food).count(), 3)
         self.assertFalse(self.item("Pick a camp date").todo.is_completed)
-        self.assertEqual(self.item("Camp rules").doc.content, "New rules")
+        self.assertEqual(
+            self.item("Camp rules").doc.content, "# Camp rules\n\nNew rules"
+        )
         self.assertEqual(
             self.item("We have a camp!").pk, self.item("We have a camp!").pk
         )
@@ -541,6 +545,15 @@ class SecondRunTest(ImportCase):
         }
         self.run_import()
         self.assertTrue(Todo.objects.get(item=food).is_completed)
+
+    def test_documents_get_their_title_as_a_heading_once(self):
+        self.run_import()
+        rules = self.item("Camp rules")
+        self.assertTrue(rules.doc.content.startswith("# Camp rules\n\n"))
+        self.run_import()
+        rules.doc.refresh_from_db()
+        self.assertEqual(rules.doc.content.count("# Camp rules"), 1)
+        self.assertEqual(rules.title, "Camp rules")
 
     def test_the_visibility_switch_follows_basecamp(self):
         self.run_import()

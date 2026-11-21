@@ -167,10 +167,11 @@ browsers (Playwright) typing, a client watching, an internal doc
   type.", "Offline. Your changes are kept and merged when the connection
   is back.", "You are watching. You can't change this doc.", "You can't
   see this doc anymore.", **?** wording) and who else is here; below it,
-  for editors, attaching files (dropping, pasting, the button) and a form
-  to rename the doc and "Save as a version". The editor is read-only
-  until the first sync (typing before it would land before the text).
-  The title isn't edited live.
+  for editors, attaching files (dropping, pasting, the button); "Save as
+  a version" is beside the status line. The editor is read-only until
+  the first sync (typing before it would land before the text). The
+  title is the text's first line, set when the text is saved
+  (`specs/doc-titles.md`, decided 2026-11-21).
 - **Read-only option** (`Doc.read_only`, `set_read_only()`): staff switch
   it on the doc's page, in the API (`read_only` in `PATCH
   /api/v1/docs/{id}/`) and with `biwak doc read-only DOC [--off]`. Nobody

@@ -16,7 +16,7 @@ from biwak.files import attachments, operations
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
 from biwak.projects import operations as project_ops
-from biwak.test_utils import organization, person, project
+from biwak.test_utils import bare_doc, organization, person, project
 
 
 class APIFixture:
@@ -43,14 +43,14 @@ class APIFixture:
         self.secret_message = ops.create_message(
             project=self.project, title="Secret", content="Internal", creator=self.ada
         )
-        self.shared_doc = ops.create_doc(
+        self.shared_doc = bare_doc(
             project=self.project,
             title="Shared doc",
             content="One",
             creator=self.ada,
             visible=True,
         )
-        self.secret_doc = ops.create_doc(
+        self.secret_doc = bare_doc(
             project=self.project, title="Secret doc", content="Hidden", creator=self.ada
         )
         self.shared_file = self.upload("shared.txt", visible=True)
@@ -383,8 +383,9 @@ class MentionsAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(
-            response.json()["content"], f"See [@Bob](person:{self.bob.pk})"
+            response.json()["content"], f"# D\n\nSee [@Bob](person:{self.bob.pk})"
         )
+        self.assertEqual(response.json()["title"], "D")
         pk = response.json()["id"]
         response = self.call(
             self.ada, "patch", f"docs/{pk}/", {"content": "Then @bob@example.org"}
@@ -612,7 +613,8 @@ class DocAPITest(APIFixture, TestCase):
         response = self.call(
             self.bob, "patch", f"docs/{did}/", {"content": "Three", "title": "Renamed"}
         )
-        self.assertEqual(response.json()["title"], "Renamed")
+        # The title is the text's first line: a title next to it is ignored
+        self.assertEqual(response.json()["title"], "Three")
         self.assertEqual(self.shared_doc.doc.versions.count(), 2)
         response = self.call(
             self.bob, "patch", f"docs/{did}/", {"content": "Four", "new_version": True}
@@ -621,6 +623,23 @@ class DocAPITest(APIFixture, TestCase):
         with time_machine.travel(timezone.now() + dt.timedelta(minutes=11)):
             self.call(self.bob, "patch", f"docs/{did}/", {"content": "Five"})
         self.assertEqual(self.shared_doc.doc.versions.count(), 4)
+
+    def test_a_title_alone_is_refused_for_docs(self):
+        response = self.call(
+            self.ada, "patch", f"docs/{self.shared_doc.pk}/", {"title": "Renamed"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"], "The title is the text's first line."
+        )
+        self.shared_doc.refresh_from_db()
+        self.assertEqual(self.shared_doc.title, "Shared doc")
+
+    def test_the_content_sets_the_title(self):
+        response = self.call(
+            self.ada, "patch", f"docs/{self.shared_doc.pk}/", {"content": "# New\n\nx"}
+        )
+        self.assertEqual(response.json()["title"], "New")
 
     def test_clients_cannot_edit_docs_staff_created(self):
         """Clients change only what they created (specs/access.md)"""
@@ -637,7 +656,7 @@ class DocAPITest(APIFixture, TestCase):
         self.assertFalse(self.shared_doc.doc.read_only)
 
     def test_a_client_edits_a_doc_it_created(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Ours", creator=self.cleo, visible=True
         )
         response = self.call(
@@ -1020,7 +1039,7 @@ class ReviewFixesAPITest(APIFixture, TestCase):
         )
         self.assertEqual(response.status_code, 201, response.content)
         self.assertFalse(response.json()["visible_to_clients"])
-        self.assertEqual(response.json()["content"], "Hi @cleo@example.org")
+        self.assertEqual(response.json()["content"], "# D\n\nHi @cleo@example.org")
 
     def test_a_doc_in_a_visible_folder_is_written_for_clients(self):
         response = self.call(

@@ -13,11 +13,10 @@ from biwak.activity.models import Event, Subscription
 from biwak.collab import live, ytext
 from biwak.collab.models import LiveState, LiveUpdate
 from biwak.files import attachments, operations
-from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.projects.models import Project
 from biwak.search.queries import search
-from biwak.test_utils import person, project
+from biwak.test_utils import bare_doc, person, project
 
 
 class YTextTest(TestCase):
@@ -76,7 +75,7 @@ class LiveTest(TestCase):
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
         self.project = project(members=[self.ada, self.cleo])
-        self.item = ops.create_doc(
+        self.item = bare_doc(
             project=self.project, title="Minutes", content="Agenda", creator=self.ada
         )
         self.doc = self.item.doc
@@ -94,10 +93,10 @@ class LiveTest(TestCase):
         self.doc = self.item.doc
 
     def test_access(self):
-        visible = ops.create_doc(
+        visible = bare_doc(
             project=self.project, title="Shared", creator=self.ada, visible=True
         )
-        own = ops.create_doc(
+        own = bare_doc(
             project=self.project, title="Ours", creator=self.cleo, visible=True
         )
         dan = person("Dan", client=True)
@@ -128,6 +127,13 @@ class LiveTest(TestCase):
         type(self.doc).objects.filter(pk=self.doc.pk).update(content="Changed")
         live.prepare(self.doc.pk)
         self.assertEqual(ytext.text(live.load(self.doc.pk)), "Changed")
+
+    def test_saving_sets_the_title_from_the_first_line(self):
+        self.type(self.bob, "# Budget meeting\n\nAgenda")
+        operations.save_live(self.doc.pk, self.bob)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, "Budget meeting")
+        self.assertEqual(self.doc.versions.first().title, "Budget meeting")
 
     def test_saving_merges_and_records(self):
         self.type(self.bob, "Agenda\n- Budget")
@@ -210,7 +216,7 @@ class LiveTest(TestCase):
         """Bob is staff and sees the doc, but isn't a member: Cleo's mention
         of him doesn't count, Ada's does; saved again with Ada as the first
         author, Cleo's stays rejected (it was in the text before)"""
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Ours", creator=self.cleo, visible=True
         )
         self.item, self.doc = doc, doc.doc

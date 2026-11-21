@@ -11,7 +11,7 @@ from biwak.collab import live
 from biwak.files import operations
 from biwak.items import operations as ops
 from biwak.items.models import Item
-from biwak.test_utils import person, project
+from biwak.test_utils import bare_doc, person, project
 
 
 POST_ONLY = {"doc_read_only", "doc_version_restore", "item_move"}
@@ -29,20 +29,20 @@ class Fixture:
         self.private = ops.create_folder(
             project=self.project, title="Private", creator=self.ada
         )
-        self.shared = ops.create_doc(
+        self.shared = bare_doc(
             project=self.project,
             title="Shared doc",
             content="Shared **text**",
             creator=self.ada,
             visible=True,
         )
-        self.secret = ops.create_doc(
+        self.secret = bare_doc(
             project=self.project,
             title="Secret doc",
             content="Internal",
             creator=self.ada,
         )
-        self.nested = ops.create_doc(
+        self.nested = bare_doc(
             project=self.project,
             title="Nested",
             content="In a folder",
@@ -105,7 +105,7 @@ class DocPageTest(Fixture, TestCase):
         self.assertEqual(self.latest(self.secret).content, "Internal")
 
     def test_a_visible_doc_in_an_internal_folder_is_not_possible_but_moving_works(self):
-        moved = ops.create_doc(
+        moved = bare_doc(
             project=self.project, title="Moved", creator=self.ada, parent=self.private
         )
         self.client.force_login(self.cleo)
@@ -182,7 +182,8 @@ class NewDocTest(Fixture, TestCase):
     def test_staff_creates_an_internal_doc(self):
         response = self.send(self.ada)
         doc = Item.objects.get(title="Minutes")
-        self.assertRedirects(response, reverse("doc", args=[doc.pk]))
+        self.assertRedirects(response, reverse("doc_edit", args=[doc.pk]))
+        self.assertEqual(doc.doc.content, "# Minutes\n\nText")
         self.assertFalse(doc.is_client_visible)
         self.assertEqual(doc.doc.versions.count(), 1)
 
@@ -231,26 +232,34 @@ class EditTest(Fixture, TestCase):
         response = self.client.get(self.url("doc_edit", self.shared))
         self.assertContains(response, f'data-collab="/ws/docs/{self.shared.pk}"')
         self.assertContains(response, "data-attachments=")
-        self.assertContains(response, "Rename")
         self.assertContains(response, "Save as a version")
         self.assertContains(response, "Clients can see this")
 
-    def test_renaming(self):
+    def test_no_title_form_and_no_title_next_to_the_text(self):
+        """The title is the text's first line (specs/doc-titles.md)"""
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url("doc_edit", self.shared))
+        self.assertNotContains(response, "Rename")
+        self.assertNotContains(response, 'name="title"')
+        self.assertNotContains(response, "<h1")
+        self.assertContains(response, "Shared doc", html=False)  # crumbs, <title>
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertNotContains(response, "<h1")
+
+    def test_save_as_a_version_sets_the_title_from_the_typed_text(self):
+        live.apply_text(self.shared.doc, "# Renamed\n\nText", user=self.bob)
         self.client.force_login(self.bob)
         response = self.client.post(
-            self.url("doc_edit", self.shared), {"title": "Renamed"}
+            self.url("doc_edit", self.shared), {"new_version": "1"}
         )
         self.assertRedirects(response, self.url("doc_edit", self.shared))
         self.shared.refresh_from_db()
         self.assertEqual(self.shared.title, "Renamed")
-        self.assertEqual(self.shared.doc.content, "Shared **text**")
         latest = self.latest(self.shared)
         self.assertEqual((latest.title, latest.created_by), ("Renamed", self.bob))
         self.assertTrue(
             Event.objects.filter(item=self.shared, actor=self.bob, action="edited")
         )
-        response = self.client.post(self.url("doc_edit", self.shared), {"title": ""})
-        self.assertEqual(response.status_code, 200)
 
     def test_save_as_a_version(self):
         live.apply_text(self.shared.doc, "Typed", user=self.ada)
@@ -270,7 +279,7 @@ class EditTest(Fixture, TestCase):
         self.client.force_login(self.cleo)
         response = self.client.get(self.url("doc_edit", self.shared))
         self.assertContains(response, f'data-collab="/ws/docs/{self.shared.pk}"')
-        self.assertNotContains(response, "Rename")
+        self.assertNotContains(response, "Save as a version")
         self.assertNotContains(response, "data-attachments=")
         for data in [{"title": "Scope doubled"}, {"new_version": "1"}]:
             response = self.client.post(self.url("doc_edit", self.shared), data)
@@ -280,7 +289,7 @@ class EditTest(Fixture, TestCase):
         self.assertEqual(self.shared.doc.versions.count(), 1)
 
     def test_clients_edit_docs_they_created(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Notes",
             content="Ours",
@@ -288,10 +297,10 @@ class EditTest(Fixture, TestCase):
             visible=True,
         )
         self.client.force_login(self.cleo)
-        self.assertContains(self.client.get(self.url("doc_edit", doc)), "Rename")
-        self.client.post(self.url("doc_edit", doc), {"title": "Our notes"})
-        doc.refresh_from_db()
-        self.assertEqual(doc.title, "Our notes")
+        self.assertContains(
+            self.client.get(self.url("doc_edit", doc)), "Save as a version"
+        )
+        self.client.post(self.url("doc_edit", doc), {"new_version": "1"})
         self.assertEqual(self.latest(doc).created_by, self.cleo)
 
     def test_read_only_docs_are_watched_by_everybody(self):
@@ -301,8 +310,10 @@ class EditTest(Fixture, TestCase):
         self.assertContains(response, "This doc is read-only.")
         self.assertContains(response, "Watch live")
         response = self.client.get(self.url("doc_edit", self.shared))
-        self.assertNotContains(response, "Rename")
-        response = self.client.post(self.url("doc_edit", self.shared), {"title": "x"})
+        self.assertNotContains(response, "Save as a version")
+        response = self.client.post(
+            self.url("doc_edit", self.shared), {"new_version": "1"}
+        )
         self.assertEqual(response.status_code, 403)
 
     def test_mentions_in_docs_notify(self):
@@ -333,7 +344,7 @@ class ReadOnlyTest(Fixture, TestCase):
         self.assertFalse(Item.objects.get(pk=self.shared.pk).doc.read_only)
 
     def test_clients_dont(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Notes", creator=self.cleo, visible=True
         )
         self.client.force_login(self.cleo)
@@ -390,7 +401,7 @@ class VersionsTest(Fixture, TestCase):
         )
 
     def test_a_version_of_another_doc_is_404(self):
-        other = ops.create_doc(
+        other = bare_doc(
             project=self.project, title="Other", creator=self.ada, visible=True
         )
         self.client.force_login(self.ada)

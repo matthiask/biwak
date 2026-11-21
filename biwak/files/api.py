@@ -504,6 +504,7 @@ def doc_out(item, user):
 
 
 class DocIn(Schema):
+    # Becomes the text's first line, a heading before ``content``
     title: str
     content: str = ""
     parent_id: int | None = None
@@ -541,6 +542,8 @@ def doc_detail(request, doc_id: int):
 
 
 class DocPatch(Schema):
+    # Refused alone (400): the title is the first line of ``content``;
+    # next to ``content`` it is ignored
     title: str | None = None
     content: str | None = None
     # Make a version now, even within ten minutes of the last one
@@ -577,8 +580,8 @@ def doc_update(request, doc_id: int, data: DocPatch):
     if read_only is False:
         operations.set_read_only(item, read_only=False, actor=request.user)
     changes = {}
-    if "title" in given:
-        changes["title"] = clean_title(data.title)
+    if "title" in given and "content" not in given:
+        raise HttpError(400, _("The title is the text's first line."))
     if "content" in given:
         changes["content"] = resolve_mentions(
             item, data.content or "", author=request.user

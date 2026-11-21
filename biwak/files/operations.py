@@ -18,6 +18,7 @@ from biwak.activity.models import Action
 from biwak.activity.operations import read_by_acting, record
 from biwak.collab import live
 from biwak.files import attachments
+from biwak.files.titles import doc_title
 from biwak.items import editing, operations as ops
 from biwak.items.models import Doc, DocVersion, Message, Upload
 
@@ -154,15 +155,17 @@ def _save_version(doc, *, title, content, authors, force=False):
     )
 
 
-def _save(item, doc, *, title=None, actor=None, new_version=False):
+def _save(item, doc, *, actor=None, new_version=False):
     """Merges what was typed live (and edits through ``live.apply_text()``)
-    into ``Doc.content``; ``title`` renames the doc. One ``edited`` event
+    into ``Doc.content``; a new text sets the doc's title, its first line
+    (specs/doc-titles.md). One ``edited`` event
     per person and editing session (merging into their last one), a
     version by the version rules. Returns whether anything changed."""
     content, authors, typed = live.merge(doc)
     if actor is not None and actor not in authors:
         authors.append(actor)
-    renamed = title is not None and title != item.title
+    title = doc_title(content) if content != doc.content else item.title
+    renamed = title != item.title
     if not authors or not (renamed or content != doc.content or new_version):
         return False
     changed = renamed or content != doc.content
@@ -209,12 +212,12 @@ def update_doc(
     item,
     *,
     actor,
-    title=_UNCHANGED,
     content=_UNCHANGED,
     new_version=False,
     base_version=None,
 ):
-    """Saves the doc's title and content (what's given): the content as an
+    """Saves the doc's content (when given; its first line is the title):
+    the content as an
     edit of the text the API saw last, merged with what people type live
     meanwhile, and sent to their editors.
 
@@ -240,8 +243,7 @@ def update_doc(
     _save(
         item,
         doc,
-        title=None if title is _UNCHANGED else title,
-        actor=actor if changed or new_version or title is not _UNCHANGED else None,
+        actor=actor if changed or new_version else None,
         new_version=new_version,
     )
     return item
@@ -316,7 +318,7 @@ def restore_doc_version(item, version, *, actor):
     if doc.read_only:
         raise DocReadOnly
     live.apply_text(doc, version.content, user=actor)
-    _save(item, doc, title=version.title, actor=actor, new_version=True)
+    _save(item, doc, actor=actor, new_version=True)
     return doc.versions.first()
 
 

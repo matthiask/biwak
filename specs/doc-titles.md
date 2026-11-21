@@ -4,8 +4,22 @@ The idea (user, 2026-11-21): a doc's title sat in a form below the
 editor, which is strange; writing a blog entry, the H1 is the title. So
 the title is written in the text and pulled out of it.
 
-**Status:** spec (2026-11-21), the questions answered the same day. Not
-built.
+**Status:** built (2026-11-21). `biwak/files/titles.py` has `doc_title()`
+(the first non-empty line: a heading without its `#`s, else the line as
+plain text via `excerpt()`, cut at a word boundary below `Item.title`'s
+length with "…", "Untitled" when empty) and `with_heading()`. The title
+is set in `files.operations._save()`, which every change of a doc's text
+goes through (the form's "Save as a version", the live editor's saving,
+the API, ticks, restoring a version, the importer's second run);
+`create_doc()` prefixes `# <title>` and an empty line itself (form, API,
+importer) and sets the title from that. Migration `items/0012` prefixes
+existing docs. Decisions on the way: a save that doesn't change the text
+keeps the title; the "New doc" form keeps its text field (the text
+follows the heading) and opens the editor afterwards; in the API a
+`title` next to `content` is ignored, alone it's a 400; the CLI's
+`doc edit --title` is gone (0.35.0, `MINIMUM` unchanged: older CLIs
+sending `--title` with text still work); the doc pages' header shows the
+icon and client badge, no title (not an `h1`: the text has its own).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.
