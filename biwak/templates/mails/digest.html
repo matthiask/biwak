@@ -7,7 +7,7 @@
   </head>
   <body style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #222">
     <h1 style="font-size: 20px">
-      {% blocktranslate with day=day|date:"j. F Y" %}What happened on {{ day }}{% endblocktranslate %}
+      {{ heading }}
     </h1>
     {% for group in projects %}
       <h2 style="font-size: 18px; margin-top: 24px">{{ group.project }}</h2>

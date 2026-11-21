@@ -252,7 +252,10 @@ Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
 - Digests have no one-click unsubscribing (they're about many items):
   their `List-Unsubscribe` is the settings page, without
   `List-Unsubscribe-Post`. Their subject: `[Biwak] What happened on
-  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`.
+  19. November 2026`, from `Biwak <DEFAULT_FROM_EMAIL>`; a digest of more
+  than one day (after a downtime, or switching to digests) names them:
+  `[Biwak] What happened from 17. November 2026 to 19. November 2026`
+  (the first and the last day with notifications, 2026-11-21).
 - Mails carry `Auto-Submitted: auto-generated`.
 - The `@` list for clients finds only the project's members, not by
   email, and shows no addresses.

@@ -1,4 +1,4 @@
-{% load i18n %}{% autoescape off %}{% blocktranslate with day=day|date:"j. F Y" %}What happened on {{ day }}{% endblocktranslate %}
+{% load i18n %}{% autoescape off %}{{ heading }}
 {% for group in projects %}
 == {{ group.project }} ==
 {% for item in group.items %}{% with title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text_plain=item.text_plain url=item.url %}

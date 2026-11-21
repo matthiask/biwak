@@ -193,6 +193,29 @@ class MailsTest(TestCase):
         self.assertEqual(Notification.objects.filter(sent_at=None).count(), 1)
         self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 1, tzinfo=ZURICH)), 0)
 
+    def test_digest_of_several_days(self):
+        """After a downtime, or switching to digests: the subject names the
+        days it covers"""
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
+        Notification.objects.update(
+            created_at=dt.datetime(2026, 11, 17, 22, 0, tzinfo=ZURICH)
+        )
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Two"))
+        Notification.objects.filter(
+            sent_at=None, created_at__gt=dt.datetime(2026, 11, 18, tzinfo=ZURICH)
+        ).update(created_at=dt.datetime(2026, 11, 19, 9, 0, tzinfo=ZURICH))
+        self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 0, tzinfo=ZURICH)), 1)
+        message = mail.outbox[0]
+        self.assertEqual(
+            message.subject,
+            "[Biwak] What happened from 17. November 2026 to 19. November 2026",
+        )
+        self.assertIn(
+            "What happened from 17. November 2026 to 19. November 2026", message.body
+        )
+
     def test_sent_after_the_commit(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         with self.captureOnCommitCallbacks() as callbacks:

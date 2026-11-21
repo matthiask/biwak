@@ -333,9 +333,22 @@ def item_mail(user, item, notifications):
     return message
 
 
-def digest_mail(user, notifications, *, day):
-    """The day's notifications, grouped by project and item; None when
-    there's nothing left to say"""
+def digest_heading(notifications):
+    """ "What happened on 19. November 2026", or the days it covers when
+    there's more than one (after a downtime, or switching to digests)"""
+    days = sorted({timezone.localdate(n.created_at) for n in notifications})
+    first, last = date_format(days[0], "j. F Y"), date_format(days[-1], "j. F Y")
+    if first == last:
+        return _("What happened on %(day)s") % {"day": first}
+    return _("What happened from %(first)s to %(last)s") % {
+        "first": first,
+        "last": last,
+    }
+
+
+def digest_mail(user, notifications):
+    """The notifications before today, grouped by project and item; None
+    when there's nothing left to say"""
     notifications = sorted(
         notifications,
         key=lambda n: (
@@ -357,12 +370,12 @@ def digest_mail(user, notifications, *, day):
         return None
     context = {
         "user": user,
-        "day": day,
+        "heading": digest_heading(notifications),
         "projects": projects,
         "settings_url": absolute(reverse("notification_settings")),
     }
     message = EmailMultiAlternatives(
-        _("[Biwak] What happened on %(day)s") % {"day": date_format(day, "j. F Y")},
+        _("[Biwak] %(heading)s") % context,
         render_to_string("mails/digest.txt", context),
         sender("Biwak"),
         [user.email],
@@ -445,7 +458,6 @@ def send_mails(*, now=None):
     local = timezone.localtime(now)
     if local.time() >= DIGEST_AT:
         midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
-        day = (midnight - dt.timedelta(days=1)).date()
         digests = {}
         for pk, user_id in unsent.filter(
             user__mail_delivery=MailDelivery.DIGEST, created_at__lt=midnight
@@ -458,8 +470,6 @@ def send_mails(*, now=None):
                 user,
                 pks,
                 now,
-                lambda notifications, user=user: digest_mail(
-                    user, notifications, day=day
-                ),
+                lambda notifications, user=user: digest_mail(user, notifications),
             )
     return count
