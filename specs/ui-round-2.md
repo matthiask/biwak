@@ -169,3 +169,97 @@ without one, so a later run looks at them again (one request each); people
 with an image are never fetched again. Tests: `test_images.py` and the
 profile image tests in `test_importer.py`, with images made by Pillow in
 `support.py`.
+
+## Rest of round 2 (added 2026-11-21)
+
+Points of `ui-feedback.md`'s round 2 the parts above didn't cover. Two
+more are elsewhere:
+- **The client badge in the activity list** is gone from the feed and
+  the lantern (decided 2026-11-21, `feed.md`).
+- **"Filters should autosubmit", "My to-dos grouped by project, list,
+  group" and "restore filters"** are `ui-round-3.md`.
+
+### Part D: the projects page and project colors
+
+**Touches:** `projects/_page.html` and the project views, the project
+form and its widget, CSS.
+
+1. **No archiving from the projects page.** The archive buttons go from
+   the cards, and "Bring back" from the archived list's rows. Archiving
+   and bringing back stay in the project's own "More" menu and the
+   palette.
+   - The archived list (`?archived=1`) stays as a list to open archived
+     projects.
+   - The htmx answers and the "Archived. Undo" message built for the
+     cards go. After archiving from the project's menu, the projects
+     page says "Archived Website." with an Undo, as one message.
+   - `ui-round-1.md` part 6 is superseded on this point.
+2. **The color picker is a row of radio swatches**, not a select: one
+   small rounded square per palette color (the project color's shape,
+   `project-colors.md`), plus "None".
+   - The color's name is the radio's accessible label and `title`, not
+     shown as text.
+   - The checked swatch gets a ring in the accent color.
+   - It works with the keyboard as radios do.
+   - One include, used on the new-project and edit forms.
+
+### Part E: settings, sign-in and sessions
+
+**Touches:** `accounts/settings.html`, the allauth templates for
+passkeys and sessions (`templates/allauth/` or `mfa/`, `usersessions/`),
+`accounts/api_tokens.html`, the views if needed.
+
+1. **Sign-in on the settings page, inline.** The "Sign-in" section today
+   is a list of links (passkeys, sessions, API tokens) that doesn't look
+   like a menu. It shows instead:
+   - **Passkeys:** the passkeys (name, added, last used) with "Remove"
+     each, and "Add a passkey". Adding goes through allauth's flow as
+     now.
+   - **Sessions:** the person's sessions (browser and device, IP, last
+     seen, "this one").
+     - Each other session has its own "Sign out".
+     - One button below, "Sign out everywhere else".
+     - The current session is signed out with the usual "Sign out" in
+       the "Me" menu.
+     - The table's header has a cell for every column (the action column
+       had none).
+   - **API tokens** stays a page of its own, reached by a plain link
+     ("API tokens and the command line →"), since it has the CLI's
+     instructions too.
+2. **What "Sign out" does is said where it is:** "Sign out of this
+   browser" (the "Me" menu), "Sign out" per session row, "Sign out
+   everywhere else" (all other sessions). allauth's usersessions views
+   do the work.
+
+### Part F: people with the same first name
+
+Several staff share a first name, e.g. "Moritz". Mentions and lists show
+the first name only, so it must stay clear who's who.
+- **Where a short name is shown** (mentions, subscribers, assignees,
+  reactions' "Who?", the lantern, pickers), it becomes "Moritz F." when
+  someone else the viewer may know has the same short name. That's the
+  first letter of the last name; if that's still the same, the full
+  name.
+- **The rule:** one function, e.g. `display_names(people, viewer)`,
+  computed once per request over the people the viewer may know
+  (`known_people()`). Not stored, so it adapts when someone joins.
+- **The `@` list** shows the full name and organization anyway. It
+  inserts the short form that's unique for the viewer, e.g.
+  `[@Moritz F.](person:ID)`.
+- **Rendering mentions** uses the same rule. The person's id decides
+  who it is, so the label is only a fallback.
+- **The marks** (colored initials and images) help too. The full name
+  stays in every `title`.
+
+### Done when (D, E, F)
+
+- **Tests:**
+  - **D:** no archive buttons on the projects page; the swatch radios
+    (a browser test with the keyboard).
+  - **E:** the settings page with passkeys and sessions, and signing out
+    one session and all others.
+  - **F:** two people with the same short name, as the viewer of both
+    and of only one; a third with the same initial getting the full
+    name.
+- **Screenshots** of the color picker and the sign-in section in the
+  report.

@@ -49,7 +49,8 @@ records, levels, `send_mails`), reactions.
 ## The lantern
 
 - **The menu:** a lantern icon (`bi-lamp` or a lantern of our own) in the navigation with the number of unread
-  notifications, shown as a small red dot like the one on the tab's icon,
+  notifications, shown as a small red dot like the one on the tab's icon
+  (on a phone the menu spans the screen below the bar),
   without a number (decided 2026-11-21; the number is in the button's
   tooltip and read to screen readers). Opening it shows them grouped by item, newest first:
   - the item's title, kind icon and project (no client badge: calmer,

@@ -7,7 +7,7 @@ Feedback from using "My to-dos" (2026-11-21):
   project, list and group;
 - filter forms only apply after pressing the button.
 
-**Status:** built 2026-11-21. Decisions: the switch is a POST form like the projects page's (`/todos/grouping/`, back to the page with its filters) and a valid `?grouping=` stores the choice too; the API's `list_id` is gone, to-dos carry `project_name`, `list_title` and `list_position` (projects have no position, they go by name) beside their group's; `biwak todos` is by project unless `--by-due`; autosubmit is `frontend/autosubmit.js` (`data-autosubmit`, buttons marked `data-autosubmit-button`, `data-no-autosubmit` on a field), remembered filters `frontend/filters.js` (`data-remember`, `data-reset-filters`).
+**Status:** built 2026-11-21. Decisions: the switch is a POST form like the projects page's (`/todos/grouping/`, back to the page with its filters) and a valid `?grouping=` stores the choice too; the API's `list_id` is gone, to-dos carry `project_name`, `list_title` and `list_position` (projects have no position, they go by name) beside their group's; `biwak todos` is by project unless `--by-due`; autosubmit is `frontend/autosubmit.js` (`data-autosubmit`, buttons marked `data-autosubmit-button`, `data-no-autosubmit` on a field), remembered filters `frontend/filters.js` (`data-remember`, `data-reset-filters`), the top bar's links and the palette's links restore them.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.
@@ -83,6 +83,25 @@ The rule:
 
 Decided 2026-11-21.
 
+## 4. Filters remembered
+
+Like Workbench: a filter page opened from the navigation shows the
+filters used there last.
+- **When stored:** in the browser (`localStorage`, wrapped in try/catch,
+  per path), when a filter page loads with a query.
+- **When restored:** a navigation link (the top bar, the palette's
+  jumps) to such a page goes to it with the stored query.
+- **Clearing:** a "Reset filters" link on the page clears it and the
+  stored value. Opening the page by any other link (a bookmark, a link
+  in a mail) uses that link's query as it is.
+- **Which pages:** "My to-dos", the feed and the lantern's page; search
+  is excluded (its query is the point).
+- **The code:** adapted from Workbench's `main.js` (autosubmit and the
+  stored searches; its code is the user's own, adapting it is fine,
+  decided 2026-11-21).
+
+Decided 2026-11-21.
+
 ## Done when
 
 - **Django tests:**
@@ -92,7 +111,8 @@ Decided 2026-11-21.
   - the API's `grouping` and positions;
   - the CLI.
 - **Browser tests:** a select change applying the filter, the focus
-  kept, the button hidden with JavaScript.
+  kept, the button hidden with JavaScript, a filter restored through the
+  navigation and cleared with "Reset filters".
 - **`specs/todos.md`** updated: stage 2's filters and this grouping.
 - **A screenshot** of "By project" with two projects, a group and an
   overdue to-do.
