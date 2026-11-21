@@ -587,7 +587,7 @@ class SinceTest(ImportCase):
 class PeopleTest(ImportCase):
     def test_companies_become_organizations(self):
         """Clients' and collaborators' companies, by name ignoring case and
-        spaces; employees in the installation's own organization, if one is
+        spaces; employees in the own organization, if one is
         marked (specs/organizations.md)"""
         own = organization("Example Team", is_own=True)
         existing = organization("Example client LTD")

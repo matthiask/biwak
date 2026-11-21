@@ -7,7 +7,7 @@ from biwak.projects.models import Membership, Project
 
 def organization(name="Example Client Ltd", **kwargs):
     """The organization of this name, created if needed; ``is_own=True``
-    is the installation's own, which always exists: it gets the name"""
+    is the own organization, which always exists: it gets the name"""
     if kwargs.pop("is_own", False):
         own = Organization.objects.own()
         own.name = name

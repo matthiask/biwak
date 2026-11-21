@@ -22,7 +22,7 @@ from biwak.projects.models import Membership, Project
 
 
 def can_manage_members(user):
-    """The installation's own staff manage members; clients and partners
+    """Own staff manage members; clients and partners
     don't (adding offers everybody, which partners mustn't learn about)"""
     return user.is_authenticated and user.sees_all_access
 
@@ -116,7 +116,7 @@ def remove_member(project, user, *, actor):
 def forget_lost_access(user, *, project=None):
     """Without access, the person's subscriptions go (in ``project``, or in
     every project): removed from a limited project, or no longer the
-    installation's own staff (specs/access.md)"""
+    own staff (specs/access.md)"""
     subscriptions = Subscription.objects.filter(user=user)
     if project is not None:
         subscriptions = subscriptions.filter(item__project=project)
@@ -145,7 +145,7 @@ def invite(
     (specs/access.md: staff or client is set by admins). New people belong
     to ``organization``, else to the one their address's domain belongs to
     (specs/organizations.md); only admins put people into the
-    installation's own. People who exist keep theirs. Returns the person
+    own. People who exist keep theirs. Returns the person
     and whether they were created."""
     email = User.objects.normalize_email(email.strip())
     user = User.objects.filter(email__iexact=email).first()
@@ -154,9 +154,7 @@ def invite(
         if not is_client and not actor.is_admin:
             raise InvitationError(_("Only admins can invite staff."))
         if organization is not None and not org_ops.can_touch(actor, organization):
-            raise InvitationError(
-                _("Only admins add people to the installation's own organization.")
-            )
+            raise InvitationError(_("Only admins add people to your own organization."))
         organization = org_ops.for_new_person(email, organization)
         if organization is not None and not org_ops.can_touch(actor, organization):
             # Suggested by the domain only: not for others than admins
@@ -200,7 +198,7 @@ def can_manage_project(user):
 
 
 def can_create_project(user):
-    """The installation's own staff: the form offers the organizations and
+    """Own staff: the form offers the organizations and
     their people, which partners mustn't learn about"""
     return user.is_authenticated and user.sees_all_access
 
@@ -280,7 +278,7 @@ def update_project(
 def joinable_projects(user):
     """Limited projects an admin isn't in: they see that they exist and can
     join them (specs/access.md); nobody else does. Admins are always the
-    installation's own staff (decided 2026-11-21)"""
+    own staff (decided 2026-11-21)"""
     if not (user.is_authenticated and user.is_admin):
         return Project.objects.none()
     return Project.objects.active().exclude(pk__in=Project.objects.accessible_to(user))

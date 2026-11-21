@@ -2,7 +2,7 @@ from django.db import migrations
 
 
 def own_organization(apps, schema_editor):
-    """The installation's own organization always exists ("Our
+    """The own organization always exists ("Our
     organization" if none is marked), and staff without an organization go
     into it: staff without one are partners now (decided 2026-11-21), and
     nobody loses access by the migration"""

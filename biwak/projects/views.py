@@ -92,7 +92,7 @@ ORGANIZATIONS, PEOPLE = "organizations", "people"
 class NewProjectForm(ProjectForm):
     """The new project with the organizations involved (specs/organizations.md):
     first the project and its organizations; with organizations, then their
-    people to pick from (all at first), the installation's own staff, and
+    people to pick from (all at first), own staff, and
     people without an account to invite (``invites``)."""
 
     organizations = forms.ModelMultipleChoiceField(

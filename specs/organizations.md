@@ -1,7 +1,7 @@
 # Organizations
 
 The organizations people belong to: the clients' companies, the
-installation's own, and partners (freelancers, other agencies). Today an
+own, and partners (freelancers, other agencies). Today an
 organization is a text on each person (`User.organization`): two people
 belong together only if the text matches exactly, nothing prevents typos,
 and renaming means editing everyone.
@@ -40,15 +40,15 @@ point.
   come from any number of organizations per project, so Basecamp's
   limit doesn't apply.
 - **Partners see only their projects:** staff whose organization isn't
-  the installation's own (freelancers, partner agencies, Basecamp's
+  the own organization (freelancers, partner agencies, Basecamp's
   non-client collaborators) see only the projects they're members of;
-  all-access projects open only to the installation's own staff
+  all-access projects open only to own staff
   (`access.md` to be changed accordingly, tests through every entry
   point).
 - **No organization is an individual** (decided 2026-11-21): the
   organization stays optional; staff without one (freelancers) are
   partners, clients without one are fine. Only the own organization's
-  people are the installation's own staff (`is_partner`: staff not in
+  people are own staff (`is_partner`: staff not in
   the own organization; `own_staff()`: not clients, `organization__is_own`).
 - **The own organization always exists** (decided 2026-11-21):
   `Organization.objects.own()` creates "Our organization" if none is
@@ -65,7 +65,7 @@ point.
   employees into the own organization; collaborators without a company
   stay individual partners. Made-up staff in the tests
   (`biwak/test_utils.py`) belong to the own organization.
-- **Admins are always the installation's own staff** (decided
+- **Admins are always own staff** (decided
   2026-11-21): every change that would make an admin a partner is
   refused, and the message says what to do first: ticking "is admin" on
   a partner (`User.clean()`, the Django admin), moving an admin into
@@ -90,7 +90,7 @@ point.
   autocomplete over existing names; a new name creates the organization
   only after confirming ("Create 'Exmaple Ltd'?"), which catches most
   typos.
-- **The installation's own organization** is marked (`is_own`), set once
+- **The own organization** is marked (`is_own`), set once
   by an admin.
 
 ## The People page (decided 2026-11-21)
@@ -98,11 +98,11 @@ point.
 - **`/people/`, "People" in the navigation** and "Go to people" in the
   palette: the way into the organizations pages (which settles where
   they're linked from).
-- **Order:** the installation's own organization first, then the other
+- **Order:** the own organization first, then the other
   organizations by name, each marked as a client or partner organization
   (partner: it has staff), then people without an organization
   (freelancers, individual clients). Headings link to the organization's
-  page for the installation's own staff.
+  page for own staff.
 - **Each person:** name, address, role (admin, staff, partner, client),
   a link to their feed where the viewer may open it; inactive people
   quietly, marked "inactive", last in their group. The installation's
@@ -141,7 +141,7 @@ point.
 
 All staff create, rename and merge client and partner organizations
 (recorded in the audit log); deleting only organizations without
-people; anything touching the installation's own organization (merging
+people; anything touching the own organization (merging
 into it, moving people in or out, marking it) only admins, since it
 decides who sees all-access projects.
 
@@ -149,7 +149,7 @@ decides who sees all-access projects.
 
 - **The model** (`biwak/organizations/`): `Organization(name, domains,
   is_own)`, names unique ignoring case (stored with single spaces),
-  at most one marked as the installation's own; `User.organization` a
+  at most one marked as own; `User.organization` a
   foreign key (empty allowed, protected: an organization with people
   isn't deleted). Migration `accounts.0012` turned the texts into
   organizations, merging names that differ only in case and spaces (the
@@ -164,20 +164,20 @@ decides who sees all-access projects.
   only once ticked, together with the invitation. Inviting leaves an
   empty field to the address's domain; people who exist keep their
   organization. Everybody can belong to one, staff too.
-- **Pages** (`/organizations/`, the installation's own staff only; linked
+- **Pages** (`/organizations/`, own staff only; linked
   from the People page, a project's people page and the palette's "Go to
   organizations"):
   the list with people and domains, an organization's page with its
   people, and modals to create, edit (name and domains), merge ("Merge…":
   people and domains move, the other one is deleted), delete (only
   without people) and move a person to another organization ("Change
-  organization", `/people/ID/organization/`). The installation's own is
+  organization", `/people/ID/organization/`). The own organization is
   marked in the Django admin; merging into or out of it, moving people in
   or out of it and deleting it are admins only, also on these pages.
 - **The new-project modal** asks for the organizations involved (all but
-  the installation's own); without any it adds the project at once, as
+  the own organization); without any it adds the project at once, as
   before. With some, "Continue" shows their people (partners included),
-  all ticked, the installation's own staff to tick, and three rows to
+  all ticked, own staff to tick, and three rows to
   invite people without an account (address, name, organization: the
   domain's if left empty, else the only one involved; invited as
   clients). Everybody picked becomes a member, the invitations go out
@@ -190,7 +190,7 @@ decides who sees all-access projects.
   /api/v1/organizations/`, `GET|PATCH|DELETE /api/v1/organizations/{id}/`
   (with its people), `POST /api/v1/organizations/{id}/merge/`
   (`into_id`), `PUT /api/v1/people/{id}/organization/`
-  (`organization_id`, null for none), the installation's own staff only,
+  (`organization_id`, null for none), own staff only,
   with the pages' rules; people carry `organization` (the name) and
   `organization_id`; invitations take `organization_id` or an existing
   `organization` by name (400 for an unknown one: create it first), else
@@ -200,10 +200,10 @@ decides who sees all-access projects.
 - **The importer** (`biwak/importer/importer.py`): Basecamp's companies
   become organizations by name (ignoring case and spaces); clients and
   collaborators (staff who aren't Basecamp employees) get theirs, which
-  makes collaborators partners; employees the installation's own (it
+  makes collaborators partners; employees the own organization (it
   always exists). The dry run's list says "partner" and the company.
 - **The admin:** organizations with their people count; marking one as
-  the installation's own moves the mark (`mark_own()`); a person's
+  the own organization moves the mark (`mark_own()`); a person's
   organization with autocomplete.
 
 ## Decided meanwhile (2026-11-21, to be confirmed)
@@ -213,18 +213,18 @@ decides who sees all-access projects.
   ask members; people already asked stay), names in an item's history,
   assignees in mails and the feed (others are "somebody" or left out);
   the feed's old title of a list moved out of sight only for the
-  installation's own staff. Errors naming people by ID say nothing about
+  own staff. Errors naming people by ID say nothing about
   who exists. The importer assigns and mentions as in Basecamp, also for
   a creator who's a partner now.
-- **Leaving the installation's own organization** (moved, merged, another
+- **Leaving the own organization** (moved, merged, another
   one marked, unmarked in the admin) drops the person's subscriptions in
   projects they can't open anymore, like being removed from a limited
   project (`forget_lost_access()`).
 - **The new-project modal** adds the project at once without
   organizations involved; people invited there are clients; the staff
-  list is the installation's own staff (partners come with their
+  list is own staff (partners come with their
   organization).
 - **Inviting** someone who exists doesn't change their organization; a
-  domain matching the installation's own preselects it for admins only.
+  domain matching the own organization preselects it for admins only.
 - **Shown with the organization** ("Ada, Example Ltd"): clients and
-  partners, not the installation's own staff.
+  partners, not own staff.

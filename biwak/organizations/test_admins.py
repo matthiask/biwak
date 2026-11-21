@@ -1,4 +1,4 @@
-"""Admins are always the installation's own staff (decided 2026-11-21):
+"""Admins are always own staff (decided 2026-11-21):
 every change that would make an admin a partner is refused, with what to
 do first"""
 
@@ -107,7 +107,7 @@ class AdminsTest(TestCase):
 
 class IndividualsTest(TestCase):
     """Staff without an organization are individuals, partners (decided
-    2026-11-21); the installation's own organization always exists"""
+    2026-11-21); the own organization always exists"""
 
     def test_staff_without_an_organization_are_partners(self):
         gus = person("Gus", organization=None)

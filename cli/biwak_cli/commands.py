@@ -366,7 +366,7 @@ def member_invite(
 @json_option
 @click.pass_context
 def orgs(ctx, as_json):
-    """The organizations people belong to (the installation's own staff):
+    """The organizations people belong to (own staff):
     without a command, all of them"""
     if ctx.invoked_subcommand is not None:
         return None
@@ -387,7 +387,7 @@ def orgs(ctx, as_json):
 
 
 def show_org(data):
-    own = ", the installation's own" if data["is_own"] else ""
+    own = ", your own organization" if data["is_own"] else ""
     click.echo(f"{data['name']} ({data['id']}{own})")
     if data["domains"]:
         click.echo(f"Domains: {', '.join(data['domains'])}")

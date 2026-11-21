@@ -1,5 +1,5 @@
 """Partners (specs/access.md, specs/organizations.md): staff of an
-organization other than the installation's own see only the projects
+organization other than the own one see only the projects
 they're members of, through every entry point. Pia is a partner and a
 member of "Camp"; "Lodge" is all-access, without her; "Salaries" is
 limited."""
@@ -93,7 +93,7 @@ class QueriesTest(PartnerTestCase):
         self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
         org_ops.set_organization(self.pia, organization("Other Agency"), actor=root)
         self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
-        # Their organization merged into the installation's own
+        # Their organization merged into the own organization
         org_ops.merge(self.pia.organization, self.own, actor=root)
         self.pia.refresh_from_db()
         self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
@@ -192,7 +192,7 @@ class PagesTest(PartnerTestCase):
         # People: only those sharing a project
         found = json.dumps(self.client.get("/palette/", {"q": "Bob"}).json())
         self.assertNotIn("Bob Example", found)
-        # The installation's own staff find them
+        # Own staff find them
         self.client.force_login(self.bob)
         response = self.client.get("/search/", {"q": "Book"})
         self.assertContains(response, self.lodge_todo.get_absolute_url())

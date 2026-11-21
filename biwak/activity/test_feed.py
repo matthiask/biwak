@@ -716,7 +716,7 @@ class MoveTargetTest(FeedBase):
             )
             self.move(self.plans, todo)
         self.assertEqual((count(self.cleo), count(self.ada)), few)
-        # Staff: one more, whether they're the installation's own (the old
+        # Staff: one more, whether they're the own organization (the old
         # title of lists they can't see, specs/access.md)
         self.assertEqual(few, (1, 2))
 

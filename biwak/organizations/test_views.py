@@ -150,7 +150,7 @@ class PagesTest(TestCase):
         self.cleo.refresh_from_db()
         self.assertEqual(self.cleo.organization.name, "Newco")
         self.assertRedirects(response, self.cleo.organization.get_absolute_url())
-        # Into the installation's own: admins only
+        # Into the own organization: admins only
         bob = person("Bob", organization=None)
         response = self.client.post(
             f"/people/{bob.pk}/organization/", {"organization": "Example Team"}

@@ -1,5 +1,5 @@
 """The pages of organizations (specs/organizations.md, "Managing"): for the
-installation's own staff, the forms as modals and pages (``biwak/modals.py``)"""
+own staff, the forms as modals and pages (``biwak/modals.py``)"""
 
 from django import forms
 from django.contrib import messages
@@ -222,9 +222,7 @@ def person_organization(request, pk):
         ):
             form.add_error(
                 "organization",
-                _(
-                    "Only admins move people in or out of the installation's own organization."
-                ),
+                _("Only admins move people in or out of your own organization."),
             )
         else:
             try:

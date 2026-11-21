@@ -13,7 +13,7 @@ class OrganizationForm(forms.ModelForm):
         return super()._get_validation_exclusions() | {"is_own"}
 
     def clean(self):
-        """Admins stay the installation's own staff (decided 2026-11-21):
+        """Admins stay own staff (decided 2026-11-21):
         not unmarking or moving the mark while admins would be left out"""
         data = super().clean()
         was_own = (
@@ -22,10 +22,7 @@ class OrganizationForm(forms.ModelForm):
         )
         if was_own and not data.get("is_own"):
             raise forms.ValidationError(
-                _(
-                    "There is always an installation's own organization: mark"
-                    " another one instead."
-                )
+                _("There is always your own organization: mark another one instead.")
             )
         if data.get("is_own") and not was_own:
             for old in Organization.objects.filter(is_own=True):
@@ -35,7 +32,7 @@ class OrganizationForm(forms.ModelForm):
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    """Marking the installation's own organization is here (admins only,
+    """Marking the own organization is here (admins only,
     specs/organizations.md); the rest also on the pages for staff"""
 
     list_display = ["name", "domains", "is_own", "people_count"]
@@ -52,7 +49,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         return obj.people_count
 
     def save_model(self, request, obj, form, change):
-        # Only one is the installation's own: another one loses the mark
+        # Only one is the own organization: another one loses the mark
         if obj.is_own:
             obj.is_own = False
             super().save_model(request, obj, form, change)

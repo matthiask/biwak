@@ -11,7 +11,7 @@ from biwak.accounts.models import Color
 
 def knows_everybody(viewer):
     """Whether the viewer may learn about people who aren't members of the
-    project: the installation's own staff, not partners, not clients and
+    project: own staff, not partners, not clients and
     not nobody (mails rendered for nobody in particular)"""
     return viewer is not None and viewer.is_authenticated and viewer.sees_all_access
 
@@ -19,7 +19,7 @@ def knows_everybody(viewer):
 class ProjectQuerySet(models.QuerySet):
     def accessible_to(self, user):
         """The projects a person may open (specs/access.md): the
-        installation's own staff all all-access projects and those they're
+        own staff all all-access projects and those they're
         members of, partners (staff of other organizations) and clients
         only those they're members of. Admins aren't special here: they see
         limited projects in the list of all projects, not their content."""
@@ -95,7 +95,7 @@ class Project(models.Model):
 
     def people_known_to(self, viewer, people):
         """Those of ``people`` the viewer may see named: everybody for the
-        installation's own staff, the members for clients, partners and for
+        own staff, the members for clients, partners and for
         nobody in particular (as on the project page; staff of all-access
         projects needn't be members).
         ``biwak.activity.mentions.known_to()`` is the same for querysets."""

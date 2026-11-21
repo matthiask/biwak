@@ -120,7 +120,7 @@ class OrgsCLITest(test_cli.CLITest):
         self.assertIn("Example Ltd", output)
         self.assertIn("example.com", output)
         data = json.loads(self.biwak("orgs", "--json").stdout)
-        # The installation's own always exists
+        # The own organization always exists
         self.assertEqual([o["name"] for o in data], ["Example Ltd", "Our organization"])
         output = self.biwak("orgs", "show", self.example.pk).output
         self.assertIn("Cleo Example", output)

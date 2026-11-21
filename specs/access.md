@@ -40,7 +40,7 @@ the first client gets a login.
 - **Partners see only their projects** (decided 2026-11-21,
   `organizations.md`): staff whose organization isn't the installation's
   own (freelancers, partner agencies) see only the projects they're
-  members of; all-access projects open only to the installation's own
+  members of; all-access projects open only to the own organization
   staff. Staff without an organization are individuals (freelancers) and
   partners too (decided 2026-11-21); the own organization always exists
   and admins are always in it (`User.is_partner`, `User.sees_all_access`,
@@ -54,7 +54,7 @@ the first client gets a login.
   askees, names in histories, mails and the feed). They don't create
   projects, add or invite people or manage organizations, whose forms
   offer everybody (decided 2026-11-21). Moving people in or out of the
-  installation's own organization is for admins only; leaving it drops
+  own organization is for admins only; leaving it drops
   the subscriptions in projects one can't open anymore, and open pages
   and editors check their access again.
 - **Clients** are never covered by all-access either: they see a project only

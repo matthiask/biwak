@@ -265,7 +265,7 @@ class Importer(Resolver):
 
     def _organization(self, name):
         """Basecamp's company as an organization, by name (ignoring case and
-        spaces, like the migration from texts); not the installation's own,
+        spaces, like the migration from texts); not the own organization,
         which only admins give people"""
         name = normalize_name(name)
         if not name:

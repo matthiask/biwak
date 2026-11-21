@@ -70,7 +70,7 @@ when they aren't a member; creating records no event (as on the web).
   /api/v1/projects/{id}/members/{person_id}/` with the web's rules,
   `biwak member remove PROJECT PERSON`.
 - Organizations (`organizations.md`, built 2026-11-21): `/api/v1/organizations/`
-  and `biwak orgs` for the installation's own staff; `organization_id` on
+  and `biwak orgs` for own staff; `organization_id` on
   people and invitations.
 - `biwak todo move TODO --list ID [--group ID]` and moving several
   (`--todos 1,2,3`) through the existing move endpoints.

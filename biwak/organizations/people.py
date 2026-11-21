@@ -1,8 +1,8 @@
 """The People page (specs/organizations.md, decided 2026-11-21): everybody
-the viewer may know, by organization: the installation's own first, then the
+the viewer may know, by organization: the own organization first, then the
 other organizations by name, then people without one. Clients and partners
 see the people they share a project with (the members rule of
-specs/access.md), the installation's own staff everybody."""
+specs/access.md), own staff everybody."""
 
 from dataclasses import dataclass, field
 
@@ -59,7 +59,7 @@ def groups_for(viewer):
             without.people.append(user)
         elif org.is_own:
             if own is None:
-                own = Group(org, "own", _("The installation's own organization"))
+                own = Group(org, "own", _("Your own organization"))
             own.people.append(user)
         else:
             others.setdefault(org.pk, Group(org, "client", "")).people.append(user)

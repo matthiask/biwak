@@ -157,7 +157,7 @@ def add_target_lists(events, user):
     if the viewer may not see it (specs/feed.md). Checked now, not when the
     event was recorded, in one query for all events. Clients see the list's
     current title if it is visible to them, and nothing for events without
-    the list's ID (recorded before it was stored); the installation's own
+    the list's ID (recorded before it was stored); the own organization
     staff fall back to the title at the time for lists they can't find any
     more, partners (who may not see that project) don't."""
     moves = [e for e in events if e.action == Action.MOVED and e.data.get("to")]

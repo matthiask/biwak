@@ -21,7 +21,7 @@ class OrganizationOut(Schema):
     id: int
     name: str
     domains: list[str]
-    # The installation's own: its staff see all-access projects, staff of
+    # The own organization: its staff see all-access projects, staff of
     # the others (partners) only the projects they're members of
     is_own: bool
     people_count: int
@@ -74,7 +74,7 @@ def allowed(function, *args, **kwargs):
 
 @router.get("organizations/", response=list[OrganizationOut])
 def organization_list(request):
-    """All organizations by name (the installation's own staff)"""
+    """All organizations by name (own staff)"""
     managing(request)
     return [
         organization_out(org)
@@ -134,7 +134,7 @@ class MergeIn(Schema):
 @router.post("organizations/{organization_id}/merge/", response=OrganizationDetailOut)
 def organization_merge(request, organization_id: int, data: MergeIn):
     """Moves the people and domains into ``into_id`` and deletes this one;
-    returns the one merged into. The installation's own: admins only."""
+    returns the one merged into. The own organization: admins only."""
     org = organization_for(request, organization_id)
     target = organization_for(request, data.into_id)
     allowed(org_ops.merge, org, target, actor=request.user)
@@ -158,7 +158,7 @@ class PersonOrganizationIn(Schema):
 @router.put("people/{person_id}/organization/", response=PersonOut)
 def person_organization(request, person_id: int, data: PersonOrganizationIn):
     """Moves the person to another organization (or none); in or out of the
-    installation's own: admins only"""
+    own: admins only"""
     managing(request)
     user = get_object_or_404(User, pk=person_id)
     org = None

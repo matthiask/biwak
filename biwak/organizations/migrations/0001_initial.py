@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                     models.BooleanField(
                         default=False,
                         help_text="Its staff see all-access projects; staff of other organizations (partners) only the projects they're members of.",
-                        verbose_name="the installation's own",
+                        verbose_name="your own organization",
                     ),
                 ),
                 (

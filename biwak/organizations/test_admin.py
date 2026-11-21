@@ -5,7 +5,7 @@ from biwak.test_utils import organization, person
 
 
 class AdminTest(TestCase):
-    """The installation's own organization is marked in the Django admin"""
+    """The own organization is marked in the Django admin"""
 
     def setUp(self):
         self.root = person("Root", is_admin=True)
@@ -32,7 +32,7 @@ class AdminTest(TestCase):
             f"/admin/organizations/organization/{self.own.pk}/change/",
             {"name": "Example Team", "domains": ""},
         )
-        self.assertContains(response, "always an installation")
+        self.assertContains(response, "There is always your own organization")
 
     def test_people_pick_theirs(self):
         ada = person("Ada")

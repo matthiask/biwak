@@ -1,6 +1,6 @@
 """Gaps the review of partners found (specs/access.md): who partners learn
 about through check-ins, the history, mails and the feed; subscriptions
-when leaving the installation's own organization; the importer"""
+when leaving the own organization; the importer"""
 
 from django.test import TestCase
 
@@ -163,7 +163,7 @@ class NamesTest(ReviewTestCase):
 
 
 class SubscriptionsTest(ReviewTestCase):
-    """Leaving the installation's own organization loses access to
+    """Leaving the own organization loses access to
     all-access projects one isn't a member of: their subscriptions go"""
 
     def setUp(self):

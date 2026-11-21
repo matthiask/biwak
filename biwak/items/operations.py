@@ -414,7 +414,7 @@ def assignable_people(item, by=None):
     )
     staff = Q(is_client=False) & members
     if everybody:
-        # The installation's own staff; partners only as members
+        # Own staff; partners only as members
         staff |= own_staff()
     who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
     # Inactive people only while importing (they have no account yet)

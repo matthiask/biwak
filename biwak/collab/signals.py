@@ -1,7 +1,7 @@
 """Changes outside the operations make the open editors and pages
 (``/ws/live/``) check their access again: a person made a client or
 deactivated, a project made limited or archived, an organization not the
-installation's own anymore (the Django admin), and
+own anymore (the Django admin), and
 logging out, here or everywhere"""
 
 from allauth.usersessions.models import UserSession
@@ -24,7 +24,7 @@ def user_changed(sender, instance, update_fields=None, **kwargs):
 
 @receiver(post_save, sender=Organization)
 def organization_changed(sender, instance, **kwargs):
-    """Not the installation's own anymore (the Django admin): its people
+    """Not the own organization anymore (the Django admin): its people
     may not see all-access projects anymore"""
     for pk in instance.people.values_list("pk", flat=True):
         live.check_access(user=pk)

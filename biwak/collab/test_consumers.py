@@ -359,7 +359,7 @@ class ConsumerTest(TransactionTestCase):
 
     async def test_a_partner_now(self):
         """Bob is staff, not a member: in another organization than the
-        installation's own, he's a partner and doesn't see the project"""
+        own, he's a partner and doesn't see the project"""
         bob = await self.connect(self.bob, self.shared)
 
         def make_partner():

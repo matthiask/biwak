@@ -1,8 +1,8 @@
 """Managing organizations (specs/organizations.md, "Managing"): the
-installation's own staff create, rename and merge client and partner
+own staff create, rename and merge client and partner
 organizations and change their domains; the audit log records it (the
 trigger on the tables). Deleting only organizations without people.
-Anything touching the installation's own organization (merging into or out
+Anything touching the own organization (merging into or out
 of it, moving people in or out, marking it) is for admins only: it decides
 who sees all-access projects."""
 
@@ -34,14 +34,14 @@ def _access_changed(people):
 
 
 def can_manage(user):
-    """The installation's own staff; partners and clients don't learn which
+    """Own staff; partners and clients don't learn which
     organizations and people there are"""
     return user.is_authenticated and user.is_active and user.sees_all_access
 
 
 def can_touch(user, *organizations):
     """Whether the person may change who belongs to these organizations:
-    admins any, other staff all but the installation's own"""
+    admins any, other staff all but the own organization"""
     if not can_manage(user):
         return False
     if user.is_admin:
@@ -50,14 +50,14 @@ def can_touch(user, *organizations):
 
 
 def _no_admin_partners(admins, *, own_after):
-    """Admins are always the installation's own staff (decided 2026-11-21):
+    """Admins are always own staff (decided 2026-11-21):
     ``ValidationError`` if any of these admins would be in another
     organization than the own one (``own_after``) afterwards"""
     if admins and not own_after:
         names = ", ".join(sorted(str(user) for user in admins))
         raise ValidationError(
             _(
-                "Admins are always the installation's own staff: make %(names)s"
+                "Admins are always in your own organization: make %(names)s"
                 " no admin first."
             )
             % {"names": names}
@@ -80,7 +80,7 @@ def _check_touch(actor, *organizations):
     _check_manage(actor)
     if not can_touch(actor, *organizations):
         raise PermissionError(
-            _("Only admins change who belongs to the installation's own organization.")
+            _("Only admins change who belongs to your own organization.")
         )
 
 
@@ -169,7 +169,7 @@ def merge(source, target, *, actor):
     if source.is_own:
         raise ValidationError(
             _(
-                "The installation's own organization always exists: merge"
+                "Your own organization always exists: merge"
                 " %(organization)s into it instead."
             )
             % {"organization": target}
@@ -188,11 +188,11 @@ def merge(source, target, *, actor):
 
 @transaction.atomic
 def delete_organization(org, *, actor):
-    """Only organizations nobody belongs to, never the installation's own"""
+    """Only organizations nobody belongs to, never the own organization"""
     _check_touch(actor, org)
     if org.is_own:
         raise ValidationError(
-            _("The installation's own organization always exists: rename it instead.")
+            _("Your own organization always exists: rename it instead.")
         )
     if org.people.exists():
         raise ValidationError(
@@ -209,7 +209,7 @@ def set_organization(user, org, *, actor):
         return user
     _check_touch(actor, user.organization if user.organization_id else None, org)
     if user.is_admin:
-        # Without an organization, staff are the installation's own
+        # Without an organization, staff are the own organization
         _no_admin_partners([user], own_after=org is not None and org.is_own)
     user.organization = org
     user.save(update_fields=["organization"])
@@ -219,18 +219,13 @@ def set_organization(user, org, *, actor):
 
 @transaction.atomic
 def mark_own(org, *, actor):
-    """Marks the installation's own organization (admins only); exactly one
+    """Marks the own organization (admins only); exactly one
     is marked (decided 2026-11-21), so another one loses it"""
     if not (actor.is_authenticated and actor.is_admin):
-        raise PermissionError(
-            _("Only admins mark the installation's own organization.")
-        )
+        raise PermissionError(_("Only admins mark your own organization."))
     if org is None:
         raise ValidationError(
-            _(
-                "There is always an installation's own organization: mark"
-                " another one instead."
-            )
+            _("There is always your own organization: mark another one instead.")
         )
     if org.is_own:
         return org

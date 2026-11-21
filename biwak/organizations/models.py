@@ -1,6 +1,6 @@
 """Organizations people belong to (specs/organizations.md): the clients'
-companies, the installation's own (``is_own``) and partners'. Staff of an
-organization other than the installation's own are partners and see only
+companies, the own organization (``is_own``) and partners'. Staff of an
+organization other than the own one are partners and see only
 the projects they're members of (specs/access.md)."""
 
 import re
@@ -62,7 +62,7 @@ def domain_of(email):
     return "" if domain in FREE_MAIL_DOMAINS else domain
 
 
-# The installation's own organization when none is marked yet; admins
+# The own organization when none is marked yet; admins
 # rename it
 OWN_NAME = "Our organization"
 
@@ -73,7 +73,7 @@ _own_pk = ContextVar("own_organization_pk", default=None)
 
 
 def own_values():
-    """``(ID, name)`` of the installation's own organization, ``(None,
+    """``(ID, name)`` of the own organization, ``(None,
     "")`` if none is marked yet"""
     memo = _own_pk.get()
     if memo is not None and "own" in memo:
@@ -115,7 +115,7 @@ def own_middleware(get_response):
 
 class OrganizationQuerySet(models.QuerySet):
     def own(self):
-        """The installation's own organization, which always exists
+        """The own organization, which always exists
         (decided 2026-11-21): created as "Our organization" if none is
         marked"""
         own = self.filter(is_own=True).first()
@@ -147,7 +147,7 @@ class Organization(models.Model):
         help_text=_("Inviting an address of these domains suggests the organization."),
     )
     is_own = models.BooleanField(
-        _("the installation's own"),
+        _("your own organization"),
         default=False,
         help_text=_(
             "Its staff see all-access projects; staff of other organizations"

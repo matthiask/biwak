@@ -39,7 +39,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **kwargs):
-        """Admins are the installation's own staff (decided 2026-11-21)"""
+        """Admins are own staff (decided 2026-11-21)"""
         from biwak.organizations.models import Organization
 
         kwargs.setdefault("organization", Organization.objects.own())
@@ -111,7 +111,7 @@ def own_staff(prefix=""):
 class User(AbstractBaseUser):
     """Staff or client (specs/access.md). Everybody can belong to an
     organization (specs/organizations.md); staff of an organization other
-    than the installation's own are partners."""
+    than the own one are partners."""
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -205,10 +205,10 @@ class User(AbstractBaseUser):
     def clean(self):
         super().clean()
         if self.is_admin and self.is_partner:
-            # Admins are the installation's own staff (decided 2026-11-21)
+            # Admins are own staff (decided 2026-11-21)
             raise ValidationError(
                 _(
-                    "Admins belong to the installation's own organization, a"
+                    "Admins belong to your own organization, a"
                     " partner can't be an admin: move them into it first."
                 )
             )
@@ -223,7 +223,7 @@ class User(AbstractBaseUser):
 
     @property
     def is_partner(self):
-        """Staff who aren't in the installation's own organization: of
+        """Staff who aren't in the own organization: of
         another one (partner agencies) or of none (individuals, e.g.
         freelancers, decided 2026-11-21). They see only the projects
         they're members of."""
@@ -240,7 +240,7 @@ class User(AbstractBaseUser):
     @property
     def sees_all_access(self):
         """Opens all-access projects without being a member: the
-        installation's own staff (``own_staff()`` for querysets)"""
+        own staff (``own_staff()`` for querysets)"""
         return not self.is_client and not self.is_partner
 
     @property
@@ -256,7 +256,7 @@ class User(AbstractBaseUser):
     @property
     def display_name(self):
         """With the organization for clients and partners: "Ada, Example
-        Ltd"; the installation's own staff without it"""
+        Ltd"; own staff without it"""
         if self.organization_id and not self.sees_all_access:
             return f"{self}, {self.organization.name}"
         return str(self)
