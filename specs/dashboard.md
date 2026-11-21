@@ -125,8 +125,14 @@ Plain links in a card, each only for those who can use it:
 
 Things on the dashboard can be in the lantern too: a to-do due that
 somebody commented on, an update in recent updates, a bookmarked item.
-Decided 2026-11-21 (user): their state is the same on both, kept on the
-server; the browser doesn't need to sync it. Whether the dashboard shows
+
+**Nothing has to be dealt with twice** (decided 2026-11-21, user). The
+dashboard has nothing of its own to tick off, dismiss or mark as seen:
+its rows go away when what they show is done (a to-do completed, a
+check-in answered, a bookmark removed, an update aged out), never by
+being looked at. What can be marked read is the lantern's, and it is
+one state on the server for both views; the browser doesn't need to
+sync it. Whether the dashboard shows
 notifications (unread marks, reading through the lantern) at all isn't
 decided yet (question 12); if it does, as follows. Bookmarks are shared
 either way.
@@ -144,8 +150,8 @@ either way.
   link to the item directly. This extends `lantern.md`'s "reading only
   through the lantern" to the dashboard (the lantern's entries shown on
   another page); the feed, lists and mails still read nothing.
-- **Nothing else reads:** loading the dashboard, completing a to-do on
-  it or bookmarking reads nothing.
+- **Nothing else reads:** loading the dashboard or bookmarking reads
+  nothing. Completing a to-do with unread notifications: question 13.
 - **Bookmarks** are the lantern's "Bookmarked" and the dashboard's
   bookmarks (section 6) alike: bookmarking or removing the bookmark in
   one shows in the other on the next load.
@@ -228,4 +234,11 @@ entry leaves this list.
 12. **Notifications on the dashboard at all?** Rows marked unread and
     reading through the lantern ("Shared with the lantern"), or a plain
     overview without notifications, leaving them to the lantern alone
-    (with question 9).
+    (with question 9). Either way nothing is ticked off twice (above).
+13. **Completing a to-do that has unread notifications** (on the
+    dashboard, or anywhere): does that read them too, since dealing
+    with the to-do is dealing with what was said about it? Proposed:
+    yes for the person completing it, so the lantern doesn't keep
+    asking about something they just finished; the others' stay
+    unread. This would change `lantern.md` ("reading only through the
+    lantern") for every page, not just the dashboard.

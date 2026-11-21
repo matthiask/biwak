@@ -6,7 +6,7 @@ answer goes into the spec named, and the entry leaves this file. Kept up
 to date: questions asked in the conversation and answered there are
 recorded in their spec and leave this file too.
 
-- `dashboard.md`: questions 1 to 12 (name, navigation, shortcut, what each
+- `dashboard.md`: questions 1 to 13 (name, navigation, shortcut, what each
   section shows and when).
 
 Decided to wait: the wording of mails, messages and the editor's and the
