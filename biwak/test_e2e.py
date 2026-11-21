@@ -499,6 +499,20 @@ class TodosTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
+def emoji_rows(picker):
+    """The number of emojis in each row of the reaction picker"""
+    return picker.evaluate(
+        """el => {
+          const rows = new Map()
+          for (const b of el.querySelectorAll(".wb-emoji")) {
+            const top = Math.round(b.getBoundingClientRect().top)
+            rows.set(top, (rows.get(top) || 0) + 1)
+          }
+          return [...rows.values()]
+        }"""
+    )
+
+
 class TodoPageTest(E2ETestCase):
     def setUp(self):
         super().setUp()
@@ -613,6 +627,12 @@ class TodoPageTest(E2ETestCase):
         )
         self.assertNotIn("@example.org", listbox.inner_text())
         self.assertEqual(self.errors, [])
+
+    def test_the_reaction_picker_fills_its_rows(self):
+        self.goto(self.page, self.todo)
+        reactions = self.page.locator(".wb-reactions").first
+        reactions.locator(".wb-reaction-add summary").click()
+        self.assertEqual(emoji_rows(reactions.locator(".wb-reaction-quick")), [8, 8, 8])
 
     def test_reactions(self):
         """The picker adds a quick reaction or a few words, clicking one's
@@ -1457,7 +1477,8 @@ class PageTest(E2ETestCase):
         picker = page.locator("details.wb-reaction-add").first
         picker.locator("summary").click()
         self.assertTrue(picker.evaluate("el => el.open"))
-        page.locator("h1").first.click()
+        # Empty space: the to-do's heading opens the form (view mode)
+        page.mouse.click(2, page.viewport_size["height"] - 2)
         self.assertFalse(picker.evaluate("el => el.open"))
         picker.locator("summary").click()
         picker.locator("input[type=text]").focus()
@@ -2018,6 +2039,9 @@ class PhoneTest(E2ETestCase):
         box = reactions.locator(".wb-reaction-picker").bounding_box()
         self.assertGreaterEqual(box["x"], 0)
         self.assertLessEqual(box["x"] + box["width"], 360)
+        self.assertEqual(
+            emoji_rows(reactions.locator(".wb-reaction-quick")), [6, 6, 6, 6]
+        )
 
 
 class MenuPlacementTest(E2ETestCase):

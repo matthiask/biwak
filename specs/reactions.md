@@ -154,3 +154,5 @@ Status: built (2026-11-21): the picker button is `emoji-smile` with the
 label "Add a reaction"; one's own pill (`.wb-reaction-own`,
 `frontend/reactions.js`) asks first; the confirmation page lives at
 `…/reactions/remove/?content=…` for items and comments.
+- **The picker's emojis** (2026-11-21): plain and larger, without button
+  frames, in full rows: 8 by 3, on a phone 6 by 4.
