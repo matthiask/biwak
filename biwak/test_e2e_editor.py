@@ -223,7 +223,7 @@ class ToolbarTest(E2ETestCase):
         self.put("make this bold", 5, 9)
         self.button("bold").click()
         self.assertEqual(self.value(), "make **this** bold")
-        self.field.press("Control+z")
+        self.field.press("ControlOrMeta+z")
         self.assertEqual(self.value(), "make this bold")
 
     def test_links(self):
@@ -276,19 +276,19 @@ class ToolbarTest(E2ETestCase):
 
     def test_keys(self):
         self.put("word", 0, 4)
-        self.field.press("Control+b")
+        self.field.press("ControlOrMeta+b")
         self.assertEqual(self.value(), "**word**")
         self.put("word", 0, 4)
-        self.field.press("Control+i")
+        self.field.press("ControlOrMeta+i")
         self.assertEqual(self.value(), "_word_")
         self.put("word", 0, 4)
-        self.field.press("Control+Shift+8")
+        self.field.press("ControlOrMeta+Shift+8")
         self.assertEqual(self.value(), "- word")
         self.put("word", 0, 4)
-        self.field.press("Control+Shift+7")
+        self.field.press("ControlOrMeta+Shift+7")
         self.assertEqual(self.value(), "1. word")
         self.put("word", 0, 4)
-        self.field.press("Control+Shift+9")
+        self.field.press("ControlOrMeta+Shift+9")
         self.assertEqual(self.value(), "- [ ] word")
 
     def test_tab_indents_list_items(self):
@@ -306,13 +306,13 @@ class ToolbarTest(E2ETestCase):
     def test_ctrl_k_is_a_link_in_a_field_and_the_palette_elsewhere(self):
         palette = self.page.locator("dialog[open]")
         self.put("see docs", 4, 8)
-        self.field.press("Control+k")
+        self.field.press("ControlOrMeta+k")
         self.assertEqual(self.value(), "see [docs](url)")
         self.assertEqual(palette.count(), 0)
         # Escape leaves the field, then Ctrl+K opens the palette
         self.field.press("Escape")
         expect(self.field).not_to_be_focused()
-        self.page.keyboard.press("Control+k")
+        self.page.keyboard.press("ControlOrMeta+k")
         expect(palette).to_be_visible()
         self.assertEqual(self.value(), "see [docs](url)")
         self.assertEqual(self.errors, [])
@@ -362,7 +362,7 @@ class PasteTest(E2ETestCase):
         self.copy("<p>some <b>bold</b></p>", "some bold")
         self.paste()
         expect(self.field).to_have_value("Before some **bold** after")
-        self.field.press("Control+z")
+        self.field.press("ControlOrMeta+z")
         expect(self.field).to_have_value("Before  after")
 
     def test_plain_text_pastes_as_it_is(self):

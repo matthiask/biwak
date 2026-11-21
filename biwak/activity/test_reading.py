@@ -17,7 +17,7 @@ from biwak.files import operations as file_ops
 from biwak.items import operations as ops
 from biwak.items.models import Comment
 from biwak.reactions.operations import add_reaction, remove_reaction, toggle_reaction
-from biwak.test_utils import check_in_answers, person
+from biwak.test_utils import bare_doc, check_in_answers, person
 
 
 class ReadingTestCase(LanternTestCase):
@@ -129,7 +129,7 @@ class ActionsReadTest(ReadingTestCase):
     def test_tick_in_a_doc(self):
         from biwak import checklists
 
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Notes", creator=self.ada, content="- [ ] One"
         )
         self.check(
@@ -375,7 +375,7 @@ class EditsTest(ReadingTestCase):
         self.assertReadFor(self.ada, upload, others=[self.bob])
 
     def test_doc(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Notes", creator=self.dan, content="Text"
         )
         self.edits(
@@ -390,8 +390,9 @@ class EditsTest(ReadingTestCase):
         )
         self.edits(
             doc,
-            lambda a: file_ops.update_doc(doc, actor=a, title="Minutes"),
-            lambda a: file_ops.update_doc(doc, actor=a, title="Notes"),
+            # The title is the text's first line (specs/doc-titles.md)
+            lambda a: file_ops.update_doc(doc, actor=a, content="# Minutes\n\nText"),
+            lambda a: file_ops.update_doc(doc, actor=a, content="# Notes\n\nText"),
         )
 
     def test_doc_typed_live_and_saved(self):

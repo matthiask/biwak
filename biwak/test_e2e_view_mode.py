@@ -302,7 +302,7 @@ class PickerTest(E2ETestCase):
         add.locator(".wb-picker-input").click()
         add.locator(".wb-picker-list li", has_text="Cleo").click()
         add.locator("[name=title]").fill("With Cleo")
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         page.locator("[data-todo]", has_text="With Cleo").wait_for()
         todo = Item.objects.get(title="With Cleo")
         self.assertEqual(list(todo.todo.assignees.all()), [self.cleo])

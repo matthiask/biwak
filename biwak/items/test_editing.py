@@ -12,7 +12,7 @@ from biwak import checklists
 from biwak.checkins import operations as checkin_ops
 from biwak.items import editing, operations as ops
 from biwak.items.models import Editing, Kind
-from biwak.test_utils import check_in_answers, person, project
+from biwak.test_utils import bare_doc, check_in_answers, person, project
 
 
 TEXT = "Packing\n\n- [ ] tent\n- [x] stove\n- [ ] rope\n"
@@ -235,7 +235,7 @@ class RefusedTickTest(Fixture):
 
     def test_docs_never_wait_for_the_live_editor(self):
         # The marker of a doc is the open live editor's (collab.consumers)
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project, title="Doc", creator=self.ada, content=TEXT
         )
         editing.start(doc, self.ada)

@@ -9,9 +9,9 @@ from django.urls import reverse
 
 from biwak.collab import live
 from biwak.collab.models import LiveState
-from biwak.items import operations as ops
 from biwak.items.models import Comment, Doc, Item
 from biwak.test_e2e import ASGIServerThread, E2ETestCase, expect, uvicorn
+from biwak.test_utils import bare_doc
 
 
 class ConnectionTest(E2ETestCase):
@@ -115,7 +115,7 @@ class ConnectionTest(E2ETestCase):
         self.assertFalse(self.errors)
 
     def test_the_editor_says_its_text_is_kept(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
@@ -141,7 +141,7 @@ class ConnectionTest(E2ETestCase):
         self.assertFalse(self.errors)
 
     def test_a_tick_is_undone(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Packing",
             content="- [ ] tent\n- [ ] rope\n",
@@ -253,7 +253,7 @@ class ConnectionTest(E2ETestCase):
         )
 
     def test_typing_offline_survives_closing_the_page(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
@@ -273,7 +273,7 @@ class ConnectionTest(E2ETestCase):
         )
         expect(self.banner(page)).to_contain_text("What you type is kept")
         page.locator(".cm-content").click()
-        page.keyboard.press("Control+End")
+        page.keyboard.press("ControlOrMeta+End")
         page.keyboard.type("Typed offline")
         page.wait_for_function(
             """async () => (await indexedDB.databases())
@@ -303,7 +303,7 @@ class ConnectionTest(E2ETestCase):
         self.assertFalse(self.errors)
 
     def test_logging_out_removes_the_stored_docs(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
@@ -330,7 +330,7 @@ class ConnectionTest(E2ETestCase):
         self.assertEqual(self.stored_docs(page), [])
 
     def test_the_stored_copy_stays_until_the_server_has_the_text(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
@@ -345,7 +345,7 @@ class ConnectionTest(E2ETestCase):
         )
         expect(self.banner(page)).to_contain_text("What you type is kept")
         page.locator(".cm-content").click()
-        page.keyboard.press("Control+End")
+        page.keyboard.press("ControlOrMeta+End")
         page.keyboard.type("Typed offline")
         # The server drops what the editor sends until we say otherwise
         dropping = [True]
@@ -379,7 +379,7 @@ class ConnectionTest(E2ETestCase):
         self.assertFalse(self.errors)
 
     def test_a_copy_of_another_history_is_not_merged(self):
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
@@ -393,7 +393,7 @@ class ConnectionTest(E2ETestCase):
             "document.querySelector('[data-collab]').collab.provider.ws.close()"
         )
         page.locator(".cm-content").click()
-        page.keyboard.press("Control+End")
+        page.keyboard.press("ControlOrMeta+End")
         page.keyboard.type("Typed offline")
         page.wait_for_function(
             """async () => (await indexedDB.databases())

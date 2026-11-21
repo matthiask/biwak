@@ -41,7 +41,7 @@ from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.reactions.models import Reaction
-from biwak.test_utils import person, project
+from biwak.test_utils import bare_doc, person, project
 
 
 try:
@@ -272,7 +272,7 @@ class TodosTest(E2ETestCase):
         picker.click()
         add.locator(".wb-picker-list li", has_text="Ada").click()
         add.locator("[name=due_on]").fill("2026-12-24")
-        title.press("Control+Enter")
+        title.press("ControlOrMeta+Enter")
         rows = page.locator("[data-todo]")
         rows.filter(has_text="Write the brief").wait_for()
         self.assertEqual(page.evaluate("window.marker"), 1)
@@ -286,7 +286,7 @@ class TodosTest(E2ETestCase):
         expect(title).to_be_focused()
 
         title.fill("Send it")
-        title.press("Control+Enter")
+        title.press("ControlOrMeta+Enter")
         rows.filter(has_text="Send it").wait_for()
         self.assertEqual(rows.count(), 2)
 
@@ -319,7 +319,7 @@ class TodosTest(E2ETestCase):
         add.locator("summary").click()
         add.locator("[name=title]").fill("Fresh")
         add.locator("[name=notes]").fill("Some **notes**")
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         row = page.locator("[data-todo]", has_text="Fresh")
         row.wait_for()
         row.locator("[data-peek]").first.click()
@@ -334,7 +334,7 @@ class TodosTest(E2ETestCase):
         add.locator("summary").click()
         page.context.clear_cookies()
         add.locator("[name=title]").fill("Lost")
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         error = add.locator("[data-add-todo-error]")
         expect(error).to_be_visible()
         self.assertEqual(page.locator("[data-todo]").count(), 0)
@@ -361,7 +361,7 @@ class TodosTest(E2ETestCase):
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         add.locator("[name=title]").fill("Lost")
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         error = add.locator("[data-add-todo-error]")
         expect(error).to_be_visible()
         self.assertNotIn("Server Error", error.inner_text())
@@ -373,7 +373,7 @@ class TodosTest(E2ETestCase):
         forms = page.locator("[data-add-todo]")
         forms.nth(1).locator("summary").click()
         forms.nth(1).locator("[name=title]").fill("In the group")
-        forms.nth(1).locator("[name=title]").press("Control+Enter")
+        forms.nth(1).locator("[name=title]").press("ControlOrMeta+Enter")
         page.locator(
             "[data-group-item] [data-todo]", has_text="In the group"
         ).wait_for()
@@ -397,7 +397,7 @@ class TodosTest(E2ETestCase):
         self.assertEqual(notes.input_value(), f"Ask [@Bob](person:{self.bob.pk}) ")
         self.assertTrue(add.evaluate("el => el.open"))
         add.locator("[name=title]").fill("Ask")
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         page.locator("[data-todo]", has_text="Ask").wait_for()
         self.assertEqual(
             Item.objects.get(title="Ask").todo.notes,
@@ -1098,7 +1098,8 @@ class CollabTest(E2ETestCase):
 
     def setUp(self):
         super().setUp()
-        self.doc = ops.create_doc(
+        # Exactly this text, without the heading create_doc() puts in front
+        self.doc = bare_doc(
             project=self.project,
             title="Minutes",
             content="Agenda\n",
@@ -1134,7 +1135,7 @@ class CollabTest(E2ETestCase):
         content = self.content(page)
         content.click()
         if end:
-            page.keyboard.press("Control+End")
+            page.keyboard.press("ControlOrMeta+End")
         page.keyboard.type(text)
 
     def stored(self, doc=None):
@@ -1157,24 +1158,21 @@ class CollabTest(E2ETestCase):
         self.content(page).click()
 
         def select_agenda():
-            # The text is "# Minutes", an empty line, "Agenda", an empty line
-            page.keyboard.press("Control+End")
-            page.keyboard.press("ArrowUp")
-            page.keyboard.press("Home")
+            page.keyboard.press("ControlOrMeta+Home")
             page.keyboard.press("Shift+End")
 
         select_agenda()
         bar.locator('[data-toolbar-action="bold"]').click()
-        self.wait_for_text(page, "# Minutes\n\n**Agenda**\n")
-        page.keyboard.press("Control+z")
-        self.wait_for_text(page, "# Minutes\n\nAgenda\n")
+        self.wait_for_text(page, "**Agenda**\n")
+        page.keyboard.press("ControlOrMeta+z")
+        self.wait_for_text(page, "Agenda\n")
         # The keys, before CodeMirror's own
         select_agenda()
-        page.keyboard.press("Control+i")
-        self.wait_for_text(page, "# Minutes\n\n_Agenda_\n")
+        page.keyboard.press("ControlOrMeta+i")
+        self.wait_for_text(page, "_Agenda_\n")
         bar.locator('[data-toolbar-action="quote"]').click()
-        self.wait_for_text(page, "# Minutes\n\n> _Agenda_\n")
-        self.wait_for_stored("# Minutes\n\n> _Agenda_\n")
+        self.wait_for_text(page, "> _Agenda_\n")
+        self.wait_for_stored("> _Agenda_\n")
         self.assertEqual(self.errors, [])
 
     def test_a_tick_in_another_browser_arrives_in_the_open_editor(self):
@@ -1182,7 +1180,7 @@ class CollabTest(E2ETestCase):
         editor open and typed something not stored yet, another ticks the
         box on the doc's page; the tick appears in the editor, the typing
         stays"""
-        doc = ops.create_doc(
+        doc = bare_doc(
             project=self.project,
             title="Packing",
             content="- [ ] tent\n- [ ] rope\n",
@@ -1219,7 +1217,7 @@ class CollabTest(E2ETestCase):
         ]
         for page in pages:
             self.content(page).click()
-            page.keyboard.press("Control+End")
+            page.keyboard.press("ControlOrMeta+End")
             page.keyboard.press("Enter")
         # Interleaved, a word each
         for words in zip(*[
@@ -1497,7 +1495,7 @@ class LiveTest(E2ETestCase):
         section.locator(".wb-add-todo summary").click()
         title = section.locator("[data-add-todo-form] input[name=title]")
         title.fill("Pack the stove")
-        title.press("Control+Enter")
+        title.press("ControlOrMeta+Enter")
         bob.locator("[data-todo]", has_text="Pack the stove").wait_for()
         doing = ada.locator("section.wb-group[data-group-item]", has_text="Doing")
         expect(doing.locator("[data-todo]", has_text="Pack the stove")).to_have_count(1)
@@ -1547,7 +1545,7 @@ class LiveTest(E2ETestCase):
         section = ada.locator("section.wb-group").first
         section.locator(".wb-add-todo summary").click()
         section.locator("input[name=title]").fill("Secret plan")
-        section.locator("input[name=title]").press("Control+Enter")
+        section.locator("input[name=title]").press("ControlOrMeta+Enter")
         ada.locator("[data-todo]", has_text="Secret plan").wait_for()
         # Then something clients see: it arrives, the internal changes
         # didn't (not even as a "changed")
@@ -1555,7 +1553,7 @@ class LiveTest(E2ETestCase):
         section = ada.locator("section.wb-group").first
         section.locator(".wb-add-todo summary").click()
         section.locator("input[name=title]").fill("Buy pegs")
-        section.locator("input[name=title]").press("Control+Enter")
+        section.locator("input[name=title]").press("ControlOrMeta+Enter")
         expect(cleo.locator("[data-todo]", has_text="Buy pegs")).to_have_count(1)
         received = [json.loads(frame) for frame in self.frames[cleo]]
         changed = {m["item"] for m in received if m["type"] == "changed"}
@@ -1839,7 +1837,7 @@ class ClientTest(E2ETestCase):
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         add.locator("[name=title]").fill("From the client")
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         page.locator("[data-todo]", has_text="From the client").wait_for()
         created = Item.objects.get(title="From the client")
         self.assertEqual(created.creator, self.cleo)
@@ -1944,7 +1942,7 @@ class RuleWidgetTest(E2ETestCase):
         expect(widget.locator("[data-rule-description]")).to_have_text(
             "the second Tuesday of every month"
         )
-        add.locator("[name=title]").press("Control+Enter")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
         page.locator("[data-todo]", has_text="Team lunch").wait_for()
         # The form is ready for the next one
         expect(widget.locator("[data-rule-frequency]")).to_have_value("")
@@ -2126,7 +2124,7 @@ class ModalTest(E2ETestCase):
     def test_new_list_from_the_palette_and_members(self):
         page = self.page
         self.goto(page, self.project)
-        page.keyboard.press("Control+k")
+        page.keyboard.press("ControlOrMeta+k")
         page.get_by_role("combobox").fill("New list")
         page.keyboard.press("Enter")
         dialog = page.locator("dialog#modal")
@@ -2354,7 +2352,7 @@ class KeyboardTest(E2ETestCase):
         title = page.locator("[data-add-todo] [name=title]").first
         expect(title).to_be_focused()
         title.fill("From the palette")
-        title.press("Control+Enter")
+        title.press("ControlOrMeta+Enter")
         page.locator("[data-todo]").filter(has_text="From the palette").wait_for()
         self.assertTrue(
             Item.objects.filter(title="From the palette", creator=self.ada).exists()
@@ -2648,7 +2646,7 @@ class ProjectColorTest(E2ETestCase):
     def test_the_palette_shows_the_dot_beside_the_project(self):
         page = self.login(self.ada, viewport=self.SIZES["desktop"])
         self.goto(page, self.project)
-        page.keyboard.press("Control+k")
+        page.keyboard.press("ControlOrMeta+k")
         page.keyboard.type("launch")
         option = page.locator("#wb-palette-list [role=option]").filter(
             has_text="Launch plan"
@@ -2795,7 +2793,7 @@ class FiltersTest(E2ETestCase):
         # The palette's link too
         self.goto(page, "/todos/?assignee=nobody")
         self.goto(page, "/")
-        page.keyboard.press("Control+k")
+        page.keyboard.press("ControlOrMeta+k")
         page.locator("#wb-palette-input").fill("go to to-dos")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=nobody")
@@ -2852,7 +2850,7 @@ class FiltersTest(E2ETestCase):
         # is remembered for the page
         self.goto(page, "/todos/?assignee=nobody")
         self.goto(page, "/")
-        page.keyboard.press("Control+k")
+        page.keyboard.press("ControlOrMeta+k")
         page.locator("#wb-palette-input").fill("to-dos i assigned")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=anybody&assigned_by=me")

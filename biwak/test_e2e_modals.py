@@ -114,7 +114,7 @@ class ModalTest(E2ETestCase):
     def test_the_palette_opens_the_modal(self):
         page = self.page
         self.goto(page, self.project)
-        page.keyboard.press("Control+k")
+        page.keyboard.press("ControlOrMeta+k")
         page.locator("#wb-palette-input").fill("New list")
         page.locator("#wb-palette-list [role=option]").first.press("Enter")
         expect(page.get_by_role("dialog", name="New list")).to_be_visible()
