@@ -77,6 +77,11 @@ def record(*, actor, action, project, item=None, **data):
         # A reaction isn't activity of the project (decided by the building
         # agent, 2026-11-20)
         _touch_project(event)
+    # Before announcing the change (both after the commit, in this order):
+    # a page losing access closes before it hears of the change, since the
+    # channel layer keeps the order of one sender's messages (the pages
+    # check again before passing anything on too). Pinned by
+    # biwak/live/test_announce.py.
     if action in ACCESS_CHANGES:
         from biwak.collab import live
 
