@@ -6,31 +6,6 @@
   {% if project %}{% include "_breadcrumbs.html" %}{% endif %}
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
-    {% if not completed %}
-      <div class="wb-page-actions">
-        <form
-          method="post"
-          action="{% url 'todo_grouping' %}"
-          class="btn-group btn-group-sm"
-          role="group"
-          aria-label="{% translate 'Grouping' %}"
-        >
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          {% for value, label in groupings %}
-            <button
-              type="submit"
-              name="grouping"
-              value="{{ value }}"
-              class="btn btn-sm {% if value == grouping %}btn-primary{% else %}btn-quiet{% endif %}"
-              {% if value == grouping %}aria-pressed="true"{% endif %}
-            >
-              {{ label }}
-            </button>
-          {% endfor %}
-        </form>
-      </div>
-    {% endif %}
   </div>
   <form method="get" data-autosubmit data-remember class="d-flex flex-wrap align-items-end gap-2 mb-4">
     {% for field in form %}

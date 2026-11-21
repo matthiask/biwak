@@ -23,7 +23,7 @@ from biwak.organizations.forms import OrganizationFieldMixin, organization_field
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
-from biwak.projects.overview import overview
+from biwak.projects.overview import ProjectOrder, overview
 
 
 def project_for(request, pk):
@@ -33,6 +33,9 @@ def project_for(request, pk):
 
 
 def _list_context(request, archived):
+    order = request.GET.get("order")
+    if order not in ProjectOrder.values:
+        order = ProjectOrder.ACTIVITY
     others = Project.objects.none()
     if archived:
         # A plain alphabetical list, without cards
@@ -40,7 +43,7 @@ def _list_context(request, archived):
             archived_at__isnull=False
         )
     else:
-        projects = overview(request.user)
+        projects = overview(request.user, order)
         if request.user.is_admin:
             # Admins see that limited projects exist and can join them
             others = project_ops.joinable_projects(request.user)
@@ -49,8 +52,8 @@ def _list_context(request, archived):
         "others": others,
         "archived": archived,
         "can_create": project_ops.can_create_project(request.user),
-        "order": request.user.project_order,
-        "orders": User.ProjectOrder.choices,
+        "order": order,
+        "orders": ProjectOrder.choices,
     }
 
 
@@ -66,16 +69,6 @@ def project_list(request):
             .first()
         )
     return render(request, "projects/project_list.html", context)
-
-
-@require_POST
-def project_order(request):
-    """The switch on the projects page, remembered per person"""
-    try:
-        project_ops.set_project_order(request.user, request.POST.get("order"))
-    except ValueError:
-        return HttpResponse(status=400)
-    return redirect("projects")
 
 
 class ProjectForm(ModelForm):

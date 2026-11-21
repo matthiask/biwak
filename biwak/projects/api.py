@@ -78,7 +78,7 @@ def project_list(
     order: Literal["activity", "name"] | None = None,
 ):
     """The projects the person can open, active ones unless ``archived``:
-    bookmarked ones first, then by ``order`` (the person's setting by
+    bookmarked ones first, then by ``order`` (activity by
     default), the latest activity first or by name. Archived ones by name,
     bookmarked ones first."""
     if archived:

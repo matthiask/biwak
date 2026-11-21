@@ -5,7 +5,6 @@ from biwak.items import by_due, views
 
 urlpatterns = [
     path("todos/", by_due.todos_by_due, name="todos"),
-    path("todos/grouping/", by_due.todo_grouping, name="todo_grouping"),
     path("projects/<int:pk>/todos/", by_due.project_todos, name="project_todos"),
     path("calendar/<str:token>.ics", by_due.calendar_feed, name="calendar_feed"),
     path("lists/<int:pk>/", views.todolist, name="list"),

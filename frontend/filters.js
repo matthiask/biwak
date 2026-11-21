@@ -1,11 +1,13 @@
 // Filters remembered (specs/ui-round-3.md, section 4): a filter page (its
-// form has data-remember) stores its query in the browser, per path, when it
+// form or page has data-remember; view choices like the grouping and the
+// order are query parameters too) stores its query in the browser, per
+// path, when it
 // loads with one. The links of the top bar (and the palette's links, through
 // withFilters()) go to such a page with the stored query. "Reset filters"
 // (data-reset-filters) forgets it. Other links keep their own query.
 const PREFIX = "filters:"
 // Where the page is, not what it filters
-const NOT_FILTERS = ["page", "before", "grouping"]
+const NOT_FILTERS = ["page", "before", "archived"]
 
 function read(path) {
   try {
@@ -37,7 +39,7 @@ function filtersOf(search) {
   return params.toString()
 }
 
-if (document.querySelector("form[data-remember]")) {
+if (document.querySelector("[data-remember]")) {
   const query = filtersOf(window.location.search)
   if (query) write(window.location.pathname, query)
 }

@@ -342,13 +342,3 @@ def recompute_activity():
     with connection.cursor() as cursor:
         cursor.execute(RECOMPUTE_ACTIVITY_SQL)
         return cursor.rowcount
-
-
-@transaction.atomic
-def set_project_order(user, order):
-    """The person's choice on the projects page, remembered"""
-    if order not in User.ProjectOrder.values:
-        raise ValueError(f"Unknown order {order!r}")
-    if user.project_order != order:
-        user.project_order = order
-        user.save(update_fields=["project_order"])

@@ -424,8 +424,7 @@ def todo_overview(
     """To-dos across all projects the person sees, by due date (to-dos
     without one last) or, with ``grouping=project``, by project name, the
     list's position, the group's position (to-dos outside groups first)
-    and the to-do's; without ``grouping`` the person's choice on the page
-    counts. ``completed`` the completed ones, the latest first.
+    and the to-do's; ``grouping`` defaults to ``project``. ``completed`` the completed ones, the latest first.
     ``assignee`` is ``me``, ``nobody`` or a person's ID, ``due_group`` one
     of the groups of the page. Archived projects and lists are left out.
     Clients only ever get what is visible to them."""
@@ -443,7 +442,7 @@ def todo_overview(
         )
     )
     today = schedules.today()
-    grouping = grouping or request.user.todo_grouping
+    grouping = grouping or "project"
     if completed:
         ordering = ("-completed_key", "-pk")
     elif grouping == "project":

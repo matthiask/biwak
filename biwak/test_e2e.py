@@ -953,6 +953,22 @@ class ProjectsPageTest(E2ETestCase):
         expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
 
 
+class ProjectsOrderTest(E2ETestCase):
+    def test_the_order_is_restored_through_the_navigation(self):
+        project("Camp", members=[self.ada])
+        page = self.page
+        self.goto(page, reverse("projects"))
+        page.locator("#id_order").select_option("name")
+        page.wait_for_url("**/?order=name")
+        self.goto(page, reverse("project_create"))
+        link = page.locator(".wb-nav-links a", has_text="Projects")
+        expect(link).to_have_attribute("href", "/?order=name")
+        link.click()
+        page.wait_for_url("**/?order=name")
+        expect(page.locator("#id_order")).to_have_value("name")
+        self.assertEqual(self.errors, [])
+
+
 class ColorPickerTest(E2ETestCase):
     """The project form's color picker: radio swatches, with the keyboard"""
 
@@ -2817,6 +2833,19 @@ class FiltersTest(E2ETestCase):
         page.locator("#wb-palette-input").fill("my to-dos")
         page.keyboard.press("Enter")
         page.wait_for_url("**/todos/?assignee=nobody")
+        self.assertEqual(self.errors, [])
+
+    def test_the_grouping_is_restored_through_the_navigation(self):
+        page = self.page
+        self.goto(page, "/todos/?assignee=me")
+        page.locator("#id_grouping").select_option("due")
+        page.wait_for_url("**grouping=due*")
+        self.goto(page, "/")
+        link = page.locator(".wb-nav-links a", has_text="My to-dos")
+        expect(link).to_have_attribute("href", re.compile(r"grouping=due"))
+        link.click()
+        page.wait_for_url("**grouping=due*")
+        expect(page.locator("#id_grouping")).to_have_value("due")
         self.assertEqual(self.errors, [])
 
     def test_search_is_not_remembered(self):

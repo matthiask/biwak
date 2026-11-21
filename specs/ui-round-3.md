@@ -7,7 +7,7 @@ Feedback from using "My to-dos" (2026-11-21):
   project, list and group;
 - filter forms only apply after pressing the button.
 
-**Status:** built 2026-11-21. Decisions: the switch is a POST form like the projects page's (`/todos/grouping/`, back to the page with its filters) and a valid `?grouping=` stores the choice too; the API's `list_id` is gone, to-dos carry `project_name`, `list_title` and `list_position` (projects have no position, they go by name) beside their group's; `biwak todos` is by project unless `--by-due`; autosubmit is `frontend/autosubmit.js` (`data-autosubmit`, buttons marked `data-autosubmit-button`, `data-no-autosubmit` on a field), remembered filters `frontend/filters.js` (`data-remember`, `data-reset-filters`), the top bar's links and the palette's links restore them.
+**Status:** built 2026-11-21. Decisions: the grouping is a select of the filter form (changed 2026-11-21: not stored on `User`, see below); the API's `list_id` is gone, to-dos carry `project_name`, `list_title` and `list_position` (projects have no position, they go by name) beside their group's; `biwak todos` is by project unless `--by-due`; autosubmit is `frontend/autosubmit.js` (`data-autosubmit`, buttons marked `data-autosubmit-button`, `data-no-autosubmit` on a field), remembered filters `frontend/filters.js` (`data-remember`, `data-reset-filters`), the top bar's links and the palette's links restore them.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.
@@ -31,12 +31,17 @@ other unknown parameter (decided 2026-11-21).
 
 ## 2. Two ways to see them: by project or by due date
 
-- **A switch** at the top, "By project" and "By due date", like the
-  projects page's "Activity / A–Z" (a button group).
-- **The choice is remembered per person**, like `User.project_order`:
-  `User.todo_grouping`, "project" by default. Changing it posts and
-  comes back. Without JavaScript, the switch's links carry
-  `?grouping=…` and store it too.
+- **"Group by"** in the filter form: project or due date (was a switch
+  of buttons).
+- **The choice is a query parameter** (decided 2026-11-21, replacing
+  `User.todo_grouping` and a POST to `/todos/grouping/`, which are gone
+  again, the migration deleted): `?grouping=project|due`, "project" by
+  default. It is a field of the filter form, "Group by" (project, due
+  date), a select like the others: it autosubmits and is remembered with
+  the rest of the form by `frontend/filters.js` (which no longer
+  excludes `grouping`). No separate switch (round 4 feedback). Changing a view
+  writes no row, so no audit log entry. The API's `grouping` defaults to
+  `project`.
 - **By project:**
   - **Projects** by name, each a heading with its color swatch.
   - **Lists inside a project** in the project's own order.
