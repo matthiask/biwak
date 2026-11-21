@@ -87,6 +87,26 @@ class ActivateTest(Base):
             with self.subTest(actor=actor, target=target):
                 self.assertEqual(activation.can_change(actor, target), allowed)
 
+    def test_the_active_admins_are_locked_before_the_check(self):
+        """Two requests deactivating the last two admins at the same time
+        would both see the other one still active: every active admin's row
+        is locked first, with the people deactivated, in the order of their
+        IDs (no deadlocks between requests locking several)"""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        otto = person("Otto", is_admin=True)
+        with CaptureQueriesContext(connection) as queries:
+            activation.deactivate([self.cleo], actor=self.root)
+        locks = [q["sql"] for q in queries if "FOR UPDATE" in q["sql"]]
+        self.assertTrue(locks)
+        where = locks[0].split(" WHERE ", 1)[1]
+        self.assertIn('"accounts_user"."is_admin"', where)
+        self.assertIn(f"IN ({self.cleo.pk})", where)
+        self.assertTrue(where.endswith('ORDER BY "accounts_user"."id" ASC FOR UPDATE'))
+        self.assertEqual(len(locks), 1)
+        del otto
+
     def test_nothing_changes_if_one_is_refused(self):
         with (
             self.captureOnCommitCallbacks(execute=True),

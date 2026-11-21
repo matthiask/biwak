@@ -7,6 +7,7 @@ nothing for several people."""
 from allauth.mfa.models import Authenticator
 from allauth.usersessions.models import UserSession
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -69,6 +70,33 @@ def activate(users, *, actor, mail=False):
     return done
 
 
+def lock_with_admins(user_ids):
+    """Locks the rows of these people and of every active admin, in the
+    order of their IDs (no deadlocks between requests locking several), so
+    two requests can't each take away an admin the other counted on;
+    returns these people"""
+    user_ids = set(user_ids)
+    rows = (
+        User.objects
+        .select_for_update()
+        .filter(Q(pk__in=user_ids) | Q(is_active=True, is_admin=True))
+        .order_by("pk")
+    )
+    return [user for user in rows if user.pk in user_ids]
+
+
+def check_admins_left(leaving):
+    """``ActivationError`` when no active admin would be left without the
+    people ``leaving`` (IDs); after ``lock_with_admins()``"""
+    if (
+        not User.objects
+        .filter(is_active=True, is_admin=True)
+        .exclude(pk__in=leaving)
+        .exists()
+    ):
+        raise ActivationError(_("The last active admin can't be deactivated."))
+
+
 @transaction.atomic
 def deactivate(users, *, actor):
     """Clears ``is_active`` and ends the access at once: sessions, API
@@ -78,19 +106,13 @@ def deactivate(users, *, actor):
     deactivated."""
     from biwak.collab import live
 
-    users = list(User.objects.select_for_update().filter(pk__in=[u.pk for u in users]))
+    users = lock_with_admins([u.pk for u in users])
     _check(actor, users)
     if any(user.pk == actor.pk for user in users):
         raise ActivationError(_("You can't deactivate yourself."))
     leaving = {user.pk for user in users if user.is_active}
-    if (
-        any(user.is_admin for user in users if user.pk in leaving)
-        and not User.objects
-        .filter(is_active=True, is_admin=True)
-        .exclude(pk__in=leaving)
-        .exists()
-    ):
-        raise ActivationError(_("The last active admin can't be deactivated."))
+    if any(user.is_admin for user in users if user.pk in leaving):
+        check_admins_left(leaving)
     done = []
     for user in users:
         if user.pk not in leaving:

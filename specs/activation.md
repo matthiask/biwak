@@ -100,7 +100,10 @@ nobody gets mail or a sign-in before someone decides
 ## Deactivating
 
 - Clears `is_active`; refused for oneself (not offered) and for the last
-  active admin (an error on the page, 400 in the API). Already inactive
+  active admin (an error on the page, 400 in the API). The rows of the
+  people and of every active admin are locked first, in the order of
+  their IDs (`lock_with_admins()`), so two requests can't each deactivate
+  an admin the other counted on (fixed 2026-11-21 after a review). Already inactive
   people are skipped quietly.
 - **Ends access at once:** sessions (`UserSession.end()`), API tokens
   and calendar links are deleted; open websockets close through
