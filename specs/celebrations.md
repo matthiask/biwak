@@ -5,7 +5,44 @@ example finishing a to-do, and moves a bit more in general. No more
 emojis in the reaction picker (decided 2026-11-21: the 32 stay).
 
 **Status:** spec (2026-11-21), all five moments confirmed the same day.
-Not built.
+Built (2026-11-21): all five moments, no open questions.
+
+Decisions made while building moments 1 and 2 (2026-11-21):
+
+- Completing was a plain form post and redirect. `celebrate.js` takes the
+  submit over (`data-celebrate="complete|reopen"` on the check's form and the
+  to-do page's button, so the keyboard's `x` is covered too): the request
+  goes out at once with `fetch`, the animation runs beside it, and when both
+  are done the page follows the redirect (a reload where it's the same page,
+  so counts, recurrences and the completed section come from the server).
+  If the request fails, the form is submitted the normal way.
+- With `prefers-reduced-motion: reduce` the script doesn't intercept at all.
+- Live updates (`live.js`) leave a row alone while it has `is-completing`,
+  so the refresh the server triggers doesn't cut the collapse short.
+- The burst is for the last open to-do of the row's container (group or
+  list, a page's section); "All done." only for the whole list: the list page
+  renders it when everything is completed (in `#live-completed`), the script
+  shows it before the page follows. The last row waits 0.8 s before
+  collapsing so the dots are seen.
+- The to-do's page: the icon pops (250 ms), then the page follows.
+
+Moments 3 to 5 (2026-11-21):
+
+- Reactions: `reactions.js` compares each reactions block that appears
+  (htmx swap or live update) with the one before, by id and content: a new
+  pill gets `is-new` (scale in), a pill whose count grew bumps its count
+  (`is-bumped`). Other people's reactions arriving live animate the same way.
+  Nothing on load: the first state is only remembered.
+- Lantern: `lantern.js` pulses the dot (`is-pulsing`) when the unread count
+  grows after a live event, and gives entries that weren't in the open menu
+  `is-new` (slide in) when a live event reloads it; opening the menu or
+  pressing its buttons animates nothing.
+- Small transitions: menus and the reaction picker fade in (100 ms, an
+  animation on the open `<details>`'s popup, so closed ones don't play on
+  load), modals scale in and fade (a transition with `@starting-style`, so
+  the Escape shake can come and go without replaying it), the backdrop
+  fades. Rows inserted live (`wb-live-enter`) slide in; only rows that are
+  new to a list, not replaced regions, which keep the highlight alone.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.

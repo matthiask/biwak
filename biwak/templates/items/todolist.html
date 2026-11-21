@@ -42,6 +42,7 @@
   {# Live updates (frontend/live.js): every child of a data-live-list has an id #}
   <div
     class="wb-todolist{% if view == 'board' %} is-board{% endif %}"
+    data-all-done="{% translate 'All done.' %}"
     data-groups="{{ item.pk }}"
     id="live-groups"
     data-live-list
@@ -146,6 +147,7 @@
     {% endfor %}
   </div>
   <div id="live-completed" data-live>
+    {% if all_done %}<p class="text-body-secondary wb-all-done">{% translate "All done." %}</p>{% endif %}
     {% if completed_count %}
       <details class="mt-4 wb-completed">
         <summary class="text-body-secondary">

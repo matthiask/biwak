@@ -170,8 +170,11 @@ function normalized(el) {
   // Django masks the CSRF token differently on every page
   for (const token of clone.querySelectorAll("[name=csrfmiddlewaretoken]"))
     token.removeAttribute("value")
-  for (const node of [clone, ...clone.querySelectorAll(".wb-live-new")])
-    node.classList.remove("wb-live-new")
+  for (const node of [
+    clone,
+    ...clone.querySelectorAll(".wb-live-new, .wb-live-enter"),
+  ])
+    node.classList.remove("wb-live-new", "wb-live-enter")
   for (const note of clone.querySelectorAll("[data-live-note]")) note.remove()
   // What scripts set on the page (menus placed, dragging)
   for (const node of [clone, ...clone.querySelectorAll("*")]) {
@@ -222,6 +225,15 @@ function mark(node) {
   node.classList.add("wb-live-new")
 }
 
+// A row that wasn't there slides in, beside the highlight (the class goes
+// when it's done, a row moved later doesn't slide again)
+function enter(node) {
+  node.classList.add("wb-live-enter")
+  node.addEventListener("animationend", (event) => {
+    if (event.target === node) node.classList.remove("wb-live-enter")
+  })
+}
+
 function settle(node) {
   window.htmx?.process(node)
   document.dispatchEvent(new CustomEvent("biwak:live", { detail: node }))
@@ -233,6 +245,8 @@ function update(current, fresh) {
     updateChildren(current, fresh)
     return
   }
+  // Completed here a moment ago, its animation (frontend/celebrate.js) ends it
+  if (current.classList.contains("is-completing")) return
   if (normalized(current) === normalized(fresh)) return
   if (editing(current)) {
     wait(current, fresh)
@@ -262,7 +276,13 @@ function updateChildren(current, fresh) {
   const wanted = [...fresh.children].filter((child) => child.id)
   const ids = new Set(wanted.map((child) => child.id))
   for (const child of [...current.children]) {
-    if (child.id && !ids.has(child.id) && !editing(child)) child.remove()
+    if (
+      child.id &&
+      !ids.has(child.id) &&
+      !editing(child) &&
+      !child.classList.contains("is-completing")
+    )
+      child.remove()
   }
   wanted.forEach((freshChild, index) => {
     let node = document.getElementById(freshChild.id)
@@ -278,6 +298,7 @@ function updateChildren(current, fresh) {
     } else {
       node = adopt(freshChild)
       mark(node)
+      enter(node)
       current.insertBefore(node, current.children[index] || null)
       settle(node)
       return

@@ -21,7 +21,11 @@
     </h1>
     <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
-      <form method="post" action="{% url 'todo_toggle' item.pk %}">
+      <form
+        method="post"
+        action="{% url 'todo_toggle' item.pk %}"
+        data-celebrate="{% if todo.is_completed %}reopen{% else %}complete{% endif %}"
+      >
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
         <button

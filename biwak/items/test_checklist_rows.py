@@ -87,7 +87,7 @@ class RowsTest(TestCase):
         ops.update_todo(todo, actor=self.ada, notes="x")
         self.client.force_login(self.ada)
         html, _count = self.count(self.shared.get_absolute_url())
-        self.assertNotIn(" done", html)
+        self.assertNotIn(" done<", html)
         self.assertNotIn("/3<", html)
 
     def test_fixed_number_of_queries(self):

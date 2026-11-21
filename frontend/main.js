@@ -28,6 +28,7 @@ import "./lantern.js"
 import "./autosubmit.js"
 import "./filters.js"
 import "./live.js"
+import "./celebrate.js"
 
 // The script is deferred, the page is parsed already; dragging to-dos and
 // groups
