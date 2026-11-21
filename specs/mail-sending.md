@@ -6,7 +6,8 @@ in the app, since the cluster's postfix (today's queue and retries) is
 out of the way then.
 
 **Status:** spec (2026-11-21), the questions answered the same day.
-Not built.
+Being built (2026-11-21, branch `mail-sending`): the outbox, see
+"Built".
 
 **Agent:** a strong model: mail is easy to get subtly wrong (losing
 mail, sending twice, codes arriving late).
@@ -90,6 +91,68 @@ Resend is down and nothing is sent twice:
   notification mails and digests go to it, the person's page and the
   admin show it, signing in by code says the mail may not arrive. It
   clears when the person changes the address or an admin clears it.
+
+## Built
+
+Decisions made while building (2026-11-21, by the building agent; the
+conservative choice where the spec was open):
+
+- **One app,** `biwak/outbox/`: `OutgoingMail` (`models.py`),
+  `sending.py` (`send()`, `deliver()`, `retry()`, `prune()`), the Resend
+  backend (`resend.py`), a read-only admin with a state filter (waiting,
+  sent, given up) showing the kept content.
+- **Explicitly, not as Django's default mailer:** the app's mails call
+  `outbox.send(message, kind)` instead of `message.send()`; the default
+  mailer stays the transport (`EMAIL_URL`) the outbox sends with. So
+  `mail_admins` and Django's error mails go around the outbox by
+  themselves, and the tests keep Django's locmem mailer: the outbox runs
+  in every test, `mail.outbox` gets what it sends. allauth's mails go
+  through the account adapter's `send_mail()`.
+- **Production:** `EMAIL_URL=resend:` switches the transport to Resend's
+  API (`biwak.outbox.resend.EmailBackend`, anymail's with the
+  `Idempotency-Key` header and Resend's own tag `kind`; anymail's tags
+  would be an `X-Tags` header), with `RESEND_API_KEY` and a 10 second
+  timeout. Not switched on by `RESEND_API_KEY` alone: that key is there
+  for replies already, and sending must wait for the domain's
+  verification.
+- **In the transaction of the change:** notification mails and digests
+  are put into the outbox in the transaction that marks their
+  notifications sent, invitations in the one inviting, the answer to a
+  refused reply in the one recording it, login codes in the request's.
+  Check-in mails are still built after the commit (they look at who sees
+  the question then) and put into the outbox one by one.
+- **The first attempt** is the one after the commit; a new row is due for
+  `retry()` only a minute later, so the two don't race for it (and a
+  crash before the first attempt is caught up a minute later).
+- **Locking:** `deliver()` locks the row (`select_for_update(skip_locked)`)
+  for the attempt, a short HTTP request; whoever doesn't get the lock
+  skips the row. A crash after Resend accepted and before our commit
+  leaves the row waiting: the retry sends the same `Idempotency-Key`
+  (`<host>/outgoing-mail/<id>`: the host because installations may share
+  a Resend account) and Resend answers with the first mail's ID instead
+  of sending it again. Resend keeps keys for 24 hours, which is why
+  nothing is tried after 24 hours: such rows are given up without another
+  attempt. With other transports (SMTP) that crash would send twice.
+- **Backoff:** after the first failure 1 minute, then 2, 5, 10, 30 minutes,
+  then hourly; given up at the first retry 24 hours after it was queued.
+  Resend's rate limit (HTTP 429) isn't counted as a failed attempt: the
+  row waits a minute and the run stops there. At most 200 retries a run.
+- **Giving up** tells the admins in one mail per `send_mails` run listing
+  the mails (kind, recipients, subject, attempts, last error) with a link
+  to the admin, through the plain mailer, and logs an error (Sentry).
+  Login codes past their ten minutes (`ACCOUNT_LOGIN_BY_CODE_TIMEOUT`)
+  are given up quietly: nothing for an admin to do. allauth's mail to an
+  address without an account asking for a code counts as a login code.
+- **Kinds:** `notification`, `digest`, `checkin`, `login-code`,
+  `invitation`, `reply-refused`, `account` (allauth's other mails, none
+  switched on today), and `admin` only as Resend's tag of `mail_admins`.
+- **Kept:** the content until the transport accepted the mail, then only
+  bookkeeping (recipients, kind, Resend's ID, attempts, last error, the
+  delivery state). `fairy_tasks` deletes rows 30 days after they were
+  queued. Attachments are stored in the row too (base64); none of our
+  mails have any today.
+- **No audit log** for `OutgoingMail`: only the system writes it (the
+  outbox and Resend's webhooks); the admin is read-only.
 
 ## Done when
 

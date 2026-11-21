@@ -15,6 +15,34 @@ class AccountAdapter(DefaultAccountAdapter):
     def is_open_for_signup(self, request):
         return False
 
+    def send_mail(self, template_prefix, email, context):
+        """Through the outbox (specs/mail-sending.md): login codes, and the
+        mail to an address without an account asking for one, aren't sent
+        any more once a code would have expired"""
+        from allauth.core import context as allauth_context
+        from django.contrib.sites.shortcuts import get_current_site
+
+        from biwak.outbox import sending as outbox
+        from biwak.outbox.models import Kind
+
+        request = allauth_context.request
+        message = self.render_mail(
+            template_prefix,
+            email,
+            {
+                "request": request,
+                "email": email,
+                "current_site": get_current_site(request),
+            }
+            | context,
+        )
+        kind = (
+            Kind.LOGIN_CODE
+            if template_prefix.rsplit("/", 1)[-1] in {"login_code", "unknown_account"}
+            else Kind.ACCOUNT
+        )
+        outbox.send(message, kind)
+
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
     """Google sign-in only for existing, active staff, matched by email

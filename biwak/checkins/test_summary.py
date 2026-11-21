@@ -190,8 +190,10 @@ class SummaryTest(CheckinTestCase):
         item_ops.set_visibility(
             Item.objects.get(pk=visible.pk), visible=False, actor=self.ada
         )
-        for callback in callbacks:
-            callback()
+        # The outbox sends after its own commit
+        with self.captureOnCommitCallbacks(execute=True):
+            for callback in callbacks:
+                callback()
         recipients = [m.to[0] for m in self.summaries()]
         self.assertIn(self.ada.email, recipients)
         self.assertNotIn(self.cleo.email, recipients)

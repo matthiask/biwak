@@ -1,6 +1,6 @@
 """Mails of check-ins (specs/checkins.md): the question and the summary of
 the answers. Everything goes out after the transaction commits
-(``after_commit``); the mails of single answers are the normal
+(``after_commit``), through the outbox (specs/mail-sending.md); the mails of single answers are the normal
 notifications (``biwak.activity``)."""
 
 import logging
@@ -24,6 +24,8 @@ from biwak.activity.mails import (
 from biwak.activity.notify import who_can_see
 from biwak.inbound.tokens import reply_to
 from biwak.items.models import Item
+from biwak.outbox import sending as outbox
+from biwak.outbox.models import Kind as MailKind
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +50,9 @@ def _send_all(build, occurrence, pks):
                 mentions.reading_as(user),
             ):
                 message = build(user, occurrence)
-            message.send()
+            # Its own transaction: the outbox sends it once it's committed
+            with transaction.atomic():
+                outbox.send(message, MailKind.CHECKIN)
         except Exception:
             logger.exception("Sending a check-in mail failed")
 

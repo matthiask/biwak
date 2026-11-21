@@ -68,6 +68,7 @@ INSTALLED_APPS = [
         "biwak.search",
         "biwak.palette",
         "biwak.inbound",
+        "biwak.outbox",
         "biwak.importer",
         "biwak.audit",
         "channels",
@@ -254,8 +255,24 @@ REPLY_DOMAIN = env("REPLY_DOMAIN", default="")
 RESEND_API_KEY = env("RESEND_API_KEY", default="")
 RESEND_WEBHOOK_SECRET = env("RESEND_WEBHOOK_SECRET", default="")
 
+# Sending (specs/mail-sending.md): the app's mails go through the outbox
+# (biwak.outbox), which sends them with the default mailer; mail_admins
+# uses it directly. ``EMAIL_URL=resend:`` sends through Resend's API with
+# RESEND_API_KEY (anymail); otherwise any Django mailer URL: ``console:``
+# in development, tests use Django's locmem.
 EMAIL_URL = env("EMAIL_URL", default="console:" if DEBUG else "smtp:")
-MAILERS = {"default": django_mailer_url(EMAIL_URL)}
+if EMAIL_URL == "resend:":  # pragma: no cover
+    if not RESEND_API_KEY:
+        raise ImproperlyConfigured("EMAIL_URL=resend: needs RESEND_API_KEY.")
+    MAILERS = {
+        "default": {
+            "BACKEND": "biwak.outbox.resend.EmailBackend",
+            # One short attempt: what fails is retried by send_mails
+            "OPTIONS": {"api_key": RESEND_API_KEY, "timeout": 10},
+        }
+    }
+else:
+    MAILERS = {"default": django_mailer_url(EMAIL_URL)}
 
 if DEBUG_TOOLBAR:  # pragma: no cover
     INTERNAL_IPS = ["127.0.0.1"]

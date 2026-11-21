@@ -9,6 +9,7 @@ from biwak.files.operations import save_pending
 from biwak.inbound.tokens import prune as prune_replies
 from biwak.items.editing import prune as prune_editing
 from biwak.items.operations import purge_trash
+from biwak.outbox.sending import prune as prune_outbox
 from biwak.projects.operations import recompute_activity
 
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = (
         "Daily tasks: deleting what has been in the trash for 30 days,"
-        " pruning expired API tokens, deleting received mails and reply tokens after 90 days, deleting attachments whose text was"
+        " pruning expired API tokens, deleting received mails and reply tokens after 90 days, deleting sent mails' records after 30 days, deleting attachments whose text was"
         " never saved after a day, saving what was typed into docs live and"
         " not saved yet, recomputing the projects' activity times, comparing the stored visibility with"
         " the tree and mailing admins about differences"
@@ -32,6 +33,7 @@ class Command(BaseCommand):
             "delete_unlinked": delete_unlinked,
             "save_pending": save_pending,
             "prune_replies": prune_replies,
+            "prune_outbox": prune_outbox,
             "prune_editing": prune_editing,
             "recompute_activity": recompute_activity,
             "check_visibility": lambda: call_command(

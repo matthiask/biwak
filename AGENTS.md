@@ -25,7 +25,8 @@ them when a decision changes (dated: "decided 2026-11-20").
   days, expired API tokens, `check_visibility` mailing admins); new daily
   jobs go there, hourly ones into an `hourly_tasks` like Governance's.
   `./manage.py send_mails` sends the notification mails and digests that
-  are due; cron runs it every minute. Once deployed, the cron jobs live
+  are due and retries the outbox (`biwak/outbox/`); cron runs it every
+  minute. Once deployed, the cron jobs live
   in the argocd repository.
 - Replies by mail come in through Resend's webhook (`/inbound/resend/`);
   `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by
@@ -187,8 +188,10 @@ What every part does the same way. Look at how the core does it
    migration (`biwak/audit/migrations/0002_audited_tables.py` shows how).
 9. **Daily or hourly work** goes into `fairy_tasks` (daily) or an
    `hourly_tasks` command; nothing runs in threads or on requests.
-10. **Mails** go out after the transaction commits
-    (`transaction.on_commit`), never inside it.
+10. **Mails** go through the outbox: `biwak.outbox.sending.send(message,
+    kind)` in the transaction of the change, never `message.send()`; it
+    sends after the commit and retries (`specs/mail-sending.md`).
+    `mail_admins` alone goes around it.
 11. **Help.** The user documentation is in `docs/` (`/help/`,
     `biwak/help.py`, `specs/help.md`). A part that adds or changes what
     people see or do updates the chapter it belongs to (or adds one, in
