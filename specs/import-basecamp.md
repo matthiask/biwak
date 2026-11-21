@@ -156,8 +156,10 @@ questions the spec left open, built the safe way until answered:
   have no operation to change them: those rows are updated directly).
   Card steps become a checklist at the end of the card's notes (**?**).
 - **What isn't imported:** to-dos' start dates (no operation sets them),
-  trashed recordings (**?**), archived recordings other than to-dos and
-  lists (**?**: only to-dos and lists have a documented `status` filter),
+  trashed recordings (**?**), archived messages, docs, files and questions
+  (decided 2026-11-21, `archiving.md`: found by the recordings listing's
+  `status=archived` per type and listed in the report, the dry run too, not
+  imported),
   pins of messages (not in the API's documentation), older versions of
   files, docs without a history, schedule entries, chat, pings, forwards,
   wormholes. **Basecamp has no repeating to-dos in its API**, so there are
@@ -165,7 +167,7 @@ questions the spec left open, built the safe way until answered:
 - **Message categories** are looked up by name, and **created** when
   missing (**?**, categories are the installation's list).
 - **Second run:** updates titles, texts, due dates, assignees,
-  completion, archiving, categories and the visibility switch from
+  completion, archived lists, categories and the visibility switch from
   Basecamp; adds new comments; doesn't change comments, positions or
   files already imported. `--since` skips leaves (to-dos, cards,
   messages, docs, files, answers, comments) last updated before the date;
@@ -175,6 +177,12 @@ questions the spec left open, built the safe way until answered:
   most, and 429 is waited out).
 
 ## Decided after building (2026-11-21)
+
+- Archived to-dos (and cards' to-dos) come in **completed** (decided
+  2026-11-21, `archiving.md`): at the recording's `updated_at` (the API
+  doesn't give the archiving time or the person), by the importing person
+  unless Basecamp names who completed it; their comments are imported.
+  Lists and projects stay archived.
 
 - Internal items inside a container visible to clients go into a
   separate internal folder (for files and docs: a top-level folder
