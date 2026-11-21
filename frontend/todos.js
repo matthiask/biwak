@@ -6,22 +6,7 @@ import { MultiDrag, Sortable } from "sortablejs"
 Sortable.mount(new MultiDrag())
 
 import "./add-todo.js"
-
-function csrfToken() {
-  return document.querySelector("[name=csrfmiddlewaretoken]")?.value
-}
-
-function post(url, data) {
-  const body = new FormData()
-  for (const [key, value] of Object.entries(data)) body.append(key, value)
-  return fetch(url, {
-    method: "POST",
-    body,
-    headers: { "X-CSRFToken": csrfToken() },
-  }).then((response) => {
-    if (!response.ok) window.location.reload()
-  })
-}
+import { post } from "./http.js"
 
 // Clicking grips selects several to-dos, dragging one of them moves them
 // all; one request with the to-dos in their new order and where the first
@@ -47,17 +32,11 @@ for (const container of document.querySelectorAll("[data-todos]")) {
       const index = rows
         .slice(0, rows.indexOf(ordered[0]))
         .filter((row) => !moved.includes(row)).length
-      const data = new FormData()
-      for (const row of ordered) data.append("todos", row.dataset.todo)
-      data.append("group", event.to.dataset.group)
-      data.append("index", index)
-      fetch(`/lists/${event.to.dataset.list}/todos/move/`, {
-        method: "POST",
-        body: data,
-        headers: { "X-CSRFToken": csrfToken() },
-      }).then((response) => {
-        if (!response.ok) window.location.reload()
-      })
+      post(event.to.dataset.moveUrl, [
+        ...ordered.map((row) => ["todos", row.dataset.todo]),
+        ["group", event.to.dataset.group],
+        ["index", index],
+      ])
       for (const row of moved) Sortable.utils.deselect(row)
     },
   })
@@ -72,32 +51,9 @@ for (const container of document.querySelectorAll("[data-groups]")) {
       if (event.oldIndex === event.newIndex) return
       // The ungrouped section comes first and doesn't move
       const groups = [...container.querySelectorAll("[data-group-item]")]
-      post(`/groups/${event.item.dataset.groupItem}/move/`, {
+      post(event.item.dataset.moveUrl, {
         index: groups.indexOf(event.item),
         quiet: "1",
-      })
-    },
-  })
-}
-
-// The lists on the project page, all IDs in their new order
-for (const container of document.querySelectorAll("[data-sortable-lists]")) {
-  Sortable.create(container, {
-    handle: "[data-list-handle]",
-    draggable: "[data-list-item]",
-    animation: 120,
-    onEnd(event) {
-      if (event.oldIndex === event.newIndex) return
-      const body = new FormData()
-      for (const item of container.querySelectorAll("[data-list-item]")) {
-        body.append("lists", item.dataset.listItem)
-      }
-      fetch(container.dataset.sortableLists, {
-        method: "POST",
-        body,
-        headers: { "X-CSRFToken": csrfToken() },
-      }).then((response) => {
-        if (!response.ok) window.location.reload()
       })
     },
   })

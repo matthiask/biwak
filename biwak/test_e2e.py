@@ -108,11 +108,14 @@ class E2ETestCase(LiveServerTestCase):
     def goto(self, page, target):
         url = target if isinstance(target, str) else target.get_absolute_url()
         page.goto(f"{self.live_server_url}{url}")
+        self.wait_for_sortables(page)
+
+    def wait_for_sortables(self, page):
         # The scripts for dragging are chunks loaded after the page: wait
         # until every sortable container has its Sortable
         page.wait_for_function(
             """() => [...document.querySelectorAll(
-                "[data-todos], [data-groups], [data-sortable-links], [data-sortable-lists]"
+                "[data-todos], [data-groups], [data-sortable-order]"
             )].every((el) => Object.keys(el).some((key) => key.startsWith("Sortable")))"""
         )
 
@@ -336,6 +339,22 @@ class TodosTest(E2ETestCase):
             ["D", "B", "E"],
         )
         self.assertEqual(self.errors, [])
+
+    def test_a_drag_the_server_doesnt_get_reloads_the_page(self):
+        """Offline, the page shows what the server has again"""
+        todolist = self.make_list(todos=["A", "B", "C"])
+        page = self.page
+        self.goto(page, todolist)
+        page.evaluate("window.marker = 1")
+        page.route("**/todos/move/", lambda route: route.abort())
+        page.locator("[data-todo]", has_text="A").locator("[data-handle]").drag_to(
+            page.locator("[data-todo]", has_text="C"),
+            target_position={"x": 40, "y": 15},
+        )
+        page.wait_for_function("window.marker === undefined")
+        page.unroute("**/todos/move/")
+        titles = page.locator("[data-todo] .wb-todo-title")
+        self.assertEqual(titles.all_inner_texts(), ["A", "B", "C"])
 
     def test_selecting_several_and_moving_them(self):
         todolist = self.make_list(
@@ -725,6 +744,29 @@ class DocLockTest(E2ETestCase):
 
 
 class LinksTest(E2ETestCase):
+    def test_dragging_the_lists_of_a_project(self):
+        self.make_list("First")
+        self.make_list("Second")
+        page = self.page
+        self.goto(page, self.project)
+        with page.expect_response("**/lists/order/"):
+            page.locator("[data-sortable-item]", has_text="Second").locator(
+                "[data-sortable-handle]"
+            ).drag_to(
+                page.locator("[data-sortable-item]", has_text="First"),
+                target_position={"x": 40, "y": 3},
+            )
+        self.assertEqual(
+            list(
+                Item.objects
+                .filter(project=self.project, kind=Kind.LIST)
+                .order_by("position", "pk")
+                .values_list("title", flat=True)
+            ),
+            ["Second", "First"],
+        )
+        self.assertEqual(self.errors, [])
+
     def test_adding_and_dragging_links(self):
         page = self.page
         self.goto(page, self.project)
@@ -737,7 +779,8 @@ class LinksTest(E2ETestCase):
             form.locator("[name=url]").fill(url)
             form.locator("[name=title]").fill(title)
             form.get_by_role("button", name="Add").click()
-            page.locator("[data-link-item]", has_text=title).wait_for()
+            page.locator("[data-sortable-item]", has_text=title).wait_for()
+            self.wait_for_sortables(page)
             if title == "One":
                 page.locator(".wb-links details summary").click()
         self.assertEqual(
@@ -746,10 +789,10 @@ class LinksTest(E2ETestCase):
         )
 
         with page.expect_response("**/links/order/"):
-            page.locator("[data-link-item]", has_text="Two").locator(
-                "[data-link-handle]"
+            page.locator("[data-sortable-item]", has_text="Two").locator(
+                "[data-sortable-handle]"
             ).drag_to(
-                page.locator("[data-link-item]", has_text="One"),
+                page.locator("[data-sortable-item]", has_text="One"),
                 target_position={"x": 5, "y": 5},
             )
         self.assertEqual(
@@ -771,10 +814,10 @@ class LinksTest(E2ETestCase):
         page = self.page
         self.goto(page, todolist)
         with page.expect_response("**/links/order/"):
-            page.locator("[data-link-item]", has_text="Two").locator(
-                "[data-link-handle]"
+            page.locator("[data-sortable-item]", has_text="Two").locator(
+                "[data-sortable-handle]"
             ).drag_to(
-                page.locator("[data-link-item]", has_text="One"),
+                page.locator("[data-sortable-item]", has_text="One"),
                 target_position={"x": 5, "y": 5},
             )
         self.assertEqual(
@@ -856,7 +899,10 @@ class ClientTest(E2ETestCase):
         self.assertEqual(
             staff.get_by_role("button", name="Hide from clients").count(), 1
         )
-        self.assertEqual(staff.locator("[data-link-handle]").count(), 1)
+        self.assertEqual(
+            staff.locator("[data-sortable-field=links] [data-sortable-handle]").count(),
+            1,
+        )
         self.assertEqual(staff.locator("[data-group-handle]").count(), 1)
 
         page = self.login(self.cleo)
@@ -870,7 +916,10 @@ class ClientTest(E2ETestCase):
         )
         self.assertEqual(page.get_by_role("button", name="Show to clients").count(), 0)
         self.assertEqual(page.get_by_role("link", name="Edit").count(), 0)
-        self.assertEqual(page.locator("[data-link-handle]").count(), 0)
+        self.assertEqual(
+            page.locator("[data-sortable-field=links] [data-sortable-handle]").count(),
+            0,
+        )
         self.assertEqual(page.locator("[data-group-handle]").count(), 0)
         self.assertEqual(page.get_by_text("Add a link").count(), 0)
         self.assertEqual(page.get_by_role("button", name="Add group").count(), 0)

@@ -4,16 +4,10 @@
 // Markdown the server answers with at the cursor. Saving the text links
 // the attachments to the item.
 
+import { csrfToken } from "./http.js"
+
 // The error message below each text field
 const errors = new WeakMap()
-
-function csrfToken(container) {
-  return (
-    container.querySelector("[name=csrfmiddlewaretoken]")?.value ||
-    document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] ||
-    ""
-  )
-}
 
 function insert(textarea, text) {
   const { selectionStart: start, selectionEnd: end, value } = textarea
@@ -63,7 +57,7 @@ async function upload(container, textarea, file) {
     const response = await fetch(url, {
       method: "POST",
       body,
-      headers: { "X-CSRFToken": csrfToken(container) },
+      headers: { "X-CSRFToken": csrfToken() },
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(data.detail)

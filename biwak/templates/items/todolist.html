@@ -36,13 +36,23 @@
   <div class="wb-todolist{% if view == 'board' %} is-board{% endif %}" data-groups="{{ item.pk }}">
     {# On the board, the ungrouped to-dos get a column only if there are any #}
     <section class="wb-group" {% if view == "board" and groups and not ungrouped %}hidden{% endif %}>
-      <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="">
+      <div
+        class="wb-todos"
+        data-todos
+        data-list="{{ item.pk }}"
+        data-group=""
+        data-move-url="{% url 'todos_move' item.pk %}"
+      >
         {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
       </div>
       {% include "items/_add_todo.html" with group=None %}
     </section>
     {% for group, todos in groups %}
-      <section class="wb-group" data-group-item="{{ group.pk }}">
+      <section
+        class="wb-group"
+        data-group-item="{{ group.pk }}"
+        data-move-url="{% url 'group_move' group.pk %}"
+      >
         <h2 class="h6 wb-group-title">
           {% if can_change %}
             <span
@@ -101,7 +111,13 @@
             </span>
           {% endif %}
         </h2>
-        <div class="wb-todos" data-todos data-list="{{ item.pk }}" data-group="{{ group.pk }}">
+        <div
+          class="wb-todos"
+          data-todos
+          data-list="{{ item.pk }}"
+          data-group="{{ group.pk }}"
+          data-move-url="{% url 'todos_move' item.pk %}"
+        >
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
         </div>
         {% include "items/_add_todo.html" %}

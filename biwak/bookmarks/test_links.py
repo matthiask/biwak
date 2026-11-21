@@ -164,7 +164,7 @@ class LinkTest(BookmarkBase):
         self.assertContains(response, "figma.com")
         self.assertContains(response, "bi-palette")
         self.assertContains(response, "Add a link")
-        self.assertContains(response, "data-sortable-links")
+        self.assertContains(response, "data-sortable-order")
         response = self.client.get(self.todo.get_absolute_url())
         self.assertContains(response, "The issue")
         self.assertContains(response, "bi-github")
@@ -238,7 +238,7 @@ class LinkTest(BookmarkBase):
         self.assertContains(response, "Shown")
         self.assertNotContains(response, "figma.com")
         self.assertNotContains(response, "Add a link")
-        self.assertNotContains(response, "data-sortable-links")
+        self.assertNotContains(response, "data-sortable-order")
         # Can't change, can't even find the internal one
         self.assertEqual(self.client.get(f"/links/{shown.pk}/edit/").status_code, 403)
         self.assertEqual(
