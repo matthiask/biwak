@@ -50,8 +50,10 @@ through every entry point (`AGENTS.md`).
     `mentions.known_to()`). Nobody outside their projects: the People
     page, person pages and images go by `known_people()`; a person's feed
     and the palette's people by the projects shared as members, as for
-    own staff (`people_visible_to()`). Errors naming people by ID say
-    nothing about who exists.
+    own staff (`people_visible_to()`). Inactive own staff count as the
+    project's people (names in histories); the old title of a list moved
+    out of sight shows in the feed only to own staff. Errors naming
+    people by ID say nothing about who exists.
   - Partners don't create projects, add or invite people or manage
     organizations: those forms offer everybody (decided 2026-11-21).
   - Admins manage the internal team and partners, staff the clients

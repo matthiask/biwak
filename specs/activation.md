@@ -1,95 +1,130 @@
-# Activating and deactivating people
+# People: inviting, activating, deactivating, resets
 
-The idea (backlog in `SPEC.md`, 2026-11-21): the importer creates people
-without an account inactive on purpose, so nobody gets mail or a login
-before someone decides; activating them works only in the Django admin
-today. Deactivating someone who left is the same switch the other way.
+Who gets into Biwak and who leaves: inviting people (several at once),
+the invitations still waiting, activating people the importer created
+inactive, deactivating people who left, and resetting someone's second
+factor. Organizations, the People page and partners are in
+`organizations.md`; sign-in in `access.md`.
 
-**Status:** built (2026-11-21, CLI 0.34.0): `biwak/organizations/activation.py`
-(`activate()`, `deactivate()`, `can_change()`), the pages in
-`biwak/organizations/people.py` (`/people/?inactive=1`,
-`/people/<id>/activate/` and `…/deactivate/`, a palette action on the
-person's page), the API in `biwak/organizations/api.py`, `biwak people`
-in the CLI; tests `biwak/organizations/test_activation.py` and
-`biwak/test_cli_people.py`. Decisions on the way are marked "built".
+**Status:** built (2026-11-21). Inviting several: `biwak/projects/invitations.py`
+(the form), `invite_people()`, `invite()`, `resend_invitation()`,
+`withdraw_invitation()` in `biwak/projects/operations.py`,
+`frontend/invite.js`. Activating and deactivating:
+`biwak/organizations/activation.py`, the pages in
+`biwak/organizations/people.py`, the API in `biwak/organizations/api.py`
+(CLI 0.34.0).
 
-**Agent:** a cheaper model following this spec and the checklist in
-`AGENTS.md`; deactivating ends access, so have the tests of that
-reviewed.
+## Who may (decided 2026-11-21)
 
-**Depends on:** `ui-round-6.md` (invitations, the invitation mail),
-`sso.md` (sessions and tokens), `organizations.md` (the people pages).
+One split for inviting, activating, deactivating and resets
+(`activation.can_change()`): staff for clients; admins also for own
+staff and partners (people of partner organizations); clients and
+partners never (`can_manage_members()`: the forms offer everybody,
+whom partners mustn't learn about). Putting
+people into the own or a partner organization is for admins too
+(`organizations.md`). Several people at once with someone the actor may
+not change is refused as a whole. Pages answer 404 to clients and
+partners and 403 to staff for somebody they may not change; the API 403
+to both.
 
-## Who and where (decided 2026-11-21)
+## Inviting
 
-- **Who** (decided 2026-11-21, replacing "admins only"): staff activate
-  and deactivate clients; admins also own staff and partners (people of
-  partner organizations); clients and partners never. The same split as
-  inviting (staff invite clients, admins invite staff). Several at once
-  with someone the actor may not change is refused as a whole.
-- **Pages:** `/people/` gets an "Inactive" filter (next to "Invited");
-  a person's page has "Activate…" or "Deactivate…" for whoever may, each a
-  modal (`form_response`).
-- **API:** `POST /api/v1/people/{id}/activate/` and `…/deactivate/`, and
-  a bulk form taking several IDs (`POST /api/v1/people/activate/` with
-  `ids` and `mail`), all or nothing.
-- **CLI:** `biwak people activate ID… [--mail]`, `biwak people deactivate
-  ID…`, `biwak people --inactive` lists them (bump the CLI version).
+- **One flow, two entry points** (decided 2026-11-21): "Invite people"
+  on `/people/` (staff choose the projects; also in the palette there)
+  and "Invite by email" on a project's people page (that project chosen),
+  the same form.
+- **A row per person:** address, name, organization (suggested from the
+  domain by `for_new_person()`, empty means the domain's; a name that
+  doesn't exist asks "Create …?", created only when the round is saved,
+  `organizations.md`) and, for admins, staff or client. Three rows
+  without JavaScript, the first required, at most 50; an address twice is
+  an error of the second row.
+- **The projects:** one set for all rows, those the inviter can open and
+  not archived, with one "Notified by default / Only when tagged" choice
+  for the round, stored per project.
+- **All or nothing:** errors per row (a deactivated person's address,
+  staff invited by a non-admin, an organization the inviter may not
+  touch).
+- **The mail:** one per person after the commit, naming the one project
+  ("Ada invited you to Website") or, with several, "Ada invited you to
+  Biwak" with a line per project. People who already have an account are
+  added and get the "added to" notification, no invitation; their
+  organization doesn't change.
+- The new-project modal invites from its rows the same way
+  (`organizations.md`).
+
+## Invitations
+
+- **An invitation** is a person who was invited (`User.invited_by`,
+  `invited_at`, set by `invite()`) and has never signed in
+  (`User.objects.invited()`). Marked "Invited, not signed in yet" with
+  who and when on the project's people page, `/people/` and the person's
+  page; `/people/?invited=1` lists them oldest first. The mark, Resend
+  and Withdraw are for own staff only (clients and partners don't learn
+  who invited whom).
+- **Resend** sends the mail again from the person resending, naming the
+  projects they're in now (not archived); "Sent again."; no limit
+  (decided 2026-11-21); `invited_by` and `invited_at` stay.
+- **Withdraw** (staff, only before they signed in, asking first):
+  removes them from the projects the withdrawing person can open
+  (recorded as "removed", the "added" events stay); the account goes when
+  they're in no other project and nothing refers to it (comments, items,
+  events, files, links, assignments, check-ins asking them, mentions,
+  reactions). The question says which of the two happens.
 
 ## Activating
 
+The importer creates people without an account inactive on purpose, so
+nobody gets mail or a sign-in before someone decides
+(`import-basecamp.md`).
+
 - Sets `is_active`; nothing else changes (memberships, subscriptions,
-  assignments made by the import stay).
-- **The mail is optional** (decided 2026-11-21): with `--mail` (a checkbox
-  on the page, off by default) the person gets the invitation mail of
-  `ui-round-6.md`, naming the projects they're in, through the outbox;
-  `invited_by`/`invited_at` are set then, so they show as invited until
-  they sign in. Without it, no mail.
-- People whose address bounced (`mail_undeliverable_at`) can be activated;
-  the mail isn't sent to them and the page says so.
-- An event per person isn't needed in the feed (it isn't about a project);
-  the audit log records the change (`accounts_user` is audited).
+  assignments made by the import stay). Already active people are
+  skipped quietly.
+- **The mail is optional** (decided 2026-11-21, a checkbox, off by
+  default): the invitation mail above, naming the projects they're in,
+  through the outbox; `invited_by` and `invited_at` are set then, so they
+  show as invited until they sign in. Not to addresses that bounced
+  (`mail_undeliverable_at`): they can be activated, the page says the
+  mail wasn't sent, and they aren't marked as invited.
+- No event in the feed (it isn't about a project); the audit log records
+  the change.
 
 ## Deactivating
 
-- Clears `is_active`; refused for oneself and for the last active admin.
-- **Ends access at once:** the person's sessions (`UserSession.end()` as
-  `sso.md` does), API tokens and calendar links are deleted, open
-  websockets close at their next access check.
+- Clears `is_active`; refused for oneself (not offered) and for the last
+  active admin (an error on the page, 400 in the API). Already inactive
+  people are skipped quietly.
+- **Ends access at once:** sessions (`UserSession.end()`), API tokens
+  and calendar links are deleted; open websockets close through
+  `sso.session_alive()` after `live.check_access(user=…)` told them to
+  check.
 - Keeps everything they did and what points at them: memberships,
-  subscriptions (no mail goes to inactive people anyway), assignments
-  (their to-dos count as "Nobody active", `ui-round-5.md`), comments.
-- No mail to the person.
-- Reactivating is "Activate" again (with or without the mail).
+  subscriptions (no mail goes to inactive people), assignments (their
+  to-dos count under "Nobody active", `todos.md`), comments.
+- No mail to the person. Reactivating is "Activate" again.
 
-## Built (decisions on the way, 2026-11-21)
+## Resetting a second factor
 
-- **Page 404/403:** clients (and partners, who can't manage members) get
-  404 on the pages, staff on somebody they may not change 403; the API
-  answers 403 for both.
-- **Already active** people in an activation, and already inactive ones in
-  a deactivation, are skipped quietly (no mail, nothing recorded).
-- **Bulk deactivation** exists too (`POST /api/v1/people/deactivate/` with
-  `ids`; the CLI takes several IDs). `GET /api/v1/people/` lists the
-  active people, `?inactive=true` the inactive ones (own staff): the CLI's
-  `biwak people`.
-- **A refused case** (oneself, the last active admin) is a 400 in the API,
-  an error message on the pages; the pages don't offer "Deactivate…" for
-  oneself. The last-admin refusal can't happen for an active admin acting
-  (they stay), it guards the operation.
-- **The mail** isn't sent to bounced addresses, and then `invited_by`/
-  `invited_at` stay unset too. The "Inactive" filter has "Activate…" per
-  row (the bulk is API and CLI only).
-- **Open websockets** close through `sso.session_alive()` (inactive people
-  fail it) after `live.check_access(user=…)` told them to check.
+"Reset two-factor…" on the person's page, with the split above:
+`two-factor.md` says what it does.
 
-## Done when
+## Pages, API, CLI
 
-- Both ways through the pages, the API (single and bulk) and the CLI, as
-  admin; staff and clients get 403 (pages: 404 for clients, as the
-  people pages).
-- Tests: activating with and without the mail (outbox, after the commit,
-  nothing on a failed bulk), bounced addresses, deactivating ending
-  sessions, tokens, calendar links and websockets, oneself and the last
-  admin refused, the filters.
-- `docs/` (people) and `SPEC.md`'s backlog item say so.
+- **Pages:** `/people/` has the "Invited" and "Inactive" filters
+  (`?invited=1`, `?inactive=1`, "Activate…" per row there); a person's
+  page has "Activate…" or "Deactivate…" for whoever may, each a modal,
+  also in the palette. Invitations: `/people/invite/`,
+  `/projects/<id>/people/invite/`, `/people/<id>/invitation/resend/` and
+  `…/withdraw/`.
+- **API:** `GET|POST /api/v1/invitations/` (per-row errors as `{"detail",
+  "errors": [{"index", "detail"}]}`, 400), `POST
+  /api/v1/invitations/{id}/resend/`, `DELETE /api/v1/invitations/{id}/`
+  (403 for clients and partners, 404 for people who aren't invitations);
+  `GET /api/v1/people/` (active people, `?inactive=true` the inactive
+  ones; own staff), `POST /api/v1/people/{id}/activate/` and
+  `…/deactivate/`, and in bulk `POST /api/v1/people/activate/` (`ids`,
+  `mail`) and `/people/deactivate/` (`ids`), all or nothing.
+- **CLI:** `biwak invite EMAIL… --project ID… [--only-tagged]`, `biwak
+  invitations [resend|withdraw]`, `biwak people [--inactive]`, `biwak
+  people activate ID… [--mail]`, `biwak people deactivate ID…`.
