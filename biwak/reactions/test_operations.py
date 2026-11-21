@@ -24,8 +24,8 @@ class OperationsTest(TestCase):
         self.comment = ops.add_comment(self.todo, author=self.ada, content="Hi")
 
     def test_quick_set(self):
-        self.assertEqual(len(QUICK), 24)
-        self.assertEqual(len(set(QUICK)), 24)
+        self.assertEqual(len(QUICK), 32)
+        self.assertEqual(len(set(QUICK)), 32)
 
     def test_toggle_on_todo(self):
         self.assertTrue(operations.toggle_reaction(self.bob, "👍", item=self.todo))

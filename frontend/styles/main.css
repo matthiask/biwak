@@ -1258,8 +1258,8 @@ button.wb-signal:hover {
   }
 }
 
-/* The 24 quick reactions in full rows: 8 by 3, on a phone 6 by 4 (a
-   change of reactions.emoji.QUICK's length wants these numbers too) */
+/* The 32 quick reactions in full rows: 8 by 4, also on a phone (a change
+   of reactions.emoji.QUICK's length wants these numbers too) */
 .wb-reaction-quick {
   display: grid;
   grid-template-columns: repeat(8, 2.5rem);
@@ -1268,7 +1268,7 @@ button.wb-signal:hover {
 
 @media (max-width: 575.98px) {
   .wb-reaction-quick {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(8, 1fr);
   }
 }
 

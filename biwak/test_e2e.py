@@ -632,7 +632,9 @@ class TodoPageTest(E2ETestCase):
         self.goto(self.page, self.todo)
         reactions = self.page.locator(".wb-reactions").first
         reactions.locator(".wb-reaction-add summary").click()
-        self.assertEqual(emoji_rows(reactions.locator(".wb-reaction-quick")), [8, 8, 8])
+        self.assertEqual(
+            emoji_rows(reactions.locator(".wb-reaction-quick")), [8, 8, 8, 8]
+        )
 
     def test_reactions(self):
         """The picker adds a quick reaction or a few words, clicking one's
@@ -2040,7 +2042,7 @@ class PhoneTest(E2ETestCase):
         self.assertGreaterEqual(box["x"], 0)
         self.assertLessEqual(box["x"] + box["width"], 360)
         self.assertEqual(
-            emoji_rows(reactions.locator(".wb-reaction-quick")), [6, 6, 6, 6]
+            emoji_rows(reactions.locator(".wb-reaction-quick")), [8, 8, 8, 8]
         )
 
 
