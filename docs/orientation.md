@@ -1,0 +1,96 @@
+# Finding your way
+
+The bar at the top has the same entries everywhere. On the right are
+search, the lantern (your notifications) and your menu.
+
+## Home
+
+The brand ("Biwak") on the left leads to Home. It shows what needs you:
+
+- your to-dos that are overdue or due in the next seven days;
+- check-ins waiting for your answer;
+- for staff, to-dos you assigned to others (waiting on others);
+- recent updates in your bookmarked projects and wherever you were
+  mentioned or assigned;
+- your bookmarked projects and items;
+- links to things you may need: search, the keyboard shortcuts, your
+  calendar link, the notification settings and this help.
+
+A section with nothing in it is left out. Rows with unread
+notifications are marked; see [Notifications](notifications.md).
+
+## Projects
+
+A project is the place where the work on one thing happens: to-do
+lists, messages, docs and files, check-ins, members.
+
+- **Projects** in the bar lists the projects you can open as cards, with
+  your open and overdue to-dos and the last activity. Bookmarked
+  projects (the bookmark icon on a card) come first. "Activity" and
+  "A–Z" switch the order; your choice is remembered.
+- A project is open to all staff or limited to its members; clients
+  only see projects they are members of, and in them only what is shown
+  to them ([Clients](clients.md)).
+- The project's page shows its to-do lists, the latest messages, docs
+  and files, check-ins waiting for you, links and the latest activity.
+  The "More" menu has the project's notification level, archiving and
+  the trash.
+- Staff add outside links (a design file, the live site) with "Add a
+  link" on the project's page.
+- **Members** lists who is in the project. Staff add people there or
+  invite them by email.
+- Archived projects are out of the way; the projects page has an
+  archive.
+
+## To-dos
+
+**To-dos** in the bar is your own list, by due date. Every project and
+every list has its to-dos too. See [To-dos](todos.md).
+
+## Activity
+
+**Activity** is what happened, newest first, grouped by day, across
+all your projects. Each project has its own, and "My activity" in your
+menu shows what you did. Filters narrow it to a kind of item, a person
+or an action. Comments on the same item close together are shown as one
+conversation.
+
+## The lantern
+
+The lamp icon in the bar is your inbox: what you are told about, with a
+dot while something is unread. Opening an entry reads it. See
+[Notifications](notifications.md).
+
+## Bookmarks
+
+The bookmark icon on a project or an item keeps it on your **Bookmarks**
+page and on Home. Bookmarks are yours; nobody else sees them.
+
+## Search and the palette
+
+The search field in the bar opens the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>
+or <kbd>/</kbd>): type to jump to a project, list, message, doc, file,
+check-in or person, or to run an action of the page. "Search for ..." at
+the end opens the search page, which finds words in titles and texts,
+comments and answers. Filters: project, kind, only mine, and "Include
+archived". You only find what you may see. See [Keyboard](keyboard.md).
+
+## People
+
+**People** lists everybody you may know, with their organization. A
+person's page shows the projects you have in common and what they did.
+Clients and partners only see members of their projects. Staff manage
+organizations from the People page.
+
+## Your menu
+
+Your name in the bar opens: My activity, Settings (notifications, the
+keyboard, appearance, profile image, passkeys and sessions), Calendar,
+Help and Sign out. Staff also find the link to the administration.
+
+## Trash
+
+Trashing an item (its "More" menu, then "Trash") moves it to the
+project's trash, which you reach from the project's "More" menu. Trashed
+items are deleted for good after 30 days, with everything in them;
+until then "Restore" brings them back.

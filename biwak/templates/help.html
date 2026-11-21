@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{{ title }} – Biwak{% endblock %}
+
+{% block content %}
+  {# The user documentation from docs/ (biwak/help.py) #}
+  {# All chapters, the current one marked #}
+  <nav class="wb-help-chapters" aria-label="{% translate 'Chapters of the help' %}">
+    {% for chapter in chapters %}
+      <a href="{{ chapter.url }}" {% if chapter.current %}aria-current="page"{% endif %}>{{ chapter.title }}</a>
+    {% endfor %}
+  </nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">{{ title }}</h1>
+  </div>
+  <article class="card">
+    <div class="card-body wb-markdown wb-help">
+      {{ html }}
+      {% if shortcuts %}
+        {# The one list of shortcuts, also in the "?" dialog (palette/_shortcuts.html) #}
+        <h2>{% translate "All shortcuts" %}</h2>
+        <dl class="wb-shortcuts" id="shortcuts">
+          {% include "palette/_shortcuts.html" %}
+        </dl>
+      {% endif %}
+    </div>
+  </article>
+{% endblock content %}

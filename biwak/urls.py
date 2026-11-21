@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import include, path, re_path
 
-from biwak import paste
+from biwak import help as help_pages, paste
 from biwak.accounts import signin
 from biwak.api import api
 from biwak.schedules_forms import describe
@@ -38,6 +38,8 @@ urlpatterns = [
     path("", include("biwak.search.urls")),
     path("", include("biwak.palette.urls")),
     path("", include("biwak.inbound.urls")),
+    path("help/", help_pages.help_page, name="help"),
+    path("help/<slug:page>/", help_pages.help_page, name="help"),
     path("paste/markdown/", paste.html_to_markdown, name="paste_markdown"),
     path("schedules/describe/", describe, name="schedules_describe"),
     path("api/v1/", api.urls),

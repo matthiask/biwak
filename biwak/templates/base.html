@@ -142,6 +142,7 @@
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
                 {% endif %}
+                <a class="dropdown-item" href="{% url 'help' %}">{% translate "Help" %}</a>
                 <hr class="dropdown-divider">
                 <form method="post" action="{% url 'account_logout' %}">
                   {% csrf_token %}

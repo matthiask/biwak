@@ -130,6 +130,8 @@ def everywhere(user):
         link(_("Go to people"), reverse("people")),
         link(_("Settings"), reverse("settings")),
         link(_("Search"), reverse("search")),
+        link(_("Help"), reverse("help")),
+        link(_("Keyboard shortcuts"), reverse("help", args=["keyboard"])),
         {"label": _("Switch the theme"), "type": "theme", "shortcut": ""},
     ]
     if project_ops.can_create_project(user):

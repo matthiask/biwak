@@ -47,6 +47,7 @@ def form_response(
     project=None,
     parent=None,
     intro="",
+    help_page="",
     submit_label=None,
     destructive=False,
     multipart=False,
@@ -56,7 +57,8 @@ def form_response(
     """The form as a modal or as a page (``modal_form.html``): ``title`` is
     the heading, ``item`` the item it's about (the client banner shows
     where clients see it), ``intro`` says what it does, ``cancel_url`` is
-    where Cancel goes on the page. ``form`` can be ``None`` for a question
+    where Cancel goes on the page, ``help_page`` the help page (``docs/``,
+    ``biwak/help.py``) with more about it, as a quiet link. ``form`` can be ``None`` for a question
     (the trash): the buttons only. ``template`` extends ``modal_form.html``
     for more than the form's fields (block ``fields``), with ``extra`` in its
     context."""
@@ -71,6 +73,7 @@ def form_response(
             "project": project or (item.project if item else None),
             "parent": parent,
             "intro": intro,
+            "help_page": help_page,
             "submit_label": submit_label,
             "destructive": destructive,
             "multipart": multipart,
