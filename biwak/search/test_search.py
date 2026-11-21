@@ -1,4 +1,5 @@
 import datetime as dt
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -618,11 +619,13 @@ class ExcerptTest(SearchBase):
 class PagingTest(SearchBase):
     def setUp(self):
         super().setUp()
-        for n in range(120):
+        # With pages of 5 (patched, the API's page_size): 5, 5 and 3
+        for n in range(12):
             ops.create_message(
                 project=self.project, title=f"Pegs {n}", creator=self.ada
             )
 
+    @patch.object(queries, "PAGE_SIZE", 5)
     def test_the_page(self):
         self.client.force_login(self.ada)
         seen, url = [], "/search/?q=pegs"
@@ -632,22 +635,22 @@ class PagingTest(SearchBase):
             pages += 1
             seen += [r["item"].pk for r in response.context["results"]]
             url = response.context["older"]
-        self.assertEqual((pages, len(seen), len(set(seen))), (3, 121, 121))
+        self.assertEqual((pages, len(seen), len(set(seen))), (3, 13, 13))
 
     def test_the_api(self):
-        seen, params = [], {"q": "pegs"}
+        seen, params = [], {"q": "pegs", "page_size": 5}
         pages = 0
         while True:
             data = self.client.get(
                 "/api/v1/search/", params, headers=self.api(self.ada)
             ).json()
             pages += 1
-            self.assertLessEqual(len(data["results"]), 50)
+            self.assertLessEqual(len(data["results"]), 5)
             seen += [r["id"] for r in data["results"]]
             if not data["next"]:
                 break
             params["cursor"] = parse_qs(urlsplit(data["next"]).query)["cursor"][0]
-        self.assertEqual((pages, len(seen), len(set(seen))), (3, 121, 121))
+        self.assertEqual((pages, len(seen), len(set(seen))), (3, 13, 13))
 
     def test_a_bad_cursor(self):
         self.client.force_login(self.ada)

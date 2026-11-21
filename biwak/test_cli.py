@@ -12,7 +12,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 
-from biwak import cli_version
+from biwak import api_conventions, cli_version
 from biwak.accounts.models import APIToken
 from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
@@ -178,31 +178,35 @@ class CLICommandsTest(CLITest):
             "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
         )
 
+    # Small pages, server and CLI: every list comes in several of them
+    @patch.object(api_conventions, "PAGE_SIZE", 3)
+    @patch.object(api_conventions, "MAX_PAGE_SIZE", 4)
+    @patch.object(biwak_cli.core, "MAX_PAGE_SIZE", 4)
     def test_long_lists_are_complete(self):
-        """Only the first page came: 50 completed to-dos and comments, 200
-        to-dos across projects"""
+        """Not only the first page: completed to-dos, comments, to-dos
+        across projects"""
         todos = [
             ops.create_todo(todolist=self.list, title=f"Task {n}", creator=self.ada)
-            for n in range(201)
+            for n in range(10)
         ]
-        for todo in todos[:51]:
+        for todo in todos[:5]:
             ops.complete(todo, actor=self.ada)
-        for n in range(51):
+        for n in range(5):
             ops.add_comment(todos[0], author=self.ada, content=f"Comment {n}")
 
         def count(*args):
             return len(json.loads(self.biwak(*args, "--json").stdout))
 
-        self.assertEqual(count("todos", self.list.pk, "--completed"), 51)
-        self.assertEqual(count("todos"), 150)
-        self.assertEqual(count("todos", "--completed"), 51)
+        self.assertEqual(count("todos", self.list.pk, "--completed"), 5)
+        self.assertEqual(count("todos"), 5)
+        self.assertEqual(count("todos", "--completed"), 5)
         data = json.loads(
             self.biwak("todo", "show", todos[0].pk, "--comments", "--json").stdout
         )
-        self.assertEqual(len(data["comments"]), 51)
-        for todo in todos[:60]:
+        self.assertEqual(len(data["comments"]), 5)
+        for todo in todos[:6]:
             ops.reopen(todo, actor=self.ada)
-        self.assertEqual(count("todos"), 201)
+        self.assertEqual(count("todos"), 10)
 
     def test_no_content(self):
         """request() decoded every answer as JSON: a 204 crashed"""
