@@ -44,15 +44,17 @@ def form_response(
     submit_label=None,
     destructive=False,
     multipart=False,
+    template="modal_form.html",
 ):
     """The form as a modal or as a page (``modal_form.html``): ``title`` is
     the heading, ``item`` the item it's about (the client banner shows
     where clients see it), ``intro`` says what it does, ``cancel_url`` is
     where Cancel goes on the page. ``form`` can be ``None`` for a question
-    (the trash): the buttons only."""
+    (the trash): the buttons only. ``template`` extends ``modal_form.html``
+    for more than the form's fields (block ``fields``)."""
     return render(
         request,
-        "modal_form.html",
+        template,
         {
             "form": form,
             "title": title,

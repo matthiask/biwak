@@ -512,6 +512,11 @@ class TodoPageTest(E2ETestCase):
         listbox.wait_for()
         names = listbox.locator("li span").all_inner_texts()
         self.assertEqual(sorted(names), ["Ada Example", "Bob Example", "Cleo Example"])
+        # With the organization (specs/organizations.md)
+        self.assertIn(
+            "Cleo Example, Example Client Ltd",
+            listbox.locator("li.is-unavailable").inner_text(),
+        )
         # The people who can't see the item can't be chosen
         self.assertEqual(
             listbox.locator("li.is-unavailable").inner_text().count("Cleo"), 1

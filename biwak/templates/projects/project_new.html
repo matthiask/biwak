@@ -1,0 +1,33 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{% comment %}
+  The new project (biwak/projects/views.py, NewProjectForm): with the
+  organizations involved, the second step lists their people, staff and
+  rows to invite people without an account
+{% endcomment %}
+{% block fields %}
+  {{ block.super }}
+  {% if form.stage == "people" %}
+    {{ form.invites.management_form }}
+    <fieldset class="mb-3">
+      <legend class="form-label">{% translate "Invite people without an account" %}</legend>
+      <p class="form-text">
+        {% translate "As clients. Without an organization picked, the one of the address's domain." %}
+      </p>
+      {% for row in form.invites %}
+        {% for error in row.non_field_errors %}<div class="alert alert-danger" role="alert">
+            {{ error }}
+          </div>{% endfor %}
+        <div class="row g-2 mb-2">
+          {% for field in row %}
+            <div class="col-sm-4">
+              <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label }}</label>
+              {{ field }}
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </fieldset>
+  {% endif %}
+{% endblock fields %}

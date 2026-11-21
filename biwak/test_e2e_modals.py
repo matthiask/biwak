@@ -1,7 +1,9 @@
 """Forms in a modal in the browser (biwak/modals.py, frontend/modal.js):
 opening, saving, errors, Escape and the focus"""
 
+from biwak.accounts.models import User
 from biwak.items.models import Item, Kind
+from biwak.projects.models import Project
 from biwak.test_e2e import E2ETestCase, expect
 
 
@@ -29,6 +31,38 @@ class ModalTest(E2ETestCase):
         page.wait_for_url("**/lists/*/")
         item = Item.objects.get(kind=Kind.LIST, title="Launch plan")
         self.assertTrue(page.url.endswith(item.get_absolute_url()))
+        self.assertEqual(self.errors, [])
+
+    def test_new_project_from_organizations(self):
+        """Two steps in the dialog (specs/organizations.md): the
+        organizations involved, then their people, staff and invitations"""
+        page = self.page
+        self.goto(page, "/")
+        page.get_by_role("link", name="New project").click()
+        dialog = page.get_by_role("dialog", name="New project")
+        expect(dialog).to_be_visible()
+        dialog.locator("[name=name]").fill("Camp")
+        dialog.get_by_label("Example Client Ltd").check()
+        dialog.get_by_role("button", name="Continue").click()
+        people = dialog.get_by_label("Cleo Example, Example Client Ltd")
+        expect(people).to_be_checked()
+        dialog.get_by_label("Bob Example").check()
+        dialog.locator("[name=invite-0-email]").fill("dora@example.org")
+        dialog.get_by_role("button", name="Add project").click()
+        page.wait_for_url("**/projects/*/")
+        project = Project.objects.get(name="Camp")
+        self.assertTrue(page.url.endswith(project.get_absolute_url()))
+        self.assertEqual(
+            {m.user.email for m in project.memberships.all()},
+            {
+                "ada@example.org",
+                "bob@example.org",
+                "cleo@example.org",
+                "dora@example.org",
+            },
+        )
+        dora = User.objects.get(email="dora@example.org")
+        self.assertEqual(dora.organization.name, "Example Client Ltd")
         self.assertEqual(self.errors, [])
 
     def test_escape_and_the_focus(self):

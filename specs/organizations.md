@@ -115,3 +115,15 @@ decides who sees all-access projects.
   organization", `/people/ID/organization/`). The installation's own is
   marked in the Django admin; merging into or out of it, moving people in
   or out of it and deleting it are admins only, also on these pages.
+- **The new-project modal** asks for the organizations involved (all but
+  the installation's own); without any it adds the project at once, as
+  before. With some, "Continue" shows their people (partners included),
+  all ticked, the installation's own staff to tick, and three rows to
+  invite people without an account (address, name, organization: the
+  domain's if left empty, else the only one involved; invited as
+  clients). Everybody picked becomes a member, the invitations go out
+  with the project, and an invitation that fails adds nothing.
+  `form_response(template=)` takes a template extending
+  `modal_form.html` (block `fields`) for the rows.
+- **Display:** "Ada, Example Ltd" for clients and partners (the current
+  name), also in the `@` list.
