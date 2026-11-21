@@ -20,10 +20,17 @@ PUBLIC = {
     "unsubscribe/<str:token>/",
     # Resend's webhook, signed
     "inbound/resend/",
-    # allauth's password pages don't exist (a 404)
+    # allauth's password pages and managing one's addresses don't exist
+    # (a 404, specs/sso.md)
     "^accounts/password/",
+    "^accounts/email/",
+    "^accounts/confirm-email/",
     # Django's, sending to the login
     "admin/login/",
+    # The login pages, allauth's wrapped to send people of organizations
+    # requiring single sign-on to their provider (specs/sso.md)
+    "accounts/login/",
+    "accounts/login/code/",
 }
 
 DUMMY = {"int": "1", "slug": "x", "str": "x", "path": "x", "uuid": str(uuid.uuid4())}
