@@ -505,7 +505,21 @@ def assign(item, users, *, actor, mentioned=None, assigned_by=None):
 
 @transaction.atomic
 def unassign(item, users, *, actor):
-    item.todo.assignees.remove(*users)
+    """Removes assignees; those who were assigned are recorded
+    (``UNASSIGNED``, "Ada removed Bob" on the timeline, nobody is told)"""
+    todo = item.todo
+    removed = [u for u in users if todo.assignees.filter(pk=u.pk).exists()]
+    if not removed:
+        return []
+    todo.assignees.remove(*removed)
+    record(
+        actor=actor,
+        action=Action.UNASSIGNED,
+        project=item.project,
+        item=item,
+        assignees=[u.pk for u in removed],
+    )
+    return removed
 
 
 _UNCHANGED = object()
@@ -567,9 +581,21 @@ def update_todo(
     if fields:
         todo.save(update_fields=fields)
     if edited or fields:
-        # Edits merge into one event per editing session (record())
+        # Edits merge into one event per editing session (record()); what
+        # changed and the new title and due date, for the timeline
+        # (specs/timeline.md)
+        changed = (["title"] if edited else []) + [
+            "recurrence" if name.startswith("recurrence") else name for name in fields
+        ]
+        extra = {"fields": list(dict.fromkeys(changed))}
+        if "due_on" in fields:
+            extra["due_on"] = todo.due_on.isoformat() if todo.due_on else None
         event = record(
-            actor=actor, action=Action.EDITED, project=item.project, item=item
+            actor=actor,
+            action=Action.EDITED,
+            project=item.project,
+            item=item,
+            **extra,
         )
         mentioned = mentions.update(
             item,

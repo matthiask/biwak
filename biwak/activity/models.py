@@ -23,6 +23,7 @@ class Action(models.TextChoices):
     COMPLETED = "completed", _("completed")
     REOPENED = "reopened", _("reopened")
     ASSIGNED = "assigned", _("assigned")
+    UNASSIGNED = "unassigned", _("unassigned")
     COMMENTED = "commented", _("commented")
     REACTED = "reacted", _("reacted")
     MOVED = "moved", _("moved")

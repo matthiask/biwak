@@ -145,7 +145,11 @@ def record(*, actor, action, project, item=None, **data):
         event = events.order_by("-created_at", "-pk").first()
     if event is not None:
         event.created_at = now
+        # Merged edits list everything they changed
+        fields = [*event.data.get("fields", []), *data.get("fields", [])]
         event.data |= data
+        if fields:
+            event.data["fields"] = list(dict.fromkeys(fields))
         event.save(update_fields=["created_at", "data"])
     else:
         event = Event.objects.create(

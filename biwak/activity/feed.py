@@ -95,7 +95,7 @@ def _people_of(event):
     """The people an event is about: those assigned, those it was shared
     with"""
     match event.action:
-        case Action.ASSIGNED:
+        case Action.ASSIGNED | Action.UNASSIGNED:
             return event.data.get("assignees", [])
         case Action.SHARED:
             return event.data.get("people", [])
