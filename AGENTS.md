@@ -25,8 +25,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   days, expired API tokens, `check_visibility` mailing admins); new daily
   jobs go there, hourly ones into an `hourly_tasks` like Governance's.
   `./manage.py send_mails` sends the notification mails and digests that
-  are due and retries the outbox (`biwak/outbox/`); cron runs it every
-  minute. Once deployed, the cron jobs live
+  are due, retries the outbox (`biwak/outbox/`) and tells about docs
+  whose creator never clicked "Done" (`specs/files.md`); cron runs it
+  every minute. Once deployed, the cron jobs live
   in the argocd repository.
 - Replies by mail come in through Resend's webhook (`/inbound/resend/`);
   `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by

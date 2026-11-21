@@ -369,15 +369,15 @@ class TellTest(Fixture, TestCase):
             self, response, reverse("project_files", args=[self.project.pk])
         )
 
-    def test_not_now(self):
+    def test_no_one_else(self):
         """Nobody else: those who want to hear are told anyway (decided
         2026-11-21: additive)"""
         self.write()
         # What was typed is saved first
         response = self.client.get(self.tell, headers={"HX-Modal": "true"})
         assert_modal(self, response, title="Tell people about it?")
-        self.assertContains(response, "Not now")
-        self.assertContains(response, "Tell them")
+        self.assertContains(response, "No one else")
+        self.assertContains(response, "Tell them too")
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
                 self.tell, {"not_now": "1"}, headers={"HX-Modal": "true"}
@@ -443,6 +443,107 @@ class TellTest(Fixture, TestCase):
         self.assertRedirects(self.client.get(self.tell), self.doc.get_absolute_url())
         self.doc.refresh_from_db()
         self.assertTrue(self.doc.doc.tell_pending)
+
+    def unanswered(self, minutes):
+        with self.captureOnCommitCallbacks(execute=True):
+            return operations.tell_unanswered(
+                now=timezone.now() + dt.timedelta(minutes=minutes)
+            )
+
+    def published(self):
+        """Written and saved, the question not answered"""
+        self.write()
+        operations.save_live(self.doc.pk)
+        self.doc.refresh_from_db()
+        self.assertFalse(self.doc.is_draft)
+
+    def test_unanswered_tells_after_an_hour(self):
+        """No "Done" (decided 2026-11-21): an hour without a change tells
+        those who want to hear, as "No one else" would, once"""
+        self.published()
+        self.assertEqual(self.unanswered(59), 0)
+        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
+        self.assertEqual(self.unanswered(61), 1)
+        event = Event.objects.get(item=self.doc, action=Action.SHARED)
+        self.assertEqual(event.actor, self.ada)
+        self.assertNotIn("note", event.data)
+        self.assertEqual(
+            [n.user for n in Notification.objects.filter(event=event)], [self.bob]
+        )
+        self.doc.refresh_from_db()
+        self.assertFalse(self.doc.doc.tell_pending)
+        # Once
+        self.assertEqual(self.unanswered(120), 0)
+        self.assertEqual(Event.objects.filter(action=Action.SHARED).count(), 1)
+        # A later "Done" asks nothing
+        response = self.client.get(self.url("doc_edit", self.doc))
+        self.assertNotContains(response, self.tell)
+        self.assertRedirects(self.client.get(self.tell), self.doc.get_absolute_url())
+        self.assertEqual(Event.objects.filter(action=Action.SHARED).count(), 1)
+
+    def test_done_before_the_hour_still_asks(self):
+        self.published()
+        self.unanswered(30)
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Tell people about it?")
+        # Answered: nothing told again after the hour
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(self.tell, {"not_now": "1"})
+        self.assertEqual(self.unanswered(61), 0)
+        self.assertEqual(Event.objects.filter(action=Action.SHARED).count(), 1)
+
+    def test_unanswered_counts_from_the_last_change(self):
+        self.published()
+        with time_machine.travel(timezone.now() + dt.timedelta(minutes=50)):
+            with self.captureOnCommitCallbacks(execute=True):
+                live.apply_text(self.doc.doc, "# Plan\n\nMore", user=self.ada)
+            operations.save_live(self.doc.pk)
+        self.assertEqual(self.unanswered(70), 0)
+        self.assertEqual(self.unanswered(111), 1)
+
+    def test_unanswered_waits_for_typing_and_skips_drafts_and_the_trash(self):
+        # Typing not merged yet: the next run
+        self.published()
+        with self.captureOnCommitCallbacks(execute=True):
+            live.apply_text(self.doc.doc, "# Plan\n\nMore", user=self.ada)
+        self.assertEqual(self.unanswered(61), 0)
+        operations.save_live(self.doc.pk)
+        ops.trash(Item.objects.get(pk=self.doc.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(61), 0)
+        # An empty draft isn't a doc yet
+        self.client.get(reverse("doc_new", args=[self.project.pk]))
+        self.assertEqual(self.unanswered(61), 0)
+        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
+
+    def test_restoring_counts_as_a_change(self):
+        """Trash is trash, but not a way around telling (decided
+        2026-11-21): restored, the hour starts again"""
+        self.published()
+        ops.trash(Item.objects.get(pk=self.doc.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(61), 0)
+        with time_machine.travel(timezone.now() + dt.timedelta(minutes=120)):
+            ops.restore(Item.objects.get(pk=self.doc.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(150), 0)
+        self.assertEqual(self.unanswered(181), 1)
+
+    def test_telling_is_claimed_once(self):
+        """The creator's answer and the run every minute lock and check the
+        doc: the second one tells nobody"""
+        self.published()
+        self.assertTrue(operations.tell(self.doc, actor=self.ada))
+        self.assertFalse(operations.tell(self.doc, actor=self.ada))
+        self.assertEqual(Event.objects.filter(action=Action.SHARED).count(), 1)
+
+    def test_send_mails_tells(self):
+        self.published()
+        with (
+            time_machine.travel(timezone.now() + dt.timedelta(minutes=61)),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            call_command("send_mails")
+        self.assertTrue(
+            Event.objects.filter(item=self.doc, action=Action.SHARED).exists()
+        )
 
     def test_docs_made_otherwise_dont_ask(self):
         self.client.force_login(self.ada)

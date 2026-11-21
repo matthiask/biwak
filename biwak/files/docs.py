@@ -9,8 +9,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak.activity.history import diff_lines
-from biwak.activity.notify import told_by_default, told_line
-from biwak.activity.operations import share, subscribable_people
+from biwak.activity.notify import told_line
 from biwak.activity.views import SubscribersForm
 from biwak.collab import live
 from biwak.files import operations, queries
@@ -121,7 +120,7 @@ class TellForm(SubscribersForm):
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, item=item, user=user, **kwargs)
         del self.fields["notify"]
-        self.told = default_told(item, user)
+        self.told = operations.default_told(item, user)
         field = self.fields["people"]
         field.label = _("Also tell…")
         field.required = False
@@ -129,27 +128,12 @@ class TellForm(SubscribersForm):
         field.queryset = field.queryset.exclude(pk__in=[u.pk for u in self.told])
 
 
-def default_told(item, user):
-    """Those the doc tells by default (``notify.told_by_default()``) who
-    aren't subscribed yet (people mentioned in its first text were told
-    then) and whom ``user`` may subscribe"""
-    told = told_by_default(
-        item.project, item.parent, visible=item.is_client_visible, actor=user
-    )
-    allowed = set(
-        subscribable_people(item, user)
-        .exclude(subscriptions__item=item)
-        .filter(pk__in=[u.pk for u in told])
-        .values_list("pk", flat=True)
-    )
-    return [u for u in told if u.pk in allowed]
-
-
 @never_cache
 def doc_tell(request, pk):
     """The first "Done" of a doc begun as a draft (specs/files.md, "Docs"): its
     creator is asked once whom to tell besides those told by default,
-    "Tell them" or "Not now" (only those), never again either way. A modal of the editor, also a page.
+    "Tell them too" or "No one else" (only those), never again either way. A
+    modal of the editor, also a page.
     What was typed is saved first; a draft still empty goes back to its
     folder."""
     item = item_for(request, pk, Kind.DOC, drafts=True)
@@ -164,24 +148,14 @@ def doc_tell(request, pk):
     if request.method == "POST" and request.POST.get("not_now"):
         # Nobody else, but those who want to hear are told anyway
         # (decided 2026-11-21: additive)
-        people = default_told(item, request.user)
-        if people:
-            share(item, people, actor=request.user, notify=True)
-        operations.told(item, actor=request.user)
+        operations.tell(item, actor=request.user)
         return redirect(item)
     form = TellForm(request.POST or None, item=item, user=request.user)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
-        people = [*form.told, *data["people"]]
-        if people:
-            share(
-                item,
-                people,
-                actor=request.user,
-                notify=True,
-                note=data["note"],
-            )
-        operations.told(item, actor=request.user)
+        operations.tell(
+            item, actor=request.user, also=data["people"], note=data["note"]
+        )
         return redirect(item)
     return form_response(
         request,
@@ -190,7 +164,7 @@ def doc_tell(request, pk):
         intro=_("Nobody has heard of this doc yet. You're asked once."),
         item=item,
         cancel_url=item.get_absolute_url(),
-        submit_label=_("Tell them"),
+        submit_label=_("Tell them too"),
         template="files/doc_tell.html",
     )
 

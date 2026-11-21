@@ -5,6 +5,7 @@ from django.core.management import BaseCommand
 from biwak.accounts.middleware import set_user_name
 from biwak.activity.mails import send_mails
 from biwak.checkins import operations as checkins
+from biwak.files import operations as files
 from biwak.outbox import sending as outbox
 
 
@@ -17,13 +18,22 @@ class Command(BaseCommand):
         " per person and item 10 minutes after the newest change, digests at"
         " 07:00; and what check-ins do (specs/checkins.md): asking the"
         " questions due, the summaries of the answers; and sending again what"
-        " failed to go out (specs/mail-sending.md). Run every minute by cron."
+        " failed to go out (specs/mail-sending.md); and telling about docs"
+        ' whose creator never answered "Tell people about it?" (specs/files.md).'
+        " Run every minute by cron."
     )
 
     def handle(self, **options):
         set_user_name("Send mails")
         # Each part on its own: one failing doesn't keep the other from
         # running
+        try:
+            told = files.tell_unanswered()
+        except Exception:
+            logger.exception("Telling about unanswered docs failed")
+        else:
+            if options["verbosity"] > 1 and told:
+                self.stdout.write(f"{told} docs told about.")
         try:
             count = send_mails()
         except Exception:

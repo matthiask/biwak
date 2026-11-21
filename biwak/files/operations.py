@@ -16,12 +16,27 @@ from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import Color
 from biwak.activity import mentions
 from biwak.activity.models import Action
-from biwak.activity.operations import read_by_acting, record
+from biwak.activity.notify import told_by_default
+from biwak.activity.operations import (
+    read_by_acting,
+    record,
+    share,
+    subscribable_people,
+)
 from biwak.collab import live
 from biwak.files import attachments
 from biwak.files.titles import doc_title
 from biwak.items import editing, operations as ops
-from biwak.items.models import Doc, DocVersion, Folder, Message, Status, Upload
+from biwak.items.models import (
+    Doc,
+    DocVersion,
+    Folder,
+    Item,
+    Kind,
+    Message,
+    Status,
+    Upload,
+)
 from biwak.projects.models import FilesOrdering, Project
 
 
@@ -30,6 +45,11 @@ _UNCHANGED = ops._UNCHANGED
 # Saving makes a version when the last one is older than this, or by
 # somebody else (decided 2026-11-20)
 VERSION_WINDOW = dt.timedelta(minutes=10)
+
+# A doc begun as a draft whose creator never answered "Tell people about
+# it?" tells those who want to hear once it had no change for this long
+# (decided 2026-11-21)
+TELL_AFTER = dt.timedelta(hours=1)
 
 
 class DocReadOnly(Exception):
@@ -352,10 +372,79 @@ def restore_doc_version(item, version, *, actor):
     return doc.versions.first()
 
 
-def told(item, *, actor):
-    """The creator of a doc begun as a draft answered "Tell people about
-    it?" (either way): never asked again"""
-    Doc.objects.filter(pk=item.pk, tell_pending=True).update(tell_pending=False)
+def default_told(item, user):
+    """Those the doc tells by default (``notify.told_by_default()``) who
+    aren't subscribed yet (people mentioned in its first text were told
+    then) and whom ``user`` may subscribe"""
+    told = told_by_default(
+        item.project, item.parent, visible=item.is_client_visible, actor=user
+    )
+    allowed = set(
+        subscribable_people(item, user)
+        .exclude(subscriptions__item=item)
+        .filter(pk__in=[u.pk for u in told])
+        .values_list("pk", flat=True)
+    )
+    return [u for u in told if u.pk in allowed]
+
+
+@transaction.atomic
+def tell(item, *, actor, also=(), note=""):
+    """ "Tell people about it?" answered, once (specs/files.md, "Docs"): a
+    ``shared`` event to those told by default (``default_told()``) and
+    ``also``, with the note; nothing when there's nobody. Never asked
+    again. The doc's row is locked and checked, so the creator's answer
+    and ``tell_unanswered()`` can't both tell; returns whether this call
+    did."""
+    doc = (
+        Doc.objects
+        .select_for_update(of=("self",))
+        .filter(pk=item.pk, tell_pending=True)
+        .first()
+    )
+    if doc is None:
+        return False
+    people = [*default_told(item, actor), *also]
+    if people:
+        share(item, people, actor=actor, notify=True, note=note)
+    doc.tell_pending = False
+    doc.save(update_fields=["tell_pending"])
+    return True
+
+
+def tell_unanswered(*, now=None):
+    """Docs begun as drafts whose creator never answered "Tell people about
+    it?" (no first "Done") tell those who want to hear once they had no
+    change for ``TELL_AFTER``, as "No one else" would, with the creator as
+    the actor; the question isn't asked any more (decided 2026-11-21).
+    ``send_mails`` runs it every minute. Each doc in a transaction of its
+    own with its row locked (``skip_locked``: a run at the same time or
+    the creator answering has it) and checked again; one with typing not
+    merged yet (``LiveUpdate`` rows) waits for the next run. Returns how
+    many docs told."""
+    from biwak.collab.models import LiveUpdate
+
+    cutoff = (now or timezone.now()) - TELL_AFTER
+    unanswered = Item.objects.filter(
+        kind=Kind.DOC,
+        is_draft=False,
+        doc__tell_pending=True,
+        updated_at__lt=cutoff,
+    ).exclude(status=Status.TRASHED)
+    count = 0
+    for pk in unanswered.order_by("pk").values_list("pk", flat=True):
+        with transaction.atomic():
+            doc = (
+                Doc.objects
+                .select_for_update(of=("self",), skip_locked=True)
+                .filter(item__in=unanswered.filter(pk=pk))
+                .select_related("item__creator")
+                .first()
+            )
+            if doc is None or LiveUpdate.objects.filter(doc_id=pk).exists():
+                continue
+            count += tell(doc.item, actor=doc.item.creator)
+    return count
 
 
 @transaction.atomic

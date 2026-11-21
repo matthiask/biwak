@@ -238,6 +238,18 @@ class PickerTest(E2ETestCase):
         page.get_by_role("link", name="Edit").click()
         return page.locator(".wb-picker-input")
 
+    def test_focus_alone_doesnt_open_the_list(self):
+        """A modal or a label focusing the field leaves the list closed; a
+        click, typing or Down opens it (decided 2026-11-21)"""
+        page = self.page
+        field = self.open_form(page)
+        listbox = page.locator(".wb-picker-list")
+        field.focus()
+        expect(field).to_be_focused()
+        expect(listbox).to_be_hidden()
+        field.press("ArrowDown")
+        expect(listbox).to_be_visible()
+
     def test_choosing_filtering_and_removing(self):
         page = self.page
         field = self.open_form(page)
@@ -256,6 +268,11 @@ class PickerTest(E2ETestCase):
         expect(listbox.locator("li")).to_have_count(1)
         field.press("Enter")
         expect(page.locator(".wb-pill")).to_have_text("BEBob×")  # with the mark
+        # A pick closes the list, the arrow keys open it again
+        expect(listbox).to_be_hidden()
+        expect(field).to_be_focused()
+        field.press("ArrowDown")
+        expect(listbox).to_be_visible()
         # Escape closes the list but not the form
         field.press("Escape")
         expect(listbox).to_be_hidden()
@@ -278,6 +295,38 @@ class PickerTest(E2ETestCase):
         self.assertEqual(list(self.todo.todo.assignees.all()), [self.bob])
         # Assigning made Bob a member
         self.assertTrue(self.project.memberships.filter(user=self.bob).exists())
+        self.assertEqual(self.errors, [])
+
+    def test_the_list_closes_after_the_last_pick(self):
+        """Nothing left to pick: no "Nobody found" over the button below"""
+        page = self.page
+        field = self.open_form(page)
+        listbox = page.locator(".wb-picker-list")
+        for name in ("Ada", "Cleo", "Bob"):
+            field.click()
+            listbox.locator("li", has_text=name).click()
+        expect(page.locator(".wb-pill")).to_have_count(3)
+        expect(listbox).to_be_hidden()
+        # Clicking the field again doesn't open an empty list either
+        field.click()
+        expect(listbox).to_be_hidden()
+        # The button underneath takes the click at once
+        page.get_by_role("button", name="Save").click(timeout=2000)
+        expect(page.locator("form[data-view-edit-form]")).to_have_count(0)
+        self.assertEqual(
+            set(self.todo.todo.assignees.all()), {self.ada, self.cleo, self.bob}
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_tab_leaves_the_field_and_closes_the_list(self):
+        page = self.page
+        field = self.open_form(page)
+        listbox = page.locator(".wb-picker-list")
+        field.click()
+        expect(listbox).to_be_visible()
+        field.press("Tab")
+        expect(field).not_to_be_focused()
+        expect(listbox).to_be_hidden()
         self.assertEqual(self.errors, [])
 
     def test_clicking_the_assignees_focuses_the_field(self):

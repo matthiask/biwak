@@ -1,9 +1,12 @@
 // The people picker (specs/todos.md, "Assignees"): a <select multiple
 // data-people-picker> of people (assignees, subscribers, whom to notify)
 // becomes pills, each with × to remove, and
-// a field which opens the list of the others on focus and click and filters
-// while typing. Up and Down choose, Enter or a click picks, Escape closes,
-// Backspace in the empty field takes the last pill away. The options come
+// a field which opens the list of the others on a click, typing or Down and
+// filters while typing. Up and Down choose, Enter or a click picks, Escape closes,
+// Backspace in the empty field takes the last pill away. The list floats
+// over what's below, so it closes after a pick (typing opens it again),
+// when nobody is left to pick, when the field loses the focus and on a click
+// elsewhere (``data-dismiss``, frontend/menus.js). The options come
 // members first (the server's order, ``assignable_people()``); a person who
 // isn't a member yet says so, since assigning makes them one. The select
 // stays in the form (hidden), so the form posts it as it always did and
@@ -27,6 +30,7 @@ function attach(select) {
 
   const root = document.createElement("div")
   root.className = "wb-picker"
+  root.dataset.dismiss = ""
   const pills = document.createElement("span")
   pills.className = "wb-picker-pills"
   const input = document.createElement("input")
@@ -150,6 +154,8 @@ function attach(select) {
   }
 
   const open = () => {
+    // Nobody left to pick: nothing to show ("Nobody found" is for typing)
+    if (!input.value.trim() && !matches().length) return close()
     list.hidden = false
     input.setAttribute("aria-expanded", "true")
     renderList()
@@ -165,14 +171,18 @@ function attach(select) {
   const pick = (option) => {
     option.selected = true
     input.value = ""
-    active = 0
+    close()
     changed()
   }
 
   root.addEventListener("click", (event) => {
-    if (event.target === root || event.target === pills) input.focus()
+    if (event.target === root || event.target === pills) {
+      input.focus()
+      open()
+    }
   })
-  input.addEventListener("focus", open)
+  // Not on focus alone (a modal focusing its first field, a label): a click,
+  // typing or Down opens the list (decided 2026-11-21)
   input.addEventListener("click", open)
   input.addEventListener("input", () => {
     active = 0
@@ -182,6 +192,7 @@ function attach(select) {
     input.value = ""
     close()
   })
+  root.addEventListener("dismiss", close)
   input.addEventListener("keydown", (event) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault()
