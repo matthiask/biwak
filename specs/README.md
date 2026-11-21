@@ -59,7 +59,6 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `activation.md` | activating imported people and deactivating people who left: pages, API, CLI, admins only | next | ui-round-6, sso | cheaper, review deactivating |
 | `two-factor.md` | passkeys as a way in, authenticator apps as an optional second factor, resets instead of recovery codes | next | sso, activation | strong |
 | `doc-titles.md` | a doc's title is its first line (a heading or the first text), no title form below the editor | next | files, collaboration | cheaper |
-| `deploy-checklist.md` | what the next deploy brings, what to set up before and after, what to check | for the next deploy | | |
 | `feed.md` | links: projects only, quieter ("Links", changed 2026-11-21) | built 2026-11-21 (`links`) | ui-round-4 | cheaper |
 | `lantern.md` | reading by acting: completing, editing, commenting, reacting read the item's notifications for the actor | built 2026-11-21 (`reading`) | lantern | cheaper |
 | `dashboard.md` | Home at `/`: what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | built 2026-11-21 (`home`) | ui-round-5, `feed.md` links, `lantern.md` reading by acting | cheaper, review the visibility tests |
