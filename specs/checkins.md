@@ -119,7 +119,8 @@ this part.
 - **Kind `answer`** (parent: its question), commentable:
   `Answer(Detail)` with `content` (Markdown) and `occurrence`; one per
   person and occurrence (unique on occurrence and creator), editable by
-  its author.
+  its author. Its title is the question's, renamed with it (fixed
+  2026-11-21: answers kept the old title in the feed and search).
 - **`QuestionMail(question, user, mode)`**: how a person hears about the
   answers: `each` (a mail per answer, through the normal notifications),
   `summary` (one mail the morning after an occurrence with all its

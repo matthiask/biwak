@@ -176,6 +176,8 @@ def update_question(
         item.title = title
         item.updated_at = timezone.now()
         item.save(update_fields=["title", "updated_at"])
+        # Answers carry the question as their title (feed, search, events)
+        Item.objects.filter(parent=item, kind=Kind.ANSWER).update(title=title)
         changed.append("title")
     if rule is not _UNCHANGED:
         rule = schedules.validate(rule)
