@@ -241,13 +241,11 @@ class OrderTest(OverviewTestCase):
             )
 
     def test_default_is_by_activity_without_events_last(self):
-        self.assertEqual(self.ada.project_order, "activity")
         names, _ = self.names(self.ada)
         self.assertEqual(names, ["beta", "Gamma", "Alpha", "Delta"])
 
     def test_by_name(self):
-        project_ops.set_project_order(self.ada, "name")
-        names, _ = self.names(self.ada)
+        names, _ = self.names(self.ada, order="name")
         self.assertEqual(names, ["Alpha", "beta", "Delta", "Gamma"])
 
     def test_favorites_first_in_both_orders(self):
@@ -255,11 +253,10 @@ class OrderTest(OverviewTestCase):
         bookmarks.add_bookmark(self.ada, project=self.quiet)
         names, _response = self.names(self.ada)
         self.assertEqual(names, ["Alpha", "Delta", "beta", "Gamma"])
-        project_ops.set_project_order(self.ada, "name")
-        names, _ = self.names(self.ada)
+        names, _ = self.names(self.ada, order="name")
         self.assertEqual(names, ["Alpha", "Delta", "beta", "Gamma"])
         bookmarks.add_bookmark(self.ada, project=self.gamma)
-        names, _ = self.names(self.ada)
+        names, _ = self.names(self.ada, order="name")
         self.assertEqual(names, ["Alpha", "Delta", "Gamma", "beta"])
 
     def test_bookmarks_are_per_person(self):
@@ -269,39 +266,24 @@ class OrderTest(OverviewTestCase):
         names, _ = self.names(self.cleo)
         self.assertEqual(names[0], "Delta")
 
-    def test_the_switch(self):
+    def test_the_order_is_a_select_of_a_remembered_form(self):
         self.client.force_login(self.ada)
-        response = self.client.post(reverse("project_order"), {"order": "name"})
-        self.assertRedirects(response, reverse("projects"))
-        self.ada.refresh_from_db()
-        self.assertEqual(self.ada.project_order, "name")
-        # Stays: it's the person's setting, not the request's
-        names, _ = self.names(self.ada)
-        self.assertEqual(names[0], "Alpha")
-        response = self.client.post(reverse("project_order"), {"order": "activity"})
-        self.ada.refresh_from_db()
-        self.assertEqual(self.ada.project_order, "activity")
-        self.assertEqual(
-            self.client.post(reverse("project_order"), {"order": "x"}).status_code, 400
-        )
-        # Not saved on GET
-        self.assertEqual(
-            self.client.get(reverse("project_order"), {"order": "name"}).status_code,
-            405,
-        )
-        self.ada.refresh_from_db()
-        self.assertEqual(self.ada.project_order, "activity")
+        response = self.client.get(reverse("projects"), {"order": "name"})
+        self.assertContains(response, 'name="order"')
+        self.assertContains(response, '<option value="name" selected>')
+        self.assertContains(response, "data-autosubmit data-remember")
+        self.assertEqual(response.context["order"], "name")
+        # A bad value is the default; nothing is stored on the person
+        before = User.objects.filter(pk=self.ada.pk).values().get()
+        response = self.client.get(reverse("projects"), {"order": "x"})
+        self.assertEqual(response.context["order"], "activity")
+        self.assertEqual(User.objects.filter(pk=self.ada.pk).values().get(), before)
 
     def test_clients_can_switch_too(self):
         self.client.force_login(self.cleo)
-        self.client.post(reverse("project_order"), {"order": "name"})
-        self.cleo.refresh_from_db()
-        self.assertEqual(self.cleo.project_order, "name")
-
-    def test_login_required(self):
-        response = self.client.post(reverse("project_order"), {"order": "name"})
-        self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(User.objects.filter(project_order="name").count(), 0)
+        response = self.client.get(reverse("projects"), {"order": "name"})
+        names = [p.name for p in response.context["projects"]]
+        self.assertEqual(names, sorted(names, key=str.lower))
 
     def test_archived_stay_alphabetical_without_cards(self):
         for p in (self.gamma, self.alpha):
@@ -309,7 +291,7 @@ class OrderTest(OverviewTestCase):
         names, response = self.names(self.ada, archived=1)
         self.assertEqual(names, ["Alpha", "Gamma"])
         self.assertNotContains(response, "wb-project-card")
-        self.assertNotContains(response, reverse("project_order"))
+        self.assertNotContains(response, 'name="order"')
 
 
 class ClientColumnTest(OverviewTestCase):
@@ -594,8 +576,6 @@ class ApiTest(OverviewTestCase):
     def test_orders(self):
         self.assertEqual(self.names(), ["Gamma", "Beta", "Alpha"])
         self.assertEqual(self.names(order="name"), ["Gamma", "Alpha", "Beta"])
-        project_ops.set_project_order(self.ada, "name")
-        self.assertEqual(self.names(), ["Gamma", "Alpha", "Beta"])
         self.assertEqual(self.names(order="activity"), ["Gamma", "Beta", "Alpha"])
         self.assertEqual(self.api("projects/", order="x").status_code, 422)
 

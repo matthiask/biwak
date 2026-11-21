@@ -160,7 +160,7 @@ today, this week (until Sunday), later and no date.
   nobody), open or completed (completed: the latest first, paginated),
   visible to clients or not. No list filter (decided 2026-11-21: a list's
   page shows one list).
-- Two groupings, remembered per person (`User.todo_grouping`): by
+- Two groupings, as `?grouping=` (remembered by the browser): by
   project (projects by name, lists and groups in their own order, the
   to-dos outside groups first) or by due date as below; completed to-dos
   stay newest first.

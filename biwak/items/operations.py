@@ -948,13 +948,3 @@ def purge_trash(*, now=None):
     for item in old.exclude(parent__in=old).order_by("pk"):
         item.delete()
     return count
-
-
-@transaction.atomic
-def set_todo_grouping(user, grouping):
-    """The person's choice on the to-dos page, remembered"""
-    if grouping not in User.TodoGrouping.values:
-        raise ValueError(f"Unknown grouping {grouping!r}")
-    if user.todo_grouping != grouping:
-        user.todo_grouping = grouping
-        user.save(update_fields=["todo_grouping"])

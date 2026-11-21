@@ -161,7 +161,9 @@ What every part does the same way. Look at how the core does it
    `data-kb-complete`; what a page offers in the command palette and as
    shortcuts is decided on the server in `biwak/palette/actions.py` (with
    the same permission checks as the buttons) and a new kind of page or
-   action goes there, with a test on the rendered JSON. Colors are palette
+   action goes there, with a test on the rendered JSON. View choices
+   (orderings, groupings) are query parameters remembered by
+   `frontend/filters.js`, not fields on `User`. Colors are palette
    tokens (`--wb-palette-*`, `--wb-accent-*`), never hard-coded violet.
 6. **API.** Endpoints in the app's `api.py`, registered in
    `biwak/api.py`, following `biwak/api_conventions.py`

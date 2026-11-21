@@ -62,8 +62,6 @@ class ByDueTestCase(TestCase):
         self.internal = ops.create_list(
             project=self.project, title="Internal", creator=self.ada
         )
-        # The pages and the API default to the person's choice: by project
-        User.objects.update(todo_grouping="due")
         self.other = project("Other", members=[self.ada])
         self.other_list = ops.create_list(
             project=self.other, title="Elsewhere", creator=self.ada
@@ -100,7 +98,7 @@ class PageTest(ByDueTestCase):
         self.client.force_login(self.ada)
         # 23:30 UTC on the 17th is already 00:30 on the 18th in Zurich
         with at("2026-11-17 23:30", "UTC"):
-            sections = self.sections(self.client.get("/todos/"))
+            sections = self.sections(self.client.get("/todos/?grouping=due"))
         self.assertEqual(
             sections,
             {
@@ -112,11 +110,11 @@ class PageTest(ByDueTestCase):
             },
         )
         with at("2026-11-17 22:30", "UTC"):  # 23:30 on the 17th
-            sections = self.sections(self.client.get("/todos/"))
+            sections = self.sections(self.client.get("/todos/?grouping=due"))
         self.assertEqual(sections["today"], ["late"])
         # Sunday evening: the next day is later
         with at("2026-11-22 23:30"):
-            sections = self.sections(self.client.get("/todos/"))
+            sections = self.sections(self.client.get("/todos/?grouping=due"))
         self.assertEqual(sections["later"], ["far"])
         self.assertEqual(sections["overdue"], ["late", "now"])
         self.assertEqual(sections["today"], ["soon"])
@@ -189,7 +187,7 @@ class PageTest(ByDueTestCase):
         self.client.force_login(self.ada)
 
         def found(**params):
-            response = self.client.get("/todos/", params)
+            response = self.client.get("/todos/", {"grouping": "due"} | params)
             self.assertEqual(response.status_code, 200)
             return sorted(
                 todo.title
@@ -283,7 +281,9 @@ class APITest(ByDueTestCase):
         return {"authorization": f"Bearer {secret}"}
 
     def get(self, user, **params):
-        return self.client.get("/api/v1/todos/", params, headers=self.api(user))
+        return self.client.get(
+            "/api/v1/todos/", {"grouping": "due"} | params, headers=self.api(user)
+        )
 
     def titles(self, response):
         self.assertEqual(response.status_code, 200, response.content)
@@ -492,7 +492,6 @@ class FeedTest(ByDueTestCase):
 class ByProjectTest(ByDueTestCase):
     def setUp(self):
         super().setUp()
-        User.objects.update(todo_grouping="project")
         self.doing = ops.create_group(todolist=self.shared.todolist, title="Doing")
         self.soon = ops.create_group(todolist=self.shared.todolist, title="Soon")
         self.later_list = ops.create_list(
@@ -554,7 +553,6 @@ class ByProjectTest(ByDueTestCase):
             ],
         )
         self.assertContains(response, "Second")
-        self.assertContains(response, 'aria-pressed="true"')
 
     def test_a_client_sees_no_internal_lists(self):
         self.fill()
@@ -584,40 +582,37 @@ class ByProjectTest(ByDueTestCase):
         self.assertContains(response, "data-list=")
         self.assertContains(response, "data-group=")
 
-    def test_the_choice_is_remembered(self):
+    def test_the_grouping_is_a_query_parameter(self):
         self.fill()
         self.client.force_login(self.ada)
+        # By project is the default, a bad value is the default too
         self.assertIn("projects", self.client.get("/todos/").context)
-        response = self.client.post(
-            "/todos/grouping/", {"grouping": "due", "next": "/todos/?assignee=me"}
-        )
-        self.assertRedirects(
-            response, "/todos/?assignee=me", fetch_redirect_response=False
-        )
-        self.ada.refresh_from_db()
-        self.assertEqual(self.ada.todo_grouping, "due")
-        self.assertIn("sections", self.client.get("/todos/").context)
-        # Without JavaScript the links of the switch carry it
-        self.client.get("/todos/", {"grouping": "project"})
-        self.ada.refresh_from_db()
-        self.assertEqual(self.ada.todo_grouping, "project")
-        self.assertEqual(
-            self.client.post("/todos/grouping/", {"grouping": "x"}).status_code, 400
-        )
-        self.assertEqual(self.client.get("/todos/grouping/").status_code, 405)
-        # Per person
-        self.bob.refresh_from_db()
-        self.assertEqual(self.bob.todo_grouping, "project")
-        self.client.post("/todos/grouping/", {"grouping": "due"})
-        self.bob.refresh_from_db()
-        self.assertEqual(self.bob.todo_grouping, "project")
+        self.assertIn("sections", self.client.get("/todos/?grouping=due").context)
+        self.assertIn("projects", self.client.get("/todos/?grouping=project").context)
+        self.assertEqual(self.client.post("/todos/grouping/").status_code, 404)
 
-    def test_a_next_elsewhere_is_ignored(self):
+    def test_the_grouping_is_a_field_of_the_filter_form(self):
         self.client.force_login(self.ada)
-        response = self.client.post(
-            "/todos/grouping/", {"grouping": "due", "next": "https://example.org/"}
-        )
-        self.assertRedirects(response, "/todos/", fetch_redirect_response=False)
+        response = self.client.get("/todos/?assignee=me&grouping=due")
+        form = response.context["form"]
+        self.assertEqual(form["grouping"].value(), "due")
+        self.assertContains(response, 'name="grouping"')
+        self.assertContains(response, "group by")
+        self.assertNotContains(response, 'aria-label="Grouping"')
+        self.assertIn("sections", response.context)
+        # An invalid value is an error and shows no to-dos
+        response = self.client.get("/todos/?grouping=x")
+        self.assertTrue(response.context["form"].errors)
+        # The project's page too
+        response = self.client.get(f"/projects/{self.project.pk}/todos/")
+        self.assertContains(response, 'name="grouping"')
+
+    def test_changing_the_grouping_writes_nothing(self):
+        self.fill()
+        self.client.force_login(self.ada)
+        before = User.objects.filter(pk=self.ada.pk).values().get()
+        self.client.get("/todos/?grouping=due")
+        self.assertEqual(User.objects.filter(pk=self.ada.pk).values().get(), before)
 
     def test_completed_are_not_grouped(self):
         todo = self.todo("Done")

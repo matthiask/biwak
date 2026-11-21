@@ -6,18 +6,17 @@ from django import forms
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
 from icalendar import Calendar, Event as CalendarEvent
 
 from biwak import schedules
 from biwak.accounts.models import CalendarToken, User
 from biwak.activity import mentions
 from biwak.api_conventions import absolute
-from biwak.forms import Form, next_url
-from biwak.items import due, glance, operations as ops
+from biwak.forms import Form
+from biwak.items import due, glance
 from biwak.organizations.names import display_name
 from biwak.projects.models import Project
 from biwak.projects.views import project_for
@@ -59,6 +58,12 @@ class FilterForm(Form):
         ],
     )
 
+    grouping = forms.ChoiceField(
+        label=_("group by"),
+        required=False,
+        choices=[("project", _("Project")), ("due", _("Due date"))],
+    )
+
     def __init__(self, data, *, user, project=None):
         super().__init__(data)
         projects = Project.objects.accessible_to(user).active()
@@ -74,6 +79,9 @@ class FilterForm(Form):
         self.fields["assignee"].choices = choices
         if user.is_client:
             del self.fields["visible"]
+
+
+TodoGrouping = type("TodoGrouping", (), {"PROJECT": "project", "DUE": "due"})
 
 
 def todos_by_due(request, project=None):
@@ -94,14 +102,9 @@ def todos_by_due(request, project=None):
     if not valid:
         todos = todos.none()
     todos = glance.with_signals(todos)
-    grouping = request.GET.get("grouping")
-    if grouping in User.TodoGrouping.values:
-        # The links of the switch without JavaScript store it too
-        ops.set_todo_grouping(request.user, grouping)
-    grouping = request.user.todo_grouping
+    grouping = data.get("grouping") or TodoGrouping.PROJECT
     context = {
         "grouping": grouping,
-        "groupings": User.TodoGrouping.choices,
         "form": form,
         "project": project,
         "completed": completed,
@@ -114,7 +117,7 @@ def todos_by_due(request, project=None):
         query = request.GET.copy()
         query.pop("page", None)
         context |= {"page": page, "querystring": query.urlencode()}
-    elif grouping == User.TodoGrouping.PROJECT:
+    elif grouping == TodoGrouping.PROJECT:
         context["projects"] = due.by_project(todos)
     else:
         today = schedules.today()
@@ -125,17 +128,6 @@ def todos_by_due(request, project=None):
             (key, GROUP_LABELS[key], items) for key, items in sections.items() if items
         ]
     return render(request, "items/todos_by_due.html", context)
-
-
-@require_POST
-def todo_grouping(request):
-    """The switch on the to-dos page, remembered per person; comes back to
-    the page with its filters"""
-    try:
-        ops.set_todo_grouping(request.user, request.POST.get("grouping"))
-    except ValueError:
-        return HttpResponse(status=400)
-    return redirect(next_url(request) or "todos")
 
 
 def project_todos(request, pk):

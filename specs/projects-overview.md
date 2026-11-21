@@ -74,10 +74,13 @@ alphabetical, remembered per person.
   not visible to clients now don't count). A data migration fills them
   once the same way. Projects without events sort last, by name.
 - **The switch:** "Activity" and "A–Z" as two buttons in the page
-  header. Choosing posts to `/projects/order/` (operation
-  `set_project_order(user, order)`), stored in `User.project_order`
-  (`activity` or `name`, default `activity`). Not a query parameter
-  that saves on GET.
+  header, a small form (`data-autosubmit`, `data-remember`) with an
+  "Order" select, `?order=activity|name` (default `activity`).
+  Decided 2026-11-21: a view choice is a query parameter remembered in
+  the browser by `frontend/filters.js` (`data-remember` on the page), not
+  a field on `User`; `User.project_order`, `set_project_order` and
+  `/projects/order/` are gone, and changing the order writes no row and
+  so no audit log entry.
 - Archived projects (`?archived=1`) stay alphabetical, as a plain list
   as today, without cards.
 
@@ -108,7 +111,7 @@ plain list below.
 ## API and CLI
 
 - `GET /api/v1/projects/` takes `order` (`activity` or `name`, default
-  the person's setting) and returns `is_bookmarked` and `last_activity_at`
+  `activity`) and returns `is_bookmarked` and `last_activity_at`
   (the column matching the person) with each project, favorites first.
   The bookmark endpoints exist already (`feed.md`).
 - `biwak projects [--order activity|name]` marks favorites with `*` and
@@ -123,6 +126,7 @@ plain list below.
   recomputation and the data migration.
 - A client's cards show the client column's time and counts only of
   what they see; staff see the badge, clients don't.
-- The switch stored per person; the API and the CLI with `order`.
+- The order as a select with `?order=`, remembered by the browser; the API
+  and the CLI with `order`.
 - The page with 200 projects in a fixed, small number of queries
   (`assertNumQueries`).

@@ -9,25 +9,14 @@
     <h1>{% if archived %}{% translate "Archived projects" %}{% else %}{% translate "Projects" %}{% endif %}</h1>
     <div class="wb-page-actions">
       {% if not archived %}
-        <form
-          method="post"
-          action="{% url 'project_order' %}"
-          class="btn-group btn-group-sm"
-          role="group"
-          aria-label="{% translate 'Order' %}"
-        >
-          {% csrf_token %}
-          {% for value, label in orders %}
-            <button
-              type="submit"
-              name="order"
-              value="{{ value }}"
-              class="btn btn-sm {% if value == order %}btn-primary{% else %}btn-quiet{% endif %}"
-              {% if value == order %}aria-pressed="true"{% endif %}
-            >
-              {{ label }}
-            </button>
-          {% endfor %}
+        <form method="get" data-autosubmit data-remember class="d-flex align-items-center gap-2">
+          <label class="small" for="id_order">{% translate "Order" %}</label>
+          <select name="order" id="id_order" class="form-select form-select-sm w-auto">
+            {% for value, label in orders %}
+              <option value="{{ value }}" {% if value == order %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm btn-quiet" data-autosubmit-button>{% translate "Apply" %}</button>
         </form>
       {% endif %}
       {% if archived %}

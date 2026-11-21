@@ -2,14 +2,20 @@
 active projects with favorites first, ordered by activity or name, in a
 fixed number of queries however many projects there are."""
 
+from django.db import models
 from django.db.models import Count, Exists, F, OuterRef, Q
 from django.db.models.functions import Lower
+from django.utils.translation import gettext_lazy as _
 
 from biwak import schedules
-from biwak.accounts.models import User
 from biwak.bookmarks.models import Bookmark
 from biwak.items import due
 from biwak.projects.models import Membership, Project
+
+
+class ProjectOrder(models.TextChoices):
+    ACTIVITY = "activity", _("Activity")
+    NAME = "name", _("A–Z")
 
 
 def activity_column(user):
@@ -22,7 +28,7 @@ def overview(user, order=None):
     matching the person), ``has_clients`` (staff only; always false for
     clients) and the person's ``open_count`` and ``overdue_count`` of
     to-dos, which are zero when there are none."""
-    order = order or user.project_order
+    order = order or ProjectOrder.ACTIVITY
     projects = (
         Project.objects
         .accessible_to(user)
@@ -45,7 +51,7 @@ def overview(user, order=None):
                 Membership.objects.filter(project=OuterRef("pk"), user__is_client=True)
             )
         )
-    if order == User.ProjectOrder.NAME:
+    if order == ProjectOrder.NAME:
         projects = projects.order_by("-is_bookmarked", Lower("name"), "pk")
     else:
         # Projects without events last, by name
