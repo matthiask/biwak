@@ -69,15 +69,18 @@ def _by_passkey(record):
     )
 
 
-def _through_idp(record, org):
-    return (
-        bool(org.sso)
-        and record.get("method") == "socialaccount"
-        and record.get("provider") == org.sso
+def _through_idp(record, sociallogin, user, org):
+    """Whether this sign-in is through the organization's own identity
+    provider: its Workspace or tenant, not a personal Gmail account"""
+    if record.get("method") != "socialaccount" or sociallogin is None:
+        return False
+    account = sociallogin.account
+    return record.get("provider") == account.provider and sso.is_organization_idp(
+        user, org, account.provider, account.extra_data or {}
     )
 
 
-def refuse_login(request, user):
+def refuse_login(request, user, sociallogin=None):
     """The message refusing this sign-in, or None: in organizations
     requiring a second factor, a code (or a provider other than the
     organization's) isn't enough alone. People with an app get the
@@ -88,7 +91,7 @@ def refuse_login(request, user):
         return None
     records = sso._records(request, user)
     last = records[-1] if records else {}
-    if _by_passkey(last) or _through_idp(last, org):
+    if _by_passkey(last) or _through_idp(last, sociallogin, user, org):
         return None
     if has_app(user) or not has_passkey(user):
         return None
@@ -99,16 +102,21 @@ def refuse_login(request, user):
 
 def _session_through_idp(session, user, org):
     """Whether the session signed in through the organization's identity
-    provider (``sso.remember_sign_in()``)"""
+    provider (``sso.remember_sign_in()``), counting with the organization as
+    it is now: its Workspace or tenant, not a personal Gmail account"""
     record = session.get(sso.SESSION_KEY)
     return (
         isinstance(record, dict)
-        and bool(org.sso)
         and record.get("user") == user.pk
         and record.get("org") == org.pk
-        and record.get("provider") == org.sso
         and isinstance(record.get("email"), str)
         and record["email"].lower() == user.email.lower()
+        and sso.is_organization_idp(
+            user,
+            org,
+            record.get("provider"),
+            {"hd": record.get("hd"), "tid": record.get("tid")},
+        )
     )
 
 

@@ -87,7 +87,8 @@ class AccountAdapter(DefaultAccountAdapter):
             messages.error(request, message)
             return redirect(sso.idp_login_url(user))
         # Organizations requiring a second factor (specs/two-factor.md)
-        if (message := two_factor.refuse_login(request, user)) is not None:
+        sociallogin = (kwargs.get("signal_kwargs") or {}).get("sociallogin")
+        if (message := two_factor.refuse_login(request, user, sociallogin)) is not None:
             clear_login(request)
             clear_authentication_records(request)
             messages.error(request, message)

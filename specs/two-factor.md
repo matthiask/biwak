@@ -44,7 +44,12 @@ below is what prevents that.
   - a code alone isn't: the authenticator app's code follows;
   - a sign-in through the organization's identity provider is enough
     (its own second factor is its business); a person's own app is still
-    asked for there, as everywhere, the requirement only doesn't need it;
+    asked for there, as everywhere, the requirement only doesn't need it.
+    Only its own Workspace (`hd` one of its domains) or Entra tenant
+    (`tid`, an address of its domains) counts, checked against the
+    organization as it is now: a personal Gmail account signing in with
+    Google where single sign-on is allowed is like a code (decided
+    2026-11-21 after a review);
   - someone with neither a passkey nor an app who signs in by code is led
     to a page making them add one (a passkey or an app) before anything
     else; the same after a reset;
@@ -101,7 +106,9 @@ below is what prevents that.
   paths setting one up needs stay open (`SETUP_PATHS`). A sign-in through
   the organization's identity provider is recognized by the session's
   record (`sso.remember_sign_in()`: person, organization, address,
-  provider), without the 24 hours of SSO required.
+  provider, `hd`, `tid`), without the 24 hours of SSO required, and
+  `sso.is_organization_idp()` decides on the claims (also in
+  `refuse_login()`, from the social login allauth passes to `pre_login`).
 
 ## Not done (known, open)
 

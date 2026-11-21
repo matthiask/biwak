@@ -231,6 +231,24 @@ def provider_counts(person, org, provider, data):
     )
 
 
+def is_organization_idp(person, org, provider, data):
+    """Whether the claims (``hd``, ``tid``) are of the organization's own
+    identity provider, as the organization is now: its Google Workspace
+    (``hd`` one of its domains) or its Entra tenant (``tid``, and the address
+    of its domains). Not a personal Gmail account, which ``provider_counts()``
+    lets sign in where single sign-on is allowed but isn't the organization's
+    (specs/two-factor.md)."""
+    if org is None or not org.sso or provider != org.sso:
+        return False
+    if provider == "google":
+        return hd_matches(data.get("hd"), org)
+    if provider == "microsoft":
+        return tid_matches(data.get("tid"), org) and address_in_domains(
+            person.email, org
+        )
+    return False
+
+
 def _provider_name(provider):
     return {"google": "Google", "microsoft": "Microsoft"}.get(provider, provider)
 

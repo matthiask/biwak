@@ -193,3 +193,34 @@ class RequiredTest(SignInMixin, SocialTestCase):
         self.assertEqual(self.signed_in_as(), self.ada)
         self.assertNotEqual(response["Location"], TWO_FACTOR)
         self.assert_free()
+
+    def test_gmail_isnt_the_identity_provider(self):
+        """A personal Gmail account signing in with Google where the
+        organization allows Google isn't its Workspace: it doesn't meet the
+        requirement"""
+        self.require("sso_allowed", "google")
+        gus = self.client_person("Gus", self.acme, "gus@gmail.com")
+        gus.passkey_offer_done = True
+        gus.save()
+        request, response = self.sign_in("google", google_claims("gus@gmail.com"))
+        self.assert_signed_in(request, gus)
+        self.use_session(request)
+        self.assert_setup_first()
+        self.assertFalse(sso.session_alive(request.session.session_key, gus))
+        # With only a passkey: refused, as by code
+        passkey(gus)
+        request, response = self.sign_in("google", google_claims("gus@gmail.com"))
+        self.assert_refused(request, response, "sign in with your passkey")
+
+    def test_the_identity_provider_counts_as_the_organization_is_now(self):
+        self.require("sso_allowed", "google")
+        request, _response = self.sign_in(
+            "google", google_claims("cleo@acme.example", hd="acme.example")
+        )
+        self.assert_signed_in(request, self.cleo)
+        self.use_session(request)
+        self.assert_free()
+        # The domain isn't the organization's any more
+        self.acme.domains = ["acme.test"]
+        self.acme.save()
+        self.assert_setup_first()
