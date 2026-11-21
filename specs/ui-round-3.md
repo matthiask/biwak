@@ -26,8 +26,8 @@ archiving of lists, both merged.
 ## 1. No list filter
 
 The list filter goes from the page, the API (`list`) and the CLI. A
-list's own page shows one list. Old links with `?list=` are ignored, not
-an error.
+list's own page shows one list. No compatibility for old `?list=` links
+(decided 2026-11-21).
 
 ## 2. Two ways to see them: by project or by due date
 
@@ -89,7 +89,6 @@ Decided 2026-11-21.
   - both groupings with projects, lists, groups and to-dos outside
     groups, as staff and as a client (a client sees no internal lists);
   - the remembered choice;
-  - `?list=` ignored;
   - the API's `grouping` and positions;
   - the CLI.
 - **Browser tests:** a select change applying the filter, the focus
