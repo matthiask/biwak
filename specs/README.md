@@ -42,6 +42,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `editor.md` | checklists and counts, the toolbar, pasting | built on branch `editor` | | cheaper |
 | `archiving.md` | archiving projects and lists, findable; the importer completes archived to-dos | next (spec only for now) | the core, the importer | cheaper |
 | `ui-round-1.md` | modals, quieter pages, to-do view mode, assignee picker, overdue | next | | cheaper |
+| `organizations.md` | organizations as a model, domains, starting projects from them, partners | questions first | the core, the importer | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | built (branch `collaboration`, merged into `main` 2026-11-21, not deployed) | everything | strong |

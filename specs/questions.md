@@ -6,7 +6,12 @@ answer goes into the spec named, and the entry leaves this file. Kept up
 to date: questions asked in the conversation and answered there are
 recorded in their spec and leave this file too.
 
-Nothing open at the moment.
+1. **Partners** (`organizations.md`): staff from another organization
+   (freelancers, partner agencies). See only the projects they're
+   members of, not every all-access project? Suggestion: yes.
+2. **Who manages organizations** (`organizations.md`): all staff, or
+   admins only? Suggestion: staff create and rename, admins merge and
+   delete.
 
 Decided to wait: the wording of mails, messages and the editor's and the
 lantern's texts is reviewed all at once with the German translation;
