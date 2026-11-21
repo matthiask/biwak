@@ -46,6 +46,45 @@ records, levels, `send_mails`), reactions.
   highlight; nothing moves what you're reading or typing in.
 - **Browser notifications** (Web Push) later, not now.
 
+## Reading by acting (decided 2026-11-21, not built yet)
+
+Acting on an item that's in the lantern reads its notifications: having
+done something with it means having dealt with it, so nobody ticks the
+same thing off twice (in the lantern and wherever they acted, the
+dashboard included, `dashboard.md`). Only strong signals count: **when in
+reasonable doubt, it stays unread.**
+
+- **Strong, reads:** what the person does to the item itself:
+  completing or reopening a to-do, changing its fields (title, notes,
+  assignees, due date, repeat), ticking a checklist item in it,
+  commenting on it (on the page, by mail reply, through the API),
+  reacting to it or to one of its comments, answering a check-in
+  question. A direct mention among the notifications is read too: we
+  can't know whether it was noticed, but we can't know that when it's
+  opened from the lantern either.
+- **Not a signal, stays unread:** having the item open (the window may
+  be in the background), scrolling, a live update arriving, opening it
+  from the feed, a list, a mail or a search. Also bookmarking (that's
+  "later", the opposite of dealt with), subscribing or unsubscribing,
+  moving it, and anything done to the list or project around it.
+- **For the person acting only;** the others' notifications stay as they
+  are. And only that item's notifications (with its comments'), like
+  opening its lantern entry.
+- **The same for every kind of item** with these actions (to-dos first;
+  messages, docs, files and check-ins have comments and reactions too),
+  so the rule doesn't depend on the kind.
+- **Built in the operations** (`AGENTS.md`: every change goes through
+  them): `complete()`, `reopen()`, `update_todo()`, `tick()`,
+  `add_comment()`, `toggle_reaction()` and the check-in answer call
+  `lantern.read(actor, item=item)` after the change, so pages, the API,
+  the CLI and mail replies behave alike. Not when the actor isn't the
+  person (the importer, `fairy_tasks`, the next recurring to-do). The
+  live dot follows (`read()` tells the person's tabs).
+- **Mails:** notifications read this way are left out of mails and
+  digests like any read ones.
+- This replaces "opening the item some other way reads nothing" only
+  for these actions: opening still reads nothing.
+
 ## The lantern
 
 - **The menu:** a lantern icon (`bi-lamp` or a lantern of our own) in the navigation with the number of unread
@@ -76,6 +115,7 @@ records, levels, `send_mails`), reactions.
     question 12), its rows with unread ones are the lantern's entries on
     another page: they link through the lantern and read the same way
     (the state is the lantern's, on the server, decided 2026-11-21);
+  - acting on the item reads it ("Reading by acting" below);
   - "mark as unread" per item.
 - **The model:** `Notification.read_at` (null: unread). Mail delivery
   gains `none`. `send_mails` leaves out notifications read before

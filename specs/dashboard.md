@@ -150,8 +150,10 @@ either way.
   link to the item directly. This extends `lantern.md`'s "reading only
   through the lantern" to the dashboard (the lantern's entries shown on
   another page); the feed, lists and mails still read nothing.
-- **Nothing else reads:** loading the dashboard or bookmarking reads
-  nothing. Completing a to-do with unread notifications: question 13.
+- **Acting reads, looking doesn't:** completing a to-do or anything
+  else `lantern.md` counts as a strong signal ("Reading by acting",
+  decided 2026-11-21) reads the item's notifications, on the dashboard
+  as everywhere. Loading the dashboard or bookmarking reads nothing.
 - **Bookmarks** are the lantern's "Bookmarked" and the dashboard's
   bookmarks (section 6) alike: bookmarking or removing the bookmark in
   one shows in the other on the next load.
@@ -235,10 +237,3 @@ entry leaves this list.
     reading through the lantern ("Shared with the lantern"), or a plain
     overview without notifications, leaving them to the lantern alone
     (with question 9). Either way nothing is ticked off twice (above).
-13. **Completing a to-do that has unread notifications** (on the
-    dashboard, or anywhere): does that read them too, since dealing
-    with the to-do is dealing with what was said about it? Proposed:
-    yes for the person completing it, so the lantern doesn't keep
-    asking about something they just finished; the others' stay
-    unread. This would change `lantern.md` ("reading only through the
-    lantern") for every page, not just the dashboard.
