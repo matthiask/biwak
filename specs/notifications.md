@@ -353,7 +353,10 @@ Resend's documentation (checked 2026-11-20) and what that changed:
   unsigned or the signing domain does not match the From domain", so
   `pass` is aligned); SPF alone is never enough. A domain without DMARC
   and without DKIM (rare) can't reply. If Resend's `from` differs from
-  the `From` address we parse, its results count as `unknown`.
+  the `From` address we parse, its results count as `unknown` (its `from`
+  compared as an address, also when it comes with a name; an answer of
+  its API that isn't a JSON object fails like a network error and Resend
+  tries again, 2026-11-21).
 
 Decisions made while building (proposed by the building agent,
 confirmed 2026-11-20):

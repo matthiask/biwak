@@ -149,6 +149,31 @@ class WebhookTest(ReplyTestCase):
         self.assertEqual(mail_.sender, "bea@example.org")
         self.assertEqual((mail_.spf, mail_.dkim, mail_.dmarc), ("unknown",) * 3)
 
+    def test_from_with_a_name(self):
+        """Resend may give the From with the name; its verdicts still count"""
+        original = self.api
+
+        def api(url, *, auth=True):
+            if not auth:
+                return original(url, auth=auth)
+            data = json.loads(original(url, auth=auth))
+            data["from"] = "Ada Example <Ada@example.org>"
+            return json.dumps(data).encode()
+
+        with patch.object(providers, "_get", api):
+            mail_ = providers.resend_fetch("x")
+        self.assertEqual((mail_.spf, mail_.dkim, mail_.dmarc), ("pass",) * 3)
+
+    def test_invalid_answers(self):
+        """Resend tries again"""
+        for answer in (b"<html>Bad gateway</html>", b"[]", b'"text"'):
+            with (
+                self.subTest(answer),
+                patch.object(providers, "_get", return_value=answer),
+                self.assertRaises(providers.ProviderError),
+            ):
+                providers.resend_fetch("x")
+
     def test_invalid_signatures(self):
         body = event()
         cases = {

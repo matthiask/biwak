@@ -21,7 +21,7 @@ import urllib.request
 from email import policy
 from email.message import EmailMessage
 from email.parser import BytesParser
-from email.utils import getaddresses
+from email.utils import getaddresses, parseaddr
 from urllib.parse import quote
 
 from django.conf import settings
@@ -195,7 +195,13 @@ def _get(url, *, auth=True):
 
 def resend_fetch(email_id):
     """The received mail with Resend's authentication results"""
-    data = json.loads(_get(f"{API}/emails/receiving/{quote(email_id, safe='')}"))
+    answer = _get(f"{API}/emails/receiving/{quote(email_id, safe='')}")
+    try:
+        data = json.loads(answer)
+    except ValueError as exc:
+        raise ProviderError(f"Resend's answer for {email_id} isn't JSON") from exc
+    if not isinstance(data, dict):
+        raise ProviderError(f"Resend's answer for {email_id} isn't an object")
     raw = data.get("raw") or {}
     if not raw.get("download_url"):
         raise ProviderError(f"Resend has no original message for {email_id}")
@@ -212,7 +218,7 @@ def resend_fetch(email_id):
         },
     )
     # Resend checked the From it parsed: if ours differs, its verdicts
-    # aren't about our sender
-    if (data.get("from") or "").lower() != mail.sender:
+    # aren't about our sender ("Name <address>" or the bare address)
+    if parseaddr(str(data.get("from") or ""))[1].lower() != mail.sender:
         mail.spf = mail.dkim = mail.dmarc = "unknown"
     return mail
