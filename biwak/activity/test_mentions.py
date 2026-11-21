@@ -255,6 +255,11 @@ class NewItemMentionsTest(TestCase):
         response = self.client.get(self.url, {"folder": folder.pk})
         self.assertEqual(response.status_code, 404)
 
+    def test_a_folder_which_is_no_number(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url, {"folder": "x"})
+        self.assertEqual(response.status_code, 404)
+
     def test_the_forms_use_it(self):
         self.client.force_login(self.ada)
         for url in [
