@@ -52,7 +52,12 @@
       <div class="card-body">
         <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
           {% csrf_token %}
-          <div class="flex-grow-1">{{ form.title.as_field_group }}</div>
+          {# The label and the field without the group's margin: the buttons line up with the field #}
+          <div class="flex-grow-1">
+            <label class="form-label" for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+            {{ form.title }}
+            {% for error in form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
           <button type="submit" class="btn btn-quiet">{% translate "Rename" %}</button>
           <button type="submit" name="new_version" value="1" class="btn btn-quiet" formnovalidate>
             {% translate "Save as a version" %}
