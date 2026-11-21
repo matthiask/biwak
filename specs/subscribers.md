@@ -32,6 +32,14 @@ one rule for who may be added) and, with "Tell them now", records
   out (null for `added_by`). `biwak subscribe ITEM --people … [--notify]
   [--note]` and `biwak subscribers ITEM`.
 
+**Changed 2026-11-21** (`ui-round-6.md`, part C): subscribing is the
+switch. Subscribed means notified of everything on the item, whatever
+the person's level; the item's level override and "Notifications…" in
+the items' "More" menu are gone (lists keep theirs). The subscribers box
+("You're subscribed / Subscribe") is the one setting per item;
+`shared` still goes through `notify()` like a mention (every level
+except "nothing").
+
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`; visibility needs tests through every entry point.
 
@@ -75,9 +83,9 @@ it.
   - With "Tell them now", each of them gets a notification at once: a
     new event action, `shared`, recorded on the item.
   - The lantern and mail say "Ada wants you to see this: <note>". It
-    goes through `notify()` like a mention: it concerns them, so "only
-    what concerns me" lets it through, and their mail setting decides
-    about mail.
+    goes through `notify()` like a mention: every level except
+    "nothing" lets it through (they're subscribed anyway), and their
+    mail setting decides about mail.
   - Without it, they're subscribed quietly, as today.
 - **Removing:** people remove only their own subscription, as now. The
   modal doesn't unsubscribe others.

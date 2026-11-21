@@ -1048,8 +1048,9 @@ def subscribers(item, as_json):
 @click.argument("item", type=int)
 @click.option(
     "--people",
-    required=True,
-    help="The IDs of the people to subscribe, separated by commas.",
+    default="",
+    help="The IDs of the people to subscribe, separated by commas; without"
+    " it, yourself.",
 )
 @click.option(
     "--notify", is_flag=True, help="Tell them now, with a notification at once."
@@ -1059,9 +1060,16 @@ def subscribers(item, as_json):
 )
 @json_option
 def subscribe(item, people, notify, note, as_json):
-    """Subscribe other people to ITEM: people who can see it (clients and
+    """Subscribe yourself or other people to ITEM: subscribed, you hear
+    about everything on it. Others: people who can see it (clients and
     partners: whom they may know). Quietly, or with --notify: "Ada wants
     you to see this". Marked [clients] if clients can see it."""
+    if not people.strip():
+        data = request("PUT", f"items/{item}/subscription/")
+        if as_json:
+            return echo_json(data)
+        click.echo(f"Subscribed to #{item}.")
+        return None
     try:
         ids = [int(part) for part in people.split(",") if part.strip()]
     except ValueError:
@@ -1077,6 +1085,18 @@ def subscribe(item, people, notify, note, as_json):
         click.secho("Clients can see this.", fg="yellow", err=True)
     click.echo(f"Subscribed {len(ids)} to #{item}{' and told them' if notify else ''}.")
     show_subscribers(data)
+    return None
+
+
+@cli.command()
+@click.argument("item", type=int)
+@json_option
+def unsubscribe(item, as_json):
+    """Stop hearing about ITEM (not while you're assigned to it)"""
+    data = request("DELETE", f"items/{item}/subscription/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Unsubscribed from #{item}.")
     return None
 
 
@@ -1938,16 +1958,23 @@ LEVELS = ["everything", "concerns_me", "nothing"]
 @click.option(
     "--level",
     type=click.Choice([*LEVELS, "default"]),
-    help="What to be told about; 'default' removes a project's or item's own.",
+    help="What to be told about; 'default' removes a project's or list's own.",
 )
 @click.option(
     "--delivery", type=click.Choice(["each", "digest", "none"]), help="Mails."
 )
 @click.option("--project", type=int, help="Show or set the level for PROJECT.")
-@click.option("--item", type=int, help="Show or set the level for an item.")
+@click.option(
+    "--item",
+    type=int,
+    help="Show or set the level for a list (other items have none:"
+    " biwak subscribe or unsubscribe them).",
+)
 @json_option
 def notifications(level, delivery, project, item, as_json):
-    """Show and set your notification level and mail delivery"""
+    """Show and set your notification level and mail delivery. Levels
+    decide what you're subscribed to automatically; subscribed, you hear
+    about everything on the item."""
     if project and item:
         terminate("A project or an item, not both.")
     if project or item:

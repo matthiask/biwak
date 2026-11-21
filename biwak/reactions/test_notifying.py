@@ -75,10 +75,10 @@ class NotifyingTest(TestCase):
         self.ada.save()
         self.react(self.bob, "🎉", item=self.todo)
         self.assertEqual(self.told(), set())
-        # An override for the item wins
+        # An override for the list wins
         self.ada.notification_level = NotificationLevel.EVERYTHING
         self.ada.save()
-        set_level_override(self.ada, NotificationLevel.NOTHING, item=self.todo)
+        set_level_override(self.ada, NotificationLevel.NOTHING, item=self.shared)
         self.react(self.bob, "🔥", item=self.todo)
         self.assertEqual(self.told(), set())
 

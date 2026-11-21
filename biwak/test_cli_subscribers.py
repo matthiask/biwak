@@ -70,3 +70,22 @@ class SubscribersCLITest(test_cli.CLITest):
         )
         self.assertNotEqual(result.exit_code, 0)
         self.assertFalse(Subscription.objects.filter(user=self.bob))
+
+    def test_subscribing_and_unsubscribing_oneself(self):
+        """Subscribing is the switch (specs/ui-round-6.md, part C)"""
+        self.make()
+        Subscription.objects.filter(user=self.ada).delete()
+        output = self.biwak("subscribe", self.todo.pk).output
+        self.assertIn(f"Subscribed to #{self.todo.pk}.", output)
+        self.assertTrue(Subscription.objects.filter(user=self.ada).exists())
+        output = self.biwak("unsubscribe", self.todo.pk).output
+        self.assertIn(f"Unsubscribed from #{self.todo.pk}.", output)
+        self.assertFalse(Subscription.objects.filter(user=self.ada).exists())
+        # Not while assigned
+        ops.assign(self.todo, [self.ada], actor=self.bob)
+        result = self.biwak("unsubscribe", self.todo.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("400", result.output)
+        # No level for a to-do, only for lists
+        result = self.biwak("notifications", "--item", self.todo.pk)
+        self.assertIn("Only lists have a level", result.output)

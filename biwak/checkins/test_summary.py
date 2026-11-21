@@ -115,9 +115,10 @@ class SummaryTest(CheckinTestCase):
         self.summarize()
         self.assertEqual([m.to for m in self.summaries()], [[self.ada.email]])
 
-    def test_not_to_people_with_the_level_nothing_for_the_item(self):
+    def test_not_to_people_with_the_level_nothing_for_the_project(self):
+        # Check-ins have no level of their own (specs/ui-round-6.md, part C)
         LevelOverride.objects.create(
-            user=self.ada, item=self.item, level=NotificationLevel.NOTHING
+            user=self.ada, project=self.item.project, level=NotificationLevel.NOTHING
         )
         ops.answer(self.item, user=self.ada, content="One")
         self.summarize()

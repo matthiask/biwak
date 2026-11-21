@@ -136,7 +136,8 @@ class TrashModalTest(ItemModalBase):
         response = self.client.get(self.todo.get_absolute_url())
         self.assertContains(response, f'href="{self.url}" data-modal')
         self.assertContains(response, f'href="/todos/{self.todo.pk}/move-to/"')
-        self.assertContains(response, f'href="/items/{self.todo.pk}/notifications/"')
+        # No level of its own: subscribing is the switch (specs/ui-round-6.md)
+        self.assertNotContains(response, f"/items/{self.todo.pk}/notifications/")
         self.assertNotContains(response, "Move to trash")
 
     def test_clients_may_not_trash_what_staff_made(self):
@@ -147,8 +148,8 @@ class TrashModalTest(ItemModalBase):
             )
         response = self.client.get(self.todo.get_absolute_url())
         self.assertNotContains(response, self.url)
-        # To-dos move for everybody, and they can set their notifications
-        self.assertContains(response, f"/items/{self.todo.pk}/notifications/")
+        # To-dos move for everybody, and they can see the subscribers
+        self.assertContains(response, f"/items/{self.todo.pk}/subscribers/")
 
     def test_clients_trash_what_they_made(self):
         own = ops.create_todo(todolist=self.shared, title="Mine", creator=self.cleo)
@@ -235,14 +236,11 @@ class NotificationsModalTest(ItemModalBase):
             response, 'value="nothing" class="form-check-input" id="id_level_3" checked'
         )
 
-    def test_a_todo_and_an_unknown_level(self):
+    def test_a_todo_has_none_and_an_unknown_level(self):
         todo = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
         url = f"/items/{todo.pk}/notifications/"
-        assert_modal(
-            self,
-            self.client.get(url, headers=MODAL),
-            title="Notifications for this to-do",
-        )
+        self.assertEqual(self.client.get(url, headers=MODAL).status_code, 404)
+        url = f"/items/{self.shared.pk}/notifications/"
         self.assertEqual(
             self.client.post(url, {"level": "always"}, headers=MODAL).status_code, 400
         )

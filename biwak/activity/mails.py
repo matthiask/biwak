@@ -20,10 +20,9 @@ from django.utils import timezone, translation
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
-from biwak.accounts.models import MailDelivery, NotificationLevel, User
+from biwak.accounts.models import MailDelivery, User
 from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Notification
-from biwak.activity.notify import item_levels
 from biwak.activity.operations import is_subscribed
 from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
@@ -304,22 +303,22 @@ def _send(message, pks):
 
 def _deliverable(notifications, user):
     """Those the person may still get: the item visible to them now (which
-    excludes the inactive), their level not "nothing" (it may have changed
-    since), and for clients only events which were visible to clients when
-    they happened (the same rule as ``notify()``, in case a notification
-    exists anyway). Item mails and digests both pass here. The same number
-    of queries for any number of items."""
+    excludes the inactive), and for clients only events which were visible
+    to clients when they happened (the same rule as ``notify()``, in case a
+    notification exists anyway). Levels decided who was told
+    (``notify()``); subscribing is the switch (specs/ui-round-6.md, part
+    C), so a level changed since doesn't hold the mail back. Item mails and
+    digests both pass here. The same number of queries for any number of
+    items."""
     items = {n.event.item_id: n.event.item for n in notifications if n.event.item}
     visible = set(
         Item.objects.visible_to(user).filter(pk__in=items).values_list("pk", flat=True)
     )
-    levels = item_levels(user, [items[pk] for pk in visible])
     return [
         notification
         for notification in notifications
         if notification.event.item_id in visible
         and (notification.event.is_client_visible or not user.is_client)
-        and levels[notification.event.item_id] != NotificationLevel.NOTHING
     ]
 
 

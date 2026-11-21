@@ -262,11 +262,14 @@ class ListingTest(LanternTestCase):
         self.act(lambda: ops.trash(self.secret, actor=self.ada))
         self.assertNotIn("Budget", self.items(self.bob))
 
-    def test_level_nothing_hides_them(self):
+    def test_a_level_changed_since_keeps_them(self):
+        """Subscribing is the switch (specs/ui-round-6.md, part C): the level
+        decided who was told, changing it later hides nothing"""
         self.comment(self.secret, "Two")
+        before = self.items(self.bob)
+        self.assertNotEqual(before, [])
         set_level_override(self.bob, NotificationLevel.NOTHING, item=self.internal)
-        self.assertEqual(self.items(self.bob), [])
-        self.assertEqual(lantern.unread_count(self.bob), 0)
+        self.assertEqual(self.items(self.bob), before)
 
     def test_entries_say_what_happened(self):
         self.comment(self.todo, f"Look {mentions.syntax(self.bob)}")

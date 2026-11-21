@@ -358,23 +358,35 @@ def project_override_delete(request, project_id: int):
     return {"project_id": project.pk, "level": None}
 
 
+def list_for(request, item_id):
+    """Lists have levels, other items don't: subscribing is the switch
+    (specs/ui-round-6.md, part C)"""
+    item = item_for(request, item_id)
+    if item.kind != Kind.LIST:
+        raise HttpError(
+            400, _("Only lists have a level; subscribe or unsubscribe instead.")
+        )
+    return item
+
+
 @notifications_router.get("items/{item_id}/notifications/", response=ItemOverrideOut)
 def item_override(request, item_id: int):
-    """Your level for the item and what's in it, null when there's none"""
-    item = item_for(request, item_id)
+    """Your level for the list and what's new in it, null when there's
+    none; 400 for other items"""
+    item = list_for(request, item_id)
     return {"item_id": item.pk, "level": _override(request.user, item=item)}
 
 
 @notifications_router.put("items/{item_id}/notifications/", response=ItemOverrideOut)
 def item_override_set(request, item_id: int, data: OverrideIn):
-    item = item_for(request, item_id)
+    item = list_for(request, item_id)
     set_level_override(request.user, data.level, item=item)
     return {"item_id": item.pk, "level": data.level}
 
 
 @notifications_router.delete("items/{item_id}/notifications/", response=ItemOverrideOut)
 def item_override_delete(request, item_id: int):
-    item = item_for(request, item_id)
+    item = list_for(request, item_id)
     set_level_override(request.user, None, item=item)
     return {"item_id": item.pk, "level": None}
 

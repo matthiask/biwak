@@ -211,9 +211,12 @@ class SettingsForm(Form):
         choices=NotificationLevel.choices,
         widget=forms.RadioSelect,
         help_text=_(
-            "Never about what you do yourself. Being mentioned gets through"
-            " unless you choose nothing. The activity feed always shows"
-            " everything."
+            "What you're subscribed to automatically. Subscribed, you hear"
+            " about everything on an item; unsubscribe to stop. Everything:"
+            " posts to everybody subscribe you. Only what concerns me: being"
+            " mentioned or assigned and your own things. Nothing: only what you"
+            " do yourself (commenting, being assigned). Never about what you"
+            " do yourself. The activity feed always shows everything."
         ),
     )
     mail_delivery = forms.ChoiceField(
@@ -274,7 +277,9 @@ def project_notifications(request, pk):
         title=_("Notifications for this project"),
         intro=_(
             "Your own level for this project instead of the one in your"
-            " settings. The activity feed always shows everything."
+            " settings: whether posts to everybody and new to-dos in lists"
+            " you follow reach you. The activity feed always shows"
+            " everything."
         ),
         project=project,
         cancel_url=project.get_absolute_url(),
@@ -378,22 +383,14 @@ def item_subscribers(request, pk):
     )
 
 
-NOTIFICATIONS_TITLES = {
-    Kind.LIST: _("Notifications for this list"),
-    Kind.TODO: _("Notifications for this to-do"),
-    Kind.MESSAGE: _("Notifications for this message"),
-    Kind.FOLDER: _("Notifications for this folder"),
-    Kind.DOC: _("Notifications for this doc"),
-    Kind.FILE: _("Notifications for this file"),
-    Kind.QUESTION: _("Notifications for this check-in"),
-}
-
-
 @never_cache
 def item_notifications(request, pk):
-    """An item's override ("Notifications…" in its "More" menu): a modal,
-    also a page; the settings page posts here too"""
+    """A list's override ("Notifications…" in its "More" menu): a modal,
+    also a page; the settings page posts here too. Other items have no
+    level (specs/ui-round-6.md, part C): 404."""
     item = item_for(request, pk)
+    if item.kind != Kind.LIST:
+        raise Http404
     if request.method == "POST":
         set_level_override(request.user, _level(request), item=item)
         return redirect(next_url(request) or item)
@@ -406,10 +403,12 @@ def item_notifications(request, pk):
     return form_response(
         request,
         form,
-        title=NOTIFICATIONS_TITLES.get(item.kind, _("Notifications for this item")),
+        title=_("Notifications for this list"),
         intro=_(
-            "Your own level for this one instead of the one of the project."
-            " The activity feed always shows everything."
+            "Your own level for this list instead of the one of the project:"
+            " whether you hear about new to-dos in it. To-dos you're"
+            " subscribed to tell you everything. The activity feed always"
+            " shows everything."
         ),
         item=item,
         parent=item.parent,

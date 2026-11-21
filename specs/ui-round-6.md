@@ -19,6 +19,14 @@ and views in `biwak/projects/invitations.py` (`/people/invite/`,
 `GET|POST /api/v1/invitations/`, `POST /api/v1/invitations/{id}/resend/`,
 `DELETE /api/v1/invitations/{id}/`; `biwak invite` and `biwak
 invitations [resend|withdraw]`.
+Part C built (2026-11-21): `notify.wanting()` (subscribers of the item
+whatever their level, mentions except on "nothing", the container's
+subscribers on "everything"), `notify_people()` subscribing only
+"everything" of everybody, mentions not subscribing on "nothing",
+`set_level_override()` and the API for lists only, "Notifications…" in
+lists' "More" menu only, migration `activity.0015_only_lists_have_levels`;
+`biwak subscribe ITEM` (oneself) and `biwak unsubscribe ITEM`. All
+three parts built.
 
 **Agent:** a cheaper model for part A; parts B and C touch who may do
 what and who's told: a cheaper model with the visibility and
@@ -184,6 +192,25 @@ I will be notified").
   (subscribed with "Only what concerns me" gets the comment; not
   subscribed doesn't), posting to everybody per level, the item's More
   menu without "Notifications…", the migration.
+
+### Built (decisions on the way, 2026-11-21, to be confirmed)
+
+- **Assigned people are told about the assignment on every level**,
+  also "nothing" (being assigned is one of the things that subscribe
+  them there).
+- **People chosen by name** when posting (not "everybody") are
+  subscribed whatever their level, like adding subscribers.
+- **A level changed after a notification was written** no longer holds
+  the mail back or hides the lantern entry (`_deliverable()` checks
+  visibility only): the level decided who was told.
+- **Folders and check-ins** have no level anymore either (only projects
+  and lists, as the spec says); a check-in's summary still skips people
+  whose level for the project is "nothing" (`checkins.md`, unchanged),
+  and answers reach those on "nothing" only by their mode, as before.
+- **Reactions** still tell the author on every level except "nothing".
+- The CLI gained `biwak unsubscribe ITEM` and `biwak subscribe ITEM`
+  without `--people` (oneself), since `--item` of `biwak notifications`
+  works on lists only now.
 
 ## Done when
 

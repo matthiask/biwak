@@ -290,8 +290,8 @@ def notify_field():
         initial=project_ops.NOTIFY_DEFAULT,
         widget=forms.RadioSelect,
         help_text=_(
-            "Only when tagged: mails about posts to everybody are held back"
-            " unless the person is mentioned or assigned."
+            "Only when tagged: posts to everybody don't subscribe the person;"
+            " being mentioned or assigned does."
         ),
     )
 

@@ -40,10 +40,16 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
 
 ## Subscriptions (built)
 
+- **Subscribed means notified of everything on the item** (decided
+  2026-11-21, `ui-round-6.md` part C, like Basecamp): every subscription
+  counts the same, also the automatic ones; unsubscribing is how to stop
+  hearing about one item. The levels below decide who gets subscribed
+  automatically, not which mails a subscriber gets.
 - A person subscribes to an item; for containers, also to items created
   in them later (subscribing to a list means hearing about new to-dos
   even when not assigned).
-- Automatic: author, assignees, people mentioned, people commenting.
+- Automatic: author, assignees, people mentioned (not on the level
+  "nothing"), people commenting.
   Automatic subscriptions respect an earlier unsubscribing
   (`Unsubscription`); being assigned or mentioned, or subscribing
   oneself, overrides it (`subscribe(..., explicit=True)`).
@@ -69,7 +75,10 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
 - Posting a message, doc or file lets the author choose whom to notify:
   everybody in the project (the members at that moment), chosen people,
   or nobody; those chosen are subscribed (`files.md` uses
-  `notify_people()` from stage 1).
+  `notify_people()` from stage 1). Of everybody, only those whose level
+  for the item is "everything" (decided 2026-11-21, `ui-round-6.md`);
+  people chosen by name whatever their level, like adding subscribers
+  (built 2026-11-21).
 
 ## Stage 1: mentions, levels, mails, digests
 
@@ -118,7 +127,9 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   mention of staff doesn't notify them when staff save the item later
   (`previous` of `update()`, decided 2026-11-21).
 - **A new mention** notifies the person (on every level except
-  "nothing") and subscribes them (`explicit=True`). Editing a text later
+  "nothing") and subscribes them (`explicit=True`; not on "nothing",
+  decided 2026-11-21, `ui-round-6.md`: there only what the person does
+  subscribes them). Editing a text later
   notifies only people newly mentioned. A mention doesn't come back
   after unsubscribing unless the person is mentioned again.
 - **Mail replies and the API** may write `@ada@example.org` or the
@@ -128,31 +139,34 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
 
 ### Levels
 
-Per person (`User.notification_level`), overridable per project and per
-item (`LevelOverride(user, project null, item null, level)`, one of the
-two set; the item's override wins over the project's). An item's
-override also covers what's in it: the nearest override along the item
-and its containers wins (proposed by the building agent, confirmed 2026-11-20):
+Changed 2026-11-21 (`ui-round-6.md`, part C): levels decide **who gets
+subscribed automatically** and what's new in a list reaches its
+subscribers; a subscriber hears about everything on the item. Per person
+(`User.notification_level`), overridable per project and per **list**
+(`LevelOverride(user, project null, item null, level)`, one of the two
+set; the list's override wins over the project's). Other items have no
+level (their overrides were deleted by `activity.0015`; no users yet):
+"Notifications…" is in the "More" menu of lists only, the API answers
+400 for other items.
 
-- **Everything** (the default): everything the person is subscribed to.
-- **Only what concerns me:** being assigned, being mentioned, comments on
-  items they created or commented on, their to-dos completed by someone
-  else ("their": assigned to them or created by them; proposed by the
-  building agent, 2026-11-20).
-- **Nothing:** no mails; the feed still shows everything.
+- **Everything** (the default): posting to everybody subscribes the
+  person; subscribed to a list, they hear about every new to-do in it.
+- **Only what concerns me:** posting to everybody doesn't subscribe
+  them; being mentioned, assigned or their own things (creating,
+  commenting) do. New to-dos in a list they follow reach them only when
+  they're mentioned or assigned.
+- **Nothing:** only what they do themselves subscribes them (commenting,
+  being assigned); mentions neither notify nor subscribe them. The feed
+  still shows everything.
 
 Never a notification about one's own actions.
 
 Pages: the person's level and delivery on `/accounts/notifications/`
 (linked from the user menu); a project's override in the project page's
-"More" menu; an item's override next to its subscribe button. The
-settings page also lists the person's overrides, items only while they
-can see them, projects only while they have access (an override of a
-project one has left stays, unseen, and counts again on coming back,
-2026-11-21). To-dos, lists, messages, docs, files and the
-library's folders have the subscribe button and the override form
-(`files/_sidebar.html`); a list's override is at the bottom of the list's
-page, also through the API (built 2026-11-20).
+"More" menu; a list's in the list's "More" menu. The settings page also
+lists the person's overrides, lists only while they can see them,
+projects only while they have access (an override of a project one has
+left stays, unseen, and counts again on coming back, 2026-11-21).
 
 ### Notified by default or only when tagged
 
@@ -175,9 +189,9 @@ project's level is that choice, not a new setting.
   get what they're subscribed to there, including messages, docs and
   files posted to everybody.
 - **Only when tagged:** the project's level is "only what concerns me".
-  Posting to everybody still subscribes them, but their level holds the
-  mails back unless they're mentioned or assigned, or it's about their
-  own things.
+  Posting to everybody doesn't subscribe them (changed 2026-11-21,
+  `ui-round-6.md`: it used to subscribe them and the level held the mails
+  back); being mentioned or assigned, or their own things, do.
 - **Who sets it:** whoever adds or invites someone chooses one of the
   two (default: notified by default), stored as the person's
   `LevelOverride` for the project. The person changes it later on the
@@ -190,7 +204,9 @@ project's level is that choice, not a new setting.
 - **Posting** a message, doc or file therefore preselects "everybody in
   the project" (decided 2026-11-20, replacing "no default"): the levels
   already keep the mails away from those who only want them when tagged.
-  The API's and CLI's `notify` defaults to everybody too.
+  The API's and CLI's `notify` defaults to everybody too. Since
+  2026-11-21 that's because "everybody" subscribes only those notified by
+  default.
 - **API and CLI:** adding and inviting take `notify` (`default` or
   `tagged`); the members list returns it. `biwak members PROJECT` shows
   it, `biwak member add|invite … [--only-tagged]`.
@@ -207,9 +223,14 @@ project's level is that choice, not a new setting.
 2. Without the actor, inactive people, and people who can't see the
    item **now** (`Item.objects.visible_to(user)`; for everybody at once
    `who_can_see(item)`, tested against it, 2026-11-21).
-3. Filtered by each person's effective level (a query for all,
-   `effective_levels()`; `notify()` makes the same number of queries for
-   any number of people).
+3. Who's told (`wanting()`, changed 2026-11-21, `ui-round-6.md`):
+   everybody subscribed to the item, whatever their level, and the
+   people this event assigns; people newly mentioned on every level
+   except "nothing"; subscribers of the container hear about a new item
+   in it (`created`) on "everything" (their effective level for it, a
+   query for all, `effective_levels()`; `notify()` makes the same number
+   of queries for any number of people). Reactions and `shared` on every
+   level except "nothing"; check-in answers as `checkins.md` says.
 4. One `Notification(user, event, created_at, sent_at null)` per person;
    at most one unsent per person and event, a constraint in the database
    (two `notify()` at once can't tell anybody twice, 2026-11-21).
@@ -253,9 +274,11 @@ Project events (joined, added, removed) notify nobody.
 
 Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
 
-- `send_mails` checks again when sending: inactive people, people who
-  can't see the item any more and people whose level is now "nothing"
-  get nothing, and those notifications are deleted. A mail that fails to
+- `send_mails` checks again when sending: inactive people and people
+  who can't see the item any more get nothing, and those notifications
+  are deleted. (A level changed since no longer holds mails back, nor
+  hides them in the lantern: the level decided who was told, 2026-11-21,
+  `ui-round-6.md`.) A mail that fails to
   send leaves its notifications unsent for the next run.
 - At most once: notifications are marked sent when the transaction
   commits, before the mail goes out; a crash in between loses those mails
@@ -289,11 +312,12 @@ Built in stage 1 (proposed by the building agent, confirmed 2026-11-20):
 - `GET/PUT /api/v1/me/notifications/` (level, delivery),
   `GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and
   `/api/v1/items/{id}/notifications/` (overrides; `level` null without
-  one), `GET /api/v1/items/{id}/mentionable/?q=`. Texts written through
+  one; lists only since 2026-11-21, 400 for other items), `GET /api/v1/items/{id}/mentionable/?q=`. Texts written through
   the API (to-dos, comments) resolve `@email` and an unambiguous `@Name`.
 - `biwak notifications` shows and sets the level and delivery;
-  `--project` and `--item` the overrides (`--level default` removes
-  one).
+  `--project` and `--item` (a list) the overrides (`--level default`
+  removes one). `biwak subscribe ITEM` (without `--people`) and `biwak
+  unsubscribe ITEM` for oneself (CLI 0.32.0).
 
 ### Done when (stage 1)
 
