@@ -32,7 +32,7 @@ class FeedTest(TestCase):
     def entries(self, user):
         events = feed.feed_events(user).filter(action=Action.REACTED)
         events = list(events)
-        feed.attach(events)
+        feed.attach(events, self.ada)
         return feed.merge(events)
 
     def test_one_line_per_person_and_item(self):

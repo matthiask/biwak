@@ -21,7 +21,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import MailDelivery, NotificationLevel, User
-from biwak.activity import mentions
+from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Notification
 from biwak.activity.notify import can_see, item_levels
 from biwak.activity.operations import is_subscribed
@@ -116,6 +116,20 @@ def _names(ids, user, item):
     )
 
 
+def _moved(event, user):
+    """The text of a move and where to: the list only if the viewer may see
+    it now (like the feed); a group of its own list is as visible as the
+    to-do"""
+    if not hasattr(event, "target_list"):
+        feed.add_target_lists([event], user)
+    to = event.data.get("group") or event.target_list
+    if to:
+        return _("%(actor)s moved it to %(to)s."), to
+    if "group" in event.data:
+        return _("%(actor)s moved it out of its group."), ""
+    return _("%(actor)s moved it."), ""
+
+
 def describe(event, user):
     """The line saying what happened"""
     data = event.data
@@ -140,12 +154,7 @@ def describe(event, user):
         case Action.COMMENTED:
             text = _("%(actor)s commented:")
         case Action.MOVED:
-            # Not to clients: the name may be internal (like the feed)
-            # A group of its own list is as visible as the to-do
-            to = data.get("group") or ("" if user.is_client else data.get("to"))
-            text = (
-                _("%(actor)s moved it to %(to)s.") if to else _("%(actor)s moved it.")
-            )
+            text, to = _moved(event, user)
         case Action.VISIBILITY_CHANGED:
             text = (
                 _("%(actor)s made it visible to clients.")
@@ -204,6 +213,7 @@ def _entries(notifications, user):
         if n.event.action == Action.COMMENTED
     ]
     comments = Comment.objects.in_bulk([pk for pk in comment_ids if pk])
+    feed.add_target_lists([n.event for n in notifications], user)
     entries = []
     for notification in sorted(notifications, key=lambda n: n.event.created_at):
         event = notification.event

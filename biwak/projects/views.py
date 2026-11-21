@@ -351,7 +351,7 @@ def project_detail(request, pk):
         .exclude(action=Action.REACTED)
         .select_related("actor", "item")[:20]
     )
-    feed.attach(events)
+    feed.attach(events, request.user)
     return render(
         request,
         "projects/project_detail.html",

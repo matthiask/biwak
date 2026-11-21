@@ -11,10 +11,11 @@ from django.utils import timezone
 from biwak.accounts.models import MailDelivery, NotificationLevel
 from biwak.activity import mails as mails_module, mentions
 from biwak.activity.mails import send_mails, unsubscribe_token
-from biwak.activity.models import Action, Notification, Subscription
+from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.activity.operations import record, subscribe
 from biwak.files import attachments
 from biwak.items import operations as ops
+from biwak.items.models import Item
 from biwak.reactions.operations import add_reaction
 from biwak.test_utils import person, project
 
@@ -283,6 +284,46 @@ class MailsTest(TestCase):
         self.assertNotIn("Internal plans", cleo.body + cleo.alternatives[0].content)
         self.assertIn(f"The [plan]({url})", bob.body)
         self.assertIn(f'href="{url}"', bob.alternatives[0].content)
+
+    def test_clients_get_the_target_list_if_it_is_visible_to_them(self):
+        """Checked when the mail is made, not when the move happened"""
+        subscribe(self.cleo, self.todo)
+        plans = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada, visible=True
+        )
+        self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        by = {m.to[0]: m for m in mail.outbox}
+        for user in [self.bob, self.cleo]:
+            self.assertIn("Ada Example moved it to Plans.", by[user.email].body)
+
+    def test_a_list_made_internal_since_is_left_out_for_clients(self):
+        subscribe(self.cleo, self.todo)
+        plans = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada, visible=True
+        )
+        self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
+        ops.set_visibility(plans, visible=False, actor=self.ada)
+        Item.objects.filter(pk=self.todo.pk).update(is_client_visible=True)
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        by = {m.to[0]: m for m in mail.outbox}
+        self.assertIn("moved it to Plans.", by[self.bob.email].body)
+        self.assertIn("Ada Example moved it.", by[self.cleo.email].body)
+        self.assertNotIn("moved it to", by[self.cleo.email].body)
+
+    def test_moving_out_of_its_group(self):
+        subscribe(self.cleo, self.todo)
+        group = ops.create_group(todolist=self.shared.todolist, title="Done")
+        ops.move_todo(self.todo, todolist=self.shared, group=group, actor=self.ada)
+        Event.objects.all().delete()
+        self.act(
+            lambda: ops.move_todo(
+                self.todo, todolist=self.shared, group=None, actor=self.ada
+            )
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        for message in mail.outbox:
+            self.assertIn("Ada Example moved it out of its group.", message.body)
 
     def test_mentions_in_the_lists_title(self):
         ops.update_list(

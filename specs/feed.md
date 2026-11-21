@@ -61,8 +61,16 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   with the viewer is plain text.
 - "Within an hour" means each event is at most an hour after the next
   older one of the entry (chains merge), and never across midnight.
-- A moved to-do's target list is not shown to clients (its name may be
-  internal even when the to-do is visible now).
+- A client sees the target list of a move between lists ("moved ... to
+  Plans") when that list is visible to them now (decided 2026-11-21): checked
+  when the feed, a mail or the API is shown, not when it was recorded, so a
+  list made internal later disappears from the event. The event stores the
+  list's ID (`to_id`) next to its title; `feed.add_target_lists()` resolves
+  visibility for a page of events in one query and shows the list's current
+  title. Events recorded without the ID stay staff-only (staff fall back to
+  the title at the time). The source list is visible anyway, since the
+  to-do is. In the API a client's `data` has `to` and `to_id` only for a
+  visible list.
 - Moving a to-do to another group of its list (a board column) is a
   `moved` event with the group and the list: "Ada moved 'Order the tent'
   to Done", shown to everybody who sees the to-do (the group is as
@@ -70,7 +78,7 @@ Decisions (proposed by the building agent, confirmed 2026-11-20):
   moving the same to-do within 10 minutes updates that event, so
   dragging back and forth is one event with the last group. Reordering
   within a group is no event (decided 2026-11-21). Moving it out of every
-  group says "moved" without a target.
+  group reads "moved ... out of its group" (decided 2026-11-21).
 - Merging applies to every action; the entry says "completed 5 to-dos in
   Launch", with "items" for mixed kinds.
 

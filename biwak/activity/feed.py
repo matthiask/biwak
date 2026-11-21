@@ -17,7 +17,7 @@ from biwak import cursors
 from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event
-from biwak.items.models import Comment, Kind, Message
+from biwak.items.models import Comment, Item, Kind, Message
 from biwak.projects.models import Project
 
 
@@ -74,7 +74,7 @@ def cursor_for(event):
     return cursors.encode(event.created_at, event.pk)
 
 
-def page(events, before=None):
+def page(events, before=None, *, user):
     """One page of events and the cursor of the next one (or None). With
     ``before`` only older events than the cursor's."""
     if before:
@@ -85,13 +85,14 @@ def page(events, before=None):
     found = list(events[: PAGE_SIZE + 1])
     more = len(found) > PAGE_SIZE
     found = found[:PAGE_SIZE]
-    attach(found)
+    attach(found, user)
     return found, cursor_for(found[-1]) if more else None
 
 
-def attach(events):
+def attach(events, user):
     """What rendering needs besides the event: the assigned people's names
-    (``event.assignee_names``) and the project on the item, which saves a
+    (``event.assignee_names``), the target list of moves the viewer may
+    see (``event.target_list``) and the project on the item, which saves a
     query per link"""
     ids = {
         pk
@@ -107,6 +108,7 @@ def attach(events):
             names[pk] for pk in event.data.get("assignees", []) if pk in names
         ]
     add_excerpts(events)
+    add_target_lists(events, user)
 
 
 EXCERPT_CHARS = 200
@@ -139,6 +141,31 @@ def add_excerpts(events):
         elif _is_message_text(event):
             text = messages.get(event.item_id, "")
         event.excerpt = excerpt(text, EXCERPT_CHARS, event.item) if text else ""
+
+
+def add_target_lists(events, user):
+    """``event.target_list``: the name of the list a to-do moved to, or ""
+    if the viewer may not see it (specs/feed.md). Checked now, not when the
+    event was recorded, in one query for all events. Clients see the list's
+    current title if it is visible to them, and nothing for events without
+    the list's ID (recorded before it was stored); staff fall back to the
+    title at the time for lists they can't find any more."""
+    moves = [e for e in events if e.action == Action.MOVED and e.data.get("to")]
+    ids = {e.data.get("to_id") for e in moves} - {None}
+    lists = dict(
+        Item.objects
+        .visible_to(user)
+        .filter(pk__in=ids, kind=Kind.LIST)
+        .values_list("pk", "title")
+    )
+    for event in moves:
+        title = lists.get(event.data.get("to_id"))
+        if title is None and not user.is_client:
+            title = event.data["to"]
+        event.target_list = title or ""
+    for event in events:
+        if not hasattr(event, "target_list"):
+            event.target_list = ""
 
 
 def _is_message_text(event):
