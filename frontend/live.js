@@ -233,6 +233,8 @@ function update(current, fresh) {
     updateChildren(current, fresh)
     return
   }
+  // Completed here a moment ago, its animation (frontend/celebrate.js) ends it
+  if (current.classList.contains("is-completing")) return
   if (normalized(current) === normalized(fresh)) return
   if (editing(current)) {
     wait(current, fresh)
@@ -262,7 +264,13 @@ function updateChildren(current, fresh) {
   const wanted = [...fresh.children].filter((child) => child.id)
   const ids = new Set(wanted.map((child) => child.id))
   for (const child of [...current.children]) {
-    if (child.id && !ids.has(child.id) && !editing(child)) child.remove()
+    if (
+      child.id &&
+      !ids.has(child.id) &&
+      !editing(child) &&
+      !child.classList.contains("is-completing")
+    )
+      child.remove()
   }
   wanted.forEach((freshChild, index) => {
     let node = document.getElementById(freshChild.id)

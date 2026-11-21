@@ -27,7 +27,10 @@ project. Staff create lists with "New list" on the project's page.
 
 Tick the checkbox on a row to complete it, or open the to-do and press
 "Complete". "Reopen" undoes it. Everybody who sees a to-do can
-complete it, and completing it completes it for all assignees.
+complete it, and completing it completes it for all assignees. The
+check pops, the title is struck through and the row fades away; the last
+open to-do of a list gets a small burst and "All done." (not with reduced
+motion set in your system).
 
 "Edit" on the to-do's page changes everything:
 

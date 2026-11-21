@@ -258,6 +258,7 @@ def todolist(request, pk):
             "completed": completed,
             "completed_cursor": completed_cursor,
             "completed_count": completed_count,
+            "all_done": bool(completed_count) and not any(by_group.values()),
             "form": form,
             "people": form.fields["assignees"].queryset,
             "view": view,

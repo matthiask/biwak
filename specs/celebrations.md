@@ -5,7 +5,26 @@ example finishing a to-do, and moves a bit more in general. No more
 emojis in the reaction picker (decided 2026-11-21: the 32 stay).
 
 **Status:** spec (2026-11-21), all five moments confirmed the same day.
-Not built.
+Built so far: moment 1 and 2 (`frontend/celebrate.js`, 2026-11-21).
+
+Decisions made while building moments 1 and 2 (2026-11-21):
+
+- Completing was a plain form post and redirect. `celebrate.js` takes the
+  submit over (`data-celebrate="complete|reopen"` on the check's form and the
+  to-do page's button, so the keyboard's `x` is covered too): the request
+  goes out at once with `fetch`, the animation runs beside it, and when both
+  are done the page follows the redirect (a reload where it's the same page,
+  so counts, recurrences and the completed section come from the server).
+  If the request fails, the form is submitted the normal way.
+- With `prefers-reduced-motion: reduce` the script doesn't intercept at all.
+- Live updates (`live.js`) leave a row alone while it has `is-completing`,
+  so the refresh the server triggers doesn't cut the collapse short.
+- The burst is for the last open to-do of the row's container (group or
+  list, a page's section); "All done." only for the whole list: the list page
+  renders it when everything is completed (in `#live-completed`), the script
+  shows it before the page follows. The last row waits 0.8 s before
+  collapsing so the dots are seen.
+- The to-do's page: the icon pops (250 ms), then the page follows.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`.

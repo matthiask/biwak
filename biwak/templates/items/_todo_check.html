@@ -3,7 +3,13 @@
   The check of every to-do row. `keep_page`: coming back to this page after
   toggling, not to the to-do's list.
 {% endcomment %}
-<form method="post" action="{% url 'todo_toggle' todo.pk %}" class="wb-todo-check" data-kb-complete>
+<form
+  method="post"
+  action="{% url 'todo_toggle' todo.pk %}"
+  class="wb-todo-check"
+  data-kb-complete
+  data-celebrate="{% if todo.todo.is_completed %}reopen{% else %}complete{% endif %}"
+>
   {% csrf_token %}
   {% if keep_page %}<input type="hidden" name="next" value="{{ request.get_full_path }}">{% endif %}
   <button
@@ -11,6 +17,7 @@
     class="wb-check{% if todo.todo.is_completed %} is-done{% endif %}"
     title="{% if todo.todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
   >
-    {% if todo.todo.is_completed %}{% icon "check-lg" %}{% endif %}
+    {# Always there: the script fills the check before the page follows #}
+    {% icon "check-lg" %}
   </button>
 </form>

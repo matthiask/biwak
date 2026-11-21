@@ -2825,3 +2825,92 @@ class HomeTest(E2ETestCase):
         expect(page.locator("#wb-shortcuts")).not_to_be_visible()
         self.assertEqual(page.url, f"{self.live_server_url}/")
         self.assertEqual(self.errors, [])
+
+
+class CompletionTest(E2ETestCase):
+    """Completing a to-do (specs/celebrations.md): classes the script sets
+    for the animation, the row gone after it, nothing waiting on it with
+    reduced motion"""
+
+    def test_the_row_animates_and_is_gone_after_it(self):
+        page = self.page
+        self.make_list("Launch", todos=["Plan", "Pack"])
+        self.goto(page, Item.objects.get(title="Launch"))
+        row = page.locator(".wb-todo", has_text="Plan")
+        row.get_by_role("button", name="Complete").click()
+        expect(row).to_have_class(re.compile(r"\bis-completing\b"))
+        expect(row.locator(".wb-check")).to_have_class(
+            re.compile(r"\bis-done\b.*\bis-popping\b")
+        )
+        expect(row.locator(".wb-todo-title")).to_have_class(
+            re.compile(r"\bis-striking\b")
+        )
+        # Not the last one: no burst
+        expect(row.locator(".wb-check")).not_to_have_class(
+            re.compile(r"\bis-bursting\b")
+        )
+        # Done on the server, gone from the list once the animation ended
+        expect(page.locator("[data-todos] .wb-todo", has_text="Plan")).to_have_count(0)
+        expect(page.locator("[data-todos] .wb-todo", has_text="Pack")).to_have_count(1)
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+        self.assertEqual(page.locator(".wb-all-done").count(), 0)
+        self.assertEqual(self.errors, [])
+
+    def test_the_last_open_to_do_bursts_and_the_list_says_so(self):
+        page = self.page
+        self.make_list("Launch", todos=["Plan"])
+        self.goto(page, Item.objects.get(title="Launch"))
+        row = page.locator(".wb-todo", has_text="Plan")
+        row.get_by_role("button", name="Complete").click()
+        expect(row.locator(".wb-check")).to_have_class(re.compile(r"\bis-bursting\b"))
+        expect(page.locator(".wb-all-done")).to_have_text("All done.")
+        # The page after the reload says it as well
+        expect(page.locator("[data-todos] .wb-todo")).to_have_count(0)
+        expect(page.locator(".wb-all-done")).to_have_text("All done.")
+        self.assertEqual(page.locator(".wb-all-done.is-new").count(), 0)
+        self.assertEqual(self.errors, [])
+
+    def test_the_keyboard_completes_with_the_animation(self):
+        page = self.page
+        self.make_list("Launch", todos=["Plan", "Pack"])
+        self.goto(page, Item.objects.get(title="Launch"))
+        page.keyboard.press("j")
+        page.keyboard.press("x")
+        expect(page.locator(".wb-todo.is-completing")).to_have_count(1)
+        expect(page.locator("[data-todos] .wb-todo")).to_have_count(1)
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+
+    def test_reopening_only_fades(self):
+        page = self.page
+        todolist = self.make_list("Launch", todos=["Plan"])
+        ops.complete(Item.objects.get(title="Plan"), actor=self.ada)
+        self.goto(page, todolist)
+        page.get_by_text("Completed (1)").click()
+        row = page.locator(".wb-completed .wb-todo", has_text="Plan")
+        row.get_by_role("button", name="Reopen").click()
+        expect(row).to_have_class(re.compile(r"\bis-reopening\b"))
+        expect(row.locator(".wb-check")).not_to_have_class(
+            re.compile(r"is-popping|is-bursting")
+        )
+        expect(page.locator("[data-todos] .wb-todo", has_text="Plan")).to_have_count(1)
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, False)
+
+    def test_the_to_do_page_pops_the_button(self):
+        page = self.page
+        self.make_list("Launch", todos=["Plan"])
+        self.goto(page, Item.objects.get(title="Plan"))
+        page.get_by_role("button", name="Complete").click()
+        expect(page.locator(".bi.is-popping")).to_have_count(1)
+        expect(page.get_by_text("Completed by")).to_be_visible()
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+
+    def test_with_reduced_motion_nothing_waits(self):
+        page = self.login(self.ada, reduced_motion="reduce")
+        self.make_list("Launch", todos=["Plan"])
+        self.goto(page, Item.objects.get(title="Launch"))
+        page.locator(".wb-todo", has_text="Plan").get_by_role(
+            "button", name="Complete"
+        ).click()
+        # The animations alone take over a second, with the burst
+        expect(page.locator(".wb-all-done")).to_have_text("All done.", timeout=700)
+        self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
