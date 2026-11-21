@@ -40,7 +40,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `lantern.md` | the lantern (notifications in the app), live updates | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
 | `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
 | `editor.md` | checklists and counts, the toolbar, pasting | built on branch `editor` | | cheaper |
-| `archiving.md` | archiving for every kind | questions first | the core, the importer | cheaper |
+| `archiving.md` | archiving projects and lists, findable; the importer completes archived to-dos | next (spec only for now) | the core, the importer | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | last | everything | strong |

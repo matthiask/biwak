@@ -1,105 +1,73 @@
 # Archiving
 
-Putting things out of the way without deleting them: finished projects,
-lists nobody works on any more, old messages and docs, to-dos that
-won't be done. Archived things stay readable and findable; they just
-don't clutter the pages people work on.
+Putting finished things out of the way without deleting them. Decided
+2026-11-21: **projects and lists** can be archived, nothing smaller.
+To-dos are completed, not archived; long runs of completed to-dos are
+already collapsed ("Completed (N)", `todos.md` stage 3).
 
-**Status:** open. Written 2026-11-21 after archived to-dos from a
-Basecamp import showed up as open: the `archived` status exists on
-every item, but only projects and lists treat it as anything.
+**Status:** open (spec only, written 2026-11-21 after archived to-dos
+from a Basecamp import showed up as open).
 
 **Agent:** suits a cheaper model following this spec and the checklist
-in `AGENTS.md`, once the questions below are answered.
+in `AGENTS.md`.
 
-**Depends on:** the core, the importer (its mapping of Basecamp's
-archived recordings).
+**Depends on:** the core, the importer.
 
 ## What exists
 
-- **Projects:** `Project.archived_at`. Archived projects are left out of
+- **Projects:** `Project.archived_at`; archived projects are left out of
   the projects page (an "Archive" page lists them), the feed across
-  projects, "my to-dos", and the palette (marked, last). Search
-  includes them, marked, with a filter.
-- **Items:** `Item.status` is `active`, `archived` or `trashed`. Lists can
-  be archived and unarchived (the project page has an archived section).
-  Trashing an archived item and restoring it keeps it archived.
-- **Nothing else** treats `archived`: an archived to-do, message, doc,
-  file or folder shows like an active one everywhere. The importer sets
-  the status from Basecamp, which is why archived to-dos "reappear".
+  projects, "my to-dos" and the palette (marked, last); search includes
+  them, marked, with a filter.
+- **Lists:** `Item.status` `archived`, set from the list's edit page only
+  (hard to find); the project page has an archived section. Trashing an
+  archived list and restoring it keeps it archived.
+- **Every other item** has the same `status` field, and nothing treats
+  `archived` for them: the importer sets it for Basecamp's archived
+  to-dos, which then show as open.
 
-## What archiving means (proposed)
+## Lists
 
-One meaning for every kind: **out of the way, still readable.**
+- **Easy to find:** "Archive" in the list page's "More" menu and in the
+  menu of each list on the project page, and as a palette action on the
+  list; "Unarchive" in the same places for an archived list. No change
+  to what archiving a list means.
+- **Never automatic:** a list isn't archived when it's empty or all done
+  (decided 2026-11-21).
+- **Archived lists** are left out of:
+  - the project page's lists (they're in its "Archived lists" section);
+  - "my to-dos" and the list by due date (with the calendar feed);
+  - the palette's suggestions.
 
-- **Left out of the working views:**
-  - lists and the board;
-  - "my to-dos" and the list by due date (and the calendar feed);
-  - the message board;
-  - folders;
-  - the project page;
-  - the palette's suggestions;
-  - the lantern's counts.
-- **Still reachable:**
-  - their own page and links to it, with a banner "Archived on … by …"
-    and "Unarchive";
-  - an "Archived" section or page per container (a list's archived
-    to-dos, the board's archived messages, a folder's archived docs and
-    files);
-  - search, marked, with the same filter as for archived projects;
-  - the feed's history;
-  - the API with a `status` filter.
-- **Containers:** archiving a list, folder or project hides what's in it
-  with it, without changing the children's own status. Unarchiving
-  brings them back as they were (children archived on their own stay
-  archived).
-- **Notifications:** archiving notifies nobody. Activity on an archived
-  item (a comment) still notifies as usual and doesn't unarchive it.
-- **Recurring to-dos and check-ins:** an archived recurring to-do creates
-  no next one, and an archived check-in question isn't asked (as today
-  for archived projects).
-- **Due dates:** archived to-dos are not overdue and not in "this week".
-- **Who:** staff archive and unarchive everything. Clients archive what
-  they created, as `can_change()` says. To-dos are shared work (decided
-  2026-11-20), so clients archive visible to-dos too (see the
-  questions).
-- **Events:** `archived` and `unarchived` events, shown in the feed and
-  the history, notifying nobody.
-- **API and CLI:** `POST /api/v1/items/{id}/archive/` and `unarchive/` for
-  every kind, `status=archived` filters on the list endpoints, and
-  `biwak archive ITEM` / `biwak unarchive ITEM`.
-- **The importer:** Basecamp's archived recordings map to archived items
-  of the same kind; with this spec built, they stop showing as active.
-  The importer also fetches archived messages, docs, files and
-  questions where the API allows it.
+  Their to-dos stay readable through the list. Recurring to-dos in an
+  archived list create no next one. Check what's missing of this today.
+- **Events:** `archived` and `unarchived`, in the feed and the history,
+  notifying nobody.
 
-## Questions before building
+## Smaller items
 
-1. **To-dos:** can open to-dos be archived ("won't do"), or only
-   completed ones? Basecamp archives any to-do. Proposed: any to-do;
-   archiving an open to-do takes it off lists and "my to-dos" without
-   completing it.
-2. **Completed to-dos piling up:** archive completed to-dos automatically
-   after some time (e.g. completed more than 6 months ago), or leave that
-   to the existing "Completed (N)" section and paging? Proposed: no
-   automatic archiving.
-3. **Search:** archived items included by default (marked, with a filter
-   to leave them out, like archived projects), or left out by default?
-   Proposed: included, like archived projects.
-4. **Clients:** may clients archive visible to-dos staff created (they
-   can change every field of them), or only what they created?
-   Proposed: like changing, so yes.
-5. **Groups:** can a group of a list be archived (hiding its to-dos, e.g.
-   a finished board column), or are groups only renamed and deleted?
-   Proposed: no, groups stay simple.
+- `archived` is not a status for to-dos, messages, docs, files, folders,
+  questions or answers. The operations refuse it for them, and a data
+  migration turns existing archived to-dos into completed ones (their
+  `updated_at` as the completion time), other archived items into
+  active ones. The `Status` choices keep `archived` for lists only (or
+  the check is in `archive()`; one place).
+
+## The importer
+
+- **Basecamp's archived to-dos** come in **completed** (completed at
+  Basecamp's archive time, by whoever archived them if known, else the
+  import's person), keeping their comments.
+- **Archived messages, docs, files and questions** are skipped, and the
+  dry run and the report list them.
+- **Archived to-do lists and projects** stay archived, as today.
 
 ## Done when
 
-For every kind: archiving and unarchiving through the page, the API and
-the CLI; left out of every working view listed above and shown in the
-archived sections, search (marked) and the feed; containers hiding their
-children and bringing them back unchanged; no notifications for
-archiving; recurring to-dos and check-ins stopping; clients archiving
-only what the rules allow (404 for internal); the importer's archived
-to-dos imported archived and shown as archived (a test against the
-fixtures).
+- Archiving and unarchiving lists from the list's menu, the project
+  page's menu and the palette, through the API and the CLI.
+- Archived lists left out of every place listed.
+- Smaller items refusing `archived`, and the migration converting
+  existing ones.
+- The importer's archived to-dos completed and its other archived
+  recordings skipped and reported (tests against the fixtures).
