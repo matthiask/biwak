@@ -118,7 +118,12 @@ browsers (Playwright) typing, a client watching, an internal doc
   sessions deleted: the websockets of that login session close at once,
   fixed 2026-11-21 after the visibility review of the live features), and
   every 60 seconds (**?**), which also closes sessions whose login session
-  is gone some other way. Losing access closes the session (4404; the
+  is gone some other way. And before passing on others' updates and
+  cursors when the last check is older than 5 seconds (**?**, added
+  2026-11-21 after the visibility review of the live features): losing
+  access doesn't depend on the one message telling the editors (Redis may
+  evict it, a change in the database directly sends none). Not before
+  every update: a few queries for every keystroke of everybody. Losing access closes the session (4404; the
   editor shows "You can't see this doc anymore." and removes the text);
   losing only the right to type switches the editor to watching.
 - **Storing** (`files.operations.save_live()`): 3 seconds after the last

@@ -231,6 +231,14 @@ setup as `collaboration.md`).
   of it, also of a client who couldn't see the item anymore; now only who
   sees it, clients only for events of the time they saw it. Pinning,
   unpinning and marking unread pass their item too.
+- **Losing access doesn't depend on one message:** the websocket checks
+  access again before passing on every announcement and ping (a few
+  queries; announcements only go to the tabs showing the item, and are
+  rare), not only on `access.check` and every 60 seconds. A lost
+  `access.check` (Redis evicting it, or a change in the database
+  directly) let a page hear of changes until the next 60-second check.
+  Chosen over a shorter timer: no window at all, and no load from idle
+  tabs.
 - **Limits:** `?item=` longer than 18 digits closes with 4404 (it
   crashed the consumer); at most 50 websockets per person and process
   (**?**), more close with 4429 and the page reconnects later, backing

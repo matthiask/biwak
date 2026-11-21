@@ -12,6 +12,7 @@ from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
 from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
+from django.contrib.sessions.models import Session
 from django.db import transaction
 from django.test import Client, TransactionTestCase
 from django.urls import reverse
@@ -21,6 +22,7 @@ from biwak.collab.routing import websocket_urlpatterns
 from biwak.items import operations as ops
 from biwak.live import announce, consumers
 from biwak.projects import operations as project_ops
+from biwak.projects.models import Membership
 from biwak.reactions.operations import add_reaction, remove_reaction
 from biwak.test_utils import person, project
 
@@ -347,6 +349,22 @@ class LiveConsumerTest(TransactionTestCase):
         await self.run_op(here.post, reverse("usersessions_list"))
         await self.assertClosed(ada, consumers.CLOSE_NO_LOGIN)
         await self.assertQuiet(tab)
+
+    async def test_access_lost_without_a_message_closes_at_the_next_change(self):
+        """The access check's message lost (or never sent: changed in the
+        database directly): the next announcement checks first"""
+        cleo = await self.connect(self.cleo, self.todo)
+        await self.run_op(
+            Membership.objects.filter(project=self.project, user=self.cleo).delete
+        )
+        await self.run_op(ops.add_comment, self.todo, author=self.ada, content="Hi")
+        await self.assertClosed(cleo)
+
+    async def test_logged_out_without_a_message_closes_at_the_next_change(self):
+        ada = await self.connect(self.ada, self.todo)
+        await self.run_op(Session.objects.all().delete)
+        await self.run_op(ops.add_comment, self.todo, author=self.bob, content="Hi")
+        await self.assertClosed(ada, consumers.CLOSE_NO_LOGIN)
 
     # The lantern -------------------------------------------------------------
 

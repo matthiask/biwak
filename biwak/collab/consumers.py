@@ -50,6 +50,12 @@ SAVE_AT_LEAST_EVERY = 30
 # Checks whether the person may still see and edit the doc this often
 # besides the changes telling the editors (live.check_access())
 CHECK_EVERY = 60
+# ... and before passing on what others typed or where their cursors are,
+# when the last check is older than this (seconds): losing access doesn't
+# depend on the one message telling the editors (lost when Redis evicts
+# it, or never sent when something changed in the database directly).
+# Not before every update: a few queries for every keystroke of everybody.
+RECHECK_AFTER = 5
 
 # Limits per connection (**?** values the spec didn't fix): at most the
 # first number of messages at once, then the second per second; more are
@@ -133,6 +139,7 @@ class DocConsumer(AsyncWebsocketConsumer):
         self.clock = 0
         self.save_task = self.check_task = None
         self.dirty_since = None
+        self.checked_at = 0
         self.limits = {
             YMessageType.AWARENESS: Bucket(*AWARENESS_RATE),
             QUERY_AWARENESS: Bucket(*QUERY_AWARENESS_RATE),
@@ -295,11 +302,20 @@ class DocConsumer(AsyncWebsocketConsumer):
             },
         )
 
+    async def recheck(self):
+        """Checks access again when the last check is older than
+        ``RECHECK_AFTER``; returns whether the session is still open"""
+        if asyncio.get_running_loop().time() - self.checked_at >= RECHECK_AFTER:
+            await self.access_check()
+        return self.mode is not None
+
     async def doc_update(self, event):
-        if event.get("sender") != self.channel_name:
+        if event.get("sender") != self.channel_name and await self.recheck():
             await self.send(bytes_data=create_update_message(event["update"]))
 
     async def doc_awareness(self, event):
+        if not await self.recheck():
+            return
         # To the sender too: y-websocket reconnects when it hears nothing
         # for 30 seconds, not even its own awareness. Its own state under
         # its own ID: the editor doesn't show itself among the others.
@@ -312,7 +328,7 @@ class DocConsumer(AsyncWebsocketConsumer):
         await self.send(bytes_data=create_awareness_message(update))
 
     async def doc_query_awareness(self, event):
-        if event["sender"] != self.channel_name:
+        if event["sender"] != self.channel_name and await self.recheck():
             await self.send(bytes_data=bytes([QUERY_AWARENESS]))
 
     async def access_check(self, event=None):
@@ -322,6 +338,7 @@ class DocConsumer(AsyncWebsocketConsumer):
             # Logged out (the session may not be deleted yet)
             await self.refuse()
             return
+        self.checked_at = asyncio.get_running_loop().time()
         mode = await database_sync_to_async(self._access)()
         if mode is None:
             await self.refuse()

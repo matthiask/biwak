@@ -13,9 +13,12 @@ pages (``Item.objects.visible_to()``); clients join the group that hears
 only of what happened while clients saw the item (``announce``). Access is
 checked again whenever the live editor's sessions check theirs
 (``collab.live.check_access()``: moves, visibility, the trash, members,
-people and projects changed in the admin), and every 60 seconds; a page
-that can't see its item anymore is closed with 4404 (it then fetches the
-page, which says so).
+people and projects changed in the admin, logging out), before passing on
+every message (a few queries, announcements are rare: losing access
+doesn't depend on the one message telling the pages, lost when Redis
+evicts it or never sent when something changed in the database
+directly), and every 60 seconds; a page that can't see its item anymore
+is closed with 4404 (it then fetches the page, which says so).
 """
 
 import asyncio
@@ -165,6 +168,7 @@ class LiveConsumer(AsyncWebsocketConsumer):
         # One's own changes are on one's page already
         if event.get("actor") == self.user.pk:
             return
+        await self.access_check()
         await self.send_json({
             "type": "changed",
             "item": event["item"],
@@ -173,6 +177,7 @@ class LiveConsumer(AsyncWebsocketConsumer):
         })
 
     async def lantern_changed(self, event):
+        await self.access_check()
         await self.send_json({"type": "lantern"})
 
     async def access_check(self, event=None):

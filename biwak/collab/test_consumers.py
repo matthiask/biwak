@@ -39,6 +39,7 @@ from biwak.files import operations
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.projects import operations as project_ops
+from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
 
@@ -296,6 +297,20 @@ class ConsumerTest(TransactionTestCase):
             project_ops.remove_member, self.project, self.cleo, actor=self.ada
         )
         await self.assertClosed(cleo)
+
+    @patch.object(consumers, "RECHECK_AFTER", 0)
+    async def test_access_lost_without_a_message_closes_at_the_next_update(self):
+        """The access check's message lost (or never sent: changed in the
+        database directly): the next update passed on checks first (if the
+        last check is older than ``RECHECK_AFTER``)"""
+        cleo = await self.connect(self.cleo, self.shared)
+        ada = await self.connect(self.ada, self.shared)
+        await database_sync_to_async(
+            Membership.objects.filter(project=self.project, user=self.cleo).delete
+        )()
+        await ada.type(6, " for Monday")
+        await self.assertClosed(cleo)
+        self.assertEqual(str(cleo), "Agenda\n")
 
     async def test_moving_the_doc_into_an_internal_folder(self):
         folder = await database_sync_to_async(ops.create_folder)(
