@@ -1,5 +1,6 @@
 {% load biwak i18n %}
 {# One event, or a merged entry: pass `what` ("5 to-dos") and `where` (the list or project) with its latest event. Later parts add their actions here. #}
+{% if event.actor %}{% avatar event.actor %}{% endif %}
 <span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
 {% if event.action == "created" and event.item.kind == "answer" %}
   {% translate "answered" %} {% include "activity/_subject.html" %}

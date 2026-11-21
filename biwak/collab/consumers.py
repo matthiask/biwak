@@ -168,6 +168,8 @@ class DocConsumer(AsyncWebsocketConsumer):
         self.user_state = {
             "name": self.user.get_short_name(),
             "color": COLORS[self.user.pk % len(COLORS)],
+            # The short name, as in "name": the others in a doc see that
+            "avatar": self.user.avatar_data | {"name": self.user.get_short_name()},
         }
         for group in [
             live.doc_group(self.pk),

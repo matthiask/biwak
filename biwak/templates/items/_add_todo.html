@@ -53,6 +53,7 @@
             <option
               value="{{ person.pk }}"
               data-member="{{ person.is_member|yesno:'true,false' }}"
+              data-avatar="{{ person.avatar_json }}"
               {% if posted and person.pk|stringformat:"s" in form.assignees.value %}selected{% endif %}
             >
               {{ person.get_short_name }}

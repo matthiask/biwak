@@ -57,6 +57,7 @@
           <form method="post" action="{{ notification.url }}" class="d-inline" data-lantern-open>
             {% csrf_token %}
             <button type="submit" class="wb-lantern-link">
+              {% if notification.event.actor %}{% avatar notification.event.actor %}{% endif %}
               {{ notification.line }}
               {% if notification.mentioned %}<strong>{% translate "You were mentioned." %}</strong>{% endif %}
               {% if notification.event.excerpt %}<span

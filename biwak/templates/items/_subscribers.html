@@ -2,7 +2,7 @@
 {% comment %}Who gets mails about an item, and the person's own subscription and level.{% endcomment %}
 <h2 class="h6">{% translate "Subscribers" %}</h2>
 <p class="small">
-  {% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %},
+  {% for person in subscribers %}{% avatar person %} {{ person.get_short_name }}{% if not forloop.last %},
     {% endif %}{% empty %}–{% endfor %}
 </p>
 <form method="post" action="{% url 'subscription' item.pk %}">

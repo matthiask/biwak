@@ -796,7 +796,10 @@ class ConsumerTest(TransactionTestCase):
         self.assertEqual(self.names(bob), ["Ada", "Cleo"])
         self.assertEqual(
             json.loads(received[1][2]),
-            {"cursor": None, "user": {"name": "Cleo", "color": ANY}},
+            {
+                "cursor": None,
+                "user": {"name": "Cleo", "color": ANY, "avatar": ANY},
+            },
         )
         self.assertEqual(
             [e[0] for e in received[1:]], [received[1][0]] * (len(received) - 1)

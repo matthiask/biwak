@@ -914,7 +914,7 @@ html:not(.js) .wb-handle {
    image, or white initials on the fill of one of the palette's colors,
    chosen from the person's ID */
 .wb-avatar {
-  --wb-avatar-size: 1.5rem;
+  --wb-avatar-size: 1.25rem;
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -933,7 +933,7 @@ html:not(.js) .wb-handle {
 }
 
 .wb-avatar-md {
-  --wb-avatar-size: 2.25rem;
+  --wb-avatar-size: 2rem;
 }
 
 .wb-avatar-lg {

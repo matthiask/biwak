@@ -18,6 +18,7 @@ import * as decoding from "lib0/decoding"
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next"
 import { WebsocketProvider } from "y-websocket"
 import * as Y from "yjs"
+import { avatar } from "./avatar.js"
 import { keepInBrowser } from "./collab-store.js"
 import { report } from "./connection.js"
 import { csrfToken } from "./http.js"
@@ -116,12 +117,18 @@ function setUp(container) {
 
   provider.awareness.on("change", () => {
     if (gone) return
-    const names = [...provider.awareness.getStates()]
-      .filter(([client, state]) => client !== ydoc.clientID && state.user?.name)
-      .map(([, state]) => state.user.name)
-    people.textContent = names.length
-      ? `${texts.collabHere} ${[...new Set(names)].join(", ")}`
-      : ""
+    const others = new Map()
+    for (const [client, state] of provider.awareness.getStates())
+      if (client !== ydoc.clientID && state.user?.name)
+        others.set(state.user.name, state.user.avatar)
+    people.replaceChildren(
+      ...(others.size ? [`${texts.collabHere} `] : []),
+      ...[...others].flatMap(([name, person], index) => [
+        index ? ", " : "",
+        avatar(person),
+        ` ${name}`,
+      ]),
+    )
   })
 
   if (container.dataset.attachments) attachments(container, view)

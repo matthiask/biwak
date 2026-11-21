@@ -19,7 +19,7 @@ import datetime as dt
 from typing import Annotated
 
 from django.conf import settings
-from ninja import Schema
+from ninja import Field, Schema
 from ninja.pagination import CursorPagination
 from pydantic import StringConstraints
 
@@ -49,6 +49,10 @@ class PersonOut(Schema):
     is_client: bool
     organization: str
     organization_id: int | None
+    image_url: str | None = Field(
+        description="The profile image (WebP, 256 pixels), served only to"
+        " those who may know the person (as for names); null without one."
+    )
 
 
 def person_out(user):
@@ -61,6 +65,7 @@ def person_out(user):
         "is_client": user.is_client,
         "organization": user.organization_name,
         "organization_id": user.organization_id,
+        "image_url": absolute(user.image_url) if user.image else None,
     }
 
 

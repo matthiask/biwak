@@ -12,7 +12,6 @@ from markdown_it.token import Token
 from mdit_py_plugins.tasklists import tasklists_plugin
 
 from biwak import forms
-from biwak.accounts.models import PALETTE
 
 
 register = template.Library()
@@ -314,20 +313,6 @@ def _known_people(request):
     return request._known_people
 
 
-def initials(person):
-    """ "AE" for "Ada Example", "A" for a single name, the address's first
-    letter without a name"""
-    words = (person.full_name or person.email).split()
-    if len(words) > 1:
-        return (words[0][0] + words[-1][0]).upper()
-    return words[0][0].upper() if words else "?"
-
-
-def avatar_color(person):
-    """One of the palette's names, from the ID: the same every time"""
-    return PALETTE[person.pk % len(PALETTE)]
-
-
 AVATAR_SIZES = ("sm", "md", "lg")
 
 
@@ -348,7 +333,7 @@ def avatar(context, person, size="sm"):
                 '<img class="wb-avatar wb-avatar-{}" src="{}" alt="{}" title="{}"'
                 ' width="256" height="256" loading="lazy">',
                 size,
-                reverse("person_image", args=[person.pk, person.image_version]),
+                person.image_url,
                 name,
                 name,
             )
@@ -356,10 +341,10 @@ def avatar(context, person, size="sm"):
         '<span class="wb-avatar wb-avatar-{}" data-avatar-color="{}" title="{}"'
         ' role="img" aria-label="{}">{}</span>',
         size,
-        avatar_color(person),
+        person.avatar_color,
         name,
         name,
-        initials(person),
+        person.initials,
     )
 
 

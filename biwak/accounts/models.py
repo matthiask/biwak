@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+import json
 import secrets
 
 from django.conf import settings
@@ -252,6 +253,45 @@ class User(AbstractBaseUser):
         """The part of the image's storage name that changes with it, for
         the URL (cached for good)"""
         return self.image.rsplit("/", 1)[-1].removesuffix(".webp")
+
+    @property
+    def image_url(self):
+        """The image's URL, whoever may see it (``person_image`` answers 404
+        to those who may not know the person), or None"""
+        if not self.image:
+            return None
+        from django.urls import reverse
+
+        return reverse("person_image", args=[self.pk, self.image_version])
+
+    @property
+    def initials(self):
+        """ "AE" for "Ada Example", "A" for a single name, the address's
+        first letter without a name"""
+        words = (self.full_name or self.email).split()
+        if len(words) > 1:
+            return (words[0][0] + words[-1][0]).upper()
+        return words[0][0].upper() if words else "?"
+
+    @property
+    def avatar_color(self):
+        """One of the palette's names, from the ID: the same every time"""
+        return PALETTE[self.pk % len(PALETTE)]
+
+    @property
+    def avatar_data(self):
+        """What the scripts need to draw the mark (``frontend/avatar.js``)"""
+        return {
+            "name": str(self),
+            "initials": self.initials,
+            "color": self.avatar_color,
+            "image_url": self.image_url,
+        }
+
+    @property
+    def avatar_json(self):
+        """``avatar_data`` for a ``data-avatar`` attribute"""
+        return json.dumps(self.avatar_data)
 
     @property
     def organization_name(self):

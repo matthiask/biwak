@@ -150,6 +150,7 @@ def candidates_for(project, visible, query, *, for_user):
             "name": str(user),
             "organization": user.organization_name,
             "short_name": user.get_short_name(),
+            "avatar": user.avatar_data,
             "email": "" if for_user.is_client else user.email,
             "available": user.pk in available,
             "reason": reason(user),

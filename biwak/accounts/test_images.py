@@ -3,15 +3,18 @@ the visibility rule of the People page, the mark"""
 
 import io
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import default_storage
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import Context, Template
 from django.test import RequestFactory, TestCase
+from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.urls import reverse
 from PIL import Image
 
 from biwak.accounts import operations
-from biwak.accounts.models import PALETTE
+from biwak.accounts.models import PALETTE, APIToken
 from biwak.audit.models import LoggedAction
 from biwak.test_utils import partner, person, project
 
@@ -199,14 +202,12 @@ class AvatarTagTest(TestCase):
         )  # the same for everybody
 
     def test_initials_of_single_names_and_addresses(self):
-        from biwak.templatetags.biwak import initials
-
         self.ben.full_name = "Ben"
-        self.assertEqual(initials(self.ben), "B")
+        self.assertEqual(self.ben.initials, "B")
         self.ben.full_name = "ada maria von lovelace"
-        self.assertEqual(initials(self.ben), "AL")
+        self.assertEqual(self.ben.initials, "AL")
         self.ben.full_name = ""
-        self.assertEqual(initials(self.ben), "B")  # from ben@example.org
+        self.assertEqual(self.ben.initials, "B")  # from ben@example.org
 
     def test_the_image_with_alt_and_title(self):
         operations.set_image(self.ben, picture(), actor=self.ben)
@@ -288,3 +289,71 @@ class SettingsTest(TestCase):
         response = self.client.get(url, headers={"HX-Modal": "true"})
         self.assertNotContains(response, "<html")
         self.assertContains(response, "Remove")
+
+
+class APITest(TestCase):
+    def setUp(self):
+        self.ada = person("Ada")
+        self.cleo = person("Cleo", client=True)
+        self.camp = project("Camp", members=[self.ada, self.cleo])
+
+    def headers(self, user, access="write"):
+        _token, secret = APIToken.create_for(user=user, title="T", access=access)
+        return {"authorization": f"Bearer {secret}"}
+
+    def put(self, user, data, name="me.png", access="write"):
+        file = SimpleUploadedFile(name, data)
+        return self.client.put(
+            "/api/v1/me/image/",
+            encode_multipart(BOUNDARY, {"image": file}),
+            content_type=MULTIPART_CONTENT,
+            headers=self.headers(user, access),
+        )
+
+    def test_people_have_an_image_url_or_null(self):
+        headers = self.headers(self.cleo)
+        data = self.client.get("/api/v1/me/", headers=headers).json()
+        self.assertIsNone(data["image_url"])
+        self.assertEqual(self.put(self.cleo, picture()).status_code, 200)
+        self.cleo.refresh_from_db()
+        data = self.client.get("/api/v1/me/", headers=headers).json()
+        self.assertEqual(data["image_url"], settings.BASE_URL + self.cleo.image_url)
+        # In other people's outputs too (the project's members), where the
+        # image is served to whoever may know the person
+        members = self.client.get(
+            f"/api/v1/projects/{self.camp.pk}/members/", headers=self.headers(self.ada)
+        ).json()
+        urls = {m["name"]: m["image_url"] for m in members}
+        self.assertTrue(urls["Cleo Example"].endswith(self.cleo.image_url))
+        self.assertIsNone(urls["Ada Example"])
+
+    def test_uploading_and_removing(self):
+        response = self.put(self.ada, picture())
+        self.assertEqual(response.status_code, 200)
+        self.ada.refresh_from_db()
+        name = self.ada.image
+        self.assertTrue(default_storage.exists(name))
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.delete(
+                "/api/v1/me/image/", headers=self.headers(self.ada)
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["image_url"])
+        self.assertFalse(default_storage.exists(name))
+
+    def test_invalid_images_are_a_400(self):
+        response = self.put(self.ada, b"not an image")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("JPEG, PNG or WebP", response.json()["detail"])
+
+    def test_a_read_only_token_cannot_change_it(self):
+        self.assertEqual(self.put(self.ada, picture(), access="read").status_code, 403)
+
+    def test_the_images_follow_the_visibility_through_the_api_url(self):
+        self.put(self.cleo, picture())
+        self.cleo.refresh_from_db()
+        stranger = person("Dora", client=True, organization="Other")
+        self.client.force_login(stranger)
+        self.assertEqual(self.client.get(self.cleo.image_url).status_code, 404)
+        self.client.force_login(self.ada)
+        self.assertEqual(self.client.get(self.cleo.image_url).status_code, 200)

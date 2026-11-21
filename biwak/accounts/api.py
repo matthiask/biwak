@@ -7,7 +7,7 @@ from typing import Literal
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from ninja import Field, Router, Schema
+from ninja import Field, File, Router, Schema, UploadedFile
 from ninja.errors import HttpError
 
 from biwak.accounts import operations
@@ -64,6 +64,28 @@ def me_update(request, data: MeIn):
         theme=data.theme,
         accent=data.accent,
     )
+    return me_out(request)
+
+
+@router.put("me/image/", response=MeOut)
+def me_image(request, image: File[UploadedFile]):
+    """Sets your profile image (multipart, field ``image``: JPEG, PNG or
+    WebP, at most 5 MB); it's cut to a square and scaled to 256 pixels"""
+    try:
+        operations.set_image(
+            request.user,
+            image.read(operations.IMAGE_MAX_BYTES + 1),
+            actor=request.user,
+        )
+    except operations.InvalidImage as exc:
+        raise HttpError(400, str(exc)) from exc
+    return me_out(request)
+
+
+@router.delete("me/image/", response=MeOut)
+def me_image_remove(request):
+    """Removes your profile image: the initials are shown again"""
+    operations.remove_image(request.user, actor=request.user)
     return me_out(request)
 
 
