@@ -1054,6 +1054,21 @@ class RuleWidgetTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
+class HtmxTest(E2ETestCase):
+    def test_a_request_of_any_element_carries_the_csrf_token(self):
+        """Not only forms: htmx 4 inherits headers only when told to"""
+        page = self.page
+        self.goto(page, self.project)
+        page.evaluate("""() => {
+            document.body.insertAdjacentHTML(
+              "beforeend", '<button id="x" hx-post="/nowhere/">x</button>')
+            htmx.process(document.getElementById("x"))
+        }""")
+        with page.expect_request("**/nowhere/") as request:
+            page.locator("#x").click()
+        self.assertTrue(request.value.headers.get("x-csrftoken"))
+
+
 class PhoneTest(E2ETestCase):
     """What runs off the edge of a phone's screen"""
 
