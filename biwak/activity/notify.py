@@ -289,7 +289,7 @@ def _tell(people, event):
 def everybody(project, item=None, *, visible):
     """Whom "Everybody in the project" reaches: the project's active
     members who see an item there (``visible`` to clients or not) and whose
-    level for ``item`` is "everything" (specs/ui-round-6.md, part C).
+    level for ``item`` is "everything" (specs/notifications.md, "Subscriptions").
     ``item`` is the new item or, before it exists, the container it goes
     into (``None`` at the top): it has no level of its own yet. The one
     rule for posting (``notify_people()``) and for the people preselected
