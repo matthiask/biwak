@@ -1,153 +1,25 @@
 # UI round 4: phones, and round 4 of the feedback
 
-Feedback (2026-11-21): the to-do list on a phone is "funky": header
-buttons of varying heights, and the checkbox and drag handle alone on
-their line. Screenshots at 390 px wide of a list, a to-do and a project
-page showed more of the same kind.
+Feedback (2026-11-21): the to-do list on a phone was "funky" (header
+buttons of varying heights, checkbox and handle alone on their line),
+plus round 4 of `ui-feedback.md`. Built 2026-11-21. Where it lives now:
 
-**Status:** built 2026-11-21 (branch
-`ui4-behavior`): 5.1 (sign out), 5.4 (the visibility modal) and 5.5 (the
-feed's conversations). Decisions on the way:
-- 5.1: "Sign out here" sits in the action cell of the sessions table's
-  "This one" row, next to the other rows' "Sign out", and posts to the
-  same `account_logout` as the menu's "Sign out".
-- 5.4: `GET /items/<pk>/switch/` is the question (a page, a modal for
-  `HX-Modal`; an item that is visible already redirects to itself), the
-  POST with `visible=1` shows it; the POST without it hides it, as before.
-  The question's text is built by the view (`_show_texts()`, per kind),
-  so the switch include no longer shows the sentence by the button and the
-  pages' `affected` count is gone.
-- 5.5: see `feed.md`.
+1. **Page headers** on phones: `core.md` ("Pages").
+2. **To-do rows** as a grid, "Add a to-do" and "New group" side by side,
+   the badge next to the due date: `todos.md`.
+3. **The editor toolbar** wraps: `editor.md`.
+4. **Small things:** "just now" (`core.md`); the comment field's label
+   is "Comment", visually hidden under the "Comments" heading.
+5. Round 4 of the feedback: "Sign out" in the "Me" menu and "Sign out
+   here" in the sessions (`keyboard.md`); showing to clients asks first
+   in a modal, hiding is one click (`access.md`); the feed groups
+   conversations and nothing collapses (`feed.md`); groupings and orders
+   as filters (`core.md`, `todos.md`, `projects-overview.md`).
 
-Sections 1 to 4 and 5.2 and 5.3 built on branch `ui4-layout`
-(2026-11-21). Decisions on the
-way: the header's actions are one row at the `btn-sm` height (2rem), phones
-(under 576 px) get icons only (`.wb-label`) and "More" with what's
-`.wb-phone-hide` in the header (`.wb-phone-only` in the menu), on lists,
-to-dos and projects (`.is-compact`: no wrapping); the to-do row is a grid
-(handle | check | body, the title then a line with assignees, due date and
-signals; "My to-dos" has the same, its list and due date in that line); the
-to-do page's badge says "Overdue" or "Today" next to the date; relative
-times use the `ago` filter ("just now"); "New group" sits in the row of the
-last group's "Add a to-do" (or the ungrouped one without groups).
+## To move after the builds
 
-**Agent:** a cheaper model following this spec and the checklist in
-`AGENTS.md`. Every change gets a browser test at 390 px (`PhoneTest`)
-and screenshots in the report.
-
-**Depends on:** `ui-round-3.md` merged (it reuses the to-do row) and
-`ui-round-2.md` part D (the projects page).
-
-**Touches:**
-- the page header include and its CSS (`.wb-page-header`,
-  `.wb-page-actions`);
-- the to-do row (`items/_todo.html`) and its CSS;
-- the toolbar's CSS (`forms/_toolbar.html`);
-- the visibility switch include;
-- the comment form's label;
-- `items/_todo_view.html`'s due badge;
-- the feed's relative time.
-
-## 1. Page headers
-
-- **All buttons in a header have one height**, the `btn-sm` height,
-  aligned in one row. Today List, Board and Edit stretch while History
-  doesn't.
-- **The List / Board switch** is a button group like elsewhere.
-- **On phones the actions stay on one line:**
-  - the less used ones move into "More" (History, To-dos by due date,
-    Check-ins);
-  - the rest show their icon only, with the label for screen readers
-    and as `title`;
-  - "More" never wraps alone onto a second line.
-- **Which actions are "primary" per page** (shown on phones): the
-  bookmark, Edit and the List / Board switch on lists; Complete, Edit
-  and the bookmark on to-dos; the bookmark on projects. The rest goes
-  into "More" on phones and stays visible on wide screens.
-
-## 2. To-do rows
-
-- **A grid:** handle | checkbox | content. The title wraps inside the
-  content column, never under the checkbox.
-- **The content column holds** the title, then a second line with
-  assignees and the due badge.
-- **The handle and checkbox stay at the top**, aligned with the title's
-  first line.
-- **The same row everywhere** it's used: lists, groups, "My to-dos",
-  search results if they use it.
-
-## 3. The editor toolbar
-
-On narrow screens the toolbar wraps into a second row instead of running
-past the edge. The buttons keep their size, and the paperclip is always
-reachable.
-
-## 4. Small things
-
-- **The visibility switch's help text** ("Makes this list, 3 to-dos and
-  0 comments visible to 1 client.") goes below the button as its own
-  line on phones, not wrapped around it.
-- **The comment form's field** has a proper label: "Comment", visually
-  hidden, since the "Comments" heading is right above it. Not the
-  lowercase "comment".
-- **On a to-do's page** the overdue or "Today" badge sits next to the
-  due date in the facts line, not on a line of its own above.
-- **Relative times** say "just now" under a minute, never "0 minutes",
-  in the feed and wherever `timesince` is shown.
-
-## 5. Round 4 of `ui-feedback.md` (2026-11-21)
-
-1. **"Sign out" in the "Me" menu**, as before part E, since it's
-   understood to sign out here. The sessions card loses its help text
-   about it and gets a "Sign out here" button instead (this browser's
-   session, the same as the menu's).
-2. **The to-do checkbox is aligned** with the title's first line on wide
-   screens too, as section 2's grid does.
-3. **"Add a to-do" and "New group" sit on one line** under a list, two
-   quiet buttons side by side, wrapping only on phones if needed.
-4. **"Show to clients" asks first.**
-   - Making something visible to clients can reveal what shouldn't be
-     revealed, so the switch opens a modal (`form_response`,
-     `destructive=True` styling for the button): "Show this list to
-     clients?". It says what becomes visible (the existing sentence:
-     "Makes this list, 3 to-dos and 0 comments visible to 1 client.")
-     and offers "Show to clients" and "Cancel".
-   - Without JavaScript it's the form's page.
-   - Hiding from clients ("Make internal") stays one click: it reveals
-     nothing.
-   - The same everywhere the switch is (lists, messages, folders, docs,
-     files, check-ins), through the one include.
-5. **The activity feed groups conversations, and nothing collapses.**
-   - Comments on the same item, by anyone, each within an hour of the one
-     before and on the same day, become one entry: "Conversation on
-     Order the tent", with each comment below it, indented (who, the
-     excerpt, the time).
-   - Other events in between (a completion, a reaction) don't break it
-     up: the conversation's comments gather at the newest one's place.
-   - The existing merged entries ("Ada completed 5 to-dos in Launch") show
-     their single items right away, indented, instead of inside a
-     `<details>`. The feed has no `<details>` anymore.
-   - Clients' feeds follow the same visibility rules per comment
-     (`access.md`); a conversation shows only the comments they may see.
-   - The API keeps its events as they are; the grouping is the page's.
-   - `feed.md` gets the decision.
-6. **"My to-dos" grouping as a filter:** it's a "Group by" field in the
-   filter form, remembered like the other filters, not a field on
-   `User`. The projects page's order is a small filter form the same
-   way. Built separately (branch `view-prefs`), listed here for
-   completeness.
-
-## Done when
-
-- Browser tests at 390 px:
-  - header buttons have one height and fit one line on a list, a to-do
-    and a project page;
-  - a long to-do title doesn't move below the checkbox;
-  - the toolbar doesn't overflow;
-  - no horizontal scrolling on these pages.
-- Django tests for "just now", the visibility modal (staff only, what
-  it says, without JavaScript), the feed's conversations (staff and
-  client) and the menu's label.
-- Screenshots of the list, the to-do and the project page at 390 px and
-  at 1200 px (nothing broke on wide screens), looked at before
-  reporting.
+Into `access.md` (the switch's modal, 5.4): `GET /items/<pk>/switch/`
+is the question (a page, a modal for `HX-Modal`; an item already visible
+redirects to itself); the POST with `visible=1` shows it, without it
+hides. The question's text is built by the view per kind
+(`_show_texts()`), so the switch include shows no sentence by the button.

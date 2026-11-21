@@ -1,200 +1,120 @@
 # Check-ins
 
 A question asked automatically on a schedule to chosen people, answers
-collected in one place with comments: "How are you, what are you working
-on this week?", "Read any good books lately?". Used heavily for the team
-itself, less for client projects.
+collected in one place with comments: "What are you working on this
+week?", "Read any good books lately?". Used heavily for the team itself,
+less for client projects.
 
-**Status:** built (2026-11-20): models, `biwak/checkins/` (`schedule.py`
-the time arithmetic, `operations.py` asking, summaries and answering,
-`mails.py`), pages, API (`checkins/`), CLI 0.12.0; reminders removed
-again (CLI 0.14.0), skipping removed (CLI 0.16.0). Decisions
-made while building, confirmed 2026-11-21 (the summary at 07:00 in the
-question's time zone, 5 occurrences per page, no default time of day,
-people with the level "nothing" still asked):
+**Status:** built (2026-11-20): `biwak/checkins/` (`schedule.py` the
+time arithmetic, `operations.py` asking, summaries and answering,
+`mails.py`).
 
-- **No reminders for missed check-ins (decided 2026-11-20).** The
-  question mail is the only one asking; who hasn't answered shows on the
-  question's page and in "due". Removed what was built: `remind_after`,
-  `Occurrence.reminded_at`, the reminder mail, the form, API and CLI
-  fields (`--remind`).
-- **No skipping (decided 2026-11-20).** Without reminders "Skip this time"
-  isn't worth having. Removed: `Skip`, the operation, button, page, API
-  endpoint and CLI command (`biwak checkin skip`). "Due" and "missing" mean
-  not answered. CLIs 0.15 only lose their `skip` command (the other
-  commands read no skip field), so `MINIMUM` stays.
-- **Added to the model:** `Question.starts_on` (the date the rule counts
-  from: first date and phase of "every two weeks"; the forms say "first
-  asked on"), `Question.next_at` (stored: when it is asked next, computed
-  from rule, time of day and time zone whenever one changes and after
-  asking; empty while paused), `Occurrence.date` (the scheduled date in the
-  question's time zone, unique per question: editing the schedule on the
-  day never asks a date twice), `Occurrence.asked` (whom it was asked: who
-  is missing is judged against these, not against today's people),
-  `Occurrence.summarized_at`, `Answer.author` (the item's creator repeated
-  for the unique constraint). The audit log covers the tables people change
-  (not `Occurrence`, not `next_at`).
-- **Time of day:** 09:00 stays 09:00 on the wall clock in the question's
-  zone, so in UTC it moves by an hour at the changes. A time which doesn't
-  exist (02:30 when the clocks go forward) is asked an hour later (03:30);
-  one which happens twice (02:30 when they go back) once, the first time.
-  A date is the calendar date in the question's zone. An occurrence's date
-  is the rule's date, not the date of the moment it is asked: a time in a
-  gap just before midnight (23:30 when America/Nuuk goes from 23:00 to
-  00:00) is asked at 00:30 the next day, for the day before (fixed
-  2026-11-20: it was stored under the next day, which then wasn't asked).
-- **After downtime** (or a late run) a question is asked once, for the
-  latest date due, not for every missed date; `asked_at` is when it was
-  really asked.
-- **Pausing** clears `next_at`; resuming computes it from now, so missed
-  occurrences aren't asked. Questions which can't be asked (paused,
-  trashed, archived or in an archived project) move on without asking.
-- **Editing the schedule** counts from now: today's time only if still
-  ahead, and a date already asked isn't asked again. The edit form
-  uses the rule widget (`specs/rule-widget.md`): a rule it can't show
-  (from the API or the CLI) stays unchanged unless "Replace" is pressed. A new rule or time
-  zone on the day it was asked counts from now in the new zone, so a zone
-  where that date is still ahead doesn't ask it again and one where its
-  time has passed asks the next date. Decided 2026-11-20: changing the
-  zone shortly before the question is asked can skip that day (Zurich to
-  Tokyo at 08:00 skips that Monday, 09:00 having passed in Tokyo); an
-  accepted rare edge case.
-- **A first date which doesn't match the rule** (API and CLI rules, e.g.
-  Mondays from a Friday): the first date the rule gives on or after it.
-  Decided 2026-11-20: "every two weeks" counts its phase from the first
-  date's week, so from a Friday the Monday right after isn't asked, the one
-  after it is (the first full interval); that's fine as it is.
-- **People asked and subscribers are two lists** (decided 2026-11-21,
-  `ui-round-6.md`): the people asked are only who gets asked (the
-  question mail, "due", who hasn't answered); the question's subscribers
-  are who hears about the answers, whatever their level for the project
-  ("subscribing is the switch"). A question has the subscribers card like
-  any item (Subscribe/Unsubscribe, "Manage…" to add others; the
-  subscriber endpoints and `biwak subscribers|subscribe` work for
-  questions). When a question is created its subscribers are the people
-  asked plus its creator (proposed 2026-11-21); changing who's asked later
-  leaves the subscribers alone.
-- **People:** adding is from the next occurrence on (those added
-  aren't in the latest occurrence's `asked` and aren't "due" for it);
-  removing keeps their answers. Clients only when the question is visible to
-  clients; if it turns internal they aren't asked or mailed (they stay in
-  the list, and saving the form or the API's `people` with them still
-  works; only adding clients to an internal question is refused, decided
-  2026-11-20). **Anybody who can see the question answers**, asked or not
-  (decided 2026-11-21, replacing "only people in the list answer"):
-  `can_answer()` is active and `can_see()`, so clients only on questions
-  visible to them; pages, API, CLI and replies by mail alike. Answering
-  subscribes the author to their own answer (`create_item()`: comments on
-  it reach them), not to the question. The author edits their own answer (answering again changes it,
-  also from the trash).
-- **Summary:** 07:00 on the day after the occurrence's date in the
-  question's time zone (Open: or the installation's, like the digest), or,
-  when it was asked later than its date (after downtime), on the day after
-  it was asked (fixed 2026-11-20: a late run used the summary up before
-  anyone could answer), to subscribers whose mode is `summary` (the
-  default) who see the question, whatever their level (changed
-  2026-11-21: subscribing is the switch); no mail for an occurrence without answers;
-  answers after it are not sent; choosing a mode other than `none`
-  subscribes.
-- **Answers' mails** (`each`) go through the normal notifications:
-  everybody else gets nothing per answer (unless mentioned, on every
-  level except "nothing"); `each` reaches the question's subscribers
-  whatever their level (changed 2026-11-21).
-- **Not asked:** trashed and archived questions, questions of archived
-  projects.
-- **Mails** (question, summary) go out after the commit, one per
-  person, in their language, only to people still active and seeing the
-  question then (checked again after the commit, like the notification
-  mails; fixed 2026-11-20 after the visibility review); a mail which
-  can't be sent is logged and not retried. Replying by mail
-  (`notifications.md`, stage 2, built 2026-11-20): `reply_headers()` in
-  `biwak/checkins/mails.py` gives the question mail a `Reply-To` whose
-  token points at the occurrence; replying answers that occurrence
-  (changing an answer given already). The summary has no `Reply-To`.
-- **Open (values the spec doesn't fix):** how many occurrences a page shows
-  (5, `OCCURRENCES_PER_PAGE`); the wording of the two mails and the
-  pages; no default time of day (the form asks); asking people with the
-  level "nothing" (they are asked regardless).
+## Decided
 
-**Agent:** suits a cheaper model following this spec and the checklist
-in `AGENTS.md`; have the scheduling tests reviewed.
-
-**Depends on:** schedules (`todos.md`, stage 1), mails and mentions
-(`notifications.md`, stage 1), attachments (`files.md`, stage 1).
-Answering by mail comes with `notifications.md`, stage 2, built after
-this part.
+- **No reminders** for missed check-ins (2026-11-20): the question mail
+  is the only one asking; who hasn't answered shows on the question's
+  page and in "due".
+- **No skipping** (2026-11-20): without reminders it isn't worth having;
+  "due" and "missing" mean not answered.
+- **Answers' mails:** `QuestionMail(question, user, mode)`: `summary`
+  (the default, decided 2026-11-20: ten mails per question are too
+  many), `each` or `none`; choosing a mode other than `none` subscribes.
+- **People asked and subscribers are two lists** (decided 2026-11-21):
+  the people asked get the question mail and are "due"; the question's
+  subscribers hear about the answers, whatever their level for the
+  project ("subscribing is the switch", `notifications.md`). A question
+  has the subscribers card like any item; created, its subscribers are
+  the people asked plus its creator; changing who's asked later leaves
+  them alone.
+- **Anybody who can see the question answers** (decided 2026-11-21),
+  asked or not: `can_answer()` is active and `can_see()`; pages, API,
+  CLI and mail replies alike. Answering subscribes the author to their
+  own answer, not to the question. One answer per person and occurrence;
+  answering again changes it (also from the trash).
+- **Clients** are asked only on questions visible to clients; adding
+  clients to an internal question is refused, and if it turns internal
+  they stay in the list but aren't asked or mailed. They learn only about
+  the project's members among the people asked (the page's people and
+  "hasn't answered yet", the API's `people` and `missing`, a person's
+  answers: 404 for a non-member, `Project.people_known_to()`; decided
+  2026-11-20 after the visibility review).
+- People with the level "nothing" are still asked. No default time of
+  day (the form asks). 5 occurrences per page.
 
 ## Model
 
-- **Kind `question`** (parent: none), switchable, not commentable:
-  `Question(Detail)` with the question as the item's title, `rule` (an
-  RRULE, `biwak/schedules.py`), `time_of_day`, `time_zone` (default
-  `TIME_ZONE`), `people` (many-to-many: who is asked), `paused_at`.
-- **`Occurrence(question, asked_at)`**: one per time the question is
-  asked.
+- **Kind `question`** (no parent), switchable, not commentable:
+  `Question(Detail)`, the question as the item's title, `rule` (an RRULE,
+  `biwak/schedules.py`), `starts_on` (the first date the rule counts
+  from, also the phase of "every two weeks"), `time_of_day`, `time_zone`,
+  `people` (who is asked), `paused_at`, `next_at` (stored, recomputed
+  when one of them changes and after asking; empty while paused).
+- **`Occurrence(question, date, asked_at, asked, summarized_at)`:** one
+  per scheduled date in the question's time zone (unique: editing the
+  schedule on the day never asks a date twice); `asked` is whom it was
+  asked, so who is missing is judged against them.
 - **Kind `answer`** (parent: its question), commentable:
-  `Answer(Detail)` with `content` (Markdown) and `occurrence`; one per
-  person and occurrence (unique on occurrence and creator), editable by
-  its author. Its title is the question's, renamed with it (fixed
-  2026-11-21: answers kept the old title in the feed and search).
-- **`QuestionMail(question, user, mode)`**: how a person hears about the
-  answers: `each` (a mail per answer, through the normal notifications),
-  `summary` (one mail the morning after an occurrence with all its
-  answers; the default, decided 2026-11-20: ten mails per question are
-  too many) or `none`.
+  `Answer(Detail)` with `content`, `occurrence` and `author` (unique per
+  occurrence). Its title follows the question's.
+- Audited: the tables people change (not `Occurrence`, not `next_at`).
 
-## Behaviour
+## Asking
 
-- **Asking:** `./manage.py send_mails` (every minute, `notifications.md`)
-  also creates the occurrences that are due (`schedules.next_date()` with
-  the time of day in the question's time zone) and mails the question
-  to its people. Paused questions aren't asked; resuming doesn't ask the
-  missed occurrences.
-- **The question mail** links to the answer form; in stage 2 of
-  `notifications.md`, replying to it posts the answer.
-- **Answering** in the app: `/questions/<pk>/answer/` for the latest
-  occurrence (or `?occurrence=` for an older one), Markdown with
-  mentions and attachments. Anybody who sees the question answers
-  (changed 2026-11-21); the people asked and the creator are subscribed
-  when it's created.
-- **Answers' mails** per `QuestionMail`: `each` through `notify()`;
-  `summary` at 07:00 the morning after the occurrence (in `send_mails`),
-  one mail with all answers.
-- Staff create and edit questions; clients can be asked when the
-  question is visible to clients.
-- Clients only learn about the project's members among the people asked
-  (staff of all-access projects needn't be members): the question page's
-  people and "hasn't answered yet", the API's `people` and `missing`,
-  and a person's answers (`/questions/<pk>/people/<user pk>/` and the
-  API's `occurrences/?person_id=` are 404 for a client asking about a
-  non-member; the API since 2026-11-21) (decided 2026-11-20 after the
-  visibility review, `Project.people_known_to()`).
+`./manage.py send_mails` (every minute) creates the occurrences due and
+mails the question to its people, after the commit, one mail per person,
+only to people still active and seeing the question then (checked again
+after the commit). A mail which can't be sent is logged.
 
-## Pages
+Traps the tests cover (`schedule.py`):
 
-- `/projects/<pk>/checkins/`: the project's questions with their
-  schedule (`schedules.describe()`), next date and whether paused.
-- `/questions/<pk>/`: the latest occurrence's answers (newest first) and
-  who hasn't answered yet; older occurrences below, paginated by date;
-  each answer with its comments. `?occurrence=` starts the list at that
-  occurrence, `?before=` (a date) at the next older page.
-- `/questions/<pk>/people/<user pk>/`: a person's answers over time.
-- New and edit forms for questions (staff); pause and resume, and resume all of a project's paused check-ins together (the importer leaves them paused; `POST /api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume --project ID`).
-- The person's open questions ("due") on the project page.
+- **Wall-clock time:** 09:00 stays 09:00 in the question's zone across
+  daylight saving changes. A time which doesn't exist (02:30 when clocks
+  go forward) is asked an hour later; one which happens twice, the first
+  time. An occurrence's date is the rule's date, not the date of the
+  moment it's asked (a gap just before midnight asks at 00:30 for the day
+  before).
+- **After downtime** a question is asked once, for the latest date due,
+  not for every missed date.
+- **Pausing** clears `next_at`; resuming counts from now, so missed
+  occurrences aren't asked. Paused, trashed, archived questions and
+  those of archived projects aren't asked. A project's paused questions
+  resume together (the importer leaves them paused; `POST
+  /api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume
+  --project ID`).
+- **Editing the schedule** (the rule widget, `rule-widget.md`) counts
+  from now: today's time only if still ahead, never a date already
+  asked. Changing the time zone shortly before the question is asked can
+  skip that day (accepted, 2026-11-20).
+- **A first date that doesn't match the rule:** the first date the rule
+  gives on or after it; "every two weeks" counts its phase from the
+  first date's week (fine as it is, 2026-11-20).
+- **People** added are asked from the next occurrence; removing keeps
+  their answers.
 
-## API and CLI
+## Summaries and replies
 
-Endpoints for questions (list, create, update, pause), occurrences with
-answers (cursor-paginated), answering, the mail mode.
-`biwak checkins PROJECT`, `biwak checkin show QUESTION`,
-`biwak checkin answer QUESTION [TEXT]` (standard input like comments),
-`biwak checkin due` (what I haven't answered yet).
+- **The summary:** at 07:00 on the day after the occurrence's date in
+  the question's time zone, or the day after it was asked when that was
+  later (after downtime), to subscribers in `summary` mode who see the
+  question; none for an occurrence without answers; later answers
+  aren't sent.
+- **`each`** goes through the normal notifications to the question's
+  subscribers; everybody else gets nothing per answer unless mentioned.
+- **Replying** to the question mail answers that occurrence
+  (`reply_headers()` in `biwak/checkins/mails.py`, `notifications.md`);
+  the summary has no `Reply-To`.
 
-## Done when
+## Pages, API and CLI
 
-Pages, API and CLI for all of the above. Tests: schedules across
-daylight saving time changes and time zones (a question at 09:00
-Europe/Zurich stays at 09:00 local time in March and October), pausing
-and resuming, answering an older occurrence, one answer per person and
-occurrence, the summary mail, a client asked on a visible question and not seeing
-internal questions.
+- `/projects/<pk>/checkins/`: the questions with their schedule
+  (`describe()`), next date, paused; "Resume all".
+- `/questions/<pk>/`: the latest occurrence's answers (newest first)
+  and who hasn't answered; older occurrences below (`?occurrence=`,
+  `?before=`); each answer with its comments.
+- `/questions/<pk>/answer/` (`?occurrence=` for an older one);
+  `/questions/<pk>/people/<user pk>/`: a person's answers.
+- Staff create, edit, pause and resume questions; the person's open
+  questions ("due") on the project page and Home.
+- API: questions, occurrences with answers (cursor-paginated), answering,
+  the mail mode, `GET /api/v1/me/checkins/due/`. CLI: `biwak checkins
+  PROJECT`, `biwak checkin show|answer|due|resume`.
