@@ -1131,6 +1131,17 @@ class CollabTest(E2ETestCase):
             arg=expected,
         )
 
+    def converged(self, *pages, timeout=10):
+        """The text once every editor has the same one"""
+        deadline = time.monotonic() + timeout
+        while True:
+            texts = {self.text(page) for page in pages}
+            if len(texts) == 1 or time.monotonic() > deadline:
+                break
+            pages[0].wait_for_timeout(100)
+        self.assertEqual(len(texts), 1, texts)
+        return texts.pop()
+
     def type(self, page, text, *, end=True):
         content = self.content(page)
         content.click()
@@ -1228,9 +1239,7 @@ class CollabTest(E2ETestCase):
         for page in pages:
             for word in ["Ada", "was", "Bob", "too!", "Cleo", "as"]:
                 expect(self.content(page)).to_contain_text(word)
-        final = self.text(pages[0])
-        for page in pages[1:]:
-            self.wait_for_text(page, final)
+        final = self.converged(*pages)
         # The others' cursors with their names, and who is here
         expect(pages[0].locator(".cm-ySelectionInfo", has_text="Bob")).to_have_count(1)
         expect(pages[0].locator(".cm-ySelectionInfo", has_text="Cleo")).to_have_count(1)
@@ -1263,8 +1272,10 @@ class CollabTest(E2ETestCase):
         for page in [ada, bob]:
             expect(self.content(page)).to_contain_text("Typed offline")
             expect(self.content(page)).to_contain_text("Typed online.")
-        final = self.text(ada)
-        self.wait_for_text(bob, final)
+        # Both the same, whatever arrives last (the trailing space of "Typed
+        # online. " could still be on its way when "Typed online." shows):
+        # reading one side too early made the other wait forever in CI
+        final = self.converged(ada, bob)
         self.wait_for_stored(final)
         self.assertFalse(self.errors)
 
