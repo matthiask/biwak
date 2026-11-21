@@ -1457,13 +1457,15 @@ button.wb-signal:hover {
   --wb-project-color: var(--wb-palette-berry-fill);
 }
 
+/* A small rounded square, a swatch: a round dot reads as "unread", which
+   the lantern's red dot means (decided 2026-11-21) */
 .wb-project-dot {
   display: inline-block;
   flex: none;
   width: 0.65em;
   height: 0.65em;
   margin-inline-end: 0.35em;
-  border-radius: 50%;
+  border-radius: 0.15em;
   background: var(--wb-project-color);
   vertical-align: baseline;
 }
@@ -1749,14 +1751,15 @@ button.wb-signal:hover {
 }
 
 /* Forms in a modal (modal.js, modal_form.html): the same form as on its
-   own page, in a <dialog> */
+   own page, in a <dialog>; on the cards' surface like the palette and the
+   menus, its fields as on a card (decided 2026-11-21) */
 .wb-modal {
   width: min(36rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   padding: 1.25rem;
   color: var(--bs-body-color);
-  background: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
   border-radius: var(--bs-border-radius-lg);
   box-shadow: var(--bs-box-shadow-lg);
 }
@@ -1830,7 +1833,7 @@ body:has(.wb-modal[open]) {
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--wb-field-border);
   border-radius: var(--bs-border-radius);
-  background: var(--bs-body-bg);
+  background: var(--wb-field-bg);
 }
 
 .wb-picker:focus-within {

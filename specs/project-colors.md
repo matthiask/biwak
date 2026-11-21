@@ -30,9 +30,11 @@ tag), CSS.
   (`PATCH projects/{id}/ {"color": …}`, `biwak project edit ID
   --color …`); new projects get none, or a suggested one not used by
   other active projects.
-- Shown as a colored stripe on the project card, a dot before the
-  project's name elsewhere, and a thin line under the project page's
-  header. Always with the name: color is never the only signal.
+- Shown as a colored stripe on the project card, a small rounded square
+  (a swatch, not a round dot, which reads as "unread": decided
+  2026-11-21) before the project's name elsewhere, and a thin line under
+  the project page's header. Always with the name: color is never the
+  only signal.
 - Clients see the colors of projects they're in.
 
 ## Done when
