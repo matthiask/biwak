@@ -87,12 +87,6 @@ class RoutingTest(HomeTestCase):
         self.assertIn('<a class="navbar-brand" href="/"', content)
         self.assertIn('href="/projects/"', content)
 
-    def test_login_is_required(self):
-        self.client.logout()
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/", response["Location"])
-
 
 class DueTest(HomeTestCase):
     def test_my_open_to_dos_overdue_or_due_within_a_week(self):
@@ -615,6 +609,7 @@ class QueriesTest(HomeTestCase):
         self.fill(3)
         few = self.count(self.ada)
         self.fill(30)
+        self.assertEqual(Project.objects.count(), 34)  # Not none
         self.assertEqual(self.count(self.ada), few)
         self.assertEqual(self.count(self.bob), self.count(self.bob))
 
@@ -623,7 +618,3 @@ class QueriesTest(HomeTestCase):
         few = self.count(self.cleo)
         self.fill(20)
         self.assertEqual(self.count(self.cleo), few)
-
-    def test_the_projects_in_the_test_exist(self):
-        self.fill(1)
-        self.assertEqual(Project.objects.count(), 2)

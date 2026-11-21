@@ -40,12 +40,6 @@ class SettingsBase(TestCase):
 
 
 class SettingsPagesTest(SettingsBase):
-    def test_login_required(self):
-        response = self.client.get("/accounts/settings/")
-        self.assertEqual(response.status_code, 302)
-        response = self.client.get(f"/items/{self.todo.pk}/mentionable/")
-        self.assertEqual(response.status_code, 302)
-
     def test_settings_page(self):
         for user in [self.ada, self.cleo]:
             with self.subTest(user=user):

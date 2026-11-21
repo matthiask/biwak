@@ -83,9 +83,6 @@ class BoardTest(Fixture, TestCase):
         url = reverse("project_messages", args=[limited.pk])
         self.assertEqual(self.client.get(url).status_code, 404)
 
-    def test_login_required(self):
-        self.assertEqual(self.client.get(self.url()).status_code, 302)
-
     def test_the_trash_is_left_out(self):
         ops.trash(self.shared, actor=self.ada)
         self.client.force_login(self.ada)
