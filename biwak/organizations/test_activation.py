@@ -1,0 +1,460 @@
+"""Activating and deactivating people (specs/activation.md): the
+operations, the pages, the API and the palette; the CLI in
+``biwak/test_cli_people.py``"""
+
+from unittest.mock import patch
+
+from allauth.usersessions.models import UserSession
+from django.core import mail
+from django.test import Client, TestCase
+from django.utils import timezone
+
+from biwak.accounts import sso
+from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.organizations import activation
+from biwak.outbox.models import OutgoingMail
+from biwak.palette.test_actions import palette_data
+from biwak.test_utils import assert_modal, partner, person, project
+
+
+class Base(TestCase):
+    def setUp(self):
+        self.root = person("Root", is_admin=True)
+        self.ada = person("Ada")  # staff, no admin
+        self.pia = partner("Pia")
+        self.cleo = person("Cleo", client=True, is_active=False)
+        self.dora = person("Dora", client=True, is_active=False)
+        self.staffer = person("Stan", is_active=False)
+        self.parter = partner("Paul", is_active=False)
+        self.site = project("Site", members=[self.cleo, self.ada])
+        self.archived = project("Old", members=[self.cleo])
+        self.archived.archived_at = timezone.now()
+        self.archived.save()
+
+    def active(self, user):
+        user.refresh_from_db()
+        return user.is_active
+
+
+class ActivateTest(Base):
+    def test_sets_is_active_and_nothing_else(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            done = activation.activate([self.cleo], actor=self.ada)
+        self.assertEqual(done, [(self.cleo, False)])
+        self.assertTrue(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertIsNone(self.cleo.invited_at)
+        self.assertTrue(self.site.is_member(self.cleo))
+
+    def test_with_the_mail_through_the_outbox_after_the_commit(self):
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            activation.activate([self.cleo], actor=self.ada, mail=True)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(OutgoingMail.objects.count(), 1)
+        for callback in callbacks:
+            callback()
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, [self.cleo.email])
+        self.assertIn("Site", message.body)
+        self.assertNotIn("Old", message.body)
+        self.cleo.refresh_from_db()
+        self.assertEqual(self.cleo.invited_by, self.ada)
+        self.assertTrue(self.cleo.is_invited)
+
+    def test_a_bounced_address_is_activated_without_the_mail(self):
+        self.cleo.mail_undeliverable_at = timezone.now()
+        self.cleo.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            done = activation.activate([self.cleo], actor=self.ada, mail=True)
+        self.assertEqual(done, [(self.cleo, False)])
+        self.assertTrue(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 0)
+        self.cleo.refresh_from_db()
+        self.assertIsNone(self.cleo.invited_at)
+
+    def test_who_may_change_whom(self):
+        for actor, target, allowed in [
+            (self.ada, self.cleo, True),
+            (self.ada, self.staffer, False),
+            (self.ada, self.parter, False),
+            (self.root, self.cleo, True),
+            (self.root, self.staffer, True),
+            (self.root, self.parter, True),
+            (self.pia, self.cleo, False),
+            (self.cleo, self.dora, False),
+        ]:
+            with self.subTest(actor=actor, target=target):
+                self.assertEqual(activation.can_change(actor, target), allowed)
+
+    def test_nothing_changes_if_one_is_refused(self):
+        with (
+            self.captureOnCommitCallbacks(execute=True),
+            self.assertRaises(PermissionError),
+        ):
+            activation.activate([self.cleo, self.staffer], actor=self.ada, mail=True)
+        self.assertFalse(self.active(self.cleo))
+        self.assertEqual(OutgoingMail.objects.count(), 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_several_by_an_admin(self):
+        activation.activate([self.cleo, self.staffer, self.parter], actor=self.root)
+        for user in [self.cleo, self.staffer, self.parter]:
+            self.assertTrue(self.active(user))
+
+
+class DeactivateTest(Base):
+    def setUp(self):
+        super().setUp()
+        User.objects.filter(pk=self.cleo.pk).update(is_active=True)
+        self.cleo.refresh_from_db()
+        self.client.force_login(self.cleo)
+        self.key = self.client.session.session_key
+        UserSession.objects.create(
+            user=self.cleo, session_key=self.key, ip="127.0.0.1", user_agent="Firefox"
+        )
+        APIToken.create_for(user=self.cleo, title="T", access="read")
+        CalendarToken.renew(self.cleo)
+
+    def test_ends_access_and_keeps_the_rest(self):
+        self.assertTrue(sso.session_alive(self.key, self.cleo))
+        with (
+            patch("biwak.collab.live.check_access") as check,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            done = activation.deactivate([self.cleo], actor=self.ada)
+        self.assertEqual(done, [self.cleo])
+        self.assertFalse(self.active(self.cleo))
+        self.assertFalse(UserSession.objects.filter(user=self.cleo).exists())
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.cleo).exists())
+        # Open websockets check again, and fail the check
+        check.assert_any_call(user=self.cleo.pk)
+        self.assertFalse(sso.session_alive(self.key, self.cleo))
+        self.assertTrue(self.site.is_member(self.cleo))
+        self.assertEqual(self.client.get("/").status_code, 302)
+
+    def test_the_sessions_of_others_stay(self):
+        other = Client()
+        other.force_login(self.ada)
+        UserSession.objects.create(
+            user=self.ada,
+            session_key=other.session.session_key,
+            ip="127.0.0.1",
+            user_agent="Firefox",
+        )
+        activation.deactivate([self.cleo], actor=self.ada)
+        self.assertEqual(UserSession.objects.filter(user=self.ada).count(), 1)
+        self.assertEqual(other.get("/").status_code, 200)
+
+    def test_not_oneself(self):
+        with self.assertRaises(activation.ActivationError):
+            activation.deactivate([self.root], actor=self.root)
+        self.assertTrue(self.active(self.root))
+
+    def test_not_the_last_active_admin(self):
+        # An inactive admin acting (the request layer stops them) leaves
+        # nobody
+        other = person("Otto", is_admin=True)
+        User.objects.filter(pk=self.root.pk).update(is_active=False)
+        self.root.refresh_from_db()
+        with self.assertRaises(activation.ActivationError) as cm:
+            activation.deactivate([other], actor=self.root)
+        self.assertIn("last active admin", str(cm.exception))
+        self.assertTrue(self.active(other))
+        # Admins may leave while another stays
+        User.objects.filter(pk=self.root.pk).update(is_active=True)
+        self.root.refresh_from_db()
+        activation.deactivate([other], actor=self.root)
+        self.assertFalse(self.active(other))
+
+    def test_nothing_changes_if_one_is_refused(self):
+        with self.assertRaises(PermissionError):
+            activation.deactivate([self.cleo, self.pia], actor=self.ada)
+        self.assertTrue(self.active(self.cleo))
+        self.assertTrue(APIToken.objects.filter(user=self.cleo).exists())
+
+    def test_staff_and_partners_by_an_admin_only(self):
+        with self.assertRaises(PermissionError):
+            activation.deactivate([self.pia], actor=self.ada)
+        activation.deactivate([self.pia, self.ada], actor=self.root)
+        self.assertFalse(self.active(self.pia))
+        self.assertFalse(self.active(self.ada))
+
+
+class PagesTest(Base):
+    def modal(self, url, **data):
+        method = self.client.post if data else self.client.get
+        return method(url, data, headers={"HX-Modal": "true"})
+
+    def test_filter_lists_the_inactive(self):
+        self.client.force_login(self.ada)
+        response = self.client.get("/people/?inactive=1")
+        self.assertContains(response, "Inactive")
+        self.assertContains(response, self.cleo.email)
+        self.assertContains(response, self.staffer.email)
+        self.assertNotContains(response, self.root.email)
+        # Activate… only for those staff may change
+        self.assertContains(response, f"/people/{self.cleo.pk}/activate/")
+        self.assertNotContains(response, f"/people/{self.staffer.pk}/activate/")
+        everybody = self.client.get("/people/")
+        self.assertContains(everybody, "?inactive=1")
+
+    def test_filter_is_for_staff(self):
+        for user in [self.pia, person("Chris", client=True)]:
+            self.client.force_login(user)
+            response = self.client.get("/people/?inactive=1")
+            self.assertNotContains(response, "?inactive=1")
+            self.assertNotContains(response, self.cleo.email)
+
+    def test_activate_modal_and_post(self):
+        self.client.force_login(self.ada)
+        url = f"/people/{self.cleo.pk}/activate/"
+        assert_modal(self, self.modal(url), title=f"Activate {self.cleo.display_name}?")
+        self.assertContains(self.client.get(url), "Send the invitation mail")
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(url, {"mail": "on"})
+        self.assertRedirects(
+            response, f"/people/{self.cleo.pk}/", fetch_redirect_response=False
+        )
+        self.assertTrue(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_activate_without_the_mail_and_next(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            f"/people/{self.cleo.pk}/activate/", {"next": "/people/?inactive=1"}
+        )
+        self.assertRedirects(
+            response, "/people/?inactive=1", fetch_redirect_response=False
+        )
+        self.assertTrue(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_activate_a_bounced_address_says_so(self):
+        self.cleo.mail_undeliverable_at = timezone.now()
+        self.cleo.save()
+        self.client.force_login(self.ada)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/people/{self.cleo.pk}/activate/", {"mail": "on"}, follow=True
+            )
+        self.assertContains(response, "bounced: no invitation mail was sent")
+        self.assertTrue(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_deactivate_question_and_post(self):
+        self.client.force_login(self.ada)
+        UserSession.objects.create(
+            user=self.dora, session_key="x", ip="127.0.0.1", user_agent="F"
+        )
+        User.objects.filter(pk=self.dora.pk).update(is_active=True)
+        url = f"/people/{self.dora.pk}/deactivate/"
+        assert_modal(
+            self, self.modal(url), title=f"Deactivate {self.dora.display_name}?"
+        )
+        self.assertTrue(self.active(self.dora))
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(self.active(self.dora))
+        self.assertFalse(UserSession.objects.filter(user=self.dora).exists())
+
+    def test_buttons_on_the_persons_page(self):
+        self.client.force_login(self.ada)
+        page = self.client.get(f"/people/{self.cleo.pk}/")
+        self.assertContains(page, "Activate…")
+        self.assertNotContains(page, "Deactivate…")
+        self.assertNotContains(
+            self.client.get(f"/people/{self.staffer.pk}/"), "Activate…"
+        )
+        self.assertNotContains(self.client.get(f"/people/{self.ada.pk}/"), "…</a>")
+        self.client.force_login(self.root)
+        self.assertContains(self.client.get(f"/people/{self.staffer.pk}/"), "Activate…")
+        self.assertContains(self.client.get(f"/people/{self.ada.pk}/"), "Deactivate…")
+        # Not oneself
+        self.assertNotContains(
+            self.client.get(f"/people/{self.root.pk}/"), "Deactivate…"
+        )
+
+    def test_staff_may_not_change_staff_and_partners(self):
+        self.client.force_login(self.ada)
+        for target in [self.staffer, self.parter]:
+            for name in ["activate", "deactivate"]:
+                with self.subTest(target=target, name=name):
+                    url = f"/people/{target.pk}/{name}/"
+                    self.assertEqual(self.client.get(url).status_code, 403)
+                    self.assertEqual(self.client.post(url).status_code, 403)
+        self.assertFalse(self.active(self.staffer))
+        ada_target = f"/people/{self.ada.pk}/deactivate/"
+        self.assertEqual(self.client.post(ada_target).status_code, 403)
+
+    def test_admins_change_everybody(self):
+        self.client.force_login(self.root)
+        for target in [self.staffer, self.parter]:
+            response = self.client.post(f"/people/{target.pk}/activate/")
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(self.active(target))
+        self.assertEqual(
+            self.client.post(f"/people/{self.pia.pk}/deactivate/").status_code, 302
+        )
+        self.assertFalse(self.active(self.pia))
+
+    def test_oneself_is_refused_with_a_message(self):
+        self.client.force_login(self.root)
+        response = self.client.post(f"/people/{self.root.pk}/deactivate/", follow=True)
+        self.assertContains(response, "You can&#x27;t deactivate yourself.")
+        self.assertTrue(self.active(self.root))
+
+    def test_clients_and_partners(self):
+        client = person("Chris", client=True)
+        for user, status in [(client, 404), (self.pia, 404)]:
+            self.client.force_login(user)
+            for name in ["activate", "deactivate"]:
+                url = f"/people/{self.cleo.pk}/{name}/"
+                with self.subTest(user=user, name=name):
+                    self.assertEqual(self.client.get(url).status_code, status)
+                    self.assertEqual(self.client.post(url).status_code, status)
+        self.assertFalse(self.active(self.cleo))
+
+    def test_palette(self):
+        self.client.force_login(self.ada)
+        actions = palette_data(self.client.get(f"/people/{self.cleo.pk}/"))["actions"]
+        self.assertIn(
+            f"/people/{self.cleo.pk}/activate/", [a.get("url") for a in actions]
+        )
+        actions = palette_data(self.client.get(f"/people/{self.staffer.pk}/"))[
+            "actions"
+        ]
+        self.assertNotIn("/activate/", " ".join(a.get("url", "") for a in actions))
+
+
+class APITest(Base):
+    def setUp(self):
+        super().setUp()
+        self.api = Client()
+        self.api.force_login(self.ada)
+
+    def post(self, url, data=None):
+        return self.api.post(
+            f"/api/v1/{url}", data or {}, content_type="application/json"
+        )
+
+    def test_activate_one(self):
+        response = self.post(f"people/{self.cleo.pk}/activate/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["is_active"])
+        self.assertFalse(response.json()["mailed"])
+        self.assertTrue(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_activate_one_with_the_mail(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post(f"people/{self.cleo.pk}/activate/", {"mail": True})
+        self.assertTrue(response.json()["mailed"])
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_bounced_is_not_mailed(self):
+        self.cleo.mail_undeliverable_at = timezone.now()
+        self.cleo.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post(f"people/{self.cleo.pk}/activate/", {"mail": True})
+        self.assertTrue(response.json()["is_active"])
+        self.assertFalse(response.json()["mailed"])
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_bulk_activate(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post(
+                "people/activate/",
+                {"ids": [self.cleo.pk, self.dora.pk], "mail": True},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [p["id"] for p in response.json()], [self.cleo.pk, self.dora.pk]
+        )
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_bulk_is_all_or_nothing(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post(
+                "people/activate/",
+                {"ids": [self.cleo.pk, self.staffer.pk], "mail": True},
+            )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(self.active(self.cleo))
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(
+            self.post("people/activate/", {"ids": [self.cleo.pk, 9999]}).status_code,
+            404,
+        )
+        self.assertFalse(self.active(self.cleo))
+        self.assertEqual(self.post("people/activate/", {"ids": []}).status_code, 400)
+
+    def test_staff_may_not_change_staff_or_partners(self):
+        for target in [self.staffer, self.parter]:
+            self.assertEqual(
+                self.post(f"people/{target.pk}/activate/").status_code, 403
+            )
+        self.assertEqual(
+            self.post(f"people/{self.pia.pk}/deactivate/").status_code, 403
+        )
+        self.assertTrue(self.active(self.pia))
+
+    def test_admins_change_everybody(self):
+        self.api.force_login(self.root)
+        response = self.post(
+            "people/activate/", {"ids": [self.staffer.pk, self.parter.pk]}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.active(self.staffer))
+        response = self.post(f"people/{self.pia.pk}/deactivate/")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["is_active"])
+
+    def test_deactivate_ends_access(self):
+        User.objects.filter(pk=self.cleo.pk).update(is_active=True)
+        self.cleo.refresh_from_db()
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="read")
+        CalendarToken.renew(self.cleo)
+        response = self.post(f"people/{self.cleo.pk}/deactivate/")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(APIToken.objects.filter(user=self.cleo).exists())
+        self.assertFalse(CalendarToken.objects.filter(user=self.cleo).exists())
+        other = Client()
+        self.assertEqual(
+            other.get(
+                "/api/v1/me/", headers={"Authorization": f"Bearer {secret}"}
+            ).status_code,
+            401,
+        )
+
+    def test_bulk_deactivate_refuses_oneself_as_a_whole(self):
+        self.api.force_login(self.root)
+        response = self.post("people/deactivate/", {"ids": [self.ada.pk, self.root.pk]})
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(self.active(self.ada))
+
+    def test_clients_and_partners_get_403(self):
+        for user in [person("Chris", client=True), self.pia]:
+            self.api.force_login(user)
+            with self.subTest(user=user):
+                self.assertEqual(
+                    self.post(f"people/{self.cleo.pk}/activate/").status_code, 403
+                )
+                self.assertEqual(
+                    self.post("people/deactivate/", {"ids": [self.ada.pk]}).status_code,
+                    403,
+                )
+                self.assertEqual(self.api.get("/api/v1/people/").status_code, 403)
+        self.assertFalse(self.active(self.cleo))
+
+    def test_list(self):
+        response = self.api.get("/api/v1/people/", {"inactive": "true"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {p["id"] for p in response.json()},
+            {self.cleo.pk, self.dora.pk, self.staffer.pk, self.parter.pk},
+        )
+        active = {p["id"] for p in self.api.get("/api/v1/people/").json()}
+        self.assertIn(self.ada.pk, active)
+        self.assertNotIn(self.cleo.pk, active)

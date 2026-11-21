@@ -442,6 +442,62 @@ def invite(
 
 
 @cli.group(invoke_without_command=True)
+@click.option("--inactive", is_flag=True, help="People who can't sign in.")
+@json_option
+@click.pass_context
+def people(ctx, inactive, as_json):
+    """The active people (staff), or with --inactive those who can't sign
+    in; `biwak people activate` and `deactivate` change that"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    data = request("GET", "people/", params={"inactive": inactive})
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Name", "Email", "Organization")
+    for person in data:
+        t.add_row(
+            str(person["id"]), person["name"], person["email"], person["organization"]
+        )
+    console.print(t)
+    return None
+
+
+@people.command("activate")
+@click.argument("ids", nargs=-1, type=int, required=True)
+@click.option(
+    "--mail",
+    is_flag=True,
+    help="Send them the invitation mail (not to addresses that bounced).",
+)
+@json_option
+def people_activate(ids, mail, as_json):
+    """Activate the people with these IDs, all or nothing: staff activate
+    clients, admins also staff and partners"""
+    data = request("POST", "people/activate/", json={"ids": list(ids), "mail": mail})
+    if as_json:
+        return echo_json(data)
+    for person in data:
+        note = " (mailed)" if person["mailed"] else ""
+        click.echo(f"Activated: {person['name']} ({person['id']}){note}")
+    return None
+
+
+@people.command("deactivate")
+@click.argument("ids", nargs=-1, type=int, required=True)
+@json_option
+def people_deactivate(ids, as_json):
+    """Deactivate the people with these IDs and end their access (sessions,
+    API tokens, calendar links), all or nothing; not yourself, not the last
+    active admin"""
+    data = request("POST", "people/deactivate/", json={"ids": list(ids)})
+    if as_json:
+        return echo_json(data)
+    for person in data:
+        click.echo(f"Deactivated: {person['name']} ({person['id']})")
+    return None
+
+
+@cli.group(invoke_without_command=True)
 @json_option
 @click.pass_context
 def invitations(ctx, as_json):

@@ -42,6 +42,9 @@ biwak message post PROJECT "Kick-off" "We start Monday" --notify nobody
 biwak search tent
 biwak invite dora@example.net eve@example.net --project 4 --project 7
 biwak invitations
+biwak people --inactive
+biwak people activate 12 13 --mail
+biwak people deactivate 14
 ```
 
 The numbers are the IDs in the pages' addresses. Every command takes
