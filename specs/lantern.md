@@ -77,9 +77,10 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
 - **Visibility:** listing applies the mails' rules
   (`notifications_for()`, `wanted()`, `mails._deliverable()`): only items
   the person sees now, for clients only events of the time clients saw
-  the item, not on the level "nothing". Others stay in the database,
-  unseen. Pages may hold fewer entries than asked for (the level is
-  checked after loading). Reading and marking unread touch only what's
+  the item (the level doesn't hide anything: subscribing is the switch,
+  `notifications.md`). Others stay in the database, unseen. Pages may
+  hold fewer entries than asked for (visibility and the net change of
+  completing and reopening are checked after loading). Reading and marking unread touch only what's
   listed.
 
 ### Reading

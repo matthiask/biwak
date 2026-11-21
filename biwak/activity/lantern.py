@@ -2,7 +2,8 @@
 
 The same notifications as the mails (``notify()`` writes them), listed
 with the rules of mailing them (``mails._deliverable()``): only about
-items the person sees now, not those whose level is "nothing" now.
+items the person sees now (subscribing is the switch: the level doesn't
+hide anything), and of completing and reopening only the net change.
 Others stay in the database, unseen. Only the lantern reads them
 (decided 2026-11-21): following an entry (a link posting ``views.lantern_open``
 in the background)
@@ -51,8 +52,9 @@ def notifications_for(user, *, unread=None, mentions=False):
 
 
 def wanted(notifications, user):
-    """Those whose item's level isn't "nothing" now (the rest of
-    ``mails._deliverable()`` is in ``notifications_for()``)"""
+    """Those the person may still get (``mails._deliverable()``: the item
+    visible to them now, of the unread ones only the net change of
+    completing and reopening; the rest is in ``notifications_for()``)"""
     from biwak.activity.mails import _deliverable
 
     return _deliverable(notifications, user)
