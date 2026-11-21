@@ -6,7 +6,10 @@ answer goes into the spec named, and the entry leaves this file. Kept up
 to date: questions asked in the conversation and answered there are
 recorded in their spec and leave this file too.
 
-Nothing open at the moment.
+1. **Keeping the live editor's typing in the browser** (`connection.md`):
+   so closing the tab or a crash while offline loses nothing (Yjs's
+   IndexedDB storage, removed once synced and on logging out).
+   Suggestion: yes.
 
 Decided to wait: the wording of mails, messages and the editor's and the
 lantern's texts is reviewed all at once with the German translation;
