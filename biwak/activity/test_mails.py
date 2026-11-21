@@ -226,6 +226,20 @@ class MailsTest(TestCase):
         callbacks[0]()
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_checklists_in_both_parts(self):
+        self.act(
+            lambda: ops.add_comment(
+                self.todo, author=self.ada, content="- [x] Poles\n- [ ] Pegs"
+            )
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        message = next(m for m in mail.outbox if m.to == [self.bob.email])
+        self.assertIn("- \u2611 Poles", message.body)
+        self.assertIn("- \u2610 Pegs", message.body)
+        html = message.alternatives[0].content
+        self.assertIn("\u2611", html)
+        self.assertNotIn("<input", html)
+
     def test_references_to_other_items_attachments(self):
         """Their names stay out of mails (specs/files.md)"""
         subscribe(self.cleo, self.todo)

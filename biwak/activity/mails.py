@@ -83,13 +83,23 @@ def sender(name):
 LABELLED_REFERENCE = re.compile(rf"!?\[(?:\\.|[^\]\\])*\]\({REFERENCE.pattern}\)")
 
 
+_TASK = re.compile(
+    r"^((?:[ \t]|>)*(?:[-*+]|\d+[.)])[ \t]+)\[([ xX])\](?=[ \t])", re.MULTILINE
+)
+
+
+def _task_glyphs(text):
+    """Task lists in the plain text part: ``- [ ] a`` as ``- ☐ a``"""
+    return _TASK.sub(lambda m: m[1] + ("\u2610" if m[2] == " " else "\u2611"), text)
+
+
 def plain_text(text, item):
     """A text for the plain text part: mentions as ``@`` and the current
     name, the item's attachments (``attachment:KEY``) as their download
     URLs; the download checks access, as on the pages. References to other
     items' attachments become a plain "attachment", without their names
     (``render_markdown()``)."""
-    text = mentions.plain(text, item)
+    text = _task_glyphs(mentions.plain(text, item))
     keys = set(REFERENCE.findall(text))
     if not keys:
         return text

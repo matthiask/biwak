@@ -9,6 +9,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
+from mdit_py_plugins.tasklists import tasklists_plugin
 
 
 register = template.Library()
@@ -16,6 +17,7 @@ register = template.Library()
 # Texts are stored as Markdown (specs/core.md): no HTML, links clickable
 _markdown = MarkdownIt("commonmark", {"html": False, "linkify": True, "breaks": True})
 _markdown.enable(["linkify", "strikethrough", "table"])
+_markdown.use(tasklists_plugin)
 
 _PERSON = re.compile(r"person:(\d+)")
 
@@ -58,6 +60,35 @@ def _mentions(state):
 _markdown.core.ruler.push("mentions", _mentions)
 
 
+def _checkboxes(state):
+    """Checkboxes of task lists (``biwak/checklists.py``): numbered, in a
+    mail a glyph, disabled unless the page lets the viewer tick them
+    (``env["tickable"]``)"""
+    from biwak.checklists import is_checkbox
+
+    number = 0
+    for block in state.tokens:
+        if block.type != "inline" or not block.children:
+            continue
+        box = block.children[0]
+        if not is_checkbox(box):
+            continue
+        checked = "checked" in box.content
+        if state.env.get("glyphs"):
+            box.content = "\u2611 " if checked else "\u2610 "
+        else:
+            box.content = (
+                f'<input class="task-list-item-checkbox" type="checkbox" '
+                f'data-index="{number}"'
+                f"{' checked' if checked else ''}"
+                f"{'' if state.env.get('tickable') else ' disabled'}>"
+            )
+        number += 1
+
+
+_markdown.core.ruler.push("checkboxes", _checkboxes)
+
+
 @register.filter
 def markdown(text, item=None):
     """Markdown as HTML; mentions with current names when the item they're
@@ -67,19 +98,29 @@ def markdown(text, item=None):
 
 @register.filter
 def mail_markdown(text, item=None):
-    """For mails: like ``markdown``, attachment URLs with BASE_URL"""
-    return render_markdown(text, item, absolute=True)
+    """For mails: like ``markdown``, attachment URLs with BASE_URL and
+    checkboxes as ☐ and ☑"""
+    return render_markdown(text, item, absolute=True, glyphs=True)
 
 
-def render_markdown(text, item=None, *, absolute=False, attachment_urls=True):
+def render_markdown(
+    text,
+    item=None,
+    *,
+    absolute=False,
+    attachment_urls=True,
+    tickable=False,
+    glyphs=False,
+):
     """``absolute`` for the API and mails: attachment URLs with BASE_URL.
     ``attachment_urls=False`` skips looking them up (excerpts don't show
-    them)"""
+    them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
+    turns them into ☐ and ☑ (mails)."""
     from biwak.activity.mentions import mentioned_ids, visible_names
 
     text = str(text or "")
     names = visible_names(item, mentioned_ids(text)) if item is not None else {}
-    env = {"names": names}
+    env = {"names": names, "tickable": tickable, "glyphs": glyphs}
     tokens = _markdown.parse(text, env)
     if attachment_urls:
         _attachment_urls(tokens, item, absolute=absolute)
