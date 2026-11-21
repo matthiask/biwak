@@ -93,7 +93,10 @@ records, levels, `send_mails`), reactions.
   notification, until the bookmark is removed. The bookmarks page shows
   the same items.
 - **Mark as unread** per item (also in the menu, next to each entry),
-  bringing the item's latest notification back to unread. Marked unread
+  bringing the item's notifications that were read together with its
+  latest one back to unread, so the entry is unread as a whole, as
+  "Mark as read" reads it as a whole (decided 2026-11-21; first only the
+  latest one). Marked unread
   means no mail (decided 2026-11-21): a notification marked unread by
   hand is never mailed afterwards, neither by each change nor in the
   digest (`Notification.marked_unread_at`, left out by `send_mails`).

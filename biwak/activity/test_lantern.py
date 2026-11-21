@@ -545,20 +545,34 @@ class BookmarkingTest(LanternTestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_mark_as_unread_brings_the_latest_back(self):
+    def test_mark_as_unread_brings_the_whole_entry_back(self):
+        """What was read together comes back together, as "Mark as read"
+        reads the whole entry (decided 2026-11-21)"""
         self.comment(self.todo, "One")
         self.comment(self.todo, "Two")
         lantern.read(self.bob)
         self.assertTrue(lantern.unread(self.bob, item=self.todo))
         self.assertEqual(lantern.unread_count(self.bob), 1)
-        latest = Notification.objects.filter(user=self.bob).latest("created_at", "pk")
-        self.assertIsNone(latest.read_at)
+        mine = Notification.objects.filter(user=self.bob, event__item=self.todo)
+        self.assertEqual(mine.count(), 2)
+        self.assertFalse(mine.exclude(read_at=None).exists())
+        self.assertFalse(mine.filter(marked_unread_at=None).exists())
         self.client.force_login(self.bob)
         menu = self.client.get(reverse("lantern_menu")).content.decode()
         self.assertIn("Mark as read", menu)
         lantern.read(self.bob)
         menu = self.client.get(reverse("lantern_menu")).content.decode()
         self.assertIn("Mark as unread", menu)
+
+    def test_mark_as_unread_leaves_what_was_read_earlier(self):
+        """Read on another day stays read: only the entry's latest batch"""
+        self.comment(self.todo, "Old")
+        lantern.read(self.bob)
+        self.comment(self.todo, "New")
+        lantern.read(self.bob)
+        lantern.unread(self.bob, item=self.todo)
+        unread = Notification.objects.filter(user=self.bob, read_at=None)
+        self.assertEqual(unread.count(), 1)
 
 
 class PingTest(LanternTestCase):
