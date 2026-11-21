@@ -110,6 +110,45 @@ class ManageTest(TestCase):
             with self.subTest(url=url, data=data):
                 self.assertEqual(self.client.post(url, data).status_code, 400)
 
+    def test_negative_index_and_the_same_todo_twice(self):
+        """The API took index -1 as one from the end; [a, a] left a gap"""
+        b = ops.create_todo(todolist=self.shared, title="B", creator=self.ada)
+        ops.create_todo(todolist=self.shared, title="C", creator=self.ada)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        h = {"authorization": f"Bearer {secret}"}
+
+        def titles():
+            return list(
+                Item.objects
+                .filter(parent=self.shared, todo__group=None)
+                .order_by("position")
+                .values_list("title", "position")
+            )
+
+        response = self.client.post(
+            f"/api/v1/todos/{b.pk}/move/",
+            {"index": -1},
+            content_type="application/json",
+            headers=h,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(titles(), [("B", 1), ("Visible", 2), ("C", 3)])
+        response = self.client.post(
+            f"/api/v1/lists/{self.shared.pk}/todos/move/",
+            {"todo_ids": [b.pk, b.pk], "index": 1},
+            content_type="application/json",
+            headers=h,
+        )
+        self.assertEqual(response.status_code, 400)
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            f"/lists/{self.shared.pk}/todos/move/", {"todos": [b.pk, b.pk]}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(titles(), [("B", 1), ("Visible", 2), ("C", 3)])
+        with self.assertRaises(ValueError):
+            ops.move_todos([b, b], todolist=self.shared, actor=self.ada)
+
     def test_groups(self):
         second = ops.create_group(todolist=self.shared.todolist, title="Someday")
         self.client.force_login(self.ada)

@@ -557,13 +557,16 @@ def todos_move(request, list_id: int, data: MoveManyIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
-    ops.move_todos(
-        [todos[pk] for pk in data.todo_ids],
-        todolist=target,
-        group=group,
-        index=data.index,
-        actor=request.user,
-    )
+    try:
+        ops.move_todos(
+            [todos[pk] for pk in data.todo_ids],
+            todolist=target,
+            group=group,
+            index=data.index,
+            actor=request.user,
+        )
+    except ValueError:
+        bad_request(_("Send each to-do once."))
     return [
         todo_out(item_for(request, pk, Kind.TODO), request.user) for pk in data.todo_ids
     ]

@@ -335,13 +335,16 @@ def todos_move(request, pk):
     group = None
     if group_id := request.POST.get("group"):
         group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
-    ops.move_todos(
-        [todos[pk] for pk in ids],
-        todolist=target,
-        group=group,
-        index=_index(request.POST.get("index")),
-        actor=request.user,
-    )
+    try:
+        ops.move_todos(
+            [todos[pk] for pk in ids],
+            todolist=target,
+            group=group,
+            index=_index(request.POST.get("index")),
+            actor=request.user,
+        )
+    except ValueError:
+        return HttpResponse(status=400)
     return HttpResponse(status=204)
 
 

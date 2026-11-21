@@ -486,9 +486,12 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     (or ungrouped), next to each other in the given order, starting at
     ``index`` among the others there (0-based, None: at the end). Locks the
     lists, so concurrent moves don't mix up positions. Moving into another
-    list recomputes the visibility."""
+    list recomputes the visibility. Raises ``ValueError`` for a to-do given
+    twice."""
     if not items:
         return
+    if len({i.pk for i in items}) != len(items):
+        raise ValueError("A to-do can't be moved twice at once")
     sources = {(i.parent_id, i.todo.group_id) for i in items}
     lists = sorted({todolist.pk} | {list_id for list_id, _group in sources})
     list(TodoList.objects.select_for_update().filter(item__in=lists).order_by("pk"))
@@ -501,6 +504,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     siblings = [i for i in _todos_in(todolist, group) if i.pk not in moved]
     if index is None or index > len(siblings):
         index = len(siblings)
+    index = max(0, index)
     siblings[index:index] = items
 
     for item in items:
