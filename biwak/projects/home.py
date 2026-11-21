@@ -18,7 +18,6 @@ from biwak.activity.models import Action
 from biwak.bookmarks.models import Bookmark
 from biwak.checkins import operations as checkin_ops
 from biwak.items import due, glance
-from biwak.items.by_due import GROUP_LABELS
 from biwak.items.models import Status
 from biwak.projects import operations as project_ops
 from biwak.projects.overview import overview
@@ -33,16 +32,6 @@ UPDATES_EVENTS = 50
 BOOKMARKS = 5
 PROJECTS = 6
 WINDOW = dt.timedelta(days=7)
-
-
-def due_sections(todos, today):
-    """``[(group, label, [to-do])]`` of the to-dos in the order given"""
-    sections = {}
-    for item in todos:
-        sections.setdefault(due.group_of(item.todo.due_on, today), []).append(item)
-    return [
-        (key, GROUP_LABELS[key], sections[key]) for key in due.GROUPS if key in sections
-    ]
 
 
 def due_todos(user, today, *, assigned_by=False):
@@ -162,9 +151,9 @@ def dashboard(request):
         request,
         "projects/home.html",
         {
-            "sections": due_sections(mine, today),
+            "sections": due.sections(mine, today),
             "open_count": open_count if open_count > len(mine) else None,
-            "waiting": due_sections(waiting, today),
+            "waiting": due.sections(waiting, today),
             "occurrences": occurrences,
             "days": updates(events),
             "projects": projects,

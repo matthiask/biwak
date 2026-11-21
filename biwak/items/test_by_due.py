@@ -34,7 +34,10 @@ class GroupingTest(TestCase):
             ("2026-11-18", "today"),
             ("2026-11-19", "this_week"),
             ("2026-11-22", "this_week"),  # Sunday
-            ("2026-11-23", "later"),
+            ("2026-11-23", "next_week"),  # Monday
+            ("2026-11-29", "next_week"),  # The Sunday after
+            ("2026-11-30", "later"),
+            ("2027-01-04", "later"),
         ]:
             with self.subTest(due_on=due_on):
                 self.assertEqual(
@@ -44,10 +47,44 @@ class GroupingTest(TestCase):
     def test_a_sunday_has_no_rest_of_the_week(self):
         today = d("2026-11-22")
         self.assertEqual(due.group_of(d("2026-11-22"), today), "today")
-        self.assertEqual(due.group_of(d("2026-11-23"), today), "later")
+        self.assertEqual(due.group_of(d("2026-11-23"), today), "next_week")
+        self.assertEqual(due.group_of(d("2026-11-29"), today), "next_week")
+        self.assertEqual(due.group_of(d("2026-11-30"), today), "later")
         # And a Monday has the whole week
-        self.assertEqual(due.group_of(d("2026-11-29"), d("2026-11-23")), "this_week")
-        self.assertEqual(due.group_of(d("2026-11-30"), d("2026-11-23")), "later")
+        monday = d("2026-11-23")
+        self.assertEqual(due.group_of(d("2026-11-29"), monday), "this_week")
+        self.assertEqual(due.group_of(d("2026-11-30"), monday), "next_week")
+        self.assertEqual(due.group_of(d("2026-12-06"), monday), "next_week")
+        self.assertEqual(due.group_of(d("2026-12-07"), monday), "later")
+
+    def test_the_sections_split_later_into_months(self):
+        class Item:
+            def __init__(self, due_on):
+                self.todo = type("T", (), {"due_on": due_on})
+
+        today = d("2026-11-18")
+        items = [
+            Item(d(day))
+            for day in [
+                "2026-11-23",
+                "2026-12-01",
+                "2026-12-24",
+                "2027-01-05",
+                "2027-02-01",
+            ]
+        ]
+        self.assertEqual(
+            [
+                (key, str(label), len(found))
+                for key, label, found in due.sections(items, today)
+            ],
+            [
+                ("next_week", "Next week", 1),
+                ("later-2026-12", "December", 2),
+                ("later-2027-01", "January 2027", 1),
+                ("later-2027-02", "February 2027", 1),
+            ],
+        )
 
 
 class ByDueTestCase(TestCase):
@@ -105,19 +142,31 @@ class PageTest(ByDueTestCase):
                 "overdue": ["late"],
                 "today": ["now"],
                 "this_week": ["soon"],
-                "later": ["far"],
+                "next_week": ["far"],
                 "none": ["whenever"],
             },
         )
         with at("2026-11-17 22:30", "UTC"):  # 23:30 on the 17th
             sections = self.sections(self.client.get("/todos/?grouping=due"))
         self.assertEqual(sections["today"], ["late"])
-        # Sunday evening: the next day is later
+        # Sunday evening: the next day is next week
         with at("2026-11-22 23:30"):
             sections = self.sections(self.client.get("/todos/?grouping=due"))
-        self.assertEqual(sections["later"], ["far"])
+        self.assertEqual(sections["next_week"], ["far"])
         self.assertEqual(sections["overdue"], ["late", "now"])
         self.assertEqual(sections["today"], ["soon"])
+
+    def test_later_is_one_section_per_month(self):
+        self.todo("next", "2026-11-25")
+        self.todo("december", "2026-12-10")
+        self.todo("january", "2027-01-03")
+        self.client.force_login(self.ada)
+        with at("2026-11-18 12:00"):
+            response = self.client.get("/todos/?grouping=due")
+        headings = [str(label) for _k, label, _t in response.context["sections"]]
+        self.assertEqual(headings, ["Next week", "December", "January 2027"])
+        self.assertContains(response, ">December<")
+        self.assertNotContains(response, ">Later<")
 
     def test_across_projects_and_access(self):
         self.todo("Visible")
@@ -318,6 +367,17 @@ class APITest(ByDueTestCase):
             )
             self.assertEqual(
                 self.titles(self.get(self.ada, due_group="later")), ["Far"]
+            )
+            self.assertEqual(self.titles(self.get(self.ada, due_group="next_week")), [])
+            self.todo("Next", "2026-11-24")
+            self.assertEqual(
+                self.titles(self.get(self.ada, due_group="next_week")), ["Next"]
+            )
+            self.assertEqual(
+                self.get(self.ada, due_group="next_week").json()["results"][0][
+                    "due_group"
+                ],
+                "next_week",
             )
             self.assertEqual(
                 self.titles(

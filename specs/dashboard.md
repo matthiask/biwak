@@ -13,13 +13,16 @@ a browser test in `biwak/test_e2e.py` (`HomeTest`). Decisions on the way:
   `frontend/lantern.js` posts to when the link is followed (the lantern's
   entries work the same; `lantern_open` answers POST only, so the link
   can't point at it). `lantern.unread_by_item()` finds the notifications.
-- "Due" and "Waiting on others" group by `due.group_of()`, so days after
-  this week are headed "Later"; "All N to-dos" shows the number of all my
+- "Due" and "Waiting on others" use the sections of `due.sections()`
+  (Overdue, Today, This week, Next week; decided 2026-11-21, the same
+  groups as the to-dos page, `todos.md`); "All N to-dos" shows the number of all my
   open to-dos when there are more than the rows shown.
 - Recent updates take the newest 50 events of the last 7 days from the two
   sources, merge them into entries and show the first 10.
-- "Keyboard shortcuts" in the links card is a hint (`?`), not a link: the
-  help dialog has no address.
+- "Keyboard shortcuts" in the links card is a link opening the help
+  dialog (`data-shortcuts-open`, `frontend/shortcuts.js`; decided
+  2026-11-21); without JavaScript (or with shortcuts off) the hint with
+  `?` shows instead.
 - "New project" is the one primary button, in the links card.
 
 **Agent:** a cheaper model following this spec and the checklist in

@@ -116,6 +116,11 @@ class DueTest(HomeTestCase):
             ["overdue", "today"],
         )
         self.assertContains(response, "Overdue")
+        labels = {key: label for key, label, _t in response.context["sections"]}
+        # The to-do due in 7 days is always after this week
+        self.assertEqual(labels["next_week"], "Next week")
+        self.assertContains(response, "Next week")
+        self.assertNotContains(response, ">Later<")
         # More to-dos than shown: the link has the number
         self.assertContains(response, "All 6 to-dos")
 

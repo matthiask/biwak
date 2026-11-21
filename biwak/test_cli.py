@@ -336,6 +336,10 @@ class CLITest(TestCase):
         data = json.loads(self.biwak("todos", "--due", "none", "--json").stdout)
         self.assertEqual({t["title"] for t in data}, {"Nobodys", "Elsewhere"})
         self.assertEqual(data[0]["due_group"], "none")
+        for group in ["next_week", "later"]:
+            result = self.biwak("todos", "--due", group, "--json")
+            self.assertEqual(result.exit_code, 0, group)
+            self.assertEqual(json.loads(result.stdout), [])
         self.assertEqual(self.biwak("todos", self.list.pk, "--mine").exit_code, 1)
         self.assertEqual(self.biwak("todos", self.list.pk, "--by-due").exit_code, 1)
         # The list's own to-dos stay
