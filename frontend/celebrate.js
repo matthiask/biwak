@@ -91,16 +91,39 @@ async function row(form, row) {
   follow(url)
 }
 
-// The to-do's page: the button's icon pops, then the page follows
+// Shows the end state a moment before the page follows
+const HOLD = 400
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// The to-do's page: the heading gets the moment of a row (the check pops
+// in before the title, the title is struck through), the button's icon
+// pops, then the page follows
 async function page(form) {
   const icon = form.querySelector(".bi")
   const completing = form.dataset.celebrate === "complete"
-  if (completing) icon.classList.add("is-popping")
+  const animations = []
+  if (completing) {
+    icon.classList.add("is-popping")
+    animations.push(ended(icon, "wb-pop"))
+    const title = document.querySelector("[data-celebrate-title]")
+    if (title) {
+      const mark = document.createElement("span")
+      mark.className = "text-body-secondary"
+      mark.innerHTML =
+        '<i class="bi bi-check-circle is-popping" aria-hidden="true"></i> '
+      title.before(mark)
+      title.classList.add("is-striking")
+      animations.push(
+        ended(mark.firstChild, "wb-pop"),
+        ended(title, "wb-strike"),
+      )
+    }
+  }
   let url
   try {
     ;[url] = await Promise.all([
       send(form),
-      completing ? ended(icon, "wb-pop") : Promise.resolve(),
+      Promise.all(animations).then(() => completing && pause(HOLD)),
     ])
   } catch {
     form.submit()

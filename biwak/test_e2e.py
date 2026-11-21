@@ -2973,7 +2973,10 @@ class CompletionTest(E2ETestCase):
         self.make_list("Launch", todos=["Plan"])
         self.goto(page, Item.objects.get(title="Plan"))
         page.get_by_role("button", name="Complete").click()
-        expect(page.locator(".bi.is-popping")).to_have_count(1)
+        # The button's icon and the heading's new check pop, the title is
+        # struck through
+        expect(page.locator(".bi.is-popping")).to_have_count(2)
+        expect(page.locator("h1 .wb-todo-title.is-striking")).to_be_visible()
         expect(page.get_by_text("Completed by")).to_be_visible()
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
 

@@ -16,7 +16,7 @@
       {% endif %}
     >
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
-      {{ item|item_title }}
+      <span class="wb-todo-title" data-celebrate-title>{{ item|item_title }}</span>
       {% client_badge item %}
     </h1>
     <div class="wb-page-actions is-compact">
