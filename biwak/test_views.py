@@ -158,16 +158,67 @@ class ViewsTest(TestCase):
     def test_switch(self):
         self.client.force_login(self.ada)
         ops.add_comment(self.secret_todo, author=self.ada, content="Internal note")
+        url = f"/items/{self.internal.pk}/switch/"
+        # The page offers the question, it doesn't say what happens
         response = self.client.get(self.internal.get_absolute_url())
-        self.assertContains(response, "1 to-do and 1 comments")
+        self.assertContains(response, f'href="{url}"')
+        self.assertContains(response, "data-modal")
+        # The question says what becomes visible, as a page and as a modal
+        response = self.client.get(url)
+        self.assertContains(response, "Show this list to clients?")
+        self.assertContains(response, "Makes this list, 1 to-do and 1 comments")
         self.assertContains(response, "visible to 1 client.")
+        self.assertContains(response, "Show to clients")
+        self.assertContains(response, "btn-destructive")
+        self.assertContains(response, 'name="visible"')
+        self.assertContains(response, "<html")
+        modal = self.client.get(url, headers={"HX-Modal": "true"})
+        self.assertContains(modal, "Show this list to clients?")
+        self.assertNotContains(modal, "<html")
+        # Asking changes nothing
+        self.assertIn(self.secret_todo, Item.objects.visible_to(self.ada))
+        self.assertNotIn(self.secret_todo, Item.objects.visible_to(self.cleo))
         Membership.objects.create(
             project=self.project, user=person("Dora", client=True)
         )
-        response = self.client.get(self.internal.get_absolute_url())
-        self.assertContains(response, "visible to 2 clients.")
-        self.client.post(f"/items/{self.internal.pk}/switch/", {"visible": "1"})
+        self.assertContains(self.client.get(url), "visible to 2 clients.")
+        response = self.client.post(url, {"visible": "1"})
+        self.assertRedirects(
+            response, self.internal.get_absolute_url(), fetch_redirect_response=False
+        )
         self.assertIn(self.secret_todo, Item.objects.visible_to(self.cleo))
+
+    def test_hiding_needs_no_question(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertContains(response, "Hide from clients")
+        self.assertNotContains(response, "Show to clients")
+        # Nothing to ask for what's visible already
+        url = f"/items/{self.shared.pk}/switch/"
+        self.assertRedirects(
+            self.client.get(url),
+            self.shared.get_absolute_url(),
+            fetch_redirect_response=False,
+        )
+        self.client.post(url)
+        self.assertNotIn(self.todo, Item.objects.visible_to(self.cleo))
+
+    def test_the_question_is_for_staff_only(self):
+        self.client.force_login(self.cleo)
+        for item in [self.internal, self.shared]:
+            self.assertEqual(
+                self.client.get(f"/items/{item.pk}/switch/").status_code, 403
+            )
+        self.assertEqual(
+            self.client.post(
+                f"/items/{self.shared.pk}/switch/", {"visible": "1"}
+            ).status_code,
+            403,
+        )
+        self.client.force_login(self.ada)
+        self.assertEqual(
+            self.client.get(f"/items/{self.todo.pk}/switch/").status_code, 400
+        )
 
     def test_switch_only_where_there_is_one(self):
         self.client.force_login(self.ada)

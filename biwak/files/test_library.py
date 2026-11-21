@@ -182,6 +182,8 @@ class LibraryTest(Fixture, TestCase):
         url = reverse("switch", args=[self.private.pk])
         response = self.client.get(self.private.get_absolute_url())
         self.assertContains(response, "Show to clients")
+        response = self.client.get(url)
+        self.assertContains(response, "Show this folder to clients?")
         self.assertContains(response, "items below it")
         self.assertContains(response, "visible to 1 client.")
         self.client.post(url, {"visible": "1"})
