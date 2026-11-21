@@ -70,6 +70,21 @@ records, levels, `send_mails`), reactions.
   - `POST /api/v1/lantern/read/` (all, or by item);
   - `biwak lantern [--unread] [--read ITEM|--all]`.
 
+- **Pinning** (decided 2026-11-21): an entry can be pinned to the top.
+  Pinning bookmarks its item (the existing bookmarks, no new concept);
+  bookmarked items with notifications appear in a "Pinned" section at
+  the top of the menu and the page, read or not, with their latest
+  notification, until unpinned (which removes the bookmark). The
+  bookmarks page shows the same pins.
+- **Mark as unread** per item (also in the menu, next to each entry),
+  bringing the item's latest notification back to unread.
+- **The favicon** (decided 2026-11-21, configurable): with the setting
+  on, the browser tab's icon shows a dot when there are unread
+  notifications, updated live; the setting (`User.lantern_in_favicon`,
+  off by default) sits in the notifications section of the settings
+  page. Drawn on a canvas from the normal favicon; without the setting
+  or without JavaScript the icon stays as it is.
+
 ## Live updates
 
 One websocket per browser tab (`/ws/live/`, Channels, the same ASGI
@@ -115,7 +130,9 @@ setup as `collaboration.md`).
 
 - **The lantern:**
   - the menu, the page, reading by opening and by marking;
-  - the count updating live;
+  - the count updating live; the favicon dot with the setting on and
+    not without it;
+  - pinning and unpinning (the bookmark follows), mark as unread;
   - mail delivery "none";
   - read notifications left out of mails and digests (a test for each);
   - a client never seeing a notification about something internal;
