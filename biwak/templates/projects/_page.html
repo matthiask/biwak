@@ -65,8 +65,8 @@
   {% if archived %}
     <div class="list-group mb-4">
       {% for project in projects %}
-        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2">
-          <a class="stretched-link text-decoration-none" href="{{ project.get_absolute_url }}">
+        <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+          <a class="flex-grow-1 text-decoration-none" href="{{ project.get_absolute_url }}">
             {% project_dot project %}{{ project }}
             {% if not project.is_all_access %}<span
                 class="text-body-secondary ms-1"
@@ -74,10 +74,7 @@
               >{% icon "lock" %}</span>{% endif %}
           </a>
           {% if can_manage %}
-            <span
-              class="position-relative"
-              style="z-index: 2"
-            >{% include "projects/_archive_form.html" with unarchive=True %}</span>
+            {% include "projects/_archive_form.html" with unarchive=True %}
           {% endif %}
         </div>
       {% empty %}
