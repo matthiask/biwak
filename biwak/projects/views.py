@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models.functions import Lower
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -20,6 +20,7 @@ from biwak.items.models import Item, Kind, Status
 from biwak.modals import form_response
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
+from biwak.organizations.people import project_groups
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.projects.overview import ProjectOrder, overview
@@ -327,25 +328,25 @@ def member_notify(request, pk, user_pk):
 
 
 def project_people(request, pk):
-    """Members; staff add, invite (modals) and remove people, and see who
+    """Members by organization (``project_groups()``); staff add (also from
+    an organization), invite (modals) and remove people, and see who
     hasn't signed in yet (specs/ui-round-6.md)"""
     project = project_for(request, pk)
     can_manage = project_ops.can_manage_members(request.user)
     memberships = list(
         project.memberships.select_related(
             "user__organization", "user__invited_by"
-        ).order_by("user__is_client", "user__full_name")
+        ).order_by(Lower("user__full_name"), "user__email")
     )
     for m in memberships:
         m.user.show_invitation = can_manage and m.user.is_invited
+    rows = [(m, notify_row(request.user, project, m.user)) for m in memberships]
     return render(
         request,
         "projects/people.html",
         {
             "project": project,
-            "memberships": [
-                (m, notify_row(request.user, project, m.user)) for m in memberships
-            ],
+            "groups": project_groups(project, rows, can_add=can_manage),
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
             ],
@@ -357,12 +358,25 @@ def project_people(request, pk):
 
 
 def member_add(request, pk):
-    """Adds somebody who has an account: a modal, also a page"""
+    """Adds somebody who has an account: a modal, also a page; with
+    ``?organization=ID`` somebody of that organization ("Add people from
+    …" on the people page), preselected when they're the only one"""
     project = project_for(request, pk)
     if not project_ops.can_manage_members(request.user):
         raise PermissionDenied
-    form = AddMemberForm(request.POST or None)
-    form.fields["user"].queryset = project_ops.addable_people(project)
+    people = project_ops.addable_people(project)
+    title = _("Add someone")
+    if organization := request.GET.get("organization"):
+        if not organization.isdigit():
+            raise Http404
+        organization = get_object_or_404(Organization, pk=organization)
+        people = people.filter(organization=organization)
+        title = _("Add people from %(organization)s") % {"organization": organization}
+    initial = {}
+    if organization and len(found := list(people[:2])) == 1:
+        initial["user"] = found[0]
+    form = AddMemberForm(request.POST or None, initial=initial)
+    form.fields["user"].queryset = people
     if form.is_valid():
         user = form.cleaned_data["user"]
         project_ops.add_member(
@@ -375,7 +389,7 @@ def member_add(request, pk):
     return form_response(
         request,
         form,
-        title=_("Add someone"),
+        title=title,
         project=project,
         cancel_url=reverse("project_people", args=[project.pk]),
         submit_label=_("Add"),

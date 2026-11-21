@@ -44,7 +44,9 @@ lists, messages, docs and files, check-ins, members.
   the trash; each list has a menu with "Archive".
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page.
-- **Members** lists who is in the project. Staff add people there or
+- **Members** lists who is in the project, by organization: your own
+  first, then the clients' organizations, then partners'. Staff add
+  people there, "Add people from …" an organization in the project, or
   invite them by email (see [People](#people)). "Add someone" and other long lists of choices
   (the person filter of the activity, a check-in's time zone) have a
   search field: type parts of the name, the organization or the address,
@@ -89,8 +91,12 @@ archived". You only find what you may see. See [Keyboard](keyboard.md).
 
 **People** lists everybody you may know, with their organization. A
 person's page shows the projects you have in common and what they did.
-Clients and partners only see members of their projects. Staff manage
-organizations from the People page.
+Clients only see members of their projects; partners see the people of
+their projects, including staff who open them without being members.
+Staff manage organizations from the People page: clients' organizations
+and who belongs to them. Admins manage your own organization and
+partners' (organizations with staff): who belongs to them, inviting
+people into them, merging them and their email domains.
 
 **Inviting people:** "Invite people" on the People page, or "Invite by
 email" on a project's people page (with that project chosen), opens one

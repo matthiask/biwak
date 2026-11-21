@@ -55,10 +55,12 @@ class ComboboxTest(E2ETestCase):
         expect(field).to_have_value("Dora Example · Example Client Ltd")
         expect(dialog).to_be_visible()
         dialog.get_by_role("button", name="Add").click()
-        # The people page again, with Dora
+        # The people page again, with Dora under her organization
         expect(dialog).to_be_hidden()
         expect(
-            page.get_by_role("link", name="Dora Example, Example Client Ltd")
+            page.locator('[data-people-group="client"]').get_by_role(
+                "link", name="Dora Example"
+            )
         ).to_be_visible()
         self.assertTrue(self.project.is_member(dora))
         self.assertEqual(self.errors, [])

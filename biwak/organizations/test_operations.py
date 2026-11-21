@@ -145,9 +145,14 @@ class OperationsTest(TestCase):
         org_ops.set_organization(self.bob, self.own, actor=self.admin)
         with self.assertRaises(PermissionError):
             org_ops.set_organization(self.bob, other, actor=self.bob)
-        # Others, not the own: all staff
-        org_ops.set_organization(pia, other, actor=self.bob)
-        org_ops.merge(org, other, actor=self.bob)
+        # Partners and partner organizations: admins (decided 2026-11-21)
+        with self.assertRaises(PermissionError):
+            org_ops.set_organization(pia, other, actor=self.bob)
+        org_ops.set_organization(pia, other, actor=self.admin)
+        with self.assertRaises(PermissionError):
+            org_ops.merge(org, other, actor=self.bob)
+        # Client organizations: all staff
+        org_ops.merge(org, organization("Third Ltd"), actor=self.bob)
         # The own one always exists: not deleted, not merged away, the mark
         # not removed; moving it would make the admins partners
         with self.assertRaisesMessage(ValidationError, "always exists"):

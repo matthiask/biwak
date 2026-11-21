@@ -131,9 +131,11 @@ class OperationTest(SubscribersTestCase):
         for viewer, expected in [
             # Staff of the own organization: everybody who sees it
             (self.ada, {self.bob, self.dan, self.cleo, self.eli, self.pia}),
-            # Clients and partners: the members
+            # Clients: the members
             (self.cleo, {self.ada, self.bob, self.eli, self.pia}),
-            (self.pia, {self.ada, self.bob, self.cleo, self.eli}),
+            # Partners: the project's people, staff with access too (decided
+            # 2026-11-21)
+            (self.pia, {self.ada, self.bob, self.cleo, self.dan, self.eli}),
         ]:
             with self.subTest(viewer=viewer):
                 self.assertEqual(set(subscribable_people(self.todo, viewer)), expected)
@@ -360,8 +362,28 @@ class ModalTest(SubscribersTestCase):
         self.assertContains(response, "Select a valid choice")
         self.assertFalse(Subscription.objects.filter(user=self.cleo, item=self.secret))
 
-    def test_partner_and_client_offered_only_who_they_may_know(self):
-        for viewer in [self.pia, self.cleo]:
+    def test_partner_offered_the_project_s_people(self):
+        outsider = person("Olga")  # staff, in another limited project only
+        project("Elsewhere", members=[outsider], all_access=False)
+        self.project.is_all_access = False
+        self.project.save()
+        self.project.memberships.create(user=self.dan)
+        self.client.force_login(self.pia)
+        response = self.client.get(self.url(self.todo), headers=MODAL)
+        self.assertIn(self.dan.pk, self.options(response))
+        self.assertNotIn(outsider.pk, self.options(response))
+        response = self.client.post(
+            self.url(self.todo), {"people": [outsider.pk]}, headers=MODAL
+        )
+        self.assertContains(response, "Select a valid choice")
+
+    def test_partner_offered_staff_with_access(self):
+        self.client.force_login(self.pia)
+        response = self.client.get(self.url(self.todo), headers=MODAL)
+        self.assertIn(self.dan.pk, self.options(response))
+
+    def test_client_offered_only_who_they_may_know(self):
+        for viewer in [self.cleo]:
             with self.subTest(viewer=viewer):
                 self.client.force_login(viewer)
                 response = self.client.get(self.url(self.todo), headers=MODAL)

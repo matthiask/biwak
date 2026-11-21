@@ -106,7 +106,8 @@ class OperationTest(TestCase):
             {
                 1: "This person has been deactivated.",
                 2: "Only admins can invite staff.",
-                3: "Only admins add people to your own organization.",
+                3: "Only admins add people to your own organization or a partner"
+                " organization.",
                 4: "This address is in another row too.",
             },
         )
@@ -273,7 +274,9 @@ class FormTest(TestCase):
         self.assertContains(response, "Nobody has been invited")
         # Staff can't choose: the field isn't there, they're clients
         self.assertContains(
-            response, "Only admins add people to your own organization."
+            response,
+            "Only admins add people to your own organization or a partner"
+            " organization.",
         )
         self.assertContains(response, "This address is in another row too.")
         self.assertFalse(User.objects.filter(email="dora@example.net").exists())

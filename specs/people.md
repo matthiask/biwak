@@ -45,8 +45,9 @@ in `AGENTS.md`; have the image's visibility reviewed.
 - **Serving:** through a view, like downloads, never from the storage
   directly.
   - The image is visible exactly where the person's name is: to whoever
-    may know the person (`known_to`, `people_known_to`; clients and
-    partners only see members of their projects).
+    may know the person (`known_to`, `people_known_to`; clients only see
+    members of their projects, partners their projects' people, decided
+    2026-11-21).
   - Long cache headers, and a version in the URL that changes with the
     image.
 - **Where:**
@@ -115,8 +116,9 @@ choosing stores its name. This waits for the drawings.
 - **Serving** (`accounts.views.person_image`,
   `/accounts/people/<id>/image/<version>.webp`): for whoever
   `organizations.people.known_people(viewer)` lists, which the People page
-  uses too (own staff everybody, partners and clients members of their
-  projects, and themselves), else 404; also 404 for an old version.
+  uses too (own staff everybody, clients members of their projects,
+  partners also the own staff of their all-access ones, and
+  themselves), else 404; also 404 for an old version.
   `Cache-Control: private, max-age=1 year, immutable`. Streamed through
   the app also with a bucket (a presigned redirect would be cached past its
   expiry; the file is a few kilobytes).

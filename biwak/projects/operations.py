@@ -161,7 +161,12 @@ def _invitee(email, *, actor, full_name, is_client, organization):
     if not is_client and not actor.is_admin:
         raise InvitationError(_("Only admins can invite staff."))
     if organization is not None and not org_ops.can_touch(actor, organization):
-        raise InvitationError(_("Only admins add people to your own organization."))
+        raise InvitationError(
+            _(
+                "Only admins add people to your own organization or a partner"
+                " organization."
+            )
+        )
     organization = org_ops.for_new_person(email, organization)
     if organization is not None and not org_ops.can_touch(actor, organization):
         # Suggested by the domain only: not for others than admins

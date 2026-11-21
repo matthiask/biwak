@@ -20,7 +20,9 @@ from biwak.test_utils import organization, partner, person, project, rule_post
 
 class ReviewTestCase(TestCase):
     """Ada (own staff) and Pia (a partner) in the all-access "Camp" with
-    Cleo (a client); Bob is own staff, not a member"""
+    Cleo (a client); Bob is own staff, not a member, whom Pia knows as one
+    of Camp's people (decided 2026-11-21); Paul is a partner of another
+    project, whom she doesn't"""
 
     def setUp(self):
         self.own = organization("Example Team", is_own=True)
@@ -29,7 +31,9 @@ class ReviewTestCase(TestCase):
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
         self.pia = partner("Pia")
+        self.paul = partner("Paul", organization_name="Example Other Agency")
         self.camp = project("Camp", members=[self.ada, self.pia, self.cleo])
+        self.lake = project("Lake", members=[self.paul])
         self.tents = ops.create_list(project=self.camp, title="Tents", creator=self.ada)
         self.todo = ops.create_todo(
             todolist=self.tents, title="Pitch the tents", creator=self.ada
@@ -46,34 +50,38 @@ class ReviewTestCase(TestCase):
 
 
 class CheckinFormTest(ReviewTestCase):
-    def test_partners_are_offered_members_only(self):
-        self.client.force_login(self.pia)
-        url = f"/projects/{self.camp.pk}/checkins/new/"
-        response = self.client.get(url)
-        self.assertContains(response, "Ada Example")
-        self.assertNotContains(response, "Bob Example")
-        data = {
+    def data(self, people):
+        return {
             "title": "How is it?",
             **rule_post(MONDAY_9["rule"], "rule"),
             "starts_on": "2027-03-15",
             "time_of_day": "09:00",
             "time_zone": "Europe/Zurich",
-            "people": [self.bob.pk],
+            "people": people,
         }
-        self.client.post(url, data)
+
+    def test_partners_are_offered_the_project_s_people(self):
+        self.client.force_login(self.pia)
+        url = f"/projects/{self.camp.pk}/checkins/new/"
+        response = self.client.get(url)
+        self.assertContains(response, "Ada Example")
+        self.assertContains(response, "Bob Example")
+        self.assertNotContains(response, "Paul Example")
+        self.client.post(url, self.data([self.paul.pk]))
         self.assertFalse(
             checkin_ops.Question.objects.filter(item__title="How is it?").exists()
         )
+        self.client.post(url, self.data([self.bob.pk]))
+        question = checkin_ops.Question.objects.get(item__title="How is it?")
+        self.assertEqual(set(question.people.all()), {self.bob})
 
-    def test_partners_keep_non_members_already_asked(self):
-        item = self.question([self.ada, self.bob])
-        checkin_ops.set_people(item, [self.ada, self.bob, self.pia], actor=self.pia)
-        self.assertEqual(
-            set(item.question.people.all()), {self.ada, self.bob, self.pia}
-        )
-        gus = person("Gus")
+    def test_partners_ask_the_project_s_people(self):
+        item = self.question([self.ada])
+        gus = person("Gus")  # own staff, not a member either
+        checkin_ops.set_people(item, [self.ada, self.bob, gus], actor=self.pia)
+        self.assertEqual(set(item.question.people.all()), {self.ada, self.bob, gus})
         with self.assertRaises(ValueError):
-            checkin_ops.set_people(item, [self.ada, gus], actor=self.pia)
+            checkin_ops.set_people(item, [self.ada, self.paul], actor=self.pia)
 
 
 class CheckinAPITest(ReviewTestCase):
@@ -87,15 +95,16 @@ class CheckinAPITest(ReviewTestCase):
             headers={"authorization": f"Bearer {secret}"},
         )
 
-    def test_partners_ask_members_only_and_learn_no_names(self):
-        bob = self.call(self.pia, {"people": [self.bob.pk]})
-        self.assertEqual(bob.status_code, 400)
-        self.assertNotIn("Bob", bob.json()["detail"])
+    def test_partners_ask_the_project_s_people_and_learn_no_names(self):
+        paul = self.call(self.pia, {"people": [self.paul.pk]})
+        self.assertEqual(paul.status_code, 400)
+        self.assertNotIn("Paul", paul.json()["detail"])
         nobody = self.call(self.pia, {"people": [999999]})
         # Somebody who exists and somebody who doesn't: the same answer
-        self.assertEqual(nobody.json(), bob.json())
+        self.assertEqual(nobody.json(), paul.json())
         self.assertEqual(
-            self.call(self.pia, {"people": [self.ada.pk]}).status_code, 201
+            self.call(self.pia, {"people": [self.ada.pk, self.bob.pk]}).status_code,
+            201,
         )
 
     def test_names_never_in_the_message(self):
@@ -111,40 +120,59 @@ class CheckinAPITest(ReviewTestCase):
 
 
 class HistoryTest(ReviewTestCase):
-    def test_partners_dont_learn_names_of_non_members(self):
+    def test_partners_learn_the_names_of_the_project_s_people_only(self):
+        """Bob (own staff) and Paul (a partner) were members and left:
+        Bob still opens the all-access project, Paul doesn't"""
         LoggedAction.objects.all().delete()
-        ops.assign(self.todo, [self.bob], actor=self.ada)
-        Membership.objects.filter(project=self.camp, user=self.bob).delete()
+        Membership.objects.create(project=self.camp, user=self.paul)
+        ops.assign(self.todo, [self.bob, self.paul], actor=self.ada)
+        Membership.objects.filter(
+            project=self.camp, user__in=[self.bob, self.paul]
+        ).delete()
         ops.assign(self.todo, [self.pia], actor=self.ada)
-        shown = {
-            c.new for c in history.history(self.todo, self.pia) if c.kind == "assigned"
-        }
-        self.assertEqual(shown, {"Pia Example", "somebody"})
-        shown = {
-            c.new for c in history.history(self.todo, self.ada) if c.kind == "assigned"
-        }
-        self.assertEqual(shown, {"Pia Example", "Bob Example"})
+
+        def shown(viewer):
+            return {
+                c.new
+                for c in history.history(self.todo, viewer)
+                if c.kind == "assigned"
+            }
+
+        self.assertEqual(shown(self.pia), {"Pia Example", "Bob Example", "somebody"})
+        self.assertEqual(
+            shown(self.ada), {"Pia Example", "Bob Example", "Paul Example"}
+        )
 
 
 class NamesTest(ReviewTestCase):
     def test_mails_name_whom_the_reader_may_know(self):
-        Membership.objects.create(project=self.camp, user=self.bob)
-        ops.assign(self.todo, [self.bob], actor=self.ada)
-        Membership.objects.filter(project=self.camp, user=self.bob).delete()
-        ids = [self.bob.pk, self.ada.pk]
-        self.assertEqual(_names(ids, self.pia, self.todo), "Ada Example")
+        Membership.objects.create(project=self.camp, user=self.paul)
+        ops.assign(self.todo, [self.bob, self.paul], actor=self.ada)
+        Membership.objects.filter(
+            project=self.camp, user__in=[self.bob, self.paul]
+        ).delete()
+        ids = [self.bob.pk, self.paul.pk, self.ada.pk]
+        self.assertEqual(_names(ids, self.pia, self.todo), "Ada Example, Bob Example")
         self.assertEqual(_names(ids, self.cleo, self.todo), "Ada Example")
-        self.assertEqual(_names(ids, self.root, self.todo), "Ada Example, Bob Example")
+        self.assertEqual(
+            _names(ids, self.root, self.todo),
+            "Ada Example, Bob Example, Paul Example",
+        )
 
     def test_the_feed_names_whom_the_reader_may_know(self):
-        ops.assign(self.todo, [self.bob], actor=self.ada)
-        # Assigning made him a member; not anymore
-        Membership.objects.filter(project=self.camp, user=self.bob).delete()
+        Membership.objects.create(project=self.camp, user=self.paul)
+        ops.assign(self.todo, [self.bob, self.paul], actor=self.ada)
+        # Assigning made Bob a member; neither is one anymore
+        Membership.objects.filter(
+            project=self.camp, user__in=[self.bob, self.paul]
+        ).delete()
         events = list(Event.objects.filter(action=Action.ASSIGNED))
         feed.attach(events, self.pia)
+        self.assertEqual(events[0].assignee_names, ["Bob"])
+        feed.attach(events, self.cleo)
         self.assertEqual(events[0].assignee_names, [])
         feed.attach(events, self.ada)
-        self.assertEqual(events[0].assignee_names, ["Bob"])
+        self.assertEqual(events[0].assignee_names, ["Bob", "Paul"])
 
     def test_the_feed_keeps_the_old_list_title_for_own_staff_only(self):
         lodge = project("Lodge", members=[self.ada])

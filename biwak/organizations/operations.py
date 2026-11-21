@@ -1,14 +1,16 @@
 """Managing organizations (specs/organizations.md, "Managing"): the
-own staff create, rename and merge client and partner
-organizations and change their domains; the audit log records it (the
-trigger on the tables). Deleting only organizations without people.
-Anything touching the own organization (merging into or out
-of it, moving people in or out, marking it) is for admins only: it decides
-who sees all-access projects."""
+own staff create, rename and merge client organizations and change their
+domains; the audit log records it (the trigger on the tables). Deleting
+only organizations without people. Anything touching the own organization
+or a partner organization (merging into or out of it, moving people in or
+out, inviting people into it, its domains, marking the own) and moving
+staff is for admins only: admins manage the internal team and partners,
+staff the clients (decided 2026-11-21); it decides who sees which
+projects."""
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from biwak.organizations.models import (
     DOMAIN,
@@ -42,14 +44,58 @@ def can_manage(user):
     return user.is_authenticated and user.is_active and user.sees_all_access
 
 
-def can_touch(user, *organizations):
-    """Whether the person may change who belongs to these organizations:
-    admins any, other staff all but the own organization"""
+def is_partner_organization(org):
+    """Whether staff belong to it and it isn't the own organization: a
+    partner organization (as on the People page); remembered on the
+    object, ``note_partners()`` does it for many at once"""
+    if org is None or org.is_own:
+        return False
+    if getattr(org, "_is_partner", None) is None:
+        org._is_partner = org.people.filter(is_client=False).exists()
+    return org._is_partner
+
+
+def partner_organizations():
+    """The organizations ``is_partner_organization()`` is true for"""
+    return Organization.objects.filter(is_own=False, pk__in=_staff_organizations())
+
+
+def _staff_organizations():
+    from biwak.accounts.models import User
+
+    return User.objects.filter(is_client=False, organization__isnull=False).values(
+        "organization"
+    )
+
+
+def note_partners(organizations):
+    """``is_partner_organization()`` for these at once, one query"""
+    organizations = [org for org in organizations if org is not None]
+    partners = set(
+        partner_organizations()
+        .filter(pk__in={org.pk for org in organizations})
+        .values_list("pk", flat=True)
+    )
+    for org in organizations:
+        org._is_partner = org.pk in partners
+
+
+def can_touch(user, *organizations, person=None):
+    """Whether the person may change who belongs to these organizations
+    (and move ``person``): admins any; other staff only client
+    organizations and only clients, not the own organization, partner
+    organizations or staff (decided 2026-11-21: admins manage the internal
+    team and partners, staff the clients)"""
     if not can_manage(user):
         return False
     if user.is_admin:
         return True
-    return not any(org is not None and org.is_own for org in organizations)
+    if person is not None and not person.is_client:
+        return False
+    return not any(
+        org is not None and (org.is_own or is_partner_organization(org))
+        for org in organizations
+    )
 
 
 def _no_admin_partners(admins, *, own_after):
@@ -79,12 +125,16 @@ def _check_manage(actor):
         raise PermissionError("Only staff manage organizations.")
 
 
-def _check_touch(actor, *organizations):
+TOUCH_MESSAGE = _lazy(
+    "Only admins change who belongs to your own organization or a partner"
+    " organization, and move staff."
+)
+
+
+def _check_touch(actor, *organizations, person=None):
     _check_manage(actor)
-    if not can_touch(actor, *organizations):
-        raise PermissionError(
-            _("Only admins change who belongs to your own organization.")
-        )
+    if not can_touch(actor, *organizations, person=person):
+        raise PermissionError(str(TOUCH_MESSAGE))
 
 
 def clean_name(name, *, instance=None):
@@ -147,12 +197,20 @@ def create_organization(*, name, domains=(), actor):
 def can_change_domains(user, org):
     """The domains of an organization with single sign-on decide whose
     sign-ins count (Google's Workspace domains, the addresses Microsoft's
-    tenant speaks for, specs/sso.md), so only admins change them"""
-    return can_manage(user) and (user.is_admin or not org.sso)
+    tenant speaks for, specs/sso.md), those of a partner organization who
+    is suggested for it (decided 2026-11-21), so only admins change them"""
+    return can_manage(user) and (
+        user.is_admin or not (org.sso or is_partner_organization(org))
+    )
 
 
 def _check_domains(actor, org, domains):
-    """Admins only for organizations with single sign-on, and never none"""
+    """Admins only for organizations with single sign-on and partner
+    organizations, and never none with single sign-on"""
+    if not can_change_domains(actor, org) and not org.sso:
+        raise PermissionError(
+            _("Only admins change the domains of a partner organization.")
+        )
     if not can_change_domains(actor, org):
         raise PermissionError(
             _(
@@ -313,7 +371,7 @@ def set_organization(user, org, *, actor):
     if user.organization_id == (org.pk if org else None):
         return user
     current = user.organization if user.organization_id else None
-    _check_touch(actor, current, org)
+    _check_touch(actor, current, org, person=user)
     if current is not None and current.requires_sso and not actor.is_admin:
         # It would loosen how they sign in (decided 2026-11-21)
         raise PermissionError(

@@ -7,46 +7,83 @@
   <h1 class="mb-3">{% translate "People" %}</h1>
   <div class="row g-4">
     <div class="col-lg-7">
-      <div class="list-group mb-3">
-        {% for m, notify in memberships %}
-          <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
-            <div>
-              {% person_page m.user size="md" name=m.user.display_name %}
-              {% if m.user.is_client %}<span class="badge wb-client-badge">{% translate "Client" %}</span>{% endif %}
-              {% if not request.user.is_client %}<div class="small text-body-secondary">
-                  {{ m.user.email }}
-                </div>{% endif %}
-              {% include "organizations/_invitation.html" with person=m.user next=request.get_full_path %}
-              {% if notify %}
-                <form method="post" action="{% url 'member_notify' project.pk m.user.pk %}" class="d-flex gap-1 mt-1">
-                  {% csrf_token %}
-                  <select
-                    name="notify"
-                    class="form-select form-select-sm w-auto"
-                    aria-label="{% translate "Notifications" %}"
-                  >
-                    {% if notify.value == "nothing" %}<option selected disabled>{{ notify.label }}</option>{% endif %}
-                    {% for value, label in notify_choices %}
-                      <option value="{{ value }}" {% if value == notify.value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                  <button type="submit" class="btn btn-sm btn-quiet">{% translate "Save" %}</button>
-                </form>
+      {% for group in groups %}
+        <section class="mb-3" data-people-group="{{ group.kind }}">
+          <div class="d-flex justify-content-between align-items-baseline gap-2">
+            <h2 class="h5">
+              {% if group.organization %}
+                {% if can_manage %}
+                  <a href="{{ group.organization.get_absolute_url }}">{{ group.organization }}</a>
+                {% else %}
+                  {{ group.organization }}
+                {% endif %}
+                <span class="badge wb-tone-neutral">{{ group.label }}</span>
+              {% else %}
+                {{ group.label }}
               {% endif %}
-            </div>
-            {% if can_manage or m.user == request.user %}
-              <form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-quiet">
-                  {% if m.user == request.user %}{% translate "Leave" %}{% else %}{% translate "Remove" %}{% endif %}
-                </button>
-              </form>
+            </h2>
+            {% if group.addable %}
+              <a
+                class="btn btn-sm btn-quiet"
+                href="{% url 'member_add' project.pk %}?organization={{ group.organization.pk }}"
+                data-modal
+              >{% blocktranslate with organization=group.organization %}Add people from {{ organization }}{% endblocktranslate %}</a>
             {% endif %}
           </div>
-        {% empty %}
+          <div class="list-group">
+            {% for m, notify in group.people %}
+              <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <div>
+                  {% person_page m.user size="md" name=m.user.full_name|default:m.user.email %}
+                  {% if m.user.is_client %}<span
+                      class="badge wb-client-badge"
+                    >{% translate "Client" %}</span>{% endif %}
+                  {% if not request.user.is_client %}<div class="small text-body-secondary">
+                      {{ m.user.email }}
+                    </div>{% endif %}
+                  {% include "organizations/_invitation.html" with person=m.user next=request.get_full_path %}
+                  {% if notify %}
+                    <form
+                      method="post"
+                      action="{% url 'member_notify' project.pk m.user.pk %}"
+                      class="d-flex gap-1 mt-1"
+                    >
+                      {% csrf_token %}
+                      <select
+                        name="notify"
+                        class="form-select form-select-sm w-auto"
+                        aria-label="{% translate "Notifications" %}"
+                      >
+                        {% if notify.value == "nothing" %}<option selected disabled>
+                            {{ notify.label }}
+                          </option>{% endif %}
+                        {% for value, label in notify_choices %}
+                          <option value="{{ value }}" {% if value == notify.value %}selected{% endif %}>
+                            {{ label }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                      <button type="submit" class="btn btn-sm btn-quiet">{% translate "Save" %}</button>
+                    </form>
+                  {% endif %}
+                </div>
+                {% if can_manage or m.user == request.user %}
+                  <form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-quiet">
+                      {% if m.user == request.user %}{% translate "Leave" %}{% else %}{% translate "Remove" %}{% endif %}
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+      {% empty %}
+        <div class="list-group mb-3">
           <div class="list-group-item text-body-secondary">{% translate "No members yet." %}</div>
-        {% endfor %}
-      </div>
+        </div>
+      {% endfor %}
       <p class="small text-body-secondary">
         {% if project.is_all_access %}
           {% translate "All staff can open this project. Members are listed, can be mentioned and are included when someone notifies everybody in the project." %}

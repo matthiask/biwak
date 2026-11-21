@@ -155,7 +155,7 @@ class PagesTest(TestCase):
         response = self.client.post(
             f"/people/{bob.pk}/organization/", {"organization": "Example Team"}
         )
-        self.assertContains(response, "Only admins move people")
+        self.assertContains(response, "Only admins change who belongs")
         bob.refresh_from_db()
         self.assertIsNone(bob.organization)
         self.client.force_login(self.root)
@@ -169,7 +169,7 @@ class PagesTest(TestCase):
         response = self.client.post(
             f"/people/{bob.pk}/organization/", {"organization": ""}
         )
-        self.assertContains(response, "Only admins move people")
+        self.assertContains(response, "Only admins change who belongs")
 
     def test_palette(self):
         page = self.client.get(self.example.get_absolute_url()).content.decode()

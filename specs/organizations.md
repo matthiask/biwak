@@ -6,9 +6,10 @@ organization is a text on each person (`User.organization`): two people
 belong together only if the text matches exactly, nothing prevents typos,
 and renaming means editing everyone.
 
-**Status:** built (2026-11-21), see "Built" below; open: the questions
-under "Decided meanwhile". Not built yet: the people page grouping members by
-organization (decided 2026-11-21).
+**Status:** built (2026-11-21), see "Built" below, including the
+decisions under "Decided meanwhile" (partners know their projects'
+people), a project's people page grouped by organization and partner
+organizations managed by admins (see "Managing").
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The rules who
@@ -124,7 +125,7 @@ point.
   are invited from the same step (name, address; the domain preselects
   the organization).
 - **A project's people page groups members by organization** (decided
-  2026-11-21, to build): own staff first, then each client organization,
+  2026-11-21, built): own staff first, then each client organization,
   then partners' organizations, each with its heading and "add people
   from …" (the organization's people who aren't members yet).
 
@@ -141,11 +142,18 @@ point.
 
 ## Managing (decided 2026-11-21)
 
-All staff create, rename and merge client and partner organizations
-(recorded in the audit log); deleting only organizations without
-people; anything touching the own organization (merging
-into it, moving people in or out, marking it) only admins, since it
-decides who sees all-access projects.
+All staff create, rename and merge client organizations (recorded in
+the audit log); deleting only organizations without people; anything
+touching the own organization (merging into it, moving people in or out,
+marking it) only admins, since it decides who sees all-access projects.
+
+**Admins manage the internal team and partners, staff the clients**
+(decided by the user 2026-11-21, it was "all staff, but the own
+organization"): who belongs to a partner organization (moving people in
+or out, inviting people into it, the domain's suggestion), merging into
+or out of it and its domains are for admins too, and so is moving any
+staff member (which is how an organization becomes a partner's).
+Staff keep everything for client organizations.
 
 ## Built
 
@@ -204,6 +212,44 @@ decides who sees all-access projects.
   collaborators (staff who aren't Basecamp employees) get theirs, which
   makes collaborators partners; employees the own organization (it
   always exists). The dry run's list says "partner" and the company.
+- **Partners know their projects' people** (built 2026-11-21, see
+  "Decided meanwhile"): `knows_people_of(viewer, project)` and
+  `Project.people_q()` in `biwak/projects/models.py`, used by
+  `Project.people_known_to()`, `mentions.known_to()` and
+  `mentions.candidates_for()` (the `@` list), mentions written
+  (`mentions.update()`), `assignable_people()`, the check-in form and
+  `_check_people()`; `known_people()` adds the own staff of the
+  all-access projects a partner is in (People page, person pages,
+  images, display names). Conservative choices (not in the decision):
+  a person's feed and the palette's people still go by projects shared
+  as members (`people_visible_to()`), as for own staff; inactive own
+  staff count as the project's people (names in histories); assigning a
+  non-member own staff makes them a member, as when own staff assign.
+- **A project's people page by organization** (`project_groups()` in
+  `biwak/organizations/people.py`): own staff, client organizations,
+  partner organizations (by name; partner: a member of it is staff, as
+  on the People page), then people without an organization (no "Add
+  from"); within a group by name; the full name without the
+  organization under its heading. For own staff (who add people) each
+  organization with active people who aren't members gets "Add people
+  from …": the existing "Add someone" modal with `?organization=ID`,
+  offering only them, preselected when there's one. Clients and
+  partners see the same groups of members, without actions (clients
+  without addresses, as before).
+- **Admins for partner organizations** (built 2026-11-21, see
+  "Managing"): a partner organization is one with staff that isn't the
+  own (`is_partner_organization()`, `partner_organizations()`, as on the
+  People page; no stored mark). `can_touch(user, *organizations,
+  person=)` refuses others than admins for the own and partner
+  organizations and for moving staff; it guards moving people (pages,
+  API, CLI), merging (the merge modal doesn't offer partner organizations
+  as targets to staff, nor the palette "Merge…" on them), deleting,
+  inviting (the multi-row form, the new-project rows, the API's
+  `organization_id`; the domain's suggestion of a partner organization is
+  dropped for staff, as for the own) and, through `can_change_domains()`,
+  the domains (the field disabled for staff). Conservative choice:
+  renaming a partner organization stays all staff's, like renaming the
+  own; "Change organization" shows only where it's allowed.
 - **The admin:** organizations with their people count; marking one as
   the own organization moves the mark (`mark_own()`); a person's
   organization with autocomplete.

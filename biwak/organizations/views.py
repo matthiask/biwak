@@ -48,7 +48,10 @@ def organization_list(request):
 
 def organization_detail(request, pk):
     org = organization_for(request, pk)
-    people = org.people.order_by("-is_active", "is_client", "full_name", "email")
+    people = list(org.people.order_by("-is_active", "is_client", "full_name", "email"))
+    can_touch = org_ops.can_touch(request.user, org)
+    for user in people:
+        user.can_move = can_touch and org_ops.can_touch(request.user, org, person=user)
     return render(
         request,
         "organizations/organization_detail.html",
@@ -59,7 +62,7 @@ def organization_detail(request, pk):
             "can_change_signin": org_ops.can_change_signin(request.user),
             "can_delete": org_ops.can_touch(request.user, org)
             and not org.is_own
-            and not people.exists(),
+            and not people,
         },
     )
 
@@ -85,11 +88,15 @@ class OrganizationForm(Form):
             )
         super().__init__(*args, **kwargs)
         if instance is not None and not org_ops.can_change_domains(user, instance):
-            # They decide whose sign-ins count (specs/sso.md)
+            # They decide whose sign-ins count (specs/sso.md), or who is
+            # suggested for a partner organization (decided 2026-11-21)
             self.fields["domains"].disabled = True
-            self.fields["domains"].help_text = _(
-                "It signs in with %(provider)s: only admins change its domains."
-            ) % {"provider": instance.idp_name}
+            self.fields["domains"].help_text = (
+                _("It signs in with %(provider)s: only admins change its domains.")
+                % {"provider": instance.idp_name}
+                if instance.sso
+                else _("A partner organization: only admins change its domains.")
+            )
 
     def clean_name(self):
         return org_ops.clean_name(self.cleaned_data["name"], instance=self.instance)
@@ -149,7 +156,9 @@ class MergeForm(Form):
         super().__init__(*args, **kwargs)
         others = Organization.objects.exclude(pk=organization.pk)
         if not user.is_admin:
-            others = others.exclude(is_own=True)
+            others = others.exclude(is_own=True).exclude(
+                pk__in=org_ops.partner_organizations().values("pk")
+            )
         self.fields["into"].queryset = others
 
 
@@ -245,12 +254,12 @@ def person_organization(request, pk):
         target = form.cleaned_data["organization"]
         current = user.organization if user.organization_id else None
         if not org_ops.can_touch(
-            request.user, current, target if isinstance(target, Organization) else None
+            request.user,
+            current,
+            target if isinstance(target, Organization) else None,
+            person=user,
         ):
-            form.add_error(
-                "organization",
-                _("Only admins move people in or out of your own organization."),
-            )
+            form.add_error("organization", str(org_ops.TOUCH_MESSAGE))
         else:
             try:
                 # A new organization only with the move

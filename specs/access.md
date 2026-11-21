@@ -48,13 +48,24 @@ the first client gets a login.
   `Project.objects.accessible_to()` and `notify.people_who_see()` decide
   it, so pages, the feed, search, the palette, the lantern, mails, mail
   replies, the API, the CLI and both websockets follow. Partners are
-  assigned and mentioned in all-access projects only as members. Like
-  clients, they learn about members only (`knows_everybody()`: the `@`
-  list, mentions they write and read, assignees, subscribers, check-in
-  askees, names in histories, mails and the feed). They don't create
+  assigned and mentioned in all-access projects only as members. In
+  the projects they're in, they know all its people, like staff of a
+  limited project (changed 2026-11-21, it was "members only, like
+  clients"): the members and the own staff of an all-access project
+  (`knows_people_of()`, `Project.people_q()`; the `@` list, mentions
+  they write and read, assignees, subscribers, check-in askees, names in
+  histories, mails and the feed, all through `Project.people_known_to()`
+  and `mentions.known_to()`). Nobody outside their projects: the People
+  page, person pages and images (`known_people()`); a person's feed and
+  the palette's people go by the projects shared as members, as for own
+  staff (`people_visible_to()`). They don't create
   projects, add or invite people or manage organizations, whose forms
-  offer everybody (decided 2026-11-21). Moving people in or out of the
-  own organization is for admins only; leaving it drops
+  offer everybody (decided 2026-11-21). Admins manage the internal team
+  and partners, staff the clients (decided 2026-11-21): moving people in
+  or out of the own organization or a partner organization (one with
+  staff), moving staff at all, inviting into them, merging them and their
+  domains are for admins only (`org_ops.can_touch()`). Leaving the own
+  organization drops
   the subscriptions in projects one can't open anymore, and open pages
   and editors check their access again.
 - **Clients** are never covered by all-access either: they see a project only
@@ -88,8 +99,8 @@ the first client gets a login.
   "Move to…" and through the API, only into lists they can see, so a
   move never hides a to-do from them (confirmed 2026-11-21). Everything
   else clients change only if they created it.
-- Clients learn about the project's members only, not about staff who
-  see the project because it's all-access (decided 2026-11-20 after the
+- Clients (not partners, above) learn about the project's members only,
+  not about staff who see the project because it's all-access (decided 2026-11-20 after the
   visibility review): subscribers on item pages, the people asked by a
   check-in and who hasn't answered (`Project.people_known_to()`).
   Both halves of the rule (decided 2026-11-20 after the second visibility

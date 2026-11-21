@@ -74,8 +74,12 @@ class PeoplePageTest(TestCase):
         self.assertEqual(
             self.headings_and_names(response),
             [
+                # The own staff open the all-access Camp: its people too
+                # (decided 2026-11-21); not Dora, Finn and Ivy
                 "Example Team",
                 "Ada Example",
+                "Root Example",
+                "Zed Example",
                 "Alpine Agency",
                 "Pia Example",
                 "Zebra Clients",
