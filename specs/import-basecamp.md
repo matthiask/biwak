@@ -74,6 +74,12 @@ second run update instead of duplicating.
 - **Attachments** in texts are downloaded and uploaded; links between
   items are rewritten to Biwak URLs. Optionally (`--lazy-files`),
   attachments of items older than a year are fetched when first opened.
+- **Profile images** (decided 2026-11-21, `ui-round-2.md` part C): people
+  without an image in Biwak get Basecamp's (`avatar_url` from
+  `people/ID.json`, `people.json` has null), processed like an upload and
+  once, never overwriting one. Images Basecamp generated (flat colored
+  square with initials, its placeholder) are told apart by content and
+  skipped; the report lists both. A dry run fetches nothing.
 - **Dry run** first: counts per kind, people to create, problems.
 - **Rate limits:** Basecamp answers 429 with `Retry-After`; wait as told,
   at most 50 requests per 10 seconds otherwise.

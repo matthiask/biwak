@@ -82,8 +82,10 @@ class BasecampClient:
             self.sleep(self._sent[0] + WINDOW - now)
         self._sent.append(self.clock())
 
-    def _request(self, url, *, auth=True):
+    def _request(self, url, *, auth=True, accept=None):
         headers = {"User-Agent": USER_AGENT}
+        if accept:
+            headers["Accept"] = accept
         if auth:
             headers["Authorization"] = f"Bearer {self.token}"
         for attempt in range(RETRIES):
@@ -126,12 +128,14 @@ class BasecampClient:
             found = re.search(r'<([^>]+)>;\s*rel="next"', link)
             url = found[1] if found else None
 
-    def download(self, url):
+    def download(self, url, *, accept=None):
         """The file's bytes: the API redirects to a short-lived URL, which
-        doesn't get the token"""
-        response = self._request(url)
+        doesn't get the token. ``accept`` is the ``Accept`` header."""
+        response = self._request(url, accept=accept)
         if response.status in {301, 302, 303, 307, 308}:
-            response = self._request(_header(response, "Location"), auth=False)
+            response = self._request(
+                _header(response, "Location"), auth=False, accept=accept
+            )
         if response.status == 404:
             raise NotFound(url)
         if response.status != 200:
