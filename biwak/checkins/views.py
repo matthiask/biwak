@@ -18,7 +18,7 @@ from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
-from biwak.forms import Form
+from biwak.forms import ComboboxSelect, Form
 from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
@@ -62,6 +62,7 @@ class QuestionForm(RuleFormMixin, Form):
         label=_("Time zone"),
         choices=[(name, name) for name in TIME_ZONES],
         initial=settings.TIME_ZONE,
+        widget=ComboboxSelect,
     )
     people = forms.ModelMultipleChoiceField(
         label=_("People asked"),
@@ -347,6 +348,11 @@ def question(request, pk):
             "mode": mail_mode(user, item),
             "modes": Mode.choices,
             "is_subscribed": is_subscribed(user, item),
+            # Who hears about the answers, a list of its own (specs/checkins.md,
+            # decided 2026-11-21); clients only learn about the members
+            "subscribers": item.project.people_known_to(
+                user, [s.user for s in item.subscriptions.select_related("user")]
+            ),
             "can_manage": not user.is_client,
             "can_switch": not user.is_client,
             "is_paused": question.is_paused,

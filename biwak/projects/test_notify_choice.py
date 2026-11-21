@@ -11,7 +11,7 @@ from biwak.activity.models import LevelOverride, Notification
 from biwak.items import operations as ops
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import person, project
+from biwak.test_utils import invite_data, person, project
 
 
 class Fixture:
@@ -160,7 +160,9 @@ class PageTest(Fixture, TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(
                 f"{self.people_url}invite/",
-                {"email": "x@example.org", "notify": "tagged"},
+                invite_data(
+                    [self.project], {"email": "x@example.org"}, notify="tagged"
+                ),
             )
         user = User.objects.get(email="x@example.org")
         self.assertEqual(self.level(user), NotificationLevel.CONCERNS_ME)

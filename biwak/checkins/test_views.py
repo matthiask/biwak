@@ -39,6 +39,49 @@ class ViewsTestCase(CheckinTestCase):
 
 
 class PagesTest(ViewsTestCase):
+    def test_subscribers_a_list_of_their_own(self):
+        """The question's subscribers hear about the answers, the people
+        asked are only who's asked (decided 2026-11-21): the subscribers
+        card, Subscribe/Unsubscribe and adding others, through the page and
+        the API"""
+        dora = person("Dora")
+        Membership.objects.create(project=self.project, user=dora)
+        url = self.url("question", self.shared)
+        response = self.get(dora, url)
+        self.assertContains(response, reverse("subscription", args=[self.shared.pk]))
+        self.assertContains(
+            response, reverse("item_subscribers", args=[self.shared.pk])
+        )
+        self.assertContains(response, ">Subscribe<")
+        self.post(
+            dora, reverse("subscription", args=[self.shared.pk]), {"subscribe": "1"}
+        )
+        self.assertContains(self.get(dora, url), ">Unsubscribe<")
+        self.assertFalse(self.shared.question.people.filter(pk=dora.pk).exists())
+        # Clients see the subscribers (members), not those of internal
+        # questions
+        self.assertContains(self.get(self.cleo, url), "Dora Example")
+        self.assertEqual(
+            self.get(
+                self.cleo, reverse("item_subscribers", args=[self.item.pk])
+            ).status_code,
+            404,
+        )
+        # The API's subscribers work for questions like for any item
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        headers = {"authorization": f"Bearer {secret}"}
+        response = self.client.post(
+            f"/api/v1/items/{self.shared.pk}/subscribers/",
+            {"people": [self.bob.pk]},
+            content_type="application/json",
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        names = {s["person"]["name"] for s in response.json()["subscribers"]}
+        self.assertEqual(
+            names, {"Ada Example", "Cleo Example", "Dora Example", "Bob Example"}
+        )
+
     def test_the_projects_check_ins(self):
         response = self.get(
             self.ada, reverse("project_checkins", args=[self.project.pk])
@@ -292,7 +335,11 @@ class FormsTest(ViewsTestCase):
 
     def test_creating_a_question(self):
         url = reverse("question_new", args=[self.project.pk])
-        self.assertContains(self.get(self.ada, url), "New check-in")
+        response = self.get(self.ada, url)
+        self.assertContains(response, "New check-in")
+        # About 400 time zones: a combobox (specs/ui-round-6.md)
+        self.assertContains(response, '<select name="time_zone" data-combobox=""')
+        self.assertContains(response, "data-combobox")
         response = self.post(self.ada, url, self.data())
         item = Item.objects.get(title="What did you read?")
         self.assertRedirects(response, item.get_absolute_url())
@@ -604,23 +651,17 @@ class AnsweringPagesTest(ViewsTestCase):
             self.get(self.ada, self.url("question_answer", item)).status_code, 404
         )
 
-    def test_only_people_asked(self):
-        # Bob sees it, but Cleo isn't asked the internal question: 404 (can't see)
+    def test_anybody_who_sees_it(self):
+        """Asked or not (decided 2026-11-21): Dora isn't asked but sees it
+        and answers; Cleo can't see the internal question: 404"""
         dora = person("Dora")
-        for user in [dora]:
-            self.assertEqual(
-                self.get(user, self.url("question_answer", self.item)).status_code, 403
-            )
-            self.assertEqual(
-                self.post(
-                    user, self.url("question_answer", self.item), {"content": "Hi"}
-                ).status_code,
-                403,
-            )
-        self.assertEqual(
-            self.get(self.cleo, self.url("question_answer", self.item)).status_code, 404
-        )
-        self.assertFalse(Item.objects.filter(kind="answer").exists())
+        url = self.url("question_answer", self.item)
+        self.assertEqual(self.get(dora, url).status_code, 200)
+        self.assertContains(self.get(dora, self.url("question", self.item)), url)
+        self.post(dora, url, {"content": "Hi"})
+        self.assertEqual(Item.objects.get(kind="answer").creator, dora)
+        self.assertEqual(self.get(self.cleo, url).status_code, 404)
+        self.assertEqual(self.post(self.cleo, url, {"content": "Hi"}).status_code, 404)
 
     def test_a_client_answers_a_visible_question(self):
         url = self.url("question_answer", self.shared)

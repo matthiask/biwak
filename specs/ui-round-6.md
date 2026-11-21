@@ -3,8 +3,30 @@
 Round 6 of `ui-feedback.md` (2026-11-21), the questions answered the same
 day.
 
-**Status:** spec (2026-11-21), all details confirmed the same day. Not
-built.
+**Status:** spec (2026-11-21), all details confirmed the same day.
+Part A built (2026-11-21): `ComboboxSelect` and `PersonChoiceField`
+(`person_label()`) in `biwak/forms.py`, `frontend/combobox.js`, on "Add
+someone" (found by the address too), the feed's person filter and the
+check-in's time zone; browser test `biwak/test_e2e_combobox.py`.
+Part B built (2026-11-21, CLI 0.32.0): `invite_people()` (and `invite()`
+on top of it), `resend_invitation()`, `withdrawal()` and
+`withdraw_invitation()` in `biwak/projects/operations.py`,
+`User.invited_by`/`invited_at` and `User.objects.invited()`, the form
+and views in `biwak/projects/invitations.py` (`/people/invite/`,
+`/people/<id>/invitation/resend/` and `…/withdraw/`;
+`/projects/<id>/people/invite/` is the same form), the mark
+`organizations/_invitation.html`, `frontend/invite.js`; the API
+`GET|POST /api/v1/invitations/`, `POST /api/v1/invitations/{id}/resend/`,
+`DELETE /api/v1/invitations/{id}/`; `biwak invite` and `biwak
+invitations [resend|withdraw]`.
+Part C built (2026-11-21): `notify.wanting()` (subscribers of the item
+whatever their level, mentions except on "nothing", the container's
+subscribers on "everything"), `notify_people()` subscribing only
+"everything" of everybody, mentions not subscribing on "nothing",
+`set_level_override()` and the API for lists only, "Notifications…" in
+lists' "More" menu only, migration `activity.0015_only_lists_have_levels`;
+`biwak subscribe ITEM` (oneself) and `biwak unsubscribe ITEM`. All
+three parts built.
 
 **Agent:** a cheaper model for part A; parts B and C touch who may do
 what and who's told: a cheaper model with the visibility and
@@ -39,6 +61,12 @@ notification tests reviewed, or a strong one.
   "these people"), the organization field (a text field with a
   `datalist`, which finds already). Same widget, `data-combobox`, one
   script (`frontend/combobox.js`); a new long select gets it too.
+- **Built** (2026-11-21): staff without an organization (individual
+  partners) say "staff"; clients without one only their name. Only "Add
+  someone" finds people by their address (`data-search`, staff managing
+  members see addresses anyway); the feed's filter, which clients have
+  too, doesn't. The list looks like the `@` list (`wb-mentions`) and
+  closes on Escape (not the modal) and when the field loses the focus.
 - 1500 options in the page are fine (decided 2026-11-21: about 100 KB, filtered
   in the browser); a server-side autocomplete only if it gets slow.
 
@@ -98,6 +126,42 @@ the person, set by `invite()`).
   saying so. A confirmation modal ("Withdraw the invitation?"). The
   feed's "added" events stay.
 
+### Built (decisions on the way, 2026-11-21, confirmed the same day)
+
+- **The notify choice** is one for the round, stored for each chosen
+  project (the API's `notify`, the CLI's `--only-tagged`), not one per
+  project.
+- **The organization left empty** is the address's domain's, as
+  before (`for_new_person()`); there's no way to say "none" when the
+  domain matches. A name that doesn't exist asks "Create …?" per row,
+  created only when the round is saved.
+- **The projects offered** are those the inviter can open, not archived.
+- **An address twice in one round** is an error of the second row.
+- **Rows:** three without JavaScript, the first one required, at most
+  50.
+- **The mail** names the one project as before (subject "Ada invited you
+  to Website"); with several, "Ada invited you to Biwak" and a line per
+  project with its link. Resending names the projects the person is in
+  now (not archived), from the person resending.
+- **The mark, Resend and Withdraw** are for own staff only (those who
+  invite), so clients and partners don't learn who invited whom.
+  Resending doesn't change `invited_by`/`invited_at`.
+- **Withdrawing** removes the person from the projects the withdrawing
+  person can open (recorded as "removed", the "added" events stay); the
+  account goes when they're in no other project and nothing refers to
+  it: nothing that would block deleting (comments, items, events, files,
+  links), no assignments, check-ins asking them, mentions or reactions.
+  The question says which of the two happens.
+- **People invited before this part** have no `invited_at` and aren't
+  invitations (no users yet).
+- **API:** besides `POST /api/v1/invitations/` (per-row errors as
+  `{"detail", "errors": [{"index", "detail"}]}`, 400, the addresses
+  named in `detail` for the CLI), the list, resend and withdraw, so the
+  CLI covers what the pages do; 403 for clients and partners, 404 for
+  people who aren't invitations.
+- `/people/` has "Everybody" and "Invited" for staff (`?invited=1`);
+  the palette offers "Invite people" there.
+
 ## C. Subscribing is the switch
 
 On a single to-do (message, doc, file), notifications and subscribers
@@ -128,6 +192,31 @@ I will be notified").
   (subscribed with "Only what concerns me" gets the comment; not
   subscribed doesn't), posting to everybody per level, the item's More
   menu without "Notifications…", the migration.
+
+### Built (decisions on the way, 2026-11-21, confirmed the same day)
+
+- **Assigned people are told about the assignment on every level**,
+  also "nothing" (being assigned is one of the things that subscribe
+  them there).
+- **People chosen by name** when posting (not "everybody") are
+  subscribed whatever their level, like adding subscribers.
+- **A level changed after a notification was written** no longer holds
+  the mail back or hides the lantern entry (`_deliverable()` checks
+  visibility only): the level decided who was told.
+- **Folders** have no level of their own, they follow the project's
+  (confirmed 2026-11-21).
+- **Check-ins** (decided 2026-11-21): the people asked and the
+  question's subscribers are two lists, neither depending on a level;
+  answers and summaries go to the subscribers whatever their level for
+  the project, by their mode. A question has the subscribers card;
+  created, its subscribers are the people asked plus the creator
+  (proposed). Anybody who can see a question answers it, asked or not;
+  answering subscribes them to their own answer, not to the question
+  (`checkins.md`).
+- **Reactions** still tell the author on every level except "nothing".
+- The CLI gained `biwak unsubscribe ITEM` and `biwak subscribe ITEM`
+  without `--people` (oneself), since `--item` of `biwak notifications`
+  works on lists only now.
 
 ## Done when
 

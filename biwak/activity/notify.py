@@ -116,63 +116,24 @@ def effective_level(user, item=None, *, project=None):
     return effective_levels([user], item, project=project)[user.pk]
 
 
-def item_levels(user, items):
-    """``{item ID: level}``: the person's effective level for many items"""
-    paths = _paths(items)
-    overrides = _overrides(
-        [user.pk],
-        {pk for path in paths.values() for pk in path},
-        {item.project_id for item in items},
-    ).get(user.pk, {})
-    return {
-        item.pk: _level(
-            overrides, paths[item.pk], item.project_id, user.notification_level
-        )
-        for item in items
-    }
-
-
-def concerned(event, people):
-    """Those of ``people`` (IDs) the event concerns, for "only what
-    concerns me": being assigned or mentioned, comments on items they
-    created or commented on, their to-dos (assigned to them, or created by
-    them) completed by someone else"""
-    item = event.item
-    ids = set(event.data.get("mentioned", ()))
-    match event.action:
-        case Action.ASSIGNED:
-            ids |= set(event.data.get("assignees", ()))
-        case Action.COMMENTED:
-            ids |= {item.creator_id} | set(
-                Comment.objects
-                .filter(item=item, author__in=people)
-                .exclude(pk=event.data.get("comment"))
-                .values_list("author", flat=True)
-            )
-        case Action.REACTED:
-            # Only the author is a candidate, and it's their text
-            return set(people)
-        case Action.SHARED:
-            # Told on purpose, like a mention
-            return set(people)
-        case Action.COMPLETED:
-            ids |= {item.creator_id} | set(
-                item.todo.assignees.filter(pk__in=people).values_list("pk", flat=True)
-            )
-    return ids & set(people)
-
-
 def wanting(people, event):
-    """Those of ``people`` whose level lets the event through; being
-    mentioned passes every level except nothing"""
+    """Those of ``people`` (the candidates) who are told (specs/ui-round-6.md,
+    part C: subscribing is the switch): everybody subscribed to the item,
+    whatever their level, and those this event assigns; the people newly
+    mentioned on every level except "nothing"; the subscribers of the
+    container hear about what's new in it (``created``) on "everything".
+    Reactions and sharing tell on every level except "nothing", like a
+    mention."""
     item = event.item
     levels = effective_levels(people, item)
-    people = [user for user in people if levels[user.pk] != NotificationLevel.NOTHING]
+    if event.action in {Action.REACTED, Action.SHARED}:
+        return [u for u in people if levels[u.pk] != NotificationLevel.NOTHING]
     mentioned = set(event.data.get("mentioned", ()))
     if item.kind == Kind.ANSWER and event.action == Action.CREATED:
-        # A check-in's answers: a mail each only for those who chose it
-        # (specs/checkins.md), whatever their level; the others get the
-        # summary the morning after
+        # A check-in's answers: to the question's subscribers whatever their
+        # level (decided 2026-11-21), a mail each only for those who chose
+        # it (specs/checkins.md); the others get the summary the morning
+        # after. Mentioned: on every level except "nothing".
         from biwak.checkins.models import DEFAULT_MODE, Mode, QuestionMail
 
         modes = dict(
@@ -183,18 +144,28 @@ def wanting(people, event):
         return [
             user
             for user in people
-            if user.pk in mentioned
-            or Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+            if Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+            or (user.pk in mentioned and levels[user.pk] != NotificationLevel.NOTHING)
         ]
-    choosy = [
-        user.pk for user in people if levels[user.pk] == NotificationLevel.CONCERNS_ME
-    ]
-    concerns = concerned(event, choosy) if choosy else set()
-    return [
-        user
-        for user in people
-        if levels[user.pk] != NotificationLevel.CONCERNS_ME or user.pk in concerns
-    ]
+    subscribed = set(
+        Subscription.objects.filter(item=item, user__in=people).values_list(
+            "user", flat=True
+        )
+    )
+    if event.action == Action.ASSIGNED:
+        subscribed |= set(event.data.get("assignees", ()))
+    told = []
+    for user in people:
+        level = levels[user.pk]
+        if user.pk in subscribed:
+            told.append(user)
+        elif user.pk in mentioned:
+            if level != NotificationLevel.NOTHING:
+                told.append(user)
+        elif level == NotificationLevel.EVERYTHING:
+            # Subscribed to the container: something new in it
+            told.append(user)
+    return told
 
 
 def reacted_author(event):
@@ -313,11 +284,19 @@ def notify_people(item, *, whom, actor):
     """Posting a message, doc or file: whom to tell (specs/files.md):
     ``"everybody"`` (the project's members at this moment), a list of
     people, or ``"nobody"``. Those chosen who can see the item are
-    subscribed, so the ``created`` event tells them. Returns them."""
+    subscribed, so the ``created`` event tells them; of everybody only
+    those whose level for the item is "everything" (specs/ui-round-6.md,
+    part C: "only what concerns me" and "nothing" aren't subscribed by
+    posts to everybody). People chosen by name are, as when adding
+    subscribers. Returns them."""
     if whom == "nobody":
         return []
     if whom == "everybody":
-        people = User.objects.active().filter(memberships__project=item.project)
+        people = list(User.objects.active().filter(memberships__project=item.project))
+        levels = effective_levels(people, item)
+        people = [
+            user for user in people if levels[user.pk] == NotificationLevel.EVERYTHING
+        ]
     else:
         people = [user for user in whom if user.is_active]
     chosen = [user for user in people if user != actor and can_see(user, item)]
@@ -326,7 +305,7 @@ def notify_people(item, *, whom, actor):
     return chosen
 
 
-# The forms of the overrides ------------------------------------------------
+# The forms of the levels ---------------------------------------------------
 
 
 def level_choices(default):
@@ -341,7 +320,7 @@ def level_choices(default):
 
 
 def item_level_context(user, item):
-    """For the form next to the subscribe button"""
+    """For a list's form (lists have levels, other items don't)"""
     override = LevelOverride.objects.filter(user=user, item=item).first()
     default = effective_level(user, item.parent, project=item.project)
     return {

@@ -2387,6 +2387,58 @@ body:has(.wb-modal[open]) {
   overflow-y: auto;
 }
 
+/* A search field in front of a long select (combobox.js,
+   specs/ui-round-6.md): the list below it, as wide as the field at least,
+   long options wrapping */
+.wb-combobox {
+  position: relative;
+}
+
+.wb-combobox-list {
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  max-width: min(40rem, calc(100vw - 2rem));
+  max-height: min(20rem, 60vh);
+  margin-top: 0.125rem;
+  overflow-y: auto;
+}
+
+.wb-combobox-list .list-group-item {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.wb-combobox-list .wb-combobox-selected:not(.active) {
+  font-weight: 600;
+}
+
+.wb-combobox-group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bs-tertiary-bg);
+  color: var(--bs-secondary-color);
+  font-size: 0.8rem;
+  cursor: default;
+}
+
+/* Inviting several people (projects/invite.html, specs/ui-round-6.md): a
+   box per person, its fields two by two */
+.wb-invite-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-tertiary-bg);
+}
+
+.wb-invite-confirm {
+  grid-column: 1 / -1;
+}
+
 /* The to-do (and message, file, answer) to read: clicking edits it
    (view-edit.js); the form takes the region's place */
 .wb-edit-hit {

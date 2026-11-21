@@ -6,10 +6,18 @@ opening Biwak.
 
 ## What you hear about
 
+**Subscribed means you hear about everything on the item:** every
+comment, change, completion. To stop hearing about one item,
+unsubscribe from it.
+
 You are subscribed to an item when you:
 
-- create it, are assigned to it, are mentioned in it (type `@` and a
-  name in any text) or comment on it;
+- create it, are assigned to it or comment on it;
+- are mentioned in it (type `@` and a name in any text), unless your
+  level is "Nothing";
+- are in the project when somebody posts a message, doc or file to
+  everybody, if your level is "Everything", or when they choose you by
+  name;
 - press "Subscribe" on it, or somebody adds you ("Subscribers..." in
   its "More" menu; they may tell you right away).
 
@@ -24,20 +32,24 @@ can see.
 
 ## Levels
 
-In **Settings**, under Notifications, "Notify me about" is one of:
+Levels decide what you are subscribed to automatically, and whether a
+new to-do in a list you follow reaches you. In **Settings**, under
+Notifications, "Notify me about" is one of:
 
-- **Everything** you are subscribed to (the default);
-- **Only what concerns me:** being assigned or mentioned, comments on
-  what you created or commented on, and your to-dos completed by
-  somebody else;
-- **Nothing.** The activity feed still shows everything.
+- **Everything** (the default): posts to everybody subscribe you, and
+  you hear about everything new in the lists you follow;
+- **Only what concerns me:** only being mentioned or assigned and your
+  own things subscribe you;
+- **Nothing:** only what you do yourself (commenting, being assigned)
+  subscribes you; mentions don't reach you. The activity feed still
+  shows everything.
 
-A project can have its own level ("More", then "Notifications"
-on the project's page), and so can a single item ("Notifications..."
-in its "More" menu): the closest one wins. On a project's people
-page staff see who is "Notified by default" and who gets mail "Only
-when tagged", and can change it; clients change only their own.
-Whoever adds you picks the first setting.
+A project can have its own level ("More", then "Notifications" on the
+project's page), and so can a list ("Notifications..." in its "More"
+menu): the closest one wins. Other items have no level: subscribe or
+unsubscribe. On a project's people page staff see who is "Notified by
+default" and who is notified "Only when tagged", and can change it;
+clients change only their own. Whoever adds you picks the first setting.
 
 ## The lantern
 

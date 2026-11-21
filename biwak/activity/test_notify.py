@@ -12,6 +12,7 @@ from biwak.activity.models import (
     Action,
     Event,
     LevelOverride,
+    Mention,
     Notification,
     Subscription,
 )
@@ -163,64 +164,99 @@ class NotifyTest(TestCase):
         event = record(actor=self.ada, action=Action.JOINED, project=self.project)
         self.assertEqual(notify(event.pk), [])
 
-    def test_levels(self):
-        subscribe(self.bob, self.todo)
+    def test_subscribed_means_everything(self):
+        """Subscribing is the switch (specs/ui-round-6.md, part C): whatever
+        the level, a subscriber is told about everything on the item; not
+        subscribed, nothing but a mention"""
         comment = lambda: ops.add_comment(self.todo, author=self.ada, content="x")  # noqa: E731
-        self.bob.notification_level = NotificationLevel.NOTHING
-        self.bob.save()
-        self.assertEqual(self.told(comment), set())
-        # Not even a mention gets through "nothing"
+        for level in NotificationLevel:
+            edit = lambda level=level: ops.update_todo(  # noqa: E731
+                self.todo, actor=self.ada, title=f"New {level}"
+            )
+            with self.subTest(level=level):
+                self.bob.notification_level = level
+                self.bob.save()
+                subscribe(self.bob, self.todo)
+                self.assertEqual(self.told(comment), {self.bob})
+                Notification.objects.all().delete()
+                self.assertEqual(self.told(edit), {self.bob})
+                Notification.objects.all().delete()
+                unsubscribe(self.bob, self.todo)
+                self.assertEqual(self.told(comment), set())
+
+    def test_mentions_on_every_level_except_nothing(self):
         mention = lambda: ops.add_comment(  # noqa: E731
             self.todo, author=self.ada, content=mentions.syntax(self.bob)
         )
+        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.save()
         self.assertEqual(self.told(mention), set())
-
+        # Nor subscribed by it: only what they do subscribes them
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
         self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
-        self.assertEqual(self.told(comment), set())
+        Mention.objects.all().delete()
         self.assertEqual(self.told(mention), {self.bob})
-        # Comments on what they commented on
+        # Subscribed by it: the next comment tells them
+        self.assertEqual(
+            self.told(lambda: ops.add_comment(self.todo, author=self.ada, content="x")),
+            {self.bob},
+        )
+
+    def test_what_they_do_subscribes_them_on_nothing(self):
+        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.save()
+        comment = lambda: ops.add_comment(self.todo, author=self.ada, content="x")  # noqa: E731
+        self.assertEqual(self.told(comment), set())
+        # Commenting
         ops.add_comment(self.todo, author=self.bob, content="me too")
         self.assertEqual(self.told(comment), {self.bob})
-        # Their to-dos completed by someone else
-        mine = ops.create_todo(todolist=self.shared, title="Mine", creator=self.bob)
+        # Being assigned, and told so
         other = ops.create_todo(todolist=self.shared, title="Other", creator=self.ada)
-        subscribe(self.bob, other)
-        self.assertEqual(
-            self.told(lambda: ops.complete(mine, actor=self.ada)), {self.bob}
-        )
-        self.assertEqual(self.told(lambda: ops.complete(other, actor=self.ada)), set())
-        # Being assigned
         self.assertEqual(
             self.told(lambda: ops.assign(other, [self.bob], actor=self.ada)),
             {self.bob},
         )
-        # Edits don't concern them
         self.assertEqual(
-            self.told(lambda: ops.update_todo(other, actor=self.ada, title="New")),
+            self.told(lambda: ops.complete(other, actor=self.ada)), {self.bob}
+        )
+
+    def test_new_to_dos_in_a_list_by_its_level(self):
+        """Subscribed to a list, the level for it decides whether a new to-do
+        in it tells the person: "everything" does, the others don't"""
+        subscribe(self.bob, self.shared)
+        new = lambda: ops.create_todo(  # noqa: E731
+            todolist=self.shared, title="New", creator=self.ada
+        )
+        self.assertEqual(self.told(new), {self.bob})
+        LevelOverride.objects.create(
+            user=self.bob, project=self.project, level=NotificationLevel.CONCERNS_ME
+        )
+        self.assertEqual(self.told(new), set())
+        # The list's level wins over the project's
+        set_level_override(self.bob, NotificationLevel.EVERYTHING, item=self.shared)
+        self.assertEqual(effective_level(self.bob, self.todo), "everything")
+        self.assertEqual(self.told(new), {self.bob})
+        set_level_override(self.bob, NotificationLevel.NOTHING, item=self.shared)
+        self.assertEqual(self.told(new), set())
+        # Mentioned in the new one: on "nothing" not
+        self.assertEqual(
+            self.told(
+                lambda: ops.create_todo(
+                    todolist=self.shared,
+                    title=f"For {mentions.syntax(self.bob)}",
+                    creator=self.ada,
+                )
+            ),
             set(),
         )
 
-    def test_overrides(self):
-        subscribe(self.bob, self.todo)
-        comment = lambda: ops.add_comment(self.todo, author=self.ada, content="x")  # noqa: E731
-        LevelOverride.objects.create(
-            user=self.bob, project=self.project, level=NotificationLevel.NOTHING
+    def test_only_lists_have_levels(self):
+        with self.assertRaisesMessage(ValueError, "Only lists have a level"):
+            set_level_override(self.bob, NotificationLevel.NOTHING, item=self.todo)
+        self.assertIsNotNone(
+            set_level_override(self.bob, NotificationLevel.NOTHING, item=self.shared)
         )
-        self.assertEqual(effective_level(self.bob, self.todo), "nothing")
-        self.assertEqual(self.told(comment), set())
-        # The container's override wins over the project's, the item's over
-        # the container's
-        LevelOverride.objects.create(
-            user=self.bob, item=self.shared, level=NotificationLevel.EVERYTHING
-        )
-        self.assertEqual(self.told(comment), {self.bob})
-        LevelOverride.objects.create(
-            user=self.bob, item=self.todo, level=NotificationLevel.CONCERNS_ME
-        )
-        self.assertEqual(effective_level(self.bob, self.todo), "concerns_me")
-        self.assertEqual(effective_level(self.bob, self.shared), "everything")
-        self.assertEqual(self.told(comment), set())
 
     def test_edits_merge(self):
         subscribe(self.bob, self.todo)
@@ -280,6 +316,37 @@ class NotifyTest(TestCase):
         self.assertEqual(
             notify_people(message, whom=[self.bob, self.cleo], actor=self.ada),
             [self.bob],
+        )
+
+    def test_posting_to_everybody_per_level(self):
+        """Posting to everybody subscribes those on "everything" only
+        (specs/ui-round-6.md, part C); people chosen by name whatever their
+        level"""
+        dan, eve = person("Dan"), person("Eve")
+        for user in [dan, eve]:
+            project_ops.add_member(self.project, user, actor=self.ada)
+        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.save()
+        project_ops.set_notify_choice(
+            self.project, dan, project_ops.NOTIFY_TAGGED, actor=self.ada
+        )
+        message = ops.create_message(
+            project=self.project, title="News", creator=self.ada, visible=True
+        )
+        # Bob's own level is "nothing", but the project's choice "notified
+        # by default" (adding him stored it) wins
+        LevelOverride.objects.filter(user=self.bob).delete()
+        self.assertEqual(
+            set(notify_people(message, whom="everybody", actor=self.ada)),
+            {self.cleo, eve},
+        )
+        told = self.told(
+            lambda: ops.add_comment(message, author=self.cleo, content="Hi")
+        )
+        self.assertEqual(told, {self.ada, eve})
+        self.assertEqual(
+            notify_people(message, whom=[self.bob, dan], actor=self.ada),
+            [self.bob, dan],
         )
 
 
@@ -344,7 +411,9 @@ class QueriesTest(TestCase):
                 if n % 2:
                     user.notification_level = NotificationLevel.CONCERNS_ME
                     user.save()
-                    set_level_override(user, NotificationLevel.EVERYTHING, item=todo)
+                    set_level_override(
+                        user, NotificationLevel.EVERYTHING, item=todolist
+                    )
             ops.add_comment(todo, author=ada, content="Hi")
             event = Event.objects.latest("pk")
             counts.append(self.queries(lambda event=event: notify(event.pk)))
@@ -365,7 +434,10 @@ class QueriesTest(TestCase):
                 ops.create_todo(todolist=todolist, title=f"T{n}", creator=ada)
                 for n in range(count)
             ]
-            set_level_override(bob, NotificationLevel.NOTHING, item=todos[0])
+            # A level changed since doesn't hold the mail back (subscribing
+            # is the switch), a hidden item does
+            set_level_override(bob, NotificationLevel.NOTHING, item=todolist)
+            ops.trash(todos[0], actor=ada)
             events = [
                 record(actor=ada, action=Action.EDITED, project=p, item=todo)
                 for todo in todos
@@ -374,3 +446,28 @@ class QueriesTest(TestCase):
             counts.append(self.queries(lambda n=notifications: _deliverable(n, bob)))
             self.assertEqual(len(_deliverable(notifications, bob)), count - 1)
         self.assertEqual(counts[0], counts[1])
+
+
+class OnlyListsHaveLevelsMigrationTest(TestCase):
+    def test_overrides_of_other_items_go(self):
+        """specs/ui-round-6.md, part C: projects' and lists' stay"""
+        from importlib import import_module
+
+        from django.apps import apps
+
+        migration = import_module(
+            "biwak.activity.migrations.0015_only_lists_have_levels"
+        )
+        ada = person("Ada")
+        p = project(members=[ada])
+        todolist = ops.create_list(project=p, title="List", creator=ada)
+        todo = ops.create_todo(todolist=todolist, title="To-do", creator=ada)
+        message = ops.create_message(project=p, title="News", creator=ada)
+        for item in [todolist, todo, message]:
+            LevelOverride.objects.create(user=ada, item=item, level="nothing")
+        LevelOverride.objects.create(user=ada, project=p, level="nothing")
+        migration.forward(apps, None)
+        self.assertEqual(
+            set(LevelOverride.objects.values_list("item", "project")),
+            {(todolist.pk, None), (None, p.pk)},
+        )

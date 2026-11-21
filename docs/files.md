@@ -10,8 +10,8 @@ number of comments.
 - **New message:** title, text (Markdown), an optional category,
   "Visible to clients" (staff), and whom to notify: everybody in the
   project, only chosen people, or nobody. Everybody is preselected;
-  people who only want mails when they are tagged still get none unless
-  mentioned ([Notifications](notifications.md)).
+  it subscribes the people notified by default, not those who want to
+  hear only when tagged ([Notifications](notifications.md)).
 - Staff **pin** a message (its page or the row's menu) to keep it on
   top for everybody. The categories are set up by an administrator.
 - Messages have comments and reactions like to-dos. Clients can post

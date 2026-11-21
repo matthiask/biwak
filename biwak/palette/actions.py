@@ -282,6 +282,14 @@ def on_organizations(user, name, organization):
     return actions
 
 
+def on_people(user, name):
+    """The People page: inviting, for the staff who manage members
+    (specs/ui-round-6.md)"""
+    if name != "people" or not project_ops.can_manage_members(user):
+        return []
+    return [modal(_("Invite people"), reverse("invite_people"))]
+
+
 def for_page(request, context):
     """The actions of the page: ``[{..., "group": "page"|"everywhere"}]``,
     those of the page first. ``context`` is the template's: the page's
@@ -300,6 +308,7 @@ def for_page(request, context):
     if item is not None:
         page += on_item(request, item, context)
     page += on_organizations(user, name, context.get("organization"))
+    page += on_people(user, name)
     return [{**a, "group": "page"} for a in page] + [
         {**a, "group": "everywhere"} for a in everywhere(user)
     ]

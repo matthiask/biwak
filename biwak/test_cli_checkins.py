@@ -171,8 +171,7 @@ class CheckinCLITest(test_cli.CLITest):
         result = self.biwak("checkin", "show", 999999)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("404", result.output)
-        # Bob answers, not asked? He is. A staff member who isn't asked:
+        # Not asked, but seeing it: answers (decided 2026-11-21)
         ops.set_people(self.item, [self.bob], actor=self.ada)
         result = self.biwak("checkin", "answer", self.item.pk, "Hi")
-        self.assertEqual(result.exit_code, 1)
-        self.assertIn("403", result.output)
+        self.assertEqual(result.exit_code, 0, result.output)

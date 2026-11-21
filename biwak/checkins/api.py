@@ -402,13 +402,13 @@ class AnswerIn(Schema):
 @router.post("checkins/{question_id}/answer/", response=AnswerOut)
 def answer_create(request, question_id: int, data: AnswerIn):
     """Your answer to the occurrence (default: the latest), or the change
-    of the one you gave; you answer once per occurrence. Only for people
-    asked."""
+    of the one you gave; you answer once per occurrence. Anybody who sees
+    the question, asked or not."""
     item = question_for(request, question_id)
     if not data.content.strip():
         bad_request(_("The answer is empty."))
     if not ops.can_answer(request.user, item):
-        raise HttpError(403, _("You aren't asked this question."))
+        raise HttpError(403, _("You can't answer this question."))
     occurrence = _occurrence(item, data.occurrence_id)
     try:
         answer = ops.answer(

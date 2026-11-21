@@ -16,6 +16,7 @@
               {% if not request.user.is_client %}<div class="small text-body-secondary">
                   {{ m.user.email }}
                 </div>{% endif %}
+              {% include "organizations/_invitation.html" with person=m.user next=request.get_full_path %}
               {% if notify %}
                 <form method="post" action="{% url 'member_notify' project.pk m.user.pk %}" class="d-flex gap-1 mt-1">
                   {% csrf_token %}

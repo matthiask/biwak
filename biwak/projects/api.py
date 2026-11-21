@@ -220,16 +220,14 @@ class InviteIn(Schema):
     notify: Notify = "default"
 
 
-@router.post("projects/{project_id}/members/invite/", response={201: MemberOut})
-def member_invite(request, project_id: int, data: InviteIn):
-    """Adds a person by address, creating and mailing them if they're new
-    (staff)"""
-    project = project_for(request, project_id)
-    staff_only(request)
+def invitee_organization(data):
+    """The organization an invitation names (``organization_id`` or an
+    existing ``organization`` by name), else None; ``ValueError`` for an
+    invalid address or an unknown organization"""
     try:
         validate_email(data.email)
     except ValidationError as exc:
-        raise HttpError(400, _("Enter a valid email address.")) from exc
+        raise ValueError(_("Enter a valid email address.")) from exc
     organization = None
     if data.organization_id is not None:
         organization = Organization.objects.filter(pk=data.organization_id).first()
@@ -238,7 +236,20 @@ def member_invite(request, project_id: int, data: InviteIn):
     if organization is None and (
         data.organization_id is not None or data.organization.strip()
     ):
-        raise HttpError(400, _("No such organization."))
+        raise ValueError(_("No such organization."))
+    return organization
+
+
+@router.post("projects/{project_id}/members/invite/", response={201: MemberOut})
+def member_invite(request, project_id: int, data: InviteIn):
+    """Adds a person by address, creating and mailing them if they're new
+    (staff)"""
+    project = project_for(request, project_id)
+    staff_only(request)
+    try:
+        organization = invitee_organization(data)
+    except ValueError as exc:
+        raise HttpError(400, str(exc)) from exc
     try:
         user, _changed = project_ops.invite(
             project,
@@ -314,3 +325,181 @@ def project_update(request, project_id: int, data: ProjectPatch):
         else:
             project_ops.unarchive_project(project, actor=request.user)
     return project_out(project, request.user)
+
+
+# Inviting several people at once, and the invitations (specs/ui-round-6.md,
+# part B)
+
+
+class InvitationPersonIn(Schema):
+    email: str
+    name: str = ""
+    # Only admins create staff
+    is_client: bool = True
+    # For new people: the organization by ID or by name (existing ones);
+    # neither: the one of the address's domain
+    organization_id: int | None = None
+    organization: str = ""
+
+
+class InvitationsIn(Schema):
+    people: list[InvitationPersonIn]
+    projects: list[int]
+    # The choice for every project
+    notify: Notify = "default"
+
+
+class InvitedOut(Schema):
+    person: PersonOut
+    email: str
+    # A new person, mailed the invitation; else they had an account
+    created: bool
+    # The projects they weren't in yet
+    added_to: list[int]
+
+
+class RowError(Schema):
+    index: int
+    detail: str
+
+
+class InvitationErrorsOut(Schema):
+    detail: str
+    errors: list[RowError]
+
+
+def _row_errors(errors, data):
+    """400 with each row's error; ``detail`` names the addresses too (the
+    CLI shows it)"""
+    rows = "; ".join(
+        f"{data.people[index].email}: {message}"
+        for index, message in sorted(errors.items())
+    )
+    return Status(
+        400,
+        {
+            "detail": _("Nobody has been invited. %(errors)s") % {"errors": rows},
+            "errors": [
+                {"index": index, "detail": message}
+                for index, message in sorted(errors.items())
+            ],
+        },
+    )
+
+
+@router.post("invitations/", response={201: list[InvitedOut], 400: InvitationErrorsOut})
+def invitations_create(request, data: InvitationsIn):
+    """Invites several people to several projects at once (own staff): new
+    people get one mail naming the projects, people with an account are
+    added. All or nothing: 400 with each refused row's ``index``."""
+    staff_only(request)
+    if not data.people:
+        raise HttpError(400, _("Nobody to invite."))
+    projects = list(
+        Project.objects
+        .accessible_to(request.user)
+        .active()
+        .filter(pk__in=data.projects)
+    )
+    # In the order given
+    projects.sort(key=lambda project: data.projects.index(project.pk))
+    if not data.projects or len(projects) != len(set(data.projects)):
+        raise HttpError(404, _("Not found."))
+    people, errors = [], {}
+    for index, row in enumerate(data.people):
+        try:
+            organization = invitee_organization(row)
+        except ValueError as exc:
+            errors[index] = str(exc)
+            organization = None
+        people.append({
+            "email": row.email,
+            "full_name": row.name,
+            "is_client": row.is_client,
+            "organization": organization,
+        })
+    if errors:
+        return _row_errors(errors, data)
+    try:
+        invited = project_ops.invite_people(
+            projects, people, actor=request.user, notify=data.notify
+        )
+    except project_ops.InvitationErrors as exc:
+        return _row_errors(exc.errors, data)
+    return Status(
+        201,
+        [
+            {
+                "person": person_out(person.user),
+                "email": person.user.email,
+                "created": person.created,
+                "added_to": [project.pk for project in person.added_to],
+            }
+            for person in invited
+        ],
+    )
+
+
+class InvitationOut(Schema):
+    person: PersonOut
+    email: str
+    invited_by: PersonOut | None
+    invited_at: dt.datetime
+    # The projects they're in now, which a resent invitation names
+    project_ids: list[int]
+
+
+def invitation_out(user):
+    return {
+        "person": person_out(user),
+        "email": user.email,
+        "invited_by": person_out(user.invited_by),
+        "invited_at": user.invited_at,
+        "project_ids": [p.pk for p in project_ops.invitation_projects(user)],
+    }
+
+
+def invitation_for(request, person_id):
+    if not project_ops.can_manage_members(request.user):
+        raise HttpError(403, _("Only staff manage invitations."))
+    return get_object_or_404(
+        User.objects.invited().select_related("organization", "invited_by"),
+        pk=person_id,
+    )
+
+
+@router.get("invitations/", response=list[InvitationOut])
+def invitations_list(request):
+    """Everybody invited who hasn't signed in yet, the oldest invitation
+    first (own staff)"""
+    if not project_ops.can_manage_members(request.user):
+        raise HttpError(403, _("Only staff manage invitations."))
+    return [
+        invitation_out(user)
+        for user in User.objects.invited().select_related("organization", "invited_by")
+    ]
+
+
+@router.post("invitations/{person_id}/resend/", response=InvitationOut)
+def invitation_resend(request, person_id: int):
+    """Sends the invitation mail again, naming the projects the person is
+    in now"""
+    user = invitation_for(request, person_id)
+    project_ops.resend_invitation(user, actor=request.user)
+    return invitation_out(user)
+
+
+class WithdrawnOut(Schema):
+    # Removed from these projects (those the withdrawing person can open)
+    removed_from: list[int]
+    # The account went too: nothing else referred to it
+    deleted: bool
+
+
+@router.delete("invitations/{person_id}/", response=WithdrawnOut)
+def invitation_withdraw(request, person_id: int):
+    """Withdraws the invitation while the person hasn't signed in"""
+    user = invitation_for(request, person_id)
+    projects, _delete = project_ops.withdrawal(user, actor=request.user)
+    deleted = project_ops.withdraw_invitation(user, actor=request.user)
+    return {"removed_from": [p.pk for p in projects], "deleted": deleted}

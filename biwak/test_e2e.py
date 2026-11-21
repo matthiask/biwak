@@ -2042,8 +2042,9 @@ class ModalTest(E2ETestCase):
         self.goto(page, reverse("project_people", args=[self.project.pk]))
         page.get_by_role("link", name="Invite by email").click()
         dialog = page.locator("dialog#modal")
-        expect(dialog.locator("h1")).to_have_text("Invite by email")
-        dialog.get_by_label("Email").fill("dora@example.org")
+        # The form inviting several people (specs/ui-round-6.md)
+        expect(dialog.locator("h1")).to_have_text("Invite people")
+        dialog.get_by_label("Email").first.fill("dora@example.org")
         dialog.get_by_role("button", name="Invite").click()
         # Listed: their mark links to their page, the email below the name
         expect(page.get_by_text("dora@example.org", exact=True)).to_be_visible()

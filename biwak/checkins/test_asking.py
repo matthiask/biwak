@@ -667,7 +667,10 @@ class AskingTest(CheckinTestCase):
         with self.assertRaises(ValueError):
             self.question("Shared", visible=True, people=[outsider])
 
-    def test_those_asked_are_subscribed_and_those_removed_are_not(self):
+    def test_asked_and_subscribed_are_two_lists(self):
+        """At first the people asked and the creator are subscribed; later
+        changes to who's asked leave the subscribers alone (decided
+        2026-11-21, specs/checkins.md)"""
         from biwak.activity.models import Subscription
 
         def subscribed():
@@ -679,9 +682,17 @@ class AskingTest(CheckinTestCase):
 
         self.assertEqual(subscribed(), {self.ada.pk, self.bob.pk})
         ops.set_people(self.item, [self.bob], actor=self.ada)
-        self.assertEqual(subscribed(), {self.bob.pk})
-        ops.set_people(self.item, [self.ada, self.bob], actor=self.ada)
         self.assertEqual(subscribed(), {self.ada.pk, self.bob.pk})
+        dora = person("Dora")
+        project_ops.add_member(self.project, dora, actor=self.ada)
+        ops.set_people(self.item, [self.bob, dora], actor=self.ada)
+        self.assertEqual(subscribed(), {self.ada.pk, self.bob.pk})
+        # A question created by someone not asked: its creator too
+        item = self.question("Lunch?", creator=self.bob, people=[self.ada])
+        self.assertEqual(
+            set(Subscription.objects.filter(item=item).values_list("user", flat=True)),
+            {self.ada.pk, self.bob.pk},
+        )
 
     # The command -------------------------------------------------------------
 

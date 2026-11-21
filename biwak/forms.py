@@ -111,3 +111,65 @@ class AssigneeField(forms.ModelMultipleChoiceField):
         from biwak.organizations.names import display_name
 
         return display_name(obj, reader())
+
+
+class ComboboxSelect(forms.Select):
+    """A select with a search field which finds the typed words anywhere in
+    the options (``frontend/combobox.js``, from Workbench's; specs/ui-round-6.md,
+    part A): for selects with many choices. Without JavaScript it's the plain
+    select. ``search`` returns more text to find an option by (an address),
+    given the option's model instance."""
+
+    def __init__(self, attrs=None, choices=(), *, search=None):
+        super().__init__(
+            {
+                "data-combobox": "",
+                "data-placeholder": _("Search…"),
+                "data-empty": _("Nothing found"),
+                **(attrs or {}),
+            },
+            choices,
+        )
+        self.search = search
+
+    def create_option(self, name, value, *args, **kwargs):
+        option = super().create_option(name, value, *args, **kwargs)
+        instance = getattr(value, "instance", None)
+        if self.search is not None and instance is not None:
+            option["attrs"]["data-search"] = self.search(instance)
+        return option
+
+
+def person_label(person):
+    """Who someone is, in a long list of people: "Ada Example · Example
+    Client Ltd", the organization's name (staff without one: "staff")"""
+    if person.organization_id:
+        return f"{person} · {person.organization_name}"
+    if not person.is_client:
+        return f"{person} · {_('staff')}"
+    return str(person)
+
+
+class PersonChoiceField(forms.ModelChoiceField):
+    """A person out of many, in a combobox; ``with_address`` also finds them
+    by their address (for those who may see addresses)"""
+
+    def __init__(self, queryset, *, with_address=False, **kwargs):
+        kwargs.setdefault(
+            "widget",
+            ComboboxSelect(
+                search=(lambda person: person.email) if with_address else None
+            ),
+        )
+        super().__init__(queryset, **kwargs)
+
+    def _set_queryset(self, queryset):
+        # The organization's name in each label, without a query per person
+        if queryset is not None:
+            queryset = queryset.select_related("organization")
+        super()._set_queryset(queryset)
+
+    queryset = property(forms.ModelChoiceField._get_queryset, _set_queryset)
+
+    def label_from_instance(self, obj):
+        return person_label(obj)

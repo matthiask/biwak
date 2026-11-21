@@ -153,6 +153,7 @@
           <li class="text-body-secondary">{% translate "Nobody yet." %}</li>
         {% endfor %}
       </ul>
+      <div class="mt-4">{% include "items/_subscribers.html" %}</div>
       <h2 class="h6 mt-4">{% translate "Mails about answers" %}</h2>
       <form method="post" action="{% url 'question_mail' item.pk %}">
         {% csrf_token %}

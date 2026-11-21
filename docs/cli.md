@@ -38,6 +38,8 @@ biwak checkin due
 biwak checkin answer QUESTION "Busy with the launch"
 biwak message post PROJECT "Kick-off" "We start Monday" --notify nobody
 biwak search tent
+biwak invite dora@example.net eve@example.net --project 4 --project 7
+biwak invitations
 ```
 
 The numbers are the IDs in the pages' addresses. Every command takes

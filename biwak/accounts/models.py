@@ -49,6 +49,13 @@ class UserManager(BaseUserManager):
     def active(self):
         return self.filter(is_active=True)
 
+    def invited(self):
+        """Invitations (specs/ui-round-6.md, part B): active people who were
+        invited and have never signed in, the oldest invitation first"""
+        return self.filter(
+            is_active=True, invited_at__isnull=False, last_login__isnull=True
+        ).order_by("invited_at", "pk")
+
 
 class NotificationLevel(models.TextChoices):
     """Which notifications somebody gets (specs/notifications.md)"""
@@ -141,6 +148,18 @@ class User(AbstractBaseUser):
         null=True,
         blank=True,
     )
+    # Who invited the person and when (specs/ui-round-6.md, part B): set by
+    # ``invite_people()`` when it creates them. An invitation is somebody
+    # invited who has never signed in (``User.objects.invited()``).
+    invited_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("invited by"),
+    )
+    invited_at = models.DateTimeField(_("invited at"), null=True, blank=True)
     # Overridable per project and item (biwak.activity.models.LevelOverride)
     notification_level = models.CharField(
         _("notifications"),
@@ -350,6 +369,11 @@ class User(AbstractBaseUser):
         if self.organization_id and not self.sees_all_access:
             return f"{self}, {self.organization.name}"
         return str(self)
+
+    @property
+    def is_invited(self):
+        """Invited and never signed in (``UserManager.invited()``)"""
+        return self.is_active and self.invited_at is not None and not self.last_login
 
     @property
     def is_staff(self):

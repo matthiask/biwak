@@ -5,7 +5,7 @@ from biwak.accounts.models import APIToken, User
 from biwak.activity.models import Action, Event, Subscription
 from biwak.items import operations as ops
 from biwak.projects.models import Membership
-from biwak.test_utils import person, project
+from biwak.test_utils import invite_data, person, project
 
 
 class MembersTest(TestCase):
@@ -32,17 +32,36 @@ class MembersTest(TestCase):
             self.client.get(self.project.get_absolute_url()), "Bob Example"
         )
 
+    def test_add_offers_a_combobox_saying_who_people_are(self):
+        # specs/ui-round-6.md, part A: the plain select without JavaScript,
+        # data-combobox for combobox.js, the organization in the label and
+        # the address to find people by
+        dora = person("Dora", client=True)
+        self.client.force_login(self.ada)
+        response = self.client.get(self.add_url)
+        self.assertContains(response, "data-combobox")
+        self.assertContains(
+            response,
+            f'<option value="{dora.pk}" data-search="dora@example.org">'
+            "Dora Example · Example Client Ltd</option>",
+            html=True,
+        )
+        self.assertContains(response, "Bob Example · Our organization")
+
     def test_invite_client(self):
         self.client.force_login(self.ada)
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(
                 self.invite_url,
-                {
-                    "notify": "default",
-                    "email": "Dora@Example.org",
-                    "full_name": "Dora Example",
-                    "organization": "Example Client Ltd",
-                },
+                invite_data(
+                    [self.project],
+                    {
+                        "email": "Dora@Example.org",
+                        "full_name": "Dora Example",
+                        "organization": "Example Client Ltd",
+                    },
+                    notify="default",
+                ),
             )
         dora = User.objects.get(email__iexact="dora@example.org")
         self.assertTrue(dora.is_client)
@@ -54,7 +73,9 @@ class MembersTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(
                 self.invite_url,
-                {"notify": "default", "email": "dora@example.org"},
+                invite_data(
+                    [self.project], {"email": "dora@example.org"}, notify="default"
+                ),
             )
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(
@@ -64,25 +85,27 @@ class MembersTest(TestCase):
     def test_only_admins_invite_staff(self):
         self.client.force_login(self.ada)
         # Staff can't even choose: the field isn't there, new people are clients
-        self.assertNotContains(self.client.get(self.invite_url), 'name="is_client"')
+        self.assertNotContains(
+            self.client.get(self.invite_url), 'name="person-0-is_client"'
+        )
         self.client.post(
             self.invite_url,
-            {
-                "notify": "default",
-                "email": "eve@example.org",
-                "is_client": "",
-            },
+            invite_data(
+                [self.project],
+                {"email": "eve@example.org", "is_client": ""},
+                notify="default",
+            ),
         )
         self.assertTrue(User.objects.get(email="eve@example.org").is_client)
 
         self.client.force_login(self.root)
         self.client.post(
             self.invite_url,
-            {
-                "notify": "default",
-                "email": "finn@example.org",
-                "is_client": "",
-            },
+            invite_data(
+                [self.project],
+                {"email": "finn@example.org", "is_client": ""},
+                notify="default",
+            ),
         )
         self.assertFalse(User.objects.get(email="finn@example.org").is_client)
 
@@ -94,7 +117,8 @@ class MembersTest(TestCase):
         self.assertNotContains(response, 'value="invite"')
         self.client.post(self.add_url, {"notify": "default", "user": self.bob.pk})
         self.client.post(
-            self.invite_url, {"notify": "default", "email": "x@example.org"}
+            self.invite_url,
+            invite_data([self.project], {"email": "x@example.org"}, notify="default"),
         )
         self.assertFalse(self.project.is_member(self.bob))
         self.assertFalse(User.objects.filter(email="x@example.org").exists())

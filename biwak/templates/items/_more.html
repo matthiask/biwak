@@ -1,6 +1,7 @@
 {% load biwak i18n %}
 {% comment %}
-  The "More" menu of an item's page: its notification level, its subscribers, moving,
+  The "More" menu of an item's page: a list's notification level (other items have
+  none: subscribing is the switch, specs/ui-round-6.md), its subscribers, moving,
   archiving (lists) and trashing (who may change it); `more_history`: the history too, on phones, where the page's
   header doesn't show its link; each in a modal (frontend/modal.js) which
   is also a page. `can_change` comes from the page.
@@ -14,11 +15,13 @@
     {% if more_history and not request.user.is_client %}
       <a class="dropdown-item wb-phone-only" href="{% url 'item_history' item.pk %}">{% translate "History" %}</a>
     {% endif %}
-    <a
-      class="dropdown-item"
-      href="{% url 'item_notifications' item.pk %}"
-      data-modal
-    >{% translate "Notifications…" %}</a>
+    {% if item.kind == "list" %}
+      <a
+        class="dropdown-item"
+        href="{% url 'item_notifications' item.pk %}"
+        data-modal
+      >{% translate "Notifications…" %}</a>
+    {% endif %}
     <a
       class="dropdown-item"
       href="{% url 'item_subscribers' item.pk %}"

@@ -3,10 +3,12 @@ specs/access.md). Adding someone subscribes them to nothing that exists
 already (specs/notifications.md)."""
 
 from collections import Counter
+from dataclasses import dataclass
 
 from django.core.mail import EmailMessage
-from django.db import connection, transaction
+from django.db import connection, models, transaction
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
@@ -131,7 +133,102 @@ class InvitationError(ValueError):
     pass
 
 
+class InvitationErrors(InvitationError):
+    """What ``invite_people()`` refused, ``{row's index: message}``; nothing
+    of the round was saved"""
+
+    def __init__(self, errors):
+        self.errors = errors
+        super().__init__(" ".join(errors.values()))
+
+
+@dataclass
+class Invited:
+    user: User
+    created: bool  # A new person, mailed the invitation
+    added_to: list  # The projects they weren't in yet
+
+
+def _invitee(email, *, actor, full_name, is_client, organization):
+    """The person with ``email``, created if they don't exist yet; raises
+    ``InvitationError`` for what the actor may not do. Returns the person
+    and whether they were created."""
+    user = User.objects.filter(email__iexact=email).first()
+    if user is not None:
+        if not user.is_active:
+            raise InvitationError(_("This person has been deactivated."))
+        return user, False
+    if not is_client and not actor.is_admin:
+        raise InvitationError(_("Only admins can invite staff."))
+    if organization is not None and not org_ops.can_touch(actor, organization):
+        raise InvitationError(_("Only admins add people to your own organization."))
+    organization = org_ops.for_new_person(email, organization)
+    if organization is not None and not org_ops.can_touch(actor, organization):
+        # Suggested by the domain only: not for others than admins
+        organization = None
+    user = User.objects.create_user(
+        email,
+        full_name=full_name.strip(),
+        is_client=is_client,
+        organization=organization,
+        invited_by=actor,
+        invited_at=timezone.now(),
+    )
+    return user, True
+
+
 @transaction.atomic
+def invite_people(projects, people, *, actor, notify=NOTIFY_DEFAULT):
+    """Invites ``people`` (dicts of ``email`` and optionally ``full_name``,
+    ``is_client``, default True, and ``organization``) to every one of
+    ``projects`` (specs/ui-round-6.md, part B). New people are created and
+    mailed one invitation naming the projects, after the commit; people who
+    have an account are added (``add_member()``, which records it), no
+    invitation. ``notify`` is the choice for every project. All or nothing:
+    ``InvitationErrors`` with each refused row's message, and nothing saved.
+    Only admins create staff (specs/access.md: staff or client is set by
+    admins). New people belong to their ``organization``, else to the one
+    their address's domain belongs to (specs/organizations.md); only admins
+    put people into the own. People who exist keep theirs."""
+    if not can_manage_members(actor):
+        raise PermissionError("Only staff invite people.")
+    if notify not in NOTIFY_CHOICES:
+        raise ValueError(f"Unknown choice {notify!r}")
+    projects = list(projects)
+    errors, done, seen = {}, [], set()
+    for index, row in enumerate(people):
+        email = User.objects.normalize_email(row["email"].strip())
+        if email.lower() in seen:
+            errors[index] = _("This address is in another row too.")
+            continue
+        seen.add(email.lower())
+        try:
+            user, created = _invitee(
+                email,
+                actor=actor,
+                full_name=row.get("full_name", ""),
+                is_client=row.get("is_client", True),
+                organization=row.get("organization"),
+            )
+        except InvitationError as exc:
+            errors[index] = str(exc)
+            continue
+        added = [
+            project
+            for project in projects
+            if add_member(project, user, actor=actor, notify=notify)
+        ]
+        done.append(Invited(user, created, added))
+    if errors:
+        # Rolls the round back; no mail is queued before this
+        raise InvitationErrors(errors)
+    for invited in done:
+        if invited.created:
+            # Through the outbox: sent once this commits, not on a rollback
+            send_invitation(projects, invited.user, actor=actor)
+    return done
+
+
 def invite(
     project,
     *,
@@ -142,53 +239,127 @@ def invite(
     organization=None,
     notify=NOTIFY_DEFAULT,
 ):
-    """Adds a person by email address, creating them if they don't exist
-    yet and mailing them how to log in. Only admins create staff
-    (specs/access.md: staff or client is set by admins). New people belong
-    to ``organization``, else to the one their address's domain belongs to
-    (specs/organizations.md); only admins put people into the
-    own. People who exist keep theirs. Returns the person
-    and whether they were created."""
-    email = User.objects.normalize_email(email.strip())
-    user = User.objects.filter(email__iexact=email).first()
-    created = False
-    if user is None:
-        if not is_client and not actor.is_admin:
-            raise InvitationError(_("Only admins can invite staff."))
-        if organization is not None and not org_ops.can_touch(actor, organization):
-            raise InvitationError(_("Only admins add people to your own organization."))
-        organization = org_ops.for_new_person(email, organization)
-        if organization is not None and not org_ops.can_touch(actor, organization):
-            # Suggested by the domain only: not for others than admins
-            organization = None
-        user = User.objects.create_user(
-            email,
-            full_name=full_name.strip(),
-            is_client=is_client,
-            organization=organization,
+    """``invite_people()`` for one person and one project (the API's
+    ``members/invite/``, the new project's rows). Returns the person and
+    whether they were created or added."""
+    try:
+        [invited] = invite_people(
+            [project],
+            [
+                {
+                    "email": email,
+                    "full_name": full_name,
+                    "is_client": is_client,
+                    "organization": organization,
+                }
+            ],
+            actor=actor,
+            notify=notify,
         )
-        created = True
-    elif not user.is_active:
-        raise InvitationError(_("This person has been deactivated."))
-    added = add_member(project, user, actor=actor, notify=notify)
-    if created:
-        # Through the outbox: sent once this commits
-        send_invitation(project, user, actor=actor)
-    return user, created or added
+    except InvitationErrors as exc:
+        raise InvitationError(exc.errors[0]) from exc
+    return invited.user, invited.created or bool(invited.added_to)
 
 
-def send_invitation(project, user, *, actor):
+def invitation_projects(user):
+    """The projects an invitation names when it's sent again: those the
+    person is in now, not archived"""
+    return Project.objects.filter(
+        memberships__user=user, archived_at__isnull=True
+    ).order_by(Lower("name"))
+
+
+def can_manage_invitation(actor, user):
+    """Own staff resend and withdraw invitations, while the person hasn't
+    signed in yet"""
+    return can_manage_members(actor) and user.is_invited
+
+
+def resend_invitation(user, *, actor):
+    """The invitation mail again, naming the projects the person is in now
+    (no limit in code, decided 2026-11-21); after the commit"""
+    if not can_manage_invitation(actor, user):
+        raise PermissionError("Only staff resend invitations of people not signed in.")
+    # Through the outbox: sent once this commits
+    send_invitation(list(invitation_projects(user)), user, actor=actor)
+
+
+def _referred_to(user):
+    """Whether something keeps the person: what can't be deleted with
+    them (comments, items, events, files, links: ``PROTECT``), what others
+    gave them (assignments, check-ins asking them), mentions and reactions"""
+    from biwak.activity.models import Mention
+    from biwak.reactions.models import Reaction
+
+    for relation in User._meta.get_fields(include_hidden=True):
+        if not (relation.auto_created and relation.is_relation) or relation.concrete:
+            continue
+        if relation.many_to_many or relation.on_delete is models.PROTECT:
+            manager = relation.related_model._base_manager
+            if manager.filter(**{relation.field.name: user}).exists():
+                return True
+    return (
+        Mention.objects.filter(user=user).exists()
+        or Reaction.objects.filter(user=user).exists()
+    )
+
+
+def withdrawal(user, *, actor):
+    """What withdrawing the invitation does: ``(projects, delete)``, the
+    projects the person is removed from (those the actor can open) and
+    whether the account goes too, which it does when nothing else refers
+    to it (``_referred_to()``) and they're in no other projects"""
+    memberships = Project.objects.filter(memberships__user=user)
+    projects = list(
+        memberships.filter(
+            pk__in=Project.objects.accessible_to(actor).values("pk")
+        ).order_by(Lower("name"))
+    )
+    others = memberships.exclude(pk__in=[p.pk for p in projects]).exists()
+    return projects, not others and not _referred_to(user)
+
+
+@transaction.atomic
+def withdraw_invitation(user, *, actor):
+    """Removes the invited person from the projects the actor can open,
+    and the account itself if nothing else refers to it (``withdrawal()``);
+    staff only, while the person hasn't signed in. The feed's "added"
+    events stay. Returns whether the account was deleted."""
+    if not can_manage_invitation(actor, user):
+        raise PermissionError(
+            "Only staff withdraw invitations of people not signed in."
+        )
+    projects, delete = withdrawal(user, actor=actor)
+    for project in projects:
+        remove_member(project, user, actor=actor)
+    if delete:
+        user.delete()
+    return delete
+
+
+def send_invitation(projects, user, *, actor):
+    """The invitation mail naming ``projects``"""
+    projects = list(projects)
     context = {
-        "project": project,
+        "projects": [
+            {"name": project.name, "url": absolute(project.get_absolute_url())}
+            for project in projects
+        ],
         "user": user,
         "actor": actor,
-        "url": absolute(project.get_absolute_url()),
+        "url": absolute(projects[0].get_absolute_url() if len(projects) == 1 else "/"),
     }
     # In their language if they have one, else in the inviter's
     with translation.override(user.language or translation.get_language()):
+        if len(projects) == 1:
+            subject = _("%(actor)s invited you to %(project)s") % {
+                "actor": actor,
+                "project": projects[0],
+            }
+        else:
+            subject = _("%(actor)s invited you to Biwak") % {"actor": actor}
         message = EmailMessage(
-            _("%(actor)s invited you to %(project)s")
-            % {"actor": actor, "project": project},
+            subject,
             render_to_string("projects/invitation.txt", context),
             # From the person inviting, like notification mails
             sender(_("%(name)s (Biwak)") % {"name": actor}),

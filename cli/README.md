@@ -19,6 +19,8 @@ biwak todo comment TODO "The plan" --attach plan.pdf   # --attach is repeatable
 biwak react TODO 👍                    # again removes it; --comment ID for a comment
 biwak subscribers ITEM                 # who gets what happens to it, and who added them
 biwak subscribe ITEM --people 3,4 --notify --note "Have a look"   # --notify: tell them now
+biwak subscribe ITEM                   # yourself: you hear about everything on it
+biwak unsubscribe ITEM                 # stop hearing about it
 biwak todo done TODO
 biwak todo move TODO --list LIST --group GROUP   # or --todos 1,2,3
 biwak checkins PROJECT
@@ -29,6 +31,8 @@ biwak notifications --level concerns_me --delivery digest
 biwak members PROJECT
 biwak member add PROJECT PERSON --only-tagged      # notified only when tagged
 biwak member invite PROJECT ada@example.org --name "Ada" --organization "Example Ltd"
+biwak invite ada@example.org bob@example.org --project 4 --project 7   # several at once, all or nothing
+biwak invitations                           # not signed in yet (staff); resend PERSON, withdraw PERSON
 biwak orgs                                  # organizations (staff); show, add, edit, merge, delete, move
 biwak orgs merge 12 7                       # people and domains of 12 into 7
 biwak member remove PROJECT PERSON          # staff anybody, everybody themselves

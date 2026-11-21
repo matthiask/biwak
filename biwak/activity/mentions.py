@@ -19,7 +19,7 @@ from contextvars import ContextVar
 from django.db import models
 from django.utils.translation import gettext as _
 
-from biwak.accounts.models import User
+from biwak.accounts.models import NotificationLevel, User
 from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_importing, subscribe
@@ -212,7 +212,7 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
     members), and only those this save adds: mentions already in
     ``previous`` (the text before) were looked at when they were written,
     also the rejected ones; those newly mentioned are subscribed (even
-    after unsubscribing) and added to ``event.data["mentioned"]``, so
+    after unsubscribing; not on the level "nothing") and added to ``event.data["mentioned"]``, so
     ``notify()`` tells them. People no longer mentioned are forgotten:
     mentioning them again counts as new. ``credit`` gives others than
     ``actor`` and ``event`` the mentions they typed: ``{mentioned person's
@@ -241,11 +241,19 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
     newly = []
     # Event ID: (event, IDs of those it newly mentions)
     told = {}
+    # Being mentioned subscribes, except on "nothing" (specs/ui-round-6.md,
+    # part C), where only what the person does subscribes them
+    from biwak.activity.notify import effective_levels
+
+    levels = (
+        effective_levels([user for user, _by, _e in people], item) if people else {}
+    )
     for user, by, by_event in people:
         if user == by:
             continue
         newly.append(user)
-        subscribe(user, item, added_by=by)
+        if levels[user.pk] != NotificationLevel.NOTHING:
+            subscribe(user, item, added_by=by)
         if by_event is not None:
             told.setdefault(by_event.pk, (by_event, set()))[1].add(user.pk)
     for told_event, told_ids in told.values():

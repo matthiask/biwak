@@ -66,14 +66,14 @@ class SettingsPagesTest(SettingsBase):
 
     def test_settings_page_lists_visible_overrides_only(self):
         set_level_override(self.cleo, "nothing", project=self.project)
-        set_level_override(self.cleo, "everything", item=self.todo)
+        set_level_override(self.cleo, "everything", item=self.shared)
         # Set while it was visible, e.g.; never shown now
-        set_level_override(self.cleo, "everything", item=self.secret)
+        set_level_override(self.cleo, "everything", item=self.internal)
         self.client.force_login(self.cleo)
         response = self.client.get("/accounts/settings/")
         self.assertContains(response, "Website")
-        self.assertContains(response, "Order the tent")
-        self.assertNotContains(response, "Secret plan")
+        self.assertContains(response, f"/items/{self.shared.pk}/notifications/")
+        self.assertNotContains(response, f"/items/{self.internal.pk}/notifications/")
 
     def test_settings_page_lists_accessible_projects_only(self):
         """An override of a project one has left stays out of the page"""
@@ -115,24 +115,27 @@ class SettingsPagesTest(SettingsBase):
                 )
         self.assertFalse(LevelOverride.objects.exists())
 
-    def test_item_override(self):
-        url = f"/items/{self.todo.pk}/notifications/"
-        for user in [self.ada, self.cleo]:
-            with self.subTest(user=user):
-                self.client.force_login(user)
-                # Next to the subscribe button
-                self.assertContains(self.client.get(self.todo.get_absolute_url()), url)
-                response = self.client.post(url, {"level": "concerns_me"})
-                self.assertRedirects(response, self.todo.get_absolute_url())
-                self.assertEqual(
-                    LevelOverride.objects.get(user=user, item=self.todo).level,
-                    NotificationLevel.CONCERNS_ME,
-                )
-                self.client.post(url, {"level": ""})
-                self.assertFalse(LevelOverride.objects.filter(user=user).exists())
-                self.assertEqual(
-                    self.client.post(url, {"level": "always"}).status_code, 400
-                )
+    def test_only_lists_have_a_level(self):
+        """Subscribing is the switch (specs/ui-round-6.md, part C): a to-do
+        (message, doc, file, folder) has no level, nor "Notifications…" in
+        its "More" menu"""
+        message = ops.create_message(
+            project=self.project, title="News", creator=self.ada, visible=True
+        )
+        for item in [self.todo, message]:
+            url = f"/items/{item.pk}/notifications/"
+            for user in [self.ada, self.cleo]:
+                with self.subTest(user=user, item=item):
+                    self.client.force_login(user)
+                    page = self.client.get(item.get_absolute_url())
+                    self.assertNotContains(page, url)
+                    self.assertNotContains(page, "Notifications…")
+                    self.assertContains(page, "Subscribers…")
+                    self.assertEqual(self.client.get(url).status_code, 404)
+                    self.assertEqual(
+                        self.client.post(url, {"level": "nothing"}).status_code, 404
+                    )
+        self.assertFalse(LevelOverride.objects.exists())
 
     def test_list_override_on_the_list_page(self):
         url = f"/items/{self.shared.pk}/notifications/"
@@ -152,7 +155,7 @@ class SettingsPagesTest(SettingsBase):
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
 
     def test_item_override_of_internal_items(self):
-        url = f"/items/{self.secret.pk}/notifications/"
+        url = f"/items/{self.internal.pk}/notifications/"
         for user in [self.cleo, self.dora, self.eve]:
             with self.subTest(user=user):
                 self.client.force_login(user)
@@ -334,21 +337,27 @@ class SettingsAPITest(SettingsBase):
         self.assertFalse(LevelOverride.objects.exists())
 
     def test_item_override(self):
-        path = f"items/{self.todo.pk}/notifications/"
+        path = f"items/{self.shared.pk}/notifications/"
         for user in [self.ada, self.cleo]:
             with self.subTest(user=user):
                 response = self.call("put", user, path, {"level": "nothing"})
                 self.assertEqual(
-                    response.json(), {"item_id": self.todo.pk, "level": "nothing"}
+                    response.json(), {"item_id": self.shared.pk, "level": "nothing"}
                 )
                 self.assertEqual(
                     self.call("get", user, path).json()["level"], "nothing"
                 )
                 self.call("delete", user, path)
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
+        # Other items have none (specs/ui-round-6.md, part C)
+        path = f"items/{self.todo.pk}/notifications/"
+        for method in ["get", "put", "delete"]:
+            response = self.call(method, self.ada, path, {"level": "nothing"})
+            self.assertEqual(response.status_code, 400, method)
+        self.assertFalse(LevelOverride.objects.exists())
 
     def test_item_override_of_internal_items(self):
-        path = f"items/{self.secret.pk}/notifications/"
+        path = f"items/{self.internal.pk}/notifications/"
         self.assertEqual(self.call("get", self.ada, path).status_code, 200)
         for user in [self.cleo, self.dora, self.eve]:
             with self.subTest(user=user):

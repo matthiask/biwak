@@ -116,6 +116,24 @@ def assert_modal_redirect(test, response, url=None):
         test.assertEqual(response.headers["HX-Redirect"], url)
 
 
+def invite_data(projects, *rows, notify="default"):
+    """What the invite form (``biwak/projects/invitations.py``) posts for
+    ``rows``, dicts of a row's fields (email, full_name, organization,
+    create_organization, is_client), to ``projects``"""
+    data = {
+        "projects": [getattr(p, "pk", p) for p in projects],
+        "notify": notify,
+        "person-TOTAL_FORMS": str(len(rows)),
+        "person-INITIAL_FORMS": "0",
+        "person-MIN_NUM_FORMS": "1",
+        "person-MAX_NUM_FORMS": "50",
+    }
+    for index, values in enumerate(rows):
+        for key, value in values.items():
+            data[f"person-{index}-{key}"] = value
+    return data
+
+
 def tags(html, *, cls, **attrs):
     """The start tags (their attributes) with the class ``cls`` among
     others and the ``attrs`` (``data_x`` for ``data-x``), in any order:
