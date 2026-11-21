@@ -275,9 +275,7 @@ def ask_due(*, now=None):
             )
             if question is None:
                 continue
-            date, _fire = schedule.latest_occurrence(
-                question, first=question.next_at, now=now
-            )
+            date, _fire = schedule.latest_due(question, first=question.next_at, now=now)
             if question.is_askable:
                 occurrence = _ask(question, date, now)
                 if occurrence is not None:
@@ -381,6 +379,8 @@ def answers_of(occurrence):
 
 
 def latest_occurrence(item):
+    """The question's latest ``Occurrence`` (``schedule.latest_due()`` is
+    the date the rule asks)"""
     return (
         Occurrence.objects.filter(question__item=item).order_by("-date", "-pk").first()
     )

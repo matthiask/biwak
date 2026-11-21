@@ -283,7 +283,7 @@ class NextFireTest(SimpleTestCase):
             ["2027-02-28 09:00:00", "2028-02-29 09:00:00", "2029-02-28 09:00:00"],
         )
 
-    def test_latest_occurrence_after_downtime_is_one_date(self):
+    def test_latest_due_after_downtime_is_one_date(self):
         class Q:
             rule = "FREQ=DAILY"
             starts_on = dt.date(2027, 1, 1)
@@ -293,7 +293,7 @@ class NextFireTest(SimpleTestCase):
         first = schedule.fire_at(dt.date(2027, 3, 1), dt.time(9), "Europe/Zurich")
         now = schedule.fire_at(dt.date(2027, 3, 5), dt.time(9, 30), "Europe/Zurich")
         self.assertEqual(
-            schedule.latest_occurrence(Q, first=first, now=now),
+            schedule.latest_due(Q, first=first, now=now),
             (
                 dt.date(2027, 3, 5),
                 schedule.fire_at(dt.date(2027, 3, 5), dt.time(9), "Europe/Zurich"),
@@ -301,9 +301,7 @@ class NextFireTest(SimpleTestCase):
         )
         # Nothing missed: the first stays
         self.assertEqual(
-            schedule.latest_occurrence(
-                Q, first=first, now=first + dt.timedelta(minutes=5)
-            ),
+            schedule.latest_due(Q, first=first, now=first + dt.timedelta(minutes=5)),
             (dt.date(2027, 3, 1), first),
         )
 
@@ -320,7 +318,7 @@ class NextFireTest(SimpleTestCase):
         saturday = schedule.fire_at(dt.date(2027, 3, 27), Q.time_of_day, Q.time_zone)
         self.assertEqual(schedule.local_date(saturday, Q.time_zone).day, 28)
         self.assertEqual(
-            schedule.latest_occurrence(Q, first=saturday, now=saturday),
+            schedule.latest_due(Q, first=saturday, now=saturday),
             (dt.date(2027, 3, 27), saturday),
         )
         # A minute before it (Sunday 00:29), Saturday's is next, not Sunday's
