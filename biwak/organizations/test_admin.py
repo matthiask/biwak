@@ -17,7 +17,12 @@ class AdminTest(TestCase):
         """Not while admins would be left out (here: Root)"""
         response = self.client.get("/admin/organizations/organization/")
         self.assertContains(response, "Example Agency")
-        data = {"name": "Example Agency", "domains": "", "is_own": "on"}
+        data = {
+            "name": "Example Agency",
+            "domains": "",
+            "is_own": "on",
+            "signin": "codes",
+        }
         url = f"/admin/organizations/organization/{self.other.pk}/change/"
         self.assertContains(self.client.post(url, data), "no admin")
         new = person("Nia", is_admin=True, organization=self.other)
@@ -30,7 +35,12 @@ class AdminTest(TestCase):
     def test_the_mark_isnt_removed(self):
         response = self.client.post(
             f"/admin/organizations/organization/{self.own.pk}/change/",
-            {"name": "Example Team", "domains": ""},
+            {
+                "name": "Example Team",
+                "domains": "",
+                "signin": "sso_allowed",
+                "idp": "google",
+            },
         )
         self.assertContains(response, "There is always your own organization")
 

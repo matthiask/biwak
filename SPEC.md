@@ -218,7 +218,10 @@ each a spec (or a section in one) before building it.
 - 2026-11-20: No internal comments on items visible to clients.
 - 2026-11-20: No single sign-on as the only way in; login by mail code
   or passkey (django-allauth) for everybody, Google sign-in optional for
-  staff.
+  staff. Replaced 2026-11-21 by single sign-on per organization
+  (`specs/sso.md`): codes and passkeys, Google Workspace or Microsoft
+  Entra ID allowed, or required for organizations whose IdP manages
+  their people; the own organization allows Google.
 - 2026-11-20: Replying to notification mails posts a comment, from the
   start.
 - 2026-11-20: Check-ins are in scope, the project schedule isn't.

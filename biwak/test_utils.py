@@ -151,3 +151,51 @@ def tags(html, *, cls, **attrs):
 
     Parser().feed(html)
     return found
+
+
+# Both identity providers set up, with made-up apps (specs/sso.md)
+SSO_PROVIDERS = {
+    "google": {
+        "APPS": [{"client_id": "google-id", "secret": "google-secret"}],
+        "SCOPE": ["openid", "profile", "email"],
+    },
+    "microsoft": {
+        "APPS": [
+            {
+                "client_id": "microsoft-id",
+                "secret": "microsoft-secret",
+                "settings": {"tenant": "organizations"},
+            }
+        ],
+        "SCOPE": ["openid", "email", "profile", "User.Read"],
+    },
+}
+
+
+def sign_in_with(client, user, provider="google", *, at=None, claims=None):
+    """Logged in as somebody who signed in through the identity provider
+    ``at`` (a timestamp, default now), as allauth records it and with what
+    counted (``biwak.accounts.sso.remember_sign_in``): ``hd`` the first of
+    the organization's domains, ``tid`` its tenant, unless ``claims`` say
+    otherwise"""
+    import time
+
+    at = time.time() if at is None else at
+    # As stored now
+    org = Organization.objects.filter(pk=user.organization_id).first()
+    client.force_login(user)
+    session = client.session
+    session["account_authentication_methods"] = [
+        {"method": "socialaccount", "at": at, "provider": provider, "uid": "1234"}
+    ]
+    session["account_authentication_methods_user"] = str(user.pk)
+    session["biwak_sso"] = {  # sso.SESSION_KEY
+        "user": user.pk,
+        "org": org.pk if org else None,
+        "email": user.email,
+        "provider": provider,
+        "hd": org.domains[0] if org and org.domains and provider == "google" else None,
+        "tid": org.tenant_id if org and provider == "microsoft" else None,
+        "at": at,
+    } | (claims or {})
+    session.save()

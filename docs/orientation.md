@@ -114,7 +114,8 @@ everybody who hasn't signed in yet, the oldest invitation first.
 ## Your menu
 
 Your name in the bar opens: My activity, Settings (notifications, the
-keyboard, appearance, profile image, passkeys and sessions), Calendar,
+keyboard, appearance, profile image, sign-in: connected accounts,
+passkeys and sessions), Calendar,
 Help and Sign out. Staff also find the link to the administration.
 
 ## Trash

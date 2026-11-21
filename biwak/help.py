@@ -30,6 +30,7 @@ _NAMES = {
     "notifications": "notifications",
     "clients": "clients",
     "keyboard": "keyboard",
+    "sign-in": "sign-in",
     "cli": "cli",
 }
 PAGES = {

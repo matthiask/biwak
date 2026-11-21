@@ -15,6 +15,13 @@
         data-modal
         class="btn btn-sm btn-quiet"
       >{% translate "Edit" %}</a>
+      {% if can_change_signin %}
+        <a
+          href="{% url 'organization_signin' organization.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Sign-in…" %}</a>
+      {% endif %}
       {% if can_touch %}
         <a
           href="{% url 'organization_merge' organization.pk %}"
@@ -41,6 +48,19 @@
       {% translate "Its staff see all-access projects. Only admins move people in or out." %}
     {% else %}
       {% translate "Its staff are partners: they only see the projects they're members of." %}
+    {% endif %}
+  </p>
+  <p class="text-body-secondary" id="sign-in">
+    {% if organization.signin == "codes" %}
+      {% translate "Sign-in: codes and passkeys." %}
+    {% elif organization.signin == "sso_allowed" %}
+      {% blocktranslate trimmed with provider=organization.get_idp_display %}
+        Sign-in: {{ provider }}, codes and passkeys.
+      {% endblocktranslate %}
+    {% else %}
+      {% blocktranslate trimmed with provider=organization.get_idp_display %}
+        Sign-in: only {{ provider }}; sessions and API tokens last 24 hours.
+      {% endblocktranslate %}
     {% endif %}
   </p>
   <h2 class="h5">{% translate "People" %}</h2>

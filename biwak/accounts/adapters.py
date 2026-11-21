@@ -1,11 +1,14 @@
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.providers.base import AuthProcess
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
+from biwak.accounts import sso
 from biwak.accounts.models import User
 
 
@@ -50,34 +53,76 @@ class AccountAdapter(DefaultAccountAdapter):
         )
         outbox.send(message, kind)
 
+    def pre_login(self, request, user, **kwargs):
+        """People whose organization requires single sign-on sign in only
+        through its identity provider (specs/sso.md): every way allauth signs
+        somebody in comes here, after recording the method (codes, passkeys,
+        social logins); deactivated people are allauth's (``super()``)"""
+        response = super().pre_login(request, user, **kwargs)
+        if response is not None:
+            return response
+        if (message := sso.refuse_login(request, user)) is not None:
+            from allauth.account.internal.flows.login import (
+                clear_authentication_records,
+            )
+            from allauth.account.internal.stagekit import clear_login
+
+            clear_login(request)
+            clear_authentication_records(request)
+            messages.error(request, message)
+            return redirect(sso.idp_login_url(user))
+        return None
+
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
-    """Google sign-in only for existing, active staff, matched by email
-    (specs/access.md): clients use codes or passkeys, even when their
-    address matches"""
+    """Google and Microsoft sign-in per organization (specs/sso.md): only for
+    existing, active people, matched by the address the provider vouches
+    for; whether it counts is ``sso.check_social()``'s"""
 
     def is_open_for_signup(self, request, sociallogin):
         return False
 
+    def authenticate_by_email(self, sociallogin):
+        """The person with the provider's address: Google's only verified,
+        Microsoft's as given (Entra ID doesn't verify it), which counts only
+        with the organization's tenant (``pre_social_login``)"""
+        address = sso.claimed_address(
+            sociallogin.account.provider, sociallogin.account.extra_data
+        )
+        if address and (
+            user := User.objects.filter(email__iexact=address.strip()).first()
+        ):
+            return user, user.email
+        return None
+
     def pre_social_login(self, request, sociallogin):
-        if sociallogin.is_existing:
-            person = sociallogin.user
+        """Every social login allauth completes comes here after looking the
+        person up (by the connected account, else by address): signing in,
+        Google's token login, connecting an account to oneself"""
+        process = sociallogin.state.get("process")
+        # Also allauth's "redirect" process, which signs nobody in but
+        # updates the connected account: checked like signing in
+        if process == AuthProcess.CONNECT:
+            person = request.user if request.user.is_authenticated else None
         else:
-            addresses = [a.email for a in sociallogin.email_addresses]
-            person = next(
-                (
-                    user
-                    for address in addresses
-                    if (user := User.objects.filter(email__iexact=address).first())
-                ),
-                None,
+            person = sociallogin.user if sociallogin.is_existing else None
+        try:
+            sso.check_social(
+                person, sociallogin.account.provider, sociallogin.account.extra_data
             )
-        if person is not None and person.is_client:
-            messages.error(
-                request,
-                _(
-                    "Clients can't sign in with Google. Sign in with a code sent"
-                    " to your address or with a passkey."
-                ),
+        except sso.Refused as exc:
+            messages.error(request, exc.message)
+            if process == AuthProcess.CONNECT and person is not None:
+                raise ImmediateHttpResponse(
+                    redirect(reverse("settings") + "#sign-in")
+                ) from exc
+            raise ImmediateHttpResponse(redirect(reverse("account_login"))) from exc
+
+    def validate_disconnect(self, account, accounts):
+        """Not for people whose organization requires single sign-on: it's
+        their only way in (the settings page doesn't offer it either)"""
+        if sso.requires_sso(account.user):
+            raise ValidationError(
+                _("Your organization signs in with %(provider)s: it stays connected.")
+                % {"provider": sso.required_organization(account.user).idp_name}
             )
-            raise ImmediateHttpResponse(redirect(reverse("account_login")))

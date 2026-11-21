@@ -13,7 +13,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
-from biwak.accounts import operations, passkeys, signin
+from biwak.accounts import operations, passkeys, signin, sso
 from biwak.accounts.models import (
     API_TOKEN_LIFETIME,
     Accent,
@@ -75,6 +75,7 @@ def api_tokens(request):
             "tokens": request.user.api_tokens.all(),
             "secret": secret,
             "days": API_TOKEN_LIFETIME.days,
+            "sso_organization": sso.required_organization(request.user),
             "access_choices": APIToken.Access.choices,
             "api_url": request.build_absolute_uri("/api/v1/"),
             "cli_install": cli_version.UPGRADE,
@@ -129,6 +130,7 @@ def cli_login(request):
         {
             "name": name,
             "days": API_TOKEN_LIFETIME.days,
+            "sso_organization": sso.required_organization(request.user),
             "access": APIToken.Access(access),
         },
     )
@@ -137,7 +139,10 @@ def cli_login(request):
 @never_cache
 def calendar_link(request):
     """The secret link to the iCal feed of the person's to-dos (specs/todos.md);
-    "Make a new link" replaces it, the old one stops working"""
+    "Make a new link" replaces it, the old one stops working. None for
+    organizations requiring single sign-on (specs/sso.md)."""
+    if org := sso.required_organization(request.user):
+        return render(request, "accounts/calendar.html", {"sso_organization": org})
     if request.method == "POST":
         CalendarToken.renew(request.user)
         messages.success(

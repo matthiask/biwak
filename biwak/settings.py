@@ -55,6 +55,7 @@ INSTALLED_APPS = [
         "allauth.mfa",
         "allauth.socialaccount",
         "allauth.socialaccount.providers.google",
+        "allauth.socialaccount.providers.microsoft",
         "allauth.usersessions",
         "biwak.accounts",
         "biwak.organizations",
@@ -88,6 +89,10 @@ LOGIN_REDIRECT_URL = "/"
 # django-allauth (specs/access.md): no passwords, no sign up, codes by mail,
 # passkeys, Google for those who want it; only existing, active people
 ACCOUNT_ADAPTER = "biwak.accounts.adapters.AccountAdapter"
+ACCOUNT_FORMS = {
+    "login": "biwak.accounts.forms.SSOLoginForm",
+    "request_login_code": "biwak.accounts.forms.SSORequestLoginCodeForm",
+}
 SOCIALACCOUNT_ADAPTER = "biwak.accounts.adapters.SocialAccountAdapter"
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {"email"}
@@ -105,6 +110,9 @@ USERSESSIONS_TRACK_ACTIVITY = False
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG and not LIVE
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+# Single sign-on per organization (specs/sso.md): who may use which is
+# decided by biwak.accounts.sso, these are the installation's app
+# registrations (docs/sign-in.md)
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APPS": [
@@ -115,8 +123,24 @@ SOCIALACCOUNT_PROVIDERS = {
         ]
         if env("GOOGLE_CLIENT_ID", default="")
         else [],
-        "SCOPE": ["profile", "email"],
-    }
+        # The ID token says which Workspace manages the account (hd)
+        "SCOPE": ["openid", "profile", "email"],
+    },
+    "microsoft": {
+        "APPS": [
+            {
+                "client_id": env("MICROSOFT_CLIENT_ID", default=""),
+                "secret": env("MICROSOFT_CLIENT_SECRET", default=""),
+                # Work and school accounts of any tenant, no personal ones;
+                # the organization's tenant is checked on signing in
+                "settings": {"tenant": "organizations"},
+            }
+        ]
+        if env("MICROSOFT_CLIENT_ID", default="")
+        else [],
+        "SCOPE": ["openid", "email", "profile", "User.Read"],
+        "provider_class": "biwak.accounts.microsoft.provider.EntraProvider",
+    },
 }
 
 MIDDLEWARE = [
@@ -140,6 +164,8 @@ MIDDLEWARE = [
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "allauth.account.middleware.AccountMiddleware",
         "allauth.usersessions.middleware.UserSessionsMiddleware",
+        # Sessions of organizations requiring single sign-on (specs/sso.md)
+        "biwak.accounts.sso.session_middleware",
         "biwak.accounts.middleware.user_middleware",
         "biwak.accounts.passkeys.passkey_offer_middleware",
     ]

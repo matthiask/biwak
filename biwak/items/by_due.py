@@ -12,6 +12,7 @@ from django.views.decorators.cache import never_cache
 from icalendar import Calendar, Event as CalendarEvent
 
 from biwak import schedules
+from biwak.accounts import sso
 from biwak.accounts.models import CalendarToken, User
 from biwak.activity import mentions
 from biwak.api_conventions import absolute
@@ -202,7 +203,9 @@ def calendar_feed(request, token):
     """No login: the secret in the URL is the key. It shows what the person
     sees now (nothing once they're inactive); an old link is a 404."""
     link = CalendarToken.objects.filter(token=token).select_related("user").first()
-    if link is None:
+    if link is None or sso.requires_sso(link.user):
+        # Not for organizations requiring single sign-on (specs/sso.md): a
+        # link nobody signs in for would outlast leaving the company
         raise Http404
     response = HttpResponse(
         calendar_for(link.user).to_ical(), content_type="text/calendar; charset=utf-8"

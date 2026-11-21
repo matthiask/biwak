@@ -225,12 +225,13 @@ class User(AbstractBaseUser):
         fields = kwargs.get("update_fields")
         stored = None
         if self.pk and (
-            fields is None or {"email", "mail_undeliverable_at"} & set(fields)
+            fields is None
+            or {"email", "mail_undeliverable_at", "organization"} & set(fields)
         ):
             stored = (
                 type(self)
                 .objects.filter(pk=self.pk)
-                .values("email", "mail_undeliverable_at")
+                .values("email", "mail_undeliverable_at", "organization_id")
                 .first()
             )
         if (
@@ -252,6 +253,16 @@ class User(AbstractBaseUser):
         super().save(*args, **kwargs)
         if cleared:
             self._drop_waiting_mails()
+        if (
+            stored
+            and stored["organization_id"] != self.organization_id
+            and (fields is None or "organization" in fields)
+        ):
+            # Moved into an organization requiring single sign-on
+            # (specs/sso.md): what it doesn't allow ends
+            from biwak.accounts import sso
+
+            sso.enforce_required_now_and_after_commit([self.pk])
         if fields is None or "email" in fields:
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)
@@ -403,24 +414,34 @@ def _hash_api_token(secret):
 
 class APITokenQuerySet(models.QuerySet):
     def for_secret(self, secret):
-        """The valid token of an active person, or None"""
-        return (
+        """The valid token of an active person, or None. Tokens of people
+        whose organization requires single sign-on are valid for 24 hours
+        after their creation, checked here whatever ``expires_at`` says
+        (specs/sso.md)"""
+        from biwak.accounts import sso
+
+        token = (
             self
             .filter(
                 key_hash=_hash_api_token(secret),
                 expires_at__gt=timezone.now(),
                 user__is_active=True,
             )
-            .select_related("user")
+            .select_related("user", "user__organization")
             .first()
         )
+        return token if token is not None and sso.token_counts(token) else None
 
     def extend(self, token):
-        """Each use extends the token"""
+        """Each use extends the token, but never past 24 hours after its
+        creation for people whose organization requires single sign-on"""
+        from biwak.accounts import sso
+
         now = timezone.now()
-        self.filter(pk=token.pk).update(
-            last_used_at=now, expires_at=now + API_TOKEN_LIFETIME
-        )
+        expires_at = now + API_TOKEN_LIFETIME
+        if limit := sso.token_expiry(token.user, created_at=token.created_at):
+            expires_at = min(expires_at, limit)
+        self.filter(pk=token.pk).update(last_used_at=now, expires_at=expires_at)
 
 
 class APIToken(models.Model):
@@ -462,12 +483,18 @@ class APIToken(models.Model):
         """Creates a token and returns it with its secret, which can't be
         shown again. Expired tokens of the person are removed."""
         cls.objects.filter(user=user, expires_at__lte=timezone.now()).delete()
+        from biwak.accounts import sso
+
         secret = f"biwak_{secrets.token_urlsafe(32)}"
+        now = timezone.now()
         token = cls.objects.create(
             user=user,
             title=title,
             access=cls.Access(access),
             key_hash=_hash_api_token(secret),
+            created_at=now,
+            expires_at=sso.token_expiry(user, created_at=now)
+            or now + API_TOKEN_LIFETIME,
         )
         return token, secret
 

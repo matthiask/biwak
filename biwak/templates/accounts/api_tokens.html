@@ -46,10 +46,17 @@
         </table>
       </div>
       <p class="small text-body-secondary">
-        {% blocktranslate trimmed %}
-          Tokens expire {{ days }} days after their last use. A token sees what you see, clients' tokens only what is
-          visible to clients.
-        {% endblocktranslate %}
+        {% if sso_organization %}
+          {% blocktranslate trimmed with organization=sso_organization %}
+            Tokens expire 24 hours after they were created: {{ organization }} requires single sign-on. A token sees
+            what you see, clients' tokens only what is visible to clients.
+          {% endblocktranslate %}
+        {% else %}
+          {% blocktranslate trimmed %}
+            Tokens expire {{ days }} days after their last use. A token sees what you see, clients' tokens only what is
+            visible to clients.
+          {% endblocktranslate %}
+        {% endif %}
       </p>
     </div>
     <div class="col-lg-5">

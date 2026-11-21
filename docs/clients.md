@@ -62,7 +62,9 @@ Staff never have to guess:
 
 Clients can't create lists, folders, docs or files, pin messages, use
 the visibility switch, or see internal items, history and older
-versions. They sign in with a mail code or a passkey, not with Google.
+versions. They sign in with a mail code or a passkey, or through their
+organization's Google or Microsoft account where it's set up
+([Signing in](sign-in.md)).
 Their notification settings work like everybody's
 ([Notifications](notifications.md)).
 

@@ -1,3 +1,6 @@
+from allauth.account import views as account_views
+from allauth.mfa.base import views as mfa_views
+from allauth.mfa.webauthn import views as webauthn_views
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
@@ -52,7 +55,8 @@ def manifest(request):
 @login_not_required
 def no_passwords(request, *args, **kwargs):
     """Login is by code and passkeys (specs/access.md): allauth's password
-    pages (set, change, reset) don't exist"""
+    pages (set, change, reset) don't exist, nor its pages changing one's
+    address"""
     raise Http404
 
 
@@ -77,10 +81,41 @@ urlpatterns = [
     path("api/v1/", api.urls),
     path("accounts/", include("biwak.accounts.urls")),
     re_path(r"^accounts/password/", no_passwords),
+    # Only admins change addresses (specs/mail-sending.md, specs/sso.md):
+    # an address added here could sign in elsewhere (a Gmail address with
+    # Google) after leaving a company requiring single sign-on
+    re_path(r"^accounts/email/", no_passwords),
+    re_path(r"^accounts/confirm-email/", no_passwords),
+    # Reauthenticating goes through the identity provider for people whose
+    # organization requires it, not by code or passkey (specs/sso.md)
+    path(
+        "accounts/reauthenticate/", signin.reauthenticate(account_views.reauthenticate)
+    ),
+    path(
+        "accounts/reauthenticate/code/",
+        signin.reauthenticate(account_views.request_reauthentication_code),
+    ),
+    path(
+        "accounts/reauthenticate/code/confirm/",
+        signin.reauthenticate(account_views.confirm_reauthentication_code),
+    ),
+    path(
+        "accounts/2fa/reauthenticate/", signin.reauthenticate(mfa_views.reauthenticate)
+    ),
+    path(
+        "accounts/2fa/webauthn/reauthenticate/",
+        signin.reauthenticate(webauthn_views.reauthenticate_webauthn),
+    ),
     # Passkeys and sessions are on the settings page
     path("accounts/2fa/", signin.passkeys_page),
     path("accounts/2fa/webauthn/", signin.passkeys_page),
+    path("accounts/2fa/webauthn/add/", signin.add_passkey),
     path("accounts/sessions/", signin.sessions_page),
+    path("accounts/3rdparty/", signin.connections_page),
+    # People whose organization requires single sign-on go there instead
+    # of asking for a code (specs/sso.md)
+    path("accounts/login/", signin.login),
+    path("accounts/login/code/", signin.request_login_code),
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
 ]

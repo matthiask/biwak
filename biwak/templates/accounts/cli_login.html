@@ -16,9 +16,16 @@
           The <code>biwak</code> command line interface wants to access Biwak in your name.
         {% endblocktranslate %}
       {% endif %}
-      {% blocktranslate trimmed %}
-        The access expires {{ days }} days after its last use; <code>biwak</code> asks you again then.
-      {% endblocktranslate %}
+      {% if sso_organization %}
+        {% blocktranslate trimmed with organization=sso_organization %}
+          The access expires 24 hours from now ({{ organization }} requires single sign-on); <code>biwak</code> asks you
+          again then.
+        {% endblocktranslate %}
+      {% else %}
+        {% blocktranslate trimmed %}
+          The access expires {{ days }} days after its last use; <code>biwak</code> asks you again then.
+        {% endblocktranslate %}
+      {% endif %}
     </p>
     <p>{% translate "access"|capfirst %}: <strong>{{ access.label }}</strong></p>
     <p class="text-body-secondary">{% translate "Only continue if you just started biwak yourself." %}</p>

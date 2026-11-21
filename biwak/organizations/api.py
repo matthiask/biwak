@@ -24,6 +24,11 @@ class OrganizationOut(Schema):
     # The own organization: its staff see all-access projects, staff of
     # the others (partners) only the projects they're members of
     is_own: bool
+    # How its people sign in (specs/sso.md): "codes", "sso_allowed" or
+    # "sso_required", and the identity provider ("google", "microsoft" or
+    # empty); changed by admins on the organization's page only
+    signin: str
+    idp: str
     people_count: int
     url: str
 
@@ -41,6 +46,8 @@ def organization_out(org, *, people=False):
         "name": org.name,
         "domains": org.domains,
         "is_own": org.is_own,
+        "signin": org.signin,
+        "idp": org.sso,
         "people_count": count,
         "url": absolute(org.get_absolute_url()),
     }
@@ -129,6 +136,9 @@ def organization_update(request, organization_id: int, data: OrganizationPatch):
 
 class MergeIn(Schema):
     into_id: int
+    # Merging into a stricter sign-in (admins only): confirms what happens
+    # to the people (specs/sso.md)
+    confirm: bool = False
 
 
 @router.post("organizations/{organization_id}/merge/", response=OrganizationDetailOut)
@@ -137,7 +147,7 @@ def organization_merge(request, organization_id: int, data: MergeIn):
     returns the one merged into. The own organization: admins only."""
     org = organization_for(request, organization_id)
     target = organization_for(request, data.into_id)
-    allowed(org_ops.merge, org, target, actor=request.user)
+    allowed(org_ops.merge, org, target, actor=request.user, confirmed=data.confirm)
     return organization_out(target, people=True)
 
 

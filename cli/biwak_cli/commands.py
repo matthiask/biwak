@@ -520,11 +520,23 @@ def orgs(ctx, as_json):
     return None
 
 
+SIGN_IN = {
+    "codes": "codes and passkeys",
+    "sso_allowed": "{provider}, codes and passkeys",
+    "sso_required": "only {provider}",
+}
+SIGN_IN_PROVIDERS = {"google": "Google", "microsoft": "Microsoft"}
+
+
 def show_org(data):
     own = ", your own organization" if data["is_own"] else ""
     click.echo(f"{data['name']} ({data['id']}{own})")
     if data["domains"]:
         click.echo(f"Domains: {', '.join(data['domains'])}")
+    signin = data.get("signin")
+    if signin in SIGN_IN:
+        provider = SIGN_IN_PROVIDERS.get(data.get("idp"), "")
+        click.echo(f"Sign-in: {SIGN_IN[signin].format(provider=provider)}")
     for person in data.get("people", []):
         kind = "client" if person["is_client"] else "staff"
         click.echo(f"  {person['name']} ({person['id']}, {kind})")
@@ -588,11 +600,20 @@ def orgs_edit(org, name, domains, no_domains, as_json):
 @orgs.command("merge")
 @click.argument("org", type=int)
 @click.argument("into", type=int)
+@click.option(
+    "--confirm",
+    is_flag=True,
+    help="INTO signs in more strictly: change how ORG's people sign in (admins).",
+)
 @json_option
-def orgs_merge(org, into, as_json):
+def orgs_merge(org, into, confirm, as_json):
     """Move the people and domains of ORG into INTO and delete ORG (the
     typo case)"""
-    data = request("POST", f"organizations/{org}/merge/", json={"into_id": into})
+    data = request(
+        "POST",
+        f"organizations/{org}/merge/",
+        json={"into_id": into, "confirm": confirm},
+    )
     if as_json:
         return echo_json(data)
     click.echo("Merged into ", nl=False)

@@ -124,6 +124,12 @@ class OrgsCLITest(test_cli.CLITest):
         self.assertEqual([o["name"] for o in data], ["Example Ltd", "Our organization"])
         output = self.biwak("orgs", "show", self.example.pk).output
         self.assertIn("Cleo Example", output)
+        self.assertIn("Sign-in: codes and passkeys", output)
+        own = Organization.objects.own()
+        self.assertIn(
+            "Sign-in: Google, codes and passkeys",
+            self.biwak("orgs", "show", own.pk).output,
+        )
         output = self.biwak(
             "orgs", "add", "Other AG", "--domain", "other.ch", "--domain", "other.de"
         ).output

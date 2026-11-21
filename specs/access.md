@@ -204,15 +204,16 @@ Microsoft account (decided 2026-11-20).
   anymore and can be given to somebody else; before, it stayed verified,
   logged in, and inviting somebody with it answered 500. Migration
   `accounts.0008` deletes old addresses left behind.
-- Staff can also use Google sign-in (allauth's Google provider), but it's
-  never required. Only staff (decided 2026-11-20, built 2026-11-20 in
-  `SocialAccountAdapter.pre_social_login`): clients can't sign in with
-  Google, neither with a matching address nor with a connected account;
-  they're sent back to the login page with a message pointing to codes and
-  passkeys.
-  To be replaced by sign-in per organization (`sso.md`, specified
-  2026-11-21): SSO for clients too, when their organization's IdP
-  manages their account.
+- **Single sign-on per organization** (`sso.md`, built 2026-11-21,
+  replacing "Google only for staff", decided 2026-11-20): each
+  organization says how its people sign in: codes and passkeys, its
+  identity provider (Google Workspace or Microsoft Entra ID) allowed in
+  addition, or required instead. The own organization allows Google, so
+  nothing changed for staff. A Google sign-in counts only with Google's
+  verified address of the person and `hd` one of the organization's
+  domains (Gmail addresses where single sign-on is allowed or off), a
+  Microsoft one only with the organization's tenant
+  (`tid`); `biwak/accounts/sso.py` decides, the adapters ask it.
 - No passwords at first; add them only if somebody really needs them
   (allauth's password pages answer 404, `biwak/urls.py`).
 - Sessions last weeks; people can see their sessions and log out
