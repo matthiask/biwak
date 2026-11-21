@@ -1,5 +1,8 @@
 # Collected UI feedback found while testing the project
 
+
+## Round 1
+
 - New list doesn't have to be visible always, it can just be a button like in messages.
 - A modal form (like Governance) would be super nice here. Generally, more small forms could be placed into modals so that we don't lose context.
 - Similarly, "New group" doesn't need to be an edit field which we always see.
@@ -10,3 +13,7 @@
 - The assignees list can get really long when we have dozens of people in a project. Pills per assignee with an X to remove and an autocompletion widget (opens on click and when typing) would probably work better.
 - The "move to" UI doesn't have to be always there, it can go into the more menu and a modal I think, trashing as well.
 - I like the way the archive is implemented on the start page (Project list). With some htmx it would be even better.
+
+## Round 2
+
+- Archiving projects doesn't have to be accessible from the list.

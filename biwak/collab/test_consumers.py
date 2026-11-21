@@ -371,7 +371,7 @@ class ConsumerTest(TransactionTestCase):
         bob = await self.connect(self.bob, self.shared, sync=False)
         await self.assertClosed(bob)
 
-    async def test_no_longer_the_installations_own(self):
+    async def test_no_longer_in_the_own_organization(self):
         """Unmarking the organization (the Django admin) shuts its staff
         out of all-access projects they aren't members of"""
         own = await database_sync_to_async(organization)("Example Team", is_own=True)

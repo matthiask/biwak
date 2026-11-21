@@ -28,7 +28,7 @@ class APITest(TestCase):
             headers=self.headers(user or self.ada),
         )
 
-    def test_only_the_installations_own_staff(self):
+    def test_only_own_staff(self):
         for user in [self.cleo, partner("Pia")]:
             with self.subTest(user=user):
                 self.assertEqual(

@@ -26,7 +26,7 @@ class PagesTest(TestCase):
         self.cleo = person("Cleo", client=True, organization=self.example)
         self.client.force_login(self.ada)
 
-    def test_only_the_installations_own_staff(self):
+    def test_only_own_staff(self):
         urls = [
             "/organizations/",
             "/organizations/new/",
