@@ -106,6 +106,9 @@ urlpatterns = [
         "accounts/2fa/webauthn/reauthenticate/",
         signin.reauthenticate(webauthn_views.reauthenticate_webauthn),
     ),
+    # The two-factor step asks for the authenticator app's code only
+    # (specs/two-factor.md)
+    path("accounts/2fa/authenticate/", signin.two_factor),
     # Passkeys and sessions are on the settings page
     path("accounts/2fa/", signin.passkeys_page),
     path("accounts/2fa/webauthn/", signin.passkeys_page),

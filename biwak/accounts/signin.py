@@ -5,6 +5,7 @@ and remove passkeys, its usersessions flows end sessions."""
 import re
 
 from allauth.account.views import LoginView, RequestLoginCodeView
+from allauth.mfa.base.views import AuthenticateView
 from allauth.mfa.models import Authenticator
 from allauth.mfa.webauthn.views import add_webauthn
 from allauth.socialaccount.models import SocialAccount
@@ -146,6 +147,27 @@ class SSORequestLoginCodeView(SSOViewMixin, RequestLoginCodeView):
 
 login = SSOLoginView.as_view()
 request_login_code = SSORequestLoginCodeView.as_view()
+
+
+class TwoFactorView(AuthenticateView):
+    """allauth's two-factor step (specs/two-factor.md): only the code of the
+    authenticator app, no passkey there; a passkey signs in alone, from the
+    sign-in page. Posts without a code are a missing code, not a passkey."""
+
+    template_name = "mfa/authenticate.html"
+
+    def _build_forms(self):
+        user = self.stage.login.user
+        form_class = self.get_form_class()
+        self.webauthn_form = None
+        if self.request.method == "POST":
+            self.auth_form = form_class(user=user, data=self.request.POST)
+            return self.auth_form
+        self.auth_form = form_class(user=user)
+        return None
+
+
+two_factor = TwoFactorView.as_view()
 
 
 def add_passkey(request):
