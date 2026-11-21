@@ -1,4 +1,5 @@
 import datetime as dt
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
@@ -34,13 +35,21 @@ class Fixture:
             **kwargs,
         )
 
-    def titles(self, response, key="messages"):
+    def titles(self, response, key="rows"):
         return [item.title for item in response.context[key]]
 
 
 class BoardTest(Fixture, TestCase):
     def url(self):
         return reverse("project_messages", args=[self.project.pk])
+
+    def test_messages_arent_shown_as_alerts(self):
+        """The board's rows aren't Django's messages (``messages`` in the
+        context is the messages framework's, which base.html shows)"""
+        self.post("Suppensud")
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url())
+        self.assertNotContains(response, 'class="alert')
 
     def test_a_bad_cursor_is_a_bad_request(self):
         self.client.force_login(self.ada)
@@ -87,7 +96,7 @@ class BoardTest(Fixture, TestCase):
         ops.add_comment(self.shared, author=self.cleo, content="Two")
         self.client.force_login(self.ada)
         response = self.client.get(self.url())
-        counts = {i.title: i.comment_count for i in response.context["messages"]}
+        counts = {i.title: i.comment_count for i in response.context["rows"]}
         self.assertEqual(counts, {"Shared news": 2, "Secret plans": 0})
         self.assertContains(response, "2 comments")
 
@@ -125,7 +134,7 @@ class BoardTest(Fixture, TestCase):
         operations.pin_message(pinned, actor=self.ada)
         self.client.force_login(self.cleo)
         response = self.client.get(self.url())
-        self.assertEqual(len(response.context["messages"]), board.PAGE_SIZE)
+        self.assertEqual(len(response.context["rows"]), board.PAGE_SIZE)
         self.assertEqual(self.titles(response, "pinned"), ["Pinned"])
         cursor = response.context["cursor"]
         self.assertTrue(cursor)
@@ -366,6 +375,8 @@ class PinningTest(Fixture, TestCase):
         self.assertTrue(Event.objects.filter(action=Action.PINNED).count(), 2)
 
 
+# The rules with small numbers; the numbers themselves: test_five_and_a_link
+@patch.object(queries, "FRONT_MESSAGES", 3)
 class ProjectPageTest(Fixture, TestCase):
     def url(self):
         return reverse("project", args=[self.project.pk])
@@ -418,6 +429,7 @@ class ProjectPageTest(Fixture, TestCase):
         )
 
 
+@patch.object(queries, "FRONT_FILES", 3)
 class FrontFilesTest(Fixture, TestCase):
     def setUp(self):
         super().setUp()
@@ -492,3 +504,16 @@ class FrontFilesTest(Fixture, TestCase):
     def test_empty(self):
         Item.objects.filter(kind__in=["doc", "file"]).delete()
         self.assertContains(self.page(self.ada), "No docs or files yet.")
+
+
+class FrontNumbersTest(Fixture, TestCase):
+    def test_five_and_a_link(self):
+        """Five messages and five docs and files on the project page, and a
+        link to all messages (decided 2026-11-21)"""
+        self.assertEqual((queries.FRONT_MESSAGES, queries.FRONT_FILES), (5, 5))
+        for n in range(6):
+            self.post(f"Visible {n}", visible=True)
+        self.client.force_login(self.ada)
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertEqual(len(response.context["front_messages"]), 5)
+        self.assertContains(response, "All messages")

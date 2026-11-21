@@ -50,3 +50,4 @@ Ad hoc.
 ## Round 5
 
 - The detail view of to dos could use more cards, for example for title and description. It seems a bit unstructured now (even though it isn't). Same for docs.
+- The project to do list can also be linked from the project overview since that actually exists and makes sense. To Dos by list, or to dos by due date.

@@ -50,7 +50,7 @@ def project_messages(request, pk):
         {
             "project": project,
             "pinned": pinned,
-            "messages": rows,
+            "rows": rows,
             "cursor": cursor,
             "can_pin": not request.user.is_client,
         },

@@ -14,7 +14,9 @@ Decisions and open questions of the building agent are under "Details
 of stage 2".
 
 Decided 2026-11-20 ("consistent with the rest"): the message board has 50
-messages per page; the project page lists the latest three docs and files;
+messages per page; the project page lists the latest three docs and files
+(five messages and five docs and files since 2026-11-21, with an "All
+messages" link under them);
 older doc and file versions are for staff only (like the item history);
 moving to the top level makes the item internal (like new top-level
 items). Whom to notify by default: see `notifications.md`.

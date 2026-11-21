@@ -13,8 +13,8 @@
   </div>
   <div class="list-group mb-3" id="messages">
     {% for item in pinned %}{% include "files/_message_row.html" %}{% endfor %}
-    {% for item in messages %}{% include "files/_message_row.html" %}{% endfor %}
-    {% if not pinned and not messages %}
+    {% for item in rows %}{% include "files/_message_row.html" %}{% endfor %}
+    {% if not pinned and not rows %}
       <div class="list-group-item text-body-secondary">{% translate "No messages yet." %}</div>
     {% endif %}
   </div>

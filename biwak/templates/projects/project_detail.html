@@ -144,6 +144,12 @@
           <div class="list-group-item text-body-secondary">{% translate "No messages yet." %}</div>
         {% endfor %}
       </div>
+      {# The board, like the docs and files' counts below (decided 2026-11-21) #}
+      {% if front_messages %}
+        <p class="small">
+          <a href="{% url 'project_messages' project.pk %}">{% translate "All messages" %}</a>
+        </p>
+      {% endif %}
       <h2 class="h5 mt-4">
         <a
           class="text-reset text-decoration-none"

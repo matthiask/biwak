@@ -8,9 +8,9 @@ from biwak.items.models import Item, Kind
 
 
 # The project page shows this many messages, unless more are pinned
-FRONT_MESSAGES = 3
+FRONT_MESSAGES = 5
 # ... and this many of the latest changed docs and files
-FRONT_FILES = 3
+FRONT_FILES = 5
 
 
 def board(project, user):
