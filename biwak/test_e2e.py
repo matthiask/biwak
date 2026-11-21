@@ -2297,7 +2297,7 @@ class KeyboardTest(E2ETestCase):
         ops.create_todo(todolist=self.make_list(), title="Alpha", creator=self.ada)
         page = self.page
         for url, row in [
-            ("/todos/", "[data-kb-row]"),
+            ("/todos/?assignee=anybody", "[data-kb-row]"),
             ("/feed/", "[data-kb-row]"),
             ("/search/?q=alpha", "[data-kb-row]"),
         ]:
