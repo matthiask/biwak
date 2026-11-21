@@ -340,8 +340,8 @@ class ReadingTest(LanternTestCase):
             user=self.bob, event__data__comment=comment.pk
         )
         url = reverse("lantern_open", args=[notification.pk])
-        self.assertIn(f'<form method="post" action="{url}"', menu)
-        self.assertIn("csrfmiddlewaretoken", menu)
+        # A link to the comment, posting here in the background
+        self.assertIn(f'data-lantern-read="{url}"', menu)
         response = self.client.post(url)
         self.assertRedirects(
             response,
@@ -350,8 +350,12 @@ class ReadingTest(LanternTestCase):
         )
         self.assertEqual(lantern.unread_count(self.bob), 1)
         self.assertIn(
-            f'action="{url}"', self.client.get(reverse("lantern")).content.decode()
+            f'data-lantern-read="{url}"',
+            self.client.get(reverse("lantern")).content.decode(),
         )
+        # In the background (frontend/lantern.js): no redirect
+        response = self.client.post(url, headers={"HX-Request": "true"})
+        self.assertEqual(response.status_code, 204)
 
     def test_following_is_a_post_with_a_csrf_token(self):
         """Another site can't read somebody's notifications: GET answers

@@ -2,8 +2,9 @@
 // on its button, the menu's content fetched when it opens, its buttons
 // (read, unread, bookmark) without leaving the page, and with the setting on a
 // dot on the tab's icon. frontend/live.js says when something changed
-// ("biwak:lantern"). Without JavaScript the menu links to the page, and following an entry
-// is a form which posts.
+// ("biwak:lantern"). Entries are links to where they apply; following one
+// reads its item's notifications in the background (below). Without
+// JavaScript the menu links to the page, and "Mark as read" reads.
 
 import { csrfToken } from "./http.js"
 
@@ -101,8 +102,6 @@ if (menu) {
   // Reading, marking as unread and bookmarking stay in the menu
   content.addEventListener("submit", async (event) => {
     const form = event.target
-    // Following an entry leaves the page: the form posts as it is
-    if (form.hasAttribute("data-lantern-open")) return
     event.preventDefault()
     try {
       // The views answer 204 instead of redirecting
@@ -118,3 +117,26 @@ if (menu) {
     await Promise.all([load(), updateCount()])
   })
 }
+
+// Following an entry (a link, so its address shows and it opens in a new
+// tab) reads its item: a post in the background which survives leaving
+// the page (keepalive), for a click and a middle click (decided
+// 2026-11-21). The lantern's page has the entries too.
+function readOnFollow(event) {
+  if (event.type === "auxclick" && event.button !== 1) return
+  if (event.type === "click" && event.button !== 0) return
+  const link = event.target.closest?.("a[data-lantern-read]")
+  if (!link) return
+  fetch(link.dataset.lanternRead, {
+    method: "POST",
+    keepalive: true,
+    credentials: "same-origin",
+    headers: { "X-CSRFToken": csrfToken(), "HX-Request": "true" },
+  })
+    .then(() => document.dispatchEvent(new CustomEvent("biwak:lantern")))
+    .catch(() => {
+      // Offline: it stays unread, "Mark as read" is there
+    })
+}
+document.addEventListener("click", readOnFollow)
+document.addEventListener("auxclick", readOnFollow)

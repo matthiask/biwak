@@ -32,7 +32,7 @@ from django.views.static import serve as static_serve
 
 from biwak import schedules
 from biwak.accounts.models import APIToken, CalendarToken, User
-from biwak.activity.models import LevelOverride
+from biwak.activity.models import LevelOverride, Notification
 from biwak.bookmarks import operations as link_ops
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
@@ -1347,6 +1347,23 @@ class LiveTest(E2ETestCase):
         expect(menu).to_contain_text("Bookmarked")
         self.assertTrue(self.ada.bookmarks.filter(item=self.todo).exists())
         self.assertFalse(self.errors)
+
+    def test_a_lantern_entry_is_a_link_which_reads(self):
+        """Its address shows on hovering; a middle click opens a new tab and
+        reads the item's notifications all the same"""
+        ada = self.open(self.ada, reverse("projects"), page=self.page)
+        bob = self.open(self.bob, self.todo)
+        self.comment(bob, "In a new tab")
+        expect(ada.locator("[data-lantern-count]")).to_have_text("1 unread")
+        ada.locator("[data-lantern] > summary").click()
+        entry = ada.locator("[data-lantern-menu] a", has_text="In a new tab")
+        self.assertIn(self.todo.get_absolute_url(), entry.get_attribute("href"))
+        with ada.context.expect_page():
+            entry.click(button="middle")
+        expect(ada.locator("[data-lantern-count]")).to_be_hidden()
+        self.assertFalse(
+            Notification.objects.filter(user=self.ada, read_at=None).exists()
+        )
 
     def test_the_favicon_dot(self):
         icon = "document.querySelector('link[rel=icon]').href"

@@ -300,3 +300,12 @@ setup as `collaboration.md`).
   "You were mentioned.").
 - The menu shows at most 100 unread notifications (the page has all):
   a value the spec didn't fix.
+
+**Entries are links again** (decided 2026-11-21): following one posted a
+form, so its address didn't show on hovering and it couldn't open in a
+new tab. Now each entry is a link to where it applies; a click or a
+middle click posts `lantern/<id>/` in the background (`keepalive`,
+so it survives leaving the page), which reads the item's notifications
+(204). Not read: without JavaScript, or "Open in new tab" from the
+browser's context menu; "Mark as read" covers those. The view still only
+posts, so another site can't read somebody's notifications.

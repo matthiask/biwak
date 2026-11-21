@@ -423,14 +423,17 @@ def lantern_count(request):
 @require_POST
 def lantern_open(request, pk):
     """Following an entry: reads the notifications of its item (all of
-    them: the entry stands for the item) and opens the item where the
-    notification applies. A form posting, so that it works without
-    JavaScript and another site can't read somebody's notifications by
-    linking here (decided 2026-11-21); GET answers 405."""
+    them: the entry stands for the item). The entries are links to where
+    they apply, and frontend/lantern.js posts here in the background when
+    one is followed (204); a plain post redirects there. Posting only, so
+    another site can't read somebody's notifications by linking here
+    (decided 2026-11-21); GET answers 405."""
     notification = lantern_module.notifications_for(request.user).filter(pk=pk).first()
     if notification is None:
         raise Http404
     lantern_module.read(request.user, item=notification.event.item)
+    if request.headers.get("HX-Request"):
+        return HttpResponse(status=204)
     return redirect(lantern_module.anchor(notification))
 
 
