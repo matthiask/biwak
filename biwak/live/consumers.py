@@ -168,7 +168,11 @@ class LiveConsumer(AsyncWebsocketConsumer):
         # One's own changes are on one's page already
         if event.get("actor") == self.user.pk:
             return
+        as_client = self.as_client
         await self.access_check()
+        if self.as_client != as_client:
+            # Sent to the group of who the person was: maybe staff's
+            return
         await self.send_json({
             "type": "changed",
             "item": event["item"],

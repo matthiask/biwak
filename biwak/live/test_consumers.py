@@ -360,6 +360,33 @@ class LiveConsumerTest(TransactionTestCase):
         await self.run_op(ops.add_comment, self.todo, author=self.ada, content="Hi")
         await self.assertClosed(cleo)
 
+    async def test_made_a_client_without_a_message(self):
+        """Made a client in the database directly: an announcement still on
+        its way to the staff group doesn't reach the page, which joins the
+        clients' group"""
+        from channels.layers import get_channel_layer
+
+        bob = await self.connect(self.bob, self.shared)
+
+        def make_client():
+            type(self.bob).objects.filter(pk=self.bob.pk).update(is_client=True)
+            Membership.objects.create(project=self.project, user=self.bob)
+
+        await self.run_op(make_client)
+        await get_channel_layer().group_send(
+            announce.item_group(self.shared.pk, clients=False),
+            {
+                "type": "live.changed",
+                "item": self.secret.pk,
+                "watched": self.shared.pk,
+                "action": "moved",
+                "actor": self.ada.pk,
+            },
+        )
+        await self.assertQuiet(bob)
+        groups = get_channel_layer().groups
+        self.assertIn(announce.item_group(self.shared.pk, clients=True), groups)
+
     async def test_logged_out_without_a_message_closes_at_the_next_change(self):
         ada = await self.connect(self.ada, self.todo)
         await self.run_op(Session.objects.all().delete)
