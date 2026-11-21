@@ -76,10 +76,11 @@ text field and "whom to notify" goes.
   day. Its visibility: internal (staff can switch it on the doc's page).
 - **Telling people:** creating notifies nobody; the creator is the only
   subscriber (decided 2026-11-21). When the creator leaves the editor the
-  first time ("Done"), the doc's page offers "Tell people about it…": the
-  subscribers' "add others, telling them now" (`subscribers.md`), and
-  keeps offering it in the subscribers card until someone else is
-  subscribed or it's dismissed (proposed).
+  first time ("Done", the draft having become a doc), a modal "Tell
+  people about it?" opens with the subscribers' picker ("add others,
+  telling them now", `subscribers.md`): "Tell them" or "Not now", and
+  it's never offered again either way (decided 2026-11-21: once, no
+  reminder); afterwards the subscribers card works as on every item.
 - API and CLI: creating a doc stays as it is (title and text, not a
   draft).
 
