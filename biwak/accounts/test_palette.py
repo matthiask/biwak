@@ -241,3 +241,16 @@ class PaletteContrastTest(SimpleTestCase):
                     shade["tint-bg"],
                     4.5,
                 )
+
+
+class AvatarColorsTest(SimpleTestCase):
+    def test_every_palette_color_has_an_avatar_rule_using_its_fill(self):
+        """Initials are white on the fill: ``test_contrast`` checks white on
+        every fill for 4.5:1"""
+        for name in PALETTE:
+            self.assertRegex(
+                CSS,
+                rf'\[data-avatar-color="{name}"\]\s*\{{\s*--wb-avatar-bg:'
+                rf"\s*var\(--wb-palette-{name}-fill\);",
+            )
+        self.assertEqual(CSS.count("[data-avatar-color="), len(PALETTE))

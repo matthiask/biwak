@@ -6,6 +6,7 @@ specs/access.md), the installation's own staff everybody."""
 
 from dataclasses import dataclass, field
 
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.shortcuts import render
 from django.utils.translation import gettext as _
@@ -34,15 +35,23 @@ def role(user):
     return _("staff")
 
 
+def known_people(viewer):
+    """The people the viewer may know (specs/people.md): everybody for the
+    installation's own staff, else those they share a project with, and
+    themselves. The People page, the person's page and the images use it."""
+    people = User.objects.select_related("organization")
+    if knows_everybody(viewer):
+        return people
+    shared = people_visible_to(viewer).values("pk")
+    return people.filter(Q(pk__in=shared) | Q(pk=viewer.pk))
+
+
 def groups_for(viewer):
     """The groups in the page's order, each person with ``role``,
     ``feed`` (whether the viewer may open their feed), ``show_email`` and
     ``can_move`` (the existing "Change organization" modal)"""
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
-    people = User.objects.select_related("organization")
-    if not knows_everybody(viewer):
-        people = people.filter(pk__in=shared | {viewer.pk})
-    people = people.order_by("-is_active", Lower("full_name"), "email")
+    people = known_people(viewer).order_by("-is_active", Lower("full_name"), "email")
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))
     for user in people:
         user.role = role(user)

@@ -185,6 +185,10 @@ class User(AbstractBaseUser):
         _("accent color"), max_length=10, choices=Accent, default=Accent.HEATHER
     )
 
+    # The profile image (specs/people.md): 256 pixel WebP in the default
+    # storage as people/<id>/<version>.webp, served by ``person_image``
+    image = models.CharField(_("profile image"), max_length=200, blank=True)
+
     objects = UserManager()
 
     class Meta:
@@ -242,6 +246,12 @@ class User(AbstractBaseUser):
         """Opens all-access projects without being a member: the
         installation's own staff (``own_staff()`` for querysets)"""
         return not self.is_client and not self.is_partner
+
+    @property
+    def image_version(self):
+        """The part of the image's storage name that changes with it, for
+        the URL (cached for good)"""
+        return self.image.rsplit("/", 1)[-1].removesuffix(".webp")
 
     @property
     def organization_name(self):

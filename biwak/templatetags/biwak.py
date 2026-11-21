@@ -12,6 +12,7 @@ from markdown_it.token import Token
 from mdit_py_plugins.tasklists import tasklists_plugin
 
 from biwak import forms
+from biwak.accounts.models import PALETTE
 
 
 register = template.Library()
@@ -295,6 +296,71 @@ def person_link(context, person, *, name=None, css=""):
             label,
         )
     return label
+
+
+def _known_people(request):
+    """None if the viewer may know everybody, else the set of the people
+    they may know (``biwak.organizations.people.known_people()``); looked
+    up once per request"""
+    from biwak.organizations.people import known_people
+    from biwak.projects.models import knows_everybody
+
+    if not hasattr(request, "_known_people"):
+        request._known_people = (
+            None
+            if knows_everybody(request.user)
+            else set(known_people(request.user).values_list("pk", flat=True))
+        )
+    return request._known_people
+
+
+def initials(person):
+    """ "AE" for "Ada Example", "A" for a single name, the address's first
+    letter without a name"""
+    words = (person.full_name or person.email).split()
+    if len(words) > 1:
+        return (words[0][0] + words[-1][0]).upper()
+    return words[0][0].upper() if words else "?"
+
+
+def avatar_color(person):
+    """One of the palette's names, from the ID: the same every time"""
+    return PALETTE[person.pk % len(PALETTE)]
+
+
+AVATAR_SIZES = ("sm", "md", "lg")
+
+
+@register.simple_tag(takes_context=True)
+def avatar(context, person, size="sm"):
+    """The mark of a person (specs/people.md): their image, or the initials
+    on a color of the palette. The image only where the viewer may know the
+    person (else the image view would answer 404), the name is the
+    ``title``."""
+    if size not in AVATAR_SIZES:
+        raise ValueError(f"Unknown avatar size {size!r}")
+    name = str(person)
+    request = context.get("request")
+    if person.image and request is not None:
+        known = _known_people(request)
+        if known is None or person.pk in known:
+            return format_html(
+                '<img class="wb-avatar wb-avatar-{}" src="{}" alt="{}" title="{}"'
+                ' width="256" height="256" loading="lazy">',
+                size,
+                reverse("person_image", args=[person.pk, person.image_version]),
+                name,
+                name,
+            )
+    return format_html(
+        '<span class="wb-avatar wb-avatar-{}" data-avatar-color="{}" title="{}"'
+        ' role="img" aria-label="{}">{}</span>',
+        size,
+        avatar_color(person),
+        name,
+        name,
+        initials(person),
+    )
 
 
 @register.simple_tag

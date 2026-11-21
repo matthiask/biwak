@@ -2,13 +2,15 @@ import re
 
 from django import forms
 from django.contrib import messages
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.core.files.storage import default_storage
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
 from biwak.accounts import operations, passkeys
@@ -25,6 +27,32 @@ from biwak.activity.views import SettingsForm
 from biwak.forms import Form
 from biwak.items.models import Item
 from biwak.projects.models import Project
+
+
+IMAGE_MAX_AGE = 365 * 24 * 3600
+
+
+@require_GET
+def person_image(request, pk, version):
+    """A person's image, for those who may know the person (the rule of the
+    People page), else 404. The version is in the URL, so it's cached for
+    good; an old version is gone with the image. Streamed through the app
+    also from a bucket: it's small, and a presigned redirect would be
+    cached past its expiry."""
+    from biwak.organizations.people import known_people
+
+    person = get_object_or_404(known_people(request.user), pk=pk)
+    if not person.image or person.image_version != version:
+        raise Http404("No image")
+    try:
+        with default_storage.open(person.image, "rb") as file:
+            data = file.read()
+    except FileNotFoundError as exc:
+        raise Http404("No image") from exc
+    response = HttpResponse(data, content_type="image/webp")
+    response["X-Content-Type-Options"] = "nosniff"
+    patch_cache_control(response, private=True, max_age=IMAGE_MAX_AGE, immutable=True)
+    return response
 
 
 @never_cache

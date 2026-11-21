@@ -910,6 +910,76 @@ html:not(.js) .wb-handle {
   font-weight: 500;
 }
 
+/* The mark of a person ({% avatar person size %}, specs/people.md): the
+   image, or white initials on the fill of one of the palette's colors,
+   chosen from the person's ID */
+.wb-avatar {
+  --wb-avatar-size: 1.5rem;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--wb-avatar-size);
+  height: var(--wb-avatar-size);
+  border-radius: 50%;
+  background: var(--wb-avatar-bg, var(--bs-tertiary-bg));
+  color: #fff;
+  font-size: calc(var(--wb-avatar-size) * 0.4);
+  font-weight: 600;
+  line-height: 1;
+  object-fit: cover;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.wb-avatar-md {
+  --wb-avatar-size: 2.25rem;
+}
+
+.wb-avatar-lg {
+  --wb-avatar-size: 4.5rem;
+}
+
+[data-avatar-color="heather"] {
+  --wb-avatar-bg: var(--wb-palette-heather-fill);
+}
+
+[data-avatar-color="lake"] {
+  --wb-avatar-bg: var(--wb-palette-lake-fill);
+}
+
+[data-avatar-color="forest"] {
+  --wb-avatar-bg: var(--wb-palette-forest-fill);
+}
+
+[data-avatar-color="glacier"] {
+  --wb-avatar-bg: var(--wb-palette-glacier-fill);
+}
+
+[data-avatar-color="ember"] {
+  --wb-avatar-bg: var(--wb-palette-ember-fill);
+}
+
+[data-avatar-color="alpenglow"] {
+  --wb-avatar-bg: var(--wb-palette-alpenglow-fill);
+}
+
+[data-avatar-color="moss"] {
+  --wb-avatar-bg: var(--wb-palette-moss-fill);
+}
+
+[data-avatar-color="slate"] {
+  --wb-avatar-bg: var(--wb-palette-slate-fill);
+}
+
+[data-avatar-color="bark"] {
+  --wb-avatar-bg: var(--wb-palette-bark-fill);
+}
+
+[data-avatar-color="berry"] {
+  --wb-avatar-bg: var(--wb-palette-berry-fill);
+}
+
 .wb-add-todo {
   margin-top: 0.25rem;
 }
