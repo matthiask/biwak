@@ -368,7 +368,7 @@ class CLITest(TestCase):
         data = json.loads(self.biwak("notifications", "--json").stdout)
         self.assertEqual(
             data,
-            {"level": "concerns_me", "delivery": "digest", "lantern_in_favicon": False},
+            {"level": "concerns_me", "delivery": "digest", "lantern_in_favicon": True},
         )
         self.biwak("notifications", "--delivery", "none")
         self.ada.refresh_from_db()

@@ -609,10 +609,21 @@ class PingTest(LanternTestCase):
 class FaviconTest(LanternTestCase):
     def test_the_setting(self):
         self.client.force_login(self.bob)
+        # On by default
+        self.assertTrue(self.bob.lantern_in_favicon)
         page = self.client.get(reverse("projects"))
-        self.assertNotContains(page, "data-lantern-favicon")
+        self.assertContains(page, "data-lantern-favicon")
         self.assertContains(
             self.client.get(reverse("settings")), 'name="lantern_in_favicon"'
+        )
+        self.client.post(
+            reverse("settings_notifications"),
+            {"notification_level": "everything", "mail_delivery": "each"},
+        )
+        self.bob.refresh_from_db()
+        self.assertFalse(self.bob.lantern_in_favicon)
+        self.assertNotContains(
+            self.client.get(reverse("projects")), "data-lantern-favicon"
         )
         self.client.post(
             reverse("settings_notifications"),

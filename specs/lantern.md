@@ -100,7 +100,8 @@ records, levels, `send_mails`), reactions.
 - **The favicon** (decided 2026-11-21, configurable): with the setting
   on, the browser tab's icon shows a dot when there are unread
   notifications, updated live; the setting (`User.lantern_in_favicon`,
-  off by default) sits in the notifications section of the settings
+  on by default, decided 2026-11-21: nobody has chosen yet, no data
+  migration) sits in the notifications section of the settings
   page. Drawn on a canvas from the normal favicon; without the setting
   or without JavaScript the icon stays as it is.
 
