@@ -1,12 +1,20 @@
 import datetime as dt
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from biwak.accounts.models import NotificationLevel
 from biwak.activity import mentions
-from biwak.activity.models import Action, Event, LevelOverride, Notification
+from biwak.activity.mails import _deliverable
+from biwak.activity.models import (
+    Action,
+    Event,
+    LevelOverride,
+    Notification,
+    Subscription,
+)
 from biwak.activity.notify import (
     can_see,
     effective_level,
@@ -14,7 +22,12 @@ from biwak.activity.notify import (
     notify_people,
     who_can_see,
 )
-from biwak.activity.operations import record, subscribe, unsubscribe
+from biwak.activity.operations import (
+    record,
+    set_level_override,
+    subscribe,
+    unsubscribe,
+)
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.projects import operations as project_ops
@@ -296,3 +309,57 @@ class WhoCanSeeTest(TestCase):
                     set(who_can_see(item)),
                     {user for user in people if can_see(user, item)},
                 )
+
+
+class QueriesTest(TestCase):
+    """notify() and checking again when sending don't grow with the people
+    told or the items of a digest"""
+
+    def queries(self, run):
+        with CaptureQueriesContext(connection) as queries:
+            run()
+        return len(queries)
+
+    def test_notify(self):
+        ada = person("Ada")
+        p = project(members=[ada])
+        todolist = ops.create_list(project=p, title="List", creator=ada)
+        todo = ops.create_todo(todolist=todolist, title="To-do", creator=ada)
+        counts = []
+        for count in [2, 8]:
+            for n in range(count):
+                user = person(f"P{count}x{n}")
+                subscribe(user, todo)
+                if n % 2:
+                    user.notification_level = NotificationLevel.CONCERNS_ME
+                    user.save()
+                    set_level_override(user, NotificationLevel.EVERYTHING, item=todo)
+            ops.add_comment(todo, author=ada, content="Hi")
+            event = Event.objects.latest("pk")
+            counts.append(self.queries(lambda event=event: notify(event.pk)))
+            self.assertEqual(
+                Notification.objects.filter(event=event).count(),
+                Subscription.objects.filter(item=todo).exclude(user=ada).count(),
+            )
+            Subscription.objects.filter(item=todo).exclude(user=ada).delete()
+        self.assertEqual(counts[0], counts[1])
+
+    def test_deliverable(self):
+        ada, bob = person("Ada"), person("Bob")
+        p = project(members=[ada, bob])
+        counts = []
+        for count in [2, 8]:
+            todolist = ops.create_list(project=p, title="List", creator=ada)
+            todos = [
+                ops.create_todo(todolist=todolist, title=f"T{n}", creator=ada)
+                for n in range(count)
+            ]
+            set_level_override(bob, NotificationLevel.NOTHING, item=todos[0])
+            events = [
+                record(actor=ada, action=Action.EDITED, project=p, item=todo)
+                for todo in todos
+            ]
+            notifications = [Notification(user=bob, event=event) for event in events]
+            counts.append(self.queries(lambda n=notifications: _deliverable(n, bob)))
+            self.assertEqual(len(_deliverable(notifications, bob)), count - 1)
+        self.assertEqual(counts[0], counts[1])

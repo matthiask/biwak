@@ -52,73 +52,136 @@ def who_can_see(item):
     return people_who_see(item.project, item.is_client_visible)
 
 
-def effective_level(user, item=None, *, project=None):
-    """The override of the item or the nearest container it's in, else the
-    project's, else the person's level"""
-    project = project or item.project
-    overrides = LevelOverride.objects.filter(user=user)
-    if item is not None:
-        ancestors = list(
-            Item.objects.ancestors(item, include_self=True).values_list("pk", flat=True)
+def _paths(items):
+    """``{item ID: [root ID, …, item ID]}``, one query for all"""
+    if not items:
+        return {}
+    return {
+        item.pk: item.tree_path
+        for item in Item.objects
+        .with_tree_fields()
+        .tree_filter(project__in={item.project_id for item in items})
+        .filter(pk__in=[item.pk for item in items])
+    }
+
+
+def _level(overrides, path, project_id, default):
+    """The override of the item or the nearest container it's in (``path``,
+    the root first), else the project's, else ``default``; ``overrides``
+    are one person's, ``{("item" or "project", ID): level}``"""
+    for pk in reversed(path):
+        if ("item", pk) in overrides:
+            return overrides["item", pk]
+    return overrides.get(("project", project_id), default)
+
+
+def _overrides(people, items, projects):
+    """``{person ID: {("item" or "project", ID): level}}``, one query"""
+    found = {}
+    for user, item, project, level in LevelOverride.objects.filter(
+        models.Q(item__in=items) | models.Q(project__in=projects),
+        user__in=people,
+    ).values_list("user", "item", "project", "level"):
+        key = ("item", item) if item else ("project", project)
+        found.setdefault(user, {})[key] = level
+    return found
+
+
+def effective_levels(people, item=None, *, project=None):
+    """``{person ID: level}``: for each, the override of the item or the
+    nearest container it's in, else the project's, else their level"""
+    project_id = project.pk if project else item.project_id
+    path = _paths([item])[item.pk] if item is not None else []
+    overrides = _overrides([user.pk for user in people], path, [project_id])
+    return {
+        user.pk: _level(
+            overrides.get(user.pk, {}), path, project_id, user.notification_level
         )
-        levels = dict(overrides.filter(item__in=ancestors).values_list("item", "level"))
-        for pk in reversed(ancestors):
-            if pk in levels:
-                return levels[pk]
-    if override := overrides.filter(project=project).first():
-        return override.level
-    return user.notification_level
+        for user in people
+    }
 
 
-def concerns(user, event):
-    """What "only what concerns me" includes: being assigned or mentioned,
-    comments on items they created or commented on, their to-dos (assigned
-    to them, or created by them) completed by someone else"""
+def effective_level(user, item=None, *, project=None):
+    """The same for one person"""
+    return effective_levels([user], item, project=project)[user.pk]
+
+
+def item_levels(user, items):
+    """``{item ID: level}``: the person's effective level for many items"""
+    paths = _paths(items)
+    overrides = _overrides(
+        [user.pk],
+        {pk for path in paths.values() for pk in path},
+        {item.project_id for item in items},
+    ).get(user.pk, {})
+    return {
+        item.pk: _level(
+            overrides, paths[item.pk], item.project_id, user.notification_level
+        )
+        for item in items
+    }
+
+
+def concerned(event, people):
+    """Those of ``people`` (IDs) the event concerns, for "only what
+    concerns me": being assigned or mentioned, comments on items they
+    created or commented on, their to-dos (assigned to them, or created by
+    them) completed by someone else"""
     item = event.item
-    if user.pk in event.data.get("mentioned", ()):
-        return True
+    ids = set(event.data.get("mentioned", ()))
     match event.action:
         case Action.ASSIGNED:
-            return user.pk in event.data.get("assignees", ())
+            ids |= set(event.data.get("assignees", ()))
         case Action.COMMENTED:
-            return (
-                item.creator_id == user.pk
-                or Comment.objects
-                .filter(item=item, author=user)
+            ids |= {item.creator_id} | set(
+                Comment.objects
+                .filter(item=item, author__in=people)
                 .exclude(pk=event.data.get("comment"))
-                .exists()
+                .values_list("author", flat=True)
             )
         case Action.REACTED:
             # Only the author is a candidate, and it's their text
-            return True
+            return set(people)
         case Action.COMPLETED:
-            return (
-                item.creator_id == user.pk
-                or item.todo.assignees.filter(pk=user.pk).exists()
+            ids |= {item.creator_id} | set(
+                item.todo.assignees.filter(pk__in=people).values_list("pk", flat=True)
             )
-    return False
+    return ids & set(people)
 
 
-def wants(user, event):
-    r"""Whether the person's level lets the event through; being mentioned
-    passes every level except "nothing\""""
-    level = effective_level(user, event.item)
-    if level == NotificationLevel.NOTHING:
-        return False
-    if (
-        event.item.kind == Kind.ANSWER
-        and event.action == Action.CREATED
-        and user.pk not in event.data.get("mentioned", ())
-    ):
+def wanting(people, event):
+    """Those of ``people`` whose level lets the event through; being
+    mentioned passes every level except nothing"""
+    item = event.item
+    levels = effective_levels(people, item)
+    people = [user for user in people if levels[user.pk] != NotificationLevel.NOTHING]
+    mentioned = set(event.data.get("mentioned", ()))
+    if item.kind == Kind.ANSWER and event.action == Action.CREATED:
         # A check-in's answers: a mail each only for those who chose it
         # (specs/checkins.md), whatever their level; the others get the
         # summary the morning after
-        from biwak.checkins.models import Mode, mail_mode
+        from biwak.checkins.models import DEFAULT_MODE, Mode, QuestionMail
 
-        return mail_mode(user, event.item.parent_id) == Mode.EACH
-    if level == NotificationLevel.CONCERNS_ME:
-        return concerns(user, event)
-    return True
+        modes = dict(
+            QuestionMail.objects.filter(
+                question_id=item.parent_id, user__in=people
+            ).values_list("user", "mode")
+        )
+        return [
+            user
+            for user in people
+            if user.pk in mentioned
+            or Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+        ]
+    choosy = [
+        user.pk for user in people if levels[user.pk] == NotificationLevel.CONCERNS_ME
+    ]
+    concerns = concerned(event, choosy) if choosy else set()
+    return [
+        user
+        for user in people
+        if levels[user.pk] != NotificationLevel.CONCERNS_ME or user.pk in concerns
+    ]
 
 
 def reacted_author(event):
@@ -158,47 +221,56 @@ def notify(event_pk):
     """Writes the notifications of an event; returns the people told.
     Never the actor, inactive people or people who can't see the item now.
     A merged edit (``record()``) notifies again: unsent notifications move
-    forward, sent ones only get a new one for people mentioned since."""
+    forward, sent ones only get a new one for people mentioned since. The
+    same number of queries for any number of people."""
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
     if event is None or event.item is None or event.action in SILENT:
         return []
-    now = timezone.now()
-    told = []
-    for user in candidates(event):
-        if not can_see(user, event.item) or not wants(user, event):
-            continue
-        if _tell(user, event, now):
-            told.append(user)
-    return told
+    people = list(candidates(event).filter(pk__in=who_can_see(event.item).values("pk")))
+    if not people:
+        return []
+    return _tell(wanting(people, event), event)
 
 
 @transaction.atomic
-def _tell(user, event, now):
+def _tell(people, event):
     """One unsent notification per person and event (a constraint, so two
     notify() at once can't tell anybody twice): an unsent one moves
     forward; after a sent one, only a mention since tells again"""
-    sent = (
-        Notification.objects
-        .filter(user=user, event=event, sent_at__isnull=False)
-        .order_by("-created_at", "-pk")
-        .first()
+    if not people:
+        return []
+    now = timezone.now()
+    ids = [user.pk for user in people]
+    existing = Notification.objects.filter(event=event, user__in=ids)
+    unsent = set(existing.filter(sent_at=None).values_list("user", flat=True))
+    last_sent = dict(
+        existing
+        .filter(sent_at__isnull=False)
+        .values("user")
+        .annotate(last=models.Max("created_at"))
+        .values_list("user", "last")
     )
-    if sent is not None and not (
-        Notification.objects.filter(user=user, event=event, sent_at=None).exists()
-        or Mention.objects.filter(
-            item=event.item, user=user, comment=None, created_at__gt=sent.created_at
-        ).exists()
-    ):
-        return False
-    # Locked: a send_mails() claiming it at the same time waits, or we wait
-    # and create a new one
-    notification, created = Notification.objects.select_for_update().get_or_create(
-        user=user, event=event, sent_at=None, defaults={"created_at": now}
+    mentioned_since = {
+        user
+        for user, created_at in Mention.objects.filter(
+            item=event.item, comment=None, user__in=last_sent
+        ).values_list("user", "created_at")
+        if created_at > last_sent[user]
+    }
+    # Sent meanwhile (send_mails claimed it): that mail has the change
+    # already, which is told before this notify() runs
+    existing.filter(user__in=unsent, sent_at=None).update(created_at=now)
+    new = [
+        user
+        for user in people
+        if user.pk not in unsent
+        and (user.pk not in last_sent or user.pk in mentioned_since)
+    ]
+    Notification.objects.bulk_create(
+        [Notification(user=user, event=event, created_at=now) for user in new],
+        ignore_conflicts=True,
     )
-    if not created:
-        notification.created_at = now
-        notification.save(update_fields=["created_at"])
-    return True
+    return [user for user in people if user.pk in unsent or user in new]
 
 
 def notify_people(item, *, whom, actor):
