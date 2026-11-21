@@ -30,6 +30,8 @@ urlpatterns = [
         name="project_files_order",
     ),
     path("items/<int:pk>/move/", library.item_move, name="item_move"),
+    path("projects/<int:pk>/files/move/", library.files_move, name="files_move"),
+    path("projects/<int:pk>/files/trash/", library.files_trash, name="files_trash"),
     # Docs
     path("projects/<int:pk>/docs/new/", docs.doc_new, name="doc_new"),
     path("docs/<int:pk>/", docs.doc, name="doc"),

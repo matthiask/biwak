@@ -28,6 +28,16 @@ does too. Staff create what is here: "New folder", "New doc", "Upload a
 file". A folder's "More" menu has "Rename…"; move things between
 folders with "Move to..." in their "More" menu.
 
+**Moving:** drag a tile onto a folder, onto "..", or onto a folder in
+the path above the title. **Several at once:** Ctrl-click (Cmd-click on
+a Mac) adds a tile to the selection or takes it out, Shift-click selects
+all tiles from the last one clicked; with the keyboard, Ctrl+Space
+selects the current tile and Shift with the arrow keys selects on to the
+next one. A plain click opens the tile as always. With a selection a bar
+shows "Move to…", "Move to trash" and "Deselect" (or press Escape);
+dragging one of the selected tiles moves them all. You move what you may
+change; clients only what they added.
+
 Staff choose the order of a folder's contents with "Order…" in its
 "More" menu (for the top level in the "More" menu of "Docs and files"):
 alphabetical (the default), reverse alphabetical, newest first or oldest

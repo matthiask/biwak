@@ -8,7 +8,7 @@ from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak.files import attachments, operations, previews
@@ -85,7 +85,7 @@ def version_for(request, item, version_pk=None, *, deny=staff_only):
 
 def folder_choices(user, project, *, exclude=None):
     """The folders a person can move something to, as (item, path): those
-    they see, not the item itself or what's in it"""
+    they see, not the item itself (or the items, a list) or what's in it"""
     folders = list(
         Item.objects
         .visible_to(user)
@@ -95,10 +95,12 @@ def folder_choices(user, project, *, exclude=None):
     )
     by_pk = {f.pk: f for f in folders}
     skip = set()
-    if exclude is not None and exclude.kind == Kind.FOLDER:
-        skip = {exclude.pk} | set(
-            Item.objects.descendants(exclude).values_list("pk", flat=True)
-        )
+    excluded = exclude if isinstance(exclude, list) else [exclude]
+    for item in excluded:
+        if item is not None and item.kind == Kind.FOLDER:
+            skip |= {item.pk} | set(
+                Item.objects.descendants(item).values_list("pk", flat=True)
+            )
 
     def path(folder):
         parts = [folder.title]
@@ -310,6 +312,102 @@ def item_move(request, pk):
         cancel_url=item.get_absolute_url(),
         submit_label=_("Move"),
     )
+
+
+def selected(request, project):
+    """The folders, docs and files of a selection (``items``, posted or in
+    the query): those the person sees in the project (else 404), and may
+    move or trash (else 403), as with "Move to…" one by one"""
+    pks = request.POST.getlist("items") or request.GET.getlist("items")
+    if not pks or not all(pk.isdecimal() for pk in pks):
+        raise Http404
+    items = list(
+        Item.objects
+        .visible_to(request.user)
+        .filter(project=project, kind__in=CONTAINED, pk__in=pks)
+        .select_related("parent", "creator")
+        .order_by(Lower("title"), "pk")
+    )
+    if len(items) != len(set(pks)):
+        raise Http404
+    if not all(ops.can_change(request.user, item) for item in items):
+        raise PermissionDenied
+    return items
+
+
+def _selection_title(items):
+    if len(items) == 1:
+        return items[0].title
+    return ngettext("%(count)s item", "%(count)s items", len(items)) % {
+        "count": len(items)
+    }
+
+
+def files_move(request, pk):
+    """Moves several folders, docs and files at once (the selection's
+    "Move to…", a modal, also a page; dropping them onto a folder posts
+    here with ``folder``) with the operation of "Move to…"
+    (specs/ui-round-7.md, part 4)"""
+    project = project_for(request, pk)
+    items = selected(request, project)
+    current = items[0].parent
+    form = MoveForm(
+        request.POST or None,
+        choices=folder_choices(request.user, project, exclude=items),
+        current=current.pk if current else None,
+    )
+    if request.method == "POST":
+        target = folder_param(request, project)
+        try:
+            operations.move_items(items, parent=target, actor=request.user)
+        except ValueError:
+            form.add_error(None, _("A folder can't be moved into itself."))
+        else:
+            return redirect(library_url(project, current))
+    return form_response(
+        request,
+        form,
+        title=_("Move to…"),
+        intro=_selection_title(items),
+        project=project,
+        cancel_url=library_url(project, current),
+        submit_label=_("Move"),
+    )
+
+
+def files_trash(request, pk):
+    """Moves several folders, docs and files to the trash: asks first (a
+    modal, also a page), the POST does it"""
+    project = project_for(request, pk)
+    items = selected(request, project)
+    current = items[0].parent
+    if request.method != "POST":
+        return form_response(
+            request,
+            None,
+            title=_("Move to the trash?"),
+            intro=ngettext(
+                "“%(title)s” can be restored for %(days)s days.",
+                "%(count)s items can be restored for %(days)s days.",
+                len(items),
+            )
+            % {"title": items[0].title, "count": len(items), "days": ops.TRASH_DAYS},
+            project=project,
+            cancel_url=library_url(project, current),
+            submit_label=_("Move to the trash"),
+            destructive=True,
+        )
+    operations.trash_items(items, actor=request.user)
+    messages.success(
+        request,
+        ngettext(
+            "“%(title)s” is in the trash for %(days)s days.",
+            "%(count)s items are in the trash for %(days)s days.",
+            len(items),
+        )
+        % {"title": items[0].title, "count": len(items), "days": ops.TRASH_DAYS},
+    )
+    return redirect(library_url(project, current))
 
 
 def folder_param(request, project):

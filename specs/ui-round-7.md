@@ -14,7 +14,14 @@ the "Order…" modals; API: `ordering` in `GET projects/{id}/files/`,
 `ordering`; CLI 0.36.0: `biwak folder rename`, `biwak folder order`,
 "Order:" in `biwak files`). The ordering is just a setting: no event;
 the audit trigger still records the column like any other (not left
-out, nothing to gain).
+out, nothing to gain). Part 4 (`frontend/files.js`; `library.files_move`
+and `files_trash` taking `items`, `files.operations.move_items()` and
+`trash_items()`): only tiles the person may move (`can_change()`, as
+"Move to…") are draggable and selectable; a refused or failed drop
+reloads the page; selecting a folder and something in it trashes them
+together (one `trashed`, restored together). Keyboard: Ctrl+Space and
+Shift+arrows (`palette/_shortcuts.html`). The drag's image is the
+browser's (one tile) also when several move.
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

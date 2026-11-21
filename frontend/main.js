@@ -66,6 +66,11 @@ if (document.querySelector("[data-sortable-order]")) {
   import(/* webpackChunkName: "sortable-order" */ "./sortable-order.js")
 }
 
+// A folder's tiles: selecting, dragging, dropping (specs/ui-round-7.md)
+if (document.querySelector("[data-tiles]")) {
+  import(/* webpackChunkName: "files" */ "./files.js")
+}
+
 // Docs edited live (specs/collaboration.md), the doc's editor page only
 if (document.querySelector("[data-collab]")) {
   import(/* webpackChunkName: "collab" */ "./collab.js")

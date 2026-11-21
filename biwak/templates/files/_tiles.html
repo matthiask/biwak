@@ -5,9 +5,17 @@
   first tile ".." leads to `up_url`, its parent). Every tile is a row of
   the keyboard (j/k); folders and ".." are drop targets
   (`data-drop-folder`, the folder's ID, empty for the top level), the
-  others carry `data-tile` (frontend/files.js).
+  others carry `data-tile` (frontend/files.js). Tiles the person may move
+  can be selected (Ctrl- and Shift-click) and dragged; `data-tiles-move`
+  moves them, the bar below acts on the selection (specs/ui-round-7.md,
+  part 4).
 {% endcomment %}
-<ul class="wb-tiles">
+<ul
+  class="wb-tiles"
+  data-tiles
+  data-tiles-move="{% url 'files_move' project.pk %}"
+  data-tiles-folder="{{ folder.pk|default_if_none:'' }}"
+>
   {% if folder %}
     <li>
       <a
@@ -31,7 +39,7 @@
         data-kb-row
         data-kb-open
         data-tile="{{ row.pk }}"
-        {% if row.can_move %}data-tile-movable{% endif %}
+        {% if row.can_move %}data-tile-movable draggable="true"{% endif %}
         {% if row.kind == "folder" %}data-drop-folder="{{ row.pk }}"{% endif %}
       >
         <span class="wb-tile-visual">
@@ -54,3 +62,25 @@
   {% endfor %}
 </ul>
 {% if not rows %}<p class="text-body-secondary">{% translate "Nothing here yet." %}</p>{% endif %}
+{% comment %}
+  What to do with the selection; frontend/files.js shows it, counts and
+  adds the selected IDs (`items`) to the links.
+{% endcomment %}
+<div class="wb-selection-bar" data-selection-bar hidden>
+  <span
+    data-selection-count
+    data-one="{% translate '1 selected' %}"
+    data-many="{% translate '%(count)s selected' %}"
+  ></span>
+  <a
+    class="btn btn-sm btn-quiet"
+    href="{% url 'files_move' project.pk %}"
+    data-selection-action
+  >{% translate "Move to…" %}</a>
+  <a
+    class="btn btn-sm btn-quiet"
+    href="{% url 'files_trash' project.pk %}"
+    data-selection-action
+  >{% icon "trash" %}<span>{% translate "Move to trash" %}</span></a>
+  <button type="button" class="btn btn-sm btn-quiet" data-selection-clear>{% translate "Deselect" %}</button>
+</div>

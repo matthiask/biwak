@@ -4,7 +4,7 @@
   {{ project }} – Biwak{% endblock title %}
 
 {% block content %}
-  {% include "files/_crumbs.html" %}
+  {% include "files/_crumbs.html" with drop=True %}
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% if folder %}{% icon "folder" %} {{ folder|item_title }}

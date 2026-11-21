@@ -20,7 +20,7 @@ from biwak.collab import live
 from biwak.files import attachments
 from biwak.files.titles import doc_title
 from biwak.items import editing, operations as ops
-from biwak.items.models import Doc, DocVersion, Folder, Message, Upload
+from biwak.items.models import Doc, DocVersion, Folder, Message, Status, Upload
 from biwak.projects.models import FilesOrdering, Project
 
 
@@ -351,6 +351,26 @@ def update_folder(item, *, actor, title=_UNCHANGED):
     item.save(update_fields=["title", "updated_at"])
     record(actor=actor, action=Action.EDITED, project=item.project, item=item)
     return item
+
+
+@transaction.atomic
+def move_items(items, *, parent, actor):
+    """Moves several folders, docs and files (dragged, or the selection's
+    "Move to…") with ``move_item()``; those already there stay. All or
+    none: a folder into itself raises ``ValueError``."""
+    for item in items:
+        if item.parent_id != (parent.pk if parent else None):
+            ops.move_item(item, parent=parent, actor=actor)
+
+
+@transaction.atomic
+def trash_items(items, *, actor):
+    """The selection's "Move to trash" (``trash()`` each; what's inside a
+    trashed folder follows it)"""
+    for item in items:
+        item.refresh_from_db(fields=["status"])
+        if item.status != Status.TRASHED:
+            ops.trash(item, actor=actor)
 
 
 def set_ordering(target, ordering, *, actor):
