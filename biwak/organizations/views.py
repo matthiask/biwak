@@ -85,11 +85,11 @@ class OrganizationForm(Form):
             )
         super().__init__(*args, **kwargs)
         if instance is not None and not org_ops.can_change_domains(user, instance):
-            # Its Google Workspace domains (specs/sso.md)
+            # They decide whose sign-ins count (specs/sso.md)
             self.fields["domains"].disabled = True
             self.fields["domains"].help_text = _(
-                "It signs in with Google: only admins change its domains."
-            )
+                "It signs in with %(provider)s: only admins change its domains."
+            ) % {"provider": instance.idp_name}
 
     def clean_name(self):
         return org_ops.clean_name(self.cleaned_data["name"], instance=self.instance)
@@ -275,7 +275,8 @@ class SignInForm(Form):
         widget=forms.RadioSelect,
         help_text=gettext_lazy(
             "Google Workspace: sign-ins count for the organization's email"
-            " domains (Google's hd). Microsoft Entra ID: for its tenant."
+            " domains (Google's hd). Microsoft Entra ID: for its tenant and"
+            " addresses of its domains."
         ),
     )
     tenant_id = forms.CharField(

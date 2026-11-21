@@ -145,29 +145,29 @@ def create_organization(*, name, domains=(), actor):
 
 
 def can_change_domains(user, org):
-    """The domains of an organization signing in with Google are its
-    Workspace domains: they decide whose Google accounts count (specs/sso.md),
-    so only admins change them"""
-    return can_manage(user) and (user.is_admin or org.sso != IdP.GOOGLE)
+    """The domains of an organization with single sign-on decide whose
+    sign-ins count (Google's Workspace domains, the addresses Microsoft's
+    tenant speaks for, specs/sso.md), so only admins change them"""
+    return can_manage(user) and (user.is_admin or not org.sso)
 
 
 def _check_domains(actor, org, domains):
-    """Admins only for organizations signing in with Google, and never
-    none"""
+    """Admins only for organizations with single sign-on, and never none"""
     if not can_change_domains(actor, org):
         raise PermissionError(
             _(
                 "Only admins change the domains of an organization signing in"
-                " with Google."
+                " with %(provider)s."
             )
+            % {"provider": org.idp_name}
         )
-    if org.sso == IdP.GOOGLE and not domains:
+    if org.sso and not domains:
         raise ValidationError(
             _(
-                "%(organization)s signs in with Google: it needs its Google"
-                " Workspace domains."
+                "%(organization)s signs in with %(provider)s: it needs its email"
+                " domains."
             )
-            % {"organization": org}
+            % {"organization": org, "provider": org.idp_name}
         )
 
 
@@ -324,11 +324,12 @@ def clean_signin(org, *, signin, idp="", tenant_id=""):
             )
             % {"provider": IdP(idp).label}
         )
-    if idp == IdP.GOOGLE and not org.domains:
+    if not org.domains:
         raise ValidationError(
             _(
-                "Add the organization's Google Workspace domains first: Google"
-                " sign-ins count only for them."
+                "Add the organization's email domains first: sign-ins count only"
+                " for them (Google Workspace's domains, the addresses of the"
+                " Microsoft tenant)."
             )
         )
     if idp == IdP.MICROSOFT and not tenant_id:

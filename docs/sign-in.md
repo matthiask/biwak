@@ -30,7 +30,8 @@ A Google sign-in counts only for an account managed by the organization's
 Google Workspace (its email domains), with your address in Biwak. A
 Gmail address may always sign in with Google, unless the organization
 requires Microsoft. A Microsoft sign-in counts only for the organization's
-own tenant. Deactivated people can't sign in at all.
+own tenant and addresses of its email domains. Deactivated people can't
+sign in at all.
 
 Settings, "Sign-in", shows the Google or Microsoft accounts connected to
 yours ("Disconnect" ends the connection; the next sign-in through the
@@ -59,13 +60,14 @@ have to consent once for their tenant.
 
 Then, on the organization's page:
 
-1. Google: check the organization's email domains, they are its Workspace
-   domains. Microsoft: copy the "Directory (tenant) ID" from the
-   organization's Entra admin center.
+1. Check the organization's email domains: Google's sign-ins count for
+   its Workspace domains, Microsoft's for addresses of these domains.
+   Microsoft: copy the "Directory (tenant) ID" from the organization's
+   Entra admin center.
 2. "Sign-in…": choose the provider and "allowed" first, and try it.
 3. Switch to "required" when everybody can sign in through the provider.
    If you belong to the organization yourself, sign in through the
    provider first.
 
-While an organization signs in with Google, only admins change its email
-domains.
+While an organization signs in through single sign-on, only admins
+change its email domains.

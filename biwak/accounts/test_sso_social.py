@@ -423,6 +423,23 @@ class MicrosoftTest(SocialTestCase):
         )
         self.assert_refused(request, response, "doesn't belong to the organization")
 
+    def test_only_addresses_of_the_organizations_domains(self):
+        """Entra ID doesn't verify addresses: the tenant's administrators
+        could give anybody's to one of their accounts, so a tenant counts
+        only for its organization's domains (somebody moved into the
+        organization with another address uses codes)"""
+        from biwak.accounts.models import User
+
+        ida = User.objects.create_user(
+            "ida@example.net", is_client=True, organization=self.acme
+        )
+        request, response = self.complete(
+            {"access_token": "a", "id_token": microsoft_token()},
+            graph_profile("ida@example.net"),
+        )
+        self.assert_refused(request, response, "doesn't belong to the organization")
+        self.assertEqual(ida.organization, self.acme)
+
     def test_not_for_organizations_without_microsoft(self):
         request, response = self.complete(
             {"access_token": "a", "id_token": microsoft_token()},

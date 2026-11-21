@@ -109,9 +109,9 @@ def _google_address(data):
 
 def _microsoft_address(data):
     """The address Microsoft Entra ID gives (Graph's ``mail``, else the user
-    principal name). Entra ID doesn't verify it: the organization's
-    administrators set it. It counts only together with the organization's
-    own tenant (``tid``), whose administrators speak for its people."""
+    principal name). Entra ID doesn't verify it: the tenant's administrators
+    set it. It counts only together with the organization's own tenant
+    (``tid``) and for the organization's domains (``check_social()``)."""
     email = data.get("mail") or data.get("userPrincipalName")
     return email if isinstance(email, str) and email else None
 
@@ -144,6 +144,11 @@ def tid_matches(tid, org):
         return False
 
 
+def address_in_domains(email, org):
+    """The address's domain is exactly one of the organization's"""
+    return email.rpartition("@")[2].lower() in {d.lower() for d in org.domains}
+
+
 def is_google_mail(email):
     return email.rpartition("@")[2].lower() in GOOGLE_MAIL_DOMAINS
 
@@ -157,7 +162,11 @@ def check_social(person, provider, data):
     - Google: the organization uses Google (allowed or required) and ``hd``
       is one of its domains, or the address is a Gmail address and the
       organization doesn't require another provider;
-    - Microsoft: the organization uses Microsoft and ``tid`` is its tenant.
+    - Microsoft: the organization uses Microsoft, ``tid`` is its tenant and
+      the address is of one of its domains: Entra ID doesn't verify
+      addresses, its administrators set them, so a tenant speaks only for
+      its organization's domains (or anybody moved into the organization
+      could be impersonated by its tenant's administrators).
     """
     generic = _(
         "There's no active account for this %(provider)s address. Sign in with"
@@ -187,7 +196,11 @@ def check_social(person, provider, data):
                 % {"organization": org, "domains": ", ".join(org.domains)}
             )
     elif provider == "microsoft":
-        if sso == "microsoft" and tid_matches(data.get("tid"), org):
+        if (
+            sso == "microsoft"
+            and tid_matches(data.get("tid"), org)
+            and address_in_domains(person.email, org)
+        ):
             return
         if sso == "microsoft":
             raise Refused(
@@ -242,6 +255,18 @@ def refuse_login(request, user):
     return uses_sso_message(org)
 
 
+def _last_sign_in(records, provider):
+    """When the records' last sign-in through the provider in the last 24
+    hours was (a timestamp), or None"""
+    now = time.time()
+    times = [
+        float(r["at"])
+        for r in records
+        if isinstance(r, dict) and _signed_in_with(r, provider, now=now)
+    ]
+    return max(times, default=None)
+
+
 def session_counts(request, user):
     """Sessions of people whose organization requires single sign-on last 24
     hours after signing in through its identity provider (the time allauth
@@ -250,8 +275,14 @@ def session_counts(request, user):
     org = required_organization(user)
     if org is None:
         return True
-    now = time.time()
-    return any(_signed_in_with(r, org.idp, now=now) for r in _records(request, user))
+    at = _last_sign_in(_records(request, user), org.idp)
+    if at is None:
+        return False
+    # Sessions from before the switch expire then too (``remember_sign_in``)
+    expires = dt.datetime.fromtimestamp(at, tz=dt.UTC) + SSO_MAX_AGE
+    if request.session.get_expiry_date() > expires + dt.timedelta(minutes=1):
+        request.session.set_expiry(expires)
+    return True
 
 
 def signed_in_with_idp(request, user, org):
@@ -289,10 +320,13 @@ def _stored_session_counts(session_key, user, org):
     if data.get("account_authentication_methods_user") != str(user.pk):
         return False
     records = data.get("account_authentication_methods")
-    now = time.time()
-    return isinstance(records, list) and any(
-        isinstance(r, dict) and _signed_in_with(r, org.idp, now=now) for r in records
-    )
+    at = _last_sign_in(records if isinstance(records, list) else [], org.idp)
+    if at is None:
+        return False
+    # Expiring 24 hours after signing in (``remember_sign_in``)
+    store.set_expiry(dt.datetime.fromtimestamp(at, tz=dt.UTC) + SSO_MAX_AGE)
+    store.save()
+    return True
 
 
 def enforce_required(users):

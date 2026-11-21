@@ -114,10 +114,17 @@ the organization's IdP.
   (`9188040d-…`). Switching back to codes keeps the provider for later.
 - **Decided while building (2026-11-21, the most secure reasonable
   option, to be confirmed):**
-  - The domains of an organization signing in with Google are its
-    Workspace domains, they decide whose Google accounts count: only
-    admins change them (also by merging into it), and it keeps at least
-    one.
+  - The domains of an organization with single sign-on decide whose
+    sign-ins count (Google's Workspace domains, the addresses Microsoft's
+    tenant speaks for): only admins change them (also by merging into
+    it), it keeps at least one, and single sign-on needs them.
+  - *Microsoft counts only for addresses of the organization's domains*:
+    Entra ID doesn't verify addresses (its administrators set `mail` and
+    the user principal name, the "nOAuth" problem), so a tenant matching
+    `tid` could otherwise claim anybody staff moved into the
+    organization. People of a Microsoft organization with addresses
+    elsewhere use codes (or, where required, nothing: move them out or
+    fix their address).
   - An admin requiring single sign-on for their own organization has to
     have signed in through it in this session, so nobody locks themselves
     out with a provider that doesn't work for them.

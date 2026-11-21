@@ -86,7 +86,7 @@ class SignInSettingTest(TestCase):
         response = self.client.post(
             self.url, {"signin": "sso_required", "idp": "google"}, headers=MODAL
         )
-        self.assertContains(response, "Workspace domains first")
+        self.assertContains(response, "email domains first")
         self.example.refresh_from_db()
         self.assertEqual(self.example.signin, SignIn.CODES)
 
@@ -182,7 +182,25 @@ class SignInSettingTest(TestCase):
         self.example.refresh_from_db()
         self.assertEqual(self.example.domains, ["example.com", "example.net"])
         response = self.client.post(edit, {"name": "Example Ltd", "domains": ""})
-        self.assertContains(response, "needs its Google Workspace domains")
+        self.assertContains(response, "it needs its email domains")
+
+    def test_and_of_microsoft_organizations(self):
+        org_ops.set_signin(
+            self.example,
+            signin="sso_allowed",
+            idp="microsoft",
+            tenant_id=TENANT,
+            actor=self.root,
+        )
+        with self.assertRaises(PermissionError):
+            org_ops.update_organization(
+                self.example, domains=["evil.example"], actor=self.ada
+            )
+        org_ops.update_organization(
+            self.example, domains=["example.net"], actor=self.root
+        )
+        self.example.refresh_from_db()
+        self.assertEqual(self.example.domains, ["example.net"])
 
     def test_other_organizations_domains_stay_staffs(self):
         edit = f"/organizations/{self.example.pk}/edit/"

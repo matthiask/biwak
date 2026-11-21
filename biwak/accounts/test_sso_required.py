@@ -237,6 +237,15 @@ class SessionsTest(RequiredTestCase):
             session.save()
             self.assertEqual(self.client.get("/").status_code, 302)
 
+    def test_sessions_from_before_the_switch_expire_then(self):
+        """Signed in with Google while it was allowed: the session's 30 days
+        become 24 hours after signing in (websockets read the date)"""
+        sign_in_with(self.client, self.cleo, at=time.time() - 3600)
+        self.assertGreater(self.client.session.get_expiry_age(), 86400)
+        self.require()
+        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertLess(self.client.session.get_expiry_age(), 23 * 3600 + 60)
+
     def test_the_api_answers_401(self):
         self.require()
         sign_in_with(self.client, self.cleo, at=time.time() - 25 * 3600)
@@ -300,6 +309,13 @@ class SwitchingTest(RequiredTestCase):
             set(UserSession.objects.values_list("session_key", flat=True)),
             {by_google, ada_session},
         )
+        # Expiring 24 hours after signing in
+        from importlib import import_module
+
+        from django.conf import settings
+
+        store = import_module(settings.SESSION_ENGINE).SessionStore(by_google)
+        self.assertLessEqual(store.get_expiry_age(), 24 * 3600)
         self.assertNotEqual(by_code, by_google)
         # Other people keep theirs
         self.assertTrue(Authenticator.objects.filter(user=self.ada).exists())
