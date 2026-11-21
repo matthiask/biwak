@@ -273,28 +273,92 @@ class FiltersTest(SearchBase):
         Item.objects.filter(pk=self.todo.pk).update(is_client_visible=False)
         self.assertEqual(self.both(self.cleo, "tent", mine="on"), [])
 
-    def test_archived_projects_are_searched_and_marked(self):
+    def test_archived_projects_are_left_out_unless_included(self):
         archive_project(self.other, actor=self.ada)
+        self.assertEqual(self.both(self.ada, "tent"), ["Order the tent", "Tent plan"])
         self.assertEqual(
-            self.both(self.ada, "tent"), ["Camp tent", "Order the tent", "Tent plan"]
+            self.both(self.ada, "tent", archived="true"),
+            ["Camp tent", "Order the tent", "Tent plan"],
         )
+        self.assertEqual(self.both(self.ada, "camp"), [])
+
+    def test_archived_projects_are_marked(self):
+        archive_project(self.other, actor=self.ada)
         response = self.client.get(
-            "/api/v1/search/", {"q": "camp"}, headers=self.api(self.ada)
+            "/api/v1/search/",
+            {"q": "camp", "archived": "true"},
+            headers=self.api(self.ada),
         )
         (result,) = response.json()["results"]
         self.assertEqual(
-            (result["project_name"], result["project_archived"]), ("Camp", True)
+            (result["project_name"], result["project_archived"], result["archived"]),
+            ("Camp", True, True),
         )
         self.client.force_login(self.ada)
-        self.assertContains(self.client.get("/search/", {"q": "camp"}), "Archived")
+        page = self.client.get("/search/", {"q": "camp", "archived": "on"})
+        self.assertEqual([r["archived"] for r in page.context["results"]], [True])
+        self.assertContains(page, ">Archived</span>", count=1)
+        page = self.client.get("/search/", {"q": "tent", "archived": "on"})
+        self.assertContains(page, ">Archived</span>", count=1)
+
+    def test_archived_lists_and_their_contents_are_left_out(self):
+        ops.add_comment(self.todo, author=self.ada, content="Parrot colors")
+        ops.archive(self.visible, actor=self.ada)
+        self.assertEqual(self.both(self.ada, "tent"), ["Camp tent", "Tent plan"])
+        self.assertEqual(self.both(self.ada, "parrot"), [])
+        self.assertEqual(self.both(self.ada, "launch"), [])
         self.assertEqual(
-            self.api_titles(self.ada, "tent", exclude_archived="true"),
-            ["Order the tent", "Tent plan"],
+            self.both(self.ada, "tent", archived="on"),
+            ["Camp tent", "Order the tent", "Tent plan"],
         )
         self.assertEqual(
-            self.page_titles(self.ada, "tent", exclude_archived="on"),
-            ["Order the tent", "Tent plan"],
+            self.both(self.ada, "parrot", archived="on"), ["Order the tent"]
         )
+        self.assertEqual(self.both(self.ada, "launch", archived="on"), ["Launch"])
+        # Marked: the list and its to-do, not the others
+        self.client.force_login(self.ada)
+        results = self.client.get("/search/", {"q": "tent", "archived": "on"}).context[
+            "results"
+        ]
+        self.assertEqual(
+            {r["item"].title: r["archived"] for r in results},
+            {"Camp tent": False, "Order the tent": True, "Tent plan": False},
+        )
+        # Active lists and what is in them stay
+        self.assertEqual(
+            self.both(self.ada, "zebra"),
+            ["Internal", "Raise the rate", "Review the zebra salaries"],
+        )
+
+    def test_a_client_sees_the_same_apart_from_archived(self):
+        before = self.both(self.cleo, "tent")
+        archive_project(self.other, actor=self.ada)
+        self.assertEqual(self.both(self.cleo, "tent"), before)
+        self.assertEqual(self.both(self.cleo, "tent", archived="true"), before)
+        ops.archive(self.visible, actor=self.ada)
+        self.assertEqual(self.both(self.cleo, "tent"), [])
+        self.assertEqual(
+            self.both(self.cleo, "tent", archived="true"), ["Order the tent"]
+        )
+        # Internal things stay hidden with the checkbox
+        self.assertEqual(self.both(self.cleo, "zebra", archived="true"), [])
+
+    def test_the_archived_filter_costs_a_fixed_number_of_queries(self):
+        ops.archive(self.visible, actor=self.ada)
+        self.client.force_login(self.ada)
+
+        def count():
+            with CaptureQueriesContext(connection) as queries_:
+                response = self.client.get("/search/", {"q": "tent", "archived": "on"})
+            return len(queries_), len(response.context["results"])
+
+        one = count()
+        for n in range(3):
+            ops.create_todo(todolist=self.visible, title=f"Tent {n}", creator=self.ada)
+        many = count()
+        self.assertEqual((one[1], many[1]), (3, 6))
+        self.assertEqual(one[0], many[0])
+        self.assertLess(many[0], 25)
 
     def test_a_bad_kind_or_project_is_an_error(self):
         self.client.force_login(self.ada)

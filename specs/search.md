@@ -4,7 +4,9 @@ Finding things across projects: a to-do, a message, a doc, a file, a
 comment, a check-in answer, by words in their title or text.
 
 **Status:** built 2026-11-20 (branch `search`): the page, the API and
-`biwak search`. See "Built" below for how, the decisions made on the way
+`biwak search`. **Changed 2026-11-21 (branch `search-archived`):**
+archived projects and archived lists with their contents are left out by
+default, "Include archived" brings them in. See "Built" below for how, the decisions made on the way
 and the query plan.
 
 **Agent:** suits a cheaper model following this spec and the checklist
@@ -34,7 +36,8 @@ indexes.
 - **Page:** `/search/?q=…`, with filters for the project, the kind and
   "only mine"; the field in the navigation. Paginated like the feed.
 - **API and CLI:** `GET /api/v1/search/?q=` with the same filters and
-  cursor pagination; `biwak search TERMS [--project ID] [--kind K]`,
+  cursor pagination; `biwak search TERMS [--project ID] [--kind K]
+  [--archived]`,
   marking `[clients]`.
 
 ## Decided (2026-11-20)
@@ -85,10 +88,10 @@ indexes.
   tags stripped, mentions as written). API: `excerpt` (plain), `excerpt_html`, `title_html`,
   `in_comment`, `project_name`, `project_archived` on top of `ItemOut`.
 - **Page and field**: `/search/?q=` with the project, kind, "only mine"
-  and "without archived projects" filters; the field in the navigation of
+  and "Include archived" filters; the field in the navigation of
   `base.html`. Filters of projects the person can't open are form errors
   (page) or 404 (API). CLI: `biwak search TERMS… [--project] [--kind]
-  [--mine] [--no-archived] [--limit]`, 0.18.0.
+  [--mine] [--archived] [--limit]`, 0.18.0 (`--archived` since 0.24.0).
 - **Query plan** (`EXPLAIN ANALYZE`, 300 000 items, 300 000 comments,
   100 000 each of to-do notes, message and doc texts, 40 projects, made-up
   words with a Zipf-like distribution, local PostgreSQL): every part of
@@ -109,8 +112,18 @@ words anywhere in an item; "only mine" changed to created or assigned)
 - "Only mine": items you created and to-dos assigned to you (decided
   2026-11-21); still within `visible_to()`.
 - Words match anywhere in the item (title, text, comments together).
-- The filter for archived projects is "without archived projects" (the
-  default includes them, marked "Archived").
+- Archived projects and lists are left out by default (decided
+  2026-11-21, replacing "without archived projects"). The query leaves out
+  items in an archived project, archived lists and the to-dos in them (the
+  only kind with a parent besides folders and answers; comments follow their
+  item); `archived` brings all in. The result is marked "Archived" when the
+  project, the list or its list is archived (`archived` in the API, next to
+  `project_archived`; `(archived)` in the CLI). No extra query: `parent` is
+  joined with the items. Other archived items (messages, docs) don't exist
+  yet. The palette's jumps (`biwak/palette/`) are unchanged: archived
+  projects come last and marked, and items of archived projects too; they
+  only look at the project's archive state, so archived lists and their
+  to-dos are listed like active ones, unmarked.
 
 ## Done when
 

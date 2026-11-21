@@ -24,6 +24,7 @@ from biwak.items.models import (
     Item,
     Kind,
     Message,
+    Status,
     Todo,
     TodoList,
     Upload,
@@ -89,6 +90,14 @@ def _lexemes(text):
         return [row[0] for row in cursor.fetchall()]
 
 
+def is_archived(item):
+    """In an archived project, or an archived list or in one"""
+    if item.project.archived_at is not None:
+        return True
+    lists = [item, item.parent] if item.parent_id else [item]
+    return any(i.kind == Kind.LIST and i.status == Status.ARCHIVED for i in lists)
+
+
 def matching_ids(prefix):
     """A query for the IDs of the items with the word in their title, in
     their text or in one of their comments. Every part uses its index."""
@@ -111,16 +120,17 @@ def search(
     project=None,
     kind=None,
     mine=False,
-    exclude_archived=False,
+    archived=False,
 ):
     """The items the person can see with all the words, newest first.
     ``project`` and ``kind`` narrow it down, ``mine`` keeps what the person
-    created and the to-dos assigned to them, ``exclude_archived`` the archived projects."""
+    created and the to-dos assigned to them, ``archived`` brings in the archived
+    projects and lists with their contents, which are left out otherwise."""
     words = prefixes(terms)
     if not words:
         return Item.objects.none()
     items = with_checklist(Item.objects.visible_to(user)).select_related(
-        "project", "creator", "answer"
+        "project", "creator", "answer", "parent"
     )
     # Every word anywhere in the item: the title can have one, the text
     # another, a comment a third
@@ -132,8 +142,11 @@ def search(
         items = items.filter(kind=kind)
     if mine:
         items = items.filter(Q(creator=user) | Q(todo__assignees=user)).distinct()
-    if exclude_archived:
-        items = items.filter(project__archived_at__isnull=True)
+    if not archived:
+        items = items.filter(project__archived_at__isnull=True).exclude(
+            Q(kind=Kind.LIST, status=Status.ARCHIVED)
+            | Q(parent__kind=Kind.LIST, parent__status=Status.ARCHIVED)
+        )
     return items.order_by("-updated_at", "-pk")
 
 

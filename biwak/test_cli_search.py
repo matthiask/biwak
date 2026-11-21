@@ -59,11 +59,13 @@ class SearchCLITest(test_cli.CLITest):
         data = json.loads(self.biwak("search", "pegs", "--mine", "--json").stdout)
         self.assertEqual(len(data), 4)
         archive_project(other, actor=self.ada)
-        self.assertIn("(archived)", self.biwak("search", "camp").output)
-        data = json.loads(
-            self.biwak("search", "pegs", "--no-archived", "--json").stdout
-        )
+        self.assertNotIn("Camp", self.biwak("search", "camp").output)
+        self.assertIn("(archived)", self.biwak("search", "camp", "--archived").output)
+        data = json.loads(self.biwak("search", "pegs", "--json").stdout)
         self.assertEqual(len(data), 2)
+        data = json.loads(self.biwak("search", "pegs", "--archived", "--json").stdout)
+        self.assertEqual(len(data), 5)
+        self.assertEqual([r["archived"] for r in data].count(True), 3)
         self.assertEqual(self.biwak("search", "pegs", "--project", 999999).exit_code, 1)
 
     def test_comments_are_marked(self):
