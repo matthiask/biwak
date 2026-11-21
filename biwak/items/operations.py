@@ -334,6 +334,7 @@ def update_todo(
     the complete new set. Removing the recurrence removes its end and
     count too."""
     todo = item.todo
+    previous = f"{item.title}\n\n{todo.notes}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -369,7 +370,13 @@ def update_todo(
         event = record(
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
-        mentions.update(item, f"{item.title}\n\n{todo.notes}", actor=actor, event=event)
+        mentions.update(
+            item,
+            f"{item.title}\n\n{todo.notes}",
+            actor=actor,
+            event=event,
+            previous=previous,
+        )
     if assignees is not _UNCHANGED:
         new, old = set(assignees), set(todo.assignees.all())
         assign(item, list(new - old), actor=actor)

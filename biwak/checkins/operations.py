@@ -455,13 +455,14 @@ def _update_answer(answer, content, *, actor):
     item = answer.item
     if content == answer.content:
         return
+    previous = answer.content
     answer.content = content
     answer.save(update_fields=["content"])
     item.updated_at = timezone.now()
     item.save(update_fields=["updated_at"])
     attachments.link(item, content, actor=actor)
     event = record(actor=actor, action=Action.EDITED, project=item.project, item=item)
-    mentions.update(item, content, actor=actor, event=event)
+    mentions.update(item, content, actor=actor, event=event, previous=previous)
 
 
 @transaction.atomic

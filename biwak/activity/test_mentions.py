@@ -353,6 +353,28 @@ class ClientsKnowMembersTest(TestCase):
         )
         self.assertOnlyAda(Item.objects.get(pk=message["id"]), message["content"])
 
+    def test_staff_saving_later_doesnt_count_what_a_client_wrote(self):
+        todo = ops.create_todo(
+            todolist=self.shared,
+            title="Call",
+            notes=f"[@x](person:{self.bob.pk})",
+            creator=self.cleo,
+        )
+        self.assertFalse(Mention.objects.filter(user=self.bob).exists())
+        ops.update_todo(todo, actor=self.ada, title="Call them")
+        ops.update_todo(todo, actor=self.ada, notes=f"[@x](person:{self.bob.pk})!")
+        self.assertFalse(Mention.objects.filter(user=self.bob).exists())
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
+        # What staff add themselves counts
+        eve = person("Eve")
+        ops.update_todo(
+            todo,
+            actor=self.ada,
+            notes=f"[@x](person:{self.bob.pk}) [@y](person:{eve.pk})",
+        )
+        self.assertTrue(Subscription.objects.filter(user=eve).exists())
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
+
     def test_staff_still_mention_everybody(self):
         comment = self.api(
             self.ada, "post", f"items/{self.todo.pk}/comments/", {"content": "@Bob"}

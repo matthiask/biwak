@@ -101,7 +101,10 @@ date records `edited` (`update_todo()`; assignees record `assigned`).
   `event.data["mentioned"]` for `notify()`. A to-do's title and notes
   are one text. People removed from a text are forgotten, so mentioning
   them again counts as new (proposed by the building agent, confirmed
-  2026-11-20).
+  2026-11-20). Only mentions a save adds count: those already in the
+  text before were looked at when written, so a client's rejected
+  mention of staff doesn't notify them when staff save the item later
+  (`previous` of `update()`, decided 2026-11-21).
 - **A new mention** notifies the person (on every level except
   "nothing") and subscribes them (`explicit=True`). Editing a text later
   notifies only people newly mentioned. A mention doesn't come back
