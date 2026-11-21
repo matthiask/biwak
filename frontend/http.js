@@ -10,15 +10,16 @@ export function csrfToken() {
 }
 
 // POSTs the fields (an object or [name, value] pairs, a name may repeat) and
-// returns the response. Fails with the request's error.
-export function send(url, data = []) {
+// returns the response. Fails with the request's error. ``headers`` ask for
+// a fragment or the like.
+export function send(url, data = [], headers = {}) {
   const body = new FormData()
   for (const [name, value] of Array.isArray(data) ? data : Object.entries(data))
     body.append(name, value)
   return fetch(url, {
     method: "POST",
     body,
-    headers: { "X-CSRFToken": csrfToken() },
+    headers: { "X-CSRFToken": csrfToken(), ...headers },
   })
 }
 

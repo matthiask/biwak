@@ -188,7 +188,7 @@ class MailsTest(TestCase):
         self.assertNotIn("List-Unsubscribe-Post", message.extra_headers)
         self.assertEqual(
             message.extra_headers["List-Unsubscribe"],
-            "<https://biwak.example.org/accounts/notifications/>",
+            "<https://biwak.example.org/accounts/settings/>",
         )
         self.assertEqual(message.extra_headers["Auto-Submitted"], "auto-generated")
         self.assertEqual(Notification.objects.filter(sent_at=None).count(), 1)

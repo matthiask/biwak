@@ -347,7 +347,7 @@ def item_mail(user, item, notifications):
     context = _item(item, user) | {
         "user": user,
         "entries": entries,
-        "settings_url": absolute(reverse("notification_settings")),
+        "settings_url": absolute(reverse("settings")),
     }
     thread = f"<item-{item.pk}@{host()}>"
     return build_mail(
@@ -401,7 +401,7 @@ def digest_mail(user, notifications):
         "user": user,
         "heading": digest_heading(notifications),
         "projects": projects,
-        "settings_url": absolute(reverse("notification_settings")),
+        "settings_url": absolute(reverse("settings")),
     }
     return build_mail(
         user,

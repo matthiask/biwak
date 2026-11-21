@@ -4,7 +4,7 @@ Working without the mouse: a command palette to jump anywhere and do
 the common things, and single-key shortcuts inside pages, like GitHub
 or Gmail.
 
-**Status:** open.
+**Status:** built 2026-11-21 (branch `keyboard`): the palette, the shortcuts, the settings page, the accent colors and the API's `me/`. See "Built" below for how and the choices to confirm.
 
 **Agent:** suits a cheaper model following this spec and the checklist
 in `AGENTS.md`. The palette lists content: its results go through
@@ -170,6 +170,61 @@ never touches data.
   no "new list"), tested on the rendered JSON.
 - Screen readers: the dialog's roles and labels (checked in the test).
 
-## Questions before building
+## Built (2026-11-21)
 
-- The labels of the actions; proposed as listed.
+- **Settings page** (`biwak/accounts/views.py`): `/accounts/settings/` with
+  one form per section, each posting to its own URL
+  (`settings/notifications/`, `settings/keyboard/`, `settings/appearance/`);
+  the old `/accounts/notifications/` redirects (301). The notification form
+  (`SettingsForm`) stays in `biwak/activity/views.py`, so new delivery
+  choices flow in from `MailDelivery`. Mails link to the new page. The user
+  menu has "Settings" and "Calendar"; passkeys, sessions and API tokens
+  moved to the page's "Sign-in" section.
+- **Preferences** (`User.keyboard_shortcuts`, `theme`, `accent`, migration
+  `accounts.0009`; `biwak/accounts/operations.py`). `<html data-theme-mode
+  data-accent>` carry them; `theme.js` saves the toggle by POST
+  (`settings/appearance/`, 204 with `X-Biwak-Fragment`), the browser's
+  storage only serves the login page. API: `GET` and `PUT /api/v1/me/`
+  (`keyboard_shortcuts`, `theme`, `accent`; what's given changes). The CLI
+  is unchanged.
+- **Palette tokens** (`frontend/styles/main.css`): `--wb-palette-<name>-<shade>`
+  for the ten colors, shades `fill` (white text on it), `fill-hover`, `text`
+  (links on the page and cards), `text-hover`, `bar` (the navigation), `tint-bg`
+  and `tint-ink` (selections), `ring` (focus), plus `-rgb` of `fill`, `text` and
+  `text-hover` (Bootstrap's links need them), for light and dark. An accent
+  maps them to `--wb-accent-*` (`[data-accent=...]`), which the stylesheet
+  uses; `project-colors.md` can use the same tokens. The test
+  (`biwak/accounts/test_palette.py`) reads the tokens and checks WCAG AA
+  (4.5 for text, 3 for controls) over all ten. The values are first
+  guesses, to be tweaked. Heather keeps today's violet.
+- **Jumps** (`biwak/palette/`): `GET /palette/?q=`, JSON; projects, lists,
+  messages, docs, files, folders, check-in questions (not to-dos or answers)
+  and people. Every word must start a word of the title or name; through
+  `accessible_to()`, `visible_to()` and `people_visible_to()` (people the
+  person shares a project with, the members rule); 3 queries, whatever the
+  text. Titles show mentions as written. Without `q` it returns the
+  person's bookmarks (at most 20).
+- **Actions** (`biwak/palette/actions.py`): `{% palette %}` in `base.html`
+  renders the page's actions as JSON; the types are link, post, focus, copy
+  and theme, shortcuts come from the same list (`"x"`, `"g p"`). Only on the
+  pages listed there (not on forms), with `ops.can_create()` and
+  `can_change()` like the buttons. "New list" focuses the form on the
+  project page and links to `#new-list` elsewhere (a hash on a field
+  focuses it).
+- **Scripts**: `frontend/palette.js` (the dialog, the combobox pattern),
+  `frontend/shortcuts.js` (rows by `data-kb-row`, `data-kb-open`,
+  `data-kb-complete`; "g" waits one second; the "?" dialog); both read the
+  JSON, neither decides permissions.
+
+### Decisions made on the way (to confirm)
+
+- Labels of the actions as proposed (listed in `actions.py`), plus
+  "Settings" and "Docs and files"; "Board view" and "List view" show the
+  one not shown.
+- Empty field: the page's actions, then the others, then bookmarks (at
+  most 20), then the pages visited last.
+- Palette results of staff and clients carry "For clients" on what clients
+  can see and "Archived" on archived projects' contents.
+- The calendar link stays in the user menu.
+- "Enter" opens the current row only while focus is on the page, the row
+  or its link; `o` always.

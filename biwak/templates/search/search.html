@@ -28,7 +28,7 @@
     <div class="list-group">
       {% for result in results %}
         {% with item=result.item hit=result.hit %}
-          <a class="list-group-item list-group-item-action" href="{{ item.get_absolute_url }}">
+          <a class="list-group-item list-group-item-action" href="{{ item.get_absolute_url }}" data-kb-row data-kb-open>
             {% icon result.icon %}
             {% if hit.title %}{{ hit.title }}{% else %}{{ item|item_title }}{% endif %}
             {% client_badge item %}

@@ -21,13 +21,11 @@ from biwak.activity.models import Action, LevelOverride
 from biwak.activity.notify import can_see, level_choices
 from biwak.activity.operations import (
     set_level_override,
-    set_notification_settings,
     unsubscribe as unsubscribe_from,
 )
 from biwak.forms import Form, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
-from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
 
@@ -210,52 +208,6 @@ class SettingsForm(Form):
             "A mail about an item comes two minutes after its last change;"
             " the digest at 07:00 with what happened the day before."
         ),
-    )
-
-
-@never_cache
-def notification_settings(request):
-    form = SettingsForm(
-        request.POST or None,
-        initial={
-            "notification_level": request.user.notification_level,
-            "mail_delivery": request.user.mail_delivery,
-        },
-    )
-    if form.is_valid():
-        set_notification_settings(
-            request.user,
-            level=form.cleaned_data["notification_level"],
-            delivery=form.cleaned_data["mail_delivery"],
-        )
-        messages.success(
-            request, gettext("Your notification settings have been saved.")
-        )
-        return redirect("notification_settings")
-    overrides = LevelOverride.objects.filter(user=request.user).select_related(
-        "project", "item"
-    )
-    visible = set(
-        Item.objects
-        .visible_to(request.user)
-        .filter(pk__in=[o.item_id for o in overrides if o.item_id])
-        .values_list("pk", flat=True)
-    )
-    # Projects one has left: their overrides stay, but aren't shown
-    projects = set(
-        Project.objects
-        .accessible_to(request.user)
-        .filter(pk__in=[o.project_id for o in overrides if o.project_id])
-        .values_list("pk", flat=True)
-    )
-    return render(
-        request,
-        "activity/notification_settings.html",
-        {
-            "form": form,
-            "project_overrides": [o for o in overrides if o.project_id in projects],
-            "item_overrides": [o for o in overrides if o.item_id in visible],
-        },
     )
 
 

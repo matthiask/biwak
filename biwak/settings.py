@@ -60,6 +60,7 @@ INSTALLED_APPS = [
         "biwak.reactions",
         "biwak.checkins",
         "biwak.search",
+        "biwak.palette",
         "biwak.inbound",
         "biwak.importer",
         "biwak.audit",

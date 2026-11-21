@@ -1,6 +1,6 @@
 {% load biwak i18n %}
-<div class="list-group-item d-flex justify-content-between align-items-start gap-2">
-  <a class="text-reset text-decoration-none flex-grow-1 min-w-0" href="{{ item.get_absolute_url }}">
+<div class="list-group-item d-flex justify-content-between align-items-start gap-2" data-kb-row>
+  <a class="text-reset text-decoration-none flex-grow-1 min-w-0" href="{{ item.get_absolute_url }}" data-kb-open>
     <div class="fw-semibold">
       {% if item.message.pinned_at %}<span
           class="text-body-secondary"

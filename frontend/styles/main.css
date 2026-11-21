@@ -11,12 +11,6 @@
   --bs-body-color: #22251f;
   --bs-border-color: #e2ddd2;
   --bs-secondary-color: rgba(34, 37, 31, 0.62);
-  --bs-primary: #6741c4;
-  --bs-primary-rgb: 103, 65, 196;
-  --bs-link-color: #6741c4;
-  --bs-link-color-rgb: 103, 65, 196;
-  --bs-link-hover-color: #4e2f9c;
-  --bs-link-hover-color-rgb: 78, 47, 156;
   --bs-border-radius: 0.5rem;
   --wb-surface: #fff;
   /* Fields on the page's background */
@@ -32,17 +26,447 @@
   --bs-body-color: #e2e3dc;
   --bs-border-color: #2f2c36;
   --bs-secondary-color: rgba(226, 227, 220, 0.62);
-  --bs-link-color: #b9a3f0;
-  --bs-link-color-rgb: 185, 163, 240;
-  --bs-link-hover-color: #d3c6f7;
-  --bs-link-hover-color-rgb: 211, 198, 247;
   --wb-surface: #18161d;
   --wb-field-bg: #000;
   --wb-field-border: #474352;
   --wb-surface-border: #2f2c36;
-  --bs-primary: #7a56d6;
-  --bs-primary-rgb: 122, 86, 214;
   --wb-shadow: none;
+}
+
+/* The palette (specs/keyboard.md, "The palette"): ten named colors, each with
+   the shades an accent needs, for light and dark. Shared by the accent colors
+   (the person's choice, <html data-accent>) and the project colors
+   (specs/project-colors.md). biwak/accounts/test_palette.py checks the
+   contrast of every one (WCAG AA). The clients' amber is not part of it.
+     fill: buttons, checked boxes (white text on it)
+     text: links and text on the page and on cards
+     bar: the navigation (light text on it)
+     tint: backgrounds of selections, with their ink
+     ring: the focus ring */
+[data-bs-theme="light"] {
+  --wb-palette-heather-fill: #6741c4;
+  --wb-palette-heather-fill-hover: #5433a8;
+  --wb-palette-heather-text: #6741c4;
+  --wb-palette-heather-text-hover: #4e2f9c;
+  --wb-palette-heather-bar: #5b37b0;
+  --wb-palette-heather-tint-bg: #ece6fb;
+  --wb-palette-heather-tint-ink: #4e2f9c;
+  --wb-palette-heather-ring: #6741c4;
+  --wb-palette-heather-fill-rgb: 103, 65, 196;
+  --wb-palette-heather-text-rgb: 103, 65, 196;
+  --wb-palette-heather-text-hover-rgb: 78, 47, 156;
+  --wb-palette-lake-fill: #226dc3;
+  --wb-palette-lake-fill-hover: #1c599e;
+  --wb-palette-lake-text: #1f64b2;
+  --wb-palette-lake-text-hover: #154479;
+  --wb-palette-lake-bar: #1c589c;
+  --wb-palette-lake-tint-bg: #d9e9fc;
+  --wb-palette-lake-tint-ink: #184b86;
+  --wb-palette-lake-ring: #226dc3;
+  --wb-palette-lake-fill-rgb: 34, 109, 195;
+  --wb-palette-lake-text-rgb: 31, 100, 178;
+  --wb-palette-lake-text-hover-rgb: 21, 68, 121;
+  --wb-palette-forest-fill: #207e4c;
+  --wb-palette-forest-fill-hover: #18623b;
+  --wb-palette-forest-text: #1c6e42;
+  --wb-palette-forest-text-hover: #134e2f;
+  --wb-palette-forest-bar: #18623b;
+  --wb-palette-forest-tint-bg: #dbfaea;
+  --wb-palette-forest-tint-ink: #175e38;
+  --wb-palette-forest-ring: #207e4c;
+  --wb-palette-forest-fill-rgb: 32, 126, 76;
+  --wb-palette-forest-text-rgb: 28, 110, 66;
+  --wb-palette-forest-text-hover-rgb: 19, 78, 47;
+  --wb-palette-glacier-fill: #127a81;
+  --wb-palette-glacier-fill-hover: #0e5d62;
+  --wb-palette-glacier-text: #116d74;
+  --wb-palette-glacier-text-hover: #0b4c50;
+  --wb-palette-glacier-bar: #0f6167;
+  --wb-palette-glacier-tint-bg: #d8fbfd;
+  --wb-palette-glacier-tint-ink: #0d585e;
+  --wb-palette-glacier-ring: #127a81;
+  --wb-palette-glacier-fill-rgb: 18, 122, 129;
+  --wb-palette-glacier-text-rgb: 17, 109, 116;
+  --wb-palette-glacier-text-hover-rgb: 11, 76, 80;
+  --wb-palette-ember-fill: #c4431c;
+  --wb-palette-ember-fill-hover: #9c3616;
+  --wb-palette-ember-text: #ae3c19;
+  --wb-palette-ember-text-hover: #782911;
+  --wb-palette-ember-bar: #983416;
+  --wb-palette-ember-tint-bg: #fde1d8;
+  --wb-palette-ember-tint-ink: #862e13;
+  --wb-palette-ember-ring: #c4431c;
+  --wb-palette-ember-fill-rgb: 196, 67, 28;
+  --wb-palette-ember-text-rgb: 174, 60, 25;
+  --wb-palette-ember-text-hover-rgb: 120, 41, 17;
+  --wb-palette-alpenglow-fill: #ce2c67;
+  --wb-palette-alpenglow-fill-hover: #a62353;
+  --wb-palette-alpenglow-text: #b9275d;
+  --wb-palette-alpenglow-text-hover: #821c41;
+  --wb-palette-alpenglow-bar: #a02250;
+  --wb-palette-alpenglow-tint-bg: #fbdae6;
+  --wb-palette-alpenglow-tint-ink: #871d43;
+  --wb-palette-alpenglow-ring: #ce2c67;
+  --wb-palette-alpenglow-fill-rgb: 206, 44, 103;
+  --wb-palette-alpenglow-text-rgb: 185, 39, 93;
+  --wb-palette-alpenglow-text-hover-rgb: 130, 28, 65;
+  --wb-palette-moss-fill: #5f7728;
+  --wb-palette-moss-fill-hover: #495c1f;
+  --wb-palette-moss-text: #566b24;
+  --wb-palette-moss-text-hover: #3a4918;
+  --wb-palette-moss-bar: #4c6020;
+  --wb-palette-moss-tint-bg: #f0f8dd;
+  --wb-palette-moss-tint-ink: #46581d;
+  --wb-palette-moss-ring: #5f7728;
+  --wb-palette-moss-fill-rgb: 95, 119, 40;
+  --wb-palette-moss-text-rgb: 86, 107, 36;
+  --wb-palette-moss-text-hover-rgb: 58, 73, 24;
+  --wb-palette-slate-fill: #5c718a;
+  --wb-palette-slate-fill-hover: #495b6e;
+  --wb-palette-slate-text: #52657a;
+  --wb-palette-slate-text-hover: #394656;
+  --wb-palette-slate-bar: #495b6e;
+  --wb-palette-slate-tint-bg: #e3eaf2;
+  --wb-palette-slate-tint-ink: #3f4e5f;
+  --wb-palette-slate-ring: #5c718a;
+  --wb-palette-slate-fill-rgb: 92, 113, 138;
+  --wb-palette-slate-text-rgb: 82, 101, 122;
+  --wb-palette-slate-text-hover-rgb: 57, 70, 86;
+  --wb-palette-bark-fill: #92633f;
+  --wb-palette-bark-fill-hover: #765032;
+  --wb-palette-bark-text: #845939;
+  --wb-palette-bark-text-hover: #5d3f28;
+  --wb-palette-bark-bar: #765032;
+  --wb-palette-bark-tint-bg: #f6e9df;
+  --wb-palette-bark-tint-ink: #68462c;
+  --wb-palette-bark-ring: #92633f;
+  --wb-palette-bark-fill-rgb: 146, 99, 63;
+  --wb-palette-bark-text-rgb: 132, 89, 57;
+  --wb-palette-bark-text-hover-rgb: 93, 63, 40;
+  --wb-palette-berry-fill: #bc2fae;
+  --wb-palette-berry-fill-hover: #97268c;
+  --wb-palette-berry-text: #a72a9b;
+  --wb-palette-berry-text-hover: #761e6d;
+  --wb-palette-berry-bar: #932588;
+  --wb-palette-berry-tint-bg: #fadbf7;
+  --wb-palette-berry-tint-ink: #7e2075;
+  --wb-palette-berry-ring: #bc2fae;
+  --wb-palette-berry-fill-rgb: 188, 47, 174;
+  --wb-palette-berry-text-rgb: 167, 42, 155;
+  --wb-palette-berry-text-hover-rgb: 118, 30, 109;
+}
+
+[data-bs-theme="dark"] {
+  --wb-palette-heather-fill: #7a56d6;
+  --wb-palette-heather-fill-hover: #5433a8;
+  --wb-palette-heather-text: #b9a3f0;
+  --wb-palette-heather-text-hover: #d3c6f7;
+  --wb-palette-heather-bar: #3a2378;
+  --wb-palette-heather-tint-bg: #2a1f4a;
+  --wb-palette-heather-tint-ink: #c7b7f5;
+  --wb-palette-heather-ring: #b9a3f0;
+  --wb-palette-heather-fill-rgb: 122, 86, 214;
+  --wb-palette-heather-text-rgb: 185, 163, 240;
+  --wb-palette-heather-text-hover-rgb: 211, 198, 247;
+  --wb-palette-lake-fill: #2575d0;
+  --wb-palette-lake-fill-hover: #1d5ea7;
+  --wb-palette-lake-text: #68a6ee;
+  --wb-palette-lake-text-hover: #9fc7f4;
+  --wb-palette-lake-bar: #1c3b5f;
+  --wb-palette-lake-tint-bg: #162a41;
+  --wb-palette-lake-tint-ink: #88b9f2;
+  --wb-palette-lake-ring: #68a6ee;
+  --wb-palette-lake-fill-rgb: 37, 117, 208;
+  --wb-palette-lake-text-rgb: 104, 166, 238;
+  --wb-palette-lake-text-hover-rgb: 159, 199, 244;
+  --wb-palette-forest-fill: #21834e;
+  --wb-palette-forest-fill-hover: #1b6a40;
+  --wb-palette-forest-text: #26d97a;
+  --wb-palette-forest-text-hover: #38dc84;
+  --wb-palette-forest-bar: #1c5f3b;
+  --wb-palette-forest-tint-bg: #16412a;
+  --wb-palette-forest-tint-ink: #5ae29a;
+  --wb-palette-forest-ring: #26d97a;
+  --wb-palette-forest-fill-rgb: 33, 131, 78;
+  --wb-palette-forest-text-rgb: 38, 217, 122;
+  --wb-palette-forest-text-hover-rgb: 56, 220, 132;
+  --wb-palette-glacier-fill: #137e86;
+  --wb-palette-glacier-fill-hover: #0f656b;
+  --wb-palette-glacier-text: #13ddec;
+  --wb-palette-glacier-text-hover: #13ddec;
+  --wb-palette-glacier-bar: #1c5a5f;
+  --wb-palette-glacier-tint-bg: #163e41;
+  --wb-palette-glacier-tint-ink: #13ddec;
+  --wb-palette-glacier-ring: #13ddec;
+  --wb-palette-glacier-fill-rgb: 19, 126, 134;
+  --wb-palette-glacier-text-rgb: 19, 221, 236;
+  --wb-palette-glacier-text-hover-rgb: 19, 221, 236;
+  --wb-palette-ember-fill: #cd461d;
+  --wb-palette-ember-fill-hover: #a53918;
+  --wb-palette-ember-text: #f28563;
+  --wb-palette-ember-text-hover: #f7b19c;
+  --wb-palette-ember-bar: #5f2b1c;
+  --wb-palette-ember-tint-bg: #412016;
+  --wb-palette-ember-tint-ink: #f59f84;
+  --wb-palette-ember-ring: #f28563;
+  --wb-palette-ember-fill-rgb: 205, 70, 29;
+  --wb-palette-ember-text-rgb: 242, 133, 99;
+  --wb-palette-ember-text-hover-rgb: 247, 177, 156;
+  --wb-palette-alpenglow-fill: #d4356f;
+  --wb-palette-alpenglow-fill-hover: #af2557;
+  --wb-palette-alpenglow-text: #ed82a9;
+  --wb-palette-alpenglow-text-hover: #f4afc8;
+  --wb-palette-alpenglow-bar: #5f1c34;
+  --wb-palette-alpenglow-tint-bg: #411626;
+  --wb-palette-alpenglow-tint-ink: #f094b6;
+  --wb-palette-alpenglow-ring: #ed82a9;
+  --wb-palette-alpenglow-fill-rgb: 212, 53, 111;
+  --wb-palette-alpenglow-text-rgb: 237, 130, 169;
+  --wb-palette-alpenglow-text-hover-rgb: 244, 175, 200;
+  --wb-palette-moss-fill: #627a29;
+  --wb-palette-moss-fill-hover: #506321;
+  --wb-palette-moss-text: #9ecc33;
+  --wb-palette-moss-text-hover: #a6d043;
+  --wb-palette-moss-bar: #495c1f;
+  --wb-palette-moss-tint-bg: #344116;
+  --wb-palette-moss-tint-ink: #bbdb70;
+  --wb-palette-moss-ring: #9ecc33;
+  --wb-palette-moss-fill-rgb: 98, 122, 41;
+  --wb-palette-moss-text-rgb: 158, 204, 51;
+  --wb-palette-moss-text-hover-rgb: 166, 208, 67;
+  --wb-palette-slate-fill: #607690;
+  --wb-palette-slate-fill-hover: #4d5e73;
+  --wb-palette-slate-text: #8ea7c2;
+  --wb-palette-slate-text-hover: #b6c6d8;
+  --wb-palette-slate-bar: #313c49;
+  --wb-palette-slate-tint-bg: #232b34;
+  --wb-palette-slate-tint-ink: #a5b9cf;
+  --wb-palette-slate-ring: #8ea7c2;
+  --wb-palette-slate-fill-rgb: 96, 118, 144;
+  --wb-palette-slate-text-rgb: 142, 167, 194;
+  --wb-palette-slate-text-hover-rgb: 182, 198, 216;
+  --wb-palette-bark-fill: #9a6842;
+  --wb-palette-bark-fill-hover: #7d5436;
+  --wb-palette-bark-text: #cf986e;
+  --wb-palette-bark-text-hover: #dfbb9f;
+  --wb-palette-bark-bar: #563a25;
+  --wb-palette-bark-tint-bg: #3d291a;
+  --wb-palette-bark-tint-ink: #dbb394;
+  --wb-palette-bark-ring: #cf986e;
+  --wb-palette-bark-fill-rgb: 154, 104, 66;
+  --wb-palette-bark-text-rgb: 207, 152, 110;
+  --wb-palette-bark-text-hover-rgb: 223, 187, 159;
+  --wb-palette-berry-fill: #c431b5;
+  --wb-palette-berry-fill-hover: #9f2893;
+  --wb-palette-berry-text: #e87ddd;
+  --wb-palette-berry-text-hover: #f0adea;
+  --wb-palette-berry-bar: #5f1c58;
+  --wb-palette-berry-tint-bg: #41163d;
+  --wb-palette-berry-tint-ink: #ed97e4;
+  --wb-palette-berry-ring: #e87ddd;
+  --wb-palette-berry-fill-rgb: 196, 49, 181;
+  --wb-palette-berry-text-rgb: 232, 125, 221;
+  --wb-palette-berry-text-hover-rgb: 240, 173, 234;
+}
+
+/* The person's accent color: the tokens the rest of the stylesheet uses */
+:root,
+[data-accent="heather"] {
+  --wb-accent-fill: var(--wb-palette-heather-fill);
+  --wb-accent-fill-hover: var(--wb-palette-heather-fill-hover);
+  --wb-accent-fill-rgb: var(--wb-palette-heather-fill-rgb);
+  --wb-accent-text: var(--wb-palette-heather-text);
+  --wb-accent-text-rgb: var(--wb-palette-heather-text-rgb);
+  --wb-accent-text-hover: var(--wb-palette-heather-text-hover);
+  --wb-accent-text-hover-rgb: var(--wb-palette-heather-text-hover-rgb);
+  --wb-accent-bar: var(--wb-palette-heather-bar);
+  --wb-accent-tint-bg: var(--wb-palette-heather-tint-bg);
+  --wb-accent-tint-ink: var(--wb-palette-heather-tint-ink);
+  --wb-accent-ring: var(--wb-palette-heather-ring);
+}
+
+[data-accent="lake"] {
+  --wb-accent-fill: var(--wb-palette-lake-fill);
+  --wb-accent-fill-hover: var(--wb-palette-lake-fill-hover);
+  --wb-accent-fill-rgb: var(--wb-palette-lake-fill-rgb);
+  --wb-accent-text: var(--wb-palette-lake-text);
+  --wb-accent-text-rgb: var(--wb-palette-lake-text-rgb);
+  --wb-accent-text-hover: var(--wb-palette-lake-text-hover);
+  --wb-accent-text-hover-rgb: var(--wb-palette-lake-text-hover-rgb);
+  --wb-accent-bar: var(--wb-palette-lake-bar);
+  --wb-accent-tint-bg: var(--wb-palette-lake-tint-bg);
+  --wb-accent-tint-ink: var(--wb-palette-lake-tint-ink);
+  --wb-accent-ring: var(--wb-palette-lake-ring);
+}
+
+[data-accent="forest"] {
+  --wb-accent-fill: var(--wb-palette-forest-fill);
+  --wb-accent-fill-hover: var(--wb-palette-forest-fill-hover);
+  --wb-accent-fill-rgb: var(--wb-palette-forest-fill-rgb);
+  --wb-accent-text: var(--wb-palette-forest-text);
+  --wb-accent-text-rgb: var(--wb-palette-forest-text-rgb);
+  --wb-accent-text-hover: var(--wb-palette-forest-text-hover);
+  --wb-accent-text-hover-rgb: var(--wb-palette-forest-text-hover-rgb);
+  --wb-accent-bar: var(--wb-palette-forest-bar);
+  --wb-accent-tint-bg: var(--wb-palette-forest-tint-bg);
+  --wb-accent-tint-ink: var(--wb-palette-forest-tint-ink);
+  --wb-accent-ring: var(--wb-palette-forest-ring);
+}
+
+[data-accent="glacier"] {
+  --wb-accent-fill: var(--wb-palette-glacier-fill);
+  --wb-accent-fill-hover: var(--wb-palette-glacier-fill-hover);
+  --wb-accent-fill-rgb: var(--wb-palette-glacier-fill-rgb);
+  --wb-accent-text: var(--wb-palette-glacier-text);
+  --wb-accent-text-rgb: var(--wb-palette-glacier-text-rgb);
+  --wb-accent-text-hover: var(--wb-palette-glacier-text-hover);
+  --wb-accent-text-hover-rgb: var(--wb-palette-glacier-text-hover-rgb);
+  --wb-accent-bar: var(--wb-palette-glacier-bar);
+  --wb-accent-tint-bg: var(--wb-palette-glacier-tint-bg);
+  --wb-accent-tint-ink: var(--wb-palette-glacier-tint-ink);
+  --wb-accent-ring: var(--wb-palette-glacier-ring);
+}
+
+[data-accent="ember"] {
+  --wb-accent-fill: var(--wb-palette-ember-fill);
+  --wb-accent-fill-hover: var(--wb-palette-ember-fill-hover);
+  --wb-accent-fill-rgb: var(--wb-palette-ember-fill-rgb);
+  --wb-accent-text: var(--wb-palette-ember-text);
+  --wb-accent-text-rgb: var(--wb-palette-ember-text-rgb);
+  --wb-accent-text-hover: var(--wb-palette-ember-text-hover);
+  --wb-accent-text-hover-rgb: var(--wb-palette-ember-text-hover-rgb);
+  --wb-accent-bar: var(--wb-palette-ember-bar);
+  --wb-accent-tint-bg: var(--wb-palette-ember-tint-bg);
+  --wb-accent-tint-ink: var(--wb-palette-ember-tint-ink);
+  --wb-accent-ring: var(--wb-palette-ember-ring);
+}
+
+[data-accent="alpenglow"] {
+  --wb-accent-fill: var(--wb-palette-alpenglow-fill);
+  --wb-accent-fill-hover: var(--wb-palette-alpenglow-fill-hover);
+  --wb-accent-fill-rgb: var(--wb-palette-alpenglow-fill-rgb);
+  --wb-accent-text: var(--wb-palette-alpenglow-text);
+  --wb-accent-text-rgb: var(--wb-palette-alpenglow-text-rgb);
+  --wb-accent-text-hover: var(--wb-palette-alpenglow-text-hover);
+  --wb-accent-text-hover-rgb: var(--wb-palette-alpenglow-text-hover-rgb);
+  --wb-accent-bar: var(--wb-palette-alpenglow-bar);
+  --wb-accent-tint-bg: var(--wb-palette-alpenglow-tint-bg);
+  --wb-accent-tint-ink: var(--wb-palette-alpenglow-tint-ink);
+  --wb-accent-ring: var(--wb-palette-alpenglow-ring);
+}
+
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+  --bs-primary: var(--wb-accent-fill);
+  --bs-primary-rgb: var(--wb-accent-fill-rgb);
+  --bs-link-color: var(--wb-accent-text);
+  --bs-link-color-rgb: var(--wb-accent-text-rgb);
+  --bs-link-hover-color: var(--wb-accent-text-hover);
+  --bs-link-hover-color-rgb: var(--wb-accent-text-hover-rgb);
+  --bs-focus-ring-color: color-mix(
+    in srgb,
+    var(--wb-accent-ring) 25%,
+    transparent
+  );
+  --wb-primary-bg: var(--wb-accent-tint-bg);
+  --wb-primary-ink: var(--wb-accent-tint-ink);
+  --bs-primary-text-emphasis: var(--wb-accent-text-hover);
+}
+
+/* What Bootstrap compiles from its $primary, in the accent color */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: var(--wb-accent-ring);
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+.form-check-input:checked,
+.form-check-input[type="checkbox"]:indeterminate {
+  background-color: var(--wb-accent-fill);
+  border-color: var(--wb-accent-fill);
+}
+
+.nav-link:focus-visible {
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+.dropdown-menu {
+  --bs-dropdown-link-active-bg: var(--wb-accent-fill);
+}
+
+.list-group {
+  --bs-list-group-active-bg: var(--wb-accent-fill);
+  --bs-list-group-active-border-color: var(--wb-accent-fill);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--wb-accent-fill);
+  --bs-btn-border-color: var(--wb-accent-fill);
+  --bs-btn-hover-bg: var(--wb-accent-fill-hover);
+  --bs-btn-hover-border-color: var(--wb-accent-fill-hover);
+  --bs-btn-active-bg: var(--wb-accent-fill-hover);
+  --bs-btn-active-border-color: var(--wb-accent-fill-hover);
+  --bs-btn-disabled-bg: var(--wb-accent-fill);
+  --bs-btn-disabled-border-color: var(--wb-accent-fill);
+  --bs-btn-focus-shadow-rgb: var(--wb-accent-fill-rgb);
+}
+
+/* The choice of an accent color on the settings page */
+.wb-accent-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem 0.25rem 0.4rem;
+  border: 1px solid var(--wb-field-border);
+  border-radius: 2rem;
+  cursor: pointer;
+}
+
+.wb-accent-choice input {
+  position: absolute;
+  opacity: 0;
+}
+
+.wb-accent-choice:has(input:checked) {
+  border-color: var(--wb-accent-fill);
+  box-shadow: 0 0 0 2px var(--wb-accent-fill);
+}
+
+.wb-accent-choice:has(input:focus-visible) {
+  outline: 2px solid var(--bs-body-color);
+  outline-offset: 2px;
+}
+
+.wb-swatch {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--wb-accent-fill);
+}
+
+.wb-swatch[data-swatch="heather"] {
+  background: var(--wb-palette-heather-fill);
+}
+
+.wb-swatch[data-swatch="lake"] {
+  background: var(--wb-palette-lake-fill);
+}
+
+.wb-swatch[data-swatch="forest"] {
+  background: var(--wb-palette-forest-fill);
+}
+
+.wb-swatch[data-swatch="glacier"] {
+  background: var(--wb-palette-glacier-fill);
+}
+
+.wb-swatch[data-swatch="ember"] {
+  background: var(--wb-palette-ember-fill);
+}
+
+.wb-swatch[data-swatch="alpenglow"] {
+  background: var(--wb-palette-alpenglow-fill);
 }
 
 a {
@@ -73,13 +497,6 @@ h3,
   font-weight: 600;
 }
 
-.btn-primary {
-  --bs-btn-bg: var(--bs-primary);
-  --bs-btn-border-color: var(--bs-primary);
-  --bs-btn-hover-bg: #5433a8;
-  --bs-btn-hover-border-color: #5433a8;
-}
-
 .card {
   --bs-card-bg: var(--wb-surface);
   --bs-card-border-color: var(--wb-surface-border);
@@ -92,19 +509,15 @@ h3,
   --bs-list-group-border-color: var(--wb-surface-border);
 }
 
-/* The violet bar with the amber tent: Biwak at a glance, in both modes */
+/* The bar in the accent color with the amber tent: Biwak at a glance, in both modes */
 .wb-navbar {
   --bs-navbar-color: rgba(255, 255, 255, 0.78);
   --bs-navbar-hover-color: #fff;
   --bs-navbar-active-color: #fff;
   --bs-navbar-brand-color: #fff;
   --bs-navbar-brand-hover-color: #fff;
-  background: #5b37b0;
+  background: var(--wb-accent-bar);
   border-bottom: 3px solid #e8a33d;
-}
-
-[data-bs-theme="dark"] .wb-navbar {
-  background: #3a2378;
 }
 
 .wb-navbar .nav-link.active {
@@ -297,8 +710,6 @@ h3,
 [data-bs-theme="light"] {
   --wb-neutral-bg: #ebe7df;
   --wb-neutral-ink: #514c42;
-  --wb-primary-bg: #ece6fb;
-  --wb-primary-ink: #4e2f9c;
   --wb-success-bg: #dcf3e9;
   --wb-success-ink: #0f6e4b;
   --wb-warning-bg: #fbefd2;
@@ -310,8 +721,6 @@ h3,
 [data-bs-theme="dark"] {
   --wb-neutral-bg: #2a2830;
   --wb-neutral-ink: #c9cbc2;
-  --wb-primary-bg: #2a1f4a;
-  --wb-primary-ink: #c7b7f5;
   --wb-success-bg: #0f3326;
   --wb-success-ink: #6fd6a8;
   --wb-warning-bg: #3a2c0c;
@@ -823,4 +1232,90 @@ button.wb-signal:hover {
 
 .wb-rule-description {
   min-height: 1.5em;
+}
+
+/* The list of shortcuts (settings page, the "?" dialog) */
+.wb-shortcuts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+}
+
+.wb-shortcuts dt {
+  font-weight: 400;
+  text-align: end;
+}
+
+.wb-shortcuts dd {
+  margin: 0;
+}
+
+/* The current row of the keyboard shortcuts (frontend/shortcuts.js) */
+.wb-kb-current {
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+  border-radius: var(--bs-border-radius-sm);
+}
+
+/* Dialogs: the command palette and the list of shortcuts */
+.wb-dialog {
+  width: min(38rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
+  padding: 1rem;
+  color: var(--bs-body-color);
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
+  border-radius: var(--bs-border-radius-lg, 0.75rem);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+}
+
+.wb-dialog::backdrop {
+  background: rgba(20, 16, 30, 0.45);
+}
+
+.wb-palette {
+  margin-top: 12vh;
+  padding: 0.75rem;
+}
+
+.wb-palette-list {
+  max-height: 55vh;
+  margin: 0.5rem 0 0;
+  overflow-y: auto;
+}
+
+.wb-palette-group {
+  padding: 0.5rem 0.5rem 0.15rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.wb-palette-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--bs-border-radius-sm);
+  cursor: pointer;
+}
+
+.wb-palette-option.is-active {
+  background: var(--wb-primary-bg);
+  color: var(--wb-primary-ink);
+}
+
+.wb-palette-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-palette-hint {
+  flex: none;
+  font-size: 0.8rem;
+  opacity: 0.8;
 }

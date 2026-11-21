@@ -6,6 +6,8 @@ import "./styles/icons.css"
 
 import "./theme.js"
 import "./menus.js"
+import "./palette.js"
+import "./shortcuts.js"
 import "./copy.js"
 import "./mentions.js"
 import "./peek.js"

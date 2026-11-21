@@ -90,7 +90,7 @@ def _context(user, occurrence):
         "url": question_url(occurrence),
         "page_url": absolute(item.get_absolute_url()),
         "unsubscribe_url": unsubscribe_url(user, item),
-        "settings_url": absolute(reverse("notification_settings")),
+        "settings_url": absolute(reverse("settings")),
     }
 
 

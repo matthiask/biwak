@@ -283,7 +283,10 @@ class MessageTest(Fixture, TestCase):
         self.assertEqual(
             self.client.get(self.url(self.shared, "message_edit")).status_code, 403
         )
-        self.assertNotContains(self.client.get(self.url(self.shared)), "Edit")
+        self.assertNotContains(
+            self.client.get(self.url(self.shared)),
+            self.url(self.shared, "message_edit"),
+        )
 
     def test_the_switch_is_for_staff(self):
         self.client.force_login(self.ada)

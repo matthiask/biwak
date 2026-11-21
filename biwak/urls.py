@@ -33,6 +33,7 @@ urlpatterns = [
     path("", include("biwak.reactions.urls")),
     path("", include("biwak.checkins.urls")),
     path("", include("biwak.search.urls")),
+    path("", include("biwak.palette.urls")),
     path("", include("biwak.inbound.urls")),
     path("schedules/describe/", describe, name="schedules_describe"),
     path("api/v1/", api.urls),
