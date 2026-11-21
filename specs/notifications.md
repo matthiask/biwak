@@ -198,6 +198,11 @@ Project events (joined, added, removed) notify nobody.
 
 ### Mails
 
+- **Notification records are kept** (decided 2026-11-21): they record who
+  was told about which event and when, small rows, never pruned unless
+  the table actually grows large. The history itself is in the events
+  and the audit log, both kept.
+
 - **Delivery** per person (`User.mail_delivery`): each change (the
   default) or a daily digest.
 - **Each change:** `./manage.py send_mails`, run every minute by cron,
