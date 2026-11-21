@@ -31,6 +31,11 @@ the first client gets a login.
     the projects they can open plus the limited ones the list offers
     (`projects_to_join()`), not archived limited ones (fixed 2026-11-20
     after the second visibility review: the API took any project).
+  - Losing access (removed from a limited project, or an all-access
+    project made limited) drops the person's subscriptions in the
+    project; both go through operations (`remove_member()`,
+    `update_project()`, fixed 2026-11-21 after the code review: making a
+    project limited kept them).
 - **Staff** with access to a project see everything in it.
 - **Clients** are never covered by all-access: they see a project only
   if they're members, and in it only what

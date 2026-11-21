@@ -10,7 +10,6 @@ from biwak import schedules
 from biwak.accounts.models import User
 from biwak.activity import feed
 from biwak.activity.models import Action, Event
-from biwak.activity.operations import record
 from biwak.files import queries as file_queries
 from biwak.forms import Form, ModelForm
 from biwak.items import glance, operations as ops
@@ -260,10 +259,10 @@ def project_edit(request, pk):
     project = project_for(request, pk)
     if not project_ops.can_manage_project(request.user):
         raise PermissionDenied
-    form = ProjectForm(request.POST or None, instance=project)
+    # The form validates a copy: update_project() compares with the project
+    form = ProjectForm(request.POST or None, instance=Project.objects.get(pk=pk))
     if form.is_valid():
-        form.save()
-        record(actor=request.user, action=Action.EDITED_PROJECT, project=project)
+        project_ops.update_project(project, actor=request.user, **form.cleaned_data)
         return redirect(project)
     return render(
         request,

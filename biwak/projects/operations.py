@@ -187,6 +187,44 @@ def create_project(*, name, description="", is_all_access=True, actor):
     return project
 
 
+_UNCHANGED = object()
+
+
+@transaction.atomic
+def update_project(
+    project, *, actor, name=_UNCHANGED, description=_UNCHANGED, is_all_access=_UNCHANGED
+):
+    """Changes what's given and differs (staff only); raises
+    ``ValidationError`` for what the model refuses. Making the project
+    limited takes access from staff who aren't members: their subscriptions
+    in the project go, as in ``remove_member()``."""
+    if not can_manage_project(actor):
+        raise PermissionError("Only staff change projects.")
+    given = {
+        "name": name if name is _UNCHANGED else name.strip(),
+        "description": description,
+        "is_all_access": is_all_access,
+    }
+    fields = [
+        field
+        for field, value in given.items()
+        if value is not _UNCHANGED and value != getattr(project, field)
+    ]
+    if not fields:
+        return project
+    limited = "is_all_access" in fields and not is_all_access
+    for field in fields:
+        setattr(project, field, given[field])
+    project.full_clean()
+    project.save(update_fields=fields)
+    record(actor=actor, action=Action.EDITED_PROJECT, project=project)
+    if limited:
+        Subscription.objects.filter(item__project=project).exclude(
+            user__memberships__project=project
+        ).delete()
+    return project
+
+
 def joinable_projects(user):
     """Limited projects an admin isn't in: they see that they exist and can
     join them (specs/access.md); nobody else does"""
