@@ -468,10 +468,8 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(self.run_at("2027-03-22 10:00")["asked"], 0)
         self.assertEqual(self.run_at("2027-03-29 09:00")["asked"], 1)
 
-    def test_archived_questions_and_questions_of_archived_projects(self):
-        item_ops.archive(self.item, actor=self.ada)
-        self.assertEqual(self.run_at("2027-03-22 09:00")["asked"], 0)
-        item_ops.unarchive(Item.objects.get(pk=self.item.pk), actor=self.ada)
+    def test_questions_of_archived_projects(self):
+        # Questions themselves can't be archived (specs/archiving.md): pausing
         project_ops.archive_project(self.project, actor=self.ada)
         self.assertEqual(self.run_at("2027-03-29 09:00")["asked"], 0)
         self.assertEqual(dates(self.item), [])
