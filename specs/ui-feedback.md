@@ -17,3 +17,11 @@
 ## Round 2
 
 - Archiving projects doesn't have to be accessible from the list.
+- I'm unsure about the client badge in the activity list.
+- The color picker for projects shouldn't use a dropdown, but a radio style input with colored circles. The name is not important, the color is.
+- Settings: The list of sign-in subpages (passkeys, sessions, API tokens) doesn't look like menu items to me. I wonder if we shouldn't inline passkeys and sessions right there, and make API tokens a separate page. Or reorganize this some other way.
+- Sessions: Is logging out single sessions possible? What does the "Sign Out" button do, end all sessions? This isn't clear enough right now. The thead is missing a cell.
+- Filters should autosubmit the form I think, like in Governance.
+- We will have a few Moritzes in Staff even, so we should probably find a way to differentiate them automatically. They do have different last names, so maybe that's enough when the people images or circles land.
+- My To Do: I think the default grouping should be: Project, List, Group. By due date would be a different view, or a different ordering.
+- Workbench (~/projects/sites/workbench) restores filters when navigating to the page again. I think I'd like that here as well.
