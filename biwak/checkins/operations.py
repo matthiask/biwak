@@ -19,7 +19,7 @@ from biwak import schedules
 from biwak.accounts.models import NotificationLevel, User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
-from biwak.activity.notify import can_see, effective_level
+from biwak.activity.notify import can_see, effective_level, who_can_see
 from biwak.activity.operations import record, subscribe
 from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
@@ -51,12 +51,6 @@ class NotAllowed(Exception):
 # Who -------------------------------------------------------------------------
 
 
-def askable_people(item):
-    """People who can be asked: those who can see the question (clients only
-    when it is visible to clients)"""
-    return mentions.mentionable_people(item)
-
-
 def can_answer(user, item):
     """People asked who still see the question; staff who aren't asked
     don't answer"""
@@ -68,9 +62,10 @@ def can_answer(user, item):
 
 
 def _check_people(item, people, *, kept=()):
-    """``kept``: people already in the list, who stay when the question
-    turns internal (clients aren't asked then, but aren't removed)"""
-    allowed = set(askable_people(item).filter(pk__in=[u.pk for u in people]))
+    """Only people who can see the question are asked. ``kept``: people
+    already in the list, who stay when the question turns internal
+    (clients aren't asked then, but aren't removed)"""
+    allowed = set(who_can_see(item).filter(pk__in=[u.pk for u in people]))
     allowed |= {u for u in kept if u.is_client}
     for user in people:
         if user not in allowed:

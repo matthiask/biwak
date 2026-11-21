@@ -6,7 +6,6 @@ import zoneinfo
 from django import forms
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak.accounts.models import User
+from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
@@ -40,16 +40,6 @@ def question_for(request, pk):
 def staff_only(request):
     if request.user.is_client:
         raise PermissionDenied
-
-
-def candidate_people(project):
-    """Who a question of the project can ask: members, and all staff in
-    all-access projects (clients only on visible questions, checked by
-    ``operations.set_people()``)"""
-    people = Q(memberships__project=project)
-    if project.is_all_access:
-        people |= Q(is_client=False)
-    return User.objects.active().filter(people).distinct()
 
 
 # Forms -----------------------------------------------------------------------
@@ -92,7 +82,9 @@ class QuestionForm(RuleFormMixin, Form):
         super().__init__(*args, **kwargs)
         self.item = item
         self.fields["rule"].widget.anchor = self.initial.get("starts_on")
-        self.fields["people"].queryset = candidate_people(project)
+        # Who sees a visible question: clients only on visible ones, checked
+        # by ``clean()`` and ``operations.set_people()``
+        self.fields["people"].queryset = people_who_see(project, visible=True)
         if item is not None:
             # The switch is on the page
             del self.fields["visible"]
