@@ -10,6 +10,10 @@ them when a decision changes (dated: "decided 2026-11-20").
 
 - `./runtests.sh` runs all tests (needs the local PostgreSQL container:
   `podman start local_postgres_1`), `./runtests.sh biwak.items` some.
+  In parallel, a process per CPU with a copy of the test database
+  (`--parallel 1` for one). Coverage only when asked:
+  `COVERAGE=1 ./runtests.sh`; CI doesn't measure it, nothing read it
+  (decided 2026-11-21).
 - `fl dev` runs Django and the rspack dev server; `uv run ./manage.py
   check_visibility` compares the stored visibility with the tree.
   `runserver` is Daphne's (`DEBUG`), serving the websockets of docs
