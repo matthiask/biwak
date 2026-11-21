@@ -2138,7 +2138,12 @@ class MenuPlacementTest(E2ETestCase):
                 page = self.login(self.ada, viewport={"width": width, "height": 740})
                 self.goto(page, self.project)
                 menus = page.locator("details.wb-menu")
-                self.assertMenuFits(page, menus.filter(has_text="More"))
+                self.assertMenuFits(
+                    page,
+                    page.locator(".wb-page-header details.wb-menu").filter(
+                        has_text="More"
+                    ),
+                )
                 self.assertMenuFits(page, menus.filter(has_text="Ada"))
                 self.goto(page, todolist)
                 self.assertMenuFits(
@@ -2148,7 +2153,9 @@ class MenuPlacementTest(E2ETestCase):
     def test_menu_follows_a_resize(self):
         self.page = self.login(self.ada, viewport={"width": 1280, "height": 740})
         self.goto(self.page, self.project)
-        menu = self.page.locator("details.wb-menu").filter(has_text="More")
+        menu = self.page.locator(".wb-page-header details.wb-menu").filter(
+            has_text="More"
+        )
         self.assertMenuFits(self.page, menu)
         self.page.set_viewport_size({"width": 360, "height": 740})
         self.page.wait_for_function(
@@ -2160,7 +2167,9 @@ class MenuPlacementTest(E2ETestCase):
     def test_menu_by_keyboard(self):
         self.page = self.login(self.ada, viewport={"width": 360, "height": 740})
         self.goto(self.page, self.project)
-        menu = self.page.locator("details.wb-menu").filter(has_text="More")
+        menu = self.page.locator(".wb-page-header details.wb-menu").filter(
+            has_text="More"
+        )
         menu.locator("summary").focus()
         self.page.keyboard.press("Enter")
         popup = menu.locator(".dropdown-menu")
