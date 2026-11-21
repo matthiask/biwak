@@ -6,6 +6,7 @@ y-websocket provider.
 """
 
 import asyncio
+import datetime as dt
 import json
 from unittest.mock import ANY, patch
 
@@ -17,6 +18,7 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.sessions.models import Session
 from django.test import Client, TransactionTestCase
 from django.urls import reverse
+from django.utils import timezone
 from pycrdt import (
     Doc,
     Encoder,
@@ -36,8 +38,8 @@ from biwak.collab.consumers import decode_awareness, encode_awareness
 from biwak.collab.models import LiveUpdate
 from biwak.collab.routing import websocket_urlpatterns
 from biwak.files import operations
-from biwak.items import operations as ops
-from biwak.items.models import Item
+from biwak.items import editing, operations as ops
+from biwak.items.models import Editing, Item
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
@@ -425,6 +427,69 @@ class ConsumerTest(TransactionTestCase):
                 is_client_visible=False
             )
             await self.assertClosed(cleo)
+
+    # The editing marker (specs/editor.md, no ticks meanwhile) ---------------
+
+    @database_sync_to_async
+    def holders(self, item):
+        return [user.get_short_name() for user in editing.holders(item)]
+
+    async def test_editors_with_write_access_hold_the_marker(self):
+        ada = await self.connect(self.ada, self.shared)
+        # Watching isn't editing
+        await self.connect(self.cleo, self.shared)
+        self.assertEqual(await self.holders(self.shared), ["Ada"])
+        await ada.communicator.disconnect()
+        self.communicators.remove(ada.communicator)
+        self.assertEqual(await self.holders(self.shared), [])
+
+    async def test_a_second_tab_keeps_it(self):
+        await self.connect(self.ada, self.shared)
+        first = await self.connect(self.ada, self.shared)
+        await first.communicator.disconnect()
+        self.communicators.remove(first.communicator)
+        await asyncio.sleep(0.1)
+        self.assertEqual(await self.holders(self.shared), ["Ada"])
+
+    async def test_read_only_ends_it_and_editable_sets_it_again(self):
+        ada = await self.connect(self.ada, self.shared)
+        await database_sync_to_async(self.on_commit)(
+            operations.set_read_only, self.shared, read_only=True, actor=self.ada
+        )
+        await ada.drain()
+        self.assertEqual(await self.holders(self.shared), [])
+        await database_sync_to_async(self.on_commit)(
+            operations.set_read_only, self.shared, read_only=False, actor=self.ada
+        )
+        await ada.drain()
+        self.assertEqual(await self.holders(self.shared), ["Ada"])
+
+    async def test_losing_access_ends_it(self):
+        doc = await database_sync_to_async(ops.create_doc)(
+            project=self.project,
+            title="Our notes",
+            content="",
+            creator=self.cleo,
+            visible=True,
+        )
+        cleo = await self.connect(self.cleo, doc)
+        self.assertEqual(await self.holders(doc), ["Cleo"])
+        await database_sync_to_async(Item.objects.filter(pk=doc.pk).update)(
+            is_client_visible=False
+        )
+        await database_sync_to_async(self.on_commit)(live.check_access, doc=doc.pk)
+        await self.assertClosed(cleo)
+        self.assertEqual(await self.holders(doc), [])
+
+    async def test_renewed_with_the_periodic_check(self):
+        with patch.object(consumers, "CHECK_EVERY", 0.1):
+            await self.connect(self.ada, self.shared)
+            await database_sync_to_async(Editing.objects.update)(
+                seen_at=timezone.now() - dt.timedelta(minutes=5)
+            )
+            self.assertEqual(await self.holders(self.shared), [])
+            await asyncio.sleep(0.3)
+            self.assertEqual(await self.holders(self.shared), ["Ada"])
 
     # Storing --------------------------------------------------------------
 

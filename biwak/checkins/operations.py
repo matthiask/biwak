@@ -31,7 +31,7 @@ from biwak.checkins.models import (
     QuestionMail,
 )
 from biwak.files import attachments
-from biwak.items import operations as items_ops
+from biwak.items import editing, operations as items_ops
 from biwak.items.models import Item, Kind, Status
 
 
@@ -426,7 +426,7 @@ def _occurrence(item, occurrence):
 
 
 @transaction.atomic
-def answer(item, *, user, content, occurrence=None):
+def answer(item, *, user, content, occurrence=None, base=None):
     """The person's answer to the occurrence (default: the latest): creates
     it, or changes the one they gave (``Answer`` is unique per occurrence
     and person); answering brings an answer from the trash
@@ -447,7 +447,7 @@ def answer(item, *, user, content, occurrence=None):
     answer_item = existing.item
     if answer_item.status == Status.TRASHED:
         items_ops.restore(answer_item, actor=user)
-    update_answer(existing, content, actor=user)
+    update_answer(existing, content, actor=user, base=base)
     return answer_item
 
 
@@ -483,8 +483,13 @@ def create_answer(question_item, user, content, occurrence):
     return item
 
 
-def update_answer(answer, content, *, actor):
+@transaction.atomic
+def update_answer(answer, content, *, actor, base=None):
+    """``base``: see ``items.operations.update_todo()``"""
     item = answer.item
+    answer = Answer.objects.select_for_update().select_related("item").get(pk=answer.pk)
+    editing.check_base(item, base, actor=actor)
+    editing.stop(item, actor)
     if content == answer.content:
         return
     previous = answer.content

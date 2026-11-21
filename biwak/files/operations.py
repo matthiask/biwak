@@ -17,7 +17,7 @@ from biwak.activity.models import Action
 from biwak.activity.operations import record
 from biwak.collab import live
 from biwak.files import attachments
-from biwak.items import operations as ops
+from biwak.items import editing, operations as ops
 from biwak.items.models import Doc, DocVersion, Message, Upload
 
 
@@ -45,10 +45,13 @@ class DocConflict(Exception):
 
 @transaction.atomic
 def update_message(
-    item, *, actor, title=_UNCHANGED, content=_UNCHANGED, category=_UNCHANGED
+    item, *, actor, title=_UNCHANGED, content=_UNCHANGED, category=_UNCHANGED, base=None
 ):
-    """Changes what's given; ``category`` is a ``MessageCategory`` or None"""
+    """Changes what's given; ``category`` is a ``MessageCategory`` or None.
+    ``base``: see ``items.operations.update_todo()``."""
     message = Message.objects.select_for_update().get(item=item)
+    editing.check_base(item, base, actor=actor)
+    editing.stop(item, actor)
     previous = f"{item.title}\n\n{message.content}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
@@ -320,8 +323,10 @@ def replace_upload(item, file, *, actor):
 
 
 @transaction.atomic
-def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED):
+def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED, base=None):
     upload = Upload.objects.select_for_update().get(item=item)
+    editing.check_base(item, base, actor=actor)
+    editing.stop(item, actor)
     previous = f"{item.title}\n\n{upload.description}"
     edited = False
     if title is not _UNCHANGED and title != item.title:

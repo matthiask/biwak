@@ -2,15 +2,12 @@
 
 The decisions stay in the specs (and the dated list in `SPEC.md`); this
 file only lists what still waits for an answer. Answer by number; the
-answer goes into the spec named, and the entry leaves this file.
+answer goes into the spec named, and the entry leaves this file. Kept up
+to date: questions asked in the conversation and answered there are
+recorded in their spec and leave this file too.
 
-Answered 2026-11-21: everything collected on 2026-11-20 except the ones
-below.
+Nothing open at the moment.
 
-1. **Search's archived filter wording** (`search.md`): "Without archived
-   projects", and "Archived" on results.
-2. **Wording of mails and messages** (the answer to rejected replies,
-   the check-in mails, "Reply to this mail to comment/answer.", the
-   editor's and the lantern's texts): reviewed all at once with the
-   German translation (decided 2026-11-21).
-Not decided, not urgent: agent skills (`api-cli.md`), later.
+Decided to wait: the wording of mails, messages and the editor's and the
+lantern's texts is reviewed all at once with the German translation;
+agent skills (`api-cli.md`) later.

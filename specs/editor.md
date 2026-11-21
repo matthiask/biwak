@@ -158,9 +158,8 @@ heading, bulleted list, numbered list, checklist, quote, code, mention
   (fixtures in `biwak/test_fixtures/`), `biwak/test_e2e_editor.py`
   (Playwright: ticking, every toolbar button and key, undo, Ctrl+K, a phone
   width, pasting).
-- **Known gap:** ticking doesn't update an edit form that's open on the same
-  page; saving it later writes its (older) text. The 409 covers ticks, not
-  forms.
+- **Known gap (closed 2026-11-21):** ticking didn't update an edit form
+  that's open; see "Ticking while someone edits".
 
 ## Ticking while someone edits (decided 2026-11-21)
 
@@ -179,3 +178,77 @@ An open edit form is more important than a tick:
 - The edit form itself still refuses a stale save (someone else saved
   meanwhile) and says who; ticks made before the form was opened are
   in the form's text.
+
+**Status:** built 2026-11-21 (branch `tick-editing`).
+
+Built as decided, with these details:
+
+- **The marker** is the table `items.Editing` (migration `items.0008`;
+  one row per item and person, not audited: it's transient). Not the
+  cache: Django's default cache is per process, so tests and production
+  would differ. `biwak/items/editing.py` has `start()`, `stop()`,
+  `holders()` (rows renewed within `TTL`, 2 minutes) and `prune()` (the
+  daily `fairy_tasks` job deletes the expired rows). `POST
+  /items/<id>/editing/` starts or renews it, with `release` ends it.
+- **Who sets it:** the edit pages of messages, files and answers set it
+  when they render the form (and again when a save is refused). The to-do
+  page shows its form all the time, so the form announces itself with the
+  first focus or input (`data-editing-lazy`) and ends when the page is
+  left. All of it in `frontend/editing.js`: the open form renews every
+  minute, Cancel (`data-editing-release`) gives up. Saving ends the
+  person's marker in the operations (`update_todo`, `update_message`,
+  `update_upload`, `update_answer`).
+- **Docs** (merged with the live editor, decided 2026-11-21): whoever is
+  connected to the doc's live editor with write access holds the marker.
+  The websocket's consumer (`collab.consumers`) sets it when it connects,
+  renews it with its access check every minute, and removes it when the
+  connection closes or the person may not type anymore (read-only, access
+  lost); when one of the person's tabs closes, their other tabs on the doc
+  set it again. Chosen over the editor page announcing itself like the
+  forms: the server knows when a websocket closes, also when a tab is
+  closed without a goodbye, and a crashed process leaves at most `TTL`.
+  Watchers (clients, read-only docs) don't block ticks. Saving a doc (the
+  API, a tick) doesn't end the marker, the editor stays open. Docs aren't
+  locked anymore (`collaboration.md`, "No locks"): the doc's page tells
+  who has it open in the editor ("Ada is editing this.", names by
+  `people_known_to()`, else "Someone is editing this."; several: "Several
+  people are editing this."), and nobody is kept out.
+- **Ticks** (`items.operations.tick()`) raise `editing.BeingEdited` while
+  anybody's marker is current, the ticker's own included (one rule). Ticks
+  of comments don't wait: comments have no edit form. The 409 answers
+  `{"message": ..., "reload": bool}`; `frontend/checklist.js` shows the
+  message in a `role="status"` span next to the box. "Ada is editing this;
+  try again when they're done." (neutral wording instead of "she's", the
+  names are of all genders); two or more: "Several people are editing
+  this"; the ticker's own form: "You have the edit form of this open; save
+  or cancel it first."
+- **Names follow the visibility rules:** `editing.name_for()` uses
+  `Project.people_known_to()`; clients get "Someone is editing this" and
+  "Changed by someone a moment ago" for staff they may not know.
+- **A text that changed** (`ChecklistConflict`) carries who changed it last
+  (the latest `edited` event of the item, for comments their author) and
+  when: "Changed by Bob a moment ago." (or "5 minutes ago"). The page loads
+  the page again in the background and replaces the text in place (no
+  navigation), the message beside the box.
+- **Stale saves:** docs always refused them through the API
+  (`base_version`, newest version); in the browser they're edited live. Now the to-do, message, file and answer forms carry `base` (the
+  hash of title and text, `editing.version()`) and the operations take
+  `base=`: somebody else's save meanwhile raises `editing.StaleEdit`, the
+  form shows who and when above the user's text ("Bob changed this a moment
+  ago, while you were editing, so your changes weren't saved. Copy your
+  text, then reload the page."). A save without `base` (the API, the CLI,
+  older forms) isn't checked; the API's `PATCH` has no `base` yet.
+- Tests: `biwak/items/test_editing.py` (the marker and its expiry, saving
+  and cancelling, refused ticks with names for staff and clients, changed
+  texts, the stale save for every kind), `biwak/test_e2e_editor.py`
+  (`EditingTest`: two browsers, one editing, one ticking; the reloaded text
+  with the message).
+
+## Docs: ticks never wait (decided 2026-11-21)
+
+Ticking a doc is never refused because someone has it open in the live
+editor, oneself included: the tick goes into the open editors like an
+API edit (a Yjs update), so nothing is overwritten. The live editor's
+presence only gives the heads-up ("Ada is editing this"). Plain edit
+forms (to-dos, messages, files, answers) still block ticks, since saving
+the form would overwrite them.
