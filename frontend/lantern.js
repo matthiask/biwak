@@ -19,7 +19,19 @@ const withFavicon = "lanternFavicon" in document.body.dataset
 const original = favicon?.href
 let dotted = null
 
-async function updateCount() {
+// Something new arrived live: the dot pulses once (specs/celebrations.md)
+function pulse() {
+  count.classList.remove("is-pulsing")
+  void count.offsetWidth
+  count.classList.add("is-pulsing")
+  count.addEventListener(
+    "animationend",
+    () => count.classList.remove("is-pulsing"),
+    { once: true },
+  )
+}
+
+async function updateCount(arriving = false) {
   try {
     const response = await fetch(menu.dataset.lanternCountUrl, {
       credentials: "same-origin",
@@ -31,6 +43,8 @@ async function updateCount() {
     const text = unread ? `${unread > 99 ? "99+" : unread} ${countText}` : ""
     count.querySelector("[data-lantern-count-text]").textContent = text
     count.hidden = !unread
+    const before = Number(menu.dataset.lanternUnread ?? unread)
+    if (arriving && unread > before) pulse()
     button.title = unread ? `${lanternTitle}: ${text}` : lanternTitle
     menu.dataset.lanternUnread = String(unread)
     if (withFavicon) showDot(unread > 0)
@@ -39,13 +53,32 @@ async function updateCount() {
   }
 }
 
-async function load() {
+function entries() {
+  return new Set(
+    [...content.querySelectorAll("[data-lantern-item]")].map(
+      (el) => el.dataset.lanternItem + el.classList.contains("is-unread"),
+    ),
+  )
+}
+
+async function load(arriving = false) {
   try {
     const response = await fetch(menu.dataset.lantern, {
       credentials: "same-origin",
     })
     if (response.ok) {
+      const before = entries()
       content.innerHTML = await response.text()
+      // New entries slide in, only while the menu is open and something
+      // arrives (not when it opens or a button changes it)
+      if (arriving && menu.open && menu.dataset.lanternLoaded)
+        for (const el of content.querySelectorAll("[data-lantern-item]"))
+          if (
+            !before.has(
+              el.dataset.lanternItem + el.classList.contains("is-unread"),
+            )
+          )
+            el.classList.add("is-new")
       menu.dataset.lanternLoaded = String(Date.now())
     }
   } catch {
@@ -96,8 +129,8 @@ if (menu) {
     if (menu.open) load()
   })
   document.addEventListener("biwak:lantern", () => {
-    updateCount()
-    if (menu.open) load()
+    updateCount(true)
+    if (menu.open) load(true)
   })
   // Reading, marking as unread and bookmarking stay in the menu
   content.addEventListener("submit", async (event) => {

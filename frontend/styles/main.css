@@ -2133,8 +2133,112 @@ body:has(.wb-modal[open]) {
   }
 }
 
+/* Small transitions (specs/celebrations.md): modals scale in, menus and the
+   reaction picker fade in, rows that arrive live slide in. Closed things
+   aren't rendered, so nothing animates on page load. */
+@keyframes wb-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* A transition from @starting-style, so the shake above can come and go
+   without playing this again */
+.wb-modal[open] {
+  opacity: 1;
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.wb-modal[open]::backdrop {
+  animation: wb-backdrop-in 0.15s ease-out;
+}
+
+.wb-menu[open] > .dropdown-menu,
+.wb-reaction-add[open] > .wb-reaction-picker {
+  animation: wb-fade-in 0.1s ease-out;
+}
+
+@keyframes wb-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+
+.wb-live-enter {
+  animation: wb-slide-in 0.25s ease-out;
+}
+
+/* A reaction that wasn't there pops in, a count that grew bumps
+   (frontend/reactions.js) */
+@keyframes wb-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes wb-bump {
+  50% {
+    transform: scale(1.5);
+  }
+}
+
+.wb-reactions > form.is-new {
+  animation: wb-pop-in 0.25s ease-out;
+}
+
+.wb-reaction-count.is-bumped {
+  display: inline-block;
+  animation: wb-bump 0.25s ease-out;
+}
+
+/* The lantern: its dot pulses once when something new arrives live, new
+   entries slide in (frontend/lantern.js) */
+@keyframes wb-pulse {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--wb-lantern-dot) 60%, transparent);
+  }
+
+  40% {
+    transform: scale(1.5);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0.6rem transparent;
+  }
+}
+
+.wb-lantern-dot.is-pulsing {
+  animation: wb-pulse 0.7s ease-out;
+}
+
+.wb-lantern-item.is-new {
+  animation: wb-slide-in 0.25s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .wb-modal-shake {
+  .wb-modal[open] {
+    transition: none;
+  }
+
+  .wb-modal-shake,
+  .wb-modal[open]::backdrop,
+  .wb-menu[open] > .dropdown-menu,
+  .wb-reaction-add[open] > .wb-reaction-picker,
+  .wb-live-enter,
+  .wb-reactions > form.is-new,
+  .wb-reaction-count.is-bumped,
+  .wb-lantern-dot.is-pulsing,
+  .wb-lantern-item.is-new {
     animation: none;
   }
 }

@@ -163,6 +163,39 @@ class E2ETestCase(LiveServerTestCase):
         ):
             self.errors.append(f"{message.text} {message.location['url']}")
 
+    def watch_classes(self, page):
+        """Remember every class any element had on this page (before it
+        loads): animations are over in a moment, the classes toggling them
+        are what the scripts do (``seen_class``)"""
+        page.add_init_script(
+            """(() => {
+                window.seenClasses = new Set()
+                const note = (el) => {
+                    if (el.classList) el.classList.forEach((n) => seenClasses.add(n))
+                }
+                new MutationObserver((records) => {
+                    for (const r of records) {
+                        note(r.target)
+                        for (const node of r.addedNodes) {
+                            note(node)
+                            node.querySelectorAll?.("*").forEach(note)
+                        }
+                    }
+                }).observe(document, {
+                    subtree: true, childList: true, attributes: true,
+                    attributeFilter: ["class"],
+                })
+            })()"""
+        )
+
+    def seen_class(self, page, name):
+        return page.wait_for_function(
+            "(name) => window.seenClasses.has(name)", arg=name
+        )
+
+    def never_class(self, page, name):
+        self.assertFalse(page.evaluate("(n) => window.seenClasses.has(n)", name), name)
+
     def goto(self, page, target):
         url = target if isinstance(target, str) else target.get_absolute_url()
         page.goto(f"{self.live_server_url}{url}")
@@ -787,6 +820,30 @@ class TodoPageTest(E2ETestCase):
         page.locator(".wb-reaction-own", has_text="🎉").wait_for()
         self.assertEqual(Reaction.objects.filter(content="🎉").count(), 2)
 
+    def test_a_new_reaction_pops_in_and_a_count_bumps(self):
+        """Nothing animates on load; the classes of the animations come with
+        the reactions htmx swaps in (specs/celebrations.md)"""
+        Reaction.objects.create(user=self.bob, item=self.todo, content="🎉")
+        page = self.login(self.ada)
+        self.watch_classes(page)
+        self.goto(page, self.todo)
+        self.never_class(page, "is-new")
+        self.never_class(page, "is-bumped")
+        page.locator("button.wb-reaction", has_text="🎉").click()
+        page.locator(".wb-reaction-own", has_text="🎉").wait_for()
+        self.seen_class(page, "is-bumped")
+        self.never_class(page, "is-new")
+        reactions = page.locator(".wb-reactions").first
+        reactions.locator(".wb-reaction-add summary").click()
+        reactions.locator("button", has_text="👍").click()
+        page.locator(".wb-reaction-own", has_text="👍").wait_for()
+        self.seen_class(page, "is-new")
+        # The classes are gone again when the animations ended
+        expect(
+            page.locator(".wb-reactions .is-new, .wb-reaction-count.is-bumped")
+        ).to_have_count(0)
+        self.assertEqual(self.errors, [])
+
     def test_reaction_on_a_comment(self):
         ops.add_comment(self.todo, author=self.bob, content="Hello")
         page = self.page
@@ -1334,6 +1391,21 @@ class LiveTest(E2ETestCase):
         bob.wait_for_load_state()
         expect(ada.locator("#live-header")).to_contain_text("Reopen")
         expect(ada.locator("#live-status")).to_contain_text("Completed by Bob")
+        self.assertFalse(self.errors)
+
+    def test_a_row_slides_in_and_the_lantern_dot_pulses(self):
+        ada = self.login(self.ada)
+        self.watch_classes(ada)
+        self.open(self.ada, self.todo, page=ada)
+        bob = self.open(self.bob, self.todo)
+        self.never_class(ada, "wb-live-enter")
+        self.never_class(ada, "is-pulsing")
+        self.comment(bob, "Ordered!")
+        # The comment is new (a row of a list), and Ada has something unread
+        self.seen_class(ada, "wb-live-enter")
+        self.seen_class(ada, "is-pulsing")
+        expect(ada.locator("[data-lantern-count]")).to_have_text("1 unread")
+        expect(ada.locator("#live-comments .wb-live-enter")).to_have_count(0)
         self.assertFalse(self.errors)
 
     def test_a_todo_added_and_moved_on_the_board(self):
@@ -2313,8 +2385,9 @@ class KeyboardTest(E2ETestCase):
         page.keyboard.press("j")
         page.keyboard.press("j")
         expect(current).to_contain_text("Two")
-        page.keyboard.press("x")
-        page.wait_for_function("() => !!document.querySelector('.wb-check.is-done')")
+        # The check fills at once, the page follows the animation
+        with page.expect_navigation():
+            page.keyboard.press("x")
         self.assertEqual(Item.objects.get(title="Two").todo.is_completed, True)
         self.assertEqual(Item.objects.get(title="One").todo.is_completed, False)
         # o opens it

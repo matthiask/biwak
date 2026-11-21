@@ -44,3 +44,63 @@ document.addEventListener("keydown", (event) => {
     pill.querySelector("[data-confirm-remove]").focus()
   }
 })
+
+// A new reaction pops in and a count that grew bumps (specs/celebrations.md).
+// The reactions are swapped by htmx and by live updates (frontend/live.js)
+// alike, so the script compares what was there with what arrives: by the
+// reactions' id, content → count. Nothing animates on load, and with
+// reduced motion the CSS turns the animations off.
+const seen = new Map()
+
+function snapshot(reactions) {
+  const counts = new Map()
+  for (const form of reactions.querySelectorAll(":scope > form")) {
+    const content = form.querySelector("[name=content]")?.value
+    const count = Number(form.querySelector(".wb-reaction-count")?.textContent)
+    if (content) counts.set(content, count)
+  }
+  return counts
+}
+
+function animate(element) {
+  element.addEventListener(
+    "animationend",
+    () => element.classList.remove("is-new", "is-bumped"),
+    { once: true },
+  )
+}
+
+function compare(reactions) {
+  const before = seen.get(reactions.id)
+  const now = snapshot(reactions)
+  seen.set(reactions.id, now)
+  if (!before) return
+  for (const form of reactions.querySelectorAll(":scope > form")) {
+    const content = form.querySelector("[name=content]")?.value
+    if (!now.has(content)) continue
+    if (!before.has(content)) {
+      form.classList.add("is-new")
+      animate(form)
+    } else if (now.get(content) > before.get(content)) {
+      const count = form.querySelector(".wb-reaction-count")
+      count.classList.add("is-bumped")
+      animate(count)
+    }
+  }
+}
+
+function remember(root) {
+  const found = root.matches?.(".wb-reactions[id]") ? [root] : []
+  found.push(...(root.querySelectorAll?.(".wb-reactions[id]") ?? []))
+  return found
+}
+
+for (const reactions of remember(document)) {
+  seen.set(reactions.id, snapshot(reactions))
+}
+
+new MutationObserver((records) => {
+  for (const record of records)
+    for (const node of record.addedNodes)
+      for (const reactions of remember(node)) compare(reactions)
+}).observe(document.body, { childList: true, subtree: true })

@@ -78,7 +78,7 @@ async function row(form, row) {
     form.submit()
     return
   }
-  row.hidden = true
+  row.remove()
   if (lastOfList) {
     const place = document.getElementById("live-completed")
     if (place && !place.querySelector(".wb-all-done")) {

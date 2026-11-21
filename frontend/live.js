@@ -170,8 +170,11 @@ function normalized(el) {
   // Django masks the CSRF token differently on every page
   for (const token of clone.querySelectorAll("[name=csrfmiddlewaretoken]"))
     token.removeAttribute("value")
-  for (const node of [clone, ...clone.querySelectorAll(".wb-live-new")])
-    node.classList.remove("wb-live-new")
+  for (const node of [
+    clone,
+    ...clone.querySelectorAll(".wb-live-new, .wb-live-enter"),
+  ])
+    node.classList.remove("wb-live-new", "wb-live-enter")
   for (const note of clone.querySelectorAll("[data-live-note]")) note.remove()
   // What scripts set on the page (menus placed, dragging)
   for (const node of [clone, ...clone.querySelectorAll("*")]) {
@@ -220,6 +223,15 @@ function mark(node) {
   // Restart the animation
   void node.offsetWidth
   node.classList.add("wb-live-new")
+}
+
+// A row that wasn't there slides in, beside the highlight (the class goes
+// when it's done, a row moved later doesn't slide again)
+function enter(node) {
+  node.classList.add("wb-live-enter")
+  node.addEventListener("animationend", (event) => {
+    if (event.target === node) node.classList.remove("wb-live-enter")
+  })
 }
 
 function settle(node) {
@@ -286,6 +298,7 @@ function updateChildren(current, fresh) {
     } else {
       node = adopt(freshChild)
       mark(node)
+      enter(node)
       current.insertBefore(node, current.children[index] || null)
       settle(node)
       return
