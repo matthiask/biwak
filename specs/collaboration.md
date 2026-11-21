@@ -273,7 +273,7 @@ about 20 seconds).
 - No limit on the size of an update or a doc beyond the server's
   websocket frame limit.
 
-## Questions (built the way described meanwhile)
+## Confirmed 2026-11-21 (to be tuned after real use)
 
 - The limits per connection (added 2026-11-21 after the visibility review
   of the live features, `consumers.py`): awareness 20 messages at once,
@@ -293,3 +293,11 @@ editing this"), from the editing marker (`editor.md`).
 the editing marker of everybody connected with write access, the doc's page
 shows the heads-up from it, and ticks on the doc wait meanwhile
 (`editor.md`, "Ticking while someone edits").
+
+## Confirmed after the merge (2026-11-21)
+
+- Checkboxes in read-only docs can't be ticked (disabled, a tick is
+  refused); comments on them still can.
+- Imports notify nobody and announce nothing, but open pages and live
+  editors still check access at once when an import changes who sees
+  what.

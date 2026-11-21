@@ -258,9 +258,23 @@ setup as `collaboration.md`).
   tabs.
 - **Limits:** `?item=` longer than 18 digits closes with 4404 (it
   crashed the consumer); at most 50 websockets per person and process
-  (**?**), more close with 4429 and the page reconnects later, backing
+  (confirmed 2026-11-21, to be tuned after real use), more close with 4429 and the page reconnects later, backing
   off like after being offline. The live editor's limits are in
   `collaboration.md`.
+
+## Decided after the review (2026-11-21)
+
+- **Reading through a form button:** following an entry posts a small
+  form styled as a link (it marks read and redirects to the item), so
+  another site can't mark someone's notifications read by embedding the
+  link; it still works without JavaScript.
+- **Following one entry reads the whole item** (the menu groups by item).
+- **An edit merged into a notification marked unread** stays unmailed; a
+  new event is mailed as usual.
+- **Assigned and mentioned in one change:** one notification, the
+  assignment, saying "assigned you (and mentioned you)"; the mention adds
+  nothing on top of being assigned. Mentions in a later edit or a
+  comment notify as usual. Basecamp sends two, which is annoying.
 
 ## Questions (built the way described meanwhile)
 
@@ -269,10 +283,3 @@ setup as `collaboration.md`).
   "You were mentioned.").
 - The menu shows at most 100 unread notifications (the page has all):
   a value the spec didn't fix.
-
-## Questions before building (answered by building)
-
-- How long read notifications stay in the lantern list (proposed: they're
-  kept, as decided for the records; the menu shows the latest 30, the
-  page pages through all).
-- The wording of the entries; proposed above.
