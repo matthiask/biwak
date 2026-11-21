@@ -1,10 +1,13 @@
 """Task lists, the toolbar and pasting in the browser (specs/editor.md)"""
 
+from pathlib import Path
+
 from django.urls import reverse
 
 from biwak.items import operations as ops
 from biwak.items.models import Todo
 from biwak.test_e2e import E2ETestCase, expect
+from biwak.test_paste import GOOGLE_DOCS, MAIL
 
 
 NOTES = "Packing\n\n- [ ] tent\n- [x] stove\n- [ ] rope"
@@ -245,3 +248,90 @@ class ToolbarTest(E2ETestCase):
                 "() => document.documentElement.scrollWidth <= window.innerWidth"
             )
         )
+
+
+FIXTURES = Path(__file__).parent / "test_fixtures"
+
+
+class PasteTest(E2ETestCase):
+    def setUp(self):
+        super().setUp()
+        self.page = self.login(
+            self.ada, permissions=["clipboard-read", "clipboard-write"]
+        )
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+
+    def copy(self, html="", text=""):
+        """Puts HTML and text on the clipboard like a page would"""
+        self.page.evaluate(
+            """async ([html, text]) => {
+                const item = {"text/plain": new Blob([text], {type: "text/plain"})}
+                if (html) item["text/html"] = new Blob([html], {type: "text/html"})
+                await navigator.clipboard.write([new ClipboardItem(item)])
+            }""",
+            [html, text],
+        )
+
+    def paste(self, key="Control+v"):
+        self.field.focus()
+        self.field.press(key)
+
+    def test_a_mail_keeps_its_formatting(self):
+        self.copy((FIXTURES / "paste_mail.html").read_text(), "Hi team, plain")
+        self.paste()
+        expect(self.field).to_have_value(MAIL)
+        self.assertEqual(self.errors, [])
+
+    def test_google_docs(self):
+        self.copy((FIXTURES / "paste_google_docs.html").read_text(), "Camp plan")
+        self.paste()
+        expect(self.field).to_have_value(GOOGLE_DOCS)
+
+    def test_it_goes_where_the_caret_is_and_can_be_undone(self):
+        self.field.fill("Before  after")
+        self.field.evaluate("el => el.setSelectionRange(7, 7)")
+        self.copy("<p>some <b>bold</b></p>", "some bold")
+        self.paste()
+        expect(self.field).to_have_value("Before some **bold** after")
+        self.field.press("Control+z")
+        expect(self.field).to_have_value("Before  after")
+
+    def test_plain_text_pastes_as_it_is(self):
+        self.copy("", "just *text*\nand more")
+        self.paste()
+        expect(self.field).to_have_value("just *text*\nand more")
+
+    def test_html_without_formatting_is_left_alone(self):
+        # What editors put on the clipboard for code: a div per line
+        self.copy(
+            "<div style='font-family:monospace'><div><span>a = 1</span></div>"
+            "<div><span>b = 2</span></div></div>",
+            "a = 1\nb = 2",
+        )
+        self.paste()
+        expect(self.field).to_have_value("a = 1\nb = 2")
+
+    def test_ctrl_shift_v_pastes_plain_text(self):
+        self.copy("<p>some <b>bold</b></p>", "some bold")
+        self.paste("Control+Shift+v")
+        expect(self.field).to_have_value("some bold")
+
+    def test_a_url_over_selected_text_makes_a_link(self):
+        self.field.fill("see the docs here")
+        self.field.evaluate("el => el.setSelectionRange(4, 12)")
+        self.copy("", "https://example.org/docs")
+        self.paste()
+        expect(self.field).to_have_value(
+            "see [the docs](https://example.org/docs) here"
+        )
+        # Without a selection the URL is pasted as it is
+        self.field.fill("")
+        self.paste()
+        expect(self.field).to_have_value("https://example.org/docs")
+
+    def test_a_failing_endpoint_pastes_the_text(self):
+        self.page.route("**/paste/markdown/", lambda route: route.abort())
+        self.copy("<p>some <b>bold</b></p>", "some bold")
+        self.paste()
+        expect(self.field).to_have_value("some bold")

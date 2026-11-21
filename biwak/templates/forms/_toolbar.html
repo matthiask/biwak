@@ -2,9 +2,10 @@
 {% comment %}
   The buttons frontend/toolbar.js puts above every Markdown field
   (textarea[data-toolbar], specs/editor.md); here so that the icons and
-  texts are in the templates.
+  texts are in the templates; frontend/paste.js reads the URL of its
+  endpoint here.
 {% endcomment %}
-<template data-toolbar-template>
+<template data-toolbar-template data-paste-url="{% url 'paste_markdown' %}">
   <button
     type="button"
     class="btn btn-sm btn-quiet"

@@ -4,7 +4,7 @@
 // only what it must through `execCommand("insertText")`, so Ctrl+Z undoes
 // a button as it undoes typing. Without JavaScript the fields stay plain.
 
-function replace(field, start, end, text) {
+export function replace(field, start, end, text) {
   field.focus()
   field.setSelectionRange(start, end)
   if (start === end && text === "") return
