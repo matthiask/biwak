@@ -473,10 +473,13 @@ def clean_signin(org, *, signin, idp="", tenant_id=""):
 
 
 @transaction.atomic
-def set_signin(org, *, signin, idp="", tenant_id="", actor):
+def set_signin(org, *, signin, idp="", tenant_id="", two_factor=None, actor):
     """How the organization's people sign in (admins only, specs/sso.md).
     Requiring single sign-on removes their passkeys, cuts their API tokens
-    and ends their other sessions (``sso.enforce_required()``)."""
+    and ends their other sessions (``sso.enforce_required()``).
+    ``two_factor`` (unchanged if None) requires a second factor
+    (specs/two-factor.md): people without a passkey or an app set one up at
+    their next request (``two_factor.setup_middleware``)."""
     if not can_change_signin(actor):
         raise PermissionError(_("Only admins change how an organization signs in."))
     signin, idp, tenant_id = clean_signin(
@@ -484,7 +487,9 @@ def set_signin(org, *, signin, idp="", tenant_id="", actor):
     )
     before = (org.signin, org.idp, org.tenant_id)
     org.signin, org.idp, org.tenant_id = signin, idp, tenant_id
-    org.save(update_fields=["signin", "idp", "tenant_id"])
+    if two_factor is not None:
+        org.requires_two_factor = bool(two_factor)
+    org.save(update_fields=["signin", "idp", "tenant_id", "requires_two_factor"])
     if org.requires_sso and before != (signin, idp, tenant_id):
         from biwak.accounts import sso
 

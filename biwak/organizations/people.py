@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _, gettext_lazy
 
-from biwak.accounts import operations as accounts_ops
+from biwak.accounts import operations as accounts_ops, two_factor
 from biwak.accounts.models import User, own_staff
 from biwak.activity.feed import people_visible_to
 from biwak.forms import Form, next_url
@@ -227,6 +227,10 @@ def person(request, pk):
     projects = Project.objects.accessible_to(viewer).filter(memberships__user=who)
     if who.pk != viewer.pk:
         projects = projects.filter(memberships__user=viewer)
+    # Reset two-factor… (specs/two-factor.md): only for somebody with an app
+    who.can_reset_two_factor = activation.can_reset_two_factor(
+        viewer, who
+    ) and two_factor.has_app(who)
     return render(
         request,
         "organizations/person.html",
@@ -325,4 +329,45 @@ def person_deactivate(request, pk):
         cancel_url=back(request, who),
         submit_label=_("Deactivate"),
         destructive=True,
+    )
+
+
+def person_reset_two_factor(request, pk):
+    """Reset two-factor…: the question, then deleting their authenticator
+    app, ending their sessions and mailing them (specs/two-factor.md)"""
+    who = person_to_change(request, pk)
+    if not two_factor.has_app(who):
+        messages.info(
+            request,
+            _("%(name)s has no authenticator app.") % {"name": who.display_name},
+        )
+        return redirect(back(request, who))
+    if request.method == "POST":
+        try:
+            activation.reset_two_factor(who, actor=request.user)
+        except activation.ActivationError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(
+                request,
+                _(
+                    "The authenticator app of %(name)s has been removed; they"
+                    " got a mail about it."
+                )
+                % {"name": who.display_name},
+            )
+        return redirect(back(request, who))
+    return form_response(
+        request,
+        None,
+        title=_("Reset two-factor for %(name)s?") % {"name": who.display_name},
+        intro=_(
+            "Removes their authenticator app and signs them out everywhere."
+            " They sign in with a code or a passkey then and can set up an"
+            " app again. They get a mail about it."
+        ),
+        cancel_url=back(request, who),
+        submit_label=_("Reset"),
+        destructive=True,
+        help_page="sign-in",
     )

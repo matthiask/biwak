@@ -1,5 +1,7 @@
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core.exceptions import ImmediateHttpResponse
+from allauth.mfa.adapter import DefaultMFAAdapter
+from allauth.mfa.models import Authenticator
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.providers.base import AuthProcess
 from django.contrib import messages
@@ -53,24 +55,43 @@ class AccountAdapter(DefaultAccountAdapter):
         )
         outbox.send(message, kind)
 
+    def get_reauthentication_methods(self, user):
+        """Confirming who one is: not by a code by mail for people with an
+        authenticator app (specs/two-factor.md), the app or a passkey"""
+        from biwak.accounts import two_factor
+
+        methods = super().get_reauthentication_methods(user)
+        if user.is_authenticated and not two_factor.code_confirms(user):
+            methods = [m for m in methods if m["id"] != "reauthenticate_by_code"]
+        return methods
+
     def pre_login(self, request, user, **kwargs):
         """People whose organization requires single sign-on sign in only
         through its identity provider (specs/sso.md): every way allauth signs
         somebody in comes here, after recording the method (codes, passkeys,
-        social logins); deactivated people are allauth's (``super()``)"""
+        social logins); deactivated people are allauth's (``super()``). The
+        same for organizations requiring a second factor
+        (specs/two-factor.md): a code isn't enough for people with only a
+        passkey."""
         response = super().pre_login(request, user, **kwargs)
         if response is not None:
             return response
-        if (message := sso.refuse_login(request, user)) is not None:
-            from allauth.account.internal.flows.login import (
-                clear_authentication_records,
-            )
-            from allauth.account.internal.stagekit import clear_login
+        from allauth.account.internal.flows.login import clear_authentication_records
+        from allauth.account.internal.stagekit import clear_login
 
+        from biwak.accounts import two_factor
+
+        if (message := sso.refuse_login(request, user)) is not None:
             clear_login(request)
             clear_authentication_records(request)
             messages.error(request, message)
             return redirect(sso.idp_login_url(user))
+        # Organizations requiring a second factor (specs/two-factor.md)
+        if (message := two_factor.refuse_login(request, user)) is not None:
+            clear_login(request)
+            clear_authentication_records(request)
+            messages.error(request, message)
+            return redirect(reverse("account_login"))
         return None
 
 
@@ -126,3 +147,26 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
                 _("Your organization signs in with %(provider)s: it stays connected.")
                 % {"provider": sso.required_organization(account.user).idp_name}
             )
+
+
+class MFAAdapter(DefaultMFAAdapter):
+    """Passkeys are a way in, not a second factor; authenticator apps (TOTP)
+    are the optional second factor (specs/two-factor.md, decided 2026-11-21)"""
+
+    def is_mfa_enabled(self, user, types=None):
+        """Whether the person has a second factor, the question of the
+        two-factor step after signing in by code or through Google or
+        Microsoft (``AuthenticateStage``, its page): an authenticator app
+        only, never a passkey. Asked about passkeys alone (allauth's
+        reauthentication offering them), passkeys count. People whose
+        organization requires single sign-on have none: the identity
+        provider does that (``sso.enforce_required()`` deletes them)."""
+        if user.is_anonymous:
+            return False
+        wanted = set(types) if types is not None else set(Authenticator.Type)
+        if wanted == {Authenticator.Type.WEBAUTHN}:
+            return super().is_mfa_enabled(user, types=list(wanted))
+        wanted.discard(Authenticator.Type.WEBAUTHN)
+        if not wanted or sso.requires_sso(user):
+            return False
+        return super().is_mfa_enabled(user, types=sorted(wanted))

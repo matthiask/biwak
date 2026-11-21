@@ -5,7 +5,73 @@ signing in by code or Google led to allauth's two-factor step, whose page
 asks for an "authenticator code" nobody set up (passkeys counted as a
 second factor).
 
-**Status:** spec (2026-11-21), decided the same day. Not built.
+**Status:** built (2026-11-21, CLI 0.36.0). Where each rule is enforced:
+
+- *The two-factor step* counts only authenticator apps:
+  `adapters.MFAAdapter.is_mfa_enabled()` (`MFA_ADAPTER`), which allauth's
+  `AuthenticateStage` and its page ask; passkeys count only when asked
+  about alone (allauth's reauthentication offering them); people whose
+  organization requires SSO have no second factor there. The page is
+  `signin.TwoFactorView` (`/accounts/2fa/authenticate/`,
+  `mfa/authenticate.html`): the code field only, posts without a code are
+  a missing code, never a passkey.
+- *The settings' card* (`accounts/settings.html`, "Authenticator app"):
+  `signin.activate_app` (`/accounts/2fa/totp/activate/`, a modal: QR code,
+  key, the code; allauth's reauthentication first; refused for SSO
+  required) and `signin.deactivate_app` (`…/deactivate/`, the app's code
+  through allauth's `ReauthenticateForm`, then its `deactivate_totp`
+  flow). `MFA_SUPPORTED_TYPES = ["webauthn", "totp"]`, no recovery codes,
+  `MFA_TOTP_ISSUER = "Biwak"`.
+- *Confirming who one is* with an app: not by a code by mail (built
+  2026-11-21, the most secure reading of "the app's code once more": a
+  code by mail would otherwise add a passkey, which signs in alone, or
+  turn the app off): `AccountAdapter.get_reauthentication_methods()` leaves
+  it out, `signin.reauthenticate(…, by_code=True)` sends the code pages
+  to the app's.
+- *Resets*: `activation.can_reset_two_factor()` (`can_change()`, not
+  oneself), `activation.reset_two_factor()` (deletes the app, ends the
+  sessions with `UserSession.end()`, `live.check_access()`, mails through
+  the outbox: `accounts/two_factor_reset.txt`, `Kind.ACCOUNT`, from the
+  actor, not to inactive people or bounced addresses); the page
+  `/people/<id>/reset-two-factor/` (offered on the person's page and in the
+  palette only when the person has an app), `POST
+  /api/v1/people/{id}/reset-two-factor/` (`reset`: whether there was an
+  app), `biwak people reset-two-factor ID`. Without an app nothing happens
+  (no mail, sessions stay). Passkeys stay. Audited: migration
+  `accounts.0017` puts `mfa_authenticator` in the audit log without
+  `data` (the app's secret, the passkey's key) and `last_used_at`.
+- *SSO required*: `sso.enforce_required()` already deletes every
+  authenticator; `signin.activate_app` refuses, the card isn't shown,
+  `passkeys.passkey_added` deletes one coming through anyway.
+- *Organizations requiring a second factor* (built 2026-11-21: a switch,
+  `Organization.requires_two_factor`, "Require a second factor" in the
+  sign-in modal next to the levels, since it combines with "codes" and
+  "SSO allowed"; `two_factor_required` is false where SSO is required):
+  `two_factor.refuse_login()` from `AccountAdapter.pre_login` (fails
+  closed: no record counts as a code); `two_factor.setup_required()`,
+  checked on every request (`two_factor.setup_middleware`: pages redirect
+  to `/accounts/two-factor/`, htmx gets `HX-Redirect`, the API with the
+  session 403) and for websockets (`sso.session_alive()`); the paths
+  setting one up needs stay open (`SETUP_PATHS`). A sign-in through the
+  organization's IdP is recognized by the session's record
+  (`sso.remember_sign_in()`: user, organization, address and the
+  organization's provider), without the 24 hours of SSO required.
+  Decided on the way: people with a passkey but no app who sign in by code
+  are refused ("sign in with your passkey"): letting them add an app
+  after a code alone would make the code enough. A person's own app is
+  asked for after their organization's IdP too (as everywhere), the
+  requirement only doesn't need it there.
+- Tests: `biwak/accounts/test_two_factor.py` (every way in, the card,
+  reauthentication), `biwak/accounts/test_two_factor_required.py`,
+  `biwak/organizations/test_two_factor_reset.py`,
+  `biwak/test_cli_people.py`.
+
+Not done, open: the app's secret is stored as allauth stores it (no
+encryption, `MFAAdapter.encrypt()` could add it); a reset keeps the
+person's API tokens; sessions signed in by code before an organization
+starts requiring a second factor stay for people who have one; merging
+or moving people between organizations doesn't look at the switch (only
+at the sign-in levels of `sso.md`).
 
 **Agent:** a strong model; sign-in is security-relevant: tests for every
 way in.

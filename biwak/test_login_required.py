@@ -31,6 +31,8 @@ PUBLIC = {
     # requiring single sign-on to their provider (specs/sso.md)
     "accounts/login/",
     "accounts/login/code/",
+    # The two-factor step during a sign-in (allauth's, specs/two-factor.md)
+    "accounts/2fa/authenticate/",
 }
 
 DUMMY = {"int": "1", "slug": "x", "str": "x", "path": "x", "uuid": str(uuid.uuid4())}

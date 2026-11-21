@@ -312,6 +312,16 @@ class SignInForm(Form):
             "The Directory (tenant) ID in the Microsoft Entra admin center."
         ),
     )
+    two_factor = forms.BooleanField(
+        label=gettext_lazy("Require a second factor"),
+        required=False,
+        help_text=gettext_lazy(
+            "A code by mail alone isn't enough: its people sign in with a"
+            " passkey, through the identity provider, or with a code and an"
+            " authenticator app. People with neither add one first. Not"
+            " needed where single sign-on is required."
+        ),
+    )
 
     def __init__(self, *args, organization, request, **kwargs):
         self.organization = organization
@@ -322,6 +332,7 @@ class SignInForm(Form):
                 "signin": organization.signin,
                 "idp": organization.idp,
                 "tenant_id": organization.tenant_id,
+                "two_factor": organization.requires_two_factor,
             },
         )
         super().__init__(*args, **kwargs)
@@ -362,7 +373,12 @@ class SignInForm(Form):
                 )
                 % {"provider": IdP(idp).label}
             )
-        return {"signin": signin, "idp": idp, "tenant_id": tenant_id}
+        return {
+            "signin": signin,
+            "idp": idp,
+            "tenant_id": tenant_id,
+            "two_factor": data.get("two_factor", False),
+        }
 
 
 def organization_signin(request, pk):

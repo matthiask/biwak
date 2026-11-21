@@ -33,7 +33,7 @@ biwak member add PROJECT PERSON --only-tagged      # notified only when tagged
 biwak member invite PROJECT ada@example.org --name "Ada" --organization "Example Ltd"
 biwak invite ada@example.org bob@example.org --project 4 --project 7   # several at once, all or nothing
 biwak invitations                           # not signed in yet (staff); resend PERSON, withdraw PERSON
-biwak people --inactive                      # who can't sign in; activate ID… [--mail], deactivate ID…
+biwak people --inactive                      # who can't sign in; activate ID… [--mail], deactivate ID…, reset-two-factor ID
 biwak orgs                                  # organizations (staff); show, add, edit, merge, delete, move
 biwak orgs merge 12 7                       # people and domains of 12 into 7
 biwak member remove PROJECT PERSON          # staff anybody, everybody themselves

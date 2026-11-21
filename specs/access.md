@@ -205,6 +205,16 @@ Microsoft account (decided 2026-11-20).
   login by code. Not for passkey or Google logins, API and htmx requests.
   Clients get it too; the behaviour, the wording and the API shapes of
   `api-cli.md` confirmed 2026-11-20.
+- **Passkeys are a way in, authenticator apps an optional second factor**
+  (`two-factor.md`, built 2026-11-21): a passkey signs in alone; with an
+  authenticator app turned on in the settings, signing in by code or
+  through Google or Microsoft asks for its code too (allauth's two-factor
+  step counts only apps), and confirming who one is takes the app or a
+  passkey, not a code by mail. No recovery codes: "Reset two-factor…"
+  (staff for clients, admins for everybody else, not oneself) removes the
+  app, ends the sessions and mails the person. Organizations may require a
+  second factor: a passkey or their IdP is enough, a code needs the app,
+  people with neither add one first.
 - Everybody's address is allauth's verified primary address
   (`verify_email()`, also when it changes): allauth confirms who someone
   is before adding a passkey, and without passwords that's a code by mail,

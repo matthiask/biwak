@@ -1356,6 +1356,16 @@ html:not(.js) .wb-handle {
 
 /* allauth's pages for logging in (allauth/layouts/entrance.html): a
    narrow card in the middle */
+/* The authenticator app's QR code (accounts/totp_activate.html): dark on
+   white in both modes, or phones don't read it */
+.wb-qr {
+  width: 12rem;
+  height: 12rem;
+  padding: 0.5rem;
+  background: #fff;
+  border-radius: var(--bs-border-radius);
+}
+
 .wb-entrance {
   max-width: 28rem;
   width: calc(100% - 2rem);

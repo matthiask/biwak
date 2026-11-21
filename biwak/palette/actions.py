@@ -292,16 +292,30 @@ def on_people(user, name):
 
 def on_person(user, name, person):
     """A person's page: Activate… or Deactivate… for those who may
-    (specs/activation.md)"""
+    (specs/activation.md), Reset two-factor… for somebody with an
+    authenticator app (specs/two-factor.md)"""
+    from biwak.accounts import two_factor
     from biwak.organizations import activation
 
     if name != "person" or not hasattr(person, "is_active"):
         return []
+    actions = []
     if not person.is_active and activation.can_change(user, person):
-        return [modal(_("Activate…"), reverse("person_activate", args=[person.pk]))]
+        actions.append(
+            modal(_("Activate…"), reverse("person_activate", args=[person.pk]))
+        )
     if person.is_active and activation.can_deactivate(user, person):
-        return [modal(_("Deactivate…"), reverse("person_deactivate", args=[person.pk]))]
-    return []
+        actions.append(
+            modal(_("Deactivate…"), reverse("person_deactivate", args=[person.pk]))
+        )
+    if activation.can_reset_two_factor(user, person) and two_factor.has_app(person):
+        actions.append(
+            modal(
+                _("Reset two-factor…"),
+                reverse("person_reset_two_factor", args=[person.pk]),
+            )
+        )
+    return actions
 
 
 def for_page(request, context):

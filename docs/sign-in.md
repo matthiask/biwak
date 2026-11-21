@@ -11,6 +11,44 @@ Biwak has no passwords. You sign in with your email address:
 - **Single sign-on:** "Sign in with Google" or "Sign in with Microsoft",
   where your organization has set it up.
 
+## An authenticator app
+
+A second step, if you want one: Settings, "Sign-in", "Authenticator app",
+"Set up…" shows a QR code for an app on your phone (any authenticator
+app); enter the code it shows to turn it on. From then on, signing in by
+code or through Google or Microsoft asks for the app's code too. A passkey
+is enough alone: it already needs your device and its PIN or fingerprint.
+
+- **Confirming it's you** (adding a passkey, setting things up) asks for
+  the app's code or a passkey then, not for a code by mail.
+- **Turning it off** ("Turn off…") needs a code from the app.
+- **Lost the app?** Sign in with a passkey and turn it off, or ask for a
+  reset: on your page, "Reset two-factor…" removes the app, signs you out
+  everywhere and mails you about it. Staff reset clients, admins reset
+  everybody else; nobody resets themselves. There are no recovery codes.
+  The CLI: `biwak people reset-two-factor ID`.
+
+People whose organization requires single sign-on have no authenticator
+app: their identity provider asks for a second step if it wants one.
+
+## Organizations requiring a second factor
+
+Admins can require a second factor for an organization (its page,
+"Sign-in…", "Require a second factor"). Then a code by mail alone isn't
+enough for its people:
+
+- a passkey is enough, and so is a sign-in through the organization's
+  identity provider;
+- after a code, the authenticator app's code follows;
+- people with a passkey but no app sign in with the passkey (a code alone
+  is refused);
+- people with neither add a passkey or set up an app right after signing
+  in by code, before anything else; the same after a reset, or when the
+  setting is switched on.
+
+API tokens made before keep working. Where single sign-on is required,
+the setting doesn't matter: there are no codes.
+
 ## Single sign-on
 
 Each organization decides how its people sign in (admins change it on the
@@ -22,7 +60,8 @@ organization's page, "Sign-in…"):
   organization signs in like this with Google.
 - **Single sign-on required:** only the organization's identity provider.
   Entering your address sends you there; codes are refused, passkeys
-  aren't offered (switching to "required" removes them), and you sign in
+  and authenticator apps aren't offered (switching to "required" removes
+  them), and you sign in
   again through the provider every 24 hours, usually one click. API tokens
   expire 24 hours after you create them, and there are no calendar links.
 
@@ -35,7 +74,8 @@ sign in at all.
 
 Settings, "Sign-in", shows the Google or Microsoft accounts connected to
 yours ("Disconnect" ends the connection; the next sign-in through the
-provider connects it again), your passkeys and your sessions.
+provider connects it again), your passkeys, your authenticator app and
+your sessions.
 
 ## Setting up single sign-on (admins)
 

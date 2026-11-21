@@ -102,7 +102,11 @@ ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 ACCOUNT_LOGIN_BY_CODE_TIMEOUT = 600
 ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 ACCOUNT_PREVENT_ENUMERATION = True
-MFA_SUPPORTED_TYPES = ["webauthn"]
+# Passkeys are a way in, authenticator apps an optional second factor, no
+# recovery codes: a reset instead (specs/two-factor.md)
+MFA_ADAPTER = "biwak.accounts.adapters.MFAAdapter"
+MFA_SUPPORTED_TYPES = ["webauthn", "totp"]
+MFA_TOTP_ISSUER = "Biwak"
 MFA_PASSKEY_LOGIN_ENABLED = True
 # Off: tracking writes the session's row on every request (decided
 # 2026-11-21); the sessions list shows when each one signed in
@@ -166,6 +170,9 @@ MIDDLEWARE = [
         "allauth.usersessions.middleware.UserSessionsMiddleware",
         # Sessions of organizations requiring single sign-on (specs/sso.md)
         "biwak.accounts.sso.session_middleware",
+        # Organizations requiring a second factor: setting one up comes
+        # first (specs/two-factor.md)
+        "biwak.accounts.two_factor.setup_middleware",
         "biwak.accounts.middleware.user_middleware",
         "biwak.accounts.passkeys.passkey_offer_middleware",
     ]

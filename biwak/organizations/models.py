@@ -189,6 +189,11 @@ class Organization(models.Model):
     # Microsoft Entra ID: the tenant's ID, compared with the tokens' ``tid``;
     # Google Workspace uses the domains (``hd``)
     tenant_id = models.CharField(_("Microsoft tenant ID"), max_length=36, blank=True)
+    # A second factor for signing in by code (specs/two-factor.md): admins
+    # only; moot where single sign-on is required
+    requires_two_factor = models.BooleanField(
+        _("requires a second factor"), default=False
+    )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
 
     objects = OrganizationQuerySet.as_manager()
@@ -239,6 +244,12 @@ class Organization(models.Model):
     @property
     def requires_sso(self):
         return self.signin == SignIn.SSO_REQUIRED
+
+    @property
+    def two_factor_required(self):
+        """A code alone isn't enough for its people (specs/two-factor.md);
+        moot where single sign-on is required (no codes at all)"""
+        return self.requires_two_factor and not self.requires_sso
 
     @property
     def idp_name(self):

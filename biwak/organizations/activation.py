@@ -4,6 +4,7 @@ the access of somebody who left. Own staff change clients, admins also own
 staff and partners (decided 2026-11-21); clients never. Both are all or
 nothing for several people."""
 
+from allauth.mfa.models import Authenticator
 from allauth.usersessions.models import UserSession
 from django.db import transaction
 from django.utils import timezone
@@ -103,3 +104,71 @@ def deactivate(users, *, actor):
         live.check_access(user=user.pk)
         done.append(user)
     return done
+
+
+# Resetting someone's second factor (specs/two-factor.md): the same split
+
+
+def can_reset_two_factor(actor, user):
+    """``can_change()``, and not oneself: people turn their own app off in
+    the settings, with its code"""
+    return can_change(actor, user) and actor.pk != user.pk
+
+
+@transaction.atomic
+def reset_two_factor(user, *, actor):
+    """Deletes the person's authenticator app, ends their sessions and mails
+    them (through the outbox, after the commit) so a reset they didn't ask
+    for is noticed; the audit log has the deleted row. Passkeys stay: they
+    are a way in, not a second factor. ``PermissionError`` for people the
+    actor may not change, ``ActivationError`` for oneself. Returns whether
+    there was an app; without one nothing happens."""
+    from biwak.collab import live
+
+    user = User.objects.select_for_update().get(pk=user.pk)
+    _check(actor, [user])
+    if actor.pk == user.pk:
+        raise ActivationError(
+            _("Turn your own authenticator app off in your settings.")
+        )
+    deleted, _rows = Authenticator.objects.filter(
+        user=user,
+        type__in=[Authenticator.Type.TOTP, Authenticator.Type.RECOVERY_CODES],
+    ).delete()
+    if not deleted:
+        return False
+    for session in UserSession.objects.filter(user=user):
+        session.end()
+    live.check_access(user=user.pk)
+    if user.is_active and user.mail_undeliverable_at is None:
+        send_two_factor_reset(user, actor=actor)
+    return True
+
+
+def send_two_factor_reset(user, *, actor):
+    """ "Ada removed your authenticator app", from the person who did"""
+    from django.core.mail import EmailMessage
+    from django.template.loader import render_to_string
+    from django.urls import reverse
+    from django.utils import translation
+
+    from biwak.activity.mails import sender
+    from biwak.api_conventions import absolute
+    from biwak.outbox import sending as outbox
+    from biwak.outbox.models import Kind
+
+    with translation.override(user.language or translation.get_language()):
+        message = EmailMessage(
+            _("%(actor)s removed your authenticator app") % {"actor": actor},
+            render_to_string(
+                "accounts/two_factor_reset.txt",
+                {
+                    "user": user,
+                    "actor": actor,
+                    "url": absolute(reverse("settings")) + "#sign-in",
+                },
+            ),
+            sender(_("%(name)s (Biwak)") % {"name": actor}),
+            [user.email],
+        )
+    outbox.send(message, Kind.ACCOUNT)

@@ -1,0 +1,41 @@
+{% extends "mfa/base_entrance.html" %}
+{% comment %}
+  The two-factor step (specs/two-factor.md, biwak/accounts/signin.py): only
+  the authenticator app's code; passkeys sign in alone from the sign-in page.
+{% endcomment %}
+{% load allauth i18n %}
+{% block head_title %}
+  {% translate "Sign In" %}
+{% endblock head_title %}
+
+{% block content %}
+  {% element h1 %}
+  {% translate "Code from your authenticator app" %}
+  {% endelement %}
+  {% element p %}
+  {% translate "You turned on an authenticator app as a second step. Enter the code it shows for Biwak." %}
+  {% endelement %}
+  {% url 'mfa_authenticate' as action_url %}
+  {% element form form=form method="post" action=action_url %}
+  {% slot body %}
+  {% csrf_token %}
+  {% element fields form=form unlabeled=True %}
+  {% endelement %}
+  {% endslot %}
+  {% slot actions %}
+  {% element button type="submit" tags="primary,mfa,login" %}
+  {% translate "Sign In" %}
+  {% endelement %}
+  {% element button type="submit" form="logout-from-stage" tags="link,mfa,cancel" %}
+  {% translate "Cancel" %}
+  {% endelement %}
+  {% endslot %}
+  {% endelement %}
+  {% element p %}
+  {% translate "Lost the app? Sign in with a passkey, or ask the person who invited you, or an admin, to reset it." %}
+  {% endelement %}
+  <form id="logout-from-stage" method="post" action="{% url 'account_logout' %}">
+    <input type="hidden" name="next" value="{% url 'account_login' %}">
+    {% csrf_token %}
+  </form>
+{% endblock content %}

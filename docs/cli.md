@@ -45,6 +45,7 @@ biwak invitations
 biwak people --inactive
 biwak people activate 12 13 --mail
 biwak people deactivate 14
+biwak people reset-two-factor 12
 ```
 
 The numbers are the IDs in the pages' addresses. Every command takes
