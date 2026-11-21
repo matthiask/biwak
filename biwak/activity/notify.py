@@ -133,7 +133,9 @@ def wanting(people, event):
         # A check-in's answers: to the question's subscribers whatever their
         # level (decided 2026-11-21), a mail each only for those who chose
         # it (specs/checkins.md); the others get the summary the morning
-        # after. Mentioned: on every level except "nothing".
+        # after. "Each" counts only while subscribed to the question (a
+        # stale choice doesn't override unsubscribing, decided 2026-11-21).
+        # Mentioned: on every level except "nothing".
         from biwak.checkins.models import DEFAULT_MODE, Mode, QuestionMail
 
         modes = dict(
@@ -141,10 +143,18 @@ def wanting(people, event):
                 question_id=item.parent_id, user__in=people
             ).values_list("user", "mode")
         )
+        subscribed = set(
+            Subscription.objects.filter(
+                item_id=item.parent_id, user__in=people
+            ).values_list("user", flat=True)
+        )
         return [
             user
             for user in people
-            if Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+            if (
+                user.pk in subscribed
+                and Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
+            )
             or (user.pk in mentioned and levels[user.pk] != NotificationLevel.NOTHING)
         ]
     subscribed = set(

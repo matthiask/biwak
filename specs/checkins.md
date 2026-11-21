@@ -99,7 +99,10 @@ Traps the tests cover (`schedule.py`):
   question; none for an occurrence without answers; later answers
   aren't sent.
 - **`each`** goes through the normal notifications to the question's
-  subscribers; everybody else gets nothing per answer unless mentioned.
+  subscribers; everybody else gets nothing per answer unless mentioned
+  (not on "nothing"). "Each" counts only while the person is subscribed
+  to the question (decided 2026-11-21): a choice left from before
+  unsubscribing doesn't bring the answers back.
 - **Replying** to the question mail answers that occurrence
   (`reply_headers()` in `biwak/checkins/mails.py`, `notifications.md`);
   the summary has no `Reply-To`.
