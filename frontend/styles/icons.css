@@ -130,8 +130,9 @@
 .bi-grip-vertical::before {
   content: "\f3fe";
 }
-/* Not in Bootstrap Icons: a camping lantern for the lantern
-   (specs/lantern.md; a table lamp didn't fit a bivouac), drawn in their
+/* Not in Bootstrap Icons: a torch with its light for the lantern
+   (specs/lantern.md; a table lamp didn't fit a bivouac, and a drawn
+   camping lantern wasn't recognizable at this size), drawn in their
    style, the font's color through a mask */
 .bi-lantern::before {
   content: "";
