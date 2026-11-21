@@ -17,7 +17,16 @@ the sockets too. htmx requests not made by a form (a button with
 `hx-post`) aren't held back. Reactions are forms, so they are held back
 with the message rather than undone. The editor's storage is
 `frontend/collab-store.js` (`y-indexeddb`, database
-`biwak-doc-<user>-<doc>`), cleared by `stored-docs.js` on logging out.
+`biwak-doc-<user>-<doc>-<history>`), cleared by `stored-docs.js` on
+logging out. Clearing (decided 2026-11-21): while connected and synced the
+editor asks the server (message 101, at most once a second per connection,
+rate limited there) for its state vector as client clocks; the stored copy
+goes once that covers the doc's own, and what it lacks is sent again, so
+an update lost on the way keeps the copy. The guard: the page carries the
+history of the server's `LiveState` (its `created_at`, `live.history()`);
+copies of other histories of the same person and doc are deleted, never
+merged (a recreated state would duplicate the text). Closing a tab online
+doesn't start keeping the doc.
 Tests: `biwak/test_connection.py`.
 
 **Agent:** suits a cheaper model following this spec and the checklist

@@ -27,6 +27,7 @@
     class="mb-3"
     data-collab="/ws/docs/{{ item.pk }}"
     data-collab-user="{{ request.user.pk }}"
+    data-collab-history="{{ history }}"
     data-collab-connecting="{% translate 'Connecting…' %}"
     data-collab-connected="{% translate 'Changes are saved as you type.' %}"
     data-collab-offline="{% translate 'Offline. Your changes are kept and merged when the connection is back.' %}"

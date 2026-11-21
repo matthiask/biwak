@@ -3,9 +3,12 @@ in the browser: the network taken away the way ``test_offline_and_reconnect``
 does it"""
 
 import time
+from unittest import mock
 
 from django.urls import reverse
 
+from biwak.collab import live
+from biwak.collab.models import LiveState
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Doc, Item
 from biwak.test_e2e import ASGIServerThread, E2ETestCase, expect, uvicorn
@@ -309,6 +312,10 @@ class ConnectionTest(E2ETestCase):
         )
         page = self.page
         self.edit(page, doc)
+        page.wait_for_function(
+            """async () => !(await indexedDB.databases())
+                .some((db) => db.name.startsWith("biwak-doc-"))"""
+        )
         # Something stored, as if the browser had been closed offline
         page.evaluate(
             """() => new Promise((resolve) => {
@@ -321,3 +328,100 @@ class ConnectionTest(E2ETestCase):
         page.get_by_role("button", name="Sign out").click()
         page.wait_for_url("**/accounts/login/**")
         self.assertEqual(self.stored_docs(page), [])
+
+    def test_the_stored_copy_stays_until_the_server_has_the_text(self):
+        doc = ops.create_doc(
+            project=self.project,
+            title="Minutes",
+            content="Agenda\n",
+            creator=self.ada,
+            visible=True,
+        )
+        page = self.page
+        self.edit(page, doc)
+        self.go_offline(page)
+        page.evaluate(
+            "document.querySelector('[data-collab]').collab.provider.ws.close()"
+        )
+        expect(self.banner(page)).to_contain_text("What you type is kept")
+        page.locator(".cm-content").click()
+        page.keyboard.press("Control+End")
+        page.keyboard.type("Typed offline")
+        # The server drops what the editor sends until we say otherwise
+        dropping = [True]
+        original = live.append
+
+        def append(pk, update, user):
+            if not dropping[0]:
+                return original(pk, update, user)
+            return None
+
+        with mock.patch.object(live, "append", append):
+            self.go_online(page)
+            expect(page.locator("[data-collab]")).to_have_attribute(
+                "data-collab-state", "connected"
+            )
+            expect(self.banner(page)).to_have_text("Back online.", timeout=15000)
+            time.sleep(3)
+            self.assertEqual(len(self.stored_docs(page)), 1)
+            self.assertNotIn("Typed offline", Doc.objects.get(pk=doc.pk).content)
+            dropping[0] = False
+            for _ in range(100):
+                if "Typed offline" in Doc.objects.get(pk=doc.pk).content:
+                    break
+                time.sleep(0.1)
+        self.assertEqual(Doc.objects.get(pk=doc.pk).content, "Agenda\nTyped offline")
+        page.wait_for_function(
+            """async () => !(await indexedDB.databases())
+                .some((db) => db.name.startsWith("biwak-doc-"))""",
+            timeout=10000,
+        )
+        self.assertFalse(self.errors)
+
+    def test_a_copy_of_another_history_is_not_merged(self):
+        doc = ops.create_doc(
+            project=self.project,
+            title="Minutes",
+            content="Agenda\n",
+            creator=self.ada,
+            visible=True,
+        )
+        page = self.page
+        self.edit(page, doc)
+        self.go_offline(page)
+        page.evaluate(
+            "document.querySelector('[data-collab]').collab.provider.ws.close()"
+        )
+        page.locator(".cm-content").click()
+        page.keyboard.press("Control+End")
+        page.keyboard.type("Typed offline")
+        page.wait_for_function(
+            """async () => (await indexedDB.databases())
+                .some((db) => db.name.startsWith("biwak-doc-"))"""
+        )
+        time.sleep(0.5)
+        context = page.context
+        page.close()
+        # The server's history is made again (a restored backup, say)
+        LiveState.objects.filter(doc_id=doc.pk).delete()
+        time.sleep(0.01)
+        context.set_offline(False)
+        self.offline = False
+        page = context.new_page()
+        self.edit(page, doc)
+        expect(page.locator(".cm-content")).to_contain_text("Agenda")
+        time.sleep(1)
+        self.assertEqual(
+            page.evaluate(
+                "document.querySelector('[data-collab]').collab.view.state.doc.toString()"
+            ),
+            "Agenda\n",
+        )
+        self.assertNotIn("Typed offline", Doc.objects.get(pk=doc.pk).content)
+        # The old copy is gone, a new one made and cleared
+        page.wait_for_function(
+            """async () => !(await indexedDB.databases())
+                .some((db) => db.name.startsWith("biwak-doc-"))""",
+            timeout=10000,
+        )
+        self.assertFalse(self.errors)

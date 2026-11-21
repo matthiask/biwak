@@ -139,6 +139,7 @@ def doc_edit(request, pk):
             "form": form,
             "breadcrumbs": breadcrumbs(item),
             "can_edit": can_edit,
+            "history": live.history(item.pk),
         },
     )
 

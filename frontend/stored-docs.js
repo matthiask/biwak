@@ -5,6 +5,16 @@
 
 export const PREFIX = "biwak-doc-"
 
+// The page is going away (closing, logging out): the websocket closing with
+// it is no reason to start keeping a doc
+export const leaving = { now: false }
+addEventListener("pagehide", () => {
+  leaving.now = true
+})
+addEventListener("pageshow", () => {
+  leaving.now = false
+})
+
 export async function clearStoredDocs() {
   try {
     const databases = (await indexedDB.databases?.()) || []
@@ -30,6 +40,7 @@ document.addEventListener("submit", async (event) => {
   if (event.defaultPrevented || !form.matches?.('form[action$="/logout/"]'))
     return
   event.preventDefault()
+  leaving.now = true
   await Promise.race([
     clearStoredDocs(),
     new Promise((resolve) => setTimeout(resolve, 2000)),

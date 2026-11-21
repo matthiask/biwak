@@ -43,7 +43,7 @@ function setUp(container) {
     // Other tabs go through the server too, which decides what they get
     { disableBc: true },
   )
-  keepInBrowser(ydoc, provider, texts.collabUser, room)
+  keepInBrowser(ydoc, provider, texts.collabUser, room, texts.collabHistory)
   // The server puts in the name and color
   provider.awareness.setLocalStateField("user", {})
 
