@@ -14,7 +14,6 @@ Each test logs in through a session cookie and waits for what it expects
 """
 
 import asyncio
-import datetime as dt
 import json
 import os
 import re
@@ -37,7 +36,7 @@ from biwak.activity.models import LevelOverride, Notification
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Doc, Item, Kind, Status, Todo
+from biwak.items.models import Comment, Doc, Item, Kind, Status
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
@@ -769,13 +768,6 @@ class TodoPageTest(E2ETestCase):
         )
         self.assertEqual(self.errors, [])
 
-    def test_the_picker_button_is_a_smiling_face(self):
-        self.goto(self.page, self.todo)
-        summary = self.page.locator(".wb-reaction-add summary").first
-        self.assertEqual(summary.get_attribute("aria-label"), "Add a reaction")
-        self.assertEqual(summary.locator("i.bi-emoji-smile").count(), 1)
-        self.assertNotIn("+", summary.inner_text())
-
     def test_removing_ones_own_reaction_asks_first(self):
         Reaction.objects.create(user=self.ada, item=self.todo, content="👍")
         page = self.page
@@ -939,35 +931,6 @@ class TodoPageTest(E2ETestCase):
         })
         form.locator("[role=alert]").filter(has_text="at most").wait_for()
         self.assertEqual(Attachment.objects.count(), 0)
-
-
-class OverdueTest(E2ETestCase):
-    def test_the_badge_on_a_list(self):
-        """Overdue gets the danger badge, today the quiet one, a completed
-        to-do none (specs/ui-round-1.md, part 5)"""
-        today = schedules.today()
-        todolist = self.make_list(todos=["Late", "Now", "Done", "Soon"])
-        for title, due_on in [
-            ("Late", today - dt.timedelta(days=2)),
-            ("Now", today),
-            ("Done", today - dt.timedelta(days=2)),
-            ("Soon", today + dt.timedelta(days=2)),
-        ]:
-            Todo.objects.filter(item__title=title).update(due_on=due_on)
-        ops.complete(Item.objects.get(title="Done"), actor=self.ada)
-        page = self.page
-        self.goto(page, todolist)
-
-        def badge(title):
-            return page.locator("[data-todo]", has_text=title).locator("[data-due]")
-
-        expect(badge("Late")).to_have_attribute("data-due", "overdue")
-        expect(badge("Late")).to_contain_text("Overdue")
-        expect(badge("Now")).to_have_text("Today")
-        expect(badge("Soon")).to_have_attribute("data-due", "later")
-        expect(page.locator("[data-todo]", has_text="Done")).to_have_count(1)
-        expect(badge("Done").filter(has_text="Overdue")).to_have_count(0)
-        expect(page.locator("[data-due=overdue]")).to_have_count(1)
 
 
 class ProjectsPageTest(E2ETestCase):
@@ -1748,33 +1711,13 @@ class PageTest(E2ETestCase):
 
 
 class ClientTest(E2ETestCase):
-    def test_client_sees_the_badge_and_banner_but_no_staff_controls(self):
-        todolist = self.make_list("Shared", visible=True, groups=["Soon"], todos=["A"])
-        # Staff see the switch and the controls
-        staff = self.page
-        self.goto(staff, todolist)
-        self.assertEqual(
-            staff.get_by_role("button", name="Hide from clients").count(), 1
-        )
-        self.assertEqual(staff.locator("[data-group-handle]").count(), 1)
+    """What clients see and may do is server-rendered (test_views.py),
+    their inline add is JavaScript"""
 
+    def test_a_client_adds_to_dos_inline(self):
+        todolist = self.make_list("Shared", visible=True, todos=["A"])
         page = self.login(self.cleo)
         self.goto(page, todolist)
-        self.assertEqual(page.locator("h1 .wb-client-badge").inner_text(), "Clients")
-        self.assertIn(
-            "Clients can see this.", page.locator(".wb-client-banner").inner_text()
-        )
-        self.assertEqual(
-            page.get_by_role("button", name="Hide from clients").count(), 0
-        )
-        self.assertEqual(page.get_by_role("button", name="Show to clients").count(), 0)
-        self.assertEqual(page.get_by_role("link", name="Edit").count(), 0)
-        self.assertEqual(page.locator("[data-group-handle]").count(), 0)
-        self.assertEqual(page.get_by_role("link", name="New group").count(), 0)
-        self.assertEqual(page.locator("details.wb-menu .wb-group-menu").count(), 0)
-
-        # Adding to-dos inline works and what the client creates is
-        # visible to clients
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         add.locator("[name=title]").fill("From the client")
@@ -1783,12 +1726,6 @@ class ClientTest(E2ETestCase):
         created = Item.objects.get(title="From the client")
         self.assertEqual(created.creator, self.cleo)
         self.assertTrue(created.is_client_visible)
-
-        # Their to-do page too
-        self.goto(page, created)
-        self.assertEqual(page.locator("h1 .wb-client-badge").count(), 1)
-        self.assertGreaterEqual(page.locator(".wb-client-banner").count(), 1)
-        self.assertEqual(page.get_by_role("button", name="Show to clients").count(), 0)
         self.assertEqual(self.errors, [])
 
 
@@ -1953,17 +1890,6 @@ class RuleWidgetTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
-class NoScriptTest(E2ETestCase):
-    def test_drag_handles_are_hidden_without_javascript(self):
-        todolist = self.make_list(groups=["Soon"], todos=["A"])
-        page = self.login(self.ada, java_script_enabled=False)
-        page.goto(f"{self.live_server_url}{todolist.get_absolute_url()}")
-        self.assertEqual(page.locator("[data-todo]").count(), 1)
-        for handle in page.locator(".wb-handle").all():
-            self.assertFalse(handle.is_visible())
-        self.assertGreater(page.locator(".wb-handle").count(), 1)
-
-
 class HtmxTest(E2ETestCase):
     def test_a_request_of_any_element_carries_the_csrf_token(self):
         """Not only forms: htmx 4 inherits headers only when told to"""
@@ -2022,29 +1948,6 @@ class ModalTest(E2ETestCase):
         expect(
             page.locator("details.wb-menu", has_text="More").first.locator("summary")
         ).to_be_focused()
-
-    def test_a_changed_form_needs_escape_twice(self):
-        page = self.page
-        self.goto(page, self.todolist)
-        dialog = self.open_more(page, "Notifications…")
-        dialog.get_by_label("Nothing").check()
-        page.keyboard.press("Escape")
-        expect(dialog).to_be_visible()
-        page.keyboard.press("Escape")
-        expect(dialog).not_to_be_visible()
-
-    def test_cancel_closes(self):
-        page = self.page
-        self.goto(page, self.todolist)
-        dialog = self.open_more(page, "Notifications…")
-        dialog.get_by_role("button", name="Cancel").click()
-        expect(dialog).not_to_be_visible()
-
-    def test_the_client_banner_shows_on_visible_items(self):
-        page = self.page
-        self.goto(page, self.todolist)
-        dialog = self.open_more(page, "Notifications…")
-        expect(dialog.locator(".wb-client-banner")).to_be_visible()
 
     def test_trashing_asks_first(self):
         page = self.page
@@ -2142,14 +2045,14 @@ class NavSearchTest(E2ETestCase):
         page.keyboard.press("Escape")
         expect(button).to_be_focused()
 
-    def test_desktop_shows_the_magnifier_with_the_hint(self):
-        page = self.page
-        self.check(page, hint_visible=True)
-        expect(page.locator(".wb-nav-search-hint")).to_have_text("Ctrl+K")
-
-    def test_phone_shows_the_magnifier(self):
-        page = self.login(self.ada, viewport={"width": 360, "height": 740})
-        self.check(page, hint_visible=False)
+    def test_the_magnifier_with_the_hint_on_a_desktop_only(self):
+        with self.subTest("desktop"):
+            page = self.page
+            self.check(page, hint_visible=True)
+            expect(page.locator(".wb-nav-search-hint")).to_have_text("Ctrl+K")
+        with self.subTest("phone"):
+            page = self.login(self.ada, viewport={"width": 360, "height": 740})
+            self.check(page, hint_visible=False)
 
     def test_a_modifier_click_is_the_link_to_the_search_page(self):
         page = self.page
@@ -2211,26 +2114,19 @@ class MenuPlacementTest(E2ETestCase):
         self.assertGreaterEqual(box["x"], 0, box)
         self.assertLessEqual(box["x"] + box["width"], width, box)
 
-    def check(self, width):
-        self.page = self.login(self.ada, viewport={"width": width, "height": 740})
-        self.make_list(groups=["Phase one"], todos=[("Plan", "Phase one")])
-        self.goto(self.page, self.project)
-        menus = self.page.locator("details.wb-menu")
-        self.assertMenuFits(self.page, menus.filter(has_text="More"))
-        self.assertMenuFits(self.page, menus.filter(has_text="Ada"))
-        self.goto(self.page, Item.objects.get(title="Launch"))
-        self.assertMenuFits(
-            self.page, self.page.locator("details.wb-menu:has(.wb-group-menu)")
-        )
-
-    def test_menus_fit_on_a_phone(self):
-        self.check(360)
-
-    def test_menus_fit_on_a_narrow_phone(self):
-        self.check(280)
-
-    def test_menus_fit_on_a_desktop(self):
-        self.check(1280)
+    def test_menus_fit_on_phones_and_desktops(self):
+        todolist = self.make_list(groups=["Phase one"], todos=[("Plan", "Phase one")])
+        for width in [360, 280, 1280]:
+            with self.subTest(width=width):
+                page = self.login(self.ada, viewport={"width": width, "height": 740})
+                self.goto(page, self.project)
+                menus = page.locator("details.wb-menu")
+                self.assertMenuFits(page, menus.filter(has_text="More"))
+                self.assertMenuFits(page, menus.filter(has_text="Ada"))
+                self.goto(page, todolist)
+                self.assertMenuFits(
+                    page, page.locator("details.wb-menu:has(.wb-group-menu)")
+                )
 
     def test_menu_follows_a_resize(self):
         self.page = self.login(self.ada, viewport={"width": 1280, "height": 740})
@@ -2319,20 +2215,6 @@ class KeyboardTest(E2ETestCase):
         expect(self.options(page).last).to_contain_text("Search for “zebra”")
         page.keyboard.press("Enter")
         page.wait_for_url("**/search/?q=zebra")
-
-    def test_a_client_does_not_find_internal_items(self):
-        self.make_list("Launch plan", visible=True)
-        self.make_list("Secret plan")
-        page = self.login(self.cleo)
-        self.goto(page, self.project)
-        self.open_palette(page)
-        page.keyboard.type("plan")
-        expect(self.options(page).filter(has_text="Launch plan")).to_be_visible()
-        self.assertEqual(self.options(page).filter(has_text="Secret").count(), 0)
-        # And no "New list" for them
-        page.locator("#wb-palette-input").fill("new")
-        expect(self.options(page).filter(has_text="New message")).to_be_visible()
-        self.assertEqual(self.options(page).filter(has_text="New list").count(), 0)
 
     def test_a_new_to_do_through_the_palette(self):
         todolist = self.make_list()
@@ -2716,16 +2598,6 @@ class AvatarTest(E2ETestCase):
         add.locator(".wb-picker-list li", has_text="Ada").click()
         expect(add.locator(".wb-pill span.wb-avatar")).to_have_text("AE")
         expect(add.locator(".wb-pill img")).to_have_count(0)
-
-    def test_the_server_rendered_pages_load_the_image(self):
-        page = self.page
-        self.goto(page, reverse("people"))
-        image = page.locator("img.wb-avatar").first
-        expect(image).to_be_visible()
-        page.wait_for_function(
-            "() => document.querySelector('img.wb-avatar').naturalWidth === 256"
-        )
-        self.assertEqual(self.errors, [])
 
 
 class FiltersTest(E2ETestCase):

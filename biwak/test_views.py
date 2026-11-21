@@ -81,6 +81,37 @@ class ViewsTest(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(Item.objects.get(pk=self.todo.pk).parent, self.shared)
 
+    def test_a_client_on_a_visible_list(self):
+        """The badge and the banner, none of staff's controls"""
+        ops.create_group(todolist=self.shared.todolist, title="Soon")
+        self.client.force_login(self.ada)
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertContains(response, "Hide from clients")
+        self.assertContains(response, "data-group-handle", count=1)
+        for present in ['<span class="wb-label">Edit</span>', "New group"]:
+            self.assertContains(response, present)
+        self.assertContains(response, "wb-group-menu")
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertContains(response, "wb-client-badge")
+        self.assertContains(response, "Clients can see this.")
+        for absent in [
+            "Hide from clients",
+            "Show to clients",
+            '<span class="wb-label">Edit</span>',
+            "data-group-handle",
+            "New group",
+            "wb-group-menu",
+        ]:
+            with self.subTest(absent=absent):
+                self.assertNotContains(response, absent)
+        # Their own to-do's page too
+        own = ops.create_todo(todolist=self.shared, title="Mine", creator=self.cleo)
+        response = self.client.get(own.get_absolute_url())
+        self.assertContains(response, "wb-client-badge")
+        self.assertContains(response, "Clients can see this")
+        self.assertNotContains(response, "Show to clients")
+
     def test_limited_project(self):
         limited = project("Salaries", members=[self.ada], all_access=False)
         self.client.force_login(self.bob)

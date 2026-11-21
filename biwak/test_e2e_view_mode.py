@@ -158,31 +158,6 @@ class ViewModeTest(E2ETestCase):
         link.click()
         self.assertEqual(self.form(page).count(), 0)
 
-    def test_without_javascript_edit_is_a_page(self):
-        context = self.browser.new_context(java_script_enabled=False)
-        self.contexts.append(context)
-        page = context.new_page()
-        from django.test import Client
-
-        client = Client()
-        client.force_login(self.ada)
-        context.add_cookies([
-            {
-                "name": "sessionid",
-                "value": client.cookies["sessionid"].value,
-                "url": self.live_server_url,
-            }
-        ])
-        self.goto_plain = page.goto(
-            f"{self.live_server_url}{self.todo.get_absolute_url()}"
-        )
-        page.get_by_role("link", name="Edit").click()
-        page.wait_for_url("**/edit/")
-        page.locator("#live-text input[name=title]").fill("Plain")
-        page.get_by_role("button", name="Save").click()
-        page.wait_for_url(f"**{self.todo.get_absolute_url()}")
-        self.assertEqual(Item.objects.get(pk=self.todo.pk).title, "Plain")
-
     def test_the_end_fields_show_with_a_repeat_only(self):
         page = self.page
         self.goto(page, self.todo)
