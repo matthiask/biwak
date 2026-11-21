@@ -161,6 +161,20 @@ def _staff_creates(request, kind):
         raise HttpError(403, _("Only staff create folders, docs and files."))
 
 
+def clean_title(title):
+    """The title without surrounding spaces; 400 if nothing is left"""
+    title = (title or "").strip()
+    if not title:
+        raise HttpError(400, _("The title can't be empty."))
+    return title
+
+
+def visible_in(folder, switch):
+    """Whether a new doc or file is visible to clients: in a folder it
+    follows the folder, at the top level the switch (``create_doc()``)"""
+    return folder.is_client_visible if folder else bool(switch)
+
+
 def resolve_for_new(project, visible, text, *, author):
     """Resolves ``@ada@example.org`` and ``@Ada`` in the text of an item
     which doesn't exist yet, for those who will see it"""
@@ -293,12 +307,11 @@ def message_create(request, project_id: int, data: MessageIn):
     """Posts a message and tells whom ``notify`` says. Clients' messages
     are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
     project = project_for(request, project_id)
-    if not data.title.strip():
-        raise HttpError(400, _("The title can't be empty."))
+    title = clean_title(data.title)
     visible = switch(request, data.visible_to_clients)
     item = ops.create_message(
         project=project,
-        title=data.title,
+        title=title,
         content=resolve_for_new(project, visible, data.content, author=request.user),
         category=_category(data.category_id),
         creator=request.user,
@@ -329,9 +342,7 @@ def message_update(request, message_id: int, data: MessagePatch):
     given = data.model_fields_set
     changes = {}
     if "title" in given:
-        if not data.title:
-            raise HttpError(400, _("The title can't be empty."))
-        changes["title"] = data.title
+        changes["title"] = clean_title(data.title)
     if "content" in given:
         changes["content"] = resolve_mentions(
             item, data.content or "", author=request.user
@@ -427,11 +438,10 @@ def folder_create(request, project_id: int, data: FolderIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.FOLDER)
-    if not data.title.strip():
-        raise HttpError(400, _("The title can't be empty."))
+    title = clean_title(data.title)
     item = ops.create_folder(
         project=project,
-        title=data.title,
+        title=title,
         creator=request.user,
         parent=folder,
         visible=data.visible_to_clients,
@@ -500,15 +510,13 @@ def doc_create(request, project_id: int, data: DocIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.DOC)
-    if not data.title.strip():
-        raise HttpError(400, _("The title can't be empty."))
+    title = clean_title(data.title)
     item = ops.create_doc(
         project=project,
-        title=data.title,
+        title=title,
         content=resolve_for_new(
             project,
-            data.visible_to_clients
-            or (folder is not None and folder.is_client_visible),
+            visible_in(folder, data.visible_to_clients),
             data.content,
             author=request.user,
         ),
@@ -553,9 +561,7 @@ def doc_update(request, doc_id: int, data: DocPatch):
     given = data.model_fields_set
     changes = {}
     if "title" in given:
-        if not data.title:
-            raise HttpError(400, _("The title can't be empty."))
-        changes["title"] = data.title
+        changes["title"] = clean_title(data.title)
     if "content" in given:
         changes["content"] = resolve_mentions(
             item, data.content or "", author=request.user
@@ -755,7 +761,12 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
         item = ops.create_upload(
             project=project,
             file=file,
-            description=data.description,
+            description=resolve_for_new(
+                project,
+                visible_in(folder, data.visible_to_clients),
+                data.description,
+                author=request.user,
+            ),
             creator=request.user,
             parent=folder,
             visible=data.visible_to_clients,
@@ -786,11 +797,11 @@ def file_update(request, file_id: int, data: FilePatch):
     given = data.model_fields_set
     changes = {}
     if "title" in given:
-        if not data.title:
-            raise HttpError(400, _("The title can't be empty."))
-        changes["title"] = data.title
+        changes["title"] = clean_title(data.title)
     if "description" in given:
-        changes["description"] = data.description or ""
+        changes["description"] = resolve_mentions(
+            item, data.description or "", author=request.user
+        )
     operations.update_upload(item, actor=request.user, **changes)
     return file_out(item_for(request, file_id, Kind.FILE), request.user)
 

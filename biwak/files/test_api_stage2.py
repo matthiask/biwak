@@ -920,3 +920,75 @@ class FileAPITest(APIFixture, TestCase):
             f"files/{self.shared_file.pk}/download/",
         ]:
             self.assertEqual(self.call(self.cleo, "get", path).status_code, 404)
+
+
+class ReviewFixesAPITest(APIFixture, TestCase):
+    def test_blank_titles_are_refused_when_patching(self):
+        for path in [
+            f"messages/{self.shared_message.pk}/",
+            f"docs/{self.shared_doc.pk}/",
+            f"files/{self.shared_file.pk}/",
+        ]:
+            for title in ["", "   "]:
+                with self.subTest(path=path, title=title):
+                    response = self.call(self.ada, "patch", path, {"title": title})
+                    self.assertEqual(response.status_code, 400)
+
+    def test_a_title_is_stripped_when_patching(self):
+        response = self.call(
+            self.ada, "patch", f"files/{self.shared_file.pk}/", {"title": " New "}
+        )
+        self.assertEqual(response.json()["title"], "New")
+
+    def test_files_resolve_mentions_in_descriptions(self):
+        response = self.client.post(
+            f"/api/v1/projects/{self.project.pk}/files/",
+            {
+                "file": SimpleUploadedFile("n.txt", b"x"),
+                "description": "Ask @bob@example.org",
+                "notify": "nobody",
+            },
+            headers=self.headers(self.ada),
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        mention = f"[@Bob Example](person:{self.bob.pk})"
+        self.assertEqual(response.json()["description"], f"Ask {mention}")
+        pk = response.json()["id"]
+        self.assertTrue(Mention.objects.filter(item_id=pk, user=self.bob).exists())
+        response = self.call(
+            self.ada, "patch", f"files/{pk}/", {"description": "Then @Bob"}
+        )
+        self.assertEqual(response.json()["description"], f"Then {mention}")
+
+    def test_a_doc_switch_inside_an_internal_folder_is_ignored(self):
+        """The doc stays internal, so its text is written for staff"""
+        response = self.call(
+            self.ada,
+            "post",
+            f"projects/{self.project.pk}/docs/",
+            {
+                "title": "D",
+                "content": "Hi @cleo@example.org",
+                "parent_id": self.private.pk,
+                "visible_to_clients": True,
+                "notify": "nobody",
+            },
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertFalse(response.json()["visible_to_clients"])
+        self.assertEqual(response.json()["content"], "Hi @cleo@example.org")
+
+    def test_a_doc_in_a_visible_folder_is_written_for_clients(self):
+        response = self.call(
+            self.ada,
+            "post",
+            f"projects/{self.project.pk}/docs/",
+            {
+                "title": "D",
+                "content": "Hi @cleo@example.org",
+                "parent_id": self.public.pk,
+                "notify": "nobody",
+            },
+        )
+        self.assertTrue(response.json()["visible_to_clients"])
+        self.assertIn(f"(person:{self.cleo.pk})", response.json()["content"])
