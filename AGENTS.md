@@ -178,15 +178,21 @@ What every part does the same way. Look at how the core does it
    `hourly_tasks` command; nothing runs in threads or on requests.
 10. **Mails** go out after the transaction commits
     (`transaction.on_commit`), never inside it.
-11. **Tests.** Django tests next to the code (`test_*.py`): the
+11. **Help.** The user documentation is in `docs/` (`/help/`,
+    `biwak/help.py`, `specs/help.md`). A part that adds or changes what
+    people see or do updates the chapter it belongs to (or adds one, in
+    `help.py`'s table), in the same branch: what it does now, short,
+    no plans. Shortcuts stay in `palette/_shortcuts.html`, the one list.
+12. **Tests.** Django tests next to the code (`test_*.py`): the
     operations, every page and endpoint as staff and as a client
     (including a client getting 404 for internal items), the CLI
     commands (`biwak/test_cli.py`). Made-up data from
     `biwak/test_utils.py`. Browser tests (`biwak/test_e2e.py`) only for
     JavaScript and htmx interactions (decided 2026-11-20).
-12. **Done** means: the spec's "Done when" list is true, the tests of
-    the apps you touched pass (`./runtests.sh biwak.<app> …`, plus the
-    browser tests of those areas), `uvx prek run --all-files` is clean,
+13. **Done** means: the spec's "Done when" list is true, the help says
+    what was built, the tests of the apps you touched pass
+    (`./runtests.sh biwak.<app> …`, plus the browser tests of those
+    areas), `uvx prek run --all-files` is clean,
     and the spec says what was built (a "Status" line) and any decisions
     made on the way. The full `./runtests.sh` is for large changes and
     integration; CI runs everything (decided 2026-11-21).
