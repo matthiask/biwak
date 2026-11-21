@@ -38,7 +38,7 @@
       {% endif %}
     </div>
   </div>
-  {% include "items/_client_banner.html" %}
+  {% include "items/_client_tab.html" %}
   <p class="text-body-secondary">
     {{ question.schedule_description|capfirst }},
     {{ question.time_of_day|time:"H:i" }} {{ question.time_zone }}
@@ -120,7 +120,6 @@
                       {% attachments_attrs item.project %}
                     >
                       {% csrf_token %}
-                      {% include "items/_client_banner.html" with item=answer.item %}
                       {% include "files/_attach_button.html" %}
                       {{ comment_form }}
                       <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>

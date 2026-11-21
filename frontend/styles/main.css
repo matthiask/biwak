@@ -844,6 +844,42 @@ h3,
   margin-bottom: 1rem;
 }
 
+/* The page of something clients can see (items/_client_tab.html): a slim
+   tab at the window's right edge, staying while scrolling, instead of a
+   banner taking a line of the page */
+.wb-client-tab {
+  position: fixed;
+  top: 5rem;
+  right: 0;
+  z-index: 1010;
+  writing-mode: vertical-rl;
+  padding: 0.75rem 0.3rem;
+  border-radius: var(--bs-border-radius) 0 0 var(--bs-border-radius);
+  background: var(--wb-client-bg);
+  color: var(--wb-client-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 0.15);
+}
+
+/* Room for the tab, so that it never covers the page's buttons */
+body:has(.wb-client-tab) .wb-main {
+  padding-right: calc(var(--bs-gutter-x, 1.5rem) * 0.5 + 1.75rem);
+}
+
+.wb-client-tab .bi {
+  writing-mode: horizontal-tb;
+  margin-bottom: 0.35rem;
+}
+
+@media print {
+  .wb-client-tab {
+    position: static;
+    writing-mode: horizontal-tb;
+  }
+}
+
 /* To-do lists: groups below each other, or as columns on the board */
 .wb-todolist {
   display: flex;

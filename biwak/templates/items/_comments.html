@@ -16,7 +16,6 @@
   {% endif %}
 </div>
 {% if timeline is not None %}{% include "items/_history_link.html" %}{% endif %}
-{% include "items/_client_banner.html" %}
 <form method="post" class="mt-2" {% attachments_attrs item.project %}>
   {% csrf_token %}
   <input type="hidden" name="form" value="comment">

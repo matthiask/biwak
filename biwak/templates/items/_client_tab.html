@@ -1,0 +1,13 @@
+{% load biwak i18n %}
+{% comment %}
+  On the page of something clients can see: a slim tab at the window's right
+  edge that stays while scrolling (like Basecamp's), instead of a banner
+  above the page and above the comment form. Forms in modals keep the banner
+  (items/_client_banner.html): the dialog covers the page.
+{% endcomment %}
+{% if item.is_client_visible %}
+  <div class="wb-client-tab" role="note">
+    {% icon "eye" %}
+    {% translate "Clients can see this." %}
+  </div>
+{% endif %}
