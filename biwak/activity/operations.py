@@ -67,6 +67,18 @@ def is_importing():
     return _importing.get()
 
 
+def read_by_acting(actor, *items):
+    """The person acted on the item (completed it, commented, reacted, …):
+    their notifications of it (or them) are read (``lantern.read()``, specs/lantern.md,
+    "Reading by acting"). Not for the importer, which acts as other people
+    (inside ``importing()``)."""
+    if is_importing():
+        return
+    from biwak.activity import lantern
+
+    lantern.read(actor, items=items)
+
+
 def record(*, actor, action, project, item=None, **data):
     """Writes the event; after the commit, ``notify()`` decides who's told
     (project events notify nobody). The event stores whether the item is

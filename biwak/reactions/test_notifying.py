@@ -90,11 +90,13 @@ class NotifyingTest(TestCase):
         self.assertEqual(self.told(), set())
 
     def test_one_mail_for_several_reactions(self):
+        # Before the reactions: commenting reads what Ada has unread
+        # about the item (specs/lantern.md, "Reading by acting")
+        comment = ops.add_comment(self.todo, author=self.ada, content="Mine")
+        Notification.objects.exclude(event__action="reacted").delete()
         self.react(self.bob, "👍", item=self.todo)
         self.react(self.bob, "🎉", item=self.todo)
         self.react(self.carl, "Thanks!", item=self.todo)
-        comment = ops.add_comment(self.todo, author=self.ada, content="Mine")
-        Notification.objects.exclude(event__action="reacted").delete()
         self.react(self.carl, "💯", comment=comment)
         self.assertEqual(self.send(minutes=1), 0)
         self.assertEqual(self.send(), 1)
