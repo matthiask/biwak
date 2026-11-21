@@ -188,8 +188,10 @@ LOCALE_PATHS = [BASE_DIR / "conf" / "locale"]
 DATABASES = {"default": django_database_url(env("DATABASE_URL", required=True))}
 DATABASES["default"] |= {
     "ATOMIC_REQUESTS": True,
-    "CONN_HEALTH_CHECKS": True,
-    "CONN_MAX_AGE": 300,
+    # Under ASGI (specs/collaboration.md) requests and websockets run in
+    # short-lived threads; persistent connections would stay open in
+    # ended threads until garbage-collected. pgbouncer pools instead.
+    "CONN_MAX_AGE": 0,
     "DISABLE_SERVER_SIDE_CURSORS": True,
 }
 
