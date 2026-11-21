@@ -511,16 +511,23 @@ class TileMenuTest(Fixture, TestCase):
                 "Edit…": reverse("folder_edit", args=[self.public.pk]) + back,
                 "Order…": reverse("folder_order", args=[self.public.pk]) + back,
                 "Move to…": reverse("item_move", args=[self.public.pk]) + back,
-                "Trash": reverse("item_trash", args=[self.public.pk]) + back,
+                "Move to trash": reverse("item_trash", args=[self.public.pk]) + back,
             },
+        )
+        # The visibility switch on top-level tiles (decided 2026-11-21): a
+        # question to show, one click to hide
+        self.assertIn(
+            f'action="{reverse("switch", args=[self.public.pk])}{back}"',
+            self.get(self.bob, root).content.decode(),
         )
         for item in [doc, self.root_secret]:
             self.assertEqual(
                 menus[item.pk],
                 {
                     "Subscribers…": reverse("item_subscribers", args=[item.pk]) + back,
+                    "Show to clients…": reverse("switch", args=[item.pk]) + back,
                     "Move to…": reverse("item_move", args=[item.pk]) + back,
-                    "Trash": reverse("item_trash", args=[item.pk]) + back,
+                    "Move to trash": reverse("item_trash", args=[item.pk]) + back,
                 },
             )
         # The same entries as on the item's page
@@ -547,7 +554,7 @@ class TileMenuTest(Fixture, TestCase):
             {
                 "Subscribers…": reverse("item_subscribers", args=[mine.pk]) + back,
                 "Move to…": reverse("item_move", args=[mine.pk]) + back,
-                "Trash": reverse("item_trash", args=[mine.pk]) + back,
+                "Move to trash": reverse("item_trash", args=[mine.pk]) + back,
             },
         )
         # A folder: no editing, no ordering, at the top level

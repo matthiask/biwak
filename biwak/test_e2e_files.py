@@ -182,7 +182,7 @@ class TilesTest(E2ETestCase):
             "Edit…",
             "Order…",
             "Move to…",
-            "Trash",
+            "Move to trash",
         ])
         self.assertTrue(page.url.endswith(self.root()))
         # Inside the window (menus.js places it)

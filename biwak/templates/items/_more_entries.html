@@ -34,6 +34,21 @@
     data-modal
   >{% translate "Order…" %}</a>
 {% endif %}
+{% if tile and item.has_switch and not request.user.is_client %}
+  {# On a tile the switch is here; an item's page has it below its content #}
+  {% if item.is_client_visible %}
+    <form method="post" action="{% url 'switch' item.pk %}{{ next_query }}">
+      {% csrf_token %}
+      <button type="submit" class="dropdown-item">{% translate "Hide from clients" %}</button>
+    </form>
+  {% else %}
+    <a
+      class="dropdown-item"
+      href="{% url 'switch' item.pk %}{{ next_query }}"
+      data-modal
+    >{% translate "Show to clients…" %}</a>
+  {% endif %}
+{% endif %}
 {% move_url item as move %}
 {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}
 {% if move and can_change or move and item.kind == "todo" %}
@@ -41,5 +56,9 @@
 {% endif %}
 {% if can_change and item.kind == "list" %}{% include "items/_archive_button.html" %}{% endif %}
 {% if can_change %}
-  <a class="dropdown-item" href="{% url 'item_trash' item.pk %}{{ next_query }}" data-modal>{% translate "Trash" %}</a>
+  <a
+    class="dropdown-item"
+    href="{% url 'item_trash' item.pk %}{{ next_query }}"
+    data-modal
+  >{% translate "Move to trash" %}</a>
 {% endif %}

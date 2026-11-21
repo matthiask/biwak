@@ -730,7 +730,7 @@ def switch(request, pk):
         return HttpResponse(status=400)
     if request.method == "GET":
         if item.is_client_visible:
-            return redirect(item)
+            return redirect(next_url(request) or item)
         title, intro = _show_texts(item)
         return form_response(
             request,
@@ -739,7 +739,7 @@ def switch(request, pk):
             intro=intro,
             help_page="clients",
             item=item,
-            cancel_url=item.get_absolute_url(),
+            cancel_url=next_url(request) or item.get_absolute_url(),
             submit_label=_("Show to clients"),
             destructive=True,
         )
@@ -748,7 +748,8 @@ def switch(request, pk):
     ops.set_visibility(
         item, visible=bool(request.POST.get("visible")), actor=request.user
     )
-    return redirect(item)
+    # Back to the grid when switched from a tile's menu
+    return redirect(next_url(request) or item)
 
 
 @require_POST

@@ -139,7 +139,7 @@ Help and Sign out. Staff also find the link to the administration.
 
 ## Trash
 
-Trashing an item (its "More" menu, then "Trash") moves it to the
+Trashing an item (its "More" menu, then "Move to trash") moves it to the
 project's trash, which you reach from the project's "More" menu. Trashed
 items are deleted for good after 30 days, with everything in them;
 until then "Restore" brings them back.

@@ -139,7 +139,7 @@ class TrashModalTest(ItemModalBase):
         # No level of its own: subscribing is the switch
         # (specs/notifications.md, "Levels")
         self.assertNotContains(response, f"/items/{self.todo.pk}/notifications/")
-        self.assertNotContains(response, "Move to trash")
+        self.assertContains(response, ">Move to trash<", count=1)
 
     def test_clients_may_not_trash_what_staff_made(self):
         self.client.force_login(self.cleo)

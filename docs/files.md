@@ -30,7 +30,8 @@ files". A folder's "More" menu has "Edit…" (its title and color); move things 
 folders with "Move to..." in their "More" menu. Every tile has the same
 menu behind its "…" button in the top-right corner (it shows when you
 point at the tile or reach it with Tab), so you can rename, move or trash
-something without opening it.
+something without opening it. Staff also show top-level folders, docs and
+files to clients there, or hide them again.
 
 **Folder colors:** a folder can have a color, chosen as a row of swatches
 in "New folder" and "Edit…" (staff; "None" is the default). Its tile and

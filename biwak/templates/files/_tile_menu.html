@@ -15,7 +15,7 @@
       {% icon "three-dots" %}
     </summary>
     <div class="dropdown-menu dropdown-menu-end">
-      {% include "items/_more_entries.html" with item=row can_change=row.can_move more_history=False next_query="?next="|add:path %}
+      {% include "items/_more_entries.html" with item=row can_change=row.can_move more_history=False next_query="?next="|add:path tile=True %}
     </div>
   </details>
 {% endwith %}

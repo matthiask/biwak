@@ -2079,12 +2079,12 @@ class ModalTest(E2ETestCase):
     def test_trashing_asks_first(self):
         page = self.page
         self.goto(page, self.todolist)
-        dialog = self.open_more(page, "Trash")
+        dialog = self.open_more(page, "Move to trash")
         expect(dialog.locator("h1")).to_have_text("Move to the trash?")
         dialog.get_by_role("button", name="Cancel").click()
         self.todolist.refresh_from_db()
         self.assertEqual(self.todolist.status, Status.ACTIVE)
-        dialog = self.open_more(page, "Trash")
+        dialog = self.open_more(page, "Move to trash")
         dialog.get_by_role("button", name="Move to the trash").click()
         page.wait_for_url(f"**{self.project.get_absolute_url()}")
         self.todolist.refresh_from_db()
