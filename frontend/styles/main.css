@@ -556,40 +556,19 @@ h3,
 }
 
 /* A quiet field on wide screens, the magnifier on phones */
+/* The navigation's search button opens the palette (keyboard.md): an icon
+   button like its neighbours, with the shortcut beside it where there's room */
 .wb-nav-search {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  background: var(--wb-surface);
+  gap: 0.4rem;
+}
+
+.wb-nav-search-hint {
+  padding: 0 0.3rem;
+  font-size: 0.75rem;
   color: var(--bs-secondary-color);
-  font-size: 0.875rem;
-  text-decoration: none;
-}
-
-.wb-nav-search:hover {
-  color: var(--bs-body-color);
   background: var(--bs-tertiary-bg);
-}
-
-.wb-nav-search-label {
-  white-space: nowrap;
-}
-
-@media (min-width: 576px) {
-  .wb-nav-search {
-    min-width: 12rem;
-  }
-
-  .wb-nav-search-hint {
-    margin-left: auto;
-    padding: 0 0.3rem;
-    font-size: 0.75rem;
-    color: var(--bs-secondary-color);
-    background: var(--bs-tertiary-bg);
-  }
 }
 
 .btn-quiet {

@@ -143,9 +143,9 @@ Status: built; "Reset" next to Save, shown while the preview differs from the
 stored choice (`frontend/appearance-preview.js`).
 
 **The navigation's search field** (decided 2026-11-21) becomes a button
-opening the palette: on wide screens it looks like a quiet field
-("Search or jump to…" with "Ctrl K", "⌘K" on Macs), on phones the
-magnifier icon. It's the visible way into the palette and search for
+opening the palette: the magnifier as a quiet button like its
+neighbours, on wide screens with "Ctrl K" ("⌘K" on Macs) beside it, no
+field-like box (decided 2026-11-21 after trying it). It's the visible way into the palette and search for
 people without the shortcut (phones); the palette's "Search for '…'"
 leads to the search page, which keeps its own field with the filters.
 Without JavaScript the button is a link to the search page.

@@ -1920,26 +1920,25 @@ class ModalTest(E2ETestCase):
 
 
 class NavSearchTest(E2ETestCase):
-    def check(self, page, *, label_visible):
+    def check(self, page, *, hint_visible):
         self.goto(page, self.project)
         button = page.locator("[data-palette-open]")
         expect(button).to_be_visible()
-        self.assertEqual(
-            page.locator(".wb-nav-search-label").is_visible(), label_visible
-        )
+        expect(button).to_have_accessible_name(re.compile(r"^Search or jump to…"))
+        self.assertEqual(page.locator(".wb-nav-search-hint").is_visible(), hint_visible)
         button.click()
         expect(page.locator("dialog.wb-dialog[open]")).to_be_visible()
         page.keyboard.press("Escape")
         expect(button).to_be_focused()
 
-    def test_desktop_shows_a_field_with_the_hint(self):
+    def test_desktop_shows_the_magnifier_with_the_hint(self):
         page = self.page
-        self.check(page, label_visible=True)
+        self.check(page, hint_visible=True)
         expect(page.locator(".wb-nav-search-hint")).to_have_text("Ctrl K")
 
     def test_phone_shows_the_magnifier(self):
         page = self.login(self.ada, viewport={"width": 360, "height": 740})
-        self.check(page, label_visible=False)
+        self.check(page, hint_visible=False)
         self.assertEqual(
             page.evaluate("document.documentElement.scrollWidth - window.innerWidth"),
             0,
