@@ -279,3 +279,8 @@ each a spec (or a section in one) before building it.
   side is Channels with pycrdt inside Django, not a Hocuspocus service
   (the spike, `specs/collaboration.md`). The doc locks are gone; docs can
   be made read-only by staff.
+- 2026-11-21: People have a mark: their profile image (cut to a 256 pixel
+  square, WebP, served only to whoever may know the person) or their
+  initials on a palette color chosen from the ID; a page per person with
+  the projects in common. Basecamp's images aren't imported (generated and
+  uploaded ones look alike) (`specs/people.md`).

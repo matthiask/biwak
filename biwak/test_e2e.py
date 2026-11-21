@@ -221,7 +221,8 @@ class TodosTest(E2ETestCase):
         rows = page.locator("[data-todo]")
         rows.filter(has_text="Write the brief").wait_for()
         self.assertEqual(page.evaluate("window.marker"), 1)
-        self.assertEqual(rows.first.locator(".wb-person").inner_text(), "Ada")
+        expect(rows.first.locator(".wb-person")).to_contain_text("Ada")
+        expect(rows.first.locator(".wb-person .wb-avatar")).to_have_count(1)
         self.assertIn("24. Dec", rows.first.inner_text())
         # Ready for the next one
         self.assertEqual(title.input_value(), "")
@@ -529,7 +530,7 @@ class TodoPageTest(E2ETestCase):
         textarea.press_sequentially("Hello @Example")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
-        names = listbox.locator("li span").all_inner_texts()
+        names = listbox.locator("li span:not(.wb-avatar)").all_inner_texts()
         self.assertEqual(sorted(names), ["Ada Example", "Bob Example", "Cleo Example"])
         # With the organization (specs/organizations.md)
         self.assertIn(
@@ -545,12 +546,14 @@ class TodoPageTest(E2ETestCase):
             "can't see internal items",
         )
         # The first available one is active, ArrowDown moves on
-        first = listbox.locator("li.active span").inner_text()
+        first = listbox.locator("li.active span:not(.wb-avatar)").inner_text()
         textarea.press("ArrowDown")
-        second = listbox.locator("li.active span").inner_text()
+        second = listbox.locator("li.active span:not(.wb-avatar)").inner_text()
         self.assertNotEqual(first, second)
         textarea.press("ArrowUp")
-        self.assertEqual(listbox.locator("li.active span").inner_text(), first)
+        self.assertEqual(
+            listbox.locator("li.active span:not(.wb-avatar)").inner_text(), first
+        )
         # Escape closes without leaving
         textarea.press("Escape")
         self.assertTrue(listbox.is_hidden())
@@ -584,7 +587,7 @@ class TodoPageTest(E2ETestCase):
         listbox.wait_for()
         # Ada is a member, Bob isn't: the client doesn't find him
         self.assertEqual(
-            sorted(listbox.locator("li span").all_inner_texts()),
+            sorted(listbox.locator("li span:not(.wb-avatar)").all_inner_texts()),
             ["Ada Example", "Cleo Example"],
         )
         self.assertNotIn("@example.org", listbox.inner_text())
@@ -627,7 +630,7 @@ class TodoPageTest(E2ETestCase):
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         self.assertEqual(
-            sorted(listbox.locator("li span").all_inner_texts()),
+            sorted(listbox.locator("li span:not(.wb-avatar)").all_inner_texts()),
             ["Ada Example", "Cleo Example"],
         )
         self.assertNotIn("@example.org", listbox.inner_text())
@@ -1077,6 +1080,7 @@ class CollabTest(E2ETestCase):
         expect(pages[0].locator(".cm-ySelectionInfo", has_text="Cleo")).to_have_count(1)
         expect(pages[2].locator("[data-collab-people]")).to_contain_text("Ada")
         expect(pages[2].locator("[data-collab-people]")).to_contain_text("Bob")
+        expect(pages[2].locator("[data-collab-people] .wb-avatar")).to_have_count(2)
         self.wait_for_stored(final, doc)
         self.assertFalse(self.errors)
 
@@ -2509,3 +2513,83 @@ class ProjectColorTest(E2ETestCase):
         expect(option).to_be_visible()
         expect(option.locator(".wb-project-dot")).to_be_visible()
         expect(option.locator(".wb-palette-hint")).to_contain_text("Website")
+
+
+class AvatarTest(E2ETestCase):
+    """The mark in what scripts build (specs/people.md): the assignee
+    picker, the @ list; the image loads through the permission-checked
+    view, with the session"""
+
+    def setUp(self):
+        super().setUp()
+        from biwak.accounts import operations as account_ops
+        from biwak.accounts.test_images import picture
+
+        account_ops.set_image(self.ada, picture(), actor=self.ada)
+
+    def test_the_assignee_picker_shows_marks(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator(".wb-picker-input").click()
+        options = add.locator(".wb-picker-list li")
+        ada = options.filter(has_text="Ada")
+        expect(ada.locator("img.wb-avatar")).to_have_count(1)
+        # Initials without an image
+        expect(options.filter(has_text="Bob").locator("span.wb-avatar")).to_have_text(
+            "BE"
+        )
+        ada.click()
+        pill = add.locator(".wb-pill")
+        expect(pill.locator("img.wb-avatar")).to_have_count(1)
+        page.wait_for_function(
+            "() => document.querySelector('.wb-pill img.wb-avatar').naturalWidth === 256"
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_the_mention_list_shows_marks(self):
+        self.make_list(todos=["Plan"])
+        page = self.page
+        self.goto(page, Item.objects.get(title="Plan"))
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.click()
+        textarea.press_sequentially("Hi @Example")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        ada = listbox.locator("li", has_text="Ada")
+        expect(ada.locator("img.wb-avatar")).to_have_count(1)
+        expect(
+            listbox.locator("li", has_text="Bob").locator("span.wb-avatar")
+        ).to_have_text("BE")
+        page.wait_for_function(
+            "() => document.querySelector('.wb-mentions img.wb-avatar').naturalWidth === 256"
+        )
+
+    def test_an_image_which_does_not_load_falls_back_to_the_initials(self):
+        """The script lists the image URL of everybody; where the view
+        answers 404 (someone the viewer may not know, here a file gone) the
+        initials take its place"""
+        from django.core.files.storage import default_storage
+
+        default_storage.delete(self.ada.image)
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator(".wb-picker-input").click()
+        add.locator(".wb-picker-list li", has_text="Ada").click()
+        expect(add.locator(".wb-pill span.wb-avatar")).to_have_text("AE")
+        expect(add.locator(".wb-pill img")).to_have_count(0)
+
+    def test_the_server_rendered_pages_load_the_image(self):
+        page = self.page
+        self.goto(page, reverse("people"))
+        image = page.locator("img.wb-avatar").first
+        expect(image).to_be_visible()
+        page.wait_for_function(
+            "() => document.querySelector('img.wb-avatar').naturalWidth === 256"
+        )
+        self.assertEqual(self.errors, [])

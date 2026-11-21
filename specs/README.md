@@ -47,7 +47,7 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | built (branch `collaboration`, merged into `main` 2026-11-21, not deployed) | everything | strong |
-| `people.md` | 1: profile images, the person's page | next once organizations is merged | `organizations.md` | cheaper, review the image's visibility |
+| `people.md` | 1: profile images, the person's page | built 2026-11-21 (branch `people`) | `organizations.md` | cheaper, review the image's visibility |
 | `people.md` | 2: choosing from drawn images | later | stage 1, the drawings | cheaper |
 
 `todos.md` stage 3, `projects-overview.md` and `glance.md` touch
