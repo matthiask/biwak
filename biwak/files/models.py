@@ -49,10 +49,35 @@ def content_type_for(name):
     return mimetypes.guess_type(name)[0] or "application/octet-stream"
 
 
+# The stored name is shortened to this many bytes (file systems allow 255
+# bytes, and the folder's key and the path need room); the shown name is
+# the full one (``Attachment.name``)
+STORAGE_NAME_BYTES = 100
+
+
+def storage_name(filename):
+    """The name a file is stored under: ASCII-safe characters of the name
+    and its extension, at most ``STORAGE_NAME_BYTES`` bytes long, never
+    empty ("file" for names of only symbols). Files already stored keep
+    their names."""
+    stem, dot, extension = str(filename).rpartition(".")
+    if not dot:
+        stem, extension = extension, ""
+    stem = _unsafe.sub("", "_".join(stem.split()))
+    extension = _unsafe.sub("", extension)[:20].encode()[:20].decode()
+    stem = stem.strip("._")
+    room = STORAGE_NAME_BYTES - len(extension.encode()) - (1 if extension else 0)
+    stem = stem.encode()[:room].decode(errors="ignore") or "file"
+    return f"{stem}.{extension}" if extension else stem
+
+
+_unsafe = re.compile(r"[^-\w.]")
+
+
 def attachment_path(attachment, filename):
     """files/<project>/<key>/<name>: names never collide, paths can't be
     guessed"""
-    return f"files/{attachment.project_id}/{attachment.key}/{filename}"
+    return f"files/{attachment.project_id}/{attachment.key}/{storage_name(filename)}"
 
 
 class AttachmentQuerySet(models.QuerySet):
@@ -141,7 +166,8 @@ def delete_file(sender, instance, **kwargs):
 
 def version_path(version, filename):
     """files/<project>/<key>/<name>, like attachments"""
-    return f"files/{version.upload.item.project_id}/{new_key()}/{filename}"
+    project_id = version.upload.item.project_id
+    return f"files/{project_id}/{new_key()}/{storage_name(filename)}"
 
 
 class FileVersion(models.Model):
