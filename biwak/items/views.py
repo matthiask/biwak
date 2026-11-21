@@ -1,5 +1,3 @@
-import datetime as dt
-
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import BadRequest, PermissionDenied
@@ -445,7 +443,6 @@ def todo(request, pk):
             "is_subscribed": is_subscribed(request.user, item),
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),
-            "today": dt.date.today(),
             "previous": _previous(request, todo),
         },
     )
