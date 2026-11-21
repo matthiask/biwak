@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -22,11 +23,12 @@ from django.utils.translation import gettext as _
 from biwak.accounts.models import MailDelivery, NotificationLevel, User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Notification
-from biwak.activity.notify import can_see, effective_level
+from biwak.activity.notify import can_see, item_levels
 from biwak.activity.operations import is_subscribed
+from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
 from biwak.inbound.tokens import reply_to
-from biwak.items.models import Comment, Kind
+from biwak.items.models import Comment, Item, Kind
 
 
 logger = logging.getLogger(__name__)
@@ -66,10 +68,6 @@ def unsubscribe_url(user, item):
 
 
 # What the mails show --------------------------------------------------------
-
-
-def absolute(url):
-    return settings.BASE_URL + url
 
 
 def host():
@@ -235,7 +233,7 @@ def _item(item, user):
             "text": todo.notes,
             "todo": todo,
             "assignees": ", ".join(str(a) for a in todo.assignees.all()),
-            "list": item.parent,
+            "list": mentions.plain(item.parent.title, item.parent),
         }
     elif item.kind == Kind.LIST:
         context["text"] = item.todolist.description
@@ -254,22 +252,34 @@ def _send(message, pks):
         message.send()
     except Exception:
         logger.exception("Sending a notification mail failed")
-        Notification.objects.filter(pk__in=pks).update(sent_at=None)
+        failed = Notification.objects.filter(pk__in=pks)
+        # Unsent again, except where a newer unsent one carries the event
+        # (one per person and event)
+        failed.filter(
+            Exists(
+                Notification.objects.filter(
+                    user=OuterRef("user"), event=OuterRef("event"), sent_at=None
+                )
+            )
+        ).delete()
+        failed.update(sent_at=None)
 
 
 def _deliverable(notifications, user):
     """Those the person may still get: the item visible to them now (which
     excludes the inactive), their level not "nothing" (it may have changed
-    since)"""
-    result = []
-    for notification in notifications:
-        item = notification.event.item
-        if item is None or not can_see(user, item):
-            continue
-        if effective_level(user, item) == NotificationLevel.NOTHING:
-            continue
-        result.append(notification)
-    return result
+    since). The same number of queries for any number of items."""
+    items = {n.event.item_id: n.event.item for n in notifications if n.event.item}
+    visible = set(
+        Item.objects.visible_to(user).filter(pk__in=items).values_list("pk", flat=True)
+    )
+    levels = item_levels(user, [items[pk] for pk in visible])
+    return [
+        notification
+        for notification in notifications
+        if notification.event.item_id in visible
+        and levels[notification.event.item_id] != NotificationLevel.NOTHING
+    ]
 
 
 def _claim(pks, now):
@@ -285,42 +295,78 @@ def _claim(pks, now):
     return claimed
 
 
+def build_mail(user, *, subject, template, context, from_name="Biwak", headers=None):
+    """A mail to the person, plain text and HTML (``template`` plus ``.txt``
+    and ``.html``), from ``"from_name" <DEFAULT_FROM_EMAIL>``, with a
+    ``Message-ID`` (unless ``headers`` bring one) and ``Auto-Submitted``.
+    The templates' ``can_reply`` says whether it has a ``Reply-To``."""
+    headers = {
+        "Message-ID": make_msgid(domain=host()),
+        "Auto-Submitted": "auto-generated",
+    } | (headers or {})
+    context = context | {"can_reply": "Reply-To" in headers}
+    message = EmailMultiAlternatives(
+        subject,
+        render_to_string(f"{template}.txt", context),
+        sender(from_name),
+        [user.email],
+        headers=headers,
+    )
+    message.attach_alternative(
+        render_to_string(f"{template}.html", context), "text/html"
+    )
+    return message
+
+
+def unsubscribe_headers(url, *, one_click=True):
+    """``List-Unsubscribe``, with ``List-Unsubscribe-Post`` (RFC 8058) when
+    a POST to the URL unsubscribes"""
+    headers = {"List-Unsubscribe": f"<{url}>"}
+    if one_click:
+        headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+    return headers
+
+
 def item_mail(user, item, notifications):
-    """One mail about one item, threaded per item"""
+    """One mail about one item, threaded per item; None when there's nothing
+    left to say (reactions to comments deleted since)"""
     entries = _entries(notifications, user)
+    if not entries:
+        return None
     context = _item(item, user) | {
         "user": user,
         "entries": entries,
         "settings_url": absolute(reverse("notification_settings")),
     }
-    subject = f"[{item.project}] {context['title']}"
-    actor = entries[-1]["event"].actor
     thread = f"<item-{item.pk}@{host()}>"
-    headers = {
-        "Message-ID": make_msgid(domain=host()),
-        "In-Reply-To": thread,
-        "References": thread,
-        "List-Unsubscribe": f"<{context['unsubscribe_url']}>",
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        "Auto-Submitted": "auto-generated",
-    } | (reply_to(user, item) if item.is_commentable else {})
-    # The mail says so only when replying works
-    context["can_reply"] = "Reply-To" in headers
-    message = EmailMultiAlternatives(
-        subject,
-        render_to_string("mails/notification.txt", context),
-        sender(_("%(name)s (Biwak)") % {"name": actor}),
-        [user.email],
-        headers=headers,
+    return build_mail(
+        user,
+        subject=_("[%(project)s] %(title)s") % context,
+        template="mails/notification",
+        context=context,
+        from_name=_("%(name)s (Biwak)") % {"name": entries[-1]["event"].actor},
+        headers={"In-Reply-To": thread, "References": thread}
+        | unsubscribe_headers(context["unsubscribe_url"])
+        | (reply_to(user, item) if item.is_commentable else {}),
     )
-    message.attach_alternative(
-        render_to_string("mails/notification.html", context), "text/html"
-    )
-    return message
 
 
-def digest_mail(user, notifications, *, day):
-    """The day's notifications, grouped by project and item"""
+def digest_heading(notifications):
+    """ "What happened on 19. November 2026", or the days it covers when
+    there's more than one (after a downtime, or switching to digests)"""
+    days = sorted({timezone.localdate(n.created_at) for n in notifications})
+    first, last = date_format(days[0], "j. F Y"), date_format(days[-1], "j. F Y")
+    if first == last:
+        return _("What happened on %(day)s") % {"day": first}
+    return _("What happened from %(first)s to %(last)s") % {
+        "first": first,
+        "last": last,
+    }
+
+
+def digest_mail(user, notifications):
+    """The notifications before today, grouped by project and item; None
+    when there's nothing left to say"""
     notifications = sorted(
         notifications,
         key=lambda n: (
@@ -332,55 +378,61 @@ def digest_mail(user, notifications, *, day):
     projects = []
     for project, by_project in groupby(notifications, lambda n: n.event.item.project):
         items = [
-            _item(item, user) | {"entries": _entries(list(by_item), user)}
+            _item(item, user) | {"entries": entries}
             for item, by_item in groupby(by_project, lambda n: n.event.item)
+            if (entries := _entries(list(by_item), user))
         ]
-        projects.append({"project": project, "items": items})
+        if items:
+            projects.append({"project": project, "items": items})
+    if not projects:
+        return None
     context = {
         "user": user,
-        "day": day,
+        "heading": digest_heading(notifications),
         "projects": projects,
         "settings_url": absolute(reverse("notification_settings")),
     }
-    message = EmailMultiAlternatives(
-        _("[Biwak] What happened on %(day)s") % {"day": date_format(day, "j. F Y")},
-        render_to_string("mails/digest.txt", context),
-        sender("Biwak"),
-        [user.email],
-        headers={
-            "Message-ID": make_msgid(domain=host()),
-            # No one-click unsubscribing from everything: the settings page
-            "List-Unsubscribe": f"<{context['settings_url']}>",
-            "Auto-Submitted": "auto-generated",
-        },
+    return build_mail(
+        user,
+        subject=_("[Biwak] %(heading)s") % context,
+        template="mails/digest",
+        context=context,
+        # No one-click unsubscribing from everything: the settings page
+        headers=unsubscribe_headers(context["settings_url"], one_click=False),
     )
-    message.attach_alternative(
-        render_to_string("mails/digest.html", context), "text/html"
-    )
-    return message
 
 
 def _mail(user, pks, now, build):
     """Claims the notifications, drops those the person mustn't get any
-    more, builds the mail and sends it after the commit"""
-    with transaction.atomic():
-        claimed = _claim(pks, now)
-        if not claimed:
-            return False
-        deliverable = _deliverable(claimed, user)
-        # Never sent: gone
-        Notification.objects.filter(
-            pk__in={n.pk for n in claimed} - {n.pk for n in deliverable}
-        ).delete()
-        if not deliverable:
-            return False
+    more, builds the mail and sends it after the commit. A mail which can't
+    be built is logged and rolled back: its notifications stay unsent, and
+    the others go out."""
+    try:
+        with transaction.atomic():
+            return _prepare(user, pks, now, build)
+    except Exception:
+        logger.exception("Building a notification mail failed")
+        return False
+
+
+def _prepare(user, pks, now, build):
+    claimed = _claim(pks, now)
+    if not claimed:
+        return False
+    deliverable = _deliverable(claimed, user)
+    message = None
+    if deliverable:
         with (
             translation.override(user.language or settings.LANGUAGE_CODE),
             mentions.reading_as(user),
         ):
             message = build(deliverable)
-        sent = [n.pk for n in deliverable]
-        transaction.on_commit(lambda: _send(message, sent))
+    sent = [n.pk for n in deliverable] if message else []
+    # Never sent: gone
+    Notification.objects.filter(pk__in={n.pk for n in claimed} - set(sent)).delete()
+    if message is None:
+        return False
+    transaction.on_commit(lambda: _send(message, sent))
     return True
 
 
@@ -416,7 +468,6 @@ def send_mails(*, now=None):
     local = timezone.localtime(now)
     if local.time() >= DIGEST_AT:
         midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
-        day = (midnight - dt.timedelta(days=1)).date()
         digests = {}
         for pk, user_id in unsent.filter(
             user__mail_delivery=MailDelivery.DIGEST, created_at__lt=midnight
@@ -429,8 +480,6 @@ def send_mails(*, now=None):
                 user,
                 pks,
                 now,
-                lambda notifications, user=user: digest_mail(
-                    user, notifications, day=day
-                ),
+                lambda notifications, user=user: digest_mail(user, notifications),
             )
     return count

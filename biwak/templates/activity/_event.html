@@ -29,7 +29,8 @@
   {% translate "moved" %}
   {% include "activity/_subject.html" %}
   {# Only staff: the list's name may be internal #}
-  {% if event.data.to and not what and not request.user.is_client %}{% translate "to" %} {{ event.data.to }}{% endif %}
+  {% if event.data.to and not what and not request.user.is_client %}{% translate "to" %}
+    {{ event.data.to|title_text }}{% endif %}
 {% elif event.action == "visibility_changed" %}
   {% if what %}
     {% translate "changed the visibility of" %} {{ what }}

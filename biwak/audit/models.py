@@ -6,14 +6,6 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 
-class LoggedActionQuerySet(models.QuerySet):
-    def for_model(self, model):
-        return self.filter(table_name=model._meta.db_table)
-
-    def for_instance(self, instance):
-        return self.for_model(type(instance)).filter(row_data__id=str(instance.pk))
-
-
 def audit_user_id(user_name):
     match = re.search(r"^user-([0-9]+)-", user_name or "")
     return int(match.groups()[0]) if match else None
@@ -36,8 +28,6 @@ class LoggedAction(models.Model):
     action = models.CharField(max_length=1, choices=ACTION_TYPES)
     row_data = HStoreField(null=True)
     changed_fields = HStoreField(null=True)
-
-    objects = LoggedActionQuerySet.as_manager()
 
     class Meta:
         managed = False

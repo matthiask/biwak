@@ -99,8 +99,12 @@ Built (`biwak/activity/history.py`, `views.py`, `api.py`):
 first, complete) for every kind of item; the to-do page links to it. It
 tracks the title, the list, the effective visibility, the status; notes,
 group, start and due dates, completing and reopening and the assignees of
-to-dos; descriptions of lists, content of messages and docs. Texts are a
-line diff with one line of context. Positions and timestamps are ignored.
+to-dos; descriptions of lists, content of messages and docs; the content
+of check-in answers, the schedule, first date, time of day, time zone,
+pausing and the people asked of questions (2026-11-21). The parent is
+"List" for to-dos and "Folder" for docs, files and folders ("another
+folder" when the viewer can't see it). Texts are a line diff with one
+line of context. Positions and timestamps are ignored.
 `audit_user_id()` gives the person, otherwise the audit's name (a job).
 
 Decisions (proposed by the building agent, confirmed 2026-11-20):

@@ -4,7 +4,7 @@ unsubscribing from mails (specs/feed.md, specs/notifications.md)"""
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import BadRequest, PermissionDenied
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,7 +18,7 @@ from biwak.accounts.models import MailDelivery, NotificationLevel, User
 from biwak.activity import feed as feed_module, history, mentions
 from biwak.activity.mails import read_unsubscribe_token
 from biwak.activity.models import Action, LevelOverride
-from biwak.activity.notify import can_see, effective_level
+from biwak.activity.notify import can_see, level_choices
 from biwak.activity.operations import (
     set_level_override,
     set_notification_settings,
@@ -27,6 +27,7 @@ from biwak.activity.operations import (
 from biwak.forms import Form, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
+from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
 
@@ -238,12 +239,19 @@ def notification_settings(request):
         .filter(pk__in=[o.item_id for o in overrides if o.item_id])
         .values_list("pk", flat=True)
     )
+    # Projects one has left: their overrides stay, but aren't shown
+    projects = set(
+        Project.objects
+        .accessible_to(request.user)
+        .filter(pk__in=[o.project_id for o in overrides if o.project_id])
+        .values_list("pk", flat=True)
+    )
     return render(
         request,
         "activity/notification_settings.html",
         {
             "form": form,
-            "project_overrides": [o for o in overrides if o.project_id],
+            "project_overrides": [o for o in overrides if o.project_id in projects],
             "item_overrides": [o for o in overrides if o.item_id in visible],
         },
     )
@@ -253,19 +261,8 @@ def _level(request):
     """The level posted, None for the person's default"""
     level = request.POST.get("level") or None
     if level is not None and level not in NotificationLevel.values:
-        raise Http404
+        raise BadRequest("Invalid level.")
     return level
-
-
-def level_choices(default):
-    return [
-        (
-            "",
-            gettext("As usual (%(level)s)")
-            % {"level": NotificationLevel(default).label},
-        ),
-        *NotificationLevel.choices,
-    ]
 
 
 @never_cache
@@ -296,16 +293,6 @@ def item_notifications(request, pk):
     item = item_for(request, pk)
     set_level_override(request.user, _level(request), item=item)
     return redirect(next_url(request) or item)
-
-
-def item_level_context(user, item):
-    """For the form next to the subscribe button"""
-    override = LevelOverride.objects.filter(user=user, item=item).first()
-    default = effective_level(user, item.parent, project=item.project)
-    return {
-        "level": override.level if override else "",
-        "level_choices": level_choices(default),
-    }
 
 
 @login_not_required

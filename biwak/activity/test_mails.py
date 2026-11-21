@@ -9,12 +9,13 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
-from biwak.activity import mentions
+from biwak.activity import mails as mails_module, mentions
 from biwak.activity.mails import send_mails, unsubscribe_token
 from biwak.activity.models import Action, Notification, Subscription
 from biwak.activity.operations import record, subscribe
 from biwak.files import attachments
 from biwak.items import operations as ops
+from biwak.reactions.operations import add_reaction
 from biwak.test_utils import person, project
 
 
@@ -138,6 +139,26 @@ class MailsTest(TestCase):
         self.assertTrue(Notification.objects.filter(sent_at__isnull=True).exists())
         self.assertEqual(self.send(later), 1)
 
+    def test_failed_sending_with_a_newer_notification(self):
+        """The newer one carries the event (one unsent per person and
+        event)"""
+        self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="One"))
+        with self.captureOnCommitCallbacks() as callbacks:
+            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+        # Merged into the same event, Bob mentioned since
+        self.act(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=mentions.syntax(self.bob)
+            )
+        )
+        with (
+            patch("django.core.mail.EmailMultiAlternatives.send", side_effect=OSError),
+            self.assertLogs("biwak.activity.mails", "ERROR"),
+        ):
+            callbacks[0]()
+        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 1)
+
     def test_digest(self):
         self.bob.mail_delivery = MailDelivery.DIGEST
         self.bob.save()
@@ -171,6 +192,29 @@ class MailsTest(TestCase):
         self.assertEqual(message.extra_headers["Auto-Submitted"], "auto-generated")
         self.assertEqual(Notification.objects.filter(sent_at=None).count(), 1)
         self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 1, tzinfo=ZURICH)), 0)
+
+    def test_digest_of_several_days(self):
+        """After a downtime, or switching to digests: the subject names the
+        days it covers"""
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
+        Notification.objects.update(
+            created_at=dt.datetime(2026, 11, 17, 22, 0, tzinfo=ZURICH)
+        )
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Two"))
+        Notification.objects.filter(
+            sent_at=None, created_at__gt=dt.datetime(2026, 11, 18, tzinfo=ZURICH)
+        ).update(created_at=dt.datetime(2026, 11, 19, 9, 0, tzinfo=ZURICH))
+        self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 0, tzinfo=ZURICH)), 1)
+        message = mail.outbox[0]
+        self.assertEqual(
+            message.subject,
+            "[Biwak] What happened from 17. November 2026 to 19. November 2026",
+        )
+        self.assertIn(
+            "What happened from 17. November 2026 to 19. November 2026", message.body
+        )
 
     def test_sent_after_the_commit(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
@@ -240,12 +284,71 @@ class MailsTest(TestCase):
         self.assertIn(f"The [plan]({url})", bob.body)
         self.assertIn(f'href="{url}"', bob.alternatives[0].content)
 
+    def test_mentions_in_the_lists_title(self):
+        ops.update_list(
+            self.shared, actor=self.ada, title=f"For {mentions.syntax(self.bob)}"
+        )
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        self.send(timezone.now() + dt.timedelta(minutes=3))
+        message = mail.outbox[0]
+        self.assertIn("List: For @Bob Example", message.body)
+        self.assertIn("For @Bob Example", message.alternatives[0].content)
+        self.assertNotIn("person:", message.body + message.alternatives[0].content)
+
     def test_command(self):
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         Notification.objects.update(created_at=timezone.now() - dt.timedelta(minutes=3))
         with self.captureOnCommitCallbacks(execute=True):
             call_command("send_mails", verbosity=0)
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_one_failing_mail_stops_nobody_else(self):
+        """Logged, its notifications stay unsent for the next run"""
+        carl = person("Carl")
+        other = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
+        subscribe(carl, other)
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="One"))
+        self.act(lambda: ops.add_comment(other, author=self.ada, content="Two"))
+        real = mails_module.item_mail
+
+        def failing(user, item, notifications):
+            if user == self.bob:
+                raise RuntimeError("Broken")
+            return real(user, item, notifications)
+
+        later = timezone.now() + dt.timedelta(minutes=3)
+        with (
+            patch.object(mails_module, "item_mail", failing),
+            self.assertLogs("biwak.activity.mails", "ERROR"),
+        ):
+            self.assertEqual(self.send(later), 1)
+        self.assertEqual([m.to for m in mail.outbox], [[carl.email]])
+        self.assertTrue(
+            Notification.objects.filter(user=self.bob, sent_at=None).exists()
+        )
+        self.assertEqual(self.send(later), 1)
+        self.assertEqual(mail.outbox[1].to, [self.bob.email])
+
+    def test_nothing_left_to_say(self):
+        """Reactions to a comment deleted since: no mail, nothing breaks"""
+        comment = ops.add_comment(self.todo, author=self.bob, content="Hi")
+        self.act(lambda: add_reaction(self.ada, "👍", comment=comment))
+        comment.delete()
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=3)), 0)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(user=self.bob).exists())
+
+    def test_command_runs_check_ins_when_mails_fail(self):
+        with (
+            patch(
+                "biwak.activity.management.commands.send_mails.send_mails",
+                side_effect=RuntimeError,
+            ),
+            patch("biwak.checkins.operations.run") as run,
+            self.assertLogs("biwak.activity.management.commands.send_mails", "ERROR"),
+        ):
+            call_command("send_mails", verbosity=0)
+        run.assert_called_once()
 
     def test_unsubscribe(self):
         url = f"/unsubscribe/{unsubscribe_token(self.bob, self.todo)}/"

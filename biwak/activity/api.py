@@ -4,14 +4,14 @@ paginated. Notification settings and the @ list (specs/notifications.md,
 ``biwak notifications``)."""
 
 import datetime as dt
-from typing import Literal
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from ninja import Router, Schema
+from ninja import Field, Router, Schema
 from ninja.errors import HttpError
 
+from biwak.accounts.models import MailDelivery, NotificationLevel
 from biwak.activity import feed, history, mentions
 from biwak.activity.models import Action, LevelOverride
 from biwak.activity.operations import set_level_override, set_notification_settings
@@ -42,9 +42,11 @@ class EventOut(Schema):
     data: dict
     created_at: dt.datetime
     visible_to_clients: bool
-    # Comments and messages (created, edited): the start of the text as it
-    # is now (plain text), else empty
-    excerpt: str
+    excerpt: str = Field(
+        description="The start of the text as it is now, as plain text: the"
+        " comment's for comments, the message's for every other event of a"
+        " message; else empty"
+    )
 
 
 def event_out(event, user):
@@ -257,18 +259,15 @@ def item_history(request, item_id: int):
 
 notifications_router = Router(tags=["notifications"])
 
-Level = Literal["everything", "concerns_me", "nothing"]
-Delivery = Literal["each", "digest"]
-
 
 class SettingsOut(Schema):
-    level: Level
-    delivery: Delivery
+    level: NotificationLevel
+    delivery: MailDelivery
 
 
 class SettingsIn(Schema):
-    level: Level | None = None
-    delivery: Delivery | None = None
+    level: NotificationLevel | None = None
+    delivery: MailDelivery | None = None
 
 
 def settings_out(user):
@@ -290,17 +289,17 @@ def settings_update(request, data: SettingsIn):
 
 
 class OverrideIn(Schema):
-    level: Level
+    level: NotificationLevel
 
 
 class ProjectOverrideOut(Schema):
     project_id: int
-    level: Level | None
+    level: NotificationLevel | None
 
 
 class ItemOverrideOut(Schema):
     item_id: int
-    level: Level | None
+    level: NotificationLevel | None
 
 
 def _override(user, **target):

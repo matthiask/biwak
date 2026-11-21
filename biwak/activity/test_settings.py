@@ -81,6 +81,15 @@ class SettingsPagesTest(SettingsBase):
         self.assertContains(response, "Order the tent")
         self.assertNotContains(response, "Secret plan")
 
+    def test_settings_page_lists_accessible_projects_only(self):
+        """An override of a project one has left stays out of the page"""
+        set_level_override(self.bob, "nothing", project=self.project)
+        self.project.memberships.filter(user=self.bob).delete()
+        self.client.force_login(self.bob)
+        response = self.client.get("/accounts/notifications/")
+        self.assertNotContains(response, "Website")
+        self.assertNotContains(response, f"/projects/{self.project.pk}/")
+
     def test_project_override(self):
         url = f"/projects/{self.project.pk}/notifications/"
         for user in [self.ada, self.cleo]:
@@ -96,7 +105,7 @@ class SettingsPagesTest(SettingsBase):
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
                 self.assertEqual(
-                    self.client.post(url, {"level": "always"}).status_code, 404
+                    self.client.post(url, {"level": "always"}).status_code, 400
                 )
         # Linked from the project page's More menu, for everybody
         self.assertContains(self.client.get(self.project.get_absolute_url()), url)
@@ -127,6 +136,9 @@ class SettingsPagesTest(SettingsBase):
                 )
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
+                self.assertEqual(
+                    self.client.post(url, {"level": "always"}).status_code, 400
+                )
 
     def test_list_override_on_the_list_page(self):
         url = f"/items/{self.shared.pk}/notifications/"

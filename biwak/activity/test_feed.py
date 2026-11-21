@@ -175,6 +175,28 @@ class FeedViewsTest(FeedBase):
         self.assertContains(response, "Today")
         self.assertContains(response, "Bob")
 
+    def test_mentions_in_where_and_to(self):
+        """Lists' titles with mentions show them as @Name, not the syntax"""
+        mention = f"[@Bob Example](person:{self.bob.pk})"
+        todolist = ops.create_list(
+            project=self.project, title=f"For {mention}", creator=self.ada
+        )
+        # Merged: "2 to-dos in …"
+        ops.create_todo(todolist=todolist, title="Pack", creator=self.ada)
+        ops.create_todo(todolist=todolist, title="Go", creator=self.ada)
+        record(
+            actor=self.ada,
+            action=Action.MOVED,
+            project=self.project,
+            item=self.secret,
+            to=todolist.title,
+        )
+        self.client.force_login(self.ada)
+        response = self.client.get("/feed/")
+        self.assertContains(response, "in For @Bob Example")
+        self.assertRegex(response.content.decode(), r"to\s+For @Bob Example")
+        self.assertNotContains(response, "person:")
+
     def test_client_feed_has_no_internal_events(self):
         record(
             actor=self.ada,

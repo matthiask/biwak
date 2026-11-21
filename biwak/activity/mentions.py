@@ -21,7 +21,9 @@ from django.utils.translation import gettext as _
 
 from biwak.accounts.models import User
 from biwak.activity.models import Mention
+from biwak.activity.notify import people_who_see
 from biwak.activity.operations import subscribe
+from biwak.projects.models import knows_everybody
 
 
 MENTION = re.compile(r"\[@([^\]\n]*)\]\(person:(\d+)\)")
@@ -56,9 +58,8 @@ def reader():
 
 def known_to(people, project, person):
     """Those of ``people`` (a queryset) the person may learn about:
-    everybody for staff, the project's members for clients and for nobody
-    in particular (like ``Project.people_known_to()``)"""
-    if person is not None and person.is_authenticated and not person.is_client:
+    ``Project.people_known_to()`` for querysets"""
+    if knows_everybody(person):
         return people
     return people.filter(pk__in=project.memberships.values("user"))
 
@@ -72,22 +73,10 @@ def mentioned_ids(text):
 
 
 def mentionable_people(item):
-    """Active people who can see the item, the same rules as
-    ``Item.objects.visible_to()``: members of the project, all staff in
-    all-access projects, clients only if they're members and the item is
-    visible to clients"""
+    """Active people who can see the item (``notify.people_who_see()``):
+    members of the project, all staff in all-access projects, clients only
+    if they're members and the item is visible to clients"""
     return people_who_see(item.project, item.is_client_visible)
-
-
-def people_who_see(project, visible):
-    """The same for an item that doesn't exist yet"""
-    staff = models.Q(is_client=False)
-    if not project.is_all_access:
-        staff &= models.Q(memberships__project=project)
-    can_see = staff
-    if visible:
-        can_see |= models.Q(is_client=True, memberships__project=project)
-    return User.objects.active().filter(can_see).distinct()
 
 
 def visible_names(item, ids):

@@ -15,6 +15,7 @@ from django.utils.translation import gettext, ngettext
 
 from biwak import cursors
 from biwak.accounts.models import User
+from biwak.activity import mentions
 from biwak.activity.models import Action, Event
 from biwak.items.models import Comment, Kind, Message
 from biwak.projects.models import Project
@@ -113,9 +114,10 @@ EXCERPT_CHARS = 200
 
 def add_excerpts(events):
     """``event.excerpt`` (specs/glance.md): the text as it is now, for
-    events of comments (the comment's) and for the creating and editing of
-    messages (the message's), two queries at most for all events; empty if
-    the comment is gone. The events are the viewer's, so the items are
+    events of comments (the comment's) and for every other event of a
+    message (the message's: created, edited, archived and so on; decided
+    2026-11-20), two queries at most for all events;
+    empty if the comment is gone. The events are the viewer's, so the items are
     visible to them."""
     from biwak.templatetags.biwak import excerpt
 
@@ -204,20 +206,13 @@ class Entry:
         key = container(self.latest)
         return key[2]
 
-    @property
-    def is_client_visible(self):
-        return all(
-            e.is_client_visible and e.item and e.item.is_client_visible
-            for e in self.events
-        )
-
 
 def container(event):
     """What counts as "the same list or project": a to-do's list, otherwise
     the project; as (kind, id, name)"""
     item = event.item
     if item is not None and item.parent_id is not None:
-        return ("item", item.parent_id, item.parent.title)
+        return ("item", item.parent_id, mentions.plain(item.parent.title, item.parent))
     return ("project", event.project_id, event.project.name)
 
 
