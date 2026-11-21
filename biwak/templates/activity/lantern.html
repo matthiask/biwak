@@ -29,13 +29,13 @@
     {% if filtered %}<a href="{% url 'lantern' %}" class="btn btn-quiet">{% translate "Clear" %}</a>{% endif %}
   </form>
   <div>
-    {% if pinned_groups %}
-      <h2 class="h6 text-body-secondary">{% translate "Pinned" %}</h2>
-      {% include "activity/_lantern_groups.html" with groups=pinned_groups next=request.get_full_path %}
+    {% if bookmarked_groups %}
+      <h2 class="h6 text-body-secondary">{% translate "Bookmarked" %}</h2>
+      {% include "activity/_lantern_groups.html" with groups=bookmarked_groups next=request.get_full_path %}
       <hr>
     {% endif %}
     {% include "activity/_lantern_groups.html" with next=request.get_full_path %}
-    {% if not groups and not pinned_groups %}<p class="text-body-secondary">
+    {% if not groups and not bookmarked_groups %}<p class="text-body-secondary">
         {% translate "Nothing to tell you about." %}
       </p>{% endif %}
   </div>

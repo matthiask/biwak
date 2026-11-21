@@ -12,20 +12,20 @@
         {{ item|item_title }}
         {% client_badge item %}
       </a>
-      <form method="post" action="{% url 'lantern_pin' %}">
+      <form method="post" action="{% url 'lantern_bookmark' %}">
         {% csrf_token %}
         <input type="hidden" name="item" value="{{ item.pk }}">
         <input type="hidden" name="next" value="{{ next }}">
-        {% if item.is_pinned %}<input type="hidden" name="unpin" value="1">{% endif %}
+        {% if item.is_bookmarked %}<input type="hidden" name="remove" value="1">{% endif %}
         <button
           type="submit"
           class="btn btn-sm btn-quiet"
-          title="{% if item.is_pinned %}{% translate 'Unpin' %}{% else %}{% translate 'Pin to the top' %}{% endif %}"
+          title="{% if item.is_bookmarked %}{% translate 'Remove the bookmark' %}{% else %}{% translate 'Bookmark' %}{% endif %}"
         >
-          {% if item.is_pinned %}{% icon "pin-angle-fill" %}{% else %}{% icon "pin-angle" %}{% endif %}
+          {% if item.is_bookmarked %}{% icon "bookmark-fill" %}{% else %}{% icon "bookmark" %}{% endif %}
           <span
             class="visually-hidden"
-          >{% if item.is_pinned %}{% translate "Unpin" %}{% else %}{% translate "Pin to the top" %}{% endif %}</span>
+          >{% if item.is_bookmarked %}{% translate "Remove the bookmark" %}{% else %}{% translate "Bookmark" %}{% endif %}</span>
         </button>
       </form>
       <form

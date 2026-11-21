@@ -41,5 +41,5 @@ urlpatterns = [
     path("lantern/<int:pk>/", views.lantern_open, name="lantern_open"),
     path("lantern/read/", views.lantern_read, name="lantern_read"),
     path("lantern/unread/", views.lantern_unread, name="lantern_unread"),
-    path("lantern/pin/", views.lantern_pin, name="lantern_pin"),
+    path("lantern/bookmark/", views.lantern_bookmark, name="lantern_bookmark"),
 ]

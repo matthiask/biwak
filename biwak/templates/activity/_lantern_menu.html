@@ -10,10 +10,10 @@
       </form>
     {% endif %}
   </div>
-  {% if pinned_groups or unread_groups or read_groups %}
-    {% if pinned_groups %}
-      <h2 class="h6 small text-body-secondary mb-1">{% translate "Pinned" %}</h2>
-      {% include "activity/_lantern_groups.html" with groups=pinned_groups next="" %}
+  {% if bookmarked_groups or unread_groups or read_groups %}
+    {% if bookmarked_groups %}
+      <h2 class="h6 small text-body-secondary mb-1">{% translate "Bookmarked" %}</h2>
+      {% include "activity/_lantern_groups.html" with groups=bookmarked_groups next="" %}
       {% if unread_groups or read_groups %}<hr class="dropdown-divider">{% endif %}
     {% endif %}
     {% include "activity/_lantern_groups.html" with groups=unread_groups next="" %}

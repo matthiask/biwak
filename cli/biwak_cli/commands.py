@@ -1569,7 +1569,7 @@ def lantern(unread, mentions, read_item, read_all, limit, as_json):
             event["created_at"][:16].replace("T", " "),
             ("" if entry["read"] else "new")
             + (" @" if entry["mentioned"] else "")
-            + (" pinned" if entry["pinned"] else ""),
+            + (" bookmarked" if entry["bookmarked"] else ""),
             event["actor"]["short_name"],
             event["action"].replace("_", " "),
             str(item.get("id", "")),

@@ -1135,8 +1135,8 @@ class LiveTest(E2ETestCase):
         menu.get_by_role("button", name="Mark as read").click()
         expect(count).to_be_hidden()
         expect(menu.get_by_role("button", name="Mark as unread")).to_have_count(1)
-        menu.get_by_role("button", name="Pin to the top").click()
-        expect(menu).to_contain_text("Pinned")
+        menu.get_by_role("button", name="Bookmark", exact=True).click()
+        expect(menu).to_contain_text("Bookmarked")
         self.assertTrue(self.ada.bookmarks.filter(item=self.todo).exists())
         self.assertFalse(self.errors)
 

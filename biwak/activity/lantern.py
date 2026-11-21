@@ -98,8 +98,8 @@ def by_item(notifications):
     return result
 
 
-def pinned_items(user):
-    """The IDs of the items the person pinned: bookmarked (and seen now)"""
+def bookmarked_items(user):
+    """The IDs of the items the person bookmarked (and sees now)"""
     from biwak.bookmarks.models import Bookmark
 
     return set(
@@ -110,10 +110,10 @@ def pinned_items(user):
     )
 
 
-def pinned(user, items=None):
-    """The pinned items with notifications, each with its latest one, read
+def bookmarked(user, items=None):
+    """The bookmarked items with notifications, each with its latest one, read
     or not, newest first: ``[(item, [notification])]``"""
-    items = pinned_items(user) if items is None else items
+    items = bookmarked_items(user) if items is None else items
     if not items:
         return []
     latest = wanted(
@@ -128,15 +128,15 @@ def pinned(user, items=None):
     latest.sort(key=lambda n: (n.created_at, n.pk), reverse=True)
     groups = by_item(prepare(latest, user))
     for item, _entries in groups:
-        item.is_pinned = True
+        item.is_bookmarked = True
     return groups
 
 
 def menu(user):
-    """``(pinned groups, unread groups, read groups, more unread)`` for the
-    menu; the pinned items aren't in the others"""
-    items = pinned_items(user)
-    pins = pinned(user, items)
+    """``(bookmarked groups, unread groups, read groups, more unread)`` for
+    the menu; the bookmarked items aren't in the others"""
+    items = bookmarked_items(user)
+    marks = bookmarked(user, items)
     unread = wanted(
         list(
             notifications_for(user, unread=True).exclude(event__item__in=items)[
@@ -155,7 +155,7 @@ def menu(user):
     )
     prepare(unread[:MENU_UNREAD] + read, user)
     return (
-        pins,
+        marks,
         by_item(unread[:MENU_UNREAD]),
         by_item(read),
         len(unread) > MENU_UNREAD,
@@ -163,8 +163,8 @@ def menu(user):
 
 
 @transaction.atomic
-def pin(user, item):
-    """Pins the item's notifications to the top: bookmarks it"""
+def bookmark(user, item):
+    """Bookmarks the item: its notifications go to the top"""
     from biwak.bookmarks.operations import add_bookmark
 
     added = add_bookmark(user, item=item)
@@ -173,7 +173,7 @@ def pin(user, item):
 
 
 @transaction.atomic
-def unpin(user, item):
+def unbookmark(user, item):
     """Removes the bookmark"""
     from biwak.bookmarks.operations import remove_bookmark
 
@@ -228,10 +228,10 @@ def unread(user, *, item):
 
 def page(user, *, unread=None, mentions=False, before=None, size=50):
     """A page of the lantern page: ``(groups, cursor of the next page)``;
-    ``before`` the cursor of this page. The pinned items aren't in it
-    (``pinned()``)."""
+    ``before`` the cursor of this page. The bookmarked items aren't in
+    it (``bookmarked()``)."""
     notifications = notifications_for(user, unread=unread, mentions=mentions).exclude(
-        event__item__in=pinned_items(user)
+        event__item__in=bookmarked_items(user)
     )
     if before:
         at, pk = cursors.decode(before)

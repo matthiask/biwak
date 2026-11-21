@@ -380,9 +380,9 @@ def lantern(request):
         request,
         "activity/lantern.html",
         {
-            "pinned_groups": []
+            "bookmarked_groups": []
             if request.GET.get("before")
-            else lantern_module.pinned(request.user),
+            else lantern_module.bookmarked(request.user),
             "groups": groups,
             "older": older,
             "unread": unread,
@@ -395,12 +395,12 @@ def lantern(request):
 @never_cache
 def lantern_menu(request):
     """The menu's content (frontend/lantern.js fetches it when opened)"""
-    pinned, unread, read, more = lantern_module.menu(request.user)
+    bookmarked, unread, read, more = lantern_module.menu(request.user)
     return render(
         request,
         "activity/_lantern_menu.html",
         {
-            "pinned_groups": pinned,
+            "bookmarked_groups": bookmarked,
             "unread_groups": unread,
             "read_groups": read,
             "more_unread": more,
@@ -447,14 +447,14 @@ def lantern_unread(request):
 
 
 @require_POST
-def lantern_pin(request):
-    """Pins an item's notifications to the top (bookmarks it), or unpins
-    them (``unpin``: removes the bookmark)"""
+def lantern_bookmark(request):
+    """Bookmarks an item, its notifications at the top, or removes the
+    bookmark (``remove``)"""
     item = _lantern_item(request)
-    if request.POST.get("unpin"):
-        lantern_module.unpin(request.user, item)
+    if request.POST.get("remove"):
+        lantern_module.unbookmark(request.user, item)
     else:
-        lantern_module.pin(request.user, item)
+        lantern_module.bookmark(request.user, item)
     if request.headers.get("HX-Request"):
         return HttpResponse(status=204)
     return redirect(next_url(request) or "lantern")

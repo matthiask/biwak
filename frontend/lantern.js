@@ -1,6 +1,6 @@
 // The lantern's menu (specs/lantern.md): the number of unread notifications
 // on its button, the menu's content fetched when it opens, its buttons
-// (read, unread, pin) without leaving the page, and with the setting on a
+// (read, unread, bookmark) without leaving the page, and with the setting on a
 // dot on the tab's icon. frontend/live.js says when something changed
 // ("biwak:lantern"). Without JavaScript the menu links to the page.
 
@@ -86,7 +86,7 @@ if (menu) {
     updateCount()
     if (menu.open) load()
   })
-  // Reading, marking as unread and pinning stay in the menu
+  // Reading, marking as unread and bookmarking stay in the menu
   content.addEventListener("submit", async (event) => {
     const form = event.target
     event.preventDefault()

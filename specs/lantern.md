@@ -8,7 +8,7 @@ appear without reloading.
 
 **Status:** built (2026-11-21, branch `collaboration`, not merged): the
 lantern (`biwak/activity/lantern.py`, the menu, `/lantern/`, reading,
-pinning, mail delivery "none", the favicon dot, `GET /api/v1/lantern/`,
+bookmarking, mail delivery "none", the favicon dot, `GET /api/v1/lantern/`,
 `POST /api/v1/lantern/read/`, `biwak lantern`, CLI 0.21.0) and live
 updates (`biwak/live/`, `frontend/live.js`, `frontend/lantern.js`). How
 it was built and what was decided on the way: "Built" below; open
@@ -80,12 +80,14 @@ records, levels, `send_mails`), reactions.
   - `POST /api/v1/lantern/read/` (all, or by item);
   - `biwak lantern [--unread] [--read ITEM|--all]`.
 
-- **Pinning** (decided 2026-11-21): an entry can be pinned to the top.
-  Pinning bookmarks its item (the existing bookmarks, no new concept);
-  bookmarked items with notifications appear in a "Pinned" section at
-  the top of the menu and the page, read or not, with their latest
-  notification, until unpinned (which removes the bookmark). The
-  bookmarks page shows the same pins.
+- **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", decided
+  2026-11-21 too: pinned messages on the board keep "Pin"): an entry's
+  item can be bookmarked (the existing bookmarks, no new concept, the
+  bookmark icons `bookmark` and `bookmark-fill` used elsewhere);
+  bookmarked items with notifications appear in a "Bookmarked" section
+  at the top of the menu and the page, read or not, with their latest
+  notification, until the bookmark is removed. The bookmarks page shows
+  the same items.
 - **Mark as unread** per item (also in the menu, next to each entry),
   bringing the item's latest notification back to unread. Marked unread
   means no mail (decided 2026-11-21): a notification marked unread by
@@ -149,7 +151,7 @@ setup as `collaboration.md`).
   - the menu, the page, reading by following an entry and by marking;
   - the count updating live; the favicon dot with the setting on and
     not without it;
-  - pinning and unpinning (the bookmark follows), mark as unread;
+  - bookmarking and removing the bookmark, mark as unread;
   - mail delivery "none";
   - read notifications left out of mails and digests (a test for each);
   - a client never seeing a notification about something internal;
@@ -188,10 +190,12 @@ setup as `collaboration.md`).
   one doesn't see. The item pages read nothing (decided 2026-11-21; built
   first as reading when opened). "Mark as unread" brings the item's
   newest notification back.
-- **Pinning:** pinning bookmarks the item (`lantern.pin()`), unpinning
-  removes the bookmark; a bookmark made on the item's page pins it too.
-  Pinned items are in "Pinned" at the top (latest notification, read or
-  not) and not in the other sections.
+- **Bookmarking:** "Bookmark" and "Remove the bookmark" in the lantern
+  (`lantern.bookmark()`, `unbookmark()`, `POST /lantern/bookmark/`); a
+  bookmark made on the item's page counts too. Bookmarked items are in
+  "Bookmarked" at the top (latest notification, read or not) and not in
+  the other sections. The API's entries say `bookmarked` (was `pinned`,
+  never released).
 - **The menu:** `frontend/lantern.js` fetches the count
   (`/lantern/count/`) on every page and when told, the menu
   (`/lantern/menu/`) when opened; its buttons post without leaving the
@@ -242,8 +246,8 @@ setup as `collaboration.md`).
 - **Every ping about an item** goes through the same filter as
   `notify()`'s: removing a reaction pinged the tabs of everybody notified
   of it, also of a client who couldn't see the item anymore; now only who
-  sees it, clients only for events of the time they saw it. Pinning,
-  unpinning and marking unread pass their item too.
+  sees it, clients only for events of the time they saw it. Bookmarking,
+  removing the bookmark and marking unread pass their item too.
 - **Losing access doesn't depend on one message:** the websocket checks
   access again before passing on every announcement and ping (a few
   queries; announcements only go to the tabs showing the item, and are
@@ -260,11 +264,9 @@ setup as `collaboration.md`).
 
 ## Questions (built the way described meanwhile)
 
-- The wording of "No mails", "Pin to the top", "Changed meanwhile: …",
+- The wording of "No mails", "Changed meanwhile: …",
   "This isn’t here anymore: …", the entries ("Cleo Example reacted 👍",
   "You were mentioned.").
-- The lantern's pins and pinned messages (staff pin a message for
-  everybody) both say "pin"; another word for one of them?
 - The menu shows at most 100 unread notifications (the page has all):
   a value the spec didn't fix.
 

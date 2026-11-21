@@ -202,11 +202,11 @@ class ListingTest(LanternTestCase):
         self.comment(self.secret, "Two")
         self.comment(self.todo, "Three")
         self.assertEqual(self.items(self.bob), ["Order the tent", "Budget"])
-        _pinned, unread, read, more = lantern.menu(self.bob)
+        _bookmarked, unread, read, more = lantern.menu(self.bob)
         self.assertEqual([len(entries) for _item, entries in unread], [2, 1])
         self.assertEqual((read, more), ([], False))
         lantern.read(self.bob, item=self.todo)
-        _pinned, unread, read, _more = lantern.menu(self.bob)
+        _bookmarked, unread, read, _more = lantern.menu(self.bob)
         self.assertEqual([item.title for item, _e in unread], ["Budget"])
         self.assertEqual([item.title for item, _e in read], ["Order the tent"])
 
@@ -214,7 +214,7 @@ class ListingTest(LanternTestCase):
         for index in range(lantern.MENU_READ + 5):
             self.comment(self.todo, f"Comment {index}")
         lantern.read(self.bob)
-        _pinned, _unread, read, _more = lantern.menu(self.bob)
+        _bookmarked, _unread, read, _more = lantern.menu(self.bob)
         self.assertEqual(sum(len(entries) for _item, entries in read), 30)
 
     def test_filters(self):
@@ -471,44 +471,54 @@ class PagesTest(LanternTestCase):
         self.assertEqual(self.bob.mail_delivery, MailDelivery.NONE)
 
 
-class PinningTest(LanternTestCase):
-    def test_pinning_bookmarks_and_unpinning_removes_the_bookmark(self):
+class BookmarkingTest(LanternTestCase):
+    def test_bookmarking_and_removing_the_bookmark(self):
+        """ "Bookmark", not "Pin", in the lantern (decided 2026-11-21): the
+        items' bookmarks, "Bookmarked" at the top"""
         from biwak.bookmarks.models import Bookmark
 
         self.comment(self.todo, "One")
         self.comment(self.secret, "Two")
         lantern.read(self.bob, item=self.todo)
         self.client.force_login(self.bob)
-        response = self.client.post(reverse("lantern_pin"), {"item": self.todo.pk})
+        response = self.client.post(reverse("lantern_bookmark"), {"item": self.todo.pk})
         self.assertRedirects(response, reverse("lantern"))
         self.assertTrue(Bookmark.objects.filter(user=self.bob, item=self.todo).exists())
-        pinned, unread, read, _more = lantern.menu(self.bob)
+        bookmarked, unread, read, _more = lantern.menu(self.bob)
         # Read or not, with its latest notification, and only there
         self.assertEqual(
-            [(i.title, len(e)) for i, e in pinned], [("Order the tent", 1)]
+            [(i.title, len(e)) for i, e in bookmarked], [("Order the tent", 1)]
         )
         self.assertEqual([i.title for i, _e in unread], ["Budget"])
         self.assertEqual(read, [])
         page = self.client.get(reverse("lantern")).content.decode()
-        self.assertIn("Pinned", page)
-        self.assertIn("Unpin", page)
-        # Bookmarked on the item's page: pinned too
+        self.assertIn("Bookmarked", page)
+        self.assertIn("Remove the bookmark", page)
+        self.assertIn("bi-bookmark-fill", page)
+        self.assertNotIn("Pin", page)
+        # Bookmarked on the item's page: at the top too
         self.client.post(
             reverse("item_bookmark", args=[self.secret.pk]), {"bookmark": "1"}
         )
         self.assertEqual(
-            {i.title for i, _e in lantern.pinned(self.bob)},
+            {i.title for i, _e in lantern.bookmarked(self.bob)},
             {"Order the tent", "Budget"},
         )
-        self.client.post(reverse("lantern_pin"), {"item": self.todo.pk, "unpin": "1"})
+        self.client.post(
+            reverse("lantern_bookmark"), {"item": self.todo.pk, "remove": "1"}
+        )
         self.assertFalse(
             Bookmark.objects.filter(user=self.bob, item=self.todo).exists()
         )
-        self.assertEqual([i.title for i, _e in lantern.pinned(self.bob)], ["Budget"])
+        self.assertEqual(
+            [i.title for i, _e in lantern.bookmarked(self.bob)], ["Budget"]
+        )
 
-    def test_a_client_pins_only_what_she_sees(self):
+    def test_a_client_bookmarks_only_what_she_sees(self):
         self.client.force_login(self.cleo)
-        response = self.client.post(reverse("lantern_pin"), {"item": self.secret.pk})
+        response = self.client.post(
+            reverse("lantern_bookmark"), {"item": self.secret.pk}
+        )
         self.assertEqual(response.status_code, 404)
 
     def test_mark_as_unread_brings_the_latest_back(self):
@@ -612,11 +622,16 @@ class APITest(LanternTestCase):
     def test_list_as_staff_and_client(self):
         self.comment(self.todo, "Visible")
         self.comment(self.secret, f"Internal {mentions.syntax(self.bob)}")
-        lantern.pin(self.bob, self.todo)
+        lantern.bookmark(self.bob, self.todo)
         data = self.call("get", self.bob, "lantern/").json()
         self.assertEqual(
             [
-                (e["event"]["item"]["title"], e["read"], e["mentioned"], e["pinned"])
+                (
+                    e["event"]["item"]["title"],
+                    e["read"],
+                    e["mentioned"],
+                    e["bookmarked"],
+                )
                 for e in data["results"]
             ],
             [("Budget", False, True, False), ("Order the tent", False, False, True)],

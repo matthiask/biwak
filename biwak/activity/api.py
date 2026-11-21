@@ -405,7 +405,7 @@ class LanternEntryOut(Schema):
     read: bool
     created_at: dt.datetime
     mentioned: bool = Field(description="Whether you were mentioned")
-    pinned: bool = Field(description="Whether you pinned (bookmarked) the item")
+    bookmarked: bool = Field(description="Whether you bookmarked the item")
     event: EventOut
 
 
@@ -432,7 +432,7 @@ def lantern_list(
     ``mentions`` only those mentioning you. A page may hold fewer entries
     than asked for (items whose level is "nothing" now are left out)."""
     user = request.user
-    pinned = lantern.pinned_items(user)
+    bookmarked = lantern.bookmarked_items(user)
 
     def prepare(notifications):
         notifications[:] = lantern.wanted(notifications, user)
@@ -448,7 +448,7 @@ def lantern_list(
             "read": notification.read_at is not None,
             "created_at": notification.created_at,
             "mentioned": notification.mentioned,
-            "pinned": notification.event.item_id in pinned,
+            "bookmarked": notification.event.item_id in bookmarked,
             "event": event_out(notification.event, user),
         },
         prepare=prepare,
