@@ -179,6 +179,14 @@ The clients' amber is not in the palette: the client badge and banner
 always stand out. Stored as the name (`heather`, …), so changing a value
 never touches data.
 
+The page background takes a hint of the accent color (decided 2026-11-21):
+`color-mix(in oklab, var(--wb-accent-bar) 5%, #eeebe4)` in light and 12% of
+the bar into `#0e0d11` in dark (the dark bars are deep, so the share is
+larger), with the plain hex in an `@supports not (color-mix)` block as the fallback. Cards and fields keep their
+colors. The contrast test checks text, secondary text, links and fills
+against every accent's mixed background; for that the light secondary text
+went from 62% to 68% opacity (the plain stone had 4.2:1 already).
+
 ## Done when
 
 - Playwright: Ctrl+K and "/" open the palette; jumping by typing;

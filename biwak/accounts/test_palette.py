@@ -49,15 +49,72 @@ def _rgb(value):
     return tuple(int(value[i : i + 2], 16) for i in (1, 3, 5))
 
 
-def page_colors(mode):
-    """The page's and the cards' backgrounds"""
-    text = _theme_block(mode) + (
+def _page_text(mode):
+    return _theme_block(mode) + (
         declarations(':root,\n[data-bs-theme="light"]') if mode == "light" else ""
     )
-    return [
-        _rgb(re.search(name + r":\s*(#[0-9a-f]{3,6})", text).group(1))
-        for name in ["--bs-body-bg", "--wb-surface"]
-    ]
+
+
+def tinted_page(mode, bar):
+    """The page's background with its share of the accent's bar mixed in
+    (``color-mix(in oklab, var(--wb-accent-bar) N%, #base)``)"""
+    share, base = re.search(
+        r"--bs-body-bg:\s*color-mix\(in oklab,\s*var\(--wb-accent-bar\)\s*"
+        r"(\d+)%,\s*(#[0-9a-f]{6})\)",
+        _page_text(mode),
+    ).groups()
+    return oklab_mix(bar, _rgb(base), int(share) / 100)
+
+
+def _linear(value):
+    value /= 255
+    return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+
+
+def _srgb(value):
+    value = 12.92 * value if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
+    return round(min(max(value, 0), 1) * 255)
+
+
+def _to_oklab(color):
+    r, g, b = map(_linear, color)
+    lc = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    return (
+        0.2104542553 * lc + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * lc - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * lc + 0.7827717662 * m - 0.8086757660 * s,
+    )
+
+
+def _from_oklab(lab):
+    L, a, b = lab
+    lc = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    return tuple(
+        _srgb(value)
+        for value in (
+            4.0767416621 * lc - 3.3077115913 * m + 0.2309699292 * s,
+            -1.2684380046 * lc + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * lc - 0.7034186147 * m + 1.7076147010 * s,
+        )
+    )
+
+
+def oklab_mix(color, base, share):
+    """``color-mix(in oklab, color share, base)``"""
+    a, b = _to_oklab(color), _to_oklab(base)
+    return _from_oklab(tuple(share * x + (1 - share) * y for x, y in zip(a, b)))
+
+
+def page_colors(mode, bar=None):
+    """The page's and the cards' backgrounds; the page's with the accent
+    whose bar color is given"""
+    text = _page_text(mode)
+    surface = _rgb(re.search(r"--wb-surface:\s*(#[0-9a-f]{3,6})", text).group(1))
+    return [tinted_page(mode, bar), surface]
 
 
 def luminance(color):
@@ -127,10 +184,31 @@ class PaletteContrastTest(SimpleTestCase):
             ratio, minimum, f"{mode} {name}: {label} has {ratio:.2f}, needs {minimum}"
         )
 
+    def test_the_text_has_contrast_on_every_tinted_page(self):
+        for mode in ["light", "dark"]:
+            text = _page_text(mode)
+            body = _rgb(re.search(r"--bs-body-color:\s*(#[0-9a-f]{6})", text).group(1))
+            alpha = float(
+                re.search(
+                    r"--bs-secondary-color:\s*rgba\([^)]*,\s*([\d.]+)\)", text
+                ).group(1)
+            )
+            for name, shade in tokens(mode).items():
+                for page in page_colors(mode, shade["bar"]):
+                    self.check(mode, name, "text on the page", body, page, 4.5)
+                    self.check(
+                        mode,
+                        name,
+                        "secondary text on the page",
+                        over(alpha, body, page),
+                        page,
+                        4.5,
+                    )
+
     def test_contrast(self):
         for mode in ["light", "dark"]:
-            pages = page_colors(mode)
             for name, shade in tokens(mode).items():
+                pages = page_colors(mode, shade["bar"])
                 # Text on buttons and checked boxes
                 for key in ["fill", "fill-hover"]:
                     self.check(mode, name, f"white on {key}", WHITE, shade[key], 4.5)
