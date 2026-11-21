@@ -95,9 +95,9 @@ class TodoFieldsForm(RepeatForm):
         widget=forms.CheckboxSelectMultiple,
     )
 
-    def __init__(self, *args, item, **kwargs):
+    def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["assignees"].queryset = ops.assignable_people(item)
+        self.fields["assignees"].queryset = ops.assignable_people(item, user)
 
 
 class TodoForm(TodoFieldsForm):
@@ -180,7 +180,7 @@ def todolist(request, pk):
     by_group = {None: []} | {g.pk: [] for g in groups}
     for todo in open_todos:
         by_group[todo.todo.group_id].append(todo)
-    form = TodoForm(request.POST or None, item=item)
+    form = TodoForm(request.POST or None, item=item, user=request.user)
     if request.method == "POST":
         if not form.is_valid():
             if wants_fragment(request):
@@ -401,6 +401,7 @@ def todo(request, pk):
             "recurrence_count": todo.recurrence_count,
         },
         item=item,
+        user=request.user,
     )
     mentions_url = reverse("mentionable", args=[item.pk])
     for field in ["title", "notes"]:

@@ -286,16 +286,18 @@ def add_comment(item, *, author, content):
     return comment
 
 
-def assignable_people(item):
+def assignable_people(item, by=None):
     """Who can be assigned to the to-do: the active people who can see it
     (specs/access.md, specs/todos.md), the project's members first. Staff
     of all-access projects whether they're members or not (assigning makes
     them members), clients only members and only on visible to-dos. The
     one rule for the forms, the API and the next to-do of a recurring
-    one."""
+    one. Clients (``by``) assign members only: they don't learn about other
+    staff."""
     project = item.project
     members = Q(memberships__project=project)
-    staff = Q(is_client=False) & (Q() if project.is_all_access else members)
+    everybody = project.is_all_access and not (by and by.is_client)
+    staff = Q(is_client=False) & (Q() if everybody else members)
     who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
     return (
         User.objects
@@ -311,11 +313,11 @@ def assignable_people(item):
     )
 
 
-def _assignable(item):
+def _assignable(item, by=None):
     """``{pk: is_member}`` of ``assignable_people()``, with the stored
     visibility, not what the object knew when it was loaded"""
     item.refresh_from_db(fields=["is_client_visible"])
-    return dict(assignable_people(item).values_list("pk", "is_member"))
+    return dict(assignable_people(item, by).values_list("pk", "is_member"))
 
 
 @transaction.atomic
@@ -325,7 +327,7 @@ def assign(item, users, *, actor):
     (decided 2026-11-21). Returns those newly assigned."""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
-    allowed = _assignable(item) if users else {}
+    allowed = _assignable(item, actor) if users else {}
     for user in users:
         if user.pk not in allowed:
             raise ValueError(f"{user} can't be assigned to {item}")

@@ -339,6 +339,31 @@ class VisibilityTest(TestCase):
         self.assertTrue(self.project.is_member(dan))
         self.assertTrue(Event.objects.filter(action=Action.ADDED).exists())
 
+    def test_clients_assign_members_only(self):
+        """Clients learn about the project's members only: other staff
+        aren't offered to them, nor taken from them"""
+        dan = person("Dan")
+        todolist = ops.create_list(
+            project=self.project, title="L", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        self.assertEqual(
+            list(ops.assignable_people(todo, self.cleo)), [self.ada, self.cleo]
+        )
+        self.client.force_login(self.cleo)
+        self.assertNotContains(self.client.get(todo.get_absolute_url()), "Dan")
+        _token, secret = APIToken.create_for(user=self.cleo, title="T", access="write")
+        response = self.client.patch(
+            f"/api/v1/todos/{todo.pk}/",
+            {"assignees": [dan.pk]},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertEqual(response.status_code, 400)
+        with self.assertRaises(ValueError):
+            ops.assign(todo, [dan], actor=self.cleo)
+        self.assertFalse(self.project.is_member(dan))
+
     def test_limited_projects_assign_members_only(self):
         dan = person("Dan")
         limited = project("HR", members=[self.ada], all_access=False)

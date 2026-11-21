@@ -331,11 +331,11 @@ def todo_list_completed(
     )
 
 
-def _assignees(item, ids):
+def _assignees(request, item, ids):
     """People who can see the to-do, by ID; 400 for anybody else"""
     if ids is None:
         return None
-    people = list(ops.assignable_people(item).filter(pk__in=ids))
+    people = list(ops.assignable_people(item, request.user).filter(pk__in=ids))
     if len(people) != len(set(ids)):
         bad_request(_("Only people who can see the to-do can be assigned."))
     return people
@@ -380,7 +380,7 @@ def todo_create(request, list_id: int, data: TodoIn):
         group=group,
         notes=resolve_mentions(item, data.notes, author=request.user),
         due_on=data.due_on,
-        assignees=_assignees(item, data.assignees),
+        assignees=_assignees(request, item, data.assignees),
         recurrence=_rule(data.recurrence, data.due_on),
         recurrence_ends_on=data.recurrence_ends_on,
         recurrence_count=_count(data.recurrence_count),
@@ -483,7 +483,7 @@ def todo_update(request, todo_id: int, data: TodoPatch):
     for field in {"title", "notes"} & changes.keys():
         changes[field] = resolve_mentions(item, changes[field], author=request.user)
     if "assignees" in given:
-        changes["assignees"] = _assignees(item, data.assignees or [])
+        changes["assignees"] = _assignees(request, item, data.assignees or [])
     if "recurrence" in given:
         anchor = changes.get("due_on", item.todo.due_on)
         changes["recurrence"] = _rule(data.recurrence, anchor)
