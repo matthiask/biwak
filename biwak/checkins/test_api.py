@@ -1,4 +1,5 @@
 import datetime as dt
+from unittest import mock
 
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Mention
@@ -260,6 +261,15 @@ class QuestionsAPITest(APITestCase):
             ).status_code,
             404,
         )
+
+    def test_update_is_one_transaction(self):
+        with mock.patch.object(ops, "pause", side_effect=ValueError("No")):
+            response = self.patch(
+                self.ada, f"checkins/{self.item.pk}/", {"title": "New", "paused": True}
+            )
+        self.assertEqual(response.status_code, 400)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, "How are you?")
 
     def test_pause_and_resume(self):
         data = self.patch(

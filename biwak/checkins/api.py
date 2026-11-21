@@ -5,6 +5,7 @@ web interface."""
 import datetime as dt
 from typing import Literal
 
+from django.db import transaction
 from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -211,9 +212,11 @@ def question_update(request, question_id: int, data: QuestionPatch):
     if "people" in changes:
         changes["people"] = _people(changes["people"])
     try:
-        ops.update_question(item, actor=request.user, **changes)
-        if data.paused is not None:
-            (ops.pause if data.paused else ops.resume)(item, actor=request.user)
+        # All or nothing: the changes and pausing or resuming
+        with transaction.atomic():
+            ops.update_question(item, actor=request.user, **changes)
+            if data.paused is not None:
+                (ops.pause if data.paused else ops.resume)(item, actor=request.user)
     except ValueError as exc:
         bad_request(str(exc))
     return question_out(request, question_for(request, question_id))
