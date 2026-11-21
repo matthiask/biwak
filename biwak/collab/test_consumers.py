@@ -281,7 +281,7 @@ class ConsumerTest(TransactionTestCase):
     def on_commit(self, function, *args, **kwargs):
         """Runs the operation; its messages to the editors go out when it
         commits"""
-        function(*args, **kwargs)
+        return function(*args, **kwargs)
 
     async def test_hiding_the_doc_closes_the_clients_session(self):
         ada = await self.connect(self.ada, self.shared)
@@ -591,6 +591,84 @@ class ConsumerTest(TransactionTestCase):
         # The API changed the text as it saw it, what Ada typed stays
         self.assertEqual(str(ada), "Live Agenda\n- one\n")
         self.assertEqual(await self.content(self.shared), "Live Agenda\n- one\n")
+
+    async def test_a_tick_arrives_in_the_editors_and_keeps_what_was_typed(self):
+        from biwak import checklists
+
+        doc = await database_sync_to_async(ops.create_doc)(
+            project=self.project,
+            title="Packing",
+            content="Packing\n\n- [ ] tent\n- [ ] rope\n",
+            creator=self.ada,
+            visible=True,
+        )
+        ada = await self.connect(self.ada, doc)
+        bob = await self.connect(self.bob, doc)
+        # Typed, not stored yet: the tick goes against the live text
+        with patch.multiple(consumers, SAVE_AFTER=30, SAVE_AT_LEAST_EVERY=60):
+            await ada.type(len("Packing\n"), "Trip\n")
+            await bob.drain()
+            live_text = "Packing\nTrip\n\n- [ ] tent\n- [ ] rope\n"
+            self.assertEqual(str(bob), live_text)
+            self.assertEqual(
+                await self.content(doc), "Packing\n\n- [ ] tent\n- [ ] rope\n"
+            )
+            # Ada's own editor is open too: the tick isn't refused
+            text = await database_sync_to_async(self.on_commit)(
+                ops.tick,
+                doc,
+                actor=self.ada,
+                index=1,
+                version=checklists.text_hash(live_text),
+                checked=True,
+            )
+            await ada.drain()
+            await bob.drain()
+        expected = "Packing\nTrip\n\n- [ ] tent\n- [x] rope\n"
+        self.assertEqual(text, expected)
+        self.assertEqual(str(ada), expected)
+        self.assertEqual(str(bob), expected)
+        self.assertEqual(await self.content(doc), expected)
+
+    async def test_a_tick_of_the_stored_text_while_more_was_typed(self):
+        """The page shows the stored text, the editors have more: the same
+        box is ticked and the typing stays"""
+        from biwak import checklists
+
+        doc = await database_sync_to_async(ops.create_doc)(
+            project=self.project,
+            title="Packing",
+            content="- [ ] tent\n",
+            creator=self.ada,
+            visible=True,
+        )
+        ada = await self.connect(self.ada, doc)
+        with patch.multiple(consumers, SAVE_AFTER=30, SAVE_AT_LEAST_EVERY=60):
+            await ada.type(0, "- [ ] new\n")
+            await ada.drain()
+            await database_sync_to_async(self.on_commit)(
+                ops.tick,
+                doc,
+                actor=self.bob,
+                index=0,
+                version=checklists.text_hash("- [ ] tent\n"),
+            )
+            await ada.drain()
+        self.assertEqual(str(ada), "- [ ] new\n- [x] tent\n")
+        self.assertEqual(await self.content(doc), "- [ ] new\n- [x] tent\n")
+
+    async def test_a_tick_of_an_old_text_is_refused(self):
+        doc = await database_sync_to_async(ops.create_doc)(
+            project=self.project,
+            title="Packing",
+            content="- [ ] tent\n",
+            creator=self.ada,
+            visible=True,
+        )
+        with self.assertRaises(ops.ChecklistConflict):
+            await database_sync_to_async(self.on_commit)(
+                ops.tick, doc, actor=self.bob, index=0, version="old"
+            )
 
     # Awareness: cursors and names -------------------------------------------
 

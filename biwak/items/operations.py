@@ -348,7 +348,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
     like any other. ``version`` is ``checklists.text_hash()`` of the text
     the person saw: ``ChecklistConflict`` if it changed since,
     ``editing.BeingEdited`` while anybody has the item's edit form open (the
-    person's own too), ``PermissionDenied`` unless they may change that text,
+    person's own too; docs never wait, their editors are live), ``PermissionDenied`` unless they may change that text,
     ``checklists.NoCheckbox`` if there's no such box. Returns the new text."""
     from biwak.checkins import operations as checkin_ops
     from biwak.files import operations as file_ops
@@ -371,6 +371,12 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
     name = TEXT_FIELDS[item.kind][0]
     getattr(item, name).__class__.objects.select_for_update().get(item=item)
     item = Item.objects.select_related(name).get(pk=item.pk)
+    if item.kind == Kind.DOC:
+        # Docs are edited live: ticks go into the open editors
+        # (specs/editor.md, "Docs: ticks never wait")
+        return file_ops.tick_doc(
+            item, actor=actor, index=index, version=version, checked=checked
+        )
     if users := editing.holders(item):
         raise editing.BeingEdited(users)
     text = text_of(item)
@@ -382,8 +388,6 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
             update_todo(item, actor=actor, notes=new)
         case Kind.MESSAGE:
             file_ops.update_message(item, actor=actor, content=new)
-        case Kind.DOC:
-            file_ops.update_doc(item, actor=actor, content=new)
         case Kind.FILE:
             file_ops.update_upload(item, actor=actor, description=new)
         case Kind.ANSWER:
