@@ -29,31 +29,39 @@
 - The items in the .wb-facts line on to dos isn't vertically aligned properly.
 - It should be clear which lantern items have already been viewed.
 - The lantern can use more horizonal space with all the content it has.
-- My counter now says 7 unread (which is correct), but I only have 5 entries (because of grouping). So, it might instead say how many entries I have?
-- There seems to be a double divider between unread and read lantern items, that looks like a bug.
+- my counter now says 7 unread (which is correct), but i only have 5 entries (because of grouping). so, it might instead say how many entries i have?
+- there seems to be a double divider between unread and read lantern items, that looks like a bug.
 
 
-## Round 3
+## round 3
 
-Ad hoc.
+ad hoc.
 
-## Round 4
+## round 4
 
-Spec: `ui-round-4.md` (built 2026-11-21).
+spec: `ui-round-4.md` (built 2026-11-21).
 
-- "Sign out" in menu. It's understood that this only does the log out here.
-- Instead of the help text, add a button to sign out immediately on the sessions card. "Sign out here" or something like that.
-- The to do checkbox is misaligned.
-- "Add a to-do" and "New group" should be on the same line.
-- "Show to clients" is a potentially destructive action and needs a warning modal. One click isn't enough for revealing potentially damaging information.
-- The grouping in the activity log is nice. It could go further I think, and for example group conversation happening within an hour or more and show them together. Stop collapsing items, I'd like to try going without <details> here. The individual items themselves should be indented though in groups.
-- todo_grouping shouldn't be a model field but a restored filter for the filter form. The ordering can go into the filter as well.
+- "sign out" in menu. it's understood that this only does the log out here.
+- instead of the help text, add a button to sign out immediately on the sessions card. "sign out here" or something like that.
+- the to do checkbox is misaligned.
+- "add a to-do" and "new group" should be on the same line.
+- "show to clients" is a potentially destructive action and needs a warning modal. one click isn't enough for revealing potentially damaging information.
+- the grouping in the activity log is nice. it could go further i think, and for example group conversation happening within an hour or more and show them together. stop collapsing items, i'd like to try going without <details> here. the individual items themselves should be indented though in groups.
+- todo_grouping shouldn't be a model field but a restored filter for the filter form. the ordering can go into the filter as well.
 
-## Round 5
+## round 5
 
-Spec: `ui-round-5.md`.
+spec: `ui-round-5.md`.
 
-- The detail view of to dos could use more cards, for example for title and description. It seems a bit unstructured now (even though it isn't). Same for docs.
-- The project to do list can also be linked from the project overview since that actually exists and makes sense. To Dos by list, or to dos by due date.
-- The "Reset filters" button shouldn't sit at the bottom of the line, centered with the dropdowns would look better.
-- Basecamp has a "assigned BY me" view, would it make sense to have something like this as well?
+- the detail view of to dos could use more cards, for example for title and description. it seems a bit unstructured now (even though it isn't). same for docs.
+- the project to do list can also be linked from the project overview since that actually exists and makes sense. to dos by list, or to dos by due date.
+- the "reset filters" button shouldn't sit at the bottom of the line, centered with the dropdowns would look better.
+- basecamp has a "assigned by me" view, would it make sense to have something like this as well?
+
+## round 6
+
+Spec: `ui-round-6.md`.
+
+- "add someone" on the people page of a project: the list can get really long really quickly. we need an autocomplete widget here, i think the best candidate is in workbench (good to copy since it's my code even though gpl)
+- i'd expect a invite flow on the people page where i can invite (multiple) people, assign them to organizations, send out the mails and add them to projects directly (all to the same set of projects, if the projects aren't the same i'll start another round of invites). are we seeing invitations anywhere?
+- On a to do item, I'm confused by notifications vs. subscribers. When I'm subscribing, I get notifications. The notification setting is important on projects or list, but on a single issue, when I'm a subscriber, I will be notified.

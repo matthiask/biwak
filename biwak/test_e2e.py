@@ -1356,6 +1356,22 @@ class LiveTest(E2ETestCase):
         expect(ada.locator("#live-header")).to_contain_text("Bob")
         self.assertFalse(self.errors)
 
+    def test_the_timelines_lines_appear_and_go(self):
+        ada = self.open(self.ada, self.todo, page=self.page)
+        bob = self.open(self.bob, self.todo)
+        lines = ada.locator("#live-comments .wb-timeline-line")
+        expect(lines).to_have_count(0)
+        bob.get_by_role("button", name="Complete").click()
+        bob.wait_for_load_state()
+        expect(lines).to_have_count(1)
+        expect(lines).to_contain_text("Bob completed this")
+        expect(lines).to_have_class(re.compile("wb-live-new"))
+        # Reopened soon after: the completing is gone (feed.md)
+        bob.get_by_role("button", name="Reopen").click()
+        bob.wait_for_load_state()
+        expect(lines).to_have_count(0)
+        self.assertFalse(self.errors)
+
     def test_a_row_slides_in_and_the_lantern_dot_pulses(self):
         ada = self.login(self.ada)
         self.watch_classes(ada)
@@ -2294,12 +2310,12 @@ class KeyboardTest(E2ETestCase):
                 )
             )
 
-    def test_g_then_t_goes_to_my_todos(self):
+    def test_g_then_t_goes_to_the_todos(self):
         page = self.page
         self.goto(page, self.project)
         page.keyboard.press("g")
         page.keyboard.press("t")
-        page.wait_for_url("**/todos/?assignee=me")
+        page.wait_for_url("**/todos/")
         page.keyboard.press("g")
         page.keyboard.press("p")
         page.wait_for_url(f"{self.live_server_url}/projects/")
@@ -2377,7 +2393,7 @@ class KeyboardTest(E2ETestCase):
         # The actions still run from the palette
         page.keyboard.type("go to to-dos")
         page.keyboard.press("Enter")
-        page.wait_for_url("**/todos/?assignee=me")
+        page.wait_for_url("**/todos/")
 
     def test_the_theme_action_and_the_stored_theme(self):
         page = self.page
@@ -2654,14 +2670,14 @@ class FiltersTest(E2ETestCase):
         page.wait_for_url("**/todos/?assignee=nobody&state=completed")
         expect(page.locator("#id_state")).to_have_value("completed")
         # Opening the page by another link uses its own query
-        self.goto(page, "/todos/?assignee=me")
-        expect(page.locator("#id_assignee")).to_have_value("me")
+        self.goto(page, "/todos/?assignee=anybody")
+        expect(page.locator("#id_assignee")).to_have_value("anybody")
         # Reset clears what is stored
         page.get_by_role("link", name="Reset filters").click()
         page.wait_for_url("**/todos/")
         self.goto(page, "/")
         expect(page.locator(".wb-nav-links a", has_text="To-dos")).to_have_attribute(
-            "href", "/todos/?assignee=me"
+            "href", "/todos/"
         )
         # The palette's link too
         self.goto(page, "/todos/?assignee=nobody")

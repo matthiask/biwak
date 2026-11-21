@@ -23,8 +23,9 @@ from biwak.items.models import Comment, Item, Kind, Status
 from biwak.live import announce as live
 
 
-# Events which tell nobody: pinning (specs/files.md)
-SILENT = {Action.PINNED, Action.UNPINNED}
+# Events which tell nobody: pinning (specs/files.md), taking somebody off a
+# to-do (specs/timeline.md: the timeline and the feed say it)
+SILENT = {Action.PINNED, Action.UNPINNED, Action.UNASSIGNED}
 
 
 def can_see(user, item):

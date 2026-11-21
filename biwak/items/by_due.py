@@ -70,13 +70,24 @@ class FilterForm(Form):
             projects = projects.filter(pk=project.pk)
         else:
             self.fields["project"].queryset = projects
-        choices = [("", _("Anybody")), ("me", _("Me")), ("nobody", _("Nobody"))]
+        # The empty choice is the page's default (decided 2026-11-21): across
+        # projects mine (everybody's can get huge), in a project anybody's
+        if project is None:
+            choices = [("", _("Me")), (ANYBODY, _("Anybody"))]
+        else:
+            choices = [("", _("Anybody")), ("me", _("Me"))]
+        choices.append(("nobody", _("Nobody active")))
         if not user.is_client:
             people = User.objects.active().filter(memberships__project__in=projects)
             choices += [(str(p.pk), display_name(p, user)) for p in people.distinct()]
         self.fields["assignee"].choices = choices
         if user.is_client:
             del self.fields["visible"]
+
+
+# The filters "Reset filters" resets
+ANYBODY = "anybody"
+FILTERS = ["project", "assignee", "assigned_by", "state", "visible"]
 
 
 TodoGrouping = type("TodoGrouping", (), {"PROJECT": "project", "DUE": "due"})
@@ -96,9 +107,18 @@ def todos_by_due(request, project=None):
     """Open to-dos by due date across the projects the person sees, or in
     one project; ``?assignee=me`` is "My to-dos". Rows are completed in
     place (``todo_toggle``)."""
-    form = FilterForm(request.GET, user=request.user, project=project)
+    query = request.GET
+    if project is None and query.get("assignee") == "me":
+        # Links from before (and Home's): me is the empty choice here
+        query = query.copy()
+        query["assignee"] = ""
+    form = FilterForm(query, user=request.user, project=project)
     valid = form.is_valid()
-    data = form.cleaned_data if valid else {}
+    data = dict(form.cleaned_data) if valid else {}
+    if project is None and valid:
+        data["assignee"] = {"": "me", ANYBODY: ""}.get(
+            data["assignee"], data["assignee"]
+        )
     completed = data.get("state") == "completed"
     todos = due.todos(
         request.user,
@@ -112,7 +132,19 @@ def todos_by_due(request, project=None):
         todos = todos.none()
     todos = glance.with_signals(todos)
     grouping = data.get("grouping") or TodoGrouping.PROJECT
+    # "Assigned to me" in the header: the same filters with me as the
+    # assignee (specs/ui-round-5.md)
+    mine = query.copy()
+    mine.pop("page", None)
+    if project is None:
+        mine.pop("assignee", None)
+    else:
+        mine["assignee"] = "me"
     context = {
+        "mine_query": mine.urlencode(),
+        "is_mine": data.get("assignee") == "me",
+        # Reset only when a filter is set; the grouping is a view, not a filter
+        "filtered": any(query.get(name) for name in FILTERS),
         "grouping": grouping,
         "form": form,
         "project": project,

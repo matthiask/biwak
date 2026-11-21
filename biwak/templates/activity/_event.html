@@ -17,6 +17,11 @@
   {% if what %}{{ what }}{% else %}{{ event.assignee_names|join:", " }}
     {% translate "to" %}
     {% include "activity/_subject.html" %}{% endif %}
+{% elif event.action == "unassigned" %}
+  {% translate "removed" %}
+  {% if what %}{{ what }}{% else %}{{ event.assignee_names|join:", " }}
+    {% translate "from" %}
+    {% include "activity/_subject.html" %}{% endif %}
 {% elif event.action == "shared" %}
   {% translate "shared" %}
   {% if what %}{{ what }}{% else %}{% include "activity/_subject.html" %}

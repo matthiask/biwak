@@ -34,32 +34,33 @@ Stages are separate hand-offs. "Next" means it can start now.
 | `checkins.md` | | built | schedules, mails, attachments | cheaper |
 | `notifications.md` | 2: replying by mail | built | notifications 1, check-ins | strong |
 | `search.md` | | built | every kind of item | cheaper |
-| `api-cli.md` | gaps to the web, passkey offer, Google for staff | built | | cheaper |
+| `api-cli.md` | gaps to the web, passkey offer, Google for staff | foundations built; agent skills: spec first | | cheaper |
 | `rule-widget.md` | one control for repeat rules | built | to-dos, check-ins | cheaper, review the round trips |
 | `keyboard.md` | command palette (Ctrl+K), shortcuts | built 2026-11-21 | search | cheaper |
-| `lantern.md` | the lantern (notifications in the app), live updates (built 2026-11-21 on `collaboration`) | after `collaboration.md` | collaboration (ASGI, Redis), notifications | strong |
-| `project-colors.md` | a color per project | after `keyboard.md` | the accent palette | cheaper |
+| `lantern.md` | the lantern (notifications in the app), live updates (built 2026-11-21 on `collaboration`) | built | collaboration (ASGI, Redis), notifications | strong |
+| `project-colors.md` | a color per project | built | the accent palette | cheaper |
 | `editor.md` | checklists and counts, the toolbar, pasting | built on branch `editor` | | cheaper |
 | `archiving.md` | archiving projects and lists, findable; the importer completes archived to-dos | next (spec only for now) | the core, the importer | cheaper |
-| `ui-round-1.md` | modals, quieter pages, to-do view mode, assignee picker, overdue | next | | cheaper |
-| `organizations.md` | organizations as a model, domains, starting projects from them, partners | after the modals (same forms) | the core, the importer | cheaper |
-| `connection.md` | the banner when offline, nothing lost silently | question first | live updates, live editor | cheaper |
+| `ui-round-1.md` | modals, quieter pages, to-do view mode, assignee picker, overdue | built | | cheaper |
+| `organizations.md` | organizations as a model, domains, starting projects from them, partners | built; later: the people page grouped by organization | the core, the importer | cheaper |
+| `connection.md` | the banner when offline, nothing lost silently | built | live updates, live editor | cheaper |
 | `import-basecamp.md` | | built (2026-11-21) | every kind of item | cheaper |
 | `api-cli.md` | agent skills | after the importer, spec first | the importer | cheaper |
 | `collaboration.md` | | built (branch `collaboration`, merged into `main` 2026-11-21, not deployed) | everything | strong |
 | `people.md` | 1: profile images, the person's page | built 2026-11-21 (branch `people`) | `organizations.md` | cheaper, review the image's visibility |
 | `people.md` | 2: choosing from drawn images | later | stage 1, the drawings | cheaper |
-| `ui-round-2.md` | A–C built; D: projects page and color picker; E: sign-in and sessions; F: same first names | D, E, F next, in parallel | lantern, people 1 | cheaper |
+| `ui-round-2.md` | A–C built; D: projects page and color picker; E: sign-in and sessions; F: same first names | built | lantern, people 1 | cheaper |
 | `subscribers.md` | assigned means subscribed; adding others, telling them now | built | ui-round-2 B, modals, lantern | cheaper, visibility tests |
 | `ui-round-3.md` | "My to-dos" by project or due date, no list filter, filters apply themselves | built | todos 2 | cheaper |
 | `ui-round-4.md` | phones: headers, to-do rows, toolbar, small things; feedback round 4 (sign out, visibility modal, feed conversations) | built 2026-11-21 (`ui4-layout`, `ui4-behavior`) | ui-round-3, ui-round-2 D | cheaper |
 | `ui-round-5.md` | feedback round 5: cards on to-dos and docs, the project's to-dos linked, filter buttons, assigned by me | built 2026-11-21 (`ui5`) | ui-round-4 | cheaper |
+| `ui-round-6.md` | a combobox for long people selects, inviting several people to several projects, invitations visible, subscribing is the switch | next | organizations, subscribers | cheaper (A), review B and C |
 | `feed.md` | links: projects only, quieter ("Links", changed 2026-11-21) | built 2026-11-21 (`links`) | ui-round-4 | cheaper |
 | `lantern.md` | reading by acting: completing, editing, commenting, reacting read the item's notifications for the actor | built 2026-11-21 (`reading`) | lantern | cheaper |
 | `dashboard.md` | Home at `/`: what needs me (to-dos due, check-ins, waiting on others), recent updates, my projects, bookmarks, links; projects move to `/projects/` | built 2026-11-21 (`home`) | ui-round-5, `feed.md` links, `lantern.md` reading by acting | cheaper, review the visibility tests |
-| `help.md` | help pages from `docs/` like Governance's, the shortcuts list moves there from settings, links to the help | built 2026-11-21 (`help`), the texts still to be read by the user | `dashboard.md` | cheaper, the texts read by the user |
+| `help.md` | help pages from `docs/` like Governance's, the shortcuts list moves there from settings, links to the help | built 2026-11-21 (`help`), the texts read by the user | `dashboard.md` | cheaper, the texts read by the user |
 | `celebrations.md` | small celebrations (completing a to-do, the last of a list) and animations | built | | cheaper |
-| `timeline.md` | the to-do's comments with what happened between them (completed, moved, assigned, due date, title, visibility, trash) | next | | cheaper, review visibility |
+| `timeline.md` | the to-do's comments with what happened between them (completed, moved, assigned, due date, title, visibility, trash) | built | | cheaper, review visibility |
 | `pwa.md` | installable as an app (manifest, icons), no push and no offline yet | built | | cheaper |
 | `mail-sending.md` | sending through Resend, an outbox with retries, bounces and complaints | next | | strong |
 | `sso.md` | sign-in per organization: codes and passkeys, SSO allowed or required; Google Workspace, Entra ID prepared | next | `organizations.md` | strong, review the checks |

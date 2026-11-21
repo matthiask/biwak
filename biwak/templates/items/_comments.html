@@ -1,19 +1,21 @@
 {% load attachments biwak i18n reactions %}
 <h2 class="h5" id="comments">{% translate "Comments" %}</h2>
 <div id="live-comments" data-live-list>
-  {% for comment in comments %}
-    <div class="card mb-2" id="comment-{{ comment.pk }}" data-live>
-      <div class="card-body">
-        <div class="small text-body-secondary mb-1 d-flex align-items-center gap-1">
-          {% avatar comment.author %}
-          <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
-        </div>
-        <div class="wb-markdown">{% checklist_markdown comment.content item comment %}</div>
-        {% reactions item comment %}
-      </div>
-    </div>
-  {% endfor %}
+  {% if timeline is not None %}
+    {% for entry in timeline %}
+      {% if entry.is_line %}
+        {% include "items/_timeline_line.html" with line=entry %}
+      {% else %}
+        {% include "items/_comment.html" with comment=entry %}
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    {% for comment in comments %}
+      {% include "items/_comment.html" %}
+    {% endfor %}
+  {% endif %}
 </div>
+{% if timeline is not None %}{% include "items/_history_link.html" %}{% endif %}
 {% include "items/_client_banner.html" %}
 <form method="post" class="mt-2" {% attachments_attrs item.project %}>
   {% csrf_token %}

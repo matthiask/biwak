@@ -11,7 +11,8 @@ the SVGs dropped, the per-language table kept; `PAGES["de"]` names the
 with the nine chapters, tests in `biwak/test_help.py`, the palette's
 in `biwak/palette/test_actions.py`, a browser test for the `?` dialog's
 link (`KeyboardTest`). The texts describe what is built now and still
-have to be read by the user. Decisions on the way:
+have to be read by the user (skimmed by the user 2026-11-21: fine).
+Decisions on the way:
 - The settings page's "All shortcuts" and the keyboard page's list
   share the anchor `#shortcuts`. Every page has the list in the `?`
   dialog anyway (`_palette.html` is in `base.html`), so "only on the

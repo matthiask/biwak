@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 
 from biwak import checklists, cursors, schedules
 from biwak.accounts.models import User
+from biwak.activity import timeline as timelines
 from biwak.activity.operations import (
     StillAssigned,
     is_assigned,
@@ -586,7 +587,9 @@ def todo(request, pk, *, edit=False):
             "can_edit": True,
             "base": base,
             "comment_form": comment_form,
-            "comments": item.comments.select_related("author"),
+            "timeline": timelines.entries_for(
+                item, request.user, item.comments.select_related("author")
+            ),
             # Clients only learn about the project's members
             "subscribers": item.project.people_known_to(
                 request.user,

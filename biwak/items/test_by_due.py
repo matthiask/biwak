@@ -135,7 +135,9 @@ class PageTest(ByDueTestCase):
         self.client.force_login(self.ada)
         # 23:30 UTC on the 17th is already 00:30 on the 18th in Zurich
         with at("2026-11-17 23:30", "UTC"):
-            sections = self.sections(self.client.get("/todos/?grouping=due"))
+            sections = self.sections(
+                self.client.get("/todos/?assignee=anybody&grouping=due")
+            )
         self.assertEqual(
             sections,
             {
@@ -147,11 +149,15 @@ class PageTest(ByDueTestCase):
             },
         )
         with at("2026-11-17 22:30", "UTC"):  # 23:30 on the 17th
-            sections = self.sections(self.client.get("/todos/?grouping=due"))
+            sections = self.sections(
+                self.client.get("/todos/?assignee=anybody&grouping=due")
+            )
         self.assertEqual(sections["today"], ["late"])
         # Sunday evening: the next day is next week
         with at("2026-11-22 23:30"):
-            sections = self.sections(self.client.get("/todos/?grouping=due"))
+            sections = self.sections(
+                self.client.get("/todos/?assignee=anybody&grouping=due")
+            )
         self.assertEqual(sections["next_week"], ["far"])
         self.assertEqual(sections["overdue"], ["late", "now"])
         self.assertEqual(sections["today"], ["soon"])
@@ -162,7 +168,7 @@ class PageTest(ByDueTestCase):
         self.todo("january", "2027-01-03")
         self.client.force_login(self.ada)
         with at("2026-11-18 12:00"):
-            response = self.client.get("/todos/?grouping=due")
+            response = self.client.get("/todos/?assignee=anybody&grouping=due")
         headings = [str(label) for _k, label, _t in response.context["sections"]]
         self.assertEqual(headings, ["Next week", "December", "January 2027"])
         self.assertContains(response, ">December<")
@@ -173,7 +179,7 @@ class PageTest(ByDueTestCase):
         self.todo("Elsewhere", todolist=self.other_list)
         self.todo("Secret", todolist=self.limited_list)
         self.client.force_login(self.ada)
-        response = self.client.get("/todos/")
+        response = self.client.get("/todos/?assignee=anybody&assignee=anybody")
         self.assertContains(response, "Visible")
         self.assertContains(response, "Elsewhere")
         self.assertNotContains(response, "Secret")
@@ -196,9 +202,14 @@ class PageTest(ByDueTestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertNotContains(response, "Internal one")
                 self.assertNotContains(response, "Elsewhere")
-        self.assertContains(self.client.get("/todos/"), "Visible")
+        self.assertContains(
+            self.client.get("/todos/?assignee=anybody&assignee=anybody"), "Visible"
+        )
         # No filter by visibility for clients, and no way to see others' projects
-        self.assertNotContains(self.client.get("/todos/"), 'name="visible"')
+        self.assertNotContains(
+            self.client.get("/todos/?assignee=anybody&assignee=anybody"),
+            'name="visible"',
+        )
         self.assertEqual(
             self.client.get(f"/projects/{self.other.pk}/todos/").status_code, 404
         )
@@ -236,7 +247,9 @@ class PageTest(ByDueTestCase):
         self.client.force_login(self.ada)
 
         def found(**params):
-            response = self.client.get("/todos/", {"grouping": "due"} | params)
+            response = self.client.get(
+                "/todos/", {"grouping": "due", "assignee": "anybody"} | params
+            )
             self.assertEqual(response.status_code, 200)
             return sorted(
                 todo.title
@@ -270,12 +283,12 @@ class PageTest(ByDueTestCase):
                 ops.complete(item, actor=self.ada)
         self.todo("Open")
         self.client.force_login(self.ada)
-        response = self.client.get("/todos/?state=completed")
+        response = self.client.get("/todos/?assignee=anybody&state=completed")
         self.assertEqual(len(response.context["page"]), 50)
         self.assertEqual(response.context["page"][0].title, "Done 54")
         self.assertNotContains(response, ">Open</a>")
         self.assertContains(response, "state=completed&page=2")
-        response = self.client.get("/todos/?state=completed&page=2")
+        response = self.client.get("/todos/?assignee=anybody&state=completed&page=2")
         self.assertEqual(
             [t.title for t in response.context["page"]],
             [f"Done {n:02}" for n in range(4, -1, -1)],
@@ -286,12 +299,18 @@ class PageTest(ByDueTestCase):
         self.todo("Old", todolist=self.other_list)
         self.client.force_login(self.ada)
         ops.archive(self.other_list, actor=self.ada)
-        self.assertNotContains(self.client.get("/todos/"), "Old")
+        self.assertNotContains(
+            self.client.get("/todos/?assignee=anybody&assignee=anybody"), "Old"
+        )
         ops.unarchive(self.other_list, actor=self.ada)
-        self.assertContains(self.client.get("/todos/"), "Old")
+        self.assertContains(
+            self.client.get("/todos/?assignee=anybody&assignee=anybody"), "Old"
+        )
         self.other.archived_at = dt.datetime.now(dt.UTC)
         self.other.save()
-        self.assertNotContains(self.client.get("/todos/"), "Old")
+        self.assertNotContains(
+            self.client.get("/todos/?assignee=anybody&assignee=anybody"), "Old"
+        )
 
     def test_completing_from_the_list(self):
         item = self.todo("Do it", "2026-11-18")
@@ -304,8 +323,12 @@ class PageTest(ByDueTestCase):
         self.assertRedirects(response, "/todos/?assignee=nobody")
         item.todo.refresh_from_db()
         self.assertIsNotNone(item.todo.completed_at)
-        self.assertNotContains(self.client.get("/todos/"), "Do it")
-        self.assertContains(self.client.get("/todos/?state=completed"), "Do it")
+        self.assertNotContains(
+            self.client.get("/todos/?assignee=anybody&assignee=anybody"), "Do it"
+        )
+        self.assertContains(
+            self.client.get("/todos/?assignee=anybody&state=completed"), "Do it"
+        )
         # Not off to other sites
         response = self.client.post(
             f"/todos/{item.pk}/toggle/", {"next": "https://example.com/"}
@@ -590,7 +613,7 @@ class ByProjectTest(ByDueTestCase):
         self.fill()
         self.client.force_login(self.ada)
         with at("2026-11-18 12:00"):
-            response = self.client.get("/todos/")
+            response = self.client.get("/todos/?assignee=anybody&assignee=anybody")
         self.assertEqual(
             self.grouped(response),
             [
@@ -617,7 +640,7 @@ class ByProjectTest(ByDueTestCase):
     def test_a_client_sees_no_internal_lists(self):
         self.fill()
         self.client.force_login(self.cleo)
-        response = self.client.get("/todos/")
+        response = self.client.get("/todos/?assignee=anybody&assignee=anybody")
         self.assertEqual(
             [(p, [t for t, _g in lists]) for p, lists in self.grouped(response)],
             [(self.project.name, ["Shared", "Later list"])],
@@ -627,7 +650,7 @@ class ByProjectTest(ByDueTestCase):
 
     def test_empty_projects_and_lists_are_left_out(self):
         self.client.force_login(self.ada)
-        response = self.client.get("/todos/")
+        response = self.client.get("/todos/?assignee=anybody&assignee=anybody")
         self.assertEqual(self.grouped(response), [])
         self.assertContains(response, "Nothing to do.")
 
@@ -646,9 +669,17 @@ class ByProjectTest(ByDueTestCase):
         self.fill()
         self.client.force_login(self.ada)
         # By project is the default, a bad value is the default too
-        self.assertIn("projects", self.client.get("/todos/").context)
-        self.assertIn("sections", self.client.get("/todos/?grouping=due").context)
-        self.assertIn("projects", self.client.get("/todos/?grouping=project").context)
+        self.assertIn(
+            "projects",
+            self.client.get("/todos/?assignee=anybody&assignee=anybody").context,
+        )
+        self.assertIn(
+            "sections", self.client.get("/todos/?assignee=anybody&grouping=due").context
+        )
+        self.assertIn(
+            "projects",
+            self.client.get("/todos/?assignee=anybody&grouping=project").context,
+        )
         self.assertEqual(self.client.post("/todos/grouping/").status_code, 404)
 
     def test_the_grouping_is_a_field_of_the_filter_form(self):
@@ -661,7 +692,7 @@ class ByProjectTest(ByDueTestCase):
         self.assertNotContains(response, 'aria-label="Grouping"')
         self.assertIn("sections", response.context)
         # An invalid value is an error and shows no to-dos
-        response = self.client.get("/todos/?grouping=x")
+        response = self.client.get("/todos/?assignee=anybody&grouping=x")
         self.assertTrue(response.context["form"].errors)
         # The project's page too
         response = self.client.get(f"/projects/{self.project.pk}/todos/")
@@ -671,14 +702,16 @@ class ByProjectTest(ByDueTestCase):
         self.fill()
         self.client.force_login(self.ada)
         before = User.objects.filter(pk=self.ada.pk).values().get()
-        self.client.get("/todos/?grouping=due")
+        self.client.get("/todos/?assignee=anybody&grouping=due")
         self.assertEqual(User.objects.filter(pk=self.ada.pk).values().get(), before)
 
     def test_completed_are_not_grouped(self):
         todo = self.todo("Done")
         ops.complete(todo, actor=self.ada)
         self.client.force_login(self.ada)
-        response = self.client.get("/todos/", {"state": "completed"})
+        response = self.client.get(
+            "/todos/", {"state": "completed", "assignee": "anybody"}
+        )
         self.assertIn("page", response.context)
         self.assertNotIn("projects", response.context)
         self.assertContains(response, "Done")
@@ -687,15 +720,15 @@ class ByProjectTest(ByDueTestCase):
         self.todo("Late", "2026-11-10")
         self.client.force_login(self.ada)
         with at("2026-11-18 12:00"):
-            response = self.client.get("/todos/")
+            response = self.client.get("/todos/?assignee=anybody&assignee=anybody")
         self.assertContains(response, "Overdue")
 
     def test_the_number_of_queries_stays_the_same(self):
         self.client.force_login(self.ada)
         self.fill()
-        self.client.get("/todos/")  # warm up
+        self.client.get("/todos/?assignee=anybody&assignee=anybody")  # warm up
         with CaptureQueriesContext(connection) as few:
-            self.client.get("/todos/")
+            self.client.get("/todos/?assignee=anybody&assignee=anybody")
         for n in range(4):
             other = project(f"Extra {n}", members=[self.ada])
             for m in range(2):
@@ -708,7 +741,7 @@ class ByProjectTest(ByDueTestCase):
                         f"T{n}{m}{k}", "2026-11-10", todolist=todolist, group=group
                     )
         with CaptureQueriesContext(connection) as many:
-            response = self.client.get("/todos/")
+            response = self.client.get("/todos/?assignee=anybody&assignee=anybody")
         self.assertEqual(len(response.context["projects"]), 6)
         self.assertEqual(len(many), len(few))
 
@@ -774,3 +807,67 @@ class ByProjectTest(ByDueTestCase):
             return response.status_code
         self.assertEqual(response.status_code, 200, response.content)
         return response.json()["results"]
+
+
+class HeaderAndResetTest(TestCase):
+    """ "Reset filters" only with a filter set; "Assigned to me" in the
+    header keeps the other filters"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.client.force_login(self.ada)
+
+    def test_reset_only_with_a_filter(self):
+        self.assertNotContains(self.client.get("/todos/"), "Reset filters")
+        self.assertNotContains(self.client.get("/todos/?grouping=due"), "Reset filters")
+        self.assertContains(self.client.get("/todos/?state=completed"), "Reset filters")
+        # Mine is the default across projects, "Anybody" a filter
+        self.assertNotContains(self.client.get("/todos/?assignee=me"), "Reset filters")
+        self.assertNotContains(self.client.get("/todos/?assignee="), "Reset filters")
+        self.assertContains(
+            self.client.get("/todos/?assignee=anybody"), "Reset filters"
+        )
+
+    def test_assigned_to_me_keeps_the_other_filters(self):
+        response = self.client.get(
+            "/todos/?assignee=anybody&state=completed&grouping=due&page=2"
+        )
+        link = response.context["mine_query"]
+        self.assertEqual(
+            parse_qs(link),
+            {"state": ["completed"], "grouping": ["due"]},
+        )
+        self.assertContains(response, "Assigned to me")
+        for query in ["?assignee=me", ""]:
+            self.assertNotContains(self.client.get("/todos/" + query), "Assigned to me")
+
+    def test_mine_is_the_default_across_projects(self):
+        bob = person("Bob")
+        site = project(members=[self.ada, bob])
+        todolist = ops.create_list(project=site, title="Launch", creator=self.ada)
+        for title, who in [("Mine here", self.ada), ("Bobs here", bob)]:
+            todo = ops.create_todo(todolist=todolist, title=title, creator=self.ada)
+            ops.assign(todo, [who], actor=self.ada)
+        response = self.client.get("/todos/")
+        self.assertEqual(response.context["title"], "My to-dos")
+        self.assertContains(response, "Mine here")
+        self.assertNotContains(response, "Bobs here")
+        self.assertContains(self.client.get("/todos/?assignee=anybody"), "Bobs here")
+        # In a project its to-dos, anybody's
+        response = self.client.get(f"/projects/{site.pk}/todos/")
+        self.assertContains(response, "Bobs here")
+
+
+class NobodyActiveTest(TestCase):
+    def test_assigned_only_to_deactivated_people_is_nobodys(self):
+        ada, gone = person("Ada"), person("Gone")
+        site = project(members=[ada, gone])
+        todolist = ops.create_list(project=site, title="Launch", creator=ada)
+        left = ops.create_todo(todolist=todolist, title="Left behind", creator=ada)
+        ops.assign(left, [gone], actor=ada)
+        ops.create_todo(todolist=todolist, title="Unassigned", creator=ada)
+        taken = ops.create_todo(todolist=todolist, title="Taken", creator=ada)
+        ops.assign(taken, [ada, gone], actor=ada)
+        User.objects.filter(pk=gone.pk).update(is_active=False)
+        found = {t.title for t in due.todos(ada, assignee="nobody")}
+        self.assertEqual(found, {"Left behind", "Unassigned"})

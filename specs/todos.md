@@ -155,7 +155,7 @@ today, this week (until Sunday), next week (Monday to Sunday), one
 section per month after that, and no date (changed 2026-11-21, see below).
 
 - `/todos/` across all projects the person can see, `/projects/<pk>/todos/`
-  per project; "My to-dos" (`/todos/?assignee=me`) in the navigation.
+  per project; "To-dos" (`/todos/`, mine by default, `ui-round-5.md`) in the navigation.
 - Filters as query parameters, the form submitting with GET and applying
   itself (`ui-round-3.md`): project, assignee (anybody, me, a person,
   nobody), open or completed (completed: the latest first, paginated),

@@ -50,6 +50,18 @@ short text) and attachments ([Messages, docs and files](files.md)).
 Type `@` to mention a person; they are told and subscribed
 ([Notifications](notifications.md)).
 
+Between the comments, quiet lines say what happened to the to-do, oldest
+first, with who did it and when (hover for the exact time): completed
+and reopened, moved to another list or group, people assigned or
+removed, a new title or due date, trashed and restored. One person's changes one after the other, within ten
+minutes, are one line ("moved this to Done and completed it"); changes
+that undo each other (completing and reopening, assigning and removing
+the same person, a due date set and removed) leave nothing, and of a
+title or due date changed several times the last one is shown. Clients see the lines of the
+time the to-do was visible to them, and "another list" where a list's
+name isn't theirs to know. Edits of the notes aren't listed; staff find
+them in the History, linked below the timeline.
+
 ## Repeating
 
 Choose how often it repeats: daily, weekly, monthly or yearly, with an
@@ -73,15 +85,19 @@ page for its own to-dos. Completing works in place.
 
 The filters apply as you change them:
 
-- **project** and **assigned to** (anybody, me, nobody, or a person;
-  clients choose between anybody, me and nobody);
+- **project** and **assigned to**: across projects your own by default,
+  or anybody, nobody active (nobody, or only people who are gone), or a
+  person (clients: me, anybody, nobody active); a project's to-dos show
+  anybody's by default;
 - **assigned by**: "Me" shows the to-dos you gave to others;
 - **state**: "Completed" shows finished to-dos, latest first, instead
   of the sections;
 - **visibility** (staff): visible to clients or internal;
 - **group by**: due date or project.
 
-Your browser remembers the filters; "Reset filters" forgets them. To-dos of archived
+"Assigned to me" at the top (when someone else is chosen) shows your
+to-dos again, with the other filters kept. Your browser remembers the
+filters; "Reset filters" (there when a filter is set) forgets them. To-dos of archived
 projects and archived lists don't show here.
 
 ## The calendar

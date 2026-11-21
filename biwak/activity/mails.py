@@ -165,6 +165,11 @@ def describe(event, user):
                 "actor": actor,
                 "people": _names(data.get("assignees", ()), user, event.item),
             }
+        case Action.UNASSIGNED:
+            return _("%(actor)s removed %(people)s.") % {
+                "actor": actor,
+                "people": _names(data.get("assignees", ()), user, event.item),
+            }
         case Action.SHARED:
             text = (
                 _("%(actor)s wants you to see this: %(note)s")

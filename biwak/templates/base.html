@@ -72,7 +72,7 @@
               <a
                 data-restore-filters
                 class="nav-link{% if request.path == todos_url %} active{% endif %}"
-                href="{{ todos_url }}?assignee=me"
+                href="{{ todos_url }}"
               >{% translate "To-dos" %}</a>
             </li>
             {% url 'feed' as feed_url %}
