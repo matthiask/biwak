@@ -11,7 +11,7 @@ from biwak.activity.models import LevelOverride, Notification
 from biwak.items import operations as ops
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import invite_data, person, project
+from biwak.test_utils import invite_data, partner, person, project
 
 
 class Fixture:
@@ -79,6 +79,56 @@ class OperationsTest(Fixture, TestCase):
                 self.project, self.eve, "tagged", actor=self.cleo
             )
         project_ops.set_notify_choice(self.project, self.eve, "tagged", actor=self.ada)
+
+
+class PartnersTest(Fixture, TestCase):
+    """Partners set their own choice, not others' (decided 2026-11-21 after
+    a review): the operation, the page and the API"""
+
+    def setUp(self):
+        super().setUp()
+        self.pia = partner()
+        Membership.objects.create(project=self.project, user=self.pia)
+
+    def call(self, method, path, data=None):
+        _token, secret = APIToken.create_for(user=self.pia, title="T", access="write")
+        return getattr(self.client, method)(
+            f"/api/v1/projects/{self.project.pk}/members/{path}",
+            json.dumps(data) if data is not None else None,
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+
+    def test_operation(self):
+        project_ops.set_notify_choice(self.project, self.pia, "tagged", actor=self.pia)
+        self.assertEqual(self.level(self.pia), NotificationLevel.CONCERNS_ME)
+        for other in [self.ada, self.cleo]:
+            with self.assertRaises(PermissionError):
+                project_ops.set_notify_choice(
+                    self.project, other, "tagged", actor=self.pia
+                )
+
+    def test_page(self):
+        self.client.force_login(self.pia)
+        response = self.client.get(self.people_url)
+        self.assertContains(response, f"people/{self.pia.pk}/notify/")
+        self.assertNotContains(response, f"people/{self.ada.pk}/notify/")
+        self.assertNotContains(response, f"people/{self.cleo.pk}/notify/")
+        for other in [self.ada, self.cleo]:
+            response = self.client.post(
+                f"{self.people_url}{other.pk}/notify/", {"notify": "tagged"}
+            )
+            self.assertEqual(response.status_code, 403)
+        self.assertIsNone(self.level(self.cleo))
+
+    def test_api(self):
+        members = {m["name"]: m for m in self.call("get", "").json()}
+        self.assertEqual(members["Pia Example"]["notify"], "default")
+        self.assertIsNone(members["Cleo Example"]["notify"])
+        self.assertIsNone(members["Ada Example"]["notify"])
+        response = self.call("patch", f"{self.cleo.pk}/", {"notify": "tagged"})
+        self.assertEqual(response.status_code, 403)
+        self.assertIsNone(self.level(self.cleo))
 
 
 class MailsTest(Fixture, TestCase):

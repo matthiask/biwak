@@ -58,8 +58,9 @@ def notify_choice(user, project):
 
 
 def can_change_notify_choice(actor, user):
-    """Staff change everybody's, clients only their own"""
-    return actor.is_authenticated and (not actor.is_client or actor == user)
+    """Own staff change (and see) everybody's; clients and partners only
+    their own (decided 2026-11-21 after a review)"""
+    return actor.is_authenticated and (can_manage_members(actor) or actor == user)
 
 
 @transaction.atomic
@@ -68,7 +69,7 @@ def set_notify_choice(project, user, notify, *, actor):
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")
     if not can_change_notify_choice(actor, user):
-        raise PermissionError("Clients change only their own choice.")
+        raise PermissionError("Clients and partners change only their own choice.")
     set_level_override(user, NOTIFY_CHOICES[notify], project=project)
 
 
