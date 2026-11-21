@@ -3,6 +3,7 @@ dragging onto folders, "..", breadcrumbs; selecting several with Ctrl- and
 Shift-click and moving them"""
 
 import re
+import time
 
 from django.core.files.base import ContentFile
 from django.urls import reverse
@@ -10,7 +11,7 @@ from django.urls import reverse
 from biwak.activity.models import Event
 from biwak.items import operations as ops
 from biwak.items.models import Item
-from biwak.test_e2e import E2ETestCase, expect
+from biwak.test_e2e import ASGIServerThread, E2ETestCase, expect, uvicorn
 
 
 class TilesTest(E2ETestCase):
@@ -272,3 +273,101 @@ class UploadTest(E2ETestCase):
         # Closing shows what went up
         dialog.get_by_role("button", name="Cancel").click()
         expect(page.locator(".wb-tile-file")).to_have_count(1)
+
+
+class NewDocTest(E2ETestCase):
+    """New docs as drafts (specs/ui-round-7.md, part 5): the address
+    replaced once there's text, "Tell people about it?" at the first Done"""
+
+    host = "127.0.0.1"
+    server_thread_class = ASGIServerThread
+
+    @classmethod
+    def setUpClass(cls):
+        if uvicorn is None:  # pragma: no cover
+            raise cls.skipTest(cls, "uvicorn isn't installed")
+        super().setUpClass()
+
+    def setUp(self):
+        super().setUp()
+        self.minutes = ops.create_folder(
+            project=self.project, title="Minutes", creator=self.ada, visible=True
+        )
+
+    def new_doc(self):
+        page = self.page
+        self.goto(page, self.minutes)
+        page.get_by_role("link", name="New doc").click()
+        page.wait_for_url("**/docs/new/**")
+        expect(page.locator("[data-collab]")).to_have_attribute(
+            "data-collab-state", "connected"
+        )
+        draft = Item.objects.filter(is_draft=True).latest("pk")
+        # The cursor after "# ": the title is typed first
+        expect(page.locator(".cm-content")).to_be_focused()
+        return page, draft
+
+    def wait_for_doc(self, draft):
+        """Saved a few seconds after the last keystroke"""
+        for _ in range(100):
+            if not Item.objects.get(pk=draft.pk).is_draft:
+                return
+            time.sleep(0.1)
+        self.fail("Still a draft")
+
+    def test_the_address_is_the_docs_once_written(self):
+        page, draft = self.new_doc()
+        history = page.evaluate("history.length")
+        page.keyboard.type("Kick-off")
+        page.wait_for_url(f"**{reverse('doc_edit', args=[draft.pk])}")
+        # Replaced, not added
+        self.assertEqual(page.evaluate("history.length"), history)
+        self.wait_for_doc(draft)
+        doc = Item.objects.get(pk=draft.pk)
+        self.assertEqual(doc.title, "Kick-off")
+        self.assertEqual(doc.doc.content, "# Kick-off")
+        # Reloading opens the doc, not a new draft
+        page.reload()
+        expect(page.locator(".cm-content")).to_contain_text("Kick-off")
+        self.assertEqual(Item.objects.filter(kind="doc").count(), 1)
+        self.assertEqual(self.errors, [])
+
+    def test_telling_people_at_the_first_done(self):
+        page, draft = self.new_doc()
+        page.keyboard.type("Plan")
+        page.wait_for_url(f"**{reverse('doc_edit', args=[draft.pk])}")
+        page.get_by_role("link", name="Done").click()
+        dialog = page.get_by_role("dialog", name="Tell people about it?")
+        expect(dialog).to_be_visible()
+        dialog.locator(".wb-picker-input").click()
+        dialog.locator(".wb-picker-list li", has_text="Cleo").click()
+        dialog.get_by_label("Note").fill("Our plan")
+        dialog.get_by_role("button", name="Tell them").click()
+        page.wait_for_url(f"**{draft.get_absolute_url()}")
+        event = Event.objects.get(item=draft, action="shared")
+        self.assertEqual(event.data["note"], "Our plan")
+        # Asked once: "Done" now just leaves
+        page.goto(f"{self.live_server_url}{reverse('doc_edit', args=[draft.pk])}")
+        page.get_by_role("link", name="Done").click()
+        page.wait_for_url(f"**{draft.get_absolute_url()}")
+        expect(page.get_by_role("dialog")).to_have_count(0)
+        self.assertEqual(self.errors, [])
+
+    def test_not_now_and_done_on_an_empty_draft(self):
+        page, draft = self.new_doc()
+        # Nothing written: back to the folder, no question
+        page.get_by_role("link", name="Done").click()
+        page.wait_for_url(f"**{self.minutes.get_absolute_url()}")
+        expect(page.get_by_role("dialog")).to_have_count(0)
+        expect(page.get_by_text("Nothing here yet.")).to_be_visible()
+
+        page, draft = self.new_doc()
+        page.keyboard.type("Plan")
+        page.wait_for_url(f"**{reverse('doc_edit', args=[draft.pk])}")
+        page.get_by_role("link", name="Done").click()
+        dialog = page.get_by_role("dialog", name="Tell people about it?")
+        dialog.get_by_role("button", name="Not now").click()
+        page.wait_for_url(f"**{draft.get_absolute_url()}")
+        self.assertFalse(Item.objects.get(pk=draft.pk).doc.tell_pending)
+        self.assertFalse(Event.objects.filter(action="shared").exists())
+        self.assertEqual(self.errors, [])

@@ -49,8 +49,17 @@ same order. Everybody sees the order chosen.
 A doc is a page of Markdown text, such as a brief or a set of notes.
 Its title is the first line of the text: a heading such as `# Brief`, or
 else the line itself. Change the first line to rename the doc; lists,
-search and the activity feed follow. An empty doc is "Untitled". "New
-doc" asks for the title and starts the text with it as a heading.
+search and the activity feed follow. An empty doc is "Untitled".
+
+**New doc** opens the editor at once, the text starting with `# ` and
+the cursor after it: type the title first, then the text. Until you
+write something it's only yours: nobody else sees it, it isn't in the
+folder, the activity or search, and an empty one is deleted after a day.
+With the first text it's a doc (the browser's address becomes the doc's)
+and it's in the folder, telling nobody yet. When you click "Done" the
+first time, you're asked "Tell people about it?": pick people (and add a
+note) and "Tell them", or "Not now". You're asked only once; later, add
+people with "Manage…" next to the subscribers.
 
 - **Edit** opens the doc for editing together: everybody who edits it
   sees the others' changes as they are typed, and changes are saved as

@@ -8,7 +8,7 @@ from biwak.files.attachments import delete_unlinked
 from biwak.files.operations import save_pending
 from biwak.inbound.tokens import prune as prune_replies
 from biwak.items.editing import prune as prune_editing
-from biwak.items.operations import purge_trash
+from biwak.items.operations import delete_drafts, purge_trash
 from biwak.outbox.sending import prune as prune_outbox
 from biwak.projects.operations import recompute_activity
 
@@ -21,7 +21,7 @@ class Command(BaseCommand):
         "Daily tasks: deleting what has been in the trash for 30 days,"
         " pruning expired API tokens, deleting received mails and reply tokens after 90 days, deleting sent mails' records after 30 days, deleting attachments whose text was"
         " never saved after a day, saving what was typed into docs live and"
-        " not saved yet, recomputing the projects' activity times, comparing the stored visibility with"
+        " not saved yet, deleting new docs left empty after a day, recomputing the projects' activity times, comparing the stored visibility with"
         " the tree and mailing admins about differences"
     )
 
@@ -32,6 +32,8 @@ class Command(BaseCommand):
             "prune_api_tokens": prune_api_tokens,
             "delete_unlinked": delete_unlinked,
             "save_pending": save_pending,
+            # After saving: a draft with text saved is a doc
+            "delete_drafts": delete_drafts,
             "prune_replies": prune_replies,
             "prune_outbox": prune_outbox,
             "prune_editing": prune_editing,

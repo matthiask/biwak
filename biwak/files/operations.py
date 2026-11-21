@@ -165,6 +165,20 @@ def _save(item, doc, *, actor=None, new_version=False):
     content, authors, typed = live.merge(doc)
     if actor is not None and actor not in authors:
         authors.append(actor)
+    published = False
+    if item.is_draft:
+        if ops.is_blank(content):
+            # Still nobody's business: the text only, no event, no version
+            if content != doc.content:
+                doc.content = content
+                doc.save(update_fields=["content"])
+            return False
+        # The doc exists from its first save with text (specs/ui-round-7.md,
+        # part 5): created now, telling nobody but who it mentions
+        published = True
+        item.is_draft = False
+        item.created_at = _now()
+        item.save(update_fields=["is_draft", "created_at"])
     title = doc_title(content) if content != doc.content else item.title
     renamed = title != item.title
     if not authors or not (renamed or content != doc.content or new_version):
@@ -183,10 +197,24 @@ def _save(item, doc, *, actor=None, new_version=False):
         doc.save(update_fields=["content"])
         for author in authors:
             attachments.link(item, content, actor=author)
-    events = [
-        record(actor=author, action=Action.EDITED, project=item.project, item=item)
-        for author in authors
-    ]
+    if published:
+        # Only its creator typed in it; quiet: the subscribers of its
+        # folder aren't told, the creator tells people at "Done"
+        events = [
+            record(
+                actor=author,
+                action=Action.CREATED,
+                project=item.project,
+                item=item,
+                quiet=True,
+            )
+            for author in authors
+        ]
+    else:
+        events = [
+            record(actor=author, action=Action.EDITED, project=item.project, item=item)
+            for author in authors
+        ]
     # Mentions to who typed them, the rest (a title, an API edit) to the
     # first author
     by_author = dict(zip(authors, events, strict=True))
@@ -321,6 +349,12 @@ def restore_doc_version(item, version, *, actor):
     live.apply_text(doc, version.content, user=actor)
     _save(item, doc, actor=actor, new_version=True)
     return doc.versions.first()
+
+
+def told(item, *, actor):
+    """The creator of a doc begun as a draft answered "Tell people about
+    it?" (either way): never asked again"""
+    Doc.objects.filter(pk=item.pk, tell_pending=True).update(tell_pending=False)
 
 
 @transaction.atomic

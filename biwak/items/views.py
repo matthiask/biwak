@@ -38,10 +38,11 @@ from biwak.schedules_forms import (
 )
 
 
-def item_for(request, pk, kind=None):
+def item_for(request, pk, kind=None, *, drafts=False):
     """The item if the person may see it, else 404: the one check
-    (specs/access.md), for the pages and the API"""
-    qs = Item.objects.visible_to(request.user).select_related(
+    (specs/access.md), for the pages and the API; ``drafts``: the
+    person's own drafts too (the editor's pages)"""
+    qs = Item.objects.visible_to(request.user, drafts=drafts).select_related(
         "project", "parent", "creator"
     )
     if kind:

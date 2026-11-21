@@ -36,6 +36,7 @@ urlpatterns = [
     path("projects/<int:pk>/docs/new/", docs.doc_new, name="doc_new"),
     path("docs/<int:pk>/", docs.doc, name="doc"),
     path("docs/<int:pk>/edit/", docs.doc_edit, name="doc_edit"),
+    path("docs/<int:pk>/tell/", docs.doc_tell, name="doc_tell"),
     path("docs/<int:pk>/read-only/", docs.doc_read_only, name="doc_read_only"),
     path("docs/<int:pk>/versions/", docs.doc_versions, name="doc_versions"),
     path(

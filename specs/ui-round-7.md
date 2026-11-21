@@ -3,8 +3,8 @@
 Round 7 of `ui-feedback.md` (2026-11-21), the questions answered the same
 day.
 
-**Status:** being built (2026-11-21, branch `ui7`). Details marked
-"proposed" are the spec writer's, accepted unless noted. Built so far:
+**Status:** built (2026-11-21, branch `ui7`, CLI 0.36.0). Details marked
+"proposed" are the spec writer's, accepted and built. What was built:
 part 1 (`files/_tiles.html`, `.wb-tiles` in `main.css`); part 2
 (`library.folder_new` and `folder_rename`, `files.operations.update_folder()`,
 renaming records `edited` like any edit, in the palette too); part 3
@@ -40,7 +40,31 @@ gone from uploading (set on the file's page); the visibility switch only
 at the top level; after the upload the page reloads (dropped onto a
 folder tile: you stay where you are); without JavaScript the files go up
 at once, a too big one is a message and the others go up; a single file
-uploaded without JavaScript opens its page as before.
+uploaded without JavaScript opens its page as before. Part 5:
+`Item.is_draft` (`visible_to()` leaves drafts out, `drafts=True` lets
+their creator's own in: the editor's pages and its websocket, nothing
+else), `items.operations.create_draft()` (text `# `, title "Untitled", no
+event, no version, its creator subscribed), `files.operations._save()`
+makes a doc of it with the first text beyond `#`s and blanks
+(`is_blank()`; `created_at` then, a quiet `created` event: the folder's
+subscribers aren't told, people mentioned in that first text are),
+`Doc.tell_pending` and `files.docs.doc_tell` (the subscribers' picker
+with a note, "Tell them" records `shared` like "Tell them now", "Not
+now"; either way never again), `delete_drafts` in `fairy_tasks` after
+`save_pending`, `data-collab-draft` in `frontend/collab.js`. The old
+"New doc" form (text, whom to notify) is gone. Decisions on the way:
+"New doc" is a link (GET) making a new draft each time it's opened
+(reloading the empty editor makes another; the empty ones go after a
+day; a link prefetched by a browser would make one too, conservative:
+nothing reuses drafts, which could put two tabs into one doc); the
+address is replaced by the browser when the text it has stops being
+blank (it doesn't wait for the server's save, a reload before that
+opens the doc's editor, which is the creator's); "Done" on an empty
+draft goes back to its folder; "Done" saves what was typed before asking;
+a draft in a folder visible to clients is visible to them once written,
+as the folder says (the spec's "internal" holds at the top level);
+Escape or Cancel in "Tell people about it?" doesn't answer it, the next
+"Done" asks again; only the creator is asked.
 
 **Agent:** a strong model (drag and drop, a draft doc's life); the
 visibility tests reviewed.

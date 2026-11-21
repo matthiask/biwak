@@ -194,7 +194,13 @@ def candidates(event):
         ids.discard(event.actor_id)
         return User.objects.active().filter(pk__in=ids)
     items = [item.pk]
-    if event.action == Action.CREATED and item.parent_id:
+    # A doc written from a draft is quiet (specs/ui-round-7.md, part 5):
+    # its creator tells people at "Done"
+    if (
+        event.action == Action.CREATED
+        and item.parent_id
+        and not event.data.get("quiet")
+    ):
         items.append(item.parent_id)
     ids = set(
         Subscription.objects.filter(item__in=items).values_list("user", flat=True)
