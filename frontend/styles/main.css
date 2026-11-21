@@ -1768,3 +1768,10 @@ main:has([data-hide-title]) .wb-page-header .wb-title,
 main:has([data-hide-title]) [data-edit-open] {
   display: none;
 }
+
+/* Commands to copy (the API tokens page): wrapped instead of scrolling
+   sideways, long URLs broken anywhere */
+.wb-pre-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
