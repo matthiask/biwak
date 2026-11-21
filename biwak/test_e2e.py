@@ -22,7 +22,7 @@ import time
 
 from django.conf import settings
 from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
-from django.db import connections
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.models import F
 from django.test import Client, LiveServerTestCase, tag
 from django.test.testcases import LiveServerThread
@@ -88,6 +88,23 @@ class E2ETestCase(LiveServerTestCase):
     def tearDown(self):
         for context in self.contexts:
             context.close()
+        self.wait_for_server_idle()
+
+    def wait_for_server_idle(self, timeout=10):
+        """Wait until the ASGI server has finished with the closed
+        browsers: the editor's websocket saves the doc and tells the others
+        when it disconnects, in a thread using the database, and the
+        flush after the test would deadlock with it (or delete rows under
+        its feet)"""
+        server = getattr(self.server_thread, "server", None)
+        state = getattr(server, "server_state", None)
+        if state is None:  # Not uvicorn
+            return
+        deadline = time.monotonic() + timeout
+        while state.connections or state.tasks:
+            if time.monotonic() > deadline:  # pragma: no cover
+                raise AssertionError("The live server still has open connections")
+            time.sleep(0.02)
 
     def login(self, user, **kwargs):
         """A page of a new browser context, logged in as ``user``"""
@@ -117,6 +134,9 @@ class E2ETestCase(LiveServerTestCase):
         if (
             message.type == "error"
             and not message.location["url"].endswith("/favicon.svg")
+            # The browser's offline mode (test_offline_and_reconnect) fails
+            # the websocket's reconnect attempts, depending on the timing
+            and "ERR_INTERNET_DISCONNECTED" not in message.text
             and not (
                 "/ws/live/" in message.text
                 and self.server_thread_class is not ASGIServerThread
@@ -727,6 +747,13 @@ class ASGIServerThread(LiveServerThread):
 
     def run(self):
         sock = socket.socket()
+        # The requests and consumers run in threads of their own (asgiref's
+        # thread sensitive contexts) which end without closing their
+        # connections when they're kept open: the test database couldn't be
+        # dropped afterwards. Connections are closed after each use instead.
+        settings_dict = connections.settings[DEFAULT_DB_ALIAS]
+        max_age = settings_dict["CONN_MAX_AGE"]
+        settings_dict["CONN_MAX_AGE"] = 0
         try:
             sock.bind((self.host, self.port))
             self.port = sock.getsockname()[1]
@@ -735,6 +762,7 @@ class ASGIServerThread(LiveServerThread):
         except OSError as exc:  # pragma: no cover
             self.error = exc
         finally:
+            settings_dict["CONN_MAX_AGE"] = max_age
             self.is_ready.set()
             connections.close_all()
 
