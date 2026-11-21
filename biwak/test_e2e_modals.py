@@ -41,7 +41,7 @@ class ModalTest(E2ETestCase):
         """Two steps in the dialog (specs/organizations.md): the
         organizations involved, then their people, staff and invitations"""
         page = self.page
-        self.goto(page, "/")
+        self.goto(page, "/projects/")
         page.get_by_role("link", name="New project").click()
         dialog = page.get_by_role("dialog", name="New project")
         expect(dialog).to_be_visible()

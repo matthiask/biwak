@@ -23,7 +23,9 @@ a browser test in `biwak/test_e2e.py` (`HomeTest`). Decisions on the way:
   dialog (`data-shortcuts-open`, `frontend/shortcuts.js`; decided
   2026-11-21); without JavaScript (or with shortcuts off) the hint with
   `?` shows instead.
-- "New project" is the one primary button, in the links card.
+- No "New project" in the links card (decided 2026-11-21: people
+  should check the existing projects first; it's on the projects list),
+  only in the empty state for someone in no project yet.
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`. Every section shows items, so the visibility tests matter
@@ -153,7 +155,6 @@ a narrow one (projects, bookmarks, links).
 
 Plain links in a card, each only for those who can use it (decided
 2026-11-21, nothing more):
-- "New project" (who may create one: the page's one primary action);
 - "To-dos I assigned" (staff);
 - "Search" with the shortcut (Ctrl+K), "Keyboard shortcuts" (`?`);
 - "Subscribe to your to-dos in a calendar" (the iCal feed's page,
