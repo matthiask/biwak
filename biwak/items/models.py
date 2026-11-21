@@ -9,7 +9,6 @@ writes both rows, the event and the subscriptions.
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import prefetch_related_objects
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -134,8 +133,8 @@ class Item(TreeNode):
         return self.title
 
     def get_absolute_url(self):
-        """An answer's needs its occurrence: ``load_links()`` loads them for
-        many items at once"""
+        """An answer's needs its occurrence: lists of items load it with
+        ``select_related("answer")`` (or ``"item__answer"``)"""
         if self.kind == Kind.ANSWER:
             # The occurrence's page, at the answer (specs/checkins.md)
             return (
@@ -193,14 +192,6 @@ class Item(TreeNode):
             if fields & self.TREE_FIELDS:
                 self.clean()
         super().save(*args, update_fields=update_fields, **kwargs)
-
-
-def load_links(items):
-    """What ``Item.get_absolute_url()`` needs for the items, in one query:
-    the answers' occurrences"""
-    prefetch_related_objects(
-        [item for item in items if item.kind == Kind.ANSWER and item.pk], "answer"
-    )
 
 
 class Detail(models.Model):

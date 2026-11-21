@@ -108,7 +108,7 @@ def _feed(
         request,
         events,
         lambda event: event_out(event, request.user),
-        prepare=feed.attach,
+        prepare=feed.add_excerpts,
         ordering=("-created_at", "-pk"),
         cursor=cursor,
         page_size=page_size,

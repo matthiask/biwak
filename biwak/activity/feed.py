@@ -17,7 +17,7 @@ from biwak import cursors
 from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event
-from biwak.items.models import Comment, Kind, Message, load_links
+from biwak.items.models import Comment, Kind, Message
 from biwak.projects.models import Project
 
 
@@ -39,8 +39,9 @@ def feed_events(
     """The events the person can see, newest first, narrowed down by the
     filters (all optional): the project, the actor, the kind of item, the
     action, only items clients can see, only events from ``since`` on"""
+    # An answer's link needs its occurrence (``Item.get_absolute_url()``)
     events = Event.objects.visible_to(user).select_related(
-        "actor", "project", "item", "item__parent"
+        "actor", "project", "item", "item__parent", "item__answer"
     )
     if project is not None:
         events = events.filter(project=project)
@@ -91,8 +92,8 @@ def page(events, before=None):
 
 def attach(events):
     """What rendering needs besides the event: the assigned people's names
-    (``event.assignee_names``), the project on the item and the answers'
-    occurrences (``load_links()``), which saves queries per link"""
+    (``event.assignee_names``) and the project on the item, which saves a
+    query per link"""
     ids = {
         pk
         for event in events
@@ -106,7 +107,6 @@ def attach(events):
         event.assignee_names = [
             names[pk] for pk in event.data.get("assignees", []) if pk in names
         ]
-    load_links([event.item for event in events if event.item is not None])
     add_excerpts(events)
 
 
