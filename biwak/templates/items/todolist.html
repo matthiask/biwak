@@ -3,7 +3,7 @@
 {% block title %}{{ item }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2"><a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a></nav>
+  {% include "_breadcrumbs.html" with project=item.project %}
   <div class="wb-page-header">
     <h1 class="wb-title">{{ item }} {% client_badge item %}</h1>
     <div class="wb-page-actions">
@@ -16,10 +16,7 @@
         class="btn btn-sm btn-quiet{% if view == 'board' %} active{% endif %}"
         href="?view=board"
       >{% translate "Board" %}</a>
-      {% if not request.user.is_client %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
-          >{% translate "History" %}</span></a>
-      {% endif %}
+      {% include "items/_history_link.html" %}
       {% if can_change %}
         <a class="btn btn-sm btn-quiet" href="{% url 'list_edit' item.pk %}">{% icon "pencil" %}<span
           >{% translate "Edit" %}</span></a>
@@ -51,7 +48,7 @@
       <section
         class="wb-group"
         data-group-item="{{ group.pk }}"
-        data-move-url="{% url 'group_move' group.pk %}"
+        {% if can_change %}data-move-url="{% url 'group_move' group.pk %}"{% endif %}
       >
         <h2 class="h6 wb-group-title">
           {% if can_change %}
@@ -149,26 +146,5 @@
     </details>
   {% endif %}
   <div class="mt-4">{% item_notifications item %}</div>
-  {% if can_switch %}
-    <form method="post" action="{% url 'switch' item.pk %}" class="mt-4 small">
-      {% csrf_token %}
-      {% if item.is_client_visible %}
-        <button type="submit" class="btn btn-sm btn-quiet">
-          {% icon "lock" %}<span>{% translate "Hide from clients" %}</span>
-        </button>
-        <span
-          class="text-body-secondary"
-        >{% translate "Hides the list, its to-dos and their comments again, also what clients wrote." %}</span>
-      {% else %}
-        <input type="hidden" name="visible" value="1">
-        <button type="submit" class="btn btn-sm btn-quiet">
-          {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
-        </button>
-        <span class="text-body-secondary">
-          {% blocktranslate asvar to_clients count counter=affected.clients %}{{ counter }} client{% plural %}{{ counter }} clients{% endblocktranslate %}
-          {% blocktranslate count counter=affected.items with comments=affected.comments clients=to_clients %}Makes this list, {{ counter }} to-do and {{ comments }} comments visible to {{ clients }}.{% plural %}Makes this list, {{ counter }} to-dos and {{ comments }} comments visible to {{ clients }}.{% endblocktranslate %}
-        </span>
-      {% endif %}
-    </form>
-  {% endif %}
+  {% include "items/_switch.html" with kind="list" %}
 {% endblock content %}

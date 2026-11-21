@@ -148,3 +148,12 @@
 .bi-upload::before {
   content: "\f603";
 }
+.bi-circle-half::before {
+  content: "\f288";
+}
+.bi-sun::before {
+  content: "\f5a2";
+}
+.bi-moon-stars::before {
+  content: "\f496";
+}

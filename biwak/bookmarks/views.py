@@ -48,9 +48,10 @@ def project_bookmark(request, pk):
         # The button on a card of the projects page swaps itself
         return render(
             request,
-            "projects/_card_bookmark.html",
+            "bookmarks/_bookmark_button.html",
             {
-                "project": project,
+                "target": project,
+                "card": True,
                 "is_bookmarked": ops.is_bookmarked(request.user, project=project),
             },
         )

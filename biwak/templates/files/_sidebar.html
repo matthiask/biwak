@@ -1,53 +1,5 @@
-{% load biwak i18n %}
-{% comment %}Subscribers, notifications, history, the switch and the trash of an item's page. Pass `what` ("message", "doc", …) for the texts.{% endcomment %}
-<h2 class="h6">{% translate "Subscribers" %}</h2>
-<p class="small">
-  {% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %},
-    {% endif %}{% empty %}–{% endfor %}
-</p>
-<form method="post" action="{% url 'subscription' item.pk %}">
-  {% csrf_token %}
-  {% if is_subscribed %}
-    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Unsubscribe" %}</button>
-  {% else %}
-    <input type="hidden" name="subscribe" value="1">
-    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Subscribe" %}</button>
-  {% endif %}
-</form>
-{% item_notifications item %}
-{% if not request.user.is_client %}
-  <p class="mt-4 mb-0">
-    <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
-      >{% translate "History" %}</span></a>
-  </p>
-{% endif %}
-{% if can_switch %}
-  <form method="post" action="{% url 'switch' item.pk %}" class="mt-4 small">
-    {% csrf_token %}
-    {% if item.is_client_visible %}
-      <button type="submit" class="btn btn-sm btn-quiet">
-        {% icon "lock" %}<span>{% translate "Hide from clients" %}</span>
-      </button>
-      <span
-        class="text-body-secondary"
-      >{% translate "Hides it again, with what's in it and its comments, also what clients wrote." %}</span>
-    {% else %}
-      <input type="hidden" name="visible" value="1">
-      <button type="submit" class="btn btn-sm btn-quiet">
-        {% icon "eye" %}<span>{% translate "Show to clients" %}</span>
-      </button>
-      <span class="text-body-secondary">
-        {% blocktranslate asvar to_clients count counter=affected.clients %}{{ counter }} client{% plural %}{{ counter }} clients{% endblocktranslate %}
-        {% blocktranslate with items=affected.items comments=affected.comments clients=to_clients %}Makes it, {{ items }} items below it and {{ comments }} comments visible to {{ clients }}.{% endblocktranslate %}
-      </span>
-    {% endif %}
-  </form>
-{% endif %}
-{% if can_change %}
-  <form method="post" action="{% url 'item_trash' item.pk %}" class="mt-4">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-sm btn-destructive">
-      {% icon "trash" %}<span>{% translate "Move to trash" %}</span>
-    </button>
-  </form>
-{% endif %}
+{% comment %}Subscribers, notifications, history, the switch and the trash of an item's page.{% endcomment %}
+{% include "items/_subscribers.html" %}
+{% include "items/_history_link.html" with block=True %}
+{% include "items/_switch.html" %}
+{% if can_change %}{% include "items/_trash_button.html" %}{% endif %}

@@ -3,7 +3,7 @@
 {% block title %}{% translate "Trash" %} – {{ project }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  {% include "_breadcrumbs.html" %}
   <h1 class="mb-2">{% translate "Trash" %}</h1>
   <p class="text-body-secondary">
     {% blocktranslate %}Trashed items are deleted for good after {{ days }} days, with everything in them.{% endblocktranslate %}

@@ -3,7 +3,7 @@
 {% block title %}{% translate "Check-ins" %} – {{ project }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  {% include "_breadcrumbs.html" %}
   <div class="wb-page-header">
     <h1 class="wb-title">{% translate "Check-ins" %}</h1>
     <div class="wb-page-actions">

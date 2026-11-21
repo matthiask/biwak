@@ -3,7 +3,7 @@
 {% block title %}{% translate "Edit the project" %} – {{ project }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>
+  {% include "_breadcrumbs.html" %}
   <h1 class="mb-3">{% translate "Edit the project" %}</h1>
   <div class="card wb-form-card">
     <div class="card-body">

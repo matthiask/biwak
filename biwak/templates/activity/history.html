@@ -3,10 +3,7 @@
 {% block title %}{% translate "History" %}: {{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{{ item.get_absolute_url }}">{{ item|item_title }}</a>
-  </nav>
+  {% include "_breadcrumbs.html" with project=item.project parent=item %}
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% translate "History" %}: {{ item|item_title }}

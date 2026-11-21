@@ -70,7 +70,7 @@
                       title="{% translate 'Limited: members only' %}"
                     >{% icon "lock" %}</span>{% endif %}
                 </h2>
-                {% include "projects/_card_bookmark.html" with is_bookmarked=project.is_bookmarked %}
+                {% include "bookmarks/_bookmark_button.html" with target=project is_bookmarked=project.is_bookmarked card=True %}
               </div>
               {% if project.description_first_line %}
                 <p class="small text-body-secondary text-truncate mb-1">

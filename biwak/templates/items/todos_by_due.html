@@ -3,7 +3,7 @@
 {% block title %}{{ title }} – Biwak{% endblock %}
 
 {% block content %}
-  {% if project %}<nav class="small mb-2"><a href="{{ project.get_absolute_url }}">{{ project }}</a></nav>{% endif %}
+  {% if project %}{% include "_breadcrumbs.html" %}{% endif %}
   <div class="wb-page-header">
     <h1 class="wb-title">{{ title }}</h1>
   </div>

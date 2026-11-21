@@ -1,0 +1,20 @@
+{% load biwak i18n %}
+{% comment %}
+  What every to-do row starts with: the check and the title. `keep_page`:
+  coming back to this page after toggling, not to the to-do's list.
+{% endcomment %}
+<form method="post" action="{% url 'todo_toggle' todo.pk %}" class="d-inline">
+  {% csrf_token %}
+  {% if keep_page %}<input type="hidden" name="next" value="{{ request.get_full_path }}">{% endif %}
+  <button
+    type="submit"
+    class="wb-check{% if todo.todo.is_completed %} is-done{% endif %}"
+    title="{% if todo.todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
+  >
+    {% if todo.todo.is_completed %}{% icon "check-lg" %}{% endif %}
+  </button>
+</form>
+<a
+  href="{{ todo.get_absolute_url }}"
+  class="wb-todo-title{% if todo.todo.is_completed %} text-decoration-line-through text-body-secondary{% endif %}"
+>{{ todo|item_title }}</a>

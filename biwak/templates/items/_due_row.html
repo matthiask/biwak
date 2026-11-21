@@ -1,25 +1,9 @@
 {% load biwak i18n %}
 <div class="wb-todo">
-  <form method="post" action="{% url 'todo_toggle' todo.pk %}" class="d-inline">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-    <button
-      type="submit"
-      class="wb-check{% if todo.todo.is_completed %} is-done{% endif %}"
-      title="{% if todo.todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
-    >
-      {% if todo.todo.is_completed %}{% icon "check-lg" %}{% endif %}
-    </button>
-  </form>
-  <a
-    href="{{ todo.get_absolute_url }}"
-    class="wb-todo-title{% if todo.todo.is_completed %} text-decoration-line-through text-body-secondary{% endif %}"
-  >{{ todo|item_title }}</a>
+  {% include "items/_todo_lead.html" with keep_page=True %}
   {% client_badge todo %}
   {% include "items/_signals.html" %}
-  {% for person in todo.todo.assignees.all %}<span
-      class="badge wb-person"
-    >{{ person.get_short_name }}</span>{% endfor %}
+  {% include "items/_todo_assignees.html" %}
   <span class="small text-body-secondary ms-auto">
     {% if not project %}<a
         href="{{ todo.project.get_absolute_url }}"

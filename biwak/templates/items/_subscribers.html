@@ -1,0 +1,17 @@
+{% load biwak i18n %}
+{% comment %}Who gets mails about an item, and the person's own subscription and level.{% endcomment %}
+<h2 class="h6">{% translate "Subscribers" %}</h2>
+<p class="small">
+  {% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %},
+    {% endif %}{% empty %}–{% endfor %}
+</p>
+<form method="post" action="{% url 'subscription' item.pk %}">
+  {% csrf_token %}
+  {% if is_subscribed %}
+    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Unsubscribe" %}</button>
+  {% else %}
+    <input type="hidden" name="subscribe" value="1">
+    <button type="submit" class="btn btn-sm btn-quiet">{% translate "Subscribe" %}</button>
+  {% endif %}
+</form>
+{% item_notifications item %}

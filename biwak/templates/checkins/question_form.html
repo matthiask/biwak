@@ -4,10 +4,7 @@
   Biwak{% endblock title %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ project.get_absolute_url }}">{{ project }}</a> /
-    <a href="{% url 'project_checkins' project.pk %}">{% translate "Check-ins" %}</a>
-  </nav>
+  {% url 'project_checkins' project.pk as area_url %}{% translate "Check-ins" as area %}{% include "_breadcrumbs.html" %}
   <h1 class="mb-3">
     {% if item %}{% translate "Edit the check-in" %}{% else %}{% translate "New check-in" %}{% endif %}
   </h1>
@@ -26,11 +23,6 @@
     </div>
   </div>
   {% if item %}
-    <form method="post" action="{% url 'item_trash' item.pk %}" class="mt-4">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-destructive">
-        {% icon "trash" %}<span>{% translate "Move to trash" %}</span>
-      </button>
-    </form>
+    {% include "items/_trash_button.html" %}
   {% endif %}
 {% endblock content %}

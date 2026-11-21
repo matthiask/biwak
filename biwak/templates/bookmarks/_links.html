@@ -18,10 +18,7 @@
               >{% icon "grip-vertical" %}</span>{% endif %}
             {% include "bookmarks/_kind_icon.html" with kind=link.kind %}
             <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a>
-            {% if link.visible_to_clients %}<span
-                class="badge wb-client-badge"
-                title="{% translate 'Clients can see this' %}"
-              >{% translate "Clients" %}</span>{% endif %}
+            {% client_badge link %}
             {% if can_manage %}
               <a
                 class="btn btn-sm btn-quiet"

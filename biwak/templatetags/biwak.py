@@ -237,8 +237,12 @@ def icon(name):
 
 @register.simple_tag
 def client_badge(item):
-    """The bright badge on everything visible to clients (specs/access.md)"""
-    if not item.is_client_visible:
+    """The bright badge on everything visible to clients (specs/access.md):
+    items, and links, which have a flag of their own"""
+    visible = getattr(item, "is_client_visible", None)
+    if visible is None:
+        visible = item.visible_to_clients
+    if not visible:
         return ""
     return format_html(
         '<span class="badge wb-client-badge" title="{}">{}</span>',

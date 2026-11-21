@@ -3,10 +3,7 @@
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{{ item.parent.get_absolute_url }}">{{ item.parent }}</a>
-  </nav>
+  {% include "_breadcrumbs.html" with project=item.project parent=item.parent %}
   <div class="wb-page-header">
     <h1 class="wb-title">
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
@@ -63,43 +60,10 @@
           </form>
         </div>
       </div>
-      <h2 class="h5" id="comments">{% translate "Comments" %}</h2>
-      {% for comment in comments %}
-        <div class="card mb-2" id="comment-{{ comment.pk }}">
-          <div class="card-body">
-            <div class="small text-body-secondary mb-1">
-              <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
-            </div>
-            <div class="wb-markdown">{{ comment.content|markdown:item }}</div>
-            {% reactions item comment %}
-          </div>
-        </div>
-      {% endfor %}
-      {% include "items/_client_banner.html" %}
-      <form method="post" class="mt-2" {% attachments_attrs item.project %}>
-        {% csrf_token %}
-        <input type="hidden" name="form" value="comment">
-        {% include "files/_attach_button.html" %}
-        {{ comment_form }}
-        <button type="submit" class="btn btn-primary btn-sm">{% translate "Add comment" %}</button>
-      </form>
+      {% include "items/_comments.html" %}
     </div>
     <div class="col-lg-4">
-      <h2 class="h6">{% translate "Subscribers" %}</h2>
-      <p class="small">
-        {% for person in subscribers %}{{ person.get_short_name }}{% if not forloop.last %},
-          {% endif %}{% empty %}–{% endfor %}
-      </p>
-      <form method="post" action="{% url 'subscription' item.pk %}">
-        {% csrf_token %}
-        {% if is_subscribed %}
-          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Unsubscribe" %}</button>
-        {% else %}
-          <input type="hidden" name="subscribe" value="1">
-          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Subscribe" %}</button>
-        {% endif %}
-      </form>
-      {% item_notifications item %}
+      {% include "items/_subscribers.html" %}
       {% if not todo.is_completed %}
         <h2 class="h6 mt-4">{% translate "Move to…" %}</h2>
         <form method="post" action="{% url 'todo_move' item.pk %}" class="wb-move-form">
@@ -134,20 +98,8 @@
           </div>
         </form>
       {% endif %}
-      {% if not request.user.is_client %}
-        <p class="mt-4 mb-0">
-          <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
-            >{% translate "History" %}</span></a>
-        </p>
-      {% endif %}
-      {% if can_change %}
-        <form method="post" action="{% url 'item_trash' item.pk %}" class="mt-4">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-destructive">
-            {% icon "trash" %}<span>{% translate "Move to trash" %}</span>
-          </button>
-        </form>
-      {% endif %}
+      {% include "items/_history_link.html" with block=True %}
+      {% if can_change %}{% include "items/_trash_button.html" %}{% endif %}
     </div>
   </div>
 {% endblock content %}

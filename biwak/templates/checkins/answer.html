@@ -3,11 +3,7 @@
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2">
-    <a href="{{ item.project.get_absolute_url }}">{{ item.project }}</a> /
-    <a href="{% url 'project_checkins' item.project.pk %}">{% translate "Check-ins" %}</a> /
-    <a href="{{ item.get_absolute_url }}">{{ item|item_title }}</a>
-  </nav>
+  {% url 'project_checkins' item.project.pk as area_url %}{% translate "Check-ins" as area %}{% include "_breadcrumbs.html" with project=item.project parent=item %}
   <h1 class="wb-title">{{ item|item_title }} {% client_badge item %}</h1>
   <p class="text-body-secondary">{{ occurrence.asked_at|date:"l, j. F Y" }}</p>
   {% include "items/_client_banner.html" %}

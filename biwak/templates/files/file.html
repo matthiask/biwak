@@ -42,7 +42,7 @@
       </p>
       {% if upload.description %}<div class="wb-markdown mb-4">{{ upload.description|markdown:item }}</div>{% endif %}
       {% reactions item %}
-      {% include "files/_comments.html" %}
+      {% include "items/_comments.html" %}
     </div>
     <div class="col-lg-4">
       {% if can_change %}

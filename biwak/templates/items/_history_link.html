@@ -1,0 +1,8 @@
+{% load biwak i18n %}
+{% comment %}The link to an item's history, for staff only; `block`: in a line of its own, below the rest.{% endcomment %}
+{% if not request.user.is_client %}
+  <span class="{% if block %}d-block mt-4{% endif %}">
+    <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
+      >{% translate "History" %}</span></a>
+  </span>
+{% endif %}

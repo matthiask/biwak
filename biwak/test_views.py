@@ -275,7 +275,9 @@ class ViewsTest(TestCase):
         url = self.shared.get_absolute_url()
         response = self.client.get(url)
         self.assertContains(response, "data-add-todo-form", count=1)
-        self.assertContains(response, f'name="assignees" value="{self.cleo.pk}"')
+        self.assertRegex(
+            response.content.decode(), rf'name="assignees"\s+value="{self.cleo.pk}"'
+        )
         response = self.client.post(
             url,
             {
@@ -302,8 +304,9 @@ class ViewsTest(TestCase):
     def test_add_todo_no_clients_on_internal_lists(self):
         self.client.force_login(self.ada)
         url = self.internal.get_absolute_url()
-        self.assertNotContains(
-            self.client.get(url), f'name="assignees" value="{self.cleo.pk}"'
+        self.assertNotRegex(
+            self.client.get(url).content.decode(),
+            rf'name="assignees"\s+value="{self.cleo.pk}"',
         )
         response = self.client.post(
             url,
