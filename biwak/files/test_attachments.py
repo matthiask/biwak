@@ -508,3 +508,43 @@ class StorageNameTest(Fixture, TestCase):
     def test_the_extension_survives_shortening(self):
         attachment = upload(self.project, self.ada, name="a" * 300 + ".pdf")
         self.assertTrue(attachment.file.name.endswith(".pdf"))
+
+
+class RollbackTest(Fixture, TestCase):
+    def test_a_failed_upload_leaves_no_file(self):
+        with (
+            patch.object(Attachment, "save", side_effect=RuntimeError),
+            self.assertRaises(RuntimeError),
+        ):
+            upload(self.project, self.ada)
+        self.assertEqual(stored_files(self.project), [])
+
+    def test_a_failed_new_file_leaves_no_file(self):
+        with (
+            patch.object(attachments, "link", side_effect=RuntimeError),
+            self.assertRaises(RuntimeError),
+        ):
+            ops.create_upload(
+                project=self.project,
+                file=ContentFile(b"x", name="a.txt"),
+                creator=self.ada,
+            )
+        self.assertEqual(stored_files(self.project), [])
+
+    def test_a_failed_replacement_keeps_only_the_old_file(self):
+        from biwak.files import operations as file_ops
+
+        item = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="a.txt"),
+            creator=self.ada,
+        )
+        before = stored_files(self.project)
+        with (
+            patch.object(file_ops, "record", side_effect=RuntimeError),
+            self.assertRaises(RuntimeError),
+        ):
+            file_ops.replace_upload(
+                item, ContentFile(b"y", name="b.txt"), actor=self.ada
+            )
+        self.assertEqual(stored_files(self.project), before)

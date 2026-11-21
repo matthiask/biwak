@@ -230,11 +230,12 @@ def new_version(upload, file, *, uploaded_by):
         content_type=content_type_for(name),
         uploaded_by=uploaded_by,
     )
-    version.file.save(name, file, save=False)
+    attachments.store(version.file, name, file)
     version.save()
     return version
 
 
+@attachments.cleans_up_files
 @transaction.atomic
 def create_upload(
     *,
