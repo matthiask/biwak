@@ -65,7 +65,7 @@ templates), `items/todo.html` and the comment template, the CLI.
 - **Quick reactions:** a fixed set of 32 emoji (24 until 2026-11-21)
   offered in a small picker, one click each, in rows of 8:
   👍 👎 👏 🙌 🙏 💪 👋 ✅ / 🎉 🥳 ❤️ 😍 😂 😊 😅 🤪 /
-  😮 😢 🤔 👀 🙈 🤯 🔥 ✨ / 🚀 💯 ⭐ ☀️ 🍀 ☕ 🍩 🍰.
+  😮 😢 🤔 👀 💡 🤯 🔥 ✨ / 🚀 💯 ⭐ ☀️ 🍀 ☕ 🍩 🍰.
   In `biwak/reactions/emoji.py`.
 - **Short text:** besides the quick ones, a text field for anything
   else (any emoji, "Thanks!", "Nice work"), at most 40 characters
@@ -156,7 +156,7 @@ label "Add a reaction"; one's own pill (`.wb-reaction-own`,
 `frontend/reactions.js`) asks first; the confirmation page lives at
 `…/reactions/remove/?content=…` for items and comments.
 - **The picker's emojis** (2026-11-21): plain and larger, without button
-  frames, in full rows. 32 of them (decided 2026-11-21, 🤪 😅 🙈 🤯 👋 ☀️
+  frames, in full rows. 32 of them (decided 2026-11-21, 🤪 😅 💡 🤯 👋 ☀️
   🍀 🍩 added), 8 by 4, also on a phone.
 - **The pills** (2026-11-21): as tall as the button adding a reaction,
   emojis a little larger than the text; a few words stay at the text's
