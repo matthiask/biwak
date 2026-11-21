@@ -1385,7 +1385,9 @@ def feed(project, person, kind, action, since, limit, as_json):
 @click.argument("terms", nargs=-1, required=True)
 @click.option("--project", type=int, help="Only this project's ID.")
 @click.option("--kind", help="Only this kind of item: todo, doc, message, …")
-@click.option("--mine", is_flag=True, help="Only what you created.")
+@click.option(
+    "--mine", is_flag=True, help="Only what you created or is assigned to you."
+)
 @click.option("--no-archived", is_flag=True, help="Leave out archived projects.")
 @click.option("--limit", default=50, show_default=True, help="At most this many.")
 @json_option

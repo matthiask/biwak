@@ -252,6 +252,27 @@ class FiltersTest(SearchBase):
             [r["title"] for r in response.json()["results"]], ["Tent plan"]
         )
 
+    def test_mine_includes_assigned_todos_within_visibility(self):
+        ops.assign(self.todo, [self.bob], actor=self.ada)
+        # Created and assigned: found once
+        mine = ops.create_todo(
+            todolist=self.visible, title="Tent pegs", creator=self.bob
+        )
+        ops.assign(mine, [self.bob], actor=self.bob)
+        self.assertEqual(
+            self.both(self.bob, "tent", mine="on"),
+            ["Order the tent", "Tent pegs", "Tent plan"],
+        )
+        # Ada created these, nobody else is assigned
+        self.assertEqual(self.both(self.bob, "zebra", mine="on"), [])
+        self.assertEqual(
+            self.both(self.ada, "tent", mine="on"), ["Camp tent", "Order the tent"]
+        )
+        # Assigned, but not visible to Cleo any more: stays out
+        ops.assign(self.todo, [self.cleo], actor=self.ada)
+        Item.objects.filter(pk=self.todo.pk).update(is_client_visible=False)
+        self.assertEqual(self.both(self.cleo, "tent", mine="on"), [])
+
     def test_archived_projects_are_searched_and_marked(self):
         archive_project(self.other, actor=self.ada)
         self.assertEqual(

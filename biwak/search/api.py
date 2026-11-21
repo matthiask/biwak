@@ -48,7 +48,8 @@ def search(
     page_size: int | None = None,
 ):
     """Items with all the words (each also as the start of a word) in their
-    title, text or comments, newest first; ``mine`` only what you created.
+    title, text or comments, newest first; ``mine`` only what you
+    created or what is assigned to you.
     Archived projects are included unless ``exclude_archived``."""
     project = project_for(request, project_id) if project_id else None
     found = queries.search(
