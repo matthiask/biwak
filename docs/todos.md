@@ -20,8 +20,13 @@ project. Staff create lists with "New list" on the project's page.
   to-do to that group.
 - **Completed:** finished to-dos collapse into "Completed (N)" below
   the list; "Show more" loads older ones.
-- Lists can be archived (in the list's edit page). An archived list
-  stays readable.
+- **Archive:** finished lists go out of the way with "Archive" in the
+  list's "More" menu, in the menu of the list on the project's page, or
+  in the command palette; "Unarchive" brings them back. An archived list
+  stays readable, but is left out of the project's lists (it is under
+  "Archived lists"), of your to-dos, of the calendar link and of the
+  palette's suggestions, and its recurring to-dos don't repeat. Nothing
+  is archived automatically. To-dos are completed, not archived.
 
 ## A to-do
 

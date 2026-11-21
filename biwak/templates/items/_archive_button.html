@@ -1,0 +1,14 @@
+{% load i18n %}
+{% comment %}
+  Archives a list or brings it back, a menu entry (the list's "More" menu, the menus of the project page's
+  lists). `item` the list; `next` where to go afterwards (default: the list).
+{% endcomment %}
+<form method="post" action="{% url 'list_archive' item.pk %}">
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% if item.status == "archived" %}
+    <button type="submit" name="unarchive" value="1" class="dropdown-item">{% translate "Unarchive" %}</button>
+  {% else %}
+    <button type="submit" class="dropdown-item">{% translate "Archive" %}</button>
+  {% endif %}
+</form>

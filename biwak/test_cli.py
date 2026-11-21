@@ -178,6 +178,19 @@ class CLICommandsTest(CLITest):
             "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
         )
 
+    def test_archiving_lists(self):
+        self.assertIn(
+            "Archived Launch", self.biwak("list", "archive", self.list.pk).output
+        )
+        self.assertNotIn("Launch", self.biwak("lists", self.project.pk).output)
+        archived = self.biwak("lists", self.project.pk, "--archived", "--json")
+        self.assertEqual([i["title"] for i in json.loads(archived.stdout)], ["Launch"])
+        data = json.loads(
+            self.biwak("list", "unarchive", self.list.pk, "--json").stdout
+        )
+        self.assertEqual(data["status"], "active")
+        self.assertIn("Launch", self.biwak("lists", self.project.pk).output)
+
     # Small pages, server and CLI: every list comes in several of them
     @patch.object(api_conventions, "PAGE_SIZE", 3)
     @patch.object(api_conventions, "MAX_PAGE_SIZE", 4)

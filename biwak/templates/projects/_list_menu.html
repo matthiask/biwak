@@ -1,0 +1,16 @@
+{% load biwak i18n %}
+{% comment %}
+  The menu of a list on the project page: archiving it, or bringing it back. `list` carries `can_change`
+  (the view sets it, like the list's own page).
+{% endcomment %}
+{% if list.can_change %}
+  <details class="dropdown wb-menu ms-2">
+    <summary class="btn btn-sm btn-quiet" aria-label="{% translate 'More' %}">
+      {% translate "More" %}
+      {% icon "chevron-down" %}
+    </summary>
+    <div class="dropdown-menu dropdown-menu-end">
+      {% include "items/_archive_button.html" with item=list next=project.get_absolute_url %}
+    </div>
+  </details>
+{% endif %}

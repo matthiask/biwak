@@ -41,7 +41,7 @@ lists, messages, docs and files, check-ins, members.
 - The project's page shows its to-do lists, the latest messages, docs
   and files, check-ins waiting for you, links and the latest activity.
   The "More" menu has the project's notification level, archiving and
-  the trash.
+  the trash; each list has a menu with "Archive".
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page.
 - **Members** lists who is in the project. Staff add people there or

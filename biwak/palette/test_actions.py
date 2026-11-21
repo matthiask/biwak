@@ -228,6 +228,30 @@ class ItemActionsTest(ActionsBase):
         self.assertIn("List view", actions)
         self.assertNotIn("Board view", actions)
 
+    def test_archiving_a_list(self):
+        url = self.list.get_absolute_url()
+        action = self.actions(self.ada, url)["Archive"]
+        self.assertEqual(action["type"], "post")
+        self.assertEqual(action["url"], f"/lists/{self.list.pk}/archive/")
+        self.assertEqual(action["data"], {"next": url})
+        ops.archive(self.list, actor=self.ada)
+        actions = self.actions(self.ada, url)
+        self.assertNotIn("Archive", actions)
+        self.assertEqual(actions["Unarchive"]["data"], {"unarchive": "1", "next": url})
+
+    def test_clients_archive_their_own_lists_only(self):
+        self.assertNotIn(
+            "Archive", self.actions(self.cleo, self.list.get_absolute_url())
+        )
+        own = ops.create_list(
+            project=self.camp, title="Wishes", creator=self.cleo, visible=True
+        )
+        self.assertIn("Archive", self.actions(self.cleo, own.get_absolute_url()))
+
+    def test_no_archiving_elsewhere(self):
+        for item in [self.todo, self.message, self.doc]:
+            self.assertNotIn("Archive", self.actions(self.ada, item.get_absolute_url()))
+
     def test_a_list_as_a_client(self):
         actions = self.actions(self.cleo, self.list.get_absolute_url())
         self.assertIn("New to-do", actions)

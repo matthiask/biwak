@@ -75,6 +75,15 @@ KINDS = {
     "Attachment": "attachments",
 }
 
+# What isn't imported when archived (the recordings' ``status`` filter works
+# on the recordings of the project)
+ARCHIVED_SKIPPED = {
+    "Message": "message",
+    "Document": "doc",
+    "Upload": "file",
+    "Question": "check-in question",
+}
+
 # Basecamp's weekdays, 0 is Sunday
 WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
 
@@ -107,6 +116,7 @@ class Report:
         self.images = []  # the people whose profile image was imported
         self.generated = []  # those whose image Basecamp generated: skipped
         self.problems = []
+        self.archived = []  # archived recordings which aren't imported
         # Internal items inside containers visible to clients, which go
         # into internal containers of their own
         self.internal = []
@@ -132,6 +142,9 @@ class Report:
         if self.internal:
             lines.append("Internal inside containers visible to clients, moved:")
             lines += [f"  {line}" for line in self.internal]
+        if self.archived:
+            lines.append("Archived in Basecamp, skipped:")
+            lines += [f"  {line}" for line in self.archived]
         if self.problems:
             lines.append("Problems:")
             lines += [f"  {problem}" for problem in self.problems]
@@ -419,11 +432,31 @@ class Importer(Resolver):
                     with importing(at=parse_time(rec["created_at"])):
                         self._add_member(project, user)
             self._dock(rec, project)
+            self._archived_recordings(project_id)
             if not self.dry:
                 self._fix_links(project)
                 self._bookmarks(project)
                 project_ops.recompute_activity()
         return self.report
+
+    def _archived_recordings(self, project_id):
+        """Archived messages, docs, files and questions aren't imported
+        (specs/archiving.md); the report lists them, in a dry run too"""
+        for bc_type, label in ARCHIVED_SKIPPED.items():
+            try:
+                found = list(
+                    self.client.paginate(
+                        "/projects/recordings.json",
+                        type=bc_type,
+                        bucket=project_id,
+                        status="archived",
+                    )
+                )
+            except api.NotFound:
+                continue
+            for rec in found:
+                title = rec.get("title") or rec.get("subject") or str(rec["id"])
+                self.report.archived.append(f"{label}: {title}")
 
     def _project(self, rec):
         def create():
@@ -576,6 +609,7 @@ class Importer(Resolver):
                 ops.set_visibility(item, visible=visible, actor=item.creator)
 
     def _status(self, item, rec):
+        """Lists stay archived (to-dos are completed, not archived)"""
         archived = rec.get("status") == "archived"
         with importing(at=parse_time(rec.get("updated_at"))):
             if archived and item.status == Status.ACTIVE:
@@ -796,23 +830,28 @@ class Importer(Resolver):
         with importing(at=parse_time(rec.get("updated_at"))):
             self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
             self._completion(todo, rec)
-            self._status(todo, rec)
         self._stamp(todo, rec)
         self._comments(rec, todo)
         self._subscriptions(rec, todo)
 
     def _completion(self, todo, rec):
+        """Archived to-dos come in completed (specs/archiving.md), at the
+        time Basecamp last changed them (the archiving), by the importing
+        person: the API doesn't say who archived"""
         done = Todo.objects.get(item=todo).is_completed
-        if rec.get("completed") and not done:
+        archived = rec.get("status") == "archived"
+        if (rec.get("completed") or archived) and not done:
             completion = rec.get("completion") or {}
             when = parse_time(completion.get("created_at")) or parse_time(
                 rec["updated_at"]
             )
-            by = self._user(completion.get("creator")) or todo.creator
+            by = self._user(completion.get("creator")) or (
+                self.actor if archived and not rec.get("completed") else todo.creator
+            )
             with importing(at=when):
                 ops.complete(todo, actor=by)
             Todo.objects.filter(pk=todo.pk).update(completed_at=when)
-        elif not rec.get("completed") and done:
+        elif not (rec.get("completed") or archived) and done:
             with importing():
                 ops.reopen(todo, actor=todo.creator)
 

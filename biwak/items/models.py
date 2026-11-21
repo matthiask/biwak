@@ -63,6 +63,8 @@ COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
 
 class Status(models.TextChoices):
+    # Archived is for lists only; ``operations.archive()`` is the one check
+    # (specs/archiving.md)
     ACTIVE = "active", _("active")
     ARCHIVED = "archived", _("archived")
     TRASHED = "trashed", _("trashed")
