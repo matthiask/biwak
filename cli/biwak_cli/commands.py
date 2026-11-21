@@ -448,7 +448,7 @@ def invite(
 def people(ctx, inactive, as_json):
     """The active people (staff), or with --inactive those who can't sign
     in; `biwak people activate` and `deactivate` change that,
-    `reset-two-factor` removes somebody's authenticator app, passkeys and
+    `reset-sign-in` removes somebody's authenticator app, passkeys and
     API tokens"""
     if ctx.invoked_subcommand is not None:
         return None
@@ -499,21 +499,50 @@ def people_deactivate(ids, as_json):
     return None
 
 
-@people.command("reset-two-factor")
+@people.command("reset-sign-in")
 @click.argument("person_id", type=int)
 @json_option
-def people_reset_two_factor(person_id, as_json):
+def people_reset_sign_in(person_id, as_json):
     """Remove the person's authenticator app, passkeys and API tokens, sign
-    them out everywhere and mail them; staff reset clients, admins also staff and partners, not
-    yourself (turn your own off in the settings)"""
-    data = request("POST", f"people/{person_id}/reset-two-factor/")
+    them out everywhere and mail them what was removed; for a lost device or
+    when someone else may have had access. Staff reset clients, admins also
+    staff and partners, not yourself (change your own in the settings)"""
+    data = request("POST", f"people/{person_id}/reset-sign-in/")
     if as_json:
         return echo_json(data)
     if data["reset"]:
-        click.echo(f"Reset: {data['name']} ({data['id']}), signed out everywhere")
+        removed = data["removed"]
+        what = [
+            *(["authenticator app"] if removed["app"] else []),
+            *([f"{removed['passkeys']} passkey(s)"] if removed["passkeys"] else []),
+            *(
+                [f"{removed['api_tokens']} API token(s)"]
+                if removed["api_tokens"]
+                else []
+            ),
+        ]
+        click.echo(
+            f"Reset: {data['name']} ({data['id']}), removed {', '.join(what)},"
+            " signed out everywhere"
+        )
     else:
-        click.echo(f"{data['name']} ({data['id']}) has no authenticator app.")
+        click.echo(
+            f"{data['name']} ({data['id']}) has no authenticator app, passkeys"
+            " or API tokens."
+        )
     return None
+
+
+# The old name (CLI 0.36.0), kept as an alias
+people.add_command(
+    click.Command(
+        "reset-two-factor",
+        callback=people_reset_sign_in.callback,
+        params=people_reset_sign_in.params,
+        help="Old name of reset-sign-in.",
+        hidden=True,
+    )
+)
 
 
 @cli.group(invoke_without_command=True)

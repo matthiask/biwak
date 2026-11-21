@@ -2,8 +2,7 @@
 
 Who gets into Biwak and who leaves: inviting people (several at once),
 the invitations still waiting, activating people the importer created
-inactive, deactivating people who left, and resetting someone's second
-factor. Organizations, the People page and partners are in
+inactive, deactivating people who left, and resetting someone's sign-in. Organizations, the People page and partners are in
 `organizations.md`; sign-in in `access.md`.
 
 **Status:** built (2026-11-21). Inviting several: `biwak/projects/invitations.py`
@@ -123,10 +122,11 @@ nobody gets mail or a sign-in before someone decides
   "is active" nor "is admin" can be taken from the last active admin
   (the form says so; `UserAdmin.save_model()` locks the admins first).
 
-## Resetting a second factor
+## Resetting someone's sign-in
 
-"Reset two-factor…" on the person's page, with the split above:
-`two-factor.md` says what it does.
+"Reset sign-in…" on the person's page (it was "Reset two-factor…",
+renamed 2026-11-21), with the split above: `two-factor.md` says what it
+does.
 
 ## Pages, API, CLI
 

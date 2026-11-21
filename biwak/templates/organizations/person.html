@@ -53,12 +53,12 @@
           class="btn btn-sm btn-quiet"
         >{% translate "Deactivate…" %}</a>
       {% endif %}
-      {% if person.can_reset_two_factor %}
+      {% if person.can_reset_sign_in %}
         <a
-          href="{% url 'person_reset_two_factor' person.pk %}"
+          href="{% url 'person_reset_sign_in' person.pk %}"
           data-modal
           class="btn btn-sm btn-quiet"
-        >{% translate "Reset two-factor…" %}</a>
+        >{% translate "Reset sign-in…" %}</a>
       {% endif %}
       {% if person.can_move %}
         <a
