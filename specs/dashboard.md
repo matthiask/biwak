@@ -119,6 +119,40 @@ Plain links in a card, each only for those who can use it:
 - "Notification settings" (`settings_notifications`);
 - "API tokens and the CLI" (staff).
 
+## Shared with the lantern
+
+Things on the dashboard can be in the lantern too: a to-do due that
+somebody commented on, an update in recent updates, a bookmarked item.
+Decided 2026-11-21 (user): their state is the same on both, kept on the
+server; the browser doesn't need to sync it.
+
+- **One state:** what the lantern has, `Notification.read_at` (and
+  `marked_unread_at`), and `Bookmark`. The dashboard keeps no state of
+  its own ("seen on the dashboard" doesn't exist).
+- **Unread shows:** a row (to-do, update, bookmark, check-in) whose item
+  has unread notifications for me gets the lantern's unread mark, the
+  same style as in the lantern's menu.
+- **Opening reads, as in the lantern:** such a row's link goes through
+  `/lantern/<notification>/` (`views.lantern_open`), which reads the
+  item's notifications and opens it at the comment, exactly like
+  clicking the entry in the lantern. Rows without unread notifications
+  link to the item directly. This extends `lantern.md`'s "reading only
+  through the lantern" to the dashboard (the lantern's entries shown on
+  another page); the feed, lists and mails still read nothing.
+- **Nothing else reads:** loading the dashboard, completing a to-do on
+  it or bookmarking reads nothing.
+- **Bookmarks** are the lantern's "Bookmarked" and the dashboard's
+  bookmarks (section 6) alike: bookmarking or removing the bookmark in
+  one shows in the other on the next load.
+- **The lantern's dot** in the navigation follows from the same state:
+  after opening an entry from the dashboard the next page shows the
+  count without it (live, the lantern's websocket tells open tabs as it
+  does after reading in the lantern, `biwak:lantern`).
+- **Tests:** opening from the dashboard reads in the lantern (and keeps
+  it out of the mail, `send_mails`), reading in the lantern removes the
+  mark on the dashboard, marking unread brings it back, a client's
+  notifications follow the visibility rules on both.
+
 ## The projects page moves
 
 - `/projects/` is the projects page as it is now (cards, order,
@@ -186,3 +220,9 @@ entry leaves this list.
 10. **"Waiting on others":** only overdue (proposed), or due today too?
 11. **Links (section 7):** anything to add or drop? A link to the
     person's own activity ("My activity")?
+12. **Recent updates and the lantern:** an update about something
+    that's unread in the lantern shows in both (marked unread on the
+    dashboard, see "Shared with the lantern"). Keep it in both
+    (proposed: the dashboard is the overview, the lantern the inbox), or
+    leave updates out of recent updates while they're unread in the
+    lantern?
