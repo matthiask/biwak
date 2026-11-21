@@ -132,7 +132,8 @@ containers, checked in one place (`specs/access.md`).
 - **Client**: a person outside the organization, invited to projects.
   Sees only what is visible to clients.
 - **Visible to clients**: the switch on containers and some items; shown
-  with a bright badge and banner everywhere.
+  with a bright badge on rows and a tab at the window's edge on pages
+  (`specs/access.md`).
 - **Container**: a list or a folder.
 - **Group**: a heading inside a list; to-dos point at it, ordered within
   it. Shown as columns in the board view.
@@ -141,12 +142,9 @@ containers, checked in one place (`specs/access.md`).
 
 The core came first; every part since builds on it and on the shared
 foundations (mentions and mails, storage and attachments, schedules).
-What's built and what's open is in `specs/README.md`. Still to come, in
-this order:
-
-1. The part being built (`ui-round-7.md`).
-2. The German translation, last (texts are marked with `gettext`; the
-   wording of mails, the editor and the lantern is reviewed with it).
+What's built and what's open is in `specs/README.md`. Still to come:
+the German translation, last (texts are marked with `gettext`; the
+wording of mails, the editor and the lantern is reviewed with it).
 
 Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
 same branch. `AGENTS.md` has the checklist every part follows.

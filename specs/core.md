@@ -104,8 +104,8 @@ Decided in the UI rounds (2026-11-21, `ui-round-1.md` to
 
 - **Forms open in modals** and every modal form is also a page
   (`AGENTS.md`, "Modals"). Pages show content, not forms: "New list",
-  "New group", renaming, members, editing a project are buttons or
-  "More" entries opening a modal. Trashing asks: "Move to the trash?
+  "New group", renaming, members, editing a project or a list
+  (2026-11-21) are buttons or "More" entries opening a modal. Trashing asks: "Move to the trash?
   It can be restored for 30 days." `form_response(help_page=…)` adds a
   quiet "More in the help" link.
 - **Items' "More" menu** (`items/_more.html`): Move to…, Trash, and
@@ -146,5 +146,8 @@ Decided in the UI rounds (2026-11-21, `ui-round-1.md` to
   Options say who someone is ("Ada Example · Example Client Ltd",
   "staff" for staff without an organization). Without JavaScript the
   plain select. The assignee picker is its own widget (`todos.md`).
+- **Visible to clients:** the badge on rows, the tab at the window's
+  edge on pages, the banner only above forms in modals (`access.md`,
+  "Making it obvious").
 - **Relative times** use the `ago` filter ("just now" under a minute).
 - **Overdue and today** are badges (`todos.md`).
