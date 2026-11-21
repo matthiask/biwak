@@ -2046,6 +2046,44 @@ class KeyboardTest(E2ETestCase):
         self.assertEqual(self.ada.theme, "light")
         self.assertEqual(self.errors, [])
 
+    def test_the_settings_page_previews_the_appearance(self):
+        page = self.page
+        root = "document.documentElement.dataset"
+        self.goto(page, "/accounts/settings/")
+        stored = page.evaluate(f"[{root}.themeMode, {root}.accent]")
+        accent = "lake" if stored[1] != "lake" else "berry"
+        page.locator(f'input[name="accent"][value="{accent}"]').check()
+        page.locator('input[name="theme"][value="dark"]').check()
+        page.wait_for_function(f"() => {root}.accent === '{accent}'")
+        self.assertEqual(page.evaluate(f"{root}.themeMode"), "dark")
+        self.assertEqual(
+            page.evaluate("document.documentElement.dataset.bsTheme"), "dark"
+        )
+        self.ada.refresh_from_db()
+        self.assertNotEqual(self.ada.accent, accent)
+        # Reset goes back to the stored choice
+        reset = page.locator("[data-appearance-reset]")
+        expect(reset).to_be_visible()
+        reset.click()
+        self.assertEqual(page.evaluate(f"[{root}.themeMode, {root}.accent]"), stored)
+        expect(reset).to_be_hidden()
+        # Reloading without saving shows the stored choice
+        page.locator(f'input[name="accent"][value="{accent}"]').check()
+        page.locator('input[name="theme"][value="dark"]').check()
+        page.reload()
+        self.assertEqual(page.evaluate(f"[{root}.themeMode, {root}.accent]"), stored)
+        # Saving stores it
+        page.locator(f'input[name="accent"][value="{accent}"]').check()
+        page.locator('input[name="theme"][value="dark"]').check()
+        page.locator("[data-appearance-preview] button[type=submit]").click()
+        page.wait_for_load_state()
+        self.ada.refresh_from_db()
+        self.assertEqual((self.ada.theme, self.ada.accent), ("dark", accent))
+        self.assertEqual(
+            page.evaluate(f"[{root}.themeMode, {root}.accent]"), ["dark", accent]
+        )
+        self.assertEqual(self.errors, [])
+
 
 class ProjectColorTest(E2ETestCase):
     """Project colors (specs/project-colors.md): the card's stripe, the dot

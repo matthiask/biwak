@@ -27,6 +27,11 @@ if (document.querySelector("[data-todos]")) {
   import(/* webpackChunkName: "todos" */ "./todos.js")
 }
 
+// Previewing the theme and the accent color on the settings page
+if (document.querySelector("[data-appearance-preview]")) {
+  import("./appearance-preview.js")
+}
+
 // Attaching files to texts (specs/files.md)
 if (document.querySelector("[data-attachments]")) {
   import(/* webpackChunkName: "attachments" */ "./attachments.js")

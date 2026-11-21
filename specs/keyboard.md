@@ -139,6 +139,8 @@ accent color on the settings page applies it to the page at once (the
 `data-theme-mode` and `data-accent` attributes on `<html>`); only saving
 stores it. Leaving without saving, or "Cancel", shows the stored choice
 again (the next page renders it anyway).
+Status: built; "Reset" next to Save, shown while the preview differs from the
+stored choice (`frontend/appearance-preview.js`).
 
 **The navigation's search field** (decided 2026-11-21) becomes a button
 opening the palette: on wide screens it looks like a quiet field
