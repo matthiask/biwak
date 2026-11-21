@@ -35,6 +35,12 @@
       {% translate "This doc is read-only." %}
     </div>
   {% endif %}
+  {% if being_edited %}
+    <p class="text-body-secondary small" role="status">
+      {% icon "pencil" %}
+      {{ being_edited }}
+    </p>
+  {% endif %}
   <div class="row g-4">
     <div class="col-lg-8">
       <div class="wb-markdown mb-4" id="live-text" data-live>{% checklist_markdown doc.content item %}</div>

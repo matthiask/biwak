@@ -288,3 +288,8 @@ about 20 seconds).
 Docs are never locked again, also not if the live editor is ever turned
 off: people get at most a heads-up that someone else is editing ("Ada is
 editing this"), from the editing marker (`editor.md`).
+
+**Status:** built 2026-11-21 (merging `tick-editing`): the consumer holds
+the editing marker of everybody connected with write access, the doc's page
+shows the heads-up from it, and ticks on the doc wait meanwhile
+(`editor.md`, "Ticking while someone edits").

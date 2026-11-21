@@ -22,7 +22,7 @@ from biwak.activity.notify import notify_people
 from biwak.activity.operations import is_importing, record, subscribe
 from biwak.files import attachments
 from biwak.files.models import FileVersion, content_type_for
-from biwak.items import visibility
+from biwak.items import editing, visibility
 from biwak.items.models import (
     Comment,
     Doc,
@@ -303,7 +303,13 @@ def add_comment(item, *, author, content):
 
 
 class ChecklistConflict(Exception):
-    """The text changed since the page showed it"""
+    """The text changed since the page showed it; ``who`` changed it last
+    (None if unknown), at ``when``"""
+
+    def __init__(self, who=None, when=None):
+        super().__init__(f"{who} changed it at {when}")
+        self.who = who
+        self.when = when
 
 
 def can_tick(user, item):
@@ -341,7 +347,8 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
     of its comments) through the operation that edits it, so it's an edit
     like any other. ``version`` is ``checklists.text_hash()`` of the text
     the person saw: ``ChecklistConflict`` if it changed since,
-    ``PermissionDenied`` unless they may change that text,
+    ``editing.BeingEdited`` while anybody has the item's edit form open (the
+    person's own too), ``PermissionDenied`` unless they may change that text,
     ``checklists.NoCheckbox`` if there's no such box. Returns the new text."""
     from biwak.checkins import operations as checkin_ops
     from biwak.files import operations as file_ops
@@ -351,7 +358,7 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
         if actor.is_client and comment.author_id != actor.pk:
             raise PermissionDenied
         if checklists.text_hash(comment.content) != version:
-            raise ChecklistConflict
+            raise ChecklistConflict(comment.author, comment.updated_at)
         comment.content = checklists.tick(comment.content, index, checked)
         comment.updated_at = timezone.now()
         comment.save(update_fields=["content", "updated_at"])
@@ -364,9 +371,11 @@ def tick(item, *, actor, index, version, comment=None, checked=None):
     name = TEXT_FIELDS[item.kind][0]
     getattr(item, name).__class__.objects.select_for_update().get(item=item)
     item = Item.objects.select_related(name).get(pk=item.pk)
+    if users := editing.holders(item):
+        raise editing.BeingEdited(users)
     text = text_of(item)
     if checklists.text_hash(text) != version:
-        raise ChecklistConflict
+        raise ChecklistConflict(*editing.last_change(item))
     new = checklists.tick(text, index, checked)
     match item.kind:
         case Kind.TODO:
@@ -465,11 +474,18 @@ def update_todo(
     recurrence=_UNCHANGED,
     recurrence_ends_on=_UNCHANGED,
     recurrence_count=_UNCHANGED,
+    base=None,
 ):
     """Changes what's given (the to-do's page and the API); assignees are
     the complete new set. Removing the recurrence removes its end and
-    count too."""
-    todo = item.todo
+    count too. ``base``: the ``editing.version()`` the form carried, so
+    ``editing.StaleEdit`` if somebody saved since. Saving ends one's
+    editing."""
+    Todo.objects.select_for_update().get(item=item)
+    editing.check_base(item, base, actor=actor)
+    editing.stop(item, actor)
+    todo = Todo.objects.get(item=item)
+    item.todo = todo
     previous = f"{item.title}\n\n{todo.notes}"
     edited = False
     if title is not _UNCHANGED and title != item.title:

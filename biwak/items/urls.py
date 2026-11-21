@@ -23,6 +23,7 @@ urlpatterns = [
     path("items/<int:pk>/subscription/", views.subscription, name="subscription"),
     path("items/<int:pk>/switch/", views.switch, name="switch"),
     path("items/<int:pk>/tick/", views.tick, name="item_tick"),
+    path("items/<int:pk>/editing/", views.item_editing, name="item_editing"),
     path("items/<int:pk>/trash/", views.item_trash, name="item_trash"),
     path("items/<int:pk>/restore/", views.item_restore, name="item_restore"),
 ]

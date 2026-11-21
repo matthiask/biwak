@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.forms import Form
-from biwak.items import glance, operations as ops
+from biwak.items import editing, glance, operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.permissions import staff_only
@@ -280,9 +280,23 @@ def file_edit(request, pk):
     mentions_url = reverse("mentionable", args=[item.pk])
     for name in ["title", "description"]:
         form.fields[name].widget.attrs["data-mentions"] = mentions_url
+    base = request.POST.get("base") or editing.version(item)
     if form.is_valid():
-        operations.update_upload(item, actor=request.user, **form.cleaned_data)
-        return redirect(item)
+        try:
+            operations.update_upload(
+                item,
+                actor=request.user,
+                base=request.POST.get("base"),
+                **form.cleaned_data,
+            )
+        except editing.StaleEdit as exc:
+            form.add_error(
+                None,
+                editing.stale_message(request.user, item.project, exc.who, exc.when),
+            )
+        else:
+            return redirect(item)
+    editing.start(item, request.user)
     return render(
         request,
         "files/file_form.html",
@@ -290,6 +304,7 @@ def file_edit(request, pk):
             "project": item.project,
             "item": item,
             "form": form,
+            "base": base,
             "breadcrumbs": breadcrumbs(item),
         },
     )

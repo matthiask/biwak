@@ -18,7 +18,7 @@ from biwak.files.library import (
     folder_param,
 )
 from biwak.forms import Form
-from biwak.items import operations as ops
+from biwak.items import editing, operations as ops
 from biwak.items.models import Kind
 from biwak.items.views import item_for
 from biwak.permissions import staff_only
@@ -84,6 +84,10 @@ def _doc_context(request, item):
         "is_staff": not request.user.is_client,
         "can_edit": not doc.read_only and ops.can_change(request.user, item),
         "move_choices": folder_choices(request.user, item.project, exclude=item),
+        # Whoever has the doc open in the editor (no locks, specs/editor.md)
+        "being_edited": editing.heads_up(
+            request.user, item.project, editing.holders(item)
+        ),
     } | sidebar_context(request, item)
 
 

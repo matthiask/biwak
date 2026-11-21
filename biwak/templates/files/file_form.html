@@ -9,8 +9,14 @@
   {% if item %}{% include "items/_client_banner.html" %}{% else %}{% include "items/_client_banner.html" with item=folder %}{% endif %}
   <div class="card mb-4">
     <div class="card-body">
-      <form method="post" enctype="multipart/form-data" {% attachments_attrs project %}>
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        {% attachments_attrs project %}
+        {% if item %}data-editing="{% url 'item_editing' item.pk %}"{% endif %}
+      >
         {% csrf_token %}
+        {% if item %}<input type="hidden" name="base" value="{{ base }}">{% endif %}
         {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
         {% include "files/_attach_button.html" %}
         {{ form }}
@@ -20,6 +26,7 @@
         <a
           href="{% if item %}{{ item.get_absolute_url }}{% elif folder %}{{ folder.get_absolute_url }}{% else %}{% url 'project_files' project.pk %}{% endif %}"
           class="btn btn-quiet"
+          {% if item %}data-editing-release{% endif %}
         >{% translate "Cancel" %}</a>
       </form>
     </div>

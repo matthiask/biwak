@@ -9,15 +9,24 @@
   {% include "items/_client_banner.html" %}
   <div class="card mb-3">
     <div class="card-body">
-      <form method="post" {% attachments_attrs item.project %}>
+      <form
+        method="post"
+        {% attachments_attrs item.project %}
+        {% if existing %}data-editing="{% url 'item_editing' existing.item_id %}"{% endif %}
+      >
         {% csrf_token %}
+        {% if existing %}<input type="hidden" name="base" value="{{ base }}">{% endif %}
         <input type="hidden" name="occurrence" value="{{ occurrence.pk }}">
         {% include "files/_attach_button.html" %}
         {{ form }}
         <button type="submit" class="btn btn-primary">
           {% if existing %}{% translate "Save the answer" %}{% else %}{% translate "Answer" %}{% endif %}
         </button>
-        <a href="{{ item.get_absolute_url }}" class="btn btn-quiet">{% translate "Cancel" %}</a>
+        <a
+          href="{{ item.get_absolute_url }}"
+          class="btn btn-quiet"
+          {% if existing %}data-editing-release{% endif %}
+        >{% translate "Cancel" %}</a>
       </form>
     </div>
   </div>

@@ -1,11 +1,12 @@
 """Task lists, the toolbar and pasting in the browser (specs/editor.md)"""
 
+import time
 from pathlib import Path
 
 from django.urls import reverse
 
 from biwak.items import operations as ops
-from biwak.items.models import Todo
+from biwak.items.models import Editing, Message, Todo
 from biwak.test_e2e import E2ETestCase, expect
 from biwak.test_paste import GOOGLE_DOCS, MAIL
 
@@ -42,16 +43,25 @@ class TicksTest(E2ETestCase):
         self.assertEqual(page.evaluate("window.marker"), 1)
         self.assertEqual(self.errors, [])
 
-    def test_a_changed_text_reloads_the_page(self):
+    def test_a_changed_text_is_loaded_again_and_says_who(self):
         page = self.page
         self.goto(page, self.todo)
+        page.evaluate("window.marker = 1")
         ops.update_todo(self.todo, actor=self.bob, notes="- [ ] new one")
-        with page.expect_navigation():
-            page.locator(".wb-checklist input[type=checkbox]").first.check()
+        page.locator(".wb-checklist input[type=checkbox]").first.check()
+        status = page.locator(".wb-tick-note[role=status]")
+        expect(status).to_have_text("Changed by Bob a moment ago.")
         boxes = page.locator(".wb-checklist input[type=checkbox]")
         self.assertEqual(boxes.count(), 1)
         self.assertFalse(boxes.first.is_checked())
         self.assertEqual(self.notes(), "- [ ] new one")
+        # No navigation: the page is the same, with the new text
+        self.assertEqual(page.evaluate("window.marker"), 1)
+        # And ticking works on the new text
+        boxes.first.check()
+        expect(boxes.first).to_be_enabled()
+        self.assertEqual(self.notes(), "- [x] new one")
+        self.assertEqual(self.errors, [])
 
     def test_a_client_ticks_a_todo_but_not_a_message(self):
         message = ops.create_message(
@@ -72,6 +82,73 @@ class TicksTest(E2ETestCase):
         boxes = page.locator("input.task-list-item-checkbox")
         self.assertEqual(boxes.count(), 3)
         expect(boxes.first).to_be_disabled()
+
+
+class EditingTest(E2ETestCase):
+    """Two browsers: one editing, one ticking"""
+
+    def setUp(self):
+        super().setUp()
+        self.message = ops.create_message(
+            project=self.project,
+            title="Camp",
+            creator=self.ada,
+            content=NOTES,
+            visible=True,
+        )
+        self.ticking = self.login(self.bob)
+        self.goto(self.ticking, self.message)
+
+    def content(self):
+        return Message.objects.get(pk=self.message.pk).content
+
+    def tick(self):
+        box = self.ticking.locator(".wb-checklist input[type=checkbox]").first
+        box.check()
+        return box
+
+    def test_ticks_wait_while_the_edit_form_is_open(self):
+        page = self.page
+        self.goto(page, reverse("message_edit", args=[self.message.pk]))
+        box = self.tick()
+        expect(self.ticking.locator(".wb-tick-note[role=status]")).to_have_text(
+            "Ada is editing this; try again when they're done."
+        )
+        expect(box).to_be_enabled()
+        self.assertFalse(box.is_checked())
+        self.assertEqual(self.content(), NOTES)
+        # Cancelling gives the text back
+        page.get_by_role("link", name="Cancel").click()
+        page.wait_for_url(f"**{self.message.get_absolute_url()}")
+        box = self.tick()
+        expect(box).to_be_enabled()
+        self.assertTrue(box.is_checked())
+        self.assertEqual(self.content(), NOTES.replace("[ ] tent", "[x] tent"))
+        self.assertEqual(self.errors, [])
+
+    def test_the_to_do_form_announces_itself_at_the_first_focus(self):
+        todolist = ops.create_list(
+            project=self.project, title="Camp", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(
+            todolist=todolist, title="Pack", creator=self.ada, notes=NOTES
+        )
+        self.goto(self.ticking, todo)
+        self.goto(self.page, todo)
+        # Just looking at the to-do doesn't block it
+        self.assertFalse(Editing.objects.exists())
+        self.page.locator("textarea[name=notes]").focus()
+        for _ in range(50):
+            if Editing.objects.filter(item=todo).exists():
+                break
+            time.sleep(0.1)
+        box = self.ticking.locator(".wb-checklist input[type=checkbox]").first
+        box.check()
+        expect(self.ticking.locator(".wb-tick-note[role=status]")).to_have_text(
+            "Ada is editing this; try again when they're done."
+        )
+        self.assertEqual(Todo.objects.get(pk=todo.pk).notes, NOTES)
+        self.assertEqual(self.errors, [])
 
 
 class ToolbarTest(E2ETestCase):

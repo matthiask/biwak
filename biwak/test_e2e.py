@@ -113,7 +113,8 @@ class E2ETestCase(LiveServerTestCase):
     def console(self, message):
         # The favicon lives in an app's static files, the test server
         # serves only the bundle in static/. Live updates need the ASGI
-        # server (LiveTest), the others' pages try in vain.
+        # server (LiveTest), the others' pages try in vain. A refused tick
+        # (409) is part of the pages' dealings, the browser logs it anyway.
         if (
             message.type == "error"
             and not message.location["url"].endswith("/favicon.svg")
@@ -121,6 +122,7 @@ class E2ETestCase(LiveServerTestCase):
                 "/ws/live/" in message.text
                 and self.server_thread_class is not ASGIServerThread
             )
+            and "status of 409" not in message.text
         ):
             self.errors.append(f"{message.text} {message.location['url']}")
 

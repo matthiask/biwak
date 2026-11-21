@@ -2,7 +2,9 @@
 
 Speaks the protocol of y-websocket's provider (``frontend/collab.js``):
 Yjs' sync and awareness messages, plus one of ours telling the editor
-whether it may type. Every update somebody may make is stored as it
+whether it may type. Whoever is connected with write access holds the
+doc's editing marker (``items.editing``: no ticks meanwhile), renewed
+with the periodic access check, gone when the connection closes. Every update somebody may make is stored as it
 arrives (``LiveUpdate``) and sent to the doc's other editors through the
 channel layer; ``Doc.content``, the events and the versions follow on a
 debounce (``files.operations.save_live()``). The state lives in the
@@ -30,6 +32,8 @@ from pycrdt import (
 )
 
 from biwak.collab import live, ytext
+from biwak.items import editing
+from biwak.items.models import Item
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +52,8 @@ CLOSE_NOT_FOUND = 4404
 SAVE_AFTER = 3
 SAVE_AT_LEAST_EVERY = 30
 # Checks whether the person may still see and edit the doc this often
-# besides the changes telling the editors (live.check_access())
+# besides the changes telling the editors (live.check_access()), and
+# renews the editing marker (well within ``editing.TTL``)
 CHECK_EVERY = 60
 # ... and before passing on what others typed or where their cursors are,
 # when the last check is older than this (seconds): losing access doesn't
@@ -146,6 +151,7 @@ class DocConsumer(AsyncWebsocketConsumer):
             YMessageType.SYNC: Bucket(*SYNC_RATE),
         }
         self.dropped = set()
+        self.marked = False
         await self.accept()
         found = await database_sync_to_async(self._found)()
         if found is None:
@@ -169,6 +175,7 @@ class DocConsumer(AsyncWebsocketConsumer):
             await self.refuse()
             return
         await self.send_mode()
+        await self.mark()
         self.check_task = asyncio.create_task(self.check_periodically())
 
     def _found(self):
@@ -186,6 +193,10 @@ class DocConsumer(AsyncWebsocketConsumer):
                 task.cancel()
         if self.dirty_since is not None:
             await self.save()
+        if self.marked:
+            await self.unmark()
+            # The person's other tabs on the doc set it again
+            await self.group_send("doc.left", user=self.user.pk)
         if self.client is not None:
             await self.group_send(
                 "doc.awareness",
@@ -327,6 +338,10 @@ class DocConsumer(AsyncWebsocketConsumer):
             ])
         await self.send(bytes_data=create_awareness_message(update))
 
+    async def doc_left(self, event):
+        if event["sender"] != self.channel_name and event["user"] == self.user.pk:
+            await self.mark()
+
     async def doc_query_awareness(self, event):
         if event["sender"] != self.channel_name and await self.recheck():
             await self.send(bytes_data=bytes([QUERY_AWARENESS]))
@@ -342,14 +357,17 @@ class DocConsumer(AsyncWebsocketConsumer):
         mode = await database_sync_to_async(self._access)()
         if mode is None:
             await self.refuse()
-        elif mode != self.mode:
+            return
+        if mode != self.mode:
             self.mode = mode
             await self.send_mode()
+        await self.mark()
 
     async def refuse(self):
         """Closes the session: nothing goes out anymore, the editor doesn't
         reconnect"""
         self.mode = None
+        await self.unmark()
         for group in self.groups_joined:
             await self.channel_layer.group_discard(group, self.channel_name)
         self.groups_joined = []
@@ -372,6 +390,24 @@ class DocConsumer(AsyncWebsocketConsumer):
         await self.send(
             bytes_data=bytes([MESSAGE_MODE, 1 if self.mode == live.WRITE else 0])
         )
+
+    async def mark(self):
+        """Sets or renews the editing marker while the person may type,
+        removes it when they may not anymore (specs/editor.md, "Ticking
+        while someone edits")"""
+        if self.mode == live.WRITE:
+            await database_sync_to_async(self._start)()
+            self.marked = True
+        else:
+            await self.unmark()
+
+    def _start(self):
+        editing.start(Item.objects.get(pk=self.pk), self.user)
+
+    async def unmark(self):
+        if self.marked:
+            self.marked = False
+            await database_sync_to_async(editing.stop)(self.pk, self.user)
 
     async def check_periodically(self):
         while True:
