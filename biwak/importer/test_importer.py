@@ -29,7 +29,7 @@ from biwak.items.models import (
     TodoList,
 )
 from biwak.projects.models import Membership, Project
-from biwak.test_utils import person
+from biwak.test_utils import organization, person
 
 
 def at(text):
@@ -555,8 +555,8 @@ class DryRunTest(ImportCase):
         self.assertEqual(
             sorted(report.people),
             [
-                "Bob Example <bob@example.org> (staff)",
-                "Cleo Example <cleo@example.org> (client)",
+                "Bob Example <bob@example.org> (staff, Example Team)",
+                "Cleo Example <cleo@example.org> (client, Example Client Ltd)",
             ],
         )
         self.assertEqual(len(report.internal), 2)
@@ -585,6 +585,38 @@ class SinceTest(ImportCase):
 
 
 class PeopleTest(ImportCase):
+    def test_companies_become_organizations(self):
+        """Clients' and collaborators' companies, by name ignoring case and
+        spaces; employees in the installation's own organization, if one is
+        marked (specs/organizations.md)"""
+        own = organization("Example Team", is_own=True)
+        existing = organization("Example client LTD")
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        freelancer = support.person(
+            5,
+            "Finn Example",
+            "finn@example.org",
+            company={"id": 11, "name": "Example  Freelance"},
+        ) | {"employee": False}
+        people.append(freelancer)
+        report = self.run_import()
+        bob = User.objects.get(email="bob@example.org")
+        self.assertEqual(bob.organization, own)
+        self.assertFalse(bob.is_partner)
+        cleo = User.objects.get(email="cleo@example.org")
+        self.assertEqual(cleo.organization, existing)
+        finn = User.objects.get(email="finn@example.org")
+        self.assertEqual(finn.organization.name, "Example Freelance")
+        self.assertTrue(finn.is_partner)
+        self.assertIn(
+            "Finn Example <finn@example.org> (partner, Example  Freelance)",
+            report.people,
+        )
+
+    def test_without_an_own_organization_employees_have_none(self):
+        self.run_import()
+        self.assertIsNone(User.objects.get(email="bob@example.org").organization)
+
     def test_redacted_addresses_become_placeholders(self):
         # Only administrators get addresses (sections/people.md)
         people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]

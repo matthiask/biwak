@@ -138,3 +138,8 @@ decides who sees all-access projects.
   the address's domain decides. `biwak orgs [show|add|edit|merge|delete|move]`,
   `biwak member invite … --organization NAME | --organization-id ID`,
   `biwak members` shows the organization.
+- **The importer** (`biwak/importer/importer.py`): Basecamp's companies
+  become organizations by name (ignoring case and spaces); clients and
+  collaborators (staff who aren't Basecamp employees) get theirs, which
+  makes collaborators partners; employees the installation's own if one
+  is marked, else none. The dry run's list says "partner" and the company.
