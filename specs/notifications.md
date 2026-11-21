@@ -192,8 +192,11 @@ project's level is that choice, not a new setting.
    subscribers of its parent container; plus people newly mentioned or
    assigned by this event.
 2. Without the actor, inactive people, and people who can't see the
-   item **now** (`Item.objects.visible_to(user)`), checked per person.
-3. Filtered by each person's effective level.
+   item **now** (`Item.objects.visible_to(user)`; for everybody at once
+   `who_can_see(item)`, tested against it, 2026-11-21).
+3. Filtered by each person's effective level (a query for all,
+   `effective_levels()`; `notify()` makes the same number of queries for
+   any number of people).
 4. One `Notification(user, event, created_at, sent_at null)` per person;
    at most one unsent per person and event, a constraint in the database
    (two `notify()` at once can't tell anybody twice, 2026-11-21).
