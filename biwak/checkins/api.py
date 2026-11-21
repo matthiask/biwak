@@ -9,7 +9,6 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
 from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
@@ -21,14 +20,13 @@ from biwak.api_conventions import (
     ItemOut,
     PersonOut,
     Title,
-    absolute,
     html,
     item_out,
     page_of,
     paginated,
     person_out,
 )
-from biwak.checkins import operations as ops, schedule
+from biwak.checkins import mails, operations as ops, schedule
 from biwak.checkins.models import Answer, Occurrence, mail_mode
 from biwak.items.api import item_for as any_item_for
 from biwak.items.models import Item, Kind
@@ -408,10 +406,7 @@ def due(request, project_id: int | None = None):
             "occurrence_id": occurrence.pk,
             "date": occurrence.date,
             "asked_at": occurrence.asked_at,
-            "url": absolute(
-                reverse("question_answer", args=[occurrence.question.item_id])
-            )
-            + f"?occurrence={occurrence.pk}",
+            "url": mails.question_url(occurrence),
             "visible_to_clients": occurrence.question.item.is_client_visible,
         }
         for occurrence in ops.due(request.user, project=project)

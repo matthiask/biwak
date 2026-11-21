@@ -56,7 +56,7 @@ def _send_all(build, occurrence, pks):
 
 
 def question_url(occurrence):
-    """The answer form of the occurrence"""
+    """The answer form of the occurrence (the mail and the API's "due")"""
     item = occurrence.question.item
     return (
         absolute(reverse("question_answer", args=[item.pk]))
