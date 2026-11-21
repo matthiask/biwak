@@ -33,7 +33,7 @@ def knows_people_of(viewer, project):
 
 
 class FilesOrdering(models.TextChoices):
-    """The order of a folder's contents (specs/ui-round-7.md, part 3),
+    """The order of a folder's contents (specs/files.md, "Folders"),
     folders first either way; by creation, not by the last change, which
     would reorder while people work"""
 

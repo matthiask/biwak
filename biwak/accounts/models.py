@@ -50,7 +50,7 @@ class UserManager(BaseUserManager):
         return self.filter(is_active=True)
 
     def invited(self):
-        """Invitations (specs/ui-round-6.md, part B): active people who were
+        """Invitations (specs/activation.md, "Inviting"): active people who were
         invited and have never signed in, the oldest invitation first"""
         return self.filter(
             is_active=True, invited_at__isnull=False, last_login__isnull=True
@@ -148,7 +148,7 @@ class User(AbstractBaseUser):
         null=True,
         blank=True,
     )
-    # Who invited the person and when (specs/ui-round-6.md, part B): set by
+    # Who invited the person and when (specs/activation.md, "Inviting"): set by
     # ``invite_people()`` when it creates them. An invitation is somebody
     # invited who has never signed in (``User.objects.invited()``).
     invited_by = models.ForeignKey(

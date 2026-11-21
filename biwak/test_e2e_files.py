@@ -1,5 +1,5 @@
-"""A folder's tiles in the browser (frontend/files.js, specs/ui-round-7.md):
-dragging onto folders, "..", breadcrumbs; selecting several with Ctrl- and
+"""A folder's tiles in the browser (frontend/files.js, specs/files.md,
+"Moving and selecting"): dragging onto folders, "..", breadcrumbs; selecting several with Ctrl- and
 Shift-click and moving them"""
 
 import re
@@ -175,7 +175,7 @@ DROP = """([selector, names]) => {
 
 
 class UploadTest(E2ETestCase):
-    """Uploading several files (specs/ui-round-7.md, part 4b)"""
+    """Uploading several files (specs/files.md, "Uploading files")"""
 
     def setUp(self):
         super().setUp()
@@ -276,7 +276,7 @@ class UploadTest(E2ETestCase):
 
 
 class NewDocTest(E2ETestCase):
-    """New docs as drafts (specs/ui-round-7.md, part 5): the address
+    """New docs as drafts (specs/files.md, "Docs"): the address
     replaced once there's text, "Tell people about it?" at the first Done"""
 
     host = "127.0.0.1"

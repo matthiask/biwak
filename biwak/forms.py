@@ -125,8 +125,8 @@ class AssigneeField(forms.ModelMultipleChoiceField):
 
 class ComboboxSelect(forms.Select):
     """A select with a search field which finds the typed words anywhere in
-    the options (``frontend/combobox.js``, from Workbench's; specs/ui-round-6.md,
-    part A): for selects with many choices. Without JavaScript it's the plain
+    the options (``frontend/combobox.js``, from Workbench's; specs/ui.md,
+    "Forms"): for selects with many choices. Without JavaScript it's the plain
     select. ``search`` returns more text to find an option by (an address),
     given the option's model instance."""
 

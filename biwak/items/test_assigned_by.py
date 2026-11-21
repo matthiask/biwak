@@ -1,4 +1,4 @@
-"""Who assigned (specs/ui-round-5.md, section 4): the through model, the
+"""Who assigned (specs/todos.md, "Assignees"): the through model, the
 operations, the filter, the API and the palette"""
 
 import datetime as dt

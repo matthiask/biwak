@@ -256,7 +256,7 @@ if (data && dialog) {
         badge.textContent = item.badge
         row.append(badge)
       }
-      // An open to-do that's overdue or due today (specs/ui-round-1.md)
+      // An open to-do that's overdue or due today (specs/todos.md, "The to-do's page")
       if (item.due) {
         const badge = document.createElement("span")
         badge.className = `badge wb-tone-${item.due.state === "overdue" ? "danger" : "neutral"}`

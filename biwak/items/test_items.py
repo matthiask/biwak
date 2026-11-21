@@ -445,7 +445,7 @@ class CheckCommandTest(TestCase):
 
 class CommentFieldLabelTest(TestCase):
     """The comment's field has a label for screen readers, "Comment", and
-    the "Comments" heading is right above it (specs/ui-round-4.md, part 4)"""
+    the "Comments" heading is right above it (specs/ui.md, "Forms")"""
 
     def test_a_hidden_label(self):
         ada = person("Ada")

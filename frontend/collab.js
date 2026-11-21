@@ -122,7 +122,7 @@ function setUp(container) {
     if (isSynced) startDraft()
   })
 
-  // A new doc (specs/ui-round-7.md, part 5): the cursor after its "# ",
+  // A new doc (specs/files.md, "Docs"): the cursor after its "# ",
   // the title is typed first; once there's text the doc exists and its
   // address replaces the draft's ("New doc") in the history
   let draft = container.dataset.collabDraft

@@ -140,7 +140,7 @@ class LibraryTest(Fixture, TestCase):
     def test_tiles_with_up_to_the_parent(self):
         """A grid of tiles; inside a folder ".." leads to the folder above,
         from a first-level folder to the project's top level
-        (specs/ui-round-7.md, part 1)"""
+        (specs/files.md, "Folders")"""
         inner = ops.create_folder(
             project=self.project, title="Inner", creator=self.ada, parent=self.public
         )
@@ -177,7 +177,7 @@ class LibraryTest(Fixture, TestCase):
 
     def test_ordering(self):
         """Stored on the folder, the project's for the top level; folders
-        first, in the same order (specs/ui-round-7.md, part 3)"""
+        first, in the same order (specs/files.md, "Folders")"""
         ops.create_folder(project=self.project, title="Archive", creator=self.ada)
         names = lambda: self.names(self.get(self.ada, self.root()))  # noqa: E731
         self.assertEqual(
@@ -274,7 +274,7 @@ class LibraryTest(Fixture, TestCase):
         return f"{url}?folder={folder.pk}" if folder else url
 
     def test_creating_folders(self):
-        """Through a modal (specs/ui-round-7.md, part 2), also a page"""
+        """Through a modal (specs/files.md, "Folders"), also a page"""
         self.client.force_login(self.ada)
         response = self.client.get(self.new_folder_url(), headers={"HX-Modal": "true"})
         assert_modal(self, response, title="New folder")
@@ -516,7 +516,7 @@ class MoveTest(Fixture, TestCase):
 
 class MoveSeveralTest(Fixture, TestCase):
     """Moving and trashing a selection, dragging onto folders
-    (specs/ui-round-7.md, part 4): the operation of "Move to…" for each"""
+    (specs/files.md, "Moving and selecting"): the operation of "Move to…" for each"""
 
     def setUp(self):
         super().setUp()
@@ -662,7 +662,7 @@ class MoveSeveralTest(Fixture, TestCase):
 
 
 class UploadPageTest(Fixture, TestCase):
-    """ "Upload files" (specs/ui-round-7.md, part 4b): a modal, also a page
+    """ "Upload files" (specs/files.md, "Uploading files"): a modal, also a page
     taking several files at once"""
 
     def url(self, folder=None):

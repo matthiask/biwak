@@ -347,7 +347,7 @@ def summary_due_at(occurrence):
 def summary_recipients(question):
     """Subscribers of the question who get summaries (the default mode) and
     see it, whatever their level: subscribing is the switch (decided
-    2026-11-21, specs/ui-round-6.md)"""
+    2026-11-21, specs/checkins.md, "Decided")"""
     item = question.item
     people = list(
         User.objects

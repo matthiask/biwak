@@ -360,7 +360,7 @@ def project_override_delete(request, project_id: int):
 
 def list_for(request, item_id):
     """Lists have levels, other items don't: subscribing is the switch
-    (specs/ui-round-6.md, part C)"""
+    (specs/notifications.md, "Subscriptions")"""
     item = item_for(request, item_id)
     if item.kind != Kind.LIST:
         raise HttpError(

@@ -47,7 +47,7 @@ def drop_columns(apps, schema_editor):
 
 class Migration(migrations.Migration):
     """``Todo.assignees`` gets a through model on the same table
-    (specs/ui-round-5.md, section 4); no backfill of who assigned."""
+    (specs/todos.md, "Assignees"); no backfill of who assigned."""
 
     dependencies = [
         ("items", "0009_merge_tick_editing"),

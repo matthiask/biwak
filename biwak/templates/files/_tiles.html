@@ -1,14 +1,14 @@
 {% load biwak i18n %}
 {% comment %}
-  A folder's contents as a grid of cards (specs/ui-round-7.md, part 1):
+  A folder's contents as a grid of cards (specs/files.md, "Folders"):
   `rows` (folders first, in the folder's order), `folder` (inside one, the
   first tile ".." leads to `up_url`, its parent). Every tile is a row of
   the keyboard (j/k); folders and ".." are drop targets
   (`data-drop-folder`, the folder's ID, empty for the top level), the
   others carry `data-tile` (frontend/files.js). Tiles the person may move
   can be selected (Ctrl- and Shift-click) and dragged; `data-tiles-move`
-  moves them, the bar below acts on the selection (specs/ui-round-7.md,
-  part 4).
+  moves them, the bar below acts on the selection (specs/files.md, "Moving and
+  selecting").
 {% endcomment %}
 <ul
   class="wb-tiles"

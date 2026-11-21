@@ -1,4 +1,4 @@
-"""The settings page's sign-in section (specs/ui-round-2.md part E): the
+"""The settings page's sign-in section (specs/access.md, "Sign-in"): the
 passkeys, the authenticator app and sessions inline. allauth does the work:
 its webauthn views add and remove passkeys, its TOTP flows turn the app on
 and off (specs/two-factor.md), its usersessions flows end sessions."""

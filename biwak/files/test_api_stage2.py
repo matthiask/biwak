@@ -438,7 +438,7 @@ class FolderAPITest(APIFixture, TestCase):
         self.assertTrue(data["entries"][0]["visible_to_clients"])
 
     def test_ordering_and_renaming(self):
-        """specs/ui-round-7.md, parts 2 and 3"""
+        """Folders: renaming and ordering (specs/files.md, "Folders")"""
         self.assertEqual(self.files(self.ada).json()["ordering"], "alphabetical")
         path = f"projects/{self.project.pk}/files/"
         response = self.call(self.ada, "patch", path, {"ordering": "reverse"})

@@ -263,7 +263,7 @@ class ListingTest(LanternTestCase):
         self.assertNotIn("Budget", self.items(self.bob))
 
     def test_a_level_changed_since_keeps_them(self):
-        """Subscribing is the switch (specs/ui-round-6.md, part C): the level
+        """Subscribing is the switch (specs/notifications.md, "Subscriptions"): the level
         decided who was told, changing it later hides nothing"""
         self.comment(self.secret, "Two")
         before = self.items(self.bob)

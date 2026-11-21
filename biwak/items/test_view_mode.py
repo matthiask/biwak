@@ -1,4 +1,4 @@
-"""Pages in view mode with click to edit (specs/ui-round-1.md, part 3): the
+"""Pages in view mode with click to edit (specs/ui.md, "Click to edit"): the
 to-do, the message, the file and the check-in answer show the item, the
 form comes in place of the text (htmx) or as the page's own form; the
 editing marker is set only while the form is shown; the assignee picker

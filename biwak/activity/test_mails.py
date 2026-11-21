@@ -165,7 +165,7 @@ class MailsTest(TestCase):
             )
 
     def test_level_changed_before_sending(self):
-        """Subscribed means told (specs/ui-round-6.md, part C): a level
+        """Subscribed means told (specs/notifications.md, "Subscriptions"): a level
         changed since doesn't hold the mail back"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
         self.bob.notification_level = NotificationLevel.NOTHING

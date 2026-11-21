@@ -1,5 +1,5 @@
 """The combobox in front of long selects in the browser
-(frontend/combobox.js, specs/ui-round-6.md, part A)"""
+(frontend/combobox.js, specs/ui.md, "Forms")"""
 
 import re
 
@@ -68,7 +68,7 @@ class ComboboxTest(E2ETestCase):
 
 class InviteRowsTest(E2ETestCase):
     """ "Add another" of the invite form (frontend/invite.js,
-    specs/ui-round-6.md, part B)"""
+    specs/activation.md, "Inviting")"""
 
     def test_adding_rows(self):
         page = self.page

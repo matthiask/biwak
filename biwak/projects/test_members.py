@@ -33,7 +33,7 @@ class MembersTest(TestCase):
         )
 
     def test_add_offers_a_combobox_saying_who_people_are(self):
-        # specs/ui-round-6.md, part A: the plain select without JavaScript,
+        # specs/ui.md, "Forms": the plain select without JavaScript,
         # data-combobox for combobox.js, the organization in the label and
         # the address to find people by
         dora = person("Dora", client=True)

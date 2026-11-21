@@ -1,4 +1,4 @@
-"""The due date as a badge (specs/ui-round-1.md, part 5): danger when an open
+"""The due date as a badge (specs/todos.md, "The to-do's page"): danger when an open
 to-do is past due, quiet "Today", never for completed ones"""
 
 import datetime as dt
@@ -132,7 +132,7 @@ class PaletteBadgeTest(Base):
 
 class TodoPageBadgeTest(Base):
     """On the to-do's page the badge sits next to the date in the facts
-    (specs/ui-round-4.md, part 4)"""
+    (specs/todos.md, "The to-do's page")"""
 
     def facts(self, item):
         html = self.client.get(item.get_absolute_url()).content.decode()

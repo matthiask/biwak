@@ -330,7 +330,7 @@ def member_notify(request, pk, user_pk):
 def project_people(request, pk):
     """Members by organization (``project_groups()``); staff add (also from
     an organization), invite (modals) and remove people, and see who
-    hasn't signed in yet (specs/ui-round-6.md)"""
+    hasn't signed in yet (specs/activation.md, "Invitations")"""
     project = project_for(request, pk)
     can_manage = project_ops.can_manage_members(request.user)
     memberships = list(

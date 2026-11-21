@@ -327,8 +327,7 @@ def project_update(request, project_id: int, data: ProjectPatch):
     return project_out(project, request.user)
 
 
-# Inviting several people at once, and the invitations (specs/ui-round-6.md,
-# part B)
+# Inviting several people at once, and the invitations (specs/activation.md, "Inviting")
 
 
 class InvitationPersonIn(Schema):

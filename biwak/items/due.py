@@ -86,7 +86,7 @@ def sections(todos, today):
 def badge_state(todo, today=None):
     """``OVERDUE`` or ``TODAY`` for an open to-do (its ``Todo`` detail) due
     before or on ``today``, else an empty string: completed to-dos are never
-    overdue (the badge, specs/ui-round-1.md, part 5)"""
+    overdue (the badge, specs/todos.md, "The to-do's page")"""
     if todo.due_on is None or todo.is_completed:
         return ""
     group = group_of(todo.due_on, today or schedules.today())

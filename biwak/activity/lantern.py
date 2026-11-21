@@ -60,7 +60,7 @@ def wanted(notifications, user):
 
 def entry_key(notification):
     """What the lantern's entry of a notification is: its item, or the
-    batch of files uploaded together (specs/ui-round-7.md, part 4b)"""
+    batch of files uploaded together (specs/files.md, "Uploading files")"""
     event = notification.event
     if batch := event.data.get("batch"):
         return ("batch", batch)

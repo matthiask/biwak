@@ -1,5 +1,5 @@
 """Inviting several people at once, and invitations visible
-(specs/ui-round-6.md, part B): the operation, both entry points of the form,
+(specs/activation.md, "Inviting"): the operation, both entry points of the form,
 the marks, resending, the filter, withdrawing, the API"""
 
 import json
@@ -210,8 +210,8 @@ class FormTest(TestCase):
         self.assertFalse(User.objects.filter(email="fay@example.net").exists())
 
     def test_the_only_when_tagged_help_says_what_it_does(self):
-        """Not subscribed to posts to everybody (specs/ui-round-6.md, part
-        C), in the invite and the add form"""
+        """Not subscribed to posts to everybody (specs/notifications.md,
+        "Subscriptions"), in the invite and the add form"""
         self.client.force_login(self.ada)
         for url in [self.url, reverse("member_add", args=[self.website.pk])]:
             response = self.client.get(url)

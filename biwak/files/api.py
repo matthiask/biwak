@@ -447,7 +447,7 @@ class OrderingIn(Schema):
 @router.patch("projects/{project_id}/files/", response=FolderOut)
 def files_update(request, project_id: int, data: OrderingIn):
     """The order of the project's top level, for everybody; staff only
-    (specs/ui-round-7.md, part 3)"""
+    (specs/files.md, "Folders")"""
     project = project_for(request, project_id)
     api_staff_only(request, _("Only staff change the order."))
     operations.set_ordering(project, data.ordering, actor=request.user)

@@ -31,7 +31,7 @@
       {% if folder %}
         {% include "items/_more.html" with item=folder %}
       {% elif not request.user.is_client %}
-        {# The top level's order is the project's (specs/ui-round-7.md, part 3) #}
+        {# The top level's order is the project's (specs/files.md, "Folders") #}
         <details class="dropdown wb-menu">
           <summary class="btn btn-sm btn-quiet">
             {% translate "More" %}

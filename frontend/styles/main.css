@@ -935,7 +935,7 @@ body:has(.wb-client-tab) .wb-main {
 
 /* A to-do's row is a grid: handle | check | body. The handle and the check
    are as high as the title's first line and sit in its middle; the title
-   wraps inside the body (specs/ui-round-4.md). A row without a handle
+   wraps inside the body (specs/todos.md, "Lists and the board"). A row without a handle
    (completed, "My to-dos") has an empty first column of no width. */
 .wb-todo {
   display: grid;
@@ -2363,7 +2363,7 @@ body:has(.wb-modal[open]) {
   border-bottom-color: var(--bs-success-border-subtle);
 }
 
-/* The assignee picker (assignees.js, specs/ui-round-1.md): pills and a field
+/* The assignee picker (assignees.js, specs/todos.md, "Assignees"): pills and a field
    with a list below, which is positioned by the picker's own box */
 .wb-picker {
   position: relative;
@@ -2437,7 +2437,7 @@ body:has(.wb-modal[open]) {
 }
 
 /* A search field in front of a long select (combobox.js,
-   specs/ui-round-6.md): the list below it, as wide as the field at least,
+   specs/ui.md, "Forms"): the list below it, as wide as the field at least,
    long options wrapping */
 .wb-combobox {
   position: relative;
@@ -2472,7 +2472,7 @@ body:has(.wb-modal[open]) {
   cursor: default;
 }
 
-/* Inviting several people (projects/invite.html, specs/ui-round-6.md): a
+/* Inviting several people (projects/invite.html, specs/activation.md, "Inviting"): a
    box per person, its fields two by two */
 .wb-invite-row {
   display: grid;
@@ -2539,7 +2539,7 @@ main:has([data-hide-title]) [data-edit-open] {
   overflow-wrap: anywhere;
 }
 
-/* UI round 2, part B (specs/ui-round-2.md) */
+/* People in the interface (specs/people.md, "The mark") */
 
 /* The "Me" menu: the mark, then the name (phones: the mark only) */
 .wb-me-button {
@@ -2598,8 +2598,8 @@ main:has([data-hide-title]) [data-edit-open] {
   display: none;
 }
 
-/* UI round 5, section 3: the buttons of a filter form (_filter_buttons.html)
-   sit at the height of the fields, whatever the labels above them */
+/* specs/ui.md, "Filters and view choices": the buttons of a filter form
+   (_filter_buttons.html) sit at the height of the fields, whatever the labels above them */
 .wb-filters {
   display: flex;
   flex-wrap: wrap;
@@ -2682,7 +2682,7 @@ main:has([data-hide-title]) [data-edit-open] {
   margin-bottom: 0.25rem;
 }
 
-/* A folder's contents as tiles (specs/ui-round-7.md, part 1,
+/* A folder's contents as tiles (specs/files.md, "Folders",
    files/_tiles.html): two to five columns by width, a list of compact
    cards on a phone */
 .wb-tiles {
@@ -2812,7 +2812,7 @@ main:has([data-hide-title]) [data-edit-open] {
   }
 }
 
-/* Selecting and dragging tiles (specs/ui-round-7.md, part 4,
+/* Selecting and dragging tiles (specs/files.md, "Moving and selecting",
    frontend/files.js) */
 .wb-tile.is-selected {
   border-color: var(--wb-accent-ring);
@@ -2863,7 +2863,7 @@ a.is-drop-target {
   font-weight: 500;
 }
 
-/* Uploading files (specs/ui-round-7.md, part 4b): the hint while files are
+/* Uploading files (specs/files.md, "Uploading files"): the hint while files are
    dragged over a folder's page (frontend/files.js), the modal's rows
    (frontend/upload.js) */
 .wb-drop-hint {

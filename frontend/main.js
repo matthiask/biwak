@@ -66,8 +66,8 @@ if (document.querySelector("[data-sortable-order]")) {
   import(/* webpackChunkName: "sortable-order" */ "./sortable-order.js")
 }
 
-// A folder's tiles: selecting, dragging, dropping (specs/ui-round-7.md);
-// uploading several files, also on the form's own page
+// A folder's tiles: selecting, dragging, dropping (specs/files.md, "Moving
+// and selecting"); uploading several files, also on the form's own page
 // (the modal "Upload files" opens from the palette on other pages too)
 if (document.querySelector("[data-tiles]")) {
   import(/* webpackChunkName: "files" */ "./files.js")

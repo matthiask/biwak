@@ -1,5 +1,5 @@
-"""Archiving lives in the project's menu (specs/ui-round-2.md, part D): the
-projects page has no archive buttons, says "Archived Camp." with an Undo
+"""Archiving lives in the project's menu (specs/projects-overview.md,
+"Archived projects"): the projects page has no archive buttons, says "Archived Camp." with an Undo
 afterwards, and lists the archived projects to open them"""
 
 from django.test import TestCase

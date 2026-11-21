@@ -1,4 +1,4 @@
-// Filters remembered (specs/ui-round-3.md, section 4): a filter page (its
+// Filters remembered (specs/ui.md, "Filters and view choices"): a filter page (its
 // form or page has data-remember; view choices like the grouping and the
 // order are query parameters too) stores its query in the browser, per
 // path, when it

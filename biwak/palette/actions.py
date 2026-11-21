@@ -294,7 +294,7 @@ def on_organizations(user, name, organization):
 
 def on_people(user, name):
     """The People page: inviting, for the staff who manage members
-    (specs/ui-round-6.md)"""
+    (specs/activation.md, "Inviting")"""
     if name != "people" or not project_ops.can_manage_members(user):
         return []
     return [modal(_("Invite people"), reverse("invite_people"))]
@@ -344,7 +344,7 @@ def for_page(request, context):
     if name in PROJECT_PAGES and isinstance(project, Project):
         page += in_project(user, project, folder=item if name == "folder" else None)
     if name == "project_files" and isinstance(project, Project) and not user.is_client:
-        # The top level's order, the project's (specs/ui-round-7.md, part 3)
+        # The top level's order, the project's (specs/files.md, "Folders")
         page.append(
             modal(_("Order…"), reverse("project_files_order", args=[project.pk]))
         )

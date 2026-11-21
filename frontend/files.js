@@ -1,4 +1,4 @@
-// A folder's tiles (files/_tiles.html, specs/ui-round-7.md, part 4):
+// A folder's tiles (files/_tiles.html, specs/files.md, "Moving and selecting"):
 // selecting several without checkboxes, Ctrl-click (Cmd on a Mac) adding
 // or removing a tile and Shift-click the range from the last one, Ctrl+Space
 // and Shift+arrows on the focused tile the same; the bar acts on the

@@ -1603,7 +1603,7 @@ class LiveTest(E2ETestCase):
 
     def test_unread_and_read_items_and_one_divider(self):
         """Unread items have a red dot and bold text, read ones are quiet,
-        and one line (not two) separates the groups (specs/ui-round-2.md)"""
+        and one line (not two) separates the groups (specs/lantern.md, "The lantern")"""
         from biwak.activity import lantern
 
         stove = ops.create_todo(
@@ -2142,7 +2142,7 @@ class ModalTest(E2ETestCase):
         self.goto(page, reverse("project_people", args=[self.project.pk]))
         page.get_by_role("link", name="Invite by email").click()
         dialog = page.locator("dialog#modal")
-        # The form inviting several people (specs/ui-round-6.md)
+        # The form inviting several people (specs/activation.md, "Inviting")
         expect(dialog.locator("h1")).to_have_text("Invite people")
         dialog.get_by_label("Email").first.fill("dora@example.org")
         dialog.get_by_role("button", name="Invite").click()
@@ -2727,7 +2727,8 @@ class AvatarTest(E2ETestCase):
 
 
 class FiltersTest(E2ETestCase):
-    """Filter forms apply themselves and are remembered (specs/ui-round-3.md)"""
+    """Filter forms apply themselves and are remembered (specs/ui.md, "Filters and
+    view choices")"""
 
     def setUp(self):
         super().setUp()

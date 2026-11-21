@@ -522,7 +522,7 @@ class CommentForm(Form):
 def todo(request, pk, *, edit=False):
     """The to-do's page: the to-do to read, or with ``edit`` (its own URL,
     also a posted form) the form in place of the text; the page's htmx
-    takes the same region out of either (specs/ui-round-1.md)"""
+    takes the same region out of either (specs/ui.md, "Click to edit")"""
     item = item_for(request, pk, Kind.TODO)
     todo = item.todo
     edit = edit or request.POST.get("form") == "todo"

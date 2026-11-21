@@ -76,7 +76,7 @@ class ItemQuerySet(TreeQuerySet):
         items of accessible projects, not trashed (unless ``with_trashed``,
         for the trash), and for clients only those visible to clients. A
         filter on stored columns, no recursive query. Drafts (new docs
-        nobody wrote in yet, specs/ui-round-7.md, part 5) are nobody's
+        nobody wrote in yet, specs/files.md, "Docs") are nobody's
         business: only with ``drafts``, and then only the person's own (the
         editor's page and its websocket)."""
         if not user.is_authenticated or not user.is_active:
@@ -127,7 +127,7 @@ class Item(TreeNode):
         _("is visible to clients"), default=False, editable=False
     )
     # A new doc until somebody writes in it: only its creator's
-    # (``visible_to()``, specs/ui-round-7.md, part 5)
+    # (``visible_to()``, specs/files.md, "Docs")
     is_draft = models.BooleanField(_("draft"), default=False, editable=False)
 
     objects = ItemQuerySet.as_manager()
@@ -313,7 +313,7 @@ class Group(models.Model):
 
 class Assignment(models.Model):
     """Somebody assigned to a to-do, and who assigned them
-    (specs/ui-round-5.md, section 4). ``assigned_by`` is empty for
+    (specs/todos.md, "Assignees"). ``assigned_by`` is empty for
     assignments from before it was stored, imported ones and people who
     were deleted since."""
 
@@ -442,7 +442,7 @@ class Message(Checklist, Detail):
 
 
 class Folder(Detail):
-    # The order of its contents for everybody (specs/ui-round-7.md, part 3)
+    # The order of its contents for everybody (specs/files.md, "Folders")
     ordering = models.CharField(
         _("order"),
         max_length=20,
@@ -462,7 +462,7 @@ class Doc(Checklist, Detail):
     # staff turn it off
     read_only = models.BooleanField(_("read-only"), default=False)
     # A doc begun as a draft asks its creator once, at the first "Done",
-    # whom to tell (specs/ui-round-7.md, part 5)
+    # whom to tell (specs/files.md, "Docs")
     tell_pending = models.BooleanField(
         _("telling people pending"), default=False, editable=False
     )

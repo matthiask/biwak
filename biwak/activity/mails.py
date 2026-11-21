@@ -287,9 +287,9 @@ def _deliverable(notifications, user):
     excludes the inactive), and for clients only events which were visible
     to clients when they happened (the same rule as ``notify()``, in case a
     notification exists anyway). Levels decided who was told
-    (``notify()``); subscribing is the switch (specs/ui-round-6.md, part
-    C), so a level changed since doesn't hold the mail back. Item mails and
-    digests both pass here. The same number of queries for any number of
+    (``notify()``); subscribing is the switch (specs/notifications.md,
+    "Subscriptions"), so a level changed since doesn't hold the mail back. Item
+    mails and digests both pass here. The same number of queries for any number of
     items."""
     items = {n.event.item_id: n.event.item for n in notifications if n.event.item}
     visible = set(
@@ -411,8 +411,8 @@ def _batch(notifications, user):
 
 
 def batch_mail(user, notifications):
-    """One mail about files uploaded together (specs/ui-round-7.md, part
-    4b): "Ada uploaded 5 files to Minutes", the files linked"""
+    """One mail about files uploaded together (specs/files.md, "Uploading files"):
+    "Ada uploaded 5 files to Minutes", the files linked"""
     context = _batch(notifications, user)
     if context is None:
         return None

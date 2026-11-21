@@ -80,7 +80,7 @@ def decorate(user, viewer, shared):
         and user.organization_id == viewer.organization_id
     )
     user.can_move = org_ops.can_touch(viewer, user.organization, person=user)
-    # Invited, not signed in yet (specs/ui-round-6.md): for the staff who
+    # Invited, not signed in yet (specs/activation.md, "Invitations"): for the staff who
     # resend and withdraw invitations, with who invited them and when
     user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
     # Activating and deactivating (specs/activation.md)

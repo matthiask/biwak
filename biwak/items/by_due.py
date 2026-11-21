@@ -141,7 +141,7 @@ def todos_by_due(request, project=None):
     todos = glance.with_signals(todos)
     grouping = data.get("grouping") or TodoGrouping.PROJECT
     # "Assigned to me" in the header: the same filters with me as the
-    # assignee (specs/ui-round-5.md)
+    # assignee (specs/todos.md, "The to-dos page")
     mine = query.copy()
     mine.pop("page", None)
     if project is None:

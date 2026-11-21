@@ -117,9 +117,9 @@ def effective_level(user, item=None, *, project=None):
 
 
 def wanting(people, event):
-    """Those of ``people`` (the candidates) who are told (specs/ui-round-6.md,
-    part C: subscribing is the switch): everybody subscribed to the item,
-    whatever their level, and those this event assigns; the people newly
+    """Those of ``people`` (the candidates) who are told (specs/notifications.md,
+    "Who gets told": subscribing is the switch): everybody subscribed to the
+    item, whatever their level, and those this event assigns; the people newly
     mentioned on every level except "nothing"; the subscribers of the
     container hear about what's new in it (``created``) on "everything".
     Reactions and sharing tell on every level except "nothing", like a
@@ -194,7 +194,7 @@ def candidates(event):
         ids.discard(event.actor_id)
         return User.objects.active().filter(pk__in=ids)
     items = [item.pk]
-    # A doc written from a draft is quiet (specs/ui-round-7.md, part 5):
+    # A doc written from a draft is quiet (specs/files.md, "Docs"):
     # its creator tells people at "Done"
     if (
         event.action == Action.CREATED
@@ -291,8 +291,8 @@ def notify_people(item, *, whom, actor):
     ``"everybody"`` (the project's members at this moment), a list of
     people, or ``"nobody"``. Those chosen who can see the item are
     subscribed, so the ``created`` event tells them; of everybody only
-    those whose level for the item is "everything" (specs/ui-round-6.md,
-    part C: "only what concerns me" and "nothing" aren't subscribed by
+    those whose level for the item is "everything" (specs/notifications.md,
+    "Levels": "only what concerns me" and "nothing" aren't subscribed by
     posts to everybody). People chosen by name are, as when adding
     subscribers. Returns them."""
     if whom == "nobody":
