@@ -1,0 +1,22 @@
+{% load i18n %}
+<div class="mb-2" data-invite-row>
+  {% for error in row.non_field_errors %}<div class="alert alert-danger mb-1 py-1" role="alert">
+      {{ error }}
+    </div>{% endfor %}
+  <div class="wb-invite-row">
+    {% for field in row.visible_fields %}
+      {% if field.widget_type == "checkbox" %}
+        <div class="form-check wb-invite-confirm">
+          {{ field }}
+          <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+        </div>
+      {% else %}
+        <div>
+          <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>

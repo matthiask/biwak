@@ -8,6 +8,17 @@ Part A built (2026-11-21): `ComboboxSelect` and `PersonChoiceField`
 (`person_label()`) in `biwak/forms.py`, `frontend/combobox.js`, on "Add
 someone" (found by the address too), the feed's person filter and the
 check-in's time zone; browser test `biwak/test_e2e_combobox.py`.
+Part B built (2026-11-21, CLI 0.32.0): `invite_people()` (and `invite()`
+on top of it), `resend_invitation()`, `withdrawal()` and
+`withdraw_invitation()` in `biwak/projects/operations.py`,
+`User.invited_by`/`invited_at` and `User.objects.invited()`, the form
+and views in `biwak/projects/invitations.py` (`/people/invite/`,
+`/people/<id>/invitation/resend/` and `…/withdraw/`;
+`/projects/<id>/people/invite/` is the same form), the mark
+`organizations/_invitation.html`, `frontend/invite.js`; the API
+`GET|POST /api/v1/invitations/`, `POST /api/v1/invitations/{id}/resend/`,
+`DELETE /api/v1/invitations/{id}/`; `biwak invite` and `biwak
+invitations [resend|withdraw]`.
 
 **Agent:** a cheaper model for part A; parts B and C touch who may do
 what and who's told: a cheaper model with the visibility and
@@ -106,6 +117,42 @@ the person, set by `invite()`).
   other projects); else only from these projects, with the question
   saying so. A confirmation modal ("Withdraw the invitation?"). The
   feed's "added" events stay.
+
+### Built (decisions on the way, 2026-11-21, to be confirmed)
+
+- **The notify choice** is one for the round, stored for each chosen
+  project (the API's `notify`, the CLI's `--only-tagged`), not one per
+  project.
+- **The organization left empty** is the address's domain's, as
+  before (`for_new_person()`); there's no way to say "none" when the
+  domain matches. A name that doesn't exist asks "Create …?" per row,
+  created only when the round is saved.
+- **The projects offered** are those the inviter can open, not archived.
+- **An address twice in one round** is an error of the second row.
+- **Rows:** three without JavaScript, the first one required, at most
+  50.
+- **The mail** names the one project as before (subject "Ada invited you
+  to Website"); with several, "Ada invited you to Biwak" and a line per
+  project with its link. Resending names the projects the person is in
+  now (not archived), from the person resending.
+- **The mark, Resend and Withdraw** are for own staff only (those who
+  invite), so clients and partners don't learn who invited whom.
+  Resending doesn't change `invited_by`/`invited_at`.
+- **Withdrawing** removes the person from the projects the withdrawing
+  person can open (recorded as "removed", the "added" events stay); the
+  account goes when they're in no other project and nothing refers to
+  it: nothing that would block deleting (comments, items, events, files,
+  links), no assignments, check-ins asking them, mentions or reactions.
+  The question says which of the two happens.
+- **People invited before this part** have no `invited_at` and aren't
+  invitations (no users yet).
+- **API:** besides `POST /api/v1/invitations/` (per-row errors as
+  `{"detail", "errors": [{"index", "detail"}]}`, 400, the addresses
+  named in `detail` for the CLI), the list, resend and withdraw, so the
+  CLI covers what the pages do; 403 for clients and partners, 404 for
+  people who aren't invitations.
+- `/people/` has "Everybody" and "Invited" for staff (`?invited=1`);
+  the palette offers "Invite people" there.
 
 ## C. Subscribing is the switch
 

@@ -45,7 +45,7 @@ lists, messages, docs and files, check-ins, members.
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page.
 - **Members** lists who is in the project. Staff add people there or
-  invite them by email. "Add someone" and other long lists of choices
+  invite them by email (see [People](#people)). "Add someone" and other long lists of choices
   (the person filter of the activity, a check-in's time zone) have a
   search field: type parts of the name, the organization or the address,
   in any order, then choose with the arrow keys and Enter or a click.
@@ -91,6 +91,25 @@ archived". You only find what you may see. See [Keyboard](keyboard.md).
 person's page shows the projects you have in common and what they did.
 Clients and partners only see members of their projects. Staff manage
 organizations from the People page.
+
+**Inviting people:** "Invite people" on the People page, or "Invite by
+email" on a project's people page (with that project chosen), opens one
+form for several people at once. Choose the projects, whether they are
+notified by default or only when tagged, and fill a row per person:
+address, name, organization (left empty: the one of the address's
+domain) and, for admins, staff or client. "Add another" adds a row. New
+people get one mail naming the projects; people who have an account are
+added to them. If a row can't be invited (a deactivated person, staff
+invited by somebody who isn't an admin), nobody is, and the form says
+which row is wrong.
+
+**Invitations:** until someone signs in for the first time, staff see
+"Invited, not signed in yet" next to them, with who invited them and
+when. "Resend" sends the invitation again, naming the projects they are
+in now. "Withdraw…" removes them from the projects you can open, and
+deletes the account if nothing else refers to it (no comments, no
+assignments, no other projects). "Invited" on the People page lists
+everybody who hasn't signed in yet, the oldest invitation first.
 
 ## Your menu
 

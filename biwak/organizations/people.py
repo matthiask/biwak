@@ -15,6 +15,7 @@ from biwak.accounts import operations as accounts_ops
 from biwak.accounts.models import User
 from biwak.activity.feed import people_visible_to
 from biwak.organizations import operations as org_ops
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Project, knows_everybody
 
 
@@ -61,6 +62,9 @@ def decorate(user, viewer, shared):
         and user.organization_id == viewer.organization_id
     )
     user.can_move = org_ops.can_touch(viewer, user.organization)
+    # Invited, not signed in yet (specs/ui-round-6.md): for the staff who
+    # resend and withdraw invitations, with who invited them and when
+    user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
     return user
 
 
@@ -69,7 +73,11 @@ def groups_for(viewer):
     ``feed`` (whether the viewer may open their feed), ``show_email`` and
     ``can_move`` (the existing "Change organization" modal)"""
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
-    people = known_people(viewer).order_by("-is_active", Lower("full_name"), "email")
+    people = (
+        known_people(viewer)
+        .select_related("invited_by")
+        .order_by("-is_active", Lower("full_name"), "email")
+    )
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))
     for user in people:
         decorate(user, viewer, shared)
@@ -92,13 +100,27 @@ def groups_for(viewer):
     return [g for g in [own, *ordered, without] if g is not None and g.people]
 
 
+def invitations_for(viewer):
+    """The "Invited" filter: everybody invited who hasn't signed in yet,
+    the oldest invitation first (own staff, who manage members)"""
+    shared = set(people_visible_to(viewer).values_list("pk", flat=True))
+    return [
+        decorate(user, viewer, shared)
+        for user in User.objects.invited().select_related("organization", "invited_by")
+    ]
+
+
 def people(request):
+    can_invite = project_ops.can_manage_members(request.user)
+    invited = can_invite and bool(request.GET.get("invited"))
     return render(
         request,
         "organizations/people.html",
         {
-            "groups": groups_for(request.user),
+            "groups": [] if invited else groups_for(request.user),
+            "invited": invitations_for(request.user) if invited else None,
             "can_manage": org_ops.can_manage(request.user),
+            "can_invite": can_invite,
         },
     )
 
@@ -108,7 +130,7 @@ def person(request, pk):
     projects both are in; for whoever may know the person (the rule of the
     People page), else 404"""
     viewer = request.user
-    who = get_object_or_404(known_people(viewer), pk=pk)
+    who = get_object_or_404(known_people(viewer).select_related("invited_by"), pk=pk)
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
     decorate(who, viewer, shared)
     projects = Project.objects.accessible_to(viewer).filter(memberships__user=who)

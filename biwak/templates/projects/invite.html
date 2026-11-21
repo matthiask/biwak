@@ -1,0 +1,32 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{% comment %}
+  Inviting several people at once (biwak/projects/invitations.py,
+  specs/ui-round-6.md): the fields of the form, then a row per person with
+  its errors; "Add another" adds a row from the template (frontend/invite.js),
+  without JavaScript the empty rows are there
+{% endcomment %}
+{% block fields %}
+  {{ block.super }}
+  {{ form.rows.management_form }}
+  <fieldset class="mb-3" data-invite-rows>
+    <legend class="form-label fs-6">{% translate "People" %}</legend>
+    <p class="form-text">
+      {% translate "An organization left empty is the one of the address's domain, if any." %}
+    </p>
+    {% for error in form.rows.non_form_errors %}<div class="alert alert-danger" role="alert">
+        {{ error }}
+      </div>{% endfor %}
+    {% for row in form.rows %}
+      {% include "projects/_invite_row.html" %}
+    {% endfor %}
+    <template data-invite-template>
+      {% with row=form.rows.empty_form %}
+        {% include "projects/_invite_row.html" %}
+      {% endwith %}
+    </template>
+    <button type="button" class="btn btn-sm btn-quiet" data-invite-add hidden>
+      {% translate "Add another" %}
+    </button>
+  </fieldset>
+{% endblock fields %}

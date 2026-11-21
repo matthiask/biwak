@@ -19,7 +19,6 @@ from biwak.items import glance, operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.modals import form_response
 from biwak.organizations import operations as org_ops
-from biwak.organizations.forms import OrganizationFieldMixin, organization_field
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
@@ -304,34 +303,6 @@ class AddMemberForm(Form):
     notify = notify_field()
 
 
-class InviteForm(OrganizationFieldMixin, Form):
-    email = forms.EmailField(label=_("Email"))
-    full_name = forms.CharField(label=_("Name"), max_length=200, required=False)
-    is_client = forms.TypedChoiceField(
-        label=_("Staff or client"),
-        choices=[("1", _("Client")), ("", _("Staff"))],
-        coerce=bool,
-        empty_value=False,
-        initial="1",
-        widget=forms.RadioSelect,
-        required=False,
-    )
-    notify = notify_field()
-    organization = organization_field(
-        help_text=_(
-            "For new people; left empty, the organization of the address's"
-            " domain. Shown beside the names of clients and partners. No"
-            " organization: staff see only the projects they're added to."
-        ),
-    )
-
-    def __init__(self, *args, actor, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not actor.is_admin:
-            # Only admins create staff (specs/access.md)
-            del self.fields["is_client"]
-
-
 def notify_row(actor, project, user):
     """How the person is in the project, for staff and the person themselves"""
     if not project_ops.can_change_notify_choice(actor, user):
@@ -356,18 +327,24 @@ def member_notify(request, pk, user_pk):
 
 
 def project_people(request, pk):
-    """Members; staff add, invite (modals) and remove people"""
+    """Members; staff add, invite (modals) and remove people, and see who
+    hasn't signed in yet (specs/ui-round-6.md)"""
     project = project_for(request, pk)
+    can_manage = project_ops.can_manage_members(request.user)
+    memberships = list(
+        project.memberships.select_related(
+            "user__organization", "user__invited_by"
+        ).order_by("user__is_client", "user__full_name")
+    )
+    for m in memberships:
+        m.user.show_invitation = can_manage and m.user.is_invited
     return render(
         request,
         "projects/people.html",
         {
             "project": project,
             "memberships": [
-                (m, notify_row(request.user, project, m.user))
-                for m in project.memberships.select_related(
-                    "user__organization"
-                ).order_by("user__is_client", "user__full_name")
+                (m, notify_row(request.user, project, m.user)) for m in memberships
             ],
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
@@ -402,48 +379,6 @@ def member_add(request, pk):
         project=project,
         cancel_url=reverse("project_people", args=[project.pk]),
         submit_label=_("Add"),
-    )
-
-
-def member_invite(request, pk):
-    """Invites by email: a modal, also a page"""
-    project = project_for(request, pk)
-    if not project_ops.can_manage_members(request.user):
-        raise PermissionDenied
-    form = InviteForm(request.POST or None, actor=request.user)
-    if form.is_valid():
-        data = form.cleaned_data
-        try:
-            # A new organization only with the invitation
-            with transaction.atomic():
-                user, _changed = project_ops.invite(
-                    project,
-                    email=data["email"],
-                    full_name=data["full_name"],
-                    is_client=data.get("is_client", True),
-                    organization=form.organization(request.user),
-                    notify=data["notify"],
-                    actor=request.user,
-                )
-        except project_ops.InvitationError as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(
-                request,
-                _("%(name)s has been invited.") % {"name": user.display_name},
-            )
-            return redirect("project_people", pk=project.pk)
-    return form_response(
-        request,
-        form,
-        title=_("Invite by email"),
-        intro=_(
-            "New people get a mail and log in with a code sent to their address."
-            " Adding someone subscribes them to nothing that exists already."
-        ),
-        project=project,
-        cancel_url=reverse("project_people", args=[project.pk]),
-        submit_label=_("Invite"),
     )
 
 

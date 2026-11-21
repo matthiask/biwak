@@ -1,7 +1,13 @@
-{% load i18n %}{% autoescape off %}{% blocktranslate with actor=actor.display_name project=project %}{{ actor }} invited you to the project “{{ project }}” on Biwak.{% endblocktranslate %}
+{% load i18n %}{% autoescape off %}{% if projects|length == 1 %}{% blocktranslate with actor=actor.display_name project=projects.0.name %}{{ actor }} invited you to the project “{{ project }}” on Biwak.{% endblocktranslate %}
 
 {% translate "Open it here and log in with your email address; you'll get a code by mail:" %}
-{{ url }}
+{{ url }}{% else %}{% blocktranslate with actor=actor.display_name %}{{ actor }} invited you to Biwak.{% endblocktranslate %}{% if projects %}
+
+{% translate "Your projects:" %}
+{% for project in projects %}- {{ project.name }}: {{ project.url }}
+{% endfor %}{% endif %}
+{% translate "Log in here with your email address; you'll get a code by mail:" %}
+{{ url }}{% endif %}
 
 {% translate "There's no password. After logging in you can add a passkey to log in without a code." %}
 {% endautoescape %}

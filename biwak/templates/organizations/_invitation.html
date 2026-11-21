@@ -1,0 +1,29 @@
+{% load i18n %}
+{% comment %}
+  An invitation (specs/ui-round-6.md, part B): "Invited, not signed in
+  yet", who invited the person and when, Resend and Withdraw… for the staff
+  managing members (``person.show_invitation``). ``next`` is where to come
+  back to.
+{% endcomment %}
+{% if person.show_invitation %}
+  <div class="small text-body-secondary d-flex flex-wrap align-items-center gap-2 mt-1" data-invitation>
+    <span class="badge wb-tone-neutral">{% translate "Invited, not signed in yet" %}</span>
+    <span>
+      {% if person.invited_by %}
+        {% blocktranslate with name=person.invited_by date=person.invited_at|date %}by {{ name }} on {{ date }}{% endblocktranslate %}
+      {% else %}
+        {% blocktranslate with date=person.invited_at|date %}on {{ date }}{% endblocktranslate %}
+      {% endif %}
+    </span>
+    <form method="post" action="{% url 'invitation_resend' person.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn-sm btn-quiet">{% translate "Resend" %}</button>
+    </form>
+    <a
+      class="btn btn-sm btn-quiet"
+      href="{% url 'invitation_withdraw' person.pk %}?next={{ next|urlencode }}"
+      data-modal
+    >{% translate "Withdraw…" %}</a>
+  </div>
+{% endif %}

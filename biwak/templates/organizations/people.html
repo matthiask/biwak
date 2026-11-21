@@ -7,6 +7,13 @@
     <h1 class="wb-title">{% translate "People" %}</h1>
     {% if can_manage %}
       <div class="d-flex gap-2">
+        {% if can_invite %}
+          <a
+            href="{% url 'invite_people' %}"
+            data-modal
+            class="btn btn-sm btn-quiet"
+          >{% translate "Invite people" %}</a>
+        {% endif %}
         <a href="{% url 'organizations' %}" class="btn btn-sm btn-quiet">{% translate "Organizations" %}</a>
         <a
           href="{% url 'organization_create' %}"
@@ -16,6 +23,43 @@
       </div>
     {% endif %}
   </div>
+  {% if can_invite %}
+    <div class="d-flex gap-2 mb-3" aria-label="{% translate "Filter" %}" role="group">
+      <a
+        href="{% url 'people' %}"
+        class="btn btn-sm btn-quiet{% if invited is None %} active{% endif %}"
+        {% if invited is None %}aria-current="page"{% endif %}
+      >{% translate "Everybody" %}</a>
+      <a
+        href="{% url 'people' %}?invited=1"
+        class="btn btn-sm btn-quiet{% if invited is not None %} active{% endif %}"
+        {% if invited is not None %}aria-current="page"{% endif %}
+      >{% translate "Invited" %}</a>
+    </div>
+  {% endif %}
+  {% if invited is not None %}
+    <div class="list-group mb-4" data-invitations>
+      {% for user in invited %}
+        <div class="list-group-item" data-kb-row>
+          <div class="d-flex align-items-center gap-2">
+            {% avatar user "md" %}
+            <div>
+              <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
+              {% if user.is_client %}
+                <span class="badge wb-client-badge">{{ user.role }}</span>
+              {% else %}
+                <span class="badge wb-tone-neutral">{{ user.role }}</span>
+              {% endif %}
+              <div class="small text-body-secondary">{{ user.email }}</div>
+              {% include "organizations/_invitation.html" with person=user next=request.get_full_path %}
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="list-group-item text-body-secondary">{% translate "Nobody is waiting to sign in." %}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
   {% for group in groups %}
     <section class="mb-4" data-people-group="{{ group.kind }}">
       <h2 class="h5">
@@ -49,6 +93,7 @@
                     class="badge wb-tone-neutral"
                   >{% translate "inactive" %}</span>{% endif %}
                 {% if user.show_email %}<div class="small text-body-secondary">{{ user.email }}</div>{% endif %}
+                {% include "organizations/_invitation.html" with person=user next=request.get_full_path %}
               </div>
             </div>
             {% if user.can_move %}
@@ -63,6 +108,6 @@
       </div>
     </section>
   {% empty %}
-    <p class="text-body-secondary">{% translate "Nobody yet." %}</p>
+    {% if invited is None %}<p class="text-body-secondary">{% translate "Nobody yet." %}</p>{% endif %}
   {% endfor %}
 {% endblock content %}

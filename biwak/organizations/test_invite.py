@@ -6,7 +6,7 @@ from django.test import TestCase
 from biwak.accounts.models import APIToken, User
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
-from biwak.test_utils import organization, person, project
+from biwak.test_utils import invite_data, organization, person, project
 
 
 class InviteTest(TestCase):
@@ -19,12 +19,12 @@ class InviteTest(TestCase):
         self.own = organization("Example Team", is_own=True, domains=["example.net"])
 
     def post(self, **data):
-        return self.client.post(self.url, {"notify": "default", **data})
+        return self.client.post(self.url, invite_data([self.project], data))
 
     def test_the_field_completes_existing_names(self):
         self.client.force_login(self.ada)
         response = self.client.get(self.url)
-        self.assertContains(response, 'list="id_organization-names"')
+        self.assertContains(response, 'list="id_person-0-organization-names"')
         self.assertContains(response, '<option value="Example Ltd">')
 
     def test_an_existing_one_ignoring_case_and_spaces(self):

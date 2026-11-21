@@ -62,3 +62,28 @@ class ComboboxTest(E2ETestCase):
         ).to_be_visible()
         self.assertTrue(self.project.is_member(dora))
         self.assertEqual(self.errors, [])
+
+
+class InviteRowsTest(E2ETestCase):
+    """ "Add another" of the invite form (frontend/invite.js,
+    specs/ui-round-6.md, part B)"""
+
+    def test_adding_rows(self):
+        page = self.page
+        self.goto(page, f"/projects/{self.project.pk}/people/")
+        page.get_by_role("link", name="Invite by email").click()
+        dialog = page.get_by_role("dialog", name="Invite people")
+        emails = dialog.get_by_role("textbox", name="Email")
+        expect(emails).to_have_count(3)
+        dialog.get_by_role("button", name="Add another").click()
+        expect(emails).to_have_count(4)
+        expect(emails.nth(3)).to_be_focused()
+        emails.nth(0).fill("dora@example.net")
+        emails.nth(3).fill("eve@example.net")
+        dialog.get_by_role("button", name="Invite").click()
+        expect(dialog).to_be_hidden()
+        expect(page.get_by_role("link", name="eve@example.net")).to_be_visible()
+        self.assertTrue(
+            self.project.memberships.filter(user__email="dora@example.net").exists()
+        )
+        self.assertEqual(self.errors, [])

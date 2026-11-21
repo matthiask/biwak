@@ -394,6 +394,108 @@ def member_invite(
     return None
 
 
+@cli.command()
+@click.argument("emails", nargs=-1, required=True)
+@click.option(
+    "--project",
+    "projects",
+    type=int,
+    multiple=True,
+    required=True,
+    help="A project to invite them to (repeat for several).",
+)
+@click.option(
+    "--organization",
+    default="",
+    help="New people's organization, by name (see biwak orgs); default: the"
+    " one of each address's domain.",
+)
+@click.option("--organization-id", type=int, help="The same by ID.")
+@click.option("--staff", is_flag=True, help="Staff instead of clients (admins).")
+@only_tagged_option
+@json_option
+def invite(
+    emails, projects, organization, organization_id, staff, only_tagged, as_json
+):
+    """Invite the people with these addresses to every --project at once:
+    new people (clients unless --staff) get one mail naming the projects,
+    people with an account are added. All or nothing: an address that
+    can't be invited invites nobody."""
+    person = {"organization": organization, "is_client": not staff}
+    if organization_id is not None:
+        person["organization_id"] = organization_id
+    data = request(
+        "POST",
+        "invitations/",
+        json={
+            "people": [{"email": email, **person} for email in emails],
+            "projects": list(projects),
+            "notify": "tagged" if only_tagged else "default",
+        },
+    )
+    if as_json:
+        return echo_json(data)
+    for invited in data:
+        word = "Invited" if invited["created"] else "Added"
+        click.echo(f"{word}: {invited['person']['name']} ({invited['person']['id']})")
+    return None
+
+
+@cli.group(invoke_without_command=True)
+@json_option
+@click.pass_context
+def invitations(ctx, as_json):
+    """Who was invited and hasn't signed in yet, the oldest invitation
+    first (staff); resend or withdraw an invitation"""
+    if ctx.invoked_subcommand:
+        return None
+    data = request("GET", "invitations/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Name", "Email", "Invited by", "Invited at", "Projects")
+    for invitation in data:
+        t.add_row(
+            str(invitation["person"]["id"]),
+            invitation["person"]["name"],
+            invitation["email"],
+            (invitation["invited_by"] or {}).get("name", ""),
+            invitation["invited_at"][:10],
+            ", ".join(str(pk) for pk in invitation["project_ids"]),
+        )
+    console.print(t)
+    return None
+
+
+@invitations.command("resend")
+@click.argument("person", type=int)
+@json_option
+def invitations_resend(person, as_json):
+    """Send the invitation of PERSON again, naming the projects they're
+    in now"""
+    data = request("POST", f"invitations/{person}/resend/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Sent again to {data['email']}.")
+    return None
+
+
+@invitations.command("withdraw")
+@click.argument("person", type=int)
+@json_option
+def invitations_withdraw(person, as_json):
+    """Withdraw the invitation of PERSON: removed from the projects you can
+    open, the account deleted if nothing else refers to it"""
+    data = request("DELETE", f"invitations/{person}/")
+    if as_json:
+        return echo_json(data)
+    removed = ", ".join(str(pk) for pk in data["removed_from"]) or "no projects"
+    click.echo(
+        f"Withdrawn: removed from {removed}"
+        + ("; the account is deleted." if data["deleted"] else "; the account stays.")
+    )
+    return None
+
+
 @cli.group(invoke_without_command=True)
 @json_option
 @click.pass_context
