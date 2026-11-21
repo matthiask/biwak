@@ -19,13 +19,20 @@
       {{ item|item_title }}
       {% client_badge item %}
     </h1>
-    <div class="wb-page-actions">
+    <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
       <form method="post" action="{% url 'todo_toggle' item.pk %}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
-        <button type="submit" class="btn btn-sm btn-quiet">
-          {% if todo.is_completed %}{% translate "Reopen" %}{% else %}{% icon "check-lg" %}<span
+        <button
+          type="submit"
+          class="btn btn-sm btn-quiet"
+          title="{% if todo.is_completed %}{% translate 'Reopen' %}{% else %}{% translate 'Complete' %}{% endif %}"
+        >
+          {% if todo.is_completed %}{% icon "arrow-counterclockwise" %}<span
+              class="wb-label"
+            >{% translate "Reopen" %}</span>{% else %}{% icon "check-lg" %}<span
+              class="wb-label"
             >{% translate "Complete" %}</span>{% endif %}
         </button>
       </form>
@@ -33,10 +40,11 @@
         <a
           class="btn btn-sm btn-quiet"
           href="{% url 'todo_edit' item.pk %}"
+          title="{% translate 'Edit' %}"
           data-edit-url="{% url 'todo_edit' item.pk %}"
           data-edit-focus="title"
           data-edit-open
-        >{% icon "pencil" %}<span>{% translate "Edit" %}</span></a>
+        >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% endif %}
       {% include "items/_more.html" %}
     </div>
@@ -44,7 +52,6 @@
   {% show_links item %}
   {% include "items/_client_banner.html" %}
   <div id="live-status" data-live>
-    {% if todo.due_on %}<p class="mb-2">{% due_badge todo %}</p>{% endif %}
     {% if todo.is_completed %}
       <p class="text-body-secondary">
         {% short_name todo.completed_by as who %}
@@ -74,7 +81,7 @@
     </div>
     <div class="col-lg-4">
       {% include "items/_subscribers.html" %}
-      {% include "items/_history_link.html" with block=True %}
+      {% include "items/_history_link.html" with below=True %}
     </div>
   </div>
 {% endblock content %}

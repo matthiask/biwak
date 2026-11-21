@@ -5,7 +5,7 @@ buttons of varying heights, and the checkbox and drag handle alone on
 their line. Screenshots at 390 px wide of a list, a to-do and a project
 page showed more of the same kind.
 
-**Status:** open (spec, 2026-11-21). Built 2026-11-21 (branch
+**Status:** built 2026-11-21 (branch
 `ui4-behavior`): 5.1 (sign out), 5.4 (the visibility modal) and 5.5 (the
 feed's conversations). Decisions on the way:
 - 5.1: "Sign out here" sits in the action cell of the sessions table's
@@ -18,6 +18,18 @@ feed's conversations). Decisions on the way:
   so the switch include no longer shows the sentence by the button and the
   pages' `affected` count is gone.
 - 5.5: see `feed.md`.
+
+Sections 1 to 4 and 5.2 and 5.3 built on branch `ui4-layout`
+(2026-11-21). Decisions on the
+way: the header's actions are one row at the `btn-sm` height (2rem), phones
+(under 576 px) get icons only (`.wb-label`) and "More" with what's
+`.wb-phone-hide` in the header (`.wb-phone-only` in the menu), on lists,
+to-dos and projects (`.is-compact`: no wrapping); the to-do row is a grid
+(handle | check | body, the title then a line with assignees, due date and
+signals; "My to-dos" has the same, its list and due date in that line); the
+to-do page's badge says "Overdue" or "Today" next to the date; relative
+times use the `ago` filter ("just now"); "New group" sits in the row of the
+last group's "Add a to-do" (or the ungrouped one without groups).
 
 **Agent:** a cheaper model following this spec and the checklist in
 `AGENTS.md`. Every change gets a browser test at 390 px (`PhoneTest`)

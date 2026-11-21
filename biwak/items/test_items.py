@@ -441,3 +441,24 @@ class CheckCommandTest(TestCase):
             call_command("check_visibility", "--mail", stdout=out)
         self.assertIn("stored True, expected False", out.getvalue())
         self.assertEqual(len(mail.outbox), 1)
+
+
+class CommentFieldLabelTest(TestCase):
+    """The comment's field has a label for screen readers, "Comment", and
+    the "Comments" heading is right above it (specs/ui-round-4.md, part 4)"""
+
+    def test_a_hidden_label(self):
+        ada = person("Ada")
+        todo = ops.create_todo(
+            todolist=ops.create_list(
+                project=project(members=[ada]), title="Launch", creator=ada
+            ),
+            title="Pack",
+            creator=ada,
+        )
+        self.client.force_login(ada)
+        html = self.client.get(todo.get_absolute_url()).content.decode()
+        self.assertRegex(
+            html,
+            r'<label class="form-label visually-hidden" for="id_content">Comment</label>',
+        )

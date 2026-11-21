@@ -1,7 +1,8 @@
 {% load biwak i18n %}
 {% comment %}
   The "More" menu of an item's page: its notification level, its subscribers, moving and
-  trashing (who may change it), each in a modal (frontend/modal.js) which
+  trashing (who may change it); `more_history`: the history too, on phones, where the page's
+  header doesn't show its link; each in a modal (frontend/modal.js) which
   is also a page. `can_change` comes from the page.
 {% endcomment %}
 <details class="dropdown wb-menu">
@@ -10,6 +11,9 @@
     {% icon "chevron-down" %}
   </summary>
   <div class="dropdown-menu dropdown-menu-end">
+    {% if more_history and not request.user.is_client %}
+      <a class="dropdown-item wb-phone-only" href="{% url 'item_history' item.pk %}">{% translate "History" %}</a>
+    {% endif %}
     <a
       class="dropdown-item"
       href="{% url 'item_notifications' item.pk %}"

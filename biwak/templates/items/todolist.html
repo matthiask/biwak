@@ -8,22 +8,29 @@
   {% include "_breadcrumbs.html" with project=item.project %}
   <div class="wb-page-header" id="live-header" data-live>
     <h1 class="wb-title">{{ item }} {% client_badge item %}</h1>
-    <div class="wb-page-actions">
+    <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
-      <a
-        class="btn btn-sm btn-quiet{% if view == 'list' %} active{% endif %}"
-        href="?view=list"
-      >{% translate "List" %}</a>
-      <a
-        class="btn btn-sm btn-quiet{% if view == 'board' %} active{% endif %}"
-        href="?view=board"
-      >{% translate "Board" %}</a>
-      {% include "items/_history_link.html" %}
+      <div class="btn-group btn-group-sm" role="group" aria-label="{% translate 'View' %}">
+        <a
+          class="btn btn-sm {% if view == 'list' %}btn-primary{% else %}btn-quiet{% endif %}"
+          href="?view=list"
+          {% if view == "list" %}aria-current="page"{% endif %}
+        >{% translate "List" %}</a>
+        <a
+          class="btn btn-sm {% if view == 'board' %}btn-primary{% else %}btn-quiet{% endif %}"
+          href="?view=board"
+          {% if view == "board" %}aria-current="page"{% endif %}
+        >{% translate "Board" %}</a>
+      </div>
+      {% include "items/_history_link.html" with phone_hide=True %}
       {% if can_change %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'list_edit' item.pk %}">{% icon "pencil" %}<span
-          >{% translate "Edit" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'list_edit' item.pk %}"
+          title="{% translate 'Edit' %}"
+        >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% endif %}
-      {% include "items/_more.html" %}
+      {% include "items/_more.html" with more_history=True %}
     </div>
   </div>
   {% if item.status == "archived" %}
@@ -58,7 +65,10 @@
       >
         {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
       </div>
-      <div id="add-none" data-live>{% include "items/_add_todo.html" with group=None %}</div>
+      <div id="add-none" data-live class="wb-add-row">
+        {% include "items/_add_todo.html" with group=None %}
+        {% if not groups and can_change %}{% include "items/_new_group.html" %}{% endif %}
+      </div>
     </section>
     {% for group, todos in groups %}
       <section
@@ -129,16 +139,13 @@
         >
           {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
         </div>
-        <div id="add-{{ group.pk }}" data-live>{% include "items/_add_todo.html" %}</div>
+        <div id="add-{{ group.pk }}" data-live class="wb-add-row">
+          {% include "items/_add_todo.html" %}
+          {% if forloop.last and can_change %}{% include "items/_new_group.html" %}{% endif %}
+        </div>
       </section>
     {% endfor %}
   </div>
-  {% if can_change %}
-    <p class="my-3">
-      <a class="btn btn-sm btn-quiet" href="{% url 'group_create' item.pk %}" data-modal>{% icon "plus-lg" %}<span
-        >{% translate "New group" %}</span></a>
-    </p>
-  {% endif %}
   <div id="live-completed" data-live>
     {% if completed_count %}
       <details class="mt-4 wb-completed">

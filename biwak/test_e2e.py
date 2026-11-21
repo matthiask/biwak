@@ -2207,6 +2207,114 @@ class PhoneTest(E2ETestCase):
         project("A" * 80, members=[self.ada])
         self.assertFits(reverse("projects"))
 
+    def phone(self, width=390):
+        return self.login(self.ada, viewport={"width": width, "height": 800})
+
+    def test_header_buttons_have_one_height_on_one_line(self):
+        page = self.phone()
+        project_url = self.project.get_absolute_url()
+        for path in [
+            self.todolist.get_absolute_url(),
+            self.todo.get_absolute_url(),
+            project_url,
+        ]:
+            with self.subTest(path=path):
+                page.goto(f"{self.live_server_url}{path}")
+                boxes = page.locator(".wb-page-actions .btn:visible").evaluate_all(
+                    "els => els.map(e => { const r = e.getBoundingClientRect();"
+                    " return [r.top, r.height, r.right] })"
+                )
+                self.assertGreaterEqual(len(boxes), 2)
+                self.assertEqual({round(box[1]) for box in boxes}, {32})
+                self.assertEqual({round(box[0]) for box in boxes}, {round(boxes[0][0])})
+                self.assertLessEqual(max(box[2] for box in boxes), 390)
+                self.assertEqual(
+                    page.evaluate(
+                        "document.documentElement.scrollWidth - window.innerWidth"
+                    ),
+                    0,
+                )
+
+    def test_the_less_used_actions_are_in_more_on_phones(self):
+        page = self.phone()
+        page.goto(f"{self.live_server_url}{self.todolist.get_absolute_url()}")
+        history = page.locator(".wb-page-actions a:has-text('History')")
+        self.assertEqual(history.count(), 2)
+        self.assertFalse(history.first.is_visible())
+        page.locator(".wb-page-actions summary").click()
+        expect(history.last).to_be_visible()
+        # Icon only, with the label as title
+        edit = page.get_by_role("link", name="Edit")
+        self.assertEqual(edit.get_attribute("title"), "Edit")
+        self.assertLess(edit.bounding_box()["width"], 40)
+        # On a wide screen History is in the header, and not in the menu
+        wide = self.login(self.ada, viewport={"width": 1200, "height": 800})
+        wide.goto(f"{self.live_server_url}{self.todolist.get_absolute_url()}")
+        wide.locator(".wb-page-actions summary").click()
+        visible = [
+            link.is_visible()
+            for link in wide.locator(".wb-page-actions a:has-text('History')").all()
+        ]
+        self.assertEqual(sorted(visible), [False, True])
+        self.assertGreater(
+            wide.get_by_role("link", name="Edit").bounding_box()["width"], 60
+        )
+
+    def test_a_long_title_stays_beside_the_check(self):
+        title = "Order the tent and the sleeping bags and the stove " * 3
+        long = Item.objects.get(
+            pk=ops.create_todo(todolist=self.todolist, title=title, creator=self.ada).pk
+        )
+        for width in (390, 1200):
+            with self.subTest(width=width):
+                page = self.phone(width)
+                page.goto(f"{self.live_server_url}{self.todolist.get_absolute_url()}")
+                row = page.locator(f"#todo-{long.pk}")
+                check = row.locator(".wb-check").bounding_box()
+                link = row.locator(".wb-todo-title")
+                box = link.bounding_box()
+                # The whole title is right of the check, on its first line
+                self.assertGreaterEqual(box["x"], check["x"] + check["width"])
+                line = link.evaluate(
+                    "el => parseFloat(getComputedStyle(el).lineHeight)"
+                )
+                middle = box["y"] + line / 2
+                self.assertAlmostEqual(
+                    check["y"] + check["height"] / 2, middle, delta=2
+                )
+                handle = row.locator(".wb-handle").bounding_box()
+                self.assertAlmostEqual(
+                    handle["y"] + handle["height"] / 2, middle, delta=2
+                )
+                if width == 390:
+                    self.assertGreater(box["height"], 2 * line)
+
+    def test_add_a_to_do_and_new_group_share_a_line(self):
+        for width in (390, 1200):
+            with self.subTest(width=width):
+                page = self.phone(width)
+                page.goto(f"{self.live_server_url}{self.todolist.get_absolute_url()}")
+                add = page.locator(".wb-add-todo > summary").last.bounding_box()
+                group = page.get_by_role("link", name="New group").bounding_box()
+                self.assertEqual(round(add["y"]), round(group["y"]))
+                self.assertGreater(group["x"], add["x"] + add["width"])
+
+    def test_the_visibility_switch_help_is_below_the_button_on_phones(self):
+        page = self.phone()
+        page.goto(f"{self.live_server_url}{self.todolist.get_absolute_url()}")
+        button = page.get_by_role("button", name="Show to clients").bounding_box()
+        help_ = page.locator(".wb-switch-help").bounding_box()
+        self.assertGreaterEqual(help_["y"], button["y"] + button["height"])
+
+    def test_the_editor_toolbar_stays_in_the_screen(self):
+        page = self.phone()
+        page.goto(f"{self.live_server_url}{self.todo.get_absolute_url()}")
+        bar = page.locator(".wb-toolbar")
+        expect(bar.get_by_role("button", name="Attach files")).to_be_visible()
+        self.assertTrue(bar.evaluate("el => el.scrollWidth <= el.clientWidth"))
+        box = bar.get_by_role("button", name="Attach files").bounding_box()
+        self.assertLessEqual(box["x"] + box["width"], 390)
+
     def test_the_reaction_picker_stays_on_the_screen(self):
         from biwak.reactions import operations as reaction_ops
 
@@ -2248,10 +2356,6 @@ class MenuPlacementTest(E2ETestCase):
         self.make_list(groups=["Phase one"], todos=[("Plan", "Phase one")])
         self.goto(self.page, self.project)
         menus = self.page.locator("details.wb-menu")
-        if width == 360:
-            # The button wrapped onto a line of its own, at the left
-            more = menus.filter(has_text="More").locator("summary")
-            self.assertLess(more.bounding_box()["x"], 40)
         self.assertMenuFits(self.page, menus.filter(has_text="More"))
         self.assertMenuFits(self.page, menus.filter(has_text="Ada"))
         self.goto(self.page, Item.objects.get(title="Launch"))

@@ -172,7 +172,7 @@
         {% endfor %}
         <button type="submit" class="btn btn-sm btn-quiet mt-2">{% translate "Save" %}</button>
       </form>
-      {% include "items/_history_link.html" with block=True %}
+      {% include "items/_history_link.html" with below=True %}
       {% include "items/_switch.html" with kind="checkin" %}
     </div>
   </div>

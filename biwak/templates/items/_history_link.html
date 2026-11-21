@@ -1,7 +1,10 @@
 {% load biwak i18n %}
-{% comment %}The link to an item's history, for staff only; `block`: in a line of its own, below the rest.{% endcomment %}
+{% comment %}
+  The link to an item's history, for staff only; `below`: in a line of its own, below the rest;
+  `phone_hide`: not on phones (the "More" menu has it, `more_history`).
+{% endcomment %}
 {% if not request.user.is_client %}
-  <span class="{% if block %}d-block mt-4{% endif %}">
+  <span class="{% if below %}d-block mt-4{% endif %}{% if phone_hide %} wb-phone-hide{% endif %}">
     <a class="btn btn-sm btn-quiet" href="{% url 'item_history' item.pk %}">{% icon "clock-history" %}<span
       >{% translate "History" %}</span></a>
   </span>

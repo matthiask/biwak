@@ -1,0 +1,6 @@
+{% load biwak %}
+<a
+  href="{{ todo.get_absolute_url }}"
+  data-kb-open
+  class="wb-todo-title{% if todo.todo.is_completed %} text-decoration-line-through text-body-secondary{% endif %}"
+>{{ todo|item_title }}</a>
