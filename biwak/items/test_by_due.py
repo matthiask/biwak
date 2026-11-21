@@ -476,3 +476,18 @@ class FeedTest(ByDueTestCase):
         self.bob.is_active = False
         self.bob.save()
         self.assertEqual(self.events(self.feed(link)), [])
+
+    def test_mentions_are_names(self):
+        """Titles and the list's title show mentions as names, not the
+        syntax"""
+        self.shared.title = f"Shared with [@Bob](person:{self.bob.pk})"
+        self.shared.save(update_fields=["title"])
+        self.todo(
+            f"Call [@Bob](person:{self.bob.pk})", "2026-11-20", assignees=[self.ada]
+        )
+        response = self.feed(self.link(self.ada))
+        event = next(iter(Calendar.from_ical(response.content).walk("VEVENT")))
+        self.assertEqual(str(event["summary"]), f"Call @{self.bob}")
+        self.assertEqual(
+            str(event["description"]), f"{self.project} / Shared with @{self.bob}"
+        )

@@ -13,6 +13,7 @@ from icalendar import Calendar, Event as CalendarEvent
 
 from biwak import schedules
 from biwak.accounts.models import CalendarToken, User
+from biwak.activity import mentions
 from biwak.api_conventions import absolute
 from biwak.forms import Form
 from biwak.items import due, glance
@@ -142,23 +143,26 @@ def project_todos(request, pk):
 
 
 def calendar_for(user):
-    """The person's open to-dos with a due date as all-day events"""
+    """The person's open to-dos with a due date as all-day events; mentions
+    as names the person may know, like the mails"""
     calendar = Calendar()
     calendar.add("prodid", "-//Biwak//To-dos//EN")
     calendar.add("version", "2.0")
     calendar.add("x-wr-calname", "Biwak")
     qs = due.todos(user, assignee="me").filter(todo__due_on__isnull=False)
-    for item in qs.order_by("todo__due_on", "pk"):
-        event = CalendarEvent()
-        event.add("uid", f"todo-{item.pk}@biwak")
-        event.add("summary", item.title)
-        event.add("dtstart", item.todo.due_on)
-        event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
-        event.add("dtstamp", item.updated_at)
-        event.add("transp", "TRANSPARENT")
-        event.add("url", absolute(item.get_absolute_url()))
-        event.add("description", f"{item.project} / {item.parent}")
-        calendar.add_component(event)
+    with mentions.reading_as(user):
+        for item in qs.order_by("todo__due_on", "pk"):
+            event = CalendarEvent()
+            event.add("uid", f"todo-{item.pk}@biwak")
+            event.add("summary", mentions.plain(item.title, item))
+            event.add("dtstart", item.todo.due_on)
+            event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
+            event.add("dtstamp", item.updated_at)
+            event.add("transp", "TRANSPARENT")
+            event.add("url", absolute(item.get_absolute_url()))
+            todolist = mentions.plain(item.parent.title, item.parent)
+            event.add("description", f"{item.project} / {todolist}")
+            calendar.add_component(event)
     return calendar
 
 
