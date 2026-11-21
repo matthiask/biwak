@@ -536,6 +536,16 @@ class NameTest(TestCase):
     def test_clients_dont(self):
         self.assertEqual(self.rename(self.cleo, self.bob).status_code, 404)
 
+    def test_not_oneself_its_in_the_settings(self):
+        for actor in [self.root, self.bob]:
+            with self.subTest(actor=actor):
+                response = self.rename(actor, actor)
+                self.assertRedirects(
+                    response, "/accounts/settings/", fetch_redirect_response=False
+                )
+                actor.refresh_from_db()
+                self.assertNotEqual(actor.full_name, "Lovelace Ada")
+
 
 class DjangoAdminTest(TestCase):
     """The Django admin's ``is_active`` and ``is_admin`` go through the same

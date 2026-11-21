@@ -342,6 +342,9 @@ def person_name(request, pk):
     (activation.can_change(), specs/activation.md); a modal, also a page"""
     from biwak.accounts.views import NameForm
 
+    if pk == request.user.pk and project_ops.can_manage_members(request.user):
+        # One's own name is in the settings (not offered here)
+        return redirect("settings")
     who = person_to_change(request, pk)
     form = NameForm(
         request.POST or None,

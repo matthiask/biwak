@@ -66,7 +66,9 @@ and in the API's `*_html` aren't links (the text leaves the site).
   in the settings ("Name"); others' through "Edit the name…" on the
   person's page, with the split of `activation.md` (staff correct
   clients' names, admins everybody's), e.g. somebody who signed up as
-  "NACHNAME VORNAME". The audit log has it.
+  "NACHNAME VORNAME". The audit log has it. Not oneself there:
+  `/people/<own id>/name/` leads to the settings (fixed 2026-11-21 after
+  a review, admins could rename themselves there).
 - Short names where people are listed (mentions, subscribers, assignees,
   reactions' "Who?", the lantern, pickers): `get_short_name()` (the short
   name if set, else the first word of the full name). The full name in
