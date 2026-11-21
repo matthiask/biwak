@@ -7,6 +7,7 @@ mails, merged per item or as a daily digest.
 
 from django.db import models, transaction
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from biwak.accounts.models import NotificationLevel, User
 from biwak.activity.models import (
@@ -215,3 +216,27 @@ def notify_people(item, *, whom, actor):
     for user in chosen:
         subscribe(user, item, added_by=actor)
     return chosen
+
+
+# The forms of the overrides ------------------------------------------------
+
+
+def level_choices(default):
+    return [
+        (
+            "",
+            gettext("As usual (%(level)s)")
+            % {"level": NotificationLevel(default).label},
+        ),
+        *NotificationLevel.choices,
+    ]
+
+
+def item_level_context(user, item):
+    """For the form next to the subscribe button"""
+    override = LevelOverride.objects.filter(user=user, item=item).first()
+    default = effective_level(user, item.parent, project=item.project)
+    return {
+        "level": override.level if override else "",
+        "level_choices": level_choices(default),
+    }

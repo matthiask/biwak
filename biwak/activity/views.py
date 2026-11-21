@@ -18,7 +18,7 @@ from biwak.accounts.models import MailDelivery, NotificationLevel, User
 from biwak.activity import feed as feed_module, history, mentions
 from biwak.activity.mails import read_unsubscribe_token
 from biwak.activity.models import Action, LevelOverride
-from biwak.activity.notify import can_see, effective_level
+from biwak.activity.notify import can_see, level_choices
 from biwak.activity.operations import (
     set_level_override,
     set_notification_settings,
@@ -265,17 +265,6 @@ def _level(request):
     return level
 
 
-def level_choices(default):
-    return [
-        (
-            "",
-            gettext("As usual (%(level)s)")
-            % {"level": NotificationLevel(default).label},
-        ),
-        *NotificationLevel.choices,
-    ]
-
-
 @never_cache
 def project_notifications(request, pk):
     """A project's override (the project page's "More" menu)"""
@@ -304,16 +293,6 @@ def item_notifications(request, pk):
     item = item_for(request, pk)
     set_level_override(request.user, _level(request), item=item)
     return redirect(next_url(request) or item)
-
-
-def item_level_context(user, item):
-    """For the form next to the subscribe button"""
-    override = LevelOverride.objects.filter(user=user, item=item).first()
-    default = effective_level(user, item.parent, project=item.project)
-    return {
-        "level": override.level if override else "",
-        "level_choices": level_choices(default),
-    }
 
 
 @login_not_required
