@@ -4,10 +4,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from speckenv import env
 from speckenv_django import django_database_url, django_mailer_url
 
+from biwak.redis_url import channels_redis_url
 from biwak.storage_url import storage_from_url
 
 
@@ -139,10 +141,17 @@ WSGI_APPLICATION = "wsgi.application"
 # asgi.py; the processes talk through Redis, required when deployed (the
 # WSGI processes tell the editors about edits through the API too)
 ASGI_APPLICATION = "asgi.application"
-# The channel layer of live editing (specs/collaboration.md): required
+# The channel layer of live editing (specs/collaboration.md): the shared
+# Redis of CACHE_URL, or REDIS_URL as an override; one of them required
 # outside development and tests, since with several workers an in-memory
 # layer would quietly keep editors on different workers apart
-REDIS_URL = env("REDIS_URL", default="", required=not (DEBUG or TESTING))
+REDIS_URL = channels_redis_url(
+    redis_url=env("REDIS_URL", default=""), cache_url=env("CACHE_URL", default="")
+)
+if not (REDIS_URL or DEBUG or TESTING):
+    raise ImproperlyConfigured(
+        "Set CACHE_URL (the shared Redis) or REDIS_URL for the channel layer."
+    )
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",

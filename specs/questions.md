@@ -11,9 +11,10 @@ answer goes into the spec named, and the entry leaves this file.
    Django's security middleware and the cache-busting static file
    names. Intended? *Suggestion: set `LIVE=True`.*
 2. **Real-time editing** (`collaboration.md`, branch `collaboration`):
-   merge only once `REDIS_URL` is in the secret (the app now refuses to
-   start without it), or merge now and deploy later? *Suggestion: add
-   `REDIS_URL`, then merge and deploy together.*
+   merge only once Redis is configured, or merge now and deploy later?
+   (Since 2026-11-21 the channel layer uses the shared Redis of
+   `CACHE_URL`, already in the cluster's environment; no `REDIS_URL`
+   needed.) *Suggestion: merge and deploy together.*
 3. **Search order** (`search.md`): newest first by `updated_at` (built),
    or by relevance (needs another cursor)? *Suggestion: keep newest
    first.*

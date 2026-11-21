@@ -188,8 +188,8 @@ browsers (Playwright) typing, a client watching, an internal doc
 - **Development**: `fl dev` as before. `daphne` (a development
   dependency) is in `INSTALLED_APPS` when `DEBUG`, so `runserver` serves
   the websockets; the rspack dev server passes `/ws/docs/` on to it
-  (`rspack.config.js`, its own websocket is `/ws`). Without `REDIS_URL`
-  the channel layer is in memory, enough for one process.
+  (`rspack.config.js`, its own websocket is `/ws`). Without `CACHE_URL`
+  or `REDIS_URL` the channel layer is in memory, enough for one process.
 - **Tests**: `./runtests.sh` needs nothing new. The websocket tests use
   Channels' communicator (`biwak/collab/test_consumers.py`, transaction
   tests: the consumer commits), the end-to-end tests run `asgi.py` with
@@ -201,14 +201,21 @@ browsers (Playwright) typing, a client watching, an internal doc
     --interface asginl asgi:application --workers 4`, for pages and
     websockets alike (sync views run one at a time per worker under
     ASGI, hence four workers instead of two). The chart stays as it is.
-  - **Redis** for the channel layer: `REDIS_URL` (e.g.
-    `redis://redis.prod.svc.cluster.local:6379/N`), required outside
-    development and tests (an in-memory layer would keep editors on
-    different workers apart), in the environment of the deployment and
-    the cron jobs (`fairy_tasks` sends access checks to the editors). The shared Redis evicts with `allkeys-lru` at 200 MB; channel
-    messages live seconds, so eviction would only drop a message under
-    memory pressure (the editors resync on reconnect). The prefix is
-    `biwak`.
+  - **Redis** for the channel layer: the shared Redis of `CACHE_URL`,
+    which the cluster sets already (e.g.
+    `hiredis://redis:6379/1/?key_prefix=…`; decided 2026-11-21, no
+    separate `REDIS_URL`): the same host, port and database, the scheme
+    `redis://`, without the query string (`biwak/redis_url.py`); the
+    channel layer's own prefix `biwak` keeps its keys apart from the
+    cache's. `REDIS_URL` overrides it when set. One of them is required
+    outside development and tests (the app refuses to start without:
+    an in-memory layer would keep editors on different workers apart), in
+    the environment of the deployment and the cron jobs (`fairy_tasks`
+    sends access checks to the editors). The image's build environment
+    (`conf/_env`) has a placeholder `CACHE_URL`. The shared Redis evicts
+    with `allkeys-lru` at 200 MB; channel messages live seconds, so
+    eviction would only drop a message under memory pressure (the editors
+    resync on reconnect).
   - **Websockets through the ingress**: HAProxy ingress passes
     websockets on without configuration; its tunnel timeout (1 hour by
     default) is far above the editors' 15-second awareness heartbeat. The

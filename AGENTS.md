@@ -16,7 +16,7 @@ them when a decision changes (dated: "decided 2026-11-20").
   edited live and of live updates too (`asgi.py`, `biwak/collab/`,
   `biwak/live/`); the rspack dev server passes `/ws/docs/` and
   `/ws/live/` on. Deployed, the websockets need an ASGI process
-  and Redis (`REDIS_URL`), see `specs/collaboration.md`.
+  and Redis (`CACHE_URL`'s, or `REDIS_URL`), see `specs/collaboration.md`.
 - `./manage.py fairy_tasks` runs the daily jobs (trash older than 30
   days, expired API tokens, `check_visibility` mailing admins); new daily
   jobs go there, hourly ones into an `hourly_tasks` like Governance's.
