@@ -121,35 +121,34 @@ def attachment_download(request, key: str):
     return attachments.serve(attachment_for(request, key))
 
 
-# Whom to notify, the same choice as the forms ---------------------------
+# Whom to tell besides those told by default (notify_people()) -----------
 
-Notify = Literal["everybody", "nobody"] | list[int]
+# What older CLIs send: ``everybody`` and ``nobody`` are ignored, IDs are
+# people to tell too (decided 2026-11-21: notifications are additive)
+Notify = Literal["everybody", "nobody"] | list[int] | None
 
 
-def whom(project, notify):
-    """``"everybody"``, ``"nobody"`` or the IDs of project members, as
-    ``notify_people()`` takes them; 400 for anybody else"""
-    if isinstance(notify, str):
-        return notify
+def also_people(project, also, notify=None):
+    """The people ``also`` names (IDs of the project's members), and those
+    of an older CLI's ``notify`` list; 400 for anybody else"""
+    ids = [*(also or []), *(notify if isinstance(notify, list) else [])]
     people = list(
-        User.objects.active().filter(pk__in=notify, memberships__project=project)
+        User.objects.active().filter(pk__in=ids, memberships__project=project)
     )
-    if len(people) != len(set(notify)):
-        raise HttpError(400, _("Only members of the project can be notified."))
+    if len(people) != len(set(ids)):
+        raise HttpError(400, _("Only members of the project can be told."))
     return people
 
 
-def notify_from_form(value):
-    """The multipart endpoints take ``everybody``, ``nobody`` or
-    comma-separated IDs"""
+def ids_from_form(value):
+    """The multipart endpoints take IDs separated by commas; an older CLI's
+    ``everybody`` and ``nobody`` are nothing"""
     if value in {"everybody", "nobody"}:
-        return value
+        return []
     try:
         return [int(part) for part in value.split(",") if part.strip()]
     except ValueError as exc:
-        raise HttpError(
-            400, _("notify is everybody, nobody or IDs separated by commas.")
-        ) from exc
+        raise HttpError(400, _("Give people's IDs separated by commas.")) from exc
 
 
 def parent_folder(request, project, parent_id):
@@ -293,8 +292,10 @@ class MessageIn(Schema):
     content: str = ""
     category_id: int | None = None
     visible_to_clients: bool = False
-    # everybody (the default), nobody or the IDs of members (notify_people())
-    notify: Notify = "everybody"
+    # The IDs of members to tell besides those told by default
+    # (notify_people()); ``notify`` is what older CLIs send
+    also: list[int] = []
+    notify: Notify = None
 
 
 def _category(category_id):
@@ -308,7 +309,8 @@ def _category(category_id):
 
 @router.post("projects/{project_id}/messages/", response={201: MessageOut})
 def message_create(request, project_id: int, data: MessageIn):
-    """Posts a message and tells whom ``notify`` says. Clients' messages
+    """Posts a message, telling those told by default and ``also`` these
+    people (specs/notifications.md). Clients' messages
     are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
     project = project_for(request, project_id)
     title = clean_title(data.title)
@@ -320,7 +322,7 @@ def message_create(request, project_id: int, data: MessageIn):
         category=_category(data.category_id),
         creator=request.user,
         visible=visible,
-        whom=whom(project, data.notify),
+        also=also_people(project, data.also, data.notify),
     )
     return Status(201, message_out(_message(request, item.pk), request.user))
 
@@ -559,7 +561,8 @@ class DocIn(Schema):
     content: str = ""
     parent_id: int | None = None
     visible_to_clients: bool = False
-    notify: Notify = "everybody"
+    also: list[int] = []
+    notify: Notify = None
 
 
 @router.post("projects/{project_id}/docs/", response={201: DocOut})
@@ -581,7 +584,7 @@ def doc_create(request, project_id: int, data: DocIn):
         creator=request.user,
         parent=folder,
         visible=data.visible_to_clients,
-        whom=whom(project, data.notify),
+        also=also_people(project, data.also, data.notify),
     )
     return Status(201, doc_out(item_for(request, item.pk, Kind.DOC), request.user))
 
@@ -799,8 +802,10 @@ class FileIn(Schema):
     description: str = ""
     parent_id: int | None = None
     visible_to_clients: bool = False
-    # everybody (the default), nobody or IDs separated by commas
-    notify: str = "everybody"
+    # IDs of members to tell besides those told by default, separated by
+    # commas; ``notify`` is what older CLIs send
+    also: str = ""
+    notify: str = ""
 
 
 @router.post("projects/{project_id}/files/", response={201: FileOut})
@@ -824,7 +829,9 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
             creator=request.user,
             parent=folder,
             visible=data.visible_to_clients,
-            whom=whom(project, notify_from_form(data.notify)),
+            also=also_people(
+                project, ids_from_form(data.also), ids_from_form(data.notify)
+            ),
         )
     except attachments.UploadError as exc:
         raise HttpError(413, str(exc)) from exc

@@ -17,7 +17,7 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   levels: whatever you'd be told about. Mail is a delivery choice:
   **each**, **digest** or **none** ("No mails", `MailDelivery.NONE`).
 - **Read in the lantern, not mailed:** a notification read before its
-  mail goes (the 2-minute merge window, or before the digest) is left
+  mail goes (the 10-minute merge window, or before the digest) is left
   out of it; a mail or digest with nothing left isn't sent.
 - **Live** on item pages (to-dos, messages, docs, files, check-in
   questions), lists and the board, reactions included. Not the feed or
@@ -52,10 +52,18 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   `biwak lantern` prints one row per item ("(+N)" for more), `--json`
   the entries. Digests are unaffected.
 - **A batch of uploaded files is one entry** (`entry_key()`, `Batch`;
-  `files.md`, "Uploading files"): its folder, "Ada uploaded 5 files to
+  `files.md`, "Uploading files"), and so are one person's batches into
+  the same folder (or the top level) each within 10 minutes
+  (`MERGE_AFTER`) of the one before (`group_uploads()`, decided
+  2026-11-21): its folder, "Ada uploaded 5 files to
   Minutes.", the files linked; counted once; following it, "Mark as
   read" and "Mark as unread" act on all its files. No bookmark button:
   bookmarks are per item.
+- **Completing and reopening back and forth** (decided 2026-11-21): of
+  the unread notifications, those of a person's consecutive completing
+  and reopening of an item don't show when they cancel out; otherwise
+  only the last shows (`mails._deliverable()`, `notifications.md`).
+  Read ones show as they were.
 - **The page** `/lantern/`: the same, paginated like the feed, filters
   "unread" and "mentions only".
 - **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", which
@@ -72,9 +80,10 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
 - **Visibility:** listing applies the mails' rules
   (`notifications_for()`, `wanted()`, `mails._deliverable()`): only items
   the person sees now, for clients only events of the time clients saw
-  the item, not on the level "nothing". Others stay in the database,
-  unseen. Pages may hold fewer entries than asked for (the level is
-  checked after loading). Reading and marking unread touch only what's
+  the item (the level doesn't hide anything: subscribing is the switch,
+  `notifications.md`). Others stay in the database, unseen. Pages may
+  hold fewer entries than asked for (visibility and the net change of
+  completing and reopening are checked after loading). Reading and marking unread touch only what's
   listed.
 
 ### Reading

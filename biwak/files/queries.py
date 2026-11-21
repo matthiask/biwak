@@ -39,8 +39,8 @@ def latest_messages(messages):
 
 
 def front_messages(project, user):
-    """The project page's messages: the pinned ones, then the latest, three
-    in all unless more are pinned"""
+    """The project page's messages: the pinned ones, then the latest,
+    ``FRONT_MESSAGES`` in all unless more are pinned"""
     messages = board(project, user)
     pinned = list(pinned_messages(messages))
     rest = max(0, FRONT_MESSAGES - len(pinned))
@@ -48,8 +48,8 @@ def front_messages(project, user):
 
 
 def front_files(project, user):
-    """The project page's docs and files: the latest three changed ones, at
-    any depth"""
+    """The project page's docs and files: the latest ``FRONT_FILES`` changed
+    ones, at any depth"""
     return list(
         with_checklist(Item.objects.visible_to(user))
         .filter(project=project, kind__in=[Kind.DOC, Kind.FILE])

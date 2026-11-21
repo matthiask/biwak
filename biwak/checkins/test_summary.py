@@ -4,7 +4,7 @@ from django.core import mail
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from biwak.accounts.models import NotificationLevel
+from biwak.accounts.models import MailDelivery, NotificationLevel
 from biwak.activity.models import LevelOverride
 from biwak.activity.operations import subscribe, unsubscribe
 from biwak.checkins import operations as ops
@@ -105,6 +105,14 @@ class SummaryTest(CheckinTestCase):
 
     def test_not_to_people_who_unsubscribed(self):
         unsubscribe(self.bob, self.item)
+        ops.answer(self.item, user=self.ada, content="One")
+        self.summarize()
+        self.assertEqual([m.to for m in self.summaries()], [[self.ada.email]])
+
+    def test_not_with_no_mails(self):
+        """ "No mails" stops the summary too (decided 2026-11-21)"""
+        self.bob.mail_delivery = MailDelivery.NONE
+        self.bob.save()
         ops.answer(self.item, user=self.ada, content="One")
         self.summarize()
         self.assertEqual([m.to for m in self.summaries()], [[self.ada.email]])

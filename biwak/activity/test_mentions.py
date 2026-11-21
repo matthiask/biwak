@@ -481,7 +481,7 @@ class ClientsKnowMembersTest(TestCase):
         self.bob.save()
         mail.outbox.clear()
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         messages = {message.to[0]: message for message in mail.outbox}
         for user, name, other in [
             (self.cleo, "Bob Old", "Bob Renamed"),

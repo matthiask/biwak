@@ -72,12 +72,18 @@ Decisions (2026-11-20 unless dated):
   dragging back and forth is one event with the last group. Reordering
   within a group is no event; moving it out of every group reads "moved …
   out of its group" (decided 2026-11-21).
-- **Completing and reopening soon after** (decided 2026-11-21): when the
-  same person undoes their latest one within 10 minutes, that event is
-  deleted with its notifications instead of recording the opposite, so
-  clicking back and forth leaves at most the net change. Someone else's
-  reopening, or one after more than 10 minutes, is told; the importer
-  keeps every event.
+- **Completing and reopening back and forth** (decided 2026-11-21,
+  replacing deleting the earlier event within ten minutes): every
+  completing and reopening is recorded. Where it's shown it makes sense
+  of it (`timeline.cancelled()`): a person's consecutive completing and
+  reopening of an item (other events in between don't break it up,
+  another person's completing or reopening does) is its net change, the
+  last one, or nothing when the to-do is back where it started. In the
+  feed (and the project page's latest events) each within an hour of the
+  one before and on the same day, like merging; the to-do's timeline
+  does the same within its lines (`combine()`, `timeline.md`); the
+  lantern and the mails: `notifications.md`. The API lists single
+  events, all of them.
 
 **API** (`biwak/activity/api.py`): single events, not merged entries.
 `GET /api/v1/feed/` with `project_id`, `person_id`, `kind`, `action`,

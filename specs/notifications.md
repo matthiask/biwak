@@ -50,25 +50,35 @@ it for the first time.
   for the page, the mail link, the API and the CLI). The box says
   "You're assigned, so you hear about it" and offers "Unassign me"; the
   mail's link does nothing and its page says why; the API answers 400.
-- **Posting a message, doc or file** asks whom to notify: everybody in
-  the project (the members at that moment, preselected; decided
-  2026-11-20, replacing "no default"), chosen people, or nobody; the API
-  (`notify`: `everybody`, `nobody` or IDs) and the CLI (`--notify`)
-  default to everybody too; `create_message()`, `create_doc()` and
-  `create_upload()` default to nobody (`notify_people()`). Of everybody,
-  only those whose level for the item is "everything" are subscribed;
-  people chosen by name whatever their level, like adding subscribers.
-- **The form** (`files.common.NotifyForm`, decided 2026-11-21): "These
-  people" shows only while "Only these people" is chosen
-  (`frontend/shown-when.js`; without JavaScript always), in the people
-  picker (`PeopleField`, the assignees' and subscribers' one). Preselected
-  are those "Everybody" would reach: `notify.everybody()`, the same
-  function `notify_people()` uses, for the container the item goes into
-  (a folder, or the top level) and the visibility the form starts with
-  (the folder's; at the top internal, a client's visible). The poster is
-  neither preselected nor offered. A form shown again with errors keeps
-  what was chosen. A doc begun as a draft has the same preselection in
-  "Tell people about it?" (those not subscribed yet).
+- **Notifications are additive** (decided 2026-11-21, replacing
+  "Everybody / Only these people / Nobody"): "Report by default to those
+  who want to hear about it according to their settings, and allow
+  additional people to hear about it." The poster can't hide something
+  new from people who want it ("if people don't want to be notified
+  about files, then upload them to Google Drive or wherever"). Posting a
+  message, doc or file always tells `notify.told_by_default()`: the
+  subscribers of its container (folder) and the members whose level for
+  it is "everything", of those who see it, never the poster; being told
+  subscribes them. The poster can only add people (`also`), whatever
+  their level, subscribed and told like them. `notify_people(item,
+  actor=, also=)` does it for `create_message()`, `create_doc()` and
+  `create_upload()` (not inside `importing()`). Mentions and
+  assignments as before. API: `also` (IDs of members; multipart: comma
+  separated); an older CLI's `notify` is accepted, its IDs count as
+  `also`, `everybody` and `nobody` are ignored. CLI: `--also IDS`
+  (0.37.0).
+- **The form** (`files.common.NotifyForm`, decided 2026-11-21): no
+  choice, a line saying who will be told ("Ada, Bob and 3 others will be
+  told.", `told_line()`: the names the poster may know, the others
+  counted; "Nobody is told unless you add people."), below it "Also
+  tell…", the people picker (`PeopleField`) of the members who see it
+  (the visibility the form starts with: the folder's; at the top
+  internal, a client's visible) and aren't told already, nothing
+  preselected. A doc begun as a draft asks at its first "Done" ("Tell
+  people about it?", `docs.TellForm`): the same line and "Also tell…"
+  with a note; "Tell them" records `shared` to those told by default
+  (not subscribed yet) and those added, "Not now" to those told by
+  default only.
 
 ## Mentions
 
@@ -184,13 +194,21 @@ large).
 ## Mails
 
 - **Delivery** per person (`User.mail_delivery`): each change (the
-  default), a daily digest, or none (`lantern.md`).
+  default), a daily digest, or none (`lantern.md`). None means no mails
+  at all, check-in questions and summaries included (decided
+  2026-11-21, `checkins.md`); digests leave check-in mails alone.
 - **Each change:** `send_mails`, every minute by cron, sends one mail
-  per person and item once the newest unsent notification for it is 2
-  minutes old (decided 2026-11-20), so quick edits merge. **A batch of
+  per person and item once the newest unsent notification for it is 10
+  minutes old (`MERGE_AFTER`; 2 minutes decided 2026-11-20, 10 since
+  2026-11-21: "if it were urgent, they would have gotten a phone call,
+  or they would have Biwak open"; the lantern is immediate), so quick
+  edits merge. **A batch of
   uploaded files is one mail** (`batch_mail()`, `mails/batch.*`,
   `files.md`), whose unsubscribe link is the settings page (there's no
-  one item).
+  one item); one person's uploads into one folder (or the top level)
+  are one group, so rounds within the 10 minutes merge too (decided
+  2026-11-21). A batch still going up waits: while the newest file's
+  event says `more` follow, up to `BATCH_WAIT` (an hour) after it.
 - **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
   day before, grouped by project and item, a batch as one entry; nothing
   to say, no mail. Subject `[Biwak] What happened on 19. November 2026`
@@ -210,6 +228,15 @@ large).
   (link checkers), the `POST` unsubscribes; only who still sees the item
   is shown its title. Through a container, it unsubscribes from the
   container. Digests: the settings page, no one-click.
+- **Completing and reopening back and forth** (decided 2026-11-21,
+  replacing deleting the earlier event within ten minutes): every one is
+  recorded and notifies as usual. Of a person's unsent notifications,
+  those of one person's consecutive completing and reopening of an item
+  are mailed as the net change (`timeline.cancelled()` in
+  `mails._deliverable()`): the last one, or nothing (and they're deleted)
+  when the to-do is back where it started. A completion already mailed is
+  followed by a mail of the reopening, so the inbox ends up right. The
+  lantern does the same with the unread ones (`lantern.md`).
 - **Checked again when sending:** inactive people and people who can't
   see the item any more get nothing (their notifications are deleted),
   and read ones are left out (`lantern.md`); the level decided who was

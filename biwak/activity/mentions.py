@@ -1,4 +1,4 @@
-"""Mentions in texts: ``[@Ada Lovelace](person:12)`` (specs/notifications.md)
+"""Mentions in texts: ``[@Ada](person:12)`` (specs/notifications.md)
 
 The syntax of the Basecamp CLI, so agents know it. The label is only a
 fallback: pages and mails show the person's current name, as long as the

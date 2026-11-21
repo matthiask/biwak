@@ -6,6 +6,7 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.utils import timezone
 
+from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.files import attachments, operations
 from biwak.files.models import MAX_SIZE, FileVersion
@@ -57,26 +58,31 @@ class MessageTest(Fixture, TestCase):
         self.assertTrue(item.visible_to_clients)
         self.assertTrue(item.is_client_visible)
 
-    def test_whom_to_notify(self):
-        def post(whom):
+    def test_who_is_told(self):
+        """Those who want to hear, and ``also`` whom the poster adds
+        (decided 2026-11-21: additive)"""
+
+        def post(also=()):
             return self.told(
                 lambda: ops.create_message(
                     project=self.project,
                     title="Hi",
                     creator=self.ada,
                     visible=True,
-                    whom=whom,
+                    also=also,
                 )
             )
 
-        self.assertEqual(post("nobody"), set())
-        self.assertEqual(post("everybody"), {self.bob, self.cleo})
-        self.assertEqual(post([self.bob]), {self.bob})
+        self.assertEqual(post(), {self.bob, self.cleo})
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        self.assertEqual(post(), {self.cleo})
+        self.assertEqual(post([self.bob]), {self.bob, self.cleo})
 
     def test_internal_messages_do_not_notify_clients(self):
         told = self.told(
             lambda: ops.create_message(
-                project=self.project, title="Hi", creator=self.ada, whom="everybody"
+                project=self.project, title="Hi", creator=self.ada
             )
         )
         self.assertEqual(told, {self.bob})
@@ -342,7 +348,6 @@ class UploadTest(Fixture, TestCase):
             file=file("Plan v1.pdf"),
             creator=self.ada,
             description="The plan",
-            whom="nobody",
         )
         self.assertEqual(item.kind, Kind.FILE)
         self.assertEqual(item.title, "Plan v1.pdf")
@@ -386,7 +391,6 @@ class UploadTest(Fixture, TestCase):
                 creator=self.ada,
                 parent=folder,
                 visible=True,
-                whom="everybody",
             )
         )
         self.assertEqual(told, {self.bob, self.cleo})

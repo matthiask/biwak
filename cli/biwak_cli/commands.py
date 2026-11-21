@@ -1461,27 +1461,24 @@ def checkin_mail(question_id, mode, as_json):
 
 # Messages -------------------------------------------------------------------
 
-notify_option = click.option(
-    "--notify",
-    default="everybody",
-    show_default=True,
-    metavar="WHOM",
-    help="Whom to tell: everybody (in the project), nobody, or people's IDs"
-    " separated by commas.",
+also_option = click.option(
+    "--also",
+    default="",
+    metavar="IDS",
+    help="People's IDs separated by commas to tell too, besides those who"
+    " want to hear (the folder's subscribers, people notified of everything).",
 )
 visible_option = click.option(
     "--visible", is_flag=True, help="Visible to clients (staff; clients always are)."
 )
 
 
-def whom(value):
-    """``everybody``, ``nobody`` or the IDs as a list"""
-    if value in {"everybody", "nobody"}:
-        return value
+def people_ids(value):
+    """The IDs of ``--also`` as a list"""
     try:
         return [int(part) for part in value.split(",") if part.strip()]
     except ValueError:
-        terminate("--notify is everybody, nobody or people's IDs separated by commas.")
+        terminate("--also is people's IDs separated by commas.")
 
 
 def category_id(name):
@@ -1574,11 +1571,11 @@ def message_show(message_id, comments, as_json):
 @click.argument("title")
 @click.argument("text", required=False)
 @click.option("--category", help="A category's name or ID.")
-@notify_option
+@also_option
 @visible_option
 @attach_option
 @json_option
-def message_post(project, title, text, category, notify, visible, attach, as_json):
+def message_post(project, title, text, category, also, visible, attach, as_json):
     """Post a message titled TITLE to PROJECT; TEXT (Markdown) or standard input"""
     if text is None:
         text = click.get_text_stream("stdin").read()
@@ -1592,7 +1589,7 @@ def message_post(project, title, text, category, notify, visible, attach, as_jso
             "content": with_attachments(project, text, attach),
             "category_id": category_id(category),
             "visible_to_clients": visible,
-            "notify": whom(notify),
+            "also": people_ids(also),
         },
     )
     if as_json:
@@ -1729,10 +1726,10 @@ def file_group():
 @click.argument("path", type=click.Path(exists=True, dir_okay=False))
 @click.option("--folder", "parent", type=int, help="Into this folder.")
 @click.option("--description", default="", help="Markdown.")
-@notify_option
+@also_option
 @visible_option
 @json_option
-def file_upload(project, path, parent, description, notify, visible, as_json):
+def file_upload(project, path, parent, description, also, visible, as_json):
     """Upload the file at PATH to PROJECT's root or a folder"""
     if visible:
         click.secho("Clients can see this file.", fg="yellow", err=True)
@@ -1744,7 +1741,7 @@ def file_upload(project, path, parent, description, notify, visible, as_json):
             data={
                 "description": description,
                 "visible_to_clients": "true" if visible else "false",
-                "notify": notify,
+                "also": ",".join(map(str, people_ids(also))),
                 **({"parent_id": parent} if parent else {}),
             },
         )
@@ -1843,11 +1840,11 @@ def doc_show(doc_id, comments, version, as_json):
 @click.argument("title")
 @click.argument("text", required=False)
 @click.option("--folder", "parent", type=int, help="Inside this folder.")
-@notify_option
+@also_option
 @visible_option
 @attach_option
 @json_option
-def doc_new(project, title, text, parent, notify, visible, attach, as_json):
+def doc_new(project, title, text, parent, also, visible, attach, as_json):
     """Create a doc titled TITLE in PROJECT; TEXT (Markdown) or standard input
 
     TITLE becomes the first line of the doc, a heading before TEXT."""
@@ -1863,7 +1860,7 @@ def doc_new(project, title, text, parent, notify, visible, attach, as_json):
             "content": with_attachments(project, text, attach),
             "parent_id": parent,
             "visible_to_clients": visible,
-            "notify": whom(notify),
+            "also": people_ids(also),
         },
     )
     if as_json:

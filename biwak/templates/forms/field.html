@@ -34,7 +34,8 @@
     {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
   </fieldset>
 {% else %}
-  <div class="mb-3" {% if field.field.shown_when %}data-shown-when="{{ field.field.shown_when }}"{% endif %}>
+  <div class="mb-3">
+    {% if field.field.intro %}<p class="form-text mt-0 mb-2">{{ field.field.intro }}</p>{% endif %}
     {% if field.label %}<label
         class="form-label{% if field.field.hide_label %} visually-hidden{% endif %}"
         for="{{ field.id_for_label }}"

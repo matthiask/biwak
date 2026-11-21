@@ -288,7 +288,7 @@ class NotificationsTest(PartnerTestCase):
         self.assertNotContains(response, "Book the lodge")
         mail.outbox = []
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + timezone.timedelta(minutes=3))
+            send_mails(now=timezone.now() + timezone.timedelta(minutes=11))
         to_pia = [m for m in mail.outbox if m.to == [self.pia.email]]
         self.assertEqual(len(to_pia), 1)
         self.assertIn("Pitch the tents", to_pia[0].subject)

@@ -44,7 +44,7 @@ class NotifyingTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             operations.toggle_reaction(user, content, **target)
 
-    def send(self, minutes=3):
+    def send(self, minutes=11):
         with self.captureOnCommitCallbacks(execute=True):
             return send_mails(now=timezone.now() + dt.timedelta(minutes=minutes))
 

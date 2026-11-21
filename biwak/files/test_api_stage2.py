@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
 
-from biwak.accounts.models import APIToken
+from biwak.accounts.models import APIToken, NotificationLevel
 from biwak.activity.models import Action, Event, Mention, Notification
 from biwak.activity.operations import subscribe
 from biwak.collab import live
@@ -187,33 +187,41 @@ class MessageAPITest(APIFixture, TestCase):
             {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
         )
 
-    def test_create_notifying_chosen_people_or_nobody(self):
+    def test_create_tells_who_wants_and_also(self):
+        """Those who want to hear, plus ``also`` (decided 2026-11-21:
+        additive); an older CLI's ``notify`` is accepted: its IDs count as
+        ``also``, ``everybody`` and ``nobody`` change nothing"""
         url = f"projects/{self.project.pk}/messages/"
-        with self.captureOnCommitCallbacks(execute=True):
+        self.cleo.notification_level = NotificationLevel.CONCERNS_ME
+        self.cleo.save()
+        for n, (data, told) in enumerate([
+            ({}, {self.bob}),
+            ({"notify": "nobody"}, {self.bob}),
+            ({"notify": "everybody"}, {self.bob}),
+            ({"also": [self.cleo.pk]}, {self.bob, self.cleo}),
+            ({"notify": [self.cleo.pk]}, {self.bob, self.cleo}),
+        ]):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.call(
+                    self.ada,
+                    "post",
+                    url,
+                    {"title": f"M{n}", "visible_to_clients": True} | data,
+                )
+            self.assertEqual(response.status_code, 201)
+            event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
+            self.assertEqual({n.user for n in event.notifications.all()}, told)
+
+    def test_only_members_can_be_told(self):
+        outsider = person("Dan")
+        for data in [{"also": [outsider.pk]}, {"notify": [outsider.pk]}]:
             response = self.call(
                 self.ada,
                 "post",
-                url,
-                {"title": "A", "visible_to_clients": True, "notify": [self.cleo.pk]},
+                f"projects/{self.project.pk}/messages/",
+                {"title": "A"} | data,
             )
-        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
-        self.assertEqual({n.user for n in event.notifications.all()}, {self.cleo})
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.call(
-                self.ada, "post", url, {"title": "B", "notify": "nobody"}
-            )
-        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
-        self.assertEqual(event.notifications.count(), 0)
-
-    def test_only_members_can_be_notified(self):
-        outsider = person("Dan")
-        response = self.call(
-            self.ada,
-            "post",
-            f"projects/{self.project.pk}/messages/",
-            {"title": "A", "notify": [outsider.pk]},
-        )
-        self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.status_code, 400)
 
     def test_clients_post_visible_messages(self):
         response = self.call(
@@ -811,40 +819,31 @@ class FileAPITest(APIFixture, TestCase):
         self.assertEqual(len(data["versions"]), 1)
         self.assertTrue(data["download_url"].endswith(f"/files/{data['id']}/download/"))
 
-    def test_upload_into_a_folder_and_notify(self):
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.post_file(
-                self.ada, parent_id=self.public.pk, notify="everybody"
-            )
-        data = response.json()
-        self.assertEqual(data["parent_id"], self.public.pk)
-        self.assertTrue(data["visible_to_clients"])
-        event = Event.objects.get(item=data["id"], action=Action.CREATED)
-        self.assertEqual(
-            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
-        )
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.post_file(
-                self.ada, parent_id=self.public.pk, notify=f"{self.bob.pk}"
-            )
-        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
-        self.assertEqual({n.user for n in event.notifications.all()}, {self.bob})
+    def test_upload_into_a_folder_and_who_is_told(self):
+        """Those who want to hear, and ``also`` (decided 2026-11-21:
+        additive); an older CLI's ``notify`` IDs count as ``also``, its
+        ``nobody`` is ignored"""
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        for sent, told in [
+            ({"no_notify": True}, {self.cleo}),
+            ({"notify": "nobody"}, {self.cleo}),
+            ({"also": f"{self.bob.pk}"}, {self.bob, self.cleo}),
+            ({"notify": f"{self.bob.pk}"}, {self.bob, self.cleo}),
+        ]:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.post_file(self.ada, parent_id=self.public.pk, **sent)
+            data = response.json()
+            self.assertEqual(data["parent_id"], self.public.pk)
+            self.assertTrue(data["visible_to_clients"])
+            event = Event.objects.get(item=data["id"], action=Action.CREATED)
+            self.assertEqual({n.user for n in event.notifications.all()}, told)
 
-    def test_upload_notifies_everybody_by_default(self):
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.post_file(
-                self.ada, parent_id=self.public.pk, no_notify=True
-            )
-        event = Event.objects.get(item=response.json()["id"], action=Action.CREATED)
-        self.assertEqual(
-            {n.user for n in event.notifications.all()}, {self.bob, self.cleo}
-        )
-
-    def test_bad_notify(self):
-        self.assertEqual(self.post_file(self.ada, notify="some").status_code, 400)
+    def test_bad_also(self):
+        self.assertEqual(self.post_file(self.ada, also="some").status_code, 400)
         outsider = person("Dan")
         self.assertEqual(
-            self.post_file(self.ada, notify=str(outsider.pk)).status_code, 400
+            self.post_file(self.ada, also=str(outsider.pk)).status_code, 400
         )
 
     def test_clients_dont_upload(self):

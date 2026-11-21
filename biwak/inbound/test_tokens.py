@@ -63,7 +63,7 @@ class ReplyToTest(ReplyTestCase):
                 self.todo, author=self.bea, content="The headline is too long."
             )
         with self.captureOnCommitCallbacks(execute=True):
-            send_mails(now=timezone.now() + dt.timedelta(minutes=3))
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
         return {message.to[0]: message for message in mail.outbox}
 
     def test_notification_mails_carry_a_token_each(self):
