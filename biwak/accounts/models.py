@@ -243,7 +243,7 @@ class User(AbstractBaseUser):
             # (specs/sso.md): what it doesn't allow ends
             from biwak.accounts import sso
 
-            sso.enforce_required([self])
+            sso.enforce_required_now_and_after_commit([self.pk])
         if fields is None or "email" in fields:
             # A changed address (the Django admin) stays allauth's verified one
             verify_email(self)

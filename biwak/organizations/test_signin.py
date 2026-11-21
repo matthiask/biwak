@@ -149,7 +149,8 @@ class SignInSettingTest(TestCase):
             "Sign in with Google Workspace first",
         )
         sign_in_with(self.client, self.root, "google")
-        assert_modal_redirect(self, self.client.post(url, data, headers=MODAL))
+        response = self.client.post(url, data, headers=MODAL)
+        assert_modal_redirect(self, response)
         own.refresh_from_db()
         self.assertTrue(own.requires_sso)
 

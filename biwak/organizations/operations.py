@@ -187,6 +187,13 @@ def update_organization(org, *, actor, name=None, domains=None):
             fields.append("domains")
     if fields:
         org.save(update_fields=fields)
+    if "domains" in fields and org.requires_sso:
+        # Sign-ins through domains it doesn't have anymore end
+        from biwak.accounts import sso
+
+        sso.enforce_required_now_and_after_commit(
+            org.people.values_list("pk", flat=True)
+        )
     return org
 
 
@@ -218,9 +225,8 @@ def merge(source, target, *, actor):
     _access_changed(moved)
     if target.requires_sso:
         from biwak.accounts import sso
-        from biwak.accounts.models import User
 
-        sso.enforce_required(User.objects.filter(pk__in=moved))
+        sso.enforce_required_now_and_after_commit(moved)
     return target
 
 
@@ -353,7 +359,9 @@ def set_signin(org, *, signin, idp="", tenant_id="", actor):
     if org.requires_sso and before != (signin, idp, tenant_id):
         from biwak.accounts import sso
 
-        sso.enforce_required(org.people.select_related("organization"))
+        sso.enforce_required_now_and_after_commit(
+            org.people.values_list("pk", flat=True)
+        )
     return org
 
 

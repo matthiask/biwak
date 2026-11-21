@@ -8,12 +8,10 @@ what people type meanwhile. Merging (``files.operations.save_live()``)
 writes ``Doc.content``, the events and the versions.
 """
 
-from importlib import import_module
 from itertools import groupby
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -34,11 +32,13 @@ def access(user, pk, *, session_key=None):
     the websocket refuses it like the pages, 404). Staff edit what they
     see, clients the docs they created and watch the others they see
     (decided 2026-11-20); nobody edits a read-only doc. With
-    ``session_key``, the session must still exist (logging out closes the
-    session)."""
+    ``session_key``, the session must still exist, unexpired (logging out
+    closes the session; organizations requiring single sign-on end it after
+    24 hours, ``sso.session_alive()``)."""
     if session_key is not None:
-        store = import_module(settings.SESSION_ENGINE).SessionStore
-        if not store().exists(session_key):
+        from biwak.accounts import sso
+
+        if not sso.session_alive(session_key, user):
             return None
     item = (
         Item.objects

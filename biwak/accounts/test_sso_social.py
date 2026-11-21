@@ -511,6 +511,7 @@ class ThroughTheViewsTest(SocialTestCase):
         self.assertEqual(response["Location"], settings.LOGIN_REDIRECT_URL)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.ada.pk)
         self.assertEqual(session.calls, ["https://oauth2.googleapis.com/token"])
+        self.assertEqual(self.client.session["biwak_sso"]["hd"], "example.org")
 
     def test_google_without_hd(self):
         token = {
@@ -539,6 +540,13 @@ class ThroughTheViewsTest(SocialTestCase):
         )
         self.assertEqual(response["Location"], settings.LOGIN_REDIRECT_URL)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.cleo.pk)
+        # What counted is kept in the session and counts on the next request
+        record = self.client.session["biwak_sso"]
+        self.assertEqual(
+            (record["provider"], record["tid"], record["org"], record["user"]),
+            ("microsoft", TENANT, self.acme.pk, self.cleo.pk),
+        )
+        self.assertEqual(self.client.get("/").status_code, 200)
         self.assertEqual(
             session.calls[0],
             "https://login.microsoftonline.com/organizations/oauth2/v2.0/token",

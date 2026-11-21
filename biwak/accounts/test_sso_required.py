@@ -234,18 +234,25 @@ class SessionsTest(RequiredTestCase):
         for provider in ["microsoft", None]:
             sign_in_with(self.client, self.cleo, provider)
             self.assertEqual(self.client.get("/").status_code, 302)
+        # What counted then has to count now: the person, their address and
+        # organization, the provider's claims
+        for claims in [
+            {"user": self.ada.pk},
+            {"email": "other@acme.example"},
+            {"org": self.root.organization_id},
+            {"hd": "other.example"},
+            {"hd": None},
+            {"provider": "microsoft"},
+            {"at": "soon"},
+        ]:
+            with self.subTest(claims=claims):
+                sign_in_with(self.client, self.cleo, claims=claims)
+                self.assertEqual(self.client.get("/").status_code, 302)
         sign_in_with(self.client, self.cleo)
         session = self.client.session
-        session["account_authentication_methods_user"] = str(self.ada.pk)
+        session["biwak_sso"] = "x"
         session.save()
         self.assertEqual(self.client.get("/").status_code, 302)
-        # Records allauth can't read
-        for records in [[{"method": "socialaccount", "provider": "google"}], "x"]:
-            sign_in_with(self.client, self.cleo)
-            session = self.client.session
-            session["account_authentication_methods"] = records
-            session.save()
-            self.assertEqual(self.client.get("/").status_code, 302)
 
     def test_sessions_from_before_the_switch_expire_then(self):
         """Signed in with Google while it was allowed: the session's 30 days

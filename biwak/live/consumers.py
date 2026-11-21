@@ -24,12 +24,11 @@ is closed with 4404 (it then fetches the page, which says so).
 import asyncio
 import json
 from collections import Counter
-from importlib import import_module
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.conf import settings
 
+from biwak.accounts import sso
 from biwak.collab import live as collab
 from biwak.items.models import Item
 from biwak.live import announce
@@ -124,10 +123,12 @@ class LiveConsumer(AsyncWebsocketConsumer):
         self.user.refresh_from_db()
         if not self.user.is_active:
             return CLOSE_NO_LOGIN
-        if self.session_key is not None:
-            store = import_module(settings.SESSION_ENGINE).SessionStore
-            if not store().exists(self.session_key):
-                return CLOSE_NO_LOGIN
+        if self.session_key is not None and not sso.session_alive(
+            self.session_key, self.user
+        ):
+            # Logged out, expired, or no longer counting for an organization
+            # requiring single sign-on (specs/sso.md)
+            return CLOSE_NO_LOGIN
         if self.item is None:
             return True
         project_id = (

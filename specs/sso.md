@@ -179,19 +179,40 @@ the organization's IdP.
     `sso.enforce_required()`: authenticators deleted, API tokens cut to 24
     hours after their creation, calendar links deleted, sessions that
     didn't sign in through the provider in the last 24 hours ended
-    (`UserSession`, the session data allauth recorded), except the
-    current request's, which the middleware ends on the next one.
-  - *Sessions:* `sso.session_middleware` (after allauth's middleware)
-    signs these people out unless the session recorded a social login
-    through the organization's provider less than 24 hours ago (allauth's
-    `account_authentication_methods` in the session, stored on the server
-    and only for the person it names): "Remember me", the cookie's age and
+    (`UserSession`, the session's sign-in record, see *Sessions*), except
+    the current request's, which the middleware ends on the next one; open
+    websockets check theirs again. It runs again after the commit
+    (`enforce_required_now_and_after_commit()`, fixed 2026-11-21 after the
+    review), so what other requests made meanwhile goes too; also after
+    changing the domains of an organization requiring it.
+  - *Sessions:* signing in through a provider keeps what counted in the
+    session (`biwak_sso`, `sso.remember_sign_in()`: person, address,
+    organization, provider, `hd`, `tid`, time; stored on the server).
+    `sso.session_middleware` (after allauth's middleware) signs these
+    people out unless that sign-in is less than 24 hours old and still
+    counts with the organization as it is now (fixed 2026-11-21 after the
+    review: changing the domains or the tenant, moving the person to
+    another organization, even one with the same provider, or changing
+    their address ends it): "Remember me", the cookie's age and
     `SESSION_SAVE_EVERY_REQUEST` don't matter, sessions without the
     record (signed in another way, before the switch) end, the API
     answers 401. Signing in sets the session's expiry to that date too
-    (`sso.remember_sign_in()`, an absolute date, which saving on every
-    request doesn't extend), so websockets, which read the session but
-    not the middleware, can't open with an older one.
+    (an absolute date, which saving on every request doesn't extend).
+  - *Websockets* (the live updates and docs edited live, which accept
+    edits) check `sso.session_alive()` when connecting and on their
+    periodic and pushed access checks: the session exists, hasn't expired
+    (Django's `exists()` ignores the expiry, fixed 2026-11-21 after the
+    review), is the person's and, for these people, still counts; else
+    they close.
+  - *Reauthenticating* (allauth's pages confirming who somebody is before
+    sensitive changes, by code or passkey) sends these people through
+    their provider instead (`signin.reauthenticate()`, fixed 2026-11-21
+    after the review).
+  - *Addresses:* nobody changes their own address: allauth's address
+    pages (`/accounts/email/`, `/accounts/confirm-email/`) answer 404 for
+    everybody (fixed 2026-11-21 after the review: a Gmail address added
+    there could have signed in with Google after leaving a company
+    requiring single sign-on). Admins change addresses (`mail-sending.md`).
   - *API tokens:* created with `expires_at` 24 hours after `created_at`,
     using them doesn't extend that (`APIToken.objects.extend()`), and
     `for_secret()` refuses them 24 hours after their creation whatever
@@ -260,6 +281,9 @@ How each is handled; the tests are in `biwak/accounts/test_sso_social.py`,
 - **A connected account outliving its address** (allauth finds people by
   the provider's ID first): it counts only when the provider vouches for
   the person's current address now.
+- **allauth's "redirect" process**, which signs nobody in but updates
+  the connected account, is checked like signing in (fixed 2026-11-21
+  after the review).
 - **Connecting an account to oneself** (allauth's connect flow) as a way
   around the rules: the same checks against the person signed in.
 - **Codes for people who must use the IdP:** not sent (the address
@@ -285,8 +309,11 @@ How each is handled; the tests are in `biwak/accounts/test_sso_social.py`,
 - **Locking everybody out:** single sign-on only with a provider the
   installation has set up and the organization's domains (and tenant);
   an admin requires it for their own organization only after signing in
-  through it in that session; switching back to codes is always possible
-  (also in the Django admin, and `./manage.py shell` as a last resort).
+  through it in that session, on the page and in the Django admin, which
+  also keeps the domains of organizations with single sign-on (fixed
+  2026-11-21 after the review); switching back to codes is always
+  possible (also in the Django admin, and `./manage.py shell` as a last
+  resort).
 - **Staff loosening the rules:** the setting and the domains of an
   organization with single sign-on are admins only (pages, merging, the
   API shows the setting read-only). Staff moving a person out of an
@@ -297,9 +324,13 @@ How each is handled; the tests are in `biwak/accounts/test_sso_social.py`,
   single sign-on is sent to its provider with the organization's name
   (asked for by the spec); unknown and deactivated addresses look as
   before.
-- **Not handled:** websockets already open when a session ends stay open
-  until they close (they only push what the person may see); there is no
-  sign-out at the provider and no sync with it (the 24 hours, decided).
+- **Not handled:** there is no sign-out at the provider and no sync with
+  it (the 24 hours, decided). Open websockets close at their next access
+  check (at most a minute, or at once when told).
+- **Open question (asked 2026-11-21):** the Gmail exception lets a Gmail
+  address sign in with Google whatever the organization allows; with
+  addresses changed only by admins it can't be added to get around the
+  provider.
 
 ## Production setup (the user's)
 
@@ -313,5 +344,10 @@ How each is handled; the tests are in `biwak/accounts/test_sso_social.py`,
   `https://BIWAK/accounts/microsoft/login/callback/`, a client secret;
   `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` in the deployment's
   secrets. Each organization's tenant ID goes into its setting.
-- After deploying: check the own organization's domains (migration
-  `organizations.0005` filled them from staff addresses if it had none).
+- After deploying: check the own organization's domains. Migration
+  `organizations.0005` fills them from its active staff's addresses if it
+  had none (not free-mail domains or other organizations'), and prints
+  them ("The own organization's domains for Google sign-in, from its
+  staff's addresses: …"). Not guessing would end staff's Google sign-in
+  on deploying (a sign-in counts only for the domains), so it guesses
+  and says what (decided 2026-11-21 after the review).

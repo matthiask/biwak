@@ -177,7 +177,13 @@ def check_social(person, provider, data):
     address = claimed_address(provider, data)
     if address is None or address.strip().lower() != person.email.lower():
         raise Refused(generic)
-    org = organization_of(person)
+    provider_counts(person, organization_of(person), provider, data)
+
+
+def provider_counts(person, org, provider, data):
+    """The provider's part of ``check_social()``: raises ``Refused`` unless
+    the claims (``hd``, ``tid``) count for the person in ``org`` (their
+    organization, as it is now). Also checked again for sessions."""
     sso = org.sso if org is not None else ""
     if org is not None and org.requires_sso and sso != provider:
         raise Refused(uses_sso_message(org))
@@ -255,27 +261,55 @@ def refuse_login(request, user):
     return uses_sso_message(org)
 
 
-def _last_sign_in(records, provider):
-    """When the records' last sign-in through the provider in the last 24
-    hours was (a timestamp), or None"""
-    now = time.time()
-    times = [
-        float(r["at"])
-        for r in records
-        if isinstance(r, dict) and _signed_in_with(r, provider, now=now)
-    ]
-    return max(times, default=None)
+# What the session keeps of a sign-in through a provider (``remember_sign_in``)
+SESSION_KEY = "biwak_sso"
+
+
+def _sign_in_counts(record, user, org):
+    """When the session's sign-in through the provider was (a timestamp), if
+    it counts for the person in ``org`` as it is now, else None: the person,
+    their address and organization the same, the provider the organization's,
+    less than 24 hours ago, and its claims (``hd``, ``tid``) still matching
+    the organization's domains and tenant. Changing those, or moving the
+    person, ends the session."""
+    if not isinstance(record, dict) or org is None:
+        return None
+    try:
+        at = float(record.get("at"))
+    except TypeError, ValueError:
+        return None
+    if not (
+        record.get("user") == user.pk
+        and record.get("org") == org.pk
+        and isinstance(record.get("email"), str)
+        and record["email"].lower() == user.email.lower()
+        and record.get("provider") == org.sso
+        and 0 <= time.time() - at < SSO_MAX_AGE.total_seconds()
+    ):
+        return None
+    try:
+        provider_counts(
+            user,
+            org,
+            record["provider"],
+            {"hd": record.get("hd"), "tid": record.get("tid")},
+        )
+    except Refused:
+        return None
+    return at
 
 
 def session_counts(request, user):
     """Sessions of people whose organization requires single sign-on last 24
-    hours after signing in through its identity provider (the time allauth
-    recorded in the session, which the browser can't change; "Remember me"
-    and the cookie's age don't matter); others as long as Django keeps them"""
+    hours after signing in through its identity provider (the time stored in
+    the session on the server, which the browser can't change; "Remember me"
+    and the cookie's age don't matter), while that sign-in still counts for
+    the organization (``_sign_in_counts()``); others as long as Django keeps
+    them"""
     org = required_organization(user)
     if org is None:
         return True
-    at = _last_sign_in(_records(request, user), org.idp)
+    at = _sign_in_counts(request.session.get(SESSION_KEY), user, org)
     if at is None:
         return False
     # Sessions from before the switch expire then too (``remember_sign_in``)
@@ -287,10 +321,9 @@ def session_counts(request, user):
 
 def signed_in_with_idp(request, user, org):
     """Whether this session signed in through the organization's identity
-    provider in the last 24 hours"""
-    now = time.time()
-    return bool(org.sso) and any(
-        _signed_in_with(r, org.sso, now=now) for r in _records(request, user)
+    provider in the last 24 hours, counting with ``org``'s settings"""
+    return bool(org.sso) and (
+        _sign_in_counts(request.session.get(SESSION_KEY), user, org) is not None
     )
 
 
@@ -308,25 +341,48 @@ def token_expiry(user, *, created_at):
     return created_at + SSO_MAX_AGE if requires_sso(user) else None
 
 
-def _stored_session_counts(session_key, user, org):
-    """``session_counts()`` for a stored session"""
+def _load_session(session_key):
+    """The stored session (Django's store) and its data, ``{}`` when it
+    doesn't exist or expired"""
     from importlib import import_module
 
     store = import_module(settings.SESSION_ENGINE).SessionStore(session_key)
     try:
         data = store.load()
     except Exception:  # noqa: BLE001 (a broken session doesn't count)
+        data = {}
+    return store, data
+
+
+def _stored_session_counts(session_key, user, org):
+    """``session_counts()`` for a stored session"""
+    store, data = _load_session(session_key)
+    if str(data.get("_auth_user_id")) != str(user.pk):
         return False
-    if data.get("account_authentication_methods_user") != str(user.pk):
-        return False
-    records = data.get("account_authentication_methods")
-    at = _last_sign_in(records if isinstance(records, list) else [], org.idp)
+    at = _sign_in_counts(data.get(SESSION_KEY), user, org)
     if at is None:
         return False
     # Expiring 24 hours after signing in (``remember_sign_in``)
     store.set_expiry(dt.datetime.fromtimestamp(at, tz=dt.UTC) + SSO_MAX_AGE)
     store.save()
     return True
+
+
+def session_alive(session_key, user):
+    """For websockets, which read the session once when connecting: whether
+    the login session still exists, hasn't expired (Django's ``exists()``
+    doesn't look at the date) and is the person's, and for people whose
+    organization requires single sign-on still counts (``session_counts()``)"""
+    from biwak.accounts.models import User
+
+    _store, data = _load_session(session_key)
+    if not data or str(data.get("_auth_user_id")) != str(user.pk):
+        return False
+    user = User.objects.select_related("organization").filter(pk=user.pk).first()
+    if user is None or not user.is_active:
+        return False
+    org = required_organization(user)
+    return org is None or _sign_in_counts(data.get(SESSION_KEY), user, org) is not None
 
 
 def enforce_required(users):
@@ -346,6 +402,7 @@ def enforce_required(users):
 
     current = getattr(context.request, "session", None)
     current_key = getattr(current, "session_key", None)
+    users = list(users)
     for user in users:
         org = required_organization(user)
         if org is None:
@@ -360,16 +417,55 @@ def enforce_required(users):
                 continue
             if not _stored_session_counts(session.session_key, user, org):
                 session.end()
+        # Open websockets check their session again (``session_alive()``)
+        from biwak.collab import live
+
+        live.check_access(user=user.pk)
+
+
+def enforce_required_now_and_after_commit(user_ids):
+    """``enforce_required()`` now, and again once the transaction committed:
+    passkeys, calendar links, tokens and sessions made meanwhile by other
+    requests (which didn't see the change yet) go too"""
+    from django.db import transaction
+
+    from biwak.accounts.models import User
+
+    user_ids = list(user_ids)
+
+    def run():
+        enforce_required(
+            User.objects.filter(pk__in=user_ids).select_related("organization")
+        )
+
+    run()
+    transaction.on_commit(run)
 
 
 # The session
 
 
-def remember_sign_in(request, user):
-    """Sessions of people whose organization requires single sign-on expire
-    24 hours after signing in, as a date: saving the session on every request
-    doesn't extend it, and websockets (which read the session but not
-    ``session_middleware``) stop with it too"""
+def remember_sign_in(request, user, sociallogin=None):
+    """A sign-in through a provider is kept in the session with what counted
+    (provider, ``hd``, ``tid``, organization, address, time), checked again
+    on every request (``session_counts()``). Sessions of people whose
+    organization requires single sign-on expire 24 hours after signing in,
+    as a date: saving the session on every request doesn't extend it, and
+    websockets stop with it too (``session_alive()``)."""
+    if sociallogin is not None:
+        data = sociallogin.account.extra_data or {}
+        org = organization_of(user)
+        request.session[SESSION_KEY] = {
+            "user": user.pk,
+            "org": org.pk if org is not None else None,
+            "email": user.email,
+            "provider": sociallogin.account.provider,
+            "hd": data.get("hd") if isinstance(data.get("hd"), str) else None,
+            "tid": data.get("tid") if isinstance(data.get("tid"), str) else None,
+            "at": time.time(),
+        }
+    else:
+        request.session.pop(SESSION_KEY, None)
     if requires_sso(user):
         request.session.set_expiry(timezone.now() + SSO_MAX_AGE)
 

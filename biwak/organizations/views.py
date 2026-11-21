@@ -320,7 +320,13 @@ class SignInForm(Form):
             and not sso.signed_in_with_idp(
                 self.request,
                 user,
-                Organization(signin=signin, idp=idp, tenant_id=tenant_id),
+                Organization(
+                    pk=self.organization.pk,
+                    domains=self.organization.domains,
+                    signin=signin,
+                    idp=idp,
+                    tenant_id=tenant_id,
+                ),
             )
         ):
             # Not locking oneself out: it works for the one requiring it

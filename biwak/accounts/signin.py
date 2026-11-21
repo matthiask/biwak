@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
@@ -186,3 +187,30 @@ def disconnect(request, pk):
         % {"provider": account.get_provider_account().get_brand()["name"]},
     )
     return back_to_the_section()
+
+
+def reauthenticate(allauth_view):
+    """allauth's page confirming who somebody is (by code, passkey);
+    people whose organization requires single sign-on sign in through it
+    again instead (specs/sso.md)"""
+
+    def view(request, *args, **kwargs):
+        if request.user.is_authenticated and (
+            org := sso.required_organization(request.user)
+        ):
+            messages.info(request, sso.uses_sso_message(org))
+            next_url = request.GET.get("next", "")
+            if not url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                next_url = ""
+            return redirect(
+                sso.idp_login_url(
+                    request.user, next_url=next_url or reverse("settings")
+                )
+            )
+        return allauth_view(request, *args, **kwargs)
+
+    return view

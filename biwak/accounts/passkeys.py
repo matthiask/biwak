@@ -44,7 +44,7 @@ def remember_offer(sender, request, user, **kwargs):
     sign-on expire 24 hours after signing in (specs/sso.md)."""
     from biwak.accounts import sso
 
-    sso.remember_sign_in(request, user)
+    sso.remember_sign_in(request, user, kwargs.get("sociallogin"))
     by_code = any(
         r.get("method") == "code" for r in get_authentication_records(request, user)
     )

@@ -62,6 +62,13 @@ def own_organization_google(apps, schema_editor):
             ):
                 domains.append(domain)
         own.domains = sorted(domains)
+        # Staff's Google sign-in counts only for these: check them after
+        # deploying (specs/sso.md, "Production setup")
+        print(
+            "\n  The own organization's domains for Google sign-in, from its"
+            f" staff's addresses: {', '.join(own.domains) or 'none'}."
+            " Check them on its page."
+        )
     own.save()
 
 

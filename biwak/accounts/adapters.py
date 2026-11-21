@@ -100,9 +100,8 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         person up (by the connected account, else by address): signing in,
         Google's token login, connecting an account to oneself"""
         process = sociallogin.state.get("process")
-        if process == AuthProcess.REDIRECT:
-            # Nobody signs in or connects anything
-            return
+        # Also allauth's "redirect" process, which signs nobody in but
+        # updates the connected account: checked like signing in
         if process == AuthProcess.CONNECT:
             person = request.user if request.user.is_authenticated else None
         else:

@@ -3,8 +3,9 @@ from django.contrib import admin
 from django.db.models import Count
 from django.utils.translation import gettext as _
 
+from biwak.accounts import sso
 from biwak.organizations import operations as org_ops
-from biwak.organizations.models import Organization
+from biwak.organizations.models import Organization, SignIn
 
 
 class OrganizationForm(forms.ModelForm):
@@ -27,14 +28,40 @@ class OrganizationForm(forms.ModelForm):
         if data.get("is_own") and not was_own:
             for old in Organization.objects.filter(is_own=True):
                 org_ops._no_admin_partners(org_ops._admins_in(old), own_after=False)
+        # The same checks as the organization's page (specs/sso.md)
         if {"signin", "idp", "tenant_id"} & set(self.changed_data):
-            # The same checks as the organization's page (specs/sso.md)
-            org = Organization(domains=data.get("domains") or [])
+            org = Organization(pk=self.instance.pk, domains=data.get("domains") or [])
             data["signin"], data["idp"], data["tenant_id"] = org_ops.clean_signin(
                 org,
                 signin=data.get("signin"),
                 idp=data.get("idp"),
                 tenant_id=data.get("tenant_id"),
+            )
+            org.signin, org.idp, org.tenant_id = (
+                data["signin"],
+                data["idp"],
+                data["tenant_id"],
+            )
+            user = self.request.user
+            if (
+                org.requires_sso
+                and org.pk is not None
+                and user.organization_id == org.pk
+                and not sso.signed_in_with_idp(self.request, user, org)
+            ):
+                raise forms.ValidationError(
+                    _(
+                        "Sign in with %(provider)s first: requiring it signs you"
+                        " out of sessions that didn't."
+                    )
+                    % {"provider": org.get_idp_display()}
+                )
+        if data.get("signin", SignIn.CODES) != SignIn.CODES and not data.get("domains"):
+            raise forms.ValidationError(
+                _(
+                    "With single sign-on, the organization needs its email"
+                    " domains: sign-ins count only for them."
+                )
             )
         return data
 
@@ -57,6 +84,11 @@ class OrganizationAdmin(admin.ModelAdmin):
     def people_count(self, obj):
         return obj.people_count
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.request = request
+        return form
+
     def save_model(self, request, obj, form, change):
         if change and {"signin", "idp", "tenant_id"} & set(form.changed_data):
             # Through the operation, which ends what requiring single
@@ -69,6 +101,11 @@ class OrganizationAdmin(admin.ModelAdmin):
             org_ops.set_signin(obj, actor=request.user, **signin)
         else:
             self._save(request, obj, form, change)
+            if change and "domains" in form.changed_data and obj.requires_sso:
+                # Sign-ins through domains it doesn't have anymore end
+                sso.enforce_required_now_and_after_commit(
+                    obj.people.values_list("pk", flat=True)
+                )
 
     def _save(self, request, obj, form, change):
         # Only one is the own organization: another one loses the mark
