@@ -564,11 +564,13 @@ h3,
   gap: 0.4rem;
 }
 
+/* Readable but quiet: no filled key cap */
 .wb-nav-search-hint {
-  padding: 0 0.3rem;
+  padding: 0;
   font-size: 0.75rem;
   color: var(--bs-secondary-color);
-  background: var(--bs-tertiary-bg);
+  background: transparent;
+  box-shadow: none;
 }
 
 .btn-quiet {
