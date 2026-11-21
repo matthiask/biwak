@@ -358,6 +358,12 @@ def _canonical(rule):
     return sorted(parts.items())
 
 
+def same_rule(a, b):
+    """Whether two valid rules are the same apart from how they're written
+    (order of days, the default interval and week start)"""
+    return _canonical(a) == _canonical(b)
+
+
 def _guess_fields(parts):
     interval = _int(parts.get("INTERVAL", "1"), 1, MAX_INTERVAL)
     fields = {"interval": interval}
@@ -459,7 +465,11 @@ def _describe_monthly(interval, days, monthdays, parts):
         return None
     if len(days) == 1 and days[0] in names and setpos.lstrip("-").isdigit():
         return f"the {_ordinal(int(setpos))} {names[days[0]]} of {month}"
-    if days == WEEKDAYS.split(",") and setpos.lstrip("-").isdigit():
+    if (
+        days == WEEKDAYS.split(",")
+        and setpos.lstrip("-").isdigit()
+        and int(setpos) in ORDINALS
+    ):
         return f"the {_ordinal(int(setpos))} working day of {month}"
     if len(monthdays) == 1 and not days and not setpos:
         return f"the {_ordinal(int(monthdays[0]))} of {month}"

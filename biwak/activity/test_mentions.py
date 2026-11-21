@@ -255,6 +255,11 @@ class NewItemMentionsTest(TestCase):
         response = self.client.get(self.url, {"folder": folder.pk})
         self.assertEqual(response.status_code, 404)
 
+    def test_a_folder_which_is_no_number(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url, {"folder": "x"})
+        self.assertEqual(response.status_code, 404)
+
     def test_the_forms_use_it(self):
         self.client.force_login(self.ada)
         for url in [
@@ -347,6 +352,28 @@ class ClientsKnowMembersTest(TestCase):
             {"content": f"{self.text}!"},
         )
         self.assertOnlyAda(Item.objects.get(pk=message["id"]), message["content"])
+
+    def test_staff_saving_later_doesnt_count_what_a_client_wrote(self):
+        todo = ops.create_todo(
+            todolist=self.shared,
+            title="Call",
+            notes=f"[@x](person:{self.bob.pk})",
+            creator=self.cleo,
+        )
+        self.assertFalse(Mention.objects.filter(user=self.bob).exists())
+        ops.update_todo(todo, actor=self.ada, title="Call them")
+        ops.update_todo(todo, actor=self.ada, notes=f"[@x](person:{self.bob.pk})!")
+        self.assertFalse(Mention.objects.filter(user=self.bob).exists())
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
+        # What staff add themselves counts
+        eve = person("Eve")
+        ops.update_todo(
+            todo,
+            actor=self.ada,
+            notes=f"[@x](person:{self.bob.pk}) [@y](person:{eve.pk})",
+        )
+        self.assertTrue(Subscription.objects.filter(user=eve).exists())
+        self.assertFalse(Subscription.objects.filter(user=self.bob).exists())
 
     def test_staff_still_mention_everybody(self):
         comment = self.api(

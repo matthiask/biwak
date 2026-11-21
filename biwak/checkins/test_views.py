@@ -449,6 +449,40 @@ class FormsTest(ViewsTestCase):
             self.assertEqual(response.status_code, 302, rule)
             self.assertEqual(Question.objects.get(item=item).rule, rule)
 
+    def test_keep_without_a_stored_rule_is_a_form_error(self):
+        url = reverse("question_new", args=[self.project.pk])
+        data = self.data(rule_keep="1")
+        data = {k: v for k, v in data.items() if k != "rule_frequency"}
+        response = self.post(self.ada, url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(title="What did you read?").exists())
+
+    def test_saving_an_unchanged_form_changes_nothing(self):
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=TH,MO",
+            "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO",
+            "FREQ=WEEKLY;BYDAY=MO;WKST=MO",
+        ]:
+            item = self.question(rule, rule=rule, starts_on=dt.date(2027, 3, 22))
+            before = Question.objects.get(item=item)
+            self.assertEqual(before.rule, rule)
+            events = item.events.count()
+            data = self.data(
+                title=item.title,
+                starts_on="2027-03-22",
+                time_of_day=before.time_of_day.strftime("%H:%M"),
+                time_zone=before.time_zone,
+            )
+            data = {k: v for k, v in data.items() if not k.startswith("rule_")}
+            data |= rule_post(rule, "rule")
+            data["people"] = [self.ada.pk]
+            response = self.post(self.ada, self.url("question_edit", item), data)
+            self.assertEqual(response.status_code, 302, rule)
+            after = Question.objects.get(item=item)
+            self.assertEqual(after.rule, rule)
+            self.assertEqual(after.next_at, before.next_at)
+            self.assertEqual(item.events.count(), events, rule)
+
     def test_editing_a_visible_question_keeps_the_clients(self):
         response = self.post(
             self.ada,

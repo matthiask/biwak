@@ -37,6 +37,17 @@ SINGLE = [
 ]
 
 
+class RuleFormMixin:
+    """For forms with a ``RuleField``: tells the field the rule the form
+    starts from (``initial``), so that it can be kept"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field, RuleField):
+                field.initial_rule = self.initial.get(name) or ""
+
+
 class RuleWidget(forms.Widget):
     """A fieldset of plain controls: all parts show without JavaScript,
     ``frontend/rule-widget.js`` hides those of other frequencies"""
@@ -148,10 +159,13 @@ class RuleField(forms.Field):
         self.widget.label = self.label
         self.allow_empty = allow_empty
 
+    # The rule the form starts from, set by ``RuleFormMixin``
+    initial_rule = ""
+
     def to_python(self, value):
         if not value:
             value = {}
-        if value.get("unshowable") and not value.get("replace"):
+        if self.initial_rule and value.get("unshowable") and not value.get("replace"):
             return KEEP
         try:
             rule = schedules.build_rule(value)
@@ -161,6 +175,9 @@ class RuleField(forms.Field):
                     ValidationError(str(m)) for m in exc.errors.values()
                 ]) from exc
             raise ValidationError(str(exc)) from exc
+        if rule and self.initial_rule and schedules.same_rule(rule, self.initial_rule):
+            # Written differently, but the same: saving never rewrites it
+            return KEEP
         if not rule and not self.allow_empty:
             raise ValidationError(_("Choose how often it repeats."))
         return rule
@@ -169,7 +186,7 @@ class RuleField(forms.Field):
         pass
 
     def bound_data(self, data, initial):
-        if data.get("unshowable") and not data.get("replace"):
+        if initial and data.get("unshowable") and not data.get("replace"):
             return initial
         return data
 

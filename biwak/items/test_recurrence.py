@@ -319,6 +319,30 @@ class PagesTest(RecurrenceTestCase):
             self.assertEqual(item.todo.recurrence, rule)
             self.assertEqual(Item.objects.get(pk=item.pk).title, "Renamed")
 
+    def test_saving_an_unchanged_form_changes_nothing(self):
+        """Rules the widget shows, but writes differently (order of days,
+        the default interval and week start): no new text, no event"""
+        self.client.force_login(self.ada)
+        for rule in [
+            "FREQ=WEEKLY;BYDAY=TH,MO",
+            "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO",
+            "FREQ=WEEKLY;BYDAY=MO;WKST=MO",
+        ]:
+            item = self.todo(rule, "2026-11-20")
+            self.assertEqual(item.todo.recurrence, rule)
+            url = item.get_absolute_url()
+            data = rule_post(rule) | {
+                "form": "todo",
+                "title": item.title,
+                "due_on": "2026-11-20",
+                "assignees": [],
+            }
+            events = item.events.count()
+            self.assertRedirects(self.client.post(url, data), url)
+            item.todo.refresh_from_db()
+            self.assertEqual(item.todo.recurrence, rule)
+            self.assertEqual(item.events.count(), events, rule)
+
     def test_replacing_a_rule_the_widget_cant_show(self):
         self.client.force_login(self.ada)
         rule = "FREQ=MONTHLY;BYMONTHDAY=1,15"

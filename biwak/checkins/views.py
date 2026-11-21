@@ -23,7 +23,7 @@ from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
 from biwak.projects.views import project_for
 from biwak.reactions.operations import prefetch
-from biwak.schedules_forms import KEEP, RuleField
+from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
 
 # How many occurrences a page shows (older ones: "Show more")
@@ -55,7 +55,7 @@ def candidate_people(project):
 # Forms -----------------------------------------------------------------------
 
 
-class QuestionForm(Form):
+class QuestionForm(RuleFormMixin, Form):
     title = forms.CharField(label=_("Question"), max_length=500)
     rule = RuleField(label=_("Asked"), allow_empty=False, default_frequency="weekly")
     starts_on = forms.DateField(

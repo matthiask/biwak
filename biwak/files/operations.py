@@ -53,6 +53,7 @@ def update_message(
 ):
     """Changes what's given; ``category`` is a ``MessageCategory`` or None"""
     message = Message.objects.select_for_update().get(item=item)
+    previous = f"{item.title}\n\n{message.content}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -74,7 +75,11 @@ def update_message(
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
         mentions.update(
-            item, f"{item.title}\n\n{message.content}", actor=actor, event=event
+            item,
+            f"{item.title}\n\n{message.content}",
+            actor=actor,
+            event=event,
+            previous=previous,
         )
     return item
 
@@ -227,6 +232,7 @@ def update_doc(
 def _write_doc(item, doc, title, content, *, actor):
     # Only called with a change; a new text is a change of the doc too
     # ("latest docs and files" on the project page)
+    previous = f"{item.title}\n\n{doc.content}"
     item.title = title
     item.updated_at = _now()
     item.save(update_fields=["title", "updated_at"])
@@ -235,7 +241,9 @@ def _write_doc(item, doc, title, content, *, actor):
         doc.save(update_fields=["content"])
         attachments.link(item, content, actor=actor)
     event = record(actor=actor, action=Action.EDITED, project=item.project, item=item)
-    mentions.update(item, f"{title}\n\n{content}", actor=actor, event=event)
+    mentions.update(
+        item, f"{title}\n\n{content}", actor=actor, event=event, previous=previous
+    )
 
 
 @transaction.atomic
@@ -278,6 +286,7 @@ def replace_upload(item, file, *, actor):
 @transaction.atomic
 def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED):
     upload = Upload.objects.select_for_update().get(item=item)
+    previous = f"{item.title}\n\n{upload.description}"
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -294,6 +303,10 @@ def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED):
             actor=actor, action=Action.EDITED, project=item.project, item=item
         )
         mentions.update(
-            item, f"{item.title}\n\n{upload.description}", actor=actor, event=event
+            item,
+            f"{item.title}\n\n{upload.description}",
+            actor=actor,
+            event=event,
+            previous=previous,
         )
     return item

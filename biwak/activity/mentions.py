@@ -199,10 +199,12 @@ def resolve(item, text, *, author):
     return "".join(result)
 
 
-def update(item, text, *, comment=None, actor, event=None):
+def update(item, text, *, comment=None, actor, event=None, previous=""):
     """Stores who ``text`` (an item's texts, or ``comment``) mentions, from
     the operations saving texts. Only people who can see the item and
-    whom the actor may know count (clients: the members);
+    whom the actor may know count (clients: the members), and only those
+    this save adds: mentions already in ``previous`` (the text before)
+    were looked at when they were written, also the rejected ones;
     those newly mentioned are subscribed (even after unsubscribing) and
     added to ``event.data["mentioned"]``, so ``notify()`` tells them.
     People no longer mentioned are forgotten: mentioning them again counts
@@ -210,7 +212,7 @@ def update(item, text, *, comment=None, actor, event=None):
     ids = mentioned_ids(text)
     mentions = Mention.objects.filter(item=item, comment=comment)
     mentions.exclude(user__in=ids).delete()
-    known = set(mentions.values_list("user", flat=True))
+    known = set(mentions.values_list("user", flat=True)) | mentioned_ids(previous)
     people = [
         user
         for user in known_to(

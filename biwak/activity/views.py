@@ -174,6 +174,8 @@ def mentionable_new(request, pk):
     project = project_for(request, pk)
     visible = request.user.is_client or bool(request.GET.get("visible"))
     if folder_id := request.GET.get("folder"):
+        if not folder_id.isdecimal():
+            raise Http404
         folder = item_for(request, folder_id, Kind.FOLDER)
         if folder.project_id != project.pk:
             raise Http404

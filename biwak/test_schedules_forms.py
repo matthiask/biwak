@@ -3,16 +3,19 @@ import datetime as dt
 from django import forms
 from django.test import SimpleTestCase, TestCase
 
-from biwak.schedules_forms import KEEP, RuleField, RuleWidget
+from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin, RuleWidget
 from biwak.test_utils import person
 
 
-class Form(forms.Form):
+class Form(RuleFormMixin, forms.Form):
     rule = RuleField(label="Repeat")
 
 
 class Required(forms.Form):
     rule = RuleField(label="Asked", allow_empty=False, default_frequency="weekly")
+
+
+INITIAL = {"rule": "FREQ=MONTHLY;BYMONTHDAY=1,15"}
 
 
 def post(**data):
@@ -42,16 +45,27 @@ class FieldTest(SimpleTestCase):
         )
 
     def test_keeping_unless_replaced(self):
-        form = Form(post(keep="1"))
+        form = Form(post(keep="1"), initial=INITIAL)
         self.assertTrue(form.is_valid())
         self.assertIs(form.cleaned_data["rule"], KEEP)
         # The rest is ignored while it's kept
-        form = Form(post(keep="1", frequency="daily", interval="1"))
+        form = Form(post(keep="1", frequency="daily", interval="1"), initial=INITIAL)
         self.assertTrue(form.is_valid())
         self.assertIs(form.cleaned_data["rule"], KEEP)
-        form = Form(post(keep="1", replace="1", frequency="daily", interval="1"))
+        form = Form(
+            post(keep="1", replace="1", frequency="daily", interval="1"),
+            initial=INITIAL,
+        )
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["rule"], "FREQ=DAILY")
+
+    def test_keeping_needs_a_stored_rule(self):
+        form = Form(post(keep="1"))
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["rule"], "")
+        form = Required(post(keep="1"))
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.errors["rule"], ["Choose how often it repeats."])
 
     def test_a_bound_form_shows_what_was_posted(self):
         form = Form(
