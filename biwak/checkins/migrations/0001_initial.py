@@ -5,8 +5,6 @@ import django.utils.timezone
 from django.conf import settings
 from django.db import migrations, models
 
-import biwak.checkins.models
-
 
 class Migration(migrations.Migration):
     initial = True
@@ -37,7 +35,7 @@ class Migration(migrations.Migration):
                 (
                     "time_zone",
                     models.CharField(
-                        default=biwak.checkins.models.default_time_zone,
+                        default="Europe/Zurich",  # default_time_zone() is gone (0006)
                         max_length=64,
                         verbose_name="time zone",
                     ),

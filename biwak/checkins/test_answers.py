@@ -454,7 +454,7 @@ class AuditTest(AnswerTestCase):
     def test_audit_log(self):
         LoggedAction.objects.all().delete()
         ops.update_question(
-            self.item, actor=self.ada, title="Renamed", time_zone="Asia/Tokyo"
+            self.item, actor=self.ada, title="Renamed", time_of_day=dt.time(10)
         )
         ops.answer(self.item, user=self.ada, content="Fine")
         ops.set_mail_mode(self.item, user=self.bob, mode=Mode.EACH)

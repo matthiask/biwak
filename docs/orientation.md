@@ -53,7 +53,7 @@ lists, messages, docs and files, check-ins, members.
   Clients and externals can't remove anybody, themselves included: to
   hear less about a project, change its notifications instead (see
   [Notifications](notifications.md)). "Add someone" and other long lists of choices
-  (the person filter of the activity, a check-in's time zone) have a
+  (the person filter of the activity) have a
   search field: type parts of the name, the organization or the address,
   in any order, then choose with the arrow keys and Enter or a click.
 - Archived projects are out of the way; the projects page has an

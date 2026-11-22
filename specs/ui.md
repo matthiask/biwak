@@ -101,8 +101,8 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 
 - **Long selects get a search field** (2026-11-21, from Workbench's):
   `data-combobox` (`ComboboxSelect`, `frontend/combobox.js`): "Add
-  someone" (also finding the address), the feed's person filter, a
-  check-in's time zone; a new long select gets it too. Options say who
+  someone" (also finding the address), the feed's person filter; a
+  new long select gets it too. Options say who
   someone is ("Ada Example · Example Client Ltd", "staff" for staff
   without an organization). Without JavaScript the plain select. Choosing
   several people (assignees, subscribers, whom to notify) is the people

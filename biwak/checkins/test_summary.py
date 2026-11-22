@@ -2,6 +2,7 @@ import datetime as dt
 
 from django.core import mail
 from django.db import connection
+from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
@@ -218,10 +219,9 @@ class SummaryTest(CheckinTestCase):
         self.assertIn(self.ada.email, recipients)
         self.assertNotIn(self.cleo.email, recipients)
 
-    def test_the_morning_is_in_the_questions_time_zone(self):
-        tokyo = self.question(
-            "Tokyo", time_zone="Asia/Tokyo", now=at("2027-03-19 12:00")
-        )
+    @override_settings(TIME_ZONE="Asia/Tokyo")
+    def test_the_morning_is_in_the_installations_time_zone(self):
+        tokyo = self.question("Tokyo", now=at("2027-03-19 12:00"))
         utc = dt.UTC
         # Monday 09:00 Tokyo is 00:00 UTC; Tuesday 07:00 Tokyo is Monday 22:00 UTC
         self.run_at("2027-03-22 00:00", utc)

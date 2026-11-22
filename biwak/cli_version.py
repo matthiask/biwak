@@ -12,8 +12,9 @@ from django.utils.translation import gettext as _
 # Raise this when the API changes in ways older CLIs can't handle
 # (0.20.0: docs without locks, specs/collaboration.md; older CLIs take a
 # lock that isn't there anymore and fail; 0.30.0: links on projects only,
-# the links list has no ``item_id`` anymore, specs/feed.md)
-MINIMUM = (0, 30, 0)
+# the links list has no ``item_id`` anymore, specs/feed.md; 0.46.0: check-in
+# questions have no ``time_zone`` anymore, specs/checkins.md)
+MINIMUM = (0, 46, 0)
 INSTALL = "git+https://github.com/matthiask/biwak#subdirectory=cli"
 _PROJECT = tomllib.loads((settings.BASE_DIR / "cli" / "pyproject.toml").read_text())[
     "project"

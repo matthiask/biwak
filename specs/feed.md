@@ -122,7 +122,7 @@ item; every item's page links to it in its "More" menu, for staff
   group, start and due dates, completing and reopening and the assignees
   of to-dos; descriptions of lists, content of messages and docs; the
   content of check-in answers, and the schedule, first date, time of day,
-  time zone, pausing and people asked of questions. Texts as a line diff
+  pausing and people asked of questions. Texts as a line diff
   (`difflib`) with one line of context. Positions and timestamps are
   ignored.
 - **Staff only** (decided 2026-11-20; 403 for clients, 404 for what they

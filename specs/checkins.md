@@ -9,14 +9,15 @@ less for client projects.
 time arithmetic, `operations.py` asking, summaries and answering,
 `mails.py`).
 
-**Open (decided 2026-11-22):** questions lose their own time zone; the
-installation's (`TIME_ZONE`) is the only one, as for quiet hours
-(`quiet-hours.md`): no `time_zone` field, form field, API field or CLI
-`--zone`; asking, occurrences and summaries in the installation's time
-zone; a migration drops the field (no users yet). The mentions of "the
-question's time zone" below then mean the installation's.
-
 ## Decided
+
+- **One time zone** (decided 2026-11-22, built the same day): the
+  installation's (`TIME_ZONE`), as for quiet hours (`quiet-hours.md`).
+  Questions have no time zone of their own: no field, form field, API
+  field or CLI `--zone` (migration `0006` dropped it, no users yet; CLIs
+  before 0.46.0 are refused). Asking, occurrences and summaries are in
+  the installation's time zone; `schedule.py` still takes a zone,
+  called with `schedule.time_zone()`.
 
 - **No reminders** for missed check-ins (2026-11-20): the question mail
   is the only one asking; who hasn't answered shows on the question's
@@ -67,11 +68,11 @@ question's time zone" below then mean the installation's.
 - **Kind `question`** (no parent), switchable, not commentable:
   `Question(Detail)`, the question as the item's title, `rule` (an RRULE,
   `biwak/schedules.py`), `starts_on` (the first date the rule counts
-  from, also the phase of "every two weeks"), `time_of_day`, `time_zone`,
+  from, also the phase of "every two weeks"), `time_of_day`,
   `people` (who is asked), `paused_at`, `next_at` (stored, recomputed
   when one of them changes and after asking; empty while paused).
 - **`Occurrence(question, date, asked_at, asked, summarized_at)`:** one
-  per scheduled date in the question's time zone (unique: editing the
+  per scheduled date in the installation's time zone (unique: editing the
   schedule on the day never asks a date twice); `asked` is whom it was
   asked, so who is missing is judged against them.
 - **Kind `answer`** (parent: its question), commentable:
@@ -88,8 +89,8 @@ after the commit). A mail which can't be sent is logged.
 
 Traps the tests cover (`schedule.py`):
 
-- **Wall-clock time:** 09:00 stays 09:00 in the question's zone across
-  daylight saving changes. A time which doesn't exist (02:30 when clocks
+- **Wall-clock time:** 09:00 stays 09:00 in the installation's zone
+  across daylight saving changes. A time which doesn't exist (02:30 when clocks
   go forward) is asked an hour later; one which happens twice, the first
   time. An occurrence's date is the rule's date, not the date of the
   moment it's asked (a gap just before midnight asks at 00:30 for the day
@@ -104,8 +105,7 @@ Traps the tests cover (`schedule.py`):
   --project ID`).
 - **Editing the schedule** (the rule widget, `rule-widget.md`) counts
   from now: today's time only if still ahead, never a date already
-  asked. Changing the time zone shortly before the question is asked can
-  skip that day (accepted, 2026-11-20).
+  asked.
 - **A first date that doesn't match the rule:** the first date the rule
   gives on or after it; "every two weeks" counts its phase from the
   first date's week (fine as it is, 2026-11-20).
@@ -115,7 +115,7 @@ Traps the tests cover (`schedule.py`):
 ## Summaries and replies
 
 - **The summary:** at 07:00 on the day after the occurrence's date in
-  the question's time zone, or the day after it was asked when that was
+  the installation's time zone, or the day after it was asked when that was
   later (after downtime), to subscribers in `summary` mode who see the
   question; none for an occurrence without answers; later answers
   aren't sent.

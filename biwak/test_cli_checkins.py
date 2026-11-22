@@ -34,7 +34,7 @@ class CheckinCLITest(test_cli.CLITest):
 
     def test_checkins(self):
         output = self.biwak("checkins", self.project.pk).output
-        for text in ["How are you?", "every Monday, 09:00 Europe/Zurich", "[clients]"]:
+        for text in ["How are you?", "every Monday, 09:00", "[clients]"]:
             self.assertIn(text, output)
         data = json.loads(self.biwak("checkins", self.project.pk, "--json").stdout)
         self.assertEqual(data[0]["id"], self.item.pk)
@@ -51,7 +51,6 @@ class CheckinCLITest(test_cli.CLITest):
         for text in [
             "How are you?",
             "Asked: every Monday, 09:00",
-            "Time zone: Europe/Zurich",
             "Busy with the **launch**",
             "Ada Example:",
             "Hasn't answered yet: Bob",
@@ -102,13 +101,12 @@ class CheckinCLITest(test_cli.CLITest):
         result = self.biwak(
             "checkin", "add", self.project.pk, "What did you read?",
             "--schedule", "weekly", "--time", "08:30", "--from", "2027-03-26",
-            "--people", self.ada.pk, "--zone", "Asia/Tokyo",
-            "--json",
+            "--people", self.ada.pk, "--json",
         )  # fmt: skip
         data = json.loads(result.stdout)
         question = Question.objects.get(item=data["id"])
         self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR")
-        self.assertEqual(question.time_zone, "Asia/Tokyo")
+        self.assertEqual(question.time_of_day, dt.time(8, 30))
         self.assertFalse(data["visible_to_clients"])
         self.assertIn("Added #", self.biwak(
             "checkin", "add", self.project.pk, "Daily", "--schedule", "FREQ=DAILY",

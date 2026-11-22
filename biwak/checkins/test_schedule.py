@@ -3,7 +3,7 @@ from importlib import import_module
 from zoneinfo import ZoneInfo
 
 from django.apps import apps
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from biwak.activity.models import Event
 from biwak.checkins import schedule
@@ -301,7 +301,6 @@ class NextFireTest(SimpleTestCase):
             rule = "FREQ=DAILY"
             starts_on = dt.date(2027, 1, 1)
             time_of_day = dt.time(9)
-            time_zone = "Europe/Zurich"
 
         first = schedule.fire_at(dt.date(2027, 3, 1), dt.time(9), "Europe/Zurich")
         now = schedule.fire_at(dt.date(2027, 3, 5), dt.time(9, 30), "Europe/Zurich")
@@ -318,6 +317,7 @@ class NextFireTest(SimpleTestCase):
             (dt.date(2027, 3, 1), first),
         )
 
+    @override_settings(TIME_ZONE="America/Nuuk")
     def test_the_date_of_a_time_in_a_gap_before_midnight_is_the_rules(self):
         """America/Nuuk goes from Saturday 27 March 2027 23:00 (-02) to
         Sunday 00:00 (-01): Saturday's 23:30 is Sunday 00:30"""
@@ -326,10 +326,10 @@ class NextFireTest(SimpleTestCase):
             rule = "FREQ=DAILY"
             starts_on = dt.date(2027, 1, 1)
             time_of_day = dt.time(23, 30)
-            time_zone = "America/Nuuk"
 
-        saturday = schedule.fire_at(dt.date(2027, 3, 27), Q.time_of_day, Q.time_zone)
-        self.assertEqual(schedule.local_date(saturday, Q.time_zone).day, 28)
+        nuuk = "America/Nuuk"
+        saturday = schedule.fire_at(dt.date(2027, 3, 27), Q.time_of_day, nuuk)
+        self.assertEqual(schedule.local_date(saturday, nuuk).day, 28)
         self.assertEqual(
             schedule.latest_due(Q, first=saturday, now=saturday),
             (dt.date(2027, 3, 27), saturday),

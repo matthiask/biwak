@@ -11,8 +11,8 @@ check-in":
 
 - **Question**: the text people see.
 - **Asked**: how often (daily, weekly, monthly, yearly, with an
-  interval and weekdays), **First asked on**, **Time of day** and
-  **Time zone**. 09:00 stays 09:00 on the wall clock in that zone
+  interval and weekdays), **First asked on** and **Time of day**, in
+  the installation's time zone. 09:00 stays 09:00 on the wall clock
   through the changes to and from daylight saving time.
 - **Visible to clients**: only then can clients be asked and see the
   answers ([Clients](clients.md)).

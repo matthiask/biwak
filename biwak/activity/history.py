@@ -69,7 +69,6 @@ def _fields(item):
             "rule": (gettext("Schedule"), SCHEDULE),
             "starts_on": (gettext("First asked on"), DATE),
             "time_of_day": (gettext("Time of day"), TIME),
-            "time_zone": (gettext("Time zone"), VALUE),
             "paused_at": (gettext("Paused"), PAUSED),
         },
     }
