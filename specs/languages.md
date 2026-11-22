@@ -46,6 +46,7 @@ a third language is a catalog, nothing else.
 | trash | Papierkorb |
 | archive, archived | archivieren, archiviert |
 | public link | öffentlicher Link |
+| template | Vorlage |
 | command palette | Befehlspalette |
 | settings | Einstellungen |
 | sign in, sign out | anmelden, abmelden |

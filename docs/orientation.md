@@ -60,6 +60,36 @@ lists, messages, docs and files, check-ins, members.
   in any order, then choose with the arrow keys and Enter or a click.
 - Archived projects are out of the way; the projects page has an
   archive.
+
+## Templates
+
+New projects can start from a template, a project kept for that
+(staff only; clients and externals never see templates).
+
+- **Templates** on the projects page (and "Go to templates" in the
+  command palette) lists them as cards with what each holds. "New
+  template" adds one; you build and change it like any project: lists
+  with groups and to-dos, messages, folders, docs and files. Templates
+  have no members, all staff see them.
+- **Nothing in a template tells anybody:** no notifications, no mails,
+  no mentions. Templates stay out of the projects page, Home, the
+  activity across projects, your to-dos and the calendar link; search
+  finds them with "Include templates" or inside a template.
+- **"New project from this…"** on a template's card or page (or "From
+  a template" in the new project form) creates a project with a copy of
+  everything at its top level: the lists with their groups and open
+  to-dos (with notes and checklists), the messages (pinned ones stay
+  pinned), the folders with their docs and files. Not comments or
+  history. What's visible to clients in the template is visible in the
+  new project; the form says which. Assignees who don't see the new
+  project are left out. Changing the template later changes no project
+  made from it.
+- **A list from a template:** "New list" offers "From a template…":
+  pick a list of any template, then give it a title (fill in what the
+  template leaves open, like a name) and choose what happens to its due
+  dates, as when copying a list (see [To-dos](todos.md)). A template
+  holding only lists is a library of lists.
+- Templates are archived like projects.
 - **All projects** (admins, linked below the cards, in your menu and in
   the command palette) lists every project in a table: whether it's
   limited or archived, how many active staff members it has, its
@@ -101,8 +131,8 @@ The search field in the bar opens the command palette (<kbd>Ctrl</kbd>+<kbd>K</k
 or <kbd>/</kbd>): type to jump to a project, list, message, doc, file,
 check-in or person, or to run an action of the page. "Search for ..." at
 the end opens the search page, which finds words in titles and texts,
-comments and answers. Filters: project, kind, only mine, and "Include
-archived". You only find what you may see. See [Keyboard](keyboard.md).
+comments and answers. Filters: project, kind, only mine, "Include
+archived" and, for staff, "Include templates". You only find what you may see. See [Keyboard](keyboard.md).
 
 ## Writing texts
 

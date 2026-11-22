@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 18:15+0100\n"
+"POT-Creation-Date: 2026-11-22 19:37+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -787,34 +787,35 @@ msgid "%(name)s (inactive)"
 msgstr "%(name)s (inaktiv)"
 
 #: biwak/activity/feed.py biwak/items/across.py biwak/items/views.py
+#: biwak/projects/template_views.py
 #, python-format
 msgid "%(count)d to-do"
 msgid_plural "%(count)d to-dos"
 msgstr[0] "%(count)d To-do"
 msgstr[1] "%(count)d To-dos"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/projects/template_views.py
 #, python-format
 msgid "%(count)d list"
 msgid_plural "%(count)d lists"
 msgstr[0] "%(count)d Liste"
 msgstr[1] "%(count)d Listen"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/projects/template_views.py
 #, python-format
 msgid "%(count)d message"
 msgid_plural "%(count)d messages"
 msgstr[0] "%(count)d Mitteilung"
 msgstr[1] "%(count)d Mitteilungen"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/projects/template_views.py
 #, python-format
 msgid "%(count)d folder"
 msgid_plural "%(count)d folders"
 msgstr[0] "%(count)d Ordner"
 msgstr[1] "%(count)d Ordner"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/projects/template_views.py
 #, python-format
 msgid "%(count)d doc"
 msgid_plural "%(count)d docs"
@@ -864,8 +865,8 @@ msgstr "Projekt"
 msgid "Folder"
 msgstr "Ordner"
 
-#: biwak/activity/history.py biwak/templates/items/todolist.html
-#: biwak/templates/mails/_item.txt
+#: biwak/activity/history.py biwak/projects/template_views.py
+#: biwak/templates/items/todolist.html biwak/templates/mails/_item.txt
 msgid "List"
 msgstr "Liste"
 
@@ -1397,6 +1398,7 @@ msgstr[0] "%(people)s wird benachrichtigt."
 msgstr[1] "%(people)s werden benachrichtigt."
 
 #: biwak/activity/notify.py biwak/activity/timeline.py biwak/items/across.py
+#: biwak/projects/template_views.py
 msgid "and"
 msgstr "und"
 
@@ -2037,7 +2039,8 @@ msgid "Category"
 msgstr "Kategorie"
 
 #: biwak/files/board.py biwak/files/library.py biwak/forwarding/views.py
-#: biwak/organizations/views.py biwak/projects/views.py
+#: biwak/organizations/views.py biwak/projects/template_views.py
+#: biwak/projects/views.py
 msgid "None"
 msgstr "Keine"
 
@@ -2264,7 +2267,7 @@ msgid_plural "%(n)s files"
 msgstr[0] "%(n)s Datei"
 msgstr[1] "%(n)s Dateien"
 
-#: biwak/files/templatetags/folders.py
+#: biwak/files/templatetags/folders.py biwak/templates/projects/templates.html
 msgid "Empty"
 msgstr "Leer"
 
@@ -3158,6 +3161,10 @@ msgstr "Es ist schon in diesem Projekt."
 msgid "Nothing moves into or out of an archived project."
 msgstr "In ein archiviertes Projekt und aus einem heraus wird nichts verschoben."
 
+#: biwak/items/operations.py
+msgid "Nothing moves into or out of a template."
+msgstr "In eine Vorlage und aus einer heraus wird nichts verschoben."
+
 #: biwak/items/views.py biwak/templates/forms/rule_widget.html
 msgid "Repeat"
 msgstr "Wiederholen"
@@ -3992,6 +3999,10 @@ msgid "New project"
 msgstr "Neues Projekt"
 
 #: biwak/palette/actions.py
+msgid "Go to templates"
+msgstr "Zu den Vorlagen"
+
+#: biwak/palette/actions.py
 msgid "Go to organizations"
 msgstr "Zu den Organisationen"
 
@@ -4000,10 +4011,19 @@ msgstr "Zu den Organisationen"
 msgid "Public links"
 msgstr "Öffentliche Links"
 
+#: biwak/palette/actions.py biwak/templates/projects/project_detail.html
+#: biwak/templates/projects/templates.html
+msgid "New project from this…"
+msgstr "Neues Projekt daraus…"
+
 #: biwak/palette/actions.py biwak/projects/views.py
 #: biwak/templates/projects/project_detail.html
 msgid "New list"
 msgstr "Neue Liste"
+
+#: biwak/palette/actions.py
+msgid "New list from a template…"
+msgstr "Neue Liste aus einer Vorlage…"
 
 #: biwak/palette/actions.py biwak/templates/files/board.html
 #: biwak/templates/files/message_form.html
@@ -4063,7 +4083,7 @@ msgid "Unarchive"
 msgstr "Archivierung aufheben"
 
 #: biwak/palette/actions.py biwak/templates/items/_archive_button.html
-#: biwak/templates/projects/_page.html
+#: biwak/templates/projects/_page.html biwak/templates/projects/templates.html
 msgid "Archive"
 msgstr "Archivieren"
 
@@ -4163,9 +4183,19 @@ msgstr "Letzte Aktivität zuerst"
 msgid "Newest posts first"
 msgstr "Neueste Mitteilungen zuerst"
 
+#: biwak/palette/actions.py biwak/projects/template_views.py
+#: biwak/templates/projects/templates.html
+msgid "New template"
+msgstr "Neue Vorlage"
+
 #: biwak/palette/apps.py
 msgid "command palette"
 msgstr "Befehlspalette"
+
+#: biwak/palette/queries.py biwak/templates/projects/project_detail.html
+#: biwak/templates/search/search.html
+msgid "Template"
+msgstr "Vorlage"
 
 #: biwak/palette/queries.py biwak/templates/items/_due_badge.html
 #, python-format
@@ -4240,6 +4270,14 @@ msgstr "Nur Admins sehen alle Projekte."
 msgid "Only staff can create projects."
 msgstr "Nur Mitarbeitende können Projekte erstellen."
 
+#: biwak/projects/api.py biwak/projects/operations.py
+msgid "Templates have no members."
+msgstr "Vorlagen haben keine Mitglieder."
+
+#: biwak/projects/api.py
+msgid "Only active people can be added."
+msgstr "Nur aktive Personen können hinzugefügt werden."
+
 #: biwak/projects/api.py
 msgid "Only staff can join projects."
 msgstr "Nur Mitarbeitende können Projekten beitreten."
@@ -4312,6 +4350,7 @@ msgstr "Team"
 #: biwak/templates/bookmarks/bookmarks.html biwak/templates/projects/_page.html
 #: biwak/templates/projects/home.html
 #: biwak/templates/projects/project_list.html
+#: biwak/templates/projects/templates.html
 msgid "Projects"
 msgstr "Projekte"
 
@@ -4421,6 +4460,10 @@ msgid "order of messages"
 msgstr "Reihenfolge der Mitteilungen"
 
 #: biwak/projects/models.py
+msgid "template"
+msgstr "Vorlage"
+
+#: biwak/projects/models.py
 msgid "archived at"
 msgstr "archiviert am"
 
@@ -4462,9 +4505,57 @@ msgstr "%(actor)s hat dich zu %(project)s eingeladen"
 msgid "%(actor)s invited you to Biwak"
 msgstr "%(actor)s hat dich zu Biwak eingeladen"
 
+#: biwak/projects/operations.py
+msgid "Templates are for all staff."
+msgstr "Vorlagen sind für das ganze Team."
+
 #: biwak/projects/overview.py
 msgid "A–Z"
 msgstr "A–Z"
+
+#: biwak/projects/template_views.py
+#, python-format
+msgid "%(count)d file"
+msgid_plural "%(count)d files"
+msgstr[0] "%(count)d Datei"
+msgstr[1] "%(count)d Dateien"
+
+#: biwak/projects/template_views.py
+msgid "Projects made from it get its description, to change."
+msgstr "Projekte daraus übernehmen die Beschreibung, zum Anpassen."
+
+#: biwak/projects/template_views.py
+msgid "Add template"
+msgstr "Vorlage hinzufügen"
+
+#: biwak/projects/template_views.py
+#, python-format
+msgid "Visible to clients: %(titles)s"
+msgstr "Für Kund:innen sichtbar: %(titles)s"
+
+#: biwak/projects/template_views.py
+msgid "Fill in what the template leaves open, like a name."
+msgstr "Ergänze, was die Vorlage offen lässt, zum Beispiel einen Namen."
+
+#: biwak/projects/template_views.py
+msgid "New list from a template"
+msgstr "Neue Liste aus einer Vorlage"
+
+#: biwak/projects/template_views.py
+#, python-format
+msgid "From %(list)s."
+msgstr "Aus %(list)s."
+
+#: biwak/projects/template_views.py biwak/projects/views.py
+msgid "Add list"
+msgstr "Liste hinzufügen"
+
+#: biwak/projects/template_views.py biwak/projects/views.py
+#: biwak/templates/accounts/cli_login_redirect.html
+#: biwak/templates/socialaccount/login.html
+#: biwak/templates/socialaccount/login_redirect.html
+msgid "Continue"
+msgstr "Weiter"
 
 #: biwak/projects/views.py
 msgid "Organizations involved"
@@ -4473,6 +4564,14 @@ msgstr "Beteiligte Organisationen"
 #: biwak/projects/views.py
 msgid "Next, you pick their people."
 msgstr "Danach wählst du ihre Personen aus."
+
+#: biwak/projects/views.py
+msgid "From a template"
+msgstr "Aus einer Vorlage"
+
+#: biwak/projects/views.py
+msgid "Its lists, messages, folders, docs and files are copied into the new project."
+msgstr "Die Listen, Mitteilungen, Ordner, Dokumente und Dateien der Vorlage werden ins neue Projekt kopiert."
 
 #: biwak/projects/views.py
 #, python-format
@@ -4487,11 +4586,10 @@ msgstr "Du bist sowieso Mitglied."
 msgid "By the address's domain"
 msgstr "Nach der Domain der Adresse"
 
-#: biwak/projects/views.py biwak/templates/accounts/cli_login_redirect.html
-#: biwak/templates/socialaccount/login.html
-#: biwak/templates/socialaccount/login_redirect.html
-msgid "Continue"
-msgstr "Weiter"
+#: biwak/projects/views.py
+#, python-format
+msgid "New project from %(template)s"
+msgstr "Neues Projekt aus %(template)s"
 
 #: biwak/projects/views.py
 msgid "Add project"
@@ -4579,12 +4677,12 @@ msgid "Open to-dos in it assigned to %(name)s lose %(name)s as assignee."
 msgstr "Offene To-dos darin, die %(name)s zugewiesen sind, verlieren %(name)s als zugewiesene Person."
 
 #: biwak/projects/views.py biwak/templates/projects/project_detail.html
+msgid "Edit the template"
+msgstr "Vorlage bearbeiten"
+
+#: biwak/projects/views.py biwak/templates/projects/project_detail.html
 msgid "Edit the project"
 msgstr "Projekt bearbeiten"
-
-#: biwak/projects/views.py
-msgid "Add list"
-msgstr "Liste hinzufügen"
 
 #: biwak/public_links/api.py
 msgid "Only staff share items publicly."
@@ -4918,6 +5016,10 @@ msgstr "Suche"
 #: biwak/search/views.py
 msgid "Only mine"
 msgstr "Nur meine"
+
+#: biwak/search/views.py
+msgid "Include templates"
+msgstr "Mit Vorlagen"
 
 #: biwak/settings.py
 msgid "German"
@@ -5518,6 +5620,16 @@ msgstr "Unterhaltung zu"
 #: biwak/templates/activity/_entries.html biwak/templates/activity/_events.html
 msgid "Nothing yet."
 msgstr "Noch nichts."
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "created %(project)s from the template %(template)s"
+msgstr "hat %(project)s aus der Vorlage %(template)s erstellt"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "created %(project)s from a template"
+msgstr "hat %(project)s aus einer Vorlage erstellt"
 
 #: biwak/templates/activity/_event.html
 #, python-format
@@ -7005,6 +7117,10 @@ msgstr "Anwenden"
 msgid "Active projects"
 msgstr "Aktive Projekte"
 
+#: biwak/templates/projects/_page.html biwak/templates/projects/templates.html
+msgid "Templates"
+msgstr "Vorlagen"
+
 #: biwak/templates/projects/_page.html
 #, python-format
 msgid "Archived %(name)s."
@@ -7146,6 +7262,10 @@ msgstr "Bleibt die Organisation leer, gilt die der Domain der Adresse, falls es 
 msgid "Add another"
 msgstr "Weitere hinzufügen"
 
+#: biwak/templates/projects/list_new.html
+msgid "From a template…"
+msgstr "Aus einer Vorlage…"
+
 #: biwak/templates/projects/people.html
 msgid "Invite by email"
 msgstr "Per Mail einladen"
@@ -7181,8 +7301,20 @@ msgid "Bring back from the archive"
 msgstr "Aus dem Archiv zurückholen"
 
 #: biwak/templates/projects/project_detail.html
+msgid "Archive the template"
+msgstr "Vorlage archivieren"
+
+#: biwak/templates/projects/project_detail.html
 msgid "Archive the project"
 msgstr "Projekt archivieren"
+
+#: biwak/templates/projects/project_detail.html
+msgid "A template: new projects start as a copy of what's in it, client visibility included. Nothing in it tells anybody."
+msgstr "Eine Vorlage: Neue Projekte beginnen als Kopie davon, samt Sichtbarkeit für Kund:innen. Was darin geschieht, meldet niemandem etwas."
+
+#: biwak/templates/projects/project_detail.html
+msgid "All templates"
+msgstr "Alle Vorlagen"
 
 #: biwak/templates/projects/project_detail.html
 #, python-format
@@ -7263,6 +7395,26 @@ msgstr "Personen ohne Konto einladen"
 #: biwak/templates/projects/project_new.html
 msgid "As clients. Without an organization picked, the one of the address's domain."
 msgstr "Als Kund:innen. Ohne gewählte Organisation die der Domain der Adresse."
+
+#: biwak/templates/projects/templates.html
+msgid "Archived templates"
+msgstr "Archivierte Vorlagen"
+
+#: biwak/templates/projects/templates.html
+msgid "New projects start as a copy of a template. Nothing in a template tells anybody."
+msgstr "Neue Projekte beginnen als Kopie einer Vorlage. Was in einer Vorlage geschieht, meldet niemandem etwas."
+
+#: biwak/templates/projects/templates.html
+msgid "Active templates"
+msgstr "Aktive Vorlagen"
+
+#: biwak/templates/projects/templates.html
+msgid "No archived templates."
+msgstr "Keine archivierten Vorlagen."
+
+#: biwak/templates/projects/templates.html
+msgid "No templates yet."
+msgstr "Noch keine Vorlagen."
 
 #: biwak/templates/projects/trash.html
 #, python-format
@@ -7520,6 +7672,3 @@ msgstr "am %(date)s"
 #, python-format
 #~ msgid "by %(name)s on %(date)s"
 #~ msgstr "von %(name)s am %(date)s"
-
-#~ msgid "All people"
-#~ msgstr "Alle Personen"
