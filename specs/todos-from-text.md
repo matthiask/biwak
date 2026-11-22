@@ -5,7 +5,14 @@ list adds its items as to-dos. Asked by the user 2026-11-22, after
 Basecamp's version, which makes a new list per heading: here the text
 goes into **one existing list**, and **headings become groups**.
 
-**Status:** open.
+**Status:** built 2026-11-22 (branch `todos-from-text`). The parser
+`biwak/items/from_text.py`, the operation `add_from_text()` in
+`biwak/items/operations.py`, the modal and preview
+`biwak/items/from_text_views.py` (`items/from_text_form.html`,
+`items/_from_text_preview.html`), dropping `frontend/from-text.js`
+(`items/_drop_text.html`), the event `added_todos`, the API and
+`biwak todo add-from-text`. Decisions proposed while building, for the
+user to confirm, are under "Proposed while building".
 
 ## Where
 
@@ -85,9 +92,46 @@ disabled and the preview says why.
 - `POST /api/v1/lists/{id}/todos/from-text/` with `text` and `preview`
   (true answers the plan without adding: groups new or existing, to-dos,
   what's left out); the same parser and operation.
-- `biwak todos add-from-text LIST [FILE]` (stdin without a file),
+- `biwak todo add-from-text LIST [FILE]` (stdin without a file; `todo`,
+  not `todos`: `biwak todos LIST` takes the list's ID already),
   `--preview`, `--json`. `[clients]`. Agents get a simple way to turn a
   plan into to-dos.
+
+## Proposed while building (to confirm)
+
+- **The event** is a new action `added_todos` on the list ("Bob added 12
+  to-dos to Launch", mails "Bob added 12 to-dos."), not `added`, which
+  is the project's "added a person" and would merge with it in the feed.
+- **Only active lists** in projects that aren't archived: archived ones
+  aren't offered (menu, palette, drops, the combobox) and the operation
+  refuses them ("No to-dos can be added to this list.").
+- **Groups:** a heading's title is cut at 200 characters (the field);
+  an empty heading is ignored (the items stay where they were); a heading
+  without items still makes its group; the same heading twice is one
+  group. Two existing groups of the same name: the first.
+- **Plain text mode:** lines of code blocks count as lines too; a
+  horizontal rule is neither a to-do nor "left out". With list items,
+  code blocks, quotes and tables at the top level count as "paragraphs
+  left out".
+- **Titles:** a title over 500 characters is cut with "…". An item whose
+  first line isn't a paragraph (`- ```…`) takes the line as written.
+  The rest of the first paragraph (lines after the first) goes into the
+  notes.
+- **Wording:** "Paste a text or choose a file." (empty), "This text has
+  no to-dos.", "This text is larger than 200 KB; up to 200 KB can be
+  added at once." (and "This file …"), "This file can’t be read as text
+  (UTF-8).", for clients "Only the list’s creator can add groups. Remove
+  these headings or use the names of existing groups: …", the badges
+  "new" and "existing", the button "Add to-dos" while there's nothing.
+  German: "Aus Text hinzufügen…", "Listenpunkte", "bestehend".
+- **Without JavaScript** the button is always enabled; posting shows the
+  problem and the preview. The file input posts the file, its text added
+  after the typed text; with JavaScript the chosen file is read into the
+  text field (after what's there) and not uploaded. Files can also be
+  dropped onto the modal's form.
+- **The API** answers `200` for a preview (with `problem`), `201` when
+  added, `400` with the problem otherwise; groups carry `id` (existing,
+  or created), `new`, and the to-dos their IDs once added.
 
 ## Done when
 

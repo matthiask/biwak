@@ -52,7 +52,7 @@ confirm: `decisions-to-confirm.md`.
 | `quiet-hours.md` | built | quiet hours for mails, out of office (one time zone) |
 | `start-dates.md` | built | start dates on to-dos, hidden from current work until they start |
 | `lists-across-projects.md` | built | copying lists, moving top-level items to another project |
-| `todos-from-text.md` | open | dropping or pasting a Markdown list onto a to-do list: headings become groups |
+| `todos-from-text.md` | built; decisions to confirm in its spec | dropping or pasting a Markdown list onto a to-do list: headings become groups |
 | `templates.md` | open | projects and lists started from templates kept in the app |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
 
