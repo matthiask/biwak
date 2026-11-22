@@ -68,6 +68,19 @@ class TodoViewTest(ViewModeBase):
             self.assertContains(page, f'data-edit-url="{self.edit}"')
             self.assertContains(page, f'href="{self.edit}"')
 
+    def test_the_page_says_when_and_by_whom_it_was_created(self):
+        type(self.todo).objects.filter(pk=self.todo.pk).update(
+            created_at="2026-12-03T10:00:00+01:00"
+        )
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            html = self.client.get(self.url).content.decode()
+            fact = html[html.index("<dt>Created</dt>") :]
+            fact = re.sub(r"\s+", " ", fact[: fact.index("</dd>")])
+            self.assertIn("3 Dec 2026 by", fact)
+            self.assertIn(f'href="/people/{self.ada.pk}/"', fact)
+            self.assertIn("Ada", fact)
+
     def test_the_facts_and_the_notes_share_one_card(self):
         # Reactions and comments are below it, the sidebar beside it
         for user in [self.ada, self.cleo]:

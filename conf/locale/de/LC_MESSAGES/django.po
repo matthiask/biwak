@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:37+0100\n"
+"POT-Creation-Date: 2026-11-22 17:44+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -982,7 +982,7 @@ msgstr "Fortgesetzt"
 msgid "unknown"
 msgstr "unbekannt"
 
-#: biwak/activity/history.py
+#: biwak/activity/history.py biwak/templates/items/_todo_view.html
 msgid "Created"
 msgstr "Erstellt"
 
@@ -6608,6 +6608,11 @@ msgstr[0] "%(counter)s weiteres folgt."
 msgstr[1] "%(counter)s weitere folgen."
 
 #: biwak/templates/items/_todo_view.html
+#, python-format
+msgid "%(date)s by %(creator)s"
+msgstr "%(date)s von %(creator)s"
+
+#: biwak/templates/items/_todo_view.html
 msgid "Add notes…"
 msgstr "Notizen hinzufügen…"
 
@@ -7501,5 +7506,3 @@ msgstr "gerade eben"
 #, python-format
 msgid "%(time)s ago"
 msgstr "vor %(time)s"
-
-#, python-format

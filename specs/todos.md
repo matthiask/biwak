@@ -84,7 +84,8 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
 - **View mode** (decided 2026-11-21): the title as the heading, then one
   card with the facts (assigned to, due on, repeats: "Nobody", "No
   date", "Doesn't repeat" when empty; the overdue or "Today" badge next
-  to the date) and, below a divider, the notes ("Add notes…" when
+  to the date; last "Created 3 Dec 2026 by Ada", the person through
+  `{% person_page %}`, not editable, decided 2026-11-22) and, below a divider, the notes ("Add notes…" when
   empty; checklists tickable). Reactions and the timeline (`timeline.md`)
   below the card. Clicking the facts or the notes edits in place
   (`ui.md`, "Click to edit"; `/todos/<id>/edit/`).
