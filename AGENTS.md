@@ -50,7 +50,13 @@ them when a decision changes (dated: "decided 2026-11-20").
 - `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
   [--dry-run] [--archive]` imports a Basecamp 4 project
   (`specs/import-basecamp.md`); a second run updates, `--archive`
-  archives it in Basecamp afterwards. Always dry-run first.
+  archives it in Basecamp afterwards. Always dry-run first. Downloaded
+  files are cached in `~/.cache/biwak/basecamp/` (`XDG_CACHE_HOME`),
+  `--cache-dir DIR` elsewhere, `--no-cache` off; never cleaned up.
+  `fl manage-remote biwak-feinheit-app ~/projects/sites/biwak
+  "import_basecamp …"` (in the argocd repository) runs it locally
+  against production, so the cache survives pod restarts; the checkout
+  must match the deployed version.
 - The audit log (`biwak/audit/`) is a trigger on the main tables.
   Requests, API tokens and `fairy_tasks` set who changes things
   (`set_user_name()`). Tests reading the audit log delete its rows first.

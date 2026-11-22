@@ -3,7 +3,7 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21). Not built: `--lazy-files` (fetching
+**Status:** built (2026-11-21), the download cache 2026-11-22. Not built: `--lazy-files` (fetching
 old attachments when first opened), other people's bookmarks (the API
 only gives the token owner's).
 
@@ -16,7 +16,7 @@ the tests.
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
 [--project ID ...] [--templates] [--dry-run] [--since YYYY-MM-DD] [--full]
-[--include-disabled] [--user EMAIL] [--archive]`.
+[--include-disabled] [--user EMAIL] [--archive] [--cache-dir DIR | --no-cache]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
 
@@ -89,6 +89,31 @@ goes into internal containers, archived recordings skipped.
   gone (project and folder, or "a text in" the project) and its link
   in Basecamp. Known sizes skip the download; a text keeps "name (not
   imported: too large)" in its place. The run goes on.
+- **Download cache** (decided 2026-11-22): a run into a fresh or reset
+  database, or with `--full`, would download every file again. Downloads
+  (uploads and files in texts) are cached on disk, by default in
+  `$XDG_CACHE_HOME/biwak/basecamp/` (`~/.cache/biwak/basecamp/` without
+  it), `--cache-dir DIR` elsewhere, `--no-cache` neither reads nor writes
+  it. **The key is where the API redirects to**, the storage location
+  without its query (the signed, short-lived part): `FileCache` in
+  `client.py`, a file per location named by its SHA-256 (in a
+  subdirectory of its first two characters), nothing else stored. Not
+  the API URL: an upload's `download_url`
+  (`…/buckets/B/uploads/U/download/NAME`) stays the same when a new
+  version replaces the file (Basecamp keeps the upload's ID and URL), so
+  it would serve the old file; the storage location is a different one
+  per version (verified 2026-11-22 with an upload of two versions; files
+  in texts are `…/blobs/UUID/download/NAME`). So the API's request is
+  still made (and counts against the rate limit), only the storage
+  download is skipped. An answer without a redirect isn't cached.
+  Written to a temporary file in the same directory and renamed, so an
+  interrupted run leaves no half file; a failed download stores nothing;
+  never cleaned up by the importer. **Profile images aren't cached**:
+  `avatar_url` is the person's (`…/people/TOKEN/avatar`), the same
+  whatever the image; people with an image are never fetched again
+  anyway. The report counts files downloaded and from the cache ("Files:
+  3 downloaded, 12 from the cache"), and those answered without a
+  redirect. A dry run downloads nothing.
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
   subscribers (on later runs only for changed ones), so big accounts take
@@ -137,7 +162,11 @@ The projects: the active and archived ones from Basecamp's project list
 and sample projects skipped by the importer. Hours of runtime, memory
 mostly one downloaded file (up to 100 MB): one process per project (a
 shell loop over the IDs, so memory stays bounded and one failure doesn't
-stop the rest; a rerun skips what's done). In the argocd chart, later: a
+stop the rest; a rerun skips what's done). For now it runs locally
+against production (`fl manage-remote biwak-feinheit-app
+~/projects/sites/biwak "import_basecamp …"`, in the argocd repository),
+so the download cache survives pod restarts; the checkout must match the
+deployed version. In the argocd chart, later: a
 suspended CronJob `biwak-import` with a memory limit of about 2 GiB and a
 long `activeDeadlineSeconds`, started by hand (`kubectl create job
 --from=cronjob/biwak-import import-1`); the cronjob template supports

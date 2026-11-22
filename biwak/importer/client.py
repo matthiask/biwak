@@ -6,16 +6,25 @@ Basecamp answers 429 with ``Retry-After``: wait as told. Otherwise at most
 The importer uses ``get()``, ``paginate()`` and ``download()``, and
 ``archive_project()`` with ``--archive``; the tests give it a fake client
 with the same methods.
+
+Downloads go through a cache on disk (``FileCache``), keyed by where the
+API redirects to: an upload's download URL stays the same when a new
+version replaces its file, the storage location doesn't (verified
+2026-11-22).
 """
 
+import hashlib
 import json
+import os
 import re
+import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import deque
+from collections import Counter, deque
 from dataclasses import dataclass, field
+from pathlib import Path
 
 
 API = "https://3.basecampapi.com"
@@ -61,21 +70,72 @@ def urllib_transport(url, headers, method="GET"):
             return Response(exc.code, dict(exc.headers), exc.read())
 
 
+def default_cache_dir():
+    """``$XDG_CACHE_HOME/biwak/basecamp``, ``~/.cache`` without it"""
+    base = os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache"
+    return Path(base) / "biwak" / "basecamp"
+
+
+class FileCache:
+    """Downloaded files on disk, by the storage location they came from
+    (without the query, the signed short-lived part). Never cleaned up:
+    a location's bytes don't change. Written to a temporary file next to
+    the final one and renamed, so an interrupted write leaves nothing."""
+
+    def __init__(self, directory):
+        self.directory = Path(directory)
+
+    def _path(self, key):
+        digest = hashlib.sha256(key.encode()).hexdigest()
+        return self.directory / digest[:2] / digest
+
+    def get(self, key):
+        try:
+            return self._path(key).read_bytes()
+        except FileNotFoundError:
+            return None
+
+    def put(self, key, data):
+        path = self._path(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".tmp-")
+        try:
+            with os.fdopen(fd, "wb") as file:
+                file.write(data)
+            os.replace(tmp, path)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
+
+
+def storage_key(location):
+    """The storage location without its query string"""
+    parts = urllib.parse.urlsplit(location)
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
 class BasecampClient:
     def __init__(
         self,
         account,
         token,
         *,
+        cache=None,
         transport=urllib_transport,
         sleep=time.sleep,
         clock=time.monotonic,
     ):
+        """``cache``: a ``FileCache`` for downloads, or None"""
         self.account = account
         self.token = token
+        self.cache = cache
         self.transport = transport
         self.sleep = sleep
         self.clock = clock
+        # For the report: files "downloaded", "cached" (from the cache),
+        # "not redirected" (the API answered with the file itself: not
+        # cached, also counted as downloaded)
+        self.file_counts = Counter()
         self._sent = deque()
         # For progress: requests sent, and who to tell about a wait
         # (``on_wait(seconds, why)``)
@@ -154,18 +214,32 @@ class BasecampClient:
         if response.status not in {200, 204}:
             raise ApiError(f"{url}: status {response.status}")
 
-    def download(self, url, *, accept=None):
+    def download(self, url, *, accept=None, cache=True):
         """The file's bytes: the API redirects to a short-lived URL, which
-        doesn't get the token. ``accept`` is the ``Accept`` header."""
+        doesn't get the token. ``accept`` is the ``Accept`` header. With
+        ``cache`` (and a ``FileCache``), the redirect's storage location
+        is looked up first and stored after; profile images pass False
+        (their URL is the person's, counted nowhere)."""
         response = self._request(url, accept=accept)
+        key = None
         if response.status in {301, 302, 303, 307, 308}:
-            response = self._request(
-                _header(response, "Location"), auth=False, accept=accept
-            )
+            location = _header(response, "Location")
+            if cache and self.cache is not None:
+                key = storage_key(location)
+                if (data := self.cache.get(key)) is not None:
+                    self.file_counts["cached"] += 1
+                    return data
+            response = self._request(location, auth=False, accept=accept)
+        elif cache and response.status == 200:
+            self.file_counts["not redirected"] += 1
         if response.status == 404:
             raise NotFound(url)
         if response.status != 200:
             raise ApiError(f"{url}: status {response.status}")
+        if key is not None:
+            self.cache.put(key, response.body)
+        if cache:
+            self.file_counts["downloaded"] += 1
         return response.body
 
 

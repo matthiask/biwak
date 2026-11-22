@@ -11,6 +11,7 @@ import copy
 import io
 import random
 import urllib.parse
+from collections import Counter
 
 from PIL import Image, ImageDraw
 
@@ -856,6 +857,7 @@ class FakeClient:
         self.files = made_files if files is None else files
         self.requests = []
         self.downloads = []
+        self.file_counts = Counter()
         self.archived_projects = []
         # Called with the path of each request, to fail in the middle
         self.on_request = None
@@ -894,9 +896,12 @@ class FakeClient:
     def archive_project(self, project_id):
         self.archived_projects.append(project_id)
 
-    def download(self, url, *, accept=None):
+    def download(self, url, *, accept=None, cache=True):
         self.downloads.append(url)
         try:
-            return self.files[url]
+            data = self.files[url]
         except KeyError:
             raise NotFound(url) from None
+        if cache:
+            self.file_counts["downloaded"] += 1
+        return data

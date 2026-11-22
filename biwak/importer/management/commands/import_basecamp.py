@@ -9,8 +9,10 @@ from biwak.importer import client as api
 from biwak.importer.importer import Importer, ImportRefused
 
 
-def make_client(account, token):
-    return api.BasecampClient(account, token)
+def make_client(account, token, *, cache_dir=None):
+    """``cache_dir``: where downloads are cached, None for no cache"""
+    cache = api.FileCache(cache_dir) if cache_dir is not None else None
+    return api.BasecampClient(account, token, cache=cache)
 
 
 class Command(BaseCommand):
@@ -71,6 +73,19 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--cache-dir",
+            help=(
+                "Where downloaded files are cached, by their storage location"
+                " (default: $XDG_CACHE_HOME/biwak/basecamp or"
+                " ~/.cache/biwak/basecamp); never cleaned up"
+            ),
+        )
+        parser.add_argument(
+            "--no-cache",
+            action="store_true",
+            help="Download every file, without reading or writing the cache",
+        )
+        parser.add_argument(
             "--user",
             help=(
                 "The email address of the Biwak person running the import"
@@ -90,6 +105,8 @@ class Command(BaseCommand):
         full,
         include_disabled,
         templates,
+        cache_dir,
+        no_cache,
         **options,
     ):
         if not project and not templates:
@@ -97,7 +114,11 @@ class Command(BaseCommand):
         token = os.environ.get("BASECAMP_TOKEN")
         if not token:
             raise CommandError("Set BASECAMP_TOKEN to an OAuth token.")
-        client = make_client(account, token)
+        if no_cache and cache_dir:
+            raise CommandError("Give --cache-dir or --no-cache, not both.")
+        if not no_cache:
+            cache_dir = cache_dir or api.default_cache_dir()
+        client = make_client(account, token, cache_dir=None if no_cache else cache_dir)
         email = user or client.get("/my/profile.json").get("email_address")
         actor = User.objects.filter(email__iexact=email or "", is_active=True).first()
         if actor is None or actor.is_client:

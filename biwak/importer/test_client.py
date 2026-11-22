@@ -24,7 +24,7 @@ def ok(data, **headers):
     return Response(200, headers, json.dumps(data).encode())
 
 
-class ClientTest(SimpleTestCase):
+class ClientCase(SimpleTestCase):
     def make(self, *responses):
         self.transport = Transport(*responses)
         self.slept = []
@@ -42,6 +42,8 @@ class ClientTest(SimpleTestCase):
             clock=lambda: self.now,
         )
 
+
+class ClientTest(ClientCase):
     def test_get_sends_the_token_and_a_user_agent(self):
         client = self.make(ok({"id": 1}))
         self.assertEqual(client.get("/projects/1.json"), {"id": 1})
@@ -153,3 +155,118 @@ class ClientTest(SimpleTestCase):
         client = self.make(Response(403))
         with self.assertRaisesMessage(api.ApiError, "not allowed"):
             client.archive_project(42)
+
+
+STORAGE = "https://storage.example.org/blob-1"
+FILE_URL = "https://3.basecampapi.com/1000/buckets/1/uploads/2/download/a.pdf"
+
+
+def redirect(location):
+    return Response(302, {"Location": location})
+
+
+class CacheTest(ClientCase):
+    """Downloads by the storage location the API redirects to"""
+
+    def setUp(self):
+        import tempfile
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.cache = api.FileCache(tmp.name)
+        self.directory = tmp.name
+
+    def make(self, *responses):
+        client = super().make(*responses)
+        client.cache = self.cache
+        return client
+
+    def files(self):
+        import os
+
+        return sorted(
+            name for _root, _dirs, names in os.walk(self.directory) for name in names
+        )
+
+    def test_a_miss_downloads_and_stores_a_hit_skips_the_storage(self):
+        client = self.make(
+            redirect(f"{STORAGE}?sig=1"),
+            Response(200, {}, b"file"),
+            redirect(f"{STORAGE}?sig=2"),
+        )
+        self.assertEqual(client.download(FILE_URL), b"file")
+        self.assertEqual(len(self.files()), 1)
+        # Another signature, the same location: from the cache, only the
+        # API's request
+        self.assertEqual(client.download(FILE_URL), b"file")
+        self.assertEqual(len(self.transport.requests), 3)
+        self.assertEqual(client.file_counts, {"downloaded": 1, "cached": 1})
+
+    def test_a_new_location_downloads_again(self):
+        """A replaced upload: the same API URL, a new storage location"""
+        client = self.make(
+            redirect(f"{STORAGE}?sig=1"),
+            Response(200, {}, b"version 1"),
+            redirect("https://storage.example.org/blob-2?sig=1"),
+            Response(200, {}, b"version 2"),
+        )
+        self.assertEqual(client.download(FILE_URL), b"version 1")
+        self.assertEqual(client.download(FILE_URL), b"version 2")
+        self.assertEqual(client.file_counts, {"downloaded": 2})
+
+    def test_without_a_cache(self):
+        client = self.make(
+            redirect(STORAGE),
+            Response(200, {}, b"file"),
+            redirect(STORAGE),
+            Response(200, {}, b"file"),
+        )
+        client.cache = None
+        client.download(FILE_URL)
+        client.download(FILE_URL)
+        self.assertEqual(client.file_counts, {"downloaded": 2})
+        self.assertEqual(self.files(), [])
+
+    def test_a_failing_download_is_not_cached(self):
+        client = self.make(redirect(STORAGE), Response(403, {}, b"denied"))
+        with self.assertRaises(api.ApiError):
+            client.download(FILE_URL)
+        self.assertEqual(self.files(), [])
+        self.assertEqual(client.file_counts, {})
+
+    def test_an_answer_without_a_redirect_is_not_cached(self):
+        client = self.make(Response(200, {}, b"file"))
+        self.assertEqual(client.download(FILE_URL), b"file")
+        self.assertEqual(self.files(), [])
+        self.assertEqual(client.file_counts, {"downloaded": 1, "not redirected": 1})
+
+    def test_profile_images_are_not_cached_nor_counted(self):
+        client = self.make(redirect(STORAGE), Response(200, {}, b"image"))
+        client.download(FILE_URL, cache=False)
+        self.assertEqual(self.files(), [])
+        self.assertEqual(client.file_counts, {})
+
+    def test_an_interrupted_write_leaves_nothing(self):
+        from unittest import mock
+
+        with (
+            mock.patch("os.replace", side_effect=KeyboardInterrupt),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            self.cache.put(STORAGE, b"file")
+        self.assertEqual(self.files(), [])
+        self.assertIsNone(self.cache.get(STORAGE))
+
+    def test_the_key_leaves_out_the_query(self):
+        self.assertEqual(api.storage_key(f"{STORAGE}?sig=1&exp=2"), STORAGE)
+
+    def test_default_directory(self):
+        from pathlib import Path
+        from unittest import mock
+
+        with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": "/srv/cache"}):
+            self.assertEqual(api.default_cache_dir(), Path("/srv/cache/biwak/basecamp"))
+        with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": ""}):
+            self.assertEqual(
+                api.default_cache_dir(), Path.home() / ".cache/biwak/basecamp"
+            )
