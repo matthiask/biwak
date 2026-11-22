@@ -1,10 +1,15 @@
 """The "Forwarded" page, filing and deleting through the pages
 (specs/forwarding.md): only the forwarder sees a forwarded mail"""
 
+import datetime as dt
+
+from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from biwak.activity.mails import send_mails
+from biwak.activity.operations import subscribe
 from biwak.files.models import Attachment
 from biwak.forwarding import operations
 from biwak.forwarding.models import ForwardedMail
@@ -161,13 +166,12 @@ class FileThroughThePageTest(FilingTestCase):
         self.client.force_login(self.ada)
         response = self.client.get(url, **MODAL)
         assert_modal(self, response, title="File as to-do")
-        # Grouped by project; lists clients see aren't offered
+        # Grouped by project
         self.assertContains(response, '<optgroup label="Website">')
         self.assertContains(response, f'<option value="{self.internal.pk}">')
         self.assertContains(
             response, f'<option value="{self.internal.pk}:{group.pk}">Internal / Bugs'
         )
-        self.assertNotContains(response, f'<option value="{self.shared.pk}"')
         response = self.client.post(
             url,
             {
@@ -183,15 +187,29 @@ class FileThroughThePageTest(FilingTestCase):
         self.assertIn("goes to a 404", todo.todo.notes)
         self.assertFalse(ForwardedMail.objects.exists())
 
-    def test_not_into_lists_clients_see(self):
+    def test_lists_clients_see_are_marked_with_the_note(self):
         forwarded = self.forwarded("apple_mail_en.eml")
+        url = reverse("forwarded_file_todo", args=[forwarded.pk])
         self.client.force_login(self.ada)
-        response = self.client.post(
-            reverse("forwarded_file_todo", args=[forwarded.pk]),
-            {"title": "Footer", "target": str(self.shared.pk)},
+        response = self.client.get(url, **MODAL)
+        self.assertContains(
+            response,
+            f'<option value="{self.shared.pk}" data-client="true">'
+            "Shared (clients can see this)</option>",
+            html=True,
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Item.objects.filter(kind="todo").exists())
+        # The note is there, hidden until such a list is chosen
+        self.assertContains(response, 'id="clients-note" hidden')
+        response = self.client.post(
+            url, {"title": "", "target": str(self.shared.pk)}, **MODAL
+        )
+        self.assertContains(response, 'id="clients-note" >')
+        response = self.client.post(
+            url, {"title": "Footer", "target": str(self.shared.pk)}, **MODAL
+        )
+        todo = Item.objects.get(kind="todo")
+        assert_modal_redirect(self, response, todo.get_absolute_url())
+        self.assertTrue(todo.is_client_visible)
 
     def test_delete_asks_first(self):
         forwarded = self.forwarded()
@@ -240,6 +258,34 @@ class FiledItemsVisibilityTest(FilingTestCase):
         self.assertContains(
             self.client.get(reverse("search"), {"q": "revised quote"}), "Zebra crossing"
         )
+
+    def test_clients_see_a_todo_filed_into_their_list(self):
+        subscribe(self.cleo, self.shared)
+        with self.captureOnCommitCallbacks(execute=True):
+            item = operations.file_as_todo(
+                self.forwarded("outlook_en.eml"),
+                todolist=self.shared,
+                title="Zebra crossing",
+                actor=self.ada,
+            )
+        image = Attachment.objects.filter(item=item, name="image001.png").get()
+        self.client.force_login(self.cleo)
+        response = self.client.get(item.get_absolute_url())
+        self.assertContains(response, "Forwarded from Dora Example")
+        self.assertContains(response, image.get_absolute_url())
+        self.assertEqual(self.client.get(image.get_absolute_url()).status_code, 200)
+        self.assertContains(self.client.get(reverse("feed")), "Zebra crossing")
+        self.assertContains(
+            self.client.get(reverse("search"), {"q": "revised quote"}),
+            "Zebra crossing",
+        )
+        self.assertEqual(self.client.get(f"/api/v1/todos/{item.pk}/").status_code, 200)
+        # The mail about the new to-do carries the text and the files
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
+        [message] = [m for m in mail.outbox if m.to == [self.cleo.email]]
+        self.assertIn("Forwarded from Dora Example", message.body)
+        self.assertIn("image001.png", message.body)
 
     def test_clients_get_404_for_the_filed_todo(self):
         item = operations.file_as_todo(

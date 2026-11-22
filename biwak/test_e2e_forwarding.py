@@ -1,5 +1,6 @@
 """Forwarded mails in the browser (specs/forwarding.md): filing one as a
-to-do in the dialog, choosing the list's group in the combobox, and
+to-do in the dialog, choosing the list's group in the combobox, the note
+while a list clients see is chosen, and
 deleting one after the question"""
 
 from biwak.forwarding import operations as forwarding
@@ -39,6 +40,28 @@ class ForwardedTest(E2ETestCase):
         self.assertEqual(todo.get().todo.group, self.group)
         expect(page.get_by_text("goes to a 404")).to_be_visible()
         self.assertFalse(ForwardedMail.objects.exists())
+        self.assertEqual(self.errors, [])
+
+    def test_the_note_follows_a_list_clients_see(self):
+        ops.create_list(
+            project=self.project, title="Client wishes", creator=self.ada, visible=True
+        )
+        page = self.page
+        self.goto(page, "/forwarded/")
+        page.get_by_role("link", name="File as to-do…").click()
+        dialog = page.get_by_role("dialog", name="File as to-do")
+        note = dialog.locator("#clients-note")
+        expect(note).to_be_hidden()
+        field = dialog.get_by_role("combobox", name="List and group")
+        listbox = dialog.get_by_role("listbox")
+        field.fill("wishes")
+        listbox.get_by_role(
+            "option", name="Client wishes (clients can see this)"
+        ).click()
+        expect(note).to_be_visible()
+        field.fill("footer")
+        listbox.get_by_role("option", name="Website fixes / Footer").click()
+        expect(note).to_be_hidden()
         self.assertEqual(self.errors, [])
 
     def test_delete_after_the_question(self):

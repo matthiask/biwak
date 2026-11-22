@@ -62,8 +62,8 @@ class ForwardedCLITest(test_cli.CLITest):
         result = self.biwak("forwarded", "file", mail.pk)
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("--message PROJECT or --todo LIST", result.output)
-        # Lists clients see are refused: filed mails are internal
-        result = self.biwak("forwarded", "file", mail.pk, "--todo", self.list.pk)
-        self.assertNotEqual(result.exit_code, 0)
-        self.assertIn("internal lists only", result.output)
         self.assertTrue(ForwardedMail.objects.exists())
+        # Lists clients see too: the to-do follows its list
+        result = self.biwak("forwarded", "file", mail.pk, "--todo", self.list.pk)
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertTrue(Item.objects.get(kind="todo").is_client_visible)

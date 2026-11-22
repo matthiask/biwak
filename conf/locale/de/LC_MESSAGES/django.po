@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:48+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1959,7 +1959,7 @@ msgstr "Speichern"
 msgid "Project root"
 msgstr "Oberste Ebene des Projekts"
 
-#: biwak/files/library.py biwak/items/views.py
+#: biwak/files/library.py biwak/forwarding/views.py biwak/items/views.py
 msgid "clients can see this"
 msgstr "Kund:innen sehen dies"
 
@@ -2162,8 +2162,8 @@ msgid "Give the list."
 msgstr "Gib die Liste an."
 
 #: biwak/forwarding/api.py
-msgid "Forwarded mails are filed into active internal lists only."
-msgstr "Weitergeleitete Mails werden nur in aktiven internen Listen abgelegt."
+msgid "Forwarded mails are filed into active lists only."
+msgstr "Weitergeleitete Mails werden nur in aktiven Listen abgelegt."
 
 #: biwak/forwarding/api.py
 msgid "The group isn't in this list."
@@ -2280,16 +2280,12 @@ msgid "Post message"
 msgstr "Nachricht veröffentlichen"
 
 #: biwak/forwarding/views.py
-msgid "Choose an internal list."
-msgstr "Wähle eine interne Liste."
-
-#: biwak/forwarding/views.py
 msgid "File as to-do"
 msgstr "Als To-do ablegen"
 
 #: biwak/forwarding/views.py
-msgid "A to-do in an internal list, with the mail's text as its notes and its files."
-msgstr "Ein To-do in einer internen Liste, mit dem Text der Mail als Notizen und ihren Dateien."
+msgid "A to-do by you, with the mail's text as its notes and its files."
+msgstr "Ein To-do von dir, mit dem Text der Mail als Notizen und ihren Dateien."
 
 #: biwak/forwarding/views.py
 msgid "Add to-do"
@@ -6107,6 +6103,10 @@ msgctxt "repeats"
 msgid "left"
 msgstr "übrig"
 
+#: biwak/templates/forwarding/file_todo.html
+msgid "Clients of this project will see the to-do with the mail’s text, whom it was sent to and its files."
+msgstr "Die Kund:innen dieses Projekts sehen das To-do mit dem Text der Mail, an wen sie ging, und ihren Dateien."
+
 #: biwak/templates/forwarding/list.html
 #, python-format
 msgid "Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't file is deleted after %(days)s day."
@@ -7146,3 +7146,6 @@ msgstr "gerade eben"
 #, python-format
 msgid "%(time)s ago"
 msgstr "vor %(time)s"
+
+#~ msgid "Choose an internal list."
+#~ msgstr "Wähle eine interne Liste."

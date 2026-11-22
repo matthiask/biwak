@@ -15,7 +15,7 @@ from biwak.forwarding.models import ForwardedFile, ForwardedMail
 from biwak.forwarding.support import IMAGE, sample
 from biwak.inbound.support import replying
 from biwak.items import operations as ops
-from biwak.items.models import Item, MessageCategory
+from biwak.items.models import MessageCategory
 from biwak.test_utils import person, project
 
 
@@ -128,14 +128,18 @@ class FileAsTodoTest(FilingTestCase):
         self.assertIn(f"[analytics-2026-11.csv](attachment:{csv.key})", notes)
         self.assertFalse(ForwardedMail.objects.exists())
 
-    def test_not_into_lists_clients_see(self):
-        forwarded = self.forwarded("gmail_en.eml")
-        with self.assertRaises(ValueError):
-            operations.file_as_todo(
-                forwarded, todolist=self.shared, title="Export", actor=self.ada
-            )
-        self.assertFalse(Item.objects.filter(kind="todo").exists())
-        self.assertTrue(ForwardedMail.objects.exists())
+    def test_into_a_list_clients_see_the_todo_follows_it(self):
+        item = operations.file_as_todo(
+            self.forwarded("gmail_en.eml"),
+            todolist=self.shared,
+            title="Export",
+            actor=self.ada,
+        )
+        self.assertTrue(item.is_client_visible)
+        self.assertTrue(
+            Attachment.objects.visible_to(self.cleo).filter(item=item).exists()
+        )
+        self.assertFalse(ForwardedMail.objects.exists())
 
 
 class DeleteTest(FilingTestCase):

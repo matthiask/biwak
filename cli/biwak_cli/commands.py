@@ -2403,8 +2403,9 @@ def forwarded(ctx, as_json):
 @json_option
 def forwarded_file(forwarded_id, project, category, todolist, group, title, as_json):
     """File the forwarded mail FORWARDED_ID as an internal message
-    (--message PROJECT) or as a to-do in an internal list (--todo LIST),
-    with its text and files; it leaves your forwarded mails"""
+    (--message PROJECT) or as a to-do in a list (--todo LIST; clients
+    see it, its text and files when they see the list); it leaves your
+    forwarded mails"""
     if (project is None) == (todolist is None):
         terminate("Give --message PROJECT or --todo LIST.")
     if project is not None:

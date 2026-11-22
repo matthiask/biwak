@@ -104,22 +104,50 @@ class FileMessageForm(Form):
         self.fields["project"].queryset = ops.message_projects(user)
 
 
+class TargetSelect(ComboboxSelect):
+    """Options of lists clients see carry ``data-client``: choosing one
+    shows the note saying so (``frontend/clients-note.js``)"""
+
+    def __init__(self, attrs=None):
+        super().__init__({"data-clients-note": "#clients-note", **(attrs or {})})
+        self.visible = set()
+
+    def create_option(self, name, value, *args, **kwargs):
+        option = super().create_option(name, value, *args, **kwargs)
+        if str(value) in self.visible:
+            option["attrs"]["data-client"] = "true"
+        return option
+
+
 class FileTodoForm(Form):
     title = forms.CharField(label=_("title"), max_length=500)
-    target = forms.ChoiceField(label=_("List and group"), widget=ComboboxSelect)
+    target = forms.ChoiceField(label=_("List and group"), widget=TargetSelect)
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
         choices = {}
+        visible = set()
         for todolist in ops.todo_lists(user):
-            choices.setdefault(str(todolist.project), []).extend([
+            options = [
                 (str(todolist.pk), str(todolist)),
                 *(
                     (f"{todolist.pk}:{group.pk}", f"{todolist} / {group}")
                     for group in todolist.todolist.groups.all()
                 ),
-            ])
+            ]
+            if todolist.is_client_visible:
+                # Like "Move to…"
+                suffix = _("clients can see this")
+                options = [(value, f"{label} ({suffix})") for value, label in options]
+                visible.update(value for value, _label in options)
+            choices.setdefault(str(todolist.project), []).extend(options)
         self.fields["target"].choices = [("", BLANK_CHOICE_LABEL), *choices.items()]
+        self.fields["target"].widget.visible = visible
+
+    def clients_see(self):
+        """Whether the list chosen (when the form is shown again) is one
+        clients see"""
+        return str(self["target"].value()) in self.fields["target"].widget.visible
 
 
 def file_message(request, pk):
@@ -150,7 +178,8 @@ def file_message(request, pk):
 
 
 def file_todo(request, pk):
-    """File as to-do…: a to-do in an internal list, optionally a group"""
+    """File as to-do…: a to-do in a list, optionally a group; visible to
+    clients when the list is, which the note under the choice says"""
     mail = forwarded_for(request, pk)
     form = FileTodoForm(
         request.POST or None, user=request.user, initial={"title": mail.subject}
@@ -164,30 +193,23 @@ def file_todo(request, pk):
             group = get_object_or_404(
                 Group, pk=int(group_id), todolist=todolist.todolist
             )
-        try:
-            item = ops.file_as_todo(
-                mail,
-                todolist=todolist,
-                group=group,
-                title=data["title"],
-                actor=request.user,
-            )
-        except ValueError:
-            # The list was made visible to clients meanwhile
-            form.add_error("target", _("Choose an internal list."))
-        else:
-            return redirect(item)
+        item = ops.file_as_todo(
+            mail,
+            todolist=todolist,
+            group=group,
+            title=data["title"],
+            actor=request.user,
+        )
+        return redirect(item)
     return form_response(
         request,
         form,
         title=_("File as to-do"),
-        intro=_(
-            "A to-do in an internal list, with the mail's text as its notes"
-            " and its files."
-        ),
+        intro=_("A to-do by you, with the mail's text as its notes and its files."),
         cancel_url=reverse("forwarded"),
         help_page="notifications",
         submit_label=_("Add to-do"),
+        template="forwarding/file_todo.html",
     )
 
 

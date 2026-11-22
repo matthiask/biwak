@@ -140,9 +140,11 @@ some wait. Open "Text" to read it. Then:
   yours and internal (show it to clients later like any message), with
   a line saying whom it came from and when, the text and the files.
   People are told as when you post a message.
-- **File as to-do…**: pick a list, or a group in it, of any project; only
-  internal lists are offered. The mail's text becomes the notes, the
-  files are attached.
+- **File as to-do…**: pick a list, or a group in it, of any project. The
+  mail's text becomes the notes, the files are attached. Lists clients
+  see are marked "(clients can see this)": a to-do there is visible to
+  them like any to-do in the list, with the text, whom the mail was sent
+  to and the files; the dialog says so when you choose one.
 - **Delete**: gone for good.
 
 Filed mails leave the list; mails you don't file are deleted after 30

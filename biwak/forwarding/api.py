@@ -101,9 +101,9 @@ class FileIn(Schema):
 @router.post("forwarded/{forwarded_id}/file/", response={201: ItemOut})
 def forwarded_file(request, forwarded_id: int, data: FileIn):
     """Files the forwarded mail as an internal message (``project_id``,
-    ``category_id``) or as a to-do in an internal list (``list_id``,
-    ``group_id``), with a line about the original, its text and files;
-    the forwarded mail is gone afterwards"""
+    ``category_id``) or as a to-do in a list (``list_id``, ``group_id``;
+    visible to clients when the list is), with a line about the original,
+    its text and files; the forwarded mail is gone afterwards"""
     mail = get_object_or_404(_forwarded(request), pk=forwarded_id)
     title = data.title or mail.subject
     if not title:
@@ -127,9 +127,7 @@ def forwarded_file(request, forwarded_id: int, data: FileIn):
             raise HttpError(400, _("Give the list."))
         todolist = item_for(request, data.list_id, Kind.LIST)
         if not ops.todo_lists(request.user).filter(pk=todolist.pk).exists():
-            raise HttpError(
-                400, _("Forwarded mails are filed into active internal lists only.")
-            )
+            raise HttpError(400, _("Forwarded mails are filed into active lists only."))
         group = None
         if data.group_id is not None:
             group = Group.objects.filter(

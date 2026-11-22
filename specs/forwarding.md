@@ -10,7 +10,7 @@ address avoids having to pick among many. Decided with the user
 (receiving, the "Forwarded" page, filing, deleting, the 30-day cleanup in
 `fairy_tasks`, the API, `biwak forwarded`), the help in
 `docs/notifications.md`. Decisions made on the way are in
-`decisions-to-confirm.md`; one question is open (below).
+`decisions-to-confirm.md`.
 
 Depends on: `notifications.md` ("Replying by mail": `biwak/inbound/`,
 Resend's webhook, the sender check, stripping), `files.md`
@@ -59,6 +59,14 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
 - **"File as to-do…"**: a list or board (one combobox of the lists the
   person can add to, grouped by project), optionally a group, the
   title from the subject, the text as notes, attachments attached.
+  **Lists clients see are offered too** (decided by the user
+  2026-11-22: it teaches clients they could have created a to-do
+  instead of mailing), marked "(clients can see this)" like "Move
+  to…"; the to-do follows its list like any to-do, its text (the line
+  about the original with To and Cc included) and attachments too.
+  Choosing such a list shows one line under the choice saying so
+  (`forwarding/file_todo.html`, `frontend/clients-note.js`), no extra
+  question. Filed messages stay internal.
 - **"Delete"**: gone. Filed mails leave the list; unfiled ones are kept
   30 days, then deleted by `fairy_tasks` (the page says so).
 - **Built** (`biwak/forwarding/views.py`, `forwarding/list.html`): the
@@ -74,8 +82,8 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   with "To:" and "Cc:" lines when known) and deletes the forwarded
   mail. The message form: title (the subject), project (combobox of the
   open, not archived projects), category; the to-do form: title, one
-  combobox of the active internal lists and their groups ("List /
-  Group"), grouped by project.
+  combobox of the active lists and their groups ("List / Group"),
+  grouped by project.
 - API: `GET /forwarded/`, `POST /forwarded/{id}/file/` (message or
   to-do), `DELETE`; CLI `biwak forwarded [file ID --message PROJECT |
   --todo LIST] [delete ID]`, so agents can file mails too.
@@ -85,7 +93,7 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   `text_html` and `files`; `file/` takes `kind` (`message`, `todo`),
   `title` (the subject when left out), `project_id` and `category_id`
   or `list_id` and `group_id`, the same choices as the page (an
-  archived project or a list clients see is a 400), and answers 201
+  archived project or list is a 400), and answers 201
   with the item; `DELETE /forwarded/{id}/` 204. Clients 403, somebody
   else's 404, all 404 while forwarding is off. CLI: `biwak forwarded`,
   `biwak forwarded file ID --message PROJECT [--category ID] | --todo
@@ -116,11 +124,3 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   audit log nor in the admin: the forwarder's only.
 - The message form has no "Also tell…": the project is chosen in the same
   form, so posting tells those told by default only.
-
-## Question
-
-- **To-dos into lists clients see?** The spec says a filed mail is
-  internal, so "File as to-do…" offers only internal lists (and the API
-  refuses the others). Should lists visible to clients be offered too,
-  marked "(clients can see this)" like "Move to…", making the to-do
-  visible to them?

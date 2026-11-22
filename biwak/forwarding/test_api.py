@@ -81,6 +81,18 @@ class ForwardedAPITest(FilingTestCase):
         self.assertEqual(todo.todo.group, group)
         self.assertIn("up 12%", todo.todo.notes)
 
+    def test_file_as_todo_into_a_list_clients_see(self):
+        forwarded = self.forwarded("gmail_en.eml")
+        self.client.force_login(self.ada)
+        response = self.post(forwarded, kind="todo", list_id=self.shared.pk)
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertTrue(response.json()["visible_to_clients"])
+        # The client reads it, with its notes and attachments
+        self.client.force_login(self.cleo)
+        data = self.client.get(f"/api/v1/todos/{response.json()['id']}/").json()
+        self.assertIn("up 12%", data["notes"])
+        self.assertIn("analytics-2026-11.csv", data["notes_html"])
+
     def test_refused(self):
         forwarded = self.forwarded("gmail_en.eml")
         limited = project("Payroll", members=[self.bea], all_access=False)
@@ -95,8 +107,6 @@ class ForwardedAPITest(FilingTestCase):
             ),
             ({"kind": "todo"}, 400),
             ({"kind": "todo", "list_id": other.pk}, 404),
-            # Filed mails are internal
-            ({"kind": "todo", "list_id": self.shared.pk}, 400),
             ({"kind": "todo", "list_id": self.internal.pk, "group_id": 999}, 400),
             ({"kind": "doc", "project_id": self.project.pk}, 422),
         ]:

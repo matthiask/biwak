@@ -244,8 +244,8 @@ def message_projects(user):
 
 def todo_lists(user):
     """The lists the person can add a forwarded mail's to-do to: active,
-    in projects not archived, internal (filed mails are internal), with
-    their groups"""
+    in projects not archived, with their groups; also those clients see
+    (decided 2026-11-22: the to-do follows its list)"""
     if not ops.can_create(user, Kind.TODO):
         return Item.objects.none()
     return (
@@ -255,7 +255,6 @@ def todo_lists(user):
             kind=Kind.LIST,
             parent=None,
             status=Status.ACTIVE,
-            is_client_visible=False,
             project__archived_at__isnull=True,
         )
         .select_related("project")
@@ -338,11 +337,10 @@ def file_as_message(mail, *, project, title, actor, category=None):
 @transaction.atomic
 def file_as_todo(mail, *, todolist, title, actor, group=None):
     """A to-do in the list (optionally a group) with the text as its notes
-    and the files attached; the forwarded mail is gone afterwards"""
+    and the files attached, visible to clients when the list is (the
+    line about the original with its recipients included); the forwarded
+    mail is gone afterwards"""
     _check(mail, actor)
-    if todolist.is_client_visible:
-        # Filed mails are internal (specs/forwarding.md)
-        raise ValueError("Forwarded mails are filed into internal lists only.")
     item = ops.create_todo(
         todolist=todolist,
         title=title,
