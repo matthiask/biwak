@@ -163,6 +163,10 @@ class ImportEveryKindTest(ImportCase):
                 *announcement.comments.values_list("created_at", flat=True),
             ]),
         )
+        latest = announcement.comments.order_by("created_at", "pk").last()
+        self.assertEqual(
+            announcement.message.last_commenter, latest.author if latest else None
+        )
 
         # Folders, docs, files
         self.assertEqual(

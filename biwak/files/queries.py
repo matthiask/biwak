@@ -20,9 +20,9 @@ def board(project, user):
     messages = Item.objects.visible_to(user).filter(kind=Kind.MESSAGE)
     if project is not None:
         messages = messages.filter(project=project)
-    return messages.select_related("creator", "message__category").annotate(
-        comment_count=Count("comments")
-    )
+    return messages.select_related(
+        "creator", "message__category", "message__last_commenter"
+    ).annotate(comment_count=Count("comments"))
 
 
 def pinned_messages(messages):

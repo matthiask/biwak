@@ -407,15 +407,20 @@ def add_comment(item, *, author, content):
     return comment
 
 
-# The later of posting and the latest comment of messages (specs/files.md,
-# "The order"); editing doesn't count. For one message
-# (``refresh_message_activity()``) and, without the condition, all of them
-# (the data migration).
+# The later of posting and the latest comment of messages, and who wrote
+# that comment (specs/files.md, "The order"); editing doesn't count. For one
+# message (``refresh_message_activity()``) and, without the condition, all
+# of them (the data migration).
 MESSAGE_ACTIVITY_SQL = """
-UPDATE items_message m SET last_activity_at = GREATEST(
-  i.created_at,
-  (SELECT max(c.created_at) FROM items_comment c WHERE c.item_id = m.item_id)
-)
+UPDATE items_message m SET
+  last_activity_at = GREATEST(
+    i.created_at,
+    (SELECT max(c.created_at) FROM items_comment c WHERE c.item_id = m.item_id)
+  ),
+  last_commenter_id = (
+    SELECT c.author_id FROM items_comment c WHERE c.item_id = m.item_id
+    ORDER BY c.created_at DESC, c.id DESC LIMIT 1
+  )
 FROM items_item i
 WHERE i.id = m.item_id
 """

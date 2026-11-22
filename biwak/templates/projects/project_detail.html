@@ -171,7 +171,7 @@
       </h2>
       <div class="list-group mb-3">
         {% for item in front_messages %}
-          {% include "files/_message_row.html" with can_pin=False %}
+          {% include "files/_message_row.html" with can_pin=False order=project.messages_order %}
         {% empty %}
           <div class="list-group-item text-body-secondary">{% translate "No messages yet." %}</div>
         {% endfor %}

@@ -460,6 +460,16 @@ class Message(Checklist, Detail):
     last_activity_at = models.DateTimeField(
         _("last activity at"), default=timezone.now, editable=False
     )
+    # Who wrote the latest comment, shown in that order
+    last_commenter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="+",
+        verbose_name=_("last commenter"),
+    )
 
     class Meta:
         verbose_name = _("message")

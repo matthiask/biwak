@@ -13,7 +13,7 @@ from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event, Notification
 from biwak.files import board, operations, queries
 from biwak.items import operations as ops
-from biwak.items.models import Item, MessageCategory
+from biwak.items.models import Comment, Item, MessageCategory
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -678,6 +678,32 @@ class OrderTest(Fixture, TestCase):
         )
         response = self.client.get(self.url(), {"order": "latest"})
         self.assertEqual(self.titles(response)[0], "Old but discussed")
+
+    def test_rows_say_who_commented_last_in_that_order(self):
+        """ "Last comment 2 hours ago · Cleo" (decided 2026-11-22), on the
+        board and the project page; not by newest posts, not without
+        comments"""
+        comment = self.old.comments.get()
+        Comment.objects.filter(pk=comment.pk).update(
+            created_at=timezone.now() - dt.timedelta(hours=2)
+        )
+        ops.refresh_message_activity(self.old)
+        self.old.message.refresh_from_db()
+        self.assertEqual(self.old.message.last_commenter, self.cleo)
+        line = "Last comment 2\xa0hours ago · Cleo"  # timesince's space
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            for url in [self.url(), self.project.get_absolute_url()]:
+                response = self.client.get(url)
+                self.assertContains(response, line, count=1)
+                self.assertNotContains(response, "Last comment 1 day")
+            response = self.client.get(self.url(), {"order": "newest"})
+            self.assertNotContains(response, "Last comment")
+        operations.set_messages_order(self.project, "newest", actor=self.ada)
+        self.assertNotContains(
+            self.client.get(self.project.get_absolute_url()), "Last comment"
+        )
+        self.assertContains(self.client.get(self.url(), {"order": "latest"}), line)
 
     def test_pinned_stay_on_top(self):
         operations.pin_message(self.secret, actor=self.ada)
