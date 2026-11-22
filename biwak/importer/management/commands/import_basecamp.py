@@ -42,6 +42,19 @@ class Command(BaseCommand):
             help="Only what was changed on or after this date (YYYY-MM-DD)",
         )
         parser.add_argument(
+            "--full",
+            action="store_true",
+            help=(
+                "Read everything again, also what didn't change since the last"
+                " run (changed subscriptions only come along this way)"
+            ),
+        )
+        parser.add_argument(
+            "--include-disabled",
+            action="store_true",
+            help="Import the tools switched off in Basecamp too",
+        )
+        parser.add_argument(
             "--archive",
             action="store_true",
             help=(
@@ -57,7 +70,19 @@ class Command(BaseCommand):
             ),
         )
 
-    def handle(self, *, account, project, dry_run, since, user, archive, **options):
+    def handle(
+        self,
+        *,
+        account,
+        project,
+        dry_run,
+        since,
+        user,
+        archive,
+        full,
+        include_disabled,
+        **options,
+    ):
         token = os.environ.get("BASECAMP_TOKEN")
         if not token:
             raise CommandError("Set BASECAMP_TOKEN to an OAuth token.")
@@ -87,6 +112,8 @@ class Command(BaseCommand):
             actor=actor,
             dry_run=dry_run,
             since=since,
+            full=full,
+            include_disabled=include_disabled,
             archive=archive,
             progress=progress,
         )

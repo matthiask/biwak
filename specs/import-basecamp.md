@@ -13,8 +13,8 @@ data and a fake client for the tests). Not built: `--lazy-files`
 ## Running it
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
-[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--user EMAIL]
-[--archive]`.
+[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--full]
+[--include-disabled] [--user EMAIL] [--archive]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
 
@@ -49,17 +49,34 @@ goes into internal containers, archived recordings skipped.
   count; when both are the same, the recording isn't updated and its
   comments and subscribers aren't fetched (the two requests per
   recording that made a second run as slow as the first). The report
-  counts them as unchanged. Changed subscriptions don't change
-  `updated_at`, so they come along only with `--full`, which reads
-  everything as before.
+  counts them as unchanged (a dry run too). Changed subscriptions don't
+  change `updated_at`, so they come along only with `--full`, which reads
+  everything as before. Built so (2026-11-22): `ImportedObject`'s
+  `basecamp_updated_at` and `basecamp_comments_count` (cards say
+  `comment_count`), stored once the recording's comments and subscribers
+  are done, so an interrupted run reads it again; rows from before have
+  none and are read completely once. The children of containers (lists,
+  groups, folders, card tables' columns, questions' answers) are still
+  listed, new children don't change the parent; what the listing already
+  gives (visibility, completion, assignees, archived) is still compared,
+  costing no request. `--since` skips older leaves before any of this.
 - **Several tools of a kind** (two to-do sets, several message boards
   or Docs & Files) are merged as they come (decided 2026-11-22): their
   lists, messages and files land together in the project. The report
-  lists the projects that had several, with the tools' names.
+  lists the projects that had several, with the tools' names ("Camp
+  kitchen, To-dos: "To-dos", "Kitchen to-dos"").
 - **Switched-off tools** are skipped unless `--include-disabled`
   (decided 2026-11-22): the report (also a dry run's) lists those that
   aren't empty, with what's in them; empty ones (Basecamp's defaults)
-  stay silent. Checking costs a request per switched-off tool.
+  stay silent. Checking costs a request per switched-off tool: the
+  tool's own record (`/todosets/ID.json`: `todolists_count` and the
+  to-dos in `completed_ratio`; `/message_boards/ID.json`:
+  `messages_count`; `/vaults/ID.json`: `vaults_count`,
+  `documents_count`, `uploads_count`; `/card_tables/ID.json`: its
+  columns' `cards_count`; `/questionnaires/ID.json`: `questions_count`),
+  e.g. "Camp kitchen, Card table "Planning": 12 cards". A tool that can't
+  be checked is a problem in the report. Tools never imported (schedule,
+  chat, forwards, …) are ignored, on or off.
 - **Files over the upload limit** (100 MB, `files.models.MAX_SIZE`;
   decided 2026-11-22: really large files belong elsewhere) aren't
   imported: the report lists each with its size, where it would have
@@ -68,7 +85,8 @@ goes into internal containers, archived recordings skipped.
   imported: too large)" in its place. The run goes on.
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
-  subscribers, so big accounts take a while.
+  subscribers (on later runs only for changed ones), so big accounts take
+  a while the first time.
 
 ## Importing the whole account (planned, 2026-11-22)
 

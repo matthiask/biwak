@@ -433,6 +433,7 @@ class NotifyNobodyTest(ImportCase):
                 content_attachments=[],
             )
         )
+        self.client_.data["/todolists/301/todos.json"][0]["comments_count"] = 3
         with self.captureOnCommitCallbacks(execute=True):
             self.run_import()
         self.assertEqual(Notification.objects.count(), 0)
@@ -491,7 +492,8 @@ class SecondRunTest(ImportCase):
         # generated one wasn't kept
         self.assertEqual(len(self.client_.downloads), downloads + 1)
         self.assertEqual(report.counts["to-dos"]["created"], 0)
-        self.assertEqual(report.counts["to-dos"]["updated"], 6)
+        self.assertEqual(report.counts["to-dos"]["updated"], 0)
+        self.assertEqual(report.counts["to-dos"]["unchanged"], 6)
         self.assertEqual(visibility.check(), [])
 
     def test_a_second_run_updates_what_changed(self):
@@ -504,8 +506,10 @@ class SecondRunTest(ImportCase):
         todo["due_on"] = "2026-07-01"
         todo["assignees"] = [support.BOB]
         todo["updated_at"] = "2026-03-01T08:00:00.000Z"
+        todo["comments_count"] = 3
+        changed = {"updated_at": "2026-03-01T08:00:00.000Z"}
         done = data["/todolists/301/todos.json?completed=true"][0]
-        data["/todolists/301/todos.json"].append(done | {"completed": False})
+        data["/todolists/301/todos.json"].append(done | {"completed": False} | changed)
         data["/todolists/301/todos.json?completed=true"] = []
         data["/recordings/3011/comments.json"].append(
             support.recording(
@@ -518,9 +522,15 @@ class SecondRunTest(ImportCase):
                 content_attachments=[],
             )
         )
-        data["/vaults/400/documents.json"][1]["content"] = "<div>New rules</div>"
+        data["/vaults/400/documents.json"][1] |= {"content": "<div>New rules</div>"}
         data["/message_boards/200/messages.json"][1]["subject"] = "We have a camp!"
         data[f"/projects/{support.PROJECT}.json"]["name"] = "Camp kitchen 2"
+        for rec in (
+            data["/vaults/400/documents.json"][1],
+            data["/message_boards/200/messages.json"][1],
+            data[f"/projects/{support.PROJECT}.json"],
+        ):
+            rec.update(changed)
         self.run_import()
         food.refresh_from_db()
         self.assertEqual(food.title, "Buy giraffe and zebra food")
@@ -544,6 +554,7 @@ class SecondRunTest(ImportCase):
             "created_at": "2026-03-02T08:00:00.000Z",
             "creator": support.BOB,
         }
+        todo["updated_at"] = "2026-03-02T08:00:00.000Z"
         self.run_import()
         self.assertTrue(Todo.objects.get(item=food).is_completed)
 
@@ -591,6 +602,293 @@ class SecondRunTest(ImportCase):
         self.item("Peel potatoes").delete()
         self.run_import()
         self.assertEqual(Item.objects.filter(title="Peel potatoes").count(), 1)
+
+
+class UnchangedTest(ImportCase):
+    """A later run skips recordings whose ``updated_at`` and comment count
+    are as stored: no update, no requests for comments and subscribers"""
+
+    def run_import(self, **kwargs):
+        start = len(self.client_.requests)
+        importer = Importer(self.client_, actor=self.ada, **kwargs)
+        self.report = importer.run(support.PROJECT)
+        return [path for path, _params in self.client_.requests[start:]]
+
+    def following(self, paths):
+        """The requests for comments and subscribers"""
+        return sorted(
+            p for p in paths if p.endswith(("/comments.json", "/subscription.json"))
+        )
+
+    def test_a_later_run_saves_the_requests(self):
+        first = self.run_import()
+        self.assertGreater(len(self.following(first)), 20)
+        second = self.run_import()
+        self.assertEqual(self.following(second), [])
+        # Everything else is read as before (containers' children too), but
+        # the profile images of Bob and Cleo, which were imported
+        self.assertEqual(len(second), len(first) - len(self.following(first)) - 2)
+        self.assertEqual(self.report.counts["to-dos"]["unchanged"], 6)
+        self.assertEqual(self.report.counts["messages"]["unchanged"], 2)
+        self.assertEqual(self.report.counts["comments"], {})
+        self.assertIn("to-dos: 0 new, 0 updated, 6 unchanged", self.report.as_text())
+
+    def test_full_reads_everything(self):
+        first = self.run_import()
+        again = self.run_import(full=True)
+        self.assertEqual(self.following(again), self.following(first))
+        self.assertEqual(self.report.counts["to-dos"]["updated"], 6)
+        self.assertNotIn("unchanged", self.report.as_text())
+
+    def test_a_changed_recording_is_read(self):
+        self.run_import()
+        data = self.client_.data
+        message = data["/message_boards/200/messages.json"][1]
+        message["subject"] = "We have a camp!"
+        message["updated_at"] = "2026-03-01T08:00:00.000Z"
+        # A new comment changes the count, not necessarily ``updated_at``
+        data["/todolists/301/todos.json"][0]["comments_count"] = 3
+        data["/recordings/3011/comments.json"].append(
+            support.recording(
+                8003,
+                "Comment",
+                "Re: x",
+                support.BOB,
+                "2026-02-01T08:00:00.000Z",
+                content="<div>One more</div>",
+                content_attachments=[],
+            )
+        )
+        paths = self.run_import()
+        self.assertEqual(
+            self.following(paths),
+            [
+                "/recordings/2001/comments.json",
+                "/recordings/2001/subscription.json",
+                "/recordings/3011/comments.json",
+                "/recordings/3011/subscription.json",
+            ],
+        )
+        self.assertTrue(Item.objects.filter(title="We have a camp!").exists())
+        self.assertEqual(
+            Comment.objects.filter(item__title="Buy giraffe food").count(), 3
+        )
+        counts = self.report.counts
+        self.assertEqual(counts["messages"]["updated"], 1)
+        self.assertEqual(counts["messages"]["unchanged"], 1)
+        self.assertEqual(counts["comments"]["created"], 1)
+        # Those of the message too, which were fetched again
+        self.assertEqual(counts["comments"]["unchanged"], 3)
+        # And then it's unchanged again
+        self.assertEqual(self.following(self.run_import()), [])
+
+    def test_new_children_of_unchanged_containers_are_found(self):
+        self.run_import()
+        todos = self.client_.data["/todolists/301/todos.json"]
+        todos.append(todos[1] | {"id": 3099, "title": "Wash the pots"})
+        self.run_import()
+        self.assertTrue(Item.objects.filter(title="Wash the pots").exists())
+        self.assertEqual(self.report.counts["lists"]["unchanged"], 3)
+
+    def test_what_was_imported_before_is_read_once_completely(self):
+        self.run_import()
+        # As imported before the state was stored
+        ImportedObject.objects.update(
+            basecamp_updated_at=None, basecamp_comments_count=None
+        )
+        self.assertGreater(len(self.following(self.run_import())), 20)
+        self.assertEqual(self.following(self.run_import()), [])
+
+    def test_an_interrupted_recording_is_read_again(self):
+        def fail(path):
+            if path == "/recordings/3011/subscription.json":
+                raise ConnectionError("down")
+
+        self.client_.on_request = fail
+        with self.assertRaises(ConnectionError):
+            self.run_import()
+        self.client_.on_request = None
+        # Its comments were imported, its subscribers not yet: read again
+        paths = self.following(self.run_import())
+        self.assertIn("/recordings/3011/subscription.json", paths)
+        self.assertEqual(
+            Subscription.objects.filter(item__title="Buy giraffe food").count(), 2
+        )
+
+    def test_a_dry_run_reports_what_it_would_skip(self):
+        self.run_import()
+        paths = self.run_import(dry_run=True)
+        self.assertEqual(self.following(paths), [])
+        self.assertEqual(self.report.counts["to-dos"]["unchanged"], 6)
+        self.assertIn("6 unchanged", self.report.as_text())
+
+    def test_since_still_skips_what_is_older(self):
+        self.run_import()
+        todo = self.client_.data["/todolists/301/todos.json"][0]
+        todo["title"] = "Buy zebra food"
+        todo["updated_at"] = "2026-03-01T08:00:00.000Z"
+        paths = self.run_import(since=at("2026-02-05T00:00:00+00:00"))
+        self.assertTrue(Item.objects.filter(title="Buy zebra food").exists())
+        self.assertEqual(
+            self.following(paths),
+            ["/recordings/3011/comments.json", "/recordings/3011/subscription.json"],
+        )
+        # The others are older: skipped by --since, not even counted
+        self.assertEqual(self.report.counts["to-dos"]["updated"], 1)
+        self.assertEqual(self.report.counts["to-dos"]["unchanged"], 0)
+
+
+class ToolsTest(ImportCase):
+    """Several tools of a kind are merged and named in the report;
+    switched-off ones are skipped, the report says what's in them"""
+
+    @property
+    def dock(self):
+        return self.client_.data[f"/projects/{support.PROJECT}.json"]["dock"]
+
+    def switch_off(self, *names):
+        for tool in self.dock:
+            if tool["name"] in names:
+                tool["enabled"] = False
+
+    def add_todoset(self, *, enabled=True):
+        """A second to-do set with a list and a to-do"""
+        data = self.client_.data
+        self.dock.append({
+            "id": 310,
+            "title": "Kitchen to-dos",
+            "name": "todoset",
+            "enabled": enabled,
+        })
+        data["/todosets/310.json"] = support.tool(
+            "todoset", 310, "Kitchen to-dos", todolists_count=1, completed_ratio="0/1"
+        )
+        data["/todosets/310/todolists.json"] = [
+            support.recording(
+                311,
+                "Todolist",
+                "Dishes",
+                support.ADA,
+                "2026-01-06T10:00:00.000Z",
+                description="",
+                description_attachments=[],
+            )
+        ]
+        data["/todosets/310/todolists.json?status=archived"] = []
+        data["/todolists/311/todos.json"] = [
+            data["/todolists/301/todos.json"][1] | {"id": 3111, "title": "Dry"}
+        ]
+
+    def test_several_of_a_kind_are_merged_and_listed(self):
+        self.add_todoset()
+        report = self.run_import()
+        self.assertTrue(Item.objects.filter(title="Dishes").exists())
+        self.assertTrue(Item.objects.filter(title="Kitchen plan").exists())
+        self.assertEqual(
+            report.several, ['Camp kitchen, To-dos: "To-dos", "Kitchen to-dos"']
+        )
+        self.assertIn(
+            'Several tools of a kind, merged:\n  Camp kitchen, To-dos: "To-dos",',
+            report.as_text(),
+        )
+
+    def test_one_of_each_kind_says_nothing(self):
+        report = self.run_import()
+        self.assertEqual(report.several, [])
+        self.assertNotIn("Several tools", report.as_text())
+
+    def test_switched_off_ones_are_skipped_and_listed(self):
+        self.switch_off(
+            "todoset", "kanban_board", "message_board", "vault", "questionnaire"
+        )
+        report = self.run_import()
+        self.assertFalse(Item.objects.exists())
+        self.assertEqual(
+            report.switched_off,
+            [
+                'Camp kitchen, Message board "Message Board": 2 messages',
+                'Camp kitchen, To-dos "To-dos": 2 lists, 5 to-dos',
+                'Camp kitchen, Docs & files "Docs & Files": 3 folders, 2 docs, 1 file',
+                'Camp kitchen, Card table "Card Table": 2 cards',
+                'Camp kitchen, Check-ins "Automatic Check-ins": 2 questions',
+            ],
+        )
+        self.assertIn(
+            "Switched off in Basecamp, not imported (--include-disabled imports"
+            " them):\n  Camp kitchen, Message board",
+            report.as_text(),
+        )
+        # One request each, for the tool itself, and nothing in them
+        paths = [path for path, _params in self.client_.requests]
+        for path in (
+            "/todosets/300.json",
+            "/message_boards/200.json",
+            "/vaults/400.json",
+            "/card_tables/600.json",
+            "/questionnaires/500.json",
+        ):
+            self.assertEqual(paths.count(path), 1)
+        self.assertFalse(
+            any(
+                path.startswith((
+                    "/todosets/300/",
+                    "/message_boards/200/",
+                    "/vaults/400/",
+                ))
+                for path in paths
+            )
+        )
+
+    def test_empty_ones_stay_silent(self):
+        self.switch_off("message_board", "kanban_board")
+        self.client_.data["/message_boards/200.json"]["messages_count"] = 0
+        for column in self.client_.data["/card_tables/600.json"]["lists"]:
+            column["cards_count"] = 0
+        report = self.run_import()
+        self.assertEqual(report.switched_off, [])
+        self.assertNotIn("Switched off", report.as_text())
+        self.assertFalse(Item.objects.filter(kind=Kind.MESSAGE).exists())
+
+    def test_tools_never_imported_are_ignored(self):
+        # The chat and the schedule, switched off or not; the inbox is off
+        self.switch_off("chat", "schedule")
+        report = self.run_import()
+        self.assertEqual(report.switched_off, [])
+        self.assertFalse([p for p in report.problems if "Switched-off" in p])
+        paths = [path for path, _params in self.client_.requests]
+        self.assertFalse(
+            any(p.startswith(("/chats", "/schedules", "/inboxes")) for p in paths)
+        )
+
+    def test_a_dry_run_lists_them_too(self):
+        self.switch_off("message_board")
+        self.add_todoset()
+        report = self.run_import(dry_run=True)
+        self.assertEqual(
+            report.switched_off,
+            ['Camp kitchen, Message board "Message Board": 2 messages'],
+        )
+        self.assertEqual(len(report.several), 1)
+        self.assertEqual(report.counts["messages"], {})
+
+    def test_include_disabled_imports_them(self):
+        self.switch_off("message_board")
+        self.add_todoset(enabled=False)
+        importer = Importer(self.client_, actor=self.ada, include_disabled=True)
+        report = importer.run(support.PROJECT)
+        self.assertEqual(report.switched_off, [])
+        self.assertTrue(Item.objects.filter(title="We have a camp").exists())
+        self.assertTrue(Item.objects.filter(title="Dishes").exists())
+        self.assertEqual(len(report.several), 1)
+
+    def test_a_tool_which_cant_be_checked_is_a_problem(self):
+        self.switch_off("questionnaire")
+        del self.client_.data["/questionnaires/500.json"]
+        report = self.run_import()
+        self.assertIn(
+            "Switched-off tool 'Automatic Check-ins' (500) in Camp kitchen not checked",
+            report.problems[-1],
+        )
 
 
 class ArchivedTest(ImportCase):
@@ -695,7 +993,7 @@ class DryRunTest(ImportCase):
     def test_after_a_run_it_counts_existing_ones(self):
         self.run_import()
         report = self.run_import(dry_run=True)
-        self.assertEqual(report.counts["to-dos"]["updated"], 6)
+        self.assertEqual(report.counts["to-dos"]["unchanged"], 6)
         self.assertEqual(report.counts["to-dos"]["created"], 0)
         self.assertEqual(report.people, [])
 
@@ -943,6 +1241,25 @@ class CommandTest(ImportCase):
             "ada@example.org",
         )
         self.assertFalse(Item.objects.filter(title="Camp rules").exists())
+
+    def test_full(self):
+        args = ("--account", "1000", "--project", str(support.PROJECT))
+        self.call(*args)
+        text, _make = self.call(*args)
+        self.assertIn("to-dos: 0 new, 0 updated, 6 unchanged", text)
+        text, _make = self.call(*args, "--full")
+        self.assertIn("to-dos: 0 new, 6 updated", text)
+        self.assertNotIn("unchanged", text)
+
+    def test_include_disabled(self):
+        dock = self.client_.data[f"/projects/{support.PROJECT}.json"]["dock"]
+        dock[0]["enabled"] = False  # the message board
+        args = ("--account", "1000", "--project", str(support.PROJECT))
+        text, _make = self.call(*args, "--dry-run")
+        self.assertIn('Message board "Message Board": 2 messages', text)
+        text, _make = self.call(*args, "--include-disabled")
+        self.assertNotIn("Switched off", text)
+        self.assertIn("messages: 2 new", text)
 
     def test_archive(self):
         args = ("--account", "1000", "--project", str(support.PROJECT), "--archive")

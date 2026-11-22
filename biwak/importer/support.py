@@ -193,6 +193,65 @@ def image(entry):
     )
 
 
+def tool(name, tid, title, **counts):
+    """A tool's own record, ``counts`` as Basecamp names them (e.g.
+    ``messages_count``); a card table's are on its columns (``lists``)"""
+    type_ = {
+        "todoset": "Todoset",
+        "message_board": "Message::Board",
+        "vault": "Vault",
+        "questionnaire": "Questionnaire",
+        "kanban_board": "Kanban::Board",
+    }[name]
+    return recording(
+        tid,
+        type_,
+        title,
+        ADA,
+        "2026-01-05T09:00:00.000Z",
+        position=1,
+        name=title,
+        **counts,
+    )
+
+
+def tools():
+    """The records of the tools in the dock of ``make_data()``"""
+    return {
+        "/todosets/300.json": tool(
+            "todoset",
+            300,
+            "To-dos",
+            todolists_count=2,
+            completed_ratio="1/5",
+            completed=False,
+            todolists_url=f"{BASE}/todosets/300/todolists.json",
+        ),
+        "/message_boards/200.json": tool(
+            "message_board",
+            200,
+            "Message Board",
+            messages_count=2,
+            messages_url=f"{BASE}/message_boards/200/messages.json",
+        ),
+        "/vaults/400.json": tool(
+            "vault",
+            400,
+            "Docs & Files",
+            documents_count=2,
+            uploads_count=1,
+            vaults_count=3,
+        ),
+        "/questionnaires/500.json": tool(
+            "questionnaire",
+            500,
+            "Automatic Check-ins",
+            questions_count=2,
+            questions_url=f"{BASE}/questionnaires/500/questions.json",
+        ),
+    }
+
+
 def make_data():
     """Every kind of the mapping; the tests change what they need"""
     d = {}
@@ -230,6 +289,9 @@ def make_data():
         "app_url": f"{APP}/projects/{PROJECT}",
         "dock": dock,
     }
+    # The tools themselves (sections/todosets.md, message_boards.md,
+    # vaults.md, questionnaires.md): what's in them, without listing it
+    d.update(tools())
     d[f"/projects/{PROJECT}/people.json"] = [ADA, BOB, CLEO]
     for person_ in (ADA, BOB, CLEO):
         d[f"/people/{person_['id']}.json"] = {
