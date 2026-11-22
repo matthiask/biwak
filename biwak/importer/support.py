@@ -312,6 +312,7 @@ def make_data():
         301,
         visible=True,
         description=f'<div>Ask {mention(BOB)} about prices.<br>See <a href="{APP}/buckets/{PROJECT}/messages/2001">the announcement</a>.</div>',
+        starts_on="2026-05-28",
         due_on="2026-06-01",
         assignees=[BOB, CLEO],
         comments_count=2,

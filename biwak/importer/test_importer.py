@@ -126,6 +126,7 @@ class ImportEveryKindTest(ImportCase):
 
         food = self.item("Buy giraffe food")
         self.assertEqual(food.todo.due_on, dt.date(2026, 6, 1))
+        self.assertEqual(food.todo.starts_on, dt.date(2026, 5, 28))
         self.assertEqual(
             self.names(food.todo.assignees.all()), {"Bob Example", "Cleo Example"}
         )
@@ -1112,3 +1113,33 @@ class InternalInsideVisibleTest(ImportCase):
         self.assertEqual(pots.todo.group.todolist, internal.todolist)
         self.assertEqual(self.item("Peel potatoes").todo.group.title, "Week 1")
         self.assertEqual(internal.todolist.groups.count(), 1)
+
+
+class StartDatesTest(ImportCase):
+    """Basecamp's ``starts_on`` (specs/start-dates.md)"""
+
+    def food(self):
+        return self.client_.data["/todolists/301/todos.json"][0]
+
+    def test_a_second_run_changes_it(self):
+        self.run_import()
+        self.food().update(
+            starts_on="2026-06-20",
+            due_on="2026-07-01",
+            updated_at="2026-03-01T08:00:00.000Z",
+        )
+        self.run_import()
+        todo = self.item("Buy giraffe food").todo
+        self.assertEqual(
+            (todo.starts_on, todo.due_on), (dt.date(2026, 6, 20), dt.date(2026, 7, 1))
+        )
+
+    def test_without_a_due_date_or_after_it_none(self):
+        for due_on in [None, "2026-05-01"]:
+            with self.subTest(due_on=due_on):
+                Item.objects.all().delete()
+                ImportedObject.objects.all().delete()
+                self.food()["due_on"] = due_on
+                self.run_import()
+                todo = self.item("Buy giraffe food").todo
+                self.assertIsNone(todo.starts_on)

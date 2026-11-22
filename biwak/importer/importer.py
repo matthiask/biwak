@@ -818,6 +818,17 @@ class Importer(Resolver):
             )
             return f"{text}\n\n{steps}".strip()
 
+        def dates():
+            """The due date and the start date (specs/start-dates.md); a
+            start date without a due date or after it isn't brought"""
+            due, starts = (
+                dt.date.fromisoformat(value) if value else None
+                for value in (rec.get("due_on"), rec.get("starts_on"))
+            )
+            if due is None or (starts and starts > due):
+                starts = None
+            return {"due_on": due, "starts_on": starts}
+
         def create():
             with importing(at=parse_time(rec["created_at"])):
                 return ops.create_todo(
@@ -826,7 +837,7 @@ class Importer(Resolver):
                     creator=creator,
                     group=group,
                     notes=notes(),
-                    due_on=rec.get("due_on") and dt.date.fromisoformat(rec["due_on"]),
+                    **dates(),
                 )
 
         def update(todo):
@@ -836,7 +847,7 @@ class Importer(Resolver):
                     actor=todo.creator,
                     title=title,
                     notes=notes(),
-                    due_on=rec.get("due_on") and dt.date.fromisoformat(rec["due_on"]),
+                    **dates(),
                 )
 
         todo = self._upsert(bc_type, rec, create=create, update=update)
