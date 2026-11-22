@@ -3,6 +3,7 @@ leaves them out"""
 
 import datetime as dt
 
+from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.test import TestCase
 
@@ -17,6 +18,7 @@ from biwak.items.models import Item, Kind, MessageCategory, Status
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
 from biwak.projects.overview import overview
+from biwak.public_links import operations as public_link_ops
 from biwak.search import queries as search
 from biwak.test_utils import external, person, project
 
@@ -117,6 +119,13 @@ class TemplateTest(Fixture, TestCase):
     def test_no_members(self):
         with self.assertRaises(ValueError):
             project_ops.add_member(self.template, self.bob, actor=self.ada)
+
+    def test_no_public_links(self):
+        """Nothing in a template is shared publicly (decided 2026-11-22)"""
+        self.assertFalse(self.kickoff.is_shareable)
+        self.assertFalse(public_link_ops.can_share(self.ada, self.welcome))
+        with self.assertRaises(PermissionDenied):
+            public_link_ops.create_public_link(self.welcome, days=7, actor=self.ada)
 
     def test_stays_all_access(self):
         with self.assertRaises(ValueError):

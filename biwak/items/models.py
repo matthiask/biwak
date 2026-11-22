@@ -179,8 +179,13 @@ class Item(TreeNode):
 
     @property
     def is_shareable(self):
-        """Whether it can have a public link (specs/public-links.md)"""
-        return self.kind in SHAREABLE and not self.is_draft
+        """Whether it can have a public link (specs/public-links.md): not
+        in templates (decided 2026-11-22, specs/templates.md)"""
+        return (
+            self.kind in SHAREABLE
+            and not self.is_draft
+            and not self.project.is_template
+        )
 
     @property
     def detail(self):

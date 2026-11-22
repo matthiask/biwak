@@ -16,7 +16,8 @@ from biwak.public_links.models import DAYS, PublicLink
 
 def can_share(user, item):
     """Staff, on any leaf they see (internal or visible to clients);
-    clients never, like the visibility switches (decided 2026-11-22)"""
+    clients never, like the visibility switches (decided 2026-11-22);
+    nothing in templates (``is_shareable``, specs/templates.md)"""
     return not user.is_client and item.is_shareable
 
 

@@ -6,9 +6,11 @@ are maintained by people in the app (one person or role keeps them
 current) and used while projects run (an onboarding list, a list per
 event), which a skill setting up projects doesn't cover.
 
-**Status:** built (2026-11-22), branch `templates`; the decisions
-marked "proposed" below were made while building, for the user to
-confirm.
+**Status:** built (2026-11-22), branch `templates`; the changes
+decided afterwards (check-ins copied, assignments kept, search never
+finding templates, one library for the importer, no public links)
+built on `templates-fixes`. The decisions marked "proposed" below were
+made while building, for the user to confirm.
 
 ## What real templates hold
 
@@ -94,7 +96,8 @@ of what's needed:
 - **One to-do list library** (decided 2026-11-22): a template project
   named "To-do list library" holding lists; no separate concept.
 - **No public links** in templates (decided 2026-11-22): "Share…" isn't
-  offered on their items, and the API refuses them.
+  offered on their items (the "More" menu, the palette; the page is
+  404), and the API and the operation refuse them.
 
 ## Importing
 
@@ -117,7 +120,9 @@ rebuilds them by hand.
   `project__is_template=False` in the feed across projects, the to-dos
   (`due.todos()`, so also Home and the calendar feed), Home's
   bookmarks, check-ins due (and `is_askable()`: questions in templates
-  aren't asked), forwarding's lists, public links (they don't resolve),
+  aren't asked), forwarding's lists, public links (they don't resolve;
+  `Item.is_shareable` is false in templates, so no "Share…",
+  `create_public_link()` refuses, the API answers 400),
   the all-projects page, the archived projects. Search never finds
   them (`search.queries.search()`; the search page doesn't offer them
   as a project to search in). The palette lists templates after the
@@ -182,10 +187,6 @@ rebuilds them by hand.
   activity ("created Website from the template …" stays apart from
   "created Launch").
 
-## To change (decided 2026-11-22, not built yet)
-
-- No "Share…" in templates, the API refusing public links there.
-
 ## Not planned
 
 - **"Save as template"** from a running project (decided 2026-11-22):
@@ -193,8 +194,9 @@ rebuilds them by hand.
 
 ## Done when
 
-- Tests for the operations (copying everything, assignees left out,
-  visibility, one event, nothing told), the pages as staff, a client
+- Tests for the operations (copying everything, assignees and people
+  asked kept and added as members, visibility, one event, nothing
+  told), no search and no public links in templates, the pages as staff, a client
   and an external getting 404, templates left out everywhere listed
   above, the API and the CLI. (`biwak/projects/test_templates*.py`,
   `biwak/test_cli_templates.py`, `biwak/importer/test_templates.py`)

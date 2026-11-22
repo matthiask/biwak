@@ -94,6 +94,7 @@ palette.
   opens Share….
 - Trashing the item (or what it's in) or archiving the project ends its
   link for good; restoring doesn't bring it back.
+- Nothing in a template can be shared publicly.
 - **Public links** in your account menu lists the live links in your
   projects, each with "Stop sharing". Sharing and stopping show in the
   activity for staff, they notify nobody.

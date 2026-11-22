@@ -7,6 +7,7 @@ from biwak.activity.models import Action, Event
 from biwak.items.models import Item, Kind
 from biwak.projects.models import Project
 from biwak.projects.test_templates import Fixture
+from biwak.public_links.models import PublicLink
 
 
 class TemplatesAPITest(Fixture, TestCase):
@@ -16,6 +17,15 @@ class TemplatesAPITest(Fixture, TestCase):
         if method != "get":
             kwargs["content_type"] = "application/json"
         return getattr(self.client, method)(f"/api/v1/{path}", data, **kwargs)
+
+    def test_no_public_links(self):
+        """Refused in templates (decided 2026-11-22)"""
+        response = self.api(
+            "post", f"items/{self.kickoff.pk}/public-link/", self.ada, {"days": 7}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("templates", response.json()["detail"])
+        self.assertFalse(PublicLink.objects.exists())
 
     def test_list(self):
         data = self.api("get", "projects/", self.bob, {"templates": "true"}).json()

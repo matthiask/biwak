@@ -155,6 +155,20 @@ class TemplatePageTest(Base, TestCase):
         self.assertNotIn("New list from a template…", labels)
 
 
+class NoPublicLinksTest(Base, TestCase):
+    def test_no_share(self):
+        """Not in the menu or the palette, the page 404 (decided
+        2026-11-22)"""
+        self.client.force_login(self.ada)
+        url = reverse("item_share", args=[self.welcome.pk])
+        response = self.client.get(self.welcome.get_absolute_url())
+        self.assertNotContains(response, url)
+        labels = [a["label"] for a in palette_data(response)["actions"]]
+        self.assertNotIn("Share…", labels)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, {"days": 7}).status_code, 404)
+
+
 class SearchTest(Base, TestCase):
     def test_never_found(self):
         """No "Include templates", not offered as a project to search in,
