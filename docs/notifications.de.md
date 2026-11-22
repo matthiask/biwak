@@ -120,6 +120,32 @@ nicht gemailt, und eine Mail, in der nichts übrig bleibt, wird nicht
 gesendet. Mails enthalten den ganzen Text; die erste Zeile sagt, wenn
 Kund:innen den Eintrag sehen können.
 
+## Push-Benachrichtigungen
+
+Biwak kann dich auf deinem Telefon oder Computer benachrichtigen, auch
+wenn es nicht offen ist, wenn du **erwähnt** oder **zugewiesen** wirst
+(die To-dos eines „Zuweisen…“ sind eine Benachrichtigung), sonst nicht.
+In den Einstellungen unter „Benachrichtigungen“ fragt „Auf diesem Gerät
+benachrichtigen“ deinen Browser um Erlaubnis und fügt das Gerät der
+Liste darunter hinzu; „Entfernen“ beendet es. Jedes Gerät wählst du
+einzeln, und es ist unabhängig von den Mails: Du kannst beides wollen,
+oder nur Push-Benachrichtigungen mit „Keine Mails“.
+
+- Sie kommen wie Mails etwa zehn Minuten nach der Änderung, eine pro
+  Eintrag, und nicht, wenn du es vorher in der Laterne gelesen hast.
+- Nicht in deinen Ruhezeiten und nicht, während du abwesend bist, und
+  auch nicht später: Die Laterne hat es.
+- Ein Tippen öffnet den Eintrag.
+- Jedes Gerät, auf dem du sie eingeschaltet hast, bekommt jede
+  Benachrichtigung; die Liste zeigt sie nach Browser und System, wann
+  hinzugefügt und wann zuletzt verwendet.
+- Abmelden auf einem Gerät beendet seine Benachrichtigungen
+  („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
+  nach dem Anmelden wieder ein.
+- Auf einem iPhone oder iPad füge Biwak zuerst zum Home-Bildschirm
+  hinzu (in Safari im Teilen-Menü „Zum Home-Bildschirm“) und schalte es
+  dann in der App ein.
+
 ## Ruhezeiten und Abwesenheit
 
 Mails warten, während du nicht arbeitest; die Laterne zeigt weiterhin

@@ -7,4 +7,4 @@ class AccountsConfig(AppConfig):
     verbose_name = _("accounts")
 
     def ready(self):
-        from biwak.accounts import passkeys  # noqa: F401
+        from biwak.accounts import passkeys, signals  # noqa: F401

@@ -205,6 +205,73 @@
         <a href="{% url 'help' 'notifications' %}">{% translate "How notifications work" %}</a>
       </p>
     </div>
+    {% if push %}
+      {% comment %}
+        Push notifications (specs/web-push.md): frontend/push.js shows the
+        button, or why there's none, and marks this device in the list
+      {% endcomment %}
+      <div
+        class="card-body border-top"
+        id="devices"
+        data-push="{{ push.key }}"
+        data-push-url="{% url 'push_subscription' %}"
+      >
+        <h3 class="h6">{% translate "Push notifications" %}</h3>
+        <p class="form-text mt-0">
+          {% translate "When you're mentioned or assigned, also while Biwak isn't open; not in your quiet hours or while you're away." %}
+        </p>
+        <button type="button" class="btn btn-sm btn-quiet" data-push-subscribe hidden>
+          {% translate "Notify me on this device" %}
+        </button>
+        <p class="form-text mb-0" data-push-state="home-screen" hidden>
+          {% translate "Add Biwak to your home screen to get notifications on this iPhone." %}
+        </p>
+        <p class="form-text mb-0" data-push-state="blocked" hidden>
+          {% translate "Notifications are blocked for Biwak in this browser's settings." %}
+        </p>
+        <p class="form-text mb-0" data-push-state="failed" role="status" hidden>
+          {% translate "That didn't work. Please try again." %}
+        </p>
+        {% if push.devices %}
+          <div class="wb-table-scroll mt-3">
+            <table class="wb-table" id="push-devices">
+              <thead>
+                <tr>
+                  <th>{% translate "Browser" %}</th>
+                  <th>{% translate "Added" %}</th>
+                  <th>{% translate "Last used" %}</th>
+                  <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for device in push.devices %}
+                  <tr data-push-endpoint="{{ device.endpoint }}">
+                    <td title="{{ device.user_agent }}">
+                      {{ device.name }}
+                      <span class="badge wb-tone-neutral ms-1" data-push-this hidden>{% translate "This one" %}</span>
+                    </td>
+                    <td>{{ device.created_at|moment }}</td>
+                    <td>
+                      {% if device.last_success_at %}
+                        {{ device.last_success_at|moment }}
+                      {% else %}
+                        <span class="text-body-secondary">{% translate "Never" %}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      <form method="post" action="{% url 'push_subscription_remove' device.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
     <div class="card-body border-top" id="away">
       <h3 class="h6">{% translate "Out of office" %}</h3>
       {% if request.user.is_away %}

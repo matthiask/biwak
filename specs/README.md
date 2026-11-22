@@ -55,7 +55,7 @@ confirm: `decisions-to-confirm.md`.
 | `todos-from-text.md` | built | dropping or pasting a Markdown list onto a to-do list: headings become groups |
 | `templates.md` | built (decisions to confirm in the spec) | projects and lists started from templates kept in the app |
 | `cli-style.md` | built (0.60.0) | the CLI in the style of gov and wb: one plural group per thing, verbs as subcommands |
-| `web-push.md` | open | push notifications on phones and desktops |
+| `web-push.md` | built | push notifications on phones and desktops: mentions and assignments |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
 
 ## Writing a spec for a new part

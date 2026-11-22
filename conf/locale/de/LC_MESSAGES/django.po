@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 21:57+0100\n"
+"POT-Creation-Date: 2026-11-22 22:12+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -663,6 +663,34 @@ msgstr "Kalender-Link"
 msgid "calendar links"
 msgstr "Kalender-Links"
 
+#: biwak/accounts/models.py
+msgid "endpoint"
+msgstr "Endpunkt"
+
+#: biwak/accounts/models.py
+msgid "public key"
+msgstr "öffentlicher Schlüssel"
+
+#: biwak/accounts/models.py
+msgid "authentication secret"
+msgstr "Authentifizierungsgeheimnis"
+
+#: biwak/accounts/models.py
+msgid "user agent"
+msgstr "User-Agent"
+
+#: biwak/accounts/models.py
+msgid "last success at"
+msgstr "zuletzt erfolgreich am"
+
+#: biwak/accounts/models.py
+msgid "push subscription"
+msgstr "Push-Abonnement"
+
+#: biwak/accounts/models.py
+msgid "push subscriptions"
+msgstr "Push-Abonnements"
+
 #: biwak/accounts/operations.py biwak/accounts/views.py
 msgid "Choose today or a later day."
 msgstr "Wähle heute oder einen späteren Tag."
@@ -947,6 +975,10 @@ msgstr "Stattdessen wird die Zeichnung angezeigt."
 #: biwak/templates/reactions/confirm_remove.html
 msgid "Remove"
 msgstr "Entfernen"
+
+#: biwak/accounts/views.py
+msgid "Push notifications on this device are off."
+msgstr "Push-Benachrichtigungen auf diesem Gerät sind aus."
 
 #: biwak/activity/api.py
 msgid "The history is for staff only."
@@ -1577,6 +1609,10 @@ msgstr "als ungelesen markiert am"
 msgid "held at"
 msgstr "zurückgehalten am"
 
+#: biwak/activity/models.py
+msgid "pushed at"
+msgstr "gepusht am"
+
 #: biwak/activity/models.py biwak/outbox/models.py
 msgid "notification"
 msgstr "Benachrichtigung"
@@ -1631,6 +1667,10 @@ msgstr "Die Arbeitszeit endet nach ihrem Beginn."
 #: biwak/activity/operations.py biwak/activity/views.py
 msgid "Choose at least one working day."
 msgstr "Wähle mindestens einen Arbeitstag."
+
+#: biwak/activity/push.py biwak/templates/activity/_lantern_groups.html
+msgid "You were mentioned."
+msgstr "Du wurdest erwähnt."
 
 #: biwak/activity/timeline.py
 msgid "removed the due date"
@@ -4505,7 +4545,7 @@ msgstr "Diese Seite hat keine eigenen."
 msgid "Link copied."
 msgstr "Link kopiert."
 
-#: biwak/palette/templatetags/palette.py
+#: biwak/palette/templatetags/palette.py biwak/templates/accounts/settings.html
 msgid "That didn't work. Please try again."
 msgstr "Das hat nicht geklappt. Bitte versuche es noch einmal."
 
@@ -5720,6 +5760,46 @@ msgid "How notifications work"
 msgstr "So funktionieren Benachrichtigungen"
 
 #: biwak/templates/accounts/settings.html
+msgid "Push notifications"
+msgstr "Push-Benachrichtigungen"
+
+#: biwak/templates/accounts/settings.html
+msgid "When you're mentioned or assigned, also while Biwak isn't open; not in your quiet hours or while you're away."
+msgstr "Wenn du erwähnt oder zugewiesen wirst, auch wenn Biwak nicht offen ist; nicht in deinen Ruhezeiten und nicht, während du abwesend bist."
+
+#: biwak/templates/accounts/settings.html
+msgid "Notify me on this device"
+msgstr "Auf diesem Gerät benachrichtigen"
+
+#: biwak/templates/accounts/settings.html
+msgid "Add Biwak to your home screen to get notifications on this iPhone."
+msgstr "Füge Biwak zum Home-Bildschirm hinzu, um auf diesem iPhone benachrichtigt zu werden."
+
+#: biwak/templates/accounts/settings.html
+msgid "Notifications are blocked for Biwak in this browser's settings."
+msgstr "Benachrichtigungen sind für Biwak in den Einstellungen dieses Browsers blockiert."
+
+#: biwak/templates/accounts/settings.html
+msgid "Browser"
+msgstr "Browser"
+
+#: biwak/templates/accounts/settings.html
+msgid "Added"
+msgstr "Hinzugefügt"
+
+#: biwak/templates/accounts/settings.html
+msgid "Last used"
+msgstr "Zuletzt verwendet"
+
+#: biwak/templates/accounts/settings.html
+msgid "This one"
+msgstr "Diese"
+
+#: biwak/templates/accounts/settings.html
+msgid "Never"
+msgstr "Nie"
+
+#: biwak/templates/accounts/settings.html
 msgid "Out of office"
 msgstr "Abwesenheit"
 
@@ -5773,18 +5853,6 @@ msgid "Passkey"
 msgstr "Passkey"
 
 #: biwak/templates/accounts/settings.html
-msgid "Added"
-msgstr "Hinzugefügt"
-
-#: biwak/templates/accounts/settings.html
-msgid "Last used"
-msgstr "Zuletzt verwendet"
-
-#: biwak/templates/accounts/settings.html
-msgid "Never"
-msgstr "Nie"
-
-#: biwak/templates/accounts/settings.html
 msgid "No passkeys yet."
 msgstr "Noch keine Passkeys."
 
@@ -5822,20 +5890,12 @@ msgid "Sessions"
 msgstr "Sitzungen"
 
 #: biwak/templates/accounts/settings.html
-msgid "Browser"
-msgstr "Browser"
-
-#: biwak/templates/accounts/settings.html
 msgid "IP address"
 msgstr "IP-Adresse"
 
 #: biwak/templates/accounts/settings.html
 msgid "Signed in"
 msgstr "Angemeldet"
-
-#: biwak/templates/accounts/settings.html
-msgid "This one"
-msgstr "Diese"
 
 #: biwak/templates/accounts/settings.html
 msgid "Sign out here"
@@ -6124,10 +6184,6 @@ msgstr "Als gelesen markieren"
 #: biwak/templates/activity/_lantern_groups.html
 msgid "Mark as unread"
 msgstr "Als ungelesen markieren"
-
-#: biwak/templates/activity/_lantern_groups.html
-msgid "You were mentioned."
-msgstr "Du wurdest erwähnt."
 
 #: biwak/templates/activity/_lantern_menu.html
 #: biwak/templates/activity/lantern.html biwak/templates/base.html

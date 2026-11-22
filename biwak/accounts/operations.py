@@ -196,3 +196,60 @@ def remove_image(person, *, actor):
 
 def _delete(name):
     default_storage.delete(name)
+
+
+# Devices getting push notifications (specs/web-push.md) ---------------------
+
+
+def subscription_data(data):
+    """``(endpoint, p256dh, auth)`` from the JSON of the browser's
+    ``PushSubscription.toJSON()``; ``ValidationError`` for anything else"""
+    from django.core.validators import URLValidator
+
+    try:
+        endpoint = data["endpoint"]
+        keys = data["keys"]
+        p256dh, auth = keys["p256dh"], keys["auth"]
+    except KeyError, TypeError:
+        raise ValidationError("Not a push subscription.") from None
+    if not all(isinstance(value, str) and value for value in (endpoint, p256dh, auth)):
+        raise ValidationError("Not a push subscription.")
+    URLValidator(schemes=["https"])(endpoint)
+    if len(endpoint) > 1000 or len(p256dh) > 200 or len(auth) > 100:
+        raise ValidationError("Not a push subscription.")
+    return endpoint, p256dh, auth
+
+
+@transaction.atomic
+def add_device(user, data, *, user_agent=""):
+    """Subscribes the device (the JSON of ``PushSubscription.toJSON()``):
+    the browser's subscription is the device's, so subscribing again
+    updates it; somebody else's on that browser becomes the person's"""
+    from biwak.accounts.models import PushSubscription
+
+    endpoint, p256dh, auth = subscription_data(data)
+    subscription = (
+        PushSubscription.objects.select_for_update().filter(endpoint=endpoint).first()
+    )
+    if subscription is None or subscription.user_id != user.pk:
+        # Somebody else's before: theirs no more, and nothing of before
+        # pushed (``push.pending()``)
+        if subscription is not None:
+            subscription.delete()
+        subscription = PushSubscription(user=user, endpoint=endpoint)
+    subscription.p256dh, subscription.auth = p256dh, auth
+    subscription.user_agent = user_agent[:500]
+    subscription.save()
+    return subscription
+
+
+@transaction.atomic
+def remove_device(user, *, pk=None, endpoint=None):
+    """Removes one of the person's devices, by ID or endpoint; returns
+    whether there was one"""
+    devices = user.push_subscriptions.all()
+    devices = (
+        devices.filter(pk=pk) if pk is not None else devices.filter(endpoint=endpoint)
+    )
+    deleted, _rows = devices.delete()
+    return bool(deleted)

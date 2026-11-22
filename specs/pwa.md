@@ -16,6 +16,7 @@ app.
 - **No service worker and no offline caching** (decided 2026-11-21):
   cached pages would show stale data, maybe what somebody may not see
   anymore. Offline, the connection banner says so (`connection.md`).
-  Push notifications are postponed; a service worker comes with them.
+  The one service worker shows push notifications only (`web-push.md`,
+  built 2026-11-22), without a `fetch` handler.
 - Links to other sites open in the browser (`target="_blank"`); the
   brand leads Home, so the app works without a back button.

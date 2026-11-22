@@ -313,6 +313,9 @@ class Notification(models.Model):
     # Waiting for the person's working time or return (specs/quiet-hours.md):
     # what waited goes out as one mail
     held_at = models.DateTimeField(_("held at"), null=True, blank=True)
+    # Pushed to the person's devices, or not to be pushed any more (quiet
+    # hours, away: nothing later; specs/web-push.md)
+    pushed_at = models.DateTimeField(_("pushed at"), null=True, blank=True)
 
     class Meta:
         ordering = ["created_at", "pk"]

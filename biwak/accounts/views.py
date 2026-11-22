@@ -1,8 +1,10 @@
+import json
 import re
 
 from django import forms
 from django.conf import settings as django_settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,7 +14,11 @@ from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import (
+    require_GET,
+    require_http_methods,
+    require_POST,
+)
 
 from biwak import cli_version
 from biwak.accounts import languages, operations, passkeys, signin, sso
@@ -288,6 +294,7 @@ def _settings_page(request, *, notifications=None, name_form=None, away_form=Non
             "accents": Accent.choices,
             "project_overrides": project_overrides,
             "item_overrides": item_overrides,
+            "push": _push_context(user),
             **signin.context(request),
         },
     )
@@ -511,3 +518,102 @@ def person_image_remove(request, pk):
         submit_label=_("Remove"),
         destructive=True,
     )
+
+
+# Push notifications (specs/web-push.md) -------------------------------------
+
+
+def _push_context(user):
+    """The settings' devices, None without the VAPID keys (nothing
+    offered)"""
+    from biwak.activity import push
+
+    if not push.enabled():
+        return None
+    devices = list(user.push_subscriptions.all())
+    for device in devices:
+        device.name = signin.describe_agent(device.user_agent)
+    return {"key": django_settings.WEBPUSH_VAPID_PUBLIC_KEY, "devices": devices}
+
+
+@never_cache
+@require_http_methods(["POST", "DELETE"])
+def push_subscription(request):
+    """``POST`` subscribes this device, ``DELETE`` unsubscribes it: the
+    JSON of the browser's ``PushSubscription.toJSON()`` (frontend/push.js),
+    with the CSRF token in its header. 204, or 400 for anything else, 404
+    without the VAPID keys."""
+    from biwak.activity import push
+
+    if not push.enabled():
+        raise Http404
+    try:
+        device = _push_change(request, json.loads(request.body))
+    except ValueError, ValidationError:
+        return HttpResponseBadRequest()
+    response = HttpResponse(status=204)
+    if device is None:
+        response.delete_cookie(DEVICE_COOKIE)
+    else:
+        # Which device this browser is, for signing out (``signed_out()``)
+        response.set_signed_cookie(
+            DEVICE_COOKIE,
+            device.pk,
+            salt=DEVICE_COOKIE,
+            max_age=DEVICE_COOKIE_AGE,
+            secure=request.is_secure(),
+            httponly=True,
+            samesite="Lax",
+        )
+    return response
+
+
+def _push_change(request, data):
+    """Subscribes or (``DELETE``) unsubscribes the device; returns it, or
+    None when unsubscribed"""
+    if request.method == "DELETE":
+        operations.remove_device(
+            request.user, endpoint=operations.subscription_data(data)[0]
+        )
+        return None
+    return operations.add_device(
+        request.user, data, user_agent=request.headers.get("User-Agent", "")
+    )
+
+
+# This browser's device (``push_subscription``): signing out removes it,
+# also without JavaScript (specs/web-push.md). As long as browsers keep a
+# cookie (Chrome: 400 days); the browser's own subscription outlives it.
+DEVICE_COOKIE = "biwak_push_device"
+DEVICE_COOKIE_AGE = 400 * 24 * 3600
+
+
+def signed_out(request, user):
+    """Signing out explicitly ends pushes on this browser: its device (the
+    cookie, or the endpoint ``frontend/push.js`` adds to the sign-out
+    form) is removed, and a message says so. Sessions that expire don't
+    get here (``user_logged_out``)."""
+    if user is None:
+        return False
+    removed = False
+    pk = request.get_signed_cookie(DEVICE_COOKIE, default=None, salt=DEVICE_COOKIE)
+    if pk is not None and str(pk).isdigit():
+        removed |= operations.remove_device(user, pk=int(pk))
+    if (
+        endpoint := request.POST.get("push_endpoint", "")
+        if request.method == "POST"
+        else ""
+    ):
+        removed |= operations.remove_device(user, endpoint=endpoint)
+    if removed:
+        messages.info(request, _("Push notifications on this device are off."))
+    return removed
+
+
+@never_cache
+@require_POST
+def push_subscription_remove(request, pk):
+    """The settings' "Remove" of a device"""
+    if not operations.remove_device(request.user, pk=pk):
+        raise Http404
+    return redirect(reverse("settings") + "#devices")

@@ -2,6 +2,7 @@ import atexit
 import shutil
 import sys
 import tempfile
+from email.utils import parseaddr
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -306,6 +307,17 @@ if LIVE:  # pragma: no cover
 REPLY_DOMAIN = env("REPLY_DOMAIN", default="")
 RESEND_API_KEY = env("RESEND_API_KEY", default="")
 RESEND_WEBHOOK_SECRET = env("RESEND_WEBHOOK_SECRET", default="")
+
+# Push notifications (specs/web-push.md): the VAPID key pair signing our
+# requests to the browsers' push services, made once with ``uvx --from
+# py-vapid vapid --gen`` (the public key as the application server key,
+# base64url; the private key as base64url or PEM). Without both, nothing is
+# offered or sent.
+WEBPUSH_VAPID_PUBLIC_KEY = env("WEBPUSH_VAPID_PUBLIC_KEY", default="")
+WEBPUSH_VAPID_PRIVATE_KEY = env("WEBPUSH_VAPID_PRIVATE_KEY", default="")
+WEBPUSH_SUBJECT = env(
+    "WEBPUSH_SUBJECT", default=f"mailto:{parseaddr(DEFAULT_FROM_EMAIL)[1]}"
+)
 
 # Sending (specs/mail-sending.md): the app's mails go through the outbox
 # (biwak.outbox), which sends them with the default mailer; mail_admins
