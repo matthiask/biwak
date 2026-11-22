@@ -58,8 +58,10 @@ commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break.
 End-to-end tests (`biwak/test_e2e.py`, tagged `e2e`) run the real server and
 Chromium through Playwright: `uv run playwright install chromium` once,
 without the browser they're skipped, `./runtests.sh --exclude-tag e2e`
-leaves them out. They need the production bundle in `static/`, which
-`./runtests.sh` builds first. Only for what nothing but a browser can test:
+leaves them out and skips building the production bundle they need
+(`./runtests.sh` builds it first otherwise). While building, run your
+few modules with `--exclude-tag e2e --parallel 1`: a second, not a
+minute (decided 2026-11-22: waiting on tests isn't work). Only for what nothing but a browser can test:
 the JavaScript in `frontend/` and htmx (decided 2026-11-20); the test client
 covers everything else. A change to a script or an htmx interaction gets a
 test there: logged in through a session cookie, Playwright's waiting
