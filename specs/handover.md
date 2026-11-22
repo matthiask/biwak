@@ -119,6 +119,21 @@ Asked by the user 2026-11-22, on the same selection as "Assign…".
   isn't useful): one due
   date for all, or "Move by N days" (and start dates with them), or
   "Remove", like copying a list's dates (`lists-across-projects.md`).
+- **Building it** like "Assign…": `biwak/items/assigning.py`
+  (`todos_for(user, ids)`, `AssignForm`, the view `todos_assign` at
+  `/todos/assign/?items=…&next=…`, all or nothing with
+  `missing_message()`), its button in `items/_selection_bar.html`
+  (`data-selection-action`, the script `frontend/select-rows.js` adds
+  the selected IDs). Moving within a project: `ops.move_todos(items,
+  todolist=, group=)`; to another project: one new operation in
+  `biwak/items/operations.py` following `move_to_project()` and its
+  `people_plan()`/`staying()` (the modal says who's added and who's
+  dropped first, like "Move to…"). Dates: the `Dates` choices of
+  copying (`KEEP` is "Set a date" here: one date, "Move by N days",
+  "Remove"), through `ops.update_todo()` per to-do inside one
+  transaction. Tests next to `biwak/items/test_assigning.py`, a browser
+  test only for the bar's new buttons (`test_e2e.py`, the selection
+  class).
 - Both one event per action like "Assign…" (one entry in the lantern),
   the API (`POST /api/v1/todos/move/`, `/todos/dates/` with the IDs) and
   the CLI (`biwak todos move ID… --list`, `biwak todos dates ID…`).

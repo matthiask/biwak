@@ -54,7 +54,55 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 - Audit log for the new table; API: list and delete one's own devices;
   the CLI doesn't push.
 
-## Done when
+## Building it
+
+In this order, each step with its tests:
+
+1. **Model:** `PushSubscription` in `biwak/accounts/` (user, endpoint
+   unique, `p256dh`, `auth`, user agent, `created_at`,
+   `last_success_at`), `audit_tables()` in the migration
+   (`biwak/audit/migrations/0002_audited_tables.py` shows how). A
+   `Notification` gets `pushed_at` (null), like `sent_at`.
+2. **Which notifications push:** a function `push.wanted(notification)`:
+   the event's data names the person in `mentioned`, or the event is
+   `Action.ASSIGNED` naming them in `assignees` (the same tests the
+   lantern's "You were mentioned" and `mails.describe()` use; grep
+   `"mentioned"` in `biwak/activity/`). Not read
+   (`read_at`), not the person's own event.
+3. **Sending:** `push.send_due(now)` called from `send_mails`
+   (`biwak/activity/mails.py`, `send_mails()`; the command in
+   `biwak/*/management/commands/send_mails.py` runs each part in its own
+   `try`): notifications older than `mails.MERGE_AFTER` (10 minutes),
+   not pushed, `wanted`, for people with subscriptions and not
+   `quiet.mails_held(user, now)` (quiet hours, away:
+   `biwak/accounts/quiet.py`); held ones are marked pushed without a
+   push (nothing later). One push per item and person (several
+   notifications of one item: the latest line), `pywebpush.webpush()`
+   with the VAPID settings, `TTL` 12 hours; 404/410 delete the
+   subscription, other errors are logged and left for the next run.
+4. **Settings:** `WEBPUSH_VAPID_PUBLIC_KEY`, `WEBPUSH_VAPID_PRIVATE_KEY`,
+   `WEBPUSH_SUBJECT` (`mailto:` the default from address) with speckenv
+   in `biwak/settings.py`; empty: nothing offered or sent. How to make
+   keys: `uvx --from py-vapid vapid --gen` (in the spec and
+   `AGENTS.md`'s "Running it").
+5. **Subscribing:** endpoints `POST`/`DELETE /accounts/push/` (session,
+   CSRF; the JSON of `PushSubscription.toJSON()`), the settings'
+   Notifications section: "Notify me on this device" (a button, then
+   the browser's permission), the list of devices with "Remove",
+   `frontend/push.js` loaded from `main.js`; the text for Safari on an
+   iPhone not on the home screen ("Add Biwak to your home screen to get
+   notifications on this iPhone."). API: `GET`/`DELETE
+   /api/v1/me/push-subscriptions/` (own devices).
+6. **Service worker** `frontend/sw.js` served at `/sw.js` (root scope,
+   `Service-Worker-Allowed` not needed), only `push` (show the
+   notification: title the lantern's line, body the project and the
+   first line, `tag` the item's ID, `data.url`) and `notificationclick`
+   (focus an open Biwak window on the URL or open one). No `fetch`
+   handler: nothing cached.
+7. **Translations** (`fl mm --language=de`), the help's notifications
+   chapter (English and German), this spec's Status.
+
+
 
 - Tests: what pushes and what doesn't (mentions and assignments only,
   own actions, read, quiet hours,
