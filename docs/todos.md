@@ -6,7 +6,7 @@ project. Staff create lists with "New list" on the project's page.
 ## Lists and groups
 
 - **Add a to-do** opens a form in the list: title, notes, assignees, a
-  due date and how it repeats. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it
+  due date (and a start date once it's set) and how it repeats. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it
   and starts the next one, <kbd>Esc</kbd> closes the form.
 - **Groups** are headings inside a list ("New group"). Rename or remove
   a group with the icons next to its name; removing it keeps its
@@ -59,7 +59,7 @@ check pops, the title is struck through and the row fades away; the last
 open to-do of a list gets a small burst and "All done." (not with reduced
 motion set in your system).
 
-The to-do's page shows its facts (assigned to, due on, repeats) and
+The to-do's page shows its facts (assigned to, due on, starts on, repeats) and
 notes. Click them, the title or "Edit" (<kbd>e</kbd>) to change them in
 place; "Save" or "Cancel" goes back. To choose people, type in the
 field: the list shows who matches, <kbd>↑</kbd>/<kbd>↓</kbd> and
@@ -82,6 +82,12 @@ you're on, and typing goes back to the field.
   their to-dos over; their mark is greyed and "(inactive)" follows their
   name. They aren't offered for new assignments.
 - **Due on:** a date. Overdue to-dos are marked.
+- **Starts on:** for work that can't start yet, a start date shows once
+  the due date is set; it can't be after the due date, and removing the
+  due date removes it. Rows show both ("3–7 Dec"). Until it starts, the
+  to-do stays out of your current work: My to-dos, the to-dos page and
+  Home (also its "Waiting on others") list it at the end under
+  "Starting later (N)", closed until you open it. Lists, the board and search show it as always.
 - **Repeat:** see below.
 
 Below the notes are the comments, with reactions (a quick emoji or a
@@ -92,7 +98,8 @@ Type `@` to mention a person; they are told and subscribed
 Between the comments, quiet lines say what happened to the to-do, oldest
 first, with who did it and when (hover for the exact time): completed
 and reopened, moved to another list or group, people assigned or
-removed, a new title or due date, trashed and restored. One person's changes one after the other, within ten
+removed, a new title or due date ("changed the dates" once there's a
+start date), trashed and restored. One person's changes one after the other, within ten
 minutes, are one line ("moved this to Done and completed it"); changes
 that undo each other (completing and reopening, assigning and removing
 the same person, a due date set and removed) leave nothing, and of a
@@ -110,7 +117,8 @@ interval, weekdays, or the nth weekday of the month. Optionally set
 Completing a repeating to-do creates the next one at the end of the
 same list and group, with the same title, notes, assignees and
 subscribers, due on the rule's next date after today (or after the due
-date, when you complete it early). There is never a stack of open
+date, when you complete it early). A start date keeps its distance:
+starting four days before the due date, the next one does too. There is never a stack of open
 copies. Comments and attachments stay with the completed to-do, and the
 new one links back ("Previous: ..."). Reopening a completed to-do
 doesn't remove the next one.
@@ -121,7 +129,8 @@ doesn't remove the next one.
 project, list and group. Grouped by due date, they are in Overdue,
 Today, This week (until Sunday), Next week, one section per month after
 that, and No date. Every project has the same page for its own to-dos.
-Completing works in place.
+Completing works in place. Open to-dos whose start date hasn't come yet
+are in "Starting later" at the end, the next to start first.
 
 The filters apply as you change them:
 
@@ -147,7 +156,8 @@ projects and archived lists don't show here.
 ## The calendar
 
 "Calendar" in your menu shows a link to a calendar feed (iCal) of your
-open to-dos that have a due date, as all-day events. Add it to your
+open to-dos that have a due date, as all-day events (from the start
+date to the due date, when there's a start date). Add it to your
 calendar app as a subscription. The link needs no login, so keep it
 to yourself; "Make a new link" replaces it and the old one stops
 working. The feed only shows what you can see.

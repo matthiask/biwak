@@ -21,6 +21,7 @@ import "htmx.org"
 // Forms in a <dialog> (biwak/modals.py)
 import "./modal.js"
 import "./rule-widget.js"
+import "./start-date.js"
 import "./connection.js"
 import "./stored-docs.js"
 import "./people-picker.js"

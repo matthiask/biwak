@@ -34,15 +34,28 @@ PROJECTS = 6
 WINDOW = dt.timedelta(days=7)
 
 
-def due_todos(user, today, *, assigned_by=False):
-    """Open to-dos due within the window or overdue, the most urgent first:
-    mine, or those I assigned to others"""
+def _in_window(user, today, *, assigned_by):
+    """Open to-dos due within the window or overdue: mine, or those I
+    assigned to others"""
     if assigned_by:
         todos = due.todos(user, assigned_by="me").exclude(todo__assignees=user)
     else:
         todos = due.todos(user, assignee="me")
-    todos = glance.with_signals(todos.filter(todo__due_on__lte=today + WINDOW))
-    return list(due.ordered(todos)[:TODOS])
+    return glance.with_signals(todos.filter(todo__due_on__lte=today + WINDOW))
+
+
+def due_todos(user, today, *, assigned_by=False):
+    """Those of ``_in_window()`` which have started, the most urgent first;
+    the others are "Starting later" (specs/start-dates.md)"""
+    todos = _in_window(user, today, assigned_by=assigned_by)
+    return list(due.ordered(todos.filter(due.started(today)))[:TODOS])
+
+
+def starting_later(user, today, *, assigned_by=False):
+    """Those of ``_in_window()`` whose start date hasn't come yet, the next
+    to start first"""
+    todos = _in_window(user, today, assigned_by=assigned_by)
+    return list(due.starting_later(todos, today))
 
 
 def recent_events(user):
@@ -125,7 +138,11 @@ def dashboard(request):
         return redirect(f"{reverse('projects')}?{request.GET.urlencode()}")
     today = schedules.today()
     mine = due_todos(user, today)
+    later = starting_later(user, today)
     waiting = [] if user.is_client else due_todos(user, today, assigned_by=True)
+    waiting_later = (
+        [] if user.is_client else starting_later(user, today, assigned_by=True)
+    )
     occurrences = checkin_ops.due(user)
     events = recent_events(user)
     bookmarks = bookmarked_items(user)
@@ -134,7 +151,9 @@ def dashboard(request):
         user,
         [
             *mine,
+            *later,
             *waiting,
+            *waiting_later,
             *(o.question.item for o in occurrences),
             *(e.item for e in events if e.item is not None),
             *(b.item for b in bookmarks),
@@ -152,8 +171,10 @@ def dashboard(request):
         "projects/home.html",
         {
             "sections": due.sections(mine, today),
+            "later": later,
             "open_count": open_count if open_count > len(mine) else None,
             "waiting": due.sections(waiting, today),
+            "waiting_later": waiting_later,
             "occurrences": occurrences,
             "days": updates(events),
             "projects": projects,

@@ -3,6 +3,7 @@ specs/api-cli.md). The same operations as the web interface, so writes
 create the same events and subscriptions."""
 
 import datetime as dt
+from contextlib import contextmanager
 from typing import Annotated, Literal
 
 from django.db.models import F, Prefetch
@@ -389,6 +390,7 @@ class TodoIn(Schema):
     title: Title
     notes: str = ""
     due_on: dt.date | None = None
+    starts_on: dt.date | None = None
     assignees: list[int] = []
     group_id: int | None = None
     recurrence: str = ""
@@ -405,6 +407,16 @@ def _rule(value, anchor):
         bad_request(str(exc))
 
 
+@contextmanager
+def invalid_dates():
+    """400 for a start date without a due date or after it (the operations
+    check before changing anything)"""
+    try:
+        yield
+    except ops.InvalidDates as exc:
+        bad_request(str(exc))
+
+
 def _count(value):
     if value is not None and value < 1:
         bad_request(_("The number of repeats left must be 1 or more."))
@@ -417,18 +429,20 @@ def todo_create(request, list_id: int, data: TodoIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=item.todolist)
-    todo = ops.create_todo(
-        todolist=item,
-        title=resolve_mentions(item, data.title, author=request.user),
-        creator=request.user,
-        group=group,
-        notes=resolve_mentions(item, data.notes, author=request.user),
-        due_on=data.due_on,
-        assignees=_assignees(request, item, data.assignees),
-        recurrence=_rule(data.recurrence, data.due_on),
-        recurrence_ends_on=data.recurrence_ends_on,
-        recurrence_count=_count(data.recurrence_count),
-    )
+    with invalid_dates():
+        todo = ops.create_todo(
+            todolist=item,
+            title=resolve_mentions(item, data.title, author=request.user),
+            creator=request.user,
+            group=group,
+            notes=resolve_mentions(item, data.notes, author=request.user),
+            due_on=data.due_on,
+            starts_on=data.starts_on,
+            assignees=_assignees(request, item, data.assignees),
+            recurrence=_rule(data.recurrence, data.due_on),
+            recurrence_ends_on=data.recurrence_ends_on,
+            recurrence_count=_count(data.recurrence_count),
+        )
     return Status(201, todo_out(Item.objects.get(pk=todo.pk), request.user))
 
 
@@ -451,6 +465,7 @@ def todo_overview(
     visible_to_clients: bool | None = None,
     due_group: Literal["overdue", "today", "this_week", "next_week", "later", "none"]
     | None = None,
+    started: bool | None = None,
     cursor: str | None = None,
     page_size: int | None = None,
 ):
@@ -461,7 +476,10 @@ def todo_overview(
     ``assignee`` is ``me``, ``nobody``, ``anybody`` (the default) or a
     person's ID, ``assigned_by=me``
     the to-dos the person assigned to somebody, ``due_group`` one
-    of the groups of the page. Archived projects and lists are left out.
+    of the groups of the page. ``started=true`` only those which have
+    started (or have no start date), ``false`` only those starting later
+    (specs/start-dates.md); without it all. Archived projects and lists
+    are left out.
     Clients only ever get what is visible to them."""
     project = project_for(request, project_id) if project_id is not None else None
     if assignee not in {None, "", "me", "nobody", "anybody"} and not (
@@ -485,6 +503,12 @@ def todo_overview(
         )
     )
     today = schedules.today()
+    if started is not None:
+        qs = (
+            qs.filter(due.started(today))
+            if started
+            else qs.filter(todo__starts_on__gt=today)
+        )
     grouping = grouping or "project"
     if completed:
         ordering = ("-completed_key", "-pk")
@@ -559,6 +583,7 @@ class TodoPatch(Schema):
     title: Title | None = None
     notes: str | None = None
     due_on: dt.date | None = None
+    starts_on: dt.date | None = None
     assignees: list[int] | None = None
     recurrence: str | None = None
     recurrence_ends_on: dt.date | None = None
@@ -568,14 +593,16 @@ class TodoPatch(Schema):
 @router.patch("todos/{todo_id}/", response=TodoOut)
 def todo_update(request, todo_id: int, data: TodoPatch):
     """Changes the fields given; ``assignees`` is the complete new set,
-    ``"due_on": null`` removes the due date. ``recurrence`` is a preset name
+    ``"due_on": null`` removes the due date and the start date,
+    ``"starts_on": null`` the start date; a start date needs a due date
+    and can't be after it. ``recurrence`` is a preset name
     (counting from the due date) or an RRULE; ``null`` or ``""`` removes it
     and its end and count."""
     item = item_for(request, todo_id, Kind.TODO)
     given = data.model_fields_set
     changes = {
         field: getattr(data, field)
-        for field in ["title", "notes", "due_on"]
+        for field in ["title", "notes", "due_on", "starts_on"]
         if field in given
     }
     if "title" in changes and changes["title"] is None:
@@ -593,7 +620,8 @@ def todo_update(request, todo_id: int, data: TodoPatch):
         if field in given:
             changes[field] = getattr(data, field)
     _count(changes.get("recurrence_count"))
-    ops.update_todo(item, actor=request.user, **changes)
+    with invalid_dates():
+        ops.update_todo(item, actor=request.user, **changes)
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 

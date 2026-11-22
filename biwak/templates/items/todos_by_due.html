@@ -78,5 +78,6 @@
       <p class="text-body-secondary">{% translate "Nothing to do." %}</p>
     {% endfor %}
   {% endif %}
+  {% if later %}{% include "items/_starting_later.html" with todos=later %}{% endif %}
   {% include "items/_selection_bar.html" %}
 {% endblock content %}

@@ -131,7 +131,8 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   subscribers and rule, due on the rule's next date after today, or
   after the due date when completed early (decided 2026-11-20: a weekly
   to-do due Friday and done on Wednesday is next due the Friday after).
-  Never a stack of open copies. In `complete()`'s transaction, created
+  Never a stack of open copies. A start date keeps its distance to the
+  due date (`start-dates.md`). In `complete()`'s transaction, created
   by the original creator with its own `created` event by whoever
   completed it.
 - **One series:** completing a to-do that already has a next one (not
@@ -206,7 +207,7 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
 ## The calendar feed
 
 - Per person, their assigned open to-dos with a due date as all-day
-  events at `/calendar/<token>.ics` (`icalendar`): title, link, "project
+  events (from the start date, `start-dates.md`) at `/calendar/<token>.ics` (`icalendar`): title, link, "project
   / list" as the description, no notes (the URL travels through
   calendar servers), `UID` `todo-ID@biwak`, not busy.
 - The token is secret (`CalendarToken`, not in the audit log), shown on

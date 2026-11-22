@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:30+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -790,7 +790,8 @@ msgstr "Notizen"
 msgid "Group"
 msgstr "Gruppe"
 
-#: biwak/activity/history.py
+#: biwak/activity/history.py biwak/templates/items/_todo_view.html
+#: biwak/templates/mails/_item.html biwak/templates/mails/_item.txt
 msgid "Starts on"
 msgstr "Beginnt am"
 
@@ -1319,6 +1320,11 @@ msgstr "Du bist zugewiesen, darum erfährst du davon. Entferne zuerst deine Zuwe
 #: biwak/activity/timeline.py
 msgid "removed the due date"
 msgstr "hat die Fälligkeit entfernt"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "changed the dates to %(dates)s"
+msgstr "hat die Daten auf %(dates)s geändert"
 
 #: biwak/activity/timeline.py
 #, python-format
@@ -2600,7 +2606,8 @@ msgstr "zugewiesen am"
 msgid "notes"
 msgstr "Notizen"
 
-#: biwak/items/models.py
+#: biwak/items/models.py biwak/items/views.py
+#: biwak/templates/items/_add_todo.html
 msgid "starts on"
 msgstr "beginnt am"
 
@@ -2701,6 +2708,14 @@ msgstr "Dokumentversionen"
 #: biwak/items/models.py
 msgid "comments"
 msgstr "Kommentare"
+
+#: biwak/items/operations.py
+msgid "A start date needs a due date."
+msgstr "Ein Startdatum braucht eine Fälligkeit."
+
+#: biwak/items/operations.py
+msgid "The start date can't be after the due date."
+msgstr "Das Startdatum kann nicht nach der Fälligkeit liegen."
 
 #: biwak/items/operations.py
 #, python-format
@@ -5976,6 +5991,10 @@ msgid "Notes (Markdown)"
 msgstr "Notizen (Markdown)"
 
 #: biwak/templates/items/_add_todo.html
+msgid "Starts"
+msgstr "Beginnt"
+
+#: biwak/templates/items/_add_todo.html
 msgid "Add this to-do"
 msgstr "Dieses To-do hinzufügen"
 
@@ -6035,6 +6054,11 @@ msgid "%(count)s attachment"
 msgid_plural "%(count)s attachments"
 msgstr[0] "%(count)s Anhang"
 msgstr[1] "%(count)s Anhänge"
+
+#: biwak/templates/items/_starting_later.html
+#, python-format
+msgid "Starting later (%(n)s)"
+msgstr "Beginnt später (%(n)s)"
 
 #: biwak/templates/items/_subscribers.html
 msgid "You're assigned, so you hear about it."

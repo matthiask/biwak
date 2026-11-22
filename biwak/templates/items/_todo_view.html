@@ -1,6 +1,6 @@
 {% load biwak i18n %}
 {% comment %}
-  The to-do to read (specs/todos.md, "The to-do's page"): assignees, due date,
+  The to-do to read (specs/todos.md, "The to-do's page"): assignees, due and start date,
   repeat rule and notes. Clicking one (frontend/view-edit.js) swaps in the
   edit form, focused on it; without JavaScript the "Edit" link is the form's
   own page. Checklists stay tickable.
@@ -25,6 +25,12 @@
             >{% translate "No date" %}</span>{% endif %}
         </dd>
       </div>
+      {% if todo.starts_on %}
+        <div class="wb-fact wb-edit-hit" data-edit-focus="starts_on">
+          <dt>{% translate "Starts on" %}</dt>
+          <dd>{{ todo.starts_on|dateformat:"WEEKDAY_DATE_FORMAT" }}</dd>
+        </div>
+      {% endif %}
       <div class="wb-fact wb-edit-hit" data-edit-focus="recurrence_frequency">
         <dt>{% translate "Repeats" %}</dt>
         <dd>

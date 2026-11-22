@@ -1,7 +1,7 @@
 {% load attachments biwak i18n %}
 {% comment %}
   Adding a to-do inline (specs/todos.md): opens in place with title, notes,
-  assignees and due date. frontend/add-todo.js submits it without leaving
+  assignees, due and start date. frontend/add-todo.js submits it without leaving
   the page, Ctrl+Enter saves and starts the next one, Escape or a click
   elsewhere closes it. Without JavaScript it's a plain form.
 {% endcomment %}
@@ -69,6 +69,18 @@
           class="form-control form-control-sm"
           aria-label="{% translate 'due on' %}"
           {% if posted %}value="{{ form.due_on.value|default:'' }}"{% endif %}
+        >
+      </label>
+      {# Shown once the due date is set (frontend/start-date.js) #}
+      <label class="wb-due">
+        {% translate "Starts" %}
+        <input
+          type="date"
+          name="starts_on"
+          class="form-control form-control-sm"
+          aria-label="{% translate 'starts on' %}"
+          data-starts-on
+          {% if posted %}value="{{ form.starts_on.value|default:'' }}"{% endif %}
         >
       </label>
     </div>

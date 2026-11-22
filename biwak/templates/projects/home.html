@@ -18,6 +18,9 @@
         {% empty %}
           <p class="text-body-secondary mb-2">{% translate "Nothing due this week." %}</p>
         {% endfor %}
+        {% if later %}<div class="mb-3">
+            {% include "items/_starting_later.html" with todos=later keep_page=True %}
+          </div>{% endif %}
         <a
           href="{% url 'todos' %}?grouping=due"
         >{% if open_count %}{% blocktranslate with n=open_count %}All {{ n }} to-dos{% endblocktranslate %}{% else %}{% translate "All my to-dos" %}{% endif %}</a>
@@ -29,7 +32,7 @@
         </section>
       {% endif %}
 
-      {% if waiting %}
+      {% if waiting or waiting_later %}
         <section class="mb-4" data-home="waiting">
           <h2 class="h5">{% translate "Waiting on others" %}</h2>
           {% for key, label, todos in waiting %}
@@ -38,6 +41,9 @@
               {% for todo in todos %}{% include "items/_due_row.html" with keep_page=True %}{% endfor %}
             </div>
           {% endfor %}
+          {% if waiting_later %}<div class="mb-3">
+              {% include "items/_starting_later.html" with todos=waiting_later keep_page=True %}
+            </div>{% endif %}
           <a href="{% url 'todos' %}?assigned_by=me&amp;grouping=due">{% translate "All to-dos I assigned" %}</a>
         </section>
       {% endif %}

@@ -4,7 +4,7 @@ later and no date. Everything goes through ``Item.objects.visible_to()``."""
 
 import datetime as dt
 
-from django.db.models import DateField, Exists, F, OuterRef, Value
+from django.db.models import DateField, Exists, F, OuterRef, Q, Value
 from django.db.models.functions import Coalesce
 from django.utils import formats
 from django.utils.translation import gettext_lazy as _
@@ -183,6 +183,25 @@ def _in_group(qs, group, today):
         LATER: lambda: qs.filter(todo__due_on__gt=sunday + dt.timedelta(days=7)),
         NO_DATE: lambda: qs.filter(todo__due_on__isnull=True),
     }[group]()
+
+
+def started(today):
+    """To-dos which have started: without a start date or one up to
+    ``today``; the others are "Starting later" on My to-dos, the to-dos
+    page and Home (specs/start-dates.md)"""
+    return Q(todo__starts_on__isnull=True) | Q(todo__starts_on__lte=today)
+
+
+def starting_later(qs, today):
+    """Those of ``qs`` which haven't started, the next to start first"""
+    return qs.filter(todo__starts_on__gt=today).order_by(
+        "todo__starts_on",
+        "due_key",
+        "project__name",
+        "parent__position",
+        "position",
+        "pk",
+    )
 
 
 def ordered(qs):

@@ -16,6 +16,7 @@ from django.utils.translation import gettext as _
 
 from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Event
+from biwak.formats import format_range
 
 
 # Consecutive changes of one person within this time of each other are one
@@ -35,7 +36,8 @@ ACTIONS = [
     Action.RESTORED,
 ]
 # What an edit tells
-EDIT_FIELDS = ("title", "due_on")
+EDIT_FIELDS = ("title", "due_on", "starts_on")
+DATE_FIELDS = {"due_on", "starts_on"}
 
 
 def _edit_fields(event):
@@ -45,15 +47,27 @@ def _edit_fields(event):
 def _kind(event):
     """What the line's icon shows (``_timeline_line.html`` has the icons)"""
     if event.action == Action.EDITED:
-        return "due" if _edit_fields(event) == ["due_on"] else "title"
+        fields = _edit_fields(event)
+        return "due" if fields and DATE_FIELDS.issuperset(fields) else "title"
     return str(event.action)
 
 
 def _due(value):
-    if not value:
+    """``value``: the start and the due date (ISO or ``None``); "changed
+    the dates" once a start date is or was involved (specs/start-dates.md)"""
+    starts, due, with_start = value
+    if not due:
         return _("removed the due date")
+    if with_start:
+        return _("changed the dates to %(dates)s") % {
+            "dates": format_range(
+                starts and dt.date.fromisoformat(starts),
+                dt.date.fromisoformat(due),
+                "SHORT_DATE_FORMAT",
+            )
+        }
     return _("set the due date to %(date)s") % {
-        "date": date_format(dt.date.fromisoformat(value), "SHORT_DATE_FORMAT")
+        "date": date_format(dt.date.fromisoformat(due), "SHORT_DATE_FORMAT")
     }
 
 
@@ -285,16 +299,22 @@ def effects(event):
                     was = mentions.plain(was)
                 if was != title:
                     result.append(Effect("title", "title", title, lambda it: text, was))
-            if "due_on" in fields:
-                value = data.get("due_on")
-                if data.get("due_was", UNKNOWN) != value:
+            if DATE_FIELDS & set(fields):
+                value = (data.get("starts_on"), data.get("due_on"))
+                was = (
+                    (data.get("starts_was"), data["due_was"])
+                    if "due_was" in data
+                    else UNKNOWN
+                )
+                if was != value:
+                    with_start = bool(data.get("starts_on") or data.get("starts_was"))
                     result.append(
                         Effect(
                             "due",
                             "due",
                             value,
-                            lambda it, v=value: _due(v),
-                            data.get("due_was", UNKNOWN),
+                            lambda it, v=(*value, with_start): _due(v),
+                            was,
                         )
                     )
             return result

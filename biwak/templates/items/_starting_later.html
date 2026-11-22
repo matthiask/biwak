@@ -1,0 +1,14 @@
+{% load i18n %}
+{% comment %}
+  Open to-dos whose start date hasn't come yet, collapsed at the end of My
+  to-dos, the to-dos page and Home's "Due", the next to start first
+  (specs/start-dates.md). ``todos``: the rows; ``keep_page`` as for the rows.
+{% endcomment %}
+<details class="mt-3" data-starting-later>
+  <summary class="text-body-secondary">
+    {% blocktranslate with n=todos|length %}Starting later ({{ n }}){% endblocktranslate %}
+  </summary>
+  <div class="mt-2">
+    {% for todo in todos %}{% include "items/_due_row.html" %}{% endfor %}
+  </div>
+</details>

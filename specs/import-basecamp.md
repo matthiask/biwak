@@ -87,7 +87,7 @@ project. Waiting for Basecamp's account export to confirm the plan.
 | Project | Project, members with staff/client from Basecamp |
 | To-do set, to-do list | List |
 | To-do list group | Group of the list |
-| To-do | To-do (assignees, due dates, completion, notes) |
+| To-do | To-do (assignees, due and start dates, completion, notes) |
 | Card table | List with its columns as groups, shown as board |
 | Card | To-do in its column's group; steps as a checklist in the notes (confirmed 2026-11-21: the reason for checklists in Markdown) |
 | Message board, message | Message board, message (category by name, ignoring case, in the installation's one list; created when missing, with Basecamp's icon as its emoji; confirmed 2026-11-21) |
@@ -148,6 +148,6 @@ project. Waiting for Basecamp's account export to confirm the plan.
   archived lists and projects stay archived; archived messages, docs,
   files and questions are skipped and listed in the report.
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
-  to-dos, messages, docs, files, comments; confirmed 2026-11-21), to-dos' start dates, pins of
+  to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.
   Basecamp's API has no repeating to-dos.
