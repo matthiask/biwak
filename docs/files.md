@@ -29,7 +29,14 @@ how many are done, folders what they hold directly ("2 folders · 3 files"). Ins
 folder above (or the project's top level); the path above the title
 does too. Staff create what is here: "New folder", "New doc", "Upload
 files". A folder's "More" menu has "Edit…" (its title and color); move things between
-folders with "Move to…" in their "More" menu. Every tile has the same
+folders with "Move to…" in their "More" menu. What's at the top of the
+project (folders, docs and files) moves to another project there too,
+with everything in it; something inside a folder moves with its
+folder, or to the top first. Messages have "Move to…" for other
+projects as well. Assigned staff who aren't in the other project are
+added to it, clients and subscribers who won't see it there are
+dropped (the dialog names them first), and if clients there would see
+it, it asks first. Every tile has the same
 menu behind its "…" button in the top-right corner (it shows when you
 point at the tile or reach it with Tab), so you can edit a folder, move
 something or move it to the trash without opening it. Staff also show

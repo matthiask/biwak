@@ -705,10 +705,13 @@ def subscription(request, pk):
     return redirect(item)
 
 
-def _show_texts(item):
+def show_texts(item, clients=None):
     """The question's title and what showing the item to clients makes
-    visible (``visibility.affected()``)"""
+    visible (``visibility.affected()``); ``clients``: how many, if others
+    than its project's (moving it to another project)"""
     affected = visibility.affected(item)
+    if clients is not None:
+        affected["clients"] = clients
     clients = ngettext("%(count)d client", "%(count)d clients", affected["clients"]) % {
         "count": affected["clients"]
     }
@@ -767,7 +770,7 @@ def switch(request, pk):
     if request.method == "GET":
         if item.is_client_visible:
             return redirect(next_url(request) or item)
-        title, intro = _show_texts(item)
+        title, intro = show_texts(item)
         return form_response(
             request,
             ShowForm(),

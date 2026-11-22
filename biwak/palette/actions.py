@@ -214,6 +214,9 @@ def on_item(request, item, context):
             actions.append(link(_("List view"), f"{url}?view=list"))
         else:
             actions.append(link(_("Board view"), f"{url}?view=board"))
+        if ops.can_create(user, Kind.LIST):
+            # Staff, like the "More" menu (specs/lists-across-projects.md)
+            actions.append(modal(_("Copy…"), reverse("list_copy", args=[item.pk])))
         if ops.can_change(user, item):
             archived = item.status == Status.ARCHIVED
             actions.append(

@@ -41,6 +41,8 @@ biwak todo comment TODO "The plan" --attach plan.pdf
 biwak checkin due
 biwak checkin answer QUESTION "Busy with the launch"
 biwak message post PROJECT "Kick-off" "We start Monday" --also 12
+biwak list copy LIST --to PROJECT --shift 7
+biwak move ITEM --to PROJECT --confirm
 biwak search tent
 biwak forwarded file 21 --todo LIST
 biwak invite dora@example.net eve@example.net --project 4 --project 7

@@ -38,6 +38,7 @@ from biwak.files.library import (
 )
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
+from biwak.items.across import move_notes
 from biwak.items.api import item_for
 from biwak.items.models import Kind, MessageCategory
 from biwak.permissions import api_staff_only
@@ -528,14 +529,24 @@ def folder_create(request, project_id: int, data: FolderIn):
 class MoveIn(Schema):
     # null: the root
     parent_id: int | None = None
+    # Another project: to its top level (specs/lists-across-projects.md)
+    project_id: int | None = None
+    # Moving there drops people or shows it to clients: say so
+    confirm: bool = False
 
 
 @router.post("items/{item_id}/move/", response=ItemOut)
 def item_move(request, item_id: int, data: MoveIn):
     """Moves a folder, doc or file into a folder or to the root; the
     visibility follows the new place. Clients only move what they created,
-    into folders they see."""
+    into folders they see. With ``project_id`` of another project, a
+    top-level list, message, folder, doc or file moves to its top level,
+    with everything in it; assignees and subscribers who aren't members
+    there are dropped and clients there may see it: without ``confirm``
+    that's a 400 saying so."""
     item = item_for(request, item_id)
+    if data.project_id is not None and data.project_id != item.project_id:
+        return _move_to_project(request, item, data)
     if item.kind not in CONTAINED:
         raise HttpError(400, _("Only folders, docs and files can be moved."))
     if not ops.can_change(request.user, item):
@@ -546,6 +557,28 @@ def item_move(request, item_id: int, data: MoveIn):
     except ValueError as exc:
         raise HttpError(400, _("A folder can't be moved into itself.")) from exc
     return item_out(item_for(request, item_id))
+
+
+def _move_to_project(request, item, data):
+    if not ops.can_change(request.user, item):
+        raise HttpError(403, _("You can only move what you created."))
+    if data.parent_id is not None:
+        raise HttpError(400, _("Items move to the top of another project."))
+    if item.kind not in ops.MOVABLE or item.parent_id is not None:
+        raise HttpError(400, _("Only what's at the top of a project moves there."))
+    project = project_for(request, data.project_id)
+    if not ops.can_create(request.user, item.kind):
+        raise HttpError(403, _("Only staff create these."))
+    notes = [note for note in move_notes(item, project, request.user) if note]
+    if notes and not data.confirm:
+        raise HttpError(
+            400, " ".join([*notes, _("Send “confirm”: true to move it anyway.")])
+        )
+    try:
+        ops.move_to_project(item, project=project, actor=request.user)
+    except ValueError as exc:
+        raise HttpError(400, str(exc)) from exc
+    return item_out(item_for(request, item.pk))
 
 
 # Docs -------------------------------------------------------------------

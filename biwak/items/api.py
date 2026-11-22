@@ -160,6 +160,44 @@ def list_update(request, list_id: int, data: ListPatch):
     return list_out(item_for(request, list_id, Kind.LIST))
 
 
+class ListCopyIn(Schema):
+    project_id: int
+    # Left out: the list's own; " (copy)" … only on a clash
+    title: Title | None = None
+    dates: Literal["keep", "shift", "remove"] = "keep"
+    # For "shift": how many days, negative for earlier
+    days: int = Field(0, ge=-3650, le=3650)
+    visible_to_clients: bool = False
+
+
+@router.post("lists/{list_id}/copy/", response={201: ListOut})
+def list_copy(request, list_id: int, data: ListCopyIn):
+    """A copy of the list's open work in a project (this one or another):
+    description, groups, open to-dos with notes, checklists, recurrence and
+    the assignees who are members there; due dates kept, shifted by
+    ``days`` or removed. Internal unless ``visible_to_clients``. Staff
+    only, like creating lists (specs/lists-across-projects.md)."""
+    item = item_for(request, list_id, Kind.LIST)
+    if not ops.can_create(request.user, Kind.LIST):
+        raise HttpError(403, _("Only staff create lists."))
+    project = project_for(request, data.project_id)
+    if data.dates == "shift" and not data.days:
+        bad_request(_("Send the days to move the due dates by."))
+    try:
+        copy = ops.copy_list(
+            item,
+            project=project,
+            title=data.title or item.title,
+            actor=request.user,
+            dates=data.dates,
+            days=data.days,
+            visible=data.visible_to_clients,
+        )
+    except ValueError as exc:
+        bad_request(str(exc))
+    return Status(201, list_out(copy))
+
+
 class ListOrderIn(Schema):
     list_ids: list[int]
 

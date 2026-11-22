@@ -658,16 +658,22 @@ def project_dot(project):
     )
 
 
-@register.simple_tag
-def move_url(item):
+@register.simple_tag(takes_context=True)
+def move_url(context, item):
     """The form for moving an item (an entry of its "More" menu), empty for
-    what doesn't move: completed to-dos, lists, messages"""
+    what doesn't move: completed to-dos, lists and messages without another
+    project to go to (specs/lists-across-projects.md)"""
     if item.kind == "todo":
         if item.todo.is_completed:
             return ""
         return reverse("todo_move_to", args=[item.pk])
     if item.kind in {"folder", "doc", "file"}:
         return reverse("item_move", args=[item.pk])
+    if item.kind in {"list", "message"}:
+        from biwak.items.across import target_projects
+
+        if target_projects(context["request"].user, item).exists():
+            return reverse("item_move_project", args=[item.pk])
     return ""
 
 

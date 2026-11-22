@@ -277,6 +277,14 @@ class ItemActionsTest(ActionsBase):
         for item in [self.todo, self.message, self.doc]:
             self.assertNotIn("Archive", self.actions(self.ada, item.get_absolute_url()))
 
+    def test_copying_a_list(self):
+        """Staff, like creating lists (specs/lists-across-projects.md)"""
+        action = self.actions(self.ada, self.list.get_absolute_url())["Copy…"]
+        self.assertEqual(action["type"], "modal")
+        self.assertEqual(action["url"], f"/lists/{self.list.pk}/copy/")
+        self.assertNotIn("Copy…", self.actions(self.cleo, self.list.get_absolute_url()))
+        self.assertNotIn("Copy…", self.actions(self.ada, self.todo.get_absolute_url()))
+
     def test_a_list_as_a_client(self):
         actions = self.actions(self.cleo, self.list.get_absolute_url())
         self.assertIn("New to-do", actions)

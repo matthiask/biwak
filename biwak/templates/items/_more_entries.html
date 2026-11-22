@@ -3,7 +3,8 @@
   The entries of an item's "More" menu (items/_more.html), also of a
   tile's menu (files/_tile_menu.html): a list's notification level (other
   items have none: subscribing is the switch, specs/notifications.md,
-  "Levels"), its subscribers, editing and ordering (folders), moving,
+  "Levels"), its subscribers, editing and ordering (folders), moving
+  (to another project too), copying (lists),
   archiving (lists), the switch of the visibility to clients and sharing
   publicly (staff), trashing (who may change it), and on an item's page
   (not `tile`) its history (staff); each in a modal (frontend/modal.js)
@@ -62,6 +63,10 @@
 {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}
 {% if move and can_change or move and item.kind == "todo" %}
   <a class="dropdown-item" href="{{ move }}{{ next_query }}" data-modal>{% translate "Move to…" %}</a>
+{% endif %}
+{% if item.kind == "list" and not request.user.is_client %}
+  {# Copying makes a list: staff only (specs/lists-across-projects.md) #}
+  <a class="dropdown-item" href="{% url 'list_copy' item.pk %}" data-modal>{% translate "Copy…" %}</a>
 {% endif %}
 {% if can_change and item.kind == "list" %}{% include "items/_archive_button.html" %}{% endif %}
 {% if can_change %}

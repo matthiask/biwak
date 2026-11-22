@@ -17,8 +17,15 @@ from biwak.accounts.models import Color
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import folder_counts
-from biwak.forms import ColorSwatches, Form, next_url
+from biwak.forms import ColorSwatches, ComboboxSelect, Form, next_url
 from biwak.items import editing, glance, operations as ops
+from biwak.items.across import (
+    NO_NOTES,
+    Confirming,
+    asking,
+    confirmed_move,
+    target_projects,
+)
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
@@ -279,14 +286,16 @@ def folder(request, pk):
     return library(request, item.project, item)
 
 
-class MoveForm(Form):
-    """Where a folder, doc or file goes; the view checks the folder itself"""
+class MoveForm(Confirming):
+    """Where a folder, doc or file goes; the view checks the folder itself.
+    With ``projects``, the top of other projects too
+    (specs/lists-across-projects.md), as ``project:<pk>``."""
 
     folder = forms.ChoiceField(label=_("Folder"), required=False)
 
-    def __init__(self, *args, choices, current, **kwargs):
+    def __init__(self, *args, choices, current, projects=(), **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["folder"].choices = [
+        folders = [
             ("", _("Project root")),
             *(
                 (
@@ -301,6 +310,19 @@ class MoveForm(Form):
                 for target, path in choices
             ),
         ]
+        field = self.fields["folder"]
+        if projects:
+            field.label = _("Folder or project")
+            field.widget = ComboboxSelect()
+            field.choices = [
+                (_("This project"), folders),
+                (
+                    _("Other projects"),
+                    [(f"project:{p.pk}", p.name) for p in projects],
+                ),
+            ]
+        else:
+            field.choices = folders
         self.initial["folder"] = str(current or "")
 
 
@@ -312,12 +334,24 @@ def item_move(request, pk):
         raise PermissionDenied
     if not ops.can_change(request.user, item):
         raise PermissionDenied
+    projects = list(target_projects(request.user, item))
     form = MoveForm(
         request.POST or None,
         choices=folder_choices(request.user, item.project, exclude=item),
         current=item.parent_id,
+        projects=projects,
     )
-    if request.method == "POST":
+    notes = NO_NOTES
+    value = request.POST.get("folder", "")
+    if request.method == "POST" and value.startswith("project:"):
+        # To the top of another project (specs/lists-across-projects.md)
+        if form.is_valid():
+            project = next(p for p in projects if f"project:{p.pk}" == value)
+            response, notes = confirmed_move(request, item, project, form)
+            if response is not None:
+                # To the item in its new project, not back to the old one
+                return response
+    elif request.method == "POST":
         target = folder_param(request, item.project)
         try:
             ops.move_item(item, parent=target, actor=request.user)
@@ -325,12 +359,12 @@ def item_move(request, pk):
             form.add_error(None, _("A folder can't be moved into itself."))
         else:
             return redirect(next_url(request) or item)
-    return form_response(
+    return asking(
         request,
         form,
         title=_("Move to…"),
         item=item,
-        parent=item.parent,
+        notes=notes,
         cancel_url=next_url(request) or item.get_absolute_url(),
         submit_label=_("Move"),
     )

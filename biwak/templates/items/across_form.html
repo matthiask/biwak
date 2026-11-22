@@ -1,0 +1,16 @@
+{% extends "modal_form.html" %}
+{% load biwak i18n %}
+{% comment %}
+  Copying a list and moving to another project (biwak/items/across.py):
+  before doing it, what the form doesn't show, who is left out (`note`)
+  and which clients would see it (`clients_note`); submitting again does it.
+{% endcomment %}
+{% block before_form %}
+  {% if note %}<div class="alert alert-warning" role="note" data-dropped>{{ note }}</div>{% endif %}
+  {% if clients_note %}
+    <div class="wb-client-banner" role="note" data-new-clients>
+      {% icon "eye" %}
+      {{ clients_note }}
+    </div>
+  {% endif %}
+{% endblock before_form %}

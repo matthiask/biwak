@@ -1,6 +1,6 @@
 from django.urls import path
 
-from biwak.items import assigning, by_due, views
+from biwak.items import across, assigning, by_due, views
 
 
 urlpatterns = [
@@ -17,6 +17,7 @@ urlpatterns = [
     path("lists/<int:pk>/edit/", views.list_edit, name="list_edit"),
     path("lists/<int:pk>/todos/move/", views.todos_move, name="todos_move"),
     path("lists/<int:pk>/archive/", views.item_archive, name="list_archive"),
+    path("lists/<int:pk>/copy/", across.list_copy, name="list_copy"),
     path("todos/<int:pk>/", views.todo, name="todo"),
     path("todos/<int:pk>/edit/", views.todo, {"edit": True}, name="todo_edit"),
     path("todos/<int:pk>/peek/", views.todo_peek, name="todo_peek"),
@@ -28,5 +29,10 @@ urlpatterns = [
     path("items/<int:pk>/tick/", views.tick, name="item_tick"),
     path("items/<int:pk>/editing/", views.item_editing, name="item_editing"),
     path("items/<int:pk>/trash/", views.item_trash, name="item_trash"),
+    path(
+        "items/<int:pk>/move-to-project/",
+        across.item_move_project,
+        name="item_move_project",
+    ),
     path("items/<int:pk>/restore/", views.item_restore, name="item_restore"),
 ]
