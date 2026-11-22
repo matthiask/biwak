@@ -216,8 +216,7 @@ class SettingsForm(Form):
             "What you're subscribed to automatically. Subscribed, you hear"
             " about everything on an item; unsubscribe to stop. Everything:"
             " posts to everybody subscribe you. Only what concerns me: being"
-            " mentioned or assigned and your own things. Nothing: only what you"
-            " do yourself (commenting, being assigned). Never about what you"
+            " mentioned or assigned and your own things. Never about what you"
             " do yourself. The activity feed always shows everything."
         ),
     )

@@ -358,7 +358,7 @@ class NotificationsTest(AnswerTestCase):
             lambda: ops.answer(self.item, user=self.ada, content="One")
         )
         self.assertEqual(told, {self.bob})
-        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.notification_level = NotificationLevel.EVERYTHING
         self.bob.save()
         told = self.notified(
             lambda: ops.answer(
@@ -369,7 +369,7 @@ class NotificationsTest(AnswerTestCase):
 
     def test_each_only_while_subscribed_to_the_question(self):
         """A stale "each" doesn't override unsubscribing; a mention still
-        tells, except on "nothing" (decided 2026-11-21)"""
+        tells, on every level (decided 2026-11-21 and 2026-11-22)"""
         from biwak.activity.operations import unsubscribe
 
         ops.set_mail_mode(self.item, user=self.bob, mode=Mode.EACH)
@@ -380,14 +380,14 @@ class NotificationsTest(AnswerTestCase):
         )
         self.assertEqual(told, {self.bob})
         unsubscribe(self.bob, self.item)
-        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
         told = self.notified(
             lambda: ops.answer(
                 self.item, user=self.ada, content=mention, occurrence=self.first
             )
         )
-        self.assertEqual(told, set())
+        self.assertEqual(told, {self.bob})
 
     def test_answering_unasked_doesnt_subscribe_to_the_answers(self):
         """Dora answers without being asked: subscribed to her answer, not

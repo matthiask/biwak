@@ -42,7 +42,7 @@ time arithmetic, `operations.py` asking, summaries and answering,
   "hasn't answered yet", the API's `people` and `missing`, a person's
   answers: 404 for a non-member, `Project.people_known_to()`; decided
   2026-11-20 after the visibility review).
-- People with the level "nothing" are still asked. No default time of
+- People are asked whatever their level. No default time of
   day (the form asks). 5 occurrences per page.
 
 ## Model
@@ -103,8 +103,7 @@ Traps the tests cover (`schedule.py`):
   question; none for an occurrence without answers; later answers
   aren't sent.
 - **`each`** goes through the normal notifications to the question's
-  subscribers; everybody else gets nothing per answer unless mentioned
-  (not on "nothing"). "Each" counts only while the person is subscribed
+  subscribers; everybody else gets nothing per answer unless mentioned. "Each" counts only while the person is subscribed
   to the question (decided 2026-11-21): a choice left from before
   unsubscribing doesn't bring the answers back.
 - **Replying** to the question mail answers that occurrence

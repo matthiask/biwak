@@ -268,7 +268,7 @@ class ListingTest(LanternTestCase):
         self.comment(self.secret, "Two")
         before = self.items(self.bob)
         self.assertNotEqual(before, [])
-        set_level_override(self.bob, NotificationLevel.NOTHING, item=self.internal)
+        set_level_override(self.bob, NotificationLevel.CONCERNS_ME, item=self.internal)
         self.assertEqual(self.items(self.bob), before)
 
     def test_entries_say_what_happened(self):

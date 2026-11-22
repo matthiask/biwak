@@ -48,13 +48,13 @@ NOTIFY_CHOICES = {
 
 
 def notify_choice(user, project):
-    """``default``, ``tagged`` or ``nothing``, from the person's effective
-    level for the project"""
+    """``default`` or ``tagged``, from the person's effective level for the
+    project"""
     level = effective_level(user, project=project)
     for choice, choice_level in NOTIFY_CHOICES.items():
         if level == choice_level:
             return choice
-    return "nothing"
+    raise ValueError(f"Unknown level {level!r}")
 
 
 def can_change_notify_choice(actor, user):

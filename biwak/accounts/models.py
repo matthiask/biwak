@@ -62,7 +62,6 @@ class NotificationLevel(models.TextChoices):
 
     EVERYTHING = "everything", _("Everything")
     CONCERNS_ME = "concerns_me", _("Only what concerns me")
-    NOTHING = "nothing", _("Nothing")
 
 
 class MailDelivery(models.TextChoices):

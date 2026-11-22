@@ -29,7 +29,7 @@ assignee picker), `activity.operations.share()` and
   overriding an earlier unsubscribing like assigning). With "Tell them
   now" it records `shared`, which tells only the people it names ("Ada
   wants you to see this: <note>" in the lantern and mail), on every
-  level except "nothing", and counts as "what concerns me". Without it
+  level (decided 2026-11-22), and counts as "what concerns me". Without it
   they're subscribed quietly: no event, the feed doesn't show it.
 - **Removing:** people remove only their own subscription.
 - **Clients** may add people they may know to items they can see, like

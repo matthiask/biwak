@@ -34,8 +34,8 @@ it for the first time.
   per item. Levels (below) decide who gets subscribed automatically.
 - Subscribing to a container also means hearing about items created in
   it later (subscribing to a list: new to-dos, even when not assigned).
-- **Automatic:** the author, assignees, people mentioned (not on
-  "nothing"), people commenting. They respect an earlier unsubscribing
+- **Automatic:** the author, assignees, people mentioned, people
+  commenting. They respect an earlier unsubscribing
   (`Unsubscription`); being assigned or mentioned, being added, or
   subscribing oneself overrides it (`subscribe(..., explicit=True)`).
 - **Joining a project subscribes to nothing that exists already**
@@ -125,9 +125,9 @@ it for the first time.
   client's rejected mention of staff doesn't notify them when staff save
   later); people removed from a text are forgotten, so mentioning them
   again is new.
-- **A new mention** notifies and subscribes the person (`explicit=True`),
-  except on the level "nothing" (decided 2026-11-21: there only what the
-  person does subscribes them). A mention doesn't come back after
+- **A new mention** notifies and subscribes the person (`explicit=True`)
+  on every level (decided 2026-11-22: a mention is someone deliberately
+  asking for you). A mention doesn't come back after
   unsubscribing unless the person is mentioned again.
 - **The API and mail replies** may write `@ada@example.org`, the syntax,
   or `@Ada` when exactly one person who can see the item matches. What
@@ -150,12 +150,19 @@ project's** (confirmed 2026-11-21).
   or assigned and their own things (creating, commenting) subscribe
   them. New to-dos in a list they follow reach them only when they're
   mentioned or assigned.
-- **Nothing:** only what they do themselves (commenting, being
-  assigned), following a folder and being added by others subscribe
-  them; mentions neither notify nor subscribe. The feed still shows
-  everything.
 
 Never a notification about one's own actions.
+
+**No level "Nothing"** (decided 2026-11-22): there was a third level,
+"Nothing". It wasn't really nothing: it was "only what concerns me"
+except that mentions neither notified nor subscribed and "Tell them now"
+shares and reactions weren't told, and the people page showed it as "No
+mails", which was misleading. The real ways to stay quiet are the mail
+delivery (no mails; the lantern still has everything) and unsubscribing
+from items or folders; a mention is someone deliberately asking for
+you. A data migration put everybody and every override on "nothing" on
+"only what concerns me"; the pages, the API and the CLI no longer offer
+it (an old value is a validation error).
 
 **Notified by default or only when tagged** (decided 2026-11-20): how
 someone is in a project is the project's level, not a new setting.
@@ -165,12 +172,12 @@ me"), stored as the person's `LevelOverride` for the project
 (`add_member()`, `invite()`, `set_notify_choice()`,
 `notify_choice()` in `biwak/projects/operations.py`); adding someone
 again doesn't change it. The project's people page shows it under
-each member ("No mails" for "nothing") to own staff, changed through
+each member to own staff, changed through
 "Notifications…" in the row's "…" menu (a modal, decided 2026-11-22); own staff change
 it for others, clients and partners see and change only their own
 (partners too, decided 2026-11-21 after a review:
-`can_change_notify_choice()`). API: `notify` (`default`, `tagged`,
-`nothing`; `null` for clients and partners about others) on the members list, adding
+`can_change_notify_choice()`). API: `notify` (`default` or `tagged`;
+`null` for clients and partners about others) on the members list, adding
 and inviting; `biwak members`, `biwak member add|invite …
 [--only-tagged]`.
 
@@ -191,10 +198,9 @@ unseen, and counts again on coming back).
 2. Without the actor, inactive people and people who can't see the item
    **now** (`visible_to()`; `who_can_see(item)` for everybody at once).
 3. Told (`wanting()`): every subscriber of the item, whatever their
-   level, and the people the event assigns; the newly mentioned and
-   `shared` and reactions except on "nothing" (a new doc's "Tell people
-   about it?", `posted` in the event, on every level like posting,
-   decided 2026-11-22); the container's
+   level, and the people the event assigns; the newly mentioned,
+   `shared` and reactions on every level (decided 2026-11-22); the
+   container's
    subscribers about a new item on "everything" (`effective_levels()`,
    the same number of queries for any number of people). Check-in
    answers: `checkins.md`.

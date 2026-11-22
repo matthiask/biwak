@@ -13,8 +13,8 @@ unsubscribe from it.
 You are subscribed to an item when you:
 
 - create it, are assigned to it or comment on it;
-- are mentioned in it (type `@` and a name in any text), unless your
-  level is "Nothing";
+- are mentioned in it (type `@` and a name in any text), whatever your
+  level;
 - are in the project when somebody posts a message, doc or file, if
   your level is "Everything" or you're subscribed to its folder, or
   when they add you by name ("Also tell…");
@@ -42,10 +42,12 @@ Notifications, "Notify me about" is one of:
   lists you follow;
 - **Only what concerns me:** being mentioned or assigned and your own
   things subscribe you; new messages, docs and files only when you
-  follow their folder or the poster adds you;
-- **Nothing:** only what you do yourself (commenting, being assigned)
-  subscribes you, and following a folder or being added by others;
-  mentions don't reach you. The activity feed still shows everything.
+  follow their folder or the poster adds you.
+
+Mentions, reactions to what you wrote and people telling you about
+something reach you on both levels. To hear less, unsubscribe from items
+or folders; to get no mails at all, choose "No mails" below (the lantern
+still has everything). The activity feed always shows everything.
 
 A project can have its own level ("More", then "Notifications" on the
 project's page), and so can a list ("Notifications..." in its "More"

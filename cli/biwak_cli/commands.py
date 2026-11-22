@@ -293,7 +293,6 @@ def project_join(project_id, as_json):
 NOTIFY_WORDS = {
     "default": "notified by default",
     "tagged": "only when tagged",
-    "nothing": "no mails",
 }
 
 only_tagged_option = click.option(
@@ -2169,7 +2168,7 @@ def link_delete(link_id):
 
 # Notifications --------------------------------------------------------------
 
-LEVELS = ["everything", "concerns_me", "nothing"]
+LEVELS = ["everything", "concerns_me"]
 
 
 @cli.command()

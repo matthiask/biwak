@@ -153,9 +153,8 @@ def project_detail(request, project_id: int):
 
 class MemberOut(PersonOut):
     email: str | None
-    # How the person is in the project: "default" (notified by default),
-    # "tagged" (only when tagged) or "nothing" (no mails). Only for staff
-    # and for yourself, else null.
+    # How the person is in the project: "default" (notified by default) or
+    # "tagged" (only when tagged). Only for staff and for yourself, else null.
     notify: str | None
 
 

@@ -35,9 +35,6 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 - **Restoring a folder** sets the time of the last change of everything
   it brings back, not only its own: an unannounced doc in it is told an
   hour later, and it counts as changed in "latest changed" lists.
-- **"Tell people about it?" tells people on "Nothing"** too (the doc's
-  `shared` event says `posted`): like posting, unlike "Tell them now" in
-  the subscribers box, which stays "except on Nothing".
 
 ### Sign-in and people
 

@@ -70,17 +70,12 @@ class NotifyingTest(TestCase):
         self.ada.save()
         self.react(self.bob, "👍", item=self.todo)
         self.assertEqual(self.told(), {self.ada})
+        # Also with an override for the list (decided 2026-11-22: reactions
+        # tell on every level)
         Notification.objects.all().delete()
-        self.ada.notification_level = NotificationLevel.NOTHING
-        self.ada.save()
-        self.react(self.bob, "🎉", item=self.todo)
-        self.assertEqual(self.told(), set())
-        # An override for the list wins
-        self.ada.notification_level = NotificationLevel.EVERYTHING
-        self.ada.save()
-        set_level_override(self.ada, NotificationLevel.NOTHING, item=self.shared)
+        set_level_override(self.ada, NotificationLevel.CONCERNS_ME, item=self.shared)
         self.react(self.bob, "🔥", item=self.todo)
-        self.assertEqual(self.told(), set())
+        self.assertEqual(self.told(), {self.ada})
 
     def test_client_author_not_told_about_hidden_item(self):
         todo = ops.create_todo(todolist=self.shared, title="Theirs", creator=self.cleo)

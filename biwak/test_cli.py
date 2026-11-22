@@ -469,9 +469,9 @@ class CLICommandsTest(CLITest):
             "Level: as usual",
             self.biwak("notifications", "--project", project_id).output,
         )
-        self.biwak("notifications", "--project", project_id, "--level", "nothing")
+        self.biwak("notifications", "--project", project_id, "--level", "concerns_me")
         self.assertIn(
-            "Level: nothing",
+            "Level: concerns_me",
             self.biwak("notifications", "--project", project_id).output,
         )
         self.biwak("notifications", "--project", project_id, "--level", "default")

@@ -304,7 +304,7 @@ def settings_out(user):
 
 @notifications_router.get("me/notifications/", response=SettingsOut)
 def settings_detail(request):
-    """Your level (everything, only what concerns you, nothing), how mails
+    """Your level (everything or only what concerns you), how mails
     come (each change, a daily digest, or none: the lantern only) and
     whether the tab's icon shows unread notifications"""
     return settings_out(request.user)
@@ -466,7 +466,7 @@ def lantern_list(
     """Your notifications (the lantern), newest first: about items you see
     now, the same as the mails. ``unread`` only those not read yet,
     ``mentions`` only those mentioning you. A page may hold fewer entries
-    than asked for (items whose level is "nothing" now are left out)."""
+    than asked for (items no longer visible are left out)."""
     user = request.user
     bookmarked = lantern.bookmarked_items(user)
 

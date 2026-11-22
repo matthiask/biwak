@@ -58,14 +58,14 @@ class SettingsPagesTest(SettingsBase):
                 # Invalid values change nothing
                 response = self.client.post(
                     "/accounts/settings/notifications/",
-                    {"notification_level": "always", "mail_delivery": "each"},
+                    {"notification_level": "nothing", "mail_delivery": "each"},
                 )
                 self.assertEqual(response.status_code, 200)
                 user.refresh_from_db()
                 self.assertEqual(user.mail_delivery, MailDelivery.DIGEST)
 
     def test_settings_page_lists_visible_overrides_only(self):
-        set_level_override(self.cleo, "nothing", project=self.project)
+        set_level_override(self.cleo, "concerns_me", project=self.project)
         set_level_override(self.cleo, "everything", item=self.shared)
         # Set while it was visible, e.g.; never shown now
         set_level_override(self.cleo, "everything", item=self.internal)
@@ -77,7 +77,7 @@ class SettingsPagesTest(SettingsBase):
 
     def test_settings_page_lists_accessible_projects_only(self):
         """An override of a project one has left stays out of the page"""
-        set_level_override(self.bob, "nothing", project=self.project)
+        set_level_override(self.bob, "concerns_me", project=self.project)
         self.project.memberships.filter(user=self.bob).delete()
         self.client.force_login(self.bob)
         response = self.client.get("/accounts/settings/")
@@ -90,17 +90,19 @@ class SettingsPagesTest(SettingsBase):
             with self.subTest(user=user):
                 self.client.force_login(user)
                 self.assertContains(self.client.get(url), "As usual (Everything)")
-                response = self.client.post(url, {"level": "nothing"})
+                response = self.client.post(url, {"level": "concerns_me"})
                 self.assertRedirects(response, self.project.get_absolute_url())
                 self.assertEqual(
                     LevelOverride.objects.get(user=user, project=self.project).level,
-                    NotificationLevel.NOTHING,
+                    NotificationLevel.CONCERNS_ME,
                 )
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
-                self.assertEqual(
-                    self.client.post(url, {"level": "always"}).status_code, 400
-                )
+                # "nothing" is gone (decided 2026-11-22)
+                for level in ["always", "nothing"]:
+                    self.assertEqual(
+                        self.client.post(url, {"level": level}).status_code, 400
+                    )
         # Linked from the project page's More menu, for everybody
         self.assertContains(self.client.get(self.project.get_absolute_url()), url)
 
@@ -111,7 +113,7 @@ class SettingsPagesTest(SettingsBase):
                 self.client.force_login(user)
                 self.assertEqual(self.client.get(url).status_code, 404)
                 self.assertEqual(
-                    self.client.post(url, {"level": "nothing"}).status_code, 404
+                    self.client.post(url, {"level": "concerns_me"}).status_code, 404
                 )
         self.assertFalse(LevelOverride.objects.exists())
 
@@ -133,7 +135,7 @@ class SettingsPagesTest(SettingsBase):
                     self.assertContains(page, "Subscribers…")
                     self.assertEqual(self.client.get(url).status_code, 404)
                     self.assertEqual(
-                        self.client.post(url, {"level": "nothing"}).status_code, 404
+                        self.client.post(url, {"level": "concerns_me"}).status_code, 404
                     )
         self.assertFalse(LevelOverride.objects.exists())
 
@@ -145,11 +147,11 @@ class SettingsPagesTest(SettingsBase):
                 self.assertContains(
                     self.client.get(self.shared.get_absolute_url()), url
                 )
-                response = self.client.post(url, {"level": "nothing"})
+                response = self.client.post(url, {"level": "concerns_me"})
                 self.assertRedirects(response, self.shared.get_absolute_url())
                 self.assertEqual(
                     LevelOverride.objects.get(user=user, item=self.shared).level,
-                    NotificationLevel.NOTHING,
+                    NotificationLevel.CONCERNS_ME,
                 )
                 self.client.post(url, {"level": ""})
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
@@ -160,7 +162,7 @@ class SettingsPagesTest(SettingsBase):
             with self.subTest(user=user):
                 self.client.force_login(user)
                 self.assertEqual(
-                    self.client.post(url, {"level": "nothing"}).status_code, 404
+                    self.client.post(url, {"level": "concerns_me"}).status_code, 404
                 )
         self.assertFalse(LevelOverride.objects.exists())
 
@@ -284,12 +286,12 @@ class SettingsAPITest(SettingsBase):
                     },
                 )
                 response = self.call(
-                    "put", user, "me/notifications/", {"level": "nothing"}
+                    "put", user, "me/notifications/", {"level": "concerns_me"}
                 )
                 self.assertEqual(
                     response.json(),
                     {
-                        "level": "nothing",
+                        "level": "concerns_me",
                         "delivery": "digest",
                         "lantern_in_favicon": True,
                     },
@@ -298,10 +300,12 @@ class SettingsAPITest(SettingsBase):
                     "put", user, "me/notifications/", {"delivery": "none"}
                 )
                 self.assertEqual(response.json()["delivery"], "none")
-                response = self.call(
-                    "put", user, "me/notifications/", {"level": "always"}
-                )
-                self.assertEqual(response.status_code, 422)
+                # "nothing" is gone (decided 2026-11-22)
+                for level in ["always", "nothing"]:
+                    response = self.call(
+                        "put", user, "me/notifications/", {"level": level}
+                    )
+                    self.assertEqual(response.status_code, 422)
         # Read-only tokens only read
         response = self.call(
             "put", self.ada, "me/notifications/", {"level": "everything"}, "read"
@@ -330,7 +334,7 @@ class SettingsAPITest(SettingsBase):
             with self.subTest(user=user):
                 self.assertEqual(self.call("get", user, path).status_code, 404)
                 self.assertEqual(
-                    self.call("put", user, path, {"level": "nothing"}).status_code,
+                    self.call("put", user, path, {"level": "concerns_me"}).status_code,
                     404,
                 )
                 self.assertEqual(self.call("delete", user, path).status_code, 404)
@@ -340,19 +344,19 @@ class SettingsAPITest(SettingsBase):
         path = f"items/{self.shared.pk}/notifications/"
         for user in [self.ada, self.cleo]:
             with self.subTest(user=user):
-                response = self.call("put", user, path, {"level": "nothing"})
+                response = self.call("put", user, path, {"level": "concerns_me"})
                 self.assertEqual(
-                    response.json(), {"item_id": self.shared.pk, "level": "nothing"}
+                    response.json(), {"item_id": self.shared.pk, "level": "concerns_me"}
                 )
                 self.assertEqual(
-                    self.call("get", user, path).json()["level"], "nothing"
+                    self.call("get", user, path).json()["level"], "concerns_me"
                 )
                 self.call("delete", user, path)
                 self.assertFalse(LevelOverride.objects.filter(user=user).exists())
         # Other items have none (specs/notifications.md, "Subscriptions")
         path = f"items/{self.todo.pk}/notifications/"
         for method in ["get", "put", "delete"]:
-            response = self.call(method, self.ada, path, {"level": "nothing"})
+            response = self.call(method, self.ada, path, {"level": "concerns_me"})
             self.assertEqual(response.status_code, 400, method)
         self.assertFalse(LevelOverride.objects.exists())
 
@@ -363,7 +367,7 @@ class SettingsAPITest(SettingsBase):
             with self.subTest(user=user):
                 self.assertEqual(self.call("get", user, path).status_code, 404)
                 self.assertEqual(
-                    self.call("put", user, path, {"level": "nothing"}).status_code,
+                    self.call("put", user, path, {"level": "concerns_me"}).status_code,
                     404,
                 )
                 self.assertEqual(self.call("delete", user, path).status_code, 404)
@@ -408,3 +412,38 @@ class SettingsAPITest(SettingsBase):
         # Cleo can't see the internal to-do
         self.assertIn("@Cleo, look", content)
         self.assertNotIn(f"person:{self.cleo.pk}", content)
+
+
+class NoLevelNothingMigrationTest(SettingsBase):
+    """The level "nothing" is gone (decided 2026-11-22): the data
+    migrations put people and overrides on it on "only what concerns me"
+    """
+
+    def test_nothing_becomes_concerns_me(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        from biwak.accounts.models import User
+
+        set_level_override(self.ada, "everything", project=self.project)
+        set_level_override(self.bob, "everything", project=self.project)
+        # Stored before the migration: the database has no choices
+        User.objects.filter(pk=self.bob.pk).update(notification_level="nothing")
+        LevelOverride.objects.filter(user=self.bob).update(level="nothing")
+        for module in [
+            "biwak.accounts.migrations.0018_no_level_nothing",
+            "biwak.activity.migrations.0016_no_level_nothing",
+        ]:
+            import_module(module).forward(apps, None)
+        self.assertEqual(
+            dict(User.objects.values_list("email", "notification_level")),
+            {
+                u.email: "concerns_me" if u == self.bob else "everything"
+                for u in User.objects.all()
+            },
+        )
+        self.assertEqual(
+            dict(LevelOverride.objects.values_list("user", "level")),
+            {self.ada.pk: "everything", self.bob.pk: "concerns_me"},
+        )

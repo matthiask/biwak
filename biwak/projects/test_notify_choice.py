@@ -71,12 +71,6 @@ class OperationsTest(Fixture, TestCase):
         with self.assertRaises(ValueError):
             project_ops.add_member(self.project, self.bob, actor=self.ada, notify="x")
 
-    def test_nothing_is_shown_as_nothing(self):
-        LevelOverride.objects.create(
-            user=self.ada, project=self.project, level=NotificationLevel.NOTHING
-        )
-        self.assertEqual(project_ops.notify_choice(self.ada, self.project), "nothing")
-
     def test_clients_change_only_their_own(self):
         project_ops.set_notify_choice(
             self.project, self.cleo, "tagged", actor=self.cleo
@@ -183,13 +177,6 @@ class PageTest(Fixture, TestCase):
         self.assertContains(response, "Notified by default")
         self.assertContains(response, f"people/{self.dan.pk}/notify/")
         self.assertContains(response, f"people/{self.cleo.pk}/notify/")
-
-    def test_nothing_is_shown(self):
-        LevelOverride.objects.filter(user=self.dan).update(
-            level=NotificationLevel.NOTHING
-        )
-        self.client.force_login(self.ada)
-        self.assertContains(self.client.get(self.people_url), "No mails")
 
     def test_staff_change_others(self):
         self.client.force_login(self.ada)
