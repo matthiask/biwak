@@ -392,6 +392,20 @@ class PasskeysArePasswordlessTest(TestCase):
             response.content.decode(),
         )
 
+    def test_confirming_who_one_is_needs_the_pin_too(self):
+        """Confirming who one is with a passkey asks for the PIN or
+        fingerprint, as signing in does (decided 2026-11-22,
+        ``MFA_WEBAUTHN_USER_VERIFICATION``)"""
+        passkey(self.ada)
+        # The made-up passkey has no key to offer
+        with patch(
+            "allauth.mfa.webauthn.internal.auth.get_credentials", return_value=[]
+        ):
+            response = self.client.get("/accounts/2fa/webauthn/reauthenticate/")
+        self.assertEqual(response.status_code, 200)
+        options = response.context["js_data"]["request_options"]["publicKey"]
+        self.assertEqual(options["userVerification"], "required")
+
     def test_a_key_without_user_verification_is_refused(self):
         from biwak.accounts.signin import AddPasskeyForm
 
