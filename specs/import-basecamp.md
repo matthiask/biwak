@@ -144,7 +144,11 @@ project. Waiting for Basecamp's account export to confirm the plan.
   `activity.operations.importing(at=...)`: events notify nobody and carry
   the original time; the original times are set on items, comments and
   projects afterwards. Open pages and live editors still check access at
-  once when an import changes who sees what.
+  once when an import changes who sees what. Basecamp doesn't say when
+  somebody was assigned: a new to-do's assignments are dated at its
+  creation, so the timeline shows them before the comments; people
+  assigned since the last run at the to-do's `updated_at` (decided
+  2026-11-22).
 - **Visibility** as in Basecamp, so a client never sees what was internal
   there: top-level containers and items get Basecamp's
   `visible_to_clients`, children inherit. What was **internal inside a

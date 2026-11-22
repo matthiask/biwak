@@ -11,7 +11,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from biwak.accounts.models import User
-from biwak.activity.models import Event, Notification, Subscription
+from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.bookmarks.models import Bookmark
 from biwak.checkins.models import Answer, Occurrence, Question
 from biwak.files.models import Attachment
@@ -307,6 +307,11 @@ class ImportEveryKindTest(ImportCase):
             item=self.item("Pick a camp date"), action="completed"
         )
         self.assertEqual(completed.created_at, at("2026-01-08T16:30:00+00:00"))
+        # Basecamp doesn't say when people were assigned: at the creation,
+        # before the comments (decided 2026-11-22)
+        for assigned in Event.objects.filter(item=food, action=Action.ASSIGNED):
+            self.assertEqual(assigned.created_at, food.created_at)
+            self.assertLess(assigned.created_at, comment.created_at)
         # The project's activity is the latest original time, not now
         self.assertEqual(self.project.last_activity_at.year, 2026)
         self.assertLess(self.project.last_activity_at, at("2026-03-01T00:00:00+00:00"))
@@ -508,6 +513,23 @@ class SecondRunTest(ImportCase):
         self.assertEqual(report.counts["to-dos"]["updated"], 0)
         self.assertEqual(report.counts["to-dos"]["unchanged"], 6)
         self.assertEqual(visibility.check(), [])
+
+    def test_people_assigned_since_the_last_run_at_the_last_change(self):
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        todo = self.client_.data["/todolists/301/todos.json"][0]
+        todo["assignees"] = [*todo["assignees"], support.ADA]
+        todo["updated_at"] = "2026-03-01T08:00:00.000Z"
+        self.run_import()
+        assigned = Event.objects.filter(item=food, action=Action.ASSIGNED)
+        self.assertEqual(
+            max((event.created_at, event.data["assignees"]) for event in assigned),
+            (at("2026-03-01T08:00:00+00:00"), [self.ada.pk]),
+        )
+        # The first run's stay at the creation
+        self.assertEqual(
+            assigned.order_by("created_at").first().created_at, food.created_at
+        )
 
     def test_a_second_run_updates_what_changed(self):
         self.run_import()

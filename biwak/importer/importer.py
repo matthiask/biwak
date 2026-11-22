@@ -1128,7 +1128,10 @@ class Importer(Resolver):
                 starts = None
             return {"due_on": due, "starts_on": starts}
 
+        created = []
+
         def create():
+            created.append(True)
             with importing(at=parse_time(rec["created_at"])):
                 return ops.create_todo(
                     todolist=item,
@@ -1151,8 +1154,13 @@ class Importer(Resolver):
 
         todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
         if todo is not None:
-            with importing(at=parse_time(rec.get("updated_at"))):
+            # Basecamp doesn't say when somebody was assigned: a new to-do's
+            # assignees at its creation, before its comments; those added
+            # since the last run when Basecamp last changed it
+            assigned_at = rec["created_at"] if created else rec.get("updated_at")
+            with importing(at=parse_time(assigned_at)):
                 self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
+            with importing(at=parse_time(rec.get("updated_at"))):
                 self._completion(todo, rec)
             self._stamp(todo, rec)
         self._follow(bc_type, rec, todo)
