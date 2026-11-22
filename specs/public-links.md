@@ -123,15 +123,22 @@ Where it lives and the choices made while building (2026-11-22):
   expiring records no event of its own.
 - **The modal** (`public_links/share.html`, `item_share`): the own link's
   Copy is the primary button; with a live link the expiry form stays
-  below it ("A new public link replaces this one."). Creating or
+  below it, its button still "Create public link", with "A new public
+  link replaces this one." (decided 2026-11-22). Creating or
   stopping in the modal answers with the modal again (the new link
-  focused) instead of a redirect, so it can be copied; the page
+  focused) instead of a redirect, so it can be copied (decided
+  2026-11-22); the page
   redirects to itself. "Stop sharing" posts `stop` to the same URL.
   `modal.js` compares all of a dialog's forms for Escape.
 - **Refusals:** clients get 403 for what they see and 404 for internal
   items (the pages and the API); containers 404 on the page, 400 in the
   API. Admins stop links in projects they can't open from the page of
-  all public links (they see them there), not through the item.
+  all public links (they see them there), not through the item (decided
+  2026-11-22).
+- **Deactivating** the person who created a link keeps it, unlike their
+  calendar link: the link is the item's, it expires within 30 days and
+  shows on the page of all public links with their name (decided
+  2026-11-22).
 - **The public page** (`public_links/public.html`, not `base.html`: the
   same whether signed in or not, no scripts of the app's own beyond the
   bundle) shows the title and mentions as written (nobody looked up),
