@@ -18,6 +18,7 @@ urlpatterns = [
         name="member_invite",
     ),
     path("people/invite/", invitations.invite_people, name="invite_people"),
+    path("people/invite/address/", invitations.invite_address, name="invite_address"),
     path(
         "people/<int:pk>/invitation/resend/",
         invitations.invitation_resend,
