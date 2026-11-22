@@ -15,6 +15,8 @@ from django.urls import URLPattern, URLResolver, get_resolver, resolve
 PUBLIC = {
     "favicon.ico",
     "manifest.webmanifest",
+    # The service worker: browsers fetch it without cookies (specs/web-push.md)
+    "sw.js",
     # The secret in the URL is the key
     "calendar/<str:token>.ics",
     "unsubscribe/<str:token>/",

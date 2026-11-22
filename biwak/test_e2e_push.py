@@ -109,8 +109,11 @@ class SubscribingTest(E2ETestCase):
         ).to_be_visible()
         self.assertEqual(list(PushSubscription.objects.all()), [phone])
         self.assertEqual(page.evaluate("sessionStorage.getItem('unsubscribed')"), "1")
-        # The sign-in page's allauth scripts aren't in the test's bundle
-        self.assertEqual([e for e in self.errors if "/static/mfa/" not in e], [])
+        # The sign-in page's allauth scripts aren't served without collectstatic
+        allauth = ("/static/mfa/", "/static/account/")
+        self.assertEqual(
+            [e for e in self.errors if not any(path in e for path in allauth)], []
+        )
 
     def test_another_device_in_the_list(self):
         PushSubscription.objects.create(

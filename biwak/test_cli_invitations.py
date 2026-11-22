@@ -28,7 +28,6 @@ class InvitationsCLITest(test_cli.CLITest):
                 self.project.pk,
                 "--project",
                 self.shop.pk,
-                "--only-tagged",
             ).output
         self.assertIn("Invited: dora@example.net", output)
         self.assertIn("Added: Bob Example", output)
