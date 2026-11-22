@@ -433,12 +433,14 @@ class CLITest(test_cli.CLITest):
             actor=person("Root", is_admin=True),
         )
         result = self.biwak(
-            "todo", "add", self.list.pk, "Pitch", "--assign", bob.pk, "--json"
+            "todos", "create", self.list.pk, "Pitch", "--assign", bob.pk, "--json"
         )
         self.assertEqual(result.exit_code, 0, result.output)
         todo = json.loads(result.stdout)
         self.assertEqual([a["name"] for a in todo["assignees"]], ["Bob Example"])
-        result = self.biwak("todo", "add", self.list.pk, "Pack", "--assign", dora.pk)
+        result = self.biwak(
+            "todos", "create", self.list.pk, "Pack", "--assign", dora.pk
+        )
         self.assertEqual(result.exit_code, 1)
         self.assertNotIn("Dora", result.output)
 
@@ -451,5 +453,5 @@ class CLITest(test_cli.CLITest):
         )
         names = {p["name"] for p in json.loads(self.biwak("projects", "--json").stdout)}
         self.assertEqual(names, {"Website"})
-        result = self.biwak("project", "join", lodge.pk)
+        result = self.biwak("projects", "join", lodge.pk)
         self.assertEqual(result.exit_code, 1)

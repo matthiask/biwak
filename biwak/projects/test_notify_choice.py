@@ -427,26 +427,28 @@ class CLITest(Fixture, test_cli.CLITest):
 
     def test_members_show_the_choice(self):
         project_ops.add_member(self.project, self.dan, actor=self.ada, notify="tagged")
-        output = self.biwak("members", self.project.pk).output
+        output = self.biwak("members", "--project", self.project.pk).output
         self.assertIn("only when tagged", output)
         self.assertIn("notified by default", output)
-        data = json.loads(self.biwak("members", self.project.pk, "--json").stdout)
+        data = json.loads(
+            self.biwak("members", "--project", self.project.pk, "--json").stdout
+        )
         self.assertEqual(
             {m["name"]: m["notify"] for m in data}["Dan Example"], "tagged"
         )
 
     def test_add_and_invite(self):
-        result = self.biwak("member", "add", self.project.pk, self.bob.pk)
+        result = self.biwak("members", "add", self.project.pk, self.bob.pk)
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertEqual(self.level(self.bob), NotificationLevel.EVERYTHING)
         result = self.biwak(
-            "member", "add", self.project.pk, self.dan.pk, "--only-tagged"
+            "members", "add", self.project.pk, self.dan.pk, "--only-tagged"
         )
         self.assertIn("only when tagged", result.output)
         self.assertEqual(self.level(self.dan), NotificationLevel.CONCERNS_ME)
         with self.captureOnCommitCallbacks(execute=True):
             result = self.biwak(
-                "member", "invite", self.project.pk, "new@example.org",
+                "members", "invite", self.project.pk, "new@example.org",
                 "--name", "New", "--only-tagged", "--json",
             )  # fmt: skip
         self.assertEqual(result.exit_code, 0, result.output)

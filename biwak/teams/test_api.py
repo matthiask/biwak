@@ -112,7 +112,11 @@ class CLITest(test_cli.CLITest):
 
     def test_teams(self):
         output = self.biwak(
-            "teams", "add", "Design team", "--members", f"{self.bob.pk},{self.cleo.pk}"
+            "teams",
+            "create",
+            "Design team",
+            "--members",
+            f"{self.bob.pk},{self.cleo.pk}",
         ).output
         self.assertIn("Created: Design team", output)
         self.assertIn(f"Cleo Example ({self.cleo.pk}, client)", output)
@@ -125,12 +129,12 @@ class CLITest(test_cli.CLITest):
             [p["id"] for p in data["members"]], [self.bob.pk, self.cleo.pk]
         )
         output = self.biwak(
-            "teams", "edit", team.pk, "--name", "Designers", "--members", self.ada.pk
+            "teams", "update", team.pk, "--name", "Designers", "--members", self.ada.pk
         ).output
         self.assertIn("Designers", output)
         self.assertEqual(list(team.members.all()), [self.ada])
         # --members alone leaves the name, an empty one removes everybody
-        self.biwak("teams", "edit", team.pk, "--members", "")
+        self.biwak("teams", "update", team.pk, "--members", "")
         self.assertFalse(team.members.exists())
         self.assertIn(
             "Deleted Designers", self.biwak("teams", "delete", team.pk).output

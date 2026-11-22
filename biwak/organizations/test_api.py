@@ -131,15 +131,15 @@ class OrgsCLITest(test_cli.CLITest):
             self.biwak("orgs", "show", own.pk).output,
         )
         output = self.biwak(
-            "orgs", "add", "Other AG", "--domain", "other.ch", "--domain", "other.de"
+            "orgs", "create", "Other AG", "--domain", "other.ch", "--domain", "other.de"
         ).output
         self.assertIn("Created: Other AG", output)
         other = Organization.objects.get(name="Other AG")
         self.assertEqual(other.domains, ["other.ch", "other.de"])
-        self.biwak("orgs", "edit", other.pk, "--name", "Other SA", "--no-domains")
+        self.biwak("orgs", "update", other.pk, "--name", "Other SA", "--no-domains")
         other.refresh_from_db()
         self.assertEqual((other.name, other.domains), ("Other SA", []))
-        result = self.biwak("orgs", "add", "example ltd")
+        result = self.biwak("orgs", "create", "example ltd")
         self.assertEqual(result.exit_code, 1)
 
     def test_merge_move_delete(self):
@@ -160,17 +160,17 @@ class OrgsCLITest(test_cli.CLITest):
     def test_invite_with_an_organization(self):
         data = json.loads(
             self.biwak(
-                "member", "invite", self.project.pk, "dora@example.org",
+                "members", "invite", self.project.pk, "dora@example.org",
                 "--organization", "example ltd", "--json",
             ).stdout
         )  # fmt: skip
         self.assertEqual(data["organization_id"], self.example.pk)
         data = json.loads(
             self.biwak(
-                "member", "invite", self.project.pk, "eve@example.org",
+                "members", "invite", self.project.pk, "eve@example.org",
                 "--organization-id", self.example.pk, "--json",
             ).stdout
         )  # fmt: skip
         self.assertEqual(data["organization"], "Example Ltd")
-        output = self.biwak("members", self.project.pk).output
+        output = self.biwak("members", "--project", self.project.pk).output
         self.assertIn("Example Ltd", output)

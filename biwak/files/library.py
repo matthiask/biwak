@@ -154,6 +154,9 @@ def library(request, project, folder=None):
     }
     counts = folder_counts(request.user, [r for r in rows if r.kind == Kind.FOLDER])
     for row in rows:
+        # The page's project, not one query per tile (its "More" menu asks
+        # ``is_shareable``, which looks at the project)
+        row.project = project
         row.version = versions.get(row.pk)
         row.counts = counts.get(row.pk)
         row.can_move = ops.can_change(request.user, row)
