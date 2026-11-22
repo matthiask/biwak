@@ -28,6 +28,13 @@ Inside a Markdown text field <kbd>Ctrl</kbd>+<kbd>K</kbd> inserts a
 link instead. Press <kbd>Esc</kbd> first or click outside the field to
 reach the palette.
 
+## Sending a form
+
+<kbd>Ctrl</kbd>+<kbd>Enter</kbd> (<kbd>⌘</kbd>+<kbd>Enter</kbd> on a
+Mac) sends the form you are typing in, every form: a comment, a new
+to-do, message or doc, an edit, a form in a dialog. It's the same as
+clicking its button, and pressing it twice sends it once.
+
 ## Shortcuts in pages
 
 - <kbd>j</kbd> and <kbd>k</kbd> move through the rows of a page: to-dos
@@ -57,6 +64,7 @@ is open.
 
 Single keys can get in the way of screen readers and voice control. In
 **Settings**, under Keyboard, you can turn the single-key shortcuts
-off. <kbd>Ctrl</kbd>+<kbd>K</kbd> keeps working. <kbd>/</kbd> is a
+off. <kbd>Ctrl</kbd>+<kbd>K</kbd> and <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
+keep working. <kbd>/</kbd> is a
 single key and goes with the setting. Selecting with <kbd>x</kbd> on a to-do or a tile
 that has the focus (after <kbd>Tab</kbd>) keeps working.

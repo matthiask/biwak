@@ -113,6 +113,8 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   "Comments".
 - **Every `Textarea` is a Markdown field** with the toolbar
   (`data-toolbar`, `editor.md`).
+- **Ctrl+Enter submits** the form the focus is in, every form (decided
+  2026-11-22, `keyboard.md`).
 - **Destructive or revealing actions ask first:** trashing, and showing
   something to clients (`access.md`, "Making it obvious"); hiding is one
   click.

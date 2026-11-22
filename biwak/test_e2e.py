@@ -2355,6 +2355,43 @@ class KeyboardTest(E2ETestCase):
         self.assertEqual(page.locator("#wb-palette-input").input_value(), "/")
         self.assertEqual(self.errors, [])
 
+    def test_ctrl_enter_submits_the_form_once(self):
+        """Every form (decided 2026-11-22): a comment, a modal's form; the
+        people picker's Enter still picks"""
+        self.make_list(todos=["Plan"])
+        todo = Item.objects.get(title="Plan")
+        page = self.page
+        self.goto(page, todo)
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.fill("Looks good")
+        # Twice quickly, or held: one comment
+        textarea.press("ControlOrMeta+Enter")
+        textarea.press("ControlOrMeta+Enter")
+        expect(page.locator(".wb-markdown", has_text="Looks good")).to_have_count(1)
+        self.assertEqual(Comment.objects.filter(item=todo).count(), 1)
+        # A modal's form, from any field of it
+        self.goto(page, self.project)
+        page.get_by_role("link", name="New list").click()
+        dialog = page.get_by_role("dialog", name="New list")
+        dialog.get_by_label("Title").fill("Packing")
+        dialog.get_by_label("Title").press("ControlOrMeta+Enter")
+        expect(page.locator("main h1")).to_contain_text("Packing")
+        self.assertEqual(Item.objects.filter(title="Packing").count(), 1)
+        # The picker picks with the list open, then the form submits
+        # Bob hears only when tagged: offered in "Also tell…"
+        project_ops.add_member(self.project, self.bob, actor=self.ada, notify="tagged")
+        page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
+        page.get_by_label("Title").fill("Kickoff")
+        picker = page.locator(".wb-picker-input")
+        picker.press_sequentially("bob")
+        expect(page.locator(".wb-picker-list li").first).to_be_visible()
+        picker.press("Enter")
+        expect(page.locator(".wb-pill")).to_have_count(1)
+        picker.press("ControlOrMeta+Enter")
+        page.wait_for_url(re.compile(r"/messages/\d+/"))
+        self.assertEqual(Item.objects.filter(title="Kickoff").count(), 1)
+        self.assertEqual(self.errors, [])
+
     def test_focus_returns_where_it_was(self):
         page = self.page
         self.goto(page, self.project)
