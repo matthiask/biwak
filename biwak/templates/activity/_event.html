@@ -38,7 +38,7 @@
   {% endif %}
 {% elif event.action == "shared_publicly" %}
   {% if event.data.expires_at and not what %}
-    {% blocktranslate trimmed with date=event.data.expires_at|parse_datetime|date:"j. M Y" %}
+    {% blocktranslate trimmed with date=event.data.expires_at|parse_datetime|dateformat:"SHORT_DATE_FORMAT" %}
       shared {{ subject }} publicly until {{ date }}
     {% endblocktranslate %}
   {% else %}

@@ -15,9 +15,10 @@
             >{% project_dot todo.project %}{{ todo.project }}</a> /{% endif %}
           <a href="{{ todo.parent.get_absolute_url }}" class="text-body-secondary">{{ todo.parent }}</a>
         {% endif %}
-        {% if todo.todo.due_on %}{% if not in_project %}·{% endif %} {% due_badge todo.todo "D, j. M Y" %}{% endif %}
+        {% if todo.todo.due_on %}{% if not in_project %}·{% endif %}
+          {% due_badge todo.todo "SHORT_WEEKDAY_DATE_FORMAT" %}{% endif %}
         {% if todo.todo.is_completed %}·
-          {% blocktranslate with day=todo.todo.completed_at|date:"j. M Y" %}completed {{ day }}{% endblocktranslate %}{% endif %}
+          {% blocktranslate with day=todo.todo.completed_at|dateformat:"SHORT_DATE_FORMAT" %}completed {{ day }}{% endblocktranslate %}{% endif %}
       </span>
     </div>
   </div>

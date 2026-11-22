@@ -5,7 +5,7 @@
 {% block content %}
   {% url 'project_checkins' item.project.pk as area_url %}{% translate "Check-ins" as area %}{% include "_breadcrumbs.html" with project=item.project parent=item %}
   <h1 class="wb-title">{{ item|item_title }} {% client_badge item %}</h1>
-  <p class="text-body-secondary">{{ occurrence.asked_at|date:"l, j. F Y" }}</p>
+  <p class="text-body-secondary">{{ occurrence.asked_at|dateformat:"WEEKDAY_DATE_FORMAT" }}</p>
   {% include "items/_client_tab.html" %}
   <div {% if existing %}id="{{ region }}" data-live data-view-form{% endif %}>
     <div class="card mb-3">

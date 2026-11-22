@@ -135,7 +135,7 @@
       {% if request.user.mail_undeliverable_at %}
         {# Resend reported a hard bounce or a complaint (specs/mail-sending.md) #}
         <div class="alert alert-warning">
-          {% blocktranslate with since=request.user.mail_undeliverable_at|date:"j. F Y" email=request.user.email %}Mail to your address {{ email }} bounced or was marked as spam on {{ since }}, so you get no notification mails. Ask an admin to change the address or to clear this once it works again.{% endblocktranslate %}
+          {% blocktranslate with since=request.user.mail_undeliverable_at|dateformat:"DATE_FORMAT" email=request.user.email %}Mail to your address {{ email }} bounced or was marked as spam on {{ since }}, so you get no notification mails. Ask an admin to change the address or to clear this once it works again.{% endblocktranslate %}
         </div>
       {% endif %}
       <form method="post" action="{% url 'settings_notifications' %}">
@@ -247,7 +247,7 @@
               {% for passkey in passkeys %}
                 <tr>
                   <td>{{ passkey }}</td>
-                  <td>{{ passkey.created_at|date:"j. M Y" }}</td>
+                  <td>{{ passkey.created_at|dateformat:"SHORT_DATE_FORMAT" }}</td>
                   <td>
                     {% if passkey.last_used_at %}
                       <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|ago }}</span>
@@ -285,7 +285,7 @@
           <div>
             {% translate "On" %}
             <div class="small text-body-secondary">
-              {% blocktranslate trimmed with date=authenticator_app.created_at|date:"j. M Y" %}
+              {% blocktranslate trimmed with date=authenticator_app.created_at|dateformat:"SHORT_DATE_FORMAT" %}
                 Since {{ date }}
               {% endblocktranslate %}
             </div>
@@ -327,7 +327,9 @@
               </td>
               <td>{{ session.ip }}</td>
               <td>
-                <span title="{{ session.created_at|date:'j. M Y, H:i' }}">{{ session.created_at|ago }}</span>
+                <span
+                  title="{{ session.created_at|dateformat:'SHORT_DATETIME_FORMAT' }}"
+                >{{ session.created_at|ago }}</span>
               </td>
               <td class="text-end">
                 {% if session.current %}

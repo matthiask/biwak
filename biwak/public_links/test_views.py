@@ -425,8 +425,8 @@ class PublicPageTest(Fixture, TestCase):
             updated_at=timezone.make_aware(dt.datetime(2026, 3, 9, 12)),
         )
         response = self.client.get(f"/p/{self.share().token}/")
-        self.assertContains(response, "9. Mar 2026")
-        self.assertNotContains(response, "5. Jan 2026")
+        self.assertContains(response, "9 Mar 2026")
+        self.assertNotContains(response, "5 Jan 2026")
 
     def test_a_client_never_reaches_anything_else(self):
         """A client with a token gets the item and nothing pointing elsewhere"""

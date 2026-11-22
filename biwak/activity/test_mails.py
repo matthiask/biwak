@@ -257,7 +257,7 @@ class MailsTest(MailsBase):
         )
         self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 0, tzinfo=ZURICH)), 1)
         message = mail.outbox[0]
-        self.assertEqual(message.subject, "[Biwak] What happened on 19. November 2026")
+        self.assertEqual(message.subject, "[Biwak] What happened on 19 November 2026")
         self.assertEqual(message.from_email, "Biwak <biwak@example.org>")
         self.assertIn("== Website ==", message.body)
         self.assertIn("One", message.body)
@@ -290,10 +290,10 @@ class MailsTest(MailsBase):
         message = mail.outbox[0]
         self.assertEqual(
             message.subject,
-            "[Biwak] What happened from 17. November 2026 to 19. November 2026",
+            "[Biwak] What happened from 17 November 2026 to 19 November 2026",
         )
         self.assertIn(
-            "What happened from 17. November 2026 to 19. November 2026", message.body
+            "What happened from 17 November 2026 to 19 November 2026", message.body
         )
 
     def test_sent_after_the_commit(self):

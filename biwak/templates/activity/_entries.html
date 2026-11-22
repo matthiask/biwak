@@ -1,7 +1,7 @@
 {% load biwak i18n %}
 {% for day, label, entries in days %}
   <h2 class="h6 mt-4 text-body-secondary">
-    {% if label %}{{ label }} · {% endif %}{{ day|date:"l, j. F Y" }}
+    {% if label %}{{ label }} · {% endif %}{{ day|dateformat:"WEEKDAY_DATE_FORMAT" }}
   </h2>
   <ul class="list-unstyled">
     {% for entry in entries %}
@@ -10,7 +10,7 @@
           {% with event=entry.latest %}
             <span class="fw-semibold">{% translate "Conversation on" %}</span>
             {% include "activity/_subject.html" %}
-            <span class="small text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+            <span class="small text-body-secondary">· {{ event.created_at|dateformat:"TIME_FORMAT" }}</span>
             {% if not project %}<span class="small text-body-secondary">·
                 {% project_dot event.project %}{{ event.project }}</span>{% endif %}
           {% endwith %}
@@ -19,20 +19,20 @@
               <li>
                 {% if event.actor %}{% avatar event.actor %}{% endif %}
                 <span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
-                <span class="text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+                <span class="text-body-secondary">· {{ event.created_at|dateformat:"TIME_FORMAT" }}</span>
                 {% if event.excerpt %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}
               </li>
             {% endfor %}
           </ul>
         {% elif entry.is_merged %}
           {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents own_excerpt=True %}
-          <span class="small text-body-secondary">· {{ entry.latest.created_at|date:"H:i" }}</span>
+          <span class="small text-body-secondary">· {{ entry.latest.created_at|dateformat:"TIME_FORMAT" }}</span>
           {% include "activity/_excerpt.html" with event=entry.latest what=entry.what %}
           <ul class="list-unstyled ms-4 small">
             {% for event in entry.events %}
               <li>
                 {% include "activity/_event.html" with own_excerpt=True %}
-                <span class="text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+                <span class="text-body-secondary">· {{ event.created_at|dateformat:"TIME_FORMAT" }}</span>
                 {% include "activity/_excerpt.html" %}
               </li>
             {% endfor %}
@@ -40,7 +40,7 @@
         {% else %}
           {% with event=entry.latest %}
             {% include "activity/_event.html" with own_excerpt=True %}
-            <span class="small text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+            <span class="small text-body-secondary">· {{ event.created_at|dateformat:"TIME_FORMAT" }}</span>
             {% if not project %}<span class="small text-body-secondary">·
                 {% project_dot event.project %}{{ event.project }}</span>{% endif %}
             {% include "activity/_excerpt.html" %}

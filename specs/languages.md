@@ -94,8 +94,10 @@ Depends on: everything with texts; `accounts` (the `language` field,
   `aria-label`s, messages) and moves them into data attributes or a
   small catalog the page renders (`json_script`); no runtime catalog
   fetch.
-- **Dates, times, numbers:** Django's formats for the language
-  (`USE_L10N`): "22. Nov. 2026", 24-hour times; relative times ("vor 13
+- **Dates, times, numbers:** formats per language (`biwak/formats/`,
+  `FORMAT_MODULE_PATH`; templates name them, `|dateformat:"SHORT_DATE_FORMAT"`):
+  English "22 Nov 2026", German "22. Nov. 2026" (decided 2026-11-22),
+  24-hour times in both; relative times ("vor 13
   Stunden", one unit, `ui-feedback.md` round 8); weekday and month
   names in the rule widget and check-ins' schedules; file sizes.
 - **Mails** in the recipient's language: their choice, else for an

@@ -6,7 +6,7 @@
   {% for comment in comments %}
     <div class="wb-peek-comment">
       <div class="small text-body-secondary">
-        <strong>{% short_name comment.author %}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+        <strong>{% short_name comment.author %}</strong> · {{ comment.created_at|dateformat:"SHORT_DATETIME_FORMAT" }}
       </div>
       <div class="wb-markdown">{{ comment.content|markdown:item }}</div>
     </div>

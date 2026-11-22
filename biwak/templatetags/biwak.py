@@ -4,7 +4,7 @@ import re
 from django import template
 from django.conf import settings
 from django.urls import reverse
-from django.utils.dateformat import format as date_format
+from django.utils.formats import date_format
 from django.utils.html import escape, format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.timezone import localtime
@@ -553,13 +553,13 @@ def public_link_badge(context, item):
         '<a class="badge wb-public-badge" href="{}" data-modal title="{}">{}</a>',
         reverse("item_share", args=[item.pk]),
         gettext("Shared publicly until %(date)s")
-        % {"date": date_format(localtime(link.expires_at), "j. M Y, H:i")},
+        % {"date": date_format(localtime(link.expires_at), "SHORT_DATETIME_FORMAT")},
         gettext("Public link"),
     )
 
 
 @register.inclusion_tag("items/_due_badge.html")
-def due_badge(todo, date_format="j. M", *, badge_only=False):
+def due_badge(todo, date_format="MONTH_DAY_FORMAT", *, badge_only=False):
     """A to-do's due date (``todo``: the item's ``Todo`` detail), as a
     danger badge when it's open and past due, as a quiet "Today" badge on
     the day, else as plain text; nothing without a date. ``badge_only``:
@@ -672,3 +672,14 @@ def capture(parser, token):
     nodelist = parser.parse(("endcapture",))
     parser.delete_first_token()
     return CaptureNode(nodelist, bits[2])
+
+
+@register.filter(expects_localtime=True, is_safe=False)
+def dateformat(value, name):
+    """``{{ day|dateformat:"SHORT_DATE_FORMAT" }}``: a format of the active
+    language by its name, Django's or ours (``biwak.formats``)"""
+    from biwak.formats import format_date
+
+    if value in {None, ""}:
+        return ""
+    return format_date(value, name)

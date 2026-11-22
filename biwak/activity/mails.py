@@ -479,7 +479,10 @@ def digest_heading(notifications):
     """ "What happened on 19. November 2026", or the days it covers when
     there's more than one (after a downtime, or switching to digests)"""
     days = sorted({timezone.localdate(n.created_at) for n in notifications})
-    first, last = date_format(days[0], "j. F Y"), date_format(days[-1], "j. F Y")
+    first, last = (
+        date_format(days[0], "DATE_FORMAT"),
+        date_format(days[-1], "DATE_FORMAT"),
+    )
     if first == last:
         return _("What happened on %(day)s") % {"day": first}
     return _("What happened from %(first)s to %(last)s") % {

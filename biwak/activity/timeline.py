@@ -53,7 +53,7 @@ def _due(value):
     if not value:
         return _("removed the due date")
     return _("set the due date to %(date)s") % {
-        "date": date_format(dt.date.fromisoformat(value), "j. M Y")
+        "date": date_format(dt.date.fromisoformat(value), "SHORT_DATE_FORMAT")
     }
 
 

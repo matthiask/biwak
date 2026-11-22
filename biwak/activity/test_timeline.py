@@ -76,7 +76,7 @@ class LinesTest(TimelineBase):
         response = self.client.get(self.todo.get_absolute_url())
         when = Event.objects.get().created_at
         self.assertContains(
-            response, f'title="{timezone.localtime(when):%-d. %b %Y, %H:%M}"'
+            response, f'title="{timezone.localtime(when):%-d %b %Y, %H:%M}"'
         )
 
     def test_moved_to_a_list_and_a_group(self):
@@ -123,7 +123,7 @@ class LinesTest(TimelineBase):
         ops.update_todo(self.todo, actor=self.bob, due_on=None)
         first, second = self.lines()
         self.assertIn("changed the title to “Order two tents”", first)
-        self.assertIn("set the due date to 1. Dec 2026", first)
+        self.assertIn("set the due date to 1 Dec 2026", first)
         self.assertIn("removed the due date", second)
 
     def test_notes_edits_and_old_edits_are_not_shown(self):
@@ -318,8 +318,8 @@ class CancellingTest(TimelineBase):
         Event.objects.update(created_at=timezone.now() - dt.timedelta(minutes=9))
         ops.update_todo(self.todo, actor=self.ada, due_on=dt.date(2026, 12, 8))
         (line,) = self.lines()
-        self.assertIn("set the due date to 8. Dec 2026", line)
-        self.assertNotIn("1. Dec", line)
+        self.assertIn("set the due date to 8 Dec 2026", line)
+        self.assertNotIn("1 Dec", line)
 
 
 class ClientTest(TimelineBase):

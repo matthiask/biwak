@@ -12,7 +12,7 @@
     </div>
     <div class="small text-body-secondary">
       {% avatar item.creator %}
-      {% short_name item.creator %} · {{ item.created_at|date:"j. M Y" }}
+      {% short_name item.creator %} · {{ item.created_at|dateformat:"SHORT_DATE_FORMAT" }}
       {% if item.comment_count %}·
         {% blocktranslate count counter=item.comment_count %}{{ counter }} comment{% plural %}{{ counter }} comments{% endblocktranslate %}{% endif %}
       {% include "items/_checklist_signal.html" with done=item.message.checklist_done total=item.message.checklist_total %}

@@ -248,6 +248,8 @@ DATABASES["default"] |= {
 LANGUAGE_CODE = "en"
 LANGUAGES = [("de", _("German")), ("en", _("English"))]
 TIME_ZONE = "Europe/Zurich"
+# Dates per language: biwak/formats/<language>/formats.py
+FORMAT_MODULE_PATH = ["biwak.formats"]
 USE_I18N = True
 USE_TZ = True
 

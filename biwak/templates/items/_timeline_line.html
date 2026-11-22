@@ -15,6 +15,6 @@
   </span>
   {% avatar line.actor %}
   <span><strong>{% short_name line.actor %}</strong> {{ line.text }}
-    <span class="text-body-secondary" title="{{ line.created_at|date:'j. M Y, H:i' }}">·
+    <span class="text-body-secondary" title="{{ line.created_at|dateformat:'SHORT_DATETIME_FORMAT' }}">·
       {{ line.created_at|ago }}</span></span>
 </div>

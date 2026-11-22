@@ -88,7 +88,7 @@
     </div>{% endif %}
   {% if project.archived_at %}
     <div class="alert alert-info">
-      {% blocktranslate with when=project.archived_at|date:"j. F Y" %}Archived on {{ when }}. Everything stays readable.{% endblocktranslate %}
+      {% blocktranslate with when=project.archived_at|dateformat:"DATE_FORMAT" %}Archived on {{ when }}. Everything stays readable.{% endblocktranslate %}
     </div>
   {% endif %}
   <div class="row g-4">
@@ -198,7 +198,7 @@
             <span class="fw-semibold">{{ item|item_title }}</span>
             {% client_badge item %}
             <span class="small text-body-secondary">· {% short_name item.creator %} ·
-              {{ item.updated_at|date:"j. M Y" }}</span>
+              {{ item.updated_at|dateformat:"SHORT_DATE_FORMAT" }}</span>
             {% include "items/_checklist_signal.html" with done=item.checklist_done total=item.checklist_total %}
           </a>
         {% empty %}

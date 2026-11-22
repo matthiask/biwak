@@ -25,7 +25,7 @@
             {{ item.title|title_text }}
           </h1>
           <p class="small text-body-secondary" data-public-byline>
-            {{ item.creator.display_name }} · {{ item.updated_at|date:"j. M Y" }}
+            {{ item.creator.display_name }} · {{ item.updated_at|dateformat:"SHORT_DATE_FORMAT" }}
           </p>
           {% if version %}
             {% if version.has_preview %}

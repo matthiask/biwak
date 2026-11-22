@@ -19,7 +19,8 @@
       <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">
         <dt>{% translate "Due on" %}</dt>
         <dd>
-          {% if todo.due_on %}{{ todo.due_on|date:"l, j. F Y" }} {% due_badge todo badge_only=True %}{% else %}<span
+          {% if todo.due_on %}{{ todo.due_on|dateformat:"WEEKDAY_DATE_FORMAT" }}
+            {% due_badge todo badge_only=True %}{% else %}<span
               class="text-body-secondary"
             >{% translate "No date" %}</span>{% endif %}
         </dd>
@@ -29,7 +30,7 @@
         <dd>
           {% if todo.recurrence %}
             {{ todo.recurrence_description|capfirst }}.
-            {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|date:"j. F Y" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
+            {% if todo.recurrence_ends_on %}{% blocktranslate with day=todo.recurrence_ends_on|dateformat:"DATE_FORMAT" %}Until {{ day }}.{% endblocktranslate %}{% endif %}
             {% if todo.recurrence_count is not None %}{% blocktranslate count counter=todo.recurrence_count %}{{ counter }} more to come.{% plural %}{{ counter }} more to come.{% endblocktranslate %}{% endif %}
           {% else %}
             <span class="text-body-secondary">{% translate "Doesn't repeat" %}</span>

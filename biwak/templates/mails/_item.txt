@@ -1,7 +1,7 @@
-{% load i18n %}{{ kind|capfirst }}: {{ title }}{% if list %}
+{% load biwak i18n %}{{ kind|capfirst }}: {{ title }}{% if list %}
 {% translate "List" %}: {{ list }}{% endif %}{% if assignees %}
 {% translate "Assigned to" %}: {{ assignees }}{% endif %}{% if todo.due_on %}
-{% translate "Due on" %}: {{ todo.due_on|date:"j. F Y" }}{% endif %}{% if todo.completed_at %}
+{% translate "Due on" %}: {{ todo.due_on|dateformat:"DATE_FORMAT" }}{% endif %}{% if todo.completed_at %}
 {% translate "Completed." %}{% endif %}{% if text_plain %}
 
 {{ text_plain }}{% endif %}

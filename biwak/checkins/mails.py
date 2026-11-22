@@ -140,7 +140,7 @@ def summary_mail(user, occurrence):
     from biwak.checkins.operations import answers_of
 
     context = _context(user, occurrence)
-    context["day"] = date_format(occurrence.date, "j. F Y")
+    context["day"] = date_format(occurrence.date, "DATE_FORMAT")
     context["answers"] = [
         {
             "author": answer.author,

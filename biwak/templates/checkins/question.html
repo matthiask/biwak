@@ -55,7 +55,8 @@
     {% if is_paused %}
       · {% translate "paused, not asked" %}
     {% elif question.next_local %}
-      · {% blocktranslate with when=question.next_local|date:"l, j. F Y, H:i" %}next: {{ when }}{% endblocktranslate %}
+      ·
+      {% blocktranslate with when=question.next_local|dateformat:"WEEKDAY_DATETIME_FORMAT" %}next: {{ when }}{% endblocktranslate %}
     {% endif %}
   </p>
   <div class="row g-4">
@@ -63,7 +64,7 @@
       {% for occurrence, answers in rows %}
         <section class="mb-4" id="occurrence-{{ occurrence.pk }}">
           <h2 class="h5">
-            {{ occurrence.date|date:"l, j. F Y" }}
+            {{ occurrence.date|dateformat:"WEEKDAY_DATE_FORMAT" }}
             {% if can_answer and occurrence.pk not in answered %}
               <a
                 class="btn btn-sm btn-quiet"
@@ -88,7 +89,7 @@
                     {% avatar answer.author %}
                     <a href="{% url 'question_person' item.pk answer.author_id %}"><strong
                       >{{ answer.author.display_name }}</strong></a>
-                    · {{ answer.item.created_at|date:"j. M Y, H:i" }}
+                    · {{ answer.item.created_at|dateformat:"SHORT_DATETIME_FORMAT" }}
                     {% if answer.author_id == request.user.pk %}
                       ·
                       <a
@@ -115,7 +116,8 @@
                   {% for comment in comments %}
                     <div class="border-top mt-2 pt-2" id="comment-{{ comment.pk }}">
                       <div class="small text-body-secondary">
-                        <strong>{{ comment.author.display_name }}</strong> · {{ comment.created_at|date:"j. M Y, H:i" }}
+                        <strong>{{ comment.author.display_name }}</strong> ·
+                        {{ comment.created_at|dateformat:"SHORT_DATETIME_FORMAT" }}
                       </div>
                       <div class="wb-markdown">{% checklist_markdown comment.content answer.item comment %}</div>
                       {% reactions answer.item comment %}

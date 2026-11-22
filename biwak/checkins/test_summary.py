@@ -43,7 +43,7 @@ class SummaryTest(CheckinTestCase):
         )
         message = messages[0]
         self.assertEqual(
-            message.subject, "[Website] How are you?: answers of 22. March 2027"
+            message.subject, "[Website] How are you?: answers of 22 March 2027"
         )
         for text in [
             "Ada Example",
@@ -232,7 +232,7 @@ class SummaryTest(CheckinTestCase):
         self.run_at("2027-03-22 22:00", utc)
         self.assertEqual(
             [m.subject for m in self.summaries()],
-            ["[Website] Tokyo: answers of 22. March 2027"] * 2,
+            ["[Website] Tokyo: answers of 22 March 2027"] * 2,
         )
 
     def test_across_the_change_to_summer_time(self):
@@ -278,7 +278,7 @@ class SummaryAfterDowntimeTest(CheckinTestCase):
         self.assertEqual(self.run_at("2027-03-24 06:59")["summarized"], 0)
         self.assertEqual(self.run_at("2027-03-24 07:00")["summarized"], 1)
         self.assertEqual(
-            len([m for m in self.sent() if ": answers of 22. March" in m.subject]), 2
+            len([m for m in self.sent() if ": answers of 22 March" in m.subject]), 2
         )
 
 

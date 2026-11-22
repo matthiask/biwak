@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load biwak i18n %}
 {% block title %}{% translate "API tokens" %} – Biwak{% endblock %}
 
 {% block content %}
@@ -28,8 +28,8 @@
               <tr>
                 <td>{{ token }}</td>
                 <td>{{ token.get_access_display }}</td>
-                <td>{{ token.last_used_at|date:"j. M Y H:i"|default:"–" }}</td>
-                <td>{{ token.expires_at|date:"j. M Y" }}</td>
+                <td>{{ token.last_used_at|dateformat:"SHORT_DATETIME_FORMAT"|default:"–" }}</td>
+                <td>{{ token.expires_at|dateformat:"SHORT_DATE_FORMAT" }}</td>
                 <td class="text-end">
                   <form method="post" action="{% url 'api_token_delete' token.pk %}">
                     {% csrf_token %}

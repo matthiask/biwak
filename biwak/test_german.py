@@ -253,3 +253,54 @@ class WordingTest(TestCase):
             told_line([bob, cleo], website, ada),
             "Bob and Cleo will be told.",
         )
+
+
+class DateFormatsTest(TestCase):
+    """English "22 Nov 2026", German "22. Nov. 2026" (biwak/formats/)"""
+
+    def test_each_language(self):
+        from django.template import Context, Template
+        from django.utils import translation
+
+        from biwak.formats import format_date
+
+        day = dt.datetime(2026, 11, 22, 14, 5)
+        march = dt.date(2027, 3, 1)
+        expected = {
+            "en": {
+                "SHORT_DATE_FORMAT": "22 Nov 2026",
+                "DATE_FORMAT": "22 November 2026",
+                "SHORT_DATETIME_FORMAT": "22 Nov 2026, 14:05",
+                "MONTH_DAY_FORMAT": "22 Nov",
+                "WEEKDAY_DATE_FORMAT": "Sunday, 22 November 2026",
+                "SHORT_WEEKDAY_DATETIME_FORMAT": "Sun, 22 Nov 2026, 14:05",
+                "MONTH_DAY_TIME_FORMAT": "22 Nov, 14:05",
+            },
+            "de": {
+                "SHORT_DATE_FORMAT": "22. Nov. 2026",
+                "DATE_FORMAT": "22. November 2026",
+                "SHORT_DATETIME_FORMAT": "22. Nov. 2026, 14:05",
+                "MONTH_DAY_FORMAT": "22. Nov.",
+                "WEEKDAY_DATE_FORMAT": "Sonntag, 22. November 2026",
+                "SHORT_WEEKDAY_DATETIME_FORMAT": "So, 22. Nov. 2026, 14:05",
+                "MONTH_DAY_TIME_FORMAT": "22. Nov., 14:05",
+            },
+        }
+        for language, formats in expected.items():
+            with translation.override(language):
+                for name, text in formats.items():
+                    with self.subTest(language=language, name=name):
+                        self.assertEqual(format_date(day, name), text)
+                # Django's own names through its filter too
+                self.assertEqual(
+                    Template('{{ d|date:"SHORT_DATE_FORMAT" }}').render(
+                        Context({"d": march})
+                    ),
+                    {"en": "1 Mar 2027", "de": "1. März 2027"}[language],
+                )
+                self.assertEqual(
+                    Template(
+                        '{% load biwak %}{{ d|dateformat:"SHORT_DATE_FORMAT" }}'
+                    ).render(Context({"d": march})),
+                    {"en": "1 Mar 2027", "de": "1. März 2027"}[language],
+                )

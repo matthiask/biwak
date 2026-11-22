@@ -60,7 +60,7 @@ class TodoViewTest(ViewModeBase):
             self.assertNotContains(page, "data-view-form")
             self.assertContains(page, "Assigned to")
             self.assertContains(page, "Ada")
-            self.assertContains(page, "Monday, 1. March 2027")
+            self.assertContains(page, "Monday, 1 March 2027")
             self.assertContains(page, "Every Monday")
             self.assertContains(page, "<em>poles</em>")
             # The title once, as the heading
@@ -252,7 +252,7 @@ class RepeatEndsTest(ViewModeBase):
             recurrence_count=4,
         )
         page = self.client.get(self.url)
-        self.assertContains(page, "Until 1. June 2027.")
+        self.assertContains(page, "Until 1 June 2027.")
         self.assertContains(page, "4 more to come.")
 
     def test_a_bound_form_shows_what_was_posted(self):

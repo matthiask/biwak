@@ -21,7 +21,7 @@
               {% client_badge link.item %}
             </div>
             <div class="small text-body-secondary mb-2">
-              {% blocktranslate trimmed with name=link.created_by.display_name date=link.expires_at|date:"j. M Y, H:i" %}
+              {% blocktranslate trimmed with name=link.created_by.display_name date=link.expires_at|dateformat:"SHORT_DATETIME_FORMAT" %}
                 Shared by {{ name }}, until {{ date }}
               {% endblocktranslate %}
             </div>

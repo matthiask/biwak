@@ -126,7 +126,7 @@ def due_label(item):
     todo = getattr(item, "todo", None) if item.kind == Kind.TODO else None
     state = due.badge_state(todo) if todo else ""
     if state == due.OVERDUE:
-        day = date_filter(todo.due_on, "j. M")
+        day = date_filter(todo.due_on, "MONTH_DAY_FORMAT")
         return {"state": state, "label": _("Overdue · %(day)s") % {"day": day}}
     if state == due.TODAY:
         return {"state": state, "label": _("Today")}
