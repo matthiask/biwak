@@ -233,3 +233,23 @@ class MailsTest(TestCase):
         self.assertEqual(
             invitation.subject, "Ada Example hat dich zu Webseite eingeladen"
         )
+
+
+class WordingTest(TestCase):
+    def test_told_follows_the_number_of_names(self):
+        from django.utils import translation
+
+        from biwak.activity.notify import told_line
+
+        ada, bob, cleo = person("Ada"), person("Bob"), person("Cleo")
+        website = project("Webseite", members=[ada, bob, cleo])
+        with translation.override("de"):
+            self.assertEqual(told_line([bob], website, ada), "Bob wird benachrichtigt.")
+            self.assertEqual(
+                told_line([bob, cleo], website, ada),
+                "Bob und Cleo werden benachrichtigt.",
+            )
+        self.assertEqual(
+            told_line([bob, cleo], website, ada),
+            "Bob and Cleo will be told.",
+        )

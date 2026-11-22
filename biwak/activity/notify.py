@@ -339,9 +339,10 @@ def told_line(people, project, user):
     shown = names[:3] if len(people) <= 3 else names[:2]
     rest = len(people) - len(shown)
     if not rest:
-        return gettext("%(people)s will be told.") % {
-            "people": get_text_list(shown, gettext("and"))
-        }
+        # The same in English; German says "wird" or "werden"
+        return ngettext(
+            "%(people)s will be told.", "%(people)s will be told.", len(shown)
+        ) % {"people": get_text_list(shown, gettext("and"))}
     if not shown:
         return ngettext(
             "%(count)d person will be told.", "%(count)d people will be told.", rest

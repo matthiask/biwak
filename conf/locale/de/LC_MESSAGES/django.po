@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:01+0100\n"
+"POT-Creation-Date: 2026-11-22 14:30+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -32,7 +32,7 @@ msgstr "Du kannst dich nicht selbst deaktivieren."
 
 #: biwak/accounts/admin.py
 msgid "The last active admin can't be deactivated or stop being one."
-msgstr "Der letzte aktive Admin kann nicht deaktiviert werden und muss Admin bleiben."
+msgstr "Mindestens eine aktive Person muss Admin bleiben."
 
 #: biwak/accounts/admin.py
 msgid "Mail to the selected people works again"
@@ -1128,7 +1128,9 @@ msgstr "Niemand wird benachrichtigt, ausser du fügst Personen hinzu."
 #: biwak/activity/notify.py
 #, python-format
 msgid "%(people)s will be told."
-msgstr "%(people)s wird benachrichtigt."
+msgid_plural "%(people)s will be told."
+msgstr[0] "%(people)s wird benachrichtigt."
+msgstr[1] "%(people)s werden benachrichtigt."
 
 #: biwak/activity/notify.py biwak/activity/timeline.py
 msgid "and"
@@ -2735,7 +2737,7 @@ msgstr "Du darfst %(names)s nicht ändern: Nur Admins ändern Mitarbeitende."
 
 #: biwak/organizations/activation.py
 msgid "The last active admin can't be deactivated."
-msgstr "Der:die letzte aktive Admin kann nicht deaktiviert werden."
+msgstr "Mindestens eine aktive Person muss Admin bleiben, die letzte kann nicht deaktiviert werden."
 
 #: biwak/organizations/activation.py
 msgid "Change your own sign-in in your settings."
