@@ -86,8 +86,8 @@ you're on, and typing goes back to the field.
   the due date is set; it can't be after the due date, and removing the
   due date removes it. Rows show both ("3–7 Dec"). Until it starts, the
   to-do stays out of your current work: My to-dos, the to-dos page and
-  Home list it at the end under "Starting later (N)", closed until you
-  open it. Lists, the board and search show it as always.
+  Home (also its "Waiting on others") list it at the end under
+  "Starting later (N)", closed until you open it. Lists, the board and search show it as always.
 - **Repeat:** see below.
 
 Below the notes are the comments, with reactions (a quick emoji or a

@@ -321,7 +321,7 @@ class RowsTest(StartDatesBase):
         self.assertIn("Overdue · 20–24 Nov", page)
 
 
-class StartingLaterTest(StartDatesBase):
+class StartingLaterBase(StartDatesBase):
     """On 26 November 2026: "Now" started yesterday, "Today" starts today,
     "Later" on 30 November; the internal one only for staff"""
 
@@ -355,6 +355,8 @@ class StartingLaterTest(StartDatesBase):
         later = found[0] if found else ""
         return html.replace(later, ""), later
 
+
+class StartingLaterTest(StartingLaterBase):
     def test_my_to_dos_and_the_to_dos_page(self):
         for user, hidden in [(self.ada, None), (self.cleo, "Secret later")]:
             for params in [{}, {"grouping": "due"}]:
@@ -533,3 +535,52 @@ class APITest(StartDatesBase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertIsNone(self.refresh(item).todo.starts_on)
+
+
+class WaitingOnOthersTest(StartingLaterBase):
+    def test_home_waiting_on_others(self):
+        """To-dos Ada gave Bob: started ones in "Waiting on others", the
+        others in its own "Starting later" (decided 2026-11-22)"""
+        self.todo("Fetch wood", due="2026-11-28", assignees=[self.bob])
+        self.todo(
+            "Dig a ditch", due="2026-12-01", starts="2026-11-30", assignees=[self.bob]
+        )
+        html, _later = self.page(self.ada, "/")
+        waiting = between(html, 'data-home="waiting"', "</section>")
+        parts = re.findall(
+            r"<details[^>]*data-starting-later.*?</details>", waiting, re.DOTALL
+        )
+        self.assertEqual(len(parts), 1)
+        self.assertIn("Starting later (1)", parts[0])
+        self.assertIn("Dig a ditch", parts[0])
+        self.assertIn("Fetch wood", waiting.replace(parts[0], ""))
+        self.assertNotIn("Dig a ditch", waiting.replace(parts[0], ""))
+        # Only later ones: the section shows anyway
+        Item.objects.filter(title="Fetch wood").delete()
+        html, _later = self.page(self.ada, "/")
+        self.assertIn("Dig a ditch", between(html, 'data-home="waiting"', "</section>"))
+
+
+class StartedFilterTest(StartingLaterBase):
+    def titles(self, user, **params):
+        from biwak.accounts.models import APIToken
+
+        _token, secret = APIToken.create_for(user=user, title="Test", access="read")
+        with on("2026-11-26"):
+            response = self.client.get(
+                "/api/v1/todos/",
+                {"assignee": "me", **params},
+                headers={"authorization": f"Bearer {secret}"},
+            )
+        self.assertEqual(response.status_code, 200)
+        return {todo["title"] for todo in response.json()["results"]}
+
+    def test_the_api(self):
+        everything = {"Now", "Today", "Later", "No date"}
+        for user, extra in [(self.ada, {"Secret later"}), (self.cleo, set())]:
+            with self.subTest(user=user):
+                self.assertEqual(self.titles(user), everything | extra)
+                self.assertEqual(
+                    self.titles(user, started="true"), {"Now", "Today", "No date"}
+                )
+                self.assertEqual(self.titles(user, started="false"), {"Later"} | extra)

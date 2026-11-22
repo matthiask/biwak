@@ -17,7 +17,8 @@ The brand ("Biwak") on the left leads to Home. It shows what needs you:
 - your to-dos that are overdue or due in the next seven days (those
   that haven't started yet under "Starting later");
 - check-ins waiting for your answer;
-- for staff, to-dos you assigned to others (waiting on others);
+- for staff, to-dos you assigned to others (waiting on others; those
+  that haven't started yet under "Starting later");
 - recent updates in your bookmarked projects and wherever you were
   mentioned or assigned;
 - your bookmarked projects and items;
