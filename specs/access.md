@@ -162,7 +162,10 @@ Like Basecamp's bright yellow:
   (`items/_client_tab.html`, `.wb-client-tab`), instead of a banner
   taking a line of the page. No banner above the comment form. Forms in
   modals keep the banner (`items/_client_banner.html`): the dialog
-  covers the page. Editing a project with active client members says
+  covers the page. Forms on pages of their own (without JavaScript, the
+  edit pages of messages, files and check-ins) have the tab (decided
+  2026-11-22). On phones the tab starts below the navigation's two rows,
+  and the navigation's menus open above it. Editing a project with active client members says
   "The clients of this project can see this." (`clients_see` in
   `project_edit`, `modal_form.html`).
 - **Showing to clients asks first, hiding is one click** (decided

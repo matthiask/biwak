@@ -50,7 +50,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   heights): page headers show icons only (`.wb-label` hidden, the label
   as `title`) and what isn't needed often moves into "More"
   (`.wb-phone-hide`, `.wb-phone-only`); on lists the bookmark, Edit and
-  List/Board stay, on to-dos Complete, Edit and the bookmark. Grids go
+  List/Board stay, on to-dos Complete, Edit and the bookmark. Every
+  item's page does this (`wb-page-actions is-compact`, `.wb-label` and a
+  `title` on every button with an icon; 2026-11-22: messages, files,
+  docs, check-ins and "Docs and files" showed their labels). Grids go
   to one column.
 - **Floating disclosures** (menus, the reaction picker, the people
   picker's list) close on a click elsewhere and Escape (`data-dismiss`;

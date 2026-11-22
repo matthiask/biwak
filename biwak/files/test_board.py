@@ -64,7 +64,7 @@ class BoardTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         response = self.client.get(self.url())
         self.assertEqual(self.titles(response), ["Secret plans", "Shared news"])
-        self.assertContains(response, "Clients", count=2)  # the badge, once
+        self.assertContains(response, "wb-client-badge", count=1)  # the badge, once
         self.assertContains(response, "📣 News")
         self.assertContains(response, "Internal only")  # the excerpt
 

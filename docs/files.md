@@ -59,8 +59,9 @@ same order. Everybody sees the order chosen.
 
 A doc is a page of Markdown text, such as a brief or a set of notes.
 Its title is the first line of the text: a heading such as `# Brief`, or
-else the line itself. Change the first line to rename the doc; lists,
-search and the activity feed follow. An empty doc is "Untitled".
+else the line itself, shown as the page's heading. Change the first
+line to rename the doc; lists, search and the activity feed follow. An
+empty doc is "Untitled".
 
 **New doc** opens the editor at once, the text starting with `# ` and
 the cursor after it: type the title first, then the text. Until you

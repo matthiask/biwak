@@ -2,7 +2,8 @@
 {% load biwak i18n %}
 {% comment %}
   A form as a page and in a modal (biwak/modals.py, frontend/modal.js): the
-  title, the client banner where the item is visible to clients, what it
+  title, the client banner where the item is visible to clients (the tab
+  on the page, specs/ui.md), what it
   does (`intro`), the fields and the buttons. In the modal it posts to the
   dialog and the dialog's labelled by the title; Cancel closes it. On the
   page Cancel goes to `cancel_url`.
@@ -13,7 +14,7 @@
   {% if not modal and project %}{% include "_breadcrumbs.html" %}{% endif %}
   <div>
     <h1 class="wb-form-title" {% if modal %}id="modal-title"{% endif %}>{{ title }}</h1>
-    {% if item %}{% include "items/_client_banner.html" %}{% endif %}
+    {% if item and modal %}{% include "items/_client_banner.html" %}{% elif item %}{% include "items/_client_tab.html" %}{% endif %}
     {% if clients_see %}
       <div class="wb-client-banner" role="note">
         {% icon "eye" %}

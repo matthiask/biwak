@@ -600,7 +600,7 @@ class AnsweringPagesTest(ViewsTestCase):
     def test_the_form(self):
         response = self.get(self.ada, self.url("question_answer", self.item))
         self.assertContains(response, "How are you?")
-        self.assertNotContains(response, "Skip")
+        self.assertNotContains(response, ">Skip<")
         self.assertContains(response, "data-attachments")
         self.assertContains(response, "Monday, 22. March 2027")
         self.assertEqual(response.context["occurrence"], self.first)

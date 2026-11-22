@@ -564,15 +564,17 @@ class EditTest(Fixture, TestCase):
         self.assertContains(response, "Clients can see this")
 
     def test_no_title_form_and_no_title_next_to_the_text(self):
-        """The title is the text's first line (specs/doc-titles.md)"""
+        """The title is the text's first line (specs/doc-titles.md): the
+        header's heading, for screen readers only in the editor"""
         self.client.force_login(self.ada)
         response = self.client.get(self.url("doc_edit", self.shared))
         self.assertNotContains(response, "Rename")
         self.assertNotContains(response, 'name="title"')
-        self.assertNotContains(response, "<h1")
+        self.assertContains(response, '<h1 class="visually-hidden">Shared doc</h1>')
         self.assertContains(response, "Shared doc", html=False)  # crumbs, <title>
         response = self.client.get(self.shared.get_absolute_url())
-        self.assertNotContains(response, "<h1")
+        self.assertContains(response, '<h1 class="wb-title">')
+        self.assertContains(response, 'class="wb-markdown wb-doc-text"')
 
     def test_save_as_a_version_sets_the_title_from_the_typed_text(self):
         live.apply_text(self.shared.doc, "# Renamed\n\nText", user=self.bob)

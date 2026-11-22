@@ -12,7 +12,7 @@
       {% client_badge item %}
       {% if is_paused %}<span class="badge wb-tone-neutral">{% translate "paused" %}</span>{% endif %}
     </h1>
-    <div class="wb-page-actions">
+    <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
       {% if can_answer and latest %}
         <a
@@ -21,17 +21,26 @@
         >{% translate "Answer" %}</a>
       {% endif %}
       {% if can_manage %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'question_edit' item.pk %}">{% icon "pencil" %}<span
-          >{% translate "Edit" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'question_edit' item.pk %}"
+          title="{% translate 'Edit' %}"
+        >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
         <form method="post" action="{% url 'question_pause' item.pk %}">
           {% csrf_token %}
           {% if is_paused %}
-            <button type="submit" name="resume" value="1" class="btn btn-sm btn-quiet">
-              {% icon "play-circle" %}<span>{% translate "Resume" %}</span>
+            <button
+              type="submit"
+              name="resume"
+              value="1"
+              class="btn btn-sm btn-quiet"
+              title="{% translate 'Resume' %}"
+            >
+              {% icon "play-circle" %}<span class="wb-label">{% translate "Resume" %}</span>
             </button>
           {% else %}
-            <button type="submit" class="btn btn-sm btn-quiet">
-              {% icon "pause-circle" %}<span>{% translate "Pause" %}</span>
+            <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Pause' %}">
+              {% icon "pause-circle" %}<span class="wb-label">{% translate "Pause" %}</span>
             </button>
           {% endif %}
         </form>

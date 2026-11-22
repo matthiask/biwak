@@ -8,9 +8,10 @@
 {% block content %}
   {% include "files/_crumbs.html" %}
   <div class="wb-page-header">
-    {# The title is the text's first line (specs/doc-titles.md) #}
+    {# The title is the text's first line (specs/files.md, "Docs"), which the editor shows: the heading for screen readers #}
     <div class="wb-title">
       {% icon "file-earmark-text" %}
+      <h1 class="visually-hidden">{{ item|item_title }}</h1>
       {% client_badge item %}
     </div>
     <div class="wb-page-actions">

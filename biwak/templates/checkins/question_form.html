@@ -8,7 +8,7 @@
   <h1 class="mb-3">
     {% if item %}{% translate "Edit the check-in" %}{% else %}{% translate "New check-in" %}{% endif %}
   </h1>
-  {% if item %}{% include "items/_client_banner.html" %}{% endif %}
+  {% if item %}{% include "items/_client_tab.html" %}{% endif %}
   <div class="card">
     <div class="card-body">
       <form method="post">

@@ -798,6 +798,12 @@ h3,
   overflow-wrap: anywhere;
 }
 
+/* A doc's page: its first line, when a heading, is the header's title
+   (files/doc.html) */
+.wb-doc-text > :is(h1, h2, h3, h4, h5, h6):first-child {
+  display: none;
+}
+
 .wb-markdown > :last-child {
   margin-bottom: 0;
 }
@@ -910,6 +916,13 @@ h3,
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 0.15);
+}
+
+/* Below the bar, which takes two rows on small screens */
+@media (max-width: 991.98px) {
+  .wb-client-tab {
+    top: 7.5rem;
+  }
 }
 
 /* Room for the tab, so that it never covers the page's buttons */
