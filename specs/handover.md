@@ -111,17 +111,17 @@ list's page (list and board).
 Asked by the user 2026-11-22, on the same selection as "Assign…".
 
 - **"Move…"**: a modal like a single to-do's "Move to…" (a list of the
-  same project and a group of it, `move_todos()`), all or nothing;
-  across projects is a question (single to-dos stay in their project
-  today, `lists-across-projects.md`).
+  same project and a group of it, `move_todos()`), all or nothing. If
+  it's built, across projects too (decided 2026-11-22; the user isn't
+  sure it's needed: people can move whole lists), like moving top-level
+  items (`lists-across-projects.md`: who's added, who's dropped).
 - **"Due date…"** (the user is less sure, "might be useful"): one due
   date for all, or "Move by N days" (and start dates with them), or
   "Remove", like copying a list's dates (`lists-across-projects.md`).
 - Both one event per action like "Assign…" (one entry in the lantern),
   the API (`POST /api/v1/todos/move/`, `/todos/dates/` with the IDs) and
   the CLI (`biwak todos move ID… --list`, `biwak todos dates ID…`).
-- Questions: moving several across projects; whether "Due date…" is
-  wanted at all.
+- Question: whether "Due date…" is wanted at all.
 
 ## Deactivating says what's left
 

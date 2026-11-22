@@ -18,6 +18,9 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 - **Read in the lantern:** a push isn't sent for a notification already
   read; when it's read elsewhere, the shown push is closed on the
   devices that support it (`tag` per item, a `close` message).
+- **Coalesced like mails** (decided 2026-11-22: Biwak isn't chat): a
+  push waits the same merge window as the notification mail
+  (`MERGE_AFTER`, `notifications.md`), so quick edits are one push.
 - **Content:** the lantern's line ("Ada commented on Kick-off"), the
   project's name, the first line of the text for comments and messages;
   a tap opens the item. Clients only get what they may see (the
@@ -37,7 +40,10 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 - A small service worker (`frontend/sw.js`, served at `/sw.js`) that only
   shows pushes and opens their URL on a tap: still no caching of pages
   (decided 2026-11-21, `pwa.md`).
-- VAPID keys from settings (`WEBPUSH_VAPID_PUBLIC_KEY`,
+- No service of our own and no account anywhere: the browser's push
+  service (Google's for Chrome, Mozilla's, Apple's) delivers what we send
+  to the subscription's endpoint, encrypted end to end; VAPID is only a
+  key pair we generate once to sign our requests. VAPID keys from settings (`WEBPUSH_VAPID_PUBLIC_KEY`,
   `WEBPUSH_VAPID_PRIVATE_KEY`, `WEBPUSH_SUBJECT`); without them the
   setting isn't offered. Sending with `pywebpush` from `send_mails`'
   run (every minute), through a `PushSubscription` (person, endpoint,
@@ -48,11 +54,9 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
 ## Questions
 
-1. **Delay:** mails wait about 2 minutes to merge quick edits. Pushes at
-   once (proposed: a push is about now), or after the same wait?
-2. **Mentions and assignments only?** Proposed: everything the lantern
+1. **Mentions and assignments only?** Proposed: everything the lantern
    counts; the alternative is a quieter phone.
-3. **iOS** needs the app installed to the home screen for Web Push: the
+2. **iOS** needs the app installed to the home screen for Web Push: the
    setting says so on iPhones that open Biwak in Safari. Fine?
 
 ## Done when

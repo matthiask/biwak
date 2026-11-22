@@ -130,6 +130,19 @@ project. Waiting for Basecamp's account export to confirm the plan.
   archive easily, archived projects may not be imported at all;
   otherwise a cutoff by `updated_at` (open).
 
+## Running the whole import in production (idea, 2026-11-22)
+
+The projects: the active and archived ones from Basecamp's project list
+(`basecamp projects list`, `/projects.json?status=archived`), excluded
+and sample projects skipped by the importer. Hours of runtime, memory
+mostly one downloaded file (up to 100 MB): one process per project (a
+shell loop over the IDs, so memory stays bounded and one failure doesn't
+stop the rest; a rerun skips what's done). In the argocd chart, later: a
+suspended CronJob `biwak-import` with a memory limit of about 2 GiB and a
+long `activeDeadlineSeconds`, started by hand (`kubectl create job
+--from=cronjob/biwak-import import-1`); the cronjob template supports
+neither `suspend` nor `resources` yet.
+
 ## Mapping
 
 | Basecamp | Biwak |
