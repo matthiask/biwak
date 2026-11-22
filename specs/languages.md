@@ -143,7 +143,7 @@ Depends on: everything with texts; `accounts` (the `language` field,
   the actions as filter labels have a context of their own (`action`,
   participles: "erstellt").
 - Key names stay as on Swiss keyboards: Ctrl, Shift, Enter, Alt, Esc.
-- The palette's colour names are translated: Heide, See, Wald,
+- The palette's color names are translated: Heide, See, Wald,
   Gletscher, Glut, Alpenglühen, Moos, Schiefer, Rinde, Beere; the
   clients' amber is Bernstein.
 - "all-access" projects are "offene Projekte", limited ones
