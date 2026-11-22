@@ -4,15 +4,12 @@
   tile's menu (files/_tile_menu.html): a list's notification level (other
   items have none: subscribing is the switch, specs/notifications.md,
   "Levels"), its subscribers, editing and ordering (folders), moving,
-  archiving (lists), sharing publicly (leaves, staff) and trashing (who
-  may change it); `more_history`: the
-  history too, on phones, where the page's header doesn't show its link;
-  each in a modal (frontend/modal.js) which is also a page. `can_change`
-  comes from the page; `next_query` (`?next=…`) sends the modals back there.
+  archiving (lists), the switch of the visibility to clients and sharing
+  publicly (staff), trashing (who may change it), and on an item's page
+  (not `tile`) its history (staff); each in a modal (frontend/modal.js)
+  which is also a page. `can_change` comes from the page; `next_query`
+  (`?next=…`) sends the modals back there.
 {% endcomment %}
-{% if more_history and not request.user.is_client %}
-  <a class="dropdown-item wb-phone-only" href="{% url 'item_history' item.pk %}">{% translate "History" %}</a>
-{% endif %}
 {% if item.kind == "list" %}
   <a
     class="dropdown-item"
@@ -35,8 +32,8 @@
     data-modal
   >{% translate "Order…" %}</a>
 {% endif %}
-{% if tile and item.has_switch and not request.user.is_client %}
-  {# On a tile the switch is here; an item's page has it below its content #}
+{% if item.has_switch and not request.user.is_client %}
+  {# Showing asks first, hiding is one click (specs/access.md) #}
   {% if item.is_client_visible %}
     <form method="post" action="{% url 'switch' item.pk %}{{ next_query }}">
       {% csrf_token %}
@@ -49,6 +46,9 @@
       data-modal
     >{% translate "Show to clients…" %}</a>
   {% endif %}
+{% endif %}
+{% if not tile and not request.user.is_client %}
+  <a class="dropdown-item" href="{% url 'item_history' item.pk %}">{% translate "History" %}</a>
 {% endif %}
 {% if item.is_shareable and not request.user.is_client %}
   {# Public links, staff only (specs/public-links.md) #}

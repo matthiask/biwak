@@ -16,10 +16,13 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   `form_response(help_page=…)` adds a quiet "More in the help" link.
 - **Trashing asks:** "Move to the trash? It can be restored for 30
   days."
-- **Items' "More" menu** (`items/_more.html`): Move to…, Trash, and
-  "Notifications…" on lists only (`notifications.md`). Its entries
+- **Items' "More" menu** (`items/_more.html`, on every item's page,
+  check-ins too): Move to…, Trash, "Notifications…" on lists only
+  (`notifications.md`), and for staff the visibility switch on items
+  that have one and History (decided 2026-11-22: neither is a button of
+  its own on the page, `access.md`, `feed.md`). Its entries
   (`items/_more_entries.html`) are also the "…" menu of the folders'
-  tiles (`files.md`, "Folders").
+  tiles (`files.md`, "Folders"), without History.
 - **Click to edit** (2026-11-21: the to-do's page was an edit form, not
   a page to read): the pages of to-dos, messages, files and check-in
   answers show the item; clicking its title, text or facts (or "Edit",
@@ -59,7 +62,7 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   picker's list) close on a click elsewhere and Escape (`data-dismiss`;
   elements other than `<details>` get a `dismiss` event).
 - **Shared pieces come from an include** (comments, subscribers, the
-  visibility switch, breadcrumbs, the to-do row), not a copy.
+  "More" menu's entries, breadcrumbs, the to-do row), not a copy.
 
 ## Filters and view choices
 
@@ -123,7 +126,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 ## Clients, icons, colors
 
 - **Visible to clients** (2026-11-21: a banner on pages was too
-  imposing): the badge on rows (`{% client_badge item %}`, not in the
+  imposing): the switch only in the "More" menu (decided 2026-11-22:
+  less visible than a button below the content; creating something
+  visible, like "New folder" with its checkbox, stays), the badge on rows (`{% client_badge item %}`, not in the
   feed and the lantern, which tell what happened), the tab at the
   window's edge on pages (`items/_client_tab.html`), the banner
   (`items/_client_banner.html`) only above forms in modals (`access.md`,

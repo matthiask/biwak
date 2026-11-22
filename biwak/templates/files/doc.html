@@ -65,7 +65,7 @@
       {% include "items/_comments.html" %}
     </div>
     <div class="col-lg-4">
-      {% include "files/_sidebar.html" %}
+      {% include "items/_subscribers.html" %}
       {% if is_staff %}
         <form method="post" action="{% url 'doc_read_only' item.pk %}" class="mt-4 small">
           {% csrf_token %}

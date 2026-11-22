@@ -45,6 +45,7 @@
           {% endif %}
         </form>
       {% endif %}
+      {% include "items/_more.html" with can_change=can_manage %}
     </div>
   </div>
   {% include "items/_client_tab.html" %}
@@ -180,8 +181,6 @@
         {% endfor %}
         <button type="submit" class="btn btn-sm btn-quiet mt-2">{% translate "Save" %}</button>
       </form>
-      {% include "items/_history_link.html" with below=True %}
-      {% include "items/_switch.html" with kind="checkin" %}
     </div>
   </div>
 {% endblock content %}

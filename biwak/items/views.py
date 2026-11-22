@@ -269,7 +269,6 @@ def todolist(request, pk):
             "people": form.fields["assignees"].queryset,
             "people_teams": form.fields["assignees"].widget.team_attrs(),
             "view": view,
-            "can_switch": item.has_switch and not request.user.is_client,
             "can_change": ops.can_change(request.user, item),
         },
     )

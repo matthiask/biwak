@@ -2176,15 +2176,6 @@ button.wb-signal:hover {
   margin-bottom: 0.25rem;
 }
 
-/* The visibility switch: the help below the button on phones, not wrapped
-   around it */
-@media (max-width: 575.98px) {
-  .wb-switch-help {
-    display: block;
-    margin-top: 0.25rem;
-  }
-}
-
 .wb-toolbar .btn {
   flex: none;
 }

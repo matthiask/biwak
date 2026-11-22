@@ -1320,6 +1320,7 @@ class CollabTest(E2ETestCase):
         # Ada hides the doc on its page
         page = self.page
         self.goto(page, self.doc)
+        page.locator(".wb-page-actions summary", has_text="More").click()
         page.get_by_role("button", name="Hide from clients").click()
         page.wait_for_load_state()
         live = cleo.locator("[data-collab]")

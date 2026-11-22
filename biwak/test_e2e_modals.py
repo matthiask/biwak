@@ -126,7 +126,16 @@ class VisibilityModalTest(E2ETestCase):
         todolist = self.make_list(todos=["Order the tent"])
         page = self.page
         self.goto(page, todolist)
-        link = page.get_by_role("link", name="Show to clients")
+        more = page.locator(".wb-page-actions summary", has_text="More")
+        link = page.get_by_role("link", name="Show to clients…")
+
+        def open_menu():
+            # The switch is in the "More" menu only (decided 2026-11-22)
+            if not link.is_visible():
+                more.click()
+
+        expect(link).to_be_hidden()
+        open_menu()
         link.click()
         dialog = page.get_by_role("dialog", name="Show this list to clients?")
         expect(dialog).to_be_visible()
@@ -140,21 +149,25 @@ class VisibilityModalTest(E2ETestCase):
         todolist.refresh_from_db()
         self.assertFalse(todolist.visible_to_clients)
         # Escape too
+        open_menu()
         link.click()
         expect(dialog).to_be_visible()
         page.keyboard.press("Escape")
         expect(dialog).to_be_hidden()
         todolist.refresh_from_db()
         self.assertFalse(todolist.visible_to_clients)
-        # Confirming shows it, and now the page offers one click to hide it
+        # Confirming shows it, and now the menu offers one click to hide it
+        open_menu()
         link.click()
         dialog.get_by_role("button", name="Show to clients").click()
-        hide = page.get_by_role("button", name="Hide from clients")
-        expect(hide).to_be_visible()
+        expect(page.get_by_text("Clients can see this.")).to_be_visible()
         todolist.refresh_from_db()
         self.assertTrue(todolist.visible_to_clients)
-        hide.click()
-        expect(page.get_by_role("link", name="Show to clients")).to_be_visible()
+        more.click()
+        page.get_by_role("button", name="Hide from clients").click()
+        expect(page.get_by_text("Clients can see this.")).to_be_hidden()
+        more.click()
+        expect(link).to_be_visible()
         todolist.refresh_from_db()
         self.assertFalse(todolist.visible_to_clients)
         self.assertEqual(self.errors, [])

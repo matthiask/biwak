@@ -178,8 +178,13 @@ Like Basecamp's bright yellow:
   for `HX-Modal`; an item already visible redirects to itself), saying
   what changes: "Makes this list, 12 to-dos and 34 comments visible to 3
   clients." The text is built per kind by the view (`_show_texts()`,
-  `visibility.affected()` in `biwak/items/views.py`), so the switch
-  include shows no sentence by the button. It counts neither drafts
+  `visibility.affected()` in `biwak/items/views.py`). The switch is an
+  entry of the item's "More" menu, "Show to clients…" or "Hide from
+  clients" (`items/_more_entries.html`, also the tiles' "…" menu), not
+  a button on the page (decided 2026-11-22: the user wanted it less
+  visible; changing it later through "More" is fine). Creating something
+  visible right away ("Visible to clients" in "New list", "New folder",
+  a new message, doc, file or check-in) stays. It counts neither drafts
   (anybody's, only their creators see them) nor what's in the trash
   (decided 2026-11-21). The POST with `visible=1`
   shows the item, without it hides it. Staff only (403 for clients).

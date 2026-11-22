@@ -354,7 +354,6 @@ def question(request, pk):
                 user, [s.user for s in item.subscriptions.select_related("user")]
             ),
             "can_manage": not user.is_client,
-            "can_switch": not user.is_client,
             "is_paused": question.is_paused,
         },
     )
