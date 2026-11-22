@@ -48,7 +48,10 @@ below is what prevents that.
   noticed. They sign in by code or through their organization's identity
   provider then and set up again; where a second factor is required,
   they're led to the setup page first. With none of them nothing
-  happens (no mail, sessions stay). The audit log has it.
+  happens (no mail, sessions stay). The audit log has it. The question
+  and the message afterwards speak about the person ("their
+  authenticator app") and mention the mail only when one goes out (not
+  to inactive people or bounced addresses; fixed 2026-11-22).
 - **Organizations requiring single sign-on:** no passkeys and no
   authenticator apps (the identity provider does that); existing ones are
   deleted when the organization switches to "required" (`sso.md`).

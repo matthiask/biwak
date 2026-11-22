@@ -383,29 +383,40 @@ def person_reset_sign_in(request, pk):
         except activation.ActivationError as exc:
             messages.error(request, str(exc))
         else:
-            messages.success(
-                request,
-                _(
+            if activation.gets_reset_mail(who):
+                text = _(
                     "Removed from %(name)s: %(removed)s. They have been signed"
                     " out everywhere and got a mail about it."
                 )
-                % {
-                    "name": who.display_name,
-                    "removed": ", ".join(activation.removed_list(removed)),
-                },
+            else:
+                text = _(
+                    "Removed from %(name)s: %(removed)s. They have been signed"
+                    " out everywhere."
+                )
+            removed_words = activation.removed_list(removed, theirs=True)
+            messages.success(
+                request,
+                text % {"name": who.display_name, "removed": ", ".join(removed_words)},
             )
         return redirect(back(request, who))
     return form_response(
         request,
         None,
         title=_("Reset the sign-in of %(name)s?") % {"name": who.display_name},
-        intro=_(
-            "Removes %(removed)s and signs them out everywhere, for a lost"
-            " phone or laptop or when someone else may have had access. They"
-            " sign in with a code or through their organization's sign-in"
-            " then and set things up again. They get a mail about it."
-        )
-        % {"removed": ", ".join(activation.removed_list(removed))},
+        intro=(
+            _(
+                "Removes %(removed)s and signs them out everywhere, for a lost"
+                " phone or laptop or when someone else may have had access."
+                " They sign in with a code or through their organization's"
+                " sign-in then and set things up again."
+            )
+            % {"removed": ", ".join(activation.removed_list(removed, theirs=True))}
+            + (
+                " " + _("They get a mail about it.")
+                if activation.gets_reset_mail(who)
+                else ""
+            )
+        ),
         cancel_url=back(request, who),
         submit_label=_("Reset"),
         destructive=True,

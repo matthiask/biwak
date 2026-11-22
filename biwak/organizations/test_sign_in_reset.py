@@ -166,13 +166,18 @@ class PagesTest(Base):
             self.client.get(url, headers={"HX-Modal": "true"}),
             title=f"Reset the sign-in of {self.cleo.display_name}?",
         )
-        self.assertContains(
-            self.client.get(url), "Removes your authenticator app and signs"
-        )
+        # About the person, not the admin reading it
+        question = self.client.get(url)
+        self.assertContains(question, "Removes their authenticator app and signs")
+        self.assertContains(question, "They get a mail about it.")
+        self.assertNotContains(question, "your authenticator")
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(url)
-        self.assertRedirects(
-            response, f"/people/{self.cleo.pk}/", fetch_redirect_response=False
+            response = self.client.post(url, follow=True)
+        self.assertRedirects(response, f"/people/{self.cleo.pk}/")
+        self.assertContains(
+            response,
+            f"Removed from {self.cleo.display_name}: their authenticator app."
+            " They have been signed out everywhere and got a mail about it.",
         )
         self.assertFalse(self.has_app(self.cleo))
         self.assertEqual(len(mail.outbox), 1)
@@ -180,6 +185,22 @@ class PagesTest(Base):
         page = self.client.get(f"/people/{self.cleo.pk}/")
         self.assertNotContains(page, url)
         self.assertEqual(self.client.get(url).status_code, 302)
+
+    def test_no_mail_no_promise(self):
+        """A bounced address gets no mail, and neither the question nor the
+        message says it does"""
+        from django.utils import timezone
+
+        self.cleo.mail_undeliverable_at = timezone.now()
+        self.cleo.save()
+        self.client.force_login(self.ada)
+        url = f"/people/{self.cleo.pk}/reset-sign-in/"
+        self.assertNotContains(self.client.get(url), "a mail about it")
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(url, follow=True)
+        self.assertContains(response, "They have been signed out everywhere.")
+        self.assertNotContains(response, "got a mail")
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_staff_on_staff_403(self):
         self.client.force_login(self.ada)
