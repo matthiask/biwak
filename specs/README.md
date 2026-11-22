@@ -47,8 +47,8 @@ confirm: `decisions-to-confirm.md`.
 | `two-factor.md` | built | passkeys as a way in, authenticator apps as an optional second factor, organizations requiring one |
 | `public-links.md` | built | read-only links to one item for people outside, expiring after 1 to 30 days |
 | `teams.md` | built | named sets of people, expanded into their members when assigning, subscribing or mentioning |
-| `rich-editor.md` | built 2026-11-22 (branch `rich-editor`) | one rich-text editor (ProseMirror) for every text, live docs included, still storing Markdown |
-| `languages.md` | built 2026-11-22 (branch `languages`) | German, a language per person, everything following it |
+| `rich-editor.md` | built | one rich-text editor (ProseMirror) for every text, live docs included, still storing Markdown |
+| `languages.md` | built | German, a language per person, everything following it |
 | `quiet-hours.md` | built | quiet hours for mails, out of office (one time zone) |
 | `start-dates.md` | built | start dates on to-dos, hidden from current work until they start |
 | `lists-across-projects.md` | built | copying lists, moving top-level items to another project |

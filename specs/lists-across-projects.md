@@ -5,13 +5,7 @@ top-level items to another project. Decided with the user 2026-11-22.
 Project templates are left to an agent skill that sets up projects
 through the CLI (`api-cli.md`, "Agent skills").
 
-**Status:** built 2026-11-22; start dates shift and go with due dates
-(added when both were merged).
-
-Depends on: `core.md` (moving, "Move to…"), `access.md` (visibility,
-showing to clients asks first), `todos.md`, `files.md`,
-`notifications.md` (subscriptions), `feed.md`, `start-dates.md`,
-`archiving.md`, `public-links.md`.
+**Status:** built (2026-11-22).
 
 ## Copying a list
 
@@ -25,7 +19,7 @@ showing to clients asks first), `todos.md`, `files.md`,
   (in order), open to-dos in order with their notes and checklists
   (unticked as they are). Not completed to-dos, comments, history,
   events, subscribers, reactions, public links.
-- **Assignees stay** (decided 2026-11-22, replacing "members only"):
+- **Assignees stay** (decided 2026-11-22):
   those who see the copy in the target keep their assignments; own
   staff and externals who don't are added to the target as members
   (with the default notification choice, as assigning a non-member
@@ -40,23 +34,21 @@ showing to clients asks first), `todos.md`, `files.md`,
 - Attachments in notes are copied (new files, not shared rows).
 - Through an operation `copy_list(list, project, title, dates, actor)`
   recording one `created` event for the list (not one per to-do) and
-  subscribing the copier to the list. API `POST /lists/{id}/copy/`,
-  CLI `biwak list copy LIST --to PROJECT [--shift DAYS|--no-dates]`.
+  subscribing the copier to the list (API and CLI below).
 
 ## Moving to another project
 
 - **Top-level items** (decided 2026-11-22): lists, messages, folders,
   docs and files at the top of their project (anything inside a folder
   moves with its folder, or is moved out to the top first). "Move to…"
-  already in the "More" menu gains other projects as targets (where the
+  in the "More" menu offers other projects as targets (where the
   person may create such items); the API and CLI too. Single to-dos
   keep moving between lists of the same project only.
 - **Everything comes along:** children, comments, reactions, events
   and history stay with the item (the new project's feed shows them,
   including past events; the old one's keeps a trace, below), checklist
   counts, public links (they keep working), bookmarks.
-- **People** (decided 2026-11-22, replacing "nobody is added to a
-  project by moving"): assignees of open to-dos stay. Those who see the
+- **People** (decided 2026-11-22): assignees of open to-dos stay. Those who see the
   item in the target (members; own staff of an all-access project) just
   stay, own staff and externals who don't are added as members (the
   default notification choice), clients who don't are dropped with
@@ -143,20 +135,5 @@ showing to clients asks first), `todos.md`, `files.md`,
   sentences, people added or dropped and clients who'd see it, unless
   `confirm: true`, like merging organizations; decided 2026-11-22).
   Copying doesn't ask: `visible_to_clients` is explicit, as when
-  creating a list. **CLI**
-  0.46.0: `biwak list copy LIST --to PROJECT [--shift DAYS|--no-dates]
+  creating a list. **CLI:** `biwak list copy LIST --to PROJECT [--shift DAYS|--no-dates]
   [--title] [--visible]`, `biwak move ITEM --to PROJECT [--confirm]`.
-
-## Done when
-
-- Copying a list within a project and into another carries exactly the
-  open work, keeps assignments (adding staff, leaving out clients),
-  shifts or removes dates, and gets the target's visibility (asking
-  before visible); API and CLI.
-- Moving each top-level kind into another project keeps comments,
-  history and children, adds assigned staff and drops clients and
-  subscribers who won't see it after listing them, asks before becoming
-  visible to clients, and the feeds of both projects show the right
-  events (tests through every entry point for visibility: views, feed,
-  search, mails, mail replies, API).
-- Help and the German catalog updated.

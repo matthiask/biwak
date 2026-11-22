@@ -3,7 +3,9 @@
 The rules every page follows. Part-specific details (the to-do's page,
 folders as tiles, the lantern) stay in the parts' specs; `AGENTS.md`
 has the how-to ("Modals", checklist step 5). Most came from the user's
-feedback rounds (`ui-feedback.md`), all built (2026-11-21).
+feedback rounds (`ui-feedback.md`).
+
+**Status:** built (2026-11-21).
 
 ## Quiet pages and modals
 
@@ -63,9 +65,8 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   (`.wb-phone-hide`, `.wb-phone-only`); on lists the bookmark, Edit and
   List/Board stay, on to-dos Complete, Edit and the bookmark. Every
   item's page does this (`wb-page-actions is-compact`, `.wb-label` and a
-  `title` on every button with an icon; 2026-11-22: messages, files,
-  docs, check-ins and "Docs and files" showed their labels). Grids go
-  to one column.
+  `title` on every button with an icon; 2026-11-22). Grids go to one
+  column.
 - **Floating disclosures** (menus, the reaction picker, the people
   picker's list) close on a click elsewhere and Escape (`data-dismiss`;
   elements other than `<details>` get a `dismiss` event).
@@ -202,7 +203,6 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   only; checkboxes grow a little; the tiles' "…" is 36 px. What needs a
   keyboard (Home's "Search Ctrl+K", "Keyboard shortcuts") is not shown
   on phones (`.wb-keyboard-only`).
-
 - **Rows people move through with j/k** (to-dos, messages, feed
   entries, search results) carry `data-kb-row`, `data-kb-open` and, for
   to-dos, `data-kb-complete` (`keyboard.md`).

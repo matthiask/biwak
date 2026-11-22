@@ -3,8 +3,7 @@
 `/projects/` (Home is `/`, `dashboard.md`): which projects matter to the
 person and where something is going on.
 
-**Status:** built (2026-11-20; archiving and the color picker changed
-2026-11-21).
+**Status:** built (2026-11-20).
 
 ## Favorites are bookmarked projects
 
@@ -46,9 +45,9 @@ link covers the card (`.wb-card-link`, its `::after`), the bookmark
 button sits above it (`.wb-above-card-link`) and stays a button; Tab
 reaches the link, then the bookmark, and the focus outlines the whole
 card; hovering colors the card's border in the accent's ring color. The
-lock's and the "Clients" badge's titles don't show on hover any more
-(under the link; all confirmed by the user 2026-11-22). Home's cards are the same include. Each
-card, and nothing more:
+lock's and the "Clients" badge's titles don't show on hover (under the
+link; all confirmed by the user 2026-11-22). Home's cards are the same
+include. Each card, and nothing more:
 
 - the name, the project's color as a stripe (`project-colors.md`), the
   lock icon for limited projects, the bookmark button;
@@ -70,9 +69,8 @@ card, and nothing more:
   bringing back are in the project's own "More" menu. After archiving
   the projects page says "Archived Website." with an Undo.
 - Admins get a link "All projects" below the cards (decided
-  2026-11-22, `handover.md`), in place of the plain list of limited
-  projects they're not a member of: `/projects/all/` lists them with
-  "Join".
+  2026-11-22, `handover.md`): `/projects/all/` lists every project,
+  with "Join" for limited projects they're not a member of.
 
 ## API and CLI
 

@@ -6,21 +6,7 @@ this part adds the German catalog and makes everything follow the
 person's choice. Decided with the user 2026-11-22. German only for now;
 a third language is a catalog, nothing else.
 
-**Status:** built 2026-11-22 (branch `languages`). Choosing:
-`biwak/accounts/languages.py` (`language_for()`), the settings' Language
-section, `language` on `/api/v1/me/`, `biwak settings --language`.
-`User.invitation_language` remembers the language of the last invitation
-mail. The catalog: `conf/locale/de/LC_MESSAGES/django.po` (`fl mm -l de`,
-`fl cm`); `biwak/test_catalog.py` (complete, compiled, current with the
-code, the glossary, no `gettext()` at import), `biwak/test_german.py`
-(pages and mails). Relative times: `biwak/text.py` (`ago()`, units of
-their own for German's dative). The feed's events are whole sentences
-(`activity/_event.html`, the `{% capture %}` tag).
-
-Depends on: everything with texts; `accounts` (the `language` field,
-`middleware.py` activating it), `notifications.md` and `mail-sending.md`
-(mails), `keyboard.md` (the settings page, the palette), `api-cli.md`,
-`activation.md` (invitations), `help.md`.
+**Status:** built (2026-11-22).
 
 ## The German
 
@@ -71,6 +57,9 @@ Depends on: everything with texts; `accounts` (the `language` field,
 
 ## Choosing
 
+`biwak/accounts/languages.py` (`language_for()`); `User.language`,
+activated by `biwak/accounts/middleware.py`.
+
 - **Settings** (`/accounts/settings/`, `keyboard.md`): "Language":
   Automatic (the browser's), Deutsch, English, each in its own
   language. Saved on change like the page's other settings; the page
@@ -78,41 +67,37 @@ Depends on: everything with texts; `accounts` (the `language` field,
 - **Before choosing** (decided 2026-11-22): pages follow the browser
   (`Accept-Language`, `LocaleMiddleware`), else English; the sign-in
   pages too. Signed in with a choice, the choice wins
-  (`accounts.middleware`, as now).
+  (`accounts.middleware`).
 - **API and CLI:** `language` in `GET/PUT /api/v1/me/` (`""`, `de`,
   `en`); the API's own messages (errors) in the token owner's language
-  (`api_auth.py`, as now). `biwak settings --language de` (CLI version
-  bump). Texts the API returns are people's texts, not translated.
+  (`api_auth.py`). `biwak settings --language de`. Texts the API returns are people's texts, not translated.
 
 ## What follows the language
 
 - **Pages and the Django admin.** Every template text and form label
   (`gettext`, `{% translate %}`, `{% blocktranslate %}` with plurals),
   `capfirst` labels (`ui.md`).
-- **JavaScript.** Texts the scripts show come from the page (data
-  attributes rendered by the server, as most do now). The part
-  inventories `frontend/` for English left in scripts (fallbacks,
-  `aria-label`s, messages) and moves them into data attributes or a
-  small catalog the page renders (`json_script`); no runtime catalog
-  fetch.
+- **JavaScript.** Texts the scripts show (fallbacks, `aria-label`s,
+  messages) come from the page: data attributes rendered by the server
+  or `json_script`; no runtime catalog fetch.
 - **Dates, times, numbers:** formats per language (`biwak/formats/`,
   `FORMAT_MODULE_PATH`; templates name them, `|dateformat:"SHORT_DATE_FORMAT"`):
   English "22 Nov 2026", German "22. Nov. 2026" (decided 2026-11-22),
   24-hour times in both; relative times ("vor 13
-  Stunden", one unit, `ui-feedback.md` round 8); weekday and month
+  Stunden", one unit, `ui-feedback.md` round 8; `ago()` in
+  `biwak/text.py`, units of their own for German's dative); weekday and month
   names in the rule widget and check-ins' schedules; file sizes.
 - **Mails** in the recipient's language: their choice, else for an
   invitation the inviter's language at the time, else English
-  (`LANGUAGE_CODE`). Notifications, digests, check-in questions and
-  summaries, security mails, invitations, mail reply errors: one
-  helper (`translation.override(language_for(user))`) instead of the
-  copies in `projects/operations.py`, `checkins/mails.py`,
-  `security_mails.py`. Subjects too. Mails are rendered per recipient
-  (they already are).
+  (`LANGUAGE_CODE`; `User.invitation_language` remembers the language
+  of the last invitation mail). Notifications, digests, check-in
+  questions and summaries, security mails, invitations, mail reply
+  errors: one helper (`translation.override(language_for(user))`).
+  Subjects too. Mails are rendered per recipient.
 - **Texts stored once and shown later** are rendered when shown, in the
   reader's language: events (the feed, the lantern, history), the
   palette's actions, empty states. Anything stored as English text for
-  display is a bug to fix here.
+  display is a bug.
 - **The calendar feed** (`/calendar/<token>.ics`): its owner's language.
 - **Not translated:** people's texts, names of projects and items,
   categories, the API's field names, the CLI's output (English, for
@@ -123,15 +108,17 @@ Depends on: everything with texts; `accounts` (the `language` field,
 ## Checks
 
 - `makemessages` for Python, templates and the frontend's server-rendered
-  texts; the `.po` and `.mo` committed in `conf/locale/de/`; a test
-  that the catalog is complete (no empty or fuzzy entries, `msgfmt
-  --check`), run in CI.
-- A test rendering the main pages in German (staff and client) that
-  finds no English left from a list of common words, and mails in each
-  recipient's language (one German, one English in the same event).
-- The glossary test (above).
+  texts (`fl mm -l de`, `fl cm`); the `.po` and `.mo` committed in
+  `conf/locale/de/`.
+- `biwak/test_catalog.py`: the catalog is complete (no empty or fuzzy
+  entries, `msgfmt --check`), compiled, current with the code, follows
+  the glossary (above), no `gettext()` at import; run in CI.
+- `biwak/test_german.py`: the main pages rendered in German (staff and
+  client) with no English left from a list of common words, and mails
+  in each recipient's language (one German, one English in the same
+  event).
 
-## Decided while building (2026-11-22, confirmed by the user)
+## Further decisions (2026-11-22, confirmed by the user)
 
 - The Language section comes after Appearance: three radios (each
   language in itself, `lang` set), saved with its button like the
@@ -140,7 +127,8 @@ Depends on: everything with texts; `accounts` (the `language` field,
   (resending sets it again), else English. Login codes and allauth's
   mails: the recipient's language if they have one, else the page's
   (they asked for it in their browser just now).
-- Feed sentences in the perfect tense ("hat „Zelt bestellen“ erstellt");
+- Feed sentences in the perfect tense ("hat „Zelt bestellen“ erstellt"),
+  whole sentences (`activity/_event.html`, the `{% capture %}` tag);
   the actions as filter labels have a context of their own (`action`,
   participles: "erstellt").
 - Key names stay as on Swiss keyboards: Ctrl, Shift, Enter, Alt, Esc.
@@ -161,13 +149,3 @@ Depends on: everything with texts; `accounts` (the `language` field,
   "Unbenannt" (`files.md`). The own organization's "Our organization" and
   the importer's " (internal)" stay: names people rename.
 - New texts are translated in the branch that adds them (`AGENTS.md`).
-
-## Done when
-
-- A person chooses Deutsch, English or Automatic in Settings (and the
-  API and CLI); pages, the admin, JavaScript texts, dates, relative
-  times and mails follow it; without a choice pages follow the browser.
-- The German catalog is complete, Swiss, "du", gender-neutral with the
-  colon, using the glossary.
-- Mails to several people for one event are each in their language.
-- The help says how to choose (English for now).

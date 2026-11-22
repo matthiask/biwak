@@ -58,8 +58,7 @@ In scope:
 14. Public links: one item shown read only to people outside, for at
     most 30 days (`specs/public-links.md`).
 15. Forwarding mails to one address and filing them as messages or
-    to-dos (`specs/forwarding.md`; out of scope until 2026-11-22, when
-    replying by mail had built most of it).
+    to-dos (`specs/forwarding.md`, in scope since 2026-11-22).
 16. Quiet hours and out of office, start dates, copying lists and
     moving across projects (`specs/quiet-hours.md`, `start-dates.md`,
     `lists-across-projects.md`). Project templates: an agent skill, not
@@ -144,16 +143,11 @@ containers, checked in one place (`specs/access.md`).
 - **Group**: a heading inside a list; to-dos point at it, ordered within
   it. Shown as columns in the board view.
 
-## Build order
+## Parts
 
-The core came first; every part since builds on it and on the shared
-foundations (mentions and mails, storage and attachments, schedules).
-What's built and what's open is in `specs/README.md`. The German
-translation is `specs/languages.md` (built 2026-11-22; the user reviews
-the glossary and the wording).
-
-Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
-same branch. `AGENTS.md` has the checklist every part follows.
+What's built and what's open is in `specs/README.md`. Each part adds its
+API endpoints and CLI commands (`api-cli.md`) in the same branch;
+`AGENTS.md` has the checklist every part follows.
 
 ## Backlog
 
@@ -179,8 +173,7 @@ building it.
 - 2026-11-21: Sign-in per organization (`specs/sso.md`): codes by mail
   and passkeys (django-allauth), Google Workspace or Microsoft Entra ID
   allowed, or required for organizations whose IdP manages their people;
-  the own organization allows Google. No passwords. (Replaces 2026-11-20:
-  codes and passkeys for everybody, Google optional for staff.)
+  the own organization allows Google. No passwords.
 - 2026-11-21: Passkeys are a way in, not a second factor; authenticator
   apps are an optional second factor, without recovery codes (a reset
   instead); organizations may require a second factor
@@ -196,9 +189,8 @@ building it.
   groups are a foreign key on to-dos, not tree nodes; django-tree-queries
   for subtree operations; effective visibility stored per item, so the
   visibility check needs no recursive query.
-- 2026-11-20: Translations postponed to the end; texts are marked with
-  `gettext`. 2026-11-22: the German catalog came (`specs/languages.md`);
-  new texts are translated in the branch that adds them.
+- 2026-11-22: English and German, chosen per person; new texts are
+  translated in the branch that adds them (`specs/languages.md`).
 - 2026-11-20: Resend sends and receives mail: it reports SPF, DKIM and
   DMARC results for incoming mail, which the sender check of replies
   needs; Brevo's inbound parsing doesn't. Providers stay behind one
@@ -245,7 +237,7 @@ building it.
 - 2026-11-21: A command palette (Ctrl+K and "/") with jumps and actions,
   search being one of them, and single-key shortcuts inside pages that a
   setting turns off (`specs/keyboard.md`).
-- 2026-11-20: Reactions: quick emoji (32 since 2026-11-21) and short
+- 2026-11-20: Reactions: 32 quick emoji and short
   texts (40 characters), telling only the author, collected into the
   next mail or the digest (`specs/reactions.md`).
 - 2026-11-20: Docs are edited live with Yjs and CodeMirror; the server

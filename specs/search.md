@@ -3,8 +3,7 @@
 Finding things across projects: a to-do, a message, a doc, a file, a
 comment, a check-in answer, by words in their title or text.
 
-**Status:** built (2026-11-20; archived left out by default since
-2026-11-21): `biwak/search/`.
+**Status:** built (2026-11-20).
 
 ## Decided
 
@@ -18,13 +17,15 @@ comment, a check-in answer, by words in their title or text.
   comments together.
 - **"Only mine":** items you created and to-dos assigned to you
   (2026-11-21).
-- **Archived** (changed 2026-11-21): archived projects, archived lists
+- **Archived** (decided 2026-11-21): archived projects, archived lists
   and their to-dos are left out unless "Include archived" (no negation
   in the label; `archived=true` in the API, `--archived` in the CLI);
   results are then marked "Archived" (`archived` and `project_archived`
   in the API, `(archived)` in the CLI).
 
 ## How it works
+
+In `biwak/search/`.
 
 - **Indexes, not stored vectors:** expression GIN indexes on
   `to_tsvector('simple', …)` of every searched text

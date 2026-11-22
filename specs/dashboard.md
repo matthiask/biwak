@@ -5,8 +5,7 @@ projects page is `/projects/`. Home answers "what needs me today, and
 where is something going on" on one page and leads to the pages that
 have the rest.
 
-**Status:** built 2026-11-21: `biwak/projects/home.py` (URL name
-`dashboard`), `templates/projects/home.html`.
+**Status:** built (2026-11-21).
 
 ## Principles
 
@@ -25,7 +24,9 @@ have the rest.
 
 ## Where
 
-The brand ("Biwak") in the top bar links Home; the top bar's entries
+`biwak/projects/home.py` (URL name `dashboard`),
+`templates/projects/home.html`. The brand ("Biwak") in the top bar
+links Home; the top bar's entries
 stay "Projects", "To-dos", "Activity", "People", "Bookmarks". `g h` and
 the palette's "Go home". Old links to `/?archived=1` redirect to
 `/projects/?archived=1`.

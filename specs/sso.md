@@ -7,10 +7,9 @@ their access there, and people managed by an IdP mustn't get around it
 with a passkey or a code. Sign-in in general is in `access.md`, second
 factors in `two-factor.md`.
 
-**Status:** built (2026-11-21), the choices made while building and the
-review's fixes confirmed 2026-11-21. Microsoft is tested with made-up
-tokens only, not against a real tenant. Open: a further review of the
-claims checks and the enforcement.
+**Status:** built (2026-11-21). Microsoft is tested with made-up tokens
+only, not against a real tenant. Open: a further review of the claims
+checks and the enforcement.
 
 ## The setting (decided 2026-11-21)
 
@@ -52,9 +51,8 @@ claims](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claim
 `iss` and `tid`). Switching back to codes keeps the provider for later.
 
 **The own organization** is an organization like the others: single
-sign-on allowed, Google (migration `organizations.0005`, and
-`Organization.objects.own()` when it creates one), so nothing changed
-for staff, codes and passkeys keep working.
+sign-on allowed, Google (`Organization.objects.own()` when it creates
+one), so codes and passkeys keep working for staff.
 
 ## Rules (decided 2026-11-21)
 

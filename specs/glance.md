@@ -3,9 +3,7 @@
 Pages show a bit more content where it saves a click, without turning
 lists into walls of text.
 
-**Status:** built (2026-11-20): `biwak/items/glance.py`,
-`items/_signals.html`, `items/_peek.html`, `frontend/peek.js`, the
-`|excerpt` filter.
+**Status:** built (2026-11-20).
 
 ## Rule of thumb
 
@@ -32,14 +30,15 @@ per page, not a query per row (good enough, 2026-11-20).
 
 ## To-do rows
 
-After the title, muted and small: a notes icon (the notes' excerpt as
+After the title, muted and small (`items/_signals.html`,
+`biwak/items/glance.py`): a notes icon (the notes' excerpt as
 `title`), a comments icon with the count, an attachment icon with the
 count in its `title` (attachments of the notes and comments). Counted by
 annotating the page's query (list, board, to-dos page), never a query
 per row.
 
-**The peek:** clicking the notes or comments icon loads
-`/todos/<pk>/peek/` below the row: the notes in full, the latest three
+**The peek** (`items/_peek.html`, `frontend/peek.js`): clicking the
+notes or comments icon loads `/todos/<pk>/peek/` below the row: the notes in full, the latest three
 comments newest first, "Open". Through `item_for()`, so a client gets
 404 for an internal to-do. No forms in the peek, and its checklists
 can't be ticked.

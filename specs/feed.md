@@ -22,8 +22,7 @@ From the events (`biwak/activity/`, `notifications.md`);
   decided 2026-11-22; conversations' comments too). "Within
   an hour" means each event at most an hour after the next older one of
   the entry (chains merge), never across midnight. A page ends between
-  entries (decided 2026-11-22, replacing "a page boundary can split an
-  entry"): after 50 events or later, looking ahead up to another 50 for
+  entries (decided 2026-11-22): after 50 events or later, looking ahead up to another 50 for
   a place where no entry, conversation or pair cancelling out is split
   (`feed._edge()`); only a merge reaching further is still split.
 - **Conversations, nothing collapses** (decided 2026-11-21): comments
@@ -55,20 +54,18 @@ From the events (`biwak/activity/`, `notifications.md`);
 Decisions (2026-11-20 unless dated):
 
 - **The person filter** (decided 2026-11-22, one rule with the person's
-  page, replacing "shares a project as members") takes anybody whose
+  page) takes anybody whose
   page the viewer may open (`known_people()`, `feed.filter_people()`;
   in a project's activity the members the viewer shares it with) and
   ignores anybody else, so it doesn't tell whether a person exists; the
   entries stay only those the viewer sees. The API's `person_id` and
   `people/{id}/feed/` the same. "My activity" in the "Me" menu, always
-  there, is the activity filtered by oneself (`/feed/?person=<me>`;
-  it was a person feed page).
+  there, is the activity filtered by oneself (`/feed/?person=<me>`).
 - **Remembered filters** (decided 2026-11-22): a link with `?person=`
   ("My activity", "All activity") applies its own filter and is then
   remembered like any other; the navigation's "Activity" restores the
   last filters, as everywhere (`ui.md`).
-- **Names link to the person's page** (decided 2026-11-22, they linked
-  to the person feed): the actor of every entry and the people an event
+- **Names link to the person's page** (decided 2026-11-22): the actor of every entry and the people an event
   names ("assigned Bob to …", "shared … with Bob, Cleo"), in the feed,
   Home and the project page, the to-do's timeline and the history, where
   the viewer may open that page (`known_people()`), else plain text
@@ -91,14 +88,13 @@ Decisions (2026-11-20 unless dated):
   dragging back and forth is one event with the last group. Reordering
   within a group is no event; moving it out of every group reads "moved …
   out of its group" (decided 2026-11-21).
-- **Completing and reopening back and forth** (decided 2026-11-21,
-  replacing deleting the earlier event within ten minutes): every
+- **Completing and reopening back and forth** (decided 2026-11-21): every
   completing and reopening is recorded. Where it's shown it makes sense
   of it (`timeline.cancelled()`): a person's consecutive completing and
   reopening of an item (other events in between don't break it up,
   another person's completing or reopening does) is its net change, the
   last one, or nothing when the to-do is back where it started. Moves
-  too (decision B, decided 2026-11-22): a person's consecutive moves of
+  too (decided 2026-11-22): a person's consecutive moves of
   a to-do into other columns or lists are the last one, or nothing when
   it's back where it was, in its list and its column
   (`timeline.moved_back()`, from the moves' `group_was` and `to_was`; a
@@ -106,9 +102,11 @@ Decisions (2026-11-20 unless dated):
   `timeline.md`; older moves without them show as they are;
   the feed and the timeline only, not the lantern and mails). Another
   person's completing, reopening or move breaks it up in the activity
-  filtered by a person (and their page's entries) too, where that person's events are left out (`feed._others()`, fixed
-  2026-11-22): it shows the person's events as the whole feed does. In the feed (and the project page's latest events) each within an hour of the
-  one before and on the same day, like merging; the to-do's timeline
+  filtered by a person (and their page's entries) too, where that
+  person's events are left out (`feed._others()`, 2026-11-22): it shows
+  the person's events as the whole feed does. In the feed (and the
+  project page's latest events) each within an hour of the one before
+  and on the same day, like merging; the to-do's timeline
   does the same within its lines (`combine()`, `timeline.md`); the
   lantern and the mails: `notifications.md`. The API lists single
   events, all of them.
@@ -167,8 +165,8 @@ item; every item's page links to it in its "More" menu, for staff
 - `/bookmarks/` (in the navigation): bookmarked projects first, then the
   items grouped by project, the project with the newest bookmark first,
   each item with its current title and kind (decided 2026-11-21: by
-  project, not by kind: one looks for "that thing in project X"). Bookmarks of what the person can't
-  see anymore are hidden, not deleted, and come back when they see it
+  project, not by kind: one looks for "that thing in project X").
+  Bookmarks of what the person can't see anymore are hidden, not deleted, and come back when they see it
   again.
 - API: `GET /bookmarks/`, `PUT`/`DELETE` `items/{id}/bookmark/` and
   `projects/{id}/bookmark/`; CLI `biwak bookmarks`, `biwak bookmark
@@ -208,4 +206,4 @@ there only duplicated it.
   links/{id}/`, `PUT projects/{id}/links/order/` (all IDs);
   `visible_to_clients` is the link's own switch. CLI: `biwak links
   PROJECT`, `biwak link add PROJECT URL [--title] [--clients]`, `biwak
-  link delete LINK`. `MINIMUM` 0.30.0, since older CLIs read `item_id`.
+  link delete LINK`.

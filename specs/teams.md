@@ -9,17 +9,7 @@ with the user 2026-11-22.
 
 Named "team" because "group" is a list's heading (`core.md`).
 
-**Status:** built (2026-11-22). `biwak/teams/` (models, `operations.py`,
-`picking.py` for the picker's `data-teams` and the `@` list's entries,
-views, `api.py`), `teams/_teams.html` on the People page,
-`teams/team_detail.html`; `PeopleField.offer_teams()` and
-`PeopleSelect.team_attrs()` in `biwak/forms.py`;
-`frontend/people-picker.js`, `frontend/mentions.js`, `teamMark()` in
-`frontend/avatar.js`; CLI 0.44.0.
-
-Depends on: `people.md`, `organizations.md` (the People page),
-`todos.md` (the people picker), `subscribers.md`, `notifications.md`
-(mentions), `access.md`.
+**Status:** built (2026-11-22).
 
 ## Managing teams
 
@@ -33,15 +23,16 @@ Depends on: `people.md`, `organizations.md` (the People page),
   members never show to clients, in pages, the API or mails.
 - Deactivating someone keeps them in their teams (they're skipped when
   expanding, below); deleting a person's account removes them.
-- `Team(name)`, `TeamMember(team, user)`, through operations, audited
+- `Team(name)`, `TeamMember(team, user)` (`biwak/teams/`), through
+  operations (`operations.py`), audited
   (`audit_tables()`). Names up to 100 characters (confirmed by the user
   2026-11-22). Changing teams records no event: the audit log has it,
   nobody is told.
 - **Pages** (confirmed by the user 2026-11-22): "Teams" at the end of
-  the People page ("Everybody" only),
-  each team with its members; "New team" for own staff (also in the
-  palette). A team's page (`/teams/<id>/`, for staff) lists its members;
-  own staff get Edit (name and the people picker offering everybody,
+  the People page ("Everybody" only, `teams/_teams.html`), each team
+  with its members; "New team" for own staff (also in the palette). A
+  team's page (`/teams/<id>/`, `teams/team_detail.html`, for staff)
+  lists its members; own staff get Edit (name and the people picker offering everybody,
   inactive people too) and Delete (a question), also in the palette.
 - **Externals see teams with only the members they may know**
   (`known_people()`, as on the People page), everywhere: pages, picker,
@@ -52,11 +43,14 @@ Depends on: `people.md`, `organizations.md` (the People page),
 ## Using a team
 
 Wherever several people are picked, staff find teams among the people,
-marked as a team with its number of members:
+marked as a team with its number of members (`biwak/teams/picking.py`
+for the picker's `data-teams` and the `@` list's entries;
+`PeopleField.offer_teams()` and `PeopleSelect.team_attrs()` in
+`biwak/forms.py`):
 
 - **The people picker** (`frontend/people-picker.js`, `PeopleField`):
-  assignees, subscribers, whom to notify, the people a check-in asks. Picking a team adds a pill per
-  member, as if each had been picked; removing one afterwards is
+  assignees, subscribers, whom to notify, the people a check-in asks.
+  Picking a team adds a pill per member, as if each had been picked; removing one afterwards is
   removing a pill.
 - **Typing `@`** in Markdown fields (`frontend/mentions.js`): choosing a
   team inserts a mention per member (`[@Ada](person:12)
@@ -67,10 +61,11 @@ marked as a team with its number of members:
   picking ("3 of 5: 2 can't see internal items"; the same reasons as
   greyed-out people). A team never adds anyone to a project.
 - Members already picked or mentioned aren't added twice.
-- **How it shows** (confirmed by the user 2026-11-22, except the order):
-  **teams come last** in both lists, after the people (decided by the
-  user 2026-11-22: "Teams are a special case"; it was first), and don't
-  count towards the `@` list's 10 people. A people mark,
+- **How it shows** (confirmed by the user 2026-11-22): **teams come
+  last** in both lists, after the people (decided by the user
+  2026-11-22: "Teams are a special case"), and don't count towards the
+  `@` list's 10 people. A people mark (`teamMark()` in
+  `frontend/avatar.js`),
   "team · 5 members" or "team · 3 of 5: 1 not a member of this project,
   1 inactive" (the reasons: "can't see internal items", "not a member of
   this project", "inactive"; across projects in "Assign…": "can't be

@@ -5,13 +5,14 @@ not only to hear about its next comment. The rules of subscribing
 (subscribing is the switch, assigned means subscribed) are in
 `notifications.md`.
 
-**Status:** built (2026-11-21). `activity.views.item_subscribers`
-(`/items/<id>/subscribers/`, `activity/subscribers.html`, reusing the
-assignee picker), `activity.operations.share()` and
-`subscribable_people()`, `items/_subscribers.html`; "Unassign me" posts
-`unassign=1` to the subscription view (`StillAssigned`).
+**Status:** built (2026-11-21).
 
 ## The modal
+
+`activity.views.item_subscribers` (`/items/<id>/subscribers/`,
+`activity/subscribers.html`, reusing the assignee picker),
+`activity.operations.share()` and `subscribable_people()`; the box is
+`items/_subscribers.html`.
 
 - **Opening it:** "Manage…" in the subscribers box, "Subscribers…" in
   the "More" menu and the palette (which also reaches lists and
@@ -29,9 +30,10 @@ assignee picker), `activity.operations.share()` and
   overriding an earlier unsubscribing like assigning). With "Tell them
   now" it records `shared`, which tells only the people it names ("Ada
   wants you to see this: <note>" in the lantern and mail), on every
-  level (decided 2026-11-22), and counts as "what concerns me". Without it
-  they're subscribed quietly: no event, the feed doesn't show it.
-- **Removing:** people remove only their own subscription.
+  level (decided 2026-11-22), and counts as "what concerns me". Without
+  it they're subscribed quietly: no event, the feed doesn't show it.
+- **Removing:** people remove only their own subscription ("Unassign
+  me" posts `unassign=1` to the subscription view, `StillAssigned`).
 - **Clients** may add people they may know to items they can see, like
   subscribing themselves and mentioning.
 - **The feed** shows "Ada shared it with Bob" (not the note), for

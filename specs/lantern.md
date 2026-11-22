@@ -5,11 +5,7 @@ after Biwak's camp theme; avoiding "Hey!", the name of Basecamp's mail
 product; its icon is a torch with its light, `frontend/styles/icons.css`),
 and pages that update while they're open.
 
-**Status:** built (2026-11-21). The lantern: `biwak/activity/lantern.py`,
-the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
-`/lantern/count/`), `frontend/lantern.js`, `GET /api/v1/lantern/`,
-`POST /api/v1/lantern/read/`, `biwak lantern`. Live updates:
-`biwak/live/` (`consumers.py`, `announce.py`), `frontend/live.js`.
+**Status:** built (2026-11-21).
 
 ## Decided (2026-11-21)
 
@@ -26,6 +22,10 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
 - **Browser notifications** (Web Push) later, not now.
 
 ## The lantern
+
+`biwak/activity/lantern.py`, the views in `biwak/activity/views.py`
+(`/lantern/`, `/lantern/menu/`, `/lantern/count/`), `frontend/lantern.js`,
+`GET /api/v1/lantern/`, `POST /api/v1/lantern/read/`, `biwak lantern`.
 
 - **The menu** (`base.html`, fetched from `/lantern/menu/` when opened;
   `frontend/lantern.js` fetches the count on every page and when told):
@@ -77,9 +77,8 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   notifications are in "Bookmarked" at the top of the menu and the page,
   with their latest notification read or not, and not in the other
   sections. The latest is the latest left after completing and
-  reopening cancelled out among the unread ones (fixed 2026-11-22: an
-  item whose latest two cancelled out was listed nowhere). A bookmark made on the item's page counts too. The API's
-  entries say `bookmarked`.
+  reopening cancelled out among the unread ones. A bookmark made on the
+  item's page counts too. The API's entries say `bookmarked`.
 - **The favicon** (decided 2026-11-21): with `User.lantern_in_favicon`
   (on by default, in the settings' notifications section) the tab's icon
   shows a dot while something is unread, updated live, drawn on a
@@ -95,8 +94,7 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
 
 ### Reading
 
-- **Only the lantern reads** (decided 2026-11-21, replacing "opening an
-  item reads it"): following an entry, "Mark as read", "Mark all as
+- **Only the lantern reads** (decided 2026-11-21): following an entry, "Mark as read", "Mark all as
   read", and acting on the item (below). Opening the item some other way
   (the feed, a list, a mail, a live update) reads nothing.
 - **Entries are links** (decided 2026-11-21: the address shows on
@@ -162,7 +160,8 @@ before.
 ## Live updates
 
 One websocket per browser tab, `/ws/live/?item=ID` (Channels, the same
-ASGI setup as `collaboration.md`). The doc's editor page has none (one
+ASGI setup as `collaboration.md`; `biwak/live/consumers.py`,
+`frontend/live.js`). The doc's editor page has none (one
 socket per tab: the editor's); its lantern count is fetched on load.
 
 - **Never content through the websocket.** Messages carry IDs and the
@@ -176,8 +175,8 @@ socket per tab: the editor's); its lantern count is fetched on load.
   clients' one (`announce.item_group()`); an announcement goes to the
   clients' group only if it happened while clients saw the item. The
   socket checks access again before passing on every announcement and
-  ping (decided 2026-11-21 after the visibility review: no window at all
-  if an `access.check` message is lost), on `access.check` and every 60
+  ping (decided 2026-11-21: no window at all if an `access.check`
+  message is lost), on `access.check` and every 60
   seconds; made a client meanwhile, it switches groups. Logging out
   closes the session's sockets at once (4401), logging out everywhere
   those of the others.

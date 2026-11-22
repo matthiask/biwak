@@ -3,11 +3,9 @@
 Several people writing in the same doc at the same time, above all for
 meeting notes. No office suite.
 
-**Status:** built (2026-11-20), deployed: `biwak/collab/` (the
-websocket, the shared state), `asgi.py`, the doc operations in
+**Status:** built (2026-11-20), deployed. The code: `biwak/collab/`
+(the websocket, the shared state), `asgi.py`, the doc operations in
 `biwak/files/operations.py`, `files/doc_live.html`, `frontend/collab.js`.
-Since 2026-11-22 the editor is the rich editor (`rich-editor.md`), the
-shared document its `Y.XmlFragment` instead of the Markdown text.
 
 ## Approach
 
@@ -16,11 +14,10 @@ shared document its `Y.XmlFragment` instead of the Markdown text.
   `rich-editor.md`): the shared document is the editor's document, a
   `Y.XmlFragment` named `prosemirror`; docs stay Markdown in
   `Doc.content`, which the server writes from it (`biwak/richtext/`).
-  Before, it was CodeMirror on the Markdown text itself (`content`,
-  decided 2026-11-20). Cursors and names of the others, offline edits
+  Cursors and names of the others, offline edits
   merged on reconnect.
 - **Server side: Channels with `pycrdt` and our own consumer** (decided
-  2026-11-20 after a spike against Hocuspocus and pycrdt-websocket's
+  2026-11-20, rather than Hocuspocus or pycrdt-websocket's
   `YjsConsumer`, which keeps a Y document per connection). The reasons:
   the access checks are the app's own (`visible_to()`, `can_change()`)
   in the same process; storing goes through the operations with the
@@ -36,8 +33,7 @@ shared document its `Y.XmlFragment` instead of the Markdown text.
 
 ## Who
 
-`live.access()`, as for any doc (decided 2026-11-20, after the
-visibility review): staff edit what they see; clients edit docs they
+`live.access()`, as for any doc (decided 2026-11-20): staff edit what they see; clients edit docs they
 created and watch the others they can see, read-only (text and cursors
 update, they can't type); nobody edits a read-only doc. Internal docs,
 other projects, trashed docs and no login: the websocket closes with
@@ -82,7 +78,7 @@ for or removes somebody else.
   update, at least every 30 seconds while somebody types, when an
   editor leaves, and when the doc's reading view opens with unsaved
   typing ("Done" leads there while the editor's connection is still
-  closing; fixed 2026-11-22); `fairy_tasks` saves what's left. It writes
+  closing); `fairy_tasks` saves what's left. It writes
   `Doc.content` through the doc operations: an `edited` event per
   person whose updates it merges (one per editing session of 10
   minutes), mentions credited to who typed them, a version by the rules
@@ -118,11 +114,6 @@ for or removes somebody else.
   editor with y-prosemirror (its undo, per person; the others' cursors
   and names), the toolbar of `editor.md` without the "Markdown" switch.
   Unsent typing is kept in IndexedDB (`connection.md`).
-- **Existing live states** were rebuilt once (migration
-  `collab.0004_rich_editor`, no users yet): what was typed and not
-  merged went into `Doc.content`, the states were deleted; the first
-  editor makes a new one (a new history, so copies kept in browsers are
-  dropped, not merged).
 
 ## Running it
 

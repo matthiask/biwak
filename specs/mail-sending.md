@@ -4,9 +4,7 @@ Outgoing mail is queued in the app and sent through Resend's API, so
 nothing is lost when Resend is down and nothing is sent twice. Replies
 coming in are `notifications.md`.
 
-**Status:** built and live in production (2026-11-21):
-`biwak/outbox/`, `EMAIL_URL=resend:`, From `biwak@biwak.feinheit.app`
-(decided 2026-11-21), `REPLY_DOMAIN=biwak.feinheit.app`.
+**Status:** built and live in production (2026-11-21).
 
 ## The outbox
 
@@ -67,8 +65,7 @@ coming in are `notifications.md`.
   replies still go out: someone asked for them.
 - **Clearing:** when `User.email` changes, by the admin, or the admin
   action "Mail to the selected people works again".
-- **Shown** on the person's page (staff and the person; it was their
-  activity page until that went, 2026-11-22), their
+- **Shown** on the person's page (staff and the person), their
   settings page and the admin. **Not on the login page** (decided
   2026-11-21): it would tell whoever types an address that it has an
   account.
@@ -82,7 +79,9 @@ coming in are `notifications.md`.
    replies and events).
 3. Environment: `EMAIL_URL=resend:` (not switched on by
    `RESEND_API_KEY` alone, which replies use), `DEFAULT_FROM_EMAIL`,
-   `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `ADMINS`.
+   `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `ADMINS`. In production
+   From is `biwak@biwak.feinheit.app` (decided 2026-11-21),
+   `REPLY_DOMAIN=biwak.feinheit.app`.
 
 Rolling back: `EMAIL_URL` back to an SMTP URL; the outbox sends through
 it.

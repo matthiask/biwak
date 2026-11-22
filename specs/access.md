@@ -1,8 +1,8 @@
 # Access: client visibility and sign-in
 
-**Status:** built (2026-11-20), reviewed twice for visibility
-(2026-11-20) and for externals (2026-11-21); the rules marked "after the
-visibility review" came from those reviews.
+**Status:** built (2026-11-20). The rules marked "after the visibility
+review" came from the reviews for visibility (2026-11-20) and for
+externals (2026-11-21).
 
 The most delicate part of the app: a bug here shows internal content to a
 client. One function decides visibility, everything uses it, and tests go
@@ -46,8 +46,8 @@ through every entry point (`AGENTS.md`).
   it, so pages, the feed, search, the palette, the lantern, mails, mail
   replies, the API, the CLI and both websockets follow. Externals are
   assigned and mentioned in all-access projects only as members.
-  - **Externals know all the people of their projects** (changed
-    2026-11-21, it was "members only, like clients"), like staff of a
+  - **Externals know all the people of their projects** (decided
+    2026-11-21), like staff of a
     limited project: the members and the own staff of an all-access
     project (`knows_people_of()`, `Project.people_q()`), in the `@` list,
     mentions written and read, assignees, subscribers, check-in askees,
@@ -97,8 +97,8 @@ through every entry point (`AGENTS.md`).
   check-in asks and who hasn't answered (`Project.people_known_to()`).
   People removed from the project who stay assigned to to-dos aren't
   named to clients and externals either: the rows, the to-do's page, the
-  API's `assignees` and mails show only the people they may know (fixed
-  2026-11-21 after a review: `{% known_in %}`, `known_ids_for()`). The
+  API's `assignees` and mails show only the people they may know
+  (2026-11-21, after a review: `{% known_in %}`, `known_ids_for()`). The
   feed API's event data (`mentioned`, `assigned`, `people`, `assignees`,
   by ID) lists only those too (`event_out()`).
   Both halves of the rule (after the second visibility review):
@@ -178,8 +178,8 @@ Like Basecamp's bright yellow:
   2026-11-21): `GET /items/<pk>/switch/` is the question (a page, a modal
   for `HX-Modal`; an item already visible redirects to itself), saying
   what changes: "Makes this list, 12 to-dos and 34 comments visible to 3
-  clients." The text is built per kind by the view (`show_texts()`,
-  `visibility.affected()` in `biwak/items/views.py`). It counts neither drafts
+  clients." The text is built per kind by the view (`show_texts()` in
+  `biwak/items/views.py`, `visibility.affected()`). It counts neither drafts
   (anybody's, only their creators see them) nor what's in the trash
   (decided 2026-11-21). The POST with `visible=1`
   shows the item, without it hides it. Staff only (403 for clients).
@@ -190,7 +190,7 @@ Like Basecamp's bright yellow:
   Hiding is one click there without a sentence about what it hides, as
   on the tiles (confirmed by the user 2026-11-22). Creating something
   visible right away ("Visible to clients" in "New list", "New folder",
-  a new message, doc, file or check-in) stays.
+  a new message, doc, file or check-in) is still offered.
 - Notification mails about visible items say so in the first line.
 - API and CLI output include the visibility (`visible_to_clients`); the
   agent skills, when they come, tell agents to check it before writing.
@@ -228,7 +228,7 @@ behind "Sign in through your organization" (decided 2026-11-21).
 allauth's pages we show (signing in and out, codes, confirming access,
 the identity providers' pages) are overridden in `biwak/templates/` to
 say things in sentence case like the rest ("Sign in", "Remember me";
-fixed 2026-11-22, `accounts/test_sentence_case.py`).
+`accounts/test_sentence_case.py`).
 
 **The passkey offer** (decided 2026-11-20: once, dismissable;
 `biwak/accounts/passkeys.py`): the first page opened after a sign-in by
