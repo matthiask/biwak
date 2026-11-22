@@ -39,3 +39,22 @@ class StartDatesCLITest(CLITest):
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("A start date needs a due date.", result.output)
         self.assertFalse(Item.objects.filter(title="Nope").exists())
+
+    def test_started_and_not_started(self):
+        today = dt.date.today()
+        for title, starts in [("Pack now", None), ("Pack later", 30)]:
+            self.biwak(
+                "todo", "add", self.list.pk, title,
+                "--due", today + dt.timedelta(days=40),
+                *(["--starts", today + dt.timedelta(days=starts)] if starts else []),
+            )  # fmt: skip
+        args = ("todos", "--project", self.project.pk, "--json")
+
+        def titles(*flags):
+            return {t["title"] for t in json.loads(self.biwak(*args, *flags).stdout)}
+
+        self.assertEqual(titles(), {"Pack now", "Pack later"})
+        self.assertEqual(titles("--started"), {"Pack now"})
+        self.assertEqual(titles("--not-started"), {"Pack later"})
+        result = self.biwak("todos", self.list.pk, "--started")
+        self.assertNotEqual(result.exit_code, 0)

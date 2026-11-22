@@ -1033,14 +1033,25 @@ def list_unarchive(list_id, as_json):
     is_flag=True,
     help="Order by due date instead of by project, list and group.",
 )
+@click.option(
+    "--started/--not-started",
+    default=None,
+    help="Only to-dos which have started (or have no start date), or only"
+    " those starting later; default: all.",
+)
 @json_option
-def todos(list_id, completed, mine, assigned_by_me, project_id, due, by_due, as_json):
+def todos(
+    list_id, completed, mine, assigned_by_me, project_id, due, by_due, started, as_json
+):
     """The open to-dos of LIST, by group; without LIST across all projects,
     by project or by due date (--mine, --assigned-by-me, --project, --due,
     --by-due)"""
-    if list_id and (mine or assigned_by_me or project_id or due or by_due):
+    if list_id and (
+        mine or assigned_by_me or project_id or due or by_due or started is not None
+    ):
         terminate(
-            "--mine, --assigned-by-me, --project, --due and --by-due go without LIST."
+            "--mine, --assigned-by-me, --project, --due, --by-due and"
+            " --started/--not-started go without LIST."
         )
     if list_id and completed:
         data = paginate(f"lists/{list_id}/todos/completed/")
@@ -1056,6 +1067,8 @@ def todos(list_id, completed, mine, assigned_by_me, project_id, due, by_due, as_
             params["project_id"] = project_id
         if due:
             params["due_group"] = due
+        if started is not None:
+            params["started"] = "true" if started else "false"
         data = paginate("todos/", params)
     if as_json:
         return echo_json(data)

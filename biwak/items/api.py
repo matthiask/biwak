@@ -465,6 +465,7 @@ def todo_overview(
     visible_to_clients: bool | None = None,
     due_group: Literal["overdue", "today", "this_week", "next_week", "later", "none"]
     | None = None,
+    started: bool | None = None,
     cursor: str | None = None,
     page_size: int | None = None,
 ):
@@ -475,7 +476,10 @@ def todo_overview(
     ``assignee`` is ``me``, ``nobody``, ``anybody`` (the default) or a
     person's ID, ``assigned_by=me``
     the to-dos the person assigned to somebody, ``due_group`` one
-    of the groups of the page. Archived projects and lists are left out.
+    of the groups of the page. ``started=true`` only those which have
+    started (or have no start date), ``false`` only those starting later
+    (specs/start-dates.md); without it all. Archived projects and lists
+    are left out.
     Clients only ever get what is visible to them."""
     project = project_for(request, project_id) if project_id is not None else None
     if assignee not in {None, "", "me", "nobody", "anybody"} and not (
@@ -499,6 +503,12 @@ def todo_overview(
         )
     )
     today = schedules.today()
+    if started is not None:
+        qs = (
+            qs.filter(due.started(today))
+            if started
+            else qs.filter(todo__starts_on__gt=today)
+        )
     grouping = grouping or "project"
     if completed:
         ordering = ("-completed_key", "-pk")
