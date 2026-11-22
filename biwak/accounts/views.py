@@ -6,14 +6,15 @@ from django.core.files.storage import default_storage
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import translation
 from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
-from biwak.accounts import operations, passkeys, signin, sso
+from biwak.accounts import languages, operations, passkeys, signin, sso
 from biwak.accounts.models import (
     API_TOKEN_LIFETIME,
     Accent,
@@ -206,6 +207,15 @@ class KeyboardForm(Form):
     )
 
 
+class LanguageForm(Form):
+    language = forms.ChoiceField(
+        label=gettext_lazy("Language"),
+        choices=languages.choices,
+        required=False,
+        widget=forms.RadioSelect,
+    )
+
+
 class AppearanceForm(Form):
     # Only what's posted changes: the toggle in the navigation posts the
     # theme alone
@@ -263,6 +273,7 @@ def _settings_page(request, *, notifications=None, name_form=None):
                     "lantern_in_favicon": user.lantern_in_favicon,
                 }
             ),
+            "language_form": LanguageForm(initial={"language": user.language}),
             "keyboard_form": KeyboardForm(
                 initial={"keyboard_shortcuts": user.keyboard_shortcuts}
             ),
@@ -322,6 +333,22 @@ def settings_keyboard(request):
         request.user, keyboard_shortcuts=form.cleaned_data["keyboard_shortcuts"]
     )
     messages.success(request, _("Your keyboard settings have been saved."))
+    return redirect("settings")
+
+
+@never_cache
+@require_POST
+def settings_language(request):
+    """The language of the pages and mails; the page comes back in it"""
+    form = LanguageForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest("Invalid language.")
+    operations.set_preferences(request.user, language=form.cleaned_data["language"])
+    # The message in the new language, the next page shows it
+    with translation.override(
+        request.user.language or translation.get_language_from_request(request)
+    ):
+        messages.success(request, _("Your language has been saved."))
     return redirect("settings")
 
 

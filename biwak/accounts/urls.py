@@ -24,6 +24,7 @@ urlpatterns = [
     ),
     path("settings/name/", views.settings_name, name="settings_name"),
     path("settings/keyboard/", views.settings_keyboard, name="settings_keyboard"),
+    path("settings/language/", views.settings_language, name="settings_language"),
     path("settings/appearance/", views.settings_appearance, name="settings_appearance"),
     # The notification settings were here before the settings page
     path(

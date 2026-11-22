@@ -209,9 +209,10 @@ a team's name isn't expanded.
 
 ## Your menu
 
-Your name in the bar opens: My activity, Settings (your name, notifications, the
-keyboard, appearance, profile image, sign-in: connected accounts,
-passkeys, the authenticator app and sessions), Calendar,
+Your name in the bar opens: My activity, Settings (your name, the
+language, notifications, the keyboard, appearance, profile image,
+sign-in: connected accounts, passkeys, the authenticator app and
+sessions), Calendar,
 Help and Sign out. Staff also find Public links there; administrators
 All projects, after My activity, and the link to the administration.
 

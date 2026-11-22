@@ -14,6 +14,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext as _, ngettext
 
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.projects import operations as project_ops
 
@@ -293,7 +294,7 @@ def send_sign_in_reset(user, removed, *, actor):
     from biwak.outbox import sending as outbox
     from biwak.outbox.models import Kind
 
-    with translation.override(user.language or translation.get_language()):
+    with translation.override(language_for(user)):
         message = EmailMessage(
             _("%(actor)s reset your sign-in to Biwak") % {"actor": actor},
             render_to_string(

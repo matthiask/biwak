@@ -8,9 +8,11 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import translation
 from django.utils.translation import gettext as _
 
 from biwak.accounts import sso
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import User
 
 
@@ -38,16 +40,25 @@ class AccountAdapter(DefaultAccountAdapter):
         from biwak.outbox.models import Kind
 
         request = allauth_context.request
-        message = self.render_mail(
-            template_prefix,
-            email,
-            {
-                "request": request,
-                "email": email,
-                "current_site": get_current_site(request),
-            }
-            | context,
+        # In the recipient's language if they have one, else in the page's:
+        # they asked for it right now, in their browser
+        user = User.objects.filter(email__iexact=email).first()
+        language = (
+            language_for(user)
+            if user and (user.language or user.invitation_language)
+            else translation.get_language()
         )
+        with translation.override(language):
+            message = self.render_mail(
+                template_prefix,
+                email,
+                {
+                    "request": request,
+                    "email": email,
+                    "current_site": get_current_site(request),
+                }
+                | context,
+            )
         kind = (
             Kind.LOGIN_CODE
             if template_prefix.rsplit("/", 1)[-1] in {"login_code", "unknown_account"}

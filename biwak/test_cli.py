@@ -178,6 +178,19 @@ class CLICommandsTest(CLITest):
             "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
         )
 
+    def test_settings_language(self):
+        output = self.biwak("settings").output
+        self.assertIn("Language: auto", output)
+        self.assertIn("Single-key shortcuts: on", output)
+        self.assertIn("Language: de", self.biwak("settings", "--language", "de").output)
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.language, "de")
+        # The CLI stays English (specs/languages.md)
+        self.assertIn("Theme: auto", self.biwak("settings").output)
+        data = json.loads(self.biwak("settings", "--language", "auto", "--json").output)
+        self.assertEqual(data["language"], "")
+        self.assertNotEqual(self.biwak("settings", "--language", "fr").exit_code, 0)
+
     def test_archiving_lists(self):
         self.assertIn(
             "Archived Launch", self.biwak("list", "archive", self.list.pk).output

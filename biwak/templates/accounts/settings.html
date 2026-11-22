@@ -96,6 +96,39 @@
       </form>
     </div>
   </div>
+  <h2 class="h5 mt-4" id="language">{% translate "Language" %}</h2>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="post" action="{% url 'settings_language' %}">
+        {% csrf_token %}
+        <fieldset class="mb-3">
+          <legend class="visually-hidden">{% translate "Language" %}</legend>
+          {% for value, label in language_form.fields.language.choices %}
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="language"
+                id="language-{{ value|default:'auto' }}"
+                value="{{ value }}"
+                {% if request.user.language == value %}checked{% endif %}
+              >
+              {# Each language named in itself (specs/languages.md) #}
+              <label
+                class="form-check-label"
+                for="language-{{ value|default:'auto' }}"
+                {% if value %}lang="{{ value }}"{% endif %}
+              >{{ label }}</label>
+            </div>
+          {% endfor %}
+          <div class="form-text">
+            {% translate "For the pages and the mails. Automatic follows your browser; mails are in English then, or in the language you were invited in." %}
+          </div>
+        </fieldset>
+        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+      </form>
+    </div>
+  </div>
   <h2 class="h5 mt-4" id="notifications">{% translate "Notifications" %}</h2>
   <div class="card mb-4">
     <div class="card-body">

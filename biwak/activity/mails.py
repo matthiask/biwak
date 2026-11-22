@@ -19,6 +19,7 @@ from django.utils import timezone, translation
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery, User
 from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Notification
@@ -569,7 +570,7 @@ def _prepare(user, pks, now, build, kind):
     message = None
     if deliverable:
         with (
-            translation.override(user.language or settings.LANGUAGE_CODE),
+            translation.override(language_for(user)),
             mentions.reading_as(user),
         ):
             message = build(deliverable)

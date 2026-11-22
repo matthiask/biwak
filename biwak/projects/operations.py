@@ -14,6 +14,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
+from biwak.accounts.languages import language_for, supported
 from biwak.accounts.models import Color, NotificationLevel, User
 from biwak.activity.mails import sender
 from biwak.activity.models import Action, LevelOverride, Subscription
@@ -395,8 +396,12 @@ def send_invitation(projects, user, *, actor):
         "actor": actor,
         "url": absolute(projects[0].get_absolute_url() if len(projects) == 1 else "/"),
     }
-    # In their language if they have one, else in the inviter's
-    with translation.override(user.language or translation.get_language()):
+    # In their language if they chose one, else in the inviter's, which
+    # later mails use too until they choose (specs/languages.md)
+    if not user.language:
+        user.invitation_language = supported(translation.get_language())
+        user.save(update_fields=["invitation_language"])
+    with translation.override(language_for(user)):
         if len(projects) == 1:
             subject = _("%(actor)s invited you to %(project)s") % {
                 "actor": actor,
