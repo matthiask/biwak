@@ -131,6 +131,7 @@ def all_projects_page(request):
         {
             "form": form,
             "projects": all_projects(user, **data),
-            "filtered": any(data.values()),
+            # How many filters are set (the phones' "Filters" says it)
+            "filtered": sum(1 for value in data.values() if value),
         },
     )

@@ -3101,6 +3101,8 @@ a.is-drop-target {
   align-items: center;
   justify-content: center;
   gap: 0.25rem 0.5rem;
+  /* Not shrunk to the half of the screen right of "left: 50%" (phones) */
+  width: max-content;
   max-width: calc(100vw - 2rem);
   padding: 0.375rem 0.5rem 0.375rem 1rem;
   border: 1px solid var(--wb-surface-border);
