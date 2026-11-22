@@ -153,15 +153,30 @@ lantern entry) open, questions below.
   and refuse with `missing_message()` when one of the to-dos is gone,
   as "Assign…". Everybody who sees the to-dos may use them, clients too
   (to-dos' fields are shared work, as for "Assign…").
-- **"Move…"** is the single to-do's `MoveTodoForm` ("List and group",
-  "Position": to the top or the end) over the lists of their project the
-  person sees (`_move_targets()`), then `ops.move_todos()`: next to each
-  other in the order selected, a `moved` event each, the visibility
-  recomputed for another list. Completed to-dos in the selection move
-  too (as dragging and the API's `lists/{id}/todos/move/` do; only the
-  single to-do's "Move to…" leaves them out). To-dos of several projects
-  are refused (proposed): "The selected to-dos are in several projects:
+- **"Move…"** (`MoveForm`, built 2026-11-22): staff first choose the
+  project (the combobox of active projects they open, the to-dos' own
+  preselected, or the first one's), then "List and group" (the single
+  to-do's choices over that project's lists they see,
+  `list_targets()`) or "New list", and "Position" (to the top or the
+  end). Choosing another project shows its lists first (the hidden
+  `shown`; in the modal htmx posts the form on `change`, without
+  JavaScript submitting does it). Into another project, the dialog
+  first says who's added and who's dropped (`move_notes()`, "Bob
+  Example will be added to Shop.", "Cleo Example won't see the to-dos
+  in Shop: they'll be unassigned and unsubscribed.", as a warning) and
+  `confirmed` is set, as "Move to…" of lists; there is no question about
+  clients: the list's choice says "(clients can see this)", as for one
+  to-do moved between lists. Then `ops.move_todos_to()`. Completed
+  to-dos move too (decided 2026-11-22). **Clients** (decided
+  2026-11-22) get no project field and no "New list": the lists of the
+  to-dos' project they see; a selection from several projects is
+  refused for them: "The selected to-dos are in several projects:
   to-dos move to the lists of their own project."
+- **"New list"** (staff, who create lists): created in the chosen
+  project inside the move's transaction, internal, named after the list
+  the to-dos come from when it's one, else "Moved to-dos" (in the
+  mover's language), renamed later (to confirm,
+  `decisions-to-confirm.md`).
 - **Across projects** (`ops.move_todos_to()`, built 2026-11-22):
   to-dos from other projects come along with comments, reactions,
   events and attachments (their project updated), completed ones too;

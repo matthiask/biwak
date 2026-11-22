@@ -337,6 +337,22 @@ class MovePageTest(Selection):
         self.soon = Group.objects.create(
             todolist=self.internal.todolist, title="Soon", position=1
         )
+        self.shop = project("Shop", members=[self.ada, self.cleo], all_access=False)
+        self.orders = ops.create_list(
+            project=self.shop, title="Orders", creator=self.ada, visible=True
+        )
+
+    def post(self, *items, data, next="", modal=False):
+        return self.client.post(
+            url("todos_move_selected", *items, next=next),
+            data,
+            headers={"HX-Modal": "true"} if modal else {},
+        )
+
+    def assertIn_(self, items, todolist):
+        for item in items:
+            item.refresh_from_db()
+            self.assertEqual(item.parent_id, todolist.pk)
 
     def test_modal_and_page(self):
         self.client.force_login(self.ada)
@@ -345,52 +361,124 @@ class MovePageTest(Selection):
         assert_modal(self, response, title="Move…")
         self.assertContains(response, "2 to-dos")
         self.assertContains(response, f'value="{self.internal.pk}:{self.soon.pk}"')
-        self.assertEqual(self.client.get(target).status_code, 200)
+        self.assertContains(response, 'value="new"')
+        # The projects, another one showing its lists at once
+        self.assertContains(response, f'<option value="{self.shop.pk}"')
+        self.assertContains(response, 'hx-trigger="change"')
+        response = self.client.get(target)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'hx-trigger="change"')
 
     def test_moving(self):
         self.client.force_login(self.ada)
-        response = self.client.post(
-            url("todos_move_selected", self.photos, self.copy, next="&next=/todos/"),
-            {"target": f"{self.internal.pk}:{self.soon.pk}", "index": "end"},
-            headers={"HX-Modal": "true"},
+        response = self.post(
+            self.photos,
+            self.copy,
+            data={
+                "project": self.website.pk,
+                "shown": self.website.pk,
+                "target": f"{self.internal.pk}:{self.soon.pk}",
+                "index": "end",
+            },
+            next="&next=/todos/",
+            modal=True,
         )
         assert_modal_redirect(self, response, "/todos/")
-        for item in [self.copy, self.photos]:
-            item.refresh_from_db()
-            self.assertEqual(item.parent_id, self.internal.pk)
-            self.assertEqual(item.todo.group, self.soon)
-            # Internal now
-            self.assertFalse(item.is_client_visible)
+        self.assertIn_([self.copy, self.photos], self.internal)
+        self.assertEqual(self.copy.todo.group, self.soon)
+        # Internal now
+        self.assertFalse(self.copy.is_client_visible)
         # Next to each other in the order selected
         self.assertLess(self.photos.position, self.copy.position)
         self.assertEqual(Event.objects.filter(action=Action.MOVED).count(), 2)
 
-    def test_several_projects(self):
-        shop = project("Shop", members=[self.ada])
-        orders = ops.create_list(project=shop, title="Orders", creator=self.ada)
-        invoice = ops.create_todo(todolist=orders, title="Invoice", creator=self.ada)
+    def test_another_project_shows_its_lists_first(self):
         self.client.force_login(self.ada)
-        target = url("todos_move_selected", self.copy, invoice)
-        self.assertContains(self.client.get(target), "in several projects")
-        response = self.client.post(target, {"target": str(orders.pk), "index": "end"})
-        self.assertContains(response, "in several projects")
+        response = self.post(
+            self.copy,
+            data={
+                "project": self.shop.pk,
+                "shown": self.website.pk,
+                "target": str(self.internal.pk),
+            },
+        )
+        self.assertContains(response, f'value="{self.orders.pk}"')
+        self.assertNotContains(response, f'value="{self.internal.pk}"')
+        self.assertIn_([self.copy], self.launch)
+
+    def test_across_projects_asks_first(self):
+        ops.assign(self.copy, [self.bob], actor=self.ada)
+        self.client.force_login(self.ada)
+        data = {
+            "project": self.shop.pk,
+            "shown": self.shop.pk,
+            "target": str(self.orders.pk),
+            "index": "end",
+        }
+        response = self.post(self.copy, self.photos, data=data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bob Example will be added to Shop.")
+        self.assertIn_([self.copy], self.launch)
+        response = self.post(
+            self.copy,
+            self.photos,
+            data=data | {"confirmed": f"{self.shop.pk}:{self.orders.pk}"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn_([self.copy, self.photos], self.orders)
+        self.assertEqual(self.copy.project, self.shop)
+        self.assertTrue(self.shop.is_member(self.bob))
+        trace = Event.objects.get(action=Action.MOVED, item=None)
+        self.assertEqual(trace.project, self.website)
+
+    def test_a_new_list(self):
+        self.client.force_login(self.ada)
+        response = self.post(
+            self.copy,
+            self.photos,
+            data={
+                "project": self.shop.pk,
+                "shown": self.shop.pk,
+                "target": "new",
+                "index": "end",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
         self.copy.refresh_from_db()
-        self.assertEqual(self.copy.parent_id, self.launch.pk)
+        new = self.copy.parent
+        self.assertEqual((new.project, new.title), (self.shop, "Launch"))
+        self.assertFalse(new.is_client_visible)
+        self.assertIn_([self.photos], new)
+        # From several lists: "Moved to-dos"
+        self.post(
+            self.copy,
+            self.budget,
+            data={
+                "project": self.website.pk,
+                "shown": self.website.pk,
+                "target": "new",
+                "index": "end",
+            },
+        )
+        self.budget.refresh_from_db()
+        self.assertEqual(self.budget.parent.title, "Moved to-dos")
+        self.assertEqual(self.budget.project, self.website)
 
     def test_a_todo_gone_changes_nothing(self):
         self.client.force_login(self.ada)
-        target = url("todos_move_selected", self.copy, self.photos)
         ops.trash(self.photos, actor=self.bob)
-        response = self.client.post(
-            target, {"target": str(self.internal.pk), "index": "end"}
+        response = self.post(
+            self.copy,
+            self.photos,
+            data={"project": self.website.pk, "target": str(self.internal.pk)},
         )
         self.assertContains(response, "Nothing was changed.")
-        self.copy.refresh_from_db()
-        self.assertEqual(self.copy.parent_id, self.launch.pk)
+        self.assertIn_([self.copy], self.launch)
 
     def test_clients(self):
-        """Clients move to-dos they see to lists they see, as a to-do's
-        "Move to…"; the internal list isn't offered"""
+        """Clients move to-dos they see to lists they see within the
+        project (decided 2026-11-22), as a to-do's "Move to…"; no new list,
+        no other project"""
         other = ops.create_list(
             project=self.website, title="Later", creator=self.ada, visible=True
         )
@@ -399,15 +487,27 @@ class MovePageTest(Selection):
         response = self.client.get(target)
         self.assertContains(response, f'value="{other.pk}"')
         self.assertNotContains(response, f'value="{self.internal.pk}"')
+        self.assertNotContains(response, 'value="new"')
+        self.assertNotContains(response, f'value="{self.orders.pk}"')
         response = self.client.post(target, {"target": str(self.internal.pk)})
+        self.assertEqual(response.status_code, 200)
+        # Another project's list isn't a choice, the project is ignored
+        response = self.client.post(
+            target, {"project": self.shop.pk, "target": str(self.orders.pk)}
+        )
         self.assertEqual(response.status_code, 200)
         response = self.client.post(target, {"target": str(other.pk), "index": "0"})
         self.assertEqual(response.status_code, 302)
-        self.copy.refresh_from_db()
-        self.assertEqual(self.copy.parent_id, other.pk)
+        self.assertIn_([self.copy], other)
         self.assertEqual(
             self.client.get(url("todos_move_selected", self.budget)).status_code, 404
         )
+        # To-dos of several projects don't move together for clients
+        invoice = ops.create_todo(
+            todolist=self.orders, title="Invoice", creator=self.ada
+        )
+        response = self.client.get(url("todos_move_selected", self.copy, invoice))
+        self.assertContains(response, "in several projects")
 
 
 class DatesAPITest(Selection):

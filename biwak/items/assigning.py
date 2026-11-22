@@ -2,16 +2,20 @@
 "Due date…" on the to-dos page and a list's page (specs/handover.md)"""
 
 from django import forms
+from django.db import transaction
+from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
-from django.utils.translation import gettext_lazy as _, ngettext
+from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from biwak.accounts.models import User
 from biwak.forms import Form, PeopleField, next_url
 from biwak.items import operations as ops
-from biwak.items.models import Group, Item, Kind
-from biwak.items.views import MoveTodoForm, _index, _move_targets, item_for
+from biwak.items.across import Confirming, ProjectChoice, _names
+from biwak.items.models import Group, Item, Kind, Status
+from biwak.items.views import MoveTodoForm, _index, item_for
 from biwak.modals import form_response
+from biwak.projects.models import Project
 
 
 def ids_of(values):
@@ -138,42 +142,188 @@ def todos_assign(request):
     )
 
 
-def todos_move(request):
-    """ "Move…" for the selected to-dos: a list of their project or a group
-    of it, and where in it, like a to-do's "Move to…" (``move_todos()``,
-    next to each other in their order). All or nothing, like "Assign…"."""
-    todos, missing = _selected(request)
-    project = _project(todos)
-    form = MoveTodoForm(
-        request.POST if request.method == "POST" else None,
-        targets=_move_targets(request, todos[0]) if project else [],
+# The choice of "Move…" making a new list in the project (staff)
+NEW_LIST = "new"
+
+
+class MoveForm(Confirming):
+    """ "Move…": the project (staff; clients move within it), then a list
+    of it or one of its groups, or a new list, and where in it. ``shown``:
+    the project whose lists the form showed; choosing another shows its
+    lists first."""
+
+    project = ProjectChoice(Project.objects.none(), label=_("project"))
+    shown = forms.CharField(widget=forms.HiddenInput, required=False)
+    target = forms.ChoiceField(label=_("List and group"))
+    index = MoveTodoForm.base_fields["index"]
+
+    def __init__(self, *args, projects, targets, new_list, modal, **kwargs):
+        super().__init__(*args, **kwargs)
+        if projects is None:
+            del self.fields["project"]
+        else:
+            self.fields["project"].queryset = projects
+            if modal:
+                # Another project shows its lists at once (htmx posts the
+                # form, the view answers with the project's lists)
+                self.fields["project"].widget.attrs |= {
+                    "hx-post": modal,
+                    "hx-target": "#modal",
+                    "hx-headers": '{"HX-Modal": "true"}',
+                    "hx-trigger": "change",
+                }
+        choices = MoveTodoForm(targets=targets).fields["target"].choices
+        if new_list:
+            choices = [*choices, (NEW_LIST, _("New list"))]
+        self.fields["target"].choices = choices
+
+
+def move_projects(user):
+    """The projects the person may move the to-dos to: staff the active
+    projects they open (decided 2026-11-22: moving across projects is
+    staff only), clients none (the to-dos' own); None for clients"""
+    if user.is_client:
+        return None
+    return Project.objects.accessible_to(user).active().order_by(Lower("name"), "pk")
+
+
+def list_targets(user, project):
+    """The lists (and their groups) of ``project`` the person sees, as for
+    a to-do's "Move to…" (``views._move_targets()``)"""
+    if project is None:
+        return []
+    lists = (
+        Item.objects
+        .visible_to(user)
+        .filter(project=project, kind=Kind.LIST, parent=None, status=Status.ACTIVE)
+        .prefetch_related("todolist__groups")
     )
+    return [(target, list(target.todolist.groups.all())) for target in lists]
+
+
+def new_list_title(todos):
+    """The title of a new list for the moved to-dos (renamed later): their
+    list's when they all come from one, else "Moved to-dos"
+    (specs/decisions-to-confirm.md)"""
+    lists = {todo.parent_id: todo.parent for todo in todos}
+    if len(lists) == 1:
+        return next(iter(lists.values())).title
+    return gettext("Moved to-dos")
+
+
+def move_notes(todos, project, visible, viewer):
+    """Who moving the to-dos into a list of ``project`` adds there and who
+    it drops, as sentences (empty when nobody)"""
+    added, dropped = (
+        list(people)
+        for people in ops.todos_move_people(todos, project, visible=visible)
+    )
+    source = todos[0].project
+    notes = []
+    if added:
+        notes.append(
+            ngettext(
+                "%(names)s will be added to %(project)s.",
+                "%(names)s will be added to %(project)s.",
+                len(added),
+            )
+            % {"names": _names(added, source, viewer), "project": project}
+        )
+    if dropped:
+        notes.append(
+            ngettext(
+                "%(names)s won't see the to-dos in %(project)s: they'll be"
+                " unassigned and unsubscribed.",
+                "%(names)s won't see the to-dos in %(project)s: they'll be"
+                " unassigned and unsubscribed.",
+                len(dropped),
+            )
+            % {"names": _names(dropped, source, viewer), "project": project}
+        )
+    return " ".join(notes)
+
+
+def todos_move(request):
+    """ "Move…" for the selected to-dos: a list of a project or one of its
+    groups, or a new list, and where in it (``ops.move_todos_to()``, next
+    to each other in their order). Staff move into other projects too,
+    after the form said who's added and dropped there (like "Move to…" of
+    lists); clients within the to-dos' project. All or nothing, like
+    "Assign…"."""
+    todos, missing = _selected(request)
+    own = _project(todos)
+    projects = move_projects(request.user)
+    post = request.POST if request.method == "POST" else None
+    chosen = own or todos[0].project
+    if projects is not None and post and (pk := post.get("project", "")).isdecimal():
+        chosen = projects.filter(pk=pk).first() or chosen
+    modal = request.get_full_path() if request.headers.get("HX-Modal") else ""
+
+    def make(data):
+        return MoveForm(
+            data,
+            projects=projects,
+            targets=list_targets(request.user, chosen),
+            new_list=ops.can_create(request.user, Kind.LIST),
+            modal=modal,
+            initial={"project": chosen, "shown": chosen.pk},
+        )
+
+    form = make(post)
+    note = ""
     if _refuse_missing(form, missing):
         pass
-    elif project is None:
+    elif projects is None and own is None:
         _refuse(form, several_projects_message())
+    elif post is not None and post.get("shown", str(chosen.pk)) != str(chosen.pk):
+        # Another project chosen: its lists first, nothing moves yet
+        form = make(None)
     elif form.is_valid():
-        list_id, _sep, group_id = form.cleaned_data["target"].partition(":")
-        target = item_for(request, int(list_id), Kind.LIST)
-        group = None
-        if group_id:
-            group = get_object_or_404(Group, pk=int(group_id), todolist=target.todolist)
-        ops.move_todos(
-            todos,
-            todolist=target,
-            group=group,
-            index=_index(form.cleaned_data["index"]),
-            actor=request.user,
-        )
-        return redirect(next_url(request) or "todos")
+        value = form.cleaned_data["target"]
+        if value == NEW_LIST:
+            target, group = None, None
+            visible = False
+        else:
+            list_id, _sep, group_id = value.partition(":")
+            target = item_for(request, int(list_id), Kind.LIST)
+            group = None
+            if group_id:
+                group = get_object_or_404(
+                    Group, pk=int(group_id), todolist=target.todolist
+                )
+            visible = target.is_client_visible
+        note = move_notes(todos, chosen, visible, request.user)
+        if not note or form.asked(f"{chosen.pk}:{value}"):
+            try:
+                with transaction.atomic():
+                    if target is None:
+                        target = ops.create_list(
+                            project=chosen,
+                            title=new_list_title(todos),
+                            creator=request.user,
+                        )
+                    ops.move_todos_to(
+                        todos,
+                        todolist=target,
+                        group=group,
+                        index=_index(form.cleaned_data["index"]),
+                        actor=request.user,
+                    )
+            except ValueError as exc:
+                form.add_error(None, str(exc))
+                note = ""
+            else:
+                return redirect(next_url(request) or "todos")
     return form_response(
         request,
         form,
         title=_("Move…"),
         intro=_intro(todos),
-        project=project,
+        project=own,
         cancel_url=next_url(request) or "/todos/",
         submit_label=_("Move"),
+        template="items/across_form.html",
+        extra={"note": note, "clients_note": ""},
     )
 
 

@@ -90,9 +90,17 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   Liegt eines der To-dos im Papierkorb oder kannst du es nicht mehr
   sehen, ändert sich nichts, und das Formular sagt es. Jemanden
   herausnehmen geht pro To-do.
-- **Verschieben…** verschiebt sie in eine Liste ihres Projekts oder eine
-  ihrer Gruppen, an den Anfang oder ans Ende, nebeneinander. To-dos aus
-  mehreren Projekten lassen sich nicht zusammen verschieben.
+- **Verschieben…** verschiebt sie, erledigte auch, in eine Liste oder
+  eine ihrer Gruppen, an den Anfang oder ans Ende, nebeneinander. Staff
+  wählen zuerst das Projekt, auch ein anderes, dann die Liste oder „Neue
+  Liste“ (benannt nach der Liste, aus der sie kommen, oder „Verschobene
+  To-dos“; später umbenennen). In ein anderes Projekt sagt das Formular
+  zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
+  (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf
+  kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in
+  seiner Aktivität („hat 23 To-dos nach Pläne in Website verschoben“).
+  Kund:innen verschieben innerhalb des Projekts und nur To-dos eines
+  Projekts. Verschieben benachrichtigt niemanden.
 - **Fälligkeit…** gibt allen dieselbe Fälligkeit („Ein Datum setzen“;
   Startdaten bleiben, also kann sie nicht vor einem davon liegen),
   verschiebt ihre Daten um eine Anzahl Tage („Verschieben um“, Startdaten

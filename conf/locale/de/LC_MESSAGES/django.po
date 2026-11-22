@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 22:13+0100\n"
+"POT-Creation-Date: 2026-11-22 22:16+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1500,8 +1500,8 @@ msgid "added to-dos"
 msgstr "To-dos hinzugefügt"
 
 #: biwak/activity/models.py biwak/bookmarks/models.py biwak/files/models.py
-#: biwak/forwarding/views.py biwak/items/across.py biwak/items/by_due.py
-#: biwak/items/models.py biwak/projects/models.py
+#: biwak/forwarding/views.py biwak/items/across.py biwak/items/assigning.py
+#: biwak/items/by_due.py biwak/items/models.py biwak/projects/models.py
 msgid "project"
 msgstr "Projekt"
 
@@ -2626,7 +2626,7 @@ msgstr "An: %(people)s"
 msgid "Cc: %(people)s"
 msgstr "Cc: %(people)s"
 
-#: biwak/forwarding/views.py biwak/items/views.py
+#: biwak/forwarding/views.py biwak/items/assigning.py biwak/items/views.py
 msgid "List and group"
 msgstr "Liste und Gruppe"
 
@@ -2802,7 +2802,7 @@ msgid_plural "%(count)d other people"
 msgstr[0] "%(count)d weitere Person"
 msgstr[1] "%(count)d weitere Personen"
 
-#: biwak/items/across.py
+#: biwak/items/across.py biwak/items/assigning.py
 #, python-format
 msgid "%(names)s will be added to %(project)s."
 msgid_plural "%(names)s will be added to %(project)s."
@@ -2985,6 +2985,22 @@ msgstr "%(count)s To-dos"
 #: biwak/items/assigning.py
 msgid "Assign"
 msgstr "Zuweisen"
+
+#: biwak/items/assigning.py biwak/palette/actions.py biwak/projects/views.py
+#: biwak/templates/projects/project_detail.html
+msgid "New list"
+msgstr "Neue Liste"
+
+#: biwak/items/assigning.py
+msgid "Moved to-dos"
+msgstr "Verschobene To-dos"
+
+#: biwak/items/assigning.py
+#, python-format
+msgid "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
+msgid_plural "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
+msgstr[0] "%(names)s sieht die To-dos in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
+msgstr[1] "%(names)s sehen die To-dos in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
 
 #: biwak/items/assigning.py biwak/templates/items/_selection_bar.html
 msgid "Move…"
@@ -4315,11 +4331,6 @@ msgstr "Öffentliche Links"
 #: biwak/templates/projects/templates.html
 msgid "New project from this…"
 msgstr "Neues Projekt daraus…"
-
-#: biwak/palette/actions.py biwak/projects/views.py
-#: biwak/templates/projects/project_detail.html
-msgid "New list"
-msgstr "Neue Liste"
 
 #: biwak/palette/actions.py
 msgid "New list from a template…"

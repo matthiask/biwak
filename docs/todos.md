@@ -74,9 +74,16 @@ somebody leaves and their to-dos go to someone else:
   them ("Ada assigned you 23 to-dos"). People taken out aren't told.
   If one of the to-dos was trashed or you can't see it anymore, nothing
   changes and the form says so. Taking somebody off is done per to-do.
-- **Move…** moves them to a list of their project or one of its groups,
-  to the top or the end, next to each other. To-dos of several projects
-  don't move together.
+- **Move…** moves them, completed ones too, to a list or one of its
+  groups, to the top or the end, next to each other. Staff first choose
+  the project, also another one, then the list, or "New list" (named
+  after the list they come from, or "Moved to-dos"; rename it later).
+  Into another project, the form first says who will be added to it
+  and who won't see the to-dos there (they're unassigned and
+  unsubscribed); their comments and history come along, and the
+  project they left shows one line in its activity ("moved 23 to-dos to
+  Plans in Website"). Clients move within the project, and only to-dos
+  of one project. Moving tells nobody.
 - **Due date…** gives them all one due date ("Set a date"; start dates
   stay, so it can't be before one of them), moves their dates by a
   number of days ("Move by", start dates and "repeats until" too; to-dos
