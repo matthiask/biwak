@@ -112,6 +112,32 @@ nobody gets mail or a sign-in before someone decides
 - No event in the feed (it isn't about a project); the audit log records
   the change.
 
+## People who left
+
+Decided 2026-11-22: "inactive" meant two things, people waiting to be
+activated after an import and people who left, and the People page
+couldn't hide one without the other.
+
+- **`User.left_at`**, a date: set by deactivating (below), cleared by
+  activating again. The importer sets it for people Basecamp no longer
+  has: it reads the account's people once per run (`/people.json`,
+  paginated) and whoever turns up in a project (creators, commenters,
+  assignees, subscribers) but isn't among them has left (the date: the
+  run's). People still in the account who are inactive in Biwak aren't
+  touched (they wait to be activated).
+- **The People page** shows everybody who hasn't left by default:
+  active, invited, and imported people waiting to be activated (as now,
+  marked inactive). A filter "People who left" (a query parameter like
+  the page's other filters) lists the others, marked "left on 3 Mar
+  2025"; their pages stay reachable as now.
+- **Activating** doesn't offer people who left among the imported
+  ones waiting; they can still be activated from their own page (which
+  clears `left_at`).
+- **Everywhere else as now:** names, marks and assignments on old
+  to-dos, messages and comments stay, shown as inactive.
+- API: `left_at` on people, the people list's `left` filter; CLI
+  `biwak people --left`.
+
 ## Deactivating
 
 - Clears `is_active`; refused for oneself (not offered) and for the last
