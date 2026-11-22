@@ -98,10 +98,9 @@ class TilesTest(E2ETestCase):
         page.keyboard.press("Escape")
         expect(bar).to_be_hidden()
 
-        # The keyboard: Ctrl+Space and Shift+arrows on the focused tile
+        # The keyboard: x and Shift+arrows on the focused tile
         self.tile(page, a).focus()
-        # Ctrl on every platform (Cmd+Space is a Mac's Spotlight)
-        page.keyboard.press("Control+Space")
+        page.keyboard.press("x")
         expect(bar).to_contain_text("1 selected")
         page.keyboard.press("Shift+ArrowRight")
         expect(bar).to_contain_text("2 selected")
@@ -121,24 +120,29 @@ class TilesTest(E2ETestCase):
         self.assertIsNone(self.parent_of(c))
         self.assertEqual(self.errors, [])
 
-    def test_on_a_mac(self):
-        """Cmd-click adds a tile, but Ctrl+Space selects one: Cmd+Space is
-        Spotlight (decided 2026-11-22)"""
+    def test_x(self):
+        """x on the focused tile selects it or takes it out, not with a
+        modifier (Ctrl+Space switches input sources on a Mac, decided
+        2026-11-22); outside the tiles x is the to-dos' again"""
         page = self.page
-        page.add_init_script(
-            "Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel'})"
-        )
         self.goto(page, self.root())
         self.wait_for_files(page)
         a, b, _c, _d = self.files
         bar = page.locator("[data-selection-bar]")
-        self.tile(page, a).click(modifiers=["Meta"])
-        expect(bar).to_contain_text("1 selected")
         self.tile(page, b).focus()
-        page.keyboard.press("Control+Space")
+        page.keyboard.press("x")
+        expect(bar).to_contain_text("1 selected")
+        expect(self.tile(page, b)).to_have_class(re.compile("is-selected"))
+        for key in ["Control+x", "Alt+x", "Meta+x", "Control+Space"]:
+            page.keyboard.press(key)
+        expect(bar).to_contain_text("1 selected")
+        self.tile(page, a).focus()
+        page.keyboard.press("x")
         expect(bar).to_contain_text("2 selected")
-        page.keyboard.press("Meta+Space")
-        expect(bar).to_contain_text("2 selected")
+        page.keyboard.press("x")
+        expect(bar).to_contain_text("1 selected")
+        expect(self.tile(page, a)).not_to_have_class(re.compile("is-selected"))
+        self.assertTrue(page.url.endswith(self.root()))
         self.assertEqual(self.errors, [])
 
     def test_dragging_the_selection(self):

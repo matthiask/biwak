@@ -835,12 +835,6 @@ h3,
   overflow-wrap: anywhere;
 }
 
-/* A doc's page: its first line, when a heading, is the header's title
-   (files/doc.html) */
-.wb-doc-text > :is(h1, h2, h3, h4, h5, h6):first-child {
-  display: none;
-}
-
 .wb-markdown > :last-child {
   margin-bottom: 0;
 }
@@ -3189,24 +3183,37 @@ a.is-drop-target {
 }
 
 /* Touch screens (decided 2026-11-22): small controls keep their look but
-   get a larger area taking the tap, an invisible box around them; boxes
-   to tick grow a little */
+   get a larger area taking the tap; boxes to tick grow a little. An area
+   never covers a neighbouring target (decided 2026-11-22: dense lines,
+   a name below a to-do's title, took the taps meant for the line above):
+   links in lines of text grow sideways and fill the height of their own
+   line, each line of a wrapped one; the others grow sideways and only
+   into the spacing that is their row's. */
 @media (pointer: coarse) {
-  .wb-signal,
-  .wb-breadcrumbs a,
   .wb-person-link,
-  .wb-event a {
+  .wb-breadcrumbs a,
+  .wb-event a:not(.btn) {
+    /* The line's height around the text (about 1.2em high); positioned,
+       so that the text after it doesn't cover its padding */
+    position: relative;
+    padding: calc((1lh - 1.2em) / 2) 0.25rem;
+    margin-inline: -0.25rem;
+  }
+
+  .wb-signal {
     position: relative;
   }
 
   button.wb-check:not(.is-bursting)::before,
-  .wb-signal::before,
-  .wb-breadcrumbs a::after,
-  .wb-person-link::after,
-  .wb-event a::after {
+  .wb-signal::before {
     position: absolute;
-    inset: -0.4rem -0.25rem;
+    inset: 0 -0.25rem;
     content: "";
+  }
+
+  /* Down into the to-do row's padding, not up into the title */
+  .wb-signal::before {
+    bottom: -0.25rem;
   }
 
   button.wb-check:not(.is-bursting)::before {

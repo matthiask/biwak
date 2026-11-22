@@ -163,7 +163,11 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Touch targets** (2026-11-22): on coarse pointers small controls
   (the to-do's check, row signals, breadcrumbs, names, the feed's
   links) keep their look and get an invisible larger area taking the
-  tap; checkboxes grow a little; the tiles' "…" is 36 px. What needs a
+  tap, which never covers a neighbouring target (decided 2026-11-22: in
+  dense lines a name took the taps meant for the title above): links in
+  lines of text grow sideways and fill their own line's height, each line
+  of a wrapped one; signals and the check grow into their row's spacing
+  only; checkboxes grow a little; the tiles' "…" is 36 px. What needs a
   keyboard (Home's "Search Ctrl+K", "Keyboard shortcuts") is not shown
   on phones (`.wb-keyboard-only`).
 

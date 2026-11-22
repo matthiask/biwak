@@ -55,7 +55,9 @@
     <div class="col-lg-8">
       <div class="card mb-4">
         <div class="card-body">
-          <div class="wb-markdown wb-doc-text" id="live-text" data-live>{% checklist_markdown doc.content item %}</div>
+          <div class="wb-markdown" id="live-text" data-live>
+            {% checklist_markdown doc.content item without_title=True %}
+          </div>
         </div>
       </div>
       {% reactions item %}

@@ -137,11 +137,12 @@ def markdown(text, item=None):
 
 
 @register.simple_tag(takes_context=True)
-def checklist_markdown(context, text, item, comment=None):
+def checklist_markdown(context, text, item, comment=None, *, without_title=False):
     """Like ``|markdown``, and for people who may change the text its
     checkboxes can be ticked in place (``frontend/checklist.js`` posts to
     ``item_tick``); the others see them disabled. ``comment``: the text is
-    that comment's."""
+    that comment's. ``without_title``: a doc's page, whose header shows
+    the first line when it's a heading (``render_markdown()``)."""
     from biwak.checklists import text_hash
     from biwak.items import operations as ops
 
@@ -150,7 +151,9 @@ def checklist_markdown(context, text, item, comment=None):
         allowed = not user.is_client or comment.author_id == user.pk
     else:
         allowed = ops.can_tick(user, item)
-    rendered = render_markdown(text, item, tickable=allowed)
+    rendered = render_markdown(
+        text, item, tickable=allowed, without_title=without_title
+    )
     if not allowed or 'data-index="' not in rendered:
         return rendered
     return format_html(
@@ -177,11 +180,14 @@ def render_markdown(
     attachment_urls=True,
     tickable=False,
     glyphs=False,
+    without_title=False,
 ):
     """``absolute`` for the API and mails: attachment URLs with BASE_URL.
     ``attachment_urls=False`` skips looking them up (excerpts don't show
     them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
-    turns them into ☐ and ☑ (mails)."""
+    turns them into ☐ and ☑ (mails). ``without_title`` leaves out the
+    first line when it's a heading: a doc's title (``doc_title()``), which
+    its page's header shows; the checkboxes keep their numbers."""
     from biwak.activity.mentions import mentioned_ids, reader, visible_people
 
     text = str(text or "")
@@ -194,9 +200,24 @@ def render_markdown(
         "glyphs": glyphs,
     }
     tokens = _markdown.parse(text, env)
+    if without_title:
+        tokens = _without_title(text, tokens)
     if attachment_urls:
         _attachment_urls(tokens, item, absolute=absolute)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
+
+
+def _without_title(text, tokens):
+    """The tokens without the heading on the text's first line with
+    anything in it (``doc_title()``'s line)"""
+    first = next(
+        (number for number, line in enumerate(text.splitlines()) if line.strip()),
+        None,
+    )
+    if tokens and tokens[0].type == "heading_open" and tokens[0].map[0] == first:
+        end = next(i for i, t in enumerate(tokens) if t.type == "heading_close")
+        return tokens[end + 1 :]
+    return tokens
 
 
 def _attachment_reference(token):

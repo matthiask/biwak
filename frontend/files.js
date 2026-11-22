@@ -1,8 +1,8 @@
 // A folder's tiles (files/_tiles.html, specs/files.md, "Moving and selecting"):
 // selecting several without checkboxes, Ctrl-click (Cmd on a Mac) adding
-// or removing a tile and Shift-click the range from the last one, Ctrl+Space
-// (Ctrl on a Mac too: Cmd+Space is Spotlight) and Shift+arrows on the
-// focused tile the same; the bar acts on the
+// or removing a tile and Shift-click the range from the last one, x (no
+// modifiers; it comes before shortcuts.js's x, which is the to-dos') and
+// Shift+arrows on the focused tile the same; the bar acts on the
 // selection, Escape and "Deselect" clear it. Tiles are dragged onto a
 // folder, ".." or a breadcrumb ([data-drop-folder]); dragging a selected
 // tile drags the selection. A plain click opens the tile as before.
@@ -82,7 +82,10 @@ grid.addEventListener("click", (event) => {
 grid.addEventListener("keydown", (event) => {
   const tile = event.target.closest("[data-tile-movable]")
   if (!tile) return
-  if (event.key === " " && event.ctrlKey) {
+  if (
+    event.key === "x" &&
+    !(event.ctrlKey || event.altKey || event.metaKey || event.shiftKey)
+  ) {
     event.preventDefault()
     toggle(tile)
     return

@@ -164,9 +164,10 @@ the counts of the top level's folders, docs and files.
 - **Selecting several** (decided 2026-11-21: no checkboxes, it looks
   nicer, at the price of being less discoverable): Ctrl-click (Cmd on a
   Mac) adds or removes a tile, Shift-click a range, a plain click opens.
-  Ctrl+Space and Shift+arrows on the focused tile do the same
-  (`palette/_shortcuts.html`); Ctrl+Space on a Mac too (decided
-  2026-11-22: Cmd+Space is Spotlight). A bar offers "Move to…", "Move to trash"
+  x and Shift+arrows on the focused tile do the same
+  (`palette/_shortcuts.html`; decided 2026-11-22: x, not Ctrl+Space,
+  which switches input sources on Macs with several layouts; it works
+  only on a focused tile, so it stays on with shortcuts off). A bar offers "Move to…", "Move to trash"
   and "Deselect" (Escape too); dragging a selected tile drags them all
   (`library.files_move`, `files_trash` taking `items`;
   `operations.move_items()`, `trash_items()`). A folder trashed with
@@ -228,9 +229,11 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   like any other. The page header shows the title as its `<h1>`, like
   other items' pages, and the text's first line, when it's a heading, is
   not shown again below it (decided 2026-11-22, replacing "no title in
-  the header": screen readers had no heading, phones no title; CSS,
-  `.wb-doc-text`). The live editor's heading is there for screen
-  readers only (the editor shows the first line, which changes as
+  the header": screen readers had no heading, phones no title; left out
+  when rendering, `checklist_markdown … without_title=True`, decided
+  2026-11-22: CSS hiding it missed texts whose task list can be ticked).
+  A first line that isn't a heading still shows below the title. The
+  live editor's heading is there for screen readers only (the editor shows the first line, which changes as
   people type). Messages keep their subject field. `create_doc()` (the API,
   the importer) puts `# <title>` and an empty line in front
   (`with_heading()`); the importer's second run doesn't add it twice.
