@@ -451,3 +451,85 @@ class MailTest(StartDatesBase):
         (message,) = [m for m in mail.outbox if m.to == [self.bob.email]]
         self.assertIn("Starts on: 3 December 2026", message.body)
         self.assertIn("changed it.", message.body)
+
+
+class APITest(StartDatesBase):
+    def api(self, user):
+        from biwak.accounts.models import APIToken
+
+        _token, secret = APIToken.create_for(user=user, title="Test", access="write")
+        return {"authorization": f"Bearer {secret}"}
+
+    def test_creating_and_changing_as_staff_and_as_a_client(self):
+        for user in [self.ada, self.cleo]:
+            with self.subTest(user=user):
+                headers = self.api(user)
+                response = self.client.post(
+                    f"/api/v1/lists/{self.list.pk}/todos/",
+                    {
+                        "title": "Book",
+                        "due_on": "2026-12-07",
+                        "starts_on": "2026-12-03",
+                    },
+                    content_type="application/json",
+                    headers=headers,
+                )
+                self.assertEqual(response.status_code, 201)
+                data = response.json()
+                self.assertEqual(
+                    (data["starts_on"], data["due_on"]), ("2026-12-03", "2026-12-07")
+                )
+                url = f"/api/v1/todos/{data['id']}/"
+                response = self.client.patch(
+                    url,
+                    {"starts_on": "2026-12-05"},
+                    content_type="application/json",
+                    headers=headers,
+                )
+                self.assertEqual(response.json()["starts_on"], "2026-12-05")
+                response = self.client.patch(
+                    url,
+                    {"due_on": "2026-12-04"},
+                    content_type="application/json",
+                    headers=headers,
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("can't be after", response.json()["detail"])
+                response = self.client.patch(
+                    url,
+                    {"due_on": None},
+                    content_type="application/json",
+                    headers=headers,
+                )
+                self.assertEqual(
+                    (response.json()["starts_on"], response.json()["due_on"]),
+                    (None, None),
+                )
+                self.assertEqual(
+                    self.client.get("/api/v1/todos/", headers=headers).status_code, 200
+                )
+
+    def test_no_start_date_without_a_due_date(self):
+        response = self.client.post(
+            f"/api/v1/lists/{self.list.pk}/todos/",
+            {"title": "Book", "starts_on": "2026-12-03"},
+            content_type="application/json",
+            headers=self.api(self.ada),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("needs a due date", response.json()["detail"])
+        self.assertFalse(Item.objects.filter(title="Book").exists())
+
+    def test_a_client_gets_404_for_internal_to_dos(self):
+        internal = ops.create_list(
+            project=self.project, title="Internal", creator=self.ada
+        )
+        item = self.todo(due="2026-12-07", todolist=internal)
+        response = self.client.patch(
+            f"/api/v1/todos/{item.pk}/",
+            {"starts_on": "2026-12-03"},
+            content_type="application/json",
+            headers=self.api(self.cleo),
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertIsNone(self.refresh(item).todo.starts_on)

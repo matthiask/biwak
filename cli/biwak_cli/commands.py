@@ -1073,11 +1073,18 @@ def todos(list_id, completed, mine, assigned_by_me, project_id, due, by_due, as_
             if "project_name" in todo
             else (todo["group"] or {}).get("title", ""),
             names(todo["assignees"]),
-            todo["due_on"] or "",
+            dates(todo),
             clients(todo),
         )
     console.print(t)
     return None
+
+
+def dates(todo):
+    """The due date, from the start date if there's one"""
+    if todo.get("starts_on"):
+        return f"{todo['starts_on']} – {todo['due_on']}"
+    return todo["due_on"] or ""
 
 
 def show_todos_by_project(data):
@@ -1105,7 +1112,7 @@ def show_todos_by_project(data):
             str(todo["id"]),
             todo["title"],
             names(todo["assignees"]),
-            todo["due_on"] or "",
+            dates(todo),
             clients(todo),
         )
     if t is not None:
@@ -1147,6 +1154,7 @@ def show_todo(data):
         ("Group", (data["group"] or {}).get("title")),
         ("Assignees", names(data["assignees"])),
         ("Due", data["due_on"]),
+        ("Starts", data.get("starts_on")),
         ("Repeats", data.get("recurrence_description")),
         ("Repeats until", data.get("recurrence_ends_on")),
         (
@@ -1189,12 +1197,15 @@ def todo_show(todo_id, comments, as_json):
 @click.argument("title")
 @click.option("--notes", default="", help="Markdown.")
 @click.option("--due", help="YYYY-MM-DD.")
+@click.option("--starts", help="YYYY-MM-DD, with --due and not after it.")
 @click.option("--assign", multiple=True, type=int, help="A person's ID, repeatable.")
 @click.option("--group", type=int, help="The group's ID.")
 @attach_option
 @repeat_option
 @json_option
-def todo_add(list_id, title, notes, due, assign, group, attach, repeat, as_json):
+def todo_add(
+    list_id, title, notes, due, starts, assign, group, attach, repeat, as_json
+):
     """Add a to-do titled TITLE to LIST"""
     if attach:
         project_id = request("GET", f"lists/{list_id}/")["project_id"]
@@ -1206,6 +1217,7 @@ def todo_add(list_id, title, notes, due, assign, group, attach, repeat, as_json)
             "title": title,
             "notes": notes,
             "due_on": due,
+            "starts_on": starts,
             "assignees": list(assign),
             "group_id": group,
             **({"recurrence": repeat} if repeat else {}),
@@ -1221,7 +1233,10 @@ def todo_add(list_id, title, notes, due, assign, group, attach, repeat, as_json)
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.option("--title")
 @click.option("--notes", help="Markdown, replaces the notes.")
-@click.option("--due", help="YYYY-MM-DD, or 'none' to remove it.")
+@click.option("--due", help="YYYY-MM-DD, or 'none' to remove it (and the start date).")
+@click.option(
+    "--starts", help="YYYY-MM-DD, not after the due date, or 'none' to remove it."
+)
 @click.option(
     "--assign",
     multiple=True,
@@ -1231,7 +1246,7 @@ def todo_add(list_id, title, notes, due, assign, group, attach, repeat, as_json)
 @attach_option
 @repeat_option
 @json_option
-def todo_edit(todo_id, title, notes, due, assign, attach, repeat, as_json):
+def todo_edit(todo_id, title, notes, due, starts, assign, attach, repeat, as_json):
     """Change TODO; --attach appends to the notes (or to --notes)"""
     changes = {}
     if title is not None:
@@ -1247,6 +1262,8 @@ def todo_edit(todo_id, title, notes, due, assign, attach, repeat, as_json):
         )
     if due is not None:
         changes["due_on"] = None if due == "none" else due
+    if starts is not None:
+        changes["starts_on"] = None if starts == "none" else starts
     if assign:
         changes["assignees"] = [pk for pk in assign if pk]
     if repeat is not None:
