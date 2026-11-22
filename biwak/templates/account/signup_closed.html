@@ -1,0 +1,15 @@
+{% extends "account/base_entrance.html" %}
+{# allauth's, in sentence case like the rest: nobody signs up, people are invited #}
+{% load allauth i18n %}
+{% block head_title %}
+  {% translate "Sign-up closed" %}
+{% endblock head_title %}
+
+{% block content %}
+  {% element h1 %}
+  {% translate "Sign-up closed" %}
+  {% endelement %}
+  {% element p %}
+  {% translate "We are sorry, but the sign up is currently closed." %}
+  {% endelement %}
+{% endblock content %}

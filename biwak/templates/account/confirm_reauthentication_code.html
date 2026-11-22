@@ -1,0 +1,24 @@
+{% extends "account/base_confirm_code.html" %}
+{# allauth's, in sentence case like the rest #}
+{% load account allauth i18n %}
+{% block head_title %}
+  {% translate "Confirm access" %}
+{% endblock head_title %}
+
+{% block title %}
+  {% translate "Enter the sign-in code" %}
+{% endblock title %}
+
+{% block recipient %}
+  {% if email %}
+    <a href="mailto:{{ email }}">{{ email }}</a>
+  {% else %}
+    <a href="tel:{{ phone }}">{{ phone }}</a>
+  {% endif %}
+{% endblock recipient %}
+
+{% block action_url %}
+  {% url 'account_confirm_reauthentication_code' %}
+{% endblock action_url %}
+
+{% block extra_tags %}login{% endblock %}

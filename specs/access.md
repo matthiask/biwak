@@ -209,6 +209,10 @@ The ways in, each specified in one place:
 `account/request_login_code.html`): the address for a code and "Sign in
 with a passkey" right there; single sign-on a little out of the way,
 behind "Sign in through your organization" (decided 2026-11-21).
+allauth's pages we show (signing in and out, codes, confirming access,
+the identity providers' pages) are overridden in `biwak/templates/` to
+say things in sentence case like the rest ("Sign in", "Remember me";
+fixed 2026-11-22, `accounts/test_sentence_case.py`).
 
 **The passkey offer** (decided 2026-11-20: once, dismissable;
 `biwak/accounts/passkeys.py`): the first page opened after a sign-in by

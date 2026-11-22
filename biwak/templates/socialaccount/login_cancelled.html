@@ -1,0 +1,16 @@
+{% extends "socialaccount/base_entrance.html" %}
+{# allauth's, in sentence case like the rest #}
+{% load allauth i18n %}
+{% block head_title %}
+  {% translate "Sign-in cancelled" %}
+{% endblock head_title %}
+
+{% block content %}
+  {% element h1 %}
+  {% translate "Sign-in cancelled" %}
+  {% endelement %}
+  {% url 'account_login' as login_url %}
+  {% element p %}
+  {% blocktranslate %}You decided to cancel logging in to our site using one of your existing accounts. If this was a mistake, please proceed to <a href="{{ login_url }}">sign in</a>.{% endblocktranslate %}
+  {% endelement %}
+{% endblock content %}
