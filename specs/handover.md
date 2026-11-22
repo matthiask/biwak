@@ -4,7 +4,15 @@ What happens to someone's work when they leave for good, and the tools to
 hand it over: assignments that stay, assigning several to-dos at once,
 and the admins' list of all projects. Decided with the user 2026-11-22.
 
-**Status:** specified (2026-11-22), not built.
+**Status:** built (2026-11-22). Deactivating keeps assignments
+(`activation.deactivate()`); inactive people in `{% avatar %}`,
+`{% person_page %}`, `feed.attach()`, `PeopleField`, the API's people;
+selecting rows `frontend/select-rows.js`, "Assign…"
+`biwak/items/assigning.py`, `ops.assign_todos()`, the batches in
+`lantern.py` and `mails.py`; the question `activation.what_is_left()`;
+"All projects" `biwak/projects/all_projects.py`; API and CLI 0.42.0.
+Choices made while building are below each section ("Built") and in
+`decisions-to-confirm.md`.
 
 Depends on: `activation.md` (deactivating), `todos.md` (assignees, the
 to-dos page, "Nobody active"), `files.md` (selecting tiles, the model
@@ -212,18 +220,3 @@ admins). Choices made on the way (decided 2026-11-22):
 Nothing happens to them (decided 2026-11-22): an all-access project
 stays open to all staff, a limited one to admins after joining. "All
 projects" shows them with "No active staff member".
-
-## Done when
-
-- Deactivating keeps assignments; inactive people show as such; the
-  to-dos page lists an inactive person's to-dos.
-- Selecting rows and "Assign…" work on the to-dos page and a list (list
-  and board), by mouse and keyboard; x selects, Shift+x completes
-  everywhere; one mail per assignee per "Assign…".
-- The deactivation question shows the counts and the projects as above.
-- "All projects" with its filters, API and CLI.
-- Tests: the operations, every page as staff, admin and client (clients
-  don't get "Assign…" where they can't change the to-dos, no "All
-  projects"), the API and CLI, browser tests for selecting and the
-  shortcuts; the help (`docs/todos.md`, `docs/keyboard.md`, the people
-  chapter, the projects chapter) and the specs named above updated.

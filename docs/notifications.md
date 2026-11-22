@@ -25,8 +25,9 @@ Subscribing to a list or a folder also tells you about what is created
 in it later. Joining a project subscribes you to nothing that exists
 already. "Unsubscribe" works on anything, except a to-do you are
 assigned to: "Unassign me" instead. A mail about one item has a link to
-unsubscribe from it; a mail about several uploaded files and the daily
-digest link to your notification settings.
+unsubscribe from it; a mail about several uploaded files, about several
+to-dos assigned to you at once ("Ada assigned you 23 to-dos") and the
+daily digest link to your notification settings.
 
 You are never told about what you did yourself, and only about what you
 can see.

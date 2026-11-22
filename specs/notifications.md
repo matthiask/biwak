@@ -232,7 +232,9 @@ large).
   2026-11-22: a round more than 10 minutes after the one before is a
   mail of its own unless it's the same batch). A batch still going up
   waits: while the newest file's event says `more` follow, up to
-  `BATCH_WAIT` (an hour) after it.
+  `BATCH_WAIT` (an hour) after it. **The to-dos of one "Assign…" are one
+  mail** the same way, per assigner across projects ("Ada assigned you
+  23 to-dos", `handover.md`).
 - **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
   day before, grouped by project and item, a batch as one entry; nothing
   to say, no mail. Subject `[Biwak] What happened on 19. November 2026`
