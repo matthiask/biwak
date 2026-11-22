@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 from storages.backends.s3 import S3Storage
 
@@ -34,7 +33,11 @@ class StorageURLTest(SimpleTestCase):
                 "access_key": "KEY",
                 "secret_key": "SECRET",
                 "bucket_name": "bucket",
+                "location": "",
                 "endpoint_url": "https://objects.example.org",
+                # speckenv translates django-s3-storage's options
+                "querystring_expire": 3600,
+                "object_parameters": {"CacheControl": "private, max-age=3600"},
                 "default_acl": None,
                 "querystring_auth": True,
                 "file_overwrite": False,
@@ -77,12 +80,14 @@ class StorageURLTest(SimpleTestCase):
             base_dir=BASE,
         )
         self.assertEqual(storage["OPTIONS"]["location"], "biwak/files")
-        # Always presigned: the bucket is private
+        # Always presigned and no public ACL: the bucket is private
         self.assertTrue(storage["OPTIONS"]["querystring_auth"])
+        self.assertIsNone(storage["OPTIONS"]["default_acl"])
 
-    def test_unknown_option(self):
-        with self.assertRaises(ImproperlyConfigured):
+    def test_an_option_without_a_counterpart(self):
+        # django-s3-storage's, which django-storages has no URL option for
+        with self.assertRaisesRegex(ValueError, "aws_s3_metadata"):
             storage_from_url(
-                "s3://KEY:SECRET@objects.example.org/bucket/?aws_s3_gzip=True",
+                "s3://KEY:SECRET@objects.example.org/bucket/?aws_s3_metadata=x",
                 base_dir=BASE,
             )

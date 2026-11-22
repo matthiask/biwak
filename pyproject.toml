@@ -32,7 +32,7 @@ dependencies = [
   "pypdfium2>=5.15.2",
   "python-dateutil>=2.9",
   "sentry-sdk<3",
-  "speckenv>=6.5",
+  "speckenv>=7",
   "time-machine>=3.6",
 ]
 

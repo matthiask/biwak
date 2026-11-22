@@ -153,7 +153,7 @@ requires-dist = [
     { name = "pypdfium2", specifier = ">=5.15.2" },
     { name = "python-dateutil", specifier = ">=2.9" },
     { name = "sentry-sdk", specifier = "<3" },
-    { name = "speckenv", specifier = ">=6.5" },
+    { name = "speckenv", specifier = ">=7" },
     { name = "time-machine", specifier = ">=3.6" },
 ]
 
@@ -1400,11 +1400,11 @@ wheels = [
 
 [[package]]
 name = "speckenv"
-version = "6.5.0"
+version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e9/0b/c5215328f6f1e5b62375658e0ad93b451a3c96974568d3440da892807fdc/speckenv-6.5.0.tar.gz", hash = "sha256:bd92f8c1c27c015a2c99c48a263a773836f23ea5918ba65a54eef7d093bd887f", size = 8768, upload-time = "2026-10-26T17:01:16.508Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/46/ba3f9a5f3e1e028a365ea21a6252e281c46370d203f40db68dc60c525761/speckenv-7.0.0.tar.gz", hash = "sha256:06ff9ba390899612a78812ecfc583f094586b30a3ca7d998648413021d8e3098", size = 10406, upload-time = "2026-11-22T20:32:10.395Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/de/f71d20e0c3bb4a7a696afcac0fb7697462e019c104aeff4090a6b271eeb9/speckenv-6.5.0-py3-none-any.whl", hash = "sha256:52942b1b0079ff0df37a57caa1b61eedb7ecbee8d54c8f2addb85273d5f07291", size = 9477, upload-time = "2026-10-26T17:01:15.109Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/61/abebd8643841142155a73bf40eb3e2f2d529edfb11e14e73e455cdcde11e/speckenv-7.0.0-py3-none-any.whl", hash = "sha256:fb4c0c93b37437ff03935a0510e0b296f164b753cecafbc15fef70844c4e9de0", size = 11207, upload-time = "2026-11-22T20:32:09.364Z" },
 ]
 
 [[package]]

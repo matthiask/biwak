@@ -16,21 +16,24 @@ level makes the item internal (like new top-level items).
 ## Storage
 
 Django's storage API (`django-storages`), chosen by `STORAGE_URL`
-(speckenv's `django_storage_url`, translated by `biwak/storage_url.py`;
-decided 2026-11-20):
+(speckenv's `django_storage_url`, which configures django-storages since
+speckenv 7; `biwak/storage_url.py` adds Biwak's defaults; decided
+2026-11-20):
 
 - `file:./media/` (the default): `BASE_DIR / "media"`, gitignored,
   served at `MEDIA_URL` (`/media/`) only with `DEBUG`
   (`files.views.media`, with the downloads' headers), as a bucket's
   presigned URLs are when deployed.
 - `s3://KEY:SECRET@host/bucket/[prefix/]`: an S3-compatible bucket,
-  private, presigned URLs always. The first deployment uses this.
-  Options without a translation are an error at startup. No ACLs are set
-  on objects (some providers refuse them): the bucket itself must be
-  private. Checksums only where an operation requires one
-  (`request_checksum_calculation="when_required"`, decided 2026-11-22):
-  botocore 1.36 and later add a CRC32 checksum to every upload, sent
-  chunked, and S3-compatible stores like Nine's answer InvalidArgument.
+  private, presigned URLs always, files never overwritten. The first
+  deployment uses this. Options in the query string are django-storages'
+  (django-s3-storage's are translated by speckenv; one without a
+  counterpart is an error at startup). No ACLs are set on objects (some
+  providers refuse them): the bucket itself must be private. Uploads send
+  checksums only where an operation requires one (speckenv 7, decided
+  2026-11-22): botocore 1.36 and later add a CRC32 checksum to every
+  upload, sent chunked, and S3-compatible stores like Nine's answer
+  InvalidArgument.
 - Paths: `files/<project id>/<random 16 characters>/<file name>`, so
   names never collide and URLs can't be guessed.
 - **Files are deleted** with their rows (`post_delete`, after the commit):
