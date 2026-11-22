@@ -6,6 +6,33 @@ and the build order; `specs/` has one spec per part. Read `SPEC.md` and
 the spec of the part you're working on before anything else, and update
 them when a decision changes (dated: "decided 2026-11-20").
 
+# Where we are (2026-11-22, the machine died; remove when resumed)
+
+- `main` is pushed and green up to the merges of today's parts (public
+  links, teams, rich editor, languages, externals, quiet hours, start
+  dates, forwarding, copying and moving, message order, person
+  activity, people who left, the smarter importer). Deployed: up to
+  `1c141ba` only; everything since is undeployed.
+- **In progress: UI round 10**, branch `ui-round-10` (pushed; worktree
+  `../biwak-ui-round-10` with database `biwak_ui_round_10`). Its notes and
+  decisions are in `specs/ui-feedback.md` ("Next round") plus three
+  added later, not yet written there:
+  - **Done** on the branch: a double click on an item to edit opens the
+    form and nothing else (1a5c504).
+  - **To do:** the to-do's "Created … by …"; imported assignments dated at
+    the to-do's creation; no "All people" link on a person's page; room
+    between consecutive marks in the activity (screenshot); files served
+    from presigned URLs (3600 s, cached on the server; `MEDIA_URL` with
+    `serve()` on disk; checking URLs only for mails, the API and shared
+    links); **one rule for moments**: relative within 7 days, then the
+    date, the exact time on hover, everywhere (not due/start dates);
+    **the to-do forms' dates**: "Start" and "Due" always there, start
+    first, both labelled.
+- **Waiting on the user:** the Basecamp export (`specs/import-basecamp.md`,
+  "Importing the whole account"); after importing in production: merge
+  the imported "Feinheit" into the own organization, rename it and add
+  the domain (done locally).
+
 # Running it
 
 - `./runtests.sh` runs all tests (needs the local PostgreSQL container:
