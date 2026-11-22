@@ -266,11 +266,12 @@ def member_invite(request, project_id: int, data: InviteIn):
 
 @router.delete("projects/{project_id}/members/{person_id}/", response=MemberOut)
 def member_remove(request, project_id: int, person_id: int):
-    """Staff remove anybody, everybody can leave (403 otherwise); returns
-    the person removed"""
+    """Own staff remove anybody, themselves included; clients and partners
+    get 403, for themselves too (decided 2026-11-22); returns the person
+    removed"""
     project = project_for(request, project_id)
     user = get_object_or_404(User, pk=person_id, memberships__project=project)
-    if user != request.user and not project_ops.can_manage_members(request.user):
+    if not project_ops.can_manage_members(request.user):
         raise HttpError(403, _("Only staff can remove people."))
     out = member_out(project, user, request.user)
     project_ops.remove_member(project, user, actor=request.user)

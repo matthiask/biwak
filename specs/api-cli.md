@@ -31,7 +31,9 @@ API first: everything the web interface does is possible through the API
   projects (the creator becomes a member, no event); admins list
   (`GET /api/v1/projects/joinable/`) and join limited projects they're
   not in; `DELETE /api/v1/projects/{id}/members/{person_id}/` removes a
-  member or leaves.
+  member, own staff only, themselves included (clients and partners get
+  403, for themselves too: nobody leaves, decided 2026-11-22,
+  `organizations.md`).
 - Webhooks for events: later (signed, retried, per project or
   installation), specified before building.
 

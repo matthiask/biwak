@@ -47,7 +47,11 @@ lists, messages, docs and files, check-ins, members.
 - **Members** lists who is in the project, by organization: your own
   first, then the clients' organizations, then partners'. Staff add
   people there, "Add people from …" an organization in the project, or
-  invite them by email (see [People](#people)). "Add someone" and other long lists of choices
+  invite them by email (see [People](#people)), and remove them with
+  "Remove from the project…" in the row's "…" menu, which asks first.
+  Clients and partners can't remove anybody, themselves included: to
+  hear less about a project, change its notifications instead (see
+  [Notifications](notifications.md)). "Add someone" and other long lists of choices
   (the person filter of the activity, a check-in's time zone) have a
   search field: type parts of the name, the organization or the address,
   in any order, then choose with the arrow keys and Enter or a click.

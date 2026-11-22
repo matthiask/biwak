@@ -140,10 +140,25 @@ manage none (`access.md`).
 - **The page's actions** (decided 2026-11-22): "Add someone", "Invite by
   email" and "Organizations" in the page header (all quiet, icons only on
   phones); each row has a "…" menu with "Notifications…" (a modal, the
-  choice of `notifications.md`, `member_notify`) and "Remove from the
-  project" or "Leave the project", where the person may; the current
-  choice is a quiet line under the name. It was a select with its own
-  Save on every row and the buttons in a column beside the list.
+  choice of `notifications.md`, `member_notify`) and, for own staff,
+  "Remove from the project…"; the current choice is a quiet line under
+  the name. It was a select with its own Save on every row and the
+  buttons in a column beside the list.
+- **Removing asks first, and nobody leaves** (decided 2026-11-22):
+  "Remove from the project…" opens a question (`member_remove`, GET asks
+  through `form_response(form=None)` like the trash, POST removes; a page
+  without JavaScript): "Remove Bob Example from Website?", saying
+  whether Bob still sees the project (own staff in an all-access one) or
+  doesn't any more and stops hearing about it, and that Bob's open
+  to-dos in it lose Bob as assignee; for oneself "Remove yourself from
+  …?", then the projects page. Only own staff (`can_manage_members()`)
+  remove people, anybody including themselves; clients and partners
+  can't leave any more (403 on the page and in the API). "Leave the
+  project" existed so that people could drop a project or stop hearing
+  about it; notifications cover that now ("Only when tagged", "No
+  mails", unsubscribing), and letting clients and partners leave let
+  them get around the organization's decisions about who works on a
+  project.
 
 ## API, CLI, importer
 

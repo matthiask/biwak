@@ -291,11 +291,30 @@ class MemberNotificationsTest(E2ETestCase):
         self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "tagged")
         self.assertEqual(self.errors, [])
 
+    def test_staff_remove_after_a_question(self):
+        page = self.page
+        self.goto(page, f"/projects/{self.project.pk}/people/")
+        page.locator('summary[aria-label="More: Cleo Example"]').click()
+        page.get_by_role("link", name="Remove from the project…").click()
+        dialog = page.get_by_role(
+            "dialog", name=f"Remove Cleo Example from {self.project.name}?"
+        )
+        dialog.get_by_role("button", name="Remove").click()
+        expect(dialog).to_be_hidden()
+        expect(page.locator('summary[aria-label="More: Cleo Example"]')).to_have_count(
+            0
+        )
+        self.assertFalse(self.project.is_member(self.cleo))
+        self.assertEqual(self.errors, [])
+
     def test_a_client_changes_only_their_own(self):
         page = self.login(self.cleo)
         self.goto(page, f"/projects/{self.project.pk}/people/")
         expect(page.locator('summary[aria-label="More: Ada Example"]')).to_have_count(0)
         page.locator('summary[aria-label="More: Cleo Example"]').click()
+        # No leaving (decided 2026-11-22)
+        expect(page.get_by_text("Leave the project")).to_have_count(0)
+        expect(page.get_by_text("Remove from the project")).to_have_count(0)
         page.get_by_role("link", name="Notifications…").click()
         dialog = page.get_by_role("dialog", name="Your notifications")
         expect(dialog).to_be_visible()

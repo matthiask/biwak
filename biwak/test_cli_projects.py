@@ -69,7 +69,8 @@ class ProjectGapsCLITest(test_cli.CLITest):
             self.biwak("projects", "--joinable", "--json").stdout.strip(), "[]"
         )
 
-    def test_remove_and_leave(self):
+    def test_remove_anybody_including_oneself(self):
+        """Own staff remove anybody, themselves included (decided 2026-11-22)"""
         bob = person("Bob")
         Membership.objects.create(project=self.project, user=bob)
         output = self.biwak("member", "remove", self.project.pk, bob.pk).output

@@ -29,6 +29,11 @@ through every entry point (`AGENTS.md`).
     (`remove_member()`, `update_project()`, `forget_lost_access()` in
     `biwak/projects/operations.py`). Open pages and editors check their
     access again.
+  - Only own staff remove members, anybody including themselves;
+    clients and partners can't leave (decided 2026-11-22: notifications
+    cover not hearing about a project, and leaving let them get around
+    the organization's decisions about who works on it,
+    `organizations.md`).
 - **Staff** with access to a project see everything in it.
 - **Partners see only their projects** (decided 2026-11-21,
   `organizations.md`): staff whose organization isn't the own one

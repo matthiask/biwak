@@ -18,7 +18,7 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   (notifying them is `notifications.md`).
 - **Removed or deactivated people are dropped** (decided 2026-11-21: "the
   removal will be visible in the history"): removing somebody from a
-  project (`remove_member()`, leaving too) takes them off its open
+  project (`remove_member()`, own staff removing themselves too) takes them off its open
   to-dos, deactivating (`activation.deactivate()`, withdrawing an
   invitation too) off the open to-dos of every project, trashed ones
   included, through `unassign()` (`ops.unassign_dropped()`): an
