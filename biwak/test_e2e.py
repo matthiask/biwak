@@ -2444,13 +2444,13 @@ class KeyboardTest(E2ETestCase):
         expect(current).to_contain_text("Two")
         page.keyboard.press("Escape")
         self.assertEqual(current.count(), 0)
-        # x completes the current row
+        # Shift+x completes the current row (x selects it, specs/handover.md)
         page.keyboard.press("j")
         page.keyboard.press("j")
         expect(current).to_contain_text("Two")
         # The check fills at once, the page follows the animation
         with page.expect_navigation():
-            page.keyboard.press("x")
+            page.keyboard.press("Shift+x")
         self.assertEqual(Item.objects.get(title="Two").todo.is_completed, True)
         self.assertEqual(Item.objects.get(title="One").todo.is_completed, False)
         # o opens it
@@ -2458,22 +2458,22 @@ class KeyboardTest(E2ETestCase):
         page.keyboard.press("o")
         page.wait_for_url("**/todos/*/")
 
-    def test_x_on_a_todos_page_does_what_it_says(self):
+    def test_shift_x_on_a_todos_page_does_what_it_says(self):
         self.make_list("Launch", todos=["Plan"])
         item = Item.objects.get(title="Plan")
         page = self.page
         self.goto(page, item)
-        # Someone else completes it meanwhile: x said "Complete", so it stays
-        # completed instead of being reopened
+        # Someone else completes it meanwhile: Shift+x said "Complete", so it
+        # stays completed instead of being reopened
         ops.complete(item, actor=self.bob)
         with page.expect_navigation():
-            page.keyboard.press("x")
+            page.keyboard.press("Shift+x")
         item.todo.refresh_from_db()
         self.assertEqual(item.todo.completed_by, self.bob)
         # Now it says "Reopen"
         expect(page.get_by_role("button", name="Reopen")).to_be_visible()
         with page.expect_navigation():
-            page.keyboard.press("x")
+            page.keyboard.press("Shift+x")
         item.todo.refresh_from_db()
         self.assertIsNone(item.todo.completed_at)
         self.assertEqual(self.errors, [])
@@ -3051,7 +3051,7 @@ class CompletionTest(E2ETestCase):
         self.make_list("Launch", todos=["Plan", "Pack"])
         self.goto(page, Item.objects.get(title="Launch"))
         page.keyboard.press("j")
-        page.keyboard.press("x")
+        page.keyboard.press("Shift+x")
         expect(page.locator(".wb-todo.is-completing")).to_have_count(1)
         expect(page.locator("[data-todos] .wb-todo")).to_have_count(1)
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)

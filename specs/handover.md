@@ -80,6 +80,55 @@ list's page (list and board).
   TODO… --to PERSON… [--replace]` (or extend the existing command; bump
   the version).
 
+Built (2026-11-22):
+
+- **Rows** carry `data-select-row` (`items/_todo.html`,
+  `items/_due_row.html`), the bar is `items/_selection_bar.html`;
+  `frontend/select-rows.js` selects (class `is-selected`, as the tiles),
+  `shortcuts.js` calls it for x and Shift+↑/↓ (only up and down: rows
+  are a column, also on the board, where Shift+arrows go through the
+  rows in document order) and completes on Shift+x. x goes with the
+  shortcuts setting like every single key; Ctrl- and Shift-click work
+  with it off (decided 2026-11-22, consistent: the tiles' x is on a
+  focused tile only). Ctrl-click on the check, the grip or the peek
+  keeps their own clicks.
+- **Grips:** clicking grips still selects for dragging several
+  (SortableJS's MultiDrag) with the same class, so the bar counts them
+  too; a click elsewhere no longer deselects them
+  (`avoidImplicitDeselect`, else the bar's "Assign…" would have emptied
+  the selection), Escape and "Deselect" do. Rows selected with
+  Ctrl-click aren't dragged together: MultiDrag's selection is one
+  group's, this one goes across groups, lists and projects (decided
+  2026-11-22: dragging several stays as it was).
+- **"Assign…"** is `/todos/assign/?items=…&next=…`
+  (`biwak/items/assigning.py`, the IDs in the query like the tiles'
+  `items`), back to the page it came from. The picker offers
+  `ops.assignable_to_all()` (members first when they're all in one
+  project). Everybody who sees a to-do may change its assignees
+  (`access.md`: to-dos' fields are shared work), so clients get
+  "Assign…" too, offering only members of every selected to-do's
+  project; what can't be changed is what the person doesn't see
+  (anymore): trashed, made internal, not a to-do. Then nothing changes
+  and the modal says "2 of the selected to-dos can't be changed by you:
+  they were trashed or you can't see them anymore." (also before
+  posting). Completed to-dos can be assigned, as on their page.
+- **`ops.assign_todos()`:** per to-do `unassign()` (with "Instead of")
+  and `assign()`; `AssignRefused` ("Bob can't be assigned to 3 of the
+  to-dos.") before anything changes. The events of more than one to-do
+  share a `batch`; `lantern.batch_key()` groups them per assigner
+  across projects with `chain()`, like uploads (so two "Assign…" of one
+  person within `MERGE_AFTER` are one entry and one mail, as two rounds
+  of uploads are). The entry and the mail: "Ada assigned you 23
+  to-dos." (to subscribers who weren't assigned: "Ada assigned people to
+  23 to-dos."), each to-do linked, the title "To-dos" linking `/todos/`;
+  the mail's subject "[Biwak] Ada assigned you 23 to-dos" (the project's
+  name when they're all in one). Subscribers of a to-do hear of the
+  assignment as with one to-do; those taken out by "Instead of" aren't
+  told.
+- **API** answers the to-dos (`TodoOut`); people not assignable to
+  every to-do are a 400 without names (a client mustn't learn who an ID
+  is). **CLI** `biwak todo assign` prints each to-do with its assignees.
+
 ## Deactivating says what's left
 
 The question before deactivating (`activation.md`) adds, for whoever

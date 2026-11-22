@@ -27,10 +27,33 @@ project. Staff create lists with "New list" on the project's page.
   palette's suggestions, and its recurring to-dos don't repeat. Nothing
   is archived automatically. To-dos are completed, not archived.
 
+## Assigning several at once
+
+On a list (also as a board) and on the to-dos page you can select
+to-dos and assign them together, for example when somebody leaves and
+their to-dos go to someone else:
+
+- **Selecting:** <kbd>Ctrl</kbd>-click (<kbd>⌘</kbd>-click on a Mac) a
+  to-do to add it to the selection or take it out, <kbd>Shift</kbd>-click
+  to select everything from the one clicked last. With the keyboard,
+  <kbd>x</kbd> selects the current row (<kbd>j</kbd>/<kbd>k</kbd> move),
+  <kbd>Shift</kbd>+<kbd>↓</kbd>/<kbd>↑</kbd> selects on. A plain click
+  opens the to-do as always. <kbd>Esc</kbd> or "Deselect" clears the
+  selection.
+- **Assign…** in the bar at the bottom opens a form: choose the people
+  (only those who can be assigned to every selected to-do are offered)
+  and whether they come "Instead of the current assignees"; without it
+  they're added. Each new assignee gets one notification for all of
+  them ("Ada assigned you 23 to-dos"). People taken out aren't told.
+  If one of the to-dos was trashed or you can't see it anymore, nothing
+  changes and the form says so. Taking somebody off is done per to-do.
+
+`biwak todo assign 12 13 14 --to 7 [--replace]` does the same.
+
 ## A to-do
 
-Tick the checkbox on a row to complete it, or open the to-do and press
-"Complete". "Reopen" undoes it. Everybody who sees a to-do can
+Tick the checkbox on a row to complete it (<kbd>Shift</kbd>+<kbd>x</kbd>
+on the current row), or open the to-do and press "Complete". "Reopen" undoes it. Everybody who sees a to-do can
 complete it, and completing it completes it for all assignees. The
 check pops, the title is struck through and the row fades away; the last
 open to-do of a list gets a small burst and "All done." (not with reduced

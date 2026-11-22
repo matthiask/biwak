@@ -4,7 +4,14 @@
   then a line with the assignees, the due date and the signals; the title
   wraps inside it (specs/todos.md, "Lists and the board").
 {% endcomment %}
-<div class="wb-todo" data-todo="{{ todo.pk }}" id="todo-{{ todo.pk }}" data-live data-kb-row>
+<div
+  class="wb-todo"
+  data-todo="{{ todo.pk }}"
+  id="todo-{{ todo.pk }}"
+  data-live
+  data-kb-row
+  data-select-row="{{ todo.pk }}"
+>
   {% if not todo.todo.is_completed %}<span
       class="wb-handle"
       data-handle

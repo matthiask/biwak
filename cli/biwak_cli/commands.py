@@ -1108,6 +1108,41 @@ def todo_move(todo_id, todo_ids, list_id, group, as_json):
     return None
 
 
+@todo.command("assign")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@click.option(
+    "--to",
+    "people",
+    multiple=True,
+    type=int,
+    required=True,
+    help="A person's ID, repeatable.",
+)
+@click.option(
+    "--replace",
+    is_flag=True,
+    help="Instead of the current assignees (default: added to them).",
+)
+@json_option
+def todo_assign(todo_ids, people, replace, as_json):
+    """Assign the people --to to every TODO at once: all or nothing; each new
+    assignee is told once"""
+    data = request(
+        "POST",
+        "todos/assign/",
+        json={"ids": list(todo_ids), "people": list(people), "replace": replace},
+    )
+    if as_json:
+        return echo_json(data)
+    for assigned in data:
+        marker = f" {clients(assigned)}" if clients(assigned) else ""
+        click.echo(
+            f"#{assigned['id']} {assigned['title']}{marker}:"
+            f" {names(assigned['assignees'])}"
+        )
+    return None
+
+
 @todo.command("done")
 @click.argument("todo_id", metavar="TODO", type=int)
 @json_option

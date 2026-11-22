@@ -3,7 +3,8 @@
   The lantern's notifications grouped by item (specs/lantern.md): `groups`
   is [(item, notifications)], newest first; `next` where the buttons come
   back to. Files uploaded together are one entry (`item.is_batch`,
-  lantern.Batch): its folder, a line and the files.
+  lantern.Batch): its folder, a line and the files; so are the to-dos of
+  one "Assign…".
 {% endcomment %}
 {% for item, entries in groups %}
   <section class="wb-lantern-item{% if item.has_unread %} is-unread{% endif %}" data-lantern-item="{{ item.pk }}">
@@ -60,7 +61,7 @@
         </button>
       </form>
     </div>
-    <div class="small text-body-secondary">{{ item.project }}</div>
+    {% if item.project %}<div class="small text-body-secondary">{{ item.project }}</div>{% endif %}
     <ul class="list-unstyled mb-0">
       {% for notification in entries %}
         <li class="wb-lantern-entry{% if not notification.read_at %} is-unread{% endif %}">
@@ -84,7 +85,7 @@
                     href="{{ file.get_absolute_url }}"
                     class="wb-lantern-link"
                     data-lantern-read="{{ file.read_url }}"
-                  >{% icon "file-earmark" %} {{ file|item_title }}</a>
+                  >{% icon item.item_icon %} {{ file|item_title }}</a>
                 </li>
               {% endfor %}
             </ul>

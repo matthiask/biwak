@@ -34,9 +34,12 @@ reach the palette.
   on lists, the board and the to-dos page, messages, search results,
   entries in the activity feed. The current row is outlined.
 - <kbd>Enter</kbd> or <kbd>o</kbd> opens the current row.
-- <kbd>x</kbd> completes or reopens the current to-do, or the to-do
-  whose page you are on; on a folder's tile it selects the tile or takes
-  it out of the selection.
+- <kbd>Shift</kbd>+<kbd>x</kbd> completes or reopens the current to-do,
+  or the to-do whose page you are on.
+- <kbd>x</kbd> selects the current to-do (on a list, the board and the
+  to-dos page) or a folder's tile, or takes it out of the selection;
+  <kbd>Shift</kbd> with the arrow keys selects on. See
+  [Assigning several at once](todos.md#assigning-several-at-once).
 - <kbd>c</kbd> writes a comment, <kbd>e</kbd> edits, <kbd>b</kbd>
   bookmarks, <kbd>s</kbd> subscribes or unsubscribes, on an item's page.
 - <kbd>g</kbd>, then a letter, goes somewhere: <kbd>g</kbd> <kbd>h</kbd>

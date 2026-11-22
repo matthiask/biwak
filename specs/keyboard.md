@@ -64,9 +64,12 @@ never with Ctrl, Alt or Meta (except Ctrl+K). The one list is
   search results); the row is marked (`.wb-kb-current`) and its link
   focused. **Enter** (while focus is on the page or the row) or **o**
   opens it.
-- **x:** completes or reopens the current to-do or the page's to-do;
-  on a focused tile of a folder it selects the tile instead
-  (`frontend/files.js`, decided 2026-11-22, `files.md`).
+- **Shift+x:** completes or reopens the current to-do or the page's
+  to-do (the palette's "Complete"/"Reopen" shows it). **x** selects:
+  the current to-do row on a list, the board and the to-dos page
+  (`frontend/select-rows.js`, decided 2026-11-22, `handover.md`), a
+  focused tile of a folder (`frontend/files.js`, `files.md`); Shift with
+  the arrow keys selects on.
 - **c** comment, **e** edit, **b** bookmark, **s** subscribe or
   unsubscribe.
 - **g** then **h** (Home), **p** (projects), **f** (feed), **t**
@@ -76,7 +79,7 @@ never with Ctrl, Alt or Meta (except Ctrl+K). The one list is
 
 Rows say what they are through attributes, so one script serves every
 page (`frontend/shortcuts.js`): `data-kb-row`, `data-kb-open`,
-`data-kb-complete`. No page-specific JavaScript.
+`data-kb-complete`, `data-select-row`. No page-specific JavaScript.
 
 ## The settings page
 

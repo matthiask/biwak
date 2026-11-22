@@ -289,7 +289,7 @@ class ItemActionsTest(ActionsBase):
     def test_a_to_do(self):
         for user in [self.ada, self.cleo]:
             actions = self.actions(user, self.todo.get_absolute_url())
-            self.assertEqual(actions["Complete"]["shortcut"], "x")
+            self.assertEqual(actions["Complete"]["shortcut"], "Shift+x")
             self.assertEqual(actions["Complete"]["type"], "post")
             self.assertEqual(
                 actions["Complete"]["url"], f"/todos/{self.todo.pk}/toggle/"

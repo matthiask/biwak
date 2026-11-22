@@ -63,12 +63,20 @@ def wanted(notifications, user):
     return _deliverable(notifications, user, others=others)
 
 
-def upload_key(notification):
+# The key of to-dos assigned by one "Assign…" (``batch_key()``)
+ASSIGNED = "assigned"
+
+
+def batch_key(notification):
     """For files uploaded in a batch: who uploaded them where (the project
-    and the folder, or the top level); None for anything else"""
+    and the folder, or the top level); for to-dos assigned by one
+    "Assign…" (specs/handover.md): who assigned them, across projects;
+    None for anything else"""
     event = notification.event
     if not event.data.get("batch"):
         return None
+    if event.action == Action.ASSIGNED:
+        return (ASSIGNED, event.actor_id)
     return (event.actor_id, event.project_id, event.item.parent_id)
 
 
@@ -95,61 +103,63 @@ def chain(chains, key, batch, at):
     return number
 
 
-def group_uploads(notifications):
-    """Sets ``upload_entry`` on the notifications of files uploaded in
+def group_batches(notifications):
+    """Sets ``batch_entry`` on the notifications of files uploaded in
     batches: one person's uploads into one folder (or the top level), each
     within ``mails.MERGE_AFTER`` of the one before or of its batch, are one
     entry, also from separate rounds (decided 2026-11-21, like the feed
-    merges; ``chain()``). Returns the notifications."""
+    merges; ``chain()``). To-dos one person assigned with "Assign…" the
+    same (specs/handover.md). Returns the notifications."""
     chains = {}
     for notification in sorted(notifications, key=lambda n: (n.created_at, n.pk)):
-        key = upload_key(notification)
+        key = batch_key(notification)
         if key is None:
             continue
         number = chain(
             chains, key, notification.event.data["batch"], notification.created_at
         )
-        notification.upload_entry = (*key, number)
+        notification.batch_entry = (*key, number)
     return notifications
 
 
 def entry_key(notification):
     """What the lantern's entry of a notification is: its item, or the
     files uploaded together (specs/files.md, "Uploading files";
-    ``group_uploads()`` ran)"""
-    if entry := getattr(notification, "upload_entry", None):
+    ``group_batches()`` ran)"""
+    if entry := getattr(notification, "batch_entry", None):
         return ("batch", entry)
     return ("item", notification.event.item_id)
 
 
 def entry_items(user, notification):
     """The items of the notification's entry: its item, or the files
-    uploaded together (``group_uploads()`` among the person's
+    uploaded together (``group_batches()`` among the person's
     notifications of that person's uploads there)"""
-    key = upload_key(notification)
+    key = batch_key(notification)
     if key is None:
         return [notification.event.item]
-    actor, project, parent = key
-    same = group_uploads(
-        list(
-            notifications_for(user).filter(
-                event__actor=actor,
-                event__project=project,
-                event__item__parent=parent,
-                event__action=Action.CREATED,
-                event__data__has_key="batch",
-            )
+    if key[0] == ASSIGNED:
+        same = notifications_for(user).filter(
+            event__actor=key[1], event__action=Action.ASSIGNED
         )
-    )
-    entry = next(n.upload_entry for n in same if n.pk == notification.pk)
-    return [n.event.item for n in same if n.upload_entry == entry]
+    else:
+        actor, project, parent = key
+        same = notifications_for(user).filter(
+            event__actor=actor,
+            event__project=project,
+            event__item__parent=parent,
+            event__action=Action.CREATED,
+        )
+    same = group_batches(list(same.filter(event__data__has_key="batch")))
+    entry = next(n.batch_entry for n in same if n.pk == notification.pk)
+    return [n.event.item for n in same if n.batch_entry == entry]
 
 
 def unread_counts(user):
     """``(notifications, entries)``: how many unread notifications the
     person has, and about how many items (the menu groups by item, and a
     batch of files is one entry)"""
-    unread = group_uploads(wanted(list(notifications_for(user, unread=True)), user))
+    unread = group_batches(wanted(list(notifications_for(user, unread=True)), user))
     return len(unread), len({entry_key(n) for n in unread})
 
 
@@ -210,14 +220,16 @@ def unread_by_item(user, item_ids):
 
 
 class Batch:
-    """Files uploaded together (``group_uploads()``), one entry of the
+    """Files uploaded together (``group_batches()``), one entry of the
     lantern in place of an item's: "Ada uploaded 5 files to Minutes", each
-    file linked"""
+    file linked; or the to-dos of one "Assign…" (specs/handover.md): "Ada
+    assigned you 23 to-dos", each to-do linked"""
 
     is_batch = True
-    kind_icon = "upload"
 
     def __init__(self, entries):
+        from biwak.search.views import KIND_ICONS
+
         newest = entries[0]
         files = {}
         for notification in reversed(entries):
@@ -227,16 +239,33 @@ class Batch:
         self.files = list(files.values())
         # What frontend/lantern.js tells the entries apart by
         self.pk = f"{self.files[0].pk}-batch"
+        self.has_unread = any(n.read_at is None for n in entries)
+        projects = {item.project_id for item in self.files}
+        # Across projects for to-dos: none to name
+        self.project = self.files[0].project if len(projects) == 1 else None
+        event = newest.event
+        if event.action == Action.ASSIGNED:
+            self.kind_icon = "person-plus"
+            self.item_icon = KIND_ICONS[self.files[0].kind]
+            you = any(
+                newest.user_id in n.event.data.get("assignees", ()) for n in entries
+            )
+            self.title = _("To-dos")
+            self.url = reverse("todos")
+            self.line = assigned_line(event.actor, len(self.files), you=you)
+            self.subject = self.line.removesuffix(".")
+            return
+        self.kind_icon = "upload"
+        self.item_icon = "file-earmark"
         folder = self.files[0].parent
-        self.project = self.files[0].project
         self.title = folder.title if folder else _("Docs and files")
+        self.subject = self.title
         self.url = (
             folder.get_absolute_url()
             if folder
             else reverse("project_files", args=[self.project.pk])
         )
-        self.has_unread = any(n.read_at is None for n in entries)
-        self.line = batch_line(newest.event.actor, len(self.files), self.title)
+        self.line = batch_line(event.actor, len(self.files), self.title)
 
 
 def batch_line(actor, count, where):
@@ -245,6 +274,24 @@ def batch_line(actor, count, where):
         "%(actor)s uploaded %(count)s files to %(where)s.",
         count,
     ) % {"actor": actor, "count": count, "where": where}
+
+
+def assigned_line(actor, count, *, you):
+    """ "Ada assigned you 23 to-dos.", or for those told who weren't
+    assigned (subscribed to the to-dos) "Ada assigned people to 23 to-dos." """
+    if you:
+        text = ngettext(
+            "%(actor)s assigned you a to-do.",
+            "%(actor)s assigned you %(count)s to-dos.",
+            count,
+        )
+    else:
+        text = ngettext(
+            "%(actor)s assigned people to a to-do.",
+            "%(actor)s assigned people to %(count)s to-dos.",
+            count,
+        )
+    return text % {"actor": actor, "count": count}
 
 
 def by_item(notifications, *, batches=True):
@@ -256,7 +303,7 @@ def by_item(notifications, *, batches=True):
 
     groups = {}
     if batches:
-        group_uploads(notifications)
+        group_batches(notifications)
     for notification in notifications:
         key = (
             entry_key(notification) if batches else ("item", notification.event.item_id)
