@@ -94,6 +94,16 @@ class LiveTest(TestCase):
         self.item = Item.objects.select_related("doc").get(pk=self.item.pk)
         self.doc = self.item.doc
 
+    def test_the_reading_view_shows_what_was_typed(self):
+        """ "Done" leads to the reading view while the editor's connection is
+        still closing: the page saves what was typed first, not after a
+        reload"""
+        self.type(self.ada, "Agenda and minutes")
+        self.client.force_login(self.ada)
+        response = self.client.get(self.item.get_absolute_url())
+        self.assertContains(response, "Agenda and minutes")
+        self.assertFalse(LiveUpdate.objects.filter(doc=self.doc).exists())
+
     def test_access(self):
         visible = bare_doc(
             project=self.project, title="Shared", creator=self.ada, visible=True

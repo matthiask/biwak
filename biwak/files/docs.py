@@ -12,6 +12,7 @@ from biwak.activity.history import diff_lines
 from biwak.activity.notify import told_line
 from biwak.activity.views import SubscribersForm
 from biwak.collab import live
+from biwak.collab.models import LiveUpdate
 from biwak.files import operations, queries
 from biwak.files.common import comments_context, sidebar_context
 from biwak.files.library import (
@@ -63,6 +64,12 @@ def _doc_context(request, item):
 
 def doc(request, pk):
     item = item_for(request, pk, Kind.DOC, drafts=True)
+    # "Done" in the live editor leads here while its connection is still
+    # closing (and saving): what was typed is saved first, as in doc_tell,
+    # credited to who typed it (collab.live.merge())
+    if LiveUpdate.objects.filter(doc_id=item.pk).exists():
+        operations.save_live(item.pk, request.user)
+        item = item_for(request, pk, Kind.DOC, drafts=True)
     if item.is_draft:
         # "Done" before writing anything: nothing to show
         return redirect(library_url(item.project, item.parent))

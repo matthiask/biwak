@@ -79,8 +79,10 @@ for or removes somebody else.
   cursor's JSON 1 KB, a state vector 16 KB. Typing isn't limited, and
   nothing beyond the websocket frame limit limits a doc's size.
 - **Storing** (`files.operations.save_live()`): 3 seconds after the last
-  update, at least every 30 seconds while somebody types, and when an
-  editor leaves; `fairy_tasks` saves what's left. It writes
+  update, at least every 30 seconds while somebody types, when an
+  editor leaves, and when the doc's reading view opens with unsaved
+  typing ("Done" leads there while the editor's connection is still
+  closing; fixed 2026-11-22); `fairy_tasks` saves what's left. It writes
   `Doc.content` through the doc operations: an `edited` event per
   person whose updates it merges (one per editing session of 10
   minutes), mentions credited to who typed them, a version by the rules
