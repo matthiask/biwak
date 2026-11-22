@@ -1509,7 +1509,7 @@ def checkins(project, as_json):
         t.add_row(
             str(question["id"]),
             question["title"],
-            f"{asked} {question['time_zone']}",
+            asked,
             "paused"
             if question["paused"]
             else (question["next_at"] or "")[:16].replace("T", " "),
@@ -1549,7 +1549,6 @@ def checkin_show(question_id, limit, as_json):
     click.echo(f"#{data['id']} {data['title']}{marker}")
     for label, value in [
         ("Asked", f"{data['schedule_description']}, {data['time_of_day'][:5]}"),
-        ("Time zone", data["time_zone"]),
         ("People", names(data["people"])),
         ("Mails about answers", data["mail"]),
         ("Paused", "yes" if data["paused"] else ""),
@@ -1626,8 +1625,12 @@ def checkin_due(project, as_json):
         "quarterly, yearly (counting from --from) or an RRULE (at most daily)."
     ),
 )
-@click.option("--time", "time_of_day", required=True, help="HH:MM.")
-@click.option("--zone", help="The time zone (default: the installation's).")
+@click.option(
+    "--time",
+    "time_of_day",
+    required=True,
+    help="HH:MM, in the installation's time zone.",
+)
 @click.option(
     "--from", "starts_on", help="YYYY-MM-DD, the first date (default: today)."
 )
@@ -1641,7 +1644,6 @@ def checkin_add(
     title,
     schedule,
     time_of_day,
-    zone,
     starts_on,
     people,
     clients,
@@ -1655,8 +1657,6 @@ def checkin_add(
         "people": list(people),
         "visible_to_clients": clients,
     }
-    if zone:
-        body["time_zone"] = zone
     if starts_on:
         body["starts_on"] = starts_on
     data = request("POST", f"projects/{project}/checkins/", json=body)
