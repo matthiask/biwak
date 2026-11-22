@@ -16,3 +16,7 @@ Seven rounds are built (2026-11-21).
   - Decided 2026-11-22: the people picker (autocomplete), with teams for several at once; clients only offered while the question is visible to clients.
 - In the people of a project list, I'd like to be able to configure notifications directly and remove people from the project directly. The more menu with the modal requires too many clicks for my taste.
   - Decided 2026-11-22: removing always asks first (a modal or a confirmation in place, either is fine).
+
+## Next round
+
+- Ctrl+Enter should submit all kinds of forms, for example the comment form.
