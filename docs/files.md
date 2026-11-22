@@ -3,10 +3,13 @@
 ## Messages
 
 The **message board** of a project (Messages on the project's page) is
-for announcements and discussions that aren't about one to-do. Newest
-first, pinned messages on top, each with its category, author, date and
+for announcements and discussions that aren't about one to-do. Pinned
+messages on top, then the rest, each with its category, author, date and
 number of comments.
 
+- **Order:** "Latest update" (the default: a new comment brings a
+  message up, editing doesn't) or "Newest posts", chosen by staff on the
+  board for everybody and followed by the project page.
 - **New message:** title, text (Markdown), an optional category,
   "Visible to clients" (staff). A line says who will be told: whoever
   wants to hear about something new (notified of everything, or
