@@ -1,9 +1,12 @@
 // The toolbar above every Markdown field (`textarea[data-toolbar]`,
 // specs/editor.md), and above the live editor of docs (`attachToEditor()`),
 // and the keys that go with it. The buttons come from
-// `forms/_toolbar.html`; every one works on the textarea's text, changing
-// only what it must through `execCommand("insertText")`, so Ctrl+Z undoes
-// a button as it undoes typing. Without JavaScript the fields stay plain.
+// `forms/_toolbar.html`. The rich editor (frontend/editor/,
+// specs/rich-editor.md) has its own actions (`field.richEditor.run()`);
+// these here work on the textarea's text, the Markdown source the rich
+// editor's "Markdown" switch shows, changing only what they must through
+// `execCommand("insertText")`, so Ctrl+Z undoes a button as it undoes
+// typing. Without JavaScript the fields stay plain.
 
 export function replace(field, start, end, text) {
   if (field.editorView) {
@@ -211,7 +214,7 @@ function buttons(bar) {
 }
 
 // One tab stop for the toolbar; arrows move within it
-function roving(bar) {
+export function roving(bar) {
   const all = buttons(bar)
   all.forEach((button, index) => {
     button.tabIndex = index === 0 ? 0 : -1
@@ -226,6 +229,9 @@ function build(field, template) {
   bar.append(template.content.cloneNode(true))
   if (!field.dataset.mentions)
     bar.querySelector('[data-toolbar-action="mention"]').hidden = true
+  // The rich editor's "Markdown" switch, shown once it's there
+  const source = bar.querySelector('[data-toolbar-action="source"]')
+  if (source) source.hidden = true
   roving(bar)
   // Clicking a button keeps the field's focus and selection
   bar.addEventListener("mousedown", (event) => {
@@ -233,7 +239,13 @@ function build(field, template) {
   })
   bar.addEventListener("click", (event) => {
     const button = event.target.closest("[data-toolbar-action]")
-    if (button) ACTIONS[button.dataset.toolbarAction](field)
+    if (!button) return
+    // The rich editor (frontend/editor/) has its own actions, also while
+    // its source is shown (the switch)
+    const editor = field.richEditor
+    if (editor && (editor.active || button.dataset.toolbarAction === "source"))
+      editor.run(button.dataset.toolbarAction)
+    else ACTIONS[button.dataset.toolbarAction](field)
   })
   bar.addEventListener("keydown", (event) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
@@ -250,6 +262,7 @@ function build(field, template) {
     next.focus()
   })
   field.before(bar)
+  field.toolbar = bar
 
   field.addEventListener("keydown", (event) => {
     if (event.isComposing) return

@@ -139,7 +139,7 @@ class EditingTest(E2ETestCase):
         self.assertFalse(Editing.objects.exists())
         # The form shown in place announces itself
         self.page.get_by_role("link", name="Edit").click()
-        expect(self.page.locator("textarea[name=notes]")).to_be_visible()
+        expect(self.editor(self.page.locator("textarea[name=notes]"))).to_be_visible()
         for _ in range(50):
             if Editing.objects.filter(item=todo).exists():
                 break
@@ -153,28 +153,52 @@ class EditingTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
+# Selects the first occurrence of a text in the rich editor (all: the
+# whole document)
+SELECT = """(el, text) => {
+    const view = el.richEditor.view
+    const doc = view.state.doc
+    let from = 1, to = doc.content.size - 1
+    if (text !== null) {
+        from = 0
+        doc.descendants((node, pos) => {
+            if (from || !node.isText) return !from
+            const i = node.text.indexOf(text)
+            if (i >= 0) { from = pos + i; to = from + text.length }
+        })
+    }
+    const sel = view.state.selection.constructor
+    view.dispatch(view.state.tr.setSelection(sel.create(doc, from, to)))
+    view.focus()
+}"""
+
+
 class ToolbarTest(E2ETestCase):
+    """The toolbar's buttons and keys in the rich editor (specs/editor.md,
+    specs/rich-editor.md)"""
+
     def setUp(self):
         super().setUp()
         self.page.set_viewport_size({"width": 1000, "height": 800})
         self.goto(self.page, reverse("message_new", args=[self.project.pk]))
         self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
         self.bar = self.page.locator(".wb-toolbar")
 
     def button(self, name):
         return self.bar.locator(f'[data-toolbar-action="{name}"]')
 
-    def put(self, text, start=None, end=None):
-        """The field with this text, the selection from ``start`` to ``end``
-        (default: all)"""
-        self.field.fill(text)
-        self.select(0 if start is None else start, len(text) if end is None else end)
+    def put(self, text, selected=None):
+        """The editor with this Markdown, ``selected`` (default: all)
+        selected"""
+        self.set_markdown(self.field, text)
+        self.select(selected)
 
-    def select(self, start, end=None):
-        self.field.evaluate(
-            "(el, [s, e]) => { el.focus(); el.setSelectionRange(s, e) }",
-            [start, start if end is None else end],
-        )
+    def select(self, text=None):
+        self.field.evaluate(SELECT, text)
+
+    def caret_at_end(self):
+        self.box.press("ControlOrMeta+End")
 
     def value(self):
         return self.field.input_value()
@@ -192,129 +216,288 @@ class ToolbarTest(E2ETestCase):
             "quote",
             "code",
             "mention",
+            "source",
         ]:
             expect(self.button(name)).to_be_visible()
-        # The attach button moved into it
+        # The attach button moved into it, before "Markdown"
         expect(self.bar.locator("button", has_text="Attach")).to_be_visible()
         self.assertEqual(self.page.locator(".wb-toolbar").count(), 1)
+        self.assertEqual(
+            self.bar.locator("button:visible").last.get_attribute(
+                "data-toolbar-action"
+            ),
+            "source",
+        )
+        expect(self.field).to_be_hidden()
 
-    def test_inline_buttons_wrap_and_unwrap(self):
-        self.put("make this bold", 5, 9)
+    def test_inline_buttons_toggle_and_show_what_is_on(self):
+        self.put("make this bold", "this")
         self.button("bold").click()
         self.assertEqual(self.value(), "make **this** bold")
+        expect(self.button("bold")).to_have_attribute("aria-pressed", "true")
         self.button("bold").click()
         self.assertEqual(self.value(), "make this bold")
+        expect(self.button("bold")).to_have_attribute("aria-pressed", "false")
         self.button("italic").click()
-        self.assertEqual(self.value(), "make _this_ bold")
-        self.put("x", 1, 1)
+        self.assertEqual(self.value(), "make *this* bold")
+        self.put("x y", "y")
         self.button("code").click()
-        self.assertEqual(self.value(), "x``")
-        self.field.fill("")
+        self.assertEqual(self.value(), "x `y`")
+        # Nothing selected: what's typed next
+        self.put("")
         self.button("bold").click()
-        self.assertEqual(self.value(), "**bold**")
-        self.assertEqual(
-            self.field.evaluate(
-                "el => el.value.slice(el.selectionStart, el.selectionEnd)"
-            ),
-            "bold",
-        )
+        self.box.press_sequentially("loud")
+        self.assertEqual(self.value(), "**loud**")
 
     def test_undo_after_a_button(self):
-        self.put("make this bold", 5, 9)
+        self.put("make this bold", "this")
         self.button("bold").click()
         self.assertEqual(self.value(), "make **this** bold")
-        self.field.press("ControlOrMeta+z")
+        self.box.press("ControlOrMeta+z")
         self.assertEqual(self.value(), "make this bold")
+        self.box.press("ControlOrMeta+Shift+z")
+        self.assertEqual(self.value(), "make **this** bold")
 
     def test_links(self):
-        self.put("see docs", 4, 8)
+        self.put("see docs", "docs")
         self.button("link").click()
-        self.assertEqual(self.value(), "see [docs](url)")
-        self.assertEqual(
-            self.field.evaluate(
-                "el => el.value.slice(el.selectionStart, el.selectionEnd)"
-            ),
-            "url",
-        )
-        self.put("https://example.org/a")
+        address = self.page.locator(".wb-link-ask input")
+        expect(address).to_be_focused()
+        address.fill("https://example.org/docs")
+        address.press("Enter")
+        self.assertEqual(self.value(), "see [docs](https://example.org/docs)")
+        expect(self.box).to_be_focused()
+        # On the link: its address to change, empty removes it
+        self.select("docs")
+        self.box.press("ControlOrMeta+k")
+        expect(address).to_have_value("https://example.org/docs")
+        address.fill("")
+        address.press("Enter")
+        self.assertEqual(self.value(), "see docs")
+        # Escape keeps it as it was
+        self.select("docs")
         self.button("link").click()
-        self.assertEqual(self.value(), "[](https://example.org/a)")
+        address.press("Escape")
+        expect(address).to_have_count(0)
+        self.assertEqual(self.value(), "see docs")
 
     def test_line_buttons(self):
-        self.put("one\ntwo")
+        self.put("one\n\ntwo")
         self.button("bullets").click()
         self.assertEqual(self.value(), "- one\n- two")
+        expect(self.button("bullets")).to_have_attribute("aria-pressed", "true")
         self.button("bullets").click()
-        self.assertEqual(self.value(), "one\ntwo")
+        self.assertEqual(self.value(), "one\n\ntwo")
         self.button("numbers").click()
         self.assertEqual(self.value(), "1. one\n2. two")
         self.button("tasks").click()
         self.assertEqual(self.value(), "- [ ] one\n- [ ] two")
         self.button("tasks").click()
-        self.assertEqual(self.value(), "one\ntwo")
+        self.assertEqual(self.value(), "one\n\ntwo")
         self.button("quote").click()
-        self.assertEqual(self.value(), "> one\n> two")
+        self.assertEqual(self.value(), "> one\n>\n> two")
         self.button("quote").click()
+        self.assertEqual(self.value(), "one\n\ntwo")
+        # The current block only, by the caret
+        self.put("one\n\ntwo", "two")
         self.button("heading").click()
-        self.assertEqual(self.value(), "## one\n## two")
+        self.assertEqual(self.value(), "one\n\n## two")
         self.button("heading").click()
-        self.assertEqual(self.value(), "one\ntwo")
-        # The current line only, by the caret
-        self.put("one\ntwo", 5, 5)
-        self.button("bullets").click()
-        self.assertEqual(self.value(), "one\n- two")
+        self.assertEqual(self.value(), "one\n\ntwo")
 
-    def test_code_block_for_several_lines(self):
-        self.put("a\nb")
+    def test_code_block_for_several_blocks(self):
+        self.put("a\n\nb")
         self.button("code").click()
         self.assertEqual(self.value(), "```\na\nb\n```")
 
     def test_mention_starts_one(self):
-        self.put("hello ", 6, 6)
+        self.put("hello")
+        self.caret_at_end()
         self.button("mention").click()
         self.assertEqual(self.value(), "hello @")
 
     def test_keys(self):
-        self.put("word", 0, 4)
-        self.field.press("ControlOrMeta+b")
-        self.assertEqual(self.value(), "**word**")
-        self.put("word", 0, 4)
-        self.field.press("ControlOrMeta+i")
-        self.assertEqual(self.value(), "_word_")
-        self.put("word", 0, 4)
-        self.field.press("ControlOrMeta+Shift+8")
-        self.assertEqual(self.value(), "- word")
-        self.put("word", 0, 4)
-        self.field.press("ControlOrMeta+Shift+7")
-        self.assertEqual(self.value(), "1. word")
-        self.put("word", 0, 4)
-        self.field.press("ControlOrMeta+Shift+9")
-        self.assertEqual(self.value(), "- [ ] word")
+        for key, expected in [
+            ("ControlOrMeta+b", "**word**"),
+            ("ControlOrMeta+i", "*word*"),
+            ("ControlOrMeta+Shift+8", "- word"),
+            ("ControlOrMeta+Shift+7", "1. word"),
+            ("ControlOrMeta+Shift+9", "- [ ] word"),
+        ]:
+            self.put("word")
+            self.box.press(key)
+            self.assertEqual(self.value(), expected, key)
 
     def test_tab_indents_list_items(self):
-        self.put("- one\n- two", 8, 8)
-        self.field.press("Tab")
+        self.put("- one\n- two", "two")
+        self.box.press("Tab")
         self.assertEqual(self.value(), "- one\n  - two")
-        self.field.press("Shift+Tab")
+        self.box.press("Shift+Tab")
         self.assertEqual(self.value(), "- one\n- two")
         # Elsewhere Tab leaves the field, as it does
-        self.put("plain", 0, 0)
-        self.field.press("Tab")
+        self.put("plain", "plain")
+        self.box.press("Tab")
         self.assertEqual(self.value(), "plain")
-        expect(self.field).not_to_be_focused()
+        expect(self.box).not_to_be_focused()
 
     def test_ctrl_k_is_a_link_in_a_field_and_the_palette_elsewhere(self):
         palette = self.page.locator("dialog[open]")
-        self.put("see docs", 4, 8)
-        self.field.press("ControlOrMeta+k")
-        self.assertEqual(self.value(), "see [docs](url)")
+        self.put("see docs", "docs")
+        self.box.press("ControlOrMeta+k")
+        expect(self.page.locator(".wb-link-ask input")).to_be_focused()
         self.assertEqual(palette.count(), 0)
+        self.page.keyboard.press("Escape")
         # Escape leaves the field, then Ctrl+K opens the palette
-        self.field.press("Escape")
-        expect(self.field).not_to_be_focused()
+        self.box.press("Escape")
+        expect(self.box).not_to_be_focused()
         self.page.keyboard.press("ControlOrMeta+k")
         expect(palette).to_be_visible()
-        self.assertEqual(self.value(), "see [docs](url)")
+        self.assertEqual(self.value(), "see docs")
+        self.assertEqual(self.errors, [])
+
+
+class TypingTest(E2ETestCase):
+    """Enter, Shift+Enter, typing Markdown (specs/rich-editor.md)"""
+
+    def setUp(self):
+        super().setUp()
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+        self.box.click()
+
+    def type(self, *parts):
+        """Types the texts, pressing the keys in between (tuples)"""
+        for part in parts:
+            if isinstance(part, tuple):
+                for key in part:
+                    self.box.press(key)
+            else:
+                self.box.press_sequentially(part)
+
+    def test_enter_and_shift_enter(self):
+        self.type("one", ("Enter",), "two", ("Shift+Enter",), "three")
+        self.assertEqual(self.field.input_value(), "one\n\ntwo\nthree")
+
+    def test_typing_markdown(self):
+        self.type(
+            "# Title",
+            ("Enter",),
+            "Some **bold**, *soft* and `code` ~~gone~~ text",
+            ("Enter",),
+            "- one",
+            ("Enter",),
+            "two",
+            ("Enter", "Enter"),
+            "1. first",
+            ("Enter", "Enter"),
+            "> quoted",
+            ("Enter", "Enter"),
+            "```",
+            ("Enter",),
+            "x = 1",
+        )
+        self.assertEqual(
+            self.field.input_value(),
+            "# Title\n\nSome **bold**, *soft* and `code` ~~gone~~ text\n\n"
+            "- one\n- two\n\n1. first\n\n> quoted\n\n```\nx = 1\n```",
+        )
+
+    def test_task_items(self):
+        self.type("- [ ] tent", ("Enter",), "stove")
+        self.assertEqual(self.field.input_value(), "- [ ] tent\n- [ ] stove")
+        # Its box ticks it
+        self.box.locator("input.task-list-item-checkbox").first.click()
+        self.assertEqual(self.field.input_value(), "- [x] tent\n- [ ] stove")
+        self.type(("Enter", "Enter"), "[ ] alone")
+        self.assertEqual(
+            self.field.input_value(), "- [x] tent\n- [ ] stove\n\n\n* [ ] alone"
+        )
+
+    def test_backspace_takes_a_rule_back(self):
+        self.type("- ", ("Backspace",))
+        self.assertEqual(self.field.input_value(), "\\- ")
+
+    def test_bare_urls_become_links(self):
+        self.type("see www.example.org now")
+        link = self.box.locator("a")
+        expect(link).to_have_attribute("href", "http://www.example.org")
+        expect(link).to_have_text("www.example.org")
+        self.assertEqual(self.field.input_value(), "see www.example.org now")
+
+    def test_ctrl_enter_submits(self):
+        self.page.locator("[name=title]").fill("Camp")
+        self.box.click()
+        self.type("Bring a *tent*")
+        self.box.press("ControlOrMeta+Enter")
+        self.page.wait_for_url("**/messages/*/")
+        self.assertEqual(Message.objects.get().content, "Bring a *tent*")
+        self.assertEqual(self.errors, [])
+
+
+class UnchangedTest(E2ETestCase):
+    """Texts nobody edited stay as they were (specs/rich-editor.md)"""
+
+    OLD = "Intro with __old__ style\n* a\n* b\n\nEnd"
+
+    def setUp(self):
+        super().setUp()
+        self.message = ops.create_message(
+            project=self.project, title="Camp", creator=self.ada, content=self.OLD
+        )
+        self.goto(self.page, reverse("message_edit", args=[self.message.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+
+    def content(self):
+        return Message.objects.get(pk=self.message.pk).content
+
+    def test_saving_unchanged(self):
+        self.assertEqual(self.field.input_value(), self.OLD)
+        self.box.click()
+        self.box.press("ControlOrMeta+End")
+        self.box.press_sequentially("x")
+        self.box.press("Backspace")
+        self.assertEqual(self.field.input_value(), self.OLD)
+        self.box.press("ControlOrMeta+Enter")
+        self.page.wait_for_url(f"**{self.message.get_absolute_url()}")
+        self.assertEqual(self.content(), self.OLD)
+
+    def test_an_edit_keeps_the_other_blocks(self):
+        self.box.click()
+        self.box.press("ControlOrMeta+End")
+        self.box.press_sequentially("ing")
+        self.box.press("ControlOrMeta+Enter")
+        self.page.wait_for_url(f"**{self.message.get_absolute_url()}")
+        self.assertEqual(self.content(), "Intro with __old__ style\n* a\n* b\n\nEnding")
+
+    def test_the_source(self):
+        source = self.page.locator('[data-toolbar-action="source"]')
+        source.click()
+        expect(self.field).to_be_visible()
+        expect(self.field).to_be_focused()
+        expect(source).to_have_attribute("aria-pressed", "true")
+        self.assertEqual(self.field.input_value(), self.OLD)
+        # Unchanged there and back: the original
+        source.click()
+        expect(self.field).to_be_hidden()
+        expect(self.box).to_be_focused()
+        self.assertEqual(self.field.input_value(), self.OLD)
+        # Changed in the source: parsed again
+        source.click()
+        self.field.fill("Now **bold**\n\n| a | b |\n| --- | --- |\n| 1 | 2 |")
+        source.click()
+        expect(self.box.locator("strong")).to_have_text("bold")
+        expect(self.box.locator("td")).to_have_count(2)
+        self.assertEqual(
+            self.field.input_value(),
+            "Now **bold**\n\n| a | b |\n| --- | --- |\n| 1 | 2 |",
+        )
+        # The source's toolbar works on the source
+        source.click()
+        self.field.evaluate("el => el.setSelectionRange(0, 3)")
+        self.page.locator('[data-toolbar-action="italic"]').click()
+        self.assertTrue(self.field.input_value().startswith("_Now_"))
         self.assertEqual(self.errors, [])
 
 
@@ -322,6 +505,8 @@ FIXTURES = Path(__file__).parent / "test_fixtures"
 
 
 class PasteTest(E2ETestCase):
+    """Pasting into the rich editor (specs/editor.md, "Pasting")"""
+
     def setUp(self):
         super().setUp()
         self.page = self.login(
@@ -329,6 +514,7 @@ class PasteTest(E2ETestCase):
         )
         self.goto(self.page, reverse("message_new", args=[self.project.pk]))
         self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
 
     def copy(self, html="", text=""):
         """Puts HTML and text on the clipboard like a page would"""
@@ -342,13 +528,18 @@ class PasteTest(E2ETestCase):
         )
 
     def paste(self, key="Control+v"):
-        self.field.focus()
-        self.field.press(key)
+        self.box.focus()
+        self.box.press(key)
+
+    def put(self, text, selected=None):
+        self.set_markdown(self.field, text)
+        self.field.evaluate(SELECT, selected)
 
     def test_a_mail_keeps_its_formatting(self):
         self.copy((FIXTURES / "paste_mail.txt").read_text(), "Hi team, plain")
         self.paste()
-        expect(self.field).to_have_value(MAIL)
+        # A line starting with "--" is escaped (it could start a list)
+        expect(self.field).to_have_value(MAIL.replace("\n--\n", "\n\\--\n"))
         self.assertEqual(self.errors, [])
 
     def test_google_docs(self):
@@ -357,18 +548,36 @@ class PasteTest(E2ETestCase):
         expect(self.field).to_have_value(GOOGLE_DOCS)
 
     def test_it_goes_where_the_caret_is_and_can_be_undone(self):
-        self.field.fill("Before  after")
-        self.field.evaluate("el => el.setSelectionRange(7, 7)")
+        self.put("Before after", "after")
+        self.box.press("ArrowLeft")
         self.copy("<p>some <b>bold</b></p>", "some bold")
         self.paste()
-        expect(self.field).to_have_value("Before some **bold** after")
-        self.field.press("ControlOrMeta+z")
-        expect(self.field).to_have_value("Before  after")
+        expect(self.field).to_have_value("Before some **bold**after")
+        self.box.press("ControlOrMeta+z")
+        expect(self.field).to_have_value("Before after")
 
-    def test_plain_text_pastes_as_it_is(self):
-        self.copy("", "just *text*\nand more")
+    def test_blocks_go_in_as_blocks(self):
+        self.put("Intro")
+        self.box.press("ControlOrMeta+End")
+        self.copy("<ul><li>one</li><li><b>two</b></li></ul>", "one two")
         self.paste()
-        expect(self.field).to_have_value("just *text*\nand more")
+        expect(self.field).to_have_value("Intro\n\n- one\n- **two**")
+
+    def test_into_a_list_and_a_table(self):
+        self.put("- first\n- second", "second")
+        self.copy("<p>more <i>here</i></p>", "more here")
+        self.paste()
+        expect(self.field).to_have_value("- first\n- more *here*")
+        self.put("| a | b |\n| --- | --- |\n| 1 | 2 |", "1")
+        self.copy("<p>one <b>x</b></p>", "one x")
+        self.paste()
+        expect(self.field).to_have_value("| a | b |\n| --- | --- |\n| one **x** | 2 |")
+
+    def test_plain_text_pastes_as_text(self):
+        """Not parsed as Markdown: lines are breaks, blank lines paragraphs"""
+        self.copy("", "just *text*\nand more\n\nnext")
+        self.paste()
+        expect(self.field).to_have_value("just \\*text\\*\nand more\n\nnext")
 
     def test_html_without_formatting_is_left_alone(self):
         # What editors put on the clipboard for code: a div per line
@@ -386,20 +595,68 @@ class PasteTest(E2ETestCase):
         expect(self.field).to_have_value("some bold")
 
     def test_a_url_over_selected_text_makes_a_link(self):
-        self.field.fill("see the docs here")
-        self.field.evaluate("el => el.setSelectionRange(4, 12)")
+        self.put("see the docs here", "the docs")
         self.copy("", "https://example.org/docs")
         self.paste()
         expect(self.field).to_have_value(
             "see [the docs](https://example.org/docs) here"
         )
         # Without a selection the URL is pasted as it is
-        self.field.fill("")
+        self.put("")
         self.paste()
         expect(self.field).to_have_value("https://example.org/docs")
+
+    def test_copying_within_the_editor_keeps_mentions(self):
+        self.put(f"Hi [@Bob](person:{self.bob.pk}) **there**")
+        self.box.press("ControlOrMeta+a")
+        self.box.press("ControlOrMeta+c")
+        self.box.press("ControlOrMeta+End")
+        self.box.press("Enter")
+        self.box.press("ControlOrMeta+v")
+        line = f"Hi [@Bob](person:{self.bob.pk}) **there**"
+        expect(self.field).to_have_value(f"{line}\n\n{line}")
 
     def test_a_failing_endpoint_pastes_the_text(self):
         self.page.route("**/paste/markdown/", lambda route: route.abort())
         self.copy("<p>some <b>bold</b></p>", "some bold")
         self.paste()
         expect(self.field).to_have_value("some bold")
+
+
+def compose(page, steps, final):
+    """Composition through Chromium's input method protocol: the texts
+    being composed, then the committed one"""
+    cdp = page.context.new_cdp_session(page)
+    for text in steps:
+        cdp.send(
+            "Input.imeSetComposition",
+            {"text": text, "selectionStart": len(text), "selectionEnd": len(text)},
+        )
+    cdp.send("Input.insertText", {"text": final})
+    cdp.detach()
+
+
+class CompositionTest(E2ETestCase):
+    """Input methods (IME): what Chromium's protocol can simulate of them
+    (specs/rich-editor.md, "Questions while building")"""
+
+    def setUp(self):
+        super().setUp()
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+        self.box.click()
+
+    def test_composing_text(self):
+        self.box.press_sequentially("Hello ")
+        compose(self.page, ["に", "にほ", "にほん"], "日本")
+        self.box.press_sequentially(" and **more**")
+        self.assertEqual(self.field.input_value(), "Hello 日本 and **more**")
+
+    def test_composing_in_a_list_and_bold(self):
+        self.box.press_sequentially("- ")
+        self.box.press("ControlOrMeta+b")
+        compose(self.page, ["ü"], "ü")
+        compose(self.page, ["さ", "さく"], "作")
+        self.assertEqual(self.field.input_value(), "- **ü作**")
+        self.assertEqual(self.errors, [])

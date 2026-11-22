@@ -172,6 +172,9 @@
 .bi-lock::before {
   content: "\f47b";
 }
+.bi-markdown::before {
+  content: "\f481";
+}
 .bi-palette::before {
   content: "\f4b1";
 }

@@ -2193,6 +2193,74 @@ button.wb-signal:hover {
   cursor: pointer;
 }
 
+/* The rich editor (frontend/editor/, specs/rich-editor.md): looks like the
+   field it replaces, its text like the page shows it (.wb-markdown) */
+.wb-editor {
+  height: auto;
+  min-height: calc(var(--wb-editor-rows, 2) * 1.5em + 0.75rem + 2px);
+  cursor: text;
+}
+
+.wb-editor:focus-within {
+  border-color: var(--wb-accent-ring);
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+.wb-editor.is-invalid {
+  border-color: var(--wb-danger-ink);
+}
+
+.wb-editor .ProseMirror {
+  min-height: calc(var(--wb-editor-rows, 2) * 1.5em);
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.wb-editor .ProseMirror.is-empty::before {
+  position: absolute;
+  content: attr(data-placeholder);
+  color: var(--bs-secondary-color);
+  pointer-events: none;
+}
+
+.wb-markdown li.task-list-item:has(> .wb-task-body) {
+  display: flex;
+  align-items: baseline;
+}
+
+.wb-task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Tight lists: the page shows their items without paragraphs */
+:is(.wb-editor, .wb-live-editor) [data-tight] > li > :is(p, .wb-task-body > p) {
+  margin-bottom: 0;
+}
+
+:is(.wb-editor, .wb-live-editor) .task-list-item-checkbox {
+  cursor: pointer;
+}
+
+:is(.wb-editor, .wb-live-editor) .ProseMirror-selectednode {
+  outline: 2px solid var(--wb-accent-ring);
+}
+
+:is(.wb-editor, .wb-live-editor) :is(td, th) {
+  min-width: 3rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--wb-field-border);
+}
+
+/* The link's address (Ctrl+K in the rich editor) */
+.wb-link-ask {
+  position: absolute;
+  z-index: 20;
+  width: min(24rem, 100%);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
+}
+
 /* The toolbar above Markdown fields (toolbar.js, specs/editor.md): always
    visible; on narrow screens it wraps into a second row, so the paperclip
    is always there */
@@ -2207,6 +2275,11 @@ button.wb-signal:hover {
 
 .wb-toolbar .btn {
   flex: none;
+}
+
+.wb-toolbar .btn[aria-pressed="true"] {
+  background-color: var(--wb-primary-bg);
+  color: var(--wb-primary-ink);
 }
 
 /* The lantern (specs/lantern.md): the menu beside the user menu, the page */

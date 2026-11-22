@@ -65,6 +65,24 @@ else {
   })
 }
 
+// The rich editor for every Markdown field (specs/rich-editor.md), also in
+// forms htmx brings in
+function loadEditor() {
+  import(/* webpackChunkName: "editor" */ "./editor/fields.js")
+}
+if (document.querySelector("textarea[data-toolbar]")) loadEditor()
+else {
+  document.addEventListener("htmx:after:process", function once(event) {
+    if (
+      event.target.matches?.("textarea[data-toolbar]") ||
+      event.target.querySelector?.("textarea[data-toolbar]")
+    ) {
+      document.removeEventListener("htmx:after:process", once)
+      loadEditor()
+    }
+  })
+}
+
 // Dragging the lists of a project, the links of a project or an item
 if (document.querySelector("[data-sortable-order]")) {
   import(/* webpackChunkName: "sortable-order" */ "./sortable-order.js")

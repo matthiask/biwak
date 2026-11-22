@@ -181,6 +181,28 @@ in Python:
   to `checklists.boxes()`). Both skip without Node.
   `prosemirror-markdown` and `markdown-it` are pinned exactly.
 
+- **The field editor** (stage 2): `frontend/editor/fields.js` (a chunk,
+  `editor`, loaded by `main.js` where a `textarea[data-toolbar]` is,
+  also in forms htmx brings), `editor.js` (keys: Enter a paragraph or a
+  new item, a task item after a task item; Shift+Enter a break, not in
+  cells; Ctrl+Enter and Escape left to the form), `rules.js` (input
+  rules, Backspace takes one back), `commands.js` (the toolbar's
+  actions, `aria-pressed` on what's active), `plugins.js` (bare URLs
+  linked while typing like linkify, task boxes tick, the `@` list,
+  pasting), `link.js` (the address field). The textarea stays, hidden;
+  `textarea.richEditor` is the editor, `textarea.focus()` focuses it,
+  its `invalid` event and the form's `reset` are followed. The
+  toolbar (`toolbar.js`) hands its buttons to the editor, or to the
+  source while "Markdown" shows it; `mentions.js` has one list for
+  both (`mentionList()`), `attachments.js` inserts into either,
+  `paste.js` keeps the converter. Forms keep the source of unchanged
+  blocks on the server (`BootstrapMixin._clean_fields()`,
+  `richtext.preserve.keep_source()`). Browser tests:
+  `biwak/test_e2e_editor.py` (toolbar, keys, typing, unchanged texts,
+  the source, pasting into lists and tables, input methods); the other
+  browser tests type into the editor (`E2ETestCase.editor()`,
+  `set_markdown()`).
+
 ## Done when
 
 - Every Markdown field and the live doc editor are the rich editor,

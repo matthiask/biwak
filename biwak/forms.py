@@ -5,6 +5,7 @@ from django.forms.renderers import TemplatesSetting
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 
+from biwak.richtext.preserve import keep_source
 from biwak.text import line_breaks
 
 
@@ -56,11 +57,17 @@ class BootstrapMixin:
 
     def _clean_fields(self):
         super()._clean_fields()
-        # Texts with \n line breaks only, as the live editor counts them
+        # Texts with \n line breaks only, as the live editor counts them;
+        # what the rich editor didn't change keeps its source
+        # (specs/rich-editor.md)
         for name, field in self.fields.items():
             value = self.cleaned_data.get(name)
             if isinstance(field.widget, forms.Textarea) and isinstance(value, str):
-                self.cleaned_data[name] = line_breaks(value)
+                initial = self.get_initial_for_field(field, name)
+                value = line_breaks(value)
+                if isinstance(initial, str) and initial:
+                    value = keep_source(value, line_breaks(initial))
+                self.cleaned_data[name] = value
 
 
 class ColorSwatches(forms.RadioSelect):

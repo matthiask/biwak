@@ -86,7 +86,10 @@ export const schema = new Schema({
       parseDOM: [{ tag: "ul" }],
       toDOM: (node) => [
         "ul",
-        { class: tasks(node) ? "contains-task-list" : null },
+        {
+          class: tasks(node) ? "contains-task-list" : null,
+          "data-tight": node.attrs.tight ? "true" : null,
+        },
         0,
       ],
     },
@@ -105,6 +108,7 @@ export const schema = new Schema({
         {
           start: node.attrs.order === 1 ? null : node.attrs.order,
           class: tasks(node) ? "contains-task-list" : null,
+          "data-tight": node.attrs.tight ? "true" : null,
         },
         0,
       ],

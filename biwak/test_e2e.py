@@ -211,6 +211,28 @@ class E2ETestCase(LiveServerTestCase):
         url = target if isinstance(target, str) else target.get_absolute_url()
         page.goto(f"{self.live_server_url}{url}")
         self.wait_for_sortables(page)
+        self.wait_for_editors(page)
+
+    def wait_for_editors(self, page):
+        # The rich editor is a chunk loaded after the page
+        # (specs/rich-editor.md): wait until every Markdown field has it
+        page.wait_for_function(
+            """() => [...document.querySelectorAll("textarea[data-toolbar]")]
+                .every((el) => el.richEditor)"""
+        )
+
+    @staticmethod
+    def editor(field):
+        """The rich editor (its contenteditable) of a Markdown field, the
+        textarea's locator"""
+        return field.locator("xpath=preceding-sibling::div[1]").locator(".ProseMirror")
+
+    @staticmethod
+    def set_markdown(field, text):
+        """Puts Markdown into the rich editor of the field (instead of
+        ``fill()``, the textarea is hidden), as an edit"""
+        field.page.wait_for_function("el => el.richEditor", arg=field.element_handle())
+        field.evaluate("(el, text) => el.richEditor.setMarkdown(text)", text)
 
     def wait_for_sortables(self, page):
         # The scripts for dragging are chunks loaded after the page: wait
@@ -268,7 +290,7 @@ class TodosTest(E2ETestCase):
         expect(title).to_be_focused()
 
         title.fill("Write the brief")
-        add.locator("[name=notes]").fill("Two pages, *short*")
+        self.set_markdown(add.locator("[name=notes]"), "Two pages, *short*")
         picker = add.locator(".wb-picker-input")
         picker.click()
         add.locator(".wb-picker-list li", has_text="Ada").click()
@@ -334,7 +356,7 @@ class TodosTest(E2ETestCase):
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         add.locator("[name=title]").fill("Fresh")
-        add.locator("[name=notes]").fill("Some **notes**")
+        self.set_markdown(add.locator("[name=notes]"), "Some **notes**")
         add.locator("[name=title]").press("ControlOrMeta+Enter")
         row = page.locator("[data-todo]", has_text="Fresh")
         row.wait_for()
@@ -406,10 +428,10 @@ class TodosTest(E2ETestCase):
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         notes = add.locator("[name=notes]")
-        notes.click()
-        notes.press_sequentially("Ask @Bo")
+        self.editor(notes).click()
+        self.editor(notes).press_sequentially("Ask @Bo")
         page.locator(".wb-mentions:not([hidden])").first.wait_for()
-        notes.press("Enter")  # Picks, doesn't save or close
+        self.editor(notes).press("Enter")  # Picks, doesn't save or close
         self.assertEqual(notes.input_value(), f"Ask [@Bob](person:{self.bob.pk}) ")
         self.assertTrue(add.evaluate("el => el.open"))
         add.locator("[name=title]").fill("Ask")
@@ -595,8 +617,8 @@ class TodoPageTest(E2ETestCase):
         page = self.page
         self.goto(page, self.todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
-        textarea.press_sequentially("Hello @Example")
+        self.editor(textarea).click()
+        self.editor(textarea).press_sequentially("Hello @Example")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         names = listbox.locator("li span:not(.wb-avatar)").all_inner_texts()
@@ -616,26 +638,26 @@ class TodoPageTest(E2ETestCase):
         )
         # The first available one is active, ArrowDown moves on
         first = listbox.locator("li.active span:not(.wb-avatar)").inner_text()
-        textarea.press("ArrowDown")
+        self.editor(textarea).press("ArrowDown")
         second = listbox.locator("li.active span:not(.wb-avatar)").inner_text()
         self.assertNotEqual(first, second)
-        textarea.press("ArrowUp")
+        self.editor(textarea).press("ArrowUp")
         self.assertEqual(
             listbox.locator("li.active span:not(.wb-avatar)").inner_text(), first
         )
         # Escape closes without leaving
-        textarea.press("Escape")
+        self.editor(textarea).press("Escape")
         self.assertTrue(listbox.is_hidden())
 
-        textarea.press_sequentially(" and @Bo")
+        self.editor(textarea).press_sequentially(" and @Bo")
         listbox.wait_for()
-        textarea.press("Enter")
+        self.editor(textarea).press("Enter")
         self.assertEqual(
             textarea.input_value(),
             f"Hello @Example and [@Bob](person:{self.bob.pk}) ",
         )
-        textarea.press("Tab")  # blur
-        textarea.fill(f"Hello [@Bob Example](person:{self.bob.pk}) ")
+        self.editor(textarea).press("Tab")  # blur
+        self.set_markdown(textarea, f"Hello [@Bob Example](person:{self.bob.pk}) ")
         page.get_by_role("button", name="Add comment").click()
         page.locator(".wb-markdown", has_text="Hello").first.wait_for()
         self.assertEqual(
@@ -650,11 +672,11 @@ class TodoPageTest(E2ETestCase):
         page = self.page
         self.goto(page, self.todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
-        textarea.press_sequentially("Hi @Bob")
+        self.editor(textarea).click()
+        self.editor(textarea).press_sequentially("Hi @Bob")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
-        textarea.press("Enter")
+        self.editor(textarea).press("Enter")
         self.assertEqual(textarea.input_value(), f"Hi [@Bob](person:{self.bob.pk}) ")
         page.get_by_role("button", name="Add comment").click()
         mention = page.locator(".wb-markdown .wb-mention")
@@ -674,11 +696,11 @@ class TodoPageTest(E2ETestCase):
         page = self.page
         self.goto(page, self.todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
-        textarea.press_sequentially("Hi @Bob Z")
+        self.editor(textarea).click()
+        self.editor(textarea).press_sequentially("Hi @Bob Z")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
-        textarea.press("Enter")
+        self.editor(textarea).press("Enter")
         self.assertEqual(textarea.input_value(), f"Hi [@Bob Z.](person:{bob_z.pk}) ")
         page.get_by_role("button", name="Add comment").click()
         mention = page.locator(".wb-markdown .wb-mention")
@@ -693,8 +715,8 @@ class TodoPageTest(E2ETestCase):
         page = self.login(self.cleo)
         self.goto(page, todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
-        textarea.press_sequentially("@Example")
+        self.editor(textarea).click()
+        self.editor(textarea).press_sequentially("@Example")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         # Ada is a member, Bob isn't: the client doesn't find him
@@ -703,8 +725,8 @@ class TodoPageTest(E2ETestCase):
             ["Ada Example", "Cleo Example"],
         )
         self.assertNotIn("@example.org", listbox.inner_text())
-        textarea.fill("")
-        textarea.press_sequentially("@Bob")
+        self.set_markdown(textarea, "")
+        self.editor(textarea).press_sequentially("@Bob")
         # (the answer is empty: nothing opens; wait for the request)
         page.wait_for_load_state("networkidle")
         self.assertTrue(listbox.is_hidden())
@@ -715,28 +737,28 @@ class TodoPageTest(E2ETestCase):
         page = self.page
         page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
         content = page.locator("textarea[name=content]")
-        content.click()
-        content.press_sequentially("@Cleo")
+        self.editor(content).click()
+        self.editor(content).press_sequentially("@Cleo")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         self.assertEqual(
             listbox.locator("li.is-unavailable small").inner_text(),
             "can't see internal items",
         )
-        content.press("Escape")
+        self.editor(content).press("Escape")
         page.get_by_label("Visible to clients").check()
-        content.fill("")
-        content.press_sequentially("@Cleo")
+        self.set_markdown(content, "")
+        self.editor(content).press_sequentially("@Cleo")
         listbox.wait_for()
         self.assertEqual(listbox.locator("li.is-unavailable").count(), 0)
-        content.press("Enter")
+        self.editor(content).press("Enter")
         self.assertEqual(content.input_value(), f"[@Cleo](person:{self.cleo.pk}) ")
 
         page = self.login(self.cleo)
         page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
         content = page.locator("textarea[name=content]")
-        content.click()
-        content.press_sequentially("@Example")
+        self.editor(content).click()
+        self.editor(content).press_sequentially("@Example")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         self.assertEqual(
@@ -880,7 +902,7 @@ class TodoPageTest(E2ETestCase):
         self.goto(page, self.todo)
         form = page.locator("form:has([name=form][value=comment])")
         textarea = form.locator("textarea")
-        textarea.fill("See")
+        self.set_markdown(textarea, "See")
         form.get_by_role("button", name="Attach files").click()
         # The hidden file input is the button's
         form.locator("input[type=file]").set_input_files({
@@ -897,7 +919,7 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(Attachment.objects.count(), 1)
 
         # Dropping
-        textarea.evaluate(
+        self.editor(textarea).evaluate(
             """el => {
                 const data = new DataTransfer()
                 data.items.add(new File(["dropped"], "dropped.txt", {type: "text/plain"}))
@@ -909,7 +931,7 @@ class TodoPageTest(E2ETestCase):
             arg=textarea.element_handle(),
         )
         # Pasting
-        textarea.evaluate(
+        self.editor(textarea).evaluate(
             """el => {
                 const data = new DataTransfer()
                 data.items.add(new File(["pasted"], "pasted.txt", {type: "text/plain"}))
@@ -934,7 +956,7 @@ class TodoPageTest(E2ETestCase):
         self.goto(page, self.todo)
         form = page.locator("form:has([name=form][value=comment])")
         textarea = form.locator("textarea")
-        textarea.fill("See")
+        self.set_markdown(textarea, "See")
         form.locator("input[type=file]").set_input_files({
             "name": "notes.txt",
             "mimeType": "text/plain",
@@ -943,7 +965,7 @@ class TodoPageTest(E2ETestCase):
         page.wait_for_function(
             "el => /\\]\\(/.test(el.value)", arg=textarea.element_handle()
         )
-        textarea.press_sequentially(" done")
+        self.editor(textarea).press_sequentially(" done")
         self.assertRegex(textarea.input_value(), r"^See \[notes\.txt\]\(\S+\) done$")
 
     def test_too_large_file_is_refused_in_the_browser(self):
@@ -1480,7 +1502,7 @@ class LiveTest(E2ETestCase):
 
     def comment(self, page, text):
         form = page.locator("form:has(input[name=form][value=comment])")
-        form.locator("textarea[name=content]").fill(text)
+        self.set_markdown(form.locator("textarea[name=content]"), text)
         form.get_by_role("button", name="Add comment").click()
         page.wait_for_load_state()
 
@@ -1571,7 +1593,7 @@ class LiveTest(E2ETestCase):
         title = ada.locator("#live-text input[name=title]")
         title.fill("Order the big tent")
         bob.locator("#live-text .wb-view-text").click()
-        bob.locator("#live-text textarea[name=notes]").fill("Two poles")
+        self.set_markdown(bob.locator("#live-text textarea[name=notes]"), "Two poles")
         bob.get_by_role("button", name="Save").click()
         # The form waits, with a note
         expect(ada.locator("#live-text [data-live-note]")).to_be_visible()
@@ -2363,10 +2385,10 @@ class KeyboardTest(E2ETestCase):
         page = self.page
         self.goto(page, todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.fill("Looks good")
+        self.set_markdown(textarea, "Looks good")
         # Twice quickly, or held: one comment
-        textarea.press("ControlOrMeta+Enter")
-        textarea.press("ControlOrMeta+Enter")
+        self.editor(textarea).press("ControlOrMeta+Enter")
+        self.editor(textarea).press("ControlOrMeta+Enter")
         expect(page.locator(".wb-markdown", has_text="Looks good")).to_have_count(1)
         self.assertEqual(Comment.objects.filter(item=todo).count(), 1)
         # A modal's form, from any field of it
@@ -2606,7 +2628,7 @@ class KeyboardTest(E2ETestCase):
         page = self.page
         self.goto(page, todo)
         page.keyboard.press("c")
-        expect(page.locator("#comments ~ form textarea")).to_be_focused()
+        expect(self.editor(page.locator("#comments ~ form textarea"))).to_be_focused()
         page.locator("h1").click()
         page.keyboard.press("b")
         page.wait_for_function(
@@ -2844,8 +2866,8 @@ class AvatarTest(E2ETestCase):
         page = self.page
         self.goto(page, Item.objects.get(title="Plan"))
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
-        textarea.press_sequentially("Hi @Example")
+        self.editor(textarea).click()
+        self.editor(textarea).press_sequentially("Hi @Example")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         ada = listbox.locator("li", has_text="Ada")
@@ -3296,10 +3318,10 @@ class TeamsTest(E2ETestCase):
         page = self.page
         self.goto(page, todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
         # Dan is mentioned already: not twice
-        textarea.fill(f"[@Dan](person:{self.dan.pk}) and ")
-        textarea.press_sequentially("@desi")
+        self.set_markdown(textarea, f"[@Dan](person:{self.dan.pk}) and")
+        self.editor(textarea).press("ControlOrMeta+End")
+        self.editor(textarea).press_sequentially(" @desi")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         team = listbox.locator("li[data-team]")
@@ -3307,7 +3329,7 @@ class TeamsTest(E2ETestCase):
         # Bob sees the all-access project's internal items
         expect(team).to_contain_text("3 of 4: 1 can't see internal items")
         expect(team).to_have_class(re.compile("active"))
-        textarea.press("Enter")
+        self.editor(textarea).press("Enter")
         self.assertEqual(
             textarea.input_value(),
             f"[@Dan](person:{self.dan.pk}) and [@Ada](person:{self.ada.pk})"
@@ -3325,8 +3347,8 @@ class TeamsTest(E2ETestCase):
         page = self.login(self.cleo)
         self.goto(page, todo)
         textarea = page.locator("form:has([name=form][value=comment]) textarea")
-        textarea.click()
-        textarea.press_sequentially("@Example")
+        self.editor(textarea).click()
+        self.editor(textarea).press_sequentially("@Example")
         listbox = page.locator(".wb-mentions:not([hidden])")
         listbox.wait_for()
         expect(listbox.locator("li[data-team]")).to_have_count(0)
