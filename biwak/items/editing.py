@@ -127,10 +127,11 @@ def name_for(viewer, project, person):
 
 
 def ago(when, *, now=None):
+    """One unit, like the ``ago`` filter (decided 2026-11-22)"""
     now = now or timezone.now()
     if now - when < dt.timedelta(minutes=1):
         return _("a moment ago")
-    return _("%(time)s ago") % {"time": timesince(when, now)}
+    return _("%(time)s ago") % {"time": timesince(when, now, depth=1)}
 
 
 def being_edited_message(viewer, project, users):

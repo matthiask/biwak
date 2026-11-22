@@ -581,14 +581,15 @@ def due_badge(todo, date_format="j. M", *, badge_only=False):
 @register.filter
 def ago(when):
     """How long ago, "just now" under a minute (``timesince`` says "0
-    minutes"), else "5 minutes ago" """
+    minutes"), else "5 minutes ago": one unit, "13 hours ago", not "13
+    hours, 37 minutes ago" (decided 2026-11-22)"""
     from django.utils import timezone
     from django.utils.timesince import timesince
 
     now = timezone.now()
     if now - when < dt.timedelta(minutes=1):
         return gettext("just now")
-    return gettext("%(time)s ago") % {"time": timesince(when, now)}
+    return gettext("%(time)s ago") % {"time": timesince(when, now, depth=1)}
 
 
 @register.simple_tag

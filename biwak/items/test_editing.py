@@ -315,10 +315,11 @@ class ChangedTextTest(Fixture):
         from biwak.activity.models import Event
 
         Event.objects.filter(item=self.todo, actor=self.bob).update(
-            created_at=timezone.now() - dt.timedelta(minutes=5)
+            created_at=timezone.now() - dt.timedelta(hours=2, minutes=5)
         )
         message = self.tick(self.ada, self.todo, version="old").json()["message"]
-        self.assertEqual(message, "Changed by Bob 5\xa0minutes ago.")
+        # One unit, like the ``ago`` filter (decided 2026-11-22)
+        self.assertEqual(message, "Changed by Bob 2\xa0hours ago.")
 
     def test_clients_do_not_learn_who(self):
         ops.update_todo(self.todo, actor=self.bob, notes="- [ ] new one")

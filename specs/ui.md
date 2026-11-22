@@ -144,7 +144,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Dark mode** (2026-11-22): fields a little darker than cards, not
   black (`--wb-field-bg`); dialogs dim the page more
   (`--wb-backdrop`).
-- **Relative times** use the `ago` filter ("just now" under a minute).
+- **Relative times** use the `ago` filter ("just now" under a minute),
+  with one unit only: "13 hours ago", not "13 hours, 37 minutes ago"
+  (decided 2026-11-22; also the "Changed by … ago" of conflicts,
+  `editing.ago()`).
 - **Overdue and today** are badges (`todos.md`, "The to-do's page").
 
 ## Motion
