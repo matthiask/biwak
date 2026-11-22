@@ -177,7 +177,7 @@ Like Basecamp's bright yellow:
   2026-11-21): `GET /items/<pk>/switch/` is the question (a page, a modal
   for `HX-Modal`; an item already visible redirects to itself), saying
   what changes: "Makes this list, 12 to-dos and 34 comments visible to 3
-  clients." The text is built per kind by the view (`_show_texts()`,
+  clients." The text is built per kind by the view (`show_texts()`,
   `visibility.affected()` in `biwak/items/views.py`). It counts neither drafts
   (anybody's, only their creators see them) nor what's in the trash
   (decided 2026-11-21). The POST with `visible=1`

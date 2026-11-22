@@ -76,6 +76,16 @@ def event_out(event, user):
         if not event.target_list:
             del data["to"]
             data.pop("to_id", None)
+    # The projects an item moved between: only those the viewer may open
+    for key, name in [
+        ("from_project", event.source_project),
+        ("to_project", event.target_project),
+    ]:
+        if key in data and not name:
+            del data[key]
+            data.pop(f"{key}_id", None)
+        elif key in data:
+            data[key] = name
     return {
         "id": event.pk,
         "action": event.action,

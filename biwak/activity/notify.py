@@ -238,6 +238,10 @@ def notify(event_pk):
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
     if event is None or event.item is None or event.action in SILENT:
         return []
+    if "to_project" in event.data:
+        # Moved to another project: nobody is told
+        # (specs/lists-across-projects.md)
+        return []
     seeing = who_can_see(event.item)
     if not event.is_client_visible:
         # The event happened while the item was internal: clients never

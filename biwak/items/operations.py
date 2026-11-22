@@ -10,16 +10,17 @@ import datetime as dt
 import uuid
 
 from django.core.exceptions import PermissionDenied
+from django.core.files import File
 from django.db import transaction
-from django.db.models import Exists, Max, OuterRef, Q
+from django.db.models import Exists, F, Max, OuterRef, Q, TextChoices
 from django.db.models.functions import Lower
 from django.utils import timezone
-from django.utils.translation import gettext, ngettext
+from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from biwak import checklists, schedules
 from biwak.accounts.models import User, own_staff
 from biwak.activity import mentions
-from biwak.activity.models import Action
+from biwak.activity.models import Action, Event, Subscription
 from biwak.activity.notify import notify_people
 from biwak.activity.operations import (
     is_importing,
@@ -28,10 +29,17 @@ from biwak.activity.operations import (
     subscribe,
 )
 from biwak.files import attachments
-from biwak.files.models import FileVersion, content_type_for
+from biwak.files.models import (
+    REFERENCE,
+    Attachment,
+    FileVersion,
+    content_type_for,
+    new_key,
+)
 from biwak.files.titles import doc_title, with_heading
 from biwak.items import editing, visibility
 from biwak.items.models import (
+    Assignment,
     Comment,
     Doc,
     DocVersion,
@@ -1250,3 +1258,273 @@ def purge_trash(*, now=None):
     for item in old.exclude(parent__in=old).order_by("pk"):
         item.delete()
     return count
+
+
+# Copying lists and moving across projects (specs/lists-across-projects.md) --
+
+# What moves to another project: what's at the top of its project
+# (anything in a folder moves with its folder)
+MOVABLE = {Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.FILE}
+
+
+class Dates(TextChoices):
+    """What copying a list does with its to-dos' dates"""
+
+    KEEP = "keep", _("Keep")
+    SHIFT = "shift", _("Move by")
+    REMOVE = "remove", _("Remove")
+
+
+def staying(project):
+    """``Q()`` for the people who stay assigned and subscribed in
+    ``project``: its members (decided 2026-11-22); nobody is added to a
+    project by copying or moving"""
+    return Q(pk__in=Membership.objects.filter(project=project).values("user"))
+
+
+def copy_title(title, project):
+    """The list's own title, " (copy)", " (copy 2)" … only when ``project``
+    has a list of that name already, ignoring case (decided 2026-11-22);
+    lists in the trash don't count"""
+    taken = {
+        t.lower()
+        for t in Item.objects
+        .filter(project=project, kind=Kind.LIST, parent=None)
+        .exclude(status=Status.TRASHED)
+        .values_list("title", flat=True)
+    }
+    candidate, number = title, 1
+    while candidate.lower() in taken:
+        suffix = (
+            gettext(" (copy)")
+            if number == 1
+            else gettext(" (copy %(number)d)") % {"number": number}
+        )
+        candidate = title[: Item._meta.get_field("title").max_length - len(suffix)]
+        candidate += suffix
+        number += 1
+    return candidate
+
+
+def open_todos(list_item):
+    """The open to-dos of a list, in the order of the list: ungrouped ones
+    first, then group by group"""
+    return (
+        Item.objects
+        .filter(parent=list_item, kind=Kind.TODO, todo__completed_at__isnull=True)
+        .exclude(status=Status.TRASHED)
+        .select_related("todo")
+        .order_by(
+            F("todo__group__position").asc(nulls_first=True),
+            "todo__group",
+            "position",
+            "pk",
+        )
+    )
+
+
+def copy_dropped(list_item, project):
+    """The assignees of the list's open to-dos who aren't in ``project``,
+    left unassigned in a copy there"""
+    return (
+        User.objects
+        .filter(assigned_todos__item__in=open_todos(list_item))
+        .exclude(staying(project))
+        .distinct()
+        .order_by(Lower("full_name"), "email")
+    )
+
+
+def _copy_attachments(text, source, target, *, actor):
+    """``text`` of ``source`` with the attachments it references copied
+    (new files, not shared rows) for ``target``, and referencing those"""
+    keys = set(REFERENCE.findall(text or ""))
+    for attachment in Attachment.objects.filter(key__in=keys, item=source):
+        copy = Attachment(
+            project=target.project,
+            item=target,
+            key=new_key(),
+            name=attachment.name,
+            size=attachment.size,
+            content_type=attachment.content_type,
+            uploaded_by=actor,
+        )
+        with attachment.file.open("rb") as file:
+            attachments.store(copy.file, attachment.name, File(file))
+        copy.save()
+        text = text.replace(f"attachment:{attachment.key}", f"attachment:{copy.key}")
+    return text
+
+
+@attachments.cleans_up_files
+@transaction.atomic
+def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=False):
+    """A copy of the list's open work in ``project`` (the same or another):
+    its description, groups in order and open to-dos in order with their
+    notes, checklists, recurrence and the assignees who are members of
+    ``project`` (``copy_dropped()`` are left out). Not completed to-dos,
+    comments, events, subscribers, reactions or public links. ``dates``
+    keeps, shifts by ``days`` or removes the due dates. The copy gets
+    ``project``'s visibility: internal unless ``visible``. One ``created``
+    event for the list, the copier subscribed to it."""
+    if item.kind != Kind.LIST:
+        raise ValueError("Only lists are copied")
+    if project.archived_at is not None:
+        raise ValueError(gettext("Nothing can be added to an archived project."))
+    source = item.todolist
+    copy = create_item(
+        project=project,
+        kind=Kind.LIST,
+        title=copy_title(title, project),
+        creator=actor,
+        visible=visible,
+    )
+    TodoList.objects.create(
+        item=copy,
+        description=_copy_attachments(source.description, item, copy, actor=actor),
+        view=source.view,
+    )
+    groups = {
+        group.pk: Group.objects.create(
+            todolist=copy.todolist, title=group.title, position=group.position
+        )
+        for group in source.groups.all()
+    }
+    staying_ids = set(
+        User.objects.filter(staying(project)).values_list("pk", flat=True)
+    )
+    now = timezone.now()
+    positions = {}
+    for todo_item in open_todos(item).prefetch_related("todo__assignment_set"):
+        todo = todo_item.todo
+        group = groups.get(todo.group_id)
+        positions[group] = position = positions.get(group, 0) + 1
+        new = Item(
+            project=project,
+            parent=copy,
+            kind=Kind.TODO,
+            title=todo_item.title,
+            creator=actor,
+            position=position,
+            is_client_visible=copy.is_client_visible,
+        )
+        new.save()
+        due_on = todo.due_on
+        ends_on = todo.recurrence_ends_on
+        if dates == Dates.SHIFT:
+            delta = dt.timedelta(days=days)
+            due_on = due_on and due_on + delta
+            ends_on = ends_on and ends_on + delta
+        elif dates == Dates.REMOVE:
+            due_on = None
+        # TODO(start-dates): shift and remove ``starts_on`` with ``due_on``
+        # once start-dates.md is merged
+        Todo.objects.create(
+            item=new,
+            group=group,
+            notes=_copy_attachments(todo.notes, todo_item, new, actor=actor),
+            due_on=due_on,
+            recurrence=todo.recurrence,
+            recurrence_ends_on=ends_on,
+            recurrence_count=todo.recurrence_count,
+        )
+        assignees = [
+            a.user_id for a in todo.assignment_set.all() if a.user_id in staying_ids
+        ]
+        Assignment.objects.bulk_create([
+            Assignment(todo_id=new.pk, user_id=pk, assigned_by=actor, assigned_at=now)
+            for pk in assignees
+        ])
+        # Assigned means subscribed (specs/subscribers.md), told by nobody:
+        # one event for the copy
+        for user in User.objects.filter(pk__in=assignees):
+            subscribe(user, new, explicit=False)
+    created(copy, actor)
+    return copy
+
+
+def move_dropped(item, project):
+    """The assignees of open to-dos and the subscribers of the item and
+    what's in it who aren't in ``project``: dropped by moving there"""
+    items = Item.objects.descendants(item, include_self=True)
+    return (
+        User.objects
+        .filter(
+            Q(
+                assigned_todos__item__in=items.filter(
+                    kind=Kind.TODO, todo__completed_at__isnull=True
+                )
+            )
+            | Q(subscriptions__item__in=items)
+        )
+        .exclude(staying(project))
+        .distinct()
+        .order_by(Lower("full_name"), "email")
+    )
+
+
+def new_clients(item, project):
+    """The active clients of ``project`` who would see the item there and
+    don't see it now (no members of its project): moving asks first"""
+    if not item.is_client_visible:
+        return User.objects.none()
+    return (
+        User.objects
+        .active()
+        .filter(is_client=True, memberships__project=project)
+        .exclude(memberships__project=item.project_id)
+        .distinct()
+    )
+
+
+@transaction.atomic
+def move_to_project(item, *, project, actor):
+    """Moves a top-level list, message, folder, doc or file with everything
+    in it, comments, reactions, events and history to the top level of
+    another project. Assignees and subscribers who aren't members there
+    are dropped (``move_dropped()``); the item keeps its switch. Records a
+    ``moved`` event naming both projects, notifying nobody."""
+    if item.kind not in MOVABLE or item.parent_id is not None:
+        raise ValueError(gettext("Only what's at the top of a project moves there."))
+    source = item.project
+    if project.pk == source.pk:
+        raise ValueError(gettext("It's in this project already."))
+    if source.archived_at is not None or project.archived_at is not None:
+        raise ValueError(gettext("Nothing moves into or out of an archived project."))
+    pks = list(
+        Item.objects.descendants(item, include_self=True).values_list("pk", flat=True)
+    )
+    dropped = list(move_dropped(item, project))
+    if dropped:
+        todos = Item.objects.filter(
+            pk__in=pks,
+            kind=Kind.TODO,
+            todo__completed_at__isnull=True,
+            todo__assignees__in=dropped,
+        ).distinct()
+        for todo in todos.select_related("todo", "project"):
+            unassign(todo, dropped, actor=actor)
+        Subscription.objects.filter(item__in=pks, user__in=dropped).delete()
+    Item.objects.filter(pk__in=pks).update(project=project)
+    Event.objects.filter(item__in=pks).update(project=project)
+    Attachment.objects.filter(item__in=pks).update(project=project)
+    item.project = project
+    item.position = _next_position(
+        Item.objects.filter(project=project, parent=None, kind=item.kind)
+    )
+    item.save(update_fields=["project", "position"])
+    visibility.recompute(item)
+    from biwak.collab import live as collab
+
+    # The open editors of docs in it check again (specs/collaboration.md)
+    collab.check_access(project=source.pk)
+    return record(
+        actor=actor,
+        action=Action.MOVED,
+        project=project,
+        item=item,
+        from_project=source.name,
+        from_project_id=source.pk,
+        to_project=project.name,
+        to_project_id=project.pk,
+    )

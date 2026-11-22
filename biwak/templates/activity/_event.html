@@ -60,6 +60,13 @@
   {# The list: only if the viewer may see it now (attach()); a group of the to-do's own list: as visible as the to-do #}
   {% if what %}
     {% blocktranslate %}moved {{ subject }}{% endblocktranslate %}
+  {% elif event.source_project and event.target_project %}
+    {# Into another project: each named only if the viewer may open it now (feed.add_projects()) #}
+    {% blocktranslate with source=event.source_project target=event.target_project %}moved {{ subject }} from {{ source }} to {{ target }}{% endblocktranslate %}
+  {% elif event.target_project %}
+    {% blocktranslate with target=event.target_project %}moved {{ subject }} to {{ target }}{% endblocktranslate %}
+  {% elif event.source_project %}
+    {% blocktranslate with source=event.source_project %}moved {{ subject }} from {{ source }}{% endblocktranslate %}
   {% elif event.data.group %}
     {% blocktranslate with target=event.data.group|title_text %}moved {{ subject }} to {{ target }}{% endblocktranslate %}
   {% elif event.target_list %}

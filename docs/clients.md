@@ -33,6 +33,10 @@ once.
   wrote in it.
 - Moving an item into a visible folder or list shows it to clients;
   moving it into an internal one hides it.
+- Moving something visible to another project keeps it visible: the
+  clients of that project see it, with its comments and what clients
+  saw of its activity before. "Move to…" asks first when that's anybody
+  new. A copied list is internal unless you tick "Visible to clients".
 - There are no internal comments on visible items: whatever is written
   under them, clients read.
 - What happened before something was shown stays hidden from clients

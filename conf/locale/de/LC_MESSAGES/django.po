@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:38+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -398,8 +398,9 @@ msgid "read and write"
 msgstr "lesen und schreiben"
 
 #: biwak/accounts/models.py biwak/bookmarks/models.py biwak/files/board.py
-#: biwak/files/library.py biwak/items/models.py biwak/items/views.py
-#: biwak/projects/views.py biwak/templates/accounts/api_tokens.html
+#: biwak/files/library.py biwak/items/across.py biwak/items/models.py
+#: biwak/items/views.py biwak/projects/views.py
+#: biwak/templates/accounts/api_tokens.html
 #: biwak/templates/items/_add_todo.html
 msgid "title"
 msgstr "Titel"
@@ -666,7 +667,7 @@ msgstr "Profilbild von %(name)s entfernen?"
 msgid "The initials are shown instead."
 msgstr "Stattdessen werden die Initialen angezeigt."
 
-#: biwak/accounts/views.py biwak/projects/views.py
+#: biwak/accounts/views.py biwak/items/operations.py biwak/projects/views.py
 #: biwak/templates/accounts/settings.html
 #: biwak/templates/files/upload_form.html biwak/templates/projects/people.html
 #: biwak/templates/reactions/confirm_remove.html
@@ -694,7 +695,7 @@ msgstr "Aktivität"
 msgid "%(name)s (inactive)"
 msgstr "%(name)s (inaktiv)"
 
-#: biwak/activity/feed.py biwak/items/views.py
+#: biwak/activity/feed.py biwak/items/across.py biwak/items/views.py
 #, python-format
 msgid "%(count)d to-do"
 msgid_plural "%(count)d to-dos"
@@ -763,6 +764,11 @@ msgstr "Gestern"
 msgid "Title"
 msgstr "Titel"
 
+#: biwak/activity/history.py biwak/items/by_due.py biwak/palette/queries.py
+#: biwak/search/views.py biwak/templates/projects/all.html
+msgid "Project"
+msgstr "Projekt"
+
 #: biwak/activity/history.py biwak/files/library.py
 msgid "Folder"
 msgstr "Ordner"
@@ -774,7 +780,7 @@ msgstr "Liste"
 
 #: biwak/activity/history.py biwak/activity/views.py biwak/bookmarks/views.py
 #: biwak/checkins/views.py biwak/files/board.py biwak/files/library.py
-#: biwak/items/by_due.py biwak/projects/views.py
+#: biwak/items/across.py biwak/items/by_due.py biwak/projects/views.py
 msgid "Visible to clients"
 msgstr "Für Kund:innen sichtbar"
 
@@ -863,6 +869,10 @@ msgstr "ein anderer Ordner"
 #: biwak/activity/history.py biwak/activity/timeline.py
 msgid "another list"
 msgstr "eine andere Liste"
+
+#: biwak/activity/history.py
+msgid "another project"
+msgstr "ein anderes Projekt"
 
 #: biwak/activity/history.py
 msgid "a deleted group"
@@ -1199,7 +1209,8 @@ msgid "stopped sharing publicly"
 msgstr "nicht mehr öffentlich geteilt"
 
 #: biwak/activity/models.py biwak/bookmarks/models.py biwak/files/models.py
-#: biwak/items/by_due.py biwak/items/models.py biwak/projects/models.py
+#: biwak/items/across.py biwak/items/by_due.py biwak/items/models.py
+#: biwak/projects/models.py
 msgid "project"
 msgstr "Projekt"
 
@@ -1293,7 +1304,7 @@ msgid_plural "%(people)s will be told."
 msgstr[0] "%(people)s wird benachrichtigt."
 msgstr[1] "%(people)s werden benachrichtigt."
 
-#: biwak/activity/notify.py biwak/activity/timeline.py
+#: biwak/activity/notify.py biwak/activity/timeline.py biwak/items/across.py
 msgid "and"
 msgstr "und"
 
@@ -1961,12 +1972,24 @@ msgstr "Oberste Ebene des Projekts"
 msgid "clients can see this"
 msgstr "Kund:innen sehen dies"
 
-#: biwak/files/library.py biwak/items/views.py
+#: biwak/files/library.py
+msgid "Folder or project"
+msgstr "Ordner oder Projekt"
+
+#: biwak/files/library.py
+msgid "This project"
+msgstr "Dieses Projekt"
+
+#: biwak/files/library.py
+msgid "Other projects"
+msgstr "Andere Projekte"
+
+#: biwak/files/library.py biwak/items/across.py biwak/items/views.py
 #: biwak/templates/files/_tiles.html biwak/templates/items/_more_entries.html
 msgid "Move to…"
 msgstr "Verschieben nach…"
 
-#: biwak/files/library.py biwak/items/views.py
+#: biwak/files/library.py biwak/items/across.py biwak/items/views.py
 msgid "Move"
 msgstr "Verschieben"
 
@@ -2270,6 +2293,70 @@ msgstr "Du kannst das, worauf du geantwortet hast, nicht mehr sehen oder beantwo
 msgid "Your reply couldn't be posted"
 msgstr "Deine Antwort konnte nicht veröffentlicht werden"
 
+#: biwak/items/across.py
+#, python-format
+msgid "%(count)d other person"
+msgid_plural "%(count)d other people"
+msgstr[0] "%(count)d weitere Person"
+msgstr[1] "%(count)d weitere Personen"
+
+#: biwak/items/across.py
+#, python-format
+msgid "%(names)s isn't in %(project)s: they'll be unassigned and unsubscribed."
+msgid_plural "%(names)s aren't in %(project)s: they'll be unassigned and unsubscribed."
+msgstr[0] "%(names)s ist nicht in %(project)s: Zuweisungen und Abonnements fallen weg."
+msgstr[1] "%(names)s sind nicht in %(project)s: Zuweisungen und Abonnements fallen weg."
+
+#: biwak/items/across.py
+#, python-format
+msgid "%(names)s isn't in %(project)s: left unassigned."
+msgid_plural "%(names)s aren't in %(project)s: left unassigned."
+msgstr[0] "%(names)s ist nicht in %(project)s: wird nicht zugewiesen."
+msgstr[1] "%(names)s sind nicht in %(project)s: werden nicht zugewiesen."
+
+#: biwak/items/across.py
+#, python-format
+msgid "Makes the copy and %(todos)s visible to %(clients)s."
+msgstr "Macht die Kopie und %(todos)s für %(clients)s sichtbar."
+
+#: biwak/items/across.py biwak/items/views.py
+#, python-format
+msgid "%(count)d client"
+msgid_plural "%(count)d clients"
+msgstr[0] "%(count)d Kund:in"
+msgstr[1] "%(count)d Kund:innen"
+
+#: biwak/items/across.py
+msgid "Gets “(copy)” if the project has a list of that name."
+msgstr "Erhält „(Kopie)“, wenn das Projekt schon eine Liste mit diesem Namen hat."
+
+#: biwak/items/across.py
+msgid "Due dates"
+msgstr "Fälligkeiten"
+
+#: biwak/items/across.py
+msgid "Days"
+msgstr "Tage"
+
+#: biwak/items/across.py
+msgid "For “Move by”: negative numbers move them earlier."
+msgstr "Für „Verschieben um“: Negative Zahlen verschieben sie nach vorne."
+
+#: biwak/items/across.py
+msgid "By how many days?"
+msgstr "Um wie viele Tage?"
+
+#: biwak/items/across.py biwak/palette/actions.py
+#: biwak/templates/items/_more_entries.html
+msgid "Copy…"
+msgstr "Kopieren…"
+
+#: biwak/items/across.py biwak/templates/accounts/calendar.html
+#: biwak/templates/public_links/list.html
+#: biwak/templates/public_links/share.html
+msgid "Copy"
+msgstr "Kopieren"
+
 #: biwak/items/api.py
 msgid "Only staff create lists."
 msgstr "Nur Mitarbeitende erstellen Listen."
@@ -2411,11 +2498,6 @@ msgstr "Intern"
 #: biwak/items/by_due.py
 msgid "group by"
 msgstr "gruppieren nach"
-
-#: biwak/items/by_due.py biwak/palette/queries.py biwak/search/views.py
-#: biwak/templates/projects/all.html
-msgid "Project"
-msgstr "Projekt"
 
 #: biwak/items/by_due.py
 msgid "Due date"
@@ -2725,6 +2807,39 @@ msgstr "Der Eintrag ist nicht im Papierkorb."
 msgid "Restore what it's in first."
 msgstr "Stelle zuerst wieder her, worin er liegt."
 
+#: biwak/items/operations.py
+msgid "Keep"
+msgstr "Behalten"
+
+#: biwak/items/operations.py
+msgid "Move by"
+msgstr "Verschieben um"
+
+#: biwak/items/operations.py
+msgid " (copy)"
+msgstr " (Kopie)"
+
+#: biwak/items/operations.py
+#, python-format
+msgid " (copy %(number)d)"
+msgstr " (Kopie %(number)d)"
+
+#: biwak/items/operations.py
+msgid "Nothing can be added to an archived project."
+msgstr "In einem archivierten Projekt kommt nichts dazu."
+
+#: biwak/items/operations.py
+msgid "Only what's at the top of a project moves there."
+msgstr "Nur was zuoberst im Projekt liegt, kann dorthin verschoben werden."
+
+#: biwak/items/operations.py
+msgid "It's in this project already."
+msgstr "Es ist schon in diesem Projekt."
+
+#: biwak/items/operations.py
+msgid "Nothing moves into or out of an archived project."
+msgstr "In ein archiviertes Projekt und aus einem heraus wird nichts verschoben."
+
 #: biwak/items/views.py biwak/templates/forms/rule_widget.html
 msgid "Repeat"
 msgstr "Wiederholen"
@@ -2789,13 +2904,6 @@ msgstr "Nicht alle dieser To-dos wurden gefunden."
 #: biwak/templates/checkins/question.html
 msgid "Comment"
 msgstr "Kommentieren"
-
-#: biwak/items/views.py
-#, python-format
-msgid "%(count)d client"
-msgid_plural "%(count)d clients"
-msgstr[0] "%(count)d Kund:in"
-msgstr[1] "%(count)d Kund:innen"
 
 #: biwak/items/views.py
 #, python-format
@@ -4773,12 +4881,6 @@ msgid "Calendar link"
 msgstr "Kalenderlink"
 
 #: biwak/templates/accounts/calendar.html
-#: biwak/templates/public_links/list.html
-#: biwak/templates/public_links/share.html
-msgid "Copy"
-msgstr "Kopieren"
-
-#: biwak/templates/accounts/calendar.html
 msgid "Make a new link"
 msgstr "Neuen Link erstellen"
 
@@ -5157,8 +5259,18 @@ msgstr "hat %(subject)s verschoben"
 
 #: biwak/templates/activity/_event.html
 #, python-format
+msgid "moved %(subject)s from %(source)s to %(target)s"
+msgstr "hat %(subject)s von %(source)s nach %(target)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
 msgid "moved %(subject)s to %(target)s"
 msgstr "hat %(subject)s nach %(target)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(subject)s from %(source)s"
+msgstr "hat %(subject)s aus %(source)s verschoben"
 
 #: biwak/templates/activity/_event.html
 #, python-format

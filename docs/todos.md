@@ -26,6 +26,22 @@ project. Staff create lists with "New list" on the project's page.
   "Archived lists"), of your to-dos, of the calendar link and of the
   palette's suggestions, and its recurring to-dos don't repeat. Nothing
   is archived automatically. To-dos are completed, not archived.
+- **Copy:** "Copy…" in the list's "More" menu (staff) copies its open
+  work into this or another project: the description, the groups and
+  the open to-dos with their notes, checklists, attachments and repeat
+  rules. Not completed to-dos, comments or subscribers. Assignees who
+  aren't members of that project are left out; the dialog names them
+  first. The due dates stay, move by a number of days or go. The copy
+  keeps the list's title, with "(copy)" if the project has a list of
+  that name, and is internal unless you tick "Visible to clients"
+  (which asks first).
+- **Move to another project:** "Move to…" in the list's "More" menu
+  moves it with everything in it: to-dos, comments, reactions, history
+  and public links. Assignees and subscribers who aren't members there
+  are dropped (the dialog names them first), and if clients there would
+  see it, it asks first. Its activity moves along: the new project's
+  activity shows it, the old one's no longer does. Single to-dos move
+  between the lists of their project only.
 
 ## Assigning several at once
 

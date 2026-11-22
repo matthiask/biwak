@@ -20,6 +20,7 @@ from django.utils.translation import gettext
 from biwak.accounts.models import User
 from biwak.audit.models import LoggedAction
 from biwak.items.models import Group, Item, Kind, Status, TodoList
+from biwak.projects.models import Project
 
 
 # table → column → (label, kind of value); the other columns are ignored
@@ -35,6 +36,8 @@ TEXT, VALUE, BOOL, DATE, TIME, ITEM, GROUP, COMPLETED, PAUSED, SCHEDULE = (
     "paused",
     "schedule",
 )
+# Moved to another project (specs/lists-across-projects.md)
+PROJECT = "project"
 # Folders hold docs, files and folders; lists hold to-dos
 IN_FOLDERS = {Kind.DOC, Kind.FILE, Kind.FOLDER}
 
@@ -43,6 +46,7 @@ def _fields(item):
     return {
         "items_item": {
             "title": (gettext("Title"), VALUE),
+            "project_id": (gettext("Project"), PROJECT),
             "parent_id": (
                 gettext("Folder") if item.kind in IN_FOLDERS else gettext("List"),
                 ITEM,
@@ -161,6 +165,12 @@ def _show(rows, viewer, item):
     groups = dict(
         Group.objects.filter(pk__in=_ids(rows, "group_id")).values_list("pk", "title")
     )
+    projects = dict(
+        Project.objects
+        .accessible_to(viewer)
+        .filter(pk__in=_ids(rows, "project_id"))
+        .values_list("pk", "name")
+    )
 
     def show(kind, raw):
         if raw in {None, ""}:
@@ -177,6 +187,8 @@ def _show(rows, viewer, item):
                 if item.kind in IN_FOLDERS
                 else gettext("another list"),
             )
+        if kind == PROJECT:
+            return projects.get(int(raw), gettext("another project"))
         if kind == GROUP:
             return groups.get(int(raw), gettext("a deleted group"))
         if kind == TIME:

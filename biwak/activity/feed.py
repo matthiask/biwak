@@ -204,6 +204,32 @@ def add_target_lists(events, user):
     for event in events:
         if not hasattr(event, "target_list"):
             event.target_list = ""
+    add_projects(events, user)
+
+
+def add_projects(events, user):
+    """``event.source_project`` and ``event.target_project``: the names of
+    the projects an item moved from and to (specs/lists-across-projects.md),
+    each only if the viewer may open it now, else "". Checked now, in one
+    query for all events, with the project's current name."""
+    moves = [e for e in events if e.action == Action.MOVED and "to_project" in e.data]
+    ids = {
+        e.data.get(key) for e in moves for key in ("from_project_id", "to_project_id")
+    }
+    ids -= {None}
+    names = (
+        dict(
+            Project.objects
+            .accessible_to(user)
+            .filter(pk__in=ids)
+            .values_list("pk", "name")
+        )
+        if ids
+        else {}
+    )
+    for event in events:
+        event.source_project = names.get(event.data.get("from_project_id"), "")
+        event.target_project = names.get(event.data.get("to_project_id"), "")
 
 
 def _is_message_text(event):
