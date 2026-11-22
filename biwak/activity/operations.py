@@ -218,15 +218,13 @@ def subscribable_people(item, by):
 
 
 @transaction.atomic
-def share(item, people, *, actor, notify=False, note="", posted=False):
+def share(item, people, *, actor, notify=False, note=""):
     """Subscribes people to the item, ``added_by`` the actor (explicitly: it
     overrides an earlier unsubscribing, like assigning); ``ValueError`` for
     anybody who isn't in ``subscribable_people()``. With ``notify`` ("Tell
     them now") the ``shared`` event tells each of them at once, with the
-    note (one line, ``NOTE_LENGTH`` characters at most), on every level
-    except "nothing"; ``posted`` (a new doc's "Tell people about it?")
-    tells them whatever their level, like posting. Returns the people,
-    newly subscribed or not."""
+    note (one line, ``NOTE_LENGTH`` characters at most), whatever their
+    level. Returns the people, newly subscribed or not."""
     note = " ".join(note.split())
     if len(note) > NOTE_LENGTH:
         raise ValueError(f"The note has at most {NOTE_LENGTH} characters.")
@@ -249,7 +247,6 @@ def share(item, people, *, actor, notify=False, note="", posted=False):
             item=item,
             people=[u.pk for u in people],
             **({"note": note} if note else {}),
-            **({"posted": True} if posted else {}),
         )
     return people
 

@@ -413,11 +413,11 @@ class TellTest(Fixture, TestCase):
         self.doc.refresh_from_db()
         self.assertFalse(self.doc.doc.tell_pending)
 
-    def test_people_on_nothing_are_told_too(self):
-        """Told like posting, whatever their level (specs/notifications.md):
-        those added and a folder's subscribers on "Nothing" alike, at
+    def test_people_on_concerns_me_are_told_too(self):
+        """Told whatever their level (specs/notifications.md): those added
+        and a folder's subscribers on "Only what concerns me" alike, at
         "Done" and after the hour without an answer"""
-        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
         self.write()
         with self.captureOnCommitCallbacks(execute=True):

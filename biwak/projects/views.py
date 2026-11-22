@@ -281,7 +281,6 @@ def project_join(request, pk):
 NOTIFY_LABELS = {
     project_ops.NOTIFY_DEFAULT: _("Notified by default"),
     project_ops.NOTIFY_TAGGED: _("Only when tagged"),
-    "nothing": _("No mails"),
 }
 
 
@@ -332,10 +331,7 @@ def member_notify(request, pk, user_pk):
     if not project_ops.can_change_notify_choice(request.user, user):
         raise PermissionDenied
     choice = project_ops.notify_choice(user, project)
-    form = NotifyForm(
-        request.POST or None,
-        initial={"notify": choice if choice in project_ops.NOTIFY_CHOICES else None},
-    )
+    form = NotifyForm(request.POST or None, initial={"notify": choice})
     if form.is_valid():
         project_ops.set_notify_choice(
             project, user, form.cleaned_data["notify"], actor=request.user
@@ -351,10 +347,6 @@ def member_notify(request, pk, user_pk):
         form,
         title=title,
         project=project,
-        # "No mails" (their level for the project) isn't one of the choices
-        intro=_("Now: %(choice)s.") % {"choice": NOTIFY_LABELS[choice]}
-        if choice not in project_ops.NOTIFY_CHOICES
-        else "",
         cancel_url=reverse("project_people", args=[project.pk]),
         submit_label=_("Save"),
         help_page="notifications",

@@ -230,21 +230,26 @@ class NotificationsModalTest(ItemModalBase):
         self.assertContains(response, "As usual (")
         self.assertContains(response, "activity feed always shows everything")
         assert_page(self, self.client.get(url), title="Notifications for this list")
-        response = self.client.post(url, {"level": "nothing"}, headers=MODAL)
+        response = self.client.post(url, {"level": "concerns_me"}, headers=MODAL)
         assert_modal_redirect(self, response, self.shared.get_absolute_url())
         response = self.client.get(url, headers=MODAL)
         self.assertContains(
-            response, 'value="nothing" class="form-check-input" id="id_level_3" checked'
+            response,
+            'value="concerns_me" class="form-check-input" id="id_level_2" checked',
         )
+        self.assertNotContains(response, 'value="nothing"')
 
     def test_a_todo_has_none_and_an_unknown_level(self):
         todo = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
         url = f"/items/{todo.pk}/notifications/"
         self.assertEqual(self.client.get(url, headers=MODAL).status_code, 404)
         url = f"/items/{self.shared.pk}/notifications/"
-        self.assertEqual(
-            self.client.post(url, {"level": "always"}, headers=MODAL).status_code, 400
-        )
+        # "nothing" is gone (decided 2026-11-22)
+        for level in ["always", "nothing"]:
+            self.assertEqual(
+                self.client.post(url, {"level": level}, headers=MODAL).status_code,
+                400,
+            )
 
     def test_the_list_page_has_no_inline_form_anymore(self):
         response = self.client.get(self.shared.get_absolute_url())
@@ -272,7 +277,7 @@ class NotificationsModalTest(ItemModalBase):
             self.client.get(url, headers=MODAL),
             title="Notifications for this project",
         )
-        response = self.client.post(url, {"level": "nothing"}, headers=MODAL)
+        response = self.client.post(url, {"level": "concerns_me"}, headers=MODAL)
         assert_modal_redirect(self, response, self.project.get_absolute_url())
         self.assertContains(
             self.client.get(self.project.get_absolute_url()), "data-modal"

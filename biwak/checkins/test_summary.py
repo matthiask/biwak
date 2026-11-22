@@ -118,12 +118,14 @@ class SummaryTest(CheckinTestCase):
         self.assertEqual([m.to for m in self.summaries()], [[self.ada.email]])
 
     def test_whatever_the_level(self):
-        """Subscribing is the switch (decided 2026-11-21): "nothing", also
-        for the project, doesn't hold the summary back"""
-        self.bob.notification_level = NotificationLevel.NOTHING
+        """Subscribing is the switch (decided 2026-11-21): "only what concerns
+        me", also for the project, doesn't hold the summary back"""
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
         LevelOverride.objects.create(
-            user=self.ada, project=self.item.project, level=NotificationLevel.NOTHING
+            user=self.ada,
+            project=self.item.project,
+            level=NotificationLevel.CONCERNS_ME,
         )
         ops.answer(self.item, user=self.ada, content="One")
         self.summarize()

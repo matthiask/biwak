@@ -223,16 +223,14 @@ class ToldTest(SubscribersTestCase):
         )
 
     def test_levels(self):
-        """It concerns them: "only what concerns me" lets it through,
-        "nothing" doesn't"""
+        """It concerns them: every level lets it through (decided
+        2026-11-22)"""
         self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
-        self.pia.notification_level = NotificationLevel.NOTHING
-        self.pia.save()
         self.share(self.bob, self.pia, self.cleo)
         self.assertEqual(
             set(Notification.objects.values_list("user__email", flat=True)),
-            {self.bob.email, self.cleo.email},
+            {self.bob.email, self.pia.email, self.cleo.email},
         )
 
     @override_settings(

@@ -121,17 +121,12 @@ def wanting(people, event):
     """Those of ``people`` (the candidates) who are told (specs/notifications.md,
     "Who gets told": subscribing is the switch): everybody subscribed to the
     item, whatever their level, and those this event assigns; the people newly
-    mentioned on every level except "nothing"; the subscribers of the
-    container hear about what's new in it (``created``) on "everything".
-    Reactions and sharing tell on every level except "nothing", like a
-    mention; telling about a new doc (``posted``) on every level, like
-    posting."""
+    mentioned; the subscribers of the container hear about what's new in it
+    (``created``) on "everything". Reactions and sharing tell on every
+    level, like a mention."""
     item = event.item
-    if event.action == Action.SHARED and event.data.get("posted"):
-        return list(people)
-    levels = effective_levels(people, item)
     if event.action in {Action.REACTED, Action.SHARED}:
-        return [u for u in people if levels[u.pk] != NotificationLevel.NOTHING]
+        return list(people)
     mentioned = set(event.data.get("mentioned", ()))
     if item.kind == Kind.ANSWER and event.action == Action.CREATED:
         # A check-in's answers: to the question's subscribers whatever their
@@ -139,7 +134,7 @@ def wanting(people, event):
         # it (specs/checkins.md); the others get the summary the morning
         # after. "Each" counts only while subscribed to the question (a
         # stale choice doesn't override unsubscribing, decided 2026-11-21).
-        # Mentioned: on every level except "nothing".
+        # Mentioned: always.
         from biwak.checkins.models import DEFAULT_MODE, Mode, QuestionMail
 
         modes = dict(
@@ -159,7 +154,7 @@ def wanting(people, event):
                 user.pk in subscribed
                 and Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
             )
-            or (user.pk in mentioned and levels[user.pk] != NotificationLevel.NOTHING)
+            or user.pk in mentioned
         ]
     subscribed = set(
         Subscription.objects.filter(item=item, user__in=people).values_list(
@@ -168,18 +163,16 @@ def wanting(people, event):
     )
     if event.action == Action.ASSIGNED:
         subscribed |= set(event.data.get("assignees", ()))
-    told = []
-    for user in people:
-        level = levels[user.pk]
-        if user.pk in subscribed:
-            told.append(user)
-        elif user.pk in mentioned:
-            if level != NotificationLevel.NOTHING:
-                told.append(user)
-        elif level == NotificationLevel.EVERYTHING:
-            # Subscribed to the container: something new in it
-            told.append(user)
-    return told
+    levels = effective_levels(people, item)
+    # Subscribed to the item or mentioned; on "everything" subscribed to the
+    # container: something new in it
+    return [
+        user
+        for user in people
+        if user.pk in subscribed
+        or user.pk in mentioned
+        or levels[user.pk] == NotificationLevel.EVERYTHING
+    ]
 
 
 def reacted_author(event):

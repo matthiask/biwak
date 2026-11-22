@@ -2058,12 +2058,12 @@ class ModalTest(E2ETestCase):
         self.assertEqual(
             page.url, f"{self.live_server_url}{self.todolist.get_absolute_url()}"
         )
-        dialog.get_by_label("Nothing").check()
+        dialog.get_by_label("Only what concerns me").check()
         dialog.get_by_role("button", name="Save").click()
         expect(page.locator("dialog#modal[open]")).to_have_count(0)
         self.assertEqual(
             LevelOverride.objects.get(user=self.ada, item=self.todolist).level,
-            "nothing",
+            "concerns_me",
         )
 
     def test_escape_closes_an_unchanged_form_and_returns_the_focus(self):

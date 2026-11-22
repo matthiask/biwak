@@ -19,8 +19,8 @@ comment %}`, `frontend/reactions.js`.
   2026-11-20: Basecamp's 16 are too few), plain text, never Markdown, no
   mentions; whitespace collapses.
 - **Notifying:** only the author of the thing (the comment's author or
-  the item's creator) is told, never subscribers, on every level except
-  "nothing"; reacting to yourself tells nobody. Collected into the
+  the item's creator) is told, never subscribers, on every level
+  (decided 2026-11-22); reacting to yourself tells nobody. Collected into the
   author's next mail (`send_mails`' merging) or the digest under the
   thing ("Reactions to your comment:", "Bea: 👍 🎉, Carl: Thanks!"),
   never one mail per reaction.

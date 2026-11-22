@@ -175,7 +175,7 @@ class MailsTest(MailsBase):
         """Subscribed means told (specs/notifications.md, "Subscriptions"): a level
         changed since doesn't hold the mail back"""
         self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
-        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
         self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 1)
 
