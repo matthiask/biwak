@@ -1,0 +1,15 @@
+{% extends "allauth/layouts/entrance.html" %}
+{# allauth's, in sentence case like the rest #}
+{% load allauth i18n %}
+{% block head_title %}
+  {% translate "Account inactive" %}
+{% endblock head_title %}
+
+{% block content %}
+  {% element h1 %}
+  {% translate "Account inactive" %}
+  {% endelement %}
+  {% element p %}
+  {% translate "This account is inactive." %}
+  {% endelement %}
+{% endblock content %}

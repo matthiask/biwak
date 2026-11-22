@@ -1,0 +1,32 @@
+{% extends "socialaccount/base_entrance.html" %}
+{# allauth's, in sentence case like the rest #}
+{% load allauth i18n %}
+{% block head_title %}
+  {% translate "Sign in" %}
+{% endblock head_title %}
+
+{% block content %}
+  {% if process == "connect" %}
+    {% element h1 %}
+    {% blocktranslate with provider=provider.name %}Connect {{ provider }}{% endblocktranslate %}
+    {% endelement %}
+    {% element p %}
+    {% blocktranslate with provider=provider.name %}You are about to connect a new third-party account from {{ provider }}.{% endblocktranslate %}
+    {% endelement %}
+  {% else %}
+    {% element h1 %}
+    {% blocktranslate with provider=provider.name %}Sign in via {{ provider }}{% endblocktranslate %}
+    {% endelement %}
+    {% element p %}
+    {% blocktranslate with provider=provider.name %}You are about to sign in using a third-party account from {{ provider }}.{% endblocktranslate %}
+    {% endelement %}
+  {% endif %}
+  {% element form method="post" no_visible_fields=True %}
+  {% slot actions %}
+  {% csrf_token %}
+  {% element button type="submit" %}
+  {% translate "Continue" %}
+  {% endelement %}
+  {% endslot %}
+  {% endelement %}
+{% endblock content %}

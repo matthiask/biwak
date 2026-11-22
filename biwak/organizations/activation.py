@@ -211,17 +211,26 @@ def reset_sign_in(user, *, actor):
     for session in UserSession.objects.filter(user=user):
         session.end()
     live.check_access(user=user.pk)
-    if user.is_active and user.mail_undeliverable_at is None:
+    if gets_reset_mail(user):
         send_sign_in_reset(user, removed, actor=actor)
     return removed
 
 
-def removed_list(removed):
+def gets_reset_mail(user):
+    """Whether ``reset_sign_in()`` mails the person: not inactive people or
+    bounced addresses"""
+    return user.is_active and user.mail_undeliverable_at is None
+
+
+def removed_list(removed, *, theirs=False):
     """What ``reset_sign_in()`` removed, as words: ["your authenticator app",
-    "2 passkeys", …]"""
+    "2 passkeys", …]; ``theirs`` for telling somebody else ("their
+    authenticator app")"""
     words = []
     if removed.app:
-        words.append(_("your authenticator app"))
+        words.append(
+            _("their authenticator app") if theirs else _("your authenticator app")
+        )
     if removed.passkeys:
         words.append(
             ngettext("%(count)s passkey", "%(count)s passkeys", removed.passkeys)

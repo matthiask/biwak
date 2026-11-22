@@ -232,6 +232,15 @@ class SignInSectionTest(TestCase):
         # Every column has a header, also the actions'
         self.assertContains(response, "<th>", count=4)
 
+    def test_no_sessions_says_so(self):
+        """Without a recorded session (signed in before sessions were
+        recorded) the table says so instead of staying empty"""
+        with patch("allauth.usersessions.middleware.usersessionkit.track_activity"):
+            UserSession.objects.all().delete()
+            response = self.client.get("/accounts/settings/")
+        self.assertEqual(list(response.context["sessions"]), [])
+        self.assertContains(response, "No sessions recorded yet.")
+
     def test_one_session_has_nothing_to_sign_out(self):
         response = self.client.get("/accounts/settings/")
         self.assertNotContains(response, "Sign out everywhere else")

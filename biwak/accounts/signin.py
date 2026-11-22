@@ -326,8 +326,9 @@ class DeactivateAppForm(BootstrapMixin, ReauthenticateForm):
 
 def activate_app(request):
     """Set up an authenticator app: a QR code and the code it shows to
-    confirm; allauth asks to confirm who somebody is first when the sign-in
-    is older than five minutes"""
+    confirm; allauth asks to confirm who somebody is first unless they did
+    in the last five minutes: signing in doesn't count, so it asks right
+    after a sign-in too"""
     if org := sso.required_organization(request.user):
         messages.error(
             request,

@@ -27,7 +27,10 @@ below is what prevents that.
   changes) takes the app or a passkey for people with an app, never a
   code by mail: a code by mail could otherwise add a passkey, which signs
   in alone, or turn the app off (built 2026-11-21, the most secure
-  reading).
+  reading). Confirming with a passkey needs the PIN or fingerprint, as
+  signing in does (decided 2026-11-22, `MFA_WEBAUTHN_USER_VERIFICATION =
+  "required"`; allauth's default "preferred" let a key only proving it's
+  present do).
 - **A mail on every change** (decided 2026-11-21 after a review): adding
   or removing a passkey and turning the app on or off mail the person
   what changed and when, with "if it wasn't you, tell an admin", so a
@@ -48,7 +51,10 @@ below is what prevents that.
   noticed. They sign in by code or through their organization's identity
   provider then and set up again; where a second factor is required,
   they're led to the setup page first. With none of them nothing
-  happens (no mail, sessions stay). The audit log has it.
+  happens (no mail, sessions stay). The audit log has it. The question
+  and the message afterwards speak about the person ("their
+  authenticator app") and mention the mail only when one goes out (not
+  to inactive people or bounced addresses; fixed 2026-11-22).
 - **Organizations requiring single sign-on:** no passkeys and no
   authenticator apps (the identity provider does that); existing ones are
   deleted when the organization switches to "required" (`sso.md`).

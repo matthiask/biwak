@@ -5,6 +5,7 @@ them to their identity provider instead (``signin.login`` and
 
 from allauth.account.forms import LoginForm, RequestLoginCodeForm
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts import sso
 from biwak.accounts.models import User
@@ -27,6 +28,12 @@ def _check_sso(form, email, request):
 
 class SSOLoginForm(LoginForm):
     """The login page's address, which asks for a code"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Sentence case like the rest (allauth's "Remember Me")
+        if "remember" in self.fields:
+            self.fields["remember"].label = _("Remember me")
 
     def clean_login(self):
         login = super().clean_login()

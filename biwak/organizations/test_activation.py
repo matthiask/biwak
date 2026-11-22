@@ -536,6 +536,21 @@ class NameTest(TestCase):
     def test_clients_dont(self):
         self.assertEqual(self.rename(self.cleo, self.bob).status_code, 404)
 
+    def test_in_the_palette_as_the_button(self):
+        """ "Edit the name…" in the palette exactly where the button is"""
+        for actor, who, offered in [
+            (self.bob, self.cleo, True),
+            (self.bob, self.root, False),
+            (self.root, self.bob, True),
+            (self.root, self.root, False),
+            (self.cleo, self.bob, False),
+        ]:
+            with self.subTest(actor=actor, who=who):
+                self.client.force_login(actor)
+                page = self.client.get(f"/people/{who.pk}/")
+                urls = [a.get("url") for a in palette_data(page)["actions"]]
+                self.assertEqual(f"/people/{who.pk}/name/" in urls, offered)
+
     def test_not_oneself_its_in_the_settings(self):
         for actor in [self.root, self.bob]:
             with self.subTest(actor=actor):

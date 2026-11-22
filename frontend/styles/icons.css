@@ -61,6 +61,9 @@
 .bi-broadcast::before {
   content: "\f1d6";
 }
+.bi-building::before {
+  content: "\f1dd";
+}
 .bi-calendar-event::before {
   content: "\f1e8";
 }
@@ -99,6 +102,9 @@
 }
 .bi-emoji-smile::before {
   content: "\f327";
+}
+.bi-envelope::before {
+  content: "\f32f";
 }
 .bi-eye::before {
   content: "\f341";

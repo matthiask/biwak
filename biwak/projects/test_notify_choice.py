@@ -11,7 +11,15 @@ from biwak.activity.models import LevelOverride, Notification
 from biwak.items import operations as ops
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import invite_data, partner, person, project
+from biwak.test_utils import (
+    MODAL,
+    assert_modal,
+    assert_modal_redirect,
+    invite_data,
+    partner,
+    person,
+    project,
+)
 
 
 class Fixture:
@@ -193,8 +201,39 @@ class PageTest(Fixture, TestCase):
         response = self.client.post(
             f"{self.people_url}{self.dan.pk}/notify/", {"notify": "x"}
         )
-        # A bad value, like the projects' order (was 404)
-        self.assertEqual(response.status_code, 400)
+        # A bad value: the form again, with its error
+        self.assertContains(response, "Select a valid choice")
+
+    def test_a_modal_from_the_row_s_menu(self):
+        """Decided 2026-11-22: a "…" menu on each row opens a modal, not a
+        select with its own Save on every row"""
+        self.client.force_login(self.ada)
+        url = f"{self.people_url}{self.dan.pk}/notify/"
+        page = self.client.get(self.people_url)
+        self.assertNotContains(page, '<select name="notify"')
+        self.assertContains(page, f'href="{url}"')
+        self.assertContains(page, "Notifications…")
+        response = self.client.get(url, headers=MODAL)
+        assert_modal(self, response, title="Notifications of Dan Example")
+        self.assertContains(
+            response,
+            'value="tagged" class="form-check-input" id="id_notify_1" required checked',
+        )
+        response = self.client.post(url, {"notify": "default"}, headers=MODAL)
+        assert_modal_redirect(self, response, self.people_url)
+        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
+        # One's own
+        response = self.client.get(f"{self.people_url}{self.ada.pk}/notify/")
+        self.assertContains(response, "Your notifications")
+
+    def test_invite_and_organizations_in_the_header(self):
+        self.client.force_login(self.ada)
+        html = self.client.get(self.people_url).content.decode()
+        header = html.split('class="wb-page-header"', 1)[1].split("</h1>", 1)[1]
+        header = header.split("data-people-group", 1)[0]
+        for url in ["people/add/", "people/invite/", "/organizations/"]:
+            self.assertIn(url, header)
+        self.assertNotIn("btn-primary", header)
 
     def test_add_and_invite_forms_take_the_choice(self):
         self.client.force_login(self.ada)
@@ -232,6 +271,8 @@ class PageTest(Fixture, TestCase):
                 response = self.client.post(
                     f"{self.people_url}{other.pk}/notify/", {"notify": "tagged"}
                 )
+                self.assertEqual(response.status_code, 403)
+                response = self.client.get(f"{self.people_url}{other.pk}/notify/")
                 self.assertEqual(response.status_code, 403)
         self.assertIsNone(self.level(self.eve))
 

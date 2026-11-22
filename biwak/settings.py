@@ -108,6 +108,9 @@ MFA_ADAPTER = "biwak.accounts.adapters.MFAAdapter"
 MFA_SUPPORTED_TYPES = ["webauthn", "totp"]
 MFA_TOTP_ISSUER = "Biwak"
 MFA_PASSKEY_LOGIN_ENABLED = True
+# Confirming who one is with a passkey needs the PIN or fingerprint, as
+# signing in does (decided 2026-11-22)
+MFA_WEBAUTHN_USER_VERIFICATION = "required"
 # Off: tracking writes the session's row on every request (decided
 # 2026-11-21); the sessions list shows when each one signed in
 USERSESSIONS_TRACK_ACTIVITY = False

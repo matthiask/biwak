@@ -268,3 +268,37 @@ class SubscribersTest(E2ETestCase):
         self.assertEqual(len(names), 1)
         self.assertIn("Ada", names[0])
         self.assertEqual(self.errors, [])
+
+
+class MemberNotificationsTest(E2ETestCase):
+    """A project's people page: a member's notifications through the row's
+    "…" menu and a modal (decided 2026-11-22), staff for anybody, a client
+    for themselves"""
+
+    def test_staff_change_a_client_s(self):
+        from biwak.projects import operations as project_ops
+
+        page = self.page
+        self.goto(page, f"/projects/{self.project.pk}/people/")
+        page.locator('summary[aria-label="More: Cleo Example"]').click()
+        page.get_by_role("link", name="Notifications…").click()
+        dialog = page.get_by_role("dialog", name="Notifications of Cleo Example")
+        expect(dialog.get_by_label("Notified by default")).to_be_checked()
+        dialog.get_by_label("Only when tagged").check()
+        dialog.get_by_role("button", name="Save").click()
+        expect(dialog).to_be_hidden()
+        expect(page.get_by_text("The choice has been saved.")).to_be_visible()
+        self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "tagged")
+        self.assertEqual(self.errors, [])
+
+    def test_a_client_changes_only_their_own(self):
+        page = self.login(self.cleo)
+        self.goto(page, f"/projects/{self.project.pk}/people/")
+        expect(page.locator('summary[aria-label="More: Ada Example"]')).to_have_count(0)
+        page.locator('summary[aria-label="More: Cleo Example"]').click()
+        page.get_by_role("link", name="Notifications…").click()
+        dialog = page.get_by_role("dialog", name="Your notifications")
+        expect(dialog).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(dialog).to_be_hidden()
+        self.assertEqual(self.errors, [])

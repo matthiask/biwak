@@ -94,6 +94,14 @@ def decorate(user, viewer, shared):
     return user
 
 
+def own_label(viewer, organization):
+    """ "Your own organization" for its people; clients and partners see it
+    by its name alone (fixed 2026-11-22)"""
+    if viewer.organization_id == organization.pk:
+        return _("Your own organization")
+    return ""
+
+
 def groups_for(viewer):
     """The groups in the page's order, each person with ``role``,
     ``feed`` (whether the viewer may open their feed), ``show_email`` and
@@ -113,7 +121,7 @@ def groups_for(viewer):
             without.people.append(user)
         elif org.is_own:
             if own is None:
-                own = Group(org, "own", _("Your own organization"))
+                own = Group(org, "own", own_label(viewer, org))
             own.people.append(user)
         else:
             others.setdefault(org.pk, Group(org, "client", "")).people.append(user)
@@ -127,7 +135,7 @@ def groups_for(viewer):
     return [g for g in [own, *ordered, without] if g is not None and g.people]
 
 
-def project_groups(project, rows, *, can_add):
+def project_groups(project, rows, *, can_add, viewer):
     """A project's members by organization (specs/organizations.md, decided
     2026-11-21): the own staff first, then the client organizations, then
     the partner organizations (by name; partner: a member is staff), then
@@ -143,7 +151,7 @@ def project_groups(project, rows, *, can_add):
             without.people.append(row)
         elif org.is_own:
             if own is None:
-                own = Group(org, "own", _("Your own organization"))
+                own = Group(org, "own", own_label(viewer, org))
             own.people.append(row)
         else:
             clients.setdefault(org.pk, Group(org, "client", "")).people.append(row)
@@ -383,29 +391,40 @@ def person_reset_sign_in(request, pk):
         except activation.ActivationError as exc:
             messages.error(request, str(exc))
         else:
-            messages.success(
-                request,
-                _(
+            if activation.gets_reset_mail(who):
+                text = _(
                     "Removed from %(name)s: %(removed)s. They have been signed"
                     " out everywhere and got a mail about it."
                 )
-                % {
-                    "name": who.display_name,
-                    "removed": ", ".join(activation.removed_list(removed)),
-                },
+            else:
+                text = _(
+                    "Removed from %(name)s: %(removed)s. They have been signed"
+                    " out everywhere."
+                )
+            removed_words = activation.removed_list(removed, theirs=True)
+            messages.success(
+                request,
+                text % {"name": who.display_name, "removed": ", ".join(removed_words)},
             )
         return redirect(back(request, who))
     return form_response(
         request,
         None,
         title=_("Reset the sign-in of %(name)s?") % {"name": who.display_name},
-        intro=_(
-            "Removes %(removed)s and signs them out everywhere, for a lost"
-            " phone or laptop or when someone else may have had access. They"
-            " sign in with a code or through their organization's sign-in"
-            " then and set things up again. They get a mail about it."
-        )
-        % {"removed": ", ".join(activation.removed_list(removed))},
+        intro=(
+            _(
+                "Removes %(removed)s and signs them out everywhere, for a lost"
+                " phone or laptop or when someone else may have had access."
+                " They sign in with a code or through their organization's"
+                " sign-in then and set things up again."
+            )
+            % {"removed": ", ".join(activation.removed_list(removed, theirs=True))}
+            + (
+                " " + _("They get a mail about it.")
+                if activation.gets_reset_mail(who)
+                else ""
+            )
+        ),
         cancel_url=back(request, who),
         submit_label=_("Reset"),
         destructive=True,

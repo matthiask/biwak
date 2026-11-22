@@ -112,6 +112,16 @@ class PeoplePageTest(TestCase):
         self.assertNotContains(response, "ada@example.org")
         self.assertNotContains(response, "/organization/")
 
+    def test_your_own_organization_only_for_its_people(self):
+        """Clients and partners see the own organization by its name, not as
+        "Your own organization" (fixed 2026-11-22)"""
+        self.assertContains(self.page(self.ada), "Your own organization")
+        for viewer in [self.cleo, self.pia]:
+            with self.subTest(viewer=viewer):
+                response = self.page(viewer)
+                self.assertContains(response, "Example Team")
+                self.assertNotContains(response, "Your own organization")
+
     def test_navigation_and_palette(self):
         response = self.page(self.cleo)
         self.assertContains(response, 'href="/people/"')
