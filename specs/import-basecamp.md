@@ -34,6 +34,38 @@ goes into internal containers, archived recordings skipped.
   (`Retry-After`); one request per recording for its comments and its
   subscribers, so big accounts take a while.
 
+## Importing the whole account (planned, 2026-11-22)
+
+Goal: import everything still current in one go (all active projects,
+archived ones changed in the last few years) instead of project by
+project. Waiting for Basecamp's account export to confirm the plan.
+
+- **The API only lists projects you're on:** `/projects.json` gave 115
+  active and at least 15 archived projects (only the first page of
+  archived ones counted) for an account owner and admin, which isn't all
+  of them.
+- **The export as the source: probably not.** As far as we know it is a
+  browsable HTML archive with the files, not the API's JSON. Check it
+  for what the importer relies on: client visibility per recording (the
+  rule that a client never sees what was internal depends on it),
+  people's email addresses, Basecamp's IDs (a second run updates),
+  subscriptions, check-in schedules, assignees as people. Parsing HTML
+  would be a second, worse importer.
+- **Plan:** the export as the inventory, the API as the source. Compare
+  the export's project IDs with what the API lists; the person importing
+  gets added to the missing projects in Basecamp; then a bulk selection
+  in `import_basecamp` (e.g. `--all-active --archived-since DATE`)
+  walking `/projects.json` and `?status=archived`. The API has no
+  archiving date, so the cutoff would be the project's `updated_at`.
+- **Runtime:** about two requests per recording (comments,
+  subscribers) at 50 per 10 seconds: hours for a big account. Reruns
+  update, so an interrupted run is simply started again.
+- **Open questions:** the person importing becomes a member of every
+  project they were only added to for the import (the importer copies
+  Basecamp's members): skip them in those projects, or remove them
+  afterwards? The cutoff for archived projects (3 years by
+  `updated_at`?).
+
 ## Mapping
 
 | Basecamp | Biwak |
