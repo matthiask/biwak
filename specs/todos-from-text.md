@@ -41,8 +41,8 @@ same for the modal, the API and the CLI:
   The first line is the title, as plain text (inline Markdown removed;
   the title of a to-do isn't Markdown); a title over 500 characters is
   cut and the whole line kept in the notes.
-- **Ticked items** (`[x]`) are added as completed (a list moved over
-  from elsewhere keeps its state).
+- **Ticked items** (`[x]`) are added as completed (decided 2026-11-22:
+  a list moved over from elsewhere keeps its state).
 - **What's indented under an item** becomes its notes: nested items as
   a checklist (`- [ ]`, ticked ones stay ticked, deeper levels as they
   are), paragraphs and code as written. The same as Basecamp's card
@@ -76,7 +76,9 @@ disabled and the preview says why.
   in lists they created): otherwise the preview says which headings
   can't become groups and the button stays disabled until they're
   removed or match existing groups.
-- **Limits:** questions below.
+- **Limits** (decided 2026-11-22): 500 to-dos per text, files up to
+  200 KB; more is refused with the count ("This text has 640 to-dos; up
+  to 500 can be added at once.").
 
 ## API and CLI
 
@@ -86,13 +88,6 @@ disabled and the preview says why.
 - `biwak todos add-from-text LIST [FILE]` (stdin without a file),
   `--preview`, `--json`. `[clients]`. Agents get a simple way to turn a
   plan into to-dos.
-
-## Questions
-
-1. **Limits:** how many to-dos per text and how big a file? Proposed:
-   500 to-dos (the biggest template in the account being replaced has
-   160) and 200 KB; more is refused with the count.
-2. **Ticked items:** added as completed (proposed), or left out?
 
 ## Done when
 
