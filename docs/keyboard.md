@@ -18,8 +18,9 @@ inside pages, like GitHub's.
   <kbd>Esc</kbd> closes. "Search for ..." at the end opens the search
   page with your text.
 - **Actions** depend on the page and on what you may do: everywhere
-  "Go home", "Go to projects", "Go to to-dos", "Settings", "Help",
-  "Keyboard shortcuts", "Switch the theme"; in a project "New message",
+  "Go home", "Go to projects", "Go to the activity", "Go to to-dos",
+  "To-dos I assigned", "Go to bookmarks", "Go to people", "Settings",
+  "Search", "Help", "Keyboard shortcuts", "Switch the theme"; in a project "New message",
   "New doc" and so on; on a to-do "Complete", "Comment", "Edit",
   "Bookmark", "Subscribe", "Copy the link".
 

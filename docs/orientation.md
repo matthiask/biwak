@@ -43,7 +43,7 @@ lists, messages, docs and files, check-ins, members.
   The "More" menu has the project's notification level, archiving and
   the trash; a list is archived from its own "More" menu.
 - Staff add outside links (a design file, the live site) with "Add a
-  link" on the project's page.
+  link" on the project's page or in the command palette.
 - **Members** lists who is in the project, by organization: your own
   first, then the clients' organizations, then partners'. Staff add
   people there, "Add people from …" an organization in the project, or
@@ -56,8 +56,8 @@ lists, messages, docs and files, check-ins, members.
 
 ## To-dos
 
-**To-dos** in the bar is your own list, by due date. Every project and
-every list has its to-dos too. See [To-dos](todos.md).
+**To-dos** in the bar is your own list, by project (or by due date).
+Every project and every list has its to-dos too. See [To-dos](todos.md).
 
 ## Activity
 
@@ -69,14 +69,15 @@ conversation.
 
 ## The lantern
 
-The lamp icon in the bar is your inbox: what you are told about, with a
+The torch icon in the bar is your inbox: what you are told about, with a
 dot while something is unread. Opening an entry reads it. See
 [Notifications](notifications.md).
 
 ## Bookmarks
 
 The bookmark icon on a project or an item keeps it on your **Bookmarks**
-page and on Home. Bookmarks are yours; nobody else sees them.
+page (the projects first, then the items by project), on Home and in the
+command palette. Bookmarks are yours; nobody else sees them.
 
 ## Search and the palette
 
