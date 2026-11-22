@@ -4,7 +4,8 @@ Notifications on the phone (and the desktop) while Biwak isn't open,
 through the browsers' Web Push. Asked by the user 2026-11-22: installed as
 an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
-**Status:** being built (2026-11-22).
+**Status:** built (2026-11-22), except closing a shown push when it's
+read elsewhere (below, "Open").
 
 ## What pushes
 
@@ -172,3 +173,22 @@ In this order, each step with its tests:
   API, the audit log), `biwak/test_e2e_push.py` (subscribing in
   Chromium with its `PushManager` stubbed; a push delivered to the
   worker through the DevTools protocol).
+
+## Open
+
+- **Closing a shown push when it's read elsewhere** ("Read in the
+  lantern" above) isn't built: it needs a push without a notification of
+  its own, which Safari answers by revoking the subscription after a few
+  and Chrome by showing "This site has been updated in the background".
+  Options: leave it (the tag replaces the item's older push anyway);
+  close only on the device where Biwak is open (the page can close its
+  worker's notifications when the lantern reads); or a `close` push
+  that also shows something. Waiting for the user.
+- **Signing out** doesn't remove the browser's device: on a shared
+  computer the pushes keep coming until someone removes it. Remove it
+  when signing out there (the subscription can't be tied to a session
+  today)?
+- **The CLI** has no commands for the devices (the spec says "the CLI
+  doesn't push"); `biwak devices` (list, remove) if wanted.
+- The proposals above (content, wording, only what came after
+  subscribing, giving up after the TTL) wait for confirmation.
