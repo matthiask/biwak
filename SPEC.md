@@ -61,8 +61,8 @@ In scope:
     to-dos (`specs/forwarding.md`, in scope since 2026-11-22).
 16. Quiet hours and out of office, start dates, copying lists and
     moving across projects (`specs/quiet-hours.md`, `start-dates.md`,
-    `lists-across-projects.md`). Project templates: an agent skill, not
-    a feature (decided 2026-11-22).
+    `lists-across-projects.md`). Templates for projects and lists,
+    maintained in the app (`specs/templates.md`, decided 2026-11-22).
 
 Out of scope on purpose:
 

@@ -2,8 +2,7 @@
 
 Copying a to-do list (into the same or another project) and moving
 top-level items to another project. Decided with the user 2026-11-22.
-Project templates are left to an agent skill that sets up projects
-through the CLI (`api-cli.md`, "Agent skills").
+Templates copy lists the same way (`templates.md`).
 
 **Status:** built (2026-11-22).
 
