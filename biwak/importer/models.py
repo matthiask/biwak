@@ -17,6 +17,12 @@ class ImportedObject(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveBigIntegerField()
     imported_at = models.DateTimeField(default=timezone.now)
+    # The recording's state when it was last read completely: a later run
+    # skips it when both are the same (its comments and subscribers aren't
+    # fetched again). Empty for what was imported before they were stored,
+    # and for what has no ``updated_at``.
+    basecamp_updated_at = models.DateTimeField(null=True, blank=True)
+    basecamp_comments_count = models.PositiveIntegerField(null=True, blank=True)
 
     target = GenericForeignKey("content_type", "object_id")
 

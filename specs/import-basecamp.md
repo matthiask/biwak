@@ -13,8 +13,8 @@ data and a fake client for the tests). Not built: `--lazy-files`
 ## Running it
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
-[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--user EMAIL]
-[--archive]`.
+[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--full]
+[--user EMAIL] [--archive]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
 
@@ -49,9 +49,17 @@ goes into internal containers, archived recordings skipped.
   count; when both are the same, the recording isn't updated and its
   comments and subscribers aren't fetched (the two requests per
   recording that made a second run as slow as the first). The report
-  counts them as unchanged. Changed subscriptions don't change
-  `updated_at`, so they come along only with `--full`, which reads
-  everything as before.
+  counts them as unchanged (a dry run too). Changed subscriptions don't
+  change `updated_at`, so they come along only with `--full`, which reads
+  everything as before. Built so (2026-11-22): `ImportedObject`'s
+  `basecamp_updated_at` and `basecamp_comments_count` (cards say
+  `comment_count`), stored once the recording's comments and subscribers
+  are done, so an interrupted run reads it again; rows from before have
+  none and are read completely once. The children of containers (lists,
+  groups, folders, card tables' columns, questions' answers) are still
+  listed, new children don't change the parent; what the listing already
+  gives (visibility, completion, assignees, archived) is still compared,
+  costing no request. `--since` skips older leaves before any of this.
 - **Several tools of a kind** (two to-do sets, several message boards
   or Docs & Files) are merged as they come (decided 2026-11-22): their
   lists, messages and files land together in the project. The report

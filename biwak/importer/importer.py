@@ -132,9 +132,12 @@ class Report:
         lines = ["Dry run, nothing was written." if self.dry_run else "Imported."]
         for label in KINDS.values():
             if counts := self.counts.get(label):
-                lines.append(
-                    f"  {label}: {counts['created']} new, {counts['updated']} existing"
+                line = (
+                    f"  {label}: {counts['created']} new, {counts['updated']} updated"
                 )
+                if counts["unchanged"]:
+                    line += f", {counts['unchanged']} unchanged"
+                lines.append(line)
         if self.people:
             lines.append(
                 "People created inactive:" if not self.dry_run else "People to create:"
@@ -175,6 +178,12 @@ def parse_time(value):
     return dt.datetime.fromisoformat(value) if value else None
 
 
+def comment_count(rec):
+    """Recordings say ``comments_count``, cards ``comment_count``"""
+    count = rec.get("comments_count", rec.get("comment_count"))
+    return int(count) if count is not None else None
+
+
 PROGRESS_EVERY = 25  # items between progress lines
 TOOL_NAMES = {
     "todoset": "To-dos",
@@ -193,14 +202,18 @@ class Importer(Resolver):
         actor,
         dry_run=False,
         since=None,
+        full=False,
+        include_disabled=False,
         archive=False,
         progress=None,
         clock=time.monotonic,
     ):
         """``actor``: the Biwak person running the import (staff), who
         creates the projects and owns the bookmarks; ``archive``: archive
-        each project in Basecamp once it was imported; ``progress``: called
-        with a line of text while importing (the command prints them)"""
+        each project in Basecamp once it was imported; ``full``: read
+        recordings unchanged since the last run too; ``include_disabled``:
+        import tools switched off in Basecamp; ``progress``: called with a
+        line of text while importing (the command prints them)"""
         self.client = client
         self._progress = progress
         self._clock = clock
@@ -210,7 +223,11 @@ class Importer(Resolver):
         self.actor = actor
         self.dry = dry_run
         self.since = since
+        self.full = full
+        self.include_disabled = include_disabled
         self.archive = archive
+        # (Basecamp type, ID) of the recordings unchanged since the last run
+        self._skipped = set()
         self.report = Report(dry_run=dry_run)
         self._users = {}  # Basecamp person ID: User, or None
         self._people_by_sgid = {}
@@ -261,15 +278,20 @@ class Importer(Resolver):
     def _find(self, bc_type, bc_id):
         """The Biwak object of a Basecamp ID, or None (also when it was
         deleted since)"""
+        return self._mapping(bc_type, bc_id)[1]
+
+    def _mapping(self, bc_type, bc_id):
+        """(``ImportedObject``, its Biwak object), or (None, None)"""
         mapped = ImportedObject.objects.filter(
             basecamp_type=bc_type, basecamp_id=bc_id
         ).first()
         if mapped is None:
-            return None
+            return None, None
         target = mapped.target
         if target is None:
             mapped.delete()
-        return target
+            return None, None
+        return mapped, target
 
     def _remember(self, bc_type, bc_id, obj):
         ImportedObject.objects.update_or_create(
@@ -282,11 +304,20 @@ class Importer(Resolver):
             },
         )
 
-    def _upsert(self, bc_type, rec, *, create, update=None):
+    def _upsert(self, bc_type, rec, *, create, update=None, follow=False):
         """Creates the Biwak object of the recording or updates the one
         imported before; in a dry run only counts. Each in a transaction
-        of its own with the mapping, so an interrupted run continues."""
-        found = self._find(bc_type, rec["id"])
+        of its own with the mapping, so an interrupted run continues.
+
+        One unchanged since the last run (``updated_at`` and comment count
+        as stored, not ``--full``) isn't updated. ``follow``: the caller
+        fetches its comments and subscribers with ``_follow()``, which
+        stores its state once they're done; otherwise it is stored here."""
+        mapped, found = self._mapping(bc_type, rec["id"])
+        if found is not None and self._unchanged(mapped, rec):
+            self._count(bc_type, "unchanged")
+            self._skipped.add((bc_type, rec["id"]))
+            return found
         self._count(bc_type, "updated" if found else "created")
         if self.dry:
             return found
@@ -296,7 +327,42 @@ class Importer(Resolver):
                 self._remember(bc_type, rec["id"], found)
             elif update is not None:
                 update(found)
+            if not follow:
+                self._settle(bc_type, rec)
         return found
+
+    def _unchanged(self, mapped, rec):
+        """Whether the recording is as when it was last read completely"""
+        updated = parse_time(rec.get("updated_at"))
+        return (
+            not self.full
+            and updated is not None
+            and mapped.basecamp_updated_at == updated
+            and mapped.basecamp_comments_count == comment_count(rec)
+        )
+
+    def _settle(self, bc_type, rec):
+        """Stores the state of the recording, read completely now"""
+        if self.dry:
+            return
+        ImportedObject.objects.filter(
+            basecamp_type=bc_type, basecamp_id=rec["id"]
+        ).update(
+            basecamp_updated_at=parse_time(rec.get("updated_at")),
+            basecamp_comments_count=comment_count(rec),
+        )
+
+    def _follow(self, bc_type, rec, item, *, comments=True, subscriptions=True):
+        """The comments and subscribers of a recording (two requests), not
+        for one unchanged since the last run; then its state is stored"""
+        if (bc_type, rec["id"]) in self._skipped:
+            return
+        if comments:
+            self._comments(rec, item)
+        if subscriptions and item is not None:
+            self._subscriptions(rec, item)
+        if item is not None:
+            self._settle(bc_type, rec)
 
     def _skip(self, rec):
         """``--since``: what wasn't changed since isn't looked at again"""
@@ -716,7 +782,7 @@ class Importer(Resolver):
     def _comments(self, rec, item):
         if self.since and self._skip(rec):
             return
-        if rec.get("comments_count") == 0 or rec.get("comment_count") == 0:
+        if comment_count(rec) == 0:
             return
         try:
             comments = list(
@@ -824,14 +890,13 @@ class Importer(Resolver):
                     ),
                 )
 
-        item = self._upsert("Todolist", rec, create=create, update=update)
+        item = self._upsert("Todolist", rec, create=create, update=update, follow=True)
         if item is not None:
             self._top_visibility(item, visible, rec)
             self._status(item, rec)
             self._stamp(item, rec)
         self._list_content(rec, item, visible, project)
-        if item is not None:
-            self._subscriptions(rec, item)
+        self._follow("Todolist", rec, item, comments=False)
 
     def _list_content(self, rec, item, visible, project):
         """Its to-dos and the groups with theirs"""
@@ -930,16 +995,13 @@ class Importer(Resolver):
                     **dates(),
                 )
 
-        todo = self._upsert(bc_type, rec, create=create, update=update)
-        if todo is None:
-            self._comments(rec, None)
-            return
-        with importing(at=parse_time(rec.get("updated_at"))):
-            self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
-            self._completion(todo, rec)
-        self._stamp(todo, rec)
-        self._comments(rec, todo)
-        self._subscriptions(rec, todo)
+        todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
+        if todo is not None:
+            with importing(at=parse_time(rec.get("updated_at"))):
+                self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
+                self._completion(todo, rec)
+            self._stamp(todo, rec)
+        self._follow(bc_type, rec, todo)
 
     def _completion(self, todo, rec):
         """Archived to-dos come in completed (specs/archiving.md), at the
@@ -987,7 +1049,9 @@ class Importer(Resolver):
             with importing(at=parse_time(rec.get("updated_at"))):
                 ops.update_list(item, actor=item.creator, title=rec["title"])
 
-        item = self._upsert("Kanban::Board", rec, create=create, update=update)
+        item = self._upsert(
+            "Kanban::Board", rec, create=create, update=update, follow=True
+        )
         if item is not None:
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
@@ -995,8 +1059,7 @@ class Importer(Resolver):
         self._container_project = project
         for column in rec.get("lists", []):
             self._group(column, item, visible, project, rec_type=COLUMN, cards=True)
-        if item is not None:
-            self._subscriptions(rec, item)
+        self._follow("Kanban::Board", rec, item, comments=False)
 
     def _cards(self, column_id, item, group, parent_visible, project):
         try:
@@ -1067,14 +1130,11 @@ class Importer(Resolver):
                     category=self._category(rec),
                 )
 
-        item = self._upsert("Message", rec, create=create, update=update)
-        if item is None:
-            self._comments(rec, None)
-            return
-        self._top_visibility(item, visible, rec)
-        self._stamp(item, rec)
-        self._comments(rec, item)
-        self._subscriptions(rec, item)
+        item = self._upsert("Message", rec, create=create, update=update, follow=True)
+        if item is not None:
+            self._top_visibility(item, visible, rec)
+            self._stamp(item, rec)
+        self._follow("Message", rec, item)
 
     # Docs & Files -------------------------------------------------------------------------------
 
@@ -1108,11 +1168,11 @@ class Importer(Resolver):
                     visible=visible,
                 )
 
-        item = self._upsert("Vault", rec, create=create)
+        item = self._upsert("Vault", rec, create=create, follow=True)
         if item is not None:
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
-            self._subscriptions(rec, item)
+        self._follow("Vault", rec, item, comments=False)
         self._vault(
             rec["id"],
             project,
@@ -1157,14 +1217,11 @@ class Importer(Resolver):
                     content=with_heading(rec["title"], content()),
                 )
 
-        item = self._upsert("Document", rec, create=create, update=update)
-        if item is None:
-            self._comments(rec, None)
-            return
-        self._top_visibility(item, visible, rec)
-        self._stamp(item, rec)
-        self._comments(rec, item)
-        self._subscriptions(rec, item)
+        item = self._upsert("Document", rec, create=create, update=update, follow=True)
+        if item is not None:
+            self._top_visibility(item, visible, rec)
+            self._stamp(item, rec)
+        self._follow("Document", rec, item)
 
     def _upload(self, rec, project, parent, parent_visible, nested, internal):
         if self._skip(rec):
@@ -1214,16 +1271,15 @@ class Importer(Resolver):
                 )
 
         try:
-            item = self._upsert("Upload", rec, create=create, update=update)
+            item = self._upsert(
+                "Upload", rec, create=create, update=update, follow=True
+            )
         except _Skip:
             return
-        if item is None:
-            self._comments(rec, None)
-            return
-        self._top_visibility(item, visible, rec)
-        self._stamp(item, rec)
-        self._comments(rec, item)
-        self._subscriptions(rec, item)
+        if item is not None:
+            self._top_visibility(item, visible, rec)
+            self._stamp(item, rec)
+        self._follow("Upload", rec, item)
 
     # Check-ins ------------------------------------------------------------------------------------
 
@@ -1257,7 +1313,7 @@ class Importer(Resolver):
                 checkin_ops.pause(item, actor=creator)
             return item
 
-        item = self._upsert("Question", rec, create=create)
+        item = self._upsert("Question", rec, create=create, follow=True)
         answers = list(self.client.paginate(f"/questions/{rec['id']}/answers.json"))
         if item is not None:
             self._stamp(item, rec)
@@ -1281,8 +1337,7 @@ class Importer(Resolver):
                         ),
                         actor=item.creator,
                     )
-        if item is not None:
-            self._subscriptions(rec, item)
+        self._follow("Question", rec, item, comments=False)
 
     def _answer(self, rec, question_rec, question, visible):
         if not self._inherits(rec, visible, "check-in answer"):
@@ -1322,14 +1377,12 @@ class Importer(Resolver):
                 )
 
         try:
-            item = self._upsert("Question::Answer", rec, create=create)
+            item = self._upsert("Question::Answer", rec, create=create, follow=True)
         except _Skip:
             return user
         if item is not None:
             self._stamp(item, rec)
-            self._comments(rec, item)
-        else:
-            self._comments(rec, None)
+        self._follow("Question::Answer", rec, item, subscriptions=False)
         return user
 
     # After the project --------------------------------------------------------------------
