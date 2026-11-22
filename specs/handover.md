@@ -95,10 +95,12 @@ Built (2026-11-22):
   `frontend/select-rows.js` selects (class `is-selected`, as the tiles),
   `shortcuts.js` calls it for x and Shift+↑/↓ (only up and down: rows
   are a column, also on the board, where Shift+arrows go through the
-  rows in document order) and completes on Shift+x. x goes with the
-  shortcuts setting like every single key; Ctrl- and Shift-click work
-  with it off (decided 2026-11-22, consistent: the tiles' x is on a
-  focused tile only). Ctrl-click on the check, the grip or the peek
+  rows in document order) and completes on Shift+x. With the focus in
+  a row (its link), x and Shift+↑/↓ work whatever the shortcuts setting,
+  like a focused tile's x (keys on the focused element only, allowed by
+  WCAG 2.1.4); on the current row of j and k they go with the setting,
+  like every single key; Ctrl- and Shift-click always work (decided
+  2026-11-22). Ctrl-click on the check, the grip or the peek
   keeps their own clicks.
 - **Grips:** clicking grips still selects for dragging several
   (SortableJS's MultiDrag) with the same class, so the bar counts them

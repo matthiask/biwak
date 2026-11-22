@@ -98,6 +98,27 @@ class SelectingTodosTest(E2ETestCase):
         self.assertTrue(self.todo("Two").todo.is_completed)
         self.assertEqual(self.errors, [])
 
+    def test_the_focused_row_with_shortcuts_off(self):
+        """x and Shift+arrows act on the focused row whatever the setting,
+        like a focused tile's x; the single keys elsewhere don't"""
+        self.ada.keyboard_shortcuts = False
+        self.ada.save()
+        page = self.page
+        self.goto(page, self.todolist)
+        bar = page.locator("[data-row-selection-bar]")
+        page.keyboard.press("x")
+        expect(bar).to_be_hidden()
+        self.row(page, "One").locator("[data-kb-open]").focus()
+        page.keyboard.press("x")
+        expect(bar).to_contain_text("1 selected")
+        page.keyboard.press("Shift+ArrowDown")
+        expect(bar).to_contain_text("2 selected")
+        expect(self.row(page, "Two").locator("[data-kb-open]")).to_be_focused()
+        # Shift+x completes only with the shortcuts on
+        page.keyboard.press("Shift+x")
+        self.assertFalse(self.todo("Two").todo.is_completed)
+        self.assertEqual(self.errors, [])
+
     def test_assigning_on_the_todos_page(self):
         page = self.page
         self.goto(page, "/todos/?assignee=anybody")

@@ -58,4 +58,5 @@ is open.
 Single keys can get in the way of screen readers and voice control. In
 **Settings**, under Keyboard, you can turn the single-key shortcuts
 off. <kbd>Ctrl</kbd>+<kbd>K</kbd> keeps working. <kbd>/</kbd> is a
-single key and goes with the setting.
+single key and goes with the setting. Selecting with <kbd>x</kbd> on a to-do or a tile
+that has the focus (after <kbd>Tab</kbd>) keeps working.

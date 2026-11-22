@@ -13,6 +13,7 @@
 // group's, this one goes across groups and lists.
 
 import { openModal } from "./modal.js"
+import { data } from "./palette.js"
 
 const SELECTED = "is-selected"
 
@@ -107,6 +108,30 @@ if (bar) {
     } else if (event.shiftKey) {
       event.preventDefault()
       selectRange(row)
+    }
+  })
+
+  // With the shortcuts off, x and Shift+↑/↓ still select with the focus in
+  // a row (its link), like a focused tile's x (files.js; decided
+  // 2026-11-22): keys acting on the focused element only. With them on,
+  // shortcuts.js does it for the current row (the focus follows it)
+  document.addEventListener("keydown", (event) => {
+    if (data?.shortcuts) return
+    const row = event.target.closest?.("[data-select-row]")
+    if (!row || event.ctrlKey || event.altKey || event.metaKey) return
+    if (event.target.closest("input, textarea, select, [contenteditable]"))
+      return
+    if (event.key === "x" && !event.shiftKey) {
+      if (!toggleRow(row)) return
+      event.preventDefault()
+    } else if (
+      event.shiftKey &&
+      (event.key === "ArrowDown" || event.key === "ArrowUp")
+    ) {
+      const next = extendSelection(row, event.key === "ArrowDown" ? 1 : -1)
+      if (!next) return
+      event.preventDefault()
+      next.querySelector("a[href]")?.focus()
     }
   })
 
