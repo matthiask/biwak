@@ -7,15 +7,6 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 
 ## Made before the fixes
 
-- **A. Clients in "will be told" at the top level.** Ticking "Visible to
-  clients" on a new message or upload at the top level lists the clients
-  who'll be told and lets "Also tell…" offer clients of the project; the
-  line follows the checkbox.
-- **B. A to-do moved and moved back** within the 10 minutes shows no
-  line in the timeline, the same as completing and reopening.
-- **C. Confirming who you are with a passkey** (before sensitive
-  changes) needs the PIN or fingerprint, as signing in does
-  (`MFA_WEBAUTHN_USER_VERIFICATION = "required"`).
 - **D. Links inside sentences** are underlined (text in the feed, Home,
   comments, help); links that are a row, a title or navigation are not.
 - **E. A project's people page:** "Invite" and "Organizations" in the
