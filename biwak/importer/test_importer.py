@@ -738,6 +738,159 @@ class UnchangedTest(ImportCase):
         self.assertEqual(self.report.counts["to-dos"]["unchanged"], 0)
 
 
+class ToolsTest(ImportCase):
+    """Several tools of a kind are merged and named in the report;
+    switched-off ones are skipped, the report says what's in them"""
+
+    @property
+    def dock(self):
+        return self.client_.data[f"/projects/{support.PROJECT}.json"]["dock"]
+
+    def switch_off(self, *names):
+        for tool in self.dock:
+            if tool["name"] in names:
+                tool["enabled"] = False
+
+    def add_todoset(self, *, enabled=True):
+        """A second to-do set with a list and a to-do"""
+        data = self.client_.data
+        self.dock.append({
+            "id": 310,
+            "title": "Kitchen to-dos",
+            "name": "todoset",
+            "enabled": enabled,
+        })
+        data["/todosets/310.json"] = support.tool(
+            "todoset", 310, "Kitchen to-dos", todolists_count=1, completed_ratio="0/1"
+        )
+        data["/todosets/310/todolists.json"] = [
+            support.recording(
+                311,
+                "Todolist",
+                "Dishes",
+                support.ADA,
+                "2026-01-06T10:00:00.000Z",
+                description="",
+                description_attachments=[],
+            )
+        ]
+        data["/todosets/310/todolists.json?status=archived"] = []
+        data["/todolists/311/todos.json"] = [
+            data["/todolists/301/todos.json"][1] | {"id": 3111, "title": "Dry"}
+        ]
+
+    def test_several_of_a_kind_are_merged_and_listed(self):
+        self.add_todoset()
+        report = self.run_import()
+        self.assertTrue(Item.objects.filter(title="Dishes").exists())
+        self.assertTrue(Item.objects.filter(title="Kitchen plan").exists())
+        self.assertEqual(
+            report.several, ['Camp kitchen, To-dos: "To-dos", "Kitchen to-dos"']
+        )
+        self.assertIn(
+            'Several tools of a kind, merged:\n  Camp kitchen, To-dos: "To-dos",',
+            report.as_text(),
+        )
+
+    def test_one_of_each_kind_says_nothing(self):
+        report = self.run_import()
+        self.assertEqual(report.several, [])
+        self.assertNotIn("Several tools", report.as_text())
+
+    def test_switched_off_ones_are_skipped_and_listed(self):
+        self.switch_off(
+            "todoset", "kanban_board", "message_board", "vault", "questionnaire"
+        )
+        report = self.run_import()
+        self.assertFalse(Item.objects.exists())
+        self.assertEqual(
+            report.switched_off,
+            [
+                'Camp kitchen, Message board "Message Board": 2 messages',
+                'Camp kitchen, To-dos "To-dos": 2 lists, 5 to-dos',
+                'Camp kitchen, Docs & files "Docs & Files": 3 folders, 2 docs, 1 file',
+                'Camp kitchen, Card table "Card Table": 2 cards',
+                'Camp kitchen, Check-ins "Automatic Check-ins": 2 questions',
+            ],
+        )
+        self.assertIn(
+            "Switched off in Basecamp, not imported (--include-disabled imports"
+            " them):\n  Camp kitchen, Message board",
+            report.as_text(),
+        )
+        # One request each, for the tool itself, and nothing in them
+        paths = [path for path, _params in self.client_.requests]
+        for path in (
+            "/todosets/300.json",
+            "/message_boards/200.json",
+            "/vaults/400.json",
+            "/card_tables/600.json",
+            "/questionnaires/500.json",
+        ):
+            self.assertEqual(paths.count(path), 1)
+        self.assertFalse(
+            any(
+                path.startswith((
+                    "/todosets/300/",
+                    "/message_boards/200/",
+                    "/vaults/400/",
+                ))
+                for path in paths
+            )
+        )
+
+    def test_empty_ones_stay_silent(self):
+        self.switch_off("message_board", "kanban_board")
+        self.client_.data["/message_boards/200.json"]["messages_count"] = 0
+        for column in self.client_.data["/card_tables/600.json"]["lists"]:
+            column["cards_count"] = 0
+        report = self.run_import()
+        self.assertEqual(report.switched_off, [])
+        self.assertNotIn("Switched off", report.as_text())
+        self.assertFalse(Item.objects.filter(kind=Kind.MESSAGE).exists())
+
+    def test_tools_never_imported_are_ignored(self):
+        # The chat and the schedule, switched off or not; the inbox is off
+        self.switch_off("chat", "schedule")
+        report = self.run_import()
+        self.assertEqual(report.switched_off, [])
+        self.assertFalse([p for p in report.problems if "Switched-off" in p])
+        paths = [path for path, _params in self.client_.requests]
+        self.assertFalse(
+            any(p.startswith(("/chats", "/schedules", "/inboxes")) for p in paths)
+        )
+
+    def test_a_dry_run_lists_them_too(self):
+        self.switch_off("message_board")
+        self.add_todoset()
+        report = self.run_import(dry_run=True)
+        self.assertEqual(
+            report.switched_off,
+            ['Camp kitchen, Message board "Message Board": 2 messages'],
+        )
+        self.assertEqual(len(report.several), 1)
+        self.assertEqual(report.counts["messages"], {})
+
+    def test_include_disabled_imports_them(self):
+        self.switch_off("message_board")
+        self.add_todoset(enabled=False)
+        importer = Importer(self.client_, actor=self.ada, include_disabled=True)
+        report = importer.run(support.PROJECT)
+        self.assertEqual(report.switched_off, [])
+        self.assertTrue(Item.objects.filter(title="We have a camp").exists())
+        self.assertTrue(Item.objects.filter(title="Dishes").exists())
+        self.assertEqual(len(report.several), 1)
+
+    def test_a_tool_which_cant_be_checked_is_a_problem(self):
+        self.switch_off("questionnaire")
+        del self.client_.data["/questionnaires/500.json"]
+        report = self.run_import()
+        self.assertIn(
+            "Switched-off tool 'Automatic Check-ins' (500) in Camp kitchen not checked",
+            report.problems[-1],
+        )
+
+
 class ArchivedTest(ImportCase):
     def test_archived_recordings_are_skipped_and_reported(self):
         report = self.run_import()
@@ -1097,6 +1250,16 @@ class CommandTest(ImportCase):
         text, _make = self.call(*args, "--full")
         self.assertIn("to-dos: 0 new, 6 updated", text)
         self.assertNotIn("unchanged", text)
+
+    def test_include_disabled(self):
+        dock = self.client_.data[f"/projects/{support.PROJECT}.json"]["dock"]
+        dock[0]["enabled"] = False  # the message board
+        args = ("--account", "1000", "--project", str(support.PROJECT))
+        text, _make = self.call(*args, "--dry-run")
+        self.assertIn('Message board "Message Board": 2 messages', text)
+        text, _make = self.call(*args, "--include-disabled")
+        self.assertNotIn("Switched off", text)
+        self.assertIn("messages: 2 new", text)
 
     def test_archive(self):
         args = ("--account", "1000", "--project", str(support.PROJECT), "--archive")

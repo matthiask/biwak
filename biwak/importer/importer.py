@@ -127,6 +127,10 @@ class Report:
         # Files over the upload limit: not imported, listed with where they
         # would have gone and their link in Basecamp
         self.too_large = []
+        # Several tools of a kind, merged: "project, kind: titles"
+        self.several = []
+        # Tools switched off in Basecamp, not imported, with what's in them
+        self.switched_off = []
 
     def as_text(self):
         lines = ["Dry run, nothing was written." if self.dry_run else "Imported."]
@@ -158,6 +162,15 @@ class Report:
                 f"Too large to import (at most {limit} MB), put them elsewhere:"
             )
             lines += [f"  {line}" for line in self.too_large]
+        if self.several:
+            lines.append("Several tools of a kind, merged:")
+            lines += [f"  {line}" for line in self.several]
+        if self.switched_off:
+            lines.append(
+                "Switched off in Basecamp, not imported (--include-disabled"
+                " imports them):"
+            )
+            lines += [f"  {line}" for line in self.switched_off]
         if self.archived:
             lines.append("Archived in Basecamp, skipped:")
             lines += [f"  {line}" for line in self.archived]
@@ -192,6 +205,49 @@ TOOL_NAMES = {
     "vault": "Docs & files",
     "questionnaire": "Check-ins",
 }
+# Where a tool is, for what's in it
+TOOL_PATHS = {
+    "todoset": "/todosets",
+    "kanban_board": "/card_tables",
+    "message_board": "/message_boards",
+    "vault": "/vaults",
+    "questionnaire": "/questionnaires",
+}
+
+
+def _amount(count, one, many):
+    return f"{count} {one if count == 1 else many}"
+
+
+def tool_contents(name, rec):
+    """What's in a tool, from its own record ("2 lists, 5 to-dos"), empty
+    when there's nothing"""
+    match name:
+        case "todoset":
+            # "completed/all" to-dos
+            total = int((rec.get("completed_ratio") or "0/0").partition("/")[2] or 0)
+            amounts = [
+                (rec.get("todolists_count") or 0, "list", "lists"),
+                (total, "to-do", "to-dos"),
+            ]
+        case "kanban_board":
+            cards = sum(
+                column.get("cards_count") or 0 for column in rec.get("lists") or []
+            )
+            amounts = [(cards, "card", "cards")]
+        case "message_board":
+            amounts = [(rec.get("messages_count") or 0, "message", "messages")]
+        case "vault":
+            amounts = [
+                (rec.get("vaults_count") or 0, "folder", "folders"),
+                (rec.get("documents_count") or 0, "doc", "docs"),
+                (rec.get("uploads_count") or 0, "file", "files"),
+            ]
+        case "questionnaire":
+            amounts = [
+                (rec.get("questions_count") or 0, "question", "questions"),
+            ]
+    return ", ".join(_amount(*amount) for amount in amounts if amount[0])
 
 
 class Importer(Resolver):
@@ -649,11 +705,20 @@ class Importer(Resolver):
         return project
 
     def _dock(self, rec, project):
+        """The tools we import (the schedule, chat, pings and forwards
+        aren't); switched-off ones only with ``include_disabled``, otherwise
+        the report tells what's in them"""
+        tools = []
         for tool in rec.get("dock", []):
-            if not tool.get("enabled"):
+            if tool["name"] not in TOOL_NAMES:
                 continue
-            if tool["name"] in TOOL_NAMES:
-                self.say(f"  {TOOL_NAMES[tool['name']]}")
+            if tool.get("enabled") or self.include_disabled:
+                tools.append(tool)
+            else:
+                self._switched_off(tool)
+        self._several(tools)
+        for tool in tools:
+            self.say(f"  {TOOL_NAMES[tool['name']]}")
             match tool["name"]:
                 case "todoset":
                     self._todoset(tool["id"], project)
@@ -667,7 +732,37 @@ class Importer(Resolver):
                     )
                 case "questionnaire":
                     self._questionnaire(tool["id"], project)
-                # The schedule, chat, pings and forwards aren't imported
+
+    def _several(self, tools):
+        """Several tools of a kind are merged; the report names them"""
+        by_kind = defaultdict(list)
+        for tool in tools:
+            by_kind[tool["name"]].append(tool.get("title") or str(tool["id"]))
+        for name, titles in by_kind.items():
+            if len(titles) > 1:
+                self.report.several.append(
+                    f"{self._project_name}, {TOOL_NAMES[name]}: "
+                    + ", ".join(f'"{title}"' for title in titles)
+                )
+
+    def _switched_off(self, tool):
+        """What's in a tool switched off in Basecamp, with one request; the
+        report lists those which aren't empty"""
+        name, tool_id = tool["name"], tool["id"]
+        try:
+            rec = self.client.get(f"{TOOL_PATHS[name]}/{tool_id}.json")
+        except (api.NotFound, api.ApiError) as exc:
+            self.problem(
+                f"Switched-off tool {tool.get('title')!r} ({tool_id}) in"
+                f" {self._project_name} not checked: {exc}"
+            )
+            return
+        contents = tool_contents(name, rec)
+        if contents:
+            self.report.switched_off.append(
+                f'{self._project_name}, {TOOL_NAMES[name]} "{tool.get("title")}":'
+                f" {contents}"
+            )
 
     # Shared by the kinds --------------------------------------------------------
 
