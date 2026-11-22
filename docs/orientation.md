@@ -69,8 +69,9 @@ New projects can start from a template, a project kept for that
 - **Templates** on the projects page (and "Go to templates" in the
   command palette) lists them as cards with what each holds. "New
   template" adds one; you build and change it like any project: lists
-  with groups and to-dos, messages, folders, docs and files. Templates
-  have no members, all staff see them.
+  with groups and to-dos, check-ins, messages, folders, docs and files.
+  Templates have no members, all staff see them, and their check-ins
+  are never asked.
 - **Nothing in a template tells anybody:** no notifications, no mails,
   no mentions. Templates stay out of the projects page, Home, the
   activity across projects, your to-dos and the calendar link; search
@@ -78,11 +79,12 @@ New projects can start from a template, a project kept for that
 - **"New project from this…"** on a template's card or page (or "From
   a template" in the new project form) creates a project with a copy of
   everything at its top level: the lists with their groups and open
-  to-dos (with notes and checklists), the messages (pinned ones stay
+  to-dos (with notes and checklists), the check-ins with their
+  schedules and the people asked, the messages (pinned ones stay
   pinned), the folders with their docs and files. Not comments or
   history. What's visible to clients in the template is visible in the
-  new project; the form says which. Assignees are kept: those who
-  wouldn't see the new project become its members. Changing the
+  new project; the form says which. Assignees and the people asked
+  are kept: those who wouldn't see the new project become its members. Changing the
   template later changes no project made from it.
 - **A list from a template:** "New list" offers "From a template…":
   pick a list of any template, then give it a title (fill in what the

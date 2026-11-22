@@ -8,6 +8,8 @@ from django.test import TestCase
 
 from biwak.activity import feed, notify
 from biwak.activity.models import Action, Event, Mention, Notification, Subscription
+from biwak.checkins import operations as checkin_ops
+from biwak.checkins.support import MONDAY_9
 from biwak.files import attachments, operations as file_ops
 from biwak.files.models import Attachment
 from biwak.items import due, operations as ops
@@ -320,6 +322,58 @@ class FromTemplateTest(Fixture, TestCase):
         self.assertEqual(events[0].template_name, "Web project")
         feed.add_projects(events, self.pia)
         self.assertEqual(events[0].template_name, "")
+
+
+class QuestionsFromTemplateTest(Fixture, TestCase):
+    """Check-in questions are copied with their schedules and the people
+    asked (decided 2026-11-22)"""
+
+    def setUp(self):
+        super().setUp()
+        self.weekly = checkin_ops.create_question(
+            project=self.template,
+            title="What are you working on?",
+            creator=self.ada,
+            people=[self.bob],
+            **MONDAY_9,
+        )
+
+    def create(self, **kwargs):
+        kwargs.setdefault("name", "Website")
+        return project_ops.create_from_template(self.template, actor=self.ada, **kwargs)
+
+    def test_copied(self):
+        shop = self.create(is_all_access=False)
+        copy = Item.objects.get(project=shop, kind=Kind.QUESTION)
+        self.assertEqual(copy.title, "What are you working on?")
+        question = copy.question
+        self.assertEqual(question.rule, MONDAY_9["rule"])
+        self.assertEqual(question.starts_on, MONDAY_9["starts_on"])
+        self.assertEqual(question.time_of_day, MONDAY_9["time_of_day"])
+        self.assertIsNotNone(question.next_at)
+        self.assertTrue(question.is_askable)
+        # Bob, asked, wouldn't see the limited project: added as member
+        self.assertEqual(list(question.people.all()), [self.bob])
+        self.assertTrue(shop.memberships.filter(user=self.bob).exists())
+        subscribed = set(
+            Subscription.objects.filter(item=copy).values_list("user", flat=True)
+        )
+        self.assertEqual(subscribed, {self.ada.pk, self.bob.pk})
+        # Silently: the project's one event, besides adding Bob
+        self.assertFalse(Event.objects.filter(item=copy).exists())
+        # The template's own question stays, still not asked
+        self.assertFalse(self.weekly.question.is_askable)
+
+    def test_paused_and_trashed(self):
+        checkin_ops.pause(self.weekly, actor=self.ada)
+        gone = checkin_ops.create_question(
+            project=self.template, title="Gone?", creator=self.ada, **MONDAY_9
+        )
+        ops.trash(gone, actor=self.ada)
+        website = self.create()
+        question = Item.objects.get(project=website, kind=Kind.QUESTION).question
+        self.assertTrue(question.is_paused)
+        self.assertIsNone(question.next_at)
 
 
 class ListFromTemplateTest(Fixture, TestCase):

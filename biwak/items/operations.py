@@ -1881,10 +1881,13 @@ def _template_children(template, parent, kinds=None):
 
 
 def template_contents(template):
-    """What a new project gets of the template: its active lists, messages,
-    folders, docs and files at the top level"""
+    """What a new project gets of the template: its active lists and
+    check-in questions, messages, folders, docs and files at the top
+    level"""
     return _template_children(
-        template, None, [Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.FILE]
+        template,
+        None,
+        [Kind.LIST, Kind.QUESTION, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.FILE],
     ).filter(Q(status=Status.ACTIVE) | ~Q(kind=Kind.LIST))
 
 
@@ -1894,7 +1897,8 @@ def copy_template(template, project, *, actor):
     """Copies the template's top level into ``project`` as it is
     (specs/templates.md): lists through ``copy_list()`` (open to-dos,
     their assignees, added as members where they wouldn't see them, dates
-    as they are), messages
+    as they are), check-in questions (``checkins.operations
+    .copy_question()``), messages
     (title, text, category, pinned), folders with their docs and files
     (new files), and the client visibility. No comments, reactions,
     history or events: created silently, the actor subscribed to what a
@@ -1917,6 +1921,10 @@ def copy_template(template, project, *, actor):
             )
         elif item.kind == Kind.MESSAGE:
             _copy_message(item, project, actor)
+        elif item.kind == Kind.QUESTION:
+            from biwak.checkins import operations as checkin_ops
+
+            checkin_ops.copy_question(item, project, actor=actor)
     _copy_files(
         [item for item in contents if item.kind in {Kind.FOLDER, Kind.DOC, Kind.FILE}],
         project,

@@ -44,7 +44,7 @@ of what's needed:
   anybody. Its own feed and item history work as in any project.
 - **The templates page** (`/projects/templates/`, linked from the
   projects page and the palette): cards like projects, with what each
-  holds ("3 lists · 160 to-dos · 4 messages · 7 folders"), "New
+  holds ("3 lists · 160 to-dos · 1 check-in · 4 messages · 7 folders"), "New
   template", and per template "New project from this…".
 - Archiving and trashing a template work as for projects.
 
@@ -60,6 +60,12 @@ of what's needed:
   questions with their schedules (decided 2026-11-22: a weekly
   question belongs to a kind of project as much as its lists). Comments,
   reactions, history and events are not.
+- **Check-ins** keep their schedule (paused ones stay paused; asked from
+  the next date on) and the people asked, who are added as members when
+  they wouldn't see the new project, like assignees below (proposed
+  2026-11-22: a template has no members, but its questions can ask own
+  staff; a question asking nobody asks nobody in the new project
+  either). Questions in a template are never asked.
 - **Assignees and dates** are copied as they are (real templates have
   none; a template that has them means them). **Assignments are kept**
   (decided 2026-11-22: unless there's a good reason not to): assignees
@@ -132,7 +138,10 @@ rebuilds them by hand.
   `items.operations.copy_template()` copies with `copy_list(...,
   quiet=True)` (the title as it is, no event, the actor subscribed;
   assignees who wouldn't see the copy added as members, recording
-  "added"), messages, folders with docs and files (the newest
+  "added"), check-in questions (`checkins.operations.copy_question()`:
+  the schedule, paused or not, and the people asked, added as members
+  the same way; the creator and the people asked subscribed, no event),
+  messages, folders with docs and files (the newest
   version, as a new file), attachments in texts as new files; the
   project's orders of files and messages too.
 - **Pages** (`biwak/projects/template_views.py`): `/projects/templates/`
@@ -174,7 +183,6 @@ rebuilds them by hand.
 
 ## To change (decided 2026-11-22, not built yet)
 
-- Copy check-in questions (above).
 - Search never finds templates: drop "Include templates", the API's
   `templates`, `biwak search --templates` and searching inside a
   template.

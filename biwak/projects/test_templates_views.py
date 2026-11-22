@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from biwak.activity.models import Action, Event
+from biwak.checkins import operations as checkin_ops
+from biwak.checkins.support import MONDAY_9
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.palette.test_actions import palette_data
@@ -33,6 +35,25 @@ class TemplatesPageTest(Base, TestCase):
         )
         self.assertContains(
             response, f"{reverse('project_create')}?template={self.template.pk}"
+        )
+
+    def test_checkins(self):
+        """Counted on the card; one visible to clients named in the new
+        project form"""
+        checkin_ops.create_question(
+            project=self.template,
+            title="Anything blocking?",
+            creator=self.ada,
+            visible=True,
+            **MONDAY_9,
+        )
+        self.client.force_login(self.bob)
+        response = self.client.get(reverse("templates"))
+        self.assertContains(response, "1 list · 2 to-dos · 1 check-in · 2 messages")
+        url = f"{reverse('project_create')}?template={self.template.pk}"
+        response = self.client.get(url, headers=MODAL)
+        self.assertContains(
+            response, "Visible to clients: Anything blocking?, Onboarding and Welcome"
         )
 
     def test_others_get_404(self):
