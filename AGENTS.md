@@ -203,12 +203,18 @@ What every part does the same way. Look at how the core does it
     JavaScript and htmx interactions (decided 2026-11-20), not for CSS
     layout (decided 2026-11-21, above): screenshots for that.
 13. **Done** means: the spec's "Done when" list is true, the help says
-    what was built, the tests of the apps you touched pass
-    (`./runtests.sh biwak.<app> …`, plus the browser tests of those
-    areas), `uvx prek run --all-files` is clean,
-    and the spec says what was built (a "Status" line) and any decisions
-    made on the way. The full `./runtests.sh` is for large changes and
-    integration; CI runs everything (decided 2026-11-21).
+    what was built, the tests your change affects pass, `uvx prek run
+    --all-files` is clean, and the spec says what was built (a "Status"
+    line) and any decisions made on the way.
+
+    **Run only the affected tests** (decided 2026-11-22: several agents
+    at once had the machine at a load above 13, slowing everybody down):
+    the test modules or classes covering the code you changed
+    (`./runtests.sh biwak.items.test_start_dates …`), not whole apps;
+    browser tests only when you changed JavaScript or htmx, and only
+    those classes. No full runs while building: `./runtests.sh` without
+    arguments is for integration after merging, and CI runs everything.
+    Failures elsewhere are fixed during or after integration.
 
 # Fixing bugs
 
