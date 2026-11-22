@@ -1,0 +1,63 @@
+{% load biwak i18n rspack_assets static %}
+<!DOCTYPE html>
+{% comment %}
+  The public page of a link (specs/public-links.md): one item, read only,
+  for people without an account. Not base.html: no navigation, no palette,
+  no links into the app, the same for everybody whether signed in or not.
+{% endcomment %}
+<html lang="{{ LANGUAGE_CODE }}" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title>{{ item.title|title_text }}</title>
+    {% include "_theme_script.html" %}
+    <link rel="icon" href="{% static 'biwak/favicon.svg' %}" type="image/svg+xml">
+    {% rspack_assets "main" %}
+  </head>
+  <body>
+    <main id="main" class="container-xl wb-main py-4">
+      <div class="row">
+        <div class="col-lg-8">
+          <h1 class="wb-title">
+            {% if item.kind == "file" %}{% icon "file-earmark" %}{% endif %}
+            {{ item.title|title_text }}
+          </h1>
+          <p class="small text-body-secondary" data-public-byline>
+            {{ item.creator.display_name }} · {{ item.created_at|date:"j. M Y" }}
+          </p>
+          {% if version %}
+            {% if version.has_preview %}
+              <p>
+                <a href="{% url 'public_download' link.token %}">
+                  <img
+                    src="{% url 'public_preview' link.token %}"
+                    alt="{{ version.name }}"
+                    class="border wb-file-preview"
+                    loading="lazy"
+                  >
+                </a>
+              </p>
+            {% endif %}
+            <p>
+              <a class="btn btn-sm btn-primary" href="{% url 'public_download' link.token %}">
+                {% icon "download" %}<span>{% translate "Download" %}</span>
+              </a>
+              <span class="small text-body-secondary ms-2">{{ version.name }} · {{ version.size|filesizeformat }}</span>
+            </p>
+          {% endif %}
+          {% if text %}
+            <div class="card">
+              <div class="card-body">
+                <div class="wb-markdown">
+                  {% if item.kind == "doc" %}{% public_markdown text link without_title=True %}{% else %}{% public_markdown text link %}{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

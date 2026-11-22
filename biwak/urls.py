@@ -69,6 +69,7 @@ urlpatterns = [
     path("", include("biwak.files.urls")),
     path("", include("biwak.activity.urls")),
     path("", include("biwak.bookmarks.urls")),
+    path("", include("biwak.public_links.urls")),
     path("", include("biwak.reactions.urls")),
     path("", include("biwak.checkins.urls")),
     path("", include("biwak.search.urls")),

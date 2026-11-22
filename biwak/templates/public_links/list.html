@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Public links" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "Public links" %}</h1>
+  <div class="row">
+    <div class="col-lg-9">
+      <p class="text-body-secondary">
+        {% translate "What people without an account can read right now, the soonest expiry first." %}
+        <a href="{% url 'help' 'clients' %}">{% translate "More in the help" %}</a>
+      </p>
+      <ul class="list-group" id="public-links">
+        {% for link, url in links %}
+          <li class="list-group-item" data-public-link="{{ link.pk }}">
+            <div class="d-flex flex-wrap align-items-baseline gap-2">
+              <a class="fw-semibold" href="{{ link.item.get_absolute_url }}">{{ link.item.title|title_text }}</a>
+              <span class="small text-body-secondary">
+                {{ link.item.get_kind_display|capfirst }} · {{ link.item.project }}
+              </span>
+              {% client_badge link.item %}
+            </div>
+            <div class="small text-body-secondary mb-2">
+              {% blocktranslate trimmed with name=link.created_by.display_name date=link.expires_at|date:"j. M Y, H:i" %}
+                Shared by {{ name }}, until {{ date }}
+              {% endblocktranslate %}
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <div class="input-group flex-grow-1 w-auto">
+                <input
+                  type="text"
+                  readonly
+                  class="form-control form-control-sm user-select-all"
+                  id="public-link-{{ link.pk }}"
+                  value="{{ url }}"
+                  aria-label="{% translate 'Public link' %}"
+                >
+                <button
+                  type="button"
+                  class="btn btn-sm btn-quiet"
+                  data-copy="#public-link-{{ link.pk }}"
+                >
+                  {% translate "Copy" %}
+                </button>
+              </div>
+              <form
+                method="post"
+                action="{% url 'public_link_stop' link.pk %}"
+                hx-post="{% url 'public_link_stop' link.pk %}"
+                hx-target="#public-links"
+                hx-select="#public-links"
+                hx-swap="outerHTML"
+              >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-quiet">{% translate "Stop sharing" %}</button>
+              </form>
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">{% translate "Nothing is shared publicly." %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endblock content %}

@@ -18,6 +18,11 @@ PUBLIC = {
     # The secret in the URL is the key
     "calendar/<str:token>.ics",
     "unsubscribe/<str:token>/",
+    # Public links (specs/public-links.md)
+    "p/<str:token>/",
+    "p/<str:token>/download/",
+    "p/<str:token>/preview/",
+    "p/<str:token>/attachments/<str:key>/<path:name>",
     # Resend's webhook, signed
     "inbound/resend/",
     # allauth's password pages and managing one's addresses don't exist

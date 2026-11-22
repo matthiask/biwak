@@ -97,6 +97,10 @@
                         data-edit-focus="content"
                       >{% translate "Edit" %}</a>
                     {% endif %}
+                    {% if not request.user.is_client %}
+                      {# Answers have no page and no "More" menu: sharing publicly is here (specs/public-links.md) #}
+                      · <a href="{% url 'item_share' answer.item.pk %}" data-modal>{% translate "Share…" %}</a>
+                    {% endif %}
                   </div>
                   <div id="answer-{{ answer.pk }}-text">
                     <div

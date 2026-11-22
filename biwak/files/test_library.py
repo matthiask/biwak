@@ -526,6 +526,8 @@ class TileMenuTest(Fixture, TestCase):
                 {
                     "Subscribers…": reverse("item_subscribers", args=[item.pk]) + back,
                     "Show to clients…": reverse("switch", args=[item.pk]) + back,
+                    # Public links, staff only (specs/public-links.md)
+                    "Share…": reverse("item_share", args=[item.pk]) + back,
                     "Move to…": reverse("item_move", args=[item.pk]) + back,
                     "Move to trash": reverse("item_trash", args=[item.pk]) + back,
                 },

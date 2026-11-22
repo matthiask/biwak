@@ -1,0 +1,17 @@
+{# The theme before the page shows (base.html, the public page) #}
+<script>
+  // Set the theme immediately to prevent a flash of the wrong theme, see
+  // theme.js: the person's choice, in the browser's storage for those who
+  // aren't logged in
+  (function () {
+    document.documentElement.classList.add("js")
+    let stored = document.documentElement.dataset.themeMode
+    if (!stored) {
+      try { stored = window.localStorage.getItem("theme") } catch {}
+    }
+    document.documentElement.dataset.bsTheme =
+      stored === "light" || stored === "dark"
+        ? stored
+        : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  })()
+</script>
