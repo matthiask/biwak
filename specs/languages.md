@@ -44,7 +44,7 @@ Depends on: everything with texts; `accounts` (the `language` field,
 | mention | Erwähnung |
 | client, clients | Kund:in, Kund:innen |
 | staff | Team (the own people), Mitarbeitende |
-| partner | Partner:in |
+| partner (staff outside the own organization) | Externe ("die Externen", "eine externe Person", "Ada ist extern", badge "extern"; decided 2026-11-22: "Partner" is taken by Holacracy and the co-owners) |
 | visible to clients | für Kund:innen sichtbar |
 | team (the named set) | Team |
 | lantern | Laterne |
