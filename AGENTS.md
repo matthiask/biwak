@@ -30,6 +30,13 @@ them when a decision changes (dated: "decided 2026-11-20").
   are due, retries the outbox (`biwak/outbox/`) and tells about docs
   whose creator never clicked "Done" (`specs/files.md`); cron runs it
   every minute. Deployed, the cron jobs live in the argocd repository.
+- Push notifications (`specs/web-push.md`) need a VAPID key pair, made
+  once: `uvx --from py-vapid vapid --gen` writes `private_key.pem`,
+  `uvx --from py-vapid vapid --applicationServerKey` prints the public
+  key; `WEBPUSH_VAPID_PUBLIC_KEY` is that, `WEBPUSH_VAPID_PRIVATE_KEY`
+  the PEM (or its lines between the markers joined), `WEBPUSH_SUBJECT`
+  `mailto:` the default from address unless set. Without the keys
+  nothing is offered or sent; `send_mails` pushes.
 - Replies by mail come in through Resend's webhook (`/inbound/resend/`);
   `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by
   hand. Off unless `REPLY_DOMAIN`, `RESEND_API_KEY` and

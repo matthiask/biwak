@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 21:43+0100\n"
+"POT-Creation-Date: 2026-11-22 21:52+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -662,6 +662,34 @@ msgstr "Kalender-Link"
 #: biwak/accounts/models.py
 msgid "calendar links"
 msgstr "Kalender-Links"
+
+#: biwak/accounts/models.py
+msgid "endpoint"
+msgstr "Endpunkt"
+
+#: biwak/accounts/models.py
+msgid "public key"
+msgstr "öffentlicher Schlüssel"
+
+#: biwak/accounts/models.py
+msgid "authentication secret"
+msgstr "Authentifizierungsgeheimnis"
+
+#: biwak/accounts/models.py
+msgid "user agent"
+msgstr "User-Agent"
+
+#: biwak/accounts/models.py
+msgid "last success at"
+msgstr "zuletzt erfolgreich am"
+
+#: biwak/accounts/models.py
+msgid "push subscription"
+msgstr "Push-Abonnement"
+
+#: biwak/accounts/models.py
+msgid "push subscriptions"
+msgstr "Push-Abonnements"
 
 #: biwak/accounts/operations.py biwak/accounts/views.py
 msgid "Choose today or a later day."
@@ -1577,6 +1605,10 @@ msgstr "als ungelesen markiert am"
 msgid "held at"
 msgstr "zurückgehalten am"
 
+#: biwak/activity/models.py
+msgid "pushed at"
+msgstr "gepusht am"
+
 #: biwak/activity/models.py biwak/outbox/models.py
 msgid "notification"
 msgstr "Benachrichtigung"
@@ -1631,6 +1663,10 @@ msgstr "Die Arbeitszeit endet nach ihrem Beginn."
 #: biwak/activity/operations.py biwak/activity/views.py
 msgid "Choose at least one working day."
 msgstr "Wähle mindestens einen Arbeitstag."
+
+#: biwak/activity/push.py biwak/templates/activity/_lantern_groups.html
+msgid "You were mentioned."
+msgstr "Du wurdest erwähnt."
 
 #: biwak/activity/timeline.py
 msgid "removed the due date"
@@ -6124,10 +6160,6 @@ msgstr "Als gelesen markieren"
 #: biwak/templates/activity/_lantern_groups.html
 msgid "Mark as unread"
 msgstr "Als ungelesen markieren"
-
-#: biwak/templates/activity/_lantern_groups.html
-msgid "You were mentioned."
-msgstr "Du wurdest erwähnt."
 
 #: biwak/templates/activity/_lantern_menu.html
 #: biwak/templates/activity/lantern.html biwak/templates/base.html

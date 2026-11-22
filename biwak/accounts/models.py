@@ -591,3 +591,38 @@ class CalendarToken(models.Model):
         """A new link for the person; the old one stops working"""
         cls.objects.filter(user=user).delete()
         return cls.objects.create(user=user, token=secrets.token_urlsafe(32))
+
+
+class PushSubscription(models.Model):
+    """One device getting push notifications (specs/web-push.md): what the
+    browser's ``PushSubscription.toJSON()`` gave, the browser's push
+    service delivering to ``endpoint``. A 404 or 410 from it deletes the
+    subscription."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="push_subscriptions",
+        verbose_name=_("person"),
+    )
+    endpoint = models.URLField(_("endpoint"), max_length=1000, unique=True)
+    p256dh = models.CharField(_("public key"), max_length=200)
+    auth = models.CharField(_("authentication secret"), max_length=100)
+    user_agent = models.CharField(_("user agent"), max_length=500, blank=True)
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+    last_success_at = models.DateTimeField(_("last success at"), null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        verbose_name = _("push subscription")
+        verbose_name_plural = _("push subscriptions")
+
+    def __str__(self):
+        return f"{self.user}: {self.user_agent or self.endpoint}"
+
+    def info(self):
+        """What ``pywebpush.webpush()`` takes"""
+        return {
+            "endpoint": self.endpoint,
+            "keys": {"p256dh": self.p256dh, "auth": self.auth},
+        }

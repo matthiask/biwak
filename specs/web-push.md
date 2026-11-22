@@ -4,7 +4,7 @@ Notifications on the phone (and the desktop) while Biwak isn't open,
 through the browsers' Web Push. Asked by the user 2026-11-22: installed as
 an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
-**Status:** open.
+**Status:** being built (2026-11-22).
 
 ## What pushes
 
@@ -110,3 +110,25 @@ In this order, each step with its tests:
   only with keys; a browser test of subscribing (Chromium's push service
   can be stubbed).
 - The help's notifications chapter says how.
+
+## How it's built (2026-11-22)
+
+- **Sending:** `biwak/activity/push.py`, `send_due()` from the
+  `send_mails` command (its own `try`). `pending()` is `wanted()` in SQL
+  (`to_jsonb(user_id)` against the event's `mentioned` and `assignees`),
+  unpushed, not read and not marked unread in the lantern, grouped like
+  the mails (`mails._groups()`: per person and item, the to-dos of one
+  "Assign…" one push), each group once its newest is `MERGE_AFTER` old.
+  What the person may see is `mails._deliverable()`, checked when
+  pushing; what they mustn't see any more is marked pushed without a
+  push.
+- **Only what came after subscribing** (proposed 2026-11-22): a
+  notification pushes only for people with a device subscribed before
+  it, so turning pushes on doesn't bring old mentions.
+- **Failures:** a 404 or 410 deletes that device; when every device
+  failed otherwise (logged), the notifications stay unpushed for the
+  next run, until the `TTL` (12 hours) has passed (proposed 2026-11-22:
+  the push service would drop it by then anyway).
+- **The VAPID private key** may be the PEM or its lines between the
+  markers joined into one (base64url DER or raw also work), for an
+  environment variable.
