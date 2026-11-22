@@ -16,7 +16,7 @@ from biwak.bookmarks.models import Bookmark
 from biwak.checkins.models import Answer, Occurrence, Question
 from biwak.files.models import Attachment
 from biwak.importer import support
-from biwak.importer.importer import Importer
+from biwak.importer.importer import Importer, ImportRefused
 from biwak.importer.models import ImportedObject
 from biwak.items import visibility
 from biwak.items.models import (
@@ -1096,6 +1096,30 @@ class PeopleTest(ImportCase):
         people[1] = tombstone
         self.run_import()
         self.assertFalse(User.objects.get(email="bob@example.org").is_active)
+
+    def test_basecamps_sample_project_is_refused(self):
+        # Its people are made up: DummyUser, example.com (checked against a
+        # real account 2026-11-22); nothing of it is imported
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people[1] = people[1] | {"personable_type": "DummyUser"}
+        report = self.run_import()
+        self.assertFalse(Project.objects.exists())
+        self.assertFalse(User.objects.filter(email="bob@example.org").exists())
+        self.assertTrue(any("sample project" in p for p in report.problems))
+
+    def test_a_dummy_person_elsewhere_stops_the_import(self):
+        # A creator nobody listed among the project's people
+        sample = support.person(99, "Sample Person", "sample@example.com")
+        sample["personable_type"] = "DummyUser"
+        found = 0
+        for value in self.client_.data.values():
+            for rec in value if isinstance(value, list) else [value]:
+                if isinstance(rec, dict) and rec.get("title") == "Buy giraffe food":
+                    rec["creator"] = sample
+                    found += 1
+        self.assertTrue(found)
+        with self.assertRaises(ImportRefused):
+            self.run_import()
 
     def test_redacted_addresses_become_placeholders(self):
         # Only administrators get addresses (sections/people.md)

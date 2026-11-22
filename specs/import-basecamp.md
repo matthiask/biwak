@@ -172,6 +172,12 @@ project. Waiting for Basecamp's account export to confirm the plan.
   nobody else gets mail or a login before someone decides
   (`activation.md`); the operations accept inactive people only inside
   `importing()`. Active people are never marked as left by a later run.
+- **Basecamp's sample people are never imported** (decided 2026-11-22):
+  `DummyUser` entries (made-up colleagues with `example.com` addresses,
+  from the demo project every new account gets). A project with any of
+  them among its people is Basecamp's sample project: skipped before
+  anything is written, reported as a problem. One turning up anywhere
+  else stops the run (`ImportRefused`, the command's error).
   Companies become organizations by name, ignoring case and spaces:
   employees get the own organization, clients and collaborators their
   company's (collaborators become externals). Existing people keep theirs.

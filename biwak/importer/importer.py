@@ -119,6 +119,14 @@ LINK_TYPES = {
 # The kinds of ``/people.json`` entries that are the account's people
 ACCOUNT_PEOPLE = {"User", "Client"}
 
+# Basecamp's sample people (its demo project's, example.com): never imported
+SAMPLE = "DummyUser"
+
+
+class ImportRefused(Exception):
+    """Something that must not be imported turned up; nothing more is
+    written"""
+
 
 class Report:
     """What a run did (or, in a dry run, would do)"""
@@ -463,6 +471,11 @@ class Importer(Resolver):
         return user
 
     def _match_or_create(self, person):
+        if person.get("personable_type") == SAMPLE:
+            raise ImportRefused(
+                f"{person.get('name')} (Basecamp ID {person['id']}) is one of"
+                " Basecamp's sample people: nothing of them is imported"
+            )
         email = (person.get("email_address") or "").strip()
         name = person.get("name") or ""
         redacted = not email or "•" in email
@@ -718,9 +731,16 @@ class Importer(Resolver):
         self._project_name = rec["name"]
         archived = ", archived" if rec.get("status") == "archived" else ""
         self.say(f"{rec['name']} ({project_id}{archived})")
+        people = list(self.client.paginate(f"/projects/{project_id}/people.json"))
+        if any(person.get("personable_type") == SAMPLE for person in people):
+            # Basecamp's demo: made-up people and content
+            self.problem(
+                f"Skipped {rec['name']} ({project_id}): Basecamp's sample"
+                " project, its people are made up"
+            )
+            return self.report
         with importing():
             project = self._project(rec)
-            people = list(self.client.paginate(f"/projects/{project_id}/people.json"))
             self.say(f"  {len(people)} people")
             for person in people:
                 self._people_by_sgid[person.get("attachable_sgid")] = person["id"]

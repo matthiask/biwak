@@ -6,7 +6,7 @@ from django.core.management import BaseCommand, CommandError
 from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import User
 from biwak.importer import client as api
-from biwak.importer.importer import Importer
+from biwak.importer.importer import Importer, ImportRefused
 
 
 def make_client(account, token):
@@ -128,10 +128,13 @@ class Command(BaseCommand):
             archive=archive,
             progress=progress,
         )
-        for number, project_id in enumerate(project, 1):
-            progress(f"[{number}/{len(project)}] Basecamp project {project_id}")
-            importer.run(project_id)
-        if templates:
-            progress("Templates")
-            importer.run_templates()
+        try:
+            for number, project_id in enumerate(project, 1):
+                progress(f"[{number}/{len(project)}] Basecamp project {project_id}")
+                importer.run(project_id)
+            if templates:
+                progress("Templates")
+                importer.run_templates()
+        except ImportRefused as exc:
+            raise CommandError(str(exc)) from exc
         self.stdout.write(importer.report.as_text())
