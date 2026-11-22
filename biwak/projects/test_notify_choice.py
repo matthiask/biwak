@@ -14,11 +14,11 @@ from biwak.projects.models import Membership
 from biwak.test_utils import (
     MODAL,
     assert_modal,
-    assert_modal_redirect,
     invite_data,
     partner,
     person,
     project,
+    tags,
 )
 
 
@@ -203,27 +203,46 @@ class PageTest(Fixture, TestCase):
         # A bad value: the form again, with its error
         self.assertContains(response, "Select a valid choice")
 
-    def test_a_modal_from_the_row_s_menu(self):
-        """Decided 2026-11-22: a "…" menu on each row opens a modal, not a
-        select with its own Save on every row"""
+    def test_a_select_in_the_row_saving_itself(self):
+        """Decided 2026-11-22 (the user: the modal took too many clicks):
+        the choice is a select in the row, saved with htmx on change; the
+        page the redirect leads to has the row htmx takes"""
         self.client.force_login(self.ada)
         url = f"{self.people_url}{self.dan.pk}/notify/"
-        page = self.client.get(self.people_url)
-        self.assertNotContains(page, '<select name="notify"')
-        self.assertContains(page, f'href="{url}"')
-        self.assertContains(page, "Notifications…")
+        html = self.client.get(self.people_url).content.decode()
+        (form,) = tags(html, cls="d-flex", action=url)
+        self.assertEqual(form["hx-post"], url)
+        self.assertEqual(form["hx-trigger"], "change")
+        self.assertEqual(form["hx-select"], f"#member-{self.dan.pk}")
+        self.assertIn(f'id="member-{self.dan.pk}"', html)
+        self.assertInHTML(
+            f'<select name="notify" id="notify-{self.dan.pk}"'
+            ' class="form-select form-select-sm">'
+            '<option value="default">Notified by default</option>'
+            '<option value="tagged" selected>Only when tagged</option></select>',
+            html,
+        )
+        self.assertInHTML(
+            f'<label class="visually-hidden" for="notify-{self.dan.pk}">'
+            "Notifications of Dan Example</label>",
+            html,
+        )
+        self.assertInHTML(
+            f'<label class="visually-hidden" for="notify-{self.ada.pk}">'
+            "Your notifications</label>",
+            html,
+        )
+        # No "…" menu any more
+        self.assertNotIn("Notifications…", html)
+        self.assertNotIn('aria-label="More: ', html)
+        response = self.client.post(
+            url, {"notify": "default"}, headers={"HX-Request": "true"}
+        )
+        self.assertRedirects(response, self.people_url)
+        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
+        # The form's own page stays, for a bad value
         response = self.client.get(url, headers=MODAL)
         assert_modal(self, response, title="Notifications of Dan Example")
-        self.assertContains(
-            response,
-            'value="tagged" class="form-check-input" id="id_notify_1" required checked',
-        )
-        response = self.client.post(url, {"notify": "default"}, headers=MODAL)
-        assert_modal_redirect(self, response, self.people_url)
-        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
-        # One's own
-        response = self.client.get(f"{self.people_url}{self.ada.pk}/notify/")
-        self.assertContains(response, "Your notifications")
 
     def test_invite_and_organizations_in_the_header(self):
         self.client.force_login(self.ada)

@@ -177,8 +177,8 @@ me"), stored as the person's `LevelOverride` for the project
 (`add_member()`, `invite()`, `set_notify_choice()`,
 `notify_choice()` in `biwak/projects/operations.py`); adding someone
 again doesn't change it. The project's people page shows it under
-each member to own staff, changed through
-"Notifications…" in the row's "…" menu (a modal, decided 2026-11-22); own staff change
+each member to own staff, as a select in the row saving itself
+(decided 2026-11-22, `organizations.md`); own staff change
 it for others, clients and partners see and change only their own
 (partners too, decided 2026-11-21 after a review:
 `can_change_notify_choice()`). API: `notify` (`default` or `tagged`;

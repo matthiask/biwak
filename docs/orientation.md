@@ -49,7 +49,7 @@ lists, messages, docs and files, check-ins, members.
   first, then the clients' organizations, then partners'. Staff add
   people there, "Add people from …" an organization in the project, or
   invite them by email (see [People](#people)), and remove them with
-  "Remove from the project…" in the row's "…" menu, which asks first.
+  "Remove" in their row, which asks first.
   Clients and partners can't remove anybody, themselves included: to
   hear less about a project, change its notifications instead (see
   [Notifications](notifications.md)). "Add someone" and other long lists of choices

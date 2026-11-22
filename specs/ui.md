@@ -70,7 +70,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   Governance; `data-autosubmit`, `frontend/autosubmit.js`): selects,
   checkboxes and radios at once, text after 400 ms and on Enter; the
   button is hidden with JavaScript; the changed field keeps the focus.
-  Forms that change things never autosubmit. Filter buttons sit at the
+  Forms that change things never autosubmit, except a single choice in
+  a row saving itself with htmx (the people page's notification choice,
+  decided 2026-11-22, `organizations.md`). Filter buttons sit at the
   height of the fields (`wb-filters`, `_filter_buttons.html`).
 - **On phones** (2026-11-22: the feed's filters took five rows before
   the first entry) a filter form with several fields sits behind a

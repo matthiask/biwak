@@ -2777,6 +2777,12 @@ main:has([data-hide-title]) [data-edit-open] {
   display: none;
 }
 
+/* Choices saving themselves with htmx (a member's notifications on the
+   project's people page): Save is for people without JavaScript */
+.js [data-save-on-change] [data-save-button] {
+  display: none;
+}
+
 /* specs/ui.md, "Filters and view choices": the buttons of a filter form
    (_filter_buttons.html) sit at the height of the fields, whatever the labels above them */
 .wb-filters {

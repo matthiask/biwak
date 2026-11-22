@@ -149,10 +149,13 @@ class MembersTest(TestCase):
         self.client.force_login(self.ada)
         url = f"{self.url}{self.cleo.pk}/remove/"
         response = self.client.get(self.url)
+        # In the row (decided 2026-11-22), the question in a modal
         self.assertContains(
             response,
-            f'<a class="dropdown-item" href="{url}" data-modal>'
-            "Remove from the project…</a>",
+            f'<a class="btn btn-sm btn-quiet" href="{url}"'
+            ' title="Remove Cleo Example from the project"'
+            ' aria-label="Remove Cleo Example from the project" data-modal>'
+            "Remove</a>",
             html=True,
         )
         response = self.client.get(url)

@@ -1,6 +1,8 @@
 """Forms in a modal in the browser (biwak/modals.py, frontend/modal.js):
 opening, saving, errors, Escape and the focus"""
 
+import re
+
 from biwak.accounts.models import User
 from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.activity.operations import unsubscribe
@@ -283,54 +285,68 @@ class SubscribersTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
+def saved(response):
+    """The choice's POST answered (its redirect: saved)"""
+    return response.request.method == "POST" and "/notify/" in response.url
+
+
 class MemberNotificationsTest(E2ETestCase):
-    """A project's people page: a member's notifications through the row's
-    "…" menu and a modal (decided 2026-11-22), staff for anybody, a client
-    for themselves"""
+    """A project's people page: a member's notifications are a select in
+    the row saving itself, removing a button in the row asking first
+    (decided 2026-11-22), staff for anybody, a client for themselves"""
 
     def test_staff_change_a_client_s(self):
         from biwak.projects import operations as project_ops
 
         page = self.page
         self.goto(page, f"/projects/{self.project.pk}/people/")
-        page.locator('summary[aria-label="More: Cleo Example"]').click()
-        page.get_by_role("link", name="Notifications…").click()
-        dialog = page.get_by_role("dialog", name="Notifications of Cleo Example")
-        expect(dialog.get_by_label("Notified by default")).to_be_checked()
-        dialog.get_by_label("Only when tagged").check()
-        dialog.get_by_role("button", name="Save").click()
-        expect(dialog).to_be_hidden()
-        expect(page.get_by_text("The choice has been saved.")).to_be_visible()
+        page.evaluate("window.marker = 1")
+        select = page.get_by_label("Notifications of Cleo Example")
+        expect(select).to_have_value("default")
+        # No Save with JavaScript
+        row = page.locator(f"#member-{self.cleo.pk}")
+        expect(row.get_by_role("button", name="Save")).to_be_hidden()
+        select.focus()  # As a click or Tab would
+        with page.expect_response(saved):
+            select.select_option("tagged")
         self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "tagged")
+        # Swapped in place: no reload, the focus stays on the select
+        expect(select).to_have_value("tagged")
+        expect(select).to_be_focused()
+        self.assertEqual(page.evaluate("window.marker"), 1)
+        with page.expect_response(saved):
+            select.select_option("default")
+        self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "default")
         self.assertEqual(self.errors, [])
 
     def test_staff_remove_after_a_question(self):
         page = self.page
         self.goto(page, f"/projects/{self.project.pk}/people/")
-        page.locator('summary[aria-label="More: Cleo Example"]').click()
-        page.get_by_role("link", name="Remove from the project…").click()
+        remove = page.get_by_role("link", name="Remove Cleo Example from the project")
+        remove.click()
         dialog = page.get_by_role(
             "dialog", name=f"Remove Cleo Example from {self.project.name}?"
         )
+        # Cancel keeps them
+        dialog.get_by_role("button", name="Cancel").click()
+        expect(dialog).to_be_hidden()
+        self.assertTrue(self.project.is_member(self.cleo))
+        remove.click()
         dialog.get_by_role("button", name="Remove").click()
         expect(dialog).to_be_hidden()
-        expect(page.locator('summary[aria-label="More: Cleo Example"]')).to_have_count(
-            0
-        )
+        expect(remove).to_have_count(0)
         self.assertFalse(self.project.is_member(self.cleo))
         self.assertEqual(self.errors, [])
 
     def test_a_client_changes_only_their_own(self):
+        from biwak.projects import operations as project_ops
+
         page = self.login(self.cleo)
         self.goto(page, f"/projects/{self.project.pk}/people/")
-        expect(page.locator('summary[aria-label="More: Ada Example"]')).to_have_count(0)
-        page.locator('summary[aria-label="More: Cleo Example"]').click()
-        # No leaving (decided 2026-11-22)
-        expect(page.get_by_text("Leave the project")).to_have_count(0)
-        expect(page.get_by_text("Remove from the project")).to_have_count(0)
-        page.get_by_role("link", name="Notifications…").click()
-        dialog = page.get_by_role("dialog", name="Your notifications")
-        expect(dialog).to_be_visible()
-        page.keyboard.press("Escape")
-        expect(dialog).to_be_hidden()
+        expect(page.locator("select[name=notify]")).to_have_count(1)
+        # No removing, not even themselves (decided 2026-11-22)
+        expect(page.get_by_role("link", name=re.compile("^Remove"))).to_have_count(0)
+        with page.expect_response(saved):
+            page.get_by_label("Your notifications").select_option("tagged")
+        self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "tagged")
         self.assertEqual(self.errors, [])
