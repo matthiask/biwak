@@ -35,6 +35,16 @@ time arithmetic, `operations.py` asking, summaries and answering,
   CLI and mail replies alike. Answering subscribes the author to their
   own answer, not to the question. One answer per person and occurrence;
   answering again changes it (also from the trash).
+- **"People asked" is the people picker** (decided 2026-11-22, the
+  user: choosing several at once; `PeopleField` with
+  `offer_teams()`, `teams.md`), offering who sees the question once
+  visible (the project's people, staff of an all-access project too;
+  partners and clients as `access.md` says), by name. "Visible to
+  clients" comes before it in "New check-in", and clients are offered
+  only while it's ticked (`data-clients-follow`, `frontend/told.js`,
+  like "Also tell…"; unticking takes them away). Editing offers clients
+  only while the question is visible; on an internal one the clients
+  asked before stay as pills, others aren't offered.
 - **Clients** are asked only on questions visible to clients; adding
   clients to an internal question is refused, and if it turns internal
   they stay in the list but aren't asked or mailed. They learn only about

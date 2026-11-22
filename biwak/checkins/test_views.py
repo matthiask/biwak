@@ -1,4 +1,6 @@
 import datetime as dt
+import json
+import re
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -12,7 +14,8 @@ from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
 from biwak.projects.models import Membership
-from biwak.test_utils import person, project, rule_post
+from biwak.teams import operations as team_ops
+from biwak.test_utils import person, project, rule_post, tags
 
 
 class ViewsTestCase(CheckinTestCase):
@@ -366,6 +369,51 @@ class FormsTest(ViewsTestCase):
         self.assertTrue(item.is_client_visible)
         self.assertIn(self.cleo, item.question.people.all())
 
+    def test_people_asked_with_the_picker_and_teams(self):
+        # The people picker with teams, clients following "Visible to
+        # clients" (decided 2026-11-22)
+        team_ops.create_team(
+            name="Readers", members=[self.bob, self.cleo], actor=self.ada
+        )
+
+        def picker(response):
+            html = response.content.decode()
+            (select,) = tags(html, cls="form-select", name="people")
+            option = re.search(rf'<option value="{self.cleo.pk}"[^>]*>', html)
+            return html, select, option[0] if option else None
+
+        url = reverse("question_new", args=[self.project.pk])
+        html, select, cleo = picker(self.get(self.ada, url))
+        self.assertIn("data-people-picker", select)
+        self.assertEqual(select["data-clients-follow"], "#id_visible")
+        (team,) = json.loads(select["data-teams"])
+        self.assertEqual(team["name"], "Readers")
+        self.assertEqual(
+            {m["id"] for m in team["members"]}, {self.bob.pk, self.cleo.pk}
+        )
+        # Clients are there, offered only once the box is ticked
+        self.assertIn("data-client", cleo)
+        self.assertIn("disabled", cleo)
+        self.assertLess(html.index('name="visible"'), html.index('name="people"'))
+        _html, _select, cleo = picker(
+            self.post(self.ada, url, self.data(visible="on", title=""))
+        )
+        self.assertNotIn("disabled", cleo)
+        # Editing a visible question offers its clients, the switch is
+        # elsewhere
+        _html, select, cleo = picker(
+            self.get(self.ada, self.url("question_edit", self.shared))
+        )
+        self.assertNotIn("data-clients-follow", select)
+        self.assertNotIn("disabled", cleo)
+        self.assertIn("Readers", select["data-teams"])
+        # An internal one offers none
+        _html, select, cleo = picker(self.get(self.ada, self.url("question_edit")))
+        self.assertIsNone(cleo)
+        (team,) = json.loads(select["data-teams"])
+        (left_out,) = [m for m in team["members"] if m["id"] == self.cleo.pk]
+        self.assertEqual(left_out["reason"], "can't see internal items")
+
     def test_a_client_cant_be_asked_on_an_internal_question(self):
         url = reverse("question_new", args=[self.project.pk])
         response = self.post(self.ada, url, self.data(people=[self.cleo.pk]))
@@ -386,15 +434,17 @@ class FormsTest(ViewsTestCase):
         self.shared.refresh_from_db()
         self.assertEqual(self.shared.title, "Renamed")
         self.assertIn(self.cleo, self.shared.question.people.all())
-        # Adding another client is still refused
+        # Adding another client is still refused: not offered at all
         other = person("Dora", client=True)
         Membership.objects.create(project=self.project, user=other)
+        response = self.get(self.ada, url)
+        self.assertContains(response, f'<option value="{self.cleo.pk}"')
+        self.assertNotContains(response, f'<option value="{other.pk}"')
         response = self.post(
             self.ada, url, data | {"people": [*data["people"], other.pk]}
         )
-        self.assertContains(
-            response, "Clients can only be asked about check-ins they can see."
-        )
+        self.assertContains(response, "Select a valid choice.")
+        self.assertNotIn(other, self.shared.question.people.all())
 
     def test_another_schedule_and_mistakes(self):
         url = reverse("question_new", args=[self.project.pk])

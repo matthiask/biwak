@@ -14,9 +14,11 @@ check-in":
   interval and weekdays), **First asked on**, **Time of day** and
   **Time zone**. 09:00 stays 09:00 on the wall clock in that zone
   through the changes to and from daylight saving time.
-- **People asked**: who gets the question.
 - **Visible to clients**: only then can clients be asked and see the
   answers ([Clients](clients.md)).
+- **People asked**: who gets the question. Type a name, or a team's to
+  add its members at once; clients are offered only while "Visible to
+  clients" is ticked.
 
 "Pause" stops the asking and "Resume" starts it again; dates missed
 while paused aren't asked afterwards. Questions that were paused (for

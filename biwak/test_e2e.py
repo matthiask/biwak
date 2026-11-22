@@ -3226,6 +3226,33 @@ class TeamsTest(E2ETestCase):
         ])
         self.assertEqual(self.errors, [])
 
+    def test_check_ins_people_asked_follow_visible_to_clients(self):
+        """A check-in's "People asked" is the picker with teams (decided
+        2026-11-22); clients only while it's visible to clients"""
+        page = self.page
+        page.goto(
+            self.live_server_url + reverse("question_new", args=[self.project.pk])
+        )
+        pills = page.locator(".wb-pill")
+        # The one creating it is asked by default
+        expect(pills).to_have_text([re.compile("Ada")])
+        picker = page.locator(".wb-picker-input")
+        picker.press_sequentially("design")
+        team = page.locator(".wb-picker-list li[data-team]")
+        expect(team).to_contain_text("1 can't see internal items")
+        picker.press("Escape")
+        page.get_by_label("Visible to clients").check()
+        picker.press_sequentially("design")
+        expect(team).not_to_contain_text("can't see internal items")
+        picker.press("Enter")
+        expect(pills).to_have_count(4)
+        expect(page.locator(".wb-picker")).to_contain_text("Cleo")
+        # Unticking takes the client away again
+        page.get_by_label("Visible to clients").uncheck()
+        expect(pills).to_have_count(3)
+        expect(page.locator(".wb-picker")).not_to_contain_text("Cleo")
+        self.assertEqual(self.errors, [])
+
     def test_the_mention_list_inserts_a_mention_per_member(self):
         self.make_list(todos=["Plan"])
         todo = Item.objects.get(title="Plan")

@@ -55,7 +55,7 @@ Wherever several people are picked, staff find teams among the people,
 marked as a team with its number of members:
 
 - **The people picker** (`frontend/people-picker.js`, `PeopleField`):
-  assignees, subscribers, whom to notify. Picking a team adds a pill per
+  assignees, subscribers, whom to notify, the people a check-in asks. Picking a team adds a pill per
   member, as if each had been picked; removing one afterwards is
   removing a pill.
 - **Typing `@`** in Markdown fields (`frontend/mentions.js`): choosing a
@@ -80,8 +80,10 @@ marked as a team with its number of members:
   team nobody of which can see the item is greyed out, like people.
   "Also tell…" at the top leaves out clients while "Visible to clients"
   is unticked, as the picker does for them one by one.
-- **Not in:** check-ins' "who's asked" (checkboxes, not the picker), the
-  API's mentionable list.
+- **Check-ins' "People asked"** is the picker too (decided 2026-11-22,
+  `checkins.md`), its clients following "Visible to clients" like "Also
+  tell…".
+- **Not in:** the API's mentionable list.
 
 ## API and CLI
 

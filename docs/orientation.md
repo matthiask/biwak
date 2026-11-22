@@ -154,7 +154,8 @@ once, all or nothing.
 
 **Teams:** a team is a named set of people ("Design team") for picking
 several at once. Staff find teams among the people wherever they pick
-several: assignees, subscribers, whom to tell, and the list that opens
+several: assignees, subscribers, whom to tell, the people a check-in
+asks, and the list that opens
 when typing `@`. Picking a team picks its members at once, as if you had
 picked each of them: a pill per member, a mention per member. Only the
 members who can be there are added: active, able to see the item and in
