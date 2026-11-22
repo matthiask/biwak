@@ -2905,10 +2905,15 @@ class AvatarTest(E2ETestCase):
         options = add.locator(".wb-picker-list li")
         ada = options.filter(has_text="Ada")
         expect(ada.locator("img.wb-avatar")).to_have_count(1)
-        # Initials without an image
-        expect(options.filter(has_text="Bob").locator("span.wb-avatar")).to_have_text(
-            "BE"
+        # The drawn mark without an image: white through the drawing's mask
+        bob = options.filter(has_text="Bob").locator("span.wb-avatar")
+        expect(bob).to_have_class(re.compile(rf"wb-mark-{self.bob.mark}\b"))
+        expect(bob).to_have_text("")
+        mask = bob.evaluate(
+            "el => getComputedStyle(el, '::before').maskImage"
+            " || getComputedStyle(el, '::before').webkitMaskImage"
         )
+        self.assertIn("url(", mask)
         ada.click()
         pill = add.locator(".wb-pill")
         expect(pill.locator("img.wb-avatar")).to_have_count(1)
@@ -2930,15 +2935,15 @@ class AvatarTest(E2ETestCase):
         expect(ada.locator("img.wb-avatar")).to_have_count(1)
         expect(
             listbox.locator("li", has_text="Bob").locator("span.wb-avatar")
-        ).to_have_text("BE")
+        ).to_have_class(re.compile(rf"wb-mark-{self.bob.mark}\b"))
         page.wait_for_function(
             "() => document.querySelector('.wb-mentions img.wb-avatar').naturalWidth === 256"
         )
 
-    def test_an_image_which_does_not_load_falls_back_to_the_initials(self):
+    def test_an_image_which_does_not_load_falls_back_to_the_drawn_mark(self):
         """The script lists the image URL of everybody; where the view
         answers 404 (someone the viewer may not know, here a file gone) the
-        initials take its place"""
+        drawn mark takes its place"""
         from django.core.files.storage import default_storage
 
         default_storage.delete(self.ada.image)
@@ -2949,7 +2954,9 @@ class AvatarTest(E2ETestCase):
         add.locator("summary").click()
         add.locator(".wb-picker-input").click()
         add.locator(".wb-picker-list li", has_text="Ada").click()
-        expect(add.locator(".wb-pill span.wb-avatar")).to_have_text("AE")
+        expect(add.locator(".wb-pill span.wb-avatar")).to_have_class(
+            re.compile(rf"wb-mark-{self.ada.mark}\b")
+        )
         expect(add.locator(".wb-pill img")).to_have_count(0)
 
 

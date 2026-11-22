@@ -456,10 +456,10 @@ AVATAR_SIZES = ("sm", "md", "lg")
 
 @register.simple_tag(takes_context=True)
 def avatar(context, person, size="sm"):
-    """The mark of a person (specs/people.md): their image, or the initials
-    on a color of the palette. The image only where the viewer may know the
-    person (else the image view would answer 404), the name is the
-    ``title``. Away (specs/quiet-hours.md): a small sign, and the title
+    """The mark of a person (specs/people.md): their image, or their drawn
+    mark in white on a color of the palette. The image only where the
+    viewer may know the person (else the image view would answer 404), the
+    name is the ``title``. Away (specs/quiet-hours.md): a small sign, and the title
     says until when."""
     if size not in AVATAR_SIZES:
         raise ValueError(f"Unknown avatar size {size!r}")
@@ -486,14 +486,15 @@ def avatar(context, person, size="sm"):
                 name,
             )
     if mark is None:
+        # The drawn mark in white through a CSS mask (frontend/styles/marks.css)
         mark = format_html(
-            '<span class="{}" data-avatar-color="{}" title="{}"'
-            ' role="img" aria-label="{}">{}</span>',
+            '<span class="{} wb-mark wb-mark-{}" data-avatar-color="{}" title="{}"'
+            ' role="img" aria-label="{}"></span>',
             css,
+            person.mark,
             person.avatar_color,
             name,
             name,
-            person.initials,
         )
     if not away:
         return mark

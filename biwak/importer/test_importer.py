@@ -1108,6 +1108,19 @@ class PeopleTest(ImportCase):
         self.assertEqual(importer.user_for_sgid(support.CLEO["attachable_sgid"]), cleo)
         self.assertIsNone(importer.user_for_sgid("nonsense"))
 
+    def test_imported_people_get_marks_like_everybody(self):
+        """The one fewest people of the organization have (specs/people.md):
+        imported people wait to be activated and count too, so staff
+        imported together get different ones"""
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people.append(support.person(7, "Finn Example", "finn@example.org"))
+        self.run_import()
+        staff = User.objects.filter(organization__is_own=True)
+        self.assertEqual(staff.count(), 3)
+        self.assertEqual(len(set(staff.values_list("mark", flat=True))), 3)
+        cleo = User.objects.get(email="cleo@example.org")
+        self.assertEqual(cleo.mark, "tent")  # the first of her organization
+
     def test_staff_and_clients_as_in_basecamp(self):
         self.run_import()
         self.assertEqual(

@@ -53,10 +53,12 @@ class PlacesTest(TestCase):
     def test_a_to_do_page_has_it_on_comments_assignees_and_subscribers(self):
         response = self.get(self.ben, self.todo.get_absolute_url())
         html = response.content.decode()
-        # Comments: Ada's image, Cleo's initials
+        # Comments: Ada's image, Cleo's drawn mark
         self.assertContains(response, f'src="{self.image}"')
         self.assertIn(
-            f'data-avatar-color="{self.cleo.avatar_color}" title="Cleo Example"', html
+            f'wb-mark-{self.cleo.mark}" data-avatar-color="{self.cleo.avatar_color}"'
+            ' title="Cleo Example"',
+            html,
         )
         # Assignees: a list with commas, each with the mark, linked
         facts = html[html.index('class="wb-facts"') :]
@@ -68,7 +70,7 @@ class PlacesTest(TestCase):
         self.assertGreater(html.count("wb-avatar"), 6)
 
     def test_the_me_menu_has_the_own_mark_and_the_name(self):
-        """With an image or the initials; the name is the menu's first
+        """With an image or the drawn mark; the name is the menu's first
         line, and next to the mark except on phones"""
         for viewer, image in [(self.ada, True), (self.ben, False)]:
             with self.subTest(viewer=viewer):
@@ -77,7 +79,9 @@ class PlacesTest(TestCase):
                 summary = summary.split("</summary>")[0]
                 self.assertEqual("<img" in summary, image)
                 self.assertIn(f'title="{viewer}"', summary)
-                self.assertIn(viewer.initials if not image else "wb-avatar", summary)
+                self.assertIn(
+                    "wb-avatar" if image else f"wb-mark-{viewer.mark}", summary
+                )
                 self.assertIn(
                     f'<span class="d-none d-sm-inline">{viewer.get_short_name()}</span>',
                     summary,
@@ -121,7 +125,7 @@ class PlacesTest(TestCase):
         image = self.client.get(self.image)
         self.assertEqual(image.status_code, 200)
 
-    def test_a_viewer_who_may_not_know_the_person_gets_the_initials(self):
+    def test_a_viewer_who_may_not_know_the_person_gets_the_drawn_mark(self):
         stranger = person("Dora", client=True, organization="Other")
         item_ops.add_comment(self.todo, author=stranger, content="Hm")
         operations.set_image(stranger, picture(), actor=stranger)
@@ -133,6 +137,7 @@ class PlacesTest(TestCase):
         response = self.client.get(self.todo.get_absolute_url())
         self.assertNotContains(response, stranger.image_url)
         self.assertContains(response, f'title="{stranger}"')
+        self.assertContains(response, f"wb-mark-{stranger.mark}")
 
     def test_messages(self):
         response = self.get(self.ben, self.message.get_absolute_url())
@@ -171,7 +176,7 @@ class PlacesTest(TestCase):
             ada["avatar"],
             {
                 "name": "Ada Example",
-                "initials": "AE",
+                "mark": self.ada.mark,
                 "color": self.ada.avatar_color,
                 "image_url": self.image,
                 "inactive": False,

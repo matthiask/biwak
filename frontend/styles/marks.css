@@ -1,0 +1,153 @@
+/* The drawn marks of people (specs/people.md, "Stage 2: drawn marks"):
+   the drawings in biwak/static/biwak/marks/ in white on the avatar's
+   palette color, through a CSS mask like an icon. One class per mark
+   (wb-mark-ibex) for {% avatar %} and frontend/avatar.js;
+   biwak/accounts/test_marks.py checks that every drawing has its class
+   and every class its drawing. */
+.wb-mark::before {
+  content: "";
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  mask: var(--wb-mark-image) center / 100% 100% no-repeat;
+}
+
+.wb-mark-tent {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/tent.svg");
+}
+
+.wb-mark-mountain {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/mountain.svg");
+}
+
+.wb-mark-horn {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/horn.svg");
+}
+
+.wb-mark-lake {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/lake.svg");
+}
+
+.wb-mark-fir {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/fir.svg");
+}
+
+.wb-mark-ibex {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/ibex.svg");
+}
+
+.wb-mark-marmot {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/marmot.svg");
+}
+
+.wb-mark-edelweiss {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/edelweiss.svg");
+}
+
+.wb-mark-gentian {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/gentian.svg");
+}
+
+.wb-mark-ice-axe {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/ice-axe.svg");
+}
+
+.wb-mark-campfire {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/campfire.svg");
+}
+
+.wb-mark-lantern {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/lantern.svg");
+}
+
+.wb-mark-backpack {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/backpack.svg");
+}
+
+.wb-mark-boot {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/boot.svg");
+}
+
+.wb-mark-cable-car {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/cable-car.svg");
+}
+
+.wb-mark-hut {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/hut.svg");
+}
+
+.wb-mark-sunrise {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/sunrise.svg");
+}
+
+.wb-mark-moon {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/moon.svg");
+}
+
+.wb-mark-snowflake {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/snowflake.svg");
+}
+
+.wb-mark-cloud {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/cloud.svg");
+}
+
+.wb-mark-eagle {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/eagle.svg");
+}
+
+.wb-mark-cowbell {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/cowbell.svg");
+}
+
+.wb-mark-cheese {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/cheese.svg");
+}
+
+.wb-mark-fox {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/fox.svg");
+}
+
+.wb-mark-owl {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/owl.svg");
+}
+
+.wb-mark-cat {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/cat.svg");
+}
+
+.wb-mark-fish {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/fish.svg");
+}
+
+.wb-mark-leaf {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/leaf.svg");
+}
+
+.wb-mark-mushroom {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/mushroom.svg");
+}
+
+.wb-mark-cup {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/cup.svg");
+}
+
+.wb-mark-paper-plane {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/paper-plane.svg");
+}
+
+.wb-mark-anchor {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/anchor.svg");
+}
+
+.wb-mark-heart {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/heart.svg");
+}
+
+.wb-mark-rocket {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/rocket.svg");
+}
+
+.wb-mark-star {
+  --wb-mark-image: url("../../biwak/static/biwak/marks/star.svg");
+}

@@ -3,6 +3,7 @@
 import "./styles/bootstrap.scss"
 import "./styles/main.css"
 import "./styles/icons.css"
+import "./styles/marks.css"
 
 import "./theme.js"
 import "./menus.js"
