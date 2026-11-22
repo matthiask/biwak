@@ -55,7 +55,10 @@ def urllib_transport(url, headers, method="GET"):
         with opener.open(request, timeout=60) as response:
             return Response(response.status, dict(response.headers), response.read())
     except urllib.error.HTTPError as exc:
-        return Response(exc.code, dict(exc.headers), exc.read())
+        # Redirects of downloads arrive as errors (not followed): closed
+        # here, else Python warns about each one (ResourceWarning)
+        with exc:
+            return Response(exc.code, dict(exc.headers), exc.read())
 
 
 class BasecampClient:
@@ -74,14 +77,24 @@ class BasecampClient:
         self.sleep = sleep
         self.clock = clock
         self._sent = deque()
+        # For progress: requests sent, and who to tell about a wait
+        # (``on_wait(seconds, why)``)
+        self.request_count = 0
+        self.on_wait = None
+
+    def _sleep(self, seconds, why):
+        if self.on_wait is not None and seconds >= 1:
+            self.on_wait(seconds, why)
+        self.sleep(seconds)
 
     def _wait_for_slot(self):
         now = self.clock()
         while self._sent and self._sent[0] <= now - WINDOW:
             self._sent.popleft()
         if len(self._sent) >= LIMIT:
-            self.sleep(self._sent[0] + WINDOW - now)
+            self._sleep(self._sent[0] + WINDOW - now, "rate limit")
         self._sent.append(self.clock())
+        self.request_count += 1
 
     def _request(self, url, *, auth=True, accept=None, method="GET"):
         headers = {"User-Agent": USER_AGENT}
@@ -94,10 +107,10 @@ class BasecampClient:
             response = self.transport(url, headers, method=method)
             if response.status == 429:
                 wait = int(_header(response, "Retry-After") or WINDOW)
-                self.sleep(wait)
+                self._sleep(wait, "Basecamp asked to wait (429)")
                 continue
             if response.status >= 500:
-                self.sleep(2**attempt)
+                self._sleep(2**attempt, f"server error {response.status}, retrying")
                 continue
             return response
         raise ApiError(f"Giving up on {url}: status {response.status}")

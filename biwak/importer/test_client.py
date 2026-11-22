@@ -69,6 +69,34 @@ class ClientTest(SimpleTestCase):
         self.assertEqual(client.get("/x.json"), {"id": 1})
         self.assertEqual(self.slept, [7])
 
+    def test_a_redirect_is_closed(self):
+        """urllib raises the download's redirect as an error: closed after
+        reading, else Python warns about each file (ResourceWarning)"""
+        import email.message
+        import io
+        import urllib.error
+        from unittest import mock
+
+        body = io.BytesIO(b"")
+        headers = email.message.Message()
+        headers["Location"] = "https://storage.example.org/blob"
+        error = urllib.error.HTTPError("https://x", 302, "Found", headers, body)
+        opener = mock.Mock()
+        opener.open.side_effect = error
+        with mock.patch("urllib.request.build_opener", return_value=opener):
+            response = api.urllib_transport("https://x", {})
+        self.assertEqual(response.status, 302)
+        self.assertTrue(body.closed)
+
+    def test_waits_are_told(self):
+        """For the command's progress: who waits how long and why"""
+        client = self.make(Response(429, {"Retry-After": "7"}), ok({"id": 1}))
+        told = []
+        client.on_wait = lambda seconds, why: told.append((seconds, why))
+        client.get("/x.json")
+        self.assertEqual(told, [(7, "Basecamp asked to wait (429)")])
+        self.assertEqual(client.request_count, 2)
+
     def test_server_errors_are_retried(self):
         client = self.make(Response(503), Response(502), ok({"id": 1}))
         self.assertEqual(client.get("/x.json"), {"id": 1})

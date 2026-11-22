@@ -777,6 +777,11 @@ class FakeClient:
         self.archived_projects = []
         # Called with the path of each request, to fail in the middle
         self.on_request = None
+        self.on_wait = None
+
+    @property
+    def request_count(self):
+        return len(self.requests)
 
     def _lookup(self, path, params):
         self.requests.append((path, params))

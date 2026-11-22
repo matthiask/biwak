@@ -876,6 +876,10 @@ class ScheduleTest(ImportCase):
 
 
 class CommandTest(ImportCase):
+    def setUp(self):
+        super().setUp()
+        self.err = io.StringIO()  # the progress lines
+
     def call(self, *args, token="secret", **kwargs):
         out = io.StringIO()
         with (
@@ -887,8 +891,25 @@ class CommandTest(ImportCase):
                 return_value=self.client_,
             ) as make,
         ):
-            call_command("import_basecamp", *args, stdout=out, **kwargs)
+            call_command(
+                "import_basecamp", *args, stdout=out, stderr=self.err, **kwargs
+            )
         return out.getvalue(), make
+
+    def test_progress_while_it_runs(self):
+        """On stderr by default: the project, its people, each tool, a line
+        every 25 items and a summary; -v 0 prints none"""
+        self.call("--account", "1000", "--project", str(support.PROJECT))
+        progress = self.err.getvalue()
+        self.assertIn(f"[1/1] Basecamp project {support.PROJECT}", progress)
+        self.assertIn("people", progress)
+        self.assertIn("  To-dos", progress)
+        self.assertIn("  Message board", progress)
+        self.assertIn("  done: ", progress)
+        self.assertIn(" requests, ", progress)
+        self.err = io.StringIO()
+        self.call("--account", "1000", "--project", str(support.PROJECT), verbosity=0)
+        self.assertEqual(self.err.getvalue(), "")
 
     def test_runs_as_the_person_of_the_token(self):
         # The profile says Ada

@@ -38,6 +38,12 @@ goes into internal containers, archived recordings skipped.
   limit archiving to administrators and the project's creator: Basecamp
   answers 403 and the import stops there (rerun without `--archive`, the
   import itself is done).
+- **Progress** on stderr while it runs (decided 2026-11-22; `-v 0`
+  silences it, the report goes to stdout at the end): each project
+  ("[2/14]", its name, archived or not), its number of people, each
+  tool as it starts, a line every 25 items with the requests sent and
+  the time so far, a summary per project, and every wait of a second or
+  more (the rate limit, a 429, a server error being retried).
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
   subscribers, so big accounts take a while.

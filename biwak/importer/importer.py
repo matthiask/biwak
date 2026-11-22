@@ -13,6 +13,7 @@ counts per kind, lists the people who would be created and the problems.
 
 import datetime as dt
 import re
+import time
 from collections import Counter, defaultdict
 from zoneinfo import ZoneInfo
 
@@ -165,12 +166,37 @@ def parse_time(value):
     return dt.datetime.fromisoformat(value) if value else None
 
 
+PROGRESS_EVERY = 25  # items between progress lines
+TOOL_NAMES = {
+    "todoset": "To-dos",
+    "kanban_board": "Card table",
+    "message_board": "Message board",
+    "vault": "Docs & files",
+    "questionnaire": "Check-ins",
+}
+
+
 class Importer(Resolver):
-    def __init__(self, client, *, actor, dry_run=False, since=None, archive=False):
+    def __init__(
+        self,
+        client,
+        *,
+        actor,
+        dry_run=False,
+        since=None,
+        archive=False,
+        progress=None,
+        clock=time.monotonic,
+    ):
         """``actor``: the Biwak person running the import (staff), who
         creates the projects and owns the bookmarks; ``archive``: archive
-        each project in Basecamp once it was imported"""
+        each project in Basecamp once it was imported; ``progress``: called
+        with a line of text while importing (the command prints them)"""
         self.client = client
+        self._progress = progress
+        self._clock = clock
+        self._started = None
+        self._items = 0
         self.actor = actor
         self.dry = dry_run
         self.since = since
@@ -196,6 +222,20 @@ class Importer(Resolver):
 
     def _count(self, bc_type, what):
         self.report.counts[KINDS.get(bc_type, bc_type)][what] += 1
+        self._items += 1
+        if self._items % PROGRESS_EVERY == 0:
+            self.say(f"    {self._items} items, {self._so_far()}")
+
+    def say(self, line):
+        if self._progress is not None:
+            self._progress(line)
+
+    def _so_far(self):
+        seconds = int(self._clock() - (self._started or self._clock()))
+        return (
+            f"{self.client.request_count} requests,"
+            f" {seconds // 60}m {seconds % 60:02d}s"
+        )
 
     # The mapping -----------------------------------------------------------
 
@@ -431,10 +471,16 @@ class Importer(Resolver):
 
     def run(self, project_id):
         """Imports one project; returns the report"""
+        if self._started is None:
+            self._started = self._clock()
+        self._items = 0
         rec = self.client.get(f"/projects/{project_id}.json")
+        archived = ", archived" if rec.get("status") == "archived" else ""
+        self.say(f"{rec['name']} ({project_id}{archived})")
         with importing():
             project = self._project(rec)
             people = list(self.client.paginate(f"/projects/{project_id}/people.json"))
+            self.say(f"  {len(people)} people")
             for person in people:
                 self._people_by_sgid[person.get("attachable_sgid")] = person["id"]
             for person in people:
@@ -454,6 +500,7 @@ class Importer(Resolver):
             if not self.dry:
                 self.client.archive_project(project_id)
             self.report.archived_projects.append(rec["name"])
+        self.say(f"  done: {self._items} items, {self._so_far()}")
         return self.report
 
     def _archived_recordings(self, project_id):
@@ -509,6 +556,8 @@ class Importer(Resolver):
         for tool in rec.get("dock", []):
             if not tool.get("enabled"):
                 continue
+            if tool["name"] in TOOL_NAMES:
+                self.say(f"  {TOOL_NAMES[tool['name']]}")
             match tool["name"]:
                 case "todoset":
                     self._todoset(tool["id"], project)

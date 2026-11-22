@@ -71,9 +71,26 @@ class Command(BaseCommand):
             )
         set_user_name("Basecamp import")
         since = since and dt.datetime.combine(since, dt.time(), tzinfo=dt.UTC)
+        # Progress on stderr while it runs (-v 0: none), the report at the end
+
+        def progress(line):
+            if options["verbosity"] > 0:
+                self.stderr.write(line)
+                self.stderr.flush()
+
+        def waiting(seconds, why):
+            progress(f"    waiting {seconds:.0f} s ({why})")
+
+        client.on_wait = waiting
         importer = Importer(
-            client, actor=actor, dry_run=dry_run, since=since, archive=archive
+            client,
+            actor=actor,
+            dry_run=dry_run,
+            since=since,
+            archive=archive,
+            progress=progress,
         )
-        for project_id in project:
+        for number, project_id in enumerate(project, 1):
+            progress(f"[{number}/{len(project)}] Basecamp project {project_id}")
             importer.run(project_id)
         self.stdout.write(importer.report.as_text())
