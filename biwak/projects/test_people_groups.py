@@ -111,6 +111,11 @@ class PeopleGroupsTest(TestCase):
                 self.assertNotIn("Bob Example", html)
                 self.assertNotIn("Dora Example", html)
                 self.assertNotIn("Carl Example", html)
+        # The own organization by its name, not as theirs (fixed 2026-11-22)
+        for viewer in [self.zoe, self.pia]:
+            with self.subTest(viewer=viewer):
+                self.assertNotIn("Your own organization", self.page(viewer))
+        self.assertIn("Your own organization", self.page(self.ada))
         self.client.force_login(self.zoe)
         response = self.client.get(
             f"/projects/{self.camp.pk}/people/add/?organization={self.own.pk}"

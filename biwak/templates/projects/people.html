@@ -17,7 +17,7 @@
                 {% else %}
                   {{ group.organization }}
                 {% endif %}
-                <span class="badge wb-tone-neutral">{{ group.label }}</span>
+                {% if group.label %}<span class="badge wb-tone-neutral">{{ group.label }}</span>{% endif %}
               {% else %}
                 {{ group.label }}
               {% endif %}

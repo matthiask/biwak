@@ -354,7 +354,9 @@ def project_people(request, pk):
         "projects/people.html",
         {
             "project": project,
-            "groups": project_groups(project, rows, can_add=can_manage),
+            "groups": project_groups(
+                project, rows, can_add=can_manage, viewer=request.user
+            ),
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
             ],

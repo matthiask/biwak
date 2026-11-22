@@ -101,7 +101,10 @@ manage none (`access.md`).
 - **Order:** the own organization first, then the other organizations by
   name, each marked as a client or partner organization, then people
   without an organization (freelancers, individual clients). Headings
-  link to the organization's page for own staff.
+  link to the organization's page for own staff. The own organization
+  is marked "Your own organization" only for its people; clients and
+  partners see it by its name alone, here and on a project's people page
+  (decided 2026-11-22).
 - **Each person:** name, address, role (admin, staff, partner, client),
   a link to their feed where the viewer may open it; inactive people
   quietly, marked "inactive", last in their group. Own staff get "Change

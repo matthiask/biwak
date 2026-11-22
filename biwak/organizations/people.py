@@ -94,6 +94,14 @@ def decorate(user, viewer, shared):
     return user
 
 
+def own_label(viewer, organization):
+    """ "Your own organization" for its people; clients and partners see it
+    by its name alone (fixed 2026-11-22)"""
+    if viewer.organization_id == organization.pk:
+        return _("Your own organization")
+    return ""
+
+
 def groups_for(viewer):
     """The groups in the page's order, each person with ``role``,
     ``feed`` (whether the viewer may open their feed), ``show_email`` and
@@ -113,7 +121,7 @@ def groups_for(viewer):
             without.people.append(user)
         elif org.is_own:
             if own is None:
-                own = Group(org, "own", _("Your own organization"))
+                own = Group(org, "own", own_label(viewer, org))
             own.people.append(user)
         else:
             others.setdefault(org.pk, Group(org, "client", "")).people.append(user)
@@ -127,7 +135,7 @@ def groups_for(viewer):
     return [g for g in [own, *ordered, without] if g is not None and g.people]
 
 
-def project_groups(project, rows, *, can_add):
+def project_groups(project, rows, *, can_add, viewer):
     """A project's members by organization (specs/organizations.md, decided
     2026-11-21): the own staff first, then the client organizations, then
     the partner organizations (by name; partner: a member is staff), then
@@ -143,7 +151,7 @@ def project_groups(project, rows, *, can_add):
             without.people.append(row)
         elif org.is_own:
             if own is None:
-                own = Group(org, "own", _("Your own organization"))
+                own = Group(org, "own", own_label(viewer, org))
             own.people.append(row)
         else:
             clients.setdefault(org.pk, Group(org, "client", "")).people.append(row)

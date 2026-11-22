@@ -30,4 +30,9 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 
 ### Sign-in and people
 
+- **The own organization for clients and partners:** on the People page
+  and a project's people page they see it by its name alone, without a
+  badge ("Your own organization" stays for its people;
+  `organizations.md`).
+
 ### Phones and accessibility
