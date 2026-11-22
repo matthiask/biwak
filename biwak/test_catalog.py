@@ -223,7 +223,10 @@ class ImportTimeTest(SimpleTestCase):
         found = [
             line
             for path in sorted((settings.BASE_DIR / "biwak").rglob("*.py"))
-            if "migrations" not in path.parts and not path.name.startswith("test_")
+            if "migrations" not in path.parts
+            and not path.name.startswith("test_")
+            # makemessages' temporary copies of templates (403.html.py)
+            and "." not in path.stem
             for line in _eager_calls(path)
         ]
         self.assertEqual(found, [])

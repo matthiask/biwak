@@ -1,6 +1,6 @@
 from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.db import connections
-from django.utils.translation import activate
+from django.utils.translation import activate, deactivate
 
 
 def set_user_name(user):
@@ -11,6 +11,20 @@ def set_user_name(user):
     connections["default"].cursor().execute(
         "SET SESSION application_name TO %s", [user]
     )
+
+
+def language_middleware(get_response):
+    """Outside of ``LocaleMiddleware``: back to the default language once
+    the response is done, so that what runs next in the thread (a test,
+    the next task) doesn't go on in the request's"""
+
+    def middleware(request):
+        try:
+            return get_response(request)
+        finally:
+            deactivate()
+
+    return middleware
 
 
 def user_middleware(get_response):

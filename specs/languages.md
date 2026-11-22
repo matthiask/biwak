@@ -6,7 +6,16 @@ this part adds the German catalog and makes everything follow the
 person's choice. Decided with the user 2026-11-22. German only for now;
 a third language is a catalog, nothing else.
 
-**Status:** open.
+**Status:** built 2026-11-22 (branch `languages`). Choosing:
+`biwak/accounts/languages.py` (`language_for()`), the settings' Language
+section, `language` on `/api/v1/me/`, `biwak settings --language`.
+`User.invitation_language` remembers the language of the last invitation
+mail. The catalog: `conf/locale/de/LC_MESSAGES/django.po` (`fl mm -l de`,
+`fl cm`); `biwak/test_catalog.py` (complete, compiled, current with the
+code, the glossary, no `gettext()` at import), `biwak/test_german.py`
+(pages and mails). Relative times: `biwak/text.py` (`ago()`, units of
+their own for German's dative). The feed's events are whole sentences
+(`activity/_event.html`, the `{% capture %}` tag).
 
 Depends on: everything with texts; `accounts` (the `language` field,
 `middleware.py` activating it), `notifications.md` and `mail-sending.md`
@@ -118,6 +127,21 @@ Depends on: everything with texts; `accounts` (the `language` field,
   finds no English left from a list of common words, and mails in each
   recipient's language (one German, one English in the same event).
 - The glossary test (above).
+
+## Decided while building (2026-11-22, see `decisions-to-confirm.md`)
+
+- The Language section comes after Appearance: three radios (each
+  language in itself, `lang` set), saved with its button like the
+  others; the page comes back in the new language.
+- Mails before a choice: the language of the last invitation mail
+  (resending sets it again), else English. Login codes and allauth's
+  mails: the recipient's language if they have one, else the page's
+  (they asked for it in their browser just now).
+- Feed sentences in the perfect tense ("hat „Zelt bestellen“ erstellt");
+  the actions as filter labels have a context of their own (`action`,
+  participles: "erstellt").
+- Key names stay as on Swiss keyboards: Ctrl, Shift, Enter, Alt, Esc.
+- New texts are translated in the branch that adds them (`AGENTS.md`).
 
 ## Done when
 
