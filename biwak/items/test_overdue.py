@@ -142,17 +142,17 @@ class TodoPageBadgeTest(Base):
         facts = self.facts(self.todo(self.today - DAY))
         self.assertRegex(
             facts,
-            r"Thursday, 19 November 2026\s*<span\s+class=\"badge wb-tone-danger\""
+            r"19 Nov 2026</span>\s*<span\s+class=\"badge wb-tone-danger\""
             r"[^>]*>Overdue</span>",
         )
 
     def test_today_next_to_the_date(self):
         facts = self.facts(self.todo(self.today))
-        self.assertRegex(facts, r"Friday, 20 November 2026\s*<span[^>]*>Today</span>")
+        self.assertRegex(facts, r"20 Nov 2026</span>\s*<span[^>]*>Today</span>")
 
     def test_later_is_just_the_date(self):
         facts = self.facts(self.todo(self.today + DAY))
-        self.assertIn("Saturday, 21 November 2026", facts)
+        self.assertRegex(facts, r'title="Saturday, 21 November 2026"\s*>21 Nov 2026<')
         self.assertNotIn("data-due", facts)
 
     def test_no_badge_line_above_the_facts(self):
