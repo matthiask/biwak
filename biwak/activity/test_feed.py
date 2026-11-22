@@ -860,6 +860,8 @@ class MoveOutOfGroupTest(FeedBase):
     def test_reads_out_of_its_group(self):
         group = ops.create_group(todolist=self.shared.todolist, title="Done")
         ops.move_todo(self.todo, todolist=self.shared, group=group, actor=self.ada)
+        # In the group from before (moving it in and out at once is nothing)
+        Event.objects.all().delete()
         ops.move_todo(self.todo, todolist=self.shared, group=None, actor=self.ada)
         [event] = Event.objects.filter(action=Action.MOVED)
         self.assertEqual(event.data["group"], "")
@@ -926,3 +928,82 @@ class ToggleNetTest(FeedBase):
         event_at(self.ada, Action.REOPENED, self.todo, NOW - dt.timedelta(minutes=50))
         event_at(self.ada, Action.COMPLETED, self.todo, NOW)
         self.assertEqual(self.shown(), [Action.COMPLETED])
+
+
+class MoveBackTest(FeedBase):
+    """A to-do moved into another column or list and back shows nothing,
+    like completing and reopening (decision B, specs/feed.md)"""
+
+    def shown(self):
+        events = list(feed.feed_events(self.ada))
+        feed.attach(events, self.ada)
+        return [
+            (event.action, event.data.get("group", event.data.get("to")))
+            for entry in feed.merge(events)
+            for event in entry.events
+        ]
+
+    def test_into_a_column_and_back(self):
+        done = ops.create_group(todolist=self.shared.todolist, title="Done")
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=self.shared, group=done, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=None, actor=self.ada)
+        self.assertEqual(self.shown(), [])
+        ops.move_todo(self.todo, todolist=self.shared, group=done, actor=self.ada)
+        self.assertEqual(self.shown(), [(Action.MOVED, "Done")])
+
+    def test_into_another_list_and_back(self):
+        plans = ops.create_list(project=self.project, title="Plans", creator=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        ops.add_comment(self.todo, author=self.bob, content="Why?")
+        ops.move_todo(self.todo, todolist=self.shared, actor=self.ada)
+        self.assertEqual(self.shown(), [(Action.COMMENTED, None)])
+        # Elsewhere in the end: the last move
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        self.assertEqual(
+            self.shown(), [(Action.MOVED, "Plans"), (Action.COMMENTED, None)]
+        )
+
+    def test_someone_else_moving_it_back_shows(self):
+        plans = ops.create_list(project=self.project, title="Plans", creator=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, actor=self.bob)
+        self.assertEqual(len(self.shown()), 2)
+
+
+class PageEdgeTest(FeedBase):
+    """A page ends between entries: what merges is never split by a page's
+    edge (specs/feed.md)"""
+
+    def test_an_entry_is_never_split(self):
+        todos = self.todos(self.shared, feed.PAGE_SIZE + 10)
+        # Ten edits of other to-dos by Bob, then Ada's completions, all
+        # within minutes: the edge falls among Ada's
+        for n, todo in enumerate(todos):
+            actor, action = (
+                (self.bob, Action.EDITED) if n < 10 else (self.ada, Action.COMPLETED)
+            )
+            event_at(actor, action, todo, NOW - dt.timedelta(minutes=n))
+        # An hour and more later on: a page may end there
+        event_at(self.bob, Action.EDITED, self.todo, NOW - dt.timedelta(hours=3))
+        self.client.force_login(self.ada)
+        first = self.client.get("/feed/")
+        entries = [e for _d, _l, es in first.context["days"] for e in es]
+        self.assertEqual([e.count for e in entries], [10, feed.PAGE_SIZE])
+        second = self.client.get(first.context["older"])
+        entries = [e for _d, _l, es in second.context["days"] for e in es]
+        self.assertEqual([e.count for e in entries], [1])
+
+    def test_a_pair_cancelling_out_is_never_split(self):
+        todos = self.todos(self.shared, feed.PAGE_SIZE - 1)
+        for n, todo in enumerate(todos):
+            event_at(self.bob, Action.EDITED, todo, NOW - dt.timedelta(hours=2 * n))
+        last = NOW - dt.timedelta(hours=2 * feed.PAGE_SIZE)
+        event_at(self.ada, Action.REOPENED, self.todo, last)
+        event_at(self.ada, Action.COMPLETED, self.todo, last - dt.timedelta(minutes=5))
+        self.client.force_login(self.ada)
+        first = self.client.get("/feed/")
+        self.assertNotIn("Ada reopened", page_text(first))
+        self.assertIsNone(first.context["older"])

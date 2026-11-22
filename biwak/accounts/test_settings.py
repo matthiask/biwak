@@ -225,6 +225,8 @@ class SignInSectionTest(TestCase):
         self.assertContains(response, "This one", count=1)
         self.assertContains(response, "Sign out everywhere else")
         self.assertContains(response, "10.0.0.2")
+        # Relative times with the ago filter (specs/ui.md)
+        self.assertContains(response, "just now")
         self.assertEqual(
             [s.browser for s in response.context["sessions"]],
             ["Firefox on Linux", "Safari on iPhone"],

@@ -108,6 +108,55 @@ def cancelled(events, *, together=_always):
     return result
 
 
+def _move_kind(event):
+    """A move's kind ("group" or "list"), where to and where from, or None
+    for moves recorded before they said where from"""
+    data = event.data
+    if "group" in data:
+        to, was = data.get("group_id"), data.get("group_was", UNKNOWN)
+        kind = "group"
+    else:
+        to, was = data.get("to_id"), data.get("to_was", UNKNOWN)
+        kind = "list"
+    if was is UNKNOWN:
+        return None
+    return kind, to, was
+
+
+def moved_back(events, *, together=_always):
+    """The IDs of the moves (of ``events``, in any order) a later one makes
+    pointless: each person's consecutive moves of an item into other
+    columns or lists (other events don't break them up, another person's
+    move does) are their net change, the last one, or nothing when the
+    to-do is back where it was (decision B, decided 2026-11-22). Like
+    ``cancelled()``, for the feed; the timeline does it in ``combine()``."""
+    runs = {}  # (item ID, kind) -> runs of [(event, to, was)]
+    for event in sorted(
+        (e for e in events if e.action == Action.MOVED and e.item_id),
+        key=lambda e: (e.created_at, e.pk),
+    ):
+        move = _move_kind(event)
+        if move is None:
+            continue
+        kind, to, was = move
+        item_runs = runs.setdefault((event.item_id, kind), [])
+        last = item_runs[-1][-1][0] if item_runs else None
+        if (
+            last is not None
+            and last.actor_id == event.actor_id
+            and together(last, event)
+        ):
+            item_runs[-1].append((event, to, was))
+        else:
+            item_runs.append([(event, to, was)])
+    result = set()
+    for item_runs in runs.values():
+        for run in item_runs:
+            back = run[-1][1] == run[0][2]
+            result.update(event.pk for event, _to, _was in (run if back else run[:-1]))
+    return result
+
+
 class Effect:
     """One thing an event did: ``key`` says what it was about (a later
     effect on the same key replaces it), ``value`` what it set,

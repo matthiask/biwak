@@ -8,6 +8,7 @@ cursor of a page is the time and ID of its last event.
 
 import dataclasses
 import datetime as dt
+import itertools
 
 from django.db.models import Q
 from django.utils import timezone
@@ -84,9 +85,14 @@ def page(events, before=None, *, user):
         events = events.filter(
             Q(created_at__lt=created_at) | Q(created_at=created_at, pk__lt=pk)
         )
-    found = list(events[: PAGE_SIZE + 1])
+    # The page ends between entries (decided 2026-11-22): looking ahead
+    # up to another page for where it can
+    found = list(events[: 2 * PAGE_SIZE + 1])
     more = len(found) > PAGE_SIZE
-    found = found[:PAGE_SIZE]
+    if more:
+        edge = _edge(found[: 2 * PAGE_SIZE], PAGE_SIZE)
+        more = len(found) > edge
+        found = found[:edge]
     attach(found, user)
     return found, cursor_for(found[-1]) if more else None
 
@@ -327,6 +333,47 @@ def conversations(events):
     ]
 
 
+def _together(older, newer):
+    """Within the merge window and on the same day"""
+    return (
+        local_day(older) == local_day(newer)
+        and newer.created_at - older.created_at <= MERGE_WINDOW
+    )
+
+
+# Toggles and moves of an item a later one may cancel (``merge()``)
+NET_CHANGES = {Action.COMPLETED, Action.REOPENED, Action.MOVED}
+
+
+def _edge(events, size):
+    """Where a page of ``events`` (newest first) ends: after ``size``
+    events or later, where no entry of ``merge()`` and nothing cancelling
+    out would be split; ``len(events)`` if there's no such place"""
+    position = {event.pk: n for n, event in enumerate(events)}
+    reach = list(range(len(events)))  # the furthest partner of each event
+
+    def link(a, b):
+        a, b = sorted((position[a.pk], position[b.pk]))
+        reach[a] = max(reach[a], b)
+
+    for entry in merge(events):
+        for newer, older in itertools.pairwise(entry.events):
+            link(newer, older)
+    last = {}  # item ID and actor -> the older event of what may cancel
+    for event in reversed(events):
+        if event.action in NET_CHANGES and event.item_id:
+            key = (event.item_id, event.actor_id)
+            if key in last and _together(last[key], event):
+                link(last[key], event)
+            last[key] = event
+    furthest = -1
+    for n, partner in enumerate(reach):
+        furthest = max(furthest, partner)
+        if n + 1 >= size and furthest <= n:
+            return n + 1
+    return len(events)
+
+
 def merge(events):
     """Entries from events newest first: comments on the same item become
     conversations (``conversations()``); consecutive events of the same
@@ -335,14 +382,10 @@ def merge(events):
     day, become one entry. A person's completing and reopening an item
     back and forth (each within an hour of the one before, on the same
     day) shows as the net change (``timeline.cancelled()``)."""
-    from biwak.activity.timeline import cancelled
+    from biwak.activity.timeline import cancelled, moved_back
 
-    hidden = cancelled(
-        events,
-        together=lambda older, newer: (
-            local_day(older) == local_day(newer)
-            and newer.created_at - older.created_at <= MERGE_WINDOW
-        ),
+    hidden = cancelled(events, together=_together) | moved_back(
+        events, together=_together
     )
     events = [event for event in events if event.pk not in hidden]
     entries = []

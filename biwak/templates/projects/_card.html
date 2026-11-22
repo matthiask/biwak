@@ -1,4 +1,4 @@
-{% load biwak humanize i18n %}
+{% load biwak i18n %}
 {% comment %}A project's card (the projects page and Home): `project` annotated by `overview()`.{% endcomment %}
 <div>
   <div class="card wb-project-card" {% if project.color %}data-project-color="{{ project.color }}"{% endif %}>
@@ -31,7 +31,7 @@
           >{% translate "Clients" %}</span>
         {% endif %}
         {% if project.activity %}
-          <span class="text-body-secondary">{{ project.activity|naturaltime }}</span>
+          <span class="text-body-secondary">{{ project.activity|ago }}</span>
         {% endif %}
         {% if project.open_count %}
           <span
