@@ -2887,7 +2887,7 @@ class FiltersTest(E2ETestCase):
         # Not by the link next to the heading
         self.goto(page, self.project)
         expect(page.get_by_role("link", name="by list")).to_have_attribute(
-            "href", todos + "?grouping=project"
+            "href", todos
         )
         self.assertEqual(self.errors, [])
 
@@ -2911,9 +2911,11 @@ class FiltersTest(E2ETestCase):
         page.keyboard.press("ControlOrMeta+k")
         page.locator("#wb-palette-input").fill("to-dos i assigned")
         page.keyboard.press("Enter")
-        page.wait_for_url("**/todos/?assignee=anybody&assigned_by=me")
+        page.wait_for_url("**/todos/?assigned_by=me")
         expect(page.locator("#id_assigned_by")).to_have_value("me")
-        expect(page.locator("#id_assignee")).to_have_value("anybody")
+        # Assigned to anybody (else), the empty choice then
+        expect(page.locator("#id_assignee")).to_have_value("")
+        expect(page.locator("#id_assignee option:checked")).to_have_text("Anybody")
         self.assertEqual(self.errors, [])
 
     def test_search_is_not_remembered(self):

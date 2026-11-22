@@ -72,9 +72,8 @@ class FilterForm(Form):
             projects = projects.filter(pk=project.pk)
         else:
             self.fields["project"].queryset = projects
-        # The empty choice is the page's default (decided 2026-11-21): across
-        # projects mine (everybody's can get huge), in a project anybody's
-        if project is None:
+        # The empty choice is the page's default (decided 2026-11-21)
+        if default_assignee(project, data) == "me":
             choices = [("", _("Me")), (ANYBODY, _("Anybody"))]
         else:
             choices = [("", _("Anybody")), ("me", _("Me"))]
@@ -89,6 +88,29 @@ class FilterForm(Form):
 
 # The filters "Reset filters" resets
 ANYBODY = "anybody"
+
+
+def default_assignee(project, query):
+    """What the empty "assigned to" means: across projects mine (everybody's
+    can get huge), in a project anybody's, and anybody's for the to-dos I
+    assigned too (else they'd be only those I gave myself; decided
+    2026-11-22)"""
+    if project is None and query.get("assigned_by") != "me":
+        return "me"
+    return ANYBODY
+
+
+def without_empty(query):
+    """``query`` (a ``QueryDict``) without empty values, which stay out of
+    URLs (specs/ui.md)"""
+    query = query.copy()
+    for name, values in list(query.lists()):
+        query.setlist(name, [value for value in values if value])
+        if not query.getlist(name):
+            del query[name]
+    return query
+
+
 FILTERS = ["project", "assignee", "assigned_by", "state", "visible"]
 
 
@@ -109,24 +131,20 @@ def todos_by_due(request, project=None):
     """Open to-dos by due date across the projects the person sees, or in
     one project; ``?assignee=me`` is "My to-dos". Rows are completed in
     place (``todo_toggle``)."""
-    query = request.GET
-    if (project is None and query.get("assignee") == "me") or query.get(
-        "grouping"
-    ) == TodoGrouping.PROJECT:
-        # Links from before: me (across projects) and grouping by project
-        # are the empty choices
-        query = query.copy()
-        if project is None and query.get("assignee") == "me":
-            query["assignee"] = ""
-        if query.get("grouping") == TodoGrouping.PROJECT:
-            query["grouping"] = ""
+    query = without_empty(request.GET)
+    default = default_assignee(project, query)
+    # Links spelling a default out (from before, or written by hand): the
+    # default is the empty choice
+    if query.get("assignee") == default:
+        del query["assignee"]
+    if query.get("grouping") == TodoGrouping.PROJECT:
+        del query["grouping"]
     form = FilterForm(query, user=request.user, project=project)
     valid = form.is_valid()
     data = dict(form.cleaned_data) if valid else {}
-    if project is None and valid:
-        data["assignee"] = {"": "me", ANYBODY: ""}.get(
-            data["assignee"], data["assignee"]
-        )
+    if valid:
+        assignee = data["assignee"] or default
+        data["assignee"] = "" if assignee == ANYBODY else assignee
     completed = data.get("state") == "completed"
     todos = due.todos(
         request.user,
@@ -144,9 +162,8 @@ def todos_by_due(request, project=None):
     # assignee (specs/todos.md, "The to-dos page")
     mine = query.copy()
     mine.pop("page", None)
-    if project is None:
-        mine.pop("assignee", None)
-    else:
+    mine.pop("assignee", None)
+    if default != "me":
         mine["assignee"] = "me"
     context = {
         "mine_query": mine.urlencode(),
@@ -163,7 +180,7 @@ def todos_by_due(request, project=None):
         page = Paginator(
             todos.order_by("-todo__completed_at", "-pk"), PAGE_SIZE
         ).get_page(request.GET.get("page"))
-        query = request.GET.copy()
+        query = query.copy()
         query.pop("page", None)
         context |= {"page": page, "querystring": query.urlencode()}
     elif grouping == TodoGrouping.PROJECT:

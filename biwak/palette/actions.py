@@ -123,7 +123,7 @@ def everywhere(user):
         link(_("Go to to-dos"), reverse("todos"), "g t"),
         link(
             _("To-dos I assigned"),
-            reverse("todos") + "?assignee=anybody&assigned_by=me",
+            reverse("todos") + "?assigned_by=me",
             exact=True,
         ),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),

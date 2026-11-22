@@ -30,6 +30,14 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
   the button said: "Complete" on a to-do somebody completed meanwhile
   leaves it completed (by them), instead of reopening it (`done=1/0`,
   `todos.md`).
+- **"To-dos I assigned" leaves out those you gave yourself** (the spec's
+  "to anybody else", as Home), also in the API and the CLI; with
+  "Assigned by: Me" the empty "Assigned to" choice is "Anybody" across
+  projects too (not "Me", which would show only those you gave
+  yourself), so `/todos/?assigned_by=me` is the whole list.
+- **Links leave out defaults and empty values**: Home's, the palette's
+  and the project page's links, "Assigned to me" and the completed
+  to-dos' pages (`/todos/?assigned_by=me`, `?grouping=due`).
 
 ### Notifications and files
 

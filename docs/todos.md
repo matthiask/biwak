@@ -96,7 +96,9 @@ The filters apply as you change them:
   or anybody, nobody active (nobody, or only people who are gone), or a
   person (clients: me, anybody, nobody active); a project's to-dos show
   anybody's by default;
-- **assigned by**: "Me" shows the to-dos you gave to others;
+- **assigned by**: "Me" shows the to-dos you gave to others, assigned
+  to anybody else unless you choose who (with "Me" as the assignee,
+  those you gave yourself);
 - **state**: "Completed" shows finished to-dos, latest first, instead
   of the sections;
 - **visibility** (staff): visible to clients or internal;

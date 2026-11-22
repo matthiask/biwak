@@ -849,6 +849,20 @@ class HeaderAndResetTest(TestCase):
         for query in ["?assignee=me", ""]:
             self.assertNotContains(self.client.get("/todos/" + query), "Assigned to me")
 
+    def test_links_leave_out_empty_values_and_defaults(self):
+        # Spelled-out defaults and empty values (a form sent without
+        # JavaScript) stay out of the links the page makes (specs/ui.md)
+        response = self.client.get(
+            "/todos/?project=&assignee=anybody&state=completed&visible=&grouping=project"
+        )
+        self.assertEqual(response.context["mine_query"], "state=completed")
+        self.assertEqual(
+            response.context["querystring"], "assignee=anybody&state=completed"
+        )
+        response = self.client.get("/todos/?assignee=me&grouping=&state=")
+        self.assertNotContains(response, "Assigned to me")
+        self.assertFalse(response.context["filtered"])
+
     def test_mine_is_the_default_across_projects(self):
         bob = person("Bob")
         site = project(members=[self.ada, bob])

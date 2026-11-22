@@ -133,7 +133,7 @@ class DueTest(HomeTestCase):
         self.todo("Undated job", assignees=[self.ada])
         response = self.page(self.ada)
         self.assertContains(response, "Nothing due this week.")
-        self.assertContains(response, 'href="/todos/?assignee=me&amp;grouping=due"')
+        self.assertContains(response, 'href="/todos/?grouping=due"')
         self.assertContains(response, "All 1 to-dos")
         self.assertContains(self.page(self.bob), "All my to-dos")
 
@@ -201,7 +201,7 @@ class WaitingTest(HomeTestCase):
         self.assertContains(response, "Waiting on others")
         self.assertContains(
             response,
-            'href="/todos/?assignee=anybody&amp;assigned_by=me&amp;grouping=due"',
+            'href="/todos/?assigned_by=me&amp;grouping=due"',
         )
 
     def test_not_the_ones_assigned_to_me_too(self):

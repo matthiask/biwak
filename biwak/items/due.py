@@ -108,7 +108,8 @@ def todos(
     far away when there's none). Archived projects and lists are out of the
     way. ``assignee``: ``"me"``, ``"nobody"`` (nobody active) or a person's ID (``None``:
     anybody); ``assigned_by``: ``"me"`` for those the person assigned
-    (to somebody, or to the ``assignee`` given; ``None``: anybody);
+    (to anybody else, or to the ``assignee`` given, themselves too;
+    ``None``: anybody);
     ``visible_to_clients`` ``True`` or ``False`` (clients only
     ever see visible to-dos); ``group`` one of ``GROUPS``."""
     qs = (
@@ -138,14 +139,18 @@ def todos(
         # One assignment both to the assignee and by the person
         if assignee == "nobody":
             return qs.none()
-        wanted = {"assigned_by": user}
-        if assignee == "me":
-            wanted["user"] = user
-        elif assignee is not None:
-            wanted["user"] = assignee
-        qs = qs.filter(
-            Exists(Assignment.objects.filter(todo_id=OuterRef("pk"), **wanted))
+        assignments = Assignment.objects.filter(
+            todo_id=OuterRef("pk"), assigned_by=user
         )
+        if assignee == "me":
+            assignments = assignments.filter(user=user)
+        elif assignee is not None:
+            assignments = assignments.filter(user=assignee)
+        else:
+            # To anybody else (specs/todos.md): giving oneself a to-do isn't
+            # waiting on others
+            assignments = assignments.exclude(user=user)
+        qs = qs.filter(Exists(assignments))
     elif assignee == "me":
         qs = qs.filter(todo__assignees=user)
     elif assignee == "nobody":
