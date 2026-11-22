@@ -1183,6 +1183,17 @@ class PeopleWhoLeftTest(ImportCase):
         # Read once per run, for several projects too
         self.assertEqual(len(self.account_reads()), 1)
 
+    def test_a_tombstone_in_the_account_has_left(self):
+        # /people.json lists removed people too, as tombstones (checked
+        # against a real account 2026-11-22)
+        self.client_.data["/people.json"] = [
+            p | {"personable_type": "Tombstone"} if p["id"] == support.CLEO["id"] else p
+            for p in self.client_.data["/people.json"]
+        ]
+        report = self.run_import()
+        self.assertEqual(self.left_at("cleo@example.org"), timezone.localdate())
+        self.assertEqual(report.left, ["Cleo Example <cleo@example.org>"])
+
     def test_read_once_for_several_projects(self):
         self.leave(support.BOB)
         importer = Importer(self.client_, actor=self.ada)

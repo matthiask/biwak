@@ -116,6 +116,10 @@ LINK_TYPES = {
 }
 
 
+# The kinds of ``/people.json`` entries that are the account's people
+ACCOUNT_PEOPLE = {"User", "Client"}
+
+
 class Report:
     """What a run did (or, in a dry run, would do)"""
 
@@ -505,10 +509,15 @@ class Importer(Resolver):
         return person["id"] in self._account_ids()
 
     def _account_ids(self):
-        """The IDs of the account's people, read once per run"""
+        """The IDs of the account's people, read once per run. ``/people.json``
+        also lists removed people (``Tombstone``), people from outside
+        (``Outsider``) and placeholders (``DummyUser``, ``Integration``):
+        only users are in the account (checked 2026-11-22)."""
         if self._account_people is None:
             self._account_people = {
-                person["id"] for person in self.client.paginate("/people.json")
+                person["id"]
+                for person in self.client.paginate("/people.json")
+                if person.get("personable_type", "User") in ACCOUNT_PEOPLE
             }
         return self._account_people
 

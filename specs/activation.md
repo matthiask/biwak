@@ -121,7 +121,9 @@ couldn't hide one without the other.
 - **`User.left_at`**, a date: set by deactivating (below), cleared by
   activating again. The importer sets it (`_people_who_left()`,
   `activation.mark_left()`) for people Basecamp no longer has: it reads the account's people once per run (`/people.json`,
-  paginated) and whoever turns up in a project (creators, commenters,
+  paginated; only its `User` entries count: it also lists removed people as
+`Tombstone`, people from outside as `Outsider` and placeholders, checked
+against a real account 2026-11-22) and whoever turns up in a project (creators, commenters,
   assignees, subscribers) but isn't among them has left (the date: the
   run's). People still in the account who are inactive in Biwak aren't
   touched (they wait to be activated).
