@@ -64,6 +64,19 @@ class PublicLinksTest(E2ETestCase):
         expect(dialog).to_be_hidden()
         self.assertEqual(self.errors, [])
 
+    def test_the_badge_opens_share(self):
+        """The "Public link" badge sits in the title, which opens the edit
+        form when clicked: the badge opens Share… instead"""
+        page = self.page
+        link_ops.create_public_link(self.todo, days=7, actor=self.ada)
+        self.goto(page, self.todo)
+        page.get_by_role("link", name="Public link").click()
+        dialog = page.get_by_role("dialog", name="Share “Pitch the tent”")
+        expect(dialog).to_be_visible()
+        expect(dialog.locator("#public-link")).to_be_visible()
+        expect(page.locator("[data-view-edit-form]")).to_have_count(0)
+        self.assertEqual(self.errors, [])
+
     def test_stop_in_place_on_the_page_of_all_public_links(self):
         page = self.page
         message = ops.create_message(

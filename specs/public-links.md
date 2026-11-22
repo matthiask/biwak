@@ -42,6 +42,15 @@ secret URL, the model to copy).
    when it expires and "Stop sharing". **One live link per item:**
    creating a new one (choosing an expiry again) replaces it.
 
+## The badge
+
+While a link is live, staff see a **"Public link"** badge on the item's
+own page, next to its title and the client badge, opening the "Share…"
+modal (`data-modal`); its title says until when. Only on the item's
+page, not on rows or tiles; never for clients (decided 2026-11-22).
+`{% public_link_badge item %}`, colored by `--wb-public-bg` and
+`--wb-public-ink` (the lake palette's tint).
+
 ## All public links
 
 A central page listing the live links, each with "Stop sharing" right

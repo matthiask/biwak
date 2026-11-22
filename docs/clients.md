@@ -82,7 +82,9 @@ palette.
   attachments and the file, without signing in; no comments, no project,
   nobody else. Links to other items in the text still need an account.
 - An item has one public link at a time: creating a new one replaces
-  it. **Stop sharing** ends it at once.
+  it. **Stop sharing** ends it at once. While it's live, staff see a
+  **"Public link"** badge next to the item's title on its page, which
+  opens Share….
 - Trashing the item (or what it's in) or archiving the project ends its
   link for good; restoring doesn't bring it back.
 - **Public links** in your account menu lists the live links in your

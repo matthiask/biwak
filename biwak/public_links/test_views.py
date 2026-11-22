@@ -172,6 +172,50 @@ class ShareModalTest(Fixture, TestCase):
                 self.assertTrue(results)
                 self.assertFalse(actions & {r["action"] for r in results})
 
+    def test_the_badge_on_the_items_page(self):
+        """Staff only, while a link is live, on the item's page only (decided
+        2026-11-22), opening Share…"""
+        visible = ops.create_message(
+            project=self.project, title="Hello", creator=self.ada, visible=True
+        )
+        doc = ops.create_doc(project=self.project, title="Plan", creator=self.ada)
+        item = ops.create_upload(
+            project=self.project,
+            file=ContentFile(PNG, name="map.png"),
+            creator=self.ada,
+        )
+        badge = 'class="badge wb-public-badge"'
+        for shared in [self.todo, visible, doc, item]:
+            with self.subTest(shared.kind):
+                url = shared.get_absolute_url()
+                self.assertNotContains(self.client.get(url), badge)
+                link = self.share(shared)
+                response = self.client.get(url)
+                self.assertContains(
+                    response,
+                    f'<a {badge} href="{self.url(shared)}" data-modal',
+                    html=False,
+                )
+                self.assertContains(response, ">Public link</a>")
+                PublicLink.objects.filter(pk=link.pk).update(expires_at=timezone.now())
+                self.assertNotContains(self.client.get(url), badge)
+        self.share(visible)
+        self.share(item)
+        # Not on rows and tiles
+        for url in [
+            reverse("project_messages", args=[self.project.pk]),
+            reverse("project_files", args=[self.project.pk]),
+            self.project.get_absolute_url(),
+        ]:
+            with self.subTest(url):
+                self.assertNotContains(self.client.get(url), badge)
+        # Not for clients
+        self.client.force_login(self.cleo)
+        response = self.client.get(visible.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, badge)
+        self.assertNotContains(response, "Public link")
+
 
 class AllPublicLinksTest(Fixture, TestCase):
     def setUp(self):
