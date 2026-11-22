@@ -301,7 +301,7 @@ class TodosTest(E2ETestCase):
         self.assertEqual(page.evaluate("window.marker"), 1)
         expect(rows.first.locator(".wb-row-people")).to_contain_text("Ada")
         expect(rows.first.locator(".wb-row-people .wb-avatar")).to_have_count(1)
-        self.assertIn("24. Dec", rows.first.inner_text())
+        self.assertIn("24 Dec", rows.first.inner_text())
         # Ready for the next one
         self.assertEqual(title.input_value(), "")
         self.assertEqual(add.locator("[name=notes]").input_value(), "")
