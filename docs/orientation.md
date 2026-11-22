@@ -91,6 +91,9 @@ archived". You only find what you may see. See [Keyboard](keyboard.md).
 
 **People** lists everybody you may know, with their organization. A
 person's page shows the projects you have in common and what they did.
+Your own name is in Settings; "Edit the name…" on a person's page
+corrects somebody else's (staff correct clients' names, admins
+everybody's).
 Clients only see members of their projects; partners see the people of
 their projects, including staff who open them without being members.
 Staff manage organizations from the People page: clients' organizations
@@ -134,7 +137,7 @@ once, all or nothing.
 
 Your name in the bar opens: My activity, Settings (your name, notifications, the
 keyboard, appearance, profile image, sign-in: connected accounts,
-passkeys and sessions), Calendar,
+passkeys, the authenticator app and sessions), Calendar,
 Help and Sign out. Staff also find the link to the administration.
 
 ## Trash

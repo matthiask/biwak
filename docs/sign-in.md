@@ -8,8 +8,10 @@ Biwak has no passwords. You sign in with your email address:
 - **A passkey:** your fingerprint, face or device PIN. After signing in by
   code, Biwak offers to add one; Settings, "Sign-in", adds and removes
   them.
-- **Single sign-on:** "Sign in with Google" or "Sign in with Microsoft",
-  where your organization has set it up.
+- **Single sign-on:** "Sign in through your organization" on the
+  sign-in page, then "Sign in with Google" or "Sign in with Microsoft",
+  where your organization has set it up. Where it requires single
+  sign-on, entering your address sends you there.
 
 ## An authenticator app
 
@@ -22,8 +24,9 @@ is enough alone: it already needs your device and its PIN or fingerprint.
 - **Confirming it's you** (adding a passkey, setting things up) asks for
   the app's code or a passkey then, not for a code by mail.
 - **Turning it off** ("Turn off…") needs a code from the app.
-- **Lost the app?** Sign in with a passkey and turn it off, or ask for a
-  reset (below). There are no recovery codes.
+- **Lost the app?** A passkey still signs you in, but turning the app off
+  needs its code: without the app, ask for a reset (below). There are no
+  recovery codes.
 
 **Lost your phone or laptop, or someone else may have had access?** Ask
 for a reset: on your page, "Reset sign-in…" removes your authenticator

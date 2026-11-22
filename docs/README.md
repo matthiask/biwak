@@ -18,8 +18,9 @@ it.
 - [Clients](clients.md): what clients see, showing and hiding, what
   they can do
 - [Keyboard](keyboard.md): the command palette and the shortcuts
-- [Signing in](sign-in.md): codes, passkeys, single sign-on with
-  Google or Microsoft, setting it up
+- [Signing in](sign-in.md): codes, passkeys, an authenticator app as
+  a second step, resets, single sign-on with Google or Microsoft,
+  setting it up
 - [The CLI and the API](cli.md): tokens, the `biwak` command
 
 ## What Biwak doesn't do
