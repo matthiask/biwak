@@ -123,7 +123,7 @@ def everywhere(user):
         link(_("Go to to-dos"), reverse("todos"), "g t"),
         link(
             _("To-dos I assigned"),
-            reverse("todos") + "?assignee=anybody&assigned_by=me",
+            reverse("todos") + "?assigned_by=me",
             exact=True,
         ),
         link(_("Go to bookmarks"), reverse("bookmarks"), "g b"),
@@ -192,7 +192,7 @@ def on_item(request, item, context):
             post(
                 _("Reopen") if completed else _("Complete"),
                 reverse("todo_toggle", args=[item.pk]),
-                {"next": url},
+                {"next": url, "done": "0" if completed else "1"},
                 "x",
             )
         )

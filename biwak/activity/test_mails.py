@@ -556,6 +556,25 @@ class BackAndForthTest(MailsBase):
         self.assertIn("completed", mail.outbox[0].body)
         self.assertIn("reopened", mail.outbox[1].body)
 
+    def test_a_digest_tells_the_net_change_over_midnight(self):
+        # Completed in the evening, reopened before the digest at 07:00:
+        # nothing to tell, today or tomorrow
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        Notification.objects.update(
+            created_at=dt.datetime(2026, 11, 19, 23, 0, tzinfo=ZURICH)
+        )
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        Notification.objects.filter(event__action=Action.REOPENED).update(
+            created_at=dt.datetime(2026, 11, 20, 6, 0, tzinfo=ZURICH)
+        )
+        mail.outbox.clear()
+        self.assertEqual(self.send(dt.datetime(2026, 11, 20, 7, 0, tzinfo=ZURICH)), 0)
+        self.assertEqual(self.send(dt.datetime(2026, 11, 21, 7, 0, tzinfo=ZURICH)), 0)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(Notification.objects.filter(user=self.bob).exists())
+
     def test_digests_too(self):
         self.bob.mail_delivery = MailDelivery.DIGEST
         self.bob.save()

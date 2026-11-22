@@ -104,7 +104,7 @@
       </h2>
       <p class="small text-body-secondary mb-2">
         {% translate "All to-dos:" %}
-        <a href="{% url 'project_todos' project.pk %}?grouping=project">{% translate "by list" %}</a>
+        <a href="{% url 'project_todos' project.pk %}">{% translate "by list" %}</a>
         ·
         <a href="{% url 'project_todos' project.pk %}?grouping=due">{% translate "by due date" %}</a>
       </p>

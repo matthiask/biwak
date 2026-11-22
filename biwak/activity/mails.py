@@ -290,7 +290,36 @@ def _item(item, user):
     return context
 
 
-def _deliverable(notifications, user):
+DONE = (Action.COMPLETED, Action.REOPENED)
+
+
+def done_neighbours(queryset, notifications):
+    """The unread notifications of ``queryset`` completing or reopening the
+    items completed or reopened among the unread ``notifications``, but
+    not those: what cancels out may be split by a page's edge, a menu's
+    limit or a digest's midnight (``_deliverable(others=)``)"""
+    items = {
+        n.event.item_id
+        for n in notifications
+        if n.read_at is None and n.event.action in DONE
+    }
+    if not items:
+        return []
+    return list(
+        queryset
+        .filter(read_at__isnull=True, event__item__in=items, event__action__in=DONE)
+        .exclude(pk__in=[n.pk for n in notifications])
+        .select_related("event")
+    )
+
+
+def _cancelled(notifications, others):
+    from biwak.activity.timeline import cancelled
+
+    return cancelled([n.event for n in [*notifications, *others] if n.read_at is None])
+
+
+def _deliverable(notifications, user, *, others=()):
     """Those the person may still get: the item visible to them now (which
     excludes the inactive), and for clients only events which were visible
     to clients when they happened (the same rule as ``notify()``, in case a
@@ -300,15 +329,14 @@ def _deliverable(notifications, user):
     mails and digests both pass here, and the lantern (``lantern.wanted()``).
     Of the unread ones, those of completing and reopening which cancel out
     aren't (``timeline.cancelled()``, decided 2026-11-21): the net change,
-    if any, is the last one. The same number of queries for any number of
-    items."""
-    from biwak.activity.timeline import cancelled
-
+    if any, is the last one; ``others`` (``done_neighbours()``) are the
+    neighbours to count with, outside ``notifications``. The same number of
+    queries for any number of items."""
     items = {n.event.item_id: n.event.item for n in notifications if n.event.item}
     visible = set(
         Item.objects.visible_to(user).filter(pk__in=items).values_list("pk", flat=True)
     )
-    hidden = cancelled([n.event for n in notifications if n.read_at is None])
+    hidden = _cancelled(notifications, others)
     return [
         notification
         for notification in notifications
@@ -524,7 +552,17 @@ def _prepare(user, pks, now, build, kind):
     claimed = _claim(pks, now)
     if not claimed:
         return False
-    deliverable = _deliverable(claimed, user)
+    # Completing and reopening not mailed yet, after the digest's midnight
+    # too: what cancels out is never mailed, today or tomorrow
+    others = done_neighbours(
+        Notification.objects.filter(user=user, **MAILABLE), claimed
+    )
+    deliverable = _deliverable(claimed, user, others=others)
+    if others:
+        hidden = _cancelled(claimed, others)
+        Notification.objects.filter(
+            pk__in=[n.pk for n in others if n.event_id in hidden], **MAILABLE
+        ).delete()
     message = None
     if deliverable:
         with (

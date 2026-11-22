@@ -818,13 +818,13 @@ def list_unarchive(list_id, as_json):
 
 
 @cli.command()
-@click.argument("list_id", metavar="LIST", type=int, required=False)
+@click.argument("list_id", metavar="[LIST]", type=int, required=False)
 @click.option("--completed", is_flag=True, help="Completed to-dos, latest first.")
 @click.option("--mine", is_flag=True, help="Only to-dos assigned to you.")
 @click.option(
     "--assigned-by-me",
     is_flag=True,
-    help="Only to-dos you assigned (to somebody, or to you with --mine).",
+    help="Only to-dos you assigned (to somebody else, or to you with --mine).",
 )
 @click.option("--project", "project_id", type=int, help="Only this project's ID.")
 @click.option(
@@ -839,8 +839,9 @@ def list_unarchive(list_id, as_json):
 )
 @json_option
 def todos(list_id, completed, mine, assigned_by_me, project_id, due, by_due, as_json):
-    """The open to-dos of LIST, by group; without LIST across all projects by
-    due date (--mine, --assigned-by-me, --project, --due)"""
+    """The open to-dos of LIST, by group; without LIST across all projects,
+    by project or by due date (--mine, --assigned-by-me, --project, --due,
+    --by-due)"""
     if list_id and (mine or assigned_by_me or project_id or due or by_due):
         terminate(
             "--mine, --assigned-by-me, --project, --due and --by-due go without LIST."
@@ -1064,7 +1065,7 @@ def todo_edit(todo_id, title, notes, due, assign, attach, repeat, as_json):
 
 
 @todo.command("move")
-@click.argument("todo_id", metavar="TODO", type=int, required=False)
+@click.argument("todo_id", metavar="[TODO]", type=int, required=False)
 @click.option(
     "--todos",
     "todo_ids",
@@ -1447,7 +1448,7 @@ def checkin_pause(question_id, as_json):
 
 
 @checkin.command("resume")
-@click.argument("question_id", metavar="QUESTION", type=int, required=False)
+@click.argument("question_id", metavar="[QUESTION]", type=int, required=False)
 @click.option(
     "--project",
     "project_id",

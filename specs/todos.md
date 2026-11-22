@@ -151,7 +151,11 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
   everybody's open to-dos get huge, and "Anybody" is
   `assignee=anybody`; in a project the default is anybody's; "Nobody
   active" is nobody or only deactivated people), assigned by (anybody or
-  me: with "Anybody" it's Basecamp's "assigned by me"), open or
+  me: to anybody else, Basecamp's "assigned by me", as Home's "waiting on
+  others"; with an assignee chosen, to them, "Me" being those I gave
+  myself; decided 2026-11-22: with "assigned by me" the empty assignee
+  is "Anybody" across projects too, else it would show only those I
+  gave myself), open or
   completed (latest first, 50 per page), visible to clients (staff
   only). Assignee choices list people only for staff; clients get
   anybody, me and nobody. Unknown values show an error and no to-dos,
@@ -170,11 +174,17 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
 - **Left out:** trashed to-dos, archived projects and archived lists
   (also in the API and the calendar feed).
 - Rows complete in place (the list's toggle, `next` back to the page).
+- **Completing says what it does** (decided 2026-11-22): the rows, the
+  to-do's page, the palette and `x` post `done=1` (Complete) or `done=0`
+  (Reopen) to `/todos/<id>/toggle/`; a to-do already so stays as it is,
+  so a page from before someone else completed it never reopens it. The
+  API has `complete/` and `reopen/`.
 - **From the project page:** "All to-dos: by list · by due date" below
   the lists' heading, each keeping its own query; the header's "All
   to-dos" restores the remembered filters.
 - **API:** `GET /api/v1/todos/` with `project_id`, `assignee` (`me`,
-  `anybody`, `nobody`, an ID), `assigned_by=me` (else 400), `completed`,
+  `anybody`, `nobody`, an ID), `assigned_by=me` (else 400; to anybody
+  else without an assignee, like the page), `completed`,
   `visible_to_clients` (ignored for clients), `due_group`, `grouping`
   and the cursor; each to-do carries `due_group` (`overdue`, `today`,
   `this_week`, `next_week`, `later`, `none`; months are only headings),

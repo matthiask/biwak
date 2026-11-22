@@ -19,7 +19,7 @@
           <p class="text-body-secondary mb-2">{% translate "Nothing due this week." %}</p>
         {% endfor %}
         <a
-          href="{% url 'todos' %}?assignee=me&amp;grouping=due"
+          href="{% url 'todos' %}?grouping=due"
         >{% if open_count %}{% blocktranslate with n=open_count %}All {{ n }} to-dos{% endblocktranslate %}{% else %}{% translate "All my to-dos" %}{% endif %}</a>
       </section>
 
@@ -38,9 +38,7 @@
               {% for todo in todos %}{% include "items/_due_row.html" with keep_page=True %}{% endfor %}
             </div>
           {% endfor %}
-          <a
-            href="{% url 'todos' %}?assignee=anybody&amp;assigned_by=me&amp;grouping=due"
-          >{% translate "All to-dos I assigned" %}</a>
+          <a href="{% url 'todos' %}?assigned_by=me&amp;grouping=due">{% translate "All to-dos I assigned" %}</a>
         </section>
       {% endif %}
 
@@ -104,9 +102,7 @@
         <ul class="list-unstyled mb-0">
           {% if not request.user.is_client %}
             <li>
-              <a
-                href="{% url 'todos' %}?assignee=anybody&amp;assigned_by=me&amp;grouping=due"
-              >{% translate "To-dos I assigned" %}</a>
+              <a href="{% url 'todos' %}?assigned_by=me&amp;grouping=due">{% translate "To-dos I assigned" %}</a>
             </li>
           {% endif %}
           <li>

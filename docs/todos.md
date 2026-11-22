@@ -5,9 +5,9 @@ project. Staff create lists with "New list" on the project's page.
 
 ## Lists and groups
 
-- **Add a to-do** opens a form in the list: title, notes, assignees and
-  a due date. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it and starts the
-  next one, <kbd>Esc</kbd> closes the form.
+- **Add a to-do** opens a form in the list: title, notes, assignees, a
+  due date and how it repeats. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it
+  and starts the next one, <kbd>Esc</kbd> closes the form.
 - **Groups** are headings inside a list ("New group"). Rename or remove
   a group with the icons next to its name; removing it keeps its
   to-dos.
@@ -15,14 +15,13 @@ project. Staff create lists with "New list" on the project's page.
   another group or into another list. Click several grips to select
   several to-dos and drag them together. Without a mouse, use "Move
   to..." in the to-do's "More" menu.
-- **Board:** "Board" shows the groups as columns, "List" goes back. Your
-  choice is remembered per list. Dragging between columns moves the
-  to-do to that group.
+- **Board:** "Board" shows the groups as columns, "List" goes back, for
+  this visit. How a list opens is its "Shown as" in "Edit" (list or
+  board). Dragging between columns moves the to-do to that group.
 - **Completed:** finished to-dos collapse into "Completed (N)" below
   the list; "Show more" loads older ones.
 - **Archive:** finished lists go out of the way with "Archive" in the
-  list's "More" menu, in the menu of the list on the project's page, or
-  in the command palette; "Unarchive" brings them back. An archived list
+  list's "More" menu or in the command palette; "Unarchive" brings them back. An archived list
   stays readable, but is left out of the project's lists (it is under
   "Archived lists"), of your to-dos, of the calendar link and of the
   palette's suggestions, and its recurring to-dos don't repeat. Nothing
@@ -37,7 +36,12 @@ check pops, the title is struck through and the row fades away; the last
 open to-do of a list gets a small burst and "All done." (not with reduced
 motion set in your system).
 
-"Edit" on the to-do's page changes everything:
+The to-do's page shows its facts (assigned to, due on, repeats) and
+notes. Click them, the title or "Edit" (<kbd>e</kbd>) to change them in
+place; "Save" or "Cancel" goes back. To choose people, type in the
+field: the list shows who matches, <kbd>↑</kbd>/<kbd>↓</kbd> and
+<kbd>Enter</kbd> pick, the × on a name (or <kbd>Backspace</kbd>)
+removes it.
 
 - **Title and notes.** Notes are Markdown. A task list in them (lines
   starting with `- [ ]`) can be ticked in place, and the list's rows show
@@ -85,10 +89,11 @@ doesn't remove the next one.
 
 ## The to-dos page
 
-**To-dos** in the bar shows your open to-dos across all projects by
-due date: Overdue, Today, This week (until Sunday), Next week, one
-section per month after that, and No date. Every project has the same
-page for its own to-dos. Completing works in place.
+**To-dos** in the bar shows your open to-dos across all projects, by
+project, list and group. Grouped by due date, they are in Overdue,
+Today, This week (until Sunday), Next week, one section per month after
+that, and No date. Every project has the same page for its own to-dos.
+Completing works in place.
 
 The filters apply as you change them:
 
@@ -96,11 +101,13 @@ The filters apply as you change them:
   or anybody, nobody active (nobody, or only people who are gone), or a
   person (clients: me, anybody, nobody active); a project's to-dos show
   anybody's by default;
-- **assigned by**: "Me" shows the to-dos you gave to others;
+- **assigned by**: "Me" shows the to-dos you gave to others, assigned
+  to anybody else unless you choose who (with "Me" as the assignee,
+  those you gave yourself);
 - **state**: "Completed" shows finished to-dos, latest first, instead
   of the sections;
 - **visibility** (staff): visible to clients or internal;
-- **group by**: due date or project.
+- **group by**: project (the default) or due date.
 
 "Assigned to me" at the top (when someone else is chosen) shows your
 to-dos again, with the other filters kept. Your browser remembers the

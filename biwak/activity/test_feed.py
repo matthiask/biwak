@@ -833,6 +833,8 @@ class MoveTargetTest(FeedBase):
         self.assertNotIn("to", moved(self.cleo))
         self.assertNotIn("to_id", moved(self.cleo))
         self.assertEqual(moved(self.ada)["to"], "Roadmap")
+        # Where it came from is for the timeline only
+        self.assertNotIn("to_was", moved(self.ada))
 
     def test_a_fixed_number_of_queries(self):
         def count(user):

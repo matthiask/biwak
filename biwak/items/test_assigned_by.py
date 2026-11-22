@@ -128,12 +128,41 @@ class FilterTest(AssignedByTestCase):
             t.title for _k, _l, todos in response.context["sections"] for t in todos
         )
 
-    def test_by_me_to_anybody(self):
+    def test_by_me_to_anybody_else(self):
+        # Not what Ada gave herself (specs/todos.md: "by me, to anybody
+        # else"), as on Home
         self.assertEqual(
-            self.found(self.ada, assigned_by="me"),
-            ["Both", "Internal", "To Bob", "To me"],
+            self.found(self.ada, assigned_by="me"), ["Both", "Internal", "To Bob"]
         )
         self.assertEqual(self.found(self.bob, assigned_by="me"), ["Bob to Ada"])
+
+    def test_assigned_by_me_makes_anybody_the_assignees_default(self):
+        # Across projects the empty choice is "Me", but not for the to-dos
+        # I assigned: they'd be only those I gave myself
+        self.assertEqual(
+            self.found(self.ada, assigned_by="me", assignee=""),
+            ["Both", "Internal", "To Bob"],
+        )
+        response = self.client.get("/todos/", {"assigned_by": "me"})
+        self.assertContains(response, '<option value="" selected>Anybody</option>')
+        self.assertContains(response, '<option value="me">Me</option>')
+        self.assertNotContains(response, 'value="anybody"')
+        # Links from before spelling the default out still work
+        response = self.client.get(
+            "/todos/", {"assigned_by": "me", "assignee": "anybody", "grouping": "due"}
+        )
+        self.assertEqual(
+            sorted(t.title for _k, _l, ts in response.context["sections"] for t in ts),
+            ["Both", "Internal", "To Bob"],
+        )
+        # "Assigned to me" says so then
+        self.assertEqual(
+            response.context["mine_query"], "assigned_by=me&grouping=due&assignee=me"
+        )
+        # Without "assigned by me", "Me" is the default again
+        self.assertEqual(
+            self.found(self.ada, assignee=""), ["Bob to Ada", "Both", "To me"]
+        )
 
     def test_assigned_by_anybody_is_the_default(self):
         self.assertEqual(len(self.found(self.ada, assigned_by="")), 6)
@@ -197,6 +226,7 @@ class TitleTest(AssignedByTestCase):
             ({"assignee": "me"}, "My to-dos"),
             ({"assignee": "me", "assigned_by": "me"}, "My to-dos"),
             ({"assignee": "anybody", "assigned_by": "me"}, "To-dos I assigned"),
+            ({"assigned_by": "me"}, "To-dos I assigned"),
             ({"assignee": "anybody"}, "To-dos"),
             ({}, "My to-dos"),
         ]:
@@ -258,8 +288,7 @@ class APITest(AssignedByTestCase):
             sorted(["To Bob", "To me", "Bob's", "Nobody", "Internal"]),
         )
         self.assertEqual(
-            self.titles(self.get(self.ada, assigned_by="me")),
-            ["Internal", "To Bob", "To me"],
+            self.titles(self.get(self.ada, assigned_by="me")), ["Internal", "To Bob"]
         )
         self.assertEqual(
             self.titles(self.get(self.ada, assigned_by="me", assignee="me")),
@@ -277,7 +306,7 @@ class APITest(AssignedByTestCase):
     def test_a_client_only_gets_what_they_may_see(self):
         self.todo("Internal", assignees=[self.bob], todolist=self.internal)
         visible = self.todo("Visible")
-        ops.assign(visible, [self.cleo], actor=self.cleo)
+        ops.assign(visible, [self.cleo, self.ada], actor=self.cleo)
         self.assertEqual(
             self.titles(self.get(self.cleo, assigned_by="me")), ["Visible"]
         )
@@ -293,9 +322,7 @@ class PaletteTest(AssignedByTestCase):
                 actions = {a["label"]: a for a in data["actions"]}
                 action = actions["To-dos I assigned"]
                 self.assertEqual(action["type"], "link")
-                self.assertEqual(
-                    action["url"], "/todos/?assignee=anybody&assigned_by=me"
-                )
+                self.assertEqual(action["url"], "/todos/?assigned_by=me")
                 # Exactly this, not the remembered filters
                 self.assertTrue(action["exact"])
                 self.assertNotIn("exact", actions["Go to to-dos"])

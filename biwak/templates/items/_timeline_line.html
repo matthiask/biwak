@@ -1,4 +1,4 @@
-{% load biwak humanize %}
+{% load biwak %}
 <div class="wb-timeline-line" id="event-{{ line.pk }}" data-live>
   <span class="wb-timeline-icon">
     {% with kind=line.kind %}
@@ -16,5 +16,5 @@
   {% avatar line.actor %}
   <span><strong>{% short_name line.actor %}</strong> {{ line.text }}
     <span class="text-body-secondary" title="{{ line.created_at|date:'j. M Y, H:i' }}">·
-      {{ line.created_at|naturaltime }}</span></span>
+      {{ line.created_at|ago }}</span></span>
 </div>

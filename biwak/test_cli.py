@@ -376,18 +376,32 @@ class CLICommandsTest(CLITest):
         ops.create_todo(
             todolist=self.list, title="Theirs", creator=eve, assignees=[eve]
         )
+        ops.create_todo(
+            todolist=self.list, title="Given", creator=self.ada, assignees=[eve]
+        )
+        # To anybody else: not what Ada gave herself
         output = self.biwak("todos", "--assigned-by-me").output
-        self.assertIn("Mine", output)
+        self.assertIn("Given", output)
+        self.assertNotIn("Mine", output)
         self.assertNotIn("Theirs", output)
         self.assertNotIn("Nobodys", output)
         output = self.biwak("todos", "--assigned-by-me", "--mine").output
         self.assertIn("Mine", output)
+        self.assertNotIn("Given", output)
         data = json.loads(self.biwak("todos", "--assigned-by-me", "--json").stdout)
-        self.assertEqual({t["title"] for t in data}, {"Mine"})
+        self.assertEqual({t["title"] for t in data}, {"Given"})
         self.assertEqual(data[0]["assignees"][0]["assigned_by"]["id"], self.ada.pk)
         self.assertEqual(
             self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
         )
+
+    def test_optional_arguments_show_in_brackets(self):
+        for command, usage in [
+            (["todos"], "todos [OPTIONS] [LIST]"),
+            (["todo", "move"], "move [OPTIONS] [TODO]"),
+        ]:
+            with self.subTest(command=command):
+                self.assertIn(usage, self.biwak(*command, "--help").output)
 
     def test_read_only_and_errors(self):
         result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")

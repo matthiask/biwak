@@ -16,7 +16,7 @@ class ProjectTodoLinksTest(TestCase):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
             response = self.client.get(self.project.get_absolute_url())
-            self.assertContains(response, f'href="{self.todos}?grouping=project"')
+            self.assertContains(response, f'href="{self.todos}"')
             self.assertContains(response, f'href="{self.todos}?grouping=due"')
 
     def test_the_header_says_all_todos_and_restores_the_filters(self):

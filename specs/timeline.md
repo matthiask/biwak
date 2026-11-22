@@ -20,7 +20,13 @@ comments, like a GitHub issue but simpler.
 - **Merging:** a line takes in the same person's next change within ten
   minutes of its last one, unless a comment is in between. Changes that
   undo each other within a line are left out (the line goes if nothing
-  is left); what was set several times says its last value.
+  is left); what was set several times says its last value. A to-do
+  moved into another group (a board column like "Done") or list and back
+  shows no line, the same as completing and reopening (decision B,
+  decided 2026-11-22): moves record where from (`group_was`, `to_was`;
+  dragging between columns is one merged event keeping the first
+  `group_was`), and moving back cancels out. Older moves without them
+  show as before. The API leaves these keys out.
 - **Live:** new lines arrive like new comments (a line is the live
   region `event-<first event's id>`, so a merge updates it and an undone
   completion removes it).
