@@ -85,7 +85,8 @@ goes into internal containers, archived recordings skipped.
   imported: too large)" in its place. The run goes on.
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
-  subscribers, so big accounts take a while.
+  subscribers (on later runs only for changed ones), so big accounts take
+  a while the first time.
 
 ## Importing the whole account (planned, 2026-11-22)
 
