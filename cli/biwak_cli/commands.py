@@ -1445,43 +1445,74 @@ def todo_edit(todo_id, title, notes, due, starts, assign, attach, repeat, as_jso
 
 
 @todos.command("move")
-@click.argument("todo_id", metavar="[TODO]", type=int, required=False)
+@click.argument("todo_ids", metavar="[TODO]...", type=int, nargs=-1)
 @click.option(
     "--todos",
-    "todo_ids",
+    "several",
     help="Several to-dos' IDs, comma separated, instead of TODO; they end up"
     " next to each other in this order.",
 )
 @click.option("--list", "list_id", type=int, required=True, help="The list's ID.")
 @click.option("--group", type=int, help="The group's ID (default: ungrouped).")
 @json_option
-def todo_move(todo_id, todo_ids, list_id, group, as_json):
-    """Move TODO (or --todos) to the end of a list of the same project, into
-    a group or ungrouped"""
-    if bool(todo_id) == bool(todo_ids):
+def todo_move(todo_ids, several, list_id, group, as_json):
+    """Move TODO (or several, next to each other in this order) to the end
+    of a list of the same project, into a group or ungrouped: all or
+    nothing"""
+    if bool(todo_ids) == bool(several):
         terminate("Give either TODO or --todos.")
-    if todo_id:
+    if several:
+        try:
+            todo_ids = [int(part) for part in several.split(",")]
+        except ValueError:
+            terminate("--todos takes IDs separated by commas.")
+    if len(todo_ids) == 1:
         data = [
             request(
                 "POST",
-                f"todos/{todo_id}/move/",
+                f"todos/{todo_ids[0]}/move/",
                 json={"list_id": list_id, "group_id": group},
             )
         ]
     else:
-        try:
-            ids = [int(part) for part in todo_ids.split(",")]
-        except ValueError:
-            terminate("--todos takes IDs separated by commas.")
         data = request(
             "POST",
             f"lists/{list_id}/todos/move/",
-            json={"todo_ids": ids, "group_id": group},
+            json={"todo_ids": list(todo_ids), "group_id": group},
         )
     if as_json:
-        return echo_json(data[0] if todo_id else data)
+        return echo_json(data[0] if len(todo_ids) == 1 and not several else data)
     for moved in data:
         click.echo(f"Moved #{moved['id']} {moved['title']}.")
+    return None
+
+
+@todos.command("dates")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@click.option("--due", help="YYYY-MM-DD: one due date for all (start dates stay).")
+@click.option(
+    "--shift",
+    type=int,
+    help="Move due and start dates by this many days (negative: earlier).",
+)
+@click.option("--remove", is_flag=True, help="Remove the due and start dates.")
+@json_option
+def todo_dates(todo_ids, due, shift, remove, as_json):
+    """Set, move or remove the due dates of every TODO at once: all or
+    nothing"""
+    if sum([due is not None, shift is not None, remove]) != 1:
+        terminate("Give one of --due, --shift and --remove.")
+    if due is not None:
+        changes = {"dates": "set", "due_on": due}
+    elif shift is not None:
+        changes = {"dates": "shift", "days": shift}
+    else:
+        changes = {"dates": "remove"}
+    data = request("POST", "todos/dates/", json={"ids": list(todo_ids), **changes})
+    if as_json:
+        return echo_json(data)
+    for dated in data:
+        click.echo(f"#{dated['id']} {dated['title']}: {dates(dated) or '-'}")
     return None
 
 

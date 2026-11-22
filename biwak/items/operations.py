@@ -889,6 +889,34 @@ def update_todo(
 
 
 @transaction.atomic
+def date_todos(items, *, actor, dates, due_on=None, days=0):
+    """ "Due date…" for several to-dos (specs/handover.md), the choices of
+    copying a list (``Dates``): ``KEEP`` sets ``due_on`` on all of them
+    (start dates stay, so one after it is refused, as on the to-do's
+    page), ``SHIFT`` moves due dates, start dates and "repeats until" by
+    ``days`` (to-dos without a due date stay as they are), ``REMOVE``
+    removes due and start dates. Through ``update_todo()`` per to-do, so
+    an event each. All or nothing: ``InvalidDates`` changes nothing."""
+    delta = dt.timedelta(days=days)
+    for item in items:
+        todo = Todo.objects.get(item=item)
+        if dates == Dates.KEEP:
+            update_todo(item, actor=actor, due_on=due_on)
+        elif dates == Dates.REMOVE:
+            update_todo(item, actor=actor, due_on=None)
+        elif dates != Dates.SHIFT:
+            raise ValueError(f"Unknown dates: {dates}")
+        elif todo.due_on is not None:
+            changes = {
+                "due_on": todo.due_on + delta,
+                "starts_on": todo.starts_on and todo.starts_on + delta,
+            }
+            if todo.recurrence_ends_on:
+                changes["recurrence_ends_on"] = todo.recurrence_ends_on + delta
+            update_todo(item, actor=actor, **changes)
+
+
+@transaction.atomic
 def complete(item, *, actor):
     """Completes the to-do for all its assignees"""
     todo = Todo.objects.select_for_update().get(item=item)

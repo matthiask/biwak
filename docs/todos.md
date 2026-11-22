@@ -54,11 +54,11 @@ project. Staff create lists with "New list" on the project's page.
   project's activity keeps one line, "moved Launch to Website". Single to-dos move
   between the lists of their project only.
 
-## Assigning several at once
+## Changing several at once
 
 On a list (also as a board) and on the to-dos page you can select
-to-dos and assign them together, for example when somebody leaves and
-their to-dos go to someone else:
+to-dos and assign, move or date them together, for example when
+somebody leaves and their to-dos go to someone else:
 
 - **Selecting:** <kbd>Ctrl</kbd>-click (<kbd>⌘</kbd>-click on a Mac) a
   to-do to add it to the selection or take it out, <kbd>Shift</kbd>-click
@@ -74,8 +74,21 @@ their to-dos go to someone else:
   them ("Ada assigned you 23 to-dos"). People taken out aren't told.
   If one of the to-dos was trashed or you can't see it anymore, nothing
   changes and the form says so. Taking somebody off is done per to-do.
+- **Move…** moves them to a list of their project or one of its groups,
+  to the top or the end, next to each other. To-dos of several projects
+  don't move together.
+- **Due date…** gives them all one due date ("Set a date"; start dates
+  stay, so it can't be before one of them), moves their dates by a
+  number of days ("Move by", start dates and "repeats until" too; to-dos
+  without a due date stay as they are) or removes them ("Remove", the
+  start dates too).
 
-`biwak todos assign 12 13 14 --to 7 [--replace]` does the same.
+Every change is all or nothing: if one of the to-dos was trashed or you
+can't see it anymore, nothing changes.
+
+`biwak todos assign 12 13 14 --to 7 [--replace]`, `biwak todos move 12
+13 --list 5 [--group 8]` and `biwak todos dates 12 13 --due 2026-12-20`
+(or `--shift 7`, `--remove`) do the same.
 
 ## A to-do
 

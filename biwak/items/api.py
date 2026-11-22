@@ -696,6 +696,48 @@ def todos_assign(request, data: AssignManyIn):
     return [todo_out(found[todo.pk], request.user) for todo in todos]
 
 
+class DatesManyIn(Schema):
+    ids: list[int]
+    dates: Literal["set", "shift", "remove"]
+    due_on: dt.date | None = None
+    days: int = Field(0, ge=-3650, le=3650)
+
+
+@router.post("todos/dates/", response=list[TodoOut])
+def todos_dates(request, data: DatesManyIn):
+    """ "Due date…" for several to-dos (specs/handover.md): ``set`` gives
+    each of the to-dos ``ids`` the due date ``due_on`` (start dates stay),
+    ``shift`` moves due and start dates by ``days``, ``remove`` removes
+    them. All or nothing: 400 naming the problem (to-dos the person can't
+    change, a start date after the new due date). Returns the to-dos."""
+    from biwak.items.assigning import missing_message, todos_for
+
+    if not data.ids:
+        bad_request(_("Send at least one to-do."))
+    if data.dates == "set" and data.due_on is None:
+        bad_request(_("Send the due date."))
+    if data.dates == "shift" and not data.days:
+        bad_request(_("Send the days to move the due dates by."))
+    todos, missing = todos_for(request.user, list(dict.fromkeys(data.ids)))
+    if missing:
+        bad_request(missing_message(missing))
+    try:
+        ops.date_todos(
+            todos,
+            actor=request.user,
+            dates={"set": ops.Dates.KEEP}.get(data.dates, data.dates),
+            due_on=data.due_on,
+            days=data.days,
+        )
+    except ops.InvalidDates as exc:
+        bad_request(str(exc))
+    found = {
+        item.pk: item
+        for item in _for_todo_out(Item.objects.filter(pk__in=[t.pk for t in todos]))
+    }
+    return [todo_out(found[todo.pk], request.user) for todo in todos]
+
+
 @router.get("todos/{todo_id}/", response=TodoOut)
 def todo_detail(request, todo_id: int):
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)

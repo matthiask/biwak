@@ -4,7 +4,8 @@ What happens to someone's work when they leave for good, and the tools to
 hand it over: assignments that stay, assigning several to-dos at once,
 and the admins' list of all projects. Decided with the user 2026-11-22.
 
-**Status:** built (2026-11-22).
+**Status:** built (2026-11-22); moving across projects and telling
+once about moving and dating several open (below).
 
 ## Deactivating keeps the assignments
 
@@ -106,9 +107,13 @@ list's page (list and board).
   learn who an ID is). **CLI:** `biwak todos assign TODO… --to PERSON…
   [--replace]` prints each to-do with its assignees.
 
-## Moving and dating several to-dos (open)
+## Moving and dating several to-dos
 
 Asked by the user 2026-11-22, on the same selection as "Assign…".
+
+**Status:** "Due date…" and "Move…" within a project built
+(2026-11-22); moving across projects and telling subscribers once (one
+lantern entry) open, questions below.
 
 - **"Move…"**: a modal like a single to-do's "Move to…" (a list of the
   same project and a group of it, `move_todos()`), all or nothing. If
@@ -137,6 +142,81 @@ Asked by the user 2026-11-22, on the same selection as "Assign…".
 - Both one event per action like "Assign…" (one entry in the lantern),
   the API (`POST /api/v1/todos/move/`, `/todos/dates/` with the IDs) and
   the CLI (`biwak todos move ID… --list`, `biwak todos dates ID…`).
+
+### What's built (2026-11-22)
+
+- **The bar** has "Assign…", "Move…" and "Due date…" (links with
+  `data-selection-action`, `select-rows.js` unchanged), then "Deselect".
+  Both modals are in `biwak/items/assigning.py` (`todos_move` at
+  `/todos/move/?items=…&next=…`, `todos_dates` at `/todos/dates/`), say
+  "3 to-dos" (or the title of one), go back to the page they came from,
+  and refuse with `missing_message()` when one of the to-dos is gone,
+  as "Assign…". Everybody who sees the to-dos may use them, clients too
+  (to-dos' fields are shared work, as for "Assign…").
+- **"Move…"** is the single to-do's `MoveTodoForm` ("List and group",
+  "Position": to the top or the end) over the lists of their project the
+  person sees (`_move_targets()`), then `ops.move_todos()`: next to each
+  other in the order selected, a `moved` event each, the visibility
+  recomputed for another list. Completed to-dos in the selection move
+  too (as dragging and the API's `lists/{id}/todos/move/` do; only the
+  single to-do's "Move to…" leaves them out). To-dos of several projects
+  are refused (proposed): "The selected to-dos are in several projects:
+  to-dos move to the lists of their own project."
+- **"Due date…"** (`DatesForm`): "Due dates" with "Set a date", "Move by"
+  and "Remove" (copying's choices and labels, `KEEP` labelled "Set a
+  date"), a "Due date" field and copying's "Days" field and help;
+  "This field is required." / "By how many days?" at the fields.
+  `ops.date_todos(items, actor=, dates=, due_on=, days=)` calls
+  `update_todo()` per to-do in one transaction (an `edited` event each,
+  merging and telling as any edit of the dates):
+  - "Set a date" sets the due date and keeps start dates, as the to-do's
+    page and the API do; a start date after the new date refuses all
+    with "The start date can't be after the due date." (proposed: the
+    existing rule rather than moving or dropping the start).
+  - "Move by" moves due date, start date and "repeats until" (as
+    copying does); to-dos without a due date stay as they are.
+  - "Remove" removes due and start dates; the repeat rule and its end
+    stay (as copying).
+  - Completed to-dos are dated too (as "Assign…" assigns them).
+- **API:** `POST /api/v1/todos/dates/` with `ids`, `dates`
+  (`set`|`shift`|`remove`), `due_on`, `days` (-3650 to 3650), all or
+  nothing, answering the to-dos (`TodoOut`); 400 for no to-dos, `set`
+  without `due_on` ("Send the due date."), `shift` without `days`, a
+  to-do gone or a start date after the date. Moving several in a
+  project already had its endpoint, `POST /lists/{id}/todos/move/`
+  (`todo_ids`, `group_id`, `index`), so there's no `/todos/move/` yet:
+  it's for moving across projects (open). **CLI** (0.61.0): `biwak
+  todos dates TODO… --due DATE|--shift DAYS|--remove` prints each to-do
+  with its dates; `biwak todos move TODO… --list ID [--group ID]` takes
+  several IDs (`--todos 1,2` still works).
+- Tests: `biwak/items/test_several_todos.py`,
+  `biwak/test_cli_handover.py`, the bar's buttons in
+  `biwak/test_e2e_handover.py` (`SelectingTodosTest`).
+
+### Open questions (2026-11-22)
+
+1. **Telling subscribers once.** Moving and dating record an event per
+   to-do (`moved`, `edited`), and both tell the to-dos' subscribers, so
+   a person subscribed to 23 of them gets 23 lantern entries. One entry
+   needs a `batch` on the events (as "Assign…") and its wording: the
+   lantern's line, the mail's subject and the entry's title, e.g. "Ada
+   moved 23 to-dos to Launch." and "Ada changed the dates of 23
+   to-dos."? Should moving within a project tell anybody at all (a
+   single to-do's move to another list does now)?
+2. **Across projects**, if built now: where the target list comes
+   from (a combobox of the lists of every project the person can open,
+   grouped by project?); one `moved` event per to-do naming both
+   projects and telling nobody, as for lists; the trace in the old
+   project per to-do or one line for all ("moved 23 to-dos to
+   Website")?; may clients move to-dos into other projects they're
+   members of (they move only messages they created there now)?;
+   completed to-dos too?; the API's `POST /todos/move/` with
+   `confirm`, as `/items/{id}/move/`. Until then a selection from
+   several projects is refused.
+3. **Wording to confirm** (proposed, built): the refusal for several
+   projects (above), "Set a date" keeping start dates, the API's "Send
+   the due date." and "Send at least one to-do.", the German
+   "Verschieben…", "Fälligkeit…", "Ein Datum setzen".
 
 ## Deactivating says what's left
 

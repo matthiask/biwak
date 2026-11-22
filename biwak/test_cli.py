@@ -452,7 +452,7 @@ class CLICommandsTest(CLITest):
 
     def test_optional_arguments_show_in_brackets(self):
         for command, usage in [
-            (["todos", "move"], "move [OPTIONS] [TODO]"),
+            (["todos", "move"], "move [OPTIONS] [TODO]..."),
             (["checkins", "resume"], "resume [OPTIONS] [QUESTION]"),
         ]:
             with self.subTest(command=command):
