@@ -48,6 +48,7 @@ from biwak.items.models import (
     Todo,
     TodoList,
 )
+from biwak.organizations import activation
 from biwak.organizations.models import Organization, normalize_name
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
@@ -116,6 +117,9 @@ class Report:
         self.dry_run = dry_run
         self.counts = defaultdict(Counter)
         self.people = []  # the people created (or to create)
+        # Inactive people who turn up in a project but aren't among the
+        # account's people anymore: marked as having left (or, dry, to mark)
+        self.left = []
         self.images = []  # the people whose profile image was imported
         self.generated = []  # those whose image Basecamp generated: skipped
         self.problems = []
@@ -147,6 +151,9 @@ class Report:
                 "People created inactive:" if not self.dry_run else "People to create:"
             )
             lines += [f"  {person}" for person in self.people]
+        if self.left:
+            lines.append("People who left Basecamp:")
+            lines += [f"  {person}" for person in self.left]
         if self.images:
             lines.append("Profile images imported:")
             lines += [f"  {name}" for name in self.images]
@@ -286,6 +293,11 @@ class Importer(Resolver):
         self._skipped = set()
         self.report = Report(dry_run=dry_run)
         self._users = {}  # Basecamp person ID: User, or None
+        self._persons = {}  # Basecamp person ID: the person's record
+        # The IDs of the account's people (``/people.json``), read once
+        self._account_people = None
+        self._left = set()  # Basecamp person IDs reported as having left
+        self._today = timezone.localdate()
         self._people_by_sgid = {}
         self._imaged = set()  # Basecamp person IDs whose image was looked at
         # While converting a text: its project, author and file entries
@@ -436,6 +448,7 @@ class Importer(Resolver):
         pid = person["id"]
         if pid in self._users:
             return self._users[pid]
+        self._persons[pid] = person
         user = self._find(PERSON, pid)
         if user is None:
             user = self._match_or_create(person)
@@ -479,6 +492,40 @@ class Importer(Resolver):
             organization=organization,
             is_active=False,
         )
+
+    def _people_who_left(self):
+        """Inactive people (created by an import, or deactivated) who turn up
+        in a project but aren't among the account's people anymore have
+        left: ``left_at`` is the run's date (specs/activation.md). The
+        account's people are read once per run; inactive people still in
+        the account wait to be activated, active ones aren't touched."""
+        if self._account_people is None:
+            self._account_people = {
+                person["id"] for person in self.client.paginate("/people.json")
+            }
+        gone = [
+            pid
+            for pid in self._persons
+            if pid not in self._account_people and pid not in self._left
+        ]
+        self._left.update(gone)
+        found = {pid: self._users.get(pid) for pid in gone}
+        users = [user for user in found.values() if user is not None]
+        if self.dry:
+            waiting = {
+                user.pk for user in users if not user.is_active and user.left_at is None
+            }
+        else:
+            waiting = {user.pk for user in activation.mark_left(users, on=self._today)}
+        for pid, user in found.items():
+            # In a dry run, people who would be created would also have left
+            if (user is None and self.dry) or (user is not None and user.pk in waiting):
+                person = self._persons[pid]
+                if user is None:
+                    name, email = person.get("name"), person.get("email_address")
+                else:
+                    name, email = user.get_full_name(), user.email
+                self.report.left.append(f"{name or pid} <{email}>")
 
     def _image(self, person, user):
         """The person's profile image, once: only for people without one
@@ -647,6 +694,7 @@ class Importer(Resolver):
                 self._fix_links(project)
                 self._bookmarks(project)
                 project_ops.recompute_activity()
+            self._people_who_left()
         if self.archive and rec.get("status") != "archived":
             # Only reached when the import went through: a failure raises
             if not self.dry:
