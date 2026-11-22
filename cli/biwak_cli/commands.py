@@ -986,7 +986,38 @@ def lists(project, archived, as_json):
 
 @cli.group("list")
 def list_group():
-    """Archive and unarchive to-do lists"""
+    """Archive, unarchive and copy to-do lists"""
+
+
+@list_group.command("copy")
+@click.argument("list_id", metavar="LIST", type=int)
+@click.option("--to", "project", type=int, required=True, help="The project's ID.")
+@click.option("--title", help="The copy's title; the list's own by default.")
+@click.option(
+    "--shift", type=int, help="Move the due dates by DAYS (negative: earlier)."
+)
+@click.option("--no-dates", is_flag=True, help="Remove the due dates.")
+@click.option("--visible", is_flag=True, help="Visible to clients (staff).")
+@json_option
+def list_copy(list_id, project, title, shift, no_dates, visible, as_json):
+    """Copy the open work of LIST into a project (the same or another):
+    groups, open to-dos with notes, the assignees who are members there.
+    The title gets " (copy)" if the project has a list of that name."""
+    if shift is not None and no_dates:
+        raise click.UsageError("--shift and --no-dates don't go together.")
+    body = {"project_id": project, "visible_to_clients": visible}
+    if title:
+        body["title"] = title
+    if shift is not None:
+        body |= {"dates": "shift", "days": shift}
+    elif no_dates:
+        body["dates"] = "remove"
+    data = request("POST", f"lists/{list_id}/copy/", json=body)
+    if as_json:
+        return echo_json(data)
+    shown = " [clients]" if data["visible_to_clients"] else ""
+    click.echo(f"Copied to #{data['id']} {data['title']}: {data['url']}{shown}")
+    return None
 
 
 @list_group.command("archive")
@@ -1942,6 +1973,31 @@ def folder_move(item, folder, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Moved #{item}.{' [clients]' if data['visible_to_clients'] else ''}")
+    return None
+
+
+@cli.command("move")
+@click.argument("item", type=int)
+@click.option("--to", "project", type=int, required=True, help="The project's ID.")
+@click.option(
+    "--confirm",
+    is_flag=True,
+    help="Move it although people are dropped or clients there will see it.",
+)
+@json_option
+def move(item, project, confirm, as_json):
+    """Move the list, message, folder, doc or file ITEM at the top of its
+    project to the top of another project, with everything in it.
+    Assignees and subscribers who aren't members there are dropped."""
+    data = request(
+        "POST",
+        f"items/{item}/move/",
+        json={"project_id": project, "confirm": confirm},
+    )
+    if as_json:
+        return echo_json(data)
+    shown = " [clients]" if data["visible_to_clients"] else ""
+    click.echo(f"Moved #{item} to project {data['project_id']}.{shown}")
     return None
 
 

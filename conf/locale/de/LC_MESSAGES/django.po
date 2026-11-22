@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:38+0100\n"
+"POT-Creation-Date: 2026-11-22 16:42+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1847,6 +1847,22 @@ msgid "A folder can't be moved into itself."
 msgstr "Ein Ordner kann nicht in sich selbst verschoben werden."
 
 #: biwak/files/api.py
+msgid "Items move to the top of another project."
+msgstr "Einträge werden zuoberst in ein anderes Projekt verschoben."
+
+#: biwak/files/api.py biwak/items/operations.py
+msgid "Only what's at the top of a project moves there."
+msgstr "Nur was zuoberst im Projekt liegt, kann dorthin verschoben werden."
+
+#: biwak/files/api.py
+msgid "Only staff create these."
+msgstr "Nur Mitarbeitende erstellen solche Einträge."
+
+#: biwak/files/api.py
+msgid "Send “confirm”: true to move it anyway."
+msgstr "Sende „confirm“: true, um es trotzdem zu verschieben."
+
+#: biwak/files/api.py
 msgid "You can only change docs you created."
 msgstr "Du kannst nur Dokumente ändern, die du erstellt hast."
 
@@ -2362,6 +2378,10 @@ msgid "Only staff create lists."
 msgstr "Nur Mitarbeitende erstellen Listen."
 
 #: biwak/items/api.py
+msgid "Send the days to move the due dates by."
+msgstr "Sende die Tage, um die die Fälligkeiten verschoben werden."
+
+#: biwak/items/api.py
 msgid "Only staff can reorder lists."
 msgstr "Nur Mitarbeitende können Listen neu ordnen."
 
@@ -2827,10 +2847,6 @@ msgstr " (Kopie %(number)d)"
 #: biwak/items/operations.py
 msgid "Nothing can be added to an archived project."
 msgstr "In einem archivierten Projekt kommt nichts dazu."
-
-#: biwak/items/operations.py
-msgid "Only what's at the top of a project moves there."
-msgstr "Nur was zuoberst im Projekt liegt, kann dorthin verschoben werden."
 
 #: biwak/items/operations.py
 msgid "It's in this project already."
