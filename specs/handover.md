@@ -162,6 +162,26 @@ lantern entry) open, questions below.
   single to-do's "Move to…" leaves them out). To-dos of several projects
   are refused (proposed): "The selected to-dos are in several projects:
   to-dos move to the lists of their own project."
+- **Across projects** (`ops.move_todos_to()`, built 2026-11-22):
+  to-dos from other projects come along with comments, reactions,
+  events and attachments (their project updated), completed ones too;
+  `ops.todos_move_people()` is `people_plan()` over the assignees of
+  the open ones and the subscribers of those from other projects, with
+  the target list's visibility: assignees who don't see them there are
+  added as members (staff, externals), clients dropped with their
+  assignments (recorded, telling nobody) and subscriptions, subscribers
+  who don't see them dropped. Then `move_todos()` with `_from`: each
+  to-do's `moved` event, in the target project, names both projects
+  (`from_project`, `to_project` and IDs, as for lists) and the list
+  (`to`, `to_id`). Each project they left keeps one line for all
+  (decided 2026-11-22): an event without item (`todos`, `to`, `to_id`,
+  `to_project`, `to_project_id`), so its staff see it and clients
+  don't: "moved 23 to-dos to Plans in Website", the list linked, each
+  named only to readers who may see it now (`feed.add_target_lists()`,
+  `feed.add_projects()`), else "moved 23 to-dos to Website" or "… to
+  another project". Into or out of archived projects and templates is
+  refused, as for lists. The events of more than one to-do share a
+  `batch` (nobody is told about moves, so nothing groups them yet).
 - **"Due date…"** (`DatesForm`): "Due dates" with "Set a date", "Move by"
   and "Remove" (copying's choices and labels, `KEEP` labelled "Set a
   date"), a "Due date" field and copying's "Days" field and help;

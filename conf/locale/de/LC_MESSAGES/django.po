@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 22:11+0100\n"
+"POT-Creation-Date: 2026-11-22 22:13+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -6039,6 +6039,27 @@ msgstr "hat auf einen Kommentar zu %(subject)s reagiert"
 #, python-format
 msgid "reacted to %(subject)s"
 msgstr "hat auf %(subject)s reagiert"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(counter)s to-do to %(target)s in %(project)s"
+msgid_plural "moved %(counter)s to-dos to %(target)s in %(project)s"
+msgstr[0] "hat %(counter)s To-do nach %(target)s in %(project)s verschoben"
+msgstr[1] "hat %(counter)s To-dos nach %(target)s in %(project)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(counter)s to-do to %(project)s"
+msgid_plural "moved %(counter)s to-dos to %(project)s"
+msgstr[0] "hat %(counter)s To-do nach %(project)s verschoben"
+msgstr[1] "hat %(counter)s To-dos nach %(project)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(counter)s to-do to another project"
+msgid_plural "moved %(counter)s to-dos to another project"
+msgstr[0] "hat %(counter)s To-do in ein anderes Projekt verschoben"
+msgstr[1] "hat %(counter)s To-dos in ein anderes Projekt verschoben"
 
 #: biwak/templates/activity/_event.html
 #, python-format

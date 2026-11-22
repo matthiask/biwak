@@ -146,6 +146,115 @@ class DatedOnceTest(TestCase):
         self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
 
 
+class MoveAcrossTest(TestCase):
+    """Moving to-dos to a list of another project (decided 2026-11-22)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.pitch = project(
+            "Pitch", members=[self.ada, self.bob, self.cleo], all_access=False
+        )
+        self.website = project("Website", members=[self.ada], all_access=False)
+        launch = ops.create_list(
+            project=self.pitch, title="Launch", creator=self.ada, visible=True
+        )
+        self.plans = ops.create_list(
+            project=self.website, title="Plans", creator=self.ada
+        )
+        self.tent = ops.create_todo(
+            todolist=launch,
+            title="Tent",
+            creator=self.ada,
+            assignees=[self.bob, self.cleo],
+        )
+        self.stove = ops.create_todo(todolist=launch, title="Stove", creator=self.ada)
+        ops.add_comment(self.stove, author=self.cleo, content="Gas?")
+        ops.complete(self.stove, actor=self.ada)
+        self.here = ops.create_todo(todolist=self.plans, title="Here", creator=self.ada)
+        Event.objects.all().delete()
+
+    def move(self, items):
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.move_todos_to(items, todolist=self.plans, actor=self.ada)
+
+    def test_people_plan(self):
+        added, dropped = ops.todos_move_people(
+            [self.tent, self.stove, self.here], self.website, visible=False
+        )
+        self.assertEqual(list(added), [self.bob])
+        self.assertEqual(list(dropped), [self.cleo])
+
+    def test_moving(self):
+        self.move([self.tent, self.stove, self.here])
+        for item in [self.tent, self.stove]:
+            item.refresh_from_db()
+            self.assertEqual(item.project, self.website)
+            self.assertEqual(item.parent, self.plans)
+            self.assertFalse(item.is_client_visible)
+        # Completed ones too, with their comments and events
+        self.assertTrue(self.stove.todo.is_completed)
+        self.assertEqual(
+            set(
+                Event.objects.filter(item=self.stove).values_list("project", flat=True)
+            ),
+            {self.website.pk},
+        )
+        # Bob added, Cleo dropped
+        self.assertTrue(self.website.is_member(self.bob))
+        self.assertFalse(self.website.is_member(self.cleo))
+        self.assertEqual(list(self.tent.todo.assignees.all()), [self.bob])
+        self.assertFalse(self.stove.subscriptions.filter(user=self.cleo).exists())
+        # An event each in the target, naming both projects, one batch
+        moved = Event.objects.filter(action=Action.MOVED, item__isnull=False)
+        self.assertEqual(moved.count(), 2)
+        self.assertEqual(len({e.data["batch"] for e in moved}), 1)
+        event = moved.get(item=self.tent)
+        self.assertEqual(event.project, self.website)
+        self.assertEqual(event.data["from_project_id"], self.pitch.pk)
+        self.assertEqual(event.data["to_id"], self.plans.pk)
+        # One line for all in the project they left, for its staff
+        trace = Event.objects.get(action=Action.MOVED, item=None)
+        self.assertEqual(trace.project, self.pitch)
+        self.assertFalse(trace.is_client_visible)
+        self.assertEqual(trace.data["todos"], 2)
+        self.assertEqual(trace.data["to_id"], self.plans.pk)
+        # Nobody told
+        self.assertFalse(
+            Notification.objects.filter(event__action=Action.MOVED).exists()
+        )
+
+    def test_the_trace_in_the_feed(self):
+        self.move([self.tent, self.stove])
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("project_feed", args=[self.pitch.pk]))
+        self.assertContains(response, "moved 2 to-dos to")
+        self.assertContains(response, f'href="{self.plans.get_absolute_url()}"')
+        self.assertContains(response, "in Website")
+        # Bob can't open Website: no names
+        self.website.memberships.filter(user=self.bob).delete()
+        self.client.force_login(self.bob)
+        response = self.client.get(reverse("project_feed", args=[self.pitch.pk]))
+        self.assertContains(response, "moved 2 to-dos to another project")
+        self.assertNotContains(response, "Plans")
+
+    def test_archived_and_templates_are_refused(self):
+        self.website.archived_at = timezone.now()
+        self.website.save()
+        with self.assertRaisesMessage(ValueError, "archived project"):
+            self.move([self.tent])
+        self.tent.refresh_from_db()
+        self.assertEqual(self.tent.project, self.pitch)
+
+    def test_within_a_project_as_before(self):
+        other = ops.create_list(project=self.website, title="Other", creator=self.ada)
+        ops.move_todos_to([self.here], todolist=other, actor=self.ada)
+        self.here.refresh_from_db()
+        self.assertEqual(self.here.parent, other)
+        self.assertFalse(Event.objects.filter(item=None).exists())
+
+
 class DatesPageTest(Selection):
     def test_the_bar_has_the_buttons(self):
         self.client.force_login(self.ada)
