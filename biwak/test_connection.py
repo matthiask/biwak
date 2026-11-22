@@ -372,7 +372,10 @@ class ConnectionTest(E2ETestCase):
             self.assertEqual(len(self.stored_docs(page)), 1)
             self.assertNotIn("Typed offline", Doc.objects.get(pk=doc.pk).content)
             dropping[0] = False
-            for _ in range(100):
+            # Saving waits 3 seconds after the last update; under a parallel
+            # run's load the resend and the save take longer than alone
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
                 if "Typed offline" in Doc.objects.get(pk=doc.pk).content:
                     break
                 time.sleep(0.1)
