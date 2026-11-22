@@ -855,6 +855,19 @@ h3,
   margin-bottom: 0.5rem;
 }
 
+/* Quotes: a bar at the start, the text a little quieter; the same on
+   pages and in the editors (both render inside .wb-markdown) */
+.wb-markdown blockquote {
+  margin: 0 0 0.5rem;
+  padding: 0.125rem 0 0.125rem 0.875rem;
+  border-inline-start: 3px solid var(--wb-field-border);
+  color: var(--bs-secondary-color);
+}
+
+.wb-markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+
 /* Some room below the content, more than Bootstrap's pb-5 */
 .wb-main {
   padding-bottom: 4.5rem;
