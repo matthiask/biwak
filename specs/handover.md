@@ -168,7 +168,10 @@ lantern entry) open, questions below.
   "This field is required." / "By how many days?" at the fields.
   `ops.date_todos(items, actor=, dates=, due_on=, days=)` calls
   `update_todo()` per to-do in one transaction (an `edited` event each,
-  merging and telling as any edit of the dates):
+  merging as any edit; more than one share a `batch`, so a subscriber
+  is told once: one lantern entry and one mail, "Ada changed the dates
+  of 23 to-dos.", the title "To-dos" linking `/todos/`, as "Assign…";
+  `lantern.TODO_BATCHES`, `lantern.dated_line()`):
   - "Set a date" sets the due date and keeps start dates, as the to-do's
     page and the API do; a start date after the new date refuses all
     with "The start date can't be after the due date." (the existing

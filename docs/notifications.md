@@ -7,7 +7,8 @@ opening Biwak.
 ## What you hear about
 
 **Subscribed means you hear about everything on the item:** every
-comment, change, completion. To stop hearing about one item,
+comment, change, completion; not about moving it, which only the
+activity and the history show. To stop hearing about one item,
 unsubscribe from it.
 
 You are subscribed to an item when you:
@@ -27,8 +28,9 @@ in it later. Joining a project subscribes you to nothing that exists
 already. "Unsubscribe" works on anything, except a to-do you are
 assigned to: "Unassign me" instead. A mail about one item has a link to
 unsubscribe from it; a mail about several uploaded files, about several
-to-dos assigned to you at once ("Ada assigned you 23 to-dos") and the
-daily digest link to your notification settings.
+to-dos assigned to you at once ("Ada assigned you 23 to-dos") or dated
+at once ("Ada changed the dates of 23 to-dos") and the daily digest
+link to your notification settings.
 
 You are never told about what you did yourself, and only about what you
 can see.

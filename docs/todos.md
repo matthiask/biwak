@@ -81,7 +81,8 @@ somebody leaves and their to-dos go to someone else:
   stay, so it can't be before one of them), moves their dates by a
   number of days ("Move by", start dates and "repeats until" too; to-dos
   without a due date stay as they are) or removes them ("Remove", the
-  start dates too).
+  start dates too). Their subscribers are told once for all of them
+  ("Ada changed the dates of 23 to-dos").
 
 Every change is all or nothing: if one of the to-dos was trashed or you
 can't see it anymore, nothing changes.

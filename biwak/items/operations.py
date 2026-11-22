@@ -797,13 +797,16 @@ def update_todo(
     recurrence_ends_on=_UNCHANGED,
     recurrence_count=_UNCHANGED,
     base=None,
+    batch=None,
 ):
     """Changes what's given (the to-do's page and the API); assignees are
     the complete new set. Removing the recurrence removes its end and
     count too, removing the due date its start date (``InvalidDates`` for
     a start date without a due date or after it). ``base``: the
     ``editing.version()`` the form carried, so ``editing.StaleEdit`` if
-    somebody saved since. Saving ends one's editing."""
+    somebody saved since. Saving ends one's editing. ``batch``: the to-dos
+    of one "Due date…" share it on their events, told once
+    (specs/handover.md)."""
     Todo.objects.select_for_update().get(item=item)
     editing.check_base(item, base, actor=actor)
     editing.stop(item, actor)
@@ -851,6 +854,8 @@ def update_todo(
         # went back (the first one stays when edits merge, record())
         if edited:
             extra["title_was"] = title_was
+        if batch:
+            extra["batch"] = batch
         if {"due_on", "starts_on"} & set(fields):
             # Both dates, what they are and were (specs/start-dates.md)
             for name, value in [
@@ -896,14 +901,16 @@ def date_todos(items, *, actor, dates, due_on=None, days=0):
     page), ``SHIFT`` moves due dates, start dates and "repeats until" by
     ``days`` (to-dos without a due date stay as they are), ``REMOVE``
     removes due and start dates. Through ``update_todo()`` per to-do, so
-    an event each. All or nothing: ``InvalidDates`` changes nothing."""
+    an event each, sharing a ``batch`` (one entry in the lantern, one mail).
+    All or nothing: ``InvalidDates`` changes nothing."""
     delta = dt.timedelta(days=days)
+    batch = uuid.uuid4().hex if len(items) > 1 else None
     for item in items:
         todo = Todo.objects.get(item=item)
         if dates == Dates.KEEP:
-            update_todo(item, actor=actor, due_on=due_on)
+            update_todo(item, actor=actor, due_on=due_on, batch=batch)
         elif dates == Dates.REMOVE:
-            update_todo(item, actor=actor, due_on=None)
+            update_todo(item, actor=actor, due_on=None, batch=batch)
         elif dates != Dates.SHIFT:
             raise ValueError(f"Unknown dates: {dates}")
         elif todo.due_on is not None:
@@ -913,7 +920,7 @@ def date_todos(items, *, actor, dates, due_on=None, days=0):
             }
             if todo.recurrence_ends_on:
                 changes["recurrence_ends_on"] = todo.recurrence_ends_on + delta
-            update_todo(item, actor=actor, **changes)
+            update_todo(item, actor=actor, batch=batch, **changes)
 
 
 @transaction.atomic

@@ -7,7 +7,8 @@ reagieren, ohne Biwak zu öffnen.
 ## Wovon du hörst
 
 **Abonniert heisst, du hörst von allem beim Eintrag:** jeder Kommentar,
-jede Änderung, jedes Erledigen. Um von einem Eintrag nichts mehr zu
+jede Änderung, jedes Erledigen; nicht vom Verschieben, das zeigen nur
+die Aktivität und der Verlauf. Um von einem Eintrag nichts mehr zu
 hören, abonniere ihn nicht mehr („Nicht mehr abonnieren“).
 
 Du abonnierst einen Eintrag, wenn du:
@@ -31,7 +32,8 @@ bei einem To-do, dem du zugewiesen bist: dort „Zuweisung an mich
 aufheben“. Eine Mail zu einem Eintrag hat einen Link, um ihn nicht mehr
 zu abonnieren; eine Mail zu mehreren hochgeladenen Dateien, zu mehreren
 To-dos, die dir auf einmal zugewiesen wurden („Ada hat dir 23 To-dos
-zugewiesen“), und die tägliche Zusammenfassung verlinken auf deine
+zugewiesen“) oder deren Daten auf einmal geändert wurden („Ada hat die
+Daten von 23 To-dos geändert“), und die tägliche Zusammenfassung verlinken auf deine
 Benachrichtigungseinstellungen.
 
 Über das, was du selbst getan hast, wirst du nie benachrichtigt, und nur

@@ -97,7 +97,9 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   Startdaten bleiben, also kann sie nicht vor einem davon liegen),
   verschiebt ihre Daten um eine Anzahl Tage („Verschieben um“, Startdaten
   und „Wiederholt sich bis“ mit; To-dos ohne Fälligkeit bleiben, wie sie
-  sind) oder entfernt sie („Entfernen“, die Startdaten mit).
+  sind) oder entfernt sie („Entfernen“, die Startdaten mit). Wer sie
+  abonniert hat, erfährt es einmal für alle („Ada hat die Daten von 23
+  To-dos geändert“).
 
 Jede Änderung gilt für alle oder keines: Liegt eines der To-dos im
 Papierkorb oder kannst du es nicht mehr sehen, ändert sich nichts.

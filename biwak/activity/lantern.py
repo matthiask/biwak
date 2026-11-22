@@ -63,20 +63,33 @@ def wanted(notifications, user):
     return _deliverable(notifications, user, others=others)
 
 
-# The key of to-dos assigned by one "Assign…" (``batch_key()``)
+# The keys of to-dos assigned by one "Assign…" and dated by one "Due
+# date…" (``batch_key()``)
 ASSIGNED = "assigned"
+DATED = "dated"
+
+# The actions of to-dos changed together, across projects
+# (specs/handover.md), and their keys
+TODO_BATCHES = {Action.ASSIGNED: ASSIGNED, Action.EDITED: DATED}
+
+
+def todo_batch(action):
+    """The key of to-dos changed together by ``action``, or None"""
+    return TODO_BATCHES.get(action)
 
 
 def batch_key(notification):
     """For files uploaded in a batch: who uploaded them where (the project
     and the folder, or the top level); for to-dos assigned by one
-    "Assign…" (specs/handover.md): who assigned them, across projects;
-    None for anything else"""
+    "Assign…" or dated by one "Due date…" (specs/handover.md): who did it,
+    across projects; None for anything else"""
     event = notification.event
     if not event.data.get("batch"):
         return None
-    if event.action == Action.ASSIGNED:
-        return (ASSIGNED, event.actor_id)
+    if kind := todo_batch(event.action):
+        return (kind, event.actor_id)
+    if event.action != Action.CREATED:
+        return None
     return (event.actor_id, event.project_id, event.item.parent_id)
 
 
@@ -138,10 +151,9 @@ def entry_items(user, notification):
     key = batch_key(notification)
     if key is None:
         return [notification.event.item]
-    if key[0] == ASSIGNED:
-        same = notifications_for(user).filter(
-            event__actor=key[1], event__action=Action.ASSIGNED
-        )
+    if key[0] in {ASSIGNED, DATED}:
+        action = next(a for a, kind in TODO_BATCHES.items() if kind == key[0])
+        same = notifications_for(user).filter(event__actor=key[1], event__action=action)
     else:
         actor, project, parent = key
         same = notifications_for(user).filter(
@@ -223,7 +235,8 @@ class Batch:
     """Files uploaded together (``group_batches()``), one entry of the
     lantern in place of an item's: "Ada uploaded 5 files to Minutes", each
     file linked; or the to-dos of one "Assign…" (specs/handover.md): "Ada
-    assigned you 23 to-dos", each to-do linked"""
+    assigned you 23 to-dos", or of one "Due date…": "Ada changed the dates
+    of 23 to-dos", each to-do linked"""
 
     is_batch = True
 
@@ -253,6 +266,14 @@ class Batch:
             self.title = _("To-dos")
             self.url = reverse("todos")
             self.line = assigned_line(event.actor, len(self.files), you=you)
+            self.subject = self.line.removesuffix(".")
+            return
+        if event.action == Action.EDITED:
+            self.kind_icon = "calendar-event"
+            self.item_icon = KIND_ICONS[self.files[0].kind]
+            self.title = _("To-dos")
+            self.url = reverse("todos")
+            self.line = dated_line(event.actor, len(self.files))
             self.subject = self.line.removesuffix(".")
             return
         self.kind_icon = "upload"
@@ -292,6 +313,15 @@ def assigned_line(actor, count, *, you):
             count,
         )
     return text % {"actor": actor, "count": count}
+
+
+def dated_line(actor, count):
+    """ "Ada changed the dates of 23 to-dos." (one "Due date…")"""
+    return ngettext(
+        "%(actor)s changed the dates of a to-do.",
+        "%(actor)s changed the dates of %(count)s to-dos.",
+        count,
+    ) % {"actor": actor, "count": count}
 
 
 def by_item(notifications, *, batches=True):

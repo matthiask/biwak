@@ -4,10 +4,15 @@ modals, the API"""
 
 import datetime as dt
 
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
-from biwak.activity.models import Action, Event
+from biwak.activity import lantern
+from biwak.activity.mails import send_mails
+from biwak.activity.models import Action, Event, Notification
+from biwak.activity.operations import subscribe
 from biwak.items import operations as ops
 from biwak.items.models import Group
 from biwak.items.test_assign_several import Selection
@@ -84,6 +89,61 @@ class DateTodosTest(TestCase):
         for item in self.all:
             self.assertEqual(dates(item), (None, None))
         self.assertEqual(Event.objects.filter(action=Action.EDITED).count(), 2)
+
+
+@override_settings(
+    BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
+)
+class DatedOnceTest(TestCase):
+    """Subscribers of the to-dos of one "Due date…" are told once
+    (decided 2026-11-22)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        website = project("Website", members=[self.ada, self.bob])
+        shop = project("Shop", members=[self.ada, self.bob])
+        self.todos = [
+            ops.create_todo(
+                todolist=ops.create_list(project=p, title="Plan", creator=self.ada),
+                title=title,
+                creator=self.ada,
+            )
+            for p, title in [(website, "Copy"), (website, "Photos"), (shop, "Invoice")]
+        ]
+        for item in self.todos:
+            subscribe(self.bob, item)
+        Notification.objects.all().delete()
+        mail.outbox = []
+
+    def date(self, items):
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.date_todos(
+                items, actor=self.ada, dates=ops.Dates.KEEP, due_on=D(2026, 12, 20)
+            )
+
+    def test_one_lantern_entry_and_one_mail(self):
+        self.date(self.todos)
+        events = Event.objects.filter(action=Action.EDITED)
+        self.assertEqual(len({e.data["batch"] for e in events}), 1)
+        self.assertEqual(lantern.unread_counts(self.bob), (3, 1))
+        _marks, [(batch, _entries)], _read, _more = lantern.menu(self.bob)
+        self.assertEqual(batch.line, "Ada Example changed the dates of 3 to-dos.")
+        self.assertEqual({f.pk for f in batch.files}, {t.pk for t in self.todos})
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
+        to_bob = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertEqual(len(to_bob), 1)
+        self.assertEqual(
+            to_bob[0].subject, "[Biwak] Ada Example changed the dates of 3 to-dos"
+        )
+        for item in self.todos:
+            self.assertIn(item.get_absolute_url(), to_bob[0].body)
+
+    def test_one_to_do_is_no_batch(self):
+        self.date(self.todos[:1])
+        self.assertNotIn("batch", Event.objects.get(action=Action.EDITED).data)
+        self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
 
 
 class DatesPageTest(Selection):
