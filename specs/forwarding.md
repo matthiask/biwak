@@ -75,6 +75,17 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
 - API: `GET /forwarded/`, `POST /forwarded/{id}/file/` (message or
   to-do), `DELETE`; CLI `biwak forwarded [file ID --message PROJECT |
   --todo LIST] [delete ID]`, so agents can file mails too.
+  Built (`biwak/forwarding/api.py`, CLI 0.46.0): the list is complete
+  (kept 30 days, not paginated), each with `sender {name, email}`,
+  `sent_on`, `to`, `cc`, `text` (files as `forwarded:KEY`),
+  `text_html` and `files`; `file/` takes `kind` (`message`, `todo`),
+  `title` (the subject when left out), `project_id` and `category_id`
+  or `list_id` and `group_id`, the same choices as the page (an
+  archived project or a list clients see is a 400), and answers 201
+  with the item; `DELETE /forwarded/{id}/` 204. Clients 403, somebody
+  else's 404, all 404 while forwarding is off. CLI: `biwak forwarded`,
+  `biwak forwarded file ID --message PROJECT [--category ID] | --todo
+  LIST [--group ID] [--title …]`, `biwak forwarded delete ID`.
 
 ## Done when
 

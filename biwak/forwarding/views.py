@@ -18,8 +18,7 @@ from biwak.files import attachments
 from biwak.forms import BLANK_CHOICE_LABEL, ComboboxSelect, Form
 from biwak.forwarding import operations as ops
 from biwak.forwarding.models import REFERENCE, ForwardedFile
-from biwak.items.models import Group, Item, Kind, MessageCategory, Status
-from biwak.items.operations import can_create
+from biwak.items.models import Group, Kind, MessageCategory
 from biwak.items.views import item_for
 from biwak.modals import form_response
 from biwak.projects.models import Project
@@ -85,36 +84,6 @@ def download(request, pk, key, name):
 # Filing -----------------------------------------------------------------------
 
 
-def message_projects(user):
-    """Where the person can post a message: the projects they can open,
-    not archived"""
-    if not can_create(user, Kind.MESSAGE):
-        return Project.objects.none()
-    return Project.objects.accessible_to(user).active().order_by("name", "pk")
-
-
-def todo_lists(user):
-    """The lists the person can add a forwarded mail's to-do to: active,
-    in projects not archived, internal (filed mails are internal), with
-    their groups"""
-    if not can_create(user, Kind.TODO):
-        return Item.objects.none()
-    return (
-        Item.objects
-        .visible_to(user)
-        .filter(
-            kind=Kind.LIST,
-            parent=None,
-            status=Status.ACTIVE,
-            is_client_visible=False,
-            project__archived_at__isnull=True,
-        )
-        .select_related("project")
-        .prefetch_related("todolist__groups")
-        .order_by("project__name", "project_id", "position", "pk")
-    )
-
-
 class FileMessageForm(Form):
     title = forms.CharField(label=_("title"), max_length=500)
     project = forms.ModelChoiceField(
@@ -132,7 +101,7 @@ class FileMessageForm(Form):
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["project"].queryset = message_projects(user)
+        self.fields["project"].queryset = ops.message_projects(user)
 
 
 class FileTodoForm(Form):
@@ -142,7 +111,7 @@ class FileTodoForm(Form):
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
         choices = {}
-        for todolist in todo_lists(user):
+        for todolist in ops.todo_lists(user):
             choices.setdefault(str(todolist.project), []).extend([
                 (str(todolist.pk), str(todolist)),
                 *(

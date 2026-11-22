@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:37+0100\n"
+"POT-Creation-Date: 2026-11-22 16:42+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1801,11 +1801,11 @@ msgstr "Nicht gefunden."
 msgid "Only staff create folders, docs and files."
 msgstr "Nur Mitarbeitende erstellen Ordner, Dokumente und Dateien."
 
-#: biwak/files/api.py biwak/items/api.py
+#: biwak/files/api.py biwak/forwarding/api.py biwak/items/api.py
 msgid "The title can't be empty."
 msgstr "Der Titel darf nicht leer sein."
 
-#: biwak/files/api.py
+#: biwak/files/api.py biwak/forwarding/api.py
 msgid "There is no such category."
 msgstr "Diese Kategorie gibt es nicht."
 
@@ -2144,6 +2144,30 @@ msgstr "Nichts gefunden"
 #: biwak/forms.py biwak/organizations/people.py
 msgid "staff"
 msgstr "Team"
+
+#: biwak/forwarding/api.py
+msgid "Only staff forward mails."
+msgstr "Nur Mitarbeitende leiten Mails weiter."
+
+#: biwak/forwarding/api.py
+msgid "Give the project."
+msgstr "Gib das Projekt an."
+
+#: biwak/forwarding/api.py
+msgid "The project is archived."
+msgstr "Das Projekt ist archiviert."
+
+#: biwak/forwarding/api.py
+msgid "Give the list."
+msgstr "Gib die Liste an."
+
+#: biwak/forwarding/api.py
+msgid "Forwarded mails are filed into active internal lists only."
+msgstr "Weitergeleitete Mails werden nur in aktiven internen Listen abgelegt."
+
+#: biwak/forwarding/api.py
+msgid "The group isn't in this list."
+msgstr "Die Gruppe ist nicht in dieser Liste."
 
 #: biwak/forwarding/apps.py biwak/forwarding/models.py
 msgid "forwarded mails"

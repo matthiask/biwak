@@ -27,8 +27,10 @@ from biwak.forwarding.parse import forward
 from biwak.inbound import tokens
 from biwak.inbound.models import InboundMessage, InboundStatus
 from biwak.items import operations as ops
+from biwak.items.models import Item, Kind, Status
 from biwak.outbox import sending as outbox
 from biwak.outbox.models import Kind as MailKind
+from biwak.projects.models import Project
 
 
 logger = logging.getLogger(__name__)
@@ -230,6 +232,36 @@ def _refuse(mail, status, *, user, authenticated):
 
 
 # Filing -----------------------------------------------------------------------
+
+
+def message_projects(user):
+    """Where the person can post a message: the projects they can open,
+    not archived"""
+    if not ops.can_create(user, Kind.MESSAGE):
+        return Project.objects.none()
+    return Project.objects.accessible_to(user).active().order_by("name", "pk")
+
+
+def todo_lists(user):
+    """The lists the person can add a forwarded mail's to-do to: active,
+    in projects not archived, internal (filed mails are internal), with
+    their groups"""
+    if not ops.can_create(user, Kind.TODO):
+        return Item.objects.none()
+    return (
+        Item.objects
+        .visible_to(user)
+        .filter(
+            kind=Kind.LIST,
+            parent=None,
+            status=Status.ACTIVE,
+            is_client_visible=False,
+            project__archived_at__isnull=True,
+        )
+        .select_related("project")
+        .prefetch_related("todolist__groups")
+        .order_by("project__name", "project_id", "position", "pk")
+    )
 
 
 def _escaped(text):
