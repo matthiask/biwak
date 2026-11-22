@@ -1292,6 +1292,52 @@ def todo_add(
     return None
 
 
+@todo.command("add-from-text")
+@click.argument("list_id", metavar="LIST", type=int)
+@click.argument("file", type=click.File(encoding="utf-8-sig"), required=False)
+@click.option("--preview", is_flag=True, help="Show what would be added, add nothing.")
+@json_option
+def todo_add_from_text(list_id, file, preview, as_json):
+    """Add the to-dos of FILE (Markdown or plain text) or standard input to
+    LIST: headings become groups (existing ones of that name are used),
+    list items to-dos, what's indented under them their notes, ticked
+    items completed to-dos; a text without list items gives a to-do per
+    line"""
+    text = (file or click.get_text_stream("stdin")).read()
+    data = request(
+        "POST",
+        f"lists/{list_id}/todos/from-text/",
+        json={"text": text, "preview": preview},
+    )
+    if as_json:
+        return echo_json(data)
+    if data["problem"]:
+        terminate(data["problem"])
+    lst = request("GET", f"lists/{list_id}/")
+    marker = " [clients]" if lst["visible_to_clients"] else ""
+    for group in data["groups"]:
+        if group["title"] is not None:
+            state = "new" if group["new"] else "existing"
+            click.echo(f"{group['title']} ({state})")
+        for todo in group["todos"]:
+            box = "[x]" if todo["completed"] else "[ ]"
+            checklist = (
+                f" ({todo['checklist_done']}/{todo['checklist_total']})"
+                if todo["checklist_total"]
+                else ""
+            )
+            number = f"#{todo['id']} " if todo["id"] else ""
+            click.echo(f"  {box} {number}{todo['title']}{checklist}")
+    if data["left_out"]:
+        click.echo(f"{data['left_out']} paragraph(s) left out: not list items.")
+    count = data["count"]
+    if data["added"]:
+        click.echo(f"Added {count} to-do(s) to {lst['title']}{marker}.")
+    else:
+        click.echo(f"Would add {count} to-do(s) to {lst['title']}{marker}.")
+    return None
+
+
 @todo.command("edit")
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.option("--title")

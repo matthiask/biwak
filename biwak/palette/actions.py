@@ -208,24 +208,7 @@ def on_item(request, item, context):
             )
         )
     if item.kind == Kind.LIST:
-        view = context.get("view")
-        actions.append(focus(_("New to-do"), ADD_TODO))
-        if view == "board":
-            actions.append(link(_("List view"), f"{url}?view=list"))
-        else:
-            actions.append(link(_("Board view"), f"{url}?view=board"))
-        if ops.can_create(user, Kind.LIST):
-            # Staff, like the "More" menu (specs/lists-across-projects.md)
-            actions.append(modal(_("Copy…"), reverse("list_copy", args=[item.pk])))
-        if ops.can_change(user, item):
-            archived = item.status == Status.ARCHIVED
-            actions.append(
-                post(
-                    _("Unarchive") if archived else _("Archive"),
-                    reverse("list_archive", args=[item.pk]),
-                    {"unarchive": "1", "next": url} if archived else {"next": url},
-                )
-            )
+        actions += _on_list(user, item, context, url)
     if item.kind == Kind.FOLDER and ops.can_change(user, item):
         actions.append(modal(_("Edit…"), reverse("folder_edit", args=[item.pk])))
     if item.kind == Kind.FOLDER and not user.is_client:
@@ -284,6 +267,35 @@ def on_item(request, item, context):
         "text": request.build_absolute_uri(url),
         "shortcut": "",
     })
+    return actions
+
+
+def _on_list(user, item, context, url):
+    """What a list's page offers besides an item's"""
+    actions = []
+    view = context.get("view")
+    actions.append(focus(_("New to-do"), ADD_TODO))
+    if view == "board":
+        actions.append(link(_("List view"), f"{url}?view=list"))
+    else:
+        actions.append(link(_("Board view"), f"{url}?view=board"))
+    if ops.can_create(user, Kind.LIST):
+        # Staff, like the "More" menu (specs/lists-across-projects.md)
+        actions.append(modal(_("Copy…"), reverse("list_copy", args=[item.pk])))
+    if ops.may_add_to(user, item):
+        # Like the "More" menu (specs/todos-from-text.md)
+        actions.append(
+            modal(_("Add from text…"), reverse("list_from_text", args=[item.pk]))
+        )
+    if ops.can_change(user, item):
+        archived = item.status == Status.ARCHIVED
+        actions.append(
+            post(
+                _("Unarchive") if archived else _("Archive"),
+                reverse("list_archive", args=[item.pk]),
+                {"unarchive": "1", "next": url} if archived else {"next": url},
+            )
+        )
     return actions
 
 

@@ -4,6 +4,8 @@ msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-22 19:25+0100\n"
+||||||| c7b4e19
+"POT-Creation-Date: 2026-11-22 18:15+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1309,6 +1311,13 @@ msgid "%(actor)s restored it from the trash."
 msgstr "%(actor)s hat es aus dem Papierkorb wiederhergestellt."
 
 #: biwak/activity/mails.py
+#, python-format
+msgid "%(actor)s added %(count)d to-do."
+msgid_plural "%(actor)s added %(count)d to-dos."
+msgstr[0] "%(actor)s hat %(count)d To-do hinzugefügt."
+msgstr[1] "%(actor)s hat %(count)d To-dos hinzugefügt."
+
+#: biwak/activity/mails.py
 msgid "Reactions to your comment:"
 msgstr "Reaktionen auf deinen Kommentar:"
 
@@ -1478,6 +1487,11 @@ msgstr "öffentlich geteilt"
 msgctxt "action"
 msgid "stopped sharing publicly"
 msgstr "nicht mehr öffentlich geteilt"
+
+#: biwak/activity/models.py
+msgctxt "action"
+msgid "added to-dos"
+msgstr "To-dos hinzugefügt"
 
 #: biwak/activity/models.py biwak/bookmarks/models.py biwak/files/models.py
 #: biwak/forwarding/views.py biwak/items/across.py biwak/items/by_due.py
@@ -2549,7 +2563,7 @@ msgstr "an"
 msgid "cc"
 msgstr "Cc"
 
-#: biwak/forwarding/models.py
+#: biwak/forwarding/models.py biwak/items/from_text_views.py
 msgid "text"
 msgstr "Text"
 
@@ -2867,6 +2881,10 @@ msgstr "Nur Personen, die das To-do sehen, können zugewiesen werden."
 msgid "The number of repeats left must be 1 or more."
 msgstr "Die Zahl der verbleibenden Wiederholungen muss 1 oder mehr sein."
 
+#: biwak/items/api.py biwak/items/from_text_views.py biwak/items/operations.py
+msgid "No to-dos can be added to this list."
+msgstr "Zu dieser Liste können keine To-dos hinzugefügt werden."
+
 #: biwak/items/api.py
 msgid "assignee is me, nobody, anybody or a person's ID."
 msgstr "assignee ist me, nobody, anybody oder die ID einer Person."
@@ -3090,6 +3108,79 @@ msgstr "%(name)s hat das %(when)s geändert, während du es bearbeitet hast, des
 msgid "Someone"
 msgstr "Jemand"
 
+#: biwak/items/from_text.py
+#, python-format
+msgid "%(count)d paragraph isn’t a list item and is left out."
+msgid_plural "%(count)d paragraphs aren’t list items and are left out."
+msgstr[0] "%(count)d Absatz ist kein Listenpunkt und wird weggelassen."
+msgstr[1] "%(count)d Absätze sind keine Listenpunkte und werden weggelassen."
+
+#: biwak/items/from_text.py
+msgid "Add to-dos"
+msgstr "To-dos hinzufügen"
+
+#: biwak/items/from_text.py
+#, python-format
+msgid "Add %(count)d to-do"
+msgid_plural "Add %(count)d to-dos"
+msgstr[0] "%(count)d To-do hinzufügen"
+msgstr[1] "%(count)d To-dos hinzufügen"
+
+#: biwak/items/from_text.py
+msgid "This text is larger than 200 KB; up to 200 KB can be added at once."
+msgstr "Dieser Text ist grösser als 200 KB; höchstens 200 KB können auf einmal hinzugefügt werden."
+
+#: biwak/items/from_text.py
+msgid "Paste a text or choose a file."
+msgstr "Füge einen Text ein oder wähle eine Datei."
+
+#: biwak/items/from_text.py
+msgid "This text has no to-dos."
+msgstr "Dieser Text enthält keine To-dos."
+
+#: biwak/items/from_text.py
+#, python-format
+msgid "This text has %(count)d to-dos; up to %(max)d can be added at once."
+msgstr "Dieser Text enthält %(count)d To-dos; höchstens %(max)d können auf einmal hinzugefügt werden."
+
+#: biwak/items/from_text.py
+#, python-format
+msgid "Only the list’s creator can add groups. Remove this heading or use the name of an existing group: %(headings)s"
+msgid_plural "Only the list’s creator can add groups. Remove these headings or use the names of existing groups: %(headings)s"
+msgstr[0] "Nur wer die Liste erstellt hat, kann Gruppen hinzufügen. Entferne diese Überschrift oder nimm den Namen einer bestehenden Gruppe: %(headings)s"
+msgstr[1] "Nur wer die Liste erstellt hat, kann Gruppen hinzufügen. Entferne diese Überschriften oder nimm die Namen bestehender Gruppen: %(headings)s"
+
+#: biwak/items/from_text_views.py biwak/items/models.py
+msgid "list"
+msgstr "Liste"
+
+#: biwak/items/from_text_views.py
+msgid "Headings become groups, list items to-dos, what’s indented under them their notes."
+msgstr "Überschriften werden zu Gruppen, Listenpunkte zu To-dos, was darunter eingerückt ist, zu ihren Notizen."
+
+#: biwak/items/from_text_views.py
+msgid "Or a file"
+msgstr "Oder eine Datei"
+
+#: biwak/items/from_text_views.py biwak/templates/items/_drop_text.html
+#: biwak/templates/items/from_text_form.html
+msgid "Only text files can be added as to-dos."
+msgstr "Nur Textdateien können als To-dos hinzugefügt werden."
+
+#: biwak/items/from_text_views.py biwak/templates/items/_drop_text.html
+#: biwak/templates/items/from_text_form.html
+msgid "This file is larger than 200 KB; up to 200 KB can be added at once."
+msgstr "Diese Datei ist grösser als 200 KB; höchstens 200 KB können auf einmal hinzugefügt werden."
+
+#: biwak/items/from_text_views.py
+msgid "This file can’t be read as text (UTF-8)."
+msgstr "Diese Datei lässt sich nicht als Text (UTF-8) lesen."
+
+#: biwak/items/from_text_views.py biwak/palette/actions.py
+#: biwak/templates/items/_more_entries.html
+msgid "Add from text…"
+msgstr "Aus Text hinzufügen…"
+
 #: biwak/items/models.py
 msgid "to-do list"
 msgstr "To-do-Liste"
@@ -3146,10 +3237,6 @@ msgstr "%(kind)s kann nicht in %(parent)s liegen."
 #: biwak/items/models.py
 msgid "The parent belongs to another project."
 msgstr "Das übergeordnete Element gehört zu einem anderen Projekt."
-
-#: biwak/items/models.py
-msgid "list"
-msgstr "Liste"
 
 #: biwak/items/models.py
 msgid "board"
@@ -4229,27 +4316,6 @@ msgstr "Wieder öffnen"
 msgid "Complete"
 msgstr "Erledigen"
 
-#: biwak/palette/actions.py
-msgid "New to-do"
-msgstr "Neues To-do"
-
-#: biwak/palette/actions.py
-msgid "List view"
-msgstr "Listenansicht"
-
-#: biwak/palette/actions.py
-msgid "Board view"
-msgstr "Board-Ansicht"
-
-#: biwak/palette/actions.py biwak/templates/items/_archive_button.html
-msgid "Unarchive"
-msgstr "Archivierung aufheben"
-
-#: biwak/palette/actions.py biwak/templates/items/_archive_button.html
-#: biwak/templates/projects/_page.html
-msgid "Archive"
-msgstr "Archivieren"
-
 #: biwak/palette/actions.py biwak/templates/bookmarks/_links.html
 #: biwak/templates/checkins/question.html biwak/templates/files/doc.html
 #: biwak/templates/files/file.html biwak/templates/files/message.html
@@ -4290,6 +4356,27 @@ msgstr "Abonnent:innen…"
 #: biwak/palette/actions.py
 msgid "Copy the link"
 msgstr "Link kopieren"
+
+#: biwak/palette/actions.py
+msgid "New to-do"
+msgstr "Neues To-do"
+
+#: biwak/palette/actions.py
+msgid "List view"
+msgstr "Listenansicht"
+
+#: biwak/palette/actions.py
+msgid "Board view"
+msgstr "Board-Ansicht"
+
+#: biwak/palette/actions.py biwak/templates/items/_archive_button.html
+msgid "Unarchive"
+msgstr "Archivierung aufheben"
+
+#: biwak/palette/actions.py biwak/templates/items/_archive_button.html
+#: biwak/templates/projects/_page.html
+msgid "Archive"
+msgstr "Archivieren"
 
 #: biwak/palette/actions.py biwak/templates/activity/history.html
 #: biwak/templates/items/_more_entries.html
@@ -5795,6 +5882,18 @@ msgstr "hat aufgehört, %(subject)s öffentlich zu teilen"
 
 #: biwak/templates/activity/_event.html
 #, python-format
+msgid "added to-dos to %(what)s"
+msgstr "hat To-dos zu %(what)s hinzugefügt"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "added %(counter)s to-do to %(subject)s"
+msgid_plural "added %(counter)s to-dos to %(subject)s"
+msgstr[0] "hat %(counter)s To-do zu %(subject)s hinzugefügt"
+msgstr[1] "hat %(counter)s To-dos zu %(subject)s hinzugefügt"
+
+#: biwak/templates/activity/_event.html
+#, python-format
 msgid "commented on %(subject)s"
 msgstr "hat %(subject)s kommentiert"
 
@@ -6743,6 +6842,16 @@ msgstr "Kommentare"
 msgid "completed %(when)s"
 msgstr "erledigt %(when)s"
 
+#: biwak/templates/items/_from_text_preview.html
+msgctxt "group"
+msgid "new"
+msgstr "neu"
+
+#: biwak/templates/items/_from_text_preview.html
+msgctxt "group"
+msgid "existing"
+msgstr "bestehend"
+
 #: biwak/templates/items/_more_entries.html
 msgid "Notifications…"
 msgstr "Benachrichtigungen…"
@@ -6824,6 +6933,10 @@ msgstr "%(date)s von %(creator)s"
 #: biwak/templates/items/_todo_view.html
 msgid "Add notes…"
 msgstr "Notizen hinzufügen…"
+
+#: biwak/templates/items/from_text_form.html
+msgid "Preview"
+msgstr "Vorschau"
 
 #: biwak/templates/items/todo.html
 msgid "Reopen:"

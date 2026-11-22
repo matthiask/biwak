@@ -18,7 +18,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
 from django.utils.formats import date_format
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery, User
@@ -202,8 +202,21 @@ def describe(event, user):
         case Action.RESTORED:
             text = _("%(actor)s restored it from the trash.")
         case _:
-            text = "%(actor)s " + event.get_action_display() + "."
+            return _other(event, actor)
     return text % {"actor": actor, "to": mentions.plain(to or "")}
+
+
+def _other(event, actor):
+    """``describe()`` of the rest: to-dos added from text
+    (specs/todos-from-text.md), else the action's name"""
+    if event.action == Action.ADDED_TODOS:
+        count = event.data.get("todos", 0)
+        return ngettext(
+            "%(actor)s added %(count)d to-do.",
+            "%(actor)s added %(count)d to-dos.",
+            count,
+        ) % {"actor": actor, "count": count}
+    return f"{actor} {event.get_action_display()}."
 
 
 def _reactions(notifications, user):

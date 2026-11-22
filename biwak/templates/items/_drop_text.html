@@ -1,0 +1,17 @@
+{% load i18n %}
+{% comment %}
+  Dropping text files onto a list (frontend/from-text.js, specs/todos-from-text.md):
+  the message when they're refused, the texts and the limit; with `url`, the
+  whole page is the drop zone for that list.
+{% endcomment %}
+<div
+  class="alert alert-warning"
+  role="alert"
+  hidden
+  data-drop-text-error
+  {% if url %}data-drop-text-page="{{ url }}"{% endif %}
+  data-only-text="{% translate 'Only text files can be added as to-dos.' %}"
+  data-too-big="{% translate 'This file is larger than 200 KB; up to 200 KB can be added at once.' %}"
+  data-max-bytes="204800"
+>
+</div>

@@ -484,6 +484,90 @@ def todo_create(request, list_id: int, data: TodoIn):
     return Status(201, todo_out(Item.objects.get(pk=todo.pk), request.user))
 
 
+class FromTextTodoOut(Schema):
+    # Set once added
+    id: int | None
+    title: str
+    notes: str
+    completed: bool
+    checklist_done: int
+    checklist_total: int
+
+
+class FromTextGroupOut(Schema):
+    # None: ungrouped, or a new group not added yet
+    id: int | None
+    title: str | None
+    new: bool
+    todos: list[FromTextTodoOut]
+
+
+class FromTextOut(Schema):
+    list_id: int
+    added: bool
+    count: int
+    left_out: int
+    # Why nothing can be added (only with ``preview``; else a 400)
+    problem: str
+    groups: list[FromTextGroupOut]
+
+
+class FromTextIn(Schema):
+    text: str
+    preview: bool = False
+
+
+def from_text_out(item, plan, *, added):
+    return {
+        "list_id": item.pk,
+        "added": added,
+        "count": plan.count,
+        "left_out": plan.left_out,
+        "problem": plan.problem,
+        "groups": [
+            {
+                "id": section.group.pk if section.group is not None else None,
+                "title": section.title,
+                "new": section.is_new,
+                "todos": [
+                    {
+                        "id": todo.id,
+                        "title": todo.title,
+                        "notes": todo.notes,
+                        "completed": todo.completed,
+                        "checklist_done": todo.done,
+                        "checklist_total": todo.total,
+                    }
+                    for todo in section.todos
+                ],
+            }
+            for section in plan.sections
+            if section.title is not None or section.todos
+        ],
+    }
+
+
+@router.post(
+    "lists/{list_id}/todos/from-text/", response={200: FromTextOut, 201: FromTextOut}
+)
+def todos_from_text(request, list_id: int, data: FromTextIn):
+    """To-dos from a Markdown or plain text (specs/todos-from-text.md):
+    headings become groups, list items to-dos. ``preview`` answers the plan
+    without adding anything, with ``problem`` saying why nothing could be
+    added; otherwise such a problem is a 400."""
+    item = item_for(request, list_id, Kind.LIST)
+    if not ops.may_add_to(request.user, item):
+        bad_request(_("No to-dos can be added to this list."))
+    if data.preview:
+        plan = ops.text_plan(item, data.text, request.user)
+        return Status(200, from_text_out(item, plan, added=False))
+    try:
+        plan = ops.add_from_text(item, data.text, actor=request.user)
+    except ops.FromTextRefused as exc:
+        bad_request(str(exc))
+    return Status(201, from_text_out(item, plan, added=True))
+
+
 class DueTodoOut(TodoOut):
     due_group: Literal["overdue", "today", "this_week", "next_week", "later", "none"]
     project_name: str

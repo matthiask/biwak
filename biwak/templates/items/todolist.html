@@ -36,6 +36,10 @@
   {% if item.status == "archived" %}
     <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
   {% endif %}
+  {% if can_add_from_text %}
+    {% url 'list_from_text' item.pk as from_text_url %}
+    {% include "items/_drop_text.html" with url=from_text_url %}
+  {% endif %}
   {% include "items/_client_tab.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
   {% csrf_token %}

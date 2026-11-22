@@ -915,6 +915,10 @@ h3,
   --wb-tone-bg: var(--wb-warning-bg);
   --wb-tone-ink: var(--wb-warning-ink);
 }
+.wb-tone-accent {
+  --wb-tone-bg: var(--wb-accent-tint-bg);
+  --wb-tone-ink: var(--wb-accent-tint-ink);
+}
 
 /* A live public link, on the item's page (specs/public-links.md): a palette
    tint, quieter than the clients' yellow */
@@ -3359,13 +3363,38 @@ main:has([data-hide-title]) [data-edit-open] {
 }
 
 .wb-tile.is-drop-target,
-a.is-drop-target {
+a.is-drop-target,
+.list-group-item.is-drop-target {
   outline: 2px dashed var(--wb-accent-ring);
   outline-offset: 2px;
 }
 
 .wb-tile.is-drop-target {
   background: var(--wb-accent-tint-bg);
+}
+
+/* Adding to-dos from text: the preview (specs/todos-from-text.md) */
+.wb-from-text-preview {
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.wb-from-text-group + .wb-from-text-group {
+  margin-top: 0.5rem;
+}
+
+.wb-from-text-todo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+
+.wb-from-text-todo.is-completed > span:first-of-type {
+  color: var(--bs-secondary-color);
+  text-decoration: line-through;
 }
 
 .wb-selection-bar {

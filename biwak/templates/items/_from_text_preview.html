@@ -1,0 +1,51 @@
+{% load biwak i18n %}
+{% comment %}
+  What adding the text does (biwak/items/from_text.py's plan): the groups in
+  order, new or existing, their to-dos with checklist counts, what's left
+  out, or why nothing can be added. `data-label` and `data-ready` are the
+  button's (frontend/from-text.js).
+{% endcomment %}
+<div
+  data-from-text-plan
+  data-label="{{ plan.submit_label }}"
+  data-ready="{% if plan.problem %}false{% else %}true{% endif %}"
+>
+  {% if plan.problem %}
+    <p
+      class="{% if plan.count or plan.refused %}text-danger{% else %}text-body-secondary{% endif %} mb-2"
+      data-from-text-problem
+    >
+      {{ plan.problem }}
+    </p>
+  {% endif %}
+  {% for section in plan.sections %}
+    {% if section.title is not None or section.todos %}
+      <section class="wb-from-text-group">
+        {% if section.title is not None %}
+          <h3 class="h6 mb-1">
+            {{ section.title }}
+            {% if section.is_new %}
+              <span class="badge wb-tone-accent">{% translate "new" context "group" %}</span>
+            {% else %}
+              <span class="badge wb-tone-neutral">{% translate "existing" context "group" %}</span>
+            {% endif %}
+          </h3>
+        {% endif %}
+        {% if section.todos %}
+          <ul class="list-unstyled mb-2">
+            {% for todo in section.todos %}
+              <li class="wb-from-text-todo{% if todo.completed %} is-completed{% endif %}">
+                {% if todo.completed %}{% icon "check-square" %}{% else %}{% icon "square" %}{% endif %}
+                <span>{{ todo.title }}</span>
+                {% include "items/_checklist_signal.html" with done=todo.done total=todo.total %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    {% endif %}
+  {% endfor %}
+  {% if plan.left_out_note %}<p class="small text-body-secondary mb-0" data-from-text-left-out>
+      {{ plan.left_out_note }}
+    </p>{% endif %}
+</div>

@@ -1656,3 +1656,93 @@ def move_to_project(item, *, project, actor):
         to_project=project.name,
         to_project_id=project.pk,
     )
+
+
+class FromTextRefused(ValueError):
+    """Nothing added from the text; the message says why
+    (``from_text.Plan.problem``)"""
+
+
+def may_add_to(user, todolist_item):
+    """Whether the person adds to-dos to the list (seeing it is the
+    caller's check): an active list in a project that isn't archived"""
+    return (
+        can_create(user, Kind.TODO)
+        and todolist_item.kind == Kind.LIST
+        and todolist_item.status == Status.ACTIVE
+        and todolist_item.project.archived_at is None
+    )
+
+
+def text_plan(todolist_item, text, user):
+    """``from_text.plan()`` of the text for the list and the person: new
+    groups only where they may create groups (``can_change()``)"""
+    from biwak.items import from_text
+
+    return from_text.plan(
+        todolist_item.todolist,
+        text,
+        may_add_groups=can_change(user, todolist_item),
+    )
+
+
+@transaction.atomic
+def add_from_text(todolist, text, *, actor):
+    """The to-dos of the text (``biwak/items/from_text.py``) added to the
+    list (its item): headings become groups (existing ones matched,
+    ``create_group()`` for the others), the to-dos are appended to their
+    group in order, ticked ones completed. Created silently like
+    ``copy_list()``'s, with the list's visibility; the adder subscribed
+    to each as its creator; one ``added_todos`` event on the list. Returns
+    the plan; ``FromTextRefused`` with its problem, nothing added."""
+    if not may_add_to(actor, todolist):
+        raise FromTextRefused(gettext("No to-dos can be added to this list."))
+    TodoList.objects.select_for_update().get(item=todolist)
+    plan = text_plan(todolist, text, actor)
+    if plan.problem:
+        raise FromTextRefused(plan.problem)
+    now = timezone.now()
+    added = []
+    for section in plan.sections:
+        group = section.group
+        if section.is_new:
+            group = section.group = create_group(
+                todolist=todolist.todolist, title=section.title
+            )
+            section.created = True
+        position = _next_position(_todos_in(todolist, group))
+        for todo in section.todos:
+            item = Item(
+                project=todolist.project,
+                parent=todolist,
+                kind=Kind.TODO,
+                title=todo.title,
+                creator=actor,
+                position=position,
+                is_client_visible=todolist.is_client_visible,
+            )
+            item.save()
+            position += 1
+            todo.id = item.pk
+            Todo.objects.create(
+                item=item,
+                group=group,
+                notes=todo.notes,
+                completed_at=now if todo.completed else None,
+                completed_by=actor if todo.completed else None,
+            )
+            added.append(item)
+    # The adder follows them as their creator (``created()``); new items,
+    # nobody unsubscribed yet
+    Subscription.objects.bulk_create(
+        [Subscription(user=actor, item=item) for item in added],
+        ignore_conflicts=True,
+    )
+    record(
+        actor=actor,
+        action=Action.ADDED_TODOS,
+        project=todolist.project,
+        item=todolist,
+        todos=len(added),
+    )
+    return plan

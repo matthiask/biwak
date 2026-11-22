@@ -1,0 +1,24 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{% comment %}
+  "Add from text…" (biwak/items/from_text_views.py, specs/todos-from-text.md):
+  the list, the text (plain source, not the editor), a file, and the preview
+  of what will be added. frontend/from-text.js reads a chosen file into the
+  text, updates the preview and the button as the text or the list changes,
+  and keeps the button disabled while there's nothing to add; without
+  JavaScript the file is posted and the preview shows after posting.
+{% endcomment %}
+{% block fields %}
+  <div
+    data-from-text="{% url 'list_from_text_preview' item.pk %}"
+    data-only-text="{% translate 'Only text files can be added as to-dos.' %}"
+    data-too-big="{% translate 'This file is larger than 200 KB; up to 200 KB can be added at once.' %}"
+    data-max-bytes="{{ max_bytes }}"
+  >
+    {% for field in form.visible_fields %}{{ field.as_field_group }}{% endfor %}
+    <h2 class="h6 mt-3">{% translate "Preview" %}</h2>
+    <div class="wb-from-text-preview" data-from-text-preview aria-live="polite">
+      {% include "items/_from_text_preview.html" %}
+    </div>
+  </div>
+{% endblock fields %}

@@ -8,6 +8,16 @@ project. Staff create lists with "New list" on the project's page.
 - **Add a to-do** opens a form in the list: title, notes, assignees, a
   start and a due date and how it repeats. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it
   and starts the next one, <kbd>Esc</kbd> closes the form.
+- **Add from text:** drop a Markdown or text file (`.md`, `.txt`)
+  onto a list's page, or onto a list on the project's page, or use "Add
+  from text…" in the list's "More" menu to paste a text or choose a
+  file. Headings become groups (a heading with the name of an existing
+  group adds to it), list items become to-dos (`- [x]` ones completed),
+  and what's indented under an item becomes its notes, nested items as
+  a checklist. A text without list items gives a to-do per line. The
+  preview shows what will be added before you press "Add 12 to-dos";
+  you can pick another list there. Up to 500 to-dos and 200 KB at once.
+  Clients add new groups only in lists they created.
 - **Groups** are headings inside a list ("New group"). Rename or remove
   a group with the icons next to its name; removing it keeps its
   to-dos.
