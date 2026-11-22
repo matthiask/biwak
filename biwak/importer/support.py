@@ -14,7 +14,7 @@ import urllib.parse
 
 from PIL import Image, ImageDraw
 
-from biwak.importer.client import NotFound
+from biwak.importer.client import ApiError, NotFound
 
 
 ACCOUNT = 1000
@@ -457,7 +457,6 @@ def make_data():
         ("Message", 9001, "Old announcement"),
         ("Document", 9002, "Old notes"),
         ("Upload", 9003, "old.png"),
-        ("Question", 9004, "Last year's question"),
     ]:
         d[
             f"/projects/recordings.json?bucket={PROJECT}&status=archived&type={type_}"
@@ -830,6 +829,23 @@ def make_data():
     return d, files
 
 
+# The types ``/projects/recordings.json`` accepts (bc3-api's recordings;
+# "Question" is refused with 400, checked against a real account 2026-11-22)
+RECORDING_TYPES = {
+    "Comment",
+    "Document",
+    "Kanban::Card",
+    "Kanban::Step",
+    "Message",
+    "Question::Answer",
+    "Schedule::Entry",
+    "Todo",
+    "Todolist",
+    "Upload",
+    "Vault",
+}
+
+
 class FakeClient:
     """``BasecampClient``'s ``get()``, ``paginate()``, ``download()`` and
     ``archive_project()`` over recorded data, counting the requests"""
@@ -853,6 +869,12 @@ class FakeClient:
         self.requests.append((path, params))
         if self.on_request:
             self.on_request(path)
+        if (
+            path == "/projects/recordings.json"
+            and params.get("type") not in RECORDING_TYPES
+        ):
+            # Basecamp answers 400 for other types (checked 2026-11-22)
+            raise ApiError(f"{path}?type={params.get('type')}: status 400")
         key = path + (
             "?" + urllib.parse.urlencode(sorted(params.items())) if params else ""
         )

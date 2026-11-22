@@ -935,10 +935,11 @@ class ArchivedTest(ImportCase):
             "Old announcement",
             "Old notes",
             "old.png",
-            "Last year's question",
         ]:
             self.assertNotIn(title, titles)
-        self.assertEqual(len(report.archived), 4)
+        # Basecamp lists no archived questions there (400, checked
+        # 2026-11-22): they're neither imported nor reported
+        self.assertEqual(len(report.archived), 3)
 
     def test_archived_to_dos_keep_their_comments_and_complete_once(self):
         self.client_.data["/recordings/3031/comments.json"] = [
@@ -1019,7 +1020,6 @@ class DryRunTest(ImportCase):
                 "message: Old announcement",
                 "doc: Old notes",
                 "file: old.png",
-                "check-in question: Last year's question",
             ],
         )
         text = report.as_text()

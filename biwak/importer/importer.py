@@ -87,11 +87,12 @@ KINDS = {
 
 # What isn't imported when archived (the recordings' ``status`` filter works
 # on the recordings of the project)
+# Not "Question": /projects/recordings.json refuses it (400, checked
+# 2026-11-22), so archived check-in questions aren't listed
 ARCHIVED_SKIPPED = {
     "Message": "message",
     "Document": "doc",
     "Upload": "file",
-    "Question": "check-in question",
 }
 
 # Basecamp's weekdays, 0 is Sunday
@@ -846,7 +847,8 @@ class Importer(Resolver):
 
     def _archived_recordings(self, project_id):
         """Archived messages, docs, files and questions aren't imported
-        (specs/archiving.md); the report lists them, in a dry run too"""
+        (specs/archiving.md); the report lists the messages, docs and files,
+        in a dry run too (Basecamp doesn't list archived questions there)"""
         for bc_type, label in ARCHIVED_SKIPPED.items():
             try:
                 found = list(
