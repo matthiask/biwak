@@ -157,7 +157,9 @@ rebuilds them by hand.
   `member_ids` (added before copying) or `is_template` (`biwak project
   add NAME --template ID --member PERSON`, `--as-template`); a list
   from a template is `POST lists/{id}/copy/` (`biwak list copy`).
-- **Importer:** `import_basecamp --templates` (`import-basecamp.md`).
+- **Importer:** `import_basecamp --templates` (`import-basecamp.md`);
+  the library always becomes "To-do list library"
+  (`importer.LIBRARY_NAME`), whatever Basecamp names its bucket.
 
 ## Decisions made while building (confirmed by the user 2026-11-22)
 
@@ -182,8 +184,6 @@ rebuilds them by hand.
 
 ## To change (decided 2026-11-22, not built yet)
 
-- One "To-do list library" for the importer, whatever the bucket's
-  name.
 - No "Share…" in templates, the API refusing public links there.
 
 ## Not planned

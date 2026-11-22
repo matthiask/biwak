@@ -78,6 +78,10 @@ class TemplatesImportTest(TestCase):
         self.assertFalse(Notification.objects.exists())
 
     def test_library(self):
+        """One "To-do list library", whatever the bucket's name (decided
+        2026-11-22)"""
+        bucket = self.client_.data["/template_library/todolists.json"]["bucket"]
+        bucket["name"] = "Vorlagen"
         self.run_import()
         library = Project.objects.get(name="To-do list library")
         self.assertTrue(library.is_template)

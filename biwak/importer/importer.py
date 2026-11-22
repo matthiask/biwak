@@ -58,7 +58,8 @@ PERSON, PROJECT, ATTACHMENT = "Person", "Project", "Attachment"
 GROUP, COLUMN = "Todolist::Group", "Kanban::Column"
 # Project templates and the to-do list library's bucket (specs/templates.md)
 TEMPLATE = "Template"
-# The library's name when Basecamp gives its bucket none
+# The library's name, whatever Basecamp names its bucket: one library
+# (decided 2026-11-22, specs/templates.md)
 LIBRARY_NAME = "To-do list library"
 
 # Our names for what the counts and problems talk about
@@ -751,7 +752,7 @@ class Importer(Resolver):
             bucket = library.get("bucket") or {}
             rec = {
                 "id": bucket["id"],
-                "name": bucket.get("name") or LIBRARY_NAME,
+                "name": LIBRARY_NAME,
                 "description": bucket.get("description") or "",
                 "created_at": bucket.get("created_at"),
                 "updated_at": bucket.get("updated_at"),
