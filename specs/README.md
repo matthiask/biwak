@@ -47,6 +47,7 @@ confirm: `decisions-to-confirm.md`.
 | `two-factor.md` | built | passkeys as a way in, authenticator apps as an optional second factor, organizations requiring one |
 | `public-links.md` | built | read-only links to one item for people outside, expiring after 1 to 30 days |
 | `teams.md` | built | named sets of people, expanded into their members when assigning, subscribing or mentioning |
+| `rich-editor.md` | open | one rich-text editor (ProseMirror) for every text, live docs included, still storing Markdown |
 
 ## Writing a spec for a new part
 
