@@ -192,8 +192,8 @@ class ProjectIn(Schema):
     color: Color | Literal[""] | None = None
     # A template's ID: the new project gets a copy of it (specs/templates.md)
     template: int | None = None
-    # People added as members before the template is copied: its assignees
-    # who don't see the new project are left out
+    # People added as members before the template is copied (its assignees
+    # who wouldn't see the new project are added too)
     member_ids: list[int] = []
     # A new template instead of a project (all-access, without members)
     is_template: bool = False

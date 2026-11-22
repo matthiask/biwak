@@ -254,7 +254,7 @@ def _create_project(form, data, *, actor):
                 actor=actor,
             )
     if data.get("template"):
-        # After the members: assignees who don't see the copy are left out
+        # After the members: assignees who wouldn't see the copy are added
         project_ops.fill_from_template(project, data["template"], actor=actor)
     return project
 

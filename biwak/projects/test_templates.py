@@ -215,18 +215,24 @@ class FromTemplateTest(Fixture, TestCase):
         self.assertFalse(items.get(kind=Kind.FOLDER, title="Design").is_client_visible)
 
     def test_assignees(self):
-        """Kept when they see the new project, left out (not added) when
-        they don't"""
+        """Kept: added as members when they wouldn't see the new project,
+        as "Copy…" does (decided 2026-11-22)"""
         website = self.create(is_all_access=True)
         kickoff = Item.objects.get(project=website, title="Kick-off")
         self.assertEqual(list(kickoff.todo.assignees.all()), [self.bob])
         self.assertTrue(
             Subscription.objects.filter(user=self.bob, item=kickoff).exists()
         )
+        self.assertFalse(website.memberships.filter(user=self.bob).exists())
         shop = self.create(name="Shop", is_all_access=False)
         kickoff = Item.objects.get(project=shop, title="Kick-off")
-        self.assertFalse(kickoff.todo.assignees.exists())
-        self.assertFalse(shop.memberships.filter(user=self.bob).exists())
+        self.assertEqual(list(kickoff.todo.assignees.all()), [self.bob])
+        self.assertTrue(shop.memberships.filter(user=self.bob).exists())
+        self.assertTrue(
+            Event.objects.filter(
+                project=shop, action=Action.ADDED, data__user=self.bob.pk
+            ).exists()
+        )
         with_bob = self.create(name="Bob's", is_all_access=False, members=[self.bob])
         kickoff = Item.objects.get(project=with_bob, title="Kick-off")
         self.assertEqual(list(kickoff.todo.assignees.all()), [self.bob])

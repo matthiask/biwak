@@ -81,9 +81,9 @@ New projects can start from a template, a project kept for that
   to-dos (with notes and checklists), the messages (pinned ones stay
   pinned), the folders with their docs and files. Not comments or
   history. What's visible to clients in the template is visible in the
-  new project; the form says which. Assignees who don't see the new
-  project are left out. Changing the template later changes no project
-  made from it.
+  new project; the form says which. Assignees are kept: those who
+  wouldn't see the new project become its members. Changing the
+  template later changes no project made from it.
 - **A list from a template:** "New list" offers "From a template…":
   pick a list of any template, then give it a title (fill in what the
   template leaves open, like a name) and choose what happens to its due

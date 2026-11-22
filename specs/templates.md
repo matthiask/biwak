@@ -130,8 +130,9 @@ rebuilds them by hand.
   `feed.add_projects()`; the API drops it otherwise) and
   `create_from_template(template, actor, members, **fields)`.
   `items.operations.copy_template()` copies with `copy_list(...,
-  quiet=True)` (the title as it is, nobody added, no event, the actor
-  subscribed), messages, folders with docs and files (the newest
+  quiet=True)` (the title as it is, no event, the actor subscribed;
+  assignees who wouldn't see the copy added as members, recording
+  "added"), messages, folders with docs and files (the newest
   version, as a new file), attachments in texts as new files; the
   project's orders of files and messages too.
 - **Pages** (`biwak/projects/template_views.py`): `/projects/templates/`
@@ -173,7 +174,7 @@ rebuilds them by hand.
 
 ## To change (decided 2026-11-22, not built yet)
 
-- Copy check-in questions; keep assignments, adding members (above).
+- Copy check-in questions (above).
 - Search never finds templates: drop "Include templates", the API's
   `templates`, `biwak search --templates` and searching inside a
   template.

@@ -492,8 +492,8 @@ def create_template(*, name, description="", color="", actor):
 def fill_from_template(project, template, *, actor):
     """Copies the template into the new ``project``
     (``items.operations.copy_template()``) and records the one event
-    "created Website from the template Web project". Members are added
-    before: assignees who don't see the copy are left out."""
+    "created Website from the template Web project". Assignees who
+    wouldn't see the copy are added as members, as "Copy…" does."""
     from biwak.items import operations as item_ops
 
     if not can_use_templates(actor):
