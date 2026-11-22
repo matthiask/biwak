@@ -58,7 +58,7 @@ commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break.
 End-to-end tests (`biwak/test_e2e.py`, tagged `e2e`) run the real server and
 Chromium through Playwright: `uv run playwright install chromium` once,
 without the browser they're skipped, `./runtests.sh --exclude-tag e2e`
-leaves them out (and skips building the production bundle they need).
+leaves them out.
 What a run costs is how many tests it runs: one module about 3
 seconds, a whole app half a minute, everything five minutes. While
 building, run the one or two modules you changed with `--exclude-tag
