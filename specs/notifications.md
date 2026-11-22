@@ -112,7 +112,9 @@ it for the first time.
   to-dos, `/projects/<pk>/mentionable/?visible=1&folder=<pk>` for new
   messages, docs and files (who will see them); JSON `[{id, name,
   short_name, email, available, reason}]`, at most 10. The doc's live
-  editor doesn't complete names yet (the syntax works).
+  editor doesn't complete names yet (the syntax works). Staff find
+  teams first, which insert a mention per member (`teams.md`; the web
+  endpoints only, not the API's).
 - **Who is offered** (`mentionable_people(item)`): active people who can
   see the item; people matching who can't are greyed out with the reason
   ("can't see internal items", "not a member of this project"). Clients

@@ -50,7 +50,8 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   left to pick, when the field loses the focus (Tab, a click elsewhere)
   and on a click elsewhere (`data-dismiss`; decided 2026-11-21: the
   empty list stayed over the button below). Without JavaScript the `<select
-  multiple>`. Used in the inline form and the to-do's edit form.
+  multiple>`. Used in the inline form and the to-do's edit form. Staff
+  find teams in it, which pick their members (`teams.md`).
 
 ## Lists and the board
 

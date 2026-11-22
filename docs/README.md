@@ -7,7 +7,7 @@ them. This help explains how to use it, short and in the order you need
 it.
 
 - [Finding your way](orientation.md): Home, projects, to-dos, activity,
-  the lantern, bookmarks, search, people
+  the lantern, bookmarks, search, people, teams
 - [To-dos](todos.md): lists, groups, assigning, due dates, repeating,
   checklists, the to-dos page, the calendar
 - [Messages, docs and files](files.md): the message board, folders,
