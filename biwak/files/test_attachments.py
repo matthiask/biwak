@@ -221,12 +221,13 @@ class OperationsTest(Fixture, TestCase):
         )
         ops.update_todo(self.todo, actor=self.ada, notes=notes)
         html = str(markdown(notes, self.todo))
+        # Pages: the storage's URL (on disk MEDIA_URL; specs/files.md)
         self.assertIn(
-            f'<img src="/attachments/{image.key}/sketch.png" alt="sketch.png"'
+            f'<img src="{image.file.url}" alt="sketch.png"'
             ' class="wb-attachment-image" loading="lazy"',
             html,
         )
-        self.assertIn(f'<a href="/attachments/{pdf.key}/plan.pdf">plan.pdf</a>', html)
+        self.assertIn(f'<a href="{pdf.file.url}">plan.pdf</a>', html)
         self.assertIn("<p>attachment <a", html)  # gone
         self.assertIn(
             '<a href="https://example.org" target="_blank" rel="noopener noreferrer">'
@@ -258,19 +259,19 @@ class ForeignReferencesTest(Fixture, TestCase):
 
     def test_rendering(self):
         html = str(markdown(self.todo.todo.notes, self.todo))
-        self.assertIn(f"/attachments/{self.own.key}/sketch.png", html)
+        self.assertIn(self.own.file.url, html)
         self.assertNotIn("Salaries", html)
         self.assertNotIn(self.salaries.key, html)
         self.assertNotIn("the table", html)
         self.assertIn(' loading="lazy" /> attachment attachment</p>', html)
         # Still linked where it belongs
         html = str(markdown(self.secret.todo.notes, self.secret))
-        self.assertIn(f"/attachments/{self.salaries.key}/Salaries%202027.pdf", html)
+        self.assertIn(self.salaries.file.url, html)
 
     def test_page_and_api(self):
         self.client.force_login(self.cleo)
         response = self.client.get(self.todo.get_absolute_url())
-        self.assertContains(response, f"/attachments/{self.own.key}/sketch.png")
+        self.assertContains(response, self.own.file.url)
         # (The key is in the to-do's form, without the name)
         self.assertNotContains(response, "Salaries")
         _token, secret = APIToken.create_for(user=self.cleo, title="T", access="read")
@@ -320,7 +321,8 @@ class ViewsTest(Fixture, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Attachment.objects.get().item_id, self.secret.pk)
         response = self.client.get(self.secret.get_absolute_url())
-        self.assertContains(response, f'<img src="{data["url"]}"')
+        stored = Attachment.objects.get().file.url
+        self.assertContains(response, f'<img src="{stored}"')
         self.assertContains(response, "data-attachments=")
         self.assertContains(response, "Attach files")
 
@@ -432,7 +434,7 @@ class BucketTest(Fixture, TestCase):
         url = urlsplit(response["Location"])
         self.assertIn("biwak-test", url.netloc + url.path)
         query = parse_qs(url.query)
-        self.assertEqual(query["X-Amz-Expires"], ["300"])
+        self.assertEqual(query["X-Amz-Expires"], ["3600"])
         self.assertEqual(query["response-content-type"], ["image/svg+xml"])
         self.assertEqual(
             query["response-content-disposition"], ['attachment; filename="evil.svg"']

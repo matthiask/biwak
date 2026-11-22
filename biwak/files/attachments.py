@@ -14,9 +14,9 @@ from django.db import transaction
 from django.http import FileResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.utils.cache import patch_cache_control
-from django.utils.http import content_disposition_header
 from django.utils.translation import gettext as _
 
+from biwak.files import file_urls
 from biwak.files.models import (
     MAX_SIZE,
     REFERENCE,
@@ -29,8 +29,6 @@ from biwak.files.models import (
 # Unlinked attachments (uploaded, but the text never saved) are deleted
 # after this (fairy_tasks)
 UNLINKED_DAYS = 1
-# How long a presigned download URL of the bucket is valid
-PRESIGNED_SECONDS = 300
 
 
 class UploadError(ValueError):
@@ -134,11 +132,14 @@ def delete_unlinked(*, now=None):
 
 
 def serve(attachment):
-    """The download, after the visibility check: a redirect to a presigned
-    URL valid 5 minutes with a bucket, the file itself otherwise. Images
-    and PDFs inline, everything else (SVG and HTML above all) as a
-    download; never sniffed. Works for everything with ``file``, ``name``,
-    ``content_type`` and ``is_inline`` (attachments, file versions)."""
+    """The download, after the visibility check: a redirect to the
+    presigned URL (``file_urls``, valid an hour, the same one pages get)
+    with a bucket, the file itself otherwise. Images and PDFs inline,
+    everything else (SVG and HTML above all) as a download; never sniffed.
+    Works for everything with ``file``, ``name``, ``content_type`` and
+    ``is_inline`` (attachments, file versions, forwarded files). For
+    addresses which must stay valid: mails, the API, links people share;
+    pages use ``file_urls.file_url()`` directly."""
     return respond(
         attachment.file.storage,
         attachment.file.name,
@@ -149,17 +150,14 @@ def serve(attachment):
 
 
 def respond(storage, name, *, content_type, filename, as_attachment):
-    if _presigns(storage):
+    if file_urls.presigns(storage):
         response = HttpResponseRedirect(
-            storage.url(
+            file_urls.storage_url(
+                storage,
                 name,
-                parameters={
-                    "ResponseContentType": content_type,
-                    "ResponseContentDisposition": content_disposition_header(
-                        as_attachment, filename
-                    ),
-                },
-                expire=PRESIGNED_SECONDS,
+                content_type=content_type,
+                filename=filename,
+                as_attachment=as_attachment,
             )
         )
     else:
@@ -172,13 +170,3 @@ def respond(storage, name, *, content_type, filename, as_attachment):
     response["X-Content-Type-Options"] = "nosniff"
     patch_cache_control(response, private=True, max_age=0)
     return response
-
-
-def _presigns(storage):
-    """Buckets hand out presigned URLs; other storages (local disk, later
-    others) are streamed through the app"""
-    try:
-        from storages.backends.s3 import S3Storage
-    except ImportError:  # pragma: no cover
-        return False
-    return isinstance(storage, S3Storage)

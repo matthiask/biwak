@@ -49,11 +49,11 @@ class ForwardedPageTest(FilingTestCase):
             response, "From Dora Example &lt;dora@example.com&gt;, 20 Nov 2026"
         )
         self.assertContains(response, "To: Ada Example &lt;ada@example.org&gt;")
-        # The image inline, through the forwarder's download
+        # The image inline, at the storage's URL (specs/files.md)
         image = second.files.get(name="image001.png")
         self.assertContains(
             response,
-            f'<img class="wb-attachment-image" loading="lazy" src="{image.get_absolute_url()}"',
+            f'<img class="wb-attachment-image" loading="lazy" src="{image.file.url}"',
         )
         self.assertContains(response, "<strong>revised quote</strong>", html=True)
         # The count in the person menu
@@ -272,7 +272,7 @@ class FiledItemsVisibilityTest(FilingTestCase):
         self.client.force_login(self.cleo)
         response = self.client.get(item.get_absolute_url())
         self.assertContains(response, "Forwarded from Dora Example")
-        self.assertContains(response, image.get_absolute_url())
+        self.assertContains(response, image.file.url)
         self.assertEqual(self.client.get(image.get_absolute_url()).status_code, 200)
         self.assertContains(self.client.get(reverse("feed")), "Zebra crossing")
         self.assertContains(

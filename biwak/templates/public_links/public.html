@@ -1,4 +1,4 @@
-{% load biwak i18n rspack_assets static %}
+{% load attachments biwak i18n rspack_assets static %}
 <!DOCTYPE html>
 {% comment %}
   The public page of a link (specs/public-links.md): one item, read only,
@@ -30,9 +30,9 @@
           {% if version %}
             {% if version.has_preview %}
               <p>
-                <a href="{% url 'public_download' link.token %}">
+                <a href="{% file_url version %}">
                   <img
-                    src="{% url 'public_preview' link.token %}"
+                    src="{% url 'public_preview' link.token as fallback %}{% preview_url version fallback %}"
                     alt="{{ version.name }}"
                     class="border wb-file-preview"
                     loading="lazy"
@@ -41,7 +41,7 @@
               </p>
             {% endif %}
             <p>
-              <a class="btn btn-sm btn-primary" href="{% url 'public_download' link.token %}">
+              <a class="btn btn-sm btn-primary" href="{% file_url version %}">
                 {% icon "download" %}<span>{% translate "Download" %}</span>
               </a>
               <span class="small text-body-secondary ms-2">{{ version.name }} · {{ version.size|filesizeformat }}</span>

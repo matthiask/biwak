@@ -362,9 +362,12 @@ class PublicPageTest(Fixture, TestCase):
         attachments.link(other_item, other.markdown, actor=self.ada)
         link = self.share()
         response = self.client.get(f"/p/{link.token}/")
-        url = f"/p/{link.token}/attachments/{own.key}/sketch.png"
-        self.assertContains(response, f'src="{url}"')
+        # The page checked the token: the storage's URL, as on other pages
+        # (specs/public-links.md, decided 2026-11-22)
+        self.assertContains(response, f'src="{own.file.url}"')
         self.assertNotContains(response, f'"{own.get_absolute_url()}"')
+        # The token's URL still works
+        url = f"/p/{link.token}/attachments/{own.key}/sketch.png"
         download = self.client.get(url)
         self.assertEqual(download.status_code, 200)
         self.assertEqual(b"".join(download.streaming_content), PNG)
@@ -385,7 +388,9 @@ class PublicPageTest(Fixture, TestCase):
         )
         link = self.share(item)
         response = self.client.get(f"/p/{link.token}/")
-        self.assertContains(response, f"/p/{link.token}/download/")
+        version = item.upload.versions.get()
+        self.assertContains(response, f'href="{version.file.url}"')
+        # The preview isn't made yet: through the token, which makes it
         self.assertContains(response, f"/p/{link.token}/preview/")
         self.assertContains(response, "<em>map</em>")
         download = self.client.get(f"/p/{link.token}/download/")

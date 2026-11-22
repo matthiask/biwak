@@ -9,12 +9,13 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 
-from biwak.files import attachments
+from biwak.files import attachments, file_urls
 from biwak.forms import BLANK_CHOICE_LABEL, ComboboxSelect, Form
 from biwak.forwarding import operations as ops
 from biwak.forwarding.models import REFERENCE, ForwardedFile
@@ -40,19 +41,30 @@ def forwarded_for(request, pk):
 
 
 def text_html(mail, *, absolute=False):
-    """The text with its files through the forwarder's downloads"""
+    """The text with its files: on the page (only the forwarder's) at the
+    storage's URLs (``file_urls``), in the API (``absolute``) through the
+    forwarder's downloads"""
     files = {file.key: file for file in mail.files.all()}
-    prefix = settings.BASE_URL if absolute else ""
+    urls = {
+        key: settings.BASE_URL + file.get_absolute_url()
+        if absolute
+        else file_urls.file_url(file)
+        for key, file in files.items()
+    }
 
     def url(match):
-        file = files.get(match[1])
-        return f"({prefix}{file.get_absolute_url()})" if file else "()"
+        return f"(<{urls[match[1]]}>)" if match[1] in urls else "()"
 
     html = str(render_markdown(REFERENCE.sub(url, mail.text), attachment_urls=False))
     # Scaled to the text's width like attachments
+    own = {escape(u) for u in urls.values()}
     html = re.sub(
-        r'<img src="([^"]*/forwarded/\d+/files/[^"]*)"',
-        r'<img class="wb-attachment-image" loading="lazy" src="\1"',
+        r'<img src="([^"]*)"',
+        lambda m: (
+            f'<img class="wb-attachment-image" loading="lazy" src="{m[1]}"'
+            if m[1] in own
+            else m[0]
+        ),
         html,
     )
     return mark_safe(html)

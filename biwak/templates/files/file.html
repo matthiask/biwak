@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak bookmarks i18n reactions %}
+{% load attachments biwak bookmarks i18n reactions %}
 {% block title %}{{ item|item_title }} – Biwak{% endblock %}
 
 {% block live_item %}{{ item.pk }}{% endblock %}
@@ -24,7 +24,7 @@
       {% bookmark_button item %}
       <a
         class="btn btn-sm btn-primary"
-        href="{% url 'file_download' item.pk %}"
+        href="{% file_url version %}"
         title="{% translate 'Download' %}"
       >{% icon "download" %}<span class="wb-label">{% translate "Download" %}</span></a>
       {% if can_change %}
@@ -45,9 +45,9 @@
     <div class="col-lg-8">
       {% if version.has_preview %}
         <p>
-          <a href="{% url 'file_download' item.pk %}">
+          <a href="{% file_url version %}">
             <img
-              src="{% url 'file_preview' item.pk %}"
+              src="{% url 'file_preview' item.pk as fallback %}{% preview_url version fallback %}"
               alt="{{ version.name }}"
               class="border wb-file-preview"
               loading="lazy"
@@ -99,7 +99,7 @@
         <ul class="list-unstyled small">
           {% for old in older_versions %}
             <li>
-              <a href="{% url 'file_version_download' item.pk old.pk %}">{{ old.name }}</a>
+              <a href="{% file_url old %}">{{ old.name }}</a>
               · {{ old.size|filesizeformat }} · {% person_link old.uploaded_by %},
               {{ old.uploaded_at|dateformat:"SHORT_DATE_FORMAT" }}
             </li>

@@ -21,8 +21,10 @@ Django's storage API (`django-storages`), chosen by `STORAGE_URL`
 (speckenv's `django_storage_url`, translated by `biwak/storage_url.py`;
 decided 2026-11-20):
 
-- `file:./media/` (the default): `BASE_DIR / "media"`, gitignored, never
-  served directly, only through the download views.
+- `file:./media/` (the default): `BASE_DIR / "media"`, gitignored,
+  served at `MEDIA_URL` (`/media/`) only with `DEBUG`
+  (`files.views.media`, with the downloads' headers), as a bucket's
+  presigned URLs are when deployed.
 - `s3://KEY:SECRET@host/bucket/[prefix/]`: an S3-compatible bucket,
   private, presigned URLs always. The first deployment uses this.
   Options without a translation are an error at startup. No ACLs are set
@@ -64,10 +66,29 @@ its item's.
 
 ## Downloads
 
-- `GET /attachments/<key>/<name>` and `GET /files/<pk>/download/` check
+- **Pages use the files' storage URLs** (decided 2026-11-22: streaming
+  everything through the app would be slow with the bucket;
+  `biwak/files/file_urls.py`): a page which checked access to the item
+  links and embeds its files directly: downloads, images in texts,
+  previews, tiles, file versions, forwarded mails' files, the public
+  page. With the bucket a presigned URL valid an hour
+  (`PRESIGNED_SECONDS`) with the content type and disposition below,
+  kept in Django's cache (`CACHE_URL`'s Redis, in memory without) per
+  file and disposition for 50 minutes, so a file's URL stays the same
+  and browsers cache it; on disk `MEDIA_URL`. Previews once made (the
+  preview view makes them on the first request and hands out the URL);
+  until then, or once the cache forgot, the preview view. **Accepted
+  risk:** losing access (deactivated, removed, hidden from clients, a
+  public link stopped) leaves a URL already handed out usable for up to
+  an hour. Profile images stay with `person_image`: cached for a year
+  under a versioned URL, which beats an hourly one.
+- **The checking downloads stay where an address must stay valid**:
+  mails, the API (`*_html`, download fields), the editor's previews of
+  new attachments, links people copy to share.
+  `GET /attachments/<key>/<name>` and `GET /files/<pk>/download/` check
   visibility first (`Item.objects.visible_to()`; an unlinked attachment
-  only for its uploader), then redirect to a presigned URL valid 5
-  minutes (bucket) or stream the file (disk).
+  only for its uploader), then redirect to the same presigned URL
+  (bucket) or stream the file (disk).
 - The content type comes from the file name, never from the browser.
   Inline: PNG, JPEG, GIF, WebP, AVIF and PDF; everything else is a
   download, SVG and HTML always (they can carry scripts).

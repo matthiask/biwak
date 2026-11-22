@@ -1,4 +1,4 @@
-{% load biwak folders i18n %}
+{% load attachments biwak folders i18n %}
 {% comment %}
   A folder's contents as a grid of cards (specs/files.md, "Folders"):
   `rows` (folders first, in the folder's order), `folder` (inside one, the
@@ -47,7 +47,11 @@
         <span class="wb-tile-visual">
           {% if row.kind == "folder" %}{% icon "folder" %}
           {% elif row.kind == "doc" %}{% icon "file-earmark-text" %}
-          {% elif row.version.is_image %}<img src="{% url 'file_preview' row.pk %}" alt="" loading="lazy">
+          {% elif row.version.is_image %}<img
+              src="{% url 'file_preview' row.pk as fallback %}{% preview_url row.version fallback %}"
+              alt=""
+              loading="lazy"
+            >
           {% elif row.version.content_type == "application/pdf" %}{% icon "file-earmark-pdf" %}
           {% else %}{% icon "file-earmark" %}{% endif %}
         </span>

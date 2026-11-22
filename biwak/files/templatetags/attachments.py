@@ -24,3 +24,22 @@ def attachments_attrs(project):
         gettext("Uploading %(name)s…"),
         gettext("Not uploaded, please try again."),
     )
+
+
+@register.simple_tag
+def file_url(file):
+    """``{% file_url version %}``: where a page links or embeds a file
+    (``file_urls.file_url()``: the storage's URL, presigned with a bucket);
+    the page checked access already"""
+    from biwak.files import file_urls
+
+    return file_urls.file_url(file)
+
+
+@register.simple_tag
+def preview_url(version, fallback):
+    """``{% preview_url version fallback %}``: the preview's storage URL
+    once it was made, else ``fallback`` (the preview view, which makes it)"""
+    from biwak.files import file_urls
+
+    return file_urls.preview_url(version, fallback)

@@ -169,8 +169,8 @@ def checklist_markdown(context, text, item, comment=None, *, without_title=False
 @register.simple_tag
 def public_markdown(text, link, *, without_title=False):
     """The text on the public page of ``link`` (specs/public-links.md):
-    nobody looked up, checkboxes disabled, the item's attachments through
-    the token"""
+    nobody looked up, checkboxes disabled, the item's attachments at their
+    storage's URLs like on other pages (the page checked the token)"""
     return render_markdown(
         text, link.item, without_title=without_title, public_token=link.token
     )
@@ -204,8 +204,7 @@ def render_markdown(
 ):
     """``absolute`` for the API and mails: attachment URLs with BASE_URL.
     ``public_token``: the public page of the link with this token
-    (specs/public-links.md): mentions as written, nobody looked up, the
-    item's attachments through the token.
+    (specs/public-links.md): mentions as written, nobody looked up.
     ``attachment_urls=False`` skips looking them up (excerpts don't show
     them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
     turns them into ☐ and ☑ (mails). ``without_title`` leaves out the
@@ -230,7 +229,7 @@ def render_markdown(
     if without_title:
         tokens = _without_title(text, tokens)
     if attachment_urls:
-        _attachment_urls(tokens, item, absolute=absolute, public_token=public_token)
+        _attachment_urls(tokens, item, absolute=absolute)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
@@ -257,12 +256,15 @@ def _attachment_reference(token):
     return None
 
 
-def _attachment_urls(tokens, item, *, absolute, public_token=None):
-    """``attachment:KEY`` (specs/files.md) becomes the download URL; images
-    show inline, scaled to the text's width. Whoever reads the text may
-    not see the attachment: the download checks. Only the item's own
-    attachments: a reference to another item's (or a missing one) becomes
-    a plain "attachment", without its name, which its URL contains too."""
+def _attachment_urls(tokens, item, *, absolute):
+    """``attachment:KEY`` (specs/files.md) becomes the file's URL; images
+    show inline, scaled to the text's width. On pages (which checked
+    access to the item) the storage's URL (``file_urls``), in mails and
+    the API (``absolute``) the download view's, which checks whoever
+    follows it. Only the item's own attachments: a reference to another
+    item's (or a missing one) becomes a plain "attachment", without its
+    name, which its URL contains too."""
+    from biwak.files import file_urls
     from biwak.files.models import Attachment
 
     blocks = [token for token in tokens if token.children]
@@ -289,15 +291,12 @@ def _attachment_urls(tokens, item, *, absolute, public_token=None):
                 continue
             attr, key = reference
             if attachment := found.get(key):
-                url = (
-                    reverse(
-                        "public_attachment",
-                        args=[public_token, attachment.key, attachment.name],
-                    )
-                    if public_token
-                    else attachment.get_absolute_url()
+                child.attrSet(
+                    attr,
+                    settings.BASE_URL + attachment.get_absolute_url()
+                    if absolute
+                    else file_urls.file_url(attachment),
                 )
-                child.attrSet(attr, settings.BASE_URL + url if absolute else url)
                 if attr == "src":
                     child.attrJoin("class", "wb-attachment-image")
                     child.attrSet("loading", "lazy")

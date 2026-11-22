@@ -1149,7 +1149,11 @@ class FilePageTest(Fixture, TestCase):
             response = self.page(user)
             self.assertContains(response, "shared.txt")
             self.assertContains(response, "Clients can see this")
+            # The storage's URL (specs/files.md, "Downloads")
             self.assertContains(
+                response, self.shared_file.upload.versions.get().file.url
+            )
+            self.assertNotContains(
                 response, reverse("file_download", args=[self.shared_file.pk])
             )
 
@@ -1304,10 +1308,10 @@ class FilePageTest(Fixture, TestCase):
         old = self.shared_file.upload.versions.last()
         old_url = reverse("file_version_download", args=[self.shared_file.pk, old.pk])
         response = self.page(self.ada)
-        self.assertContains(response, old_url)
+        self.assertContains(response, old.file.url)
         self.assertEqual(read(self.client.get(old_url)), b"Plan")
         response = self.page(self.cleo)
-        self.assertNotContains(response, old_url)
+        self.assertNotContains(response, old.file.url)
         self.assertNotContains(response, "Earlier versions")
         self.assertEqual(self.client.get(old_url).status_code, 403)
         preview = reverse("file_version_preview", args=[self.shared_file.pk, old.pk])
@@ -1585,7 +1589,7 @@ class BucketTest(Fixture, TestCase):
         response = self.client.get(reverse("file_download", args=[item.pk]))
         self.assertEqual(response.status_code, 302)
         query = parse_qs(urlsplit(response["Location"]).query)
-        self.assertEqual(query["X-Amz-Expires"], ["300"])
+        self.assertEqual(query["X-Amz-Expires"], ["3600"])
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
         response = self.client.get(reverse("file_preview", args=[item.pk]))
         self.assertEqual(response.status_code, 302)

@@ -78,8 +78,14 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   and the date of the last change (`updated_at`, decided 2026-11-22). No comments, no project name, no other people, no
   navigation, no links into the app; links to other items in the text
   stay as they are (they need an account).
-- **Attachments and the file download** through the token
-  (`/p/<token>/…`), never by opening the app's protected URLs.
+- **Attachments and the file download** at their storage's URLs, like
+  on the app's pages (decided 2026-11-22, `files.md`, "Downloads"): the
+  page checked the token and isn't cached (`no-store`), so a presigned
+  URL is handed out only while the link is open; one handed out stays
+  usable up to an hour after the link ends (accepted, as in the app).
+  The preview goes through the token (`/p/<token>/preview/`, which makes
+  it) until it was made. The token's downloads stay for addresses handed
+  out before; never the app's protected URLs.
 - **Gone is 404**, the same page whether the token never existed,
   expired or was stopped.
 
@@ -156,7 +162,8 @@ Where it lives and the choices made while building (2026-11-22):
   name, size and download for files (confirmed 2026-11-22). `noindex` and `no-referrer` as meta tags and
   headers (`X-Robots-Tag`, `Referrer-Policy`), `no-store`.
   `PublicLink.objects.open()` checks expiry, the item's status, drafts
-  and the project's archive on every request; the downloads
+  and the project's archive on every request; the page links the files
+  at their storage's URLs (`file_urls`), the token's downloads
   (`/p/<token>/download/`, `/preview/`, `/attachments/<key>/<name>`)
   serve the current version and the item's own attachments only.
 - **API:** `GET /public-links/`, `GET`, `POST` (`{"days": 7}`) and

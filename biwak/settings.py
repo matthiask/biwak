@@ -7,7 +7,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from speckenv import env
-from speckenv_django import django_database_url, django_mailer_url
+from speckenv_django import django_cache_url, django_database_url, django_mailer_url
 
 from biwak.redis_url import channel_layer, channels_redis_url
 from biwak.storage_url import storage_from_url
@@ -203,6 +203,14 @@ if not (REDIS_URL or DEBUG or TESTING):
     raise ImproperlyConfigured(
         "Set CACHE_URL (the shared Redis) or REDIS_URL for the channel layer."
     )
+# Django's cache, e.g. the presigned URLs of files handed out
+# (biwak/files/file_urls.py): the shared Redis of CACHE_URL, in memory
+# without it (development, tests)
+CACHES = {
+    "default": django_cache_url(
+        "locmem://" if TESTING else env("CACHE_URL", default="locmem://")
+    )
+}
 CHANNEL_LAYERS = {
     "default": channel_layer(REDIS_URL)
     if REDIS_URL and not TESTING
@@ -262,10 +270,12 @@ STORAGES = {
         else "django.contrib.staticfiles.storage.StaticFilesStorage"
     },
 }
-# Files (specs/files.md): STORAGE_URL, on local disk by default, never
-# served directly (only through the download views); an s3:// URL for an
-# S3-compatible bucket, private, downloads through presigned URLs
+# Files (specs/files.md): STORAGE_URL, on local disk by default, served
+# at MEDIA_URL with DEBUG only (biwak/urls.py); an s3:// URL for an
+# S3-compatible bucket, private, pages and downloads through presigned
+# URLs (biwak/files/file_urls.py)
 MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
 if TESTING:
     MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="biwak-test-media-"))
     atexit.register(shutil.rmtree, MEDIA_ROOT, ignore_errors=True)

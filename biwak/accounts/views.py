@@ -41,8 +41,9 @@ def person_image(request, pk, version):
     """A person's image, for those who may know the person (the rule of the
     People page), else 404. The version is in the URL, so it's cached for
     good; an old version is gone with the image. Streamed through the app
-    also from a bucket: it's small, and a presigned redirect would be
-    cached past its expiry."""
+    also from a bucket: it's small, and a presigned URL (``file_urls``)
+    changes every hour, while this one is cached for a year (decided
+    2026-11-22, when pages moved to presigned URLs for files)."""
     from biwak.organizations.people import known_people
 
     person = get_object_or_404(known_people(request.user), pk=pk)

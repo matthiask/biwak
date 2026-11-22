@@ -1,3 +1,5 @@
+import re
+
 from allauth.account import views as account_views
 from allauth.mfa.base import views as mfa_views
 from allauth.mfa.webauthn import views as webauthn_views
@@ -131,6 +133,19 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("admin/", admin.site.urls),
 ]
+
+if settings.DEBUG:
+    # Files on disk at their storage's URL, as a bucket's presigned URLs
+    # when deployed (specs/files.md, "Downloads")
+    from biwak.files.views import media
+
+    urlpatterns += [
+        re_path(
+            rf"^{re.escape(settings.MEDIA_URL.lstrip('/'))}(?P<path>.*)$",
+            media,
+            name="media",
+        )
+    ]
 
 if settings.DEBUG_TOOLBAR:  # pragma: no cover
     from debug_toolbar.toolbar import debug_toolbar_urls
