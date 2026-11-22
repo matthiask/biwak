@@ -5,6 +5,7 @@ import secrets
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -69,6 +70,11 @@ class MailDelivery(models.TextChoices):
     DIGEST = "digest", _("A daily digest")
     # In the lantern only (specs/lantern.md)
     NONE = "none", _("No mails")
+
+
+def default_working_days():
+    """Monday to Friday (``date.weekday()``), the preset (specs/quiet-hours.md)"""
+    return [0, 1, 2, 3, 4]
 
 
 class Theme(models.TextChoices):
@@ -189,6 +195,23 @@ class User(AbstractBaseUser):
         _("unread notifications on the tab's icon"), default=True
     )
 
+    # Quiet hours (specs/quiet-hours.md): off by default; on, notification
+    # mails and digests wait outside the working days and hours, in the
+    # installation's time zone (decided 2026-11-22: no time zone per person)
+    quiet_hours = models.BooleanField(_("quiet hours"), default=False)
+    working_days = ArrayField(
+        models.PositiveSmallIntegerField(),
+        verbose_name=_("working days"),
+        default=default_working_days,
+        blank=True,
+    )
+    working_from = models.TimeField(_("working from"), default=dt.time(8))
+    working_until = models.TimeField(_("working until"), default=dt.time(18))
+    # Out of office: away up to and including this day, in the installation's
+    # time zone; ends by itself the day after (``is_away``)
+    away_until = models.DateField(_("away until"), null=True, blank=True)
+    away_note = models.CharField(_("away note"), max_length=200, blank=True)
+
     # The offer to add a passkey after logging in by code (specs/access.md)
     # stops for good once the person dismissed it or added a passkey
     passkey_offer_done = models.BooleanField(_("passkey offer done"), default=False)
@@ -306,6 +329,20 @@ class User(AbstractBaseUser):
         )
 
     @property
+    def is_away(self):
+        """Away today (specs/quiet-hours.md)"""
+        from biwak.accounts.quiet import is_away
+
+        return is_away(self)
+
+    @property
+    def away_text(self):
+        """ "Away until 3 Dec: back on the 4th" while away, else "" """
+        from biwak.accounts.quiet import away_text
+
+        return away_text(self)
+
+    @property
     def is_external(self):
         """Staff who aren't in the own organization: of
         another one (external agencies) or of none (individuals, e.g.
@@ -366,6 +403,8 @@ class User(AbstractBaseUser):
             "color": self.avatar_color,
             "image_url": self.image_url,
             "inactive": not self.is_active,
+            # The away sign (specs/quiet-hours.md)
+            "away": self.away_text,
         }
 
     @property

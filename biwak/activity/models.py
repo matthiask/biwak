@@ -307,6 +307,9 @@ class Notification(models.Model):
     marked_unread_at = models.DateTimeField(
         _("marked unread at"), null=True, blank=True
     )
+    # Waiting for the person's working time or return (specs/quiet-hours.md):
+    # what waited goes out as one mail
+    held_at = models.DateTimeField(_("held at"), null=True, blank=True)
 
     class Meta:
         ordering = ["created_at", "pk"]
