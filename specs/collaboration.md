@@ -106,7 +106,7 @@ for or removes somebody else.
   is the text's first line (`files.md`, "Docs"). Without JavaScript the
   page shows the text. Typing `@` lists people as in every field.
 - **Read-only** (`Doc.read_only`, staff on the page, `read_only` in
-  `PATCH /api/v1/docs/{id}/`, `biwak doc read-only DOC [--off]`): nobody
+  `PATCH /api/v1/docs/{id}/`, `biwak docs read-only DOC [--off]`): nobody
   edits, staff neither, until staff switch it off; no event; its
   checkboxes can't be ticked, comments still can.
 - **Frontend:** `frontend/collab.js` is a chunk loaded on the editor

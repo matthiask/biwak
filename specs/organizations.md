@@ -192,7 +192,7 @@ manage none (`access.md`).
   name) and `organization_id`; invitations take `organization_id` or an
   existing `organization` by name (400 for an unknown one: create it
   first), else the address's domain decides.
-- **CLI:** `biwak orgs [show|add|edit|merge|delete|move]`, `biwak member
+- **CLI:** `biwak orgs [show|create|update|merge|delete|move]`, `biwak members
   invite … --organization NAME | --organization-id ID`; `biwak members`
   shows the organization.
 - **The importer** (`biwak/importer/importer.py`): Basecamp's companies

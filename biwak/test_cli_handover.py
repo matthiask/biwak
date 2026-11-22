@@ -19,20 +19,20 @@ class HandoverCLITest(test_cli.CLITest):
 
     def test_inactive_assignees(self):
         activation.deactivate([self.gil], actor=self.root)
-        output = self.biwak("todo", "show", self.todo.pk).output
+        output = self.biwak("todos", "show", self.todo.pk).output
         self.assertIn("Gil (inactive)", output)
 
     def test_assign_several(self):
         bob = person("Bob")
         other = ops.create_todo(todolist=self.list, title="Photos", creator=self.ada)
         output = self.biwak(
-            "todo", "assign", self.todo.pk, other.pk, "--to", bob.pk
+            "todos", "assign", self.todo.pk, other.pk, "--to", bob.pk
         ).output
         self.assertIn("Copy [clients]: Bob, Gil", output)
         self.assertIn("Photos [clients]: Bob", output)
         data = json.loads(
             self.biwak(
-                "todo",
+                "todos",
                 "assign",
                 self.todo.pk,
                 "--to",
@@ -43,6 +43,6 @@ class HandoverCLITest(test_cli.CLITest):
         )
         self.assertEqual([a["id"] for a in data[0]["assignees"]], [self.ada.pk])
         # All or nothing
-        result = self.biwak("todo", "assign", self.todo.pk, 999999, "--to", bob.pk)
+        result = self.biwak("todos", "assign", self.todo.pk, 999999, "--to", bob.pk)
         self.assertNotEqual(result.exit_code, 0)
         self.assertEqual(set(self.todo.todo.assignees.all()), {self.ada})

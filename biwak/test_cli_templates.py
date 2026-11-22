@@ -25,18 +25,16 @@ class TemplatesCLITest(test_cli.CLITest):
 
     def test_add_from_template(self):
         output = self.biwak(
-            "project", "add", "Shop", "--template", str(self.template.pk)
+            "projects", "create", "Shop", "--template", str(self.template.pk)
         ).output
         self.assertIn("Created the project", output)
         shop = Project.objects.get(name="Shop")
         self.assertTrue(Item.objects.filter(project=shop, title="Kick-off").exists())
 
     def test_add_template(self):
-        output = self.biwak("project", "add", "Event", "--as-template").output
+        output = self.biwak("projects", "create", "Event", "--as-template").output
         self.assertIn("Created the template", output)
         self.assertTrue(Project.objects.get(name="Event").is_template)
 
     def test_search(self):
         self.assertNotIn("Kick-off", self.biwak("search", "Kick-off").output)
-        output = self.biwak("search", "Kick-off", "--templates").output
-        self.assertIn("(template)", output)

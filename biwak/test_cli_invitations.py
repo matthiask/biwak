@@ -1,4 +1,4 @@
-"""``biwak invite`` and ``biwak invitations`` (specs/activation.md, "Inviting")"""
+"""``biwak invitations`` and its ``create`` (specs/activation.md, "Inviting")"""
 
 import json
 
@@ -20,7 +20,8 @@ class InvitationsCLITest(test_cli.CLITest):
         bob = person("Bob")
         with self.captureOnCommitCallbacks(execute=True):
             output = self.biwak(
-                "invite",
+                "invitations",
+                "create",
                 "dora@example.net",
                 bob.email,
                 "--project",
@@ -38,7 +39,8 @@ class InvitationsCLITest(test_cli.CLITest):
 
     def test_errors_invite_nobody(self):
         result = self.biwak(
-            "invite",
+            "invitations",
+            "create",
             "dora@example.net",
             "eve@example.net",
             "--staff",
@@ -88,7 +90,9 @@ class InvitationsCLITest(test_cli.CLITest):
     def test_clients_cant(self):
         cleo = person("Cleo", client=True)
         self.ada = cleo  # The CLI's token is the test case's person
-        result = self.biwak("invite", "x@example.net", "--project", self.project.pk)
+        result = self.biwak(
+            "invitations", "create", "x@example.net", "--project", self.project.pk
+        )
         self.assertEqual(result.exit_code, 1)
         self.assertIn("403", result.output)
         self.assertEqual(self.biwak("invitations").exit_code, 1)

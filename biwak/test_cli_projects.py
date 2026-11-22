@@ -49,20 +49,20 @@ class ProjectGapsCLITest(test_cli.CLITest):
         self.limited = project("HR", members=[self.ada], all_access=False)
 
     def test_add(self):
-        output = self.biwak("project", "add", "Fresh", "--limited").output
+        output = self.biwak("projects", "create", "Fresh", "--limited").output
         self.assertIn("Fresh (limited)", output)
         created = Project.objects.get(name="Fresh")
         self.assertFalse(created.is_all_access)
         self.assertTrue(created.is_member(self.ada))
-        data = json.loads(self.biwak("project", "add", "Open", "--json").stdout)
+        data = json.loads(self.biwak("projects", "create", "Open", "--json").stdout)
         self.assertTrue(data["is_all_access"])
 
     def test_join(self):
         team = project("Team")
-        self.assertIn("Joined", self.biwak("project", "join", team.pk).output)
+        self.assertIn("Joined", self.biwak("projects", "join", team.pk).output)
         self.assertTrue(team.is_member(self.ada))
         # Ada isn't an admin: she can't join anything she doesn't see
-        result = self.biwak("project", "join", project("Secret", all_access=False).pk)
+        result = self.biwak("projects", "join", project("Secret", all_access=False).pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("404", result.output)
         self.assertEqual(
@@ -73,10 +73,10 @@ class ProjectGapsCLITest(test_cli.CLITest):
         """Own staff remove anybody, themselves included (decided 2026-11-22)"""
         bob = person("Bob")
         Membership.objects.create(project=self.project, user=bob)
-        output = self.biwak("member", "remove", self.project.pk, bob.pk).output
+        output = self.biwak("members", "remove", self.project.pk, bob.pk).output
         self.assertIn("Removed Bob Example", output)
         self.assertFalse(self.project.is_member(bob))
-        self.biwak("member", "remove", self.project.pk, self.ada.pk)
+        self.biwak("members", "remove", self.project.pk, self.ada.pk)
         self.assertFalse(self.project.is_member(self.ada))
 
     def test_admin_joins_limited(self):
@@ -86,7 +86,7 @@ class ProjectGapsCLITest(test_cli.CLITest):
         output = self.biwak("projects", "--joinable").output
         self.assertIn("Finance", output)
         self.assertNotIn("HR", output)
-        self.biwak("project", "join", other.pk)
+        self.biwak("projects", "join", other.pk)
         self.assertTrue(other.is_member(self.ada))
         self.assertNotIn("Finance", self.biwak("projects", "--joinable").output)
 
@@ -105,14 +105,14 @@ class TodoMoveCLITest(test_cli.CLITest):
 
     def test_move_one(self):
         self.todos()
-        output = self.biwak("todo", "move", self.a.pk, "--list", self.other.pk).output
+        output = self.biwak("todos", "move", self.a.pk, "--list", self.other.pk).output
         self.assertIn(f"Moved #{self.a.pk} A.", output)
         self.a.refresh_from_db()
         self.assertEqual(self.a.parent_id, self.other.pk)
         self.assertIsNone(self.a.todo.group)
         data = json.loads(
             self.biwak(
-                "todo",
+                "todos",
                 "move",
                 self.a.pk,
                 "--list",
@@ -127,7 +127,7 @@ class TodoMoveCLITest(test_cli.CLITest):
     def test_move_several(self):
         self.todos()
         output = self.biwak(
-            "todo",
+            "todos",
             "move",
             "--todos",
             f"{self.b.pk},{self.a.pk}",
@@ -146,16 +146,16 @@ class TodoMoveCLITest(test_cli.CLITest):
     def test_arguments_and_errors(self):
         self.todos()
         for args in [
-            ["todo", "move", "--list", self.other.pk],
-            ["todo", "move", self.a.pk, "--todos", "1", "--list", self.other.pk],
-            ["todo", "move", "--todos", "x", "--list", self.other.pk],
-            ["todo", "move", self.a.pk],
+            ["todos", "move", "--list", self.other.pk],
+            ["todos", "move", self.a.pk, "--todos", "1", "--list", self.other.pk],
+            ["todos", "move", "--todos", "x", "--list", self.other.pk],
+            ["todos", "move", self.a.pk],
         ]:
             with self.subTest(args=args):
                 self.assertNotEqual(self.biwak(*args).exit_code, 0)
         elsewhere = ops.create_list(
             project=project("Other", members=[self.ada]), title="X", creator=self.ada
         )
-        result = self.biwak("todo", "move", self.a.pk, "--list", elsewhere.pk)
+        result = self.biwak("todos", "move", self.a.pk, "--list", elsewhere.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("400", result.output)

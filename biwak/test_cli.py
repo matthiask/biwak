@@ -145,13 +145,13 @@ class CLICommandsTest(CLITest):
     def test_workflow(self):
         self.assertIn("Ada Example", self.biwak("me").output)
         self.assertIn("Website", self.biwak("projects").output)
-        output = self.biwak("lists", self.project.pk).output
+        output = self.biwak("lists", "--project", self.project.pk).output
         self.assertIn("Launch", output)
         self.assertIn("[clients]", output)
 
         result = self.biwak(
-            "todo",
-            "add",
+            "todos",
+            "create",
             self.list.pk,
             "Order the tent",
             "--due",
@@ -162,20 +162,23 @@ class CLICommandsTest(CLITest):
         )
         data = json.loads(result.stdout)
         self.assertEqual(data["due_on"], "2026-12-01")
-        self.assertIn("Order the tent", self.biwak("todos", self.list.pk).output)
-
-        self.biwak("todo", "edit", data["id"], "--due", "none")
-        self.assertIsNone(Item.objects.get(pk=data["id"]).todo.due_on)
-
-        result = self.biwak("todo", "comment", data["id"], input="Done *soon*\n")
-        self.assertIn("Clients can see this comment.", result.output)
         self.assertIn(
-            "Done *soon*", self.biwak("todo", "show", data["id"], "--comments").output
+            "Order the tent", self.biwak("todos", "--list", self.list.pk).output
         )
 
-        self.biwak("todo", "done", data["id"])
+        self.biwak("todos", "update", data["id"], "--due", "none")
+        self.assertIsNone(Item.objects.get(pk=data["id"]).todo.due_on)
+
+        result = self.biwak("todos", "comment", data["id"], input="Done *soon*\n")
+        self.assertIn("Clients can see this comment.", result.output)
         self.assertIn(
-            "Order the tent", self.biwak("todos", self.list.pk, "--completed").output
+            "Done *soon*", self.biwak("todos", "show", data["id"], "--comments").output
+        )
+
+        self.biwak("todos", "complete", data["id"])
+        self.assertIn(
+            "Order the tent",
+            self.biwak("todos", "--list", self.list.pk, "--completed").output,
         )
 
     def test_settings_language(self):
@@ -191,18 +194,46 @@ class CLICommandsTest(CLITest):
         self.assertEqual(data["language"], "")
         self.assertNotEqual(self.biwak("settings", "--language", "fr").exit_code, 0)
 
+    def test_groups_list_and_need_what_they_list(self):
+        """The group alone lists (specs/cli-style.md); what it lists by is an
+        option only listing needs"""
+        for group, option in [
+            ("lists", "--project"),
+            ("members", "--project"),
+            ("messages", "--project"),
+            ("checkins", "--project"),
+            ("files", "--project"),
+            ("links", "--project"),
+            ("subscriptions", "--item"),
+        ]:
+            with self.subTest(group=group):
+                result = self.biwak(group)
+                self.assertEqual(result.exit_code, 2)
+                self.assertIn(f"Missing option '{option}'", result.output)
+        self.assertIn(
+            "Launch", self.biwak("lists", "--project", self.project.pk).output
+        )
+        self.assertEqual(self.biwak("todos").exit_code, 0)
+        self.assertIn("Commands:", self.biwak("docs").output)
+
     def test_archiving_lists(self):
         self.assertIn(
-            "Archived Launch", self.biwak("list", "archive", self.list.pk).output
+            "Archived Launch", self.biwak("lists", "archive", self.list.pk).output
         )
-        self.assertNotIn("Launch", self.biwak("lists", self.project.pk).output)
-        archived = self.biwak("lists", self.project.pk, "--archived", "--json")
+        self.assertNotIn(
+            "Launch", self.biwak("lists", "--project", self.project.pk).output
+        )
+        archived = self.biwak(
+            "lists", "--project", self.project.pk, "--archived", "--json"
+        )
         self.assertEqual([i["title"] for i in json.loads(archived.stdout)], ["Launch"])
         data = json.loads(
-            self.biwak("list", "unarchive", self.list.pk, "--json").stdout
+            self.biwak("lists", "unarchive", self.list.pk, "--json").stdout
         )
         self.assertEqual(data["status"], "active")
-        self.assertIn("Launch", self.biwak("lists", self.project.pk).output)
+        self.assertIn(
+            "Launch", self.biwak("lists", "--project", self.project.pk).output
+        )
 
     # Small pages, server and CLI: every list comes in several of them
     @patch.object(api_conventions, "PAGE_SIZE", 3)
@@ -223,11 +254,11 @@ class CLICommandsTest(CLITest):
         def count(*args):
             return len(json.loads(self.biwak(*args, "--json").stdout))
 
-        self.assertEqual(count("todos", self.list.pk, "--completed"), 5)
+        self.assertEqual(count("todos", "--list", self.list.pk, "--completed"), 5)
         self.assertEqual(count("todos"), 5)
         self.assertEqual(count("todos", "--completed"), 5)
         data = json.loads(
-            self.biwak("todo", "show", todos[0].pk, "--comments", "--json").stdout
+            self.biwak("todos", "show", todos[0].pk, "--comments", "--json").stdout
         )
         self.assertEqual(len(data["comments"]), 5)
         for todo in todos[:6]:
@@ -243,18 +274,23 @@ class CLICommandsTest(CLITest):
 
     def test_repeat(self):
         result = self.biwak(
-            "todo", "add", self.list.pk, "Pay rent", "--due", "2026-11-20",
+            "todos", "create", self.list.pk, "Pay rent", "--due", "2026-11-20",
             "--repeat", "monthly", "--json",
         )  # fmt: skip
         data = json.loads(result.stdout)
         self.assertEqual(data["recurrence"], "FREQ=MONTHLY;BYMONTHDAY=20")
         self.assertIn(
             "Repeats: the 20th of every month",
-            self.biwak("todo", "show", data["id"]).output,
+            self.biwak("todos", "show", data["id"]).output,
         )
         # Stored and shown in the canonical form (decided 2026-11-21)
         result = self.biwak(
-            "todo", "edit", data["id"], "--repeat", "FREQ=WEEKLY;BYDAY=TH,MO", "--json"
+            "todos",
+            "update",
+            data["id"],
+            "--repeat",
+            "FREQ=WEEKLY;BYDAY=TH,MO",
+            "--json",
         )
         self.assertEqual(
             json.loads(result.stdout)["recurrence"], "FREQ=WEEKLY;BYDAY=MO,TH"
@@ -262,9 +298,9 @@ class CLICommandsTest(CLITest):
         self.assertEqual(
             Item.objects.get(pk=data["id"]).todo.recurrence, "FREQ=WEEKLY;BYDAY=MO,TH"
         )
-        self.biwak("todo", "edit", data["id"], "--repeat", "none")
+        self.biwak("todos", "update", data["id"], "--repeat", "none")
         self.assertEqual(Item.objects.get(pk=data["id"]).todo.recurrence, "")
-        result = self.biwak("todo", "edit", data["id"], "--repeat", "sometimes")
+        result = self.biwak("todos", "update", data["id"], "--repeat", "sometimes")
         self.assertEqual(result.exit_code, 1)
 
     def test_project_colors(self):
@@ -273,7 +309,7 @@ class CLICommandsTest(CLITest):
         # The CLI has its own copy of the palette's names
         self.assertEqual(biwak_cli.commands.PALETTE, Color.values)
         output = self.biwak(
-            "project", "edit", self.project.pk, "--color", "lake"
+            "projects", "update", self.project.pk, "--color", "lake"
         ).output
         self.assertIn("Lake", output)
         self.project.refresh_from_db()
@@ -281,30 +317,32 @@ class CLICommandsTest(CLITest):
         self.assertIn("Lake", self.biwak("projects").output)
         data = json.loads(
             self.biwak(
-                "project", "edit", self.project.pk, "--color", "none", "--json"
+                "projects", "update", self.project.pk, "--color", "none", "--json"
             ).output
         )
         self.assertEqual((data["color"], data["color_name"]), ("", ""))
         # Not a color of the palette
         self.assertNotEqual(
             self.biwak(
-                "project", "edit", self.project.pk, "--color", "amber"
+                "projects", "update", self.project.pk, "--color", "amber"
             ).exit_code,
             0,
         )
-        self.assertNotEqual(self.biwak("project", "edit", self.project.pk).exit_code, 0)
+        self.assertNotEqual(
+            self.biwak("projects", "update", self.project.pk).exit_code, 0
+        )
         data = json.loads(
-            self.biwak("project", "add", "Camp", "--color", "bark", "--json").output
+            self.biwak("projects", "create", "Camp", "--color", "bark", "--json").output
         )
         self.assertEqual(data["color"], "bark")
-        data = json.loads(self.biwak("project", "add", "Other", "--json").output)
+        data = json.loads(self.biwak("projects", "create", "Other", "--json").output)
         self.assertNotEqual(data["color"], "")
 
     def test_project_colors_are_staff_only(self):
         client = person("Kim", client=True)
         self.project.memberships.create(user=client)
         self.ada = client
-        result = self.biwak("project", "edit", self.project.pk, "--color", "lake")
+        result = self.biwak("projects", "update", self.project.pk, "--color", "lake")
         self.assertNotEqual(result.exit_code, 0)
         self.project.refresh_from_db()
         self.assertEqual(self.project.color, "")
@@ -316,15 +354,15 @@ class CLICommandsTest(CLITest):
             creator=self.ada,
             notes="- [x] tent\n- [ ] stove",
         )
-        self.assertIn("Checklist: 1/2", self.biwak("todo", "show", todo.pk).output)
-        data = json.loads(self.biwak("todo", "show", todo.pk, "--json").stdout)
+        self.assertIn("Checklist: 1/2", self.biwak("todos", "show", todo.pk).output)
+        data = json.loads(self.biwak("todos", "show", todo.pk, "--json").stdout)
         self.assertEqual((data["checklist_done"], data["checklist_total"]), (1, 2))
         self.assertIn('type="checkbox"', data["notes_html"])
         # Editing the text changes the count
-        self.biwak("todo", "edit", todo.pk, "--notes", "- [x] a\n- [x] b\n- [x] c")
-        self.assertIn("Checklist: 3/3", self.biwak("todo", "show", todo.pk).output)
+        self.biwak("todos", "update", todo.pk, "--notes", "- [x] a\n- [x] b\n- [x] c")
+        self.assertIn("Checklist: 3/3", self.biwak("todos", "show", todo.pk).output)
         plain = ops.create_todo(todolist=self.list, title="Plain", creator=self.ada)
-        self.assertNotIn("Checklist", self.biwak("todo", "show", plain.pk).output)
+        self.assertNotIn("Checklist", self.biwak("todos", "show", plain.pk).output)
 
     def test_todos_across_projects(self):
         other = project("Other", members=[self.ada])
@@ -374,10 +412,14 @@ class CLICommandsTest(CLITest):
             result = self.biwak("todos", "--due", group, "--json")
             self.assertEqual(result.exit_code, 0, group)
             self.assertEqual(json.loads(result.stdout), [])
-        self.assertEqual(self.biwak("todos", self.list.pk, "--mine").exit_code, 1)
-        self.assertEqual(self.biwak("todos", self.list.pk, "--by-due").exit_code, 1)
+        self.assertEqual(
+            self.biwak("todos", "--list", self.list.pk, "--mine").exit_code, 1
+        )
+        self.assertEqual(
+            self.biwak("todos", "--list", self.list.pk, "--by-due").exit_code, 1
+        )
         # The list's own to-dos stay
-        self.assertIn("Nobodys", self.biwak("todos", self.list.pk).output)
+        self.assertIn("Nobodys", self.biwak("todos", "--list", self.list.pk).output)
 
     def test_todos_assigned_by_me(self):
         ops.create_todo(
@@ -405,22 +447,22 @@ class CLICommandsTest(CLITest):
         self.assertEqual({t["title"] for t in data}, {"Given"})
         self.assertEqual(data[0]["assignees"][0]["assigned_by"]["id"], self.ada.pk)
         self.assertEqual(
-            self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
+            self.biwak("todos", "--list", self.list.pk, "--assigned-by-me").exit_code, 1
         )
 
     def test_optional_arguments_show_in_brackets(self):
         for command, usage in [
-            (["todos"], "todos [OPTIONS] [LIST]"),
-            (["todo", "move"], "move [OPTIONS] [TODO]"),
+            (["todos", "move"], "move [OPTIONS] [TODO]"),
+            (["checkins", "resume"], "resume [OPTIONS] [QUESTION]"),
         ]:
             with self.subTest(command=command):
                 self.assertIn(usage, self.biwak(*command, "--help").output)
 
     def test_read_only_and_errors(self):
-        result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")
+        result = self.biwak("todos", "create", self.list.pk, "Nope", access="read")
         self.assertEqual(result.exit_code, 1)
         self.assertIn("only allows reading", result.output)
-        result = self.biwak("todo", "show", 999999)
+        result = self.biwak("todos", "show", 999999)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("404", result.output)
 
@@ -437,20 +479,26 @@ class CLICommandsTest(CLITest):
         sketch.write_bytes(b"\x89PNG\r\n")
 
         result = self.biwak(
-            "todo", "add", self.list.pk, "Pitch the tent", "--attach", plan, "--json"
+            "todos",
+            "create",
+            self.list.pk,
+            "Pitch the tent",
+            "--attach",
+            plan,
+            "--json",
         )
         data = json.loads(result.stdout)
         attachment = Attachment.objects.get()
         self.assertEqual(attachment.item_id, data["id"])
         self.assertEqual(data["notes"], f"[plan.pdf](attachment:{attachment.key})")
 
-        self.biwak("todo", "edit", data["id"], "--attach", sketch)
+        self.biwak("todos", "update", data["id"], "--attach", sketch)
         notes = Item.objects.get(pk=data["id"]).todo.notes
         self.assertIn("[plan.pdf]", notes)
         self.assertIn("![sketch.png]", notes)
 
         self.biwak(
-            "todo", "comment", data["id"], "Both", "--attach", plan, "--attach", sketch
+            "todos", "comment", data["id"], "Both", "--attach", plan, "--attach", sketch
         )
         comment = Comment.objects.get()
         self.assertTrue(comment.content.startswith("Both\n\n[plan.pdf](attachment:"))

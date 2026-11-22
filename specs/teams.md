@@ -85,7 +85,7 @@ for the picker's `data-teams` and the `@` list's entries;
 - Staff list and show teams with their members, own staff create,
   change and delete them (`/api/v1/teams/`, `{name, members: [IDs]}`,
   PATCH replaces the members; externals 403), the CLI `biwak teams
-  [show|add|edit|delete]` with `--json` and `--members 3,4`. Clients get
+  [show|create|update|delete]` with `--json` and `--members 3,4`. Clients get
   404.
 - **`@Team` is only expanded on the web** (decided 2026-11-22): texts
   and assignees sent through the API, the CLI and mail replies don't

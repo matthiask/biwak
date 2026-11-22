@@ -6,7 +6,29 @@ pairs a plural command that shows things with a singular group that acts
 on them (`biwak todos LIST`, `biwak todo add`); the other apps have one
 group per thing.
 
-**Status:** open.
+**Status:** built (2026-11-22, CLI 0.60.0, `MINIMUM` 0.60.0); the rules
+are in `api-cli.md`.
+
+What was decided on the way (by the rules, 2026-11-22):
+
+- Listing by a thing is an option, not an argument (a group's argument
+  would swallow its subcommands): `biwak members --project ID`, `biwak
+  lists|messages|checkins|links --project ID`, `biwak files --project ID
+  [--folder ID]`, `biwak todos --list ID`, `biwak subscriptions --item
+  ID`. Without it they stop with "Missing option".
+- `members add|remove` (not `create|delete`): like `subscriptions
+  add|remove`, they add an existing person to something.
+- `invite` is `invitations create`; `invitations withdraw` stays (it
+  does more than delete: it removes the person from their projects).
+- `folder rename` and `folder color` are one `folders update FOLDER
+  [--title] [--color]`; `folder move ITEM [FOLDER]` is `folders move`
+  (into a folder), `move ITEM --to PROJECT` is `items move`.
+- `orgs move PERSON [ORG]` stays in `orgs`.
+- `docs`, `folders`, `reactions` and `items` have nothing to list
+  without an item: alone they show their help.
+- `todo done` is `todos complete`; `message post` is `messages create`.
+- `biwak search --templates` is gone (search never finds templates,
+  `templates.md`).
 
 ## The rules
 

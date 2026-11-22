@@ -1,4 +1,4 @@
-"""``biwak subscribers`` and ``biwak subscribe``; the CLI test case is the
+"""``biwak subscriptions``; the CLI test case is the
 one of test_cli.py"""
 
 import json
@@ -21,16 +21,20 @@ class SubscribersCLITest(test_cli.CLITest):
 
     def test_subscribers(self):
         self.make()
-        output = self.biwak("subscribers", self.todo.pk).output
+        output = self.biwak("subscriptions", "--item", self.todo.pk).output
         self.assertIn(f"Subscribers of #{self.todo.pk} [clients]", output)
         self.assertIn("Ada Example", output)
-        data = json.loads(self.biwak("subscribers", self.todo.pk, "--json").stdout)
+        data = json.loads(
+            self.biwak("subscriptions", "--item", self.todo.pk, "--json").stdout
+        )
         self.assertTrue(data["visible_to_clients"])
         self.assertEqual(data["subscribers"][0]["person"]["name"], "Ada Example")
 
     def test_subscribe_quietly(self):
         self.make()
-        result = self.biwak("subscribe", self.todo.pk, "--people", f"{self.bob.pk}")
+        result = self.biwak(
+            "subscriptions", "add", self.todo.pk, "--people", f"{self.bob.pk}"
+        )
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertIn("Subscribed 1", result.output)
         self.assertIn("Clients can see this", result.output)
@@ -42,7 +46,8 @@ class SubscribersCLITest(test_cli.CLITest):
     def test_subscribe_and_tell_them_now(self):
         self.make()
         result = self.biwak(
-            "subscribe",
+            "subscriptions",
+            "add",
             self.todo.pk,
             "--people",
             f"{self.bob.pk},{self.cleo.pk}",
@@ -60,13 +65,13 @@ class SubscribersCLITest(test_cli.CLITest):
 
     def test_errors(self):
         self.make()
-        result = self.biwak("subscribe", self.todo.pk, "--people", "x")
+        result = self.biwak("subscriptions", "add", self.todo.pk, "--people", "x")
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("IDs separated by commas", result.output)
-        result = self.biwak("subscribe", self.todo.pk, "--people", "999999")
+        result = self.biwak("subscriptions", "add", self.todo.pk, "--people", "999999")
         self.assertNotEqual(result.exit_code, 0)
         result = self.biwak(
-            "subscribe", self.todo.pk, "--people", self.bob.pk, access="read"
+            "subscriptions", "add", self.todo.pk, "--people", self.bob.pk, access="read"
         )
         self.assertNotEqual(result.exit_code, 0)
         self.assertFalse(Subscription.objects.filter(user=self.bob))
@@ -75,15 +80,15 @@ class SubscribersCLITest(test_cli.CLITest):
         """Subscribing is the switch (specs/notifications.md, "Subscriptions")"""
         self.make()
         Subscription.objects.filter(user=self.ada).delete()
-        output = self.biwak("subscribe", self.todo.pk).output
+        output = self.biwak("subscriptions", "add", self.todo.pk).output
         self.assertIn(f"Subscribed to #{self.todo.pk}.", output)
         self.assertTrue(Subscription.objects.filter(user=self.ada).exists())
-        output = self.biwak("unsubscribe", self.todo.pk).output
+        output = self.biwak("subscriptions", "remove", self.todo.pk).output
         self.assertIn(f"Unsubscribed from #{self.todo.pk}.", output)
         self.assertFalse(Subscription.objects.filter(user=self.ada).exists())
         # Not while assigned
         ops.assign(self.todo, [self.ada], actor=self.bob)
-        result = self.biwak("unsubscribe", self.todo.pk)
+        result = self.biwak("subscriptions", "remove", self.todo.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("400", result.output)
         # No level for a to-do, only for lists

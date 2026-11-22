@@ -169,8 +169,8 @@ item; every item's page links to it in its "More" menu, for staff
   Bookmarks of what the person can't see anymore are hidden, not deleted, and come back when they see it
   again.
 - API: `GET /bookmarks/`, `PUT`/`DELETE` `items/{id}/bookmark/` and
-  `projects/{id}/bookmark/`; CLI `biwak bookmarks`, `biwak bookmark
-  add|remove [--project] ID`.
+  `projects/{id}/bookmark/`; CLI `biwak bookmarks`, `biwak bookmarks
+  create|delete [--project] ID`.
 
 ## Links
 
@@ -205,5 +205,5 @@ there only duplicated it.
 - API: `GET`/`POST projects/{id}/links/` (in order), `PATCH`/`DELETE
   links/{id}/`, `PUT projects/{id}/links/order/` (all IDs);
   `visible_to_clients` is the link's own switch. CLI: `biwak links
-  PROJECT`, `biwak link add PROJECT URL [--title] [--clients]`, `biwak
-  link delete LINK`.
+  --project PROJECT`, `biwak links create PROJECT URL [--title]
+  [--clients]`, `biwak links delete LINK`.

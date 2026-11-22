@@ -99,7 +99,7 @@ Traps the tests cover (`schedule.py`):
   occurrences aren't asked. Paused, trashed, archived questions and
   those of archived projects aren't asked. A project's paused questions
   resume together (the importer leaves them paused; `POST
-  /api/v1/projects/{id}/checkins/resume/`, `biwak checkin resume
+  /api/v1/projects/{id}/checkins/resume/`, `biwak checkins resume
   --project ID`).
 - **Editing the schedule** (the rule widget, `rule-widget.md`) counts
   from now: today's time only if still ahead, never a date already
@@ -144,4 +144,4 @@ Traps the tests cover (`schedule.py`):
   questions ("due") on the project page and Home.
 - API: questions, occurrences with answers (cursor-paginated), answering,
   the mail mode, `GET /api/v1/me/checkins/due/`. CLI: `biwak checkins
-  PROJECT`, `biwak checkin show|answer|due|resume`.
+  --project PROJECT`, `biwak checkins show|answer|due|create|pause|resume|mail`.

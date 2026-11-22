@@ -22,8 +22,8 @@ in the project's "More" menu (`projects-overview.md`).
   decided 2026-11-21: the list itself is the place), with
   `ops.can_change()` (staff, and clients for lists they created). API:
   `PATCH lists/{id}/ {"archived": …}`, `GET
-  projects/{id}/lists/?archived=true`; CLI: `biwak list
-  archive|unarchive LIST`, `biwak lists --archived`.
+  projects/{id}/lists/?archived=true`; CLI: `biwak lists
+  archive|unarchive LIST`, `biwak lists --project ID --archived`.
 - **Never automatic:** a list isn't archived when it's empty or all done.
 - **Archived lists** are in the project page's "Archived lists" section,
   and left out of the project's lists, the to-dos page, Home and the

@@ -60,4 +60,4 @@ thing with who reacted.
 `/comments/{id}/reactions/` with `{"content": …}`; to-dos, messages,
 docs, files, answers and comments carry `reactions` (`{content, count,
 people, mine}`, loaded with `reactions.operations.prefetch()`). `biwak
-react TODO CONTENT [--comment ID]` toggles.
+reactions create TODO CONTENT [--comment ID]` toggles.

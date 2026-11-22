@@ -92,7 +92,7 @@ class QuietHoursCLITest(test_cli.CLITest):
         self.ada.save()
         self.assertIn(
             "Ada Example (away until 2026-12-03)",
-            self.biwak("members", self.project.pk).output,
+            self.biwak("members", "--project", self.project.pk).output,
         )
         self.assertIn(
             "Ada Example (away until 2026-12-03)", self.biwak("people").output

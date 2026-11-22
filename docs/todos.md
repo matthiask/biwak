@@ -75,7 +75,7 @@ their to-dos go to someone else:
   If one of the to-dos was trashed or you can't see it anymore, nothing
   changes and the form says so. Taking somebody off is done per to-do.
 
-`biwak todo assign 12 13 14 --to 7 [--replace]` does the same.
+`biwak todos assign 12 13 14 --to 7 [--replace]` does the same.
 
 ## A to-do
 

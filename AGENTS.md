@@ -178,9 +178,10 @@ What every part does the same way. Look at how the core does it
    `biwak/api.py`, following `biwak/api_conventions.py`
    (`visible_to_clients` on every item, Markdown plus `*_html`, cursor
    pagination for lists that grow). Same operations as the pages.
-7. **CLI.** Commands in `cli/biwak_cli/commands.py` with `--json`; mark
-   what clients can see with `[clients]`. Bump `cli/pyproject.toml`'s
-   version.
+7. **CLI.** Commands in `cli/biwak_cli/commands.py` with `--json`, named
+   by the rules in `specs/api-cli.md` (a plural group per thing that
+   lists alone, verbs as subcommands); mark what clients can see with
+   `[clients]`. Bump `cli/pyproject.toml`'s version.
 8. **Audit log.** New tables people change get `audit_tables()` in a
    migration (`biwak/audit/migrations/0002_audited_tables.py` shows how).
 9. **Daily or hourly work** goes into `fairy_tasks` (daily) or an

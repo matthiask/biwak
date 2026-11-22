@@ -176,8 +176,8 @@ it for others, clients and externals see and change only their own
 (externals too, decided 2026-11-21 after a review:
 `can_change_notify_choice()`). API: `notify` (`default` or `tagged`;
 `null` for clients and externals about others) on the members list, adding
-and inviting; `biwak members`, `biwak member add|invite …
-[--only-tagged]`.
+and inviting; `biwak members --project ID`, `biwak members
+add|invite … [--only-tagged]`.
 
 Pages: the level and delivery on `/accounts/notifications/`; a project's
 override in its "More" menu, a list's in the list's. The settings page
@@ -283,8 +283,8 @@ large).
 `/api/v1/items/{id}/notifications/` (lists only), `GET
 /api/v1/items/{id}/mentionable/?q=`. `biwak notifications` shows and
 sets the level and delivery, `--project` and `--item` the overrides
-(`--level default` removes one); `biwak subscribe ITEM` and `biwak
-unsubscribe ITEM` for oneself.
+(`--level default` removes one); `biwak subscriptions add ITEM`
+and `biwak subscriptions remove ITEM` for oneself.
 
 ## Replying by mail (stage 2)
 

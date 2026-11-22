@@ -57,6 +57,12 @@ attach_option = click.option(
 )
 
 
+def need(value, option):
+    """An option a group needs for listing but its commands don't"""
+    if value is None:
+        raise click.UsageError(f"Missing option '{option}'.")
+
+
 def with_attachments(project_id, text, paths):
     """Uploads the files to the project and appends their Markdown to the
     text; saving the text links them to the item"""
@@ -200,7 +206,7 @@ def settings(language, as_json):
 # Projects and lists ---------------------------------------------------------
 
 
-@cli.command()
+@cli.group(invoke_without_command=True)
 @json_option
 @click.option("--archived", is_flag=True, help="Archived projects instead.")
 @click.option(
@@ -231,7 +237,9 @@ def settings(language, as_json):
     is_flag=True,
     help="With --all: with open to-dos whose assignees are all inactive.",
 )
+@click.pass_context
 def projects(
+    ctx,
     as_json,
     archived,
     templates,
@@ -242,8 +250,10 @@ def projects(
     limited,
     inactive_todos,
 ):
-    """The projects you can open, bookmarked ones (*) first, with the latest
-    activity (for clients: of what they see)"""
+    """Projects; without a command the ones you can open, bookmarked ones
+    (*) first, with the latest activity (for clients: of what they see)"""
+    if ctx.invoked_subcommand is not None:
+        return None
     if everything:
         return all_projects(
             as_json,
@@ -318,11 +328,6 @@ def all_projects(as_json, filters):
     return None
 
 
-@cli.group()
-def project():
-    """Create and join projects"""
-
-
 color_option = click.option(
     "--color",
     type=click.Choice([*PALETTE, "none"]),
@@ -330,7 +335,7 @@ color_option = click.option(
 )
 
 
-@project.command("add")
+@projects.command("create")
 @click.argument("name")
 @click.option("--description", default="", help="Markdown.")
 @click.option(
@@ -387,7 +392,7 @@ def project_add(
     return None
 
 
-@project.command("edit")
+@projects.command("update")
 @click.argument("project_id", metavar="ID", type=int)
 @click.option("--name")
 @click.option("--description", help="Markdown, replaces the description.")
@@ -417,7 +422,7 @@ def project_edit(project_id, name, description, limited, color, as_json):
     return None
 
 
-@project.command("join")
+@projects.command("join")
 @click.argument("project_id", metavar="ID", type=int)
 @json_option
 def project_join(project_id, as_json):
@@ -450,12 +455,17 @@ def notify_word(person):
     return NOTIFY_WORDS.get(person["notify"], "") if person["notify"] else ""
 
 
-@cli.command()
-@click.argument("project", type=int)
+@cli.group(invoke_without_command=True)
+@click.option("--project", type=int, help="The project's ID.")
 @json_option
-def members(project, as_json):
-    """The people in PROJECT; staff see addresses and how each is notified
-    (notified by default, only when tagged, no mails), clients only their own"""
+@click.pass_context
+def members(ctx, project, as_json):
+    """The people in projects; without a command those of --project: staff
+    see addresses and how each is notified (notified by default, only when
+    tagged, no mails), clients only their own"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(project, "--project")
     data = request("GET", f"projects/{project}/members/")
     if as_json:
         return echo_json(data)
@@ -473,12 +483,7 @@ def members(project, as_json):
     return None
 
 
-@cli.group()
-def member():
-    """Add, invite and remove people in a project"""
-
-
-@member.command("add")
+@members.command("add")
 @click.argument("project", type=int)
 @click.argument("person", type=int)
 @only_tagged_option
@@ -497,7 +502,7 @@ def member_add(project, person, only_tagged, as_json):
     return None
 
 
-@member.command("invite")
+@members.command("invite")
 @click.argument("project", type=int)
 @click.argument("email")
 @click.option("--name", default="", help="Their name, for new people.")
@@ -530,53 +535,6 @@ def member_invite(
         return echo_json(data)
     click.echo("Invited: ", nl=False)
     show_member(data)
-    return None
-
-
-@cli.command()
-@click.argument("emails", nargs=-1, required=True)
-@click.option(
-    "--project",
-    "projects",
-    type=int,
-    multiple=True,
-    required=True,
-    help="A project to invite them to (repeat for several).",
-)
-@click.option(
-    "--organization",
-    default="",
-    help="New people's organization, by name (see biwak orgs); default: the"
-    " one of each address's domain.",
-)
-@click.option("--organization-id", type=int, help="The same by ID.")
-@click.option("--staff", is_flag=True, help="Staff instead of clients (admins).")
-@only_tagged_option
-@json_option
-def invite(
-    emails, projects, organization, organization_id, staff, only_tagged, as_json
-):
-    """Invite the people with these addresses to every --project at once:
-    new people (clients unless --staff) get one mail naming the projects,
-    people with an account are added. All or nothing: an address that
-    can't be invited invites nobody."""
-    person = {"organization": organization, "is_client": not staff}
-    if organization_id is not None:
-        person["organization_id"] = organization_id
-    data = request(
-        "POST",
-        "invitations/",
-        json={
-            "people": [{"email": email, **person} for email in emails],
-            "projects": list(projects),
-            "notify": "tagged" if only_tagged else "default",
-        },
-    )
-    if as_json:
-        return echo_json(data)
-    for invited in data:
-        word = "Invited" if invited["created"] else "Added"
-        click.echo(f"{word}: {invited['person']['name']} ({invited['person']['id']})")
     return None
 
 
@@ -721,6 +679,53 @@ def invitations(ctx, as_json):
     return None
 
 
+@invitations.command("create")
+@click.argument("emails", nargs=-1, required=True)
+@click.option(
+    "--project",
+    "projects",
+    type=int,
+    multiple=True,
+    required=True,
+    help="A project to invite them to (repeat for several).",
+)
+@click.option(
+    "--organization",
+    default="",
+    help="New people's organization, by name (see biwak orgs); default: the"
+    " one of each address's domain.",
+)
+@click.option("--organization-id", type=int, help="The same by ID.")
+@click.option("--staff", is_flag=True, help="Staff instead of clients (admins).")
+@only_tagged_option
+@json_option
+def invitations_create(
+    emails, projects, organization, organization_id, staff, only_tagged, as_json
+):
+    """Invite the people with these addresses to every --project at once:
+    new people (clients unless --staff) get one mail naming the projects,
+    people with an account are added. All or nothing: an address that
+    can't be invited invites nobody."""
+    person = {"organization": organization, "is_client": not staff}
+    if organization_id is not None:
+        person["organization_id"] = organization_id
+    data = request(
+        "POST",
+        "invitations/",
+        json={
+            "people": [{"email": email, **person} for email in emails],
+            "projects": list(projects),
+            "notify": "tagged" if only_tagged else "default",
+        },
+    )
+    if as_json:
+        return echo_json(data)
+    for invited in data:
+        word = "Invited" if invited["created"] else "Added"
+        click.echo(f"{word}: {invited['person']['name']} ({invited['person']['id']})")
+    return None
+
+
 @invitations.command("resend")
 @click.argument("person", type=int)
 @json_option
@@ -814,7 +819,7 @@ def orgs_show(org, as_json):
     return None
 
 
-@orgs.command("add")
+@orgs.command("create")
 @click.argument("name")
 @click.option(
     "--domain", "domains", multiple=True, help="e.g. example.org, repeatable."
@@ -832,7 +837,7 @@ def orgs_add(name, domains, as_json):
     return None
 
 
-@orgs.command("edit")
+@orgs.command("update")
 @click.argument("org", type=int)
 @click.option("--name", help="The new name, for everybody.")
 @click.option(
@@ -968,7 +973,7 @@ def teams_show(team, as_json):
     return None
 
 
-@teams.command("add")
+@teams.command("create")
 @click.argument("name")
 @members_option
 @json_option
@@ -986,7 +991,7 @@ def teams_add(name, members, as_json):
     return None
 
 
-@teams.command("edit")
+@teams.command("update")
 @click.argument("team", type=int)
 @click.option("--name", help="The new name.")
 @members_option
@@ -1019,7 +1024,7 @@ def teams_delete(team, as_json):
     return None
 
 
-@member.command("remove")
+@members.command("remove")
 @click.argument("project", type=int)
 @click.argument("person", type=int)
 @json_option
@@ -1033,12 +1038,17 @@ def member_remove(project, person, as_json):
     return None
 
 
-@cli.command()
-@click.argument("project", type=int)
+@cli.group(invoke_without_command=True)
+@click.option("--project", type=int, help="The project's ID.")
 @click.option("--archived", is_flag=True, help="Archived lists instead.")
 @json_option
-def lists(project, archived, as_json):
-    """The to-do lists of PROJECT"""
+@click.pass_context
+def lists(ctx, project, archived, as_json):
+    """To-do lists; without a command those of --project. Copy, archive and
+    unarchive lists, add to-dos from text."""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(project, "--project")
     data = request("GET", f"projects/{project}/lists/", params={"archived": archived})
     if as_json:
         return echo_json(data)
@@ -1049,12 +1059,7 @@ def lists(project, archived, as_json):
     return None
 
 
-@cli.group("list")
-def list_group():
-    """Archive, unarchive and copy to-do lists, add to-dos from text"""
-
-
-@list_group.command("copy")
+@lists.command("copy")
 @click.argument("list_id", metavar="LIST", type=int)
 @click.option("--to", "project", type=int, required=True, help="The project's ID.")
 @click.option("--title", help="The copy's title; the list's own by default.")
@@ -1085,7 +1090,7 @@ def list_copy(list_id, project, title, shift, no_dates, visible, as_json):
     return None
 
 
-@list_group.command("archive")
+@lists.command("archive")
 @click.argument("list_id", metavar="LIST", type=int)
 @json_option
 def list_archive(list_id, as_json):
@@ -1097,7 +1102,7 @@ def list_archive(list_id, as_json):
     return None
 
 
-@list_group.command("unarchive")
+@lists.command("unarchive")
 @click.argument("list_id", metavar="LIST", type=int)
 @json_option
 def list_unarchive(list_id, as_json):
@@ -1109,8 +1114,8 @@ def list_unarchive(list_id, as_json):
     return None
 
 
-@cli.command()
-@click.argument("list_id", metavar="[LIST]", type=int, required=False)
+@cli.group(invoke_without_command=True)
+@click.option("--list", "list_id", type=int, help="Only this list's ID, by group.")
 @click.option("--completed", is_flag=True, help="Completed to-dos, latest first.")
 @click.option("--mine", is_flag=True, help="Only to-dos assigned to you.")
 @click.option(
@@ -1136,18 +1141,30 @@ def list_unarchive(list_id, as_json):
     " those starting later; default: all.",
 )
 @json_option
+@click.pass_context
 def todos(
-    list_id, completed, mine, assigned_by_me, project_id, due, by_due, started, as_json
+    ctx,
+    list_id,
+    completed,
+    mine,
+    assigned_by_me,
+    project_id,
+    due,
+    by_due,
+    started,
+    as_json,
 ):
-    """The open to-dos of LIST, by group; without LIST across all projects,
-    by project or by due date (--mine, --assigned-by-me, --project, --due,
-    --by-due)"""
+    """To-dos; without a command the open ones of --list, by group, or
+    across all projects, by project or by due date (--mine,
+    --assigned-by-me, --project, --due, --by-due)"""
+    if ctx.invoked_subcommand is not None:
+        return None
     if list_id and (
         mine or assigned_by_me or project_id or due or by_due or started is not None
     ):
         terminate(
             "--mine, --assigned-by-me, --project, --due, --by-due and"
-            " --started/--not-started go without LIST."
+            " --started/--not-started go without --list."
         )
     if list_id and completed:
         data = paginate(f"lists/{list_id}/todos/completed/")
@@ -1242,11 +1259,6 @@ repeat_option = click.option(
 )
 
 
-@cli.group()
-def todo():
-    """Show, add, change, complete and comment on to-dos"""
-
-
 def show_reactions(reactions):
     """``👍 2 (Ada, Bob), Thanks! 1 (Cleo)``, yours marked with *"""
     return ", ".join(
@@ -1281,7 +1293,7 @@ def show_todo(data):
         click.echo(f"\n{data['notes']}")
 
 
-@todo.command("show")
+@todos.command("show")
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.option("--comments", is_flag=True, help="With the comments.")
 @json_option
@@ -1301,7 +1313,7 @@ def todo_show(todo_id, comments, as_json):
     return None
 
 
-@todo.command("add")
+@todos.command("create")
 @click.argument("list_id", metavar="LIST", type=int)
 @click.argument("title")
 @click.option("--notes", default="", help="Markdown.")
@@ -1338,7 +1350,7 @@ def todo_add(
     return None
 
 
-@list_group.command("add-from-text")
+@lists.command("add-from-text")
 @click.argument("list_id", metavar="LIST", type=int)
 @click.argument("file", type=click.File(encoding="utf-8-sig"), required=False)
 @click.option("--preview", is_flag=True, help="Show what would be added, add nothing.")
@@ -1384,7 +1396,7 @@ def list_add_from_text(list_id, file, preview, as_json):
     return None
 
 
-@todo.command("edit")
+@todos.command("update")
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.option("--title")
 @click.option("--notes", help="Markdown, replaces the notes.")
@@ -1432,7 +1444,7 @@ def todo_edit(todo_id, title, notes, due, starts, assign, attach, repeat, as_jso
     return None
 
 
-@todo.command("move")
+@todos.command("move")
 @click.argument("todo_id", metavar="[TODO]", type=int, required=False)
 @click.option(
     "--todos",
@@ -1473,7 +1485,7 @@ def todo_move(todo_id, todo_ids, list_id, group, as_json):
     return None
 
 
-@todo.command("assign")
+@todos.command("assign")
 @click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
 @click.option(
     "--to",
@@ -1508,7 +1520,7 @@ def todo_assign(todo_ids, people, replace, as_json):
     return None
 
 
-@todo.command("done")
+@todos.command("complete")
 @click.argument("todo_id", metavar="TODO", type=int)
 @json_option
 def todo_done(todo_id, as_json):
@@ -1520,7 +1532,7 @@ def todo_done(todo_id, as_json):
     return None
 
 
-@todo.command("reopen")
+@todos.command("reopen")
 @click.argument("todo_id", metavar="TODO", type=int)
 @json_option
 def todo_reopen(todo_id, as_json):
@@ -1532,7 +1544,7 @@ def todo_reopen(todo_id, as_json):
     return None
 
 
-@todo.command("comment")
+@todos.command("comment")
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.argument("text", required=False)
 @attach_option
@@ -1552,14 +1564,19 @@ def todo_comment(todo_id, text, attach, as_json):
     return None
 
 
-@cli.command()
+@cli.group()
+def reactions():
+    """Reactions on to-dos and comments"""
+
+
+@reactions.command("create")
 @click.argument("todo_id", metavar="TODO", type=int)
 @click.argument("content")
 @click.option(
     "--comment", "comment_id", type=int, help="React to this comment ID instead."
 )
 @json_option
-def react(todo_id, content, comment_id, as_json):
+def reactions_create(todo_id, content, comment_id, as_json):
     """React to TODO (or a comment) with CONTENT: an emoji or at most 40
     characters. The same again removes your reaction."""
     path = (
@@ -1596,11 +1613,16 @@ def show_subscribers(data):
     console.print(t)
 
 
-@cli.command()
-@click.argument("item", type=int)
+@cli.group(invoke_without_command=True)
+@click.option("--item", type=int, help="The item's ID (any kind of item).")
 @json_option
-def subscribers(item, as_json):
-    """Who gets what happens to ITEM (any kind of item), and who added them"""
+@click.pass_context
+def subscriptions(ctx, item, as_json):
+    """Subscriptions; without a command who gets what happens to --item,
+    and who added them"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(item, "--item")
     data = request("GET", f"items/{item}/subscribers/")
     if as_json:
         return echo_json(data)
@@ -1608,7 +1630,7 @@ def subscribers(item, as_json):
     return None
 
 
-@cli.command()
+@subscriptions.command("add")
 @click.argument("item", type=int)
 @click.option(
     "--people",
@@ -1623,7 +1645,7 @@ def subscribers(item, as_json):
     "--note", default="", help="One line sent with --notify, at most 200 characters."
 )
 @json_option
-def subscribe(item, people, notify, note, as_json):
+def subscriptions_add(item, people, notify, note, as_json):
     """Subscribe yourself or other people to ITEM: subscribed, you hear
     about everything on it. Others: people who can see it (clients and
     externals: whom they may know). Quietly, or with --notify: "Ada wants
@@ -1652,10 +1674,10 @@ def subscribe(item, people, notify, note, as_json):
     return None
 
 
-@cli.command()
+@subscriptions.command("remove")
 @click.argument("item", type=int)
 @json_option
-def unsubscribe(item, as_json):
+def subscriptions_remove(item, as_json):
     """Stop hearing about ITEM (not while you're assigned to it)"""
     data = request("DELETE", f"items/{item}/subscription/")
     if as_json:
@@ -1667,11 +1689,16 @@ def unsubscribe(item, as_json):
 # Check-ins ------------------------------------------------------------------
 
 
-@cli.command()
-@click.argument("project", type=int)
+@cli.group(invoke_without_command=True)
+@click.option("--project", type=int, help="The project's ID.")
 @json_option
-def checkins(project, as_json):
-    """The check-in questions of PROJECT with their schedules"""
+@click.pass_context
+def checkins(ctx, project, as_json):
+    """Check-in questions; without a command those of --project with their
+    schedules"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(project, "--project")
     data = request("GET", f"projects/{project}/checkins/")
     if as_json:
         return echo_json(data)
@@ -1691,11 +1718,6 @@ def checkins(project, as_json):
     return None
 
 
-@cli.group()
-def checkin():
-    """Show, answer and set up check-in questions"""
-
-
 def show_answers(occurrence):
     click.echo(f"\n{occurrence['date']} (#{occurrence['id']})")
     for answer in occurrence["answers"]:
@@ -1705,7 +1727,7 @@ def show_answers(occurrence):
         click.echo(f"\nHasn't answered yet: {names(occurrence['missing'])}")
 
 
-@checkin.command("show")
+@checkins.command("show")
 @click.argument("question_id", metavar="QUESTION", type=int)
 @click.option(
     "--limit", default=1, show_default=True, help="How many occurrences, latest first."
@@ -1733,7 +1755,7 @@ def checkin_show(question_id, limit, as_json):
     return None
 
 
-@checkin.command("answer")
+@checkins.command("answer")
 @click.argument("question_id", metavar="QUESTION", type=int)
 @click.argument("text", required=False)
 @click.option(
@@ -1761,7 +1783,7 @@ def checkin_answer(question_id, text, occurrence, attach, as_json):
     return None
 
 
-@checkin.command("due")
+@checkins.command("due")
 @click.option("--project", type=int, help="Only this project's ID.")
 @json_option
 def checkin_due(project, as_json):
@@ -1785,7 +1807,7 @@ def checkin_due(project, as_json):
     return None
 
 
-@checkin.command("add")
+@checkins.command("create")
 @click.argument("project", type=int)
 @click.argument("title")
 @click.option(
@@ -1838,7 +1860,7 @@ def checkin_add(
     return None
 
 
-@checkin.command("pause")
+@checkins.command("pause")
 @click.argument("question_id", metavar="QUESTION", type=int)
 @json_option
 def checkin_pause(question_id, as_json):
@@ -1850,7 +1872,7 @@ def checkin_pause(question_id, as_json):
     return None
 
 
-@checkin.command("resume")
+@checkins.command("resume")
 @click.argument("question_id", metavar="[QUESTION]", type=int, required=False)
 @click.option(
     "--project",
@@ -1877,7 +1899,7 @@ def checkin_resume(question_id, project_id, as_json):
     return None
 
 
-@checkin.command("mail")
+@checkins.command("mail")
 @click.argument("question_id", metavar="QUESTION", type=int)
 @click.argument("mode", type=click.Choice(["each", "summary", "none"]), required=False)
 @json_option
@@ -1930,8 +1952,8 @@ def category_id(name):
     return None
 
 
-@cli.command()
-@click.argument("project", type=int)
+@cli.group(invoke_without_command=True)
+@click.option("--project", type=int, help="The project's ID.")
 @click.option("--limit", default=25, show_default=True, help="At most this many.")
 @click.option(
     "--order",
@@ -1940,9 +1962,13 @@ def category_id(name):
     "the board's order).",
 )
 @json_option
-def messages(project, limit, order, as_json):
-    """The message board of PROJECT: pinned first, then in the board's
-    order"""
+@click.pass_context
+def messages(ctx, project, limit, order, as_json):
+    """Messages; without a command the message board of --project: pinned
+    first, then in the board's order"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(project, "--project")
     params = {"page_size": limit} | ({"order": order} if order else {})
     data = request("GET", f"projects/{project}/messages/", params=params)
     if as_json:
@@ -1962,11 +1988,6 @@ def messages(project, limit, order, as_json):
         )
     console.print(t)
     return None
-
-
-@cli.group()
-def message():
-    """Show, post and pin messages"""
 
 
 def show_message(data):
@@ -1989,7 +2010,7 @@ def show_message(data):
         click.echo(f"\n{data['content']}")
 
 
-@message.command("show")
+@messages.command("show")
 @click.argument("message_id", metavar="MESSAGE", type=int)
 @click.option("--comments", is_flag=True, help="With the comments.")
 @json_option
@@ -2007,7 +2028,7 @@ def message_show(message_id, comments, as_json):
     return None
 
 
-@message.command("post")
+@messages.command("create")
 @click.argument("project", type=int)
 @click.argument("title")
 @click.argument("text", required=False)
@@ -2039,7 +2060,7 @@ def message_post(project, title, text, category, also, visible, attach, as_json)
     return None
 
 
-@message.command("pin")
+@messages.command("pin")
 @click.argument("message_id", metavar="MESSAGE", type=int)
 @click.option("--undo", is_flag=True, help="Unpin it again.")
 @json_option
@@ -2055,12 +2076,17 @@ def message_pin(message_id, undo, as_json):
 # Docs and files -------------------------------------------------------------
 
 
-@cli.command()
-@click.argument("project", type=int)
-@click.argument("folder", type=int, required=False)
+@cli.group(invoke_without_command=True)
+@click.option("--project", type=int, help="The project's ID.")
+@click.option("--folder", type=int, help="This folder's contents.")
 @json_option
-def files(project, folder, as_json):
-    """The docs and files of PROJECT's root, or of FOLDER"""
+@click.pass_context
+def files(ctx, project, folder, as_json):
+    """Files; without a command the docs and files of --project's root, or
+    of --folder. Upload, replace and download files."""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(project, "--project")
     data = request(
         "GET",
         f"projects/{project}/files/",
@@ -2085,11 +2111,11 @@ def files(project, folder, as_json):
 
 
 @cli.group()
-def folder():
-    """Create folders and move docs and files"""
+def folders():
+    """Create, change and order folders, move docs and files into them"""
 
 
-@folder.command("new")
+@folders.command("create")
 @click.argument("project", type=int)
 @click.argument("title")
 @click.option("--folder", "parent", type=int, help="Inside this folder.")
@@ -2112,7 +2138,7 @@ def folder_new(project, title, parent, visible, color, as_json):
     return None
 
 
-@folder.command("move")
+@folders.command("move")
 @click.argument("item", type=int)
 @click.argument("folder", type=int, required=False)
 @json_option
@@ -2125,7 +2151,12 @@ def folder_move(item, folder, as_json):
     return None
 
 
-@cli.command("move")
+@cli.group()
+def items():
+    """What works on any kind of item"""
+
+
+@items.command("move")
 @click.argument("item", type=int)
 @click.option("--to", "project", type=int, required=True, help="The project's ID.")
 @click.option(
@@ -2134,7 +2165,7 @@ def folder_move(item, folder, as_json):
     help="Move it although people are dropped or clients there will see it.",
 )
 @json_option
-def move(item, project, confirm, as_json):
+def items_move(item, project, confirm, as_json):
     """Move the list, message, folder, doc or file ITEM at the top of its
     project to the top of another project, with everything in it.
     Assignees and subscribers who aren't members there are dropped."""
@@ -2150,40 +2181,37 @@ def move(item, project, confirm, as_json):
     return None
 
 
-@folder.command("rename")
+@folders.command("update")
 @click.argument("folder_id", metavar="FOLDER", type=int)
-@click.argument("title")
+@click.option("--title", help="The new name.")
+@click.option(
+    "--color",
+    type=click.Choice([*PALETTE, "none"]),
+    help="A name of the palette, or 'none'.",
+)
 @json_option
-def folder_rename(folder_id, title, as_json):
-    """Rename FOLDER to TITLE"""
-    data = request("PATCH", f"folders/{folder_id}/", json={"title": title})
+def folder_update(folder_id, title, color, as_json):
+    """Rename FOLDER or give it a color"""
+    body = {}
+    if title is not None:
+        body["title"] = title
+    if color is not None:
+        body["color"] = "" if color == "none" else color
+    if not body:
+        raise click.UsageError("Give --title or --color.")
+    data = request("PATCH", f"folders/{folder_id}/", json=body)
     if as_json:
         return echo_json(data)
-    click.echo(f"Renamed #{folder_id}: {data['folder']['title']}")
-    return None
-
-
-@folder.command("color")
-@click.argument("folder_id", metavar="FOLDER", type=int)
-@click.argument("color", type=click.Choice([*PALETTE, "none"]))
-@json_option
-def folder_color(folder_id, color, as_json):
-    """Give FOLDER a color (a name of the palette), or 'none'"""
-    data = request(
-        "PATCH",
-        f"folders/{folder_id}/",
-        json={"color": "" if color == "none" else color},
+    click.echo(
+        f"#{folder_id}: {data['folder']['title']}, {data['color_name'] or 'no color'}"
     )
-    if as_json:
-        return echo_json(data)
-    click.echo(f"#{folder_id}: {data['color_name'] or 'no color'}")
     return None
 
 
 ORDERINGS = ["alphabetical", "reverse", "newest", "oldest"]
 
 
-@folder.command("order")
+@folders.command("order")
 @click.argument("project", type=int)
 @click.argument("ordering", type=click.Choice(ORDERINGS))
 @click.option("--folder", "folder_id", type=int, help="This folder's contents.")
@@ -2203,12 +2231,7 @@ def folder_order(project, ordering, folder_id, as_json):
     return None
 
 
-@cli.group("file")
-def file_group():
-    """Upload, replace and download files"""
-
-
-@file_group.command("upload")
+@files.command("upload")
 @click.argument("project", type=int)
 @click.argument("path", type=click.Path(exists=True, dir_okay=False))
 @click.option("--folder", "parent", type=int, help="Into this folder.")
@@ -2238,7 +2261,7 @@ def file_upload(project, path, parent, description, also, visible, as_json):
     return None
 
 
-@file_group.command("replace")
+@files.command("replace")
 @click.argument("file_id", metavar="FILE", type=int)
 @click.argument("path", type=click.Path(exists=True, dir_okay=False))
 @json_option
@@ -2256,7 +2279,7 @@ def file_replace(file_id, path, as_json):
     return None
 
 
-@file_group.command("download")
+@files.command("download")
 @click.argument("file_id", metavar="FILE", type=int)
 @click.option(
     "--output",
@@ -2286,11 +2309,11 @@ def file_download(file_id, output, version):
 
 
 @cli.group()
-def doc():
+def docs():
     """Show, create and edit docs"""
 
 
-@doc.command("show")
+@docs.command("show")
 @click.argument("doc_id", metavar="DOC", type=int)
 @click.option("--comments", is_flag=True, help="With the comments.")
 @click.option("--version", type=int, help="An older version's ID (staff).")
@@ -2322,7 +2345,7 @@ def doc_show(doc_id, comments, version, as_json):
     return None
 
 
-@doc.command("new")
+@docs.command("create")
 @click.argument("project", type=int)
 @click.argument("title")
 @click.argument("text", required=False)
@@ -2356,7 +2379,7 @@ def doc_new(project, title, text, parent, also, visible, attach, as_json):
     return None
 
 
-@doc.command("edit")
+@docs.command("update")
 @click.argument("doc_id", metavar="DOC", type=int)
 @click.option(
     "--new-version", is_flag=True, help="Make a version now, not only after 10 minutes."
@@ -2392,7 +2415,7 @@ def doc_edit(doc_id, new_version, as_json):
     return None
 
 
-@doc.command("read-only")
+@docs.command("read-only")
 @click.argument("doc_id", metavar="DOC", type=int)
 @click.option("--off", is_flag=True, help="Make it editable again.")
 @json_option
@@ -2465,14 +2488,9 @@ def feed(project, person, kind, action, since, limit, as_json):
     is_flag=True,
     help="Include archived projects and lists, which are left out otherwise.",
 )
-@click.option(
-    "--templates",
-    is_flag=True,
-    help="Include templates, which are left out otherwise.",
-)
 @click.option("--limit", default=50, show_default=True, help="At most this many.")
 @json_option
-def search(terms, project, kind, mine, archived, templates, limit, as_json):
+def search(terms, project, kind, mine, archived, limit, as_json):
     """Find items by words in their title, text or comments, newest first.
     Every word also matches as the start of a word."""
     params = {"q": " ".join(terms)}
@@ -2484,8 +2502,6 @@ def search(terms, project, kind, mine, archived, templates, limit, as_json):
         params["mine"] = "true"
     if archived:
         params["archived"] = "true"
-    if templates:
-        params["templates"] = "true"
     results = paginate("search/", params, limit=limit)
     if as_json:
         return echo_json(results)
@@ -2498,9 +2514,7 @@ def search(terms, project, kind, mine, archived, templates, limit, as_json):
             str(result["id"]),
             result["kind"],
             result["title"],
-            result["project_name"]
-            + (" (archived)" if result["archived"] else "")
-            + (" (template)" if result.get("project_is_template") else ""),
+            result["project_name"] + (" (archived)" if result["archived"] else ""),
             found,
             clients(result),
         )
@@ -2518,11 +2532,14 @@ def show_public_link(link):
     click.echo(f"Expires {link['expires_at'][:16].replace('T', ' ')}")
 
 
-@cli.command("public-links")
+@cli.group("public-links", invoke_without_command=True)
 @json_option
-def public_links(as_json):
-    """The live public links in the projects you can open (admins: all),
-    the soonest expiry first (staff)"""
+@click.pass_context
+def public_links(ctx, as_json):
+    """Public links; without a command the live ones in the projects you
+    can open (admins: all), the soonest expiry first (staff)"""
+    if ctx.invoked_subcommand is not None:
+        return None
     data = request("GET", "public-links/")
     if as_json:
         return echo_json(data)
@@ -2543,7 +2560,7 @@ def public_links(as_json):
     return None
 
 
-@cli.command()
+@public_links.command("create")
 @click.argument("item", type=int)
 @click.option(
     "--days",
@@ -2553,7 +2570,7 @@ def public_links(as_json):
     help="How long the link works.",
 )
 @json_option
-def share(item, days, as_json):
+def public_links_create(item, days, as_json):
     """A public link to ITEM (a to-do, message, doc or file) for people
     without an account, read only, until it expires;
     replaces the one there is (staff)"""
@@ -2564,10 +2581,10 @@ def share(item, days, as_json):
     return None
 
 
-@cli.command()
+@public_links.command("delete")
 @click.argument("item", type=int)
 @json_option
-def unshare(item, as_json):
+def public_links_delete(item, as_json):
     """Stop sharing ITEM publicly: its public link stops working (staff)"""
     data = request("DELETE", f"items/{item}/public-link/")
     if as_json:
@@ -2647,10 +2664,13 @@ def forwarded_delete(forwarded_id):
 # Bookmarks and links --------------------------------------------------------
 
 
-@cli.command()
+@cli.group(invoke_without_command=True)
 @json_option
-def bookmarks(as_json):
-    """Your bookmarks, newest first"""
+@click.pass_context
+def bookmarks(ctx, as_json):
+    """Bookmarks; without a command yours, newest first"""
+    if ctx.invoked_subcommand is not None:
+        return None
     data = request("GET", "bookmarks/")
     if as_json:
         return echo_json(data)
@@ -2673,12 +2693,7 @@ def bookmarks(as_json):
     return None
 
 
-@cli.group()
-def bookmark():
-    """Bookmark or un-bookmark an item or a project"""
-
-
-@bookmark.command("add")
+@bookmarks.command("create")
 @click.argument("target", type=int)
 @click.option("--project", "is_project", is_flag=True, help="TARGET is a project.")
 def bookmark_add(target, is_project):
@@ -2687,7 +2702,7 @@ def bookmark_add(target, is_project):
     click.echo(f"Bookmarked #{target}.")
 
 
-@bookmark.command("remove")
+@bookmarks.command("delete")
 @click.argument("target", type=int)
 @click.option("--project", "is_project", is_flag=True, help="TARGET is a project.")
 def bookmark_remove(target, is_project):
@@ -2696,11 +2711,15 @@ def bookmark_remove(target, is_project):
     click.echo(f"Removed the bookmark of #{target}.")
 
 
-@cli.command()
-@click.argument("project", type=int)
+@cli.group(invoke_without_command=True)
+@click.option("--project", type=int, help="The project's ID.")
 @json_option
-def links(project, as_json):
-    """The links to outside tools of PROJECT"""
+@click.pass_context
+def links(ctx, project, as_json):
+    """Links to outside tools; without a command those of --project"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(project, "--project")
     data = request("GET", f"projects/{project}/links/")
     if as_json:
         return echo_json(data)
@@ -2717,12 +2736,7 @@ def links(project, as_json):
     return None
 
 
-@cli.group()
-def link():
-    """Add and delete links to outside tools"""
-
-
-@link.command("add")
+@links.command("create")
 @click.argument("project", type=int)
 @click.argument("url")
 @click.option("--title", default="", help="The host if left out.")
@@ -2740,7 +2754,7 @@ def link_add(project, url, title, clients, as_json):
     return None
 
 
-@link.command("delete")
+@links.command("delete")
 @click.argument("link_id", metavar="LINK", type=int)
 def link_delete(link_id):
     """Delete LINK"""
@@ -2805,7 +2819,7 @@ def show_days(days):
     "--item",
     type=int,
     help="Show or set the level for a list (other items have none:"
-    " biwak subscribe or unsubscribe them).",
+    " biwak subscriptions add or remove them).",
 )
 @json_option
 def notifications(

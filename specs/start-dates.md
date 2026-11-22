@@ -46,7 +46,7 @@ current work until it can. Decided with the user 2026-11-22.
   `starts_on`, the data carries both dates and what they were; the
   timeline says "changed the dates to 3–7 Dec 2026" once a start date is
   or was set, also when only the due date moved, else as before. Notifications as for due dates.
-- **API and CLI:** `starts_on` next to `due_on`; `biwak todo … --starts
+- **API and CLI:** `starts_on` next to `due_on`; `biwak todos create|update … --starts
   DATE` (`none` removes it), tables show "start – due".
   **Importer:** Basecamp's `starts_on`; one without a due date or after
   it is dropped silently.

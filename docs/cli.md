@@ -34,21 +34,21 @@ the stored login, for scripts.
 biwak projects
 biwak todos --mine --due overdue
 biwak todos --mine --started
-biwak todo add LIST "Order the tent" --due 2026-12-01 --starts 2026-11-28 --assign 3
-biwak list add-from-text LIST plan.md --preview
-biwak todo done TODO
-biwak todo assign 12 13 14 --to 7 --replace
-biwak todo comment TODO "The plan" --attach plan.pdf
-biwak checkin due
-biwak checkin answer QUESTION "Busy with the launch"
-biwak message post PROJECT "Kick-off" "We start Monday" --also 12
-biwak list copy LIST --to PROJECT --shift 7
+biwak todos create LIST "Order the tent" --due 2026-12-01 --starts 2026-11-28 --assign 3
+biwak lists add-from-text LIST plan.md --preview
+biwak todos complete TODO
+biwak todos assign 12 13 14 --to 7 --replace
+biwak todos comment TODO "The plan" --attach plan.pdf
+biwak checkins due
+biwak checkins answer QUESTION "Busy with the launch"
+biwak messages create PROJECT "Kick-off" "We start Monday" --also 12
+biwak lists copy LIST --to PROJECT --shift 7
 biwak projects --templates
-biwak project add "Website" --template 5 --member 12
-biwak move ITEM --to PROJECT --confirm
+biwak projects create "Website" --template 5 --member 12
+biwak items move ITEM --to PROJECT --confirm
 biwak search tent
 biwak forwarded file 21 --todo LIST
-biwak invite dora@example.net eve@example.net --project 4 --project 7
+biwak invitations create dora@example.net eve@example.net --project 4 --project 7
 biwak invitations
 biwak people --inactive
 biwak people --left
@@ -71,7 +71,11 @@ among the assignees sent through the CLI, the API or a reply by mail
 isn't expanded. `biwak teams show TEAM` lists its members; send them
 instead.
 
-`biwak --help` lists the commands. The CLI's
+`biwak --help` lists the commands: one group per thing in the plural
+(`biwak todos`, `biwak lists`, `biwak messages`, …), which alone lists
+them (`biwak lists --project 4`) and has the verbs `show`, `create`,
+`update` and `delete` and its own (`biwak todos complete`); `biwak
+GROUP --help` lists a group's. The CLI's
 [README](https://github.com/matthiask/biwak/tree/main/cli) has more
 examples.
 
