@@ -5,6 +5,7 @@ from typing import Literal
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
@@ -40,6 +41,8 @@ class ProjectOut(Schema):
     # of it, so for clients only the activity on items visible to clients
     last_activity_at: dt.datetime | None
     archived_at: dt.datetime | None
+    # A template (specs/templates.md): new projects start as a copy of it
+    is_template: bool
     url: str
 
 
@@ -66,6 +69,7 @@ def project_out(project, user):
             project, "activity", getattr(project, activity_column(user))
         ),
         "archived_at": project.archived_at,
+        "is_template": project.is_template,
         "url": absolute(project.get_absolute_url()),
     }
 
@@ -76,14 +80,26 @@ def project_list(
     *,
     archived: bool = False,
     order: Literal["activity", "name"] | None = None,
+    templates: bool = False,
 ):
     """The projects the person can open, active ones unless ``archived``:
     bookmarked ones first, then by ``order`` (activity by
     default), the latest activity first or by name. Archived ones by name,
-    bookmarked ones first."""
-    if archived:
+    bookmarked ones first. ``templates``: the templates instead (own staff;
+    the archived ones with ``archived``), by name."""
+    if templates:
+        projects = (
+            Project.objects
+            .accessible_to(request.user)
+            .templates()
+            .filter(archived_at__isnull=not archived)
+            .order_by(Lower("name"), "pk")
+        )
+        if not project_ops.can_use_templates(request.user):
+            projects = projects.none()
+    elif archived:
         projects = Project.objects.accessible_to(request.user).filter(
-            archived_at__isnull=False
+            archived_at__isnull=False, is_template=False
         )
         projects = projects.annotate(
             is_bookmarked=Exists(
@@ -174,20 +190,54 @@ class ProjectIn(Schema):
     is_all_access: bool = True
     # Left out: a suggested color no other active project has; "": none
     color: Color | Literal[""] | None = None
+    # A template's ID: the new project gets a copy of it (specs/templates.md)
+    template: int | None = None
+    # People added as members before the template is copied: its assignees
+    # who don't see the new project are left out
+    member_ids: list[int] = []
+    # A new template instead of a project (all-access, without members)
+    is_template: bool = False
 
 
 @router.post("projects/", response={201: ProjectOut})
 def project_create(request, data: ProjectIn):
-    """Creates the project (staff); the creator becomes a member"""
+    """Creates the project (staff); the creator becomes a member, and so
+    do ``member_ids``. With ``template``, a copy of the template's lists,
+    messages, folders, docs and files; with ``is_template``, a template"""
     if not project_ops.can_create_project(request.user):
         raise HttpError(403, _("Only staff can create projects."))
-    project = project_ops.create_project(
-        name=data.name,
-        description=data.description,
-        is_all_access=data.is_all_access,
-        color=data.color,
-        actor=request.user,
-    )
+    if data.is_template:
+        if data.template is not None or data.member_ids:
+            raise HttpError(400, _("Templates have no members."))
+        project = project_ops.create_template(
+            name=data.name,
+            description=data.description,
+            color=data.color or "",
+            actor=request.user,
+        )
+        return Status(201, project_out(project, request.user))
+    template = None
+    if data.template is not None:
+        template = get_object_or_404(
+            Project.objects.accessible_to(request.user).templates(),
+            pk=data.template,
+            archived_at__isnull=True,
+        )
+    members = list(User.objects.active().filter(pk__in=data.member_ids))
+    if len(members) != len(set(data.member_ids)):
+        raise HttpError(400, _("Only active people can be added."))
+    with transaction.atomic():
+        project = project_ops.create_project(
+            name=data.name,
+            description=data.description,
+            is_all_access=data.is_all_access,
+            color=data.color,
+            actor=request.user,
+        )
+        for user in members:
+            project_ops.add_member(project, user, actor=request.user)
+        if template is not None:
+            project_ops.fill_from_template(project, template, actor=request.user)
     return Status(201, project_out(project, request.user))
 
 
@@ -247,6 +297,11 @@ def staff_only(request):
         raise HttpError(403, _("Only staff can add people."))
 
 
+def no_template(project):
+    if project.is_template:
+        raise HttpError(400, _("Templates have no members."))
+
+
 class MemberIn(Schema):
     person_id: int
     notify: Notify = "default"
@@ -258,6 +313,7 @@ def member_add(request, project_id: int, data: MemberIn):
     unless they have one already."""
     project = project_for(request, project_id)
     staff_only(request)
+    no_template(project)
     user = User.objects.active().filter(pk=data.person_id).first()
     if user is None:
         raise HttpError(404, _("Not found."))
@@ -303,6 +359,7 @@ def member_invite(request, project_id: int, data: InviteIn):
     (staff)"""
     project = project_for(request, project_id)
     staff_only(request)
+    no_template(project)
     try:
         organization = invitee_organization(data)
     except ValueError as exc:
@@ -376,7 +433,10 @@ def project_update(request, project_id: int, data: ProjectPatch):
     for field, value in changes.items():
         if value is None or (field == "name" and not value.strip()):
             raise HttpError(400, _("%(field)s can't be empty.") % {"field": field})
-    project_ops.update_project(project, actor=request.user, **changes)
+    try:
+        project_ops.update_project(project, actor=request.user, **changes)
+    except ValueError as exc:
+        raise HttpError(400, str(exc)) from exc
     if "archived" in given and data.archived != bool(project.archived_at):
         if data.archived:
             project_ops.archive_project(project, actor=request.user)

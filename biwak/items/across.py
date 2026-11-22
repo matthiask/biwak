@@ -258,11 +258,16 @@ class CopyForm(Confirming):
 
 def copy_targets(user):
     """The projects the person may copy a list to: those they open and
-    create lists in, not archived, no templates (lists come from templates
-    the other way round, specs/templates.md)"""
+    create lists in, not archived; templates too, for the own staff
+    (specs/templates.md), after the projects"""
     if not ops.can_create(user, Kind.LIST):
         return Project.objects.none()
-    return Project.objects.accessible_to(user).active().order_by(Lower("name"), "pk")
+    return (
+        Project.objects
+        .accessible_to(user)
+        .filter(archived_at__isnull=True)
+        .order_by("is_template", Lower("name"), "pk")
+    )
 
 
 def list_copy(request, pk):
@@ -277,7 +282,7 @@ def list_copy(request, pk):
         request.POST or None,
         projects=projects,
         initial={
-            "project": None if item.project.is_quiet else item.project,
+            "project": item.project if item.project.archived_at is None else None,
             "title": item.title,
         },
     )

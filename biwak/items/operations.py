@@ -1383,6 +1383,9 @@ def people_plan(assignees, subscribers, project, visible):
         .filter(is_client=False, is_active=True)
         .distinct()
     )
+    if project.is_template:
+        # Nobody is added to a template (specs/templates.md)
+        added = added.none()
     kept = Q(pk__in=seeing.values("pk")) | Q(pk__in=added.values("pk"))
     dropped = User.objects.filter(
         Q(pk__in=assignees.values("pk")) | Q(pk__in=subscribers.values("pk"))
