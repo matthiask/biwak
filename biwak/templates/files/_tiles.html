@@ -1,4 +1,4 @@
-{% load biwak i18n %}
+{% load biwak folders i18n %}
 {% comment %}
   A folder's contents as a grid of cards (specs/files.md, "Folders"):
   `rows` (folders first, in the folder's order), `folder` (inside one, the
@@ -55,6 +55,7 @@
           <span class="wb-tile-title">{{ row|item_title }}</span>
           <span class="wb-tile-meta">
             {% if row.version %}<span>{{ row.version.size|filesizeformat }}</span>{% endif %}
+            {% if row.counts %}<span>{{ row.counts|folder_counts }}</span>{% endif %}
             {% include "items/_checklist_signal.html" with done=row.checklist_done total=row.checklist_total %}
             {% client_badge row %}
           </span>

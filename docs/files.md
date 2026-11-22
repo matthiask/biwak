@@ -25,7 +25,7 @@ number of comments.
 **Docs and files** on the project's page opens the project's root
 folder. Its contents show as tiles: folders first, then docs and files,
 in the folder's order; images show a preview, files their size, docs with a task list
-how many are done. Inside a folder the first tile, "..", leads to the
+how many are done, folders what they hold directly ("2 folders · 3 files"). Inside a folder the first tile, "..", leads to the
 folder above (or the project's top level); the path above the title
 does too. Staff create what is here: "New folder", "New doc", "Upload
 files". A folder's "More" menu has "Edit…" (its title and color); move things between

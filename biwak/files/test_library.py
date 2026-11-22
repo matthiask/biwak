@@ -160,6 +160,39 @@ class LibraryTest(Fixture, TestCase):
         self.assertContains(response, f'data-drop-folder="{self.public.pk}"')
         self.assertContains(response, "Nothing here yet.")
 
+    def test_folder_tiles_count_what_they_hold(self):
+        """A folder's tile shows its direct subfolders, docs and files that
+        the person can see, zeros left out (specs/files.md, "Folders")"""
+        inner = ops.create_folder(
+            project=self.project, title="Inner", creator=self.ada, parent=self.public
+        )
+        self.upload("deep.txt", parent=inner)
+        ops.create_doc(
+            project=self.project, title="Notes", creator=self.ada, parent=self.public
+        )
+        ops.create_folder(project=self.project, title="Spare", creator=self.ada)
+        response = self.get(self.ada, self.root())
+        counts = {
+            row.title: row.counts
+            for row in response.context["rows"]
+            if row.kind == Kind.FOLDER
+        }
+        self.assertEqual(
+            counts,
+            {
+                "Spare": {"folders": 0, "docs": 0, "files": 0},
+                "Private": {"folders": 0, "docs": 0, "files": 1},
+                "Public": {"folders": 1, "docs": 1, "files": 1},
+            },
+        )
+        self.assertContains(response, "1 folder · 1 doc · 1 file")
+        self.assertContains(response, "<span>Empty</span>", html=False)
+        # A client sees the counts of what they see (the visible folder's
+        # children are visible: they inherit)
+        response = self.get(self.cleo, self.root())
+        self.assertContains(response, "1 folder · 1 doc · 1 file")
+        self.assertNotContains(response, "Spare")
+
     def test_tiles_show_previews_of_images_sizes_and_checklists(self):
         image = self.upload("photo.png", content=png(), parent=self.private)
         ops.create_doc(

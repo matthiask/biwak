@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_POST
 from biwak.accounts.models import Color
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
+from biwak.files.queries import folder_counts
 from biwak.forms import ColorSwatches, Form, next_url
 from biwak.items import editing, glance, operations as ops
 from biwak.items.models import Item, Kind
@@ -144,8 +145,10 @@ def library(request, project, folder=None):
             pk__in=[r.pk for r in rows if r.kind == Kind.FILE]
         ).prefetch_related("upload__versions")
     }
+    counts = folder_counts(request.user, [r for r in rows if r.kind == Kind.FOLDER])
     for row in rows:
         row.version = versions.get(row.pk)
+        row.counts = counts.get(row.pk)
         row.can_move = ops.can_change(request.user, row)
     context = {
         "project": project,

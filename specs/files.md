@@ -103,8 +103,10 @@ the counts of the top level's folders, docs and files.
 
 - **Tiles** (decided 2026-11-21: a grid, not a list in a card,
   `files/_tiles.html`, `.wb-tiles`): an icon by kind or file type, an
-  image's preview, the title, the size (files) or the checklist signal
-  (docs), the client badge; two to five columns by width, compact cards
+  image's preview, the title, the size (files), the checklist signal
+  (docs) or what a folder holds directly (decided 2026-11-22: "2
+  folders · 1 doc · 3 files", zeros left out, "Empty"; counted for the
+  viewer, `queries.folder_counts()`), the client badge; two to five columns by width, compact cards
   in one column on a phone. Empty: "Nothing here yet."
 - **A "…" menu on every tile** (decided 2026-11-21: "Folders should
   have a '...' menu for renaming and editing etc.", docs and files too

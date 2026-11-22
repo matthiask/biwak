@@ -58,23 +58,40 @@ def front_files(project, user):
     )
 
 
+def _counts(user, **filters):
+    """{parent ID: {"folders": n, "docs": n, "files": n}} of the folders,
+    docs and files the person can see"""
+    found = {}
+    rows = (
+        Item.objects
+        .visible_to(user)
+        .filter(kind__in=[Kind.FOLDER, Kind.DOC, Kind.FILE], **filters)
+        .values_list("parent", "kind")
+        .annotate(n=Count("pk"))
+        .order_by()
+    )
+    names = {Kind.FOLDER: "folders", Kind.DOC: "docs", Kind.FILE: "files"}
+    for parent, kind, n in rows:
+        found.setdefault(parent, {"folders": 0, "docs": 0, "files": 0})
+        found[parent][names[kind]] = n
+    return found
+
+
 def root_counts(project, user):
     """What the root of the docs and files holds, for the project page:
     {"folders": n, "docs": n, "files": n}"""
-    counts = dict(
-        Item.objects
-        .visible_to(user)
-        .filter(
-            project=project, parent=None, kind__in=[Kind.FOLDER, Kind.DOC, Kind.FILE]
-        )
-        .values_list("kind")
-        .annotate(n=Count("pk"))
-        .values_list("kind", "n")
+    return _counts(user, project=project, parent=None).get(
+        None, {"folders": 0, "docs": 0, "files": 0}
     )
+
+
+def folder_counts(user, folders):
+    """What each folder holds directly, for its tile (specs/files.md,
+    "Folders"): {folder ID: {"folders": n, "docs": n, "files": n}}"""
+    found = _counts(user, parent__in=[folder.pk for folder in folders])
     return {
-        "folders": counts.get(Kind.FOLDER, 0),
-        "docs": counts.get(Kind.DOC, 0),
-        "files": counts.get(Kind.FILE, 0),
+        folder.pk: found.get(folder.pk, {"folders": 0, "docs": 0, "files": 0})
+        for folder in folders
     }
 
 
