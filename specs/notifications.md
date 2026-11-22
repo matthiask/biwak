@@ -72,11 +72,19 @@ it for the first time.
   told.", `told_line()`: the names the poster may know, the others
   counted; "Nobody is told unless you add people."), below it "Also
   tell…", the people picker (`PeopleField`) of the members who see it
-  (the visibility the form starts with: the folder's; at the top
-  internal, a client's visible) and aren't told already, nothing
-  preselected. A doc begun as a draft asks at its first "Done" ("Tell
-  people about it?", `docs.TellForm`): the same line and "Also tell…"
-  (the project's members too, decided 2026-11-22) with a note; "Tell them too" records `shared` to those told by default
+  (in a folder as the folder says; what clients post is visible) and
+  aren't told already, nothing preselected. **At the top the line
+  follows "Visible to clients"** (decided 2026-11-22): staff's form
+  renders the line for both (`intro_lines`) and shows the one ticked,
+  and offers the clients of the project in "Also tell…" only while it's
+  ticked (`frontend/told.js`: unticking takes the clients picked away);
+  the server tells exactly that (`notify_people()` with the item's
+  visibility). Clients picked for an internal item are a form error,
+  and a 400 in the API ("Clients can't see it."). A doc begun as a
+  draft asks at its first "Done" ("Tell people about it?",
+  `docs.TellForm`): the same line and "Also tell…" (the project's
+  members too, decided 2026-11-22) with a note; "Tell them too" records
+  `shared` to those told by default
   (not subscribed yet) and those added, "No one else" to those told by
   default only; without an answer, an hour after the last change, as
   "No one else" (`files.md`, decided 2026-11-21).

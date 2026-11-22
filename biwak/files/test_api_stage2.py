@@ -223,6 +223,19 @@ class MessageAPITest(APIFixture, TestCase):
             )
             self.assertEqual(response.status_code, 400)
 
+    def test_internal_tells_no_client(self):
+        """Clients can't be told of an internal message (decided
+        2026-11-22, like the form)"""
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.call(
+                self.ada,
+                "post",
+                f"projects/{self.project.pk}/messages/",
+                {"title": "A", "also": [self.cleo.pk]},
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Item.objects.filter(title="A").exists())
+
     def test_clients_post_visible_messages(self):
         response = self.call(
             self.cleo,

@@ -103,7 +103,9 @@ function attach(select) {
     const query = input.value.trim().toLowerCase()
     return options.filter(
       (option) =>
-        !option.selected && option.textContent.toLowerCase().includes(query),
+        !option.selected &&
+        !option.disabled &&
+        option.textContent.toLowerCase().includes(query),
     )
   }
 
@@ -228,6 +230,11 @@ function attach(select) {
 
   // A reset puts the form's own selection back
   select.form?.addEventListener("reset", () => setTimeout(renderPills))
+  // Options changed from outside (frontend/told.js)
+  select.addEventListener("picker:refresh", () => {
+    renderPills()
+    if (!list.hidden) renderList()
+  })
   renderPills()
 }
 

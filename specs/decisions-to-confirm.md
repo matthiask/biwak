@@ -28,6 +28,21 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 
 ### Notifications and files
 
+- **Clients picked for something internal** (with A): the form says
+  "Clients can't see it." and the API answers 400, rather than leaving
+  them out quietly.
+- **Uploads chain the same in mails and the lantern**
+  (`lantern.chain()`): a round more than 10 minutes after the one before
+  is an entry and a mail of its own, unless it's the same batch (one
+  file taking long); a batch's files are always one entry, in the
+  lantern too.
+- **Restoring a folder** sets the time of the last change of everything
+  it brings back, not only its own: an unannounced doc in it is told an
+  hour later, and it counts as changed in "latest changed" lists.
+- **"Tell people about it?" tells people on "Nothing"** too (the doc's
+  `shared` event says `posted`): like posting, unlike "Tell them now" in
+  the subscribers box, which stays "except on Nothing".
+
 ### Sign-in and people
 
 ### Phones and accessibility
