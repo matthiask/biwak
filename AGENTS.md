@@ -14,6 +14,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   (`--parallel 1` for one). Coverage only when asked:
   `COVERAGE=1 ./runtests.sh`; CI doesn't measure it, nothing read it
   (decided 2026-11-21).
+- Node and yarn come from `mise.toml` (`mise install`), as in CI. Yarn,
+  never npm: `yarn add`, `yarn <bin>`, only `yarn.lock` committed
+  (decided 2026-11-22: npm was very slow).
 - `fl dev` runs Django and the rspack dev server; `uv run ./manage.py
   check_visibility` compares the stored visibility with the tree.
   `runserver` is Daphne's (`DEBUG`), serving the websockets of docs
