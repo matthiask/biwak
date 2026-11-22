@@ -20,17 +20,26 @@ class ReactionsCLITest(test_cli.CLITest):
 
     def test_react_toggles(self):
         self.make()
-        output = self.biwak("react", self.todo.pk, "👍").output
+        output = self.biwak("reactions", "create", self.todo.pk, "👍").output
         self.assertIn("Reacted with 👍", output)
         self.assertEqual(Reaction.objects.get().user, self.ada)
-        self.assertIn("Removed your 👍", self.biwak("react", self.todo.pk, "👍").output)
+        self.assertIn(
+            "Removed your 👍",
+            self.biwak("reactions", "create", self.todo.pk, "👍").output,
+        )
         self.assertFalse(Reaction.objects.exists())
 
     def test_react_to_a_comment_and_json(self):
         self.make()
         data = json.loads(
             self.biwak(
-                "react", self.todo.pk, "Thanks!", "--comment", self.comment.pk, "--json"
+                "reactions",
+                "create",
+                self.todo.pk,
+                "Thanks!",
+                "--comment",
+                self.comment.pk,
+                "--json",
             ).stdout
         )
         self.assertEqual(data[0]["content"], "Thanks!")
@@ -39,10 +48,10 @@ class ReactionsCLITest(test_cli.CLITest):
 
     def test_too_long_and_read_access(self):
         self.make()
-        result = self.biwak("react", self.todo.pk, "x" * 41)
+        result = self.biwak("reactions", "create", self.todo.pk, "x" * 41)
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("at most 40", result.output)
-        result = self.biwak("react", self.todo.pk, "👍", access="read")
+        result = self.biwak("reactions", "create", self.todo.pk, "👍", access="read")
         self.assertNotEqual(result.exit_code, 0)
         self.assertFalse(Reaction.objects.exists())
 
@@ -51,6 +60,6 @@ class ReactionsCLITest(test_cli.CLITest):
         operations.toggle_reaction(self.bob, "👍", item=self.todo)
         operations.toggle_reaction(self.ada, "👍", item=self.todo)
         operations.toggle_reaction(self.ada, "Nice", comment=self.comment)
-        output = self.biwak("todo", "show", self.todo.pk, "--comments").output
+        output = self.biwak("todos", "show", self.todo.pk, "--comments").output
         self.assertIn("Reactions: 👍 2* (Bob, Ada)", output)
         self.assertIn("Reactions: Nice 1* (Ada)", output)

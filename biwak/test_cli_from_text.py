@@ -23,7 +23,7 @@ class FromTextCLITest(CLITest):
 
     def test_preview_from_stdin(self):
         result = self.biwak(
-            "list", "add-from-text", self.list.pk, "--preview", input=TEXT
+            "lists", "add-from-text", self.list.pk, "--preview", input=TEXT
         )
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertIn("Design (new)", result.output)
@@ -36,7 +36,7 @@ class FromTextCLITest(CLITest):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "plan.md"
             path.write_text(TEXT)
-            result = self.biwak("list", "add-from-text", self.list.pk, path, "--json")
+            result = self.biwak("lists", "add-from-text", self.list.pk, path, "--json")
         data = json.loads(result.stdout)
         self.assertTrue(data["added"])
         self.assertEqual(data["groups"][1]["title"], "Design")
@@ -45,7 +45,7 @@ class FromTextCLITest(CLITest):
 
     def test_problems(self):
         result = self.biwak(
-            "list", "add-from-text", self.list.pk, input="# Only a heading\n"
+            "lists", "add-from-text", self.list.pk, input="# Only a heading\n"
         )
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("This text has no to-dos.", result.output)

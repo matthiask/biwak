@@ -326,7 +326,9 @@ class APITest(TestCase):
         self.assertEqual(response.status_code, 426, "links on projects only in 0.30")
         response = self.get("me/", headers | {"x-biwak-cli": "0.45.1"})
         self.assertEqual(response.status_code, 426, "questions without zones in 0.46")
-        response = self.get("me/", headers | {"x-biwak-cli": "0.46.0"})
+        response = self.get("me/", headers | {"x-biwak-cli": "0.59.0"})
+        self.assertEqual(response.status_code, 426, "the commands renamed in 0.60")
+        response = self.get("me/", headers | {"x-biwak-cli": "0.60.0"})
         self.assertIn("x-biwak-cli-latest", response.headers)
 
     def test_openapi_schema(self):

@@ -23,14 +23,14 @@ class AcrossCLITest(test_cli.CLITest):
         )
 
     def test_list_copy(self):
-        result = self.biwak("list", "copy", self.list.pk, "--to", self.project.pk)
+        result = self.biwak("lists", "copy", self.list.pk, "--to", self.project.pk)
         self.assertEqual(result.exit_code, 0, result.output)
         copy = Item.objects.get(title="Launch (copy)")
         self.assertIn(f"Copied to #{copy.pk} Launch (copy): http", result.output)
         self.assertNotIn("[clients]", result.output)
         data = json.loads(
             self.biwak(
-                "list",
+                "lists",
                 "copy",
                 self.list.pk,
                 "--to",
@@ -48,7 +48,7 @@ class AcrossCLITest(test_cli.CLITest):
         )
         data = json.loads(
             self.biwak(
-                "list",
+                "lists",
                 "copy",
                 self.list.pk,
                 "--to",
@@ -62,7 +62,7 @@ class AcrossCLITest(test_cli.CLITest):
         self.assertEqual(data["title"], "Next")
         self.assertIsNone(Item.objects.get(parent=data["id"]).todo.due_on)
         result = self.biwak(
-            "list",
+            "lists",
             "copy",
             self.list.pk,
             "--to",
@@ -77,11 +77,13 @@ class AcrossCLITest(test_cli.CLITest):
         cleo = person("Cleo", client=True)
         Membership.objects.create(project=self.project, user=cleo)
         ops.assign(self.tent, [cleo], actor=self.ada)
-        result = self.biwak("move", self.list.pk, "--to", self.shop.pk)
+        result = self.biwak("items", "move", self.list.pk, "--to", self.shop.pk)
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("Cleo Example won't see it in Shop", result.output)
         self.assertIn("confirm", result.output)
-        result = self.biwak("move", self.list.pk, "--to", self.shop.pk, "--confirm")
+        result = self.biwak(
+            "items", "move", self.list.pk, "--to", self.shop.pk, "--confirm"
+        )
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertIn(
             f"Moved #{self.list.pk} to project {self.shop.pk}. [clients]",

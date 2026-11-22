@@ -42,8 +42,8 @@ class FeedCLITest(test_cli.CLITest):
         todo = ops.create_todo(
             todolist=self.list, title="Order the tent", creator=self.ada
         )
-        self.biwak("bookmark", "add", todo.pk)
-        self.biwak("bookmark", "add", "--project", self.project.pk)
+        self.biwak("bookmarks", "create", todo.pk)
+        self.biwak("bookmarks", "create", "--project", self.project.pk)
         output = self.biwak("bookmarks").output
         self.assertIn("Order the tent", output)
         self.assertIn("todo", output)
@@ -51,15 +51,15 @@ class FeedCLITest(test_cli.CLITest):
         self.assertIn("[clients]", output)
         data = json.loads(self.biwak("bookmarks", "--json").stdout)
         self.assertEqual([b["project"] is None for b in data], [False, True])
-        self.biwak("bookmark", "remove", todo.pk)
-        self.biwak("bookmark", "remove", "--project", self.project.pk)
+        self.biwak("bookmarks", "delete", todo.pk)
+        self.biwak("bookmarks", "delete", "--project", self.project.pk)
         self.assertNotIn("Order the tent", self.biwak("bookmarks").output)
-        self.assertEqual(self.biwak("bookmark", "add", 999999).exit_code, 1)
+        self.assertEqual(self.biwak("bookmarks", "create", 999999).exit_code, 1)
 
     def test_links(self):
         result = self.biwak(
-            "link",
-            "add",
+            "links",
+            "create",
             self.project.pk,
             "https://figma.com/file/1",
             "--title",
@@ -69,24 +69,31 @@ class FeedCLITest(test_cli.CLITest):
         link = json.loads(result.stdout)
         self.assertEqual(link["kind"], "figma")
         self.biwak(
-            "link",
-            "add",
+            "links",
+            "create",
             self.project.pk,
             "https://github.com/example/repo",
             "--clients",
         )
-        output = self.biwak("links", self.project.pk).output
+        output = self.biwak("links", "--project", self.project.pk).output
         self.assertIn("Design", output)
         self.assertIn("figma", output)
         self.assertIn("github", output)
         self.assertEqual(
-            len(json.loads(self.biwak("links", self.project.pk, "--json").stdout)), 2
+            len(
+                json.loads(
+                    self.biwak("links", "--project", self.project.pk, "--json").stdout
+                )
+            ),
+            2,
         )
-        self.assertIn("Deleted", self.biwak("link", "delete", link["id"]).output)
-        self.assertNotIn("Design", self.biwak("links", self.project.pk).output)
-        result = self.biwak("link", "add", self.project.pk, "javascript:alert(1)")
+        self.assertIn("Deleted", self.biwak("links", "delete", link["id"]).output)
+        self.assertNotIn(
+            "Design", self.biwak("links", "--project", self.project.pk).output
+        )
+        result = self.biwak("links", "create", self.project.pk, "javascript:alert(1)")
         self.assertEqual(result.exit_code, 1)
         result = self.biwak(
-            "link", "add", self.project.pk, "https://example.org/", access="read"
+            "links", "create", self.project.pk, "https://example.org/", access="read"
         )
         self.assertEqual(result.exit_code, 1)

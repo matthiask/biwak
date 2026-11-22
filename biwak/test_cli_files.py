@@ -43,14 +43,16 @@ class FilesCLITest(test_cli.CLITest):
         )
         ops.create_message(project=self.project, title="Internal", creator=self.ada)
         operations.pin_message(shared, actor=self.ada)
-        output = self.biwak("messages", self.project.pk).output
+        output = self.biwak("messages", "--project", self.project.pk).output
         for text in ["Kick-off", "Internal", "pinned", "📣 News", "[clients]"]:
             self.assertIn(text, output)
-        data = json.loads(self.biwak("messages", self.project.pk, "--json").stdout)
+        data = json.loads(
+            self.biwak("messages", "--project", self.project.pk, "--json").stdout
+        )
         self.assertEqual(
             [m["title"] for m in data["results"]], ["Kick-off", "Internal"]
         )
-        output = self.biwak("message", "show", shared.pk, "--comments").output
+        output = self.biwak("messages", "show", shared.pk, "--comments").output
         self.assertIn("We start **Monday**", output)
         self.assertIn("(pinned)", output)
         self.assertIn("[clients]", output)
@@ -72,15 +74,15 @@ class FilesCLITest(test_cli.CLITest):
             (self.cleo, "newest", ["Second", "First"]),
         ]:
             with self.subTest(user=user, order=order):
-                args = ["messages", self.project.pk, "--json"]
+                args = ["messages", "--project", self.project.pk, "--json"]
                 args += ["--order", order] if order else []
                 data = json.loads(self.cli_as(user, *args))
                 self.assertEqual([m["title"] for m in data["results"]], expected)
 
     def test_post(self):
         result = self.biwak(
-            "message",
-            "post",
+            "messages",
+            "create",
             self.project.pk,
             "News",
             "Hello",
@@ -97,8 +99,8 @@ class FilesCLITest(test_cli.CLITest):
         self.assertEqual(item.message.content, "Hello")
         # Standard input, telling somebody too
         result = self.biwak(
-            "message",
-            "post",
+            "messages",
+            "create",
             self.project.pk,
             "Piped",
             "--also",
@@ -117,7 +119,7 @@ class FilesCLITest(test_cli.CLITest):
         self.bob.save()
         with self.captureOnCommitCallbacks(execute=True):
             result = self.biwak(
-                "message", "post", self.project.pk, "Some", "Text", "--visible",
+                "messages", "create", self.project.pk, "Some", "Text", "--visible",
                 "--also", str(self.bob.pk),
             )  # fmt: skip
         self.assertEqual(result.exit_code, 0, result.output)
@@ -129,7 +131,7 @@ class FilesCLITest(test_cli.CLITest):
     def test_post_notifies_everybody_by_default(self):
         with self.captureOnCommitCallbacks(execute=True):
             result = self.biwak(
-                "message", "post", self.project.pk, "All", "Text", "--visible"
+                "messages", "create", self.project.pk, "All", "Text", "--visible"
             )
         self.assertEqual(result.exit_code, 0, result.output)
         event = Event.objects.get(item__title="All", action=Action.CREATED)
@@ -139,23 +141,23 @@ class FilesCLITest(test_cli.CLITest):
 
     def test_post_needs_a_known_category(self):
         result = self.biwak(
-            "message", "post", self.project.pk, "No", "Text",
+            "messages", "create", self.project.pk, "No", "Text",
             "--category", "Nope",
         )  # fmt: skip
         self.assertEqual(result.exit_code, 1)
         self.assertIn("No category", result.output)
         result = self.biwak(
-            "message", "post", self.project.pk, "No", "Text", "--also", "some"
+            "messages", "create", self.project.pk, "No", "Text", "--also", "some"
         )
         self.assertEqual(result.exit_code, 1)
         self.assertFalse(Item.objects.filter(title="No").exists())
 
     def test_pin(self):
         message = ops.create_message(project=self.project, title="Hi", creator=self.ada)
-        self.assertIn("Pinned", self.biwak("message", "pin", message.pk).output)
+        self.assertIn("Pinned", self.biwak("messages", "pin", message.pk).output)
         message.message.refresh_from_db()
         self.assertIsNotNone(message.message.pinned_at)
-        self.biwak("message", "pin", message.pk, "--undo")
+        self.biwak("messages", "pin", message.pk, "--undo")
         message.message.refresh_from_db()
         self.assertIsNone(message.message.pinned_at)
 
@@ -163,7 +165,7 @@ class FilesCLITest(test_cli.CLITest):
         plan = self.directory / "plan.pdf"
         plan.write_bytes(b"%PDF-1.7")
         result = self.biwak(
-            "message", "post", self.project.pk, "With a plan", "See",
+            "messages", "create", self.project.pk, "With a plan", "See",
             "--attach", plan, "--json",
         )  # fmt: skip
         item = Item.objects.get(pk=json.loads(result.stdout)["id"])
@@ -172,7 +174,7 @@ class FilesCLITest(test_cli.CLITest):
     def test_folders_and_files(self):
         data = json.loads(
             self.biwak(
-                "folder", "new", self.project.pk, "Specs", "--visible", "--json"
+                "folders", "create", self.project.pk, "Specs", "--visible", "--json"
             ).stdout
         )
         folder = data["id"]
@@ -180,7 +182,7 @@ class FilesCLITest(test_cli.CLITest):
         plan = self.directory / "plan.txt"
         plan.write_bytes(b"The plan")
         result = self.biwak(
-            "file", "upload", self.project.pk, plan, "--folder", folder,
+            "files", "upload", self.project.pk, plan, "--folder", folder,
             "--description", "About it", "--json",
         )  # fmt: skip
         uploaded = json.loads(result.stdout)
@@ -188,33 +190,43 @@ class FilesCLITest(test_cli.CLITest):
         self.assertTrue(uploaded["visible_to_clients"])
         self.assertEqual(uploaded["description"], "About it")
 
-        output = self.biwak("files", self.project.pk).output
+        output = self.biwak("files", "--project", self.project.pk).output
         self.assertIn("Specs", output)
         self.assertIn("[clients]", output)
-        output = self.biwak("files", self.project.pk, folder).output
+        output = self.biwak(
+            "files", "--project", self.project.pk, "--folder", folder
+        ).output
         self.assertIn("plan.txt", output)
         self.assertIn("/ Specs", output)
-        data = json.loads(self.biwak("files", self.project.pk, "--json").stdout)
+        data = json.loads(
+            self.biwak("files", "--project", self.project.pk, "--json").stdout
+        )
         self.assertEqual([e["title"] for e in data["entries"]], ["Specs"])
 
     def test_folder_colors(self):
         data = json.loads(
             self.biwak(
-                "folder", "new", self.project.pk, "Tinted", "--color", "ember", "--json"
+                "folders",
+                "create",
+                self.project.pk,
+                "Tinted",
+                "--color",
+                "ember",
+                "--json",
             ).stdout
         )
         self.assertEqual(Folder.objects.get(pk=data["id"]).color, "ember")
         plain = json.loads(
-            self.biwak("folder", "new", self.project.pk, "Plain", "--json").stdout
+            self.biwak("folders", "create", self.project.pk, "Plain", "--json").stdout
         )
         self.assertEqual(Folder.objects.get(pk=plain["id"]).color, "")
-        output = self.biwak("folder", "color", plain["id"], "lake").output
+        output = self.biwak("folders", "update", plain["id"], "--color", "lake").output
         self.assertIn("Lake", output)
         self.assertEqual(Folder.objects.get(pk=plain["id"]).color, "lake")
-        output = self.biwak("folder", "color", plain["id"], "none").output
+        output = self.biwak("folders", "update", plain["id"], "--color", "none").output
         self.assertIn("no color", output)
         self.assertEqual(Folder.objects.get(pk=plain["id"]).color, "")
-        result = self.biwak("folder", "color", plain["id"], "amber")
+        result = self.biwak("folders", "update", plain["id"], "--color", "amber")
         self.assertNotEqual(result.exit_code, 0)
 
     def test_renaming_and_ordering_folders(self):
@@ -226,25 +238,28 @@ class FilesCLITest(test_cli.CLITest):
             ops.create_doc(
                 project=self.project, title=title, creator=self.ada, parent=folder
             )
-        output = self.biwak("folder", "rename", folder.pk, "Briefs").output
-        self.assertIn("Renamed", output)
+        output = self.biwak("folders", "update", folder.pk, "--title", "Briefs").output
+        self.assertIn("Briefs, no color", output)
+        self.assertNotEqual(self.biwak("folders", "update", folder.pk).exit_code, 0)
         self.assertEqual(Item.objects.get(pk=folder.pk).title, "Briefs")
-        output = self.biwak("files", self.project.pk, folder.pk).output
+        output = self.biwak(
+            "files", "--project", self.project.pk, "--folder", folder.pk
+        ).output
         self.assertIn("Order: alphabetical", output)
         data = json.loads(
             self.biwak(
-                "folder", "order", self.project.pk, "newest", "--folder", folder.pk,
+                "folders", "order", self.project.pk, "newest", "--folder", folder.pk,
                 "--json",
             ).stdout
         )  # fmt: skip
         self.assertEqual(data["ordering"], "newest")
         self.assertEqual([e["title"] for e in data["entries"]], ["a.md", "b.md"])
-        output = self.biwak("folder", "order", self.project.pk, "reverse").output
+        output = self.biwak("folders", "order", self.project.pk, "reverse").output
         self.assertIn("Order: reverse", output)
         self.project.refresh_from_db()
         self.assertEqual(self.project.files_ordering, "reverse")
         # Staff only
-        output = self.cli_as(self.cleo, "folder", "order", self.project.pk, "oldest")
+        output = self.cli_as(self.cleo, "folders", "order", self.project.pk, "oldest")
         self.assertIn("403", output)
         self.project.refresh_from_db()
         self.assertEqual(self.project.files_ordering, "reverse")
@@ -253,24 +268,24 @@ class FilesCLITest(test_cli.CLITest):
         plan = self.directory / "plan.txt"
         plan.write_bytes(b"One")
         uploaded = json.loads(
-            self.biwak("file", "upload", self.project.pk, plan, "--json").stdout
+            self.biwak("files", "upload", self.project.pk, plan, "--json").stdout
         )
         fid = uploaded["id"]
         self.assertFalse(uploaded["visible_to_clients"])
         target = self.directory / "saved.txt"
-        result = self.biwak("file", "download", fid, "-o", target)
+        result = self.biwak("files", "download", fid, "-o", target)
         self.assertIn("Saved", result.output)
         self.assertEqual(target.read_bytes(), b"One")
 
         newer = self.directory / "plan2.txt"
         newer.write_bytes(b"Two")
-        self.assertIn("2 versions", self.biwak("file", "replace", fid, newer).output)
-        self.biwak("file", "download", fid, "-o", target)
+        self.assertIn("2 versions", self.biwak("files", "replace", fid, newer).output)
+        self.biwak("files", "download", fid, "-o", target)
         self.assertEqual(target.read_bytes(), b"Two")
         old = uploaded["versions"][0]["id"]
-        self.biwak("file", "download", fid, "--version", old, "-o", target)
+        self.biwak("files", "download", fid, "--version", old, "-o", target)
         self.assertEqual(target.read_bytes(), b"One")
-        result = self.biwak("file", "download", fid, "--version", 999999)
+        result = self.biwak("files", "download", fid, "--version", 999999)
         self.assertEqual(result.exit_code, 1)
 
     def test_download_to_the_files_name(self):
@@ -282,7 +297,7 @@ class FilesCLITest(test_cli.CLITest):
         previous = Path.cwd()
         os.chdir(self.directory)
         self.addCleanup(os.chdir, previous)
-        self.biwak("file", "download", item.pk)
+        self.biwak("files", "download", item.pk)
         self.assertEqual((self.directory / "named.txt").read_bytes(), b"Named")
 
     def test_moving(self):
@@ -290,21 +305,21 @@ class FilesCLITest(test_cli.CLITest):
             project=self.project, title="Specs", creator=self.ada, visible=True
         )
         doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
-        output = self.biwak("folder", "move", doc.pk, folder.pk).output
+        output = self.biwak("folders", "move", doc.pk, folder.pk).output
         self.assertIn("[clients]", output)
         self.assertEqual(Item.objects.get(pk=doc.pk).parent, folder)
-        self.biwak("folder", "move", doc.pk)
+        self.biwak("folders", "move", doc.pk)
         self.assertIsNone(Item.objects.get(pk=doc.pk).parent)
 
     def test_docs(self):
         data = json.loads(
             self.biwak(
-                "doc", "new", self.project.pk, "Minutes", "Decided",
+                "docs", "create", self.project.pk, "Minutes", "Decided",
                 "--json",
             ).stdout
         )  # fmt: skip
         did = data["id"]
-        output = self.biwak("doc", "show", did).output
+        output = self.biwak("docs", "show", did).output
         self.assertIn("Minutes", output)
         self.assertIn("Decided", output)
         self.assertNotIn("[clients]", output)
@@ -315,11 +330,11 @@ class FilesCLITest(test_cli.CLITest):
             project=self.project, title="Minutes", content="One", creator=self.ada
         )
         with patch.object(click, "edit", return_value="# Notes\n\nOne"):
-            self.biwak("doc", "edit", doc.pk)
+            self.biwak("docs", "update", doc.pk)
         doc.refresh_from_db()
         self.assertEqual(doc.title, "Notes")
         self.assertNotEqual(
-            self.biwak("doc", "edit", doc.pk, "--title", "x").exit_code, 0
+            self.biwak("docs", "update", doc.pk, "--title", "x").exit_code, 0
         )
 
     def test_editing_a_doc(self):
@@ -331,7 +346,7 @@ class FilesCLITest(test_cli.CLITest):
             visible=True,
         )
         with patch.object(click, "edit", return_value="Two") as edit:
-            result = self.biwak("doc", "edit", doc.pk)
+            result = self.biwak("docs", "update", doc.pk)
         edit.assert_called_once()
         self.assertEqual(edit.call_args.args[0], "One")
         self.assertIn("Clients can see this doc.", result.output)
@@ -344,7 +359,7 @@ class FilesCLITest(test_cli.CLITest):
             project=self.project, title="Minutes", content="One", creator=self.ada
         )
         with patch.object(click, "edit", return_value="One"):
-            result = self.biwak("doc", "edit", doc.pk)
+            result = self.biwak("docs", "update", doc.pk)
         self.assertIn("No changes", result.output)
         self.assertEqual(doc.doc.versions.count(), 1)
 
@@ -352,16 +367,16 @@ class FilesCLITest(test_cli.CLITest):
         doc = ops.create_doc(
             project=self.project, title="Minutes", content="One", creator=self.ada
         )
-        self.assertIn("is read-only", self.biwak("doc", "read-only", doc.pk).output)
-        self.assertIn("Read-only.", self.biwak("doc", "show", doc.pk).output)
+        self.assertIn("is read-only", self.biwak("docs", "read-only", doc.pk).output)
+        self.assertIn("Read-only.", self.biwak("docs", "show", doc.pk).output)
         with patch.object(click, "edit", return_value="Two") as edit:
-            result = self.biwak("doc", "edit", doc.pk)
+            result = self.biwak("docs", "update", doc.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("The doc is read-only.", result.output)
         edit.assert_not_called()
-        output = self.biwak("doc", "read-only", doc.pk, "--off").output
+        output = self.biwak("docs", "read-only", doc.pk, "--off").output
         self.assertIn("is editable", output)
-        self.assertNotIn("Read-only.", self.biwak("doc", "show", doc.pk).output)
+        self.assertNotIn("Read-only.", self.biwak("docs", "show", doc.pk).output)
 
     def test_editing_refuses_to_overwrite_a_newer_version(self):
         doc = ops.create_doc(
@@ -374,7 +389,7 @@ class FilesCLITest(test_cli.CLITest):
             return "Ada's"
 
         with patch.object(click, "edit", side_effect=editor):
-            result = self.biwak("doc", "edit", doc.pk)
+            result = self.biwak("docs", "update", doc.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("saved a newer version", result.output)
         doc.doc.refresh_from_db()
@@ -391,9 +406,9 @@ class FilesCLITest(test_cli.CLITest):
         _token, token = APIToken.create_for(user=self.cleo, title="T", access="write")
         biwak_cli.core.write_config({"url": "http://testserver", "token": token})
         for args in [
-            ("doc", "show", secret.pk),
-            ("files", self.project.pk, private.pk),
-            ("message", "show", hidden.pk),
+            ("docs", "show", secret.pk),
+            ("files", "--project", self.project.pk, "--folder", private.pk),
+            ("messages", "show", hidden.pk),
         ]:
             with patch.object(biwak_cli.commands.console, "_color_system", None):
                 result = test_cli.CliRunner().invoke(
@@ -401,8 +416,12 @@ class FilesCLITest(test_cli.CLITest):
                 )
             self.assertEqual(result.exit_code, 1, args)
             self.assertIn("404", result.output)
-        self.assertNotIn("Hidden", self.cli_as(self.cleo, "messages", self.project.pk))
-        self.assertNotIn("Secret", self.cli_as(self.cleo, "files", self.project.pk))
+        self.assertNotIn(
+            "Hidden", self.cli_as(self.cleo, "messages", "--project", self.project.pk)
+        )
+        self.assertNotIn(
+            "Secret", self.cli_as(self.cleo, "files", "--project", self.project.pk)
+        )
 
     def cli_as(self, user, *args):
         _token, token = APIToken.create_for(user=user, title="T", access="write")
