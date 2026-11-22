@@ -334,3 +334,50 @@ class UntitledTest(TestCase):
                     self.assertNotContains(response, other)
         response = self.client.get(f"/api/v1/docs/{doc.pk}/")
         self.assertEqual(response.json()["title"], "")
+
+
+class SigningInTest(TestCase):
+    """allauth's texts in our German (specs/languages.md)"""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()  # the rate limits of login codes
+
+    def request_code(self, email, **headers):
+        mail.outbox.clear()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                "/accounts/login/code/", {"email": email}, headers=headers, follow=True
+            )
+        return response, mail.outbox[-1]
+
+    def test_the_login_code_in_german(self):
+        person("Ada", language="de")
+        response, message = self.request_code("ada@example.org")
+        self.assertIn("Anmeldecode", message.subject)
+        self.assertIn("Hier ist dein Anmeldecode.", message.body)
+        self.assertIn("Wenn du das nicht warst", message.body)
+        self.assertNotIn("Sie ", message.body)
+        # The page's message follows the browser (no choice before signing in)
+        self.assertNotContains(response, "Ihr")
+
+    def test_in_english_for_an_english_choice(self):
+        person("Bob", language="en")
+        _response, message = self.request_code(
+            "bob@example.org", **{"Accept-Language": "de"}
+        )
+        self.assertIn("Sign-In Code", message.subject)
+        self.assertIn("Your sign-in code is listed below.", message.body)
+
+    def test_unknown_addresses_in_the_browsers_language(self):
+        _response, message = self.request_code(
+            "nobody@example.org", **{"Accept-Language": "de"}
+        )
+        self.assertIn("Unbekanntes Konto", message.subject)
+        self.assertIn("kein Konto", message.body)
+
+    def test_signing_out(self):
+        self.client.force_login(person("Ada", language="de"))
+        response = self.client.post("/accounts/logout/", follow=True)
+        self.assertContains(response, "Du hast dich abgemeldet.")

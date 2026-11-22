@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:39+0100\n"
+"POT-Creation-Date: 2026-11-22 14:42+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -37,6 +37,163 @@ msgstr "Mindestens eine aktive Person muss Admin bleiben."
 #: biwak/accounts/admin.py
 msgid "Mail to the selected people works again"
 msgstr "Mails an die ausgewählten Personen funktionieren wieder"
+
+#: biwak/accounts/allauth_texts.py
+msgid "This account is currently inactive."
+msgstr "Dieses Konto ist inaktiv."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Incorrect code."
+msgstr "Der Code stimmt nicht."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Invalid login."
+msgstr "Die Anmeldung hat nicht geklappt."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Too many failed login attempts. Try again later."
+msgstr "Zu viele fehlgeschlagene Anmeldeversuche. Versuch es später nochmals."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Be patient, you are sending too many requests."
+msgstr "Einen Moment bitte, du sendest zu viele Anfragen."
+
+#: biwak/accounts/allauth_texts.py biwak/templates/account/login.html
+#: biwak/templates/account/request_login_code.html
+msgid "Send me a sign-in code"
+msgstr "Anmeldecode zuschicken"
+
+#: biwak/accounts/allauth_texts.py
+msgid "Use authenticator app or code"
+msgstr "Mit der Authenticator-App oder einem Code"
+
+#: biwak/accounts/allauth_texts.py
+msgid "Use a security key"
+msgstr "Mit einem Passkey"
+
+#: biwak/accounts/allauth_texts.py biwak/projects/invitations.py
+#: biwak/projects/views.py
+msgid "Email"
+msgstr "E-Mail"
+
+#: biwak/accounts/allauth_texts.py biwak/templates/forms/_toolbar.html
+msgid "Code"
+msgstr "Code"
+
+#: biwak/accounts/allauth_texts.py
+msgid "Authenticator code"
+msgstr "Code aus der App"
+
+#: biwak/accounts/allauth_texts.py
+msgid "Master key"
+msgstr "Hauptschlüssel"
+
+#: biwak/accounts/allauth_texts.py
+msgid "Backup key"
+msgstr "Ersatzschlüssel"
+
+#: biwak/accounts/allauth_texts.py
+#, python-brace-format
+msgid "Key nr. {number}"
+msgstr "Schlüssel Nr. {number}"
+
+#: biwak/accounts/allauth_texts.py
+#, python-format
+msgid "An account already exists with this email address. Please sign in to that account first, then connect your %s account."
+msgstr "Es gibt schon ein Konto mit dieser Adresse. Melde dich zuerst damit an und verbinde dann dein %s-Konto."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Invalid token."
+msgstr "Ungültiger Token."
+
+#: biwak/accounts/allauth_texts.py
+msgid "The third-party account is already connected to a different account."
+msgstr "Dieses Konto ist schon mit einem anderen Konto verbunden."
+
+#: biwak/accounts/allauth_texts.py
+msgid "You cannot disconnect your last remaining third-party account."
+msgstr "Dein letztes verbundenes Konto kannst du nicht trennen."
+
+#: biwak/accounts/allauth_texts.py
+#, python-format
+msgid "Hello from %(site_name)s!"
+msgstr "Hallo von %(site_name)s!"
+
+#: biwak/accounts/allauth_texts.py
+#, python-format
+msgid ""
+"Thank you for using %(site_name)s!\n"
+"%(site_domain)s"
+msgstr ""
+"Danke, dass du %(site_name)s verwendest!\n"
+"%(site_domain)s"
+
+#: biwak/accounts/allauth_texts.py
+msgid "Your sign-in code is listed below. Please enter it in your open browser window."
+msgstr "Hier ist dein Anmeldecode. Gib ihn im offenen Browserfenster ein."
+
+#: biwak/accounts/allauth_texts.py
+msgid "This mail can be safely ignored if you did not initiate this action."
+msgstr "Wenn du das nicht warst, kannst du diese Mail ignorieren."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Sign-In Code"
+msgstr "Anmeldecode"
+
+#: biwak/accounts/allauth_texts.py
+#, python-format
+msgid "You are receiving this email because you, or someone else, tried to access an account with email %(email)s. However, we do not have any record of such an account in our database."
+msgstr "Du erhältst diese Mail, weil du oder jemand anderes sich mit der Adresse %(email)s anmelden wollte. Zu dieser Adresse gibt es aber kein Konto."
+
+#: biwak/accounts/allauth_texts.py
+msgid "If it was you, you can sign up for an account using the link below."
+msgstr "Wenn du das warst, findest du unter dem Link mehr dazu."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Unknown Account"
+msgstr "Unbekanntes Konto"
+
+#: biwak/accounts/allauth_texts.py
+#, python-format
+msgid "Successfully signed in as %(name)s."
+msgstr "Du bist als %(name)s angemeldet."
+
+#: biwak/accounts/allauth_texts.py
+msgid "You have signed out."
+msgstr "Du hast dich abgemeldet."
+
+#: biwak/accounts/allauth_texts.py
+#, python-format
+msgid "A sign-in code has been sent to %(recipient)s."
+msgstr "Ein Anmeldecode ist unterwegs an %(recipient)s."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Authenticator app activated."
+msgstr "Authenticator-App eingeschaltet."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Authenticator app deactivated."
+msgstr "Authenticator-App ausgeschaltet."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Security key added."
+msgstr "Passkey hinzugefügt."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Security key removed."
+msgstr "Passkey entfernt."
+
+#: biwak/accounts/allauth_texts.py
+msgid "The third-party account has been connected."
+msgstr "Das Konto wurde verbunden."
+
+#: biwak/accounts/allauth_texts.py
+msgid "The third-party account has been disconnected."
+msgstr "Das Konto wurde getrennt."
+
+#: biwak/accounts/allauth_texts.py
+msgid "Signed out of all other sessions."
+msgstr "Du bist überall sonst abgemeldet."
 
 #: biwak/accounts/api.py
 msgid "This request wasn't authenticated with a token."
@@ -3694,10 +3851,6 @@ msgstr "Nur Admins verwalten Einladungen von Mitarbeitenden."
 msgid "projects"
 msgstr "Projekte"
 
-#: biwak/projects/invitations.py biwak/projects/views.py
-msgid "Email"
-msgstr "E-Mail"
-
 #: biwak/projects/invitations.py
 msgid "Staff or client"
 msgstr "Team oder Kund:in"
@@ -4519,11 +4672,6 @@ msgstr "Anmeldecode eingeben"
 #: biwak/templates/account/request_login_code.html
 msgid "Sign in with a passkey"
 msgstr "Mit einem Passkey anmelden"
-
-#: biwak/templates/account/login.html
-#: biwak/templates/account/request_login_code.html
-msgid "Send me a sign-in code"
-msgstr "Anmeldecode zuschicken"
 
 #: biwak/templates/account/logout.html biwak/templates/accounts/settings.html
 #: biwak/templates/accounts/two_factor_setup.html biwak/templates/base.html
@@ -5688,10 +5836,6 @@ msgstr "Checkliste"
 #: biwak/templates/forms/_toolbar.html
 msgid "Quote"
 msgstr "Zitat"
-
-#: biwak/templates/forms/_toolbar.html
-msgid "Code"
-msgstr "Code"
 
 #: biwak/templates/forms/_toolbar.html
 msgid "Insert table"

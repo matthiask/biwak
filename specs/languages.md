@@ -130,7 +130,7 @@ Depends on: everything with texts; `accounts` (the `language` field,
   recipient's language (one German, one English in the same event).
 - The glossary test (above).
 
-## Decided while building (2026-11-22, see `decisions-to-confirm.md`)
+## Decided while building (2026-11-22, confirmed by the user)
 
 - The Language section comes after Appearance: three radios (each
   language in itself, `lang` set), saved with its button like the
@@ -143,6 +143,22 @@ Depends on: everything with texts; `accounts` (the `language` field,
   the actions as filter labels have a context of their own (`action`,
   participles: "erstellt").
 - Key names stay as on Swiss keyboards: Ctrl, Shift, Enter, Alt, Esc.
+- The palette's colour names are translated: Heide, See, Wald,
+  Gletscher, Glut, Alpenglühen, Moos, Schiefer, Rinde, Beere; the
+  clients' amber is Bernstein.
+- "all-access" projects are "offene Projekte", limited ones
+  "eingeschränkt"; "Only when tagged" is "Nur wenn markiert"; Monday to
+  Friday is "Werktag".
+- The rule widget's controls stay pieces around the fields ("alle [3]
+  Tage", "am [März] [5]"); the description below them is a whole
+  sentence ("alle 2 Jahre am 5. März").
+- allauth's texts people see when signing in (form errors, messages, the
+  login-code mails) are in our catalog with our German
+  (`biwak/accounts/allauth_texts.py`, its exact English; ours wins). The
+  Django admin keeps Django's German ("Sie").
+- A doc without a title is stored empty and shown as "Untitled" /
+  "Unbenannt" (`files.md`). The own organization's "Our organization" and
+  the importer's " (internal)" stay: names people rename.
 - New texts are translated in the branch that adds them (`AGENTS.md`).
 
 ## Done when
