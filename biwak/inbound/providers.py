@@ -33,7 +33,11 @@ MIN_INLINE_SIZE = 20 * 1000
 
 
 def _is_small_inline(part, content):
-    inline = part.get_content_disposition() == "inline" or part["Content-ID"]
+    """A small image in the text (a logo, a signature's icons): left out.
+    A part meant as an attachment is kept even with a Content-ID, which
+    Gmail gives every attachment"""
+    disposition = part.get_content_disposition()
+    inline = disposition == "inline" or (disposition is None and part["Content-ID"])
     return bool(inline) and len(content) < MIN_INLINE_SIZE
 
 
