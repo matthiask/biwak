@@ -6,10 +6,12 @@ that shows what the text will look like: we mostly write prose, not
 code, and the source view looks like code. One editor for every text
 field, live docs included. Asked by the user 2026-11-22.
 
-**Status:** open, to be built (decided with the user 2026-11-22:
-ProseMirror, Markdown stored, a source toggle, live docs' conversion
-in Python; a spike confirmed it with the changes below, its code and
-report on the branch `spike-editor`, `spike/REPORT.md`).
+**Status:** built 2026-11-22 on the branch `rich-editor` (decided with
+the user 2026-11-22: ProseMirror, Markdown stored, a source toggle, live
+docs' conversion in Python; a spike confirmed it with the changes below,
+its code and report on the branch `spike-editor`, `spike/REPORT.md`).
+What was built, the sizes and what's left to confirm: "What's built"
+below and `decisions-to-confirm.md`.
 
 Depends on: `editor.md` (the toolbar, checklists, pasting),
 `collaboration.md` (live docs: Yjs, `pycrdt`, saving),
@@ -216,6 +218,28 @@ in Python:
   tests with a Python client typing into the fragment, the browser's
   `CollabTest` (typing at once, cursors, undo per person, composing
   beside somebody typing, offline, ticks and API edits arriving).
+
+- **Sizes** (measured 2026-11-22, production bundle, gzip -9): a page
+  with a text field loads 129.6 KB of editor chunks beyond the main
+  bundle (34 KB): ProseMirror, markdown-it and prosemirror-markdown
+  117.5 KB, our editor modules 9.4 KB, the field code 2.7 KB; over the
+  budget of 125 KB by about 5 KB (markdown-it's HTML entities and
+  prosemirror-tables are the candidates if it matters). The live doc
+  page loads 167 KB (Yjs and y-prosemirror 37.6 KB more; CodeMirror's
+  was 136 KB).
+- **Tried in a browser** (Chromium through Playwright): composition
+  through the input method protocol (in a field, in a list with bold,
+  in a live doc while somebody else types in the same paragraph), undo
+  per person in live docs, the others' cursors with names, pasting into
+  lists and table cells, our CSS (screenshots). **Not verified:** real
+  input methods and phone keyboards (Android's composition, iOS's
+  Enter), Safari and Firefox, screen readers with the editor.
+- **Decided on the way** (2026-11-22): images with a link keep it as the
+  image's `href` also in fields (one schema); the stored text keeps its
+  line break at the end when the last block changes; forms keep the
+  source of unchanged blocks on the server (`keep_source()`); a run of
+  text split by a new mention keeps its Y text where most of it went
+  (the deep diff's pairing). The rest in `decisions-to-confirm.md`.
 
 ## Done when
 
