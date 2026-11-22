@@ -302,7 +302,7 @@ def on_people(user, name):
 
 def on_person(user, name, person):
     """A person's page: Activate… or Deactivate… for those who may
-    (specs/activation.md), Reset sign-in… for somebody with an
+    (specs/activation.md), Edit the name… (specs/people.md), Reset sign-in… for somebody with an
     authenticator app, passkeys or API tokens (specs/two-factor.md)"""
     from biwak.organizations import activation
 
@@ -312,6 +312,11 @@ def on_person(user, name, person):
     if not person.is_active and activation.can_change(user, person):
         actions.append(
             modal(_("Activate…"), reverse("person_activate", args=[person.pk]))
+        )
+    # The button's check (``people.decorate()``): not oneself, the split
+    if person.pk != user.pk and activation.can_change(user, person):
+        actions.append(
+            modal(_("Edit the name…"), reverse("person_name", args=[person.pk]))
         )
     if person.is_active and activation.can_deactivate(user, person):
         actions.append(
