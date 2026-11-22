@@ -49,12 +49,13 @@ class CopyTest(Fixture, TestCase):
     def url(self, item=None):
         return f"/lists/{(item or self.list).pk}/copy/"
 
-    def post(self, **data):
-        return self.client.post(
-            self.url(),
-            {"project": self.pitch.pk, "title": "Launch", "dates": "keep"} | data,
-            headers=MODAL,
-        )
+    def post(self, *, confirm=True, **data):
+        """Confirmed unless ``confirm`` is False: Cleo, a client, isn't on
+        an internal copy"""
+        data = {"project": self.pitch.pk, "title": "Launch", "dates": "keep"} | data
+        if confirm and "confirmed" not in data:
+            data["confirmed"] = f"{data['project']}:{int('visible' in data)}"
+        return self.client.post(self.url(), data, headers=MODAL)
 
     def test_the_modal_and_the_page(self):
         response = self.client.get(self.url(), headers=MODAL)
@@ -83,10 +84,10 @@ class CopyTest(Fixture, TestCase):
 
     def test_asks_who_is_left_out(self):
         """Cleo isn't in Website: the modal says so first"""
-        response = self.post(project=self.website.pk)
+        response = self.post(project=self.website.pk, confirm=False)
         assert_modal(self, response, title="Copy…")
         self.assertContains(
-            response, "Cleo Example isn&#x27;t in Website: left unassigned."
+            response, "Cleo Example won&#x27;t see the copy: left unassigned."
         )
         self.assertFalse(Item.objects.filter(project=self.website).exists())
         self.assertContains(response, f'name="confirmed" value="{self.website.pk}:0"')
@@ -98,7 +99,7 @@ class CopyTest(Fixture, TestCase):
 
     def test_asks_before_showing_to_clients(self):
         Membership.objects.create(project=self.website, user=self.cleo)
-        response = self.post(project=self.website.pk, visible="on")
+        response = self.post(project=self.website.pk, visible="on", confirm=False)
         self.assertContains(
             response, "Makes the copy and 1 to-do visible to 2 clients."
         )
@@ -190,8 +191,8 @@ class MoveListTest(Fixture, TestCase):
         assert_modal(self, response, title="Move to…")
         self.assertContains(
             response,
-            "Cleo Example isn&#x27;t in Website: they&#x27;ll be unassigned and"
-            " unsubscribed.",
+            "Cleo Example won&#x27;t see it in Website: they&#x27;ll be"
+            " unassigned and unsubscribed.",
         )
         self.assertContains(
             response,
@@ -256,7 +257,7 @@ class MoveListTest(Fixture, TestCase):
 
     def test_clients_dont_learn_about_others(self):
         """The names of people a client may not know aren't shown"""
-        Membership.objects.create(project=self.website, user=self.cleo)
+        shop = project("Shop", members=[self.cleo, self.dan], all_access=False)
         eve = person("Eve")
         message = ops.create_message(
             project=self.pitch, title="Hello", creator=self.cleo, visible=True
@@ -267,9 +268,9 @@ class MoveListTest(Fixture, TestCase):
         subscribe(self.bob, message)
         self.client.force_login(self.cleo)
         response = self.client.post(
-            self.url(message), {"project": self.website.pk}, headers=MODAL
+            self.url(message), {"project": shop.pk}, headers=MODAL
         )
-        self.assertContains(response, "Bob Example and 1 other person aren")
+        self.assertContains(response, "Bob Example and 1 other person won")
         self.assertNotContains(response, "Eve")
 
     def test_the_menu(self):
@@ -291,7 +292,14 @@ class MoveListTest(Fixture, TestCase):
         )
         pitch = self.client.get(f"/projects/{self.pitch.pk}/feed/")
         self.assertNotContains(pitch, "Order the tent")
+        # A trace, without a link (decided 2026-11-22)
+        self.assertContains(pitch, "moved Launch to Website")
+        self.assertNotContains(pitch, self.list.get_absolute_url())
+        # Not for clients
+        self.client.force_login(self.cleo)
+        pitch = self.client.get(f"/projects/{self.pitch.pk}/feed/")
         self.assertNotContains(pitch, "Launch")
+        self.client.force_login(self.ada)
         website = self.client.get(f"/projects/{self.website.pk}/feed/")
         self.assertContains(website, "Order the tent")
         self.assertContains(website, "from Pitch to Website")
@@ -335,13 +343,7 @@ class MoveFilesTest(Fixture, TestCase):
             {"folder": f"project:{self.website.pk}"},
             headers=MODAL,
         )
-        # Bob follows the doc (told about it) and isn't in Website
-        self.assertContains(response, "Bob Example isn&#x27;t in Website")
-        response = self.client.post(
-            self.url(self.folder),
-            {"folder": f"project:{self.website.pk}", "confirmed": self.website.pk},
-            headers=MODAL,
-        )
+        # Bob follows the doc and sees Website, all-access: nothing to ask
         assert_modal_redirect(self, response, self.folder.get_absolute_url())
         self.doc.refresh_from_db()
         self.assertEqual(self.doc.project, self.website)

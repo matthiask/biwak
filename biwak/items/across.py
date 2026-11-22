@@ -1,9 +1,10 @@
 """Copying a list and moving top-level items to another project: the
 modals (specs/lists-across-projects.md)
 
-Both ask before doing what can't be seen in the form: who is left out
-(assignees and subscribers who aren't members of the target project) and
-who would see it (clients of the target). The form comes back with these
+Both ask before doing what can't be seen in the form: who is added to
+the target project (assignees who don't see it there), who is left out
+(clients, and subscribers who don't see it there) and who would see it
+(clients of the target). The form comes back with these
 sentences and ``confirmed`` set to what they're about; posting it again
 with the same target does it.
 """
@@ -61,35 +62,57 @@ def _names(people, project, viewer):
     return get_text_list(names, gettext("and"))
 
 
+def _added(added, item, project, viewer):
+    if not added:
+        return ""
+    return ngettext(
+        "%(names)s will be added to %(project)s.",
+        "%(names)s will be added to %(project)s.",
+        len(added),
+    ) % {"names": _names(added, item.project, viewer), "project": project}
+
+
 def move_notes(item, project, viewer):
     """What moving the item to ``project`` does that the form doesn't
-    show: who is dropped, and the clients who'd see it (asking like "Show
-    to clients…"): ``(who's dropped, who'd see it)``, each a sentence or
-    empty."""
-    note = clients_note = ""
-    dropped = list(ops.move_dropped(item, project))
+    show: who is added there and who is dropped, and the clients who'd see
+    it (asking like "Show to clients…"): ``(who's added and dropped, who'd
+    see it)``, each sentences or empty."""
+    added, dropped = (list(people) for people in ops.move_people(item, project))
+    notes = [_added(added, item, project, viewer)]
     if dropped:
-        note = ngettext(
-            "%(names)s isn't in %(project)s: they'll be unassigned and unsubscribed.",
-            "%(names)s aren't in %(project)s: they'll be unassigned and unsubscribed.",
-            len(dropped),
-        ) % {"names": _names(dropped, item.project, viewer), "project": project}
+        notes.append(
+            ngettext(
+                "%(names)s won't see it in %(project)s: they'll be unassigned"
+                " and unsubscribed.",
+                "%(names)s won't see it in %(project)s: they'll be unassigned"
+                " and unsubscribed.",
+                len(dropped),
+            )
+            % {"names": _names(dropped, item.project, viewer), "project": project}
+        )
+    clients_note = ""
     if clients := ops.new_clients(item, project).count():
         clients_note = show_texts(item, clients)[1]
-    return note, clients_note
+    return " ".join(filter(None, notes)), clients_note
 
 
 def copy_notes(item, project, visible, viewer):
-    """What copying the list to ``project`` leaves out, and the clients who'd
-    see the copy: ``(who's left out, who'd see it)``"""
-    note = clients_note = ""
-    dropped = list(ops.copy_dropped(item, project))
+    """What copying the list to ``project`` adds there and leaves out, and
+    the clients who'd see the copy: ``(who's added and left out, who'd see
+    it)``"""
+    added, dropped = (
+        list(people) for people in ops.copy_people(item, project, visible=visible)
+    )
+    notes = [_added(added, item, project, viewer)]
     if dropped:
-        note = ngettext(
-            "%(names)s isn't in %(project)s: left unassigned.",
-            "%(names)s aren't in %(project)s: left unassigned.",
-            len(dropped),
-        ) % {"names": _names(dropped, item.project, viewer), "project": project}
+        notes.append(
+            ngettext(
+                "%(names)s won't see the copy: left unassigned.",
+                "%(names)s won't see the copy: left unassigned.",
+                len(dropped),
+            )
+            % {"names": _names(dropped, item.project, viewer)}
+        )
     clients = 0
     if visible:
         clients = (
@@ -99,6 +122,7 @@ def copy_notes(item, project, visible, viewer):
             .distinct()
             .count()
         )
+    clients_note = ""
     if clients:
         todos = ops.open_todos(item).count()
         clients_note = _("Makes the copy and %(todos)s visible to %(clients)s.") % {
@@ -107,7 +131,7 @@ def copy_notes(item, project, visible, viewer):
             "clients": ngettext("%(count)d client", "%(count)d clients", clients)
             % {"count": clients},
         }
-    return note, clients_note
+    return " ".join(filter(None, notes)), clients_note
 
 
 class ProjectChoice(forms.ModelChoiceField):

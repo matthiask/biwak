@@ -72,7 +72,7 @@ class APITest(Fixture, TestCase):
         response = self.move(self.ada)
         self.assertEqual(response.status_code, 400)
         detail = response.json()["detail"]
-        self.assertIn("Cleo Example isn't in Website", detail)
+        self.assertIn("Cleo Example won't see it in Website", detail)
         self.assertIn("visible to 1 client", detail)
         self.assertIn("confirm", detail)
         self.list.refresh_from_db()

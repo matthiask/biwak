@@ -17,7 +17,7 @@ from biwak.items.models import Comment, Item, Kind, Status
 from biwak.projects.models import Membership
 from biwak.public_links import operations as link_ops
 from biwak.reactions import operations as reaction_ops
-from biwak.test_utils import person, project
+from biwak.test_utils import external, person, project
 
 
 class Fixture:
@@ -28,6 +28,7 @@ class Fixture:
         self.dan = person("Dan", client=True, organization="Example Shop Ltd")
         self.pitch = project("Pitch", members=[self.ada, self.bob, self.cleo])
         self.website = project("Website", members=[self.ada, self.dan])
+        self.shop = project("Shop", members=[self.ada, self.dan], all_access=False)
         self.list = ops.create_list(
             project=self.pitch,
             title="Launch",
@@ -98,22 +99,46 @@ class CopyListTest(Fixture, TestCase):
         self.assertEqual(Item.objects.filter(parent=self.list).count(), 3)
         self.assertEqual(visibility.check(), [])
 
-    def test_assignees_who_are_members(self):
+    def test_assignees(self):
+        """Kept where they see the copy; staff who don't are added to the
+        project, clients who don't are left out (decided 2026-11-22)"""
+        # Website is all-access: Bob sees it as own staff
         self.assertEqual(
-            list(ops.copy_dropped(self.list, self.website)), [self.bob, self.cleo]
+            [list(p) for p in ops.copy_people(self.list, self.website, visible=False)],
+            [[], [self.cleo]],
         )
         copy = self.copy(project=self.website)
         tent, stove = ops.open_todos(copy)
-        self.assertEqual(list(tent.todo.assignees.all()), [self.ada])
+        self.assertEqual(set(tent.todo.assignees.all()), {self.ada, self.bob})
         self.assertEqual(list(stove.todo.assignees.all()), [])
+        self.assertFalse(self.website.is_member(self.bob))
         # Assigned means subscribed
         self.assertTrue(Subscription.objects.filter(item=tent, user=self.ada).exists())
-        # Within the project everybody stays
-        self.assertEqual(list(ops.copy_dropped(self.list, self.pitch)), [])
-        copy = self.copy()
-        tent, stove = ops.open_todos(copy)
+        # Shop is limited: Bob is added
+        self.assertEqual(
+            [list(p) for p in ops.copy_people(self.list, self.shop, visible=False)],
+            [[self.bob], [self.cleo]],
+        )
+        copy = self.copy(project=self.shop)
+        tent, _stove = ops.open_todos(copy)
         self.assertEqual(set(tent.todo.assignees.all()), {self.ada, self.bob})
+        self.assertTrue(self.shop.is_member(self.bob))
+        self.assertTrue(
+            Event.objects.filter(
+                project=self.shop, action=Action.ADDED, data__user=self.bob.pk
+            ).exists()
+        )
+        # Within the project: Cleo only if the copy is visible
+        self.assertEqual(
+            [list(p) for p in ops.copy_people(self.list, self.pitch, visible=True)],
+            [[], []],
+        )
+        copy = self.copy(visible=True)
+        _tent, stove = ops.open_todos(copy)
         self.assertEqual(list(stove.todo.assignees.all()), [self.cleo])
+        copy = self.copy()
+        _tent, stove = ops.open_todos(copy)
+        self.assertEqual(list(stove.todo.assignees.all()), [])
 
     def test_title(self):
         """The list's own; " (copy)", " (copy 2)" only on a clash ignoring
@@ -206,7 +231,7 @@ class MoveToProjectTest(Fixture, TestCase):
         link.refresh_from_db()
         self.assertEqual(link.item, self.tent)
         self.assertTrue(Bookmark.objects.filter(item=self.list).exists())
-        # Every event moves, the old project has none of them
+        # Every event moves, the old project keeps only the trace
         self.assertFalse(
             Event.objects.filter(project=self.pitch, item__isnull=False).exists()
         )
@@ -230,29 +255,57 @@ class MoveToProjectTest(Fixture, TestCase):
         self.assertEqual(visibility.check(), [])
 
     def test_people_not_in_the_target(self):
-        """Listed before and dropped; nobody is added to the project"""
+        """Assigned staff and externals who don't see it there are added,
+        clients and subscribers who don't are dropped (decided 2026-11-22)"""
+        pia = external()
+        Membership.objects.create(project=self.pitch, user=pia)
+        ops.assign(self.tent, [pia], actor=self.ada)
         subscribe(self.bob, self.list)
+        eve = person("Eve")
+        subscribe(eve, self.list)
         self.assertEqual(
-            list(ops.move_dropped(self.list, self.website)), [self.bob, self.cleo]
+            [list(p) for p in ops.move_people(self.list, self.shop)],
+            [[self.bob, pia], [self.cleo, eve]],
         )
-        ops.move_to_project(self.list, project=self.website, actor=self.ada)
-        self.assertEqual(list(self.tent.todo.assignees.all()), [self.ada])
+        ops.move_to_project(self.list, project=self.shop, actor=self.ada)
+        self.assertEqual(set(self.tent.todo.assignees.all()), {self.ada, self.bob, pia})
         self.assertEqual(list(self.stove.todo.assignees.all()), [])
+        self.assertTrue(self.shop.is_member(self.bob))
+        self.assertTrue(self.shop.is_member(pia))
+        self.assertFalse(self.shop.is_member(self.cleo))
+        self.assertFalse(self.shop.is_member(eve))
         self.assertFalse(
             Subscription.objects.filter(
-                user__in=[self.bob, self.cleo], item__project=self.website
+                user__in=[self.cleo, eve], item__project=self.shop
             ).exists()
         )
-        self.assertTrue(Subscription.objects.filter(user=self.ada).exists())
-        self.assertFalse(
-            Membership.objects.filter(
-                project=self.website, user__in=[self.bob, self.cleo]
-            ).exists()
+        self.assertTrue(
+            Subscription.objects.filter(user=self.bob, item=self.list).exists()
         )
         # The unassigning is history: recorded, telling nobody
         self.assertTrue(
-            Event.objects.filter(item=self.tent, action=Action.UNASSIGNED).exists()
+            Event.objects.filter(item=self.stove, action=Action.UNASSIGNED).exists()
         )
+
+    def test_people_who_see_it_stay(self):
+        """Own staff of an all-access project see it there: nobody added"""
+        subscribe(self.bob, self.list)
+        self.assertEqual(
+            [list(p) for p in ops.move_people(self.list, self.website)],
+            [[], [self.cleo]],
+        )
+        ops.move_to_project(self.list, project=self.website, actor=self.ada)
+        self.assertEqual(set(self.tent.todo.assignees.all()), {self.ada, self.bob})
+        self.assertFalse(self.website.is_member(self.bob))
+
+    def test_a_trace_in_the_old_project(self):
+        """For its staff (decided 2026-11-22)"""
+        ops.move_to_project(self.list, project=self.website, actor=self.ada)
+        trace = Event.objects.get(project=self.pitch, action=Action.MOVED)
+        self.assertIsNone(trace.item)
+        self.assertFalse(trace.is_client_visible)
+        self.assertEqual(trace.data["title"], "Launch")
+        self.assertEqual(trace.data["to_project_id"], self.website.pk)
 
     def test_completed_todos_keep_their_assignees(self):
         ops.assign(self.maps, [self.bob], actor=self.ada)

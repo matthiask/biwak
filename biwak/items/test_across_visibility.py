@@ -62,14 +62,16 @@ class MovedTest(ReceiveMixin, ReplyTestCase):
         self.assertNotContains(page, "Zebra")
         self.client.force_login(self.ada)
         page = self.client.get(self.project.get_absolute_url())
-        self.assertNotContains(page, "Zebra notes")
-        self.assertNotContains(page, "Shared")
+        # Only the trace of the move, without links
+        self.assertNotContains(page, self.doc.get_absolute_url())
+        self.assertNotContains(page, self.shared.get_absolute_url())
 
     def test_feeds(self):
         self.move()
         self.client.force_login(self.cleo)
         self.assertNotContains(self.client.get("/feed/"), "Giraffe")
         self.assertNotContains(self.client.get("/feed/"), "Update the copy")
+        self.assertNotContains(self.client.get("/feed/"), "Shop")
         self.client.force_login(self.dan)
         feed = self.client.get(f"/projects/{self.shop.pk}/feed/")
         # What clients saw before comes along, the internal doc doesn't
@@ -81,7 +83,9 @@ class MovedTest(ReceiveMixin, ReplyTestCase):
         self.client.force_login(self.ada)
         old = self.client.get(f"/projects/{self.project.pk}/feed/")
         self.assertNotContains(old, "Giraffe")
-        self.assertNotContains(old, "Zebra")
+        # The trace of the moves (decided 2026-11-22)
+        self.assertContains(old, "moved Zebra notes to Shop")
+        self.assertContains(old, "moved Shared to Shop")
         new = self.client.get(f"/projects/{self.shop.pk}/feed/")
         self.assertContains(new, "Giraffe")
         self.assertContains(new, "Zebra notes")

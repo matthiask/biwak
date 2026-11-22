@@ -33,9 +33,10 @@ folders with "Move to…" in their "More" menu. What's at the top of the
 project (folders, docs and files) moves to another project there too,
 with everything in it; something inside a folder moves with its
 folder, or to the top first. Messages have "Move to…" for other
-projects as well. People who aren't members of the other project are
-dropped from it (the dialog names them first), and if clients there
-would see it, it asks first. Every tile has the same
+projects as well. Assigned staff who aren't in the other project are
+added to it, clients and subscribers who won't see it there are
+dropped (the dialog names them first), and if clients there would see
+it, it asks first. Every tile has the same
 menu behind its "…" button in the top-right corner (it shows when you
 point at the tile or reach it with Tab), so you can edit a folder, move
 something or move it to the trash without opening it. Staff also show

@@ -44,7 +44,7 @@ class AcrossTest(E2ETestCase):
         dialog.get_by_role("button", name="Copy").click()
         # Asked in the dialog: Cleo isn't in Shop
         expect(dialog.locator("[data-dropped]")).to_contain_text(
-            "Cleo Example isn't in Shop: left unassigned."
+            "Cleo Example won't see the copy: left unassigned."
         )
         expect(dialog.get_by_role("combobox", name="Project")).to_have_value("Shop")
         dialog.get_by_role("button", name="Copy").click()

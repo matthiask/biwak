@@ -79,7 +79,7 @@ class AcrossCLITest(test_cli.CLITest):
         ops.assign(self.tent, [cleo], actor=self.ada)
         result = self.biwak("move", self.list.pk, "--to", self.shop.pk)
         self.assertNotEqual(result.exit_code, 0)
-        self.assertIn("Cleo Example isn't in Shop", result.output)
+        self.assertIn("Cleo Example won't see it in Shop", result.output)
         self.assertIn("confirm", result.output)
         result = self.biwak("move", self.list.pk, "--to", self.shop.pk, "--confirm")
         self.assertEqual(result.exit_code, 0, result.output)

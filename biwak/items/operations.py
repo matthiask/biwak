@@ -1275,11 +1275,44 @@ class Dates(TextChoices):
     REMOVE = "remove", _("Remove")
 
 
-def staying(project):
-    """``Q()`` for the people who stay assigned and subscribed in
-    ``project``: its members (decided 2026-11-22); nobody is added to a
-    project by copying or moving"""
-    return Q(pk__in=Membership.objects.filter(project=project).values("user"))
+def staying(project, visible):
+    """``Q()`` for the people who see an item of ``project`` (visible to
+    clients or not) and stay assigned and subscribed when it's copied or
+    moved there: its members (clients only if it's visible) and, in an
+    all-access project, the own staff; inactive people too (they keep
+    their assignments, specs/handover.md). ``notify.people_who_see()``
+    without the active filter."""
+    can_see = Q(is_client=False, memberships__project=project)
+    if project.is_all_access:
+        can_see |= own_staff()
+    if visible:
+        can_see |= Q(is_client=True, memberships__project=project)
+    return Q(pk__in=User.objects.filter(can_see).values("pk"))
+
+
+def people_plan(assignees, subscribers, project, visible):
+    """Who copying or moving into ``project`` adds there and who it drops
+    (decided 2026-11-22): assignees who don't see it there are added as
+    members, staff and externals alike, if they're active; clients aren't,
+    they're dropped with their assignments and subscriptions. Subscribers
+    who don't see it there (and aren't added) are dropped. ``(added,
+    dropped)``, querysets of people ordered by name."""
+    seeing = User.objects.filter(staying(project, visible))
+    added = (
+        assignees
+        .exclude(pk__in=seeing.values("pk"))
+        .filter(is_client=False, is_active=True)
+        .distinct()
+    )
+    kept = Q(pk__in=seeing.values("pk")) | Q(pk__in=added.values("pk"))
+    dropped = User.objects.filter(
+        Q(pk__in=assignees.values("pk")) | Q(pk__in=subscribers.values("pk"))
+    ).exclude(kept)
+    order = (Lower("full_name"), "email")
+    return (
+        User.objects.filter(pk__in=added.values("pk")).order_by(*order),
+        dropped.order_by(*order),
+    )
 
 
 def copy_title(title, project):
@@ -1323,15 +1356,14 @@ def open_todos(list_item):
     )
 
 
-def copy_dropped(list_item, project):
-    """The assignees of the list's open to-dos who aren't in ``project``,
-    left unassigned in a copy there"""
-    return (
-        User.objects
-        .filter(assigned_todos__item__in=open_todos(list_item))
-        .exclude(staying(project))
-        .distinct()
-        .order_by(Lower("full_name"), "email")
+def copy_people(list_item, project, *, visible):
+    """``people_plan()`` of copying the list's open to-dos into
+    ``project``: those assignees added there, those left out"""
+    return people_plan(
+        User.objects.filter(assigned_todos__item__in=open_todos(list_item)),
+        User.objects.none(),
+        project,
+        visible,
     )
 
 
@@ -1362,7 +1394,8 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
     """A copy of the list's open work in ``project`` (the same or another):
     its description, groups in order and open to-dos in order with their
     notes, checklists, recurrence and the assignees who are members of
-    ``project`` (``copy_dropped()`` are left out). Not completed to-dos,
+    ``project`` or added to it (``copy_people()``; clients who aren't are
+    left out). Not completed to-dos,
     comments, events, subscribers, reactions or public links. ``dates``
     keeps, shifts by ``days`` or removes the due dates. The copy gets
     ``project``'s visibility: internal unless ``visible``. One ``created``
@@ -1390,8 +1423,11 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
         )
         for group in source.groups.all()
     }
+    added, _dropped = copy_people(item, project, visible=visible)
+    for user in added:
+        project_ops.add_member(project, user, actor=actor)
     staying_ids = set(
-        User.objects.filter(staying(project)).values_list("pk", flat=True)
+        User.objects.filter(staying(project, visible)).values_list("pk", flat=True)
     )
     now = timezone.now()
     positions = {}
@@ -1443,23 +1479,20 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
     return copy
 
 
-def move_dropped(item, project):
-    """The assignees of open to-dos and the subscribers of the item and
-    what's in it who aren't in ``project``: dropped by moving there"""
+def move_people(item, project):
+    """``people_plan()`` of moving the item into ``project``: the assignees
+    of its open to-dos added there, those assignees and subscribers of it
+    and what's in it dropped"""
     items = Item.objects.descendants(item, include_self=True)
-    return (
-        User.objects
-        .filter(
-            Q(
-                assigned_todos__item__in=items.filter(
-                    kind=Kind.TODO, todo__completed_at__isnull=True
-                )
+    return people_plan(
+        User.objects.filter(
+            assigned_todos__item__in=items.filter(
+                kind=Kind.TODO, todo__completed_at__isnull=True
             )
-            | Q(subscriptions__item__in=items)
-        )
-        .exclude(staying(project))
-        .distinct()
-        .order_by(Lower("full_name"), "email")
+        ),
+        User.objects.filter(subscriptions__item__in=items),
+        project,
+        item.is_client_visible,
     )
 
 
@@ -1481,9 +1514,11 @@ def new_clients(item, project):
 def move_to_project(item, *, project, actor):
     """Moves a top-level list, message, folder, doc or file with everything
     in it, comments, reactions, events and history to the top level of
-    another project. Assignees and subscribers who aren't members there
-    are dropped (``move_dropped()``); the item keeps its switch. Records a
-    ``moved`` event naming both projects, notifying nobody."""
+    another project. Assignees who don't see it there are added as members
+    or, clients, dropped; subscribers who don't are dropped
+    (``move_people()``); the item keeps its switch. Records a ``moved``
+    event naming both projects, notifying nobody, and a trace in the old
+    project (an event without item, for its staff)."""
     if item.kind not in MOVABLE or item.parent_id is not None:
         raise ValueError(gettext("Only what's at the top of a project moves there."))
     source = item.project
@@ -1494,7 +1529,9 @@ def move_to_project(item, *, project, actor):
     pks = list(
         Item.objects.descendants(item, include_self=True).values_list("pk", flat=True)
     )
-    dropped = list(move_dropped(item, project))
+    added, dropped = (list(people) for people in move_people(item, project))
+    for user in added:
+        project_ops.add_member(project, user, actor=actor)
     if dropped:
         todos = Item.objects.filter(
             pk__in=pks,
@@ -1518,6 +1555,17 @@ def move_to_project(item, *, project, actor):
 
     # The open editors of docs in it check again (specs/collaboration.md)
     collab.check_access(project=source.pk)
+    # The trace in the old project (decided 2026-11-22: hard to find
+    # otherwise), for its staff: what moved stays out of clients' sight
+    record(
+        actor=actor,
+        action=Action.MOVED,
+        project=source,
+        title=item.title,
+        kind=item.kind,
+        to_project=project.name,
+        to_project_id=project.pk,
+    )
     return record(
         actor=actor,
         action=Action.MOVED,

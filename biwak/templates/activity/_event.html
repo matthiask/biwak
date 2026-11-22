@@ -67,6 +67,8 @@
     {% blocktranslate with target=event.target_project %}moved {{ subject }} to {{ target }}{% endblocktranslate %}
   {% elif event.source_project %}
     {% blocktranslate with source=event.source_project %}moved {{ subject }} from {{ source }}{% endblocktranslate %}
+  {% elif event.data.to_project %}
+    {% blocktranslate %}moved {{ subject }} to another project{% endblocktranslate %}
   {% elif event.data.group %}
     {% blocktranslate with target=event.data.group|title_text %}moved {{ subject }} to {{ target }}{% endblocktranslate %}
   {% elif event.target_list %}

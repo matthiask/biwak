@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:57+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2318,17 +2318,24 @@ msgstr[1] "%(count)d weitere Personen"
 
 #: biwak/items/across.py
 #, python-format
-msgid "%(names)s isn't in %(project)s: they'll be unassigned and unsubscribed."
-msgid_plural "%(names)s aren't in %(project)s: they'll be unassigned and unsubscribed."
-msgstr[0] "%(names)s ist nicht in %(project)s: Zuweisungen und Abonnements fallen weg."
-msgstr[1] "%(names)s sind nicht in %(project)s: Zuweisungen und Abonnements fallen weg."
+msgid "%(names)s will be added to %(project)s."
+msgid_plural "%(names)s will be added to %(project)s."
+msgstr[0] "%(names)s wird zu %(project)s hinzugefügt."
+msgstr[1] "%(names)s werden zu %(project)s hinzugefügt."
 
 #: biwak/items/across.py
 #, python-format
-msgid "%(names)s isn't in %(project)s: left unassigned."
-msgid_plural "%(names)s aren't in %(project)s: left unassigned."
-msgstr[0] "%(names)s ist nicht in %(project)s: wird nicht zugewiesen."
-msgstr[1] "%(names)s sind nicht in %(project)s: werden nicht zugewiesen."
+msgid "%(names)s won't see it in %(project)s: they'll be unassigned and unsubscribed."
+msgid_plural "%(names)s won't see it in %(project)s: they'll be unassigned and unsubscribed."
+msgstr[0] "%(names)s sieht es in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
+msgstr[1] "%(names)s sehen es in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
+
+#: biwak/items/across.py
+#, python-format
+msgid "%(names)s won't see the copy: left unassigned."
+msgid_plural "%(names)s won't see the copy: left unassigned."
+msgstr[0] "%(names)s sieht die Kopie nicht: wird nicht zugewiesen."
+msgstr[1] "%(names)s sehen die Kopie nicht: werden nicht zugewiesen."
 
 #: biwak/items/across.py
 #, python-format
@@ -5287,6 +5294,11 @@ msgstr "hat %(subject)s nach %(target)s verschoben"
 #, python-format
 msgid "moved %(subject)s from %(source)s"
 msgstr "hat %(subject)s aus %(source)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(subject)s to another project"
+msgstr "hat %(subject)s in ein anderes Projekt verschoben"
 
 #: biwak/templates/activity/_event.html
 #, python-format
