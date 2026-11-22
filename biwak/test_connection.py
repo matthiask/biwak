@@ -37,12 +37,10 @@ class ConnectionTest(E2ETestCase):
         return page
 
     def go_offline(self, page):
-        self.offline = True
         page.context.set_offline(True)
 
     def go_online(self, page):
         page.context.set_offline(False)
-        self.offline = False
 
     def test_the_banner_is_a_status_region_and_empty_online(self):
         page = self.open(self.ada, self.todolist, page=self.page)
@@ -286,7 +284,6 @@ class ConnectionTest(E2ETestCase):
         page.close()
         self.assertNotIn("Typed offline", Doc.objects.get(pk=doc.pk).content)
         context.set_offline(False)
-        self.offline = False
         page = context.new_page()
         self.edit(page, doc)
         expect(page.locator("[data-collab-editor] .ProseMirror")).to_contain_text(
@@ -418,7 +415,6 @@ class ConnectionTest(E2ETestCase):
         LiveState.objects.filter(doc_id=doc.pk).delete()
         time.sleep(0.01)
         context.set_offline(False)
-        self.offline = False
         page = context.new_page()
         self.edit(page, doc)
         expect(page.locator("[data-collab-editor] .ProseMirror")).to_contain_text(

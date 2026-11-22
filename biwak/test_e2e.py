@@ -100,9 +100,6 @@ class E2ETestCase(LiveServerTestCase):
         self.project = project(members=[self.ada, self.cleo])
         self.contexts = []
         self.errors = []
-        # While a test has taken the network away on purpose, the browser
-        # logs the failed requests and reconnects
-        self.offline = False
         self.page = self.login(self.ada)
 
     def tearDown(self):
@@ -162,10 +159,13 @@ class E2ETestCase(LiveServerTestCase):
         # serves only the bundle in static/. Live updates need the ASGI
         # server (LiveTest), the others' pages try in vain. A refused tick
         # (409) is part of the pages' dealings, the browser logs it anyway.
+        # Only a test taking the network away causes
+        # ERR_INTERNET_DISCONNECTED, and a request that failed offline can
+        # be logged after the test went online again: ignored throughout.
         if (
             message.type == "error"
             and not message.location["url"].endswith("/favicon.svg")
-            and not (self.offline and "ERR_INTERNET_DISCONNECTED" in message.text)
+            and "ERR_INTERNET_DISCONNECTED" not in message.text
             and not (
                 "/ws/live/" in message.text
                 and self.server_thread_class is not ASGIServerThread
@@ -1343,7 +1343,6 @@ class CollabTest(E2ETestCase):
         expect(live).to_have_attribute("data-collab-state", "connected")
         # The network goes, and with it the websocket (which the browser's
         # offline mode leaves open); reconnecting fails until it's back
-        self.offline = True
         ada.context.set_offline(True)
         ada.evaluate(
             "document.querySelector('[data-collab]').collab.provider.ws.close()"
@@ -1355,7 +1354,6 @@ class CollabTest(E2ETestCase):
         expect(self.content(bob)).not_to_contain_text("Typed offline")
         ada.context.set_offline(False)
         expect(live).to_have_attribute("data-collab-state", "connected")
-        self.offline = False
         for page in [ada, bob]:
             expect(self.content(page)).to_contain_text("Typed offline")
             expect(self.content(page)).to_contain_text("Typed online.")
