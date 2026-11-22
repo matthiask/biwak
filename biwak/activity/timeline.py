@@ -11,6 +11,8 @@ import dataclasses
 import datetime as dt
 
 from django.utils.formats import date_format
+from django.utils.html import conditional_escape, escape
+from django.utils.safestring import mark_safe
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
 
@@ -280,7 +282,7 @@ def effects(event):
         case Action.ASSIGNED | Action.UNASSIGNED:
             sign = action == Action.ASSIGNED
             ids = event.data.get("assignees", [])
-            names = getattr(event, "assignee_by_id", {})
+            names = getattr(event, "assignee_links", {})
             # Only those the viewer may know; "someone" if nobody
             known = [pk for pk in ids if pk in names]
             if ids and not known:
@@ -358,8 +360,9 @@ def combine(events):
 
 
 def phrases(events):
-    """The phrases of ``combine(events)``: people assigned (or removed)
-    together, the first phrase about "this", the later ones "it" """
+    """The phrases of ``combine(events)``, escaped HTML: people assigned
+    (or removed) together, their names linked (``feed.attach()``), the
+    first phrase about "this", the later ones "it" """
     said = []
     effects_ = combine(events)
     people = {True: [], False: []}
@@ -375,13 +378,20 @@ def phrases(events):
             verb = _("assigned %(people)s") if effect.value else _("removed %(people)s")
             names = list(dict.fromkeys(people[effect.value]))
             said.append(
-                lambda it, verb=verb, names=names: (
-                    verb % {"people": get_text_list(names, _("and"))}
+                lambda it, verb=verb, names=names: mark_safe(
+                    escape(verb) % {"people": _text_list(names)}
                 )
             )
         else:
-            said.append(effect.make)
+            said.append(lambda it, make=effect.make: escape(make(it)))
     return [make(_("it") if n else _("this")) for n, make in enumerate(said)]
+
+
+def _text_list(parts):
+    """``get_text_list()`` of escaped parts, escaped"""
+    return mark_safe(
+        get_text_list([conditional_escape(p) for p in parts], escape(_("and")))
+    )
 
 
 @dataclasses.dataclass
@@ -415,7 +425,7 @@ class Line:
 
     @property
     def text(self):
-        return get_text_list(phrases(self.events), _("and"))
+        return _text_list(phrases(self.events))
 
 
 def relevant(events, user):

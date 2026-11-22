@@ -298,7 +298,7 @@ class FeedExcerptsTest(Fixture):
         for url in [
             "/feed/",
             f"/projects/{self.project.pk}/feed/",
-            f"/people/{self.ada.pk}/feed/",
+            f"/feed/?person={self.ada.pk}",
         ]:
             with self.subTest(url=url):
                 response = self.client.get(url)

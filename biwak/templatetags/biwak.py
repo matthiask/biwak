@@ -364,16 +364,6 @@ def excerpt(text, chars=200, item=None):
     return cut.rstrip() + "…"
 
 
-def _feed_people(request):
-    from biwak.activity.feed import people_visible_to
-
-    if not hasattr(request, "_feed_people"):
-        request._feed_people = set(
-            people_visible_to(request.user).values_list("pk", flat=True)
-        )
-    return request._feed_people
-
-
 @register.simple_tag
 def forwarded_waiting(user):
     """The person menu's "Forwarded" (specs/forwarding.md): None while
@@ -383,13 +373,6 @@ def forwarded_waiting(user):
     if not operations.enabled() or not operations.can_forward(user):
         return None
     return operations.waiting(user)
-
-
-@register.simple_tag(takes_context=True)
-def can_open_feed(context, person):
-    """Whether the viewer gets the person's feed (else a 404, see
-    ``people_visible_to``); looked up once per request"""
-    return person.pk in _feed_people(context["request"])
 
 
 def _viewer(context):
@@ -410,18 +393,16 @@ def short_name(context, person):
 
 
 @register.simple_tag(takes_context=True)
-def person_link(context, person, *, name=None, css=""):
-    """A person's name, linked to their feed (specs/feed.md) when the
-    viewer would not get a 404 there, else plain text"""
+def person_link(context, person, *, name=None):
+    """A person's name (or ``name``), linked to their page when the viewer
+    may open it (``known_people()``), else plain text: names in sentences,
+    the activity, the timeline and histories (``person_page`` adds the
+    mark, for lists)"""
+    from biwak.organizations.people import linked_name
+
     label = name if name is not None else short_name(context, person)
-    if can_open_feed(context, person):
-        return format_html(
-            '<a href="{}" class="{}">{}</a>',
-            reverse("person_feed", args=[person.pk]),
-            css,
-            label,
-        )
-    return label
+    request = context.get("request")
+    return linked_name(person, label, _known_people(request) if request else set())
 
 
 @register.simple_tag(takes_context=True)
@@ -430,6 +411,8 @@ def person_page(context, person, *, size="sm", name=None):
     their page (``/people/<id>/``) when the viewer may open it
     (``known_people()``, as the page itself), else plain text; a quiet link
     (no underline until hover). The one place lists of people use."""
+    from biwak.organizations.people import linked_name
+
     label = name if name is not None else short_name(context, person)
     if not person.is_active:
         # Inactive people show as such (specs/handover.md)
@@ -440,29 +423,17 @@ def person_page(context, person, *, size="sm", name=None):
         )
     inner = format_html("{} {}", avatar(context, person, size), label)
     request = context.get("request")
-    known = _known_people(request) if request is not None else set()
-    if known is None or person.pk in known:
-        return format_html(
-            '<a href="{}" class="wb-person-link">{}</a>',
-            reverse("person", args=[person.pk]),
-            inner,
-        )
-    return inner
+    return linked_name(person, inner, _known_people(request) if request else set())
 
 
 def _known_people(request):
     """None if the viewer may know everybody, else the set of the people
     they may know (``biwak.organizations.people.known_people()``); looked
     up once per request"""
-    from biwak.organizations.people import known_people
-    from biwak.projects.models import knows_everybody
+    from biwak.organizations.people import known_ids
 
     if not hasattr(request, "_known_people"):
-        request._known_people = (
-            None
-            if knows_everybody(request.user)
-            else set(known_people(request.user).values_list("pk", flat=True))
-        )
+        request._known_people = known_ids(request.user)
     return request._known_people
 
 

@@ -1,11 +1,19 @@
 """The person's page (specs/people.md): visible to whoever may know the
 person, with the projects both are in"""
 
+import datetime as dt
+
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from biwak.accounts import operations
 from biwak.accounts.test_images import picture
+from biwak.activity.models import Action, Event
+from biwak.activity.operations import record
+from biwak.activity.test_feed import page_text
+from biwak.items import operations as ops
+from biwak.palette.test_actions import palette_data
 from biwak.test_utils import external, organization, person, project
 
 
@@ -37,7 +45,6 @@ class PersonPageTest(TestCase):
         self.assertContains(response, "Lake")
         self.assertNotContains(response, "Secret")
         self.assertContains(response, "wb-avatar wb-avatar-lg")
-        self.assertContains(response, reverse("person_feed", args=[self.cleo.pk]))
         # Ben is in no project: no projects in common, still known
         response = self.get(self.ben, self.cleo)
         self.assertEqual(response.status_code, 200)
@@ -75,13 +82,6 @@ class PersonPageTest(TestCase):
         for user in [self.paul, self.ben, self.cleo]:
             self.assertEqual(self.get(user, user).status_code, 200)
 
-    def test_no_feed_link_where_the_feed_is_a_404(self):
-        # Own staff may know Ivy, but she's in no project: no feed
-        ivy = person("Ivy", client=True)
-        response = self.get(self.ben, ivy)
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, reverse("person_feed", args=[ivy.pk]))
-
     def test_anonymous_is_sent_to_the_login(self):
         response = self.client.get(reverse("person", args=[self.ada.pk]))
         self.assertEqual(response.status_code, 302)
@@ -107,3 +107,131 @@ class PersonPageTest(TestCase):
             self.assertEqual(self.client.post(remove).status_code, 404)
         self.cleo.refresh_from_db()
         self.assertNotEqual(self.cleo.image, "")
+
+
+class PersonActivityTest(TestCase):
+    """The person's last entries on their page (decided 2026-11-22): as the
+    activity shows them, only what the viewer sees, with "All activity"
+    """
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.ben = person("Ben")
+        self.pia = external("Pia")
+        self.cleo = person("Cleo", client=True)
+        self.camp = project("Camp", members=[self.ada, self.ben, self.pia, self.cleo])
+        self.internal = ops.create_list(
+            project=self.camp, title="Internal plans", creator=self.ada
+        )
+        self.shared = ops.create_list(
+            project=self.camp, title="Shared plans", creator=self.ada, visible=True
+        )
+        Event.objects.all().delete()
+
+    def get(self, viewer, who):
+        self.client.force_login(viewer)
+        return self.client.get(reverse("person", args=[who.pk]))
+
+    def all_activity(self, who):
+        return f'href="/feed/?person={who.pk}"'
+
+    def test_the_last_five_entries_merged_as_the_activity(self):
+        for n in range(3):
+            ops.create_todo(todolist=self.shared, title=f"Tent {n}", creator=self.ada)
+        # Completions in six lists, later: entries of their own
+        for title in ["Rope", "Map", "Stove", "Lamp", "Boots", "Snacks"]:
+            todolist = ops.create_list(
+                project=self.camp, title=f"{title} list", creator=self.ben, visible=True
+            )
+            todo = ops.create_todo(todolist=todolist, title=title, creator=self.ben)
+            record(
+                actor=self.ada, action=Action.COMPLETED, project=self.camp, item=todo
+            )
+        completed = Event.objects.filter(actor=self.ada, action=Action.COMPLETED)
+        completed.update(created_at=timezone.now() + dt.timedelta(minutes=1))
+        response = self.get(self.ben, self.ada)
+        text = page_text(response)
+        self.assertIn("Recent activity", text)
+        self.assertEqual(text.count("Ada completed"), 5)
+        self.assertNotIn("Tent", text)
+        self.assertContains(response, self.all_activity(self.ada))
+        # Two completions left: the to-dos created are one entry, as in the
+        # activity
+        completed.filter(
+            pk__in=list(completed.values_list("pk", flat=True)[:4])
+        ).delete()
+        text = page_text(self.get(self.ben, self.ada))
+        self.assertEqual(text.count("Ada completed"), 2)
+        self.assertIn("created 3 to-dos in Shared plans", text)
+        # Nothing of Pia's yet: no section
+        response = self.get(self.ada, self.pia)
+        self.assertNotContains(response, "Recent activity")
+        self.assertNotContains(response, self.all_activity(self.pia))
+
+    def test_only_what_the_viewer_sees(self):
+        ops.create_todo(todolist=self.internal, title="Secret tent", creator=self.ada)
+        # Staff and the external see the internal to-do
+        for viewer in [self.ben, self.pia]:
+            with self.subTest(viewer=viewer):
+                response = self.get(viewer, self.ada)
+                self.assertContains(response, "Secret tent")
+                self.assertContains(response, self.all_activity(self.ada))
+        # The client sees nothing of Ada's: no section, no link
+        response = self.get(self.cleo, self.ada)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Secret tent")
+        self.assertNotContains(response, "Recent activity")
+        self.assertNotContains(response, self.all_activity(self.ada))
+        ops.create_todo(todolist=self.shared, title="Open tent", creator=self.ada)
+        response = self.get(self.cleo, self.ada)
+        self.assertContains(response, "Open tent")
+        self.assertNotContains(response, "Secret tent")
+        self.assertContains(response, self.all_activity(self.ada))
+        # The link is the palette's too
+        labels = {a["label"]: a for a in palette_data(response)["actions"]}
+        self.assertEqual(labels["All activity"]["url"], f"/feed/?person={self.ada.pk}")
+        self.assertNotIn("All activity", self.labels(self.cleo, self.ben))
+
+    def labels(self, viewer, who):
+        return {a["label"] for a in palette_data(self.get(viewer, who))["actions"]}
+
+    def test_whoever_the_viewer_may_know(self):
+        """One rule with the page (decided 2026-11-22): whoever's page the
+        viewer may open, the preview and the person filter too"""
+        root = person("Root", is_admin=True)
+        ivy = person("Ivy", client=True)
+        lake = project("Lake", members=[ivy])
+        lake_list = ops.create_list(
+            project=lake, title="Lake plans", creator=self.ada, visible=True
+        )
+        ops.create_todo(todolist=lake_list, title="Lake tent", creator=ivy)
+        # The admin shares no project with Ivy
+        response = self.get(root, ivy)
+        self.assertContains(response, "Lake tent")
+        self.assertContains(response, self.all_activity(ivy))
+        response = self.client.get("/feed/", {"person": ivy.pk})
+        self.assertTrue(response.context["form"].is_valid())
+        self.assertContains(response, "Lake tent")
+
+    def test_an_external_sees_the_entries_it_may_see(self):
+        # Bea is own staff, in no project: Pia may open her page (the
+        # all-access Camp's people), and sees only what she did in Camp
+        bea = person("Bea")
+        ops.create_todo(todolist=self.shared, title="Camp tent", creator=bea)
+        lake = project("Lake", members=[self.ada])
+        lake_list = ops.create_list(project=lake, title="Lake plans", creator=bea)
+        ops.create_todo(todolist=lake_list, title="Lake tent", creator=bea)
+        response = self.get(self.pia, bea)
+        self.assertContains(response, "Camp tent")
+        self.assertNotContains(response, "Lake tent")
+        self.assertContains(response, self.all_activity(bea))
+        response = self.client.get("/feed/", {"person": bea.pk})
+        self.assertTrue(response.context["form"].is_valid())
+        self.assertContains(response, "Camp tent")
+        self.assertNotContains(response, "Lake tent")
+
+    def test_the_person_feed_page_is_gone(self):
+        self.client.force_login(self.ada)
+        self.assertEqual(
+            self.client.get(f"/people/{self.ada.pk}/feed/").status_code, 404
+        )

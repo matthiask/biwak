@@ -214,7 +214,7 @@ class DeliveryEventsTest(TestCase):
 
     def test_shown_on_the_persons_page(self):
         self.post(event("email.bounced", bounce=PERMANENT))
-        url = f"/people/{self.cleo.pk}/feed/"
+        url = f"/people/{self.cleo.pk}/"
         notice = "bounced or was marked as spam"
         self.client.force_login(self.ada)
         self.assertContains(self.client.get(url), notice)
@@ -229,7 +229,7 @@ class DeliveryEventsTest(TestCase):
         self.assertNotContains(response, notice)
         # Nor about people whose mail works
         self.client.force_login(self.cleo)
-        self.assertNotContains(self.client.get(f"/people/{self.ada.pk}/feed/"), notice)
+        self.assertNotContains(self.client.get(f"/people/{self.ada.pk}/"), notice)
 
     def test_signing_in_by_code_says_nothing(self):
         """The login page doesn't tell whoever types the address that it

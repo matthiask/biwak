@@ -214,14 +214,12 @@ class PagesTest(ExternalTestCase):
         self.assertContains(response, "Pitch the tents")
         self.assertNotContains(response, "Book the lodge")
         self.assertNotContains(response, "Payroll")
-        # The person's feed goes by projects shared as members, as for own
-        # staff: Bob opens Camp without being a member
-        self.assertEqual(
-            self.client.get(f"/people/{self.bob.pk}/feed/").status_code, 404
-        )
-        self.assertEqual(
-            self.client.get(f"/people/{self.dora.pk}/feed/").status_code, 404
-        )
+        # The person filter takes whom the person may know (decided
+        # 2026-11-22): Bob, own staff of the all-access Camp, not Dora
+        response = self.client.get("/feed/", {"person": self.bob.pk})
+        self.assertTrue(response.context["form"].is_valid())
+        response = self.client.get("/feed/", {"person": self.dora.pk})
+        self.assertFalse(response.context["form"].is_valid())
 
     def test_search_and_palette(self):
         response = self.client.get("/search/", {"q": "Book"})

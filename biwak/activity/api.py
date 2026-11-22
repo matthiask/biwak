@@ -167,7 +167,7 @@ def feed_list(
     person = None
     if person_id:
         person = get_object_or_404(
-            feed.people_visible_to(request.user, project), pk=person_id
+            feed.filter_people(request.user, project), pk=person_id
         )
     return _feed(
         request,
@@ -199,7 +199,7 @@ def project_feed(
     person = None
     if person_id:
         person = get_object_or_404(
-            feed.people_visible_to(request.user, project), pk=person_id
+            feed.filter_people(request.user, project), pk=person_id
         )
     return _feed(
         request,
@@ -228,9 +228,7 @@ def person_feed(
     page_size: int | None = None,
 ):
     project = project_for(request, project_id) if project_id else None
-    person = get_object_or_404(
-        feed.people_visible_to(request.user, project), pk=person_id
-    )
+    person = get_object_or_404(feed.filter_people(request.user, project), pk=person_id)
     return _feed(
         request,
         project=project,

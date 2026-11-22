@@ -141,12 +141,15 @@ class FeedAPITest(FeedBase):
         self.assertEqual(
             self.get(self.cleo, f"projects/{self.project.pk}/feed/").status_code, 200
         )
-        self.assertEqual(
-            self.get(self.ada, f"people/{stranger.pk}/feed/").status_code, 404
-        )
-        self.assertEqual(
-            self.get(self.ada, "feed/", person_id=stranger.pk).status_code, 404
-        )
+        # The person filter takes whom the viewer may know (decided
+        # 2026-11-22): own staff everybody, a client the members
+        for user, status in [(self.ada, 200), (self.cleo, 404)]:
+            self.assertEqual(
+                self.get(user, f"people/{stranger.pk}/feed/").status_code, status
+            )
+            self.assertEqual(
+                self.get(user, "feed/", person_id=stranger.pk).status_code, status
+            )
         self.assertEqual(self.client.get("/api/v1/feed/").status_code, 401)
 
     def test_cursor_pagination(self):

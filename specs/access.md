@@ -53,8 +53,9 @@ through every entry point (`AGENTS.md`).
     mentions written and read, assignees, subscribers, check-in askees,
     names in histories, mails and the feed (`Project.people_known_to()`,
     `mentions.known_to()`). Nobody outside their projects: the People
-    page, person pages and images go by `known_people()`; a person's feed
-    and the palette's people by the projects shared as members, as for
+    page, person pages and images go by `known_people()`; the activity's
+    person filter (and a person's entries on their page) and the
+    palette's people by the projects shared as members, as for
     own staff (`people_visible_to()`). Inactive own staff count as the
     project's people (names in histories); the old title of a list moved
     out of sight shows in the feed only to own staff. Errors naming

@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dates import WEEKDAYS
@@ -66,14 +66,9 @@ class FilterForm(Form):
     )
     clients = forms.BooleanField(label=_("Visible to clients"), required=False)
 
-    def __init__(self, *args, user, project=None, with_person=True, **kwargs):
+    def __init__(self, *args, user, project=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if with_person:
-            self.fields["person"].queryset = feed_module.people_visible_to(
-                user, project
-            )
-        else:
-            del self.fields["person"]
+        self.fields["person"].queryset = feed_module.filter_people(user, project)
         if user.is_client:
             # Everything a client sees is visible to clients
             del self.fields["clients"]
@@ -85,16 +80,9 @@ class FilterForm(Form):
             ]
 
 
-def feed_page(request, *, title, url, project=None, person=None):
-    form = FilterForm(
-        request.GET or None,
-        user=request.user,
-        project=project,
-        with_person=person is None,
-    )
+def feed_page(request, *, title, url, project=None):
+    form = FilterForm(request.GET or None, user=request.user, project=project)
     filters = form.cleaned_data if form.is_valid() else {}
-    if person is not None:
-        filters["person"] = person
     # Invalid filter values are ignored, the form shows the errors
     events = feed_module.feed_events(
         request.user,
@@ -128,7 +116,6 @@ def feed_page(request, *, title, url, project=None, person=None):
             "title": title,
             "url": url,
             "project": project,
-            "person": person,
             "form": form,
             "days": days,
             "older": older,
@@ -153,16 +140,6 @@ def project_feed(request, pk):
         title=gettext("Activity in %(project)s") % {"project": project},
         url=reverse("project_feed", args=[project.pk]),
         project=project,
-    )
-
-
-def person_feed(request, pk):
-    person = get_object_or_404(feed_module.people_visible_to(request.user), pk=pk)
-    return feed_page(
-        request,
-        title=gettext("Activity of %(person)s") % {"person": person.display_name},
-        url=reverse("person_feed", args=[person.pk]),
-        person=person,
     )
 
 

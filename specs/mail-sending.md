@@ -67,7 +67,8 @@ coming in are `notifications.md`.
   replies still go out: someone asked for them.
 - **Clearing:** when `User.email` changes, by the admin, or the admin
   action "Mail to the selected people works again".
-- **Shown** on the person's activity page (staff and the person), their
+- **Shown** on the person's page (staff and the person; it was their
+  activity page until that went, 2026-11-22), their
   settings page and the admin. **Not on the login page** (decided
   2026-11-21): it would tell whoever types an address that it has an
   account.

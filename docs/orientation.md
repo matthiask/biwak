@@ -79,7 +79,7 @@ Every project and every list has its to-dos too. See [To-dos](todos.md).
 
 **Activity** is what happened, newest first, grouped by day, across
 all your projects. Each project has its own, and "My activity" in your
-menu shows what you did. Filters narrow it to a kind of item, a person
+menu shows what you did (the activity filtered by you). Filters narrow it to a kind of item, a person
 or an action (on a phone, behind "Filters"). Comments on the same item close together are shown as one
 conversation.
 
@@ -145,7 +145,10 @@ up for what's under the cursor, and pressing one again takes it off.
 ## People
 
 **People** lists everybody you may know, with their organization. A
-person's page shows the projects you have in common and what they did.
+person's page shows the projects you have in common and the last
+things they did that you can see, with "All activity" for the rest.
+Names in the activity, a to-do's timeline and elsewhere open the
+person's page.
 Your own name is in Settings; "Edit the name…" on a person's page
 corrects somebody else's (staff correct clients' names, admins
 everybody's).

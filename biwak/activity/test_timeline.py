@@ -383,6 +383,40 @@ class ClientTest(TimelineBase):
         self.assertIn("Dora", self.lines(self.ada)[0])
 
 
+class NameLinksTest(TimelineBase):
+    """The actor and the people a line names link to their pages where the
+    viewer may open them (decided 2026-11-22)"""
+
+    def html(self, user):
+        self.client.force_login(user)
+        return self.client.get(self.todo.get_absolute_url()).content.decode()
+
+    def link(self, user, name):
+        return f'<a href="/people/{user.pk}/" class="wb-person-link">{name}</a>'
+
+    def test_actor_and_assignees(self):
+        ops.assign(self.todo, [self.bob, self.cleo], actor=self.ada)
+        html = self.html(self.ada)
+        for user, name in [(self.ada, "Ada"), (self.bob, "Bob"), (self.cleo, "Cleo")]:
+            self.assertIn(self.link(user, name), html)
+        self.assertIn("assigned Bob and Cleo", self.lines(self.ada)[0])
+
+    def test_plain_text_for_people_the_viewer_may_not_know(self):
+        ops.assign(self.todo, [self.bob], actor=self.ada)
+        # Ada left the project: the client may not know her anymore
+        self.project.memberships.filter(user=self.ada).delete()
+        html = self.html(self.cleo)
+        self.assertIn("Ada", self.lines(self.cleo)[0])
+        self.assertNotIn(f'href="/people/{self.ada.pk}/"', html)
+        self.assertIn(self.link(self.bob, "Bob"), html)
+
+    def test_titles_stay_escaped(self):
+        ops.update_todo(self.todo, actor=self.ada, title="<b>Tent</b> & pegs")
+        html = self.html(self.ada)
+        self.assertIn("“&lt;b&gt;Tent&lt;/b&gt; &amp; pegs”", html)
+        self.assertNotIn("<b>Tent</b>", html)
+
+
 class QueryCountTest(TimelineBase):
     def count(self):
         self.client.force_login(self.ada)

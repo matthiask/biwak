@@ -18,7 +18,7 @@
             {% for event in entry.comments %}
               <li>
                 {% if event.actor %}{% avatar event.actor %}{% endif %}
-                <span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
+                <span class="fw-semibold">{% person_link event.actor %}</span>
                 <span class="text-body-secondary">· {{ event.created_at|dateformat:"TIME_FORMAT" }}</span>
                 {% if event.excerpt %}<div class="wb-excerpt">{{ event.excerpt }}</div>{% endif %}
               </li>

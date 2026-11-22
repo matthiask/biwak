@@ -119,6 +119,15 @@ class HistoryTest(TestCase):
         )
         self.assertEqual(first.diff[-1], ("+", "Eight"))
 
+    def test_names_link_to_the_persons_page(self):
+        set_user_name(self.bob)
+        ops.update_todo(self.item(), actor=self.bob, title="Final")
+        self.client.force_login(self.ada)
+        response = self.client.get(f"/items/{self.todo.pk}/history/")
+        self.assertContains(
+            response, f'<a href="/people/{self.bob.pk}/" class="wb-person-link">Bob</a>'
+        )
+
     def test_who_is_not_always_a_person(self):
         set_user_name("Fairy tasks")
         ops.update_todo(self.item(), actor=self.ada, title="Changed")
