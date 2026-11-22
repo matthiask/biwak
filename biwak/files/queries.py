@@ -1,10 +1,11 @@
 """What the project page, the message board and the API list (specs/files.md):
 everything through ``Item.objects.visible_to()``"""
 
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 
 from biwak.items.glance import with_checklist
 from biwak.items.models import Item, Kind
+from biwak.projects.models import MessagesOrder
 
 
 # The project page shows this many messages, unless more are pinned
@@ -19,9 +20,9 @@ def board(project, user):
     messages = Item.objects.visible_to(user).filter(kind=Kind.MESSAGE)
     if project is not None:
         messages = messages.filter(project=project)
-    return messages.select_related("creator", "message__category").annotate(
-        comment_count=Count("comments")
-    )
+    return messages.select_related(
+        "creator", "message__category", "message__last_commenter"
+    ).annotate(comment_count=Count("comments"))
 
 
 def pinned_messages(messages):
@@ -31,20 +32,38 @@ def pinned_messages(messages):
     )
 
 
-def latest_messages(messages):
-    """The unpinned ones, newest first"""
-    return messages.filter(message__pinned_at__isnull=True).order_by(
-        "-created_at", "-pk"
+def messages_order(project, wanted=None):
+    """The order to show: ``wanted`` (``?order=``) if it is one, else the
+    board's setting"""
+    if wanted in MessagesOrder.values:
+        return MessagesOrder(wanted)
+    return MessagesOrder(project.messages_order)
+
+
+def in_order(messages, order):
+    """In the board's ``order``, the latest first, with ``sort_at`` (the
+    time they're sorted by, for cursors)"""
+    sort_at = (
+        F("message__last_activity_at")
+        if order == MessagesOrder.LATEST
+        else F("created_at")
     )
+    return messages.annotate(sort_at=sort_at).order_by("-sort_at", "-pk")
+
+
+def latest_messages(messages, order):
+    """The unpinned ones in the board's ``order``"""
+    return in_order(messages.filter(message__pinned_at__isnull=True), order)
 
 
 def front_messages(project, user):
-    """The project page's messages: the pinned ones, then the latest,
-    ``FRONT_MESSAGES`` in all unless more are pinned"""
+    """The project page's messages: the pinned ones, then the latest in the
+    board's order, ``FRONT_MESSAGES`` in all unless more are pinned"""
     messages = board(project, user)
     pinned = list(pinned_messages(messages))
     rest = max(0, FRONT_MESSAGES - len(pinned))
-    return pinned + list(latest_messages(messages)[:rest])
+    latest = latest_messages(messages, messages_order(project))
+    return pinned + list(latest[:rest])
 
 
 def front_files(project, user):

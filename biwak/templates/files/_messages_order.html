@@ -1,0 +1,33 @@
+{% load i18n %}
+{% comment %}
+The board's order (specs/files.md, "The message board"): staff change it
+for everybody, clients look the other way with ?order= like a list's view
+{% endcomment %}
+{% if can_order %}
+  <form method="post" action="{% url 'project_messages_order' project.pk %}">
+    {% csrf_token %}
+    <div class="btn-group btn-group-sm" role="group" aria-label="{% translate 'Order' %}">
+      {% for value, label in orders %}
+        <button
+          type="submit"
+          name="order"
+          value="{{ value }}"
+          class="btn btn-sm {% if order == value %}btn-primary{% else %}btn-quiet{% endif %}"
+          {% if order == value %}aria-pressed="true"{% endif %}
+        >
+          {{ label }}
+        </button>
+      {% endfor %}
+    </div>
+  </form>
+{% else %}
+  <div class="btn-group btn-group-sm" role="group" aria-label="{% translate 'Order' %}">
+    {% for value, label in orders %}
+      <a
+        class="btn btn-sm {% if order == value %}btn-primary{% else %}btn-quiet{% endif %}"
+        href="?order={{ value }}"
+        {% if order == value %}aria-current="page"{% endif %}
+      >{{ label }}</a>
+    {% endfor %}
+  </div>
+{% endif %}

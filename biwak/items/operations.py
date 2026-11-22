@@ -11,7 +11,7 @@ import uuid
 
 from django.core.exceptions import PermissionDenied
 from django.core.files import File
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Exists, F, Max, OuterRef, Q, TextChoices
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -238,7 +238,9 @@ def create_message(
         creator=creator,
         visible=message_visibility(creator, visible),
     )
-    Message.objects.create(item=item, content=content, category=category)
+    Message.objects.create(
+        item=item, content=content, category=category, last_activity_at=item.created_at
+    )
     attachments.link(item, content, actor=creator)
     event = created(item, creator)
     mentions.update(item, f"{title}\n\n{content}", actor=creator, event=event)
@@ -400,7 +402,35 @@ def add_comment(item, *, author, content):
     )
     mentions.update(item, content, comment=comment, actor=author, event=event)
     read_by_acting(author, item)
+    if item.kind == Kind.MESSAGE:
+        refresh_message_activity(item)
     return comment
+
+
+# The later of posting and the latest comment of messages, and who wrote
+# that comment (specs/files.md, "The order"); editing doesn't count. For one
+# message (``refresh_message_activity()``) and, without the condition, all
+# of them (the data migration).
+MESSAGE_ACTIVITY_SQL = """
+UPDATE items_message m SET
+  last_activity_at = GREATEST(
+    i.created_at,
+    (SELECT max(c.created_at) FROM items_comment c WHERE c.item_id = m.item_id)
+  ),
+  last_commenter_id = (
+    SELECT c.author_id FROM items_comment c WHERE c.item_id = m.item_id
+    ORDER BY c.created_at DESC, c.id DESC LIMIT 1
+  )
+FROM items_item i
+WHERE i.id = m.item_id
+"""
+
+
+def refresh_message_activity(item):
+    """After a comment, and in the importer, which sets the original times
+    afterwards"""
+    with connection.cursor() as cursor:
+        cursor.execute(MESSAGE_ACTIVITY_SQL + " AND m.item_id = %s", [item.pk])
 
 
 class ChecklistConflict(Exception):

@@ -454,6 +454,22 @@ class Message(Checklist, Detail):
     # Pinned for everybody, by staff; the latest pinned first. Kept when
     # the message is trashed, so restoring brings the pin back.
     pinned_at = models.DateTimeField(_("pinned at"), null=True, blank=True)
+    # The later of posting and the latest comment, for the board's "Latest
+    # update" order (specs/files.md); edits don't count. Kept by
+    # ``operations.refresh_message_activity()``.
+    last_activity_at = models.DateTimeField(
+        _("last activity at"), default=timezone.now, editable=False
+    )
+    # Who wrote the latest comment, shown in that order
+    last_commenter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="+",
+        verbose_name=_("last commenter"),
+    )
 
     class Meta:
         verbose_name = _("message")

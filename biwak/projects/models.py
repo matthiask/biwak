@@ -32,6 +32,15 @@ def knows_people_of(viewer, project):
     )
 
 
+class MessagesOrder(models.TextChoices):
+    """The order of a project's message board (specs/files.md, "The
+    message board"), pinned messages on top either way"""
+
+    # The later of posting and the latest comment; edits don't count
+    LATEST = "latest", _("Latest update")
+    NEWEST = "newest", _("Newest posts")
+
+
 class FilesOrdering(models.TextChoices):
     """The order of a folder's contents (specs/files.md, "Folders"),
     folders first either way; by creation, not by the last change, which
@@ -87,6 +96,14 @@ class Project(models.Model):
         max_length=20,
         choices=FilesOrdering,
         default=FilesOrdering.ALPHABETICAL,
+        editable=False,
+    )
+    # The order of the message board, for everybody (set by staff)
+    messages_order = models.CharField(
+        _("order of messages"),
+        max_length=20,
+        choices=MessagesOrder,
+        default=MessagesOrder.LATEST,
         editable=False,
     )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)

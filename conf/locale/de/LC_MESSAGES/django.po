@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:02+0100\n"
+"POT-Creation-Date: 2026-11-22 17:22+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1935,6 +1935,10 @@ msgstr "Nur Mitarbeitende erstellen Ordner, Dokumente und Dateien."
 msgid "The title can't be empty."
 msgstr "Der Titel darf nicht leer sein."
 
+#: biwak/files/api.py
+msgid "Only staff change the order."
+msgstr "Nur Mitarbeitende ändern die Reihenfolge."
+
 #: biwak/files/api.py biwak/forwarding/api.py
 msgid "There is no such category."
 msgstr "Diese Kategorie gibt es nicht."
@@ -1946,10 +1950,6 @@ msgstr "Du kannst nur Nachrichten ändern, die du erstellt hast."
 #: biwak/files/api.py
 msgid "Only staff can pin messages."
 msgstr "Nur Mitarbeitende können Nachrichten anheften."
-
-#: biwak/files/api.py
-msgid "Only staff change the order."
-msgstr "Nur Mitarbeitende ändern die Reihenfolge."
 
 #: biwak/files/api.py
 msgid "You can only change folders you created."
@@ -2072,7 +2072,8 @@ msgstr "Neuer Ordner"
 msgid "Add folder"
 msgstr "Ordner hinzufügen"
 
-#: biwak/files/library.py biwak/templates/projects/_page.html
+#: biwak/files/library.py biwak/templates/files/_messages_order.html
+#: biwak/templates/projects/_page.html
 msgid "Order"
 msgstr "Reihenfolge"
 
@@ -3056,6 +3057,14 @@ msgstr "Kategorie"
 #: biwak/items/models.py
 msgid "pinned at"
 msgstr "angeheftet am"
+
+#: biwak/items/models.py biwak/projects/models.py
+msgid "last activity at"
+msgstr "letzte Aktivität am"
+
+#: biwak/items/models.py
+msgid "last commenter"
+msgstr "zuletzt kommentiert von"
 
 #: biwak/items/models.py
 msgid "messages"
@@ -4132,6 +4141,14 @@ msgstr "Deaktivieren…"
 msgid "Reset sign-in…"
 msgstr "Anmeldung zurücksetzen…"
 
+#: biwak/palette/actions.py
+msgid "Latest update first"
+msgstr "Letzte Aktivität zuerst"
+
+#: biwak/palette/actions.py
+msgid "Newest posts first"
+msgstr "Neueste Nachrichten zuerst"
+
 #: biwak/palette/apps.py
 msgid "command palette"
 msgstr "Befehlspalette"
@@ -4346,6 +4363,14 @@ msgid "Withdraw"
 msgstr "Zurückziehen"
 
 #: biwak/projects/models.py
+msgid "Latest update"
+msgstr "Letzte Aktivität"
+
+#: biwak/projects/models.py
+msgid "Newest posts"
+msgstr "Neueste Nachrichten"
+
+#: biwak/projects/models.py
 msgid "Alphabetical"
 msgstr "Alphabetisch"
 
@@ -4378,12 +4403,12 @@ msgid "order of docs and files"
 msgstr "Reihenfolge der Dokumente und Dateien"
 
 #: biwak/projects/models.py
-msgid "archived at"
-msgstr "archiviert am"
+msgid "order of messages"
+msgstr "Reihenfolge der Nachrichten"
 
 #: biwak/projects/models.py
-msgid "last activity at"
-msgstr "letzte Aktivität am"
+msgid "archived at"
+msgstr "archiviert am"
 
 #: biwak/projects/models.py
 msgid "last client activity at"
@@ -6013,6 +6038,11 @@ msgstr "Dateien anhängen"
 #: biwak/templates/files/_message_row.html biwak/templates/files/message.html
 msgid "Pinned"
 msgstr "Angeheftet"
+
+#: biwak/templates/files/_message_row.html
+#, python-format
+msgid "Last comment %(when)s · %(commenter)s"
+msgstr "Letzter Kommentar %(when)s · %(commenter)s"
 
 #: biwak/templates/files/_message_row.html
 #, python-format

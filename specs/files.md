@@ -3,9 +3,9 @@
 **Status:** built (2026-11-20; tiles, ordering, drag and drop, uploading
 several, new docs as drafts, folder colors, a "…" menu on every tile and
 "Tell people about it?" with the announcement an hour after the last
-change 2026-11-21). `biwak/files/`: attachments
-(`attachments.py`), the board (`board.py`), folders and files
-(`library.py`, previews in `previews.py`), docs (`docs.py`, titles in
+change 2026-11-21; the message board's order 2026-11-22).
+`biwak/files/`: attachments (`attachments.py`), the board (`board.py`),
+folders and files (`library.py`, previews in `previews.py`), docs (`docs.py`, titles in
 `titles.py`), the operations in `operations.py` (creating in
 `biwak/items/operations.py`), `queries.py`, `api.py`. The live editor:
 `collaboration.md`. Whom to notify: `notifications.md`. Reactions:
@@ -78,7 +78,7 @@ its item's.
 ## The message board
 
 One per project, `/projects/<pk>/messages/`: pinned ones on top (the
-latest pinned first), then newest first, 50 per page by cursor (the
+latest pinned first), then in the board's order, 50 per page by cursor (the
 feed's page size), with category, author, date, comment count and the
 first two lines (`|excerpt`, `glance.md`). The project page shows the
 pinned messages and then the latest, five in all unless more are pinned,
@@ -92,6 +92,24 @@ with an "All messages" link (`queries.front_messages()`).
   way for a moment; pinned messages stay on top either way. The project
   page's messages follow the board's order. API: `order` on the board
   and as a parameter of its list; CLI `biwak messages --order`.
+  Built (2026-11-22): `Message.last_activity_at` and `last_commenter`,
+  set by `create_message()` and `add_comment()`
+  (`refresh_message_activity()`, also the importer's after setting the
+  original times), left out of the audit log; `Project.messages_order`
+  (`MessagesOrder`) set by `set_messages_order()`. Confirmed by the user
+  (2026-11-22): on the board staff get the two orders as buttons saving
+  the setting for everybody at once, clients the same two as `?order=`
+  links (looking only); staff look the other way only through `?order=`
+  or the palette, which offers the other order as a link for everybody
+  ("Newest posts first", "Latest update first"); changing the order
+  records no event and notifies nobody (like the files' order); the
+  API's board is `GET`/`PATCH projects/{id}/message-board/` with
+  `{"order"}`, messages carry `last_activity_at`.
+- **Who commented last** (decided 2026-11-22): in "Latest update" order
+  a row (board and project page) whose latest comment is newer than its
+  posting adds "Last comment 2 hours ago · Bob" (the `ago` filter's one
+  unit, the short name as plain text: the row is one link). In German
+  the order is "Letzte Aktivität", so nobody thinks edits count.
 - A message: title, Markdown, optional category, comments, attachments,
   the visibility switch. Categories (`MessageCategory(name, emoji,
   position)`) are one list for the installation, edited by admins in the
@@ -339,13 +357,14 @@ versions.
 
 `POST /api/v1/projects/{id}/attachments/` (multipart `file`, answering
 the key and the Markdown), `GET /api/v1/attachments/{key}/`; messages
-(list, create with `also`, update, pin), folders (contents, create,
+(list with `order`, create with `also`, update, pin), the board
+(`GET`/`PATCH projects/{id}/message-board/` with `order`), folders (contents, create,
 move, `PATCH folders/{id}/` with `title` and `ordering`), the top level
 (`GET`/`PATCH projects/{id}/files/` with `ordering`), docs (get, update
 with `base_version`, versions; a `title` alone is a 400, the title is the
 text's first line), files (upload, replace, versions, download URL).
 
 CLI: `--attach FILE` on commands writing texts (appended at the end),
-`biwak messages`, `biwak message show|post`, `biwak files [FOLDER]`
+`biwak messages [--order latest|newest]`, `biwak message show|post`, `biwak files [FOLDER]`
 (with "Order:"), `biwak folder new|move|rename|color|order`, `biwak file
 upload|download`, `biwak doc show|edit` (`$EDITOR`).

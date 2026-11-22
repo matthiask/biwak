@@ -7,6 +7,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">{% translate "Messages" %}</h1>
     <div class="wb-page-actions">
+      {% include "files/_messages_order.html" %}
       <a class="btn btn-sm btn-primary" href="{% url 'message_new' project.pk %}">{% icon "plus-lg" %}<span
         >{% translate "New message" %}</span></a>
     </div>
@@ -19,6 +20,9 @@
     {% endif %}
   </div>
   {% if cursor %}
-    <a class="btn btn-sm btn-quiet" href="?before={{ cursor|urlencode }}">{% translate "Older messages" %}</a>
+    <a
+      class="btn btn-sm btn-quiet"
+      href="?{% if order_given %}order={{ order }}&amp;{% endif %}before={{ cursor|urlencode }}"
+    >{% translate "Older messages" %}</a>
   {% endif %}
 {% endblock content %}

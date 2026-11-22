@@ -1,6 +1,7 @@
 import datetime as dt
 from unittest.mock import patch
 
+from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import TestCase
@@ -12,7 +13,7 @@ from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event, Notification
 from biwak.files import board, operations, queries
 from biwak.items import operations as ops
-from biwak.items.models import Item, MessageCategory
+from biwak.items.models import Comment, Item, MessageCategory
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -105,6 +106,7 @@ class BoardTest(Fixture, TestCase):
         Item.objects.filter(pk=old.pk).update(
             created_at=timezone.now() - dt.timedelta(days=3)
         )
+        ops.refresh_message_activity(old)
         first = self.post("Pinned first", visible=True)
         second = self.post("Pinned second", visible=True)
         operations.pin_message(first, actor=self.ada)
@@ -592,3 +594,193 @@ class FrontNumbersTest(Fixture, TestCase):
         response = self.client.get(self.project.get_absolute_url())
         self.assertEqual(len(response.context["front_messages"]), 5)
         self.assertContains(response, "All messages")
+
+
+class OrderTest(Fixture, TestCase):
+    """The board's order (specs/files.md, "The message board", decided
+    2026-11-22): "Latest update" by default, or "Newest posts"; pinned
+    messages on top either way"""
+
+    def setUp(self):
+        super().setUp()
+        self.old = self.post("Old but discussed", visible=True)
+        self.recent = self.post("Recent", visible=True)
+        self.ago(self.old, days=3)
+        self.ago(self.recent, days=1)
+        self.ago(self.shared, days=2)
+        self.ago(self.secret, days=4)
+        # Newest posts: Recent, Shared news, Old but discussed, Secret plans
+        ops.add_comment(self.old, author=self.cleo, content="What about this?")
+
+    def ago(self, item, **delta):
+        """Posted earlier, comments and all"""
+        Item.objects.filter(pk=item.pk).update(
+            created_at=timezone.now() - dt.timedelta(**delta)
+        )
+        ops.refresh_message_activity(item)
+
+    def url(self):
+        return reverse("project_messages", args=[self.project.pk])
+
+    def activity(self, item):
+        item.message.refresh_from_db()
+        return item.message.last_activity_at
+
+    def test_posting_and_commenting_count_editing_doesnt(self):
+        item = self.post("Fresh")
+        self.assertEqual(self.activity(item), item.created_at)
+        comment = ops.add_comment(item, author=self.bob, content="Yes")
+        self.assertEqual(self.activity(item), comment.created_at)
+        operations.update_message(item, actor=self.ada, title="Changed", content="x")
+        self.assertEqual(self.activity(item), comment.created_at)
+
+    def test_the_activity_is_the_later_of_posting_and_comments(self):
+        """Also for times set afterwards (the importer's)"""
+        comment = self.old.comments.get()
+        self.assertEqual(self.activity(self.old), comment.created_at)
+        self.ago(self.recent, days=1)
+        self.assertEqual(
+            self.activity(self.recent),
+            Item.objects.get(pk=self.recent.pk).created_at,
+        )
+
+    def test_staff_sets_the_order_clients_cant(self):
+        self.assertEqual(self.project.messages_order, "latest")
+        operations.set_messages_order(self.project, "newest", actor=self.ada)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.messages_order, "newest")
+        with self.assertRaises(PermissionDenied):
+            operations.set_messages_order(self.project, "latest", actor=self.cleo)
+        with self.assertRaises(ValueError):
+            operations.set_messages_order(self.project, "sideways", actor=self.ada)
+        self.assertFalse(Event.objects.filter(action=Action.EDITED).exists())
+
+    def test_the_board_in_both_orders(self):
+        latest = ["Old but discussed", "Recent", "Shared news", "Secret plans"]
+        newest = ["Recent", "Shared news", "Old but discussed", "Secret plans"]
+        for user, hidden in [(self.ada, set()), (self.cleo, {"Secret plans"})]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                response = self.client.get(self.url())
+                expected = [t for t in latest if t not in hidden]
+                self.assertEqual(self.titles(response), expected)
+                self.assertContains(response, 'aria-label="Order"')
+                response = self.client.get(self.url(), {"order": "newest"})
+                expected = [t for t in newest if t not in hidden]
+                self.assertEqual(self.titles(response), expected)
+                # Nonsense is the board's order
+                response = self.client.get(self.url(), {"order": "x"})
+                self.assertEqual(self.titles(response)[0], "Old but discussed")
+        operations.set_messages_order(self.project, "newest", actor=self.ada)
+        response = self.client.get(self.url())
+        self.assertEqual(
+            self.titles(response), ["Recent", "Shared news", "Old but discussed"]
+        )
+        response = self.client.get(self.url(), {"order": "latest"})
+        self.assertEqual(self.titles(response)[0], "Old but discussed")
+
+    def test_rows_say_who_commented_last_in_that_order(self):
+        """ "Last comment 2 hours ago · Cleo" (decided 2026-11-22), on the
+        board and the project page; not by newest posts, not without
+        comments"""
+        comment = self.old.comments.get()
+        Comment.objects.filter(pk=comment.pk).update(
+            created_at=timezone.now() - dt.timedelta(hours=2)
+        )
+        ops.refresh_message_activity(self.old)
+        self.old.message.refresh_from_db()
+        self.assertEqual(self.old.message.last_commenter, self.cleo)
+        line = "Last comment 2\xa0hours ago · Cleo"  # timesince's space
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            for url in [self.url(), self.project.get_absolute_url()]:
+                response = self.client.get(url)
+                self.assertContains(response, line, count=1)
+                self.assertNotContains(response, "Last comment 1 day")
+            response = self.client.get(self.url(), {"order": "newest"})
+            self.assertNotContains(response, "Last comment")
+        operations.set_messages_order(self.project, "newest", actor=self.ada)
+        self.assertNotContains(
+            self.client.get(self.project.get_absolute_url()), "Last comment"
+        )
+        self.assertContains(self.client.get(self.url(), {"order": "latest"}), line)
+
+    def test_pinned_stay_on_top(self):
+        operations.pin_message(self.secret, actor=self.ada)
+        self.client.force_login(self.ada)
+        for order in ["latest", "newest"]:
+            response = self.client.get(self.url(), {"order": order})
+            self.assertEqual(self.titles(response, "pinned"), ["Secret plans"])
+            self.assertNotIn("Secret plans", self.titles(response))
+
+    def test_staff_change_it_on_the_board_clients_look(self):
+        url = reverse("project_messages_order", args=[self.project.pk])
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url())
+        self.assertContains(response, f'action="{url}"')
+        self.assertContains(
+            response, 'name="order"\n          value="newest"', html=False
+        )
+        response = self.client.post(url, {"order": "newest"})
+        self.assertRedirects(response, self.url())
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.messages_order, "newest")
+        self.assertEqual(self.client.post(url, {"order": "x"}).status_code, 400)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.url())
+        self.assertNotContains(response, url)
+        self.assertContains(response, 'href="?order=latest"')
+        self.assertEqual(self.client.post(url, {"order": "latest"}).status_code, 403)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.messages_order, "newest")
+
+    def test_paging_in_both_orders(self):
+        """Each message once across the pages, in order, also when
+        comments move old ones up"""
+        start = timezone.now() - dt.timedelta(days=30)
+        items = []
+        for number in range(board.PAGE_SIZE + 3):
+            item = self.post(f"Message {number}", visible=True)
+            Item.objects.filter(pk=item.pk).update(
+                created_at=start + dt.timedelta(hours=number)
+            )
+            ops.refresh_message_activity(item)
+            items.append(item)
+        # The oldest gets a comment: first by latest update, last by posting
+        ops.add_comment(items[0], author=self.bob, content="Bump")
+        self.client.force_login(self.cleo)
+        for order in ["latest", "newest"]:
+            with self.subTest(order=order):
+                response = self.client.get(self.url(), {"order": order})
+                seen = self.titles(response)
+                self.assertEqual(len(seen), board.PAGE_SIZE)
+                cursor = response.context["cursor"]
+                if order == "newest":
+                    # Not the board's order: the next page stays in it
+                    self.assertContains(response, "?order=newest&amp;before=")
+                rest = self.client.get(self.url(), {"order": order, "before": cursor})
+                self.assertIsNone(rest.context["cursor"])
+                seen += self.titles(rest)
+                self.assertEqual(len(seen), len(set(seen)))
+                self.assertEqual(len(seen), board.PAGE_SIZE + 6)
+                if order == "latest":
+                    self.assertEqual(seen[0], "Message 0")
+                else:
+                    self.assertEqual(seen[3], f"Message {board.PAGE_SIZE + 2}")
+                    self.assertEqual(seen[-1], "Message 0")
+
+    def test_the_project_page_follows_the_board(self):
+        url = self.project.get_absolute_url()
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            response = self.client.get(url)
+            titles = [i.title for i in response.context["front_messages"]]
+            self.assertEqual(titles[0], "Old but discussed")
+        operations.set_messages_order(self.project, "newest", actor=self.ada)
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            response = self.client.get(url)
+            titles = [i.title for i in response.context["front_messages"]]
+            self.assertEqual(titles[:2], ["Recent", "Shared news"])
+            self.assertNotEqual(user.is_client, "Secret plans" in titles)

@@ -32,7 +32,7 @@ from biwak.items.models import Item, Kind, Status
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
-from biwak.projects.models import Project
+from biwak.projects.models import MessagesOrder, Project
 
 
 # Pages of a project, which show its actions
@@ -394,6 +394,13 @@ def for_page(request, context):
         page.append(
             modal(_("Order…"), reverse("project_files_order", args=[project.pk]))
         )
+    if name == "project_messages" and isinstance(project, Project):
+        # Looking the other way, like a list's view (specs/files.md)
+        url = reverse("project_messages", args=[project.pk])
+        if context.get("order") == MessagesOrder.NEWEST:
+            page.append(link(_("Latest update first"), f"{url}?order=latest"))
+        else:
+            page.append(link(_("Newest posts first"), f"{url}?order=newest"))
     if item is not None:
         page += on_item(request, item, context)
     page += on_organizations(user, name, context.get("organization"))

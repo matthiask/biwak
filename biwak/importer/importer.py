@@ -1230,6 +1230,9 @@ class Importer(Resolver):
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
         self._follow("Message", rec, item)
+        if item is not None:
+            # From the original times, for the board's order
+            ops.refresh_message_activity(item)
 
     # Docs & Files -------------------------------------------------------------------------------
 

@@ -1832,10 +1832,18 @@ def category_id(name):
 @cli.command()
 @click.argument("project", type=int)
 @click.option("--limit", default=25, show_default=True, help="At most this many.")
+@click.option(
+    "--order",
+    type=click.Choice(["latest", "newest"]),
+    help="Latest update (posting or comment) or newest posts first (default: "
+    "the board's order).",
+)
 @json_option
-def messages(project, limit, as_json):
-    """The message board of PROJECT: pinned first, then the newest"""
-    data = request("GET", f"projects/{project}/messages/", params={"page_size": limit})
+def messages(project, limit, order, as_json):
+    """The message board of PROJECT: pinned first, then in the board's
+    order"""
+    params = {"page_size": limit} | ({"order": order} if order else {})
+    data = request("GET", f"projects/{project}/messages/", params=params)
     if as_json:
         return echo_json(data)
     t = table("ID", "", "Category", "Message", "By", "Date", "Comments", "")

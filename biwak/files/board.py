@@ -12,11 +12,17 @@ from django.views.decorators.http import require_POST
 from biwak import cursors
 from biwak.files import operations
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
-from biwak.files.queries import board, latest_messages, pinned_messages
+from biwak.files.queries import (
+    board,
+    latest_messages,
+    messages_order,
+    pinned_messages,
+)
 from biwak.forms import Form, next_url
 from biwak.items import editing, operations as ops
 from biwak.items.models import Kind, MessageCategory
 from biwak.items.views import item_for
+from biwak.projects.models import MessagesOrder
 from biwak.projects.views import project_for
 
 
@@ -28,7 +34,8 @@ PAGE_SIZE = 50
 def project_messages(request, pk):
     project = project_for(request, pk)
     messages = board(project, request.user)
-    latest = latest_messages(messages)
+    order = messages_order(project, request.GET.get("order"))
+    latest = latest_messages(messages, order)
     before = request.GET.get("before")
     pinned = []
     if before:
@@ -36,14 +43,14 @@ def project_messages(request, pk):
             at, last = cursors.decode(before)
         except ValueError:
             return HttpResponseBadRequest("Invalid cursor.")
-        latest = latest.filter(Q(created_at__lt=at) | Q(created_at=at, pk__lt=last))
+        latest = latest.filter(Q(sort_at__lt=at) | Q(sort_at=at, pk__lt=last))
     else:
         pinned = list(pinned_messages(messages))
     rows = list(latest[: PAGE_SIZE + 1])
     cursor = None
     if len(rows) > PAGE_SIZE:
         rows = rows[:PAGE_SIZE]
-        cursor = cursors.encode(rows[-1].created_at, rows[-1].pk)
+        cursor = cursors.encode(rows[-1].sort_at, rows[-1].pk)
     return render(
         request,
         "files/board.html",
@@ -52,9 +59,26 @@ def project_messages(request, pk):
             "pinned": pinned,
             "rows": rows,
             "cursor": cursor,
+            "order": order,
+            # ``?order=`` looks the other way without changing the setting
+            "order_given": order != project.messages_order,
+            "orders": MessagesOrder.choices,
+            "can_order": not request.user.is_client,
             "can_pin": not request.user.is_client,
         },
     )
+
+
+@require_POST
+def project_messages_order(request, pk):
+    """The board's order, for everybody; staff only"""
+    project = project_for(request, pk)
+    if request.user.is_client:
+        raise PermissionDenied
+    if request.POST.get("order") not in MessagesOrder.values:
+        return HttpResponseBadRequest("Invalid order.")
+    operations.set_messages_order(project, request.POST["order"], actor=request.user)
+    return redirect("project_messages", project.pk)
 
 
 class MessageEditForm(Form):

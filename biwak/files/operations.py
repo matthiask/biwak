@@ -37,7 +37,7 @@ from biwak.items.models import (
     Status,
     Upload,
 )
-from biwak.projects.models import FilesOrdering, Project
+from biwak.projects.models import FilesOrdering, MessagesOrder, Project
 
 
 _UNCHANGED = ops._UNCHANGED
@@ -518,6 +518,17 @@ def set_ordering(target, ordering, *, actor):
         Folder.objects.filter(pk=target.pk).update(ordering=ordering)
         target.folder.ordering = ordering
     return ordering
+
+
+def set_messages_order(project, order, *, actor):
+    """The order of the project's message board, for everybody; staff
+    only. Just a setting, like ``set_ordering()``: no event."""
+    if actor.is_client:
+        raise PermissionDenied
+    order = MessagesOrder(order)
+    Project.objects.filter(pk=project.pk).update(messages_order=order)
+    project.messages_order = order
+    return order
 
 
 # Files ------------------------------------------------------------------

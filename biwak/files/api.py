@@ -219,6 +219,8 @@ class MessageOut(ItemOut):
     category: CategoryOut | None
     pinned: bool
     pinned_at: dt.datetime | None
+    # The later of posting and the latest comment (the "latest" order)
+    last_activity_at: dt.datetime
     comment_count: int
     reactions: list[ReactionOut]
 
@@ -234,6 +236,7 @@ def message_out(item, user):
         "category": category_out(message.category),
         "pinned": message.pinned_at is not None,
         "pinned_at": message.pinned_at,
+        "last_activity_at": message.last_activity_at,
         "comment_count": item.comment_count,
         "reactions": reactions_out(item, None, user),
     }
@@ -265,16 +268,27 @@ def category_list(request):
     return [category_out(c) for c in MessageCategory.objects.all()]
 
 
+BoardOrder = Literal["latest", "newest"]
+
+
 @router.get("projects/{project_id}/messages/", response=page_of(MessageOut))
 def message_list(
-    request, project_id: int, cursor: str | None = None, page_size: int | None = None
+    request,
+    project_id: int,
+    order: BoardOrder | None = None,
+    cursor: str | None = None,
+    page_size: int | None = None,
 ):
-    """The message board: the latest pinned first, then the rest newest
-    first"""
+    """The message board: the latest pinned first, then the rest in the
+    board's order or ``order`` (``latest``: by the later of posting and the
+    latest comment; ``newest``: by posting)"""
     project = project_for(request, project_id)
     messages = (
         queries
-        .board(project, request.user)
+        .in_order(
+            queries.board(project, request.user),
+            queries.messages_order(project, order),
+        )
         .annotate(
             pin_key=Coalesce(
                 "message__pinned_at", Value(dt.datetime(1970, 1, 1, tzinfo=dt.UTC))
@@ -286,10 +300,36 @@ def message_list(
         request,
         messages,
         lambda item: message_out(item, request.user),
-        ordering=("-pin_key", "-created_at", "-pk"),
+        ordering=("-pin_key", "-sort_at", "-pk"),
         cursor=cursor,
         page_size=page_size,
     )
+
+
+class BoardOut(Schema):
+    # Of the board, for everybody
+    order: BoardOrder
+
+
+class BoardIn(Schema):
+    order: BoardOrder
+
+
+@router.get("projects/{project_id}/message-board/", response=BoardOut)
+def board_get(request, project_id: int):
+    """The message board's setting: its order"""
+    project = project_for(request, project_id)
+    return {"order": project.messages_order}
+
+
+@router.patch("projects/{project_id}/message-board/", response=BoardOut)
+def board_update(request, project_id: int, data: BoardIn):
+    """The order of the message board, for everybody; staff only
+    (specs/files.md, "The message board")"""
+    project = project_for(request, project_id)
+    api_staff_only(request, _("Only staff change the order."))
+    operations.set_messages_order(project, data.order, actor=request.user)
+    return {"order": project.messages_order}
 
 
 class MessageIn(Schema):
