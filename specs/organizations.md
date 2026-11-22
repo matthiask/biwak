@@ -155,8 +155,8 @@ manage none (`access.md`).
   email" and "Organizations" in the page header (all quiet, icons only on
   phones). **Each row has its actions in it** (decided 2026-11-22, the
   user: the "…" menu and its modals took too many clicks): the choice of
-  `notifications.md` as a small select ("Notified by default", "Only
-  when tagged") where `can_change_notify_choice()` allows it, saving
+  `notifications.md` as a small select ("Only when tagged", "Notified
+  of everything new") where `can_change_notify_choice()` allows it, saving
   itself on change (`frontend/save-on-change.js`,
   `[data-save-on-change]`, posting to `member_notify`; a Save button
   without JavaScript), and for own staff "Remove", which asks first in

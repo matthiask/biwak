@@ -39,12 +39,12 @@ Levels decide what you are subscribed to automatically, and whether a
 new to-do in a list you follow reaches you. In **Settings**, under
 Notifications, "Notify me about" is one of:
 
-- **Everything** (the default): every new message, doc or file you can
-  see tells and subscribes you, and you hear about everything new in the
-  lists you follow;
-- **Only what concerns me:** being mentioned or assigned and your own
-  things subscribe you; new messages, docs and files only when you
-  follow their folder or the poster adds you.
+- **Only what concerns me** (the default): being mentioned or assigned
+  and your own things subscribe you; new messages, docs and files only
+  when you follow their folder or the poster adds you;
+- **Everything:** every new message, doc or file you can see tells and
+  subscribes you, so you hear about its comments too, and you hear about
+  everything new in the lists you follow.
 
 Mentions, reactions to what you wrote and people telling you about
 something reach you on both levels. To hear less, unsubscribe from items
@@ -54,11 +54,12 @@ still has everything). The activity feed always shows everything.
 A project can have its own level ("More", then "Notifications" on the
 project's page), and so can a list ("Notifications..." in its "More"
 menu): the closest one wins. Other items have no level: subscribe or
-unsubscribe. On a project's people page staff see who is "Notified by
-default" and who is notified "Only when tagged", and change it right in
+unsubscribe. On a project's people page staff see who is notified "Only
+when tagged" and who is "Notified of everything new", and change it right in
 the person's row (it's saved at once; if it can't be saved, it shakes
 and shows the setting that is stored); clients and externals change only
-their own. Whoever adds you picks the first setting.
+their own. Whoever adds you picks the first setting; it's "Only when tagged"
+unless they choose otherwise.
 
 ## The lantern
 

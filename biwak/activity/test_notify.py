@@ -333,7 +333,9 @@ class NotifyTest(TestCase):
         "Subscriptions"); people added by name whatever their level"""
         dan, eve = person("Dan"), person("Eve")
         for user in [dan, eve]:
-            project_ops.add_member(self.project, user, actor=self.ada)
+            project_ops.add_member(
+                self.project, user, actor=self.ada, notify=project_ops.NOTIFY_DEFAULT
+            )
         self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
         project_ops.set_notify_choice(

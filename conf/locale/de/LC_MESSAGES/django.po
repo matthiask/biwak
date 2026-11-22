@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 21:43+0100\n"
+"POT-Creation-Date: 2026-11-22 21:57+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4859,12 +4859,12 @@ msgid "Add project"
 msgstr "Projekt hinzufügen"
 
 #: biwak/projects/views.py
-msgid "Notified by default"
-msgstr "Standardmässig benachrichtigt"
-
-#: biwak/projects/views.py
 msgid "Only when tagged"
 msgstr "Nur wenn markiert"
+
+#: biwak/projects/views.py
+msgid "Notified of everything new"
+msgstr "Über alles Neue benachrichtigt"
 
 #: biwak/projects/views.py biwak/templates/accounts/settings.html
 #: biwak/templates/projects/project_detail.html
@@ -7966,6 +7966,9 @@ msgstr "vor %(time)s"
 #, python-format
 msgid "on %(date)s"
 msgstr "am %(date)s"
+
+#~ msgid "Notified by default"
+#~ msgstr "Standardmässig benachrichtigt"
 
 #~ msgid "Include templates"
 #~ msgstr "Mit Vorlagen"

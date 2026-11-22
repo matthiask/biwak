@@ -210,7 +210,7 @@ they may know. Setting yourself away: [Notifications](notifications.md).
 **Inviting people:** "Invite people" on the People page, or "Invite by
 email" on a project's people page (with that project chosen), opens one
 form for several people at once. Choose the projects, whether they are
-notified by default or only when tagged, and fill a row per person:
+notified only when tagged (the default) or of everything new, and fill a row per person:
 address, name, organization (left empty: the one of the address's
 domain) and, for admins, staff or client. Leaving the address fills in
 the organization of its domain and, for admins, staff for your own and

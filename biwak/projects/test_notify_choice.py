@@ -41,14 +41,28 @@ class Fixture:
 
 class OperationsTest(Fixture, TestCase):
     def test_adding_stores_the_choice(self):
+        """Only when tagged unless chosen otherwise (decided 2026-11-22)"""
         project_ops.add_member(self.project, self.bob, actor=self.ada)
         project_ops.add_member(
-            self.project, self.dan, actor=self.ada, notify=project_ops.NOTIFY_TAGGED
+            self.project, self.dan, actor=self.ada, notify=project_ops.NOTIFY_DEFAULT
         )
-        self.assertEqual(self.level(self.bob), NotificationLevel.EVERYTHING)
-        self.assertEqual(self.level(self.dan), NotificationLevel.CONCERNS_ME)
-        self.assertEqual(project_ops.notify_choice(self.bob, self.project), "default")
-        self.assertEqual(project_ops.notify_choice(self.dan, self.project), "tagged")
+        self.assertEqual(self.level(self.bob), NotificationLevel.CONCERNS_ME)
+        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
+        self.assertEqual(project_ops.notify_choice(self.bob, self.project), "tagged")
+        self.assertEqual(project_ops.notify_choice(self.dan, self.project), "default")
+
+    def test_the_default_level(self):
+        """Decided 2026-11-22: a post to everybody would subscribe everybody
+        to its comments, so new people hear only what concerns them; a new
+        message tells nobody unless the poster adds people"""
+        user = User.objects.create_user("new@example.org", full_name="New Example")
+        self.assertEqual(user.notification_level, NotificationLevel.CONCERNS_ME)
+        project_ops.add_member(self.project, user, actor=self.ada)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.create_message(
+                project=self.project, title="Coffee?", creator=self.ada, visible=False
+            )
+        self.assertFalse(Notification.objects.filter(user=user).exists())
 
     def test_an_unknown_level_is_tagged(self):
         # A level stored before the levels changed doesn't break the people
@@ -186,7 +200,7 @@ class PageTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         response = self.client.get(self.people_url)
         self.assertContains(response, "Only when tagged")
-        self.assertContains(response, "Notified by default")
+        self.assertContains(response, "Notified of everything new")
         self.assertContains(response, f"people/{self.dan.pk}/notify/")
         self.assertContains(response, f"people/{self.cleo.pk}/notify/")
 
@@ -215,8 +229,8 @@ class PageTest(Fixture, TestCase):
         self.assertInHTML(
             f'<select name="notify" id="notify-{self.dan.pk}"'
             ' class="form-select form-select-sm">'
-            '<option value="default">Notified by default</option>'
-            '<option value="tagged" selected>Only when tagged</option></select>',
+            '<option value="tagged" selected>Only when tagged</option>'
+            '<option value="default">Notified of everything new</option></select>',
             html,
         )
         self.assertInHTML(
@@ -336,15 +350,15 @@ class APITest(Fixture, TestCase):
     def test_add(self):
         response = self.call(self.ada, "post", "", {"person_id": self.bob.pk})
         self.assertEqual(response.status_code, 201, response.content)
-        self.assertEqual(response.json()["notify"], "default")
-        response = self.call(
-            self.ada, "post", "", {"person_id": self.dan.pk, "notify": "tagged"}
-        )
         self.assertEqual(response.json()["notify"], "tagged")
-        self.assertEqual(self.level(self.dan), NotificationLevel.CONCERNS_ME)
+        response = self.call(
+            self.ada, "post", "", {"person_id": self.dan.pk, "notify": "default"}
+        )
+        self.assertEqual(response.json()["notify"], "default")
+        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
         # Adding again changes nothing
-        self.call(self.ada, "post", "", {"person_id": self.dan.pk, "notify": "default"})
-        self.assertEqual(self.level(self.dan), NotificationLevel.CONCERNS_ME)
+        self.call(self.ada, "post", "", {"person_id": self.dan.pk, "notify": "tagged"})
+        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
         self.assertEqual(
             self.call(self.ada, "post", "", {"person_id": 0}).status_code, 404
         )
@@ -429,7 +443,7 @@ class CLITest(Fixture, test_cli.CLITest):
         project_ops.add_member(self.project, self.dan, actor=self.ada, notify="tagged")
         output = self.biwak("members", "--project", self.project.pk).output
         self.assertIn("only when tagged", output)
-        self.assertIn("notified by default", output)
+        self.assertIn("notified of everything new", output)
         data = json.loads(
             self.biwak("members", "--project", self.project.pk, "--json").stdout
         )
@@ -440,12 +454,13 @@ class CLITest(Fixture, test_cli.CLITest):
     def test_add_and_invite(self):
         result = self.biwak("members", "add", self.project.pk, self.bob.pk)
         self.assertEqual(result.exit_code, 0, result.output)
-        self.assertEqual(self.level(self.bob), NotificationLevel.EVERYTHING)
-        result = self.biwak(
-            "members", "add", self.project.pk, self.dan.pk, "--only-tagged"
-        )
         self.assertIn("only when tagged", result.output)
-        self.assertEqual(self.level(self.dan), NotificationLevel.CONCERNS_ME)
+        self.assertEqual(self.level(self.bob), NotificationLevel.CONCERNS_ME)
+        result = self.biwak(
+            "members", "add", self.project.pk, self.dan.pk, "--everything"
+        )
+        self.assertIn("notified of everything new", result.output)
+        self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
         with self.captureOnCommitCallbacks(execute=True):
             result = self.biwak(
                 "members", "invite", self.project.pk, "new@example.org",

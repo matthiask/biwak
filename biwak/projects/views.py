@@ -335,8 +335,8 @@ def project_join(request, pk):
 
 
 NOTIFY_LABELS = {
-    project_ops.NOTIFY_DEFAULT: _("Notified by default"),
     project_ops.NOTIFY_TAGGED: _("Only when tagged"),
+    project_ops.NOTIFY_DEFAULT: _("Notified of everything new"),
 }
 
 
@@ -344,11 +344,8 @@ def notify_field():
     """How the person is in the project (specs/notifications.md)"""
     return forms.ChoiceField(
         label=_("Notifications"),
-        choices=[
-            (project_ops.NOTIFY_DEFAULT, NOTIFY_LABELS[project_ops.NOTIFY_DEFAULT]),
-            (project_ops.NOTIFY_TAGGED, NOTIFY_LABELS[project_ops.NOTIFY_TAGGED]),
-        ],
-        initial=project_ops.NOTIFY_DEFAULT,
+        choices=list(NOTIFY_LABELS.items()),
+        initial=project_ops.NOTIFY_TAGGED,
         widget=forms.RadioSelect,
         help_text=_(
             "Only when tagged: posts to everybody don't subscribe the person;"

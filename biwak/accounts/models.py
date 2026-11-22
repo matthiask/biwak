@@ -188,7 +188,9 @@ class User(AbstractBaseUser):
         _("notifications"),
         max_length=20,
         choices=NotificationLevel,
-        default=NotificationLevel.EVERYTHING,
+        # Not everything (decided 2026-11-22): a post to everybody would
+        # subscribe everybody to its comments
+        default=NotificationLevel.CONCERNS_ME,
     )
     mail_delivery = models.CharField(
         _("mail delivery"),

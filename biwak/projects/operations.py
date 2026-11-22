@@ -40,11 +40,12 @@ def addable_people(project):
 
 # How people are in a project (specs/notifications.md, "Notified by default
 # or only when tagged"): not a setting of its own, the person's level for
-# the project
+# the project. "default" is the older name of "notified of everything new";
+# only when tagged is the default (decided 2026-11-22).
 NOTIFY_DEFAULT, NOTIFY_TAGGED = "default", "tagged"
 NOTIFY_CHOICES = {
-    NOTIFY_DEFAULT: NotificationLevel.EVERYTHING,
     NOTIFY_TAGGED: NotificationLevel.CONCERNS_ME,
+    NOTIFY_DEFAULT: NotificationLevel.EVERYTHING,
 }
 
 
@@ -74,7 +75,7 @@ def set_notify_choice(project, user, notify, *, actor):
 
 
 @transaction.atomic
-def add_member(project, user, *, actor, notify=NOTIFY_DEFAULT):
+def add_member(project, user, *, actor, notify=NOTIFY_TAGGED):
     """Returns whether the person was added (False if already a member).
     ``notify`` is stored as the person's override for the project, unless
     they have one already: adding again never changes it."""
@@ -194,7 +195,7 @@ def _invitee(email, *, actor, full_name, is_client, organization):
 
 
 @transaction.atomic
-def invite_people(projects, people, *, actor, notify=NOTIFY_DEFAULT):
+def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
     """Invites ``people`` (dicts of ``email`` and optionally ``full_name``,
     ``is_client``, default True, and ``organization``) to every one of
     ``projects`` (specs/activation.md, "Inviting"). New people are created and
@@ -253,7 +254,7 @@ def invite(
     full_name="",
     is_client=True,
     organization=None,
-    notify=NOTIFY_DEFAULT,
+    notify=NOTIFY_TAGGED,
 ):
     """``invite_people()`` for one person and one project (the API's
     ``members/invite/``, the new project's rows). Returns the person and

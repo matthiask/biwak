@@ -261,8 +261,8 @@ def project_detail(request, project_id: int):
 
 class MemberOut(PersonOut):
     email: str | None
-    # How the person is in the project: "default" (notified by default) or
-    # "tagged" (only when tagged). Only for staff and for yourself, else null.
+    # How the person is in the project: "default" (notified of everything
+    # new) or "tagged" (only when tagged, the default). Only for staff and for yourself, else null.
     notify: str | None
 
 
@@ -304,7 +304,7 @@ def no_template(project):
 
 class MemberIn(Schema):
     person_id: int
-    notify: Notify = "default"
+    notify: Notify = "tagged"
 
 
 @router.post("projects/{project_id}/members/", response={201: MemberOut})
@@ -330,7 +330,7 @@ class InviteIn(Schema):
     # ignoring case and spaces); neither: the one of the address's domain
     organization_id: int | None = None
     organization: str = ""
-    notify: Notify = "default"
+    notify: Notify = "tagged"
 
 
 def invitee_organization(data):
@@ -463,7 +463,7 @@ class InvitationsIn(Schema):
     people: list[InvitationPersonIn]
     projects: list[int]
     # The choice for every project
-    notify: Notify = "default"
+    notify: Notify = "tagged"
 
 
 class InvitedOut(Schema):

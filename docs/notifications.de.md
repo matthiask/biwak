@@ -44,13 +44,14 @@ To-do in einer Liste erreicht, der du folgst. In den
 **Einstellungen** unter Benachrichtigungen ist „Benachrichtige mich
 über“ eines von:
 
-- **Alles** (der Standard): Jede neue Mitteilung, jedes Dokument und
-  jede Datei, die du sehen kannst, benachrichtigt dich und abonniert
-  dich, und du hörst von allem Neuen in den Listen, denen du folgst;
-- **Nur was mich betrifft:** Erwähnt oder zugewiesen werden und deine
-  eigenen Dinge abonnieren dich; neue Mitteilungen, Dokumente und
-  Dateien nur, wenn du ihrem Ordner folgst oder wer sie veröffentlicht,
-  dich hinzufügt.
+- **Nur was mich betrifft** (der Standard): Erwähnt oder zugewiesen
+  werden und deine eigenen Dinge abonnieren dich; neue Mitteilungen,
+  Dokumente und Dateien nur, wenn du ihrem Ordner folgst oder wer sie
+  veröffentlicht, dich hinzufügt;
+- **Alles:** Jede neue Mitteilung, jedes Dokument und jede Datei, die du
+  sehen kannst, benachrichtigt dich und abonniert dich, du hörst also
+  auch von ihren Kommentaren, und du hörst von allem Neuen in den
+  Listen, denen du folgst.
 
 Erwähnungen, Reaktionen auf das, was du geschrieben hast, und Personen,
 die dich auf etwas hinweisen, erreichen dich auf beiden Stufen. Um
@@ -63,11 +64,13 @@ Ein Projekt kann eine eigene Stufe haben („Mehr“, dann
 („Benachrichtigungen…“ in ihrem Menü „Mehr“): Die nächstliegende gilt.
 Andere Einträge haben keine Stufe: abonnieren oder nicht mehr
 abonnieren. Auf der Personenseite eines Projekts sehen Mitarbeitende,
-wer „Standardmässig benachrichtigt“ wird und wer „Nur wenn markiert“,
+wer „Nur wenn markiert“ benachrichtigt wird und wer „Über alles Neue
+benachrichtigt“,
 und ändern es direkt in der Zeile der Person (es wird sofort
 gespeichert; lässt es sich nicht speichern, wackelt es und zeigt die
 gespeicherte Einstellung); Kund:innen und Externe ändern nur ihre
-eigene. Wer dich hinzufügt, wählt die erste Einstellung.
+eigene. Wer dich hinzufügt, wählt die erste Einstellung; sie ist „Nur
+wenn markiert“, ausser es wird anders gewählt.
 
 ## Die Laterne
 
