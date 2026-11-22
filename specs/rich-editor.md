@@ -230,9 +230,9 @@ either, `paste.js` keeps the converter. Python: `biwak/richtext/`
 browser tests type into the editor (`E2ETestCase.editor()`,
 `set_markdown()`).
 
-**Not verified** (2026-11-22): real input methods and phone keyboards
-(Android's composition, iOS's Enter), Safari and Firefox, screen
-readers with the editor. Composition through Chromium's input method
+**Input methods, phones, other browsers, screen readers:** left to
+ProseMirror, which is battle-tested there (decided 2026-11-22: not
+checked separately). Composition through Chromium's input method
 protocol is tested.
 
 ## Choices confirmed by the user (2026-11-22)

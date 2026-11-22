@@ -5,6 +5,10 @@ groupings and "assigned by" 2026-11-21).
 
 ## Assignees
 
+- **No "When done, notify…"** (decided 2026-11-22): the people who'd
+  be named are subscribed anyway and hear about the completion with
+  the rest of the thread.
+
 - Any number, everybody who can see the to-do: staff (in all-access
   projects every staff member), clients only on visible to-dos.
   Assigning somebody who isn't a member makes them a member, recorded as

@@ -118,11 +118,12 @@ project. Waiting for Basecamp's account export to confirm the plan.
 - **After importing in production:** merge the imported organization of
   the own company into the own organization, rename it and add the
   domain (done locally, 2026-11-22).
-- **Open questions:** the person importing becomes a member of every
-  project they were only added to for the import (the importer copies
-  Basecamp's members): skip them in those projects, or remove them
-  afterwards? The cutoff for archived projects (3 years by
-  `updated_at`?).
+- **The person importing** becomes a member of every project they were
+  only added to for the import (the importer copies Basecamp's
+  members); that's fine (decided 2026-11-22).
+- **Archived projects** depend on the export: if it makes a browsable
+  archive easily, archived projects may not be imported at all;
+  otherwise a cutoff by `updated_at` (open).
 
 ## Mapping
 

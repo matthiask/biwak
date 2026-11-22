@@ -638,7 +638,7 @@ def compose(page, steps, final):
 
 class CompositionTest(E2ETestCase):
     """Input methods (IME): what Chromium's protocol can simulate of them
-    (specs/rich-editor.md, "Not verified")"""
+    (specs/rich-editor.md, "The code")"""
 
     def setUp(self):
         super().setUp()

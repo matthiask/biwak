@@ -7,8 +7,8 @@ their access there, and people managed by an IdP mustn't get around it
 with a passkey or a code. Sign-in in general is in `access.md`, second
 factors in `two-factor.md`.
 
-**Status:** built (2026-11-21). Microsoft is tested with made-up tokens
-only, not against a real tenant. Open: a further review of the claims
+**Status:** built (2026-11-21). Microsoft is tested against the real
+service (2026-11-22: the sign-in runs through to the account match). Open: a further review of the claims
 checks and the enforcement.
 
 ## The setting (decided 2026-11-21)
