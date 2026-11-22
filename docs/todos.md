@@ -63,8 +63,11 @@ The to-do's page shows its facts (assigned to, due on, repeats) and
 notes. Click them, the title or "Edit" (<kbd>e</kbd>) to change them in
 place; "Save" or "Cancel" goes back. To choose people, type in the
 field: the list shows who matches, <kbd>↑</kbd>/<kbd>↓</kbd> and
-<kbd>Enter</kbd> pick, the × on a name (or <kbd>Backspace</kbd>)
-removes it.
+<kbd>Enter</kbd> pick, the × on a name removes it. From the keyboard,
+<kbd>←</kbd> at the start of the field reaches the names:
+<kbd>←</kbd>/<kbd>→</kbd>, <kbd>Home</kbd> and <kbd>End</kbd> move
+between them, <kbd>Delete</kbd> or <kbd>Backspace</kbd> removes the one
+you're on, and typing goes back to the field.
 
 - **Title and notes.** Notes are Markdown. A task list in them (lines
   starting with `- [ ]`) can be ticked in place, and the list's rows show

@@ -321,6 +321,50 @@ class PickerTest(E2ETestCase):
         self.assertTrue(self.project.memberships.filter(user=self.bob).exists())
         self.assertEqual(self.errors, [])
 
+    def test_editing_the_pills_with_the_keyboard(self):
+        """Left from the empty field reaches the pills; arrows, Home and End
+        move between them; Delete and Backspace remove the focused one,
+        not only the last; Right past the last and typing return to the
+        field (decided 2026-11-22)"""
+        page = self.page
+        field = self.open_form(page)
+        for name in ("Ada", "Cleo", "Bob"):
+            field.click()
+            page.locator(".wb-picker-list li", has_text=name).click()
+        pills = page.locator(".wb-pill")
+        expect(pills).to_have_count(3)
+
+        def focused():
+            return page.evaluate(
+                "document.activeElement.closest('.wb-pill')?.dataset.name ?? ''"
+            )
+
+        field.press("ArrowLeft")
+        self.assertEqual(focused(), "Bob")
+        page.keyboard.press("ArrowLeft")
+        self.assertEqual(focused(), "Cleo")
+        page.keyboard.press("Delete")  # the middle one, the next gets the focus
+        expect(pills).to_have_count(2)
+        self.assertEqual(focused(), "Bob")
+        page.keyboard.press("Home")
+        self.assertEqual(focused(), "Ada")
+        page.keyboard.press("End")
+        self.assertEqual(focused(), "Bob")
+        page.keyboard.press("ArrowLeft")
+        page.keyboard.press("Backspace")  # Ada, the next one gets the focus
+        expect(pills).to_have_count(1)
+        self.assertEqual(focused(), "Bob")
+        page.keyboard.press("ArrowRight")  # past the last: the field
+        expect(field).to_be_focused()
+        field.press("ArrowLeft")
+        page.keyboard.type("c")  # typing goes to the field
+        expect(field).to_be_focused()
+        expect(field).to_have_value("c")
+        page.get_by_role("button", name="Save").click()
+        expect(page.locator("form[data-view-edit-form]")).to_have_count(0)
+        self.assertEqual(list(self.todo.todo.assignees.all()), [self.bob])
+        self.assertEqual(self.errors, [])
+
     def test_the_list_closes_after_the_last_pick(self):
         """Nothing left to pick: no "Nobody found" over the button below"""
         page = self.page

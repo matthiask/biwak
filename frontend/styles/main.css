@@ -2536,6 +2536,11 @@ body:has(.wb-modal[open]) {
   font-size: 0.8rem;
 }
 
+.wb-pill:focus-visible {
+  outline: 2px solid var(--bs-focus-ring-color);
+  outline-offset: 1px;
+}
+
 .wb-pill-remove {
   display: inline-flex;
   align-items: center;

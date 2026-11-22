@@ -3,7 +3,12 @@
 // becomes pills, each with × to remove, and
 // a field which opens the list of the others on a click, typing or Down and
 // filters while typing. Up and Down choose, Enter or a click picks, Escape closes,
-// Backspace in the empty field takes the last pill away. The list floats
+// Backspace in the empty field takes the last pill away. Left from the
+// start of the field (Home from an empty one) reaches the pills: Left,
+// Right, Home and End move between them, Delete and Backspace remove the
+// focused one, Right past the last and typing return to the field
+// (decided 2026-11-22: one stop for Tab, the pills by the arrow keys, ×
+// for the mouse). The order isn't kept: the select's. The list floats
 // over what's below, so it closes after a pick (typing opens it again),
 // when nobody is left to pick, when the field loses the focus and on a click
 // elsewhere (``data-dismiss``, frontend/menus.js). The options come
@@ -95,11 +100,15 @@ function attach(select) {
       ...chosen().map((option) => {
         const pill = document.createElement("span")
         pill.className = "wb-pill"
+        pill.tabIndex = -1
+        pill.dataset.value = option.value
+        pill.dataset.name = option.textContent
         const name = document.createElement("span")
         name.textContent = option.textContent
         const remove = document.createElement("button")
         remove.type = "button"
         remove.className = "wb-pill-remove"
+        remove.tabIndex = -1
         remove.textContent = "×"
         remove.setAttribute(
           "aria-label",
@@ -121,6 +130,57 @@ function attach(select) {
     renderPills()
     if (!list.hidden) renderList()
   }
+
+  const pillAt = (index) => pills.children[index]
+
+  // Removes the pill and focuses its neighbour (Backspace: the one before,
+  // else after; Delete: the one after), else the field
+  const removePill = (pill, backwards) => {
+    const index = [...pills.children].indexOf(pill)
+    byId.get(pill.dataset.value).selected = false
+    changed()
+    const count = pills.children.length
+    let next = backwards ? index - 1 : index
+    if (backwards && next < 0) next = 0
+    if (next >= 0 && next < count) pillAt(next).focus()
+    else input.focus()
+  }
+
+  pills.addEventListener("keydown", (event) => {
+    const pill = event.target.closest(".wb-pill")
+    if (!pill) return
+    // A pill isn't a text field: its keys aren't the page's shortcuts
+    // (frontend/shortcuts.js), and Escape doesn't close the form around it
+    if (!event.ctrlKey && !event.metaKey) event.stopPropagation()
+    const index = [...pills.children].indexOf(pill)
+    const last = pills.children.length - 1
+    const moves = {
+      ArrowLeft: Math.max(index - 1, 0),
+      ArrowRight: index + 1,
+      Home: 0,
+      End: last,
+    }
+    if (event.key in moves) {
+      event.preventDefault()
+      const to = moves[event.key]
+      if (to > last) input.focus()
+      else pillAt(to).focus()
+    } else if (event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault()
+      removePill(pill, event.key === "Backspace")
+    } else if (event.key === "Escape") {
+      event.preventDefault()
+      input.focus()
+    } else if (
+      event.key.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      // Typing goes on in the field, with this key
+      input.focus()
+    }
+  })
 
   // What picking the team would do now: the options it adds, how many
   // members are in then and why the others are left out
@@ -309,6 +369,16 @@ function attach(select) {
       event.stopPropagation()
       input.value = ""
       close()
+    } else if (
+      pills.children.length &&
+      ((event.key === "ArrowLeft" &&
+        input.selectionStart === 0 &&
+        input.selectionEnd === 0) ||
+        (event.key === "Home" && !input.value))
+    ) {
+      event.preventDefault()
+      close()
+      pillAt(event.key === "Home" ? 0 : pills.children.length - 1).focus()
     } else if (event.key === "Backspace" && !input.value) {
       const last = chosen().at(-1)
       if (last) {

@@ -44,7 +44,12 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   subscribers and whom to notify): pills with
   ×, a field that opens the list on a click, typing or Down (not on focus
   alone, decided 2026-11-21) and filters while typing
-  (Up/Down, Enter, Escape, Backspace removes the last pill); non-members
+  (Up/Down, Enter, Escape, Backspace removes the last pill; decided
+  2026-11-22: Left at the field's start or Home in an empty one reaches
+  the pills, Left/Right/Home/End move between them, Delete and Backspace
+  remove the focused one and focus a neighbour, Right past the last and
+  typing return to the field; one Tab stop, × for the mouse; the order
+  isn't kept); non-members
   say "not in the project yet". The list floats over what's below, so it
   closes after a pick (typing or Down opens it again), when nobody is
   left to pick, when the field loses the focus (Tab, a click elsewhere)
