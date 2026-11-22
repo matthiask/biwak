@@ -4,7 +4,32 @@
 
 {% block content %}
   {% include "_breadcrumbs.html" %}
-  <h1 class="mb-3">{% translate "People" %}</h1>
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "People" %}</h1>
+    {% if can_manage %}
+      <div class="wb-page-actions is-compact">
+        {% if can_add %}
+          <a
+            class="btn btn-sm btn-quiet"
+            href="{% url 'member_add' project.pk %}"
+            title="{% translate 'Add someone' %}"
+            data-modal
+          >{% icon "person-plus" %}<span class="wb-label">{% translate "Add someone" %}</span></a>
+        {% endif %}
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'member_invite' project.pk %}"
+          title="{% translate 'Invite by email' %}"
+          data-modal
+        >{% icon "envelope" %}<span class="wb-label">{% translate "Invite by email" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'organizations' %}"
+          title="{% translate 'Organizations' %}"
+        >{% icon "building" %}<span class="wb-label">{% translate "Organizations" %}</span></a>
+      </div>
+    {% endif %}
+  </div>
   <div class="row g-4">
     <div class="col-lg-7">
       {% for group in groups %}
@@ -42,38 +67,35 @@
                       {{ m.user.email }}
                     </div>{% endif %}
                   {% include "organizations/_invitation.html" with person=m.user next=request.get_full_path %}
-                  {% if notify %}
-                    <form
-                      method="post"
-                      action="{% url 'member_notify' project.pk m.user.pk %}"
-                      class="d-flex gap-1 mt-1"
-                    >
-                      {% csrf_token %}
-                      <select
-                        name="notify"
-                        class="form-select form-select-sm w-auto"
-                        aria-label="{% translate "Notifications" %}"
-                      >
-                        {% if notify.value == "nothing" %}<option selected disabled>
-                            {{ notify.label }}
-                          </option>{% endif %}
-                        {% for value, label in notify_choices %}
-                          <option value="{{ value }}" {% if value == notify.value %}selected{% endif %}>
-                            {{ label }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                      <button type="submit" class="btn btn-sm btn-quiet">{% translate "Save" %}</button>
-                    </form>
-                  {% endif %}
+                  {% if notify %}<div class="small text-body-secondary">{{ notify.label }}</div>{% endif %}
                 </div>
-                {% if can_manage or m.user == request.user %}
-                  <form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-quiet">
-                      {% if m.user == request.user %}{% translate "Leave" %}{% else %}{% translate "Remove" %}{% endif %}
-                    </button>
-                  </form>
+                {% if notify or can_manage or m.user == request.user %}
+                  <details class="dropdown wb-menu">
+                    <summary
+                      class="btn btn-sm btn-quiet"
+                      title="{% translate 'More' %}"
+                      aria-label="{% blocktranslate with name=m.user.full_name|default:m.user.email %}More: {{ name }}{% endblocktranslate %}"
+                    >
+                      {% icon "three-dots" %}
+                    </summary>
+                    <div class="dropdown-menu dropdown-menu-end">
+                      {% if notify %}
+                        <a
+                          class="dropdown-item"
+                          href="{% url 'member_notify' project.pk m.user.pk %}"
+                          data-modal
+                        >{% translate "Notifications…" %}</a>
+                      {% endif %}
+                      {% if can_manage or m.user == request.user %}
+                        <form method="post" action="{% url 'member_remove' project.pk m.user.pk %}">
+                          {% csrf_token %}
+                          <button type="submit" class="dropdown-item">
+                            {% if m.user == request.user %}{% translate "Leave the project" %}{% else %}{% translate "Remove from the project" %}{% endif %}
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </details>
                 {% endif %}
               </div>
             {% endfor %}
@@ -93,24 +115,5 @@
         {% translate "Clients only see what is visible to clients." %}
       </p>
     </div>
-    {% if can_manage %}
-      <div class="col-lg-5">
-        <div class="d-flex gap-2">
-          {% if can_add %}
-            <a
-              class="btn btn-quiet"
-              href="{% url 'member_add' project.pk %}"
-              data-modal
-            >{% translate "Add someone" %}</a>
-          {% endif %}
-          <a
-            class="btn btn-quiet"
-            href="{% url 'member_invite' project.pk %}"
-            data-modal
-          >{% translate "Invite by email" %}</a>
-          <a class="btn btn-quiet" href="{% url 'organizations' %}">{% translate "Organizations" %}</a>
-        </div>
-      </div>
-    {% endif %}
   </div>
 {% endblock content %}

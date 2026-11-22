@@ -317,19 +317,48 @@ def notify_row(actor, project, user):
     return {"value": choice, "label": NOTIFY_LABELS[choice]}
 
 
-@require_POST
+class NotifyForm(Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["notify"] = notify_field()
+
+
 def member_notify(request, pk, user_pk):
-    """Staff change anybody's choice, a client only their own"""
+    """Notified by default or only when tagged: a modal from the row's "…"
+    menu (decided 2026-11-22). Staff change anybody's choice, a client only
+    their own"""
     project = project_for(request, pk)
     user = get_object_or_404(User, pk=user_pk, memberships__project=project)
     if not project_ops.can_change_notify_choice(request.user, user):
         raise PermissionDenied
-    notify = request.POST.get("notify")
-    if notify not in project_ops.NOTIFY_CHOICES:
-        return HttpResponse(status=400)
-    project_ops.set_notify_choice(project, user, notify, actor=request.user)
-    messages.success(request, _("The choice has been saved."))
-    return redirect("project_people", pk=project.pk)
+    choice = project_ops.notify_choice(user, project)
+    form = NotifyForm(
+        request.POST or None,
+        initial={"notify": choice if choice in project_ops.NOTIFY_CHOICES else None},
+    )
+    if form.is_valid():
+        project_ops.set_notify_choice(
+            project, user, form.cleaned_data["notify"], actor=request.user
+        )
+        messages.success(request, _("The choice has been saved."))
+        return redirect("project_people", pk=project.pk)
+    if user == request.user:
+        title = _("Your notifications")
+    else:
+        title = _("Notifications of %(name)s") % {"name": user.display_name}
+    return form_response(
+        request,
+        form,
+        title=title,
+        project=project,
+        # "No mails" (their level for the project) isn't one of the choices
+        intro=_("Now: %(choice)s.") % {"choice": NOTIFY_LABELS[choice]}
+        if choice not in project_ops.NOTIFY_CHOICES
+        else "",
+        cancel_url=reverse("project_people", args=[project.pk]),
+        submit_label=_("Save"),
+        help_page="notifications",
+    )
 
 
 def project_people(request, pk):

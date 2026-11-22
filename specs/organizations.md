@@ -137,6 +137,13 @@ manage none (`access.md`).
   `?organization=ID`, offering only them, preselected when there's one.
   Clients and partners see the same groups without actions (clients
   without addresses).
+- **The page's actions** (decided 2026-11-22): "Add someone", "Invite by
+  email" and "Organizations" in the page header (all quiet, icons only on
+  phones); each row has a "…" menu with "Notifications…" (a modal, the
+  choice of `notifications.md`, `member_notify`) and "Remove from the
+  project" or "Leave the project", where the person may; the current
+  choice is a quiet line under the name. It was a select with its own
+  Save on every row and the buttons in a column beside the list.
 
 ## API, CLI, importer
 

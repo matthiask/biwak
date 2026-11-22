@@ -153,8 +153,9 @@ Whoever adds or invites someone chooses "Notified by default"
 me"), stored as the person's `LevelOverride` for the project
 (`add_member()`, `invite()`, `set_notify_choice()`,
 `notify_choice()` in `biwak/projects/operations.py`); adding someone
-again doesn't change it. The project's people page shows it next to
-each member ("No mails" for "nothing") to own staff; own staff change
+again doesn't change it. The project's people page shows it under
+each member ("No mails" for "nothing") to own staff, changed through
+"Notifications…" in the row's "…" menu (a modal, decided 2026-11-22); own staff change
 it for others, clients and partners see and change only their own
 (partners too, decided 2026-11-21 after a review:
 `can_change_notify_choice()`). API: `notify` (`default`, `tagged`,
