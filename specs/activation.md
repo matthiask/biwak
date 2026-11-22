@@ -16,7 +16,9 @@ only for admins), `invite.js` remembering the fields changed by hand per
 row. Activating and deactivating:
 `biwak/organizations/activation.py`, the pages in
 `biwak/organizations/people.py`, the API in `biwak/organizations/api.py`
-(CLI 0.34.0).
+(CLI 0.34.0). People who left (2026-11-22): `User.left_at`,
+`activation.mark_left()` (the importer's `_people_who_left()`), the
+"People who left" filter (`?left=1`), CLI 0.52.0.
 
 ## Who may (decided 2026-11-21)
 
@@ -137,6 +139,16 @@ couldn't hide one without the other.
   to-dos, messages and comments stay, shown as inactive.
 - API: `left_at` on people, the people list's `left` filter; CLI
   `biwak people --left`.
+- **Built so** (2026-11-22): the importer marks only people inactive in
+  Biwak without `left_at` (active people and the day already set stay;
+  a dry run reports who would be marked, people it would create too);
+  "Inactive" (`?inactive=1`, the API's `inactive`, `biwak people
+  --inactive`) lists only people waiting, not those who left; the
+  "People who left" list has no "Activate…", by name like "Inactive";
+  `left_at` is on the people list's answers (`AccessOut`, own staff), not
+  on every person in the API. The filter isn't remembered: the page's
+  other filters aren't either (`data-remember` is for to-dos, the feed
+  and the lantern).
 
 ## Deactivating
 
@@ -175,8 +187,9 @@ does.
 
 ## Pages, API, CLI
 
-- **Pages:** `/people/` has the "Invited" and "Inactive" filters
-  (`?invited=1`, `?inactive=1`, "Activate…" per row there); a person's
+- **Pages:** `/people/` has the "Invited", "Inactive" and "People who
+  left" filters (`?invited=1`, `?inactive=1`, "Activate…" per row there,
+  `?left=1`); a person's
   page has "Activate…" or "Deactivate…" for whoever may, each a modal,
   also in the palette. Invitations: `/people/invite/`,
   `/projects/<id>/people/invite/`, `/people/<id>/invitation/resend/` and
@@ -186,9 +199,9 @@ does.
   /api/v1/invitations/{id}/resend/`, `DELETE /api/v1/invitations/{id}/`
   (403 for clients and externals, 404 for people who aren't invitations);
   `GET /api/v1/people/` (active people, `?inactive=true` the inactive
-  ones; own staff), `POST /api/v1/people/{id}/activate/` and
+  ones waiting, `?left=true` those who left, with `left_at`; own staff), `POST /api/v1/people/{id}/activate/` and
   `…/deactivate/`, and in bulk `POST /api/v1/people/activate/` (`ids`,
   `mail`) and `/people/deactivate/` (`ids`), all or nothing.
 - **CLI:** `biwak invite EMAIL… --project ID… [--only-tagged]`, `biwak
-  invitations [resend|withdraw]`, `biwak people [--inactive]`, `biwak
+  invitations [resend|withdraw]`, `biwak people [--inactive|--left]`, `biwak
   people activate ID… [--mail]`, `biwak people deactivate ID…`.

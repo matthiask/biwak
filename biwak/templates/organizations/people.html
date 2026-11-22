@@ -27,8 +27,8 @@
     <div class="d-flex gap-2 mb-3" aria-label="{% translate "Filter" %}" role="group">
       <a
         href="{% url 'people' %}"
-        class="btn btn-sm btn-quiet{% if invited is None and inactive is None %} active{% endif %}"
-        {% if invited is None and inactive is None %}aria-current="page"{% endif %}
+        class="btn btn-sm btn-quiet{% if invited is None and inactive is None and left is None %} active{% endif %}"
+        {% if invited is None and inactive is None and left is None %}aria-current="page"{% endif %}
       >{% translate "Everybody" %}</a>
       <a
         href="{% url 'people' %}?invited=1"
@@ -40,6 +40,11 @@
         class="btn btn-sm btn-quiet{% if inactive is not None %} active{% endif %}"
         {% if inactive is not None %}aria-current="page"{% endif %}
       >{% translate "Inactive" %}</a>
+      <a
+        href="{% url 'people' %}?left=1"
+        class="btn btn-sm btn-quiet{% if left is not None %} active{% endif %}"
+        {% if left is not None %}aria-current="page"{% endif %}
+      >{% translate "People who left" %}</a>
     </div>
   {% endif %}
   {% if invited is not None %}
@@ -97,6 +102,31 @@
       {% endfor %}
     </div>
   {% endif %}
+  {% if left is not None %}
+    <div class="list-group mb-4" data-left>
+      {% for user in left %}
+        <div class="list-group-item text-body-secondary" data-kb-row>
+          <div class="d-flex align-items-center gap-2">
+            {% avatar user "md" %}
+            <div>
+              <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
+              {% if user.is_client %}
+                <span class="badge wb-client-badge">{{ user.role }}</span>
+              {% else %}
+                <span class="badge wb-tone-neutral">{{ user.role }}</span>
+              {% endif %}
+              <span
+                class="badge wb-tone-neutral"
+              >{% blocktranslate with date=user.left_at|date %}left on {{ date }}{% endblocktranslate %}</span>
+              <div class="small text-body-secondary">{{ user.email }}</div>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="list-group-item text-body-secondary">{% translate "Nobody has left." %}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
   {% for group in groups %}
     <section class="mb-4" data-people-group="{{ group.kind }}">
       <h2 class="h5">
@@ -145,7 +175,7 @@
       </div>
     </section>
   {% empty %}
-    {% if invited is None and inactive is None %}<p class="text-body-secondary">
+    {% if invited is None and inactive is None and left is None %}<p class="text-body-secondary">
         {% translate "Nobody yet." %}
       </p>{% endif %}
   {% endfor %}
