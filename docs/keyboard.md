@@ -35,7 +35,8 @@ reach the palette.
   entries in the activity feed. The current row is outlined.
 - <kbd>Enter</kbd> or <kbd>o</kbd> opens the current row.
 - <kbd>x</kbd> completes or reopens the current to-do, or the to-do
-  whose page you are on.
+  whose page you are on; on a folder's tile it selects the tile or takes
+  it out of the selection.
 - <kbd>c</kbd> writes a comment, <kbd>e</kbd> edits, <kbd>b</kbd>
   bookmarks, <kbd>s</kbd> subscribes or unsubscribes, on an item's page.
 - <kbd>g</kbd>, then a letter, goes somewhere: <kbd>g</kbd> <kbd>h</kbd>

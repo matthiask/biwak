@@ -64,7 +64,9 @@ never with Ctrl, Alt or Meta (except Ctrl+K). The one list is
   search results); the row is marked (`.wb-kb-current`) and its link
   focused. **Enter** (while focus is on the page or the row) or **o**
   opens it.
-- **x:** completes or reopens the current to-do or the page's to-do.
+- **x:** completes or reopens the current to-do or the page's to-do;
+  on a focused tile of a folder it selects the tile instead
+  (`frontend/files.js`, decided 2026-11-22, `files.md`).
 - **c** comment, **e** edit, **b** bookmark, **s** subscribe or
   unsubscribe.
 - **g** then **h** (Home), **p** (projects), **f** (feed), **t**
