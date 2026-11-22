@@ -16,8 +16,8 @@ page), `checkins.md` (asking), `languages.md`.
 The installation's (`TIME_ZONE`) for working hours and away dates; no
 time zone per person (decided 2026-11-22: Biwak is for working
 together, so the shared time matters more than the local one, and DST
-doesn't change everywhere on the same day). Check-ins keep their
-question's time zone (`checkins.md`).
+doesn't change everywhere on the same day). Check-ins use it too: their
+own time zone per question goes (`checkins.md`, decided 2026-11-22).
 
 ## Quiet hours
 

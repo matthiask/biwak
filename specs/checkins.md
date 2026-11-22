@@ -9,6 +9,13 @@ less for client projects.
 time arithmetic, `operations.py` asking, summaries and answering,
 `mails.py`).
 
+**Open (decided 2026-11-22):** questions lose their own time zone; the
+installation's (`TIME_ZONE`) is the only one, as for quiet hours
+(`quiet-hours.md`): no `time_zone` field, form field, API field or CLI
+`--zone`; asking, occurrences and summaries in the installation's time
+zone; a migration drops the field (no users yet). The mentions of "the
+question's time zone" below then mean the installation's.
+
 ## Decided
 
 - **No reminders** for missed check-ins (2026-11-20): the question mail
