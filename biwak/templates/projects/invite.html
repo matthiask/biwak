@@ -4,12 +4,13 @@
   Inviting several people at once (biwak/projects/invitations.py,
   specs/activation.md, "Inviting"): the fields of the form, then a row per person with
   its errors; "Add another" adds a row from the template (frontend/invite.js),
-  without JavaScript the empty rows are there
+  without JavaScript the empty rows are there; leaving an address fills in
+  the row's untouched fields (invite_address)
 {% endcomment %}
 {% block fields %}
   {{ block.super }}
   {{ form.rows.management_form }}
-  <fieldset class="mb-3" data-invite-rows>
+  <fieldset class="mb-3" data-invite-rows data-invite-address="{% url 'invite_address' %}">
     <legend class="form-label fs-6">{% translate "People" %}</legend>
     <p class="form-text">
       {% translate "An organization left empty is the one of the address's domain, if any." %}

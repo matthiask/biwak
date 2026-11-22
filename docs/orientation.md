@@ -159,7 +159,10 @@ email" on a project's people page (with that project chosen), opens one
 form for several people at once. Choose the projects, whether they are
 notified by default or only when tagged, and fill a row per person:
 address, name, organization (left empty: the one of the address's
-domain) and, for admins, staff or client. "Add another" adds a row. New
+domain) and, for admins, staff or client. Leaving the address fills in
+the organization of its domain and, for admins, staff for your own and
+external organizations, client otherwise, unless you changed those
+fields in that row. "Add another" adds a row. New
 people get one mail naming the projects; people who have an account are
 added to them. If a row can't be invited (a deactivated person, staff
 invited by somebody who isn't an admin), nobody is, and the form says
