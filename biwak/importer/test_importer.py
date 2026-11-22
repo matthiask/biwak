@@ -202,7 +202,7 @@ class ImportEveryKindTest(ImportCase):
         )
         self.assertEqual(Occurrence.objects.filter(question=q).count(), 2)
         self.assertEqual(Answer.objects.filter(occurrence__question=q).count(), 3)
-        self.assertEqual(self.names(q.people.all()), {"Ada Example"} | set())
+        self.assertEqual(self.names(q.people.all()), {"Ada Example", "Bob Example"})
 
         # Comments, attachments
         self.assertEqual(Comment.objects.count(), 4)
@@ -272,7 +272,8 @@ class ImportEveryKindTest(ImportCase):
         self.run_import()
         self.assertEqual(User.objects.filter(email="ada@example.org").count(), 1)
         bob = User.objects.get(email="bob@example.org")
-        self.assertFalse(bob.is_active)
+        # Own staff active in Basecamp are active (decided 2026-11-22)
+        self.assertTrue(bob.is_active)
         self.assertFalse(bob.is_client)
         cleo = User.objects.get(email="cleo@example.org")
         self.assertFalse(cleo.is_active)
@@ -1000,7 +1001,7 @@ class DryRunTest(ImportCase):
         self.assertEqual(
             sorted(report.people),
             [
-                "Bob Example <bob@example.org> (staff, Example Team)",
+                "Bob Example <bob@example.org> (staff, active, Example Team)",
                 "Cleo Example <cleo@example.org> (client, Example Client Ltd)",
             ],
         )
@@ -1088,6 +1089,13 @@ class PeopleTest(ImportCase):
         gus = User.objects.get(email="gus@example.org")
         self.assertIsNone(gus.organization)
         self.assertTrue(gus.is_external)
+
+    def test_own_staff_gone_from_basecamp_stay_inactive(self):
+        tombstone = support.BOB | {"personable_type": "Tombstone"}
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people[1] = tombstone
+        self.run_import()
+        self.assertFalse(User.objects.get(email="bob@example.org").is_active)
 
     def test_redacted_addresses_become_placeholders(self):
         # Only administrators get addresses (sections/people.md)
@@ -1258,9 +1266,10 @@ class PeopleWhoLeftTest(ImportCase):
         self.assertEqual(report.counts["to-dos"]["created"], 0)
         self.assertEqual(report.left, ["Cleo Example <cleo@example.org>"])
         self.assertEqual(self.left_at("cleo@example.org"), timezone.localdate())
+        # Bob is own staff, imported active: active people aren't touched
         self.leave(support.BOB)
         report = Importer(self.client_, actor=self.ada, full=True).run(support.PROJECT)
-        self.assertEqual(report.left, ["Bob Example <bob@example.org>"])
+        self.assertEqual(report.left, [])
         self.assertEqual(len(self.account_reads()), 3)
 
 

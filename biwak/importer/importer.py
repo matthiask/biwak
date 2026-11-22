@@ -441,7 +441,8 @@ class Importer(Resolver):
 
     def _user(self, person):
         """The Biwak person of a Basecamp person: by the mapping, by email
-        address, or created (inactive, staff or client as in Basecamp).
+        address, or created (staff or client as in Basecamp; own staff
+        active in Basecamp active, everybody else inactive).
         None in a dry run for people who would be created."""
         if not person:
             return None
@@ -477,7 +478,11 @@ class Importer(Resolver):
         # ("collaborators") are externals (specs/organizations.md)
         external = not client and not person.get("employee", True)
         kind = "client" if client else "external" if external else "staff"
-        label = f"{name} <{email}> ({kind}{', ' + company if company else ''})"
+        # Own staff active in Basecamp can work in Biwak at once; clients
+        # and externals wait to be activated (decided 2026-11-22)
+        active = kind == "staff" and not redacted and self._active_in_basecamp(person)
+        label = f"{name} <{email}> ({kind}{', active' if active else ''}"
+        label += f"{', ' + company if company else ''})"
         self.report.people.append(label)
         if self.dry:
             return None
@@ -490,8 +495,22 @@ class Importer(Resolver):
             full_name=name,
             is_client=client,
             organization=organization,
-            is_active=False,
+            is_active=active,
         )
+
+    def _active_in_basecamp(self, person):
+        """Still among the account's people, not a removed one's tombstone"""
+        if person.get("personable_type") == "Tombstone":
+            return False
+        return person["id"] in self._account_ids()
+
+    def _account_ids(self):
+        """The IDs of the account's people, read once per run"""
+        if self._account_people is None:
+            self._account_people = {
+                person["id"] for person in self.client.paginate("/people.json")
+            }
+        return self._account_people
 
     def _people_who_left(self):
         """Inactive people (created by an import, or deactivated) who turn up
@@ -501,10 +520,7 @@ class Importer(Resolver):
         (decided 2026-11-22). The account's people are read once per run;
         inactive people still in the account wait to be activated, active
         ones aren't touched."""
-        if self._account_people is None:
-            self._account_people = {
-                person["id"] for person in self.client.paginate("/people.json")
-            }
+        self._account_ids()
         new = [pid for pid in self._persons if pid not in self._looked_at]
         self._looked_at.update(new)
         gone = {pid: self._users.get(pid) for pid in new}
@@ -1581,8 +1597,15 @@ class Importer(Resolver):
                 with importing():
                     checkin_ops.set_people(
                         item,
+                        # Those asked before who can't see it anymore
+                        # (deactivated in Biwak meanwhile) aren't kept
                         sorted(
-                            set(allowed) | set(item.question.people.all()),
+                            set(allowed)
+                            | set(
+                                who_can_see(item).filter(
+                                    pk__in=item.question.people.values("pk")
+                                )
+                            ),
                             key=lambda u: u.pk,
                         ),
                         actor=item.creator,

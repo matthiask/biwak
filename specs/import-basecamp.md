@@ -163,10 +163,15 @@ project. Waiting for Basecamp's account export to confirm the plan.
   title; a board for a card table). An internal answer to a visible
   question can't move and is skipped and reported. A client's internal
   message stays internal.
-- **People** by address. Those without an account are created
-  **inactive** (never admins), as staff or client as in Basecamp, so
-  nobody gets mail or a login before someone decides (`activation.md`);
-  the operations accept inactive people only inside `importing()`.
+- **People** by address. Those without an account are created (never
+  admins) as staff or client as in Basecamp. **Own staff active in
+  Basecamp are active** (decided 2026-11-22: they work in Biwak from
+  the start): Basecamp's employees still among the account's people,
+  not a tombstone, with a real address. **Everybody else is inactive**
+  (clients, externals, placeholders, people gone from Basecamp), so
+  nobody else gets mail or a login before someone decides
+  (`activation.md`); the operations accept inactive people only inside
+  `importing()`. Active people are never marked as left by a later run.
   Companies become organizations by name, ignoring case and spaces:
   employees get the own organization, clients and collaborators their
   company's (collaborators become externals). Existing people keep theirs.

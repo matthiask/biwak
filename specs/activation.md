@@ -95,9 +95,10 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
 
 ## Activating
 
-The importer creates people without an account inactive on purpose, so
-nobody gets mail or a sign-in before someone decides
-(`import-basecamp.md`).
+The importer creates clients and externals inactive on purpose, so
+nobody gets mail or a sign-in before someone decides; own staff active
+in Basecamp are created active (decided 2026-11-22,
+`import-basecamp.md`).
 
 - Sets `is_active`; nothing else changes (memberships, subscriptions,
   assignments made by the import stay). Already active people are
