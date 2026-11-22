@@ -310,6 +310,21 @@ class TodosTest(E2ETestCase):
         self.assertEqual(first.creator, self.ada)
         self.assertEqual(self.errors, [])
 
+    def test_removing_a_pill_keeps_the_form_open(self):
+        """× removes the pill, not the form: the click is inside the form
+        although the button is gone from the page by then"""
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        add.locator(".wb-picker-input").click()
+        add.locator(".wb-picker-list li", has_text="Ada").click()
+        add.locator(".wb-pill-remove").click()
+        expect(add.locator(".wb-pill")).to_have_count(0)
+        self.assertTrue(add.evaluate("el => el.open"))
+        self.assertEqual(self.errors, [])
+
     def test_a_new_row_has_a_working_peek_button(self):
         """htmx processes the row the script inserted"""
         todolist = self.make_list()

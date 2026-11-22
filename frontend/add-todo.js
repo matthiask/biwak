@@ -102,8 +102,11 @@ document.addEventListener("biwak:live", (event) => {
     setUp(details)
 })
 
+// The event's path, not the target's place now: a click that removed its
+// own target (a pill's ×) still happened inside the form
 document.addEventListener("click", (event) => {
+  const path = event.composedPath()
   for (const details of forms()) {
-    if (details.open && !details.contains(event.target)) close(details)
+    if (details.open && !path.includes(details)) close(details)
   }
 })
