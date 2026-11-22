@@ -18,10 +18,10 @@ Resend's webhook, the sender check, stripping), `files.md`
   `inbox@<REPLY_DOMAIN>` (off without `REPLY_DOMAIN`, like replies).
   Shown on the "Forwarded" page with "Copy".
 - **Whose it is:** the sender check of replies (SPF/DKIM/DMARC results
-  from Resend, the `From` matching an active staff member's address);
-  mails failing it, from clients, externals' too (proposed: staff
-  only, externals included; question for building), or from unknown
-  addresses are dropped with a short reply like refused replies.
+  from Resend, the `From` matching an active staff member's address,
+  own staff and externals alike, decided 2026-11-22); mails failing
+  it, from clients or from unknown addresses are dropped with a short
+  reply like refused replies.
 - **What's kept:** the forwarded mail's subject, the original sender,
   date and recipients when they can be read from the forward (the
   common forward formats of Outlook, Gmail, Apple Mail; else the
