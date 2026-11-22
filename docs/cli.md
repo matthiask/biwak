@@ -48,6 +48,7 @@ biwak forwarded file 21 --todo LIST
 biwak invite dora@example.net eve@example.net --project 4 --project 7
 biwak invitations
 biwak people --inactive
+biwak people --left
 biwak people activate 12 13 --mail
 biwak people deactivate 14
 biwak projects --all --inactive-todos

@@ -8,6 +8,7 @@ from unittest import mock
 from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.accounts.models import User
 from biwak.activity.models import Event, Notification, Subscription
@@ -1097,6 +1098,135 @@ class PeopleTest(ImportCase):
         )
         # Nobody becomes an administrator
         self.assertEqual(User.objects.filter(is_admin=True).count(), 1)
+
+
+LEFT_ON = dt.date(2025, 3, 3)
+
+
+class PeopleWhoLeftTest(ImportCase):
+    """Who turns up in a project but isn't among the account's people
+    anymore has left Basecamp (specs/activation.md, "People who left")"""
+
+    def leave(self, *people):
+        ids = {p["id"] for p in people}
+        self.client_.data["/people.json"] = [
+            p for p in self.client_.data["/people.json"] if p["id"] not in ids
+        ]
+
+    def left_at(self, email):
+        return User.objects.get(email=email).left_at
+
+    def account_reads(self):
+        return [r for r in self.client_.requests if r[0] == "/people.json"]
+
+    def test_people_still_in_the_account_wait_to_be_activated(self):
+        report = self.run_import()
+        self.assertEqual(report.left, [])
+        self.assertIsNone(self.left_at("bob@example.org"))
+        self.assertNotIn("People who left", report.as_text())
+
+    def test_people_gone_from_the_account_have_left(self):
+        self.leave(support.BOB)
+        report = self.run_import()
+        bob = User.objects.get(email="bob@example.org")
+        self.assertFalse(bob.is_active)
+        self.assertEqual(bob.left_at, timezone.localdate())
+        self.assertIsNone(self.left_at("cleo@example.org"))
+        self.assertEqual(report.left, ["Bob Example <bob@example.org>"])
+        self.assertIn(
+            "People who left Basecamp:\n  Bob Example <bob@example.org>",
+            report.as_text(),
+        )
+        # Read once per run, for several projects too
+        self.assertEqual(len(self.account_reads()), 1)
+
+    def test_read_once_for_several_projects(self):
+        self.leave(support.BOB)
+        importer = Importer(self.client_, actor=self.ada)
+        importer.run(support.PROJECT)
+        importer.run(support.PROJECT)
+        self.assertEqual(len(self.account_reads()), 1)
+        self.assertEqual(importer.report.left, ["Bob Example <bob@example.org>"])
+
+    def test_active_people_are_not_touched(self):
+        bob = person("Bob")
+        bob.email = "bob@example.org"
+        bob.save()
+        self.leave(support.BOB)
+        report = self.run_import()
+        bob.refresh_from_db()
+        self.assertTrue(bob.is_active)
+        self.assertIsNone(bob.left_at)
+        self.assertEqual(report.left, [])
+
+    def test_the_day_they_left_stays(self):
+        self.leave(support.BOB)
+        self.run_import()
+        User.objects.filter(email="bob@example.org").update(left_at=dt.date(2025, 3, 3))
+        report = self.run_import()
+        self.assertEqual(self.left_at("bob@example.org"), dt.date(2025, 3, 3))
+        self.assertEqual(report.left, [])
+
+    def test_people_back_in_the_account_are_cleared(self):
+        """Decided 2026-11-22: a date the import set (gone from Basecamp) is
+        cleared when they are back; they wait to be activated again"""
+        account = list(self.client_.data["/people.json"])
+        self.leave(support.BOB)
+        self.run_import()
+        bob = User.objects.get(email="bob@example.org")
+        self.assertTrue(bob.left_in_basecamp)
+        self.client_.data["/people.json"] = account
+        report = self.run_import(dry_run=True)
+        self.assertEqual(report.back, ["Bob Example <bob@example.org>"])
+        self.assertIn("Back in Basecamp:\n  Bob Example", report.as_text())
+        self.assertEqual(self.left_at("bob@example.org"), timezone.localdate())
+        report = self.run_import()
+        self.assertEqual(report.back, ["Bob Example <bob@example.org>"])
+        self.assertEqual(report.left, [])
+        bob.refresh_from_db()
+        self.assertIsNone(bob.left_at)
+        self.assertFalse(bob.left_in_basecamp)
+        self.assertEqual(self.run_import().back, [])
+
+    def test_deactivated_in_biwak_stays_whatever_basecamp_lists(self):
+        from biwak.organizations import activation
+
+        self.run_import()
+        bob = User.objects.get(email="bob@example.org")
+        User.objects.filter(pk=bob.pk).update(is_active=True)
+        activation.deactivate([bob], actor=self.ada)
+        for dry_run in [True, False]:
+            with self.subTest(dry_run=dry_run):
+                report = self.run_import(dry_run=dry_run)
+                self.assertEqual(report.back, [])
+                self.assertEqual(self.left_at("bob@example.org"), timezone.localdate())
+
+    def test_a_dry_run_reports_and_writes_nothing(self):
+        self.leave(support.BOB)
+        report = self.run_import(dry_run=True)
+        self.assertEqual(report.left, ["Bob Example <bob@example.org>"])
+        self.assertIn("People who left Basecamp:", report.as_text())
+        self.assertFalse(User.objects.filter(email="bob@example.org").exists())
+        # People who exist, inactive, are reported and not changed
+        self.run_import()
+        User.objects.filter(email="bob@example.org").update(left_at=None)
+        report = self.run_import(dry_run=True)
+        self.assertEqual(report.left, ["Bob Example <bob@example.org>"])
+        self.assertIsNone(self.left_at("bob@example.org"))
+
+    def test_later_runs_read_the_account_every_time(self):
+        """Skipping unchanged recordings or reading everything with
+        ``--full``: the account's people are read either way"""
+        self.run_import()
+        self.leave(support.CLEO)
+        report = Importer(self.client_, actor=self.ada).run(support.PROJECT)
+        self.assertEqual(report.counts["to-dos"]["created"], 0)
+        self.assertEqual(report.left, ["Cleo Example <cleo@example.org>"])
+        self.assertEqual(self.left_at("cleo@example.org"), timezone.localdate())
+        self.leave(support.BOB)
+        report = Importer(self.client_, actor=self.ada, full=True).run(support.PROJECT)
+        self.assertEqual(report.left, ["Bob Example <bob@example.org>"])
+        self.assertEqual(len(self.account_reads()), 3)
 
 
 class ScheduleTest(ImportCase):

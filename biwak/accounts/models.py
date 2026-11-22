@@ -175,6 +175,14 @@ class User(AbstractBaseUser):
         verbose_name=_("invited by"),
     )
     invited_at = models.DateTimeField(_("invited at"), null=True, blank=True)
+    # The day the person left (specs/activation.md, "People who left"): set
+    # by deactivating and by the importer for people Basecamp no longer has,
+    # cleared by activating. Inactive people without it wait to be activated.
+    left_at = models.DateField(_("left on"), null=True, blank=True)
+    # Set together with ``left_at`` by the importer (gone from Basecamp's
+    # account): only such a date is cleared when they are back in Basecamp;
+    # a date set by deactivating stays
+    left_in_basecamp = models.BooleanField(_("left in Basecamp"), default=False)
     # Overridable per project and item (biwak.activity.models.LevelOverride)
     notification_level = models.CharField(
         _("notifications"),

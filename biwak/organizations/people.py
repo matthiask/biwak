@@ -109,6 +109,8 @@ def decorate(user, viewer):
     user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
     # Resend and Withdraw: staff for clients, admins for everybody
     user.manage_invitation = project_ops.can_manage_invitation(viewer, user)
+    # "left on 3 Mar 2025" for own staff, not clients (decided 2026-11-22)
+    user.show_left = user.left_at is not None and project_ops.can_manage_members(viewer)
     # Activating and deactivating (specs/activation.md)
     user.can_activate = not user.is_active and activation.can_change(viewer, user)
     user.can_deactivate = user.is_active and activation.can_deactivate(viewer, user)
@@ -136,9 +138,10 @@ def own_label(viewer, organization):
 def groups_for(viewer):
     """The groups in the page's order, each person with ``role``,
     ``show_email`` and ``can_move`` (the existing "Change organization"
-    modal)"""
+    modal); people who left have their own filter (specs/activation.md)"""
     people = list(
         known_people(viewer)
+        .filter(left_at__isnull=True)
         .select_related("invited_by")
         .order_by("-is_active", Lower("full_name"), "email")
     )
@@ -228,11 +231,14 @@ def _note_externals(viewer, people):
         org_ops.note_externals([user.organization for user in people])
 
 
-def inactive_for(viewer):
-    """The "Inactive" filter: people who can't sign in, by name"""
+def inactive_for(viewer, *, left=False):
+    """The "Inactive" filter: people who can't sign in and haven't left
+    (imported, waiting to be activated), by name; with ``left`` the
+    "People who left" filter instead (specs/activation.md)"""
     people = list(
         known_people(viewer)
-        .filter(is_active=False)
+        .filter(left_at__isnull=not left)
+        .filter(Q() if left else Q(is_active=False))
         .select_related("organization")
         .order_by(Lower("full_name"), "email")
     )
@@ -244,19 +250,22 @@ def people(request):
     can_invite = project_ops.can_manage_members(request.user)
     invited = can_invite and bool(request.GET.get("invited"))
     inactive = can_invite and not invited and bool(request.GET.get("inactive"))
+    left = can_invite and not (invited or inactive) and bool(request.GET.get("left"))
+    filtered = invited or inactive or left
     return render(
         request,
         "organizations/people.html",
         {
-            "groups": [] if invited or inactive else groups_for(request.user),
+            "groups": [] if filtered else groups_for(request.user),
             "invited": invitations_for(request.user) if invited else None,
             "inactive": inactive_for(request.user) if inactive else None,
+            "left": inactive_for(request.user, left=True) if left else None,
             "can_manage": org_ops.can_manage(request.user),
             "can_invite": can_invite,
             # Teams (specs/teams.md): staff see them, own staff manage them
             "teams": (
                 visible_teams(request.user)
-                if team_ops.can_see(request.user) and not (invited or inactive)
+                if team_ops.can_see(request.user) and not filtered
                 else None
             ),
             "can_manage_teams": team_ops.can_manage(request.user),

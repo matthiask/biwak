@@ -293,6 +293,9 @@ def make_data():
     # vaults.md, questionnaires.md): what's in them, without listing it
     d.update(tools())
     d[f"/projects/{PROJECT}/people.json"] = [ADA, BOB, CLEO]
+    # The account's people (people.md, ``GET /people.json``): everybody
+    # still in Basecamp; who turns up in a project but not here has left
+    d["/people.json"] = [ADA, BOB, CLEO, EVE]
     for person_ in (ADA, BOB, CLEO):
         d[f"/people/{person_['id']}.json"] = {
             **person_,

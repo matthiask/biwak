@@ -31,6 +31,24 @@ class PeopleCLITest(test_cli.CLITest):
         )
         self.assertIn("ada@example.org", self.biwak("people").output)
 
+    def test_list_who_left(self):
+        """``--inactive`` lists those waiting to be activated, ``--left``
+        those who left, with the day (specs/activation.md)"""
+        import datetime as dt
+
+        User.objects.filter(pk=self.dora.pk).update(left_at=dt.date(2025, 3, 3))
+        output = self.biwak("people", "--left").output
+        self.assertIn("dora@example.org", output)
+        self.assertIn("2025-03-03", output)
+        self.assertNotIn("cleo@example.org", output)
+        data = json.loads(self.biwak("people", "--left", "--json").stdout)
+        self.assertEqual([p["left_at"] for p in data], ["2025-03-03"])
+        data = json.loads(self.biwak("people", "--inactive", "--json").stdout)
+        self.assertEqual({p["id"] for p in data}, {self.cleo.pk, self.pia.pk})
+        result = self.biwak("people", "--inactive", "--left")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("not both", result.output)
+
     def test_activate_with_the_mail(self):
         with self.captureOnCommitCallbacks(execute=True):
             output = self.biwak(

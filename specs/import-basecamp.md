@@ -161,6 +161,15 @@ project. Waiting for Basecamp's account export to confirm the plan.
   Companies become organizations by name, ignoring case and spaces:
   employees get the own organization, clients and collaborators their
   company's (collaborators become externals). Existing people keep theirs.
+- **People who left** (decided 2026-11-22, `activation.md`): the
+  account's people (`/people.json`) are read once per run, also when
+  later runs skip unchanged recordings; inactive people who turn up in a
+  project but aren't among them get `left_at` (the run's date). The
+  report lists them ("People who left Basecamp:"), a dry run too
+  without writing. People with `left_at` who are among the account's
+  people again get it cleared ("Back in Basecamp:", decided 2026-11-22
+  by the user), only when the importer set it (`left_in_basecamp`), not
+  when somebody was deactivated in Biwak.
 - **Profile images** (decided 2026-11-21): for people without an image
   in Biwak, `avatar_url` from `people/<id>.json` (`people.json` has
   null), processed like an upload, never overwriting one. Basecamp's

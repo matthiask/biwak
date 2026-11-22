@@ -535,26 +535,35 @@ def invite(
 
 
 @cli.group(invoke_without_command=True)
-@click.option("--inactive", is_flag=True, help="People who can't sign in.")
+@click.option(
+    "--inactive",
+    is_flag=True,
+    help="People who can't sign in and haven't left (waiting to be activated).",
+)
+@click.option("--left", is_flag=True, help="People who left, with the day.")
 @json_option
 @click.pass_context
-def people(ctx, inactive, as_json):
-    """The active people (staff), or with --inactive those who can't sign
-    in; `biwak people activate` and `deactivate` change that,
-    `reset-sign-in` removes somebody's authenticator app, passkeys and
-    API tokens"""
+def people(ctx, inactive, left, as_json):
+    """The active people (staff), with --inactive those waiting to be
+    activated, with --left those who left; `biwak people activate` and
+    `deactivate` change that, `reset-sign-in` removes somebody's
+    authenticator app, passkeys and API tokens"""
     if ctx.invoked_subcommand is not None:
         return None
-    data = request("GET", "people/", params={"inactive": inactive})
+    if inactive and left:
+        terminate("--inactive or --left, not both.")
+    data = request("GET", "people/", params={"inactive": inactive, "left": left})
     if as_json:
         return echo_json(data)
-    t = table("ID", "Name", "Email", "Organization")
+    columns = ["ID", "Name", "Email", "Organization"] + (["Left on"] if left else [])
+    t = table(*columns)
     for person in data:
         t.add_row(
             str(person["id"]),
             with_away(person),
             person["email"],
             person["organization"],
+            *([person.get("left_at") or ""] if left else []),
         )
     console.print(t)
     return None

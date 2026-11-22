@@ -122,7 +122,8 @@ manage none (`access.md`).
   (`known_people()`, `access.md`), grouped the same way. Externals see
   addresses as on a project's people page; clients only those of their
   own organization.
-- Invitations and the "Invited" and "Inactive" filters: `activation.md`.
+- People who left aren't listed by default; invitations and the
+  "Invited", "Inactive" and "People who left" filters: `activation.md`.
 - Teams, at the end for staff: `teams.md`.
 
 ## Projects and organizations

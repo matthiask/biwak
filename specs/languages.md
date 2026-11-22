@@ -67,6 +67,7 @@ Depends on: everything with texts; `accounts` (the `language` field,
 | sign in, sign out | anmelden, abmelden |
 | assign, assignee | zuweisen, zugewiesen |
 | due | fällig |
+| people who left, "left on 3 Mar 2025" | Ehemalige, "nicht mehr dabei seit 3. März 2025" (decided 2026-11-22 by the user: "gegangen" sounds like they were terminated; empty: "Keine Ehemaligen.") |
 
 ## Choosing
 

@@ -1,6 +1,8 @@
 """Organizations (biwak orgs, specs/organizations.md): for the installation's
 own staff, like the pages; the same operations"""
 
+import datetime as dt
+
 from django.db.models import Count
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
@@ -189,6 +191,9 @@ def person_organization(request, person_id: int, data: PersonOrganizationIn):
 class AccessOut(PersonOut):
     email: str
     is_active: bool
+    # The day they left (deactivated, or gone from Basecamp when imported);
+    # null for everybody else (specs/activation.md, "People who left")
+    left_at: dt.date | None = None
     # Activated with the invitation mail, and it was sent: not to an
     # address that bounced
     mailed: bool = False
@@ -198,6 +203,7 @@ def access_out(user, *, mailed=False):
     return person_out(user) | {
         "email": user.email,
         "is_active": user.is_active,
+        "left_at": user.left_at,
         "mailed": mailed,
     }
 
@@ -252,17 +258,21 @@ def activated(request, users, mail):
 
 
 @router.get("people/", response=list[AccessOut])
-def people_list(request, *, inactive: bool = False):
-    """The active people, or with ``inactive`` those who can't sign in,
+def people_list(request, *, inactive: bool = False, left: bool = False):
+    """The active people, with ``inactive`` those who can't sign in and
+    haven't left (waiting to be activated), with ``left`` those who left;
     by name (own staff)"""
     if not project_ops.can_manage_members(request.user):
         raise HttpError(403, _("Only staff list people."))
+    if left:
+        people = User.objects.filter(left_at__isnull=False)
+    else:
+        people = User.objects.filter(is_active=not inactive, left_at__isnull=True)
     return [
         access_out(user)
-        for user in User.objects
-        .filter(is_active=not inactive)
-        .select_related("organization")
-        .order_by(Lower("full_name"), "email")
+        for user in people.select_related("organization").order_by(
+            Lower("full_name"), "email"
+        )
     ]
 
 

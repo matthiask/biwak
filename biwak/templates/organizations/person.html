@@ -14,7 +14,13 @@
           {% else %}
             <span class="badge wb-tone-neutral">{{ person.role }}</span>
           {% endif %}
-          {% if not person.is_active %}<span class="badge wb-tone-neutral">{% translate "inactive" %}</span>{% endif %}
+          {% if person.show_left %}
+            <span
+              class="badge wb-tone-neutral"
+            >{% blocktranslate with date=person.left_at|date %}left on {{ date }}{% endblocktranslate %}</span>
+          {% elif not person.is_active %}
+            <span class="badge wb-tone-neutral">{% translate "inactive" %}</span>
+          {% endif %}
           {% if person.organization %}<span class="text-body-secondary">{{ person.organization_name }}</span>{% endif %}
         </div>
         {% if person.show_email %}<div class="small text-body-secondary">{{ person.email }}</div>{% endif %}
