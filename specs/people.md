@@ -18,9 +18,11 @@ Decided 2026-11-21:
   editor's others, the "Me" menu (only the mark on phones). Not in mails
   (images there need public URLs and are often blocked) and not in an
   item's history.
-- Without an image: white initials on the fill of a palette color
-  chosen from the id (`PALETTE[id % 10]`, `User.avatar_color`), no
-  setting. The full name is the `title` and `alt`.
+- Without a photo: the person's drawn mark (below) in white on the fill
+  of a palette color chosen from the id (`PALETTE[id % 10]`,
+  `User.avatar_color`), no setting. Initials go once the marks are built
+  (decided 2026-11-22: they collide and say little to people who don't
+  know the person). The full name is the `title` and `alt`.
 
 ## Profile images
 
@@ -28,7 +30,7 @@ Decided 2026-11-21:
   Appearance: JPEG, PNG or WebP up to 5 MB, cut to the middle square,
   scaled to 256 pixels and stored as WebP (`operations.image_data()`,
   storage name `people/<id>/<version>.webp`, a random version per
-  upload); "Remove" goes back to the initials. People set only their
+  upload); "Remove" goes back to the person's drawn mark. People set only their
   own image; admins remove anyone's (an unfitting image) on the person's
   page, recorded in the audit log (`User` is audited).
 - **Serving** through a view, never from the storage directly
@@ -98,21 +100,43 @@ site).
   for the one typing. Not for the API's and CLI's `short_name` (data),
   the live editor's labels (one for all who see it) or the audit log.
 
-## Stage 2 (later): choosing from drawn images
+## Stage 2: drawn marks
 
-Instead of uploading, people pick one of a small set of drawn images
-fitting Biwak's theme, each on a palette color, shipped with the app as
-SVG; choosing stores its name.
+Decided with the user 2026-11-22. **Status:** open; the drawings are
+there.
 
-- **The drawings** (approved by the user 2026-11-22): 35 in
+- **The drawings** (approved 2026-11-22): 35 in
   `biwak/static/biwak/marks/`, 23 alpine (tent, ibex, marmot, lantern,
-  cable car, …) and 12 generic (fox, owl, cup, rocket, …); `preview.html`
-  there shows them all at 20, 32 and 96 px.
-- **One color:** a shape in `currentColor` (shown white), a second tone
-  by opacity only, `viewBox="0 0 64 64"`, the motif inside a centered
-  circle of radius 24; the circle and its fill come from `.wb-avatar`,
-  so a mark works on every palette color and in dark mode. Readable at
-  20 px (`sm`): bold shapes, no lines under 4 units.
-- **Still to decide when building:** whether people pick the color too
-  or keep the one from their id, and how the settings offer the choice
-  next to uploading.
+  cable car, …) and 12 generic (fox, owl, cup, rocket, …);
+  `preview.html` there shows them at 20, 32 and 96 px. One color: a
+  shape in `currentColor`, a second tone by opacity only,
+  `viewBox="0 0 64 64"`, the motif inside a centered circle of radius
+  24, readable at 20 px (no lines under 4 units). New ones follow the
+  same rules.
+- **Everybody has a mark**, stored (`User.mark`, the file's name), given
+  when the account is created: the mark fewest active people of the
+  same organization have (ties: the first in the list's order), so a
+  team of up to 35 has no repeats. Imported people get one the same way;
+  people who left keep theirs. The color stays the id's: a repeated
+  mark usually differs in color.
+- **No initials:** the mark is shown wherever there's no photo. The full
+  name stays the `title` and `alt`.
+- **No color choice** (decided 2026-11-22: deriving it from the accent
+  color would give everybody the default's).
+- **The settings,** "Profile image" at the top of Appearance: **Drawn**,
+  the grid of all marks with one's own selected, a click chooses
+  (saved at once, like the other choices there); **Photo**, uploading
+  as now. A photo is shown instead of the mark; "Remove" brings the mark
+  back.
+- **Drawing:** like the icons (`frontend/styles/icons.css`), white
+  through a CSS mask on the circle, one class per mark
+  (`wb-mark-ibex`), so `{% avatar %}`, `frontend/avatar.js` (the live
+  editor's others included) and the page's colors need nothing else.
+  A test checks that every file has its class and every class its file
+  (like `biwak/test_icons.py`).
+- **API and CLI:** `mark` on people (read), changing one's own mark in
+  the settings endpoint; the CLI shows nothing new.
+- **Done when:** tests for giving marks (fewest used, per organization,
+  the importer), the settings as staff and client, the avatar's markup
+  with and without a photo, the mark classes; the help's settings
+  chapter says how.

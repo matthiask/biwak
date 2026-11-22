@@ -32,7 +32,7 @@ confirm: `decisions-to-confirm.md`.
 | `archiving.md` | built | archiving projects and lists, nothing smaller |
 | `connection.md` | built | the offline banner, nothing lost silently |
 | `organizations.md` | built | organizations, externals, the People page |
-| `people.md` | built; choosing drawn images open (the drawings are there) | the mark, profile images, names, the person's page |
+| `people.md` | built; drawn marks instead of initials open (the drawings are there) | the mark, profile images, names, the person's page |
 | `subscribers.md` | built | assigned means subscribed, adding others, telling them now |
 | `dashboard.md` | built | Home: what needs me, recent updates, my projects |
 | `help.md` | built | the help pages from `docs/` |
