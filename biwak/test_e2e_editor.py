@@ -710,8 +710,8 @@ class TableTest(E2ETestCase):
         self.set_markdown(self.field, "| a | b |\n| --- | --- |\n| 1 | 2 |")
         self.box.locator("td").first.click()
         expect(self.bar).to_be_visible()
-        # Tab leaves the table for its bar: one tab stop, arrows move
-        self.box.press("Tab")
+        # Alt+F10 goes to the bar, the arrows move
+        self.box.press("Alt+F10")
         first = self.action("row-above")
         expect(first).to_be_focused()
         self.page.keyboard.press("ArrowRight")
@@ -725,6 +725,15 @@ class TableTest(E2ETestCase):
         expect(self.action("align-right")).to_be_focused()
         self.page.keyboard.press("Escape")
         expect(self.box).to_be_focused()
+        # Back where it was
+        self.box.press("Alt+F10")
+        expect(self.action("align-right")).to_be_focused()
+        self.page.keyboard.press("Escape")
+        # Tab leaves the field as everywhere, past the bar
+        self.box.press("Tab")
+        expect(self.box).not_to_be_focused()
+        for button in self.bar.locator("button").all():
+            expect(button).not_to_be_focused()
         # Out of the table: no bar
         self.box.press("ControlOrMeta+Home")
         self.set_markdown(self.field, "Text only")

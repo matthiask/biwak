@@ -150,8 +150,10 @@ const template = () =>
   document.querySelector("template[data-table-bar-template]")
 
 // The bar, after ``after`` (the editor's element, or what follows it
-// right away) in the page, so that Tab from the table reaches it; placed
-// above the table, inside ``anchor``'s parent (the editor's)
+// right away) in the page, placed above the table, inside ``anchor``'s
+// parent (the editor's). Alt+F10 in a cell goes to it (decided
+// 2026-11-22; Tab leaves the field as everywhere, so the bar isn't a tab
+// stop), Escape back to the cell; the arrows move within it.
 export function tableBar({ anchor, after = anchor }) {
   return new Plugin({
     view(view) {
@@ -166,9 +168,8 @@ export function tableBar({ anchor, after = anchor }) {
       after.after(bar)
       anchor.parentElement.classList.add("position-relative")
       const buttons = [...bar.querySelectorAll("[data-table-action]")]
-      buttons.forEach((button, index) => {
-        button.tabIndex = index === 0 ? 0 : -1
-      })
+      let current = 0
+      for (const button of buttons) button.tabIndex = -1
 
       const show = () => {
         const inBar = bar.contains(document.activeElement)
@@ -226,11 +227,18 @@ export function tableBar({ anchor, after = anchor }) {
         else if (event.key === "End") next = buttons.length - 1
         if (next === null || index < 0) return
         event.preventDefault()
-        const target = buttons[(next + buttons.length) % buttons.length]
-        for (const button of buttons)
-          button.tabIndex = button === target ? 0 : -1
-        target.focus()
+        current = (next + buttons.length) % buttons.length
+        buttons[current].focus()
       })
+      // Alt+F10: to the bar, where one was last
+      const toBar = (event) => {
+        if (event.key !== "F10" || !event.altKey || !where(view.state)) return
+        event.preventDefault()
+        bar.hidden = false
+        buttons[current].focus()
+        show()
+      }
+      view.dom.addEventListener("keydown", toBar)
       const later = () => setTimeout(show)
       bar.addEventListener("focusout", later)
       view.dom.addEventListener("blur", later)
@@ -239,6 +247,7 @@ export function tableBar({ anchor, after = anchor }) {
         update: show,
         destroy() {
           view.dom.removeEventListener("blur", later)
+          view.dom.removeEventListener("keydown", toBar)
           view.dom.removeEventListener("focus", later)
           bar.remove()
         },

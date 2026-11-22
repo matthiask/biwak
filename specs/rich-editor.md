@@ -8,7 +8,7 @@ field, live docs included. Asked by the user 2026-11-22.
 
 **Status:** built 2026-11-22, with pasting detected Markdown and the
 table tools (both decided and built 2026-11-22, branch `editor-tables`;
-the visible details in `decisions-to-confirm.md`). (Decided with the user 2026-11-22:
+their visible details confirmed by the user 2026-11-22, under "Tables"). (Decided with the user 2026-11-22:
 ProseMirror, Markdown stored, a source toggle, live docs' conversion in
 Python; a spike confirmed it with the changes below; the choices made
 while building confirmed 2026-11-22). What was built and the sizes:
@@ -125,8 +125,22 @@ additions).
   in step, so what's saved is one alignment per column. "Delete row"
   is disabled in the header row (Markdown tables need one); deleting
   the last column deletes the table. The bar's buttons are
-  reachable by keyboard (a roving tab stop like the toolbar) and named
-  for screen readers; on phones it wraps.
+  named for screen readers; on phones it wraps. Confirmed by the user
+  2026-11-22 as built: the bar floats above the table at its left edge
+  (the surface color, a shadow, like the link's address field), shown
+  while the cursor is in a table and the editor or the bar has the
+  focus; "Row above" is unavailable in the header row like "Delete
+  row" (both dimmed, `aria-disabled`); the icons `arrow-bar-up`,
+  `-down`, `-left`, `-right`, `dash-square` (delete row), `x-square`
+  (delete column), `trash`, `text-left`/`-center`/`-right`; "Insert
+  table" after "Code" (`table`), in the Markdown source an empty
+  table's Markdown; alignment pressed again takes it off. **Keyboard**
+  (decided 2026-11-22): Tab in a cell leaves the field as everywhere;
+  **Alt+F10** goes to the bar (the common rich-editor key for a
+  toolbar), the arrows, Home and End move in it, Escape goes back to
+  the cell, the focus stays in the bar after an action.
+  Pasted Markdown undone becomes the plain text, its Markdown
+  characters escaped when saved (`\## Packing`; confirmed).
 - **Forms:** Ctrl+Enter saves, Escape closes as now (the modal's
   "changed" check compares the Markdown); the inline forms' and the
   view-mode edit forms' behaviour stays.
@@ -260,9 +274,8 @@ in Python:
   undo step of its own (`closeHistory()`, Yjs' `stopCapturing()` in
   live docs). `frontend/editor/tables.js`: `insertTable()` (the
   toolbar's "Insert table"; in the source it inserts the Markdown of
-  one), the bar (`tableBar()`, after the field in the page so that Tab
-  from a cell reaches it, `aria-disabled` where an action doesn't
-  apply) and `tableShape`, which keeps the first row the header and
+  one), the bar (`tableBar()`, Alt+F10 from a cell, not a tab stop,
+  `aria-disabled` where an action doesn't apply) and `tableShape`, which keeps the first row the header and
   every cell at its column's alignment after any change. Alignment
   round-trips on both sides (corpus `hand/32-table-alignment.md`).
   Tests: `tests/tables.test.js`, `test_e2e_editor.py` (`TableTest`,

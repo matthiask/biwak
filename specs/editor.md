@@ -85,8 +85,9 @@ attach.
   toggle; they edit through `execCommand("insertText")`, so undo works,
   and only touch the range they change.
 - Keys: Ctrl+B, Ctrl+I, Ctrl+Shift+7/8/9 (numbered, bulleted,
-  checklist), Tab and Shift+Tab indent list lines (elsewhere Tab leaves
-  the field), **Ctrl+K** a link (decided 2026-11-21: in fields Ctrl+K is
+  checklist), Alt+F10 in a table its bar (`rich-editor.md`), Tab and
+  Shift+Tab indent list lines (elsewhere Tab leaves the field),
+  **Ctrl+K** a link (decided 2026-11-21: in fields Ctrl+K is
   "link", elsewhere the palette; Escape leaves the field).
 - Roving tab stop. On narrow screens the toolbar wraps into a second
   row (decided 2026-11-21), the paperclip always reachable.

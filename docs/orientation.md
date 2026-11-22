@@ -127,8 +127,8 @@ up for what's under the cursor, and pressing one again takes it off.
 - Type `@` to mention somebody (staff can mention a team).
 - **Tables:** "Insert table" in the toolbar. While you're in a table a
   small bar above it adds rows and columns, deletes them or the table,
-  and aligns the column left, center or right. <kbd>Tab</kbd> from the
-  table reaches it.
+  and aligns the column left, center or right. <kbd>Alt</kbd>+<kbd>F10</kbd>
+  in the table goes to it, <kbd>Esc</kbd> back to the table.
 - Paste from web pages, mails, Word or Google Docs and the formatting
   stays. Pasted plain text that is clearly Markdown (headings, lists,
   tables, code blocks, links) is formatted too, and
