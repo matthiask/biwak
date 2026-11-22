@@ -37,7 +37,8 @@ of what's needed:
   audit log records changes.
 - **Quiet:** templates are left out wherever archived projects are
   (`Project.objects.active()`, `archiving.md`: the projects page, Home,
-  the feed across projects, the to-dos page, search unless asked) and
+  the feed across projects, the to-dos page, search: never, decided
+  2026-11-22) and
   also out of the calendar feed, mentions, notifications, the lantern,
   mails and digests: nothing that happens inside a template tells
   anybody. Its own feed and item history work as in any project.
@@ -55,11 +56,15 @@ of what's needed:
 - **Everything is copied**, top level as it is: lists (groups, open
   to-dos with notes and checklists, completed ones left out, through
   `copy_list()`), messages (title, text, category, pinned), folders
-  with their docs and files (new files, not shared rows). Comments,
+  with their docs and files (new files, not shared rows), check-in
+  questions with their schedules (decided 2026-11-22: a weekly
+  question belongs to a kind of project as much as its lists). Comments,
   reactions, history and events are not.
 - **Assignees and dates** are copied as they are (real templates have
-  none; a template that has them means them); assignees who aren't
-  members of the new project are left out, not added.
+  none; a template that has them means them). **Assignments are kept**
+  (decided 2026-11-22: unless there's a good reason not to): assignees
+  who wouldn't see the new project are added as members, as "Copy…"
+  does (`lists-across-projects.md`).
 - **Client visibility** is copied (decided 2026-11-22): a template
   prepares what the client sees from day one, e.g. a welcome message.
   The new project form says what clients will see ("Visible to
@@ -80,13 +85,16 @@ of what's needed:
   library"), then the copy modal of `lists-across-projects.md` (title,
   dates, visibility), the other way round. The title is asked there, so
   placeholders get filled in.
-- A to-do list library is simply a template project holding lists; no
-  separate concept.
+- **One to-do list library** (decided 2026-11-22): a template project
+  named "To-do list library" holding lists; no separate concept.
+- **No public links** in templates (decided 2026-11-22): "Share…" isn't
+  offered on their items, and the API refuses them.
 
 ## Importing
 
 The importer brings Basecamp's project templates and its to-do list
-library over as templates (`import-basecamp.md`): the API serves both
+library (into the one "To-do list library") over as templates
+(`import-basecamp.md`): the API serves both
 like projects (decided 2026-11-22), once per import, so nobody
 rebuilds them by hand.
 
@@ -142,14 +150,11 @@ rebuilds them by hand.
   from a template is `POST lists/{id}/copy/` (`biwak list copy`).
 - **Importer:** `import_basecamp --templates` (`import-basecamp.md`).
 
-## Decisions made while building (proposed, 2026-11-22)
+## Decisions made while building (confirmed by the user 2026-11-22)
 
 - **Not copied:** archived lists, trashed items, drafts, completed
-  to-dos (as `copy_list()`), check-in questions and the project's links
-  (the spec lists neither); pinned messages stay pinned.
-- **Assignees "who aren't members"** read as "who don't see the new
-  project" (`staying()`): own staff of an all-access project keep their
-  assignments without being members.
+  to-dos (as `copy_list()`) and the project's links; pinned messages
+  stay pinned.
 - **The new project form** is prefilled with the template's description
   and color, not its name. The clients' banner shows when the template
   is known (from "New project from this…", or the organizations step);
@@ -162,9 +167,19 @@ rebuilds them by hand.
 - **Archived templates** have their own archive on the templates page,
   not on the projects page's archive. Projects have no trash, so
   neither do templates.
-- **Search** asks with its own checkbox, "Include templates" (staff).
-- **The library's name** is its bucket's, "To-do list library" when it
-  has none.
+- **A project's own events** don't merge with its items' in the
+  activity ("created Website from the template …" stays apart from
+  "created Launch").
+
+## To change (decided 2026-11-22, not built yet)
+
+- Copy check-in questions; keep assignments, adding members (above).
+- Search never finds templates: drop "Include templates", the API's
+  `templates`, `biwak search --templates` and searching inside a
+  template.
+- One "To-do list library" for the importer, whatever the bucket's
+  name.
+- No "Share…" in templates, the API refusing public links there.
 
 ## Not planned
 
