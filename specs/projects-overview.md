@@ -45,8 +45,9 @@ project (decided 2026-11-22, the user: not just the title): the name's
 link covers the card (`.wb-card-link`, its `::after`), the bookmark
 button sits above it (`.wb-above-card-link`) and stays a button; Tab
 reaches the link, then the bookmark, and the focus outlines the whole
-card. The lock's and the "Clients" badge's titles don't show on hover
-any more (under the link). Home's cards are the same include. Each
+card; hovering colors the card's border in the accent's ring color. The
+lock's and the "Clients" badge's titles don't show on hover any more
+(under the link; all confirmed by the user 2026-11-22). Home's cards are the same include. Each
 card, and nothing more:
 
 - the name, the project's color as a stripe (`project-colors.md`), the

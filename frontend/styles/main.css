@@ -2390,6 +2390,24 @@ body:has(.wb-modal[open]) {
   }
 }
 
+/* A choice that couldn't be saved (frontend/save-on-change.js): a short
+   "no" from side to side */
+.wb-shake {
+  animation: wb-shake 0.4s ease-in-out;
+}
+
+@keyframes wb-shake {
+  20%,
+  60% {
+    transform: translateX(-0.25rem);
+  }
+
+  40%,
+  80% {
+    transform: translateX(0.25rem);
+  }
+}
+
 /* Small transitions (specs/celebrations.md): modals scale in, menus and the
    reaction picker fade in, rows that arrive live slide in. Closed things
    aren't rendered, so nothing animates on page load. */
@@ -2488,6 +2506,7 @@ body:has(.wb-modal[open]) {
   }
 
   .wb-modal-shake,
+  .wb-shake,
   .wb-modal[open]::backdrop,
   .wb-menu[open] > .dropdown-menu,
   .wb-reaction-add[open] > .wb-reaction-picker,

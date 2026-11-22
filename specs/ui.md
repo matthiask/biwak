@@ -20,7 +20,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   check-ins too): Move to…, Trash, "Notifications…" on lists only
   (`notifications.md`), and for staff the visibility switch on items
   that have one and History (decided 2026-11-22: neither is a button of
-  its own on the page, `access.md`, `feed.md`). Its entries
+  its own on the page, `access.md`, `feed.md`). Check-ins have it too,
+  with Subscribers… and "Move to trash" like every item (confirmed by
+  the user 2026-11-22). Its entries
   (`items/_more_entries.html`) are also the "…" menu of the folders'
   tiles (`files.md`, "Folders"), without History.
 - **Click to edit** (2026-11-21: the to-do's page was an edit form, not
@@ -71,7 +73,7 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   checkboxes and radios at once, text after 400 ms and on Enter; the
   button is hidden with JavaScript; the changed field keeps the focus.
   Forms that change things never autosubmit, except a single choice in
-  a row saving itself with htmx (the people page's notification choice,
+  a row saving itself (the people page's notification choice,
   decided 2026-11-22, `organizations.md`). Filter buttons sit at the
   height of the fields (`wb-filters`, `_filter_buttons.html`).
 - **On phones** (2026-11-22: the feed's filters took five rows before
@@ -160,6 +162,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   blocking, nothing on page load, CSS first, one celebration per action.
 - **`prefers-reduced-motion: reduce` turns every animation off;** the
   scripts then don't intercept at all.
+- **A save that failed shakes** what was changed, side to side for 0.4 s
+  (`.wb-shake`, decided 2026-11-22: the people page's notification
+  choice, `organizations.md`); a changed modal asked to close pulses
+  (`.wb-modal-shake`).
 
 ## Keyboard and accessibility
 

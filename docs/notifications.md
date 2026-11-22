@@ -56,7 +56,8 @@ project's page), and so can a list ("Notifications..." in its "More"
 menu): the closest one wins. Other items have no level: subscribe or
 unsubscribe. On a project's people page staff see who is "Notified by
 default" and who is notified "Only when tagged", and change it right in
-the person's row (it's saved at once); clients and partners change only
+the person's row (it's saved at once; if it can't be saved, it shakes
+and shows the setting that is stored); clients and partners change only
 their own. Whoever adds you picks the first setting.
 
 ## The lantern

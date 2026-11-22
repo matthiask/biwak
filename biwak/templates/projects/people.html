@@ -76,18 +76,13 @@
                     <div class="d-flex align-items-center gap-2">
                       {% if notify %}
                         {% comment %}
-                          The choice saves itself (htmx, the row swapped from the page the
-                          redirect leads to; decided 2026-11-22); Save without JavaScript
+                          The choice saves itself (frontend/save-on-change.js, decided
+                          2026-11-22); Save without JavaScript
                         {% endcomment %}
                         {% url 'member_notify' project.pk m.user.pk as notify_url %}
                         <form
                           method="post"
                           action="{{ notify_url }}"
-                          hx-post="{{ notify_url }}"
-                          hx-trigger="change"
-                          hx-target="#member-{{ m.user.pk }}"
-                          hx-select="#member-{{ m.user.pk }}"
-                          hx-swap="outerHTML"
                           class="d-flex align-items-center gap-1"
                           data-save-on-change
                         >

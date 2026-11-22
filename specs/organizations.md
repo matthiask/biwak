@@ -144,11 +144,15 @@ manage none (`access.md`).
   user: the "…" menu and its modals took too many clicks): the choice of
   `notifications.md` as a small select ("Notified by default", "Only
   when tagged") where `can_change_notify_choice()` allows it, saving
-  itself on change (htmx posts to `member_notify`, which redirects to
-  the page, and the row `#member-<id>` is swapped from it; the focus
-  stays on the select; a Save button without JavaScript,
-  `[data-save-on-change]`), and for own staff "Remove", which asks
-  first in the existing modal. No "…" menu. Before, it was a "…" menu
+  itself on change (`frontend/save-on-change.js`,
+  `[data-save-on-change]`, posting to `member_notify`; a Save button
+  without JavaScript), and for own staff "Remove", which asks first in
+  the existing modal. No "…" menu, no "saved" message (confirmed by the
+  user 2026-11-22). While it saves the select is disabled; saved, it's
+  enabled with the new value; when the save fails (offline, a network
+  error, an answer other than 2xx) it shakes (`.wb-shake`, not with
+  reduced motion), goes back to the stored value and is enabled again
+  (decided by the user 2026-11-22). The focus stays on it. Before, it was a "…" menu
   with "Notifications…" (a modal) and "Remove from the project…", and
   before that a select with its own Save on every row.
 - **Removing asks first, and nobody leaves** (decided 2026-11-22):

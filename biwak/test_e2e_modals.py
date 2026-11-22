@@ -306,18 +306,64 @@ class MemberNotificationsTest(E2ETestCase):
         # No Save with JavaScript
         row = page.locator(f"#member-{self.cleo.pk}")
         expect(row.get_by_role("button", name="Save")).to_be_hidden()
+        # Disabled while it saves: the answer waits until it's seen
+        held = []
+
+        def hold(route):
+            # A function, not ``held.append``: Playwright wraps the handler
+            held.append(route)
+
+        page.route("**/notify/", hold)
         select.focus()  # As a click or Tab would
-        with page.expect_response(saved):
-            select.select_option("tagged")
+        select.select_option("tagged")
+        expect(select).to_be_disabled()
+        self.assertEqual(len(held), 1)
+        held[0].continue_()
+        expect(select).to_be_enabled()
         self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "tagged")
-        # Swapped in place: no reload, the focus stays on the select
+        # No reload, the new value, the focus stays on the select
         expect(select).to_have_value("tagged")
         expect(select).to_be_focused()
         self.assertEqual(page.evaluate("window.marker"), 1)
+        page.unroute("**/notify/")
         with page.expect_response(saved):
             select.select_option("default")
+        expect(select).to_be_enabled()
         self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "default")
         self.assertEqual(self.errors, [])
+
+    def test_a_failed_save_shakes_and_goes_back(self):
+        from biwak.projects import operations as project_ops
+
+        page = self.page
+        self.watch_classes(page)
+        self.goto(page, f"/projects/{self.project.pk}/people/")
+        select = page.get_by_label("Notifications of Cleo Example")
+        for name, fail in [
+            ("an error", lambda route: route.fulfill(status=500, body="Broken")),
+            ("no connection", lambda route: route.abort()),
+        ]:
+            with self.subTest(name):
+                page.route("**/notify/", fail)
+                select.focus()
+                select.select_option("tagged")
+                self.seen_class(page, "wb-shake")
+                # The stored value again, usable, still focused
+                expect(select).to_have_value("default")
+                expect(select).to_be_enabled()
+                expect(select).to_be_focused()
+                page.unroute("**/notify/")
+                page.evaluate("window.seenClasses.clear()")
+        # Without motion it goes back without shaking
+        page.emulate_media(reduced_motion="reduce")
+        page.route("**/notify/", lambda route: route.abort())
+        select.select_option("tagged")
+        expect(select).to_have_value("default")
+        expect(select).to_be_enabled()
+        self.never_class(page, "wb-shake")
+        self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "default")
+        # The browser logs the failed requests
+        self.errors.clear()
 
     def test_staff_remove_after_a_question(self):
         page = self.page

@@ -205,16 +205,13 @@ class PageTest(Fixture, TestCase):
 
     def test_a_select_in_the_row_saving_itself(self):
         """Decided 2026-11-22 (the user: the modal took too many clicks):
-        the choice is a select in the row, saved with htmx on change; the
-        page the redirect leads to has the row htmx takes"""
+        the choice is a select in the row saving itself on change
+        (frontend/save-on-change.js), a Save button without JavaScript"""
         self.client.force_login(self.ada)
         url = f"{self.people_url}{self.dan.pk}/notify/"
         html = self.client.get(self.people_url).content.decode()
         (form,) = tags(html, cls="d-flex", action=url)
-        self.assertEqual(form["hx-post"], url)
-        self.assertEqual(form["hx-trigger"], "change")
-        self.assertEqual(form["hx-select"], f"#member-{self.dan.pk}")
-        self.assertIn(f'id="member-{self.dan.pk}"', html)
+        self.assertIn("data-save-on-change", form)
         self.assertInHTML(
             f'<select name="notify" id="notify-{self.dan.pk}"'
             ' class="form-select form-select-sm">'
@@ -235,9 +232,7 @@ class PageTest(Fixture, TestCase):
         # No "…" menu any more
         self.assertNotIn("Notifications…", html)
         self.assertNotIn('aria-label="More: ', html)
-        response = self.client.post(
-            url, {"notify": "default"}, headers={"HX-Request": "true"}
-        )
+        response = self.client.post(url, {"notify": "default"})
         self.assertRedirects(response, self.people_url)
         self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
         # The form's own page stays, for a bad value
