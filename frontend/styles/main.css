@@ -915,6 +915,10 @@ h3,
   --wb-tone-bg: var(--wb-warning-bg);
   --wb-tone-ink: var(--wb-warning-ink);
 }
+.wb-tone-accent {
+  --wb-tone-bg: var(--wb-accent-tint-bg);
+  --wb-tone-ink: var(--wb-accent-tint-ink);
+}
 
 /* A live public link, on the item's page (specs/public-links.md): a palette
    tint, quieter than the clients' yellow */
