@@ -5,7 +5,11 @@ for a few days. Like Basecamp's public links, but the modal first offers
 the item's own link, because people with an account never need a public
 one. Decided with the user 2026-11-22.
 
-**Status:** open.
+**Status:** built 2026-11-22 (branch `public-links`): `biwak/public_links/`
+(model, operations, views, API), Share… in `items/_more_entries.html`,
+on check-in answers and in the palette, the CLI's `share`, `unshare` and
+`public-links`; the decisions made on the way are in "Built" below and
+in `decisions-to-confirm.md`.
 
 Depends on: `access.md` (visibility, sign-in), `core.md` (items),
 `files.md` (attachments, file downloads), `notifications.md` (events),
@@ -98,6 +102,47 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   `biwak share ITEM --days 7`, `biwak unshare ITEM`.
 - **Help:** a short section where sharing belongs, saying public links
   are for people outside and expire.
+
+## Built
+
+Where it lives and the choices made while building (2026-11-22):
+
+- **Code:** `biwak/public_links/` (`PublicLink`, `operations.py` with
+  `create_public_link()`, `stop_public_link()`, `end_links()` called by
+  `items.operations.trash()` and `projects.operations.archive_project()`,
+  `delete_expired()` in `fairy_tasks`); `Item.is_shareable`
+  (`SHAREABLE` in `biwak/items/models.py`, not drafts). The events
+  `shared_publicly` (with `days` and `expires_at`) and `stopped_sharing`
+  are in `notify.SILENT`; the feed says "shared … publicly until …" and
+  "stopped sharing … publicly". Ending a link by trashing, archiving or
+  expiring records no event of its own.
+- **The modal** (`public_links/share.html`, `item_share`): the own link's
+  Copy is the primary button; with a live link the expiry form stays
+  below it ("A new public link replaces this one."). Creating or
+  stopping in the modal answers with the modal again (the new link
+  focused) instead of a redirect, so it can be copied; the page
+  redirects to itself. "Stop sharing" posts `stop` to the same URL.
+  `modal.js` compares all of a dialog's forms for Escape.
+- **Check-in answers** have no page and no "More" menu: "Share…" is a
+  link next to the answer's author and date, staff only; the palette
+  offers "Share…" on the pages of to-dos, messages, docs and files.
+- **Refusals:** clients get 403 for what they see and 404 for internal
+  items (the pages and the API); containers 404 on the page, 400 in the
+  API. Admins stop links in projects they can't open from the page of
+  all public links (they see them there), not through the item.
+- **The public page** (`public_links/public.html`, not `base.html`: the
+  same whether signed in or not, no scripts of the app's own beyond the
+  bundle) shows the title and mentions as written (nobody looked up),
+  the creator's name and the creation date, the text with disabled
+  checkboxes (a doc's without its title line), the file's preview and
+  download for files. `noindex` and `no-referrer` as meta tags and
+  headers (`X-Robots-Tag`, `Referrer-Policy`), `no-store`.
+  `PublicLink.objects.open()` checks expiry, the item's status, drafts
+  and the project's archive on every request; the downloads
+  (`/p/<token>/download/`, `/preview/`, `/attachments/<key>/<name>`)
+  serve the current version and the item's own attachments only.
+- **API:** `GET /public-links/`, `GET`, `POST` (`{"days": 7}`) and
+  `DELETE` `items/{id}/public-link/` (404 without a live link); CLI 0.43.0.
 
 ## Done when
 
