@@ -229,8 +229,9 @@ Code, specs, commits and issues in English. The interface is English and
 German, chosen per person (`specs/languages.md`). Every text is marked for
 translation (`gettext`, `gettext_lazy` outside functions, whole sentences
 with placeholders, `ngettext` for counts) and translated in the same
-branch: `fl mm -l de`, translate the new entries in
-`conf/locale/de/LC_MESSAGES/django.po`, `fl cm`, commit both files;
+branch: `fl mm --language=de`, translate the new entries in
+`conf/locale/de/LC_MESSAGES/django.po`, `fl cm`, commit both files
+(`fl mm` also writes `conf/strings.js`, ignored by git);
 `biwak/test_catalog.py` fails on a text without its translation. The
 German: "du", Swiss spelling (ss, never ß), gender-neutral with the colon
 (Teilnehmer:innen) or neutral words, the glossary in

@@ -13,3 +13,4 @@ id_rsa.pub
 node_modules/
 *.egg-info/
 /cli/build/
+conf/strings.js
