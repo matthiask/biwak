@@ -1,8 +1,7 @@
-// A to-do's start date (specs/start-dates.md): its field shows once the due
-// date is set (or when it has a date already, so a start date left without
-// a due date can be seen and its error read), and can't be after the due
-// date. Without this script both fields show; the server checks either way.
-// Delegated, so forms htmx or live updates bring in work too.
+// A to-do's start date (specs/start-dates.md): both fields are always
+// there, start first; the start can't be after the due date (its `max`).
+// The server checks either way. Delegated, so forms htmx or live updates
+// bring in work too.
 
 const STARTS = "[data-starts-on]"
 
@@ -10,9 +9,6 @@ function sync(form) {
   const due = form.querySelector("[name=due_on]")
   const starts = form.querySelector(STARTS)
   if (!due || !starts) return
-  // The field's wrapper: the label of the inline form, the field's block in
-  // the to-do's edit form
-  starts.parentElement.hidden = !(due.value || starts.value)
   if (due.value) starts.max = due.value
   else starts.removeAttribute("max")
 }

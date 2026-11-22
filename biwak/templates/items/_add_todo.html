@@ -62,19 +62,10 @@
           {% endfor %}
         </select>
       {% endif %}
+      {# Start first, then due, both always there (specs/start-dates.md) #}
       <label class="wb-due">
         {% icon "calendar-event" %}
-        <input
-          type="date"
-          name="due_on"
-          class="form-control form-control-sm"
-          aria-label="{% translate 'due on' %}"
-          {% if posted %}value="{{ form.due_on.value|default:'' }}"{% endif %}
-        >
-      </label>
-      {# Shown once the due date is set (frontend/start-date.js) #}
-      <label class="wb-due">
-        {% translate "Starts" %}
+        {% translate "Start" %}
         <input
           type="date"
           name="starts_on"
@@ -84,13 +75,30 @@
           {% if posted %}value="{{ form.starts_on.value|default:'' }}"{% endif %}
         >
       </label>
+      {% if posted %}{% for error in form.starts_on.errors %}<span
+            class="small text-danger"
+            data-starts-on-error
+          >{{ error }}</span>{% endfor %}{% endif %}
+      <label class="wb-due">
+        {% icon "calendar-event" %}
+        {% translate "Due" %}
+        <input
+          type="date"
+          name="due_on"
+          class="form-control form-control-sm"
+          aria-label="{% translate 'due on' %}"
+          {% if posted %}value="{{ form.due_on.value|default:'' }}"{% endif %}
+        >
+      </label>
     </div>
     <div class="mb-2" data-repeat>
       {% if group %}{% rule_widget form.recurrence group.pk posted=posted %}{% else %}{% rule_widget form.recurrence "ungrouped" posted=posted %}{% endif %}
       {% if posted %}
         {% for error in form.non_field_errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
         {% for field in form %}
-          {% for error in field.errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
+          {% if field.name != "starts_on" %}
+            {% for error in field.errors %}<div class="small text-danger">{{ error }}</div>{% endfor %}
+          {% endif %}
         {% endfor %}
       {% endif %}
     </div>

@@ -242,6 +242,16 @@ class FormsTest(StartDatesBase):
                 self.assertEqual(response.status_code, 422)
                 self.assertIn(error, response.content.decode())
         self.assertFalse(Item.objects.filter(title="Bad").exists())
+        # Without the script: the page's form shows it at the start field
+        # (decided 2026-11-22)
+        page = self.client.post(url, {"title": "Bad", "starts_on": "2026-12-03"})
+        html = page.content.decode()
+        self.assertRegex(
+            html,
+            r'<span\s+class="small text-danger"\s+data-starts-on-error\s*>'
+            r"A start date needs a due date\.</span>",
+        )
+        self.assertLess(html.index('name="starts_on"'), html.index('name="due_on"'))
 
     def edit(self, user, item, **data):
         self.client.force_login(user)

@@ -128,17 +128,18 @@ class TodoFieldsForm(RepeatForm):
         widget=forms.Textarea(attrs={"rows": 4}),
         help_text=_("Markdown"),
     )
-    due_on = forms.DateField(
-        label=_("due on"),
-        required=False,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
-    # Shown once the due date is set (frontend/start-date.js,
-    # specs/start-dates.md)
+    # Both always there, start first, short labels (specs/start-dates.md,
+    # decided 2026-11-22); the start's max is the due date
+    # (frontend/start-date.js)
     starts_on = forms.DateField(
-        label=_("starts on"),
+        label=_("start"),
         required=False,
         widget=forms.DateInput(attrs={"type": "date", "data-starts-on": ""}),
+    )
+    due_on = forms.DateField(
+        label=_("due"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
     )
     assignees = PeopleField(label=_("assignees"), queryset=User.objects.none())
 
@@ -165,7 +166,7 @@ class TodoForm(TodoFieldsForm):
     at first (specs/todos.md); without JavaScript a plain form"""
 
     group = forms.IntegerField(required=False, widget=forms.HiddenInput)
-    field_order = ["title", "notes", "assignees", "due_on", "starts_on", "group"]
+    field_order = ["title", "notes", "assignees", "starts_on", "due_on", "group"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -532,7 +533,7 @@ def todo_toggle(request, pk):
 
 
 class TodoDetailForm(TodoFieldsForm):
-    field_order = ["title", "notes", "due_on", "starts_on", "assignees"]
+    field_order = ["title", "notes", "starts_on", "due_on", "assignees"]
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, item=item, user=user, **kwargs)

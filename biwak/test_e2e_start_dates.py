@@ -1,6 +1,6 @@
-"""Start dates in the browser: the field showing once the due date is set
-(frontend/start-date.js) and the collapsed "Starting later"
-(specs/start-dates.md)"""
+"""Start dates in the browser: both fields always there, start first, the
+start's max the due date (frontend/start-date.js), and the collapsed
+"Starting later" (specs/start-dates.md)"""
 
 import datetime as dt
 
@@ -18,18 +18,30 @@ class StartDateFieldTest(E2ETestCase):
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
         starts = add.locator("[name=starts_on]")
-        expect(starts).to_be_hidden()
-        add.locator("[name=due_on]").fill("2026-12-07")
+        due = add.locator("[name=due_on]")
         expect(starts).to_be_visible()
+        expect(due).to_be_visible()
+        # Start first, both labelled
+        self.assertTrue(
+            starts.evaluate(
+                "(el, due) => !!(el.compareDocumentPosition(due)"
+                " & Node.DOCUMENT_POSITION_FOLLOWING)",
+                due.element_handle(),
+            )
+        )
+        expect(add.locator("label:has([name=starts_on])")).to_contain_text("Start")
+        expect(add.locator("label:has([name=due_on])")).to_contain_text("Due")
+        due.fill("2026-12-07")
         expect(starts).to_have_attribute("max", "2026-12-07")
         starts.fill("2026-12-03")
         add.locator("[name=title]").fill("Book the hall")
         add.locator("[name=title]").press("ControlOrMeta+Enter")
         row = page.locator("[data-todo]").filter(has_text="Book the hall")
         expect(row).to_contain_text("3–7 Dec")
-        # Ready for the next one: no due date, no start date to see
-        expect(add.locator("[name=due_on]")).to_have_value("")
-        expect(starts).to_be_hidden()
+        # Ready for the next one: no dates
+        expect(due).to_have_value("")
+        expect(starts).to_have_value("")
+        expect(starts).not_to_have_attribute("max", "2026-12-07")
         todo = Item.objects.get(title="Book the hall").todo
         self.assertEqual(str(todo.starts_on), "2026-12-03")
         self.assertEqual(self.errors, [])
@@ -45,9 +57,9 @@ class StartDateFieldTest(E2ETestCase):
         form = page.locator("#live-text form[data-view-edit-form]")
         starts = form.locator("[name=starts_on]")
         expect(form.locator("[name=due_on]")).to_be_visible()
-        expect(starts).to_be_hidden()
-        form.locator("[name=due_on]").fill("2026-12-07")
         expect(starts).to_be_visible()
+        form.locator("[name=due_on]").fill("2026-12-07")
+        expect(starts).to_have_attribute("max", "2026-12-07")
         starts.fill("2026-12-04")
         form.get_by_role("button", name="Save").click()
         expect(page.locator("#live-text .wb-facts")).to_contain_text("Starts on")

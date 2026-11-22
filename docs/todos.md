@@ -6,7 +6,7 @@ project. Staff create lists with "New list" on the project's page.
 ## Lists and groups
 
 - **Add a to-do** opens a form in the list: title, notes, assignees, a
-  due date (and a start date once it's set) and how it repeats. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it
+  start and a due date and how it repeats. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> adds it
   and starts the next one, <kbd>Esc</kbd> closes the form.
 - **Groups** are headings inside a list ("New group"). Rename or remove
   a group with the icons next to its name; removing it keeps its
@@ -99,9 +99,9 @@ you're on, and typing goes back to the field.
   their to-dos over; their mark is greyed and "(inactive)" follows their
   name. They aren't offered for new assignments.
 - **Due on:** a date. Overdue to-dos are marked.
-- **Starts on:** for work that can't start yet, a start date shows once
-  the due date is set; it can't be after the due date, and removing the
-  due date removes it. Rows show both ("3–7 Dec"). Until it starts, the
+- **Starts on:** for work that can't start yet, a start date (the field
+  before the due date); it needs a due date, can't be after it, and
+  removing the due date removes it. Rows show both ("3–7 Dec"). Until it starts, the
   to-do stays out of your current work: My to-dos, the to-dos page and
   Home (also its "Waiting on others") list it at the end under
   "Starting later (N)", closed until you open it. Lists, the board and search show it as always.

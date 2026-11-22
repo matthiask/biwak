@@ -16,6 +16,12 @@
             {% endif %}{% empty %}<span class="text-body-secondary">{% translate "Nobody" %}</span>{% endfor %}
         </dd>
       </div>
+      {% if todo.starts_on %}
+        <div class="wb-fact wb-edit-hit" data-edit-focus="starts_on">
+          <dt>{% translate "Starts on" %}</dt>
+          <dd>{{ todo.starts_on|dateformat:"WEEKDAY_DATE_FORMAT" }}</dd>
+        </div>
+      {% endif %}
       <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">
         <dt>{% translate "Due on" %}</dt>
         <dd>
@@ -25,12 +31,6 @@
             >{% translate "No date" %}</span>{% endif %}
         </dd>
       </div>
-      {% if todo.starts_on %}
-        <div class="wb-fact wb-edit-hit" data-edit-focus="starts_on">
-          <dt>{% translate "Starts on" %}</dt>
-          <dd>{{ todo.starts_on|dateformat:"WEEKDAY_DATE_FORMAT" }}</dd>
-        </div>
-      {% endif %}
       <div class="wb-fact wb-edit-hit" data-edit-focus="recurrence_frequency">
         <dt>{% translate "Repeats" %}</dt>
         <dd>

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:46+0100\n"
+"POT-Creation-Date: 2026-11-22 17:55+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2997,13 +2997,11 @@ msgstr "zugewiesen am"
 msgid "notes"
 msgstr "Notizen"
 
-#: biwak/items/models.py biwak/items/views.py
-#: biwak/templates/items/_add_todo.html
+#: biwak/items/models.py biwak/templates/items/_add_todo.html
 msgid "starts on"
 msgstr "beginnt am"
 
-#: biwak/items/models.py biwak/items/views.py
-#: biwak/templates/items/_add_todo.html
+#: biwak/items/models.py biwak/templates/items/_add_todo.html
 msgid "due on"
 msgstr "fällig am"
 
@@ -3179,6 +3177,14 @@ msgstr "Verbleibende Wiederholungen"
 #: biwak/items/views.py biwak/templates/forms/rule_widget.html
 msgid "How many more to-dos to create; empty: no limit."
 msgstr "Wie viele To-dos noch erstellt werden; leer: unbegrenzt."
+
+#: biwak/items/views.py
+msgid "start"
+msgstr "Beginn"
+
+#: biwak/items/views.py
+msgid "due"
+msgstr "fällig"
 
 #: biwak/items/views.py
 msgid "You can only change lists you created."
@@ -6501,8 +6507,12 @@ msgid "Notes (Markdown)"
 msgstr "Notizen (Markdown)"
 
 #: biwak/templates/items/_add_todo.html
-msgid "Starts"
-msgstr "Beginnt"
+msgid "Start"
+msgstr "Beginn"
+
+#: biwak/templates/items/_add_todo.html biwak/templates/projects/home.html
+msgid "Due"
+msgstr "Fällig"
 
 #: biwak/templates/items/_add_todo.html
 msgid "Add this to-do"
@@ -7049,10 +7059,6 @@ msgstr "Keine Projekte."
 #: biwak/templates/projects/home.html
 msgid "Home"
 msgstr "Start"
-
-#: biwak/templates/projects/home.html
-msgid "Due"
-msgstr "Fällig"
 
 #: biwak/templates/projects/home.html
 msgid "Nothing due this week."

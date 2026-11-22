@@ -18,10 +18,14 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
   due date.", "The start date can't be after the due date."). Removing
   the due date removes the start date, as removing a rule removes its
   ends; moving the due date before the start is refused. Set next to the
-  due date (the same date field, "Starts" shown after "Due" is set; the
-  field also shows while it has a date, so an error can be read; `max`
-  is the due date). The to-do's page shows "Starts on" as a fact of its
-  own when set, mails a "Starts on" line.
+  due date (decided 2026-11-22, replacing "Starts" shown only after
+  "Due" was set, which confused: both fields are always there, start
+  first, both with a short visible label, "Start" and "Due", and the
+  calendar icon in the inline form; a start without a due date is
+  refused with "A start date needs a due date." at the field; the
+  start's `max` is the due date, `frontend/start-date.js`). The to-do's
+  page shows "Starts on" as a fact of its own when set, before "Due
+  on", mails a "Starts on" line.
 - **Rows** show the range ("3–7 Dec"; across months "28 Nov – 3 Dec";
   in German "3.–7. Dez.") where they show the due date, the overdue
   badge too ("Overdue · 20–24 Nov"); overdue as now by the due date,
@@ -62,9 +66,9 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
 - "Starting later" on the to-dos page is one flat list by start date,
   not grouped like the page; on Home only what would be in its section
   (due within 7 days).
-- The inline form labels the start field "Starts" (the due field keeps
-  its icon); the to-do's page has a separate "Starts on" fact, mails a
-  "Starts on" line.
+- The forms label the fields "Start" and "Due" (decided 2026-11-22,
+  replacing "Starts" and an icon alone); the to-do's page has a separate
+  "Starts on" fact, mails a "Starts on" line.
 - The timeline says "changed the dates to …" whenever a start date is or
   was set, also when only the due date moved.
 - The overdue badge shows the range.
