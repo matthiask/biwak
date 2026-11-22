@@ -6,7 +6,8 @@ that shows what the text will look like: we mostly write prose, not
 code, and the source view looks like code. One editor for every text
 field, live docs included. Asked by the user 2026-11-22.
 
-**Status:** built 2026-11-22 (decided with the user 2026-11-22:
+**Status:** built 2026-11-22; open: pasting Markdown detected, the
+table tools (both decided 2026-11-22). (Decided with the user 2026-11-22:
 ProseMirror, Markdown stored, a source toggle, live docs' conversion in
 Python; a spike confirmed it with the changes below; the choices made
 while building confirmed 2026-11-22). What was built and the sizes:
@@ -104,6 +105,27 @@ additions).
   server (`/paste/markdown/`, `htmlmarkdown.py`), the result parsed
   into the editor, so pasting behaves the same in every field and the
   importer's converter stays the only one.
+- **Pasting plain text that is clearly Markdown** (decided 2026-11-22):
+  plain text (nothing richer on the clipboard) is parsed as Markdown
+  only when it has unmistakable structure: a heading line (`# ` …), a
+  list of several items, a fenced code block, a table, or
+  `[text](url)` links. Anything else stays text, so code with `#`
+  comments, a mail's `*` or `-` lines and paths with `_` aren't
+  formatted. Ctrl+Shift+V always pastes text; undo right after such a
+  paste turns it back into the plain text. One detection function,
+  tested with both kinds of examples.
+- **Tables** (decided 2026-11-22): "Insert table" in the toolbar
+  inserts a 2×2 table with a header row. While the cursor is in a
+  table, a small bar next to it offers: a row above, a row below, a
+  column left, a column right, delete the row, delete the column,
+  delete the table, and the column's alignment (left, center, right;
+  the active one pressed). Alignment is per column as in Markdown
+  (`:---`, `:---:`, `---:`): the editor keeps every cell of a column
+  in step, so what's saved is one alignment per column. "Delete row"
+  is disabled in the header row (Markdown tables need one); deleting
+  the last column deletes the table. The bar's buttons are
+  reachable by keyboard (a roving tab stop like the toolbar) and named
+  for screen readers; on phones it wraps.
 - **Forms:** Ctrl+Enter saves, Escape closes as now (the modal's
   "changed" check compares the Markdown); the inline forms' and the
   view-mode edit forms' behaviour stays.
