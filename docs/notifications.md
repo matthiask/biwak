@@ -122,6 +122,10 @@ only with "No mails".
   shows them by browser and system, when added and when last used.
 - Signing out on a device ends its notifications ("Push notifications on
   this device are off."); turn them on again after signing in.
+- To stop them on a device where you aren't signed in: "Turn off on this
+  device" on a notification (not on iPhones or in Safari), "Remove" in
+  the list on another device, or blocking notifications for Biwak in the
+  browser's settings.
 - On an iPhone or iPad, add Biwak to the home screen first (Safari's
   Share menu, "Add to Home Screen"), then turn it on in the app.
 

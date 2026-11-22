@@ -2,7 +2,8 @@
 // is, not bundled: it only shows push notifications and opens their URL on
 // a tap. No fetch handler: nothing is cached (specs/pwa.md).
 
-// A push: {title, body, tag, url, icon} (biwak.activity.push.content());
+// A push: {title, body, tag, url, icon, actions}
+// (biwak.activity.push.content());
 // the tag replaces an earlier push about the same item
 self.addEventListener("push", (event) => {
   let data = {}
@@ -16,18 +17,31 @@ self.addEventListener("push", (event) => {
       body: data.body || "",
       tag: data.tag,
       icon: data.icon,
+      actions: data.actions || [],
       data: { url: data.url || "/" },
     }),
   )
 })
 
-// A tap: an open Biwak window goes to the URL, or a new one opens
+// A tap: an open Biwak window goes to the URL, or a new one opens.
+// "Turn off on this device" ends the browser's subscription instead, no
+// sign-in needed; the next push to it fails with 410 and Biwak deletes the
+// device (specs/web-push.md)
 self.addEventListener("notificationclick", (event) => {
   event.notification.close()
+  if (event.action === "off") {
+    event.waitUntil(turnOff())
+    return
+  }
   const url = new URL(event.notification.data?.url || "/", self.location.origin)
   if (url.origin !== self.location.origin) return
   event.waitUntil(open(url.href))
 })
+
+async function turnOff() {
+  const subscription = await self.registration.pushManager.getSubscription()
+  await subscription?.unsubscribe()
+}
 
 async function open(url) {
   const windows = await self.clients.matchAll({

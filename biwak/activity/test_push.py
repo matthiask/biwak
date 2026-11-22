@@ -105,6 +105,11 @@ class WhatPushesTest(PushBase):
             "Can you check the poles, @Bob?\nWebsite",
         )
         self.assertEqual(payload["tag"], f"biwak-item-{self.todo.pk}")
+        # Turning it off without signing in (a browser signed out)
+        self.assertEqual(
+            payload["actions"],
+            [{"action": "off", "title": "Turn off on this device"}],
+        )
         comment = self.todo.comments.get()
         self.assertEqual(
             payload["url"],

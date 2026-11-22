@@ -49,6 +49,14 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
   explicit sign-out removes the browser's device and says so on the
   next page ("Push notifications on this device are off."); a session
   that expires doesn't.
+- **"Turn off on this device" on the push** (decided 2026-11-22: a
+  browser signed out elsewhere, "Sign out everywhere else", keeps its
+  pushes, and its settings are out of reach without signing in): a
+  button on every push (`actions`, where browsers show them: Chrome,
+  Edge, Android; not Safari or iPhones) ends the browser's subscription
+  in the service worker, no sign-in needed; the next push to it fails
+  with 410 and deletes the device. Otherwise: "Remove" in the list on
+  any other device, or blocking notifications in the browser.
 
 ## How
 

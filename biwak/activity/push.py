@@ -187,6 +187,7 @@ def content(user, notifications, *, batch=False):
             "tag": f"biwak-{entry.pk}",
             "url": absolute(entry.url),
             "icon": icon,
+            "actions": actions(),
         }
     (notification,) = lantern.prepare([newest], user)
     event = notification.event
@@ -202,7 +203,15 @@ def content(user, notifications, *, batch=False):
         "tag": f"biwak-item-{item.pk}",
         "url": absolute(notification.url),
         "icon": icon,
+        "actions": actions(),
     }
+
+
+def actions():
+    """A button on the push (where browsers show them): turning pushes off
+    on the device without signing in, for a browser signed out
+    (frontend/sw.js; the next push's 410 deletes the device)"""
+    return [{"action": "off", "title": translation.gettext("Turn off on this device")}]
 
 
 def _vapid_key():

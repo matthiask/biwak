@@ -257,8 +257,36 @@ class ServiceWorkerTest(E2ETestCase):
                     "body": "Ada Example assigned you.\nWebsite",
                     "tag": "biwak-item-1",
                     "icon": "/static/biwak/icon-192.png",
+                    "actions": [],
                     "data": {"url": url},
                 }
             ],
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_turning_off_on_this_device(self):
+        """ "Turn off on this device" ends the browser's subscription without
+        signing in; a click on a real notification can't be made, so the
+        worker gets the event as the browser would send it"""
+        page = self.page
+        page.goto(f"{self.live_server_url}/accounts/settings/")
+        worker = self.worker(page)
+        self.assertTrue(
+            worker.evaluate(
+                """async () => {
+                  self.unsubscribed = false
+                  self.registration.pushManager.getSubscription = async () => ({
+                    unsubscribe: async () => { self.unsubscribed = true },
+                  })
+                  const event = new Event("notificationclick")
+                  let done
+                  event.action = "off"
+                  event.notification = { close() {}, data: { url: "/" } }
+                  event.waitUntil = (promise) => { done = promise }
+                  self.dispatchEvent(event)
+                  await done
+                  return self.unsubscribed
+                }"""
+            )
         )
         self.assertEqual(self.errors, [])

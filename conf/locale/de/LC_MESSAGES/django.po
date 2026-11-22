@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 22:12+0100\n"
+"POT-Creation-Date: 2026-11-22 22:29+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1678,6 +1678,10 @@ msgstr "Wähle mindestens einen Arbeitstag."
 #: biwak/activity/push.py biwak/templates/activity/_lantern_groups.html
 msgid "You were mentioned."
 msgstr "Du wurdest erwähnt."
+
+#: biwak/activity/push.py
+msgid "Turn off on this device"
+msgstr "Auf diesem Gerät ausschalten"
 
 #: biwak/activity/timeline.py
 msgid "removed the due date"

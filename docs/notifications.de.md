@@ -144,6 +144,11 @@ oder nur Push-Benachrichtigungen mit „Keine Mails“.
 - Abmelden auf einem Gerät beendet seine Benachrichtigungen
   („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
   nach dem Anmelden wieder ein.
+- Um sie auf einem Gerät zu beenden, auf dem du nicht angemeldet bist:
+  „Auf diesem Gerät ausschalten“ an einer Benachrichtigung (nicht auf
+  iPhones oder in Safari), „Entfernen“ in der Liste auf einem anderen
+  Gerät oder Benachrichtigungen für Biwak in den Einstellungen des
+  Browsers blockieren.
 - Auf einem iPhone oder iPad füge Biwak zuerst zum Home-Bildschirm
   hinzu (in Safari im Teilen-Menü „Zum Home-Bildschirm“) und schalte es
   dann in der App ein.
