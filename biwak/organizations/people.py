@@ -15,6 +15,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _, gettext_lazy
+from django.views.decorators.http import require_POST
 
 from biwak.accounts import operations as accounts_ops
 from biwak.accounts.models import User, own_staff
@@ -93,6 +94,13 @@ def decorate(user, viewer, shared):
     # Correcting a name ("NACHNAME VORNAME"), the same split (decided
     # 2026-11-21); one's own in the settings
     user.can_rename = user.pk != viewer.pk and activation.can_change(viewer, user)
+    # Away for others: admins, when someone forgot (specs/quiet-hours.md);
+    # one's own in the settings
+    user.can_set_away = (
+        user.pk != viewer.pk
+        and user.is_active
+        and accounts_ops.can_set_away(viewer, user)
+    )
     return user
 
 
@@ -385,6 +393,61 @@ def person_name(request, pk):
         cancel_url=back(request, who),
         submit_label=_("Save"),
     )
+
+
+def _away_person(request, pk):
+    """The person whose away time an admin sets, else 404"""
+    who = get_object_or_404(known_people(request.user), pk=pk)
+    if (
+        who.pk == request.user.pk
+        or not who.is_active
+        or not accounts_ops.can_set_away(request.user, who)
+    ):
+        raise Http404
+    return who
+
+
+def person_away(request, pk):
+    """Set away…: admins for others (specs/quiet-hours.md); a modal, also a
+    page. One's own is in the settings."""
+    from biwak.accounts.quiet import short_date
+    from biwak.accounts.views import AwayForm
+
+    if pk == request.user.pk:
+        return redirect(reverse("settings") + "#away")
+    who = _away_person(request, pk)
+    form = (
+        AwayForm(request.POST) if request.method == "POST" else AwayForm.for_user(who)
+    )
+    if form.is_valid():
+        accounts_ops.set_away(
+            who,
+            until=form.cleaned_data["away_until"],
+            note=form.cleaned_data["away_note"],
+            actor=request.user,
+        )
+        messages.success(
+            request,
+            _("%(name)s is away until %(date)s.")
+            % {"name": who.display_name, "date": short_date(who.away_until)},
+        )
+        return redirect(back(request, who))
+    return form_response(
+        request,
+        form,
+        title=_("Set %(name)s away") % {"name": who.display_name},
+        cancel_url=back(request, who),
+        submit_label=_("Save"),
+    )
+
+
+@require_POST
+def person_back(request, pk):
+    """Ends somebody's away time early (admins)"""
+    who = _away_person(request, pk)
+    accounts_ops.end_away(who, actor=request.user)
+    messages.success(request, _("%(name)s is back.") % {"name": who.display_name})
+    return redirect(back(request, who))
 
 
 def person_reset_sign_in(request, pk):

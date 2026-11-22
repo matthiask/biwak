@@ -100,6 +100,35 @@ What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. Mails carry the full text; the
 first line says when clients can see the item.
 
+## Quiet hours and away
+
+Mails wait while you aren't working; the lantern keeps showing
+everything as it happens.
+
+- **Quiet hours** (Settings, "Notifications", off by default): your
+  working days and hours, Monday to Friday 08:00–18:00 to start with,
+  in the installation's time zone, the same for everybody (Settings
+  names it). Outside them, notification mails and digests wait, and at
+  the start of your next working time what waited goes out as one mail,
+  grouped by project like the digest (or the usual mail when it's about
+  one item). With the daily digest, it comes at the start of your
+  first working time of the day instead of 07:00, on working days only.
+- **Away until a day** (Settings, "Out of office"), with an optional
+  note of one line ("back on the 4th, ask Bob meanwhile"): nothing is
+  mailed meanwhile, digests neither. The day after that day it ends by
+  itself and one mail says what happened meanwhile, respecting quiet
+  hours; "I'm back" ends it earlier. Admins set somebody away on their
+  page ("Set away…") when they forgot.
+- **Nothing skips the wait:** mentions, "Tell them now" and check-in
+  summaries wait too. Sign-in codes, security mails, invitations,
+  answers to replies that couldn't be posted and check-in questions
+  (asked at their own time) go out at once; somebody away isn't asked
+  check-in questions at all.
+
+`biwak notifications --quiet-hours on --working-days mon-fri --from
+08:00 --until 18:00` and `biwak away --until 2026-12-03 --note "…"`
+(`--back` ends it) do the same from the command line.
+
 **When mail bounces.** If mail to someone's address is rejected for good
 or marked as spam, Biwak stops sending them notification mails, digests
 and check-in questions; what happens stays in their lantern. Their

@@ -22,6 +22,7 @@ from django.db import models
 from django.utils.translation import gettext as _
 
 from biwak.accounts.models import User
+from biwak.accounts.quiet import away_detail, away_notice
 from biwak.activity.models import Mention
 from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_importing, subscribe
@@ -175,6 +176,10 @@ def candidates_for(project, visible, query, *, for_user):
             "email": "" if for_user.is_client else user.email,
             "available": user.pk in available,
             "reason": reason(user),
+            # Still mentionable, the note shown once (specs/quiet-hours.md)
+            "away": away_detail(user),
+            "away_until": user.away_until if user.is_away else None,
+            "away_note": away_notice(user, names.get(user.pk) or user.get_short_name()),
         }
         for user in people[:LIMIT]
     ]

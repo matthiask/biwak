@@ -1,12 +1,13 @@
 import re
 
 from django import forms
+from django.conf import settings as django_settings
 from django.contrib import messages
 from django.core.files.storage import default_storage
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, gettext_lazy
@@ -22,6 +23,7 @@ from biwak.accounts.models import (
     CalendarToken,
     Theme,
 )
+from biwak.accounts.quiet import NOTE_LENGTH, short_date
 from biwak.activity.models import LevelOverride
 from biwak.activity.operations import set_notification_settings
 from biwak.activity.views import SettingsForm
@@ -260,21 +262,16 @@ def _overrides(user):
     )
 
 
-def _settings_page(request, *, notifications=None, name_form=None):
+def _settings_page(request, *, notifications=None, name_form=None, away_form=None):
     user = request.user
     project_overrides, item_overrides = _overrides(user)
     return render(
         request,
         "accounts/settings.html",
         {
-            "form": notifications
-            or SettingsForm(
-                initial={
-                    "notification_level": user.notification_level,
-                    "mail_delivery": user.mail_delivery,
-                    "lantern_in_favicon": user.lantern_in_favicon,
-                }
-            ),
+            "form": notifications or SettingsForm.for_user(user),
+            "away_form": away_form or AwayForm.for_user(user),
+            "time_zone": django_settings.TIME_ZONE,
             "language_form": LanguageForm(initial={"language": user.language}),
             "keyboard_form": KeyboardForm(
                 initial={"keyboard_shortcuts": user.keyboard_shortcuts}
@@ -301,17 +298,89 @@ def settings(request):
 @never_cache
 @require_POST
 def settings_notifications(request):
-    form = SettingsForm(request.POST)
+    form = SettingsForm(request.POST, user=request.user)
     if not form.is_valid():
         return _settings_page(request, notifications=form)
+    data = form.cleaned_data
     set_notification_settings(
         request.user,
-        level=form.cleaned_data["notification_level"],
-        delivery=form.cleaned_data["mail_delivery"],
-        favicon=form.cleaned_data["lantern_in_favicon"],
+        level=data["notification_level"],
+        delivery=data["mail_delivery"],
+        favicon=data["lantern_in_favicon"],
+        quiet_hours=data["quiet_hours"],
+        working_days=data["working_days"],
+        working_from=data["working_from"],
+        working_until=data["working_until"],
     )
     messages.success(request, _("Your notification settings have been saved."))
     return redirect("settings")
+
+
+class AwayForm(Form):
+    """Out of office (specs/quiet-hours.md): the person's own in the
+    settings, admins' for others on the person's page"""
+
+    away_until = forms.DateField(
+        label=gettext_lazy("Away until"),
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        help_text=gettext_lazy(
+            "The last day away. Nothing is mailed meanwhile; the day after,"
+            " one mail says what happened."
+        ),
+    )
+    away_note = forms.CharField(
+        label=gettext_lazy("Note"),
+        max_length=NOTE_LENGTH,
+        required=False,
+        help_text=gettext_lazy(
+            "Optional, one line shown with the name: when back, whom to ask meanwhile."
+        ),
+    )
+
+    def clean_away_until(self):
+        day = self.cleaned_data["away_until"]
+        if day < timezone.localdate():
+            raise forms.ValidationError(_("Choose today or a later day."))
+        return day
+
+    def clean_away_note(self):
+        return operations.one_line(self.cleaned_data["away_note"])
+
+    @classmethod
+    def for_user(cls, user):
+        if not user.is_away:
+            return cls()
+        return cls(initial={"away_until": user.away_until, "away_note": user.away_note})
+
+
+@never_cache
+@require_POST
+def settings_away(request):
+    """Away until a day, with a note"""
+    form = AwayForm(request.POST)
+    if not form.is_valid():
+        return _settings_page(request, away_form=form)
+    operations.set_away(
+        request.user,
+        until=form.cleaned_data["away_until"],
+        note=form.cleaned_data["away_note"],
+        actor=request.user,
+    )
+    messages.success(
+        request,
+        _("You're away until %(date)s.")
+        % {"date": short_date(request.user.away_until)},
+    )
+    return redirect(reverse("settings") + "#away")
+
+
+@never_cache
+@require_POST
+def settings_back(request):
+    """ "I'm back": ends being away early"""
+    operations.end_away(request.user, actor=request.user)
+    messages.success(request, _("Welcome back."))
+    return redirect(reverse("settings") + "#away")
 
 
 @never_cache

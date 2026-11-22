@@ -269,6 +269,11 @@ class SettingsAPITest(SettingsBase):
                         "level": "everything",
                         "delivery": "each",
                         "lantern_in_favicon": True,
+                        "quiet_hours": False,
+                        "working_days": [0, 1, 2, 3, 4],
+                        "working_from": "08:00:00",
+                        "working_until": "18:00:00",
+                        "time_zone": "Europe/Zurich",
                     },
                 )
                 response = self.call(
@@ -283,6 +288,11 @@ class SettingsAPITest(SettingsBase):
                         "level": "everything",
                         "delivery": "digest",
                         "lantern_in_favicon": True,
+                        "quiet_hours": False,
+                        "working_days": [0, 1, 2, 3, 4],
+                        "working_from": "08:00:00",
+                        "working_until": "18:00:00",
+                        "time_zone": "Europe/Zurich",
                     },
                 )
                 response = self.call(
@@ -294,6 +304,11 @@ class SettingsAPITest(SettingsBase):
                         "level": "concerns_me",
                         "delivery": "digest",
                         "lantern_in_favicon": True,
+                        "quiet_hours": False,
+                        "working_days": [0, 1, 2, 3, 4],
+                        "working_from": "08:00:00",
+                        "working_until": "18:00:00",
+                        "time_zone": "Europe/Zurich",
                     },
                 )
                 response = self.call(
@@ -387,6 +402,7 @@ class SettingsAPITest(SettingsBase):
                     "email": "cleo@example.org",
                     "available": False,
                     "reason": "can't see internal items",
+                    "away_until": None,
                 }
             ],
         )

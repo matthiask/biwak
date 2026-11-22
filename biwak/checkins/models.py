@@ -197,3 +197,35 @@ def mail_mode(user, question_item):
         .first()
     )
     return Mode(found) if found else DEFAULT_MODE
+
+
+class HeldSummary(models.Model):
+    """A summary waiting for its recipient's working time or return
+    (specs/quiet-hours.md): sent by ``send_held_summaries()`` once they may
+    get mail again"""
+
+    occurrence = models.ForeignKey(
+        Occurrence,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("occurrence"),
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("person"),
+    )
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["occurrence", "user"], name="unique_held_summary"
+            )
+        ]
+        verbose_name = _("held summary")
+        verbose_name_plural = _("held summaries")
+
+    def __str__(self):
+        return f"{self.user}: {self.occurrence}"

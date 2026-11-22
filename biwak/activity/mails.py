@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core import signing
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from django.db.models import Q
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -586,21 +587,11 @@ def _prepare(user, pks, now, build, kind):
     return True
 
 
-def send_mails(*, now=None):
-    """Sends what's due; returns how many mails. Notifications read in the
-    lantern before they're due are left out (and kept, the lantern lists
-    them); a mail with nothing left isn't sent (specs/lantern.md)."""
-    now = now or timezone.now()
-    # Not to addresses which bounced (specs/mail-sending.md): their
-    # notifications wait, like those of people who want no mails
-    unsent = Notification.objects.filter(
-        **MAILABLE, user__mail_undeliverable_at__isnull=True
-    )
-    count = 0
-
-    # Each change: per person and item, or one person's files uploaded into
-    # one folder (specs/files.md) chained as the lantern does
-    # (``lantern.chain()``), once the newest is 10 minutes old
+def _groups(notifications):
+    """The mails of ``notifications`` for people getting a mail per change:
+    per person and item, or one person's files uploaded into one folder
+    (specs/files.md) chained as the lantern does (``lantern.chain()``);
+    ``{(user ID, ("item" or "batch", key)): {"pks", "newest", "more"}}``"""
     from biwak.activity.lantern import ASSIGNED, chain
 
     groups = {}
@@ -616,22 +607,17 @@ def send_mails(*, now=None):
         project,
         parent,
         created_at,
-    ) in (
-        unsent
-        .filter(user__mail_delivery=MailDelivery.EACH)
-        .order_by("created_at", "pk")
-        .values_list(
-            "pk",
-            "user",
-            "event__item",
-            "event__data__batch",
-            "event__data__more",
-            "event__action",
-            "event__actor",
-            "event__project",
-            "event__item__parent",
-            "created_at",
-        )
+    ) in notifications.order_by("created_at", "pk").values_list(
+        "pk",
+        "user",
+        "event__item",
+        "event__data__batch",
+        "event__data__more",
+        "event__action",
+        "event__actor",
+        "event__project",
+        "event__item__parent",
+        "created_at",
     ):
         if batch:
             # To-dos of one "Assign…" across projects (specs/handover.md)
@@ -649,6 +635,90 @@ def send_mails(*, now=None):
         group["pks"].append(pk)
         if (created_at, pk) >= group["newest"]:
             group["newest"], group["more"] = (created_at, pk), bool(more)
+    return groups
+
+
+def _builder(user, kind):
+    """What builds the mail of a group (``_groups()``)"""
+    if kind == "batch":
+        return lambda notifications: batch_mail(user, notifications)
+    return lambda notifications: item_mail(
+        user, notifications[0].event.item, notifications
+    )
+
+
+def hold(now):
+    """Notifications of people whose mails wait now (quiet hours, away;
+    specs/quiet-hours.md) are marked as held; returns those people's IDs,
+    whose mails don't go now"""
+    from biwak.accounts.quiet import mails_held
+
+    people = User.objects.filter(
+        Q(quiet_hours=True) | Q(away_until__gte=timezone.localdate(now)),
+        mail_delivery__in=[MailDelivery.EACH, MailDelivery.DIGEST],
+        mail_undeliverable_at__isnull=True,
+        pk__in=Notification.objects.filter(**MAILABLE).values("user"),
+    )
+    held = {user.pk for user in people if mails_held(user, now)}
+    if held:
+        Notification.objects.filter(
+            user__in=held, held_at__isnull=True, **MAILABLE
+        ).update(held_at=now)
+    return held
+
+
+def _send_held(unsent, now):
+    """What waited for the working time or the return (specs/quiet-hours.md)
+    of people getting a mail per change: one mail, the digest's form, or
+    the usual mail when it's about one item (or batch) only"""
+    count = 0
+    by_user = {}
+    for (user_id, what), group in _groups(
+        unsent.filter(held_at__isnull=False, user__mail_delivery=MailDelivery.EACH)
+    ).items():
+        by_user.setdefault(user_id, []).append((what, group))
+    users = User.objects.in_bulk(by_user)
+    for user_id, groups in by_user.items():
+        user = users[user_id]
+        if len(groups) == 1:
+            ((kind, _key), group) = groups[0]
+            count += _mail(
+                user, group["pks"], now, _builder(user, kind), MailKind.NOTIFICATION
+            )
+        else:
+            count += _mail(
+                user,
+                [pk for _what, group in groups for pk in group["pks"]],
+                now,
+                lambda notifications, user=user: digest_mail(user, notifications),
+                MailKind.DIGEST,
+            )
+    return count
+
+
+def _digest_due(user, local):
+    """At 07:00, or with quiet hours at the start of the working time
+    (``hold()`` keeps them back outside it)"""
+    return user.quiet_hours or local.time() >= DIGEST_AT
+
+
+def send_mails(*, now=None):
+    """Sends what's due; returns how many mails. Notifications read in the
+    lantern before they're due are left out (and kept, the lantern lists
+    them); a mail with nothing left isn't sent (specs/lantern.md). Those of
+    people in quiet hours or away wait (specs/quiet-hours.md)."""
+    now = now or timezone.now()
+    # Not to addresses which bounced (specs/mail-sending.md): their
+    # notifications wait, like those of people who want no mails
+    unsent = Notification.objects.filter(
+        **MAILABLE, user__mail_undeliverable_at__isnull=True
+    ).exclude(user__in=hold(now))
+    count = _send_held(unsent, now)
+
+    # Each change, once the newest of its group is 10 minutes old
+    groups = _groups(
+        unsent.filter(held_at__isnull=True, user__mail_delivery=MailDelivery.EACH)
+    )
     users = User.objects.in_bulk({user_id for user_id, _item_id in groups})
     for (user_id, (kind, _key)), group in groups.items():
         newest = group["newest"][0]
@@ -659,36 +729,32 @@ def send_mails(*, now=None):
             continue
         user = users[user_id]
         count += _mail(
-            user,
-            group["pks"],
-            now,
-            (lambda notifications, user=user: batch_mail(user, notifications))
-            if kind == "batch"
-            else (
-                lambda notifications, user=user: item_mail(
-                    user, notifications[0].event.item, notifications
-                )
-            ),
-            MailKind.NOTIFICATION,
+            user, group["pks"], now, _builder(user, kind), MailKind.NOTIFICATION
         )
 
-    # Digests: at 07:00, the unsent notifications of the days before
+    # Digests: at 07:00 (with quiet hours: at the start of the working
+    # time), the unsent notifications of the days before and what waited
     local = timezone.localtime(now)
-    if local.time() >= DIGEST_AT:
-        midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
-        digests = {}
-        for pk, user_id in unsent.filter(
-            user__mail_delivery=MailDelivery.DIGEST, created_at__lt=midnight
-        ).values_list("pk", "user"):
-            digests.setdefault(user_id, []).append(pk)
-        users = User.objects.in_bulk(digests)
-        for user_id, pks in digests.items():
-            user = users[user_id]
-            count += _mail(
-                user,
-                pks,
-                now,
-                lambda notifications, user=user: digest_mail(user, notifications),
-                MailKind.DIGEST,
-            )
+    midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    waiting = unsent.filter(
+        Q(created_at__lt=midnight) | Q(held_at__isnull=False),
+        user__mail_delivery=MailDelivery.DIGEST,
+    )
+    if local.time() < DIGEST_AT:
+        waiting = waiting.filter(user__quiet_hours=True)
+    digests = {}
+    for pk, user_id in waiting.values_list("pk", "user"):
+        digests.setdefault(user_id, []).append(pk)
+    users = User.objects.in_bulk(digests)
+    for user_id, pks in digests.items():
+        user = users[user_id]
+        if not _digest_due(user, local):
+            continue
+        count += _mail(
+            user,
+            pks,
+            now,
+            lambda notifications, user=user: digest_mail(user, notifications),
+            MailKind.DIGEST,
+        )
     return count

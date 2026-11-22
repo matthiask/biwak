@@ -489,7 +489,8 @@ def avatar(context, person, size="sm"):
     """The mark of a person (specs/people.md): their image, or the initials
     on a color of the palette. The image only where the viewer may know the
     person (else the image view would answer 404), the name is the
-    ``title``."""
+    ``title``. Away (specs/quiet-hours.md): a small sign, and the title
+    says until when."""
     if size not in AVATAR_SIZES:
         raise ValueError(f"Unknown avatar size {size!r}")
     name = str(person)
@@ -498,11 +499,15 @@ def avatar(context, person, size="sm"):
         # Greyed, the title says why (specs/handover.md)
         css += " wb-avatar-inactive"
         name = gettext("%(name)s (inactive)") % {"name": name}
+    away = person.away_text if person.is_active else ""
+    if away:
+        name = f"{name}\n{away}"
     request = context.get("request")
+    mark = None
     if person.image and request is not None:
         known = _known_people(request)
         if known is None or person.pk in known:
-            return format_html(
+            mark = format_html(
                 '<img class="{}" src="{}" alt="{}" title="{}"'
                 ' width="256" height="256" loading="lazy">',
                 css,
@@ -510,15 +515,49 @@ def avatar(context, person, size="sm"):
                 name,
                 name,
             )
+    if mark is None:
+        mark = format_html(
+            '<span class="{}" data-avatar-color="{}" title="{}"'
+            ' role="img" aria-label="{}">{}</span>',
+            css,
+            person.avatar_color,
+            name,
+            name,
+            person.initials,
+        )
+    if not away:
+        return mark
     return format_html(
-        '<span class="{}" data-avatar-color="{}" title="{}"'
-        ' role="img" aria-label="{}">{}</span>',
-        css,
-        person.avatar_color,
-        name,
-        name,
-        person.initials,
+        '<span class="wb-away-mark">{}<span class="wb-away-sign"'
+        ' aria-hidden="true">{}</span></span>',
+        mark,
+        icon("moon-fill"),
     )
+
+
+@register.simple_tag
+def away_detail(person, *, parentheses=False):
+    """ "away until 3 Dec" for someone away (specs/quiet-hours.md), quiet;
+    nothing otherwise"""
+    from biwak.accounts.quiet import away_detail as detail
+
+    if not person.is_active or not (text := detail(person)):
+        return ""
+    return format_html(
+        '<span class="wb-away-detail">{}</span>',
+        f"({text})" if parentheses else text,
+    )
+
+
+@register.simple_tag
+def away_attrs(person):
+    """The people picker's ``data-away`` attributes of an option written by
+    hand (``items/_add_todo.html``)"""
+    from django.forms.utils import flatatt
+
+    from biwak.accounts.quiet import option_attrs
+
+    return flatatt(option_attrs(person))
 
 
 @register.simple_tag

@@ -18,6 +18,9 @@
           {% if person.organization %}<span class="text-body-secondary">{{ person.organization_name }}</span>{% endif %}
         </div>
         {% if person.show_email %}<div class="small text-body-secondary">{{ person.email }}</div>{% endif %}
+        {% if person.is_away %}<div class="wb-away-line" id="away">
+            {% icon "moon-fill" %} {{ person.away_text }}
+          </div>{% endif %}
         {% include "organizations/_invitation.html" with next=request.get_full_path %}
       </div>
     </div>
@@ -45,6 +48,19 @@
           data-modal
           class="btn btn-sm btn-quiet"
         >{% translate "Edit the name…" %}</a>
+      {% endif %}
+      {% if person.can_set_away %}
+        <a
+          href="{% url 'person_away' person.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Set away…" %}</a>
+        {% if person.is_away %}
+          <form method="post" action="{% url 'person_back' person.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-quiet">{% translate "End away" %}</button>
+          </form>
+        {% endif %}
       {% endif %}
       {% if person.can_deactivate %}
         <a

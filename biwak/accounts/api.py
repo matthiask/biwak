@@ -96,6 +96,58 @@ def me_image_remove(request):
     return me_out(request)
 
 
+# Out of office (specs/quiet-hours.md) ---------------------------------------
+
+
+class AwayIn(Schema):
+    until: dt.date = Field(description="The last day away, today or later.")
+    note: str = Field(
+        "",
+        max_length=200,
+        description="Optional, one line shown with the name (line breaks"
+        " become spaces).",
+    )
+
+
+@router.put("me/away/", response=MeOut)
+def me_away(request, data: AwayIn):
+    """Sets you away until a day: nothing is mailed meanwhile, the day
+    after one digest says what happened; your mark shows it"""
+    operations.set_away(
+        request.user, until=data.until, note=data.note, actor=request.user
+    )
+    return me_out(request)
+
+
+@router.delete("me/away/", response=MeOut)
+def me_back(request):
+    """Ends being away early ("I'm back")"""
+    operations.end_away(request.user, actor=request.user)
+    return me_out(request)
+
+
+def _person(request, person_id):
+    from biwak.organizations.people import known_people
+
+    return get_object_or_404(known_people(request.user), pk=person_id)
+
+
+@router.put("people/{person_id}/away/", response=PersonOut)
+def person_away(request, person_id: int, data: AwayIn):
+    """Sets somebody away (admins, when someone forgot)"""
+    person = _person(request, person_id)
+    operations.set_away(person, until=data.until, note=data.note, actor=request.user)
+    return person_out(person)
+
+
+@router.delete("people/{person_id}/away/", response=PersonOut)
+def person_back(request, person_id: int):
+    """Ends somebody's away time early (admins)"""
+    person = _person(request, person_id)
+    operations.end_away(person, actor=request.user)
+    return person_out(person)
+
+
 class APITokenOut(Schema):
     id: int
     title: str

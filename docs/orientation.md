@@ -156,6 +156,14 @@ and who belongs to them. Admins manage your own organization and
 externals' (organizations with staff): who belongs to them, inviting
 people into them, merging them and their email domains.
 
+**Away:** somebody out of office has a small moon on their mark;
+hovering over it says until when, with their note ("Away until 3 Dec:
+back on the 4th"). Their page says so too, and picking them as an
+assignee, typing `@` or looking at a team says "away until 3 Dec".
+Assigning or mentioning them shows their note once below the field;
+they can still be assigned and mentioned. Clients see it for the people
+they may know. Setting yourself away: [Notifications](notifications.md).
+
 **Inviting people:** "Invite people" on the People page, or "Invite by
 email" on a project's people page (with that project chosen), opens one
 form for several people at once. Choose the projects, whether they are

@@ -8,6 +8,8 @@ urlpatterns = [
     path("people/<int:pk>/", people.person, name="person"),
     path("people/<int:pk>/activate/", people.person_activate, name="person_activate"),
     path("people/<int:pk>/name/", people.person_name, name="person_name"),
+    path("people/<int:pk>/away/", people.person_away, name="person_away"),
+    path("people/<int:pk>/back/", people.person_back, name="person_back"),
     path(
         "people/<int:pk>/deactivate/",
         people.person_deactivate,
