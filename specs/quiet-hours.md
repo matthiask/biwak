@@ -16,7 +16,7 @@ and `frontend/avatar.js` (the sign), `frontend/away.js` (the note once
 in the form), `GET/PUT /api/v1/me/notifications/`, `PUT/DELETE
 /api/v1/me/away/` and `/api/v1/people/{id}/away/`, `away_until` and
 `away_note` on every person, `biwak notifications --quiet-hours …`,
-`biwak away` (CLI 0.46.0).
+`biwak away` (CLI 0.49.0).
 
 Depends on: `notifications.md` (mails and digests, `User.mail_delivery`),
 `mail-sending.md` (the outbox), `lantern.md`, `people.md` (the mark),
