@@ -30,11 +30,19 @@ impossible to find afterwards.
   board, the to-do's page, the timeline's people, the people picker's
   chosen ones): their mark greyed and "(inactive)" after the name, or a
   title on the mark where there's no room; one include, not copies.
+  Built in the tags every list of people uses: `{% avatar %}` greys the
+  mark (`.wb-avatar-inactive`, its title "Ada (inactive)"),
+  `{% person_page %}` adds "(inactive)"; the timeline's and the feed's
+  names (`feed.attach()`), the picker's labels (`PeopleField`, the
+  marks through `avatar_data`'s `inactive`), the API's people
+  (`is_active` on every person) and the CLI's names (decided 2026-11-22:
+  everywhere people show, not only assignees, so one rule).
 - **They aren't offered** for new assignments (the people picker),
   but stay in the to-do's assignees until someone takes them out.
 - **The to-dos page's "Assigned to"** offers inactive people too, after
   the active ones under "Inactive", so their open to-dos can be listed
-  and handed over (`/todos/?assignee=ID`). "Nobody active" stays: to-dos
+  and handed over (`/todos/?assignee=ID`): an `<optgroup>`, inactive
+  members of the projects the person can open. "Nobody active" stays: to-dos
   whose assignees are all inactive (or none) count as unowned.
 - Inactive people get no mails and no lantern entries, as now.
 

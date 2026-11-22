@@ -53,7 +53,8 @@ removes it.
   instead). Removing somebody from the project takes them off its open
   to-dos; the history shows it, nobody gets a notification. Completed
   to-dos keep them. Deactivated people stay assigned until someone hands
-  their to-dos over.
+  their to-dos over; their mark is greyed and "(inactive)" follows their
+  name. They aren't offered for new assignments.
 - **Due on:** a date. Overdue to-dos are marked.
 - **Repeat:** see below.
 
@@ -101,7 +102,8 @@ The filters apply as you change them:
 - **project** and **assigned to**: across projects your own by default,
   or anybody, nobody active (nobody, or only people who are gone), or a
   person (clients: me, anybody, nobody active); a project's to-dos show
-  anybody's by default;
+  anybody's by default. People who left are listed under "Inactive",
+  so their open to-dos can be found and handed over;
 - **assigned by**: "Me" shows the to-dos you gave to others, assigned
   to anybody else unless you choose who (with "Me" as the assignee,
   those you gave yourself); one you gave yourself and someone else

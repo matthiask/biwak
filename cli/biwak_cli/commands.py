@@ -34,7 +34,11 @@ def clients(item):
 
 
 def names(people):
-    return ", ".join(p["short_name"] for p in people)
+    """Short names, "(inactive)" after people who left"""
+    return ", ".join(
+        p["short_name"] + ("" if p.get("is_active", True) else " (inactive)")
+        for p in people
+    )
 
 
 attach_option = click.option(

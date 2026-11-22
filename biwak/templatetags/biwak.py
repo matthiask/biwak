@@ -386,6 +386,13 @@ def person_page(context, person, *, size="sm", name=None):
     (``known_people()``, as the page itself), else plain text; a quiet link
     (no underline until hover). The one place lists of people use."""
     label = name if name is not None else short_name(context, person)
+    if not person.is_active:
+        # Inactive people show as such (specs/handover.md)
+        label = format_html(
+            '{} <span class="text-body-secondary">{}</span>',
+            label,
+            gettext("(inactive)"),
+        )
     inner = format_html("{} {}", avatar(context, person, size), label)
     request = context.get("request")
     known = _known_people(request) if request is not None else set()
@@ -441,22 +448,27 @@ def avatar(context, person, size="sm"):
     if size not in AVATAR_SIZES:
         raise ValueError(f"Unknown avatar size {size!r}")
     name = str(person)
+    css = f"wb-avatar wb-avatar-{size}"
+    if not person.is_active:
+        # Greyed, the title says why (specs/handover.md)
+        css += " wb-avatar-inactive"
+        name = gettext("%(name)s (inactive)") % {"name": name}
     request = context.get("request")
     if person.image and request is not None:
         known = _known_people(request)
         if known is None or person.pk in known:
             return format_html(
-                '<img class="wb-avatar wb-avatar-{}" src="{}" alt="{}" title="{}"'
+                '<img class="{}" src="{}" alt="{}" title="{}"'
                 ' width="256" height="256" loading="lazy">',
-                size,
+                css,
                 person.image_url,
                 name,
                 name,
             )
     return format_html(
-        '<span class="wb-avatar wb-avatar-{}" data-avatar-color="{}" title="{}"'
+        '<span class="{}" data-avatar-color="{}" title="{}"'
         ' role="img" aria-label="{}">{}</span>',
-        size,
+        css,
         person.avatar_color,
         name,
         name,

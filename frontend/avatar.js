@@ -4,9 +4,15 @@
 // which doesn't load (the person isn't known to the viewer) falls back to
 // the initials.
 
-export function initialsMark({ name, initials, color }, size = "sm") {
+// Inactive people's marks are greyed (specs/handover.md)
+function className(person, size) {
+  return `wb-avatar wb-avatar-${size}${person.inactive ? " wb-avatar-inactive" : ""}`
+}
+
+export function initialsMark(person, size = "sm") {
+  const { name, initials, color } = person
   const mark = document.createElement("span")
-  mark.className = `wb-avatar wb-avatar-${size}`
+  mark.className = className(person, size)
   mark.dataset.avatarColor = color
   mark.title = name
   mark.setAttribute("role", "img")
@@ -19,7 +25,7 @@ export function avatar(person, size = "sm") {
   if (!person) return document.createDocumentFragment()
   if (!person.image_url) return initialsMark(person, size)
   const image = document.createElement("img")
-  image.className = `wb-avatar wb-avatar-${size}`
+  image.className = className(person, size)
   image.src = person.image_url
   image.alt = person.name
   image.title = person.name

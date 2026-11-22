@@ -79,8 +79,19 @@ class FilterForm(Form):
             choices = [("", _("Anybody")), ("me", _("Me"))]
         choices.append(("nobody", _("Nobody active")))
         if not user.is_client:
-            people = User.objects.active().filter(memberships__project__in=projects)
-            choices += [(str(p.pk), display_name(p, user)) for p in people.distinct()]
+            people = User.objects.filter(memberships__project__in=projects).distinct()
+            choices += [
+                (str(p.pk), display_name(p, user))
+                for p in people.filter(is_active=True)
+            ]
+            # Inactive people after the active ones, so their open to-dos
+            # can be listed and handed over (specs/handover.md)
+            inactive = [
+                (str(p.pk), display_name(p, user))
+                for p in people.filter(is_active=False)
+            ]
+            if inactive:
+                choices.append((_("Inactive"), inactive))
         self.fields["assignee"].choices = choices
         if user.is_client:
             del self.fields["visible"]

@@ -1352,6 +1352,12 @@ html:not(.js) .wb-handle {
   --wb-avatar-size: 2rem;
 }
 
+/* Inactive people (specs/handover.md): the mark greyed */
+.wb-avatar-inactive {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
 .wb-avatar-lg {
   --wb-avatar-size: 4.5rem;
 }
