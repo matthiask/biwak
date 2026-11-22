@@ -566,11 +566,16 @@ def due_badge(todo, date_format="MONTH_DAY_FORMAT", *, badge_only=False):
     just the badge, without the day, and nothing when it would be plain
     text (next to the date, on the to-do's page). One place for
     lists, the board, "my to-dos" and the to-do's page (specs/todos.md, "The
-    to-do's page")."""
+    to-do's page"). With a start date the range, "3–7 Dec"
+    (specs/start-dates.md)."""
+    from biwak.formats import format_range
     from biwak.items import due
 
     return {
         "due_on": todo.due_on,
+        "dates": todo.due_on and format_range(todo.starts_on, todo.due_on, date_format),
+        "short_dates": todo.due_on
+        and format_range(todo.starts_on, todo.due_on, "MONTH_DAY_FORMAT"),
         "state": due.badge_state(todo),
         "date_format": date_format,
         "badge_only": badge_only,

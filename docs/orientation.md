@@ -14,7 +14,8 @@ doesn't work offline.
 
 The brand ("Biwak") on the left leads to Home. It shows what needs you:
 
-- your to-dos that are overdue or due in the next seven days;
+- your to-dos that are overdue or due in the next seven days (those
+  that haven't started yet under "Starting later");
 - check-ins waiting for your answer;
 - for staff, to-dos you assigned to others (waiting on others);
 - recent updates in your bookmarked projects and wherever you were

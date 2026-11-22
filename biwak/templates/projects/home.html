@@ -18,6 +18,9 @@
         {% empty %}
           <p class="text-body-secondary mb-2">{% translate "Nothing due this week." %}</p>
         {% endfor %}
+        {% if later %}<div class="mb-3">
+            {% include "items/_starting_later.html" with todos=later keep_page=True %}
+          </div>{% endif %}
         <a
           href="{% url 'todos' %}?grouping=due"
         >{% if open_count %}{% blocktranslate with n=open_count %}All {{ n }} to-dos{% endblocktranslate %}{% else %}{% translate "All my to-dos" %}{% endif %}</a>

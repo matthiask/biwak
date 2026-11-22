@@ -42,7 +42,17 @@ def due_todos(user, today, *, assigned_by=False):
     else:
         todos = due.todos(user, assignee="me")
     todos = glance.with_signals(todos.filter(todo__due_on__lte=today + WINDOW))
+    if not assigned_by:
+        # Mine which haven't started are "Starting later" (specs/start-dates.md)
+        todos = todos.filter(due.started(today))
     return list(due.ordered(todos)[:TODOS])
+
+
+def starting_later(user, today):
+    """My open to-dos due within the window whose start date hasn't come
+    yet, the next to start first"""
+    todos = due.todos(user, assignee="me").filter(todo__due_on__lte=today + WINDOW)
+    return list(due.starting_later(glance.with_signals(todos), today))
 
 
 def recent_events(user):
@@ -125,6 +135,7 @@ def dashboard(request):
         return redirect(f"{reverse('projects')}?{request.GET.urlencode()}")
     today = schedules.today()
     mine = due_todos(user, today)
+    later = starting_later(user, today)
     waiting = [] if user.is_client else due_todos(user, today, assigned_by=True)
     occurrences = checkin_ops.due(user)
     events = recent_events(user)
@@ -134,6 +145,7 @@ def dashboard(request):
         user,
         [
             *mine,
+            *later,
             *waiting,
             *(o.question.item for o in occurrences),
             *(e.item for e in events if e.item is not None),
@@ -152,6 +164,7 @@ def dashboard(request):
         "projects/home.html",
         {
             "sections": due.sections(mine, today),
+            "later": later,
             "open_count": open_count if open_count > len(mine) else None,
             "waiting": due.sections(waiting, today),
             "occurrences": occurrences,

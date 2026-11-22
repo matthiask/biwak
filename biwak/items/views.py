@@ -133,6 +133,13 @@ class TodoFieldsForm(RepeatForm):
         required=False,
         widget=forms.DateInput(attrs={"type": "date"}),
     )
+    # Shown once the due date is set (frontend/start-date.js,
+    # specs/start-dates.md)
+    starts_on = forms.DateField(
+        label=_("starts on"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date", "data-starts-on": ""}),
+    )
     assignees = PeopleField(label=_("assignees"), queryset=User.objects.none())
 
     def __init__(self, *args, item, user, **kwargs):
@@ -143,13 +150,22 @@ class TodoFieldsForm(RepeatForm):
             project=item.project, visible=item.is_client_visible
         )
 
+    def clean(self):
+        data = super().clean()
+        if "due_on" in data and "starts_on" in data:
+            try:
+                ops.check_dates(data["starts_on"], data["due_on"])
+            except ops.InvalidDates as exc:
+                self.add_error("starts_on", str(exc))
+        return data
+
 
 class TodoForm(TodoFieldsForm):
     """Adding a to-do from the list: inline, with everything a to-do has
     at first (specs/todos.md); without JavaScript a plain form"""
 
     group = forms.IntegerField(required=False, widget=forms.HiddenInput)
-    field_order = ["title", "notes", "assignees", "due_on", "group"]
+    field_order = ["title", "notes", "assignees", "due_on", "starts_on", "group"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -245,6 +261,7 @@ def todolist(request, pk):
                 group=group,
                 notes=data["notes"],
                 due_on=data["due_on"],
+                starts_on=data["starts_on"],
                 assignees=list(data["assignees"]),
                 **form.recurrence_kwargs(),
             )
@@ -515,7 +532,7 @@ def todo_toggle(request, pk):
 
 
 class TodoDetailForm(TodoFieldsForm):
-    field_order = ["title", "notes", "due_on", "assignees"]
+    field_order = ["title", "notes", "due_on", "starts_on", "assignees"]
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, item=item, user=user, **kwargs)
@@ -549,6 +566,7 @@ def todo(request, pk, *, edit=False):
             "title": item.title,
             "notes": todo.notes,
             "due_on": todo.due_on,
+            "starts_on": todo.starts_on,
             "assignees": list(todo.assignees.all()),
             "recurrence": todo.recurrence,
             "recurrence_ends_on": todo.recurrence_ends_on,
@@ -570,6 +588,7 @@ def todo(request, pk, *, edit=False):
                 title=data["title"],
                 notes=data["notes"],
                 due_on=data["due_on"],
+                starts_on=data["starts_on"],
                 assignees=data["assignees"],
                 base=request.POST.get("base"),
                 **form.recurrence_kwargs(),

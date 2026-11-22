@@ -39,7 +39,8 @@ one (5–7).
    days (decided 2026-11-21: 7 days, so a Friday still shows next
    week's), in the sections of `items.due.sections()`, up to 10, most
    urgent first; "All my to-dos" with the number when there are more.
-   No to-dos without a date.
+   No to-dos without a date. Mine which haven't started are in a
+   collapsed "Starting later (N)" at its end (`start-dates.md`).
 2. **Check-ins waiting for my answer** (`checkins_due`, across
    projects).
 3. **Waiting on others** (staff): to-dos I assigned to somebody else,

@@ -1,7 +1,8 @@
 {% load biwak i18n %}{{ kind|capfirst }}: {{ title }}{% if list %}
 {% translate "List" %}: {{ list }}{% endif %}{% if assignees %}
 {% translate "Assigned to" %}: {{ assignees }}{% endif %}{% if todo.due_on %}
-{% translate "Due on" %}: {{ todo.due_on|dateformat:"DATE_FORMAT" }}{% endif %}{% if todo.completed_at %}
+{% translate "Due on" %}: {{ todo.due_on|dateformat:"DATE_FORMAT" }}{% endif %}{% if todo.starts_on %}
+{% translate "Starts on" %}: {{ todo.starts_on|dateformat:"DATE_FORMAT" }}{% endif %}{% if todo.completed_at %}
 {% translate "Completed." %}{% endif %}{% if text_plain %}
 
 {{ text_plain }}{% endif %}

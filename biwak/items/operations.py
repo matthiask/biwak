@@ -132,6 +132,23 @@ def _recurrence_fields(recurrence, ends_on, count):
     }
 
 
+class InvalidDates(ValueError):
+    """A start date without a due date or after it (specs/start-dates.md);
+    the message says which"""
+
+
+def check_dates(starts_on, due_on):
+    """Raises ``InvalidDates`` unless ``starts_on`` is empty, or there's a
+    due date and it isn't before the start: the one rule for the forms, the
+    API and the operations"""
+    if starts_on is None:
+        return
+    if due_on is None:
+        raise InvalidDates(gettext("A start date needs a due date."))
+    if starts_on > due_on:
+        raise InvalidDates(gettext("The start date can't be after the due date."))
+
+
 def _todos_in(todolist_item, group):
     """The open to-dos of a list's group (or the ungrouped ones), in order;
     the list and the group as objects or IDs"""
@@ -152,12 +169,15 @@ def create_todo(
     group=None,
     notes="",
     due_on=None,
+    starts_on=None,
     assignees=(),
     recurrence="",
     recurrence_ends_on=None,
     recurrence_count=None,
 ):
-    """``todolist`` is the list's item"""
+    """``todolist`` is the list's item; ``InvalidDates`` for a start date
+    without a due date or after it"""
+    check_dates(starts_on, due_on)
     TodoList.objects.select_for_update().get(item=todolist)
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
@@ -173,6 +193,7 @@ def create_todo(
         item=item,
         group=group,
         notes=notes,
+        starts_on=starts_on,
         due_on=due_on,
         **_recurrence_fields(recurrence, recurrence_ends_on, recurrence_count),
     )
@@ -707,6 +728,22 @@ def unassign_dropped(user, *, actor, project=None):
 _UNCHANGED = object()
 
 
+def _set_dates(todo, due_on, starts_on):
+    """Sets the dates given (``_UNCHANGED`` keeps one; no due date, no
+    start date), the fields changed; ``InvalidDates`` (in the transaction
+    of the change, so nothing is saved)"""
+    due_on = todo.due_on if due_on is _UNCHANGED else due_on
+    if starts_on is _UNCHANGED:
+        starts_on = todo.starts_on if due_on is not None else None
+    check_dates(starts_on, due_on)
+    changed = []
+    for name, value in [("due_on", due_on), ("starts_on", starts_on)]:
+        if getattr(todo, name) != value:
+            setattr(todo, name, value)
+            changed.append(name)
+    return changed
+
+
 @transaction.atomic
 def update_todo(
     item,
@@ -715,6 +752,7 @@ def update_todo(
     title=_UNCHANGED,
     notes=_UNCHANGED,
     due_on=_UNCHANGED,
+    starts_on=_UNCHANGED,
     assignees=_UNCHANGED,
     recurrence=_UNCHANGED,
     recurrence_ends_on=_UNCHANGED,
@@ -723,16 +761,17 @@ def update_todo(
 ):
     """Changes what's given (the to-do's page and the API); assignees are
     the complete new set. Removing the recurrence removes its end and
-    count too. ``base``: the ``editing.version()`` the form carried, so
-    ``editing.StaleEdit`` if somebody saved since. Saving ends one's
-    editing."""
+    count too, removing the due date its start date (``InvalidDates`` for
+    a start date without a due date or after it). ``base``: the
+    ``editing.version()`` the form carried, so ``editing.StaleEdit`` if
+    somebody saved since. Saving ends one's editing."""
     Todo.objects.select_for_update().get(item=item)
     editing.check_base(item, base, actor=actor)
     editing.stop(item, actor)
     todo = Todo.objects.get(item=item)
     item.todo = todo
     previous = f"{item.title}\n\n{todo.notes}"
-    title_was, due_was = item.title, todo.due_on
+    title_was, due_was, starts_was = item.title, todo.due_on, todo.starts_on
     edited = False
     if title is not _UNCHANGED and title != item.title:
         item.title = title
@@ -744,9 +783,7 @@ def update_todo(
         todo.notes = notes
         fields.append("notes")
         attachments.link(item, notes, actor=actor)
-    if due_on is not _UNCHANGED and due_on != todo.due_on:
-        todo.due_on = due_on
-        fields.append("due_on")
+    fields += _set_dates(todo, due_on, starts_on)
     given = {
         "recurrence": recurrence,
         "recurrence_ends_on": recurrence_ends_on,
@@ -775,9 +812,15 @@ def update_todo(
         # went back (the first one stays when edits merge, record())
         if edited:
             extra["title_was"] = title_was
-        if "due_on" in fields:
-            extra["due_on"] = todo.due_on.isoformat() if todo.due_on else None
-            extra["due_was"] = due_was.isoformat() if due_was else None
+        if {"due_on", "starts_on"} & set(fields):
+            # Both dates, what they are and were (specs/start-dates.md)
+            for name, value in [
+                ("due_on", todo.due_on),
+                ("due_was", due_was),
+                ("starts_on", todo.starts_on),
+                ("starts_was", starts_was),
+            ]:
+                extra[name] = value.isoformat() if value else None
         event = record(
             actor=actor,
             action=Action.EDITED,
@@ -838,6 +881,10 @@ def _create_next(item, todo, *, actor):
         todo.recurrence_ends_on is not None and due_on > todo.recurrence_ends_on
     ):
         return None
+    # The same distance between start and due date (specs/start-dates.md)
+    starts_on = None
+    if todo.starts_on and todo.due_on:
+        starts_on = due_on - (todo.due_on - todo.starts_on)
     if item.following.exclude(item__status=Status.TRASHED).exists():
         return None
     todolist = item.parent
@@ -857,6 +904,7 @@ def _create_next(item, todo, *, actor):
         item=following,
         group=todo.group,
         notes=todo.notes,
+        starts_on=starts_on,
         due_on=due_on,
         recurrence=todo.recurrence,
         recurrence_ends_on=todo.recurrence_ends_on,

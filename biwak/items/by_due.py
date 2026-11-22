@@ -196,10 +196,15 @@ def todos_by_due(request, project=None):
         query = query.copy()
         query.pop("page", None)
         context |= {"page": page, "querystring": query.urlencode()}
-    elif grouping == TodoGrouping.PROJECT:
-        context["projects"] = due.by_project(todos)
     else:
-        context["sections"] = due.sections(due.ordered(todos), schedules.today())
+        # Not yet started: collapsed at the end (specs/start-dates.md)
+        today = schedules.today()
+        context["later"] = list(due.starting_later(todos, today))
+        todos = todos.filter(due.started(today))
+        if grouping == TodoGrouping.PROJECT:
+            context["projects"] = due.by_project(todos)
+        else:
+            context["sections"] = due.sections(due.ordered(todos), today)
     return render(request, "items/todos_by_due.html", context)
 
 
@@ -211,7 +216,8 @@ def project_todos(request, pk):
 
 
 def calendar_for(user):
-    """The person's open to-dos with a due date as all-day events; mentions
+    """The person's open to-dos with a due date as all-day events, until the
+    due date (from the start date if any); mentions
     as names the person may know, like the mails"""
     calendar = Calendar()
     calendar.add("prodid", "-//Biwak//To-dos//EN")
@@ -223,7 +229,8 @@ def calendar_for(user):
             event = CalendarEvent()
             event.add("uid", f"todo-{item.pk}@biwak")
             event.add("summary", mentions.title(item.title, item))
-            event.add("dtstart", item.todo.due_on)
+            # From the start date when there's one (specs/start-dates.md)
+            event.add("dtstart", item.todo.starts_on or item.todo.due_on)
             event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
             event.add("dtstamp", item.updated_at)
             event.add("transp", "TRANSPARENT")
