@@ -35,7 +35,15 @@ to both.
 - **A row per person:** address, name, organization (suggested from the
   domain by `for_new_person()`, empty means the domain's; a name that
   doesn't exist asks "Create …?", created only when the round is saved,
-  `organizations.md`) and, for admins, staff or client. Three rows
+  `organizations.md`) and, for admins, staff or client. **Filled in
+  from the address** (decided 2026-11-22): on leaving the address field
+  the row shows the domain's organization (`for_new_person()`, free-mail
+  domains fill nothing, an unknown domain leaves it empty), and for
+  admins sets the role: the own organization's domain staff, an
+  external organization's staff (external), anything else client. Only
+  while the inviter hasn't changed those fields in that row; without
+  JavaScript the server still takes the domain's organization when the
+  field is empty. Three rows
   without JavaScript, the first required, at most 50; an address twice is
   an error of the second row.
 - **The projects:** one set for all rows, those the inviter can open and
