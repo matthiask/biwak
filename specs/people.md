@@ -4,7 +4,8 @@ How people are shown: a face or a colored mark makes lists, comments
 and the lantern quicker to scan; names stay short but unambiguous. The
 People page and organizations are `organizations.md`.
 
-**Status:** stage 1 built (2026-11-21); stage 2 (drawn images) later.
+**Status:** stage 1 built (2026-11-21); stage 2 (drawn marks) built
+(2026-11-22).
 
 ## The mark
 
@@ -20,9 +21,9 @@ Decided 2026-11-21:
   item's history.
 - Without a photo: the person's drawn mark (below) in white on the fill
   of a palette color chosen from the id (`PALETTE[id % 10]`,
-  `User.avatar_color`), no setting. Initials go once the marks are built
-  (decided 2026-11-22: they collide and say little to people who don't
-  know the person). The full name is the `title` and `alt`.
+  `User.avatar_color`), no setting. No initials (decided 2026-11-22:
+  they collide and say little to people who don't know the person).
+  The full name is the `title` and `alt`.
 
 ## Profile images
 
@@ -102,8 +103,7 @@ site).
 
 ## Stage 2: drawn marks
 
-Decided with the user 2026-11-22. **Status:** open; the drawings are
-there.
+Decided with the user 2026-11-22. **Status:** built (2026-11-22).
 
 - **The drawings** (approved 2026-11-22): 35 in
   `biwak/static/biwak/marks/`, 23 alpine (tent, ibex, marmot, lantern,
@@ -119,6 +119,15 @@ there.
   team of up to 35 has no repeats. Imported people get one the same way;
   people who left keep theirs. The color stays the id's: a repeated
   mark usually differs in color.
+  Built (2026-11-22, proposed, to confirm): `User.save()` gives it to
+  every new account without one (sign-up, invitation, the importer, the
+  admin), `marks.mark_for()`; the list's order is `marks.MARKS` (the
+  preview's: the alpine ones, then the generic ones), people without
+  an organization count among each other. "Active" counts everybody
+  who hasn't left (`left_at`), also those waiting to be activated: an
+  import's people are inactive until then and would otherwise all get
+  the first mark. A changed organization keeps the mark. A data
+  migration gave everybody there a mark in the order of their ids.
 - **No initials:** the mark is shown wherever there's no photo. The full
   name stays the `title` and `alt`.
 - **No color choice** (decided 2026-11-22: deriving it from the accent
@@ -127,15 +136,25 @@ there.
   the grid of all marks with one's own selected, a click chooses
   (saved at once, like the other choices there); **Photo**, uploading
   as now. A photo is shown instead of the mark; "Remove" brings the mark
-  back.
+  back. Built (2026-11-22, proposed): each drawing is a submit button
+  (`settings_mark`, `/accounts/settings/mark/`, no script), on the
+  person's own color, the chosen one ringed (`aria-pressed`), named
+  for screen readers (`MARKS`' names, translated); saving says "Your
+  mark has been saved." and comes back to the section. German: the
+  drawn mark is "Zeichnung", "Drawn"/"Photo" "Gezeichnet"/"Foto".
 - **Drawing:** like the icons (`frontend/styles/icons.css`), white
   through a CSS mask on the circle, one class per mark
   (`wb-mark-ibex`), so `{% avatar %}`, `frontend/avatar.js` (the live
   editor's others included) and the page's colors need nothing else.
   A test checks that every file has its class and every class its file
-  (like `biwak/test_icons.py`).
+  (like `biwak/test_icons.py`). Built: `frontend/styles/marks.css`, the
+  class sets the drawing (`--wb-mark-image`), `.wb-mark::before` masks
+  `currentColor` with it; the bundle inlines the small drawings.
+  `avatar_data` has `mark` instead of `initials`.
 - **API and CLI:** `mark` on people (read), changing one's own mark in
-  the settings endpoint; the CLI shows nothing new.
+  the settings endpoint; the CLI shows nothing new. Built: `mark` on
+  every person, `PUT /api/v1/me/` takes `mark` (one of the names, else
+  422); `biwak me image --remove`'s help says "Back to the drawn mark."
 - **Done when:** tests for giving marks (fewest used, per organization,
   the importer), the settings as staff and client, the avatar's markup
   with and without a photo, the mark classes; the help's settings

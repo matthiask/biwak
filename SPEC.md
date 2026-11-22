@@ -153,8 +153,7 @@ API endpoints and CLI commands (`api-cli.md`) in the same branch;
 
 Nothing waiting for a spec at the moment. What's deliberately "later"
 stays in its part's spec: webhooks and agent skills (`api-cli.md`),
-browser notifications (`lantern.md`), drawn profile images
-(`people.md`). Give a new wish a spec (or a section in one) before
+browser notifications (`lantern.md`). Give a new wish a spec (or a section in one) before
 building it.
 
 ## Decisions
@@ -248,7 +247,9 @@ building it.
   square, WebP, served only to whoever may know the person) or their
   initials on a palette color chosen from the ID; a page per person with
   the projects in common. Basecamp's images are imported, those it
-  generated skipped (`specs/people.md`).
+  generated skipped (`specs/people.md`). 2026-11-22: a drawn mark (35
+  drawings, one per person, chosen in the settings) instead of the
+  initials.
 - 2026-11-21: Only projects and lists are archived; to-dos are
   completed, nothing smaller is archived (`specs/archiving.md`).
 - 2026-11-21: Home at `/` shows what needs the person and where things
