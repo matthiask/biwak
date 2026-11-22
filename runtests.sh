@@ -4,7 +4,7 @@
 # measures the coverage too (decided 2026-11-21: nothing needs it always).
 set -ex
 # The end-to-end tests need the production bundle in static/; without them
-# (--exclude-tag e2e) the build is skipped, it's most of a small run's time
+# (--exclude-tag e2e) the build (about a second) is skipped
 case " $* " in
 *" --exclude-tag e2e "*) ;;
 *) mise exec -- yarn rspack build --mode production ;;
