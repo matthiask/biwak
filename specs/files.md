@@ -84,6 +84,14 @@ first two lines (`|excerpt`, `glance.md`). The project page shows the
 pinned messages and then the latest, five in all unless more are pinned,
 with an "All messages" link (`queries.front_messages()`).
 
+- **The order** (decided 2026-11-22, like Basecamp's): "Latest update"
+  (the default: the later of posting and the latest comment; editing
+  doesn't count) or "Newest posts". A setting of the project's message
+  board, for everybody, changed by staff with a small choice on the
+  board (like a list's view, `todos.md`), `?order=` to look the other
+  way for a moment; pinned messages stay on top either way. The project
+  page's messages follow the board's order. API: `order` on the board
+  and as a parameter of its list; CLI `biwak messages --order`.
 - A message: title, Markdown, optional category, comments, attachments,
   the visibility switch. Categories (`MessageCategory(name, emoji,
   position)`) are one list for the installation, edited by admins in the
