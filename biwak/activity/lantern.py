@@ -76,15 +76,22 @@ def chain(chains, key, batch, at):
     """The number of the entry (and mail) an upload belongs to, the uploads
     taken oldest first: one person's uploads into one folder (``key``) are
     one chain while each comes within ``mails.MERGE_AFTER`` of the one
-    before or belongs to its batch (still going up, however long a file
-    takes). ``chains`` keeps the state, one dict per run. The one rule of
+    before; a batch's files stay in the chain it started in, whatever came
+    in between (still going up, however long a file takes, another tab's
+    batch). ``chains`` keeps the state, one dict per run. The one rule of
     the lantern and the mails (decided 2026-11-22)."""
     from biwak.activity.mails import MERGE_AFTER
 
-    number, last, last_batch = chains.get(key, (0, None, None))
-    if last is not None and at - last > MERGE_AFTER and batch != last_batch:
-        number += 1
-    chains[key] = (number, at, batch)
+    state = chains.setdefault(key, {"count": 0, "last": None, "batches": {}})
+    if batch in state["batches"]:
+        number = state["batches"][batch]
+    elif state["last"] is not None and at - state["last"][0] <= MERGE_AFTER:
+        number = state["last"][1]
+    else:
+        number = state["count"]
+        state["count"] += 1
+    state["last"] = (at, number)
+    state["batches"][batch] = number
     return number
 
 
@@ -285,16 +292,26 @@ def bookmarked(user, items=None):
     items = bookmarked_items(user) if items is None else items
     if not items:
         return []
-    latest = wanted(
-        list(
-            notifications_for(user)
-            .filter(event__item__in=items)
-            .order_by("event__item_id", "-created_at", "-pk")
-            .distinct("event__item_id")
-        ),
-        user,
-    )
-    latest.sort(key=lambda n: (n.created_at, n.pk), reverse=True)
+    notifications = notifications_for(user).filter(event__item__in=items)
+    # The unread ones and the latest read one of each item go through
+    # wanted(), then the latest left of each item: the latest may cancel
+    # out against another, an older one still shows the item (an unread
+    # one is in the badge's count)
+    candidates = [
+        *notifications.filter(read_at__isnull=True),
+        *notifications
+        .filter(read_at__isnull=False)
+        .order_by("event__item_id", "-created_at", "-pk")
+        .distinct("event__item_id"),
+    ]
+    latest = {}
+    for notification in sorted(
+        wanted(candidates, user),
+        key=lambda n: (n.created_at, n.pk),
+        reverse=True,
+    ):
+        latest.setdefault(notification.event.item_id, notification)
+    latest = list(latest.values())
     groups = by_item(prepare(latest, user), batches=False)
     for item, _entries in groups:
         item.is_bookmarked = True

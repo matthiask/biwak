@@ -156,6 +156,29 @@ class BatchTest(TestCase):
         self.upload(["b.txt"])
         self.assertEqual(lantern.unread_counts(self.bob), (2, 1))
 
+    def test_a_batch_stays_together_with_another_in_between(self):
+        """Two tabs: batch A's first file, batch B 11 minutes later, A's
+        second file 25 minutes after its first. A's files are one entry
+        and one mail, B another"""
+        now = timezone.now()
+        a1 = self.upload(["a1.txt"], more=True)
+        Notification.objects.update(created_at=now - dt.timedelta(minutes=25))
+        self.upload(["b1.txt"], batch="b" * 32)
+        Notification.objects.exclude(event__item__in=a1).update(
+            created_at=now - dt.timedelta(minutes=14)
+        )
+        self.upload(["a2.txt"])
+        _marks, unread, _read, _more = lantern.menu(self.bob)
+        self.assertEqual(
+            sorted(sorted(f.title for f in batch.files) for batch, _e in unread),
+            [["a1.txt", "a2.txt"], ["b1.txt"]],
+        )
+        self.assertEqual(self.send(now + dt.timedelta(minutes=11)), 4)
+        bodies = [m.body for m in mail.outbox if m.to == [self.bob.email]]
+        [a] = [body for body in bodies if "a1.txt" in body]
+        self.assertIn("a2.txt", a)
+        self.assertNotIn("b1.txt", a)
+
     def test_mails_and_the_lantern_group_rounds_alike(self):
         """A round still waiting for files, another one 30 minutes later:
         two entries and two mails, each when it's due"""

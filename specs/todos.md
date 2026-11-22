@@ -151,9 +151,11 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
   everybody's open to-dos get huge, and "Anybody" is
   `assignee=anybody`; in a project the default is anybody's; "Nobody
   active" is nobody or only deactivated people), assigned by (anybody or
-  me: to anybody else, Basecamp's "assigned by me", as Home's "waiting on
-  others"; with an assignee chosen, to them, "Me" being those I gave
-  myself; decided 2026-11-22: with "assigned by me" the empty assignee
+  me: to anybody else, Basecamp's "assigned by me"; decided 2026-11-22: a
+  to-do I assigned to myself and Bob counts, Bob being another, one only
+  to myself doesn't; Home's "waiting on others" also leaves out to-dos
+  I'm assigned to, so they aren't listed twice on Home; with an assignee
+  chosen, to them, "Me" being those I gave myself; decided 2026-11-22: with "assigned by me" the empty assignee
   is "Anybody" across projects too, else it would show only those I
   gave myself), open or
   completed (latest first, 50 per page), visible to clients (staff

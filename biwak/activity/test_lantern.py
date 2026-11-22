@@ -921,3 +921,26 @@ class BackAndForthTest(LanternTestCase):
         lantern.read(self.bob)
         self.act(lambda: ops.reopen(self.todo, actor=self.ada))
         self.assertEqual(lantern.unread_count(self.bob), 1)
+
+    def test_a_bookmarked_item_with_a_cancelled_pair_shows_its_comment(self):
+        # The latest two cancel out; the older unread comment still shows
+        # the bookmarked item, which the badge counts
+        self.comment(self.todo, "Which tent?")
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        lantern.bookmark(self.bob, self.todo)
+        self.assertEqual(lantern.unread_count(self.bob), 1)
+        marks = lantern.menu(self.bob)[0]
+        self.assertEqual([item.title for item, _e in marks], ["Order the tent"])
+        [(_item, [notification])] = marks
+        self.assertEqual(notification.event.action, "commented")
+
+    def test_a_bookmarked_item_with_a_cancelled_pair_shows_the_read_one(self):
+        self.comment(self.todo, "Which tent?")
+        lantern.read(self.bob)
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        lantern.bookmark(self.bob, self.todo)
+        self.assertEqual(lantern.unread_count(self.bob), 0)
+        [(_item, [notification])] = lantern.menu(self.bob)[0]
+        self.assertEqual(notification.event.action, "commented")

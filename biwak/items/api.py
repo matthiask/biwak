@@ -458,13 +458,19 @@ def todo_overview(
     without one last) or, with ``grouping=project``, by project name, the
     list's position, the group's position (to-dos outside groups first)
     and the to-do's; ``grouping`` defaults to ``project``. ``completed`` the completed ones, the latest first.
-    ``assignee`` is ``me``, ``nobody`` or a person's ID, ``assigned_by=me``
+    ``assignee`` is ``me``, ``nobody``, ``anybody`` (the default) or a
+    person's ID, ``assigned_by=me``
     the to-dos the person assigned to somebody, ``due_group`` one
     of the groups of the page. Archived projects and lists are left out.
     Clients only ever get what is visible to them."""
     project = project_for(request, project_id) if project_id is not None else None
-    if assignee not in {None, "", "me", "nobody"} and not assignee.isdecimal():
-        bad_request(_("assignee is me, nobody or a person's ID."))
+    if assignee not in {None, "", "me", "nobody", "anybody"} and not (
+        assignee.isdecimal()
+    ):
+        bad_request(_("assignee is me, nobody, anybody or a person's ID."))
+    if assignee == "anybody":
+        # Like the page's "Anybody" (specs/todos.md)
+        assignee = None
     if assigned_by not in {None, "", "me"}:
         bad_request(_("assigned_by is me."))
     qs = _for_todo_out(

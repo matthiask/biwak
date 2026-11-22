@@ -25,8 +25,13 @@ comments, like a GitHub issue but simpler.
   shows no line, the same as completing and reopening (decision B,
   decided 2026-11-22): moves record where from (`group_was`, `to_was`;
   dragging between columns is one merged event keeping the first
-  `group_was`), and moving back cancels out. Older moves without them
-  show as before. The API leaves these keys out.
+  `group_was`), and moving back cancels out. A move into another list
+  also records the column it ends up in and came from (`group_id`,
+  `group_was`): it ends the column moves before it (they're about a
+  column it left), and moving back into the list cancels out only if
+  it's back in the column it started in, otherwise the line says the
+  list (fixed 2026-11-22: "moved this to ColY" while it was back in
+  ColX). Older moves without them show as before. The API leaves these keys out.
 - **Live:** new lines arrive like new comments (a line is the live
   region `event-<first event's id>`, so a merge updates it and an undone
   completion removes it).

@@ -80,7 +80,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   query) is remembered too (decided 2026-11-22); links marked
   `data-restore-filters` (the top bar, the project's "All to-dos") go to
   the stored query; "Reset filters" clears it and shows only when a
-  filter is set. Other links keep their own query.
+  filter is set. Other links keep their own query: arriving at a filter
+  page by a plain link stores that query, so a plain link without one
+  clears the stored filters ("All projects" shows all projects, decided
+  2026-11-22 by the user).
 - **View choices** (groupings, orderings) are query parameters
   remembered like filters, never fields on `User` (2026-11-21: no row,
   no audit entry per click).

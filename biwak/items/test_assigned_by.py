@@ -303,6 +303,19 @@ class APITest(AssignedByTestCase):
         self.assertEqual(self.titles(self.get(self.bob, assigned_by="me")), ["Bob's"])
         del mine
 
+    def test_assignee_anybody_like_the_page(self):
+        # specs/todos.md: "Anybody" is assignee=anybody, the API's default
+        self.todo("To Bob", assignees=[self.bob])
+        self.todo("Nobody")
+        everything = self.titles(self.get(self.ada))
+        self.assertEqual(
+            self.titles(self.get(self.ada, assignee="anybody")), everything
+        )
+        self.assertEqual(
+            self.titles(self.get(self.ada, assignee="anybody", assigned_by="me")),
+            ["To Bob"],
+        )
+
     def test_a_client_only_gets_what_they_may_see(self):
         self.todo("Internal", assignees=[self.bob], todolist=self.internal)
         visible = self.todo("Visible")

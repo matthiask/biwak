@@ -972,6 +972,68 @@ class MoveBackTest(FeedBase):
         ops.move_todo(self.todo, todolist=self.shared, actor=self.bob)
         self.assertEqual(len(self.shown()), 2)
 
+    def test_someone_elses_move_in_between_shows_in_a_persons_feed(self):
+        # The person's feed leaves Bob's move out, but it still breaks up
+        # Ada's moves: they show as they do in the whole feed
+        plans = ops.create_list(project=self.project, title="Plans", creator=self.ada)
+        later = ops.create_list(project=self.project, title="Later", creator=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        ops.move_todo(self.todo, todolist=later, actor=self.bob)
+        ops.move_todo(self.todo, todolist=self.shared, actor=self.ada)
+        self.client.force_login(self.ada)
+        whole = page_text(self.client.get("/feed/"))
+        self.assertEqual(whole.count("moved Open point"), 3)
+        for url in [f"/people/{self.ada.pk}/feed/", f"/feed/?person={self.ada.pk}"]:
+            with self.subTest(url=url):
+                text = page_text(self.client.get(url))
+                self.assertEqual(text.count("moved Open point"), 2)
+
+    def test_someone_elses_toggles_in_between_show_in_a_persons_feed(self):
+        ops.complete(self.todo, actor=self.ada)
+        ops.reopen(self.todo, actor=self.bob)
+        ops.complete(self.todo, actor=self.bob)
+        ops.reopen(self.todo, actor=self.ada)
+        events = list(feed.feed_events(self.ada, person=self.ada))
+        feed.attach(events, self.ada)
+        shown = [e.action for entry in feed.merge(events) for e in entry.events]
+        self.assertEqual(shown, [Action.REOPENED, Action.COMPLETED])
+
+    def test_a_column_move_before_moving_to_another_list_and_back(self):
+        # Ada drags it from X to Y, moves it into another list and back into
+        # X: it's where it was, nothing says it's in Y
+        x = ops.create_group(todolist=self.shared.todolist, title="ColX")
+        y = ops.create_group(todolist=self.shared.todolist, title="ColY")
+        plans = ops.create_list(project=self.project, title="Plans", creator=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=x, actor=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=self.shared, group=y, actor=self.ada)
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=x, actor=self.ada)
+        self.assertEqual(self.shown(), [])
+
+    def test_a_column_move_before_moving_back_into_another_column(self):
+        # Back in the list, but in Y: the last move says so
+        x = ops.create_group(todolist=self.shared.todolist, title="ColX")
+        y = ops.create_group(todolist=self.shared.todolist, title="ColY")
+        plans = ops.create_list(project=self.project, title="Plans", creator=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=x, actor=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=self.shared, group=y, actor=self.ada)
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=y, actor=self.ada)
+        self.assertEqual(self.shown(), [(Action.MOVED, "Shared")])
+
+    def test_moved_to_another_list_then_into_a_column_there(self):
+        plans = ops.create_list(project=self.project, title="Plans", creator=self.ada)
+        later = ops.create_group(todolist=plans.todolist, title="Later")
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=plans, actor=self.ada)
+        ops.move_todo(self.todo, todolist=plans, group=later, actor=self.ada)
+        self.assertEqual(
+            self.shown(), [(Action.MOVED, "Later"), (Action.MOVED, "Plans")]
+        )
+
 
 class PageEdgeTest(FeedBase):
     """A page ends between entries: what merges is never split by a page's

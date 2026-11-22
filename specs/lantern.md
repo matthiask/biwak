@@ -66,7 +66,9 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   only the last shows (`mails._deliverable()`, `notifications.md`).
   Read ones show as they were. The item's other unread completing and
   reopening count too (`mails.done_neighbours()`, decided 2026-11-22), so
-  the page's edges and the menu's limit don't split a pair.
+  the page's edges and the menu's limit don't split a pair. They cancel
+  out also when one was mailed already: someone may have got both mails
+  while the lantern shows neither, by design (`notifications.md`).
 - **The page** `/lantern/`: the same, paginated like the feed, filters
   "unread" and "mentions only".
 - **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", which
@@ -74,7 +76,9 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   bookmarks, `lantern.bookmark()`, `unbookmark()`); bookmarked items with
   notifications are in "Bookmarked" at the top of the menu and the page,
   with their latest notification read or not, and not in the other
-  sections. A bookmark made on the item's page counts too. The API's
+  sections. The latest is the latest left after completing and
+  reopening cancelled out among the unread ones (fixed 2026-11-22: an
+  item whose latest two cancelled out was listed nowhere). A bookmark made on the item's page counts too. The API's
   entries say `bookmarked`.
 - **The favicon** (decided 2026-11-21): with `User.lantern_in_favicon`
   (on by default, in the settings' notifications section) the tab's icon

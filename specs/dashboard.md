@@ -44,7 +44,9 @@ one (5–7).
    projects).
 3. **Waiting on others** (staff): to-dos I assigned to somebody else,
    in the same window, up to 10, with their assignees; "All to-dos I
-   assigned".
+   assigned". Unlike the to-dos page's "assigned by me" without those
+   I'm assigned to as well: they're in the first section already
+   (decided 2026-11-22).
 4. **Recent updates** (everyone): up to 10 feed entries
    (`activity/_entries.html`, conversations included) of the last 7
    days from two sources (decided 2026-11-21): everything in my
