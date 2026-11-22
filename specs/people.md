@@ -53,7 +53,8 @@ Decided 2026-11-21:
 the person, else 404: the large mark, name, role, organization, the
 projects both people are in, admins' "Remove image" and "Change
 organization". The notice that mail to them bounces, for staff and the
-person (`mail-sending.md`).
+person (`mail-sending.md`). No "All people" link at the bottom (decided
+2026-11-22: the navigation has the People page).
 
 **Their recent activity** (decided 2026-11-22, replacing the person
 feed page): their last 5 entries ("Recent activity"), rendered and

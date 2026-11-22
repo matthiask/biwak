@@ -49,6 +49,8 @@ class PersonPageTest(TestCase):
         response = self.get(self.ben, self.cleo)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No projects in common.")
+        # The navigation has the People page: no link at the bottom
+        self.assertNotContains(response, "All people")
 
     def test_an_external_sees_the_people_of_their_projects_only(self):
         response = self.get(self.pia, self.cleo)

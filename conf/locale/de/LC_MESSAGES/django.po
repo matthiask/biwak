@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:44+0100\n"
+"POT-Creation-Date: 2026-11-22 17:46+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -6884,10 +6884,6 @@ msgstr "Keine gemeinsamen Projekte."
 msgid "Recent activity"
 msgstr "Neueste Aktivität"
 
-#: biwak/templates/organizations/person.html
-msgid "All people"
-msgstr "Alle Personen"
-
 #: biwak/templates/palette/_palette.html
 msgid "Command palette"
 msgstr "Befehlspalette"
@@ -7506,3 +7502,6 @@ msgstr "gerade eben"
 #, python-format
 msgid "%(time)s ago"
 msgstr "vor %(time)s"
+
+#~ msgid "All people"
+#~ msgstr "Alle Personen"
