@@ -154,6 +154,12 @@ project. Waiting for Basecamp's account export to confirm the plan.
   creation, so the timeline shows them before the comments; people
   assigned since the last run at the to-do's `updated_at` (decided
   2026-11-22).
+- **No mails from an import** (decided 2026-11-22: nobody hears about
+  anything before people use Biwak): no notifications, questions paused,
+  and imported check-in occurrences count as summarized
+  (`checkins.operations.add_occurrence()`), so `send_mails` sends no
+  summaries of past check-ins (it did, found 2026-11-22). Tests run
+  `send_mails` with the after-commit callbacks, where mails are sent.
 - **Visibility** as in Basecamp, so a client never sees what was internal
   there: top-level containers and items get Basecamp's
   `visible_to_clients`, children inherit. What was **internal inside a

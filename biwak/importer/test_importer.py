@@ -437,7 +437,11 @@ class NotifyNobodyTest(ImportCase):
         self.assertTrue(Event.objects.filter(item__isnull=False).exists())
         self.assertFalse(Subscription.objects.filter(user=self.bob).count() == 0)
         self.assertEqual(Notification.objects.count(), 0)
-        call_command("send_mails")
+        # Mails go after the commit: run those callbacks too, or nothing is
+        # sent whatever is due (summaries of every imported check-in went
+        # out, found 2026-11-22)
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command("send_mails")
         self.assertEqual(mail.outbox, [])
 
     def test_a_second_run_tells_nobody_either(self):
@@ -1447,7 +1451,8 @@ class ScheduleTest(ImportCase):
         occurrences = Occurrence.objects.count()
         self.assertEqual(Question.objects.filter(paused_at__isnull=True).count(), 0)
         self.assertEqual(Question.objects.exclude(next_at=None).count(), 0)
-        call_command("send_mails")
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command("send_mails")
         self.assertEqual(Occurrence.objects.count(), occurrences)
         self.assertEqual(mail.outbox, [])
 

@@ -536,11 +536,15 @@ def answer(item, *, user, content, occurrence=None, base=None):
 @transaction.atomic
 def add_occurrence(item, *, date, asked_at, people=()):
     """A time the question was asked in the past (the importer), without
-    asking anybody: no mails. Returns the occurrence, which exists already
-    for the date when it was added before."""
+    asking anybody: no mails, and no summary later either (summarized
+    already: Basecamp mailed it back then; decided 2026-11-22). Returns the
+    occurrence, which exists already for the date when it was added
+    before."""
     question = Question.objects.get(item=item)
     occurrence, was_created = Occurrence.objects.get_or_create(
-        question=question, date=date, defaults={"asked_at": asked_at}
+        question=question,
+        date=date,
+        defaults={"asked_at": asked_at, "summarized_at": asked_at},
     )
     if was_created:
         occurrence.asked.set(people)
