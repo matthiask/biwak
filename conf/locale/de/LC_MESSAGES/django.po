@@ -4,8 +4,6 @@ msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-22 19:25+0100\n"
-||||||| c7b4e19
-"POT-Creation-Date: 2026-11-22 18:15+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
