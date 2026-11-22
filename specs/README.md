@@ -37,7 +37,7 @@ confirm: `decisions-to-confirm.md`.
 | `dashboard.md` | built | Home: what needs me, recent updates, my projects |
 | `help.md` | built | the help pages from `docs/` |
 | `celebrations.md` | built | small celebrations and animations |
-| `handover.md` | built | when somebody leaves: assignments stay, assigning several to-dos, all projects for admins |
+| `handover.md` | built; moving and dating several open | when somebody leaves: assignments stay, assigning several to-dos, all projects for admins |
 | `timeline.md` | built | what happened between a to-do's comments |
 | `pwa.md` | built | installable as an app |
 | `mail-sending.md` | built | the outbox and sending through Resend, bounces |
@@ -55,6 +55,7 @@ confirm: `decisions-to-confirm.md`.
 | `todos-from-text.md` | built | dropping or pasting a Markdown list onto a to-do list: headings become groups |
 | `templates.md` | built (decisions to confirm in the spec) | projects and lists started from templates kept in the app |
 | `cli-style.md` | built (0.60.0) | the CLI in the style of gov and wb: one plural group per thing, verbs as subcommands |
+| `web-push.md` | open | push notifications on phones and desktops |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
 
 ## Writing a spec for a new part

@@ -68,8 +68,9 @@ list's page (list and board).
   selection is one group's, this one goes across groups, lists and
   projects (decided 2026-11-22: dragging several stays as it was).
 - **The bar** with a selection (`items/_selection_bar.html`): "Assign…"
-  and "Deselect", with the count ("3 selected"). More actions (due date,
-  moving, completing) may come later; not now.
+  and "Deselect", with the count ("3 selected"); "Move…" and "Due
+  date…" below (open). Not completing several at once (decided
+  2026-11-22: it doesn't make much sense).
 - **"Assign…"** opens a modal (`form_response`) at
   `/todos/assign/?items=…&next=…` (`biwak/items/assigning.py`, the IDs
   in the query like the tiles' `items`), back to the page it came from:
@@ -104,6 +105,23 @@ list's page (list and board).
   assignable to every to-do are a 400 without names (a client mustn't
   learn who an ID is). **CLI:** `biwak todos assign TODO… --to PERSON…
   [--replace]` prints each to-do with its assignees.
+
+## Moving and dating several to-dos (open)
+
+Asked by the user 2026-11-22, on the same selection as "Assign…".
+
+- **"Move…"**: a modal like a single to-do's "Move to…" (a list of the
+  same project and a group of it, `move_todos()`), all or nothing;
+  across projects is a question (single to-dos stay in their project
+  today, `lists-across-projects.md`).
+- **"Due date…"** (the user is less sure, "might be useful"): one due
+  date for all, or "Move by N days" (and start dates with them), or
+  "Remove", like copying a list's dates (`lists-across-projects.md`).
+- Both one event per action like "Assign…" (one entry in the lantern),
+  the API (`POST /api/v1/todos/move/`, `/todos/dates/` with the IDs) and
+  the CLI (`biwak todos move ID… --list`, `biwak todos dates ID…`).
+- Questions: moving several across projects; whether "Due date…" is
+  wanted at all.
 
 ## Deactivating says what's left
 
