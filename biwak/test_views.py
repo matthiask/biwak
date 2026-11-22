@@ -114,7 +114,9 @@ class ViewsTest(TestCase):
         self.assertNotContains(self.client.get(reverse("projects")), "Salaries")
         admin = person("Root", is_admin=True)
         self.client.force_login(admin)
-        self.assertContains(self.client.get(reverse("projects")), "Salaries")
+        # Admins find it in "All projects" (specs/handover.md)
+        self.assertNotContains(self.client.get(reverse("projects")), "Salaries")
+        self.assertContains(self.client.get(reverse("all_projects")), "Salaries")
         self.assertEqual(self.client.get(limited.get_absolute_url()).status_code, 404)
         # Not archived ones, which the list leaves out
         limited.archived_at = timezone.now()

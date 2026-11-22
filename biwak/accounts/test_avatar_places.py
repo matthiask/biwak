@@ -174,6 +174,7 @@ class PlacesTest(TestCase):
                 "initials": "AE",
                 "color": self.ada.avatar_color,
                 "image_url": self.image,
+                "inactive": False,
             },
         )
         ben = next(p for p in data if p["id"] == self.ben.pk)
