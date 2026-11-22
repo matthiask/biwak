@@ -95,7 +95,8 @@ Every change is all or nothing: if one of the to-dos was trashed or you
 can't see it anymore, nothing changes.
 
 `biwak todos assign 12 13 14 --to 7 [--replace]`, `biwak todos move 12
-13 --list 5 [--group 8]` and `biwak todos dates 12 13 --due 2026-12-20`
+13 --list 5 [--group 8] [--confirm]` (`--confirm` into another project,
+once you've read who's added and dropped) and `biwak todos dates 12 13 --due 2026-12-20`
 (or `--shift 7`, `--remove`) do the same.
 
 ## A to-do

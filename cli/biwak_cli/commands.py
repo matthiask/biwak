@@ -1449,16 +1449,23 @@ def todo_edit(todo_id, title, notes, due, starts, assign, attach, repeat, as_jso
 @click.option(
     "--todos",
     "several",
-    help="Several to-dos' IDs, comma separated, instead of TODO; they end up"
-    " next to each other in this order.",
+    help="Several to-dos' IDs, comma separated, instead of TODO.",
 )
-@click.option("--list", "list_id", type=int, required=True, help="The list's ID.")
+@click.option(
+    "--list", "list_id", type=int, required=True, help="The list's ID (any project)."
+)
 @click.option("--group", type=int, help="The group's ID (default: ungrouped).")
+@click.option(
+    "--confirm",
+    is_flag=True,
+    help="Into another project: move although people are added or dropped.",
+)
 @json_option
-def todo_move(todo_ids, several, list_id, group, as_json):
+def todo_move(todo_ids, several, list_id, group, confirm, as_json):
     """Move TODO (or several, next to each other in this order) to the end
-    of a list of the same project, into a group or ungrouped: all or
-    nothing"""
+    of a list, into a group or ungrouped: all or nothing. Into another
+    project (staff) people who don't see them there are added or dropped:
+    the error says who, --confirm moves anyway."""
     if bool(todo_ids) == bool(several):
         terminate("Give either TODO or --todos.")
     if several:
@@ -1466,22 +1473,18 @@ def todo_move(todo_ids, several, list_id, group, as_json):
             todo_ids = [int(part) for part in several.split(",")]
         except ValueError:
             terminate("--todos takes IDs separated by commas.")
-    if len(todo_ids) == 1:
-        data = [
-            request(
-                "POST",
-                f"todos/{todo_ids[0]}/move/",
-                json={"list_id": list_id, "group_id": group},
-            )
-        ]
-    else:
-        data = request(
-            "POST",
-            f"lists/{list_id}/todos/move/",
-            json={"todo_ids": list(todo_ids), "group_id": group},
-        )
+    data = request(
+        "POST",
+        "todos/move/",
+        json={
+            "ids": list(todo_ids),
+            "list_id": list_id,
+            "group_id": group,
+            "confirm": confirm,
+        },
+    )
     if as_json:
-        return echo_json(data[0] if len(todo_ids) == 1 and not several else data)
+        return echo_json(data[0] if len(data) == 1 and not several else data)
     for moved in data:
         click.echo(f"Moved #{moved['id']} {moved['title']}.")
     return None

@@ -113,7 +113,8 @@ Jede Änderung gilt für alle oder keines: Liegt eines der To-dos im
 Papierkorb oder kannst du es nicht mehr sehen, ändert sich nichts.
 
 `biwak todos assign 12 13 14 --to 7 [--replace]`, `biwak todos move 12
-13 --list 5 [--group 8]` und `biwak todos dates 12 13 --due 2026-12-20`
+13 --list 5 [--group 8] [--confirm]` (`--confirm` in ein anderes
+Projekt, wenn du gelesen hast, wer hinzugefügt wird und wegfällt) und `biwak todos dates 12 13 --due 2026-12-20`
 (oder `--shift 7`, `--remove`) tun dasselbe.
 
 ## Ein To-do

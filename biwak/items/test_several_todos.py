@@ -566,3 +566,76 @@ class DatesAPITest(Selection):
         self.assertIn("1 of the selected to-dos", response.json()["detail"])
         response = self.post({"ids": [self.copy.pk], "dates": "remove"})
         self.assertEqual(response.status_code, 200)
+
+
+class MoveAPITest(Selection):
+    def setUp(self):
+        super().setUp()
+        self.shop = project("Shop", members=[self.ada, self.cleo], all_access=False)
+        self.orders = ops.create_list(
+            project=self.shop, title="Orders", creator=self.ada
+        )
+        self.internal = self.budget.parent
+
+    def post(self, data):
+        return self.client.post(
+            "/api/v1/todos/move/", data, content_type="application/json"
+        )
+
+    def test_within_a_project(self):
+        self.client.force_login(self.ada)
+        response = self.post({
+            "ids": [self.photos.pk, self.copy.pk],
+            "list_id": self.internal.pk,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [t["id"] for t in response.json()], [self.photos.pk, self.copy.pk]
+        )
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.parent_id, self.internal.pk)
+
+    def test_across_projects_confirm(self):
+        ops.assign(self.copy, [self.bob], actor=self.ada)
+        self.client.force_login(self.ada)
+        data = {"ids": [self.copy.pk, self.photos.pk], "list_id": self.orders.pk}
+        response = self.post(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Bob Example will be added to Shop.", response.json()["detail"])
+        self.assertIn("confirm", response.json()["detail"])
+        response = self.post(data | {"confirm": True})
+        self.assertEqual(response.status_code, 200)
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.project, self.shop)
+
+    def test_errors(self):
+        self.client.force_login(self.ada)
+        for data, status in [
+            ({"ids": [], "list_id": self.orders.pk}, 400),
+            ({"ids": [self.copy.pk, self.copy.pk], "list_id": self.orders.pk}, 400),
+            ({"ids": [self.copy.pk], "list_id": 999999}, 404),
+        ]:
+            with self.subTest(data=data):
+                self.assertEqual(self.post(data).status_code, status)
+        ops.trash(self.photos, actor=self.ada)
+        response = self.post({
+            "ids": [self.copy.pk, self.photos.pk],
+            "list_id": self.internal.pk,
+        })
+        self.assertIn("1 of the selected to-dos", response.json()["detail"])
+
+    def test_clients(self):
+        """Within the project only (decided 2026-11-22)"""
+        visible = ops.create_list(
+            project=self.shop, title="Shared", creator=self.ada, visible=True
+        )
+        self.client.force_login(self.cleo)
+        response = self.post({"ids": [self.copy.pk], "list_id": visible.pk})
+        self.assertEqual(response.status_code, 403)
+        response = self.post({"ids": [self.copy.pk], "list_id": self.internal.pk})
+        self.assertEqual(response.status_code, 404)
+        later = ops.create_list(
+            project=self.website, title="Later", creator=self.ada, visible=True
+        )
+        response = self.post({"ids": [self.copy.pk], "list_id": later.pk})
+        self.assertEqual(response.status_code, 200)

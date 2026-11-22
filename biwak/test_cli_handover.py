@@ -5,7 +5,7 @@ import json
 from biwak import test_cli
 from biwak.items import operations as ops
 from biwak.organizations import activation
-from biwak.test_utils import person
+from biwak.test_utils import person, project
 
 
 class HandoverCLITest(test_cli.CLITest):
@@ -76,3 +76,16 @@ class HandoverCLITest(test_cli.CLITest):
         other.refresh_from_db()
         self.assertEqual(self.todo.parent_id, later.pk)
         self.assertLess(other.position, self.todo.position)
+
+    def test_move_across_projects(self):
+        other = project("Other", members=[self.ada], all_access=False)
+        later = ops.create_list(project=other, title="Later", creator=self.ada)
+        result = self.biwak("todos", "move", self.todo.pk, "--list", later.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Gil Example will be added to Other.", result.output)
+        output = self.biwak(
+            "todos", "move", self.todo.pk, "--list", later.pk, "--confirm"
+        ).output
+        self.assertIn(f"Moved #{self.todo.pk} Copy.", output)
+        self.todo.refresh_from_db()
+        self.assertEqual(self.todo.project, other)

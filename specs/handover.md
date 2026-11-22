@@ -4,8 +4,7 @@ What happens to someone's work when they leave for good, and the tools to
 hand it over: assignments that stay, assigning several to-dos at once,
 and the admins' list of all projects. Decided with the user 2026-11-22.
 
-**Status:** built (2026-11-22); moving across projects and telling
-once about moving and dating several open (below).
+**Status:** built (2026-11-22).
 
 ## Deactivating keeps the assignments
 
@@ -111,9 +110,8 @@ list's page (list and board).
 
 Asked by the user 2026-11-22, on the same selection as "Assign…".
 
-**Status:** "Due date…" and "Move…" within a project built
-(2026-11-22); moving across projects and telling subscribers once (one
-lantern entry) open, questions below.
+**Status:** built (2026-11-22): "Due date…", "Move…" within and
+across projects, told once about dates, moving telling nobody.
 
 - **"Move…"**: a modal like a single to-do's "Move to…" (a list of the
   same project and a group of it, `move_todos()`), all or nothing. If
@@ -220,13 +218,18 @@ lantern entry) open, questions below.
   (`set`|`shift`|`remove`), `due_on`, `days` (-3650 to 3650), all or
   nothing, answering the to-dos (`TodoOut`); 400 for no to-dos, `set`
   without `due_on` ("Send the due date."), `shift` without `days`, a
-  to-do gone or a start date after the date. Moving several in a
-  project already had its endpoint, `POST /lists/{id}/todos/move/`
-  (`todo_ids`, `group_id`, `index`), so there's no `/todos/move/` yet:
-  it's for moving across projects (open). **CLI** (0.61.0): `biwak
-  todos dates TODO… --due DATE|--shift DAYS|--remove` prints each to-do
-  with its dates; `biwak todos move TODO… --list ID [--group ID]` takes
-  several IDs (`--todos 1,2` still works).
+  to-do gone or a start date after the date. `POST /api/v1/todos/move/`
+  (built 2026-11-22) with `ids`, `list_id` (any project), `group_id`,
+  `index`, `confirm`: all or nothing, completed to-dos too, answering
+  the to-dos; into another project a 400 with who's added and dropped
+  ("… Send “confirm”: true to move them anyway.") unless `confirm`, a
+  403 for clients ("Only staff move to-dos into other projects."); 400
+  for no to-dos or one twice, a to-do gone, archived projects or
+  templates. No new list through the API: create it first. **CLI**
+  (0.61.0): `biwak todos dates TODO… --due DATE|--shift DAYS|--remove`
+  prints each to-do with its dates; `biwak todos move TODO… --list ID
+  [--group ID] [--confirm]` goes through `/todos/move/`, across
+  projects too (`--todos 1,2` still works).
 - Tests: `biwak/items/test_several_todos.py`,
   `biwak/test_cli_handover.py`, the bar's buttons in
   `biwak/test_e2e_handover.py` (`SelectingTodosTest`).

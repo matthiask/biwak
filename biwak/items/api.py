@@ -738,6 +738,56 @@ def todos_dates(request, data: DatesManyIn):
     return [todo_out(found[todo.pk], request.user) for todo in todos]
 
 
+class MoveSelectedIn(Schema):
+    ids: list[int]
+    list_id: int
+    group_id: int | None = None
+    index: int | None = None
+    # Moving into another project adds or drops people: say so first
+    confirm: bool = False
+
+
+@router.post("todos/move/", response=list[TodoOut])
+def todos_move_selected(request, data: MoveSelectedIn):
+    """The selection's "Move…" (specs/handover.md): the to-dos ``ids``,
+    completed ones too, into the list ``list_id`` of any project (staff;
+    clients within the to-dos' project) and ``group_id``, next to each
+    other in this order at ``index`` (default: the end). All or nothing.
+    Into another project people who don't see them there are added or
+    dropped: without ``confirm`` that's a 400 saying who."""
+    from biwak.items.assigning import missing_message, move_notes, todos_for
+
+    if not data.ids:
+        bad_request(_("Send at least one to-do."))
+    if len(set(data.ids)) != len(data.ids):
+        bad_request(_("Send each to-do once."))
+    todos, missing = todos_for(request.user, data.ids)
+    if missing:
+        bad_request(missing_message(missing))
+    target = item_for(request, data.list_id, Kind.LIST)
+    group = None
+    if data.group_id is not None:
+        group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
+    if any(todo.project_id != target.project_id for todo in todos):
+        if request.user.is_client:
+            raise HttpError(403, _("Only staff move to-dos into other projects."))
+        note = move_notes(todos, target.project, target.is_client_visible, request.user)
+        if note and not data.confirm:
+            bad_request(
+                " ".join([note, _("Send “confirm”: true to move them anyway.")])
+            )
+    try:
+        ops.move_todos_to(
+            todos, todolist=target, group=group, index=data.index, actor=request.user
+        )
+    except ValueError as exc:
+        bad_request(str(exc))
+    found = {
+        item.pk: item for item in _for_todo_out(Item.objects.filter(pk__in=data.ids))
+    }
+    return [todo_out(found[pk], request.user) for pk in data.ids]
+
+
 @router.get("todos/{todo_id}/", response=TodoOut)
 def todo_detail(request, todo_id: int):
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)

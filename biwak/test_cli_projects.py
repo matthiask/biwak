@@ -153,9 +153,19 @@ class TodoMoveCLITest(test_cli.CLITest):
         ]:
             with self.subTest(args=args):
                 self.assertNotEqual(self.biwak(*args).exit_code, 0)
+        # Into another project: who's added first (specs/handover.md)
         elsewhere = ops.create_list(
-            project=project("Other", members=[self.ada]), title="X", creator=self.ada
+            project=project("Other", members=[self.ada], all_access=False),
+            title="X",
+            creator=self.ada,
         )
+        ops.assign(self.a, [person("Bob")], actor=self.ada)
         result = self.biwak("todos", "move", self.a.pk, "--list", elsewhere.pk)
         self.assertEqual(result.exit_code, 1)
-        self.assertIn("400", result.output)
+        self.assertIn("Bob Example will be added to Other.", result.output)
+        result = self.biwak(
+            "todos", "move", self.a.pk, "--list", elsewhere.pk, "--confirm"
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.parent_id, elsewhere.pk)

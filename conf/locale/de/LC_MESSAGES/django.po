@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 22:16+0100\n"
+"POT-Creation-Date: 2026-11-22 22:18+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2918,13 +2918,21 @@ msgstr "Sende mindestens ein To-do."
 msgid "Send the due date."
 msgstr "Sende die Fälligkeit."
 
-#: biwak/items/api.py biwak/items/views.py
-msgid "To-dos can't move to another project."
-msgstr "To-dos können nicht in ein anderes Projekt verschoben werden."
-
 #: biwak/items/api.py
 msgid "Send each to-do once."
 msgstr "Sende jedes To-do einmal."
+
+#: biwak/items/api.py
+msgid "Only staff move to-dos into other projects."
+msgstr "Nur Mitarbeitende verschieben To-dos in andere Projekte."
+
+#: biwak/items/api.py
+msgid "Send “confirm”: true to move them anyway."
+msgstr "Sende „confirm“: true, um sie trotzdem zu verschieben."
+
+#: biwak/items/api.py biwak/items/views.py
+msgid "To-dos can't move to another project."
+msgstr "To-dos können nicht in ein anderes Projekt verschoben werden."
 
 #: biwak/items/api.py biwak/items/models.py
 msgid "Lists and folders have no comments."
