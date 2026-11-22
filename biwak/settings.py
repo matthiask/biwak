@@ -59,6 +59,7 @@ INSTALLED_APPS = [
         "allauth.usersessions",
         "biwak.accounts",
         "biwak.organizations",
+        "biwak.teams",
         "biwak.projects",
         "biwak.items",
         "biwak.activity",

@@ -1352,6 +1352,13 @@ html:not(.js) .wb-handle {
   --wb-avatar-size: 2rem;
 }
 
+/* A team's mark (specs/teams.md): the people icon on the quiet fill */
+.wb-team-mark {
+  color: var(--bs-body-color);
+  font-size: calc(var(--wb-avatar-size) * 0.6);
+  font-weight: normal;
+}
+
 /* Inactive people (specs/handover.md): the mark greyed */
 .wb-avatar-inactive {
   filter: grayscale(1);

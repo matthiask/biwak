@@ -24,6 +24,8 @@ from biwak.modals import form_response
 from biwak.organizations import activation, operations as org_ops
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project, knows_everybody
+from biwak.teams import operations as team_ops
+from biwak.teams.picking import visible_teams
 
 
 @dataclass
@@ -225,6 +227,13 @@ def people(request):
             "inactive": inactive_for(request.user) if inactive else None,
             "can_manage": org_ops.can_manage(request.user),
             "can_invite": can_invite,
+            # Teams (specs/teams.md): staff see them, own staff manage them
+            "teams": (
+                visible_teams(request.user)
+                if team_ops.can_see(request.user) and not (invited or inactive)
+                else None
+            ),
+            "can_manage_teams": team_ops.can_manage(request.user),
         },
     )
 

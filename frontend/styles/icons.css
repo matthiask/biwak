@@ -184,6 +184,9 @@
 .bi-pencil::before {
   content: "\f4cb";
 }
+.bi-people::before {
+  content: "\f4d0";
+}
 .bi-person::before {
   content: "\f4e1";
 }

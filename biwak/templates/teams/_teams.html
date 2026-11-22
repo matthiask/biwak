@@ -1,0 +1,35 @@
+{% load biwak i18n %}
+{% comment %}
+  The Teams section of the People page (specs/teams.md): for staff; own
+  staff add teams. Each team with its members.
+{% endcomment %}
+<section class="mb-4" id="teams" data-teams-section>
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="h5 mb-0">{% translate "Teams" %}</h2>
+    {% if can_manage_teams %}
+      <a
+        href="{% url 'team_create' %}"
+        data-modal
+        class="btn btn-sm btn-quiet"
+      >{% translate "New team" %}</a>
+    {% endif %}
+  </div>
+  <div class="list-group">
+    {% for team, members in teams %}
+      <div class="list-group-item d-flex align-items-center gap-2" data-kb-row>
+        <span class="wb-avatar wb-avatar-md wb-team-mark">{% icon "people" %}</span>
+        <div>
+          <a href="{{ team.get_absolute_url }}" data-kb-open>{{ team }}</a>
+          <div class="small text-body-secondary">
+            {% for user in members %}{{ user.display_name }}{% if not forloop.last %},
+              {% endif %}{% empty %}{% translate "Nobody yet." %}{% endfor %}
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">
+        {% translate "No teams yet. A team picks several people at once when assigning, adding subscribers or mentioning." %}
+      </div>
+    {% endfor %}
+  </div>
+</section>

@@ -149,4 +149,5 @@
         {% translate "Nobody yet." %}
       </p>{% endif %}
   {% endfor %}
+  {% if teams is not None %}{% include "teams/_teams.html" %}{% endif %}
 {% endblock content %}
