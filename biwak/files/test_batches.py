@@ -146,6 +146,35 @@ class BatchTest(TestCase):
         message = next(m for m in mail.outbox if m.to == [self.bob.email])
         self.assertIn("Ada Example uploaded 2 files to Minutes.", message.body)
 
+    def test_a_batch_still_going_up_is_one_entry_too(self):
+        """The lantern chains the files of one batch however far apart,
+        like the mail"""
+        self.upload(["a.txt"], more=True)
+        Notification.objects.update(
+            created_at=timezone.now() - dt.timedelta(minutes=30)
+        )
+        self.upload(["b.txt"])
+        self.assertEqual(lantern.unread_counts(self.bob), (2, 1))
+
+    def test_mails_and_the_lantern_group_rounds_alike(self):
+        """A round still waiting for files, another one 30 minutes later:
+        two entries and two mails, each when it's due"""
+        self.upload(["a.txt"], more=True)
+        Notification.objects.update(
+            created_at=timezone.now() - dt.timedelta(minutes=30)
+        )
+        self.upload(["b.txt"], batch="b" * 32)
+        self.assertEqual(lantern.unread_counts(self.bob), (2, 2))
+        now = timezone.now()
+        self.assertEqual(self.send(now + dt.timedelta(minutes=11)), 2)
+        [message] = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertIn("b.txt", message.body)
+        self.assertNotIn("a.txt", message.body)
+        self.assertEqual(self.send(now + dt.timedelta(minutes=31)), 2)
+        message = [m for m in mail.outbox if m.to == [self.bob.email]][-1]
+        self.assertIn("a.txt", message.body)
+        self.assertNotIn("b.txt", message.body)
+
     def test_a_batch_whose_last_file_never_came_goes_after_an_hour(self):
         self.upload(["a.txt"], more=True)
         now = timezone.now()

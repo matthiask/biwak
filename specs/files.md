@@ -190,7 +190,9 @@ the counts of the top level's folders, docs and files.
   the lantern and the mails merge it (`lantern.md`, `notifications.md`).
   One person's batches into the same folder (or the top level), each
   within 10 minutes of the one before, merge into one entry and one
-  mail too (decided 2026-11-21, like the feed).
+  mail too (decided 2026-11-21, like the feed); the files of one batch
+  stay together however long one takes (`lantern.chain()`, one rule
+  for the lantern and the mails, decided 2026-11-22).
 - **A batch's mail waits until it's complete** (decided 2026-11-21,
   the simplest robust way): the modal sends `more` with every file but
   the last it will send (`UploadOneForm`, `create_upload(more=)`,

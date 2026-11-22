@@ -554,8 +554,12 @@ def send_mails(*, now=None):
     count = 0
 
     # Each change: per person and item, or one person's files uploaded into
-    # one folder (specs/files.md), once the newest is 10 minutes old
+    # one folder (specs/files.md) chained as the lantern does
+    # (``lantern.chain()``), once the newest is 10 minutes old
+    from biwak.activity.lantern import chain
+
     groups = {}
+    chains = {}
     for (
         pk,
         user_id,
@@ -566,18 +570,27 @@ def send_mails(*, now=None):
         project,
         parent,
         created_at,
-    ) in unsent.filter(user__mail_delivery=MailDelivery.EACH).values_list(
-        "pk",
-        "user",
-        "event__item",
-        "event__data__batch",
-        "event__data__more",
-        "event__actor",
-        "event__project",
-        "event__item__parent",
-        "created_at",
+    ) in (
+        unsent
+        .filter(user__mail_delivery=MailDelivery.EACH)
+        .order_by("created_at", "pk")
+        .values_list(
+            "pk",
+            "user",
+            "event__item",
+            "event__data__batch",
+            "event__data__more",
+            "event__actor",
+            "event__project",
+            "event__item__parent",
+            "created_at",
+        )
     ):
-        what = ("batch", (actor, project, parent)) if batch else ("item", item_id)
+        if batch:
+            key = (user_id, actor, project, parent)
+            what = ("batch", (*key, chain(chains, key, batch, created_at)))
+        else:
+            what = ("item", item_id)
         group = groups.setdefault(
             (user_id, what), {"pks": [], "newest": (created_at, pk), "more": False}
         )
