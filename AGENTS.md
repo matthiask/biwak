@@ -1,8 +1,8 @@
 # Biwak
 
 A self-hosted project management tool for teams working with clients.
-`SPEC.md` describes what the app does and why, the model, the decisions
-and the build order; `specs/` has one spec per part. Read `SPEC.md` and
+`SPEC.md` describes what the app does and why, the model and the
+decisions; `specs/` has one spec per part (`specs/README.md` lists them). Read `SPEC.md` and
 the spec of the part you're working on before anything else, and update
 them when a decision changes (dated: "decided 2026-11-20").
 
@@ -25,13 +25,11 @@ them when a decision changes (dated: "decided 2026-11-20").
   `/ws/live/` on. Deployed, the websockets need an ASGI process
   and Redis (`CACHE_URL`'s, or `REDIS_URL`), see `specs/collaboration.md`.
 - `./manage.py fairy_tasks` runs the daily jobs (trash older than 30
-  days, expired API tokens, `check_visibility` mailing admins); new daily
-  jobs go there, hourly ones into an `hourly_tasks` like Governance's.
+  days, expired API tokens, `check_visibility` mailing admins).
   `./manage.py send_mails` sends the notification mails and digests that
   are due, retries the outbox (`biwak/outbox/`) and tells about docs
   whose creator never clicked "Done" (`specs/files.md`); cron runs it
-  every minute. Once deployed, the cron jobs live
-  in the argocd repository.
+  every minute. Deployed, the cron jobs live in the argocd repository.
 - Replies by mail come in through Resend's webhook (`/inbound/resend/`);
   `./manage.py receive_mail FILE.eml --dmarc pass` handles a mail by
   hand. Off unless `REPLY_DOMAIN`, `RESEND_API_KEY` and
@@ -44,10 +42,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   [--dry-run] [--archive]` imports a Basecamp 4 project
   (`specs/import-basecamp.md`); a second run updates, `--archive`
   archives it in Basecamp afterwards. Always dry-run first.
-- The audit log (`biwak/audit/`) is a trigger on the main tables; new
-  tables people change get `audit_tables()` in a migration. Requests,
-  API tokens and `fairy_tasks` set who changes things (`set_user_name()`).
-  Tests reading the audit log delete its rows first.
+- The audit log (`biwak/audit/`) is a trigger on the main tables.
+  Requests, API tokens and `fairy_tasks` set who changes things
+  (`set_user_name()`). Tests reading the audit log delete its rows first.
 - `.env` (not committed): `DATABASE_URL=postgres://localhost:5432/biwak`,
   `SECRET_KEY`, `DEBUG=True`.
 
@@ -110,8 +107,7 @@ library; its own code is the user's, and adapting it is fine (decided
 
 # Working on a part
 
-- One part per branch and worktree (`specs/<part>.md`), in the order of
-  "Build order" in `SPEC.md`; a part's spec says what it depends on.
+- One part per branch and worktree (`specs/<part>.md`).
 - Small commits, each with tests, docs and spec changes together.
 - Keep it consistent: check what the existing code already does (the
   same action elsewhere, the other entry points) and do the same. No
@@ -199,9 +195,8 @@ What every part does the same way. Look at how the core does it
     operations, every page and endpoint as staff and as a client
     (including a client getting 404 for internal items), the CLI
     commands (`biwak/test_cli.py`). Made-up data from
-    `biwak/test_utils.py`. Browser tests (`biwak/test_e2e.py`) only for
-    JavaScript and htmx interactions (decided 2026-11-20), not for CSS
-    layout (decided 2026-11-21, above): screenshots for that.
+    `biwak/test_utils.py`. Browser tests only for JavaScript and htmx
+    (above).
 13. **Done** means: the spec's "Done when" list is true, the help says
     what was built, the tests your change affects pass, `uvx prek run
     --all-files` is clean, and the spec says what was built (a "Status"

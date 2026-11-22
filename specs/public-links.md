@@ -5,20 +5,13 @@ for a few days. Like Basecamp's public links, but the modal first offers
 the item's own link, because people with an account never need a public
 one. Decided with the user 2026-11-22.
 
-**Status:** built 2026-11-22 (branch `public-links`): `biwak/public_links/`
-(model, operations, views, API), Share… in `items/_more_entries.html`
-and in the palette, the CLI's `share`, `unshare` and
-`public-links`; the decisions made on the way are in "Built" below and
-in `decisions-to-confirm.md`.
-
-Depends on: `access.md` (visibility, sign-in), `core.md` (items),
-`files.md` (attachments, file downloads), `notifications.md` (events),
-`ui.md` (modals, the danger button), `todos.md` (the calendar feed's
-secret URL, the model to copy).
+**Status:** built (2026-11-22). The code: `biwak/public_links/` (model,
+operations, views, API).
 
 ## What can be shared
 
-- **Leaves only:** to-dos, messages, docs and files. Not lists or
+- **Leaves only:** to-dos, messages, docs and files, not drafts
+  (`Item.is_shareable`, `SHAREABLE` in `biwak/items/models.py`). Not lists or
   folders: a container would show whatever is added to it later. Not
   check-in answers either (decided 2026-11-22): they have no page and
   no "More" menu of their own.
@@ -28,9 +21,9 @@ secret URL, the model to copy).
 
 ## The modal
 
-"Share…" in the item's "More" menu (`items/_more.html`), in the palette
-(`biwak/palette/actions.py`) and as a page, like every modal form
-(`form_response()`):
+"Share…" in the item's "More" menu (`items/_more_entries.html`), in the
+palette (`biwak/palette/actions.py`) and as a page, like every modal form
+(`form_response()`; `item_share`, `public_links/share.html`):
 
 1. First the item's **own link** with "Copy" (`data-copy`, like the
    calendar feed), saying that people with an account open that one and
@@ -41,6 +34,14 @@ secret URL, the model to copy).
 3. **While a link is live** the modal shows it instead, with "Copy",
    when it expires and "Stop sharing". **One live link per item:**
    creating a new one (choosing an expiry again) replaces it.
+
+- With a live link the expiry form stays below it, its button still "Create public link",
+  with "A new public link replaces this one." (decided 2026-11-22).
+- Creating or stopping in the modal answers with the modal again (the
+  new link focused) instead of a redirect, so it can be copied (decided
+  2026-11-22); the page redirects to itself. "Stop sharing" posts
+  `stop` to the same URL. `modal.js` compares all of a dialog's forms
+  for Escape.
 
 ## The badge
 
@@ -75,17 +76,29 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   sent on.
 - **Little context:** the title, the text (Markdown rendered, ticking
   off), its attachments, the file itself for files, the author's name
-  and the date of the last change (`updated_at`, decided 2026-11-22). No comments, no project name, no other people, no
-  navigation, no links into the app; links to other items in the text
-  stay as they are (they need an account).
+  and the date of the last change (`updated_at`, decided 2026-11-22). No
+  comments, no project name, no other people, no navigation, no links
+  into the app; links to other items in the text stay as they are (they
+  need an account).
+- `public_links/public.html`, not `base.html`: the same whether signed
+  in or not, no scripts of the app's own beyond the bundle. It shows the
+  title and mentions as written (nobody looked up), the creator's name
+  and the date of the last change, the text with disabled checkboxes (a
+  doc's without its title line), the file's preview, name, size and
+  download for files (confirmed 2026-11-22). `noindex` and `no-referrer`
+  as meta tags and headers (`X-Robots-Tag`, `Referrer-Policy`),
+  `no-store`. `PublicLink.objects.open()` checks expiry, the item's
+  status, drafts and the project's archive on every request.
 - **Attachments and the file download** at their storage's URLs, like
   on the app's pages (decided 2026-11-22, `files.md`, "Downloads"): the
   page checked the token and isn't cached (`no-store`), so a presigned
   URL is handed out only while the link is open; one handed out stays
   usable up to an hour after the link ends (accepted, as in the app).
   The preview goes through the token (`/p/<token>/preview/`, which makes
-  it) until it was made. The token's downloads stay for addresses handed
-  out before; never the app's protected URLs.
+  it) until it was made. The token's downloads (`/p/<token>/download/`,
+  `/preview/`, `/attachments/<key>/<name>`) stay for addresses handed
+  out before and serve the current version and the item's own
+  attachments only; never the app's protected URLs.
 - **Gone is 404**, the same page whether the token never existed,
   expired or was stopped.
 
@@ -94,10 +107,17 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
 - At its expiry; "Stop sharing"; replacing it.
 - **Trashing the item** (or its container, or the project) or
   **archiving its project** ends it for good (decided 2026-11-22):
-  those operations delete the item's links, so restoring or unarchiving
-  doesn't bring them back. The page checks the item's status on every
-  request too.
-- `fairy_tasks` deletes expired links daily.
+  those operations delete the item's links (`end_links()`, called by
+  `items.operations.trash()` and `projects.operations.archive_project()`),
+  so restoring or unarchiving doesn't bring them back. The page checks
+  the item's status on every request too.
+- `fairy_tasks` deletes expired links daily (`delete_expired()`).
+- Ending a link by trashing, archiving or expiring records no event of
+  its own.
+- **Deactivating** the person who created a link keeps it, unlike their
+  calendar link: the link is the item's, it expires within 30 days and
+  shows on the page of all public links with their name (decided
+  2026-11-22).
 
 ## Model and rules
 
@@ -106,65 +126,26 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   stored as is (it's shown again in the modal, like the calendar
   feed's), not in the audit log.
 - **Operations** `create_public_link(item, days, actor)` and
-  `stop_public_link(item, actor)` in `biwak/items/operations.py` (or an
-  app of their own), recording an event (`shared_publicly`,
-  `stopped_sharing`) so the feed says who shared what until when. They
-  notify nobody: no mails, no lantern (decided 2026-11-22). **Staff
-  only** (decided 2026-11-22): clients don't see them, also on items
-  visible to them. The item's History (the audit log) doesn't show
-  sharing, the feed does (decided 2026-11-22).
-- **Visibility:** the public page shows exactly one item and what's
-  inside its text; nothing pointing elsewhere is reachable through the
-  token. Tests through every entry point (`AGENTS.md`).
-- **API and CLI:** create, show and stop a public link (staff);
-  `biwak share ITEM --days 7`, `biwak unshare ITEM`.
-- **Help:** a short section where sharing belongs, saying public links
-  are for people outside and expire.
-
-## Built
-
-Where it lives and the choices made while building (2026-11-22):
-
-- **Code:** `biwak/public_links/` (`PublicLink`, `operations.py` with
-  `create_public_link()`, `stop_public_link()`, `end_links()` called by
-  `items.operations.trash()` and `projects.operations.archive_project()`,
-  `delete_expired()` in `fairy_tasks`); `Item.is_shareable`
-  (`SHAREABLE` in `biwak/items/models.py`, not drafts). The events
-  `shared_publicly` (with `days` and `expires_at`) and `stopped_sharing`
-  are in `notify.SILENT` and `activity.operations.STAFF_ONLY` (recorded
-  as internal, so the feeds, the API and live updates leave them out for
-  clients, and the feed's action filter doesn't offer them); the feed says "shared … publicly until …" and
-  "stopped sharing … publicly". Ending a link by trashing, archiving or
-  expiring records no event of its own.
-- **The modal** (`public_links/share.html`, `item_share`): the own link's
-  Copy is the primary button; with a live link the expiry form stays
-  below it, its button still "Create public link", with "A new public
-  link replaces this one." (decided 2026-11-22). Creating or
-  stopping in the modal answers with the modal again (the new link
-  focused) instead of a redirect, so it can be copied (decided
-  2026-11-22); the page
-  redirects to itself. "Stop sharing" posts `stop` to the same URL.
-  `modal.js` compares all of a dialog's forms for Escape.
+  `stop_public_link(item, actor)` in `biwak/public_links/operations.py`,
+  recording an event (`shared_publicly` with `days` and `expires_at`,
+  `stopped_sharing`) so the feed says who shared what until when
+  ("shared … publicly until …", "stopped sharing … publicly"). They
+  notify nobody: no mails, no lantern (decided 2026-11-22;
+  `notify.SILENT`). **Staff only** (decided 2026-11-22): clients don't
+  see them, also on items visible to them (`activity.operations.STAFF_ONLY`:
+  recorded as internal, so the feeds, the API and live updates leave
+  them out for clients, and the feed's action filter doesn't offer
+  them). The item's History (the audit log) doesn't show sharing, the
+  feed does (decided 2026-11-22).
 - **Refusals:** clients get 403 for what they see and 404 for internal
   items (the pages and the API); containers 404 on the page, 400 in the
   API. Admins stop links in projects they can't open from the page of
   all public links (they see them there), not through the item (decided
   2026-11-22).
-- **Deactivating** the person who created a link keeps it, unlike their
-  calendar link: the link is the item's, it expires within 30 days and
-  shows on the page of all public links with their name (decided
-  2026-11-22).
-- **The public page** (`public_links/public.html`, not `base.html`: the
-  same whether signed in or not, no scripts of the app's own beyond the
-  bundle) shows the title and mentions as written (nobody looked up),
-  the creator's name and the date of the last change, the text with disabled
-  checkboxes (a doc's without its title line), the file's preview,
-  name, size and download for files (confirmed 2026-11-22). `noindex` and `no-referrer` as meta tags and
-  headers (`X-Robots-Tag`, `Referrer-Policy`), `no-store`.
-  `PublicLink.objects.open()` checks expiry, the item's status, drafts
-  and the project's archive on every request; the page links the files
-  at their storage's URLs (`file_urls`), the token's downloads
-  (`/p/<token>/download/`, `/preview/`, `/attachments/<key>/<name>`)
-  serve the current version and the item's own attachments only.
-- **API:** `GET /public-links/`, `GET`, `POST` (`{"days": 7}`) and
-  `DELETE` `items/{id}/public-link/` (404 without a live link); CLI 0.43.0.
+- **Visibility:** the public page shows exactly one item and what's
+  inside its text; nothing pointing elsewhere is reachable through the
+  token. Tests through every entry point (`AGENTS.md`).
+- **API and CLI:** create, show and stop a public link (staff):
+  `GET`, `POST` (`{"days": 7}`) and `DELETE` `items/{id}/public-link/`
+  (404 without a live link); `biwak share ITEM --days 7`,
+  `biwak unshare ITEM`.

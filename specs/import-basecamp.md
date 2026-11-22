@@ -3,14 +3,16 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21): `biwak/importer/` (`client.py` the API,
-`convert.py` HTML to Markdown, `importer.py`, `images.py`,
-`models.py` `ImportedObject`, `support.py` recorded shapes with made-up
-data and a fake client for the tests). Not built: `--lazy-files`
-(fetching old attachments when first opened), other people's bookmarks
-(the API only gives the token owner's).
+**Status:** built (2026-11-21). Not built: `--lazy-files` (fetching
+old attachments when first opened), other people's bookmarks (the API
+only gives the token owner's).
 
 ## Running it
+
+The code is `biwak/importer/`: `client.py` the API, `convert.py` HTML
+to Markdown, `importer.py`, `images.py`, `models.py` `ImportedObject`,
+`support.py` recorded shapes with made-up data and a fake client for
+the tests.
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
 [--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--full]
@@ -51,8 +53,7 @@ goes into internal containers, archived recordings skipped.
   recording that made a second run as slow as the first). The report
   counts them as unchanged (a dry run too). Changed subscriptions don't
   change `updated_at`, so they come along only with `--full`, which reads
-  everything as before. Built so (2026-11-22): `ImportedObject`'s
-  `basecamp_updated_at` and `basecamp_comments_count` (cards say
+  everything. `ImportedObject`'s `basecamp_updated_at` and `basecamp_comments_count` (cards say
   `comment_count`), stored once the recording's comments and subscribers
   are done, so an interrupted run reads it again; rows from before have
   none and are read completely once. The children of containers (lists,
@@ -195,8 +196,9 @@ project. Waiting for Basecamp's account export to confirm the plan.
   `every_other_week` interval 2, `every_month` by day or by
   `week_instance`: "the 2nd Monday", and "the last Monday" as the last
   one whether Basecamp says -1 or 5), in the installation's time zone
-  (Basecamp's has none; confirmed 2026-11-21), `start_date` the first date. Imported **paused**, so Biwak
-  doesn't start mailing people unasked. Occurrences come from the
+  (Basecamp's has none; confirmed 2026-11-21), `start_date` the first
+  date. Imported **paused**, so Biwak doesn't start mailing people
+  unasked. Occurrences come from the
   answers' `group_on`.
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
   come in completed at the recording's `updated_at`, by the importing

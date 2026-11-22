@@ -1,8 +1,8 @@
 # Passkeys as a way in, authenticator apps as an optional second factor
 
-**Status:** built (2026-11-21, CLI 0.36.0; "Reset sign-in…" 2026-11-21, CLI 0.38.0). Sign-in in general (codes,
-passkeys, the sign-in page, sessions) is in `access.md`; single sign-on
-in `sso.md`.
+**Status:** built (2026-11-21). Sign-in in general (codes, passkeys,
+the sign-in page, sessions) is in `access.md`; single sign-on in
+`sso.md`.
 
 Trap: allauth counts passkeys as a second factor by default, so once
 somebody had one, signing in by code or Google led to a page asking for
@@ -14,7 +14,7 @@ below is what prevents that.
 - **Passkeys are a way in, not a second factor:** a code, the
   organization's identity provider and a passkey are each enough alone.
   allauth's two-factor step never asks for a passkey.
-- **Every key added is a passkey** (decided 2026-11-21 after a review): a
+- **Every key added is a passkey** (decided 2026-11-21): a
   discoverable credential that verifies the person (PIN, fingerprint),
   never a key that only proves it's present; no "Passwordless" checkbox.
 - **Authenticator apps (TOTP) are an optional second factor:** anybody
@@ -26,14 +26,14 @@ below is what prevents that.
 - **Confirming who one is** (allauth's reauthentication before sensitive
   changes) takes the app or a passkey for people with an app, never a
   code by mail: a code by mail could otherwise add a passkey, which signs
-  in alone, or turn the app off (built 2026-11-21, the most secure
+  in alone, or turn the app off (decided 2026-11-21, the most secure
   reading). Confirming with a passkey needs the PIN or fingerprint, as
   signing in does (decided 2026-11-22, `MFA_WEBAUTHN_USER_VERIFICATION =
   "required"`; allauth's default "preferred" let a key only proving it's
   present do). Every key was already registered with user verification
   (allauth requires it for passkeys, and every key added is one), which
   is why requiring it for confirming breaks no key people have.
-- **A mail on every change** (decided 2026-11-21 after a review): adding
+- **A mail on every change** (decided 2026-11-21): adding
   or removing a passkey and turning the app on or off mail the person
   what changed and when, with "if it wasn't you, tell an admin", so a
   change somebody else made with their session is noticed.
@@ -41,8 +41,7 @@ below is what prevents that.
   or asking for a reset.
 - **Resetting someone's sign-in** (decided 2026-11-21: one recovery and
   incident action, the consistent and secure one, for "lost my phone or
-  laptop" and "someone else may have had access"; it was "Reset
-  two-factor…", only for people with an app): "Reset sign-in…" with the
+  laptop" and "someone else may have had access"): "Reset sign-in…" with the
   split of `activation.md`: staff reset clients, admins also own staff
   and externals; nobody resets themselves this way (they change their
   own in the settings). Offered whenever the person has any of an
@@ -56,7 +55,7 @@ below is what prevents that.
   happens (no mail, sessions stay). The audit log has it. The question
   and the message afterwards speak about the person ("their
   authenticator app") and mention the mail only when one goes out (not
-  to inactive people or bounced addresses; fixed 2026-11-22).
+  to inactive people or bounced addresses).
 - **Organizations requiring single sign-on:** no passkeys and no
   authenticator apps (the identity provider does that); existing ones are
   deleted when the organization switches to "required" (`sso.md`).
@@ -72,13 +71,13 @@ below is what prevents that.
     (`tid`, an address of its domains) counts, checked against the
     organization as it is now: a personal Gmail account signing in with
     Google where single sign-on is allowed is like a code (decided
-    2026-11-21 after a review);
+    2026-11-21);
   - someone with neither a passkey nor an app who signs in by code is led
     to a page making them add one (a passkey or an app) before anything
     else; the same after a reset;
   - someone with a passkey but no app who signs in by code is refused
     ("sign in with your passkey"): letting them add an app after a code
-    alone would make the code enough (decided while building);
+    alone would make the code enough (decided 2026-11-21);
   - API tokens stay as they are (created after such a sign-in);
   - "SSO required" makes it moot (no codes at all).
 
@@ -131,7 +130,7 @@ below is what prevents that.
   /api/v1/people/{id}/reset-sign-in/` (`reset`: whether there was
   anything, `removed`: `{app, passkeys, api_tokens}`; the old
   `…/reset-two-factor/` stays as an alias), `biwak people reset-sign-in
-  ID` (CLI 0.38.0; `reset-two-factor` stays as a hidden alias). Migration `accounts.0017`
+  ID` (`reset-two-factor` stays as a hidden alias). Migration `accounts.0017`
   audits `mfa_authenticator` without `data` (the app's secret, the
   passkey's key) and `last_used_at`.
 - **SSO required:** `sso.enforce_required()` deletes every authenticator;

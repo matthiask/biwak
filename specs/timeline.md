@@ -3,8 +3,8 @@
 The comments section of a to-do shows what happened between the
 comments, like a GitHub issue but simpler.
 
-**Status:** built (2026-11-21): `biwak/activity/timeline.py`,
-`items/_comments.html`, to-dos only (other items with comments later).
+**Status:** built (2026-11-21), to-dos only (other items with comments
+later).
 
 ## What
 
@@ -22,16 +22,16 @@ comments, like a GitHub issue but simpler.
   undo each other within a line are left out (the line goes if nothing
   is left); what was set several times says its last value. A to-do
   moved into another group (a board column like "Done") or list and back
-  shows no line, the same as completing and reopening (decision B,
-  decided 2026-11-22): moves record where from (`group_was`, `to_was`;
+  shows no line, the same as completing and reopening (decided
+  2026-11-22): moves record where from (`group_was`, `to_was`;
   dragging between columns is one merged event keeping the first
   `group_was`), and moving back cancels out. A move into another list
   also records the column it ends up in and came from (`group_id`,
   `group_was`): it ends the column moves before it (they're about a
   column it left), and moving back into the list cancels out only if
   it's back in the column it started in, otherwise the line says the
-  list (fixed 2026-11-22: "moved this to ColY" while it was back in
-  ColX). Older moves without them show as before. The API leaves these keys out.
+  list. Older moves without them show as before. The API leaves these
+  keys out.
 - **Live:** new lines arrive like new comments (a line is the live
   region `event-<first event's id>`, so a merge updates it and an undone
   completion removes it).
@@ -39,6 +39,8 @@ comments, like a GitHub issue but simpler.
   (decided 2026-11-22: not below the timeline, `feed.md`).
 
 ## Where it comes from
+
+`biwak/activity/timeline.py`, `items/_comments.html`.
 
 - **Events** of the item through `Event.objects.visible_to(user)`, so a
   client sees only the events of the time the to-do was visible to them,

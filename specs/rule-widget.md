@@ -6,13 +6,15 @@ inline form and the to-do's page) and check-in questions. Decided
 description instead of a preview of dates. The API and the CLI keep
 RRULEs and preset names.
 
-**Status:** built (2026-11-20): `rule_fields()`, `build_rule()` and
-`default_fields()` in `biwak/schedules.py` (the only place that knows
-RRULE syntax); `RuleField` and `RuleWidget` in `biwak/schedules_forms.py`
-with `forms/rule_widget.html` and `{% rule_widget %}` for the inline
-forms; `GET /schedules/describe/`; `frontend/rule-widget.js`.
+**Status:** built (2026-11-20).
 
 ## What it looks like
+
+`rule_fields()`, `build_rule()` and `default_fields()` in
+`biwak/schedules.py` (the only place that knows RRULE syntax);
+`RuleField` and `RuleWidget` in `biwak/schedules_forms.py` with
+`forms/rule_widget.html` and `{% rule_widget %}` for the inline forms;
+`GET /schedules/describe/`; `frontend/rule-widget.js`.
 
 A fieldset of plain form controls:
 

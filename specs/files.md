@@ -1,9 +1,7 @@
 # Messages, docs and files
 
-**Status:** built (2026-11-20; tiles, ordering, drag and drop, uploading
-several, new docs as drafts, folder colors, a "…" menu on every tile and
-"Tell people about it?" with the announcement an hour after the last
-change 2026-11-21; the message board's order 2026-11-22).
+**Status:** built (2026-11-22).
+
 `biwak/files/`: attachments (`attachments.py`), the board (`board.py`),
 folders and files (`library.py`, previews in `previews.py`), docs (`docs.py`, titles in
 `titles.py`), the operations in `operations.py` (creating in
@@ -113,19 +111,19 @@ with an "All messages" link (`queries.front_messages()`).
   way for a moment; pinned messages stay on top either way. The project
   page's messages follow the board's order. API: `order` on the board
   and as a parameter of its list; CLI `biwak messages --order`.
-  Built (2026-11-22): `Message.last_activity_at` and `last_commenter`,
-  set by `create_message()` and `add_comment()`
-  (`refresh_message_activity()`, also the importer's after setting the
-  original times), left out of the audit log; `Project.messages_order`
-  (`MessagesOrder`) set by `set_messages_order()`. Confirmed by the user
-  (2026-11-22): on the board staff get the two orders as buttons saving
-  the setting for everybody at once, clients the same two as `?order=`
-  links (looking only); staff look the other way only through `?order=`
-  or the palette, which offers the other order as a link for everybody
-  ("Newest posts first", "Latest update first"); changing the order
-  records no event and notifies nobody (like the files' order); the
-  API's board is `GET`/`PATCH projects/{id}/message-board/` with
-  `{"order"}`, messages carry `last_activity_at`.
+  `Message.last_activity_at` and `last_commenter`, set by
+  `create_message()` and `add_comment()` (`refresh_message_activity()`,
+  also the importer's after setting the original times), left out of the
+  audit log; `Project.messages_order` (`MessagesOrder`) set by
+  `set_messages_order()`. On the board staff get the two orders as
+  buttons saving the setting for everybody at once, clients the same two
+  as `?order=` links (looking only); staff look the other way only
+  through `?order=` or the palette, which offers the other order as a
+  link for everybody ("Newest posts first", "Latest update first");
+  changing the order records no event and notifies nobody (like the
+  files' order); the API's board is `GET`/`PATCH
+  projects/{id}/message-board/` with `{"order"}`, messages carry
+  `last_activity_at` (confirmed 2026-11-22).
 - **Who commented last** (decided 2026-11-22): in "Latest update" order
   a row (board and project page) whose latest comment is newer than its
   posting adds "Last comment 2 hours ago · Bob" (the `ago` filter's one
@@ -280,10 +278,10 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   lists, the feed, search and mails use it. A changed title is an edit
   like any other. The page header shows the title as its `<h1>`, like
   other items' pages, and the text's first line, when it's a heading, is
-  not shown again below it (decided 2026-11-22, replacing "no title in
-  the header": screen readers had no heading, phones no title; left out
-  when rendering, `checklist_markdown … without_title=True`, decided
-  2026-11-22: CSS hiding it missed texts whose task list can be ticked).
+  not shown again below it (decided 2026-11-22: screen readers need a
+  heading, phones a title; left out when rendering,
+  `checklist_markdown … without_title=True`, not hidden with CSS, which
+  missed texts whose task list can be ticked).
   A first line that isn't a heading still shows below the title. The
   live editor's heading is there for screen readers only (the editor shows the first line, which changes as
   people type). Messages keep their subject field. `create_doc()` (the API,

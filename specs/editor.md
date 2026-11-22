@@ -5,7 +5,7 @@ descriptions, check-in answers). Decided 2026-11-21: GitHub's task
 lists in all texts, tickable in place and counted on rows; a small
 toolbar on every Markdown field; pasting rich text keeps the structure.
 
-**Status:** built 2026-11-21.
+**Status:** built (2026-11-21).
 
 ## Checklists
 

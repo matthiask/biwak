@@ -107,13 +107,12 @@ one form per section, each posting to its own URL; the old
   previews at once (`data-theme-mode`, `data-accent` on `<html>`,
   `frontend/appearance-preview.js`); only saving stores it, "Reset"
   shows the stored choice again.
+- **Language** (`languages.md`): Automatic, Deutsch, English.
 - **Notifications** (`notifications.md`).
 - **Keyboard:** `User.keyboard_shortcuts` and "All shortcuts" linking
   the help.
 - **Sign-in** (decided 2026-11-21): passkeys, the authenticator app,
   connected accounts, sessions and the API tokens (`access.md`, "Sign-in").
-
-- **Language** (`languages.md`): Automatic, Deutsch, English.
 
 The API's `GET` and `PUT /api/v1/me/` read and change
 `keyboard_shortcuts`, `theme`, `accent` and `language`.

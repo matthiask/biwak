@@ -56,8 +56,7 @@ organization". The notice that mail to them bounces, for staff and the
 person (`mail-sending.md`). No "All people" link at the bottom (decided
 2026-11-22: the navigation has the People page).
 
-**Their recent activity** (decided 2026-11-22, replacing the person
-feed page): their last 5 entries ("Recent activity"), rendered and
+**Their recent activity** (decided 2026-11-22): their last 5 entries ("Recent activity"), rendered and
 merged as the activity does with the person filter (`feed.preview()`,
 `activity/_entries.html`), only what the viewer sees, then "All
 activity" to `/feed/?person=<id>` (also in the palette), for whoever
@@ -83,9 +82,8 @@ site).
   person's page, with the split of `activation.md` (staff correct
   clients' names, admins everybody's), e.g. somebody who signed up as
   "NACHNAME VORNAME". The audit log has it. Not oneself there:
-  `/people/<own id>/name/` leads to the settings (fixed 2026-11-21 after
-  a review, admins could rename themselves there). Also in the palette
-  where the button is (added 2026-11-22).
+  `/people/<own id>/name/` leads to the settings. Also in the palette
+  where the button is.
 - Short names where people are listed (mentions, subscribers, assignees,
   reactions' "Who?", the lantern, pickers): `get_short_name()` (the short
   name if set, else the first word of the full name). The full name in

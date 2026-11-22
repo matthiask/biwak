@@ -6,15 +6,7 @@ replying by mail already receives, checks and parses mails, and one
 address avoids having to pick among many. Decided with the user
 2026-11-22.
 
-**Status:** built 2026-11-22 (branch `forwarding`): `biwak/forwarding/`
-(receiving, the "Forwarded" page, filing, deleting, the 30-day cleanup in
-`fairy_tasks`, the API, `biwak forwarded`), the help in
-`docs/notifications.md`. Decisions made on the way are in
-`decisions-to-confirm.md`.
-
-Depends on: `notifications.md` ("Replying by mail": `biwak/inbound/`,
-Resend's webhook, the sender check, stripping), `files.md`
-(attachments), `todos.md`, `access.md`, `api-cli.md`, `ui.md`.
+**Status:** built (2026-11-22).
 
 ## The address
 
@@ -71,26 +63,22 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   question. Filed messages stay internal.
 - **"Delete"**: gone. Filed mails leave the list; unfiled ones are kept
   30 days, then deleted by `fairy_tasks` (the page says so).
-- **Built** (`biwak/forwarding/views.py`, `forwarding/list.html`): the
-  page (404 for clients and while forwarding is off), the address with
+- **The page** (`biwak/forwarding/views.py`, `forwarding/list.html`;
+  404 for clients and while forwarding is off): the address with
   "Copy", per mail "File as message…", "File as to-do…" and "Delete"
   (asking first: it can't be restored) as modals, "Text" folding the
   recipients and the text with its images inline (the files through
   `/forwarded/<id>/files/<key>/<name>`, the forwarder's only); the
   count in the person menu (`{% forwarded_waiting %}`) and "Forwarded"
   in the palette (`palette/actions.py`). Filing (`file_as_message()`,
-  `file_as_todo()`) copies the files into attachments of the project,
-  puts the line about the original first (in the forwarder's language,
-  with "To:" and "Cc:" lines when known) and deletes the forwarded
-  mail. The message form: title (the subject), project (combobox of the
+  `file_as_todo()`) copies the files into attachments of the project.
+  The message form: title (the subject), project (combobox of the
   open, not archived projects), category; the to-do form: title, one
   combobox of the active lists and their groups ("List / Group"),
   grouped by project.
-- API: `GET /forwarded/`, `POST /forwarded/{id}/file/` (message or
-  to-do), `DELETE`; CLI `biwak forwarded [file ID --message PROJECT |
-  --todo LIST] [delete ID]`, so agents can file mails too.
-  Built (`biwak/forwarding/api.py`, CLI 0.48.1): the list is paginated
-  like other lists (decided 2026-11-22: adding pagination later would
+- **API and CLI**, so agents can file mails too
+  (`biwak/forwarding/api.py`): `GET /forwarded/` is paginated like
+  other lists (decided 2026-11-22: adding pagination later would
   change the response's shape), each with `sender {name, email}`,
   `sent_on`, `to`, `cc`, `text` (files as `forwarded:KEY`),
   `text_html` and `files`; `file/` takes `kind` (`message`, `todo`),
@@ -106,11 +94,10 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
 
 - A mail with a reply token is a reply, even when the inbox is among
   its recipients too; only mails without one reach the inbox.
-- Answers to refused forwards: to `From` when the receiving server
-  confirmed it, else to the staff member whose address it claims, else
-  none; at most 20 per sender and hour (then dropped silently), tagged
-  like refused replies in the outbox. Their wording: "Your forwarded
-  mail couldn't be kept" with the reason.
+- Answers to refused forwards (who gets them and the limit: "Receiving"
+  above): over the limit dropped silently, tagged like refused replies
+  in the outbox. Their wording: "Your forwarded mail couldn't be kept"
+  with the reason.
 - Files over 25 MB are left out with a line (like replies), inline parts
   under 20 KB (signature logos) aren't files, like replies.
 - The text keeps the forwarder's own lines above the original; a mail

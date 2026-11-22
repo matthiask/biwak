@@ -9,10 +9,8 @@ sign in in `sso.md` and `two-factor.md`.
 **"External", not "partner"** (decided by the user 2026-11-22):
 "partner" is overloaded (Holacracy, the company's co-owners) and German
 already says "Externe", so English follows: "externals" for the people,
-"Ada is external", the badge "external", "external organization". The
-code, API, CLI, specs and help were renamed with it (`User.is_external`,
-`is_external_organization()`, `external_organizations()`), without
-backwards compatibility (no users yet).
+"Ada is external", the badge "external", "external organization", in
+the code, API and CLI too.
 
 **Status:** built (2026-11-21), `biwak/organizations/`.
 
@@ -64,7 +62,7 @@ backwards compatibility (no users yet).
 ## Managing (decided 2026-11-21)
 
 **Admins manage the internal team and externals, staff the clients**
-(decided by the user, it was "all staff, but the own organization"):
+(decided by the user):
 `org_ops.can_touch(user, *organizations, person=)` refuses others than
 admins for the own and external organizations and for moving staff (which
 is how an organization becomes external). It guards moving people in
@@ -167,9 +165,7 @@ manage none (`access.md`).
   enabled with the new value; when the save fails (offline, a network
   error, an answer other than 2xx) it shakes (`.wb-shake`, not with
   reduced motion), goes back to the stored value and is enabled again
-  (decided by the user 2026-11-22). The focus stays on it. Before, it was a "…" menu
-  with "Notifications…" (a modal) and "Remove from the project…", and
-  before that a select with its own Save on every row.
+  (decided by the user 2026-11-22). The focus stays on it.
 - **Removing asks first, and nobody leaves** (decided 2026-11-22):
   "Remove" in the row opens a question (`member_remove`, GET asks
   through `form_response(form=None)` like the trash, POST removes; a page
@@ -179,9 +175,8 @@ manage none (`access.md`).
   to-dos in it lose Bob as assignee; for oneself "Remove yourself from
   …?", then the projects page. Only own staff (`can_manage_members()`)
   remove people, anybody including themselves; clients and externals
-  can't leave any more (403 on the page and in the API). "Leave the
-  project" existed so that people could drop a project or stop hearing
-  about it; notifications cover that now ("Only when tagged", "No
+  can't leave (403 on the page and in the API): notifications cover
+  dropping a project or not hearing about it ("Only when tagged", "No
   mails", unsubscribing), and letting clients and externals leave let
   them get around the organization's decisions about who works on a
   project.

@@ -3,11 +3,12 @@
 When the connection drops, people must know that what they do may not
 arrive, and nothing is lost silently.
 
-**Status:** built (2026-11-21): `frontend/connection.js` (the state and
-the banner, `[data-connection]` in `base.html`); `live.js` and
-`collab.js` report their socket; `http.js`.
+**Status:** built (2026-11-21).
 
 ## When
+
+`frontend/connection.js` keeps the state; `live.js` and `collab.js`
+report their socket.
 
 - **Offline** when the browser says so (`navigator.onLine`), or when
   the page's websocket (`/ws/live/` or the live editor's) has been
@@ -25,7 +26,7 @@ the banner, `[data-connection]` in `base.html`); `live.js` and
 ## The banner and what changes
 
 A bar under the navigation in the warning tone, `role="status"`, pushing
-content down:
+content down (`[data-connection]` in `base.html`):
 
 - in the live editor: "You're offline. What you type is kept and merged
   when you're back.";

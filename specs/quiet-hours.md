@@ -4,24 +4,7 @@ Mails wait while people aren't working: outside their working hours
 (like Basecamp's "Work can wait") and while they're away. Decided with
 the user 2026-11-22.
 
-**Status:** built 2026-11-22 (branch `quiet-hours`):
-`biwak/accounts/quiet.py` (when mails wait, the away texts), the fields
-on `User` (`quiet_hours`, `working_days`, `working_from`,
-`working_until`, `away_until`, `away_note`), `Notification.held_at`,
-`hold()` and `_send_held()` in `biwak/activity/mails.py`,
-`set_away()`/`end_away()` in `biwak/accounts/operations.py`, the
-settings (Notifications: quiet hours; "Out of office"), "Set away…" on
-the person's page (`organizations.people.person_away`), `{% avatar %}`
-and `frontend/avatar.js` (the sign), `frontend/away.js` (the note once
-in the form), `GET/PUT /api/v1/me/notifications/`, `PUT/DELETE
-/api/v1/me/away/` and `/api/v1/people/{id}/away/`, `away_until` and
-`away_note` on every person, `biwak notifications --quiet-hours …`,
-`biwak away` (CLI 0.49.0).
-
-Depends on: `notifications.md` (mails and digests, `User.mail_delivery`),
-`mail-sending.md` (the outbox), `lantern.md`, `people.md` (the mark),
-`todos.md` (the people picker), `teams.md`, `keyboard.md` (the settings
-page), `checkins.md` (asking), `languages.md`.
+**Status:** built (2026-11-22).
 
 ## One time zone
 
@@ -36,7 +19,10 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
 - **Per person, off by default** (decided 2026-11-22): working days
   (Monday to Friday preset) and hours (08:00–18:00 preset, in the
   installation's time zone) in Settings
-  under Notifications; the API (`/me/notifications/`) and CLI too.
+  under Notifications; the API (`GET/PUT /api/v1/me/notifications/`)
+  and CLI (`biwak notifications --quiet-hours …`) too. The fields on
+  `User`: `quiet_hours`, `working_days`, `working_from`,
+  `working_until`; when mails wait: `biwak/accounts/quiet.py`.
 - **Mails only:** the lantern in the app keeps everything as it
   happens. Outside working time, notification mails and digests wait;
   at the start of the next working time they go out as **one mail**
@@ -66,9 +52,13 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
 ## Out of office
 
 - **"Away until <date>"** with an optional note (one line, at most 200
-  characters), set by the person in Settings, by admins for others
-  (when someone forgot), and in the API and CLI. Ends by itself the
-  day after the date; "I'm back" ends it early.
+  characters), set by the person in Settings ("Out of office"), by
+  admins for others (when someone forgot), and in the API (`PUT/DELETE
+  /api/v1/me/away/` and `/api/v1/people/{id}/away/`, `away_until` and
+  `away_note` on every person) and CLI (`biwak away`). Ends by itself
+  the day after the date; "I'm back" ends it early. `User.away_until`,
+  `User.away_note`; `set_away()`/`end_away()` in
+  `biwak/accounts/operations.py`.
 - **Shown** (decided 2026-11-22): their mark gets a small away sign
   and the title "Away until 3 Dec: <note>"; the people picker, the `@`
   list and teams' entries say "away until 3 Dec"; assigning or
@@ -78,15 +68,17 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
 - **Mails held** (decided 2026-11-22): nothing is mailed while away
   (also not digests); the lantern collects as usual. When the away
   time ends, one digest of what happened meanwhile goes out (grouped by
-  project, capped like digests), respecting quiet hours.
+  project, like digests), respecting quiet hours.
 - Clients see the away sign and note of people they may know, like the
   mark itself.
 
 ## How it's built (2026-11-22, confirmed by the user the same day)
 
-- **Held, then one mail:** every `send_mails` run marks the unsent
-  notifications of people whose mails wait now (`hold()`: away today,
-  or quiet hours and outside the working time) with `held_at`, and
+- **Held, then one mail** (`hold()` and `_send_held()` in
+  `biwak/activity/mails.py`, `Notification.held_at`): every
+  `send_mails` run marks the unsent notifications of people whose
+  mails wait now (`hold()`: away today, or quiet hours and outside the
+  working time) with `held_at`, and
   leaves those people out. Once they may get mail again, what's held
   goes at once: one digest-form mail (`digest_mail()`, kind `digest`),
   or the usual item or batch mail when it's one mail's worth (one item
@@ -106,8 +98,8 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   mail after being away goes then, a digest at 07:00); nothing clears the
   fields, `is_away` compares with today.
 - **Away for others:** admins only (`can_set_away()`), on the person's
-  page ("Set away…" as a modal, "End away" while away) and the API;
-  not for oneself there (the settings) and not for inactive people.
+  page ("Set away…" as a modal, `organizations.people.person_away`;
+  "End away" while away) and the API; not for oneself there (the settings) and not for inactive people.
 - **One mail's worth:** "as usual when only one is waiting" means one
   item, or one batch of files or assigned to-dos. What waited goes at
   the start of the working time without the 10-minute merge. Digests
@@ -118,24 +110,13 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   everybody."; German "Ruhezeiten", "Abwesenheit", "Abwesend bis 3.
   Dez.: …", "Ich bin zurück". The CLI's `members` and `people` show
   "(away until 2026-12-03)" after the name.
-- **Shown:** a small moon (`bi-moon-fill`) on the mark's lower right;
+- **Shown:** a small moon (`bi-moon-fill`) on the mark's lower right
+  (`{% avatar %}`, `frontend/avatar.js`);
   the mark's title is the name and on a second line "Away until 3 Dec:
   <note>" (the date with the year when it isn't this one). Pickers and
   the `@` list add "away until 3 Dec" to the entry; the team's page and
   the People page's teams section after the member. The note shows in
-  the form below the field (`.wb-away-notes`), once per person and form,
+  the form below the field (`.wb-away-notes`, `frontend/away.js`), once
+  per person and form,
   also for each member when a team is picked. "Teams' entries" are the
   members on a team's page and in the People page's Teams section.
-
-## Done when
-
-- Working days and hours, and away are set in Settings, the API and
-  the CLI; admins set away for others.
-- Notification mails and digests outside working time or while away
-  wait and go out as one mail at the next working time or on return;
-  the excluded kinds go at once; nothing is lost (tests with frozen
-  time, including the days DST changes).
-- The away sign and note show on marks, pickers, the `@` list, teams,
-  the person page and when assigning or mentioning (browser tests for
-  the pickers).
-- Help (notifications, people) and the German catalog updated.

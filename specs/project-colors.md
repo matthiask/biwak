@@ -2,7 +2,7 @@
 
 A color per project, so projects are told apart at a glance.
 
-**Status:** built 2026-11-21.
+**Status:** built (2026-11-21).
 
 - **The names:** one of the palette's ten (`keyboard.md`: Heather, Lake,
   Forest, Glacier, Ember, Alpenglow, Moss, Slate, Bark, Berry), or empty.

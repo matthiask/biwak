@@ -5,20 +5,18 @@ collected in one place with comments: "What are you working on this
 week?", "Read any good books lately?". Used heavily for the team itself,
 less for client projects.
 
-**Status:** built (2026-11-20): `biwak/checkins/` (`schedule.py` the
-time arithmetic, `operations.py` asking, summaries and answering,
-`mails.py`).
+**Status:** built (2026-11-20). The code: `biwak/checkins/`
+(`schedule.py` the time arithmetic, `operations.py` asking, summaries
+and answering, `mails.py`).
 
 ## Decided
 
-- **One time zone** (decided 2026-11-22, built the same day): the
-  installation's (`TIME_ZONE`), as for quiet hours (`quiet-hours.md`).
-  Questions have no time zone of their own: no field, form field, API
-  field or CLI `--zone` (migration `0006` dropped it, no users yet; CLIs
-  before 0.46.0 are refused). Asking, occurrences and summaries are in
-  the installation's time zone; `schedule.py` still takes a zone,
-  called with `schedule.time_zone()`.
-
+- **One time zone** (decided 2026-11-22): the installation's
+  (`TIME_ZONE`), as for quiet hours (`quiet-hours.md`). Questions have
+  no time zone of their own: no field, form field, API field or CLI
+  `--zone`. Asking, occurrences and summaries are in the installation's
+  time zone; `schedule.py` takes a zone, called with
+  `schedule.time_zone()`.
 - **No reminders** for missed check-ins (2026-11-20): the question mail
   is the only one asking; who hasn't answered shows on the question's
   page and in "due".
@@ -59,7 +57,7 @@ time arithmetic, `operations.py` asking, summaries and answering,
   the project's members among the people asked (the page's people and
   "hasn't answered yet", the API's `people` and `missing`, a person's
   answers: 404 for a non-member, `Project.people_known_to()`; decided
-  2026-11-20 after the visibility review).
+  2026-11-20).
 - People are asked whatever their level. No default time of
   day (the form asks). 5 occurrences per page.
 
@@ -126,8 +124,8 @@ Traps the tests cover (`schedule.py`):
   question; none for an occurrence without answers; later answers
   aren't sent.
 - **`each`** goes through the normal notifications to the question's
-  subscribers; everybody else gets nothing per answer unless mentioned. "Each" counts only while the person is subscribed
-  to the question (decided 2026-11-21): a choice left from before
+  subscribers; everybody else gets nothing per answer unless mentioned.
+  "Each" counts only while the person is subscribed to the question (decided 2026-11-21): a choice left from before
   unsubscribing doesn't bring the answers back.
 - **Replying** to the question mail answers that occurrence
   (`reply_headers()` in `biwak/checkins/mails.py`, `notifications.md`);

@@ -3,8 +3,7 @@
 The tool celebrates achievements a little, for example finishing a
 to-do, and moves a bit more in general.
 
-**Status:** built (2026-11-21): `frontend/celebrate.js`,
-`reactions.js`, `lantern.js`, keyframes in `main.css`.
+**Status:** built (2026-11-21).
 
 ## Principles
 
@@ -20,11 +19,14 @@ to-do, and moves a bit more in general.
 
 ## Moments (decided 2026-11-21)
 
+`frontend/celebrate.js`, `reactions.js`, `lantern.js`, keyframes in
+`main.css`.
+
 1. **Completing a to-do:** the check pops in the accent color, the
    title strikes through, the row fades and collapses; on the to-do's
    page the icon pops. `celebrate.js` takes over the submit
-   (`data-celebrate="complete|reopen"`, so Shift+x is covered): the request
-   goes out at once, and when it and the animation are done the page
+   (`data-celebrate="complete|reopen"`, so Shift+x is covered): the
+   request goes out at once, and when it and the animation are done the page
    follows the redirect, so counts, recurrences and the completed
    section come from the server; a failed request submits the form
    normally. Live updates leave a row with `is-completing` alone.

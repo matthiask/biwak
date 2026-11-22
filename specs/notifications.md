@@ -1,7 +1,8 @@
 # Notifications: events, subscriptions, mentions, mails, replies
 
-**Status:** built (2026-11-20, changed 2026-11-21: subscribing is the
-switch). `biwak/activity/` (`operations.record()`, `mentions.py`,
+**Status:** built (2026-11-22).
+
+`biwak/activity/` (`operations.record()`, `mentions.py`,
 `notify.py`, `mails.py`, `./manage.py send_mails`, the settings pages,
 the API, `biwak notifications`); replying by mail in `biwak/inbound/`.
 The lantern (notifications in the app, reading): `lantern.md`. Adding
@@ -37,8 +38,7 @@ it for the first time.
 - **Automatic:** the author, assignees, people mentioned, people
   commenting. **Not a folder's creator** (decided 2026-11-22: creating
   a folder is housekeeping, and following one brings every new file
-  whatever the level; a migration removed the creators' automatic
-  subscriptions). They respect an earlier unsubscribing
+  whatever the level). They respect an earlier unsubscribing
   (`Unsubscription`); being assigned or mentioned, being added, or
   subscribing oneself overrides it (`subscribe(..., explicit=True)`).
 - **Joining a project subscribes to nothing that exists already**
@@ -53,8 +53,7 @@ it for the first time.
   for the page, the mail link, the API and the CLI). The box says
   "You're assigned, so you hear about it" and offers "Unassign me"; the
   mail's link does nothing and its page says why; the API answers 400.
-- **Notifications are additive** (decided 2026-11-21, replacing
-  "Everybody / Only these people / Nobody"): "Report by default to those
+- **Notifications are additive** (decided 2026-11-21): "Report by default to those
   who want to hear about it according to their settings, and allow
   additional people to hear about it." The poster can't hide something
   new from people who want it ("if people don't want to be notified
@@ -68,8 +67,7 @@ it for the first time.
   `create_upload()` (not inside `importing()`). Mentions and
   assignments as before. API: `also` (IDs of members; multipart: comma
   separated); an older CLI's `notify` is accepted, its IDs count as
-  `also`, `everybody` and `nobody` are ignored. CLI: `--also IDS`
-  (0.37.0).
+  `also`, `everybody` and `nobody` are ignored. CLI: `--also IDS`.
 - **The form** (`files.common.NotifyForm`, decided 2026-11-21): no
   choice, a line saying who will be told ("Ada, Bob and 3 others will be
   told.", `told_line()`: the names the poster may know, the others
@@ -114,8 +112,7 @@ it for the first time.
   `GET /items/<pk>/mentionable/?q=`, `/lists/<pk>/mentionable/` for new
   to-dos, `/projects/<pk>/mentionable/?visible=1&folder=<pk>` for new
   messages, docs and files (who will see them); JSON `[{id, name,
-  short_name, email, available, reason}]`, at most 10. The doc's live
-  editor doesn't complete names yet (the syntax works). Staff find
+  short_name, email, available, reason}]`, at most 10. Staff find
   teams last, which insert a mention per member (`teams.md`; the web
   endpoints only, not the API's).
 - **Who is offered** (`mentionable_people(item)`): active people who can
@@ -158,16 +155,12 @@ project's** (confirmed 2026-11-21).
 
 Never a notification about one's own actions.
 
-**No level "Nothing"** (decided 2026-11-22): there was a third level,
-"Nothing". It wasn't really nothing: it was "only what concerns me"
-except that mentions neither notified nor subscribed and "Tell them now"
-shares and reactions weren't told, and the people page showed it as "No
-mails", which was misleading. The real ways to stay quiet are the mail
-delivery (no mails; the lantern still has everything) and unsubscribing
-from items or folders; a mention is someone deliberately asking for
-you. A data migration put everybody and every override on "nothing" on
-"only what concerns me"; the pages, the API and the CLI no longer offer
-it (an old value is a validation error).
+**No level "Nothing"** (decided 2026-11-22): such a level wasn't really
+nothing (mentions, "Tell them now" shares and reactions aside, it was
+"only what concerns me") and read as "No mails", which was misleading.
+The real ways to stay quiet are the mail delivery (no mails; the lantern
+still has everything) and unsubscribing from items or folders; a
+mention is someone deliberately asking for you.
 
 **Notified by default or only when tagged** (decided 2026-11-20): how
 someone is in a project is the project's level, not a new setting.
@@ -225,8 +218,7 @@ large).
   2026-11-21, `checkins.md`); digests leave check-in mails alone.
 - **Each change:** `send_mails`, every minute by cron, sends one mail
   per person and item once the newest unsent notification for it is 10
-  minutes old (`MERGE_AFTER`; 2 minutes decided 2026-11-20, 10 since
-  2026-11-21: "if it were urgent, they would have gotten a phone call,
+  minutes old (`MERGE_AFTER`, decided 2026-11-21: "if it were urgent, they would have gotten a phone call,
   or they would have Biwak open"; the lantern is immediate), so quick
   edits merge. **A batch of
   uploaded files is one mail** (`batch_mail()`, `mails/batch.*`,
@@ -259,8 +251,8 @@ large).
   (link checkers), the `POST` unsubscribes; only who still sees the item
   is shown its title. Through a container, it unsubscribes from the
   container. Digests: the settings page, no one-click.
-- **Completing and reopening back and forth** (decided 2026-11-21,
-  replacing deleting the earlier event within ten minutes): every one is
+- **Completing and reopening back and forth** (decided 2026-11-21):
+  every one is
   recorded and notifies as usual. Of a person's unsent notifications,
   those of one person's consecutive completing and reopening of an item
   are mailed as the net change (`timeline.cancelled()` in

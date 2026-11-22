@@ -1,9 +1,7 @@
 # To-dos: assignees, recurrence, board view, by due date
 
-Builds on `core.md` and `access.md`.
-
 **Status:** built (2026-11-20; the to-do's page, the picker, the
-groupings and "assigned by" from the UI rounds, 2026-11-21).
+groupings and "assigned by" 2026-11-21).
 
 ## Assignees
 
@@ -24,12 +22,9 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   removed them, nobody told. Completed to-dos keep them: they're history
   (confirmed by the user 2026-11-21: "historical information and
   accurate"), so a sweep doesn't fill the feed with old to-dos.
-  **Deactivating keeps them** (decided 2026-11-22, replacing the
-  decision of 2026-11-21, `handover.md`): an assignment documents who
-  did or was to do the work; inactive people show as such and their
-  to-dos are handed over with "Assign…". Migration `items.0015` dropped
-  existing ones of removed and deactivated people (at the time) without
-  events.
+  **Deactivating keeps them** (decided 2026-11-22, `handover.md`): an
+  assignment documents who did or was to do the work; inactive people
+  show as such and their to-dos are handed over with "Assign…".
 - **The edit form** offers who's still assigned but can't be assigned
   anymore, without dropping them automatically (confirmed 2026-11-21:
   a client on a to-do made internal, `ops.assignable_or_assigned()`),
@@ -169,9 +164,9 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
   to-do I assigned to myself and Bob counts, Bob being another, one only
   to myself doesn't; Home's "waiting on others" also leaves out to-dos
   I'm assigned to, so they aren't listed twice on Home; with an assignee
-  chosen, to them, "Me" being those I gave myself; decided 2026-11-22: with "assigned by me" the empty assignee
-  is "Anybody" across projects too, else it would show only those I
-  gave myself), open or
+  chosen, to them, "Me" being those I gave myself; decided 2026-11-22:
+  with "assigned by me" the empty assignee is "Anybody" across projects
+  too, else it would show only those I gave myself), open or
   completed (latest first, 50 per page), visible to clients (staff
   only). Assignee choices list people only for staff; clients get
   anybody, me and nobody. Unknown values show an error and no to-dos,

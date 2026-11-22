@@ -3,40 +3,35 @@
 An optional start date: a to-do that can't start yet stays out of
 current work until it can. Decided with the user 2026-11-22.
 
-**Status:** built 2026-11-22 (branch `start-dates`): `Todo.starts_on`
-(there since the first migration), `check_dates()` in
-`items/operations.py`, `due.started()` and `due.starting_later()`,
-`items/_starting_later.html`, `biwak.formats.format_range()`,
-`frontend/start-date.js`.
-
-Depends on: `todos.md` (due dates, the to-dos page, the calendar feed,
-recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
-`import-basecamp.md`, `api-cli.md`.
+**Status:** built (2026-11-22).
 
 - **`Todo.starts_on`**, only together with a due date and not after it
-  (validated in the operation, the form, the API: "A start date needs a
-  due date.", "The start date can't be after the due date."). Removing
-  the due date removes the start date, as removing a rule removes its
-  ends; moving the due date before the start is refused. Set next to the
-  due date (decided 2026-11-22, replacing "Starts" shown only after
-  "Due" was set, which confused: both fields are always there, start
-  first, both with a short visible label, "Start" and "Due", and the
-  calendar icon in the inline form; a start without a due date is
-  refused with "A start date needs a due date." at the field; the
-  start's `max` is the due date, `frontend/start-date.js`). The to-do's
-  page shows "Starts on" as a fact of its own when set, before "Due
-  on", mails a "Starts on" line.
-- **Rows** show the range ("3–7 Dec"; across months "28 Nov – 3 Dec";
-  in German "3.–7. Dez.") where they show the due date, the overdue
+  (validated in the operation, `check_dates()` in
+  `items/operations.py`, the form, the API: "A start date needs a due
+  date.", "The start date can't be after the due date."). Removing the
+  due date removes the start date (API `due_on: null`, CLI `--due
+  none`), as removing a rule removes its ends; moving the due date
+  before the start is refused. Set next to the due date (decided
+  2026-11-22: both fields are always there, start first, both with a
+  short visible label, "Start" and "Due", and the calendar icon in the
+  inline form; a start without a due date is refused with "A start date
+  needs a due date." at the field; the start's `max` is the due date,
+  `frontend/start-date.js`). The to-do's page shows "Starts on" as a
+  fact of its own when set, before "Due on", mails a "Starts on" line.
+- **Rows** show the range (`biwak.formats.format_range()`: "3–7 Dec";
+  across months "28 Nov – 3 Dec"; in German "3.–7. Dez.") where they show the due date, the overdue
   badge too ("Overdue · 20–24 Nov"); overdue as now by the due date,
   "Today" alone on the due date.
 - **Hidden until they start** (decided 2026-11-22): before its start
   date a to-do isn't in "My to-dos", the to-dos page's default view and
   Home's current work; those show a collapsed "Starting later (3)"
-  part at the end. Lists, the board and search show it as always.
+  part at the end (`due.started()`, `due.starting_later()`,
+  `items/_starting_later.html`). Lists, the board and search show it
+  as always.
   "Today" is the installation's (one time zone, `quiet-hours.md`).
   On the to-dos page that's the open to-dos in either grouping (not
-  "Completed"), flat, the next to start first, each row with its project
+  "Completed"), one flat list, not grouped like the page, the next to
+  start first, each row with its project
   and list; on Home the part closes "Due" and holds my to-dos which
   would be there (due within the 7 days) but haven't started, and
   "Waiting on others" has its own (decided 2026-11-22). The API's
@@ -50,30 +45,16 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
 - **Changing it** records an event like the due date: the edit lists
   `starts_on`, the data carries both dates and what they were; the
   timeline says "changed the dates to 3–7 Dec 2026" once a start date is
-  or was involved, else as before. Notifications as for due dates.
+  or was set, also when only the due date moved, else as before. Notifications as for due dates.
 - **API and CLI:** `starts_on` next to `due_on`; `biwak todo … --starts
-  DATE` (`none` removes it; CLI 0.47.0, 0.46.0 on its branch), tables show "start – due".
+  DATE` (`none` removes it), tables show "start – due".
   **Importer:** Basecamp's `starts_on`; one without a due date or after
-  it isn't brought.
+  it is dropped silently.
 - Copying a list (`lists-across-projects.md`) shifts start dates with
   due dates.
 
 ## Decided on the way (confirmed by the user 2026-11-22)
 
-- Removing the due date removes the start date (API `due_on: null`, CLI
-  `--due none`); a start without a due date, or a due date moved before
-  the start, is refused.
-- "Starting later" on the to-dos page is one flat list by start date,
-  not grouped like the page; on Home only what would be in its section
-  (due within 7 days).
-- The forms label the fields "Start" and "Due" (decided 2026-11-22,
-  replacing "Starts" and an icon alone); the to-do's page has a separate
-  "Starts on" fact, mails a "Starts on" line.
-- The timeline says "changed the dates to …" whenever a start date is or
-  was set, also when only the due date moved.
-- The overdue badge shows the range.
-- The importer drops a start date without a due date or after it,
-  silently.
 - German: "Beginnt am", "Beginnt", "Beginnt später (N)", "hat die Daten
   auf … geändert", "Ein Startdatum braucht eine Fälligkeit.", "Das
   Startdatum kann nicht nach der Fälligkeit liegen."

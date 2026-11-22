@@ -19,8 +19,9 @@ in the project's "More" menu (`projects-overview.md`).
 
 - `Item.status` `archived`. "Archive" and "Unarchive" in the list's
   "More" menu and as a palette action (not on the project page's rows,
-  decided 2026-11-21: the list itself is the place), with `ops.can_change()` (staff, and clients for
-  lists they created). API: `PATCH lists/{id}/ {"archived": …}`, `GET
+  decided 2026-11-21: the list itself is the place), with
+  `ops.can_change()` (staff, and clients for lists they created). API:
+  `PATCH lists/{id}/ {"archived": …}`, `GET
   projects/{id}/lists/?archived=true`; CLI: `biwak list
   archive|unarchive LIST`, `biwak lists --archived`.
 - **Never automatic:** a list isn't archived when it's empty or all done.
@@ -36,6 +37,5 @@ in the project's "More" menu (`projects-overview.md`).
 ## Nothing smaller
 
 `ops.archive()` refuses anything but lists (the one place; `Status`
-keeps the value). Migration `items/0011` converted earlier archived
-to-dos into completed ones. Basecamp's archived recordings:
+keeps the value). Basecamp's archived recordings:
 `import-basecamp.md`.
