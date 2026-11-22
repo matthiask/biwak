@@ -1,5 +1,5 @@
 {% load biwak i18n %}
-<div class="wb-todo" data-kb-row>
+<div class="wb-todo" data-kb-row data-select-row="{{ todo.pk }}">
   {% include "items/_todo_check.html" with keep_page=True %}
   <div class="wb-todo-body">
     {% include "items/_todo_title.html" %}

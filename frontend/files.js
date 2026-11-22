@@ -1,7 +1,7 @@
 // A folder's tiles (files/_tiles.html, specs/files.md, "Moving and selecting"):
 // selecting several without checkboxes, Ctrl-click (Cmd on a Mac) adding
 // or removing a tile and Shift-click the range from the last one, x (no
-// modifiers; it comes before shortcuts.js's x, which is the to-dos') and
+// modifiers; it comes before shortcuts.js's x, which selects to-do rows) and
 // Shift+arrows on the focused tile the same; the bar acts on the
 // selection, Escape and "Deselect" clear it. Tiles are dragged onto a
 // folder, ".." or a breadcrumb ([data-drop-folder]); dragging a selected

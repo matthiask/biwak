@@ -7,12 +7,14 @@ don't save items themselves.
 """
 
 import datetime as dt
+import uuid
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Exists, Max, OuterRef, Q
 from django.db.models.functions import Lower
 from django.utils import timezone
+from django.utils.translation import ngettext
 
 from biwak import checklists, schedules
 from biwak.accounts.models import User, own_staff
@@ -524,7 +526,7 @@ def _assignable(item, by=None):
 
 
 @transaction.atomic
-def assign(item, users, *, actor, mentioned=None, assigned_by=None):
+def assign(item, users, *, actor, mentioned=None, assigned_by=None, batch=None):
     """Adds assignees (``assignable_people()``, ``ValueError`` for anybody
     else); staff who aren't members yet become members, recorded as added
     (decided 2026-11-21). Returns those newly assigned.
@@ -538,7 +540,11 @@ def assign(item, users, *, actor, mentioned=None, assigned_by=None):
     ``assigned_by`` is who gets stored as the assigner: the actor by
     default, or ``{user pk: assigner or None}`` to say otherwise (the next
     to-do of a repeating one keeps the assigners, the importer leaves them
-    empty; decided 2026-11-21)."""
+    empty; decided 2026-11-21).
+
+    ``batch``: the to-dos of one "Assign…" share it on their events, which
+    the lantern and the mails merge into one entry per person told
+    (specs/handover.md)."""
     todo = item.todo
     users = [u for u in users if not todo.assignees.filter(pk=u.pk).exists()]
     allowed = _assignable(item, actor) if users else {}
@@ -559,6 +565,8 @@ def assign(item, users, *, actor, mentioned=None, assigned_by=None):
             event, people = mentioned
             both = {u.pk for u in users} & {u.pk for u in people}
         extra = {"mentioned": sorted(both)} if both else {}
+        if batch:
+            extra["batch"] = batch
         record(
             actor=actor,
             action=Action.ASSIGNED,
@@ -575,6 +583,84 @@ def assign(item, users, *, actor, mentioned=None, assigned_by=None):
             event.data["assigned"] = sorted(set(event.data.get("assigned", ())) | both)
             event.save(update_fields=["data"])
     return users
+
+
+def assignable_to_all(items, by=None):
+    """The people who can be assigned to every one of the to-dos
+    (``assignable_people()`` of each), the members first when they're all
+    in one project; for "Assign…" (specs/handover.md). A query per project
+    and visibility, not per to-do."""
+    common = None
+    seen = set()
+    for item in items:
+        key = (item.project_id, item.is_client_visible)
+        if key in seen:
+            continue
+        seen.add(key)
+        pks = set(assignable_people(item, by).values_list("pk", flat=True))
+        common = pks if common is None else common & pks
+    people = User.objects.filter(pk__in=common or ())
+    projects = {item.project_id for item in items}
+    if len(projects) == 1:
+        return _members_first(people, items[0].project)
+    return people.order_by(Lower("full_name"), "email")
+
+
+class AssignRefused(ValueError):
+    """Assigning several to-dos at once changed nothing: somebody can't be
+    assigned to some of them"""
+
+
+@transaction.atomic
+def assign_todos(items, users, *, actor, replace=False):
+    """ "Assign…" for several to-dos (specs/handover.md): adds ``users`` to
+    each to-do, or with ``replace`` makes them its only assignees (those
+    taken out are recorded, nobody is told). One ``assign()`` and
+    ``unassign()`` per to-do, so an event each; a new assignee is told
+    once for all of them (their events share a ``batch``). All or nothing:
+    ``AssignRefused`` when somebody can't be assigned to one of them.
+    Returns ``{item: [newly assigned]}``."""
+    items = list(items)
+    users = list(users)
+    allowed = {}
+    refused = {}
+    for item in items:
+        item.refresh_from_db(fields=["is_client_visible"])
+        key = (item.project_id, item.is_client_visible)
+        if key not in allowed:
+            allowed[key] = set(
+                assignable_people(item, actor).values_list("pk", flat=True)
+            )
+        for user in users:
+            if (
+                user.pk not in allowed[key]
+                and not item.todo.assignees.filter(pk=user.pk).exists()
+            ):
+                refused.setdefault(user, []).append(item)
+    if refused:
+        raise AssignRefused(
+            " ".join(
+                ngettext(
+                    "%(person)s can't be assigned to %(count)s of the to-dos.",
+                    "%(person)s can't be assigned to %(count)s of the to-dos.",
+                    len(todos),
+                )
+                % {"person": user, "count": len(todos)}
+                for user, todos in sorted(refused.items(), key=lambda r: str(r[0]))
+            )
+        )
+    batch = uuid.uuid4().hex if len(items) > 1 else None
+    done = {}
+    keep = {user.pk for user in users}
+    for item in items:
+        if replace:
+            unassign(
+                item,
+                [u for u in item.todo.assignees.all() if u.pk not in keep],
+                actor=actor,
+            )
+        done[item] = assign(item, users, actor=actor, batch=batch)
+    return done
 
 
 @transaction.atomic
@@ -598,8 +684,9 @@ def unassign(item, users, *, actor):
 
 def unassign_dropped(user, *, actor, project=None):
     """Takes the person off the open to-dos (trashed ones too) of
-    ``project``, or of every project: removed from the project or
-    deactivated (decided 2026-11-21, specs/todos.md). Through ``unassign()``,
+    ``project``, or of every project: removed from the project (decided
+    2026-11-21, specs/todos.md; deactivating keeps them since 2026-11-22,
+    specs/handover.md). Through ``unassign()``,
     so the history shows it and nobody is told; completed to-dos are
     history and keep them."""
     items = Item.objects.filter(

@@ -61,8 +61,10 @@ screens), favorites first. Each card, and nothing more:
 - **No archiving from this page** (decided 2026-11-21): archiving and
   bringing back are in the project's own "More" menu. After archiving
   the projects page says "Archived Website." with an Undo.
-- The admins' "Limited projects you're not a member of" is a plain list
-  below.
+- Admins get a link "All projects" below the cards (decided
+  2026-11-22, `handover.md`), in place of the plain list of limited
+  projects they're not a member of: `/projects/all/` lists them with
+  "Join".
 
 ## API and CLI
 

@@ -35,6 +35,7 @@ biwak projects
 biwak todos --mine --due overdue
 biwak todo add LIST "Order the tent" --due 2026-12-01 --assign 3
 biwak todo done TODO
+biwak todo assign 12 13 14 --to 7 --replace
 biwak todo comment TODO "The plan" --attach plan.pdf
 biwak checkin due
 biwak checkin answer QUESTION "Busy with the launch"
@@ -45,6 +46,7 @@ biwak invitations
 biwak people --inactive
 biwak people activate 12 13 --mail
 biwak people deactivate 14
+biwak projects --all --inactive-todos
 biwak people reset-sign-in 12
 ```
 

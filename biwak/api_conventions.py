@@ -47,6 +47,10 @@ class PersonOut(Schema):
     name: str
     short_name: str
     is_client: bool
+    is_active: bool = Field(
+        description="False for people who left (deactivated); they stay"
+        " assigned and show as inactive (specs/handover.md)."
+    )
     organization: str
     organization_id: int | None
     image_url: str | None = Field(
@@ -63,6 +67,7 @@ def person_out(user):
         "name": str(user),
         "short_name": user.get_short_name(),
         "is_client": user.is_client,
+        "is_active": user.is_active,
         "organization": user.organization_name,
         "organization_id": user.organization_id,
         "image_url": absolute(user.image_url) if user.image else None,

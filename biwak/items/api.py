@@ -512,6 +512,44 @@ def todo_overview(
     )
 
 
+class AssignManyIn(Schema):
+    ids: list[int]
+    people: list[int]
+    replace: bool = False
+
+
+@router.post("todos/assign/", response=list[TodoOut])
+def todos_assign(request, data: AssignManyIn):
+    """ "Assign…" for several to-dos (specs/handover.md): adds ``people`` to
+    each of the to-dos ``ids``, or with ``replace`` makes them their only
+    assignees. All or nothing: 400 naming the problem (to-dos the person
+    can't change, people who can't be assigned to every one of them).
+    Returns the to-dos."""
+    from biwak.items.assigning import missing_message, todos_for
+
+    if not data.ids or not data.people:
+        bad_request(_("Send at least one to-do and one person."))
+    todos, missing = todos_for(request.user, list(dict.fromkeys(data.ids)))
+    if missing:
+        bad_request(missing_message(missing))
+    people = list(ops.assignable_to_all(todos, request.user).filter(pk__in=data.people))
+    if len(people) != len(set(data.people)):
+        bad_request(
+            _(
+                "Only people who can be assigned to every one of the to-dos can be assigned."
+            )
+        )
+    try:
+        ops.assign_todos(todos, people, actor=request.user, replace=data.replace)
+    except ops.AssignRefused as exc:
+        bad_request(str(exc))
+    found = {
+        item.pk: item
+        for item in _for_todo_out(Item.objects.filter(pk__in=[t.pk for t in todos]))
+    }
+    return [todo_out(found[todo.pk], request.user) for todo in todos]
+
+
 @router.get("todos/{todo_id}/", response=TodoOut)
 def todo_detail(request, todo_id: int):
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)

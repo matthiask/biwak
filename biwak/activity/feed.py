@@ -108,6 +108,15 @@ def _people_of(event):
     return []
 
 
+def _named(person, viewer):
+    """The person's name as the viewer knows it, "(inactive)" after it for
+    people who left (specs/handover.md)"""
+    name = display_name(person, viewer)
+    if not person.is_active:
+        return gettext("%(name)s (inactive)") % {"name": name}
+    return name
+
+
 def attach(events, user):
     """What rendering needs besides the event: the assigned people's names
     (``event.assignee_names``, also those something was shared with), the target list of moves the viewer may
@@ -122,7 +131,7 @@ def attach(events, user):
             event.item.project = event.project
         if event.project_id not in known and _people_of(event):
             known[event.project_id] = {
-                u.pk: display_name(u, user)
+                u.pk: _named(u, user)
                 for u in event.project.people_known_to(user, people)
             }
         names = known.get(event.project_id, {})

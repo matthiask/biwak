@@ -23,7 +23,7 @@ to-do, and moves a bit more in general.
 1. **Completing a to-do:** the check pops in the accent color, the
    title strikes through, the row fades and collapses; on the to-do's
    page the icon pops. `celebrate.js` takes over the submit
-   (`data-celebrate="complete|reopen"`, so `x` is covered): the request
+   (`data-celebrate="complete|reopen"`, so Shift+x is covered): the request
    goes out at once, and when it and the animation are done the page
    follows the redirect, so counts, recurrences and the completed
    section come from the server; a failed request submits the form

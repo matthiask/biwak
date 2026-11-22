@@ -133,7 +133,11 @@ class PeopleField(forms.ModelMultipleChoiceField):
         from biwak.activity.mentions import reader
         from biwak.organizations.names import display_name
 
-        return display_name(obj, reader())
+        name = display_name(obj, reader())
+        if not obj.is_active:
+            # Chosen ones who left (specs/handover.md)
+            return _("%(name)s (inactive)") % {"name": name}
+        return name
 
 
 class ComboboxSelect(forms.Select):

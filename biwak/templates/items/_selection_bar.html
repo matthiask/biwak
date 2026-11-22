@@ -1,0 +1,16 @@
+{% load biwak i18n %}
+{% comment %}
+  What to do with the selected to-dos (specs/handover.md): frontend/select-rows.js
+  shows it, counts and adds the selected IDs (`items`) and the page (`next`)
+  to the link, like the tiles' bar (files/_tiles.html).
+{% endcomment %}
+<div class="wb-selection-bar" data-row-selection-bar hidden>
+  <span
+    data-selection-count
+    data-one="{% translate '1 selected' %}"
+    data-many="{% translate '%(count)s selected' %}"
+  ></span>
+  <a class="btn btn-sm btn-quiet" href="{% url 'todos_assign' %}" data-selection-action>{% icon "person-plus" %}<span
+    >{% translate "Assign…" %}</span></a>
+  <button type="button" class="btn btn-sm btn-quiet" data-selection-clear>{% translate "Deselect" %}</button>
+</div>

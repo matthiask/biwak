@@ -7,6 +7,12 @@ Sortable.mount(new MultiDrag())
 
 import "./add-todo.js"
 import { post, remember } from "./http.js"
+import { hooks, update } from "./select-rows.js"
+
+// One selection with select-rows.js's: grips select with its class, and
+// only Escape or "Deselect" clear it, not a click elsewhere (the bar's
+// "Assign…" is one)
+hooks.deselect = (row) => Sortable.utils.deselect(row)
 
 // Clicking grips selects several to-dos, dragging one of them moves them
 // all; one request with the to-dos in their new order and where the first
@@ -22,6 +28,9 @@ function sortTodos(container) {
     animation: 120,
     multiDrag: true,
     selectedClass: "is-selected",
+    avoidImplicitDeselect: true,
+    onSelect: update,
+    onDeselect: update,
     onStart() {
       undo = remember(document.querySelectorAll("[data-todos]"))
     },
@@ -48,6 +57,7 @@ function sortTodos(container) {
         undo,
       )
       for (const row of moved) Sortable.utils.deselect(row)
+      update()
     },
   })
 }

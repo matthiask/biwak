@@ -8,7 +8,7 @@ The same rules as the buttons of the pages: ``ops.can_create()``,
 ``ops.can_change()``, staff only where the views are.
 
 An action is a dict with ``label``, ``type`` and what the type needs, and
-optionally a ``shortcut`` ("x", or "g p" for two keys):
+optionally a ``shortcut`` ("e", "Shift+x", or "g p" for two keys):
 
 - ``link``: go to ``url``;
 - ``modal``: open the form at ``url`` in a modal (``frontend/modal.js``);
@@ -138,6 +138,9 @@ def everywhere(user):
         actions.append(modal(_("New project"), reverse("project_create")))
     if org_ops.can_manage(user):
         actions.append(link(_("Go to organizations"), reverse("organizations")))
+    if user.is_admin:
+        # Every project, for admins (specs/handover.md)
+        actions.append(link(_("All projects"), reverse("all_projects")))
     return actions
 
 
@@ -193,7 +196,8 @@ def on_item(request, item, context):
                 _("Reopen") if completed else _("Complete"),
                 reverse("todo_toggle", args=[item.pk]),
                 {"next": url, "done": "0" if completed else "1"},
-                "x",
+                # x selects rows (decided 2026-11-22, specs/handover.md)
+                "Shift+x",
             )
         )
     if item.kind == Kind.LIST:

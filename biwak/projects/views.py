@@ -36,7 +36,6 @@ def _list_context(request, archived):
     order = request.GET.get("order")
     if order not in ProjectOrder.values:
         order = ProjectOrder.ACTIVITY
-    others = Project.objects.none()
     if archived:
         # A plain alphabetical list, without cards
         projects = Project.objects.accessible_to(request.user).filter(
@@ -44,12 +43,11 @@ def _list_context(request, archived):
         )
     else:
         projects = overview(request.user, order)
-        if request.user.is_admin:
-            # Admins see that limited projects exist and can join them
-            others = project_ops.joinable_projects(request.user)
     return {
         "projects": projects,
-        "others": others,
+        # Admins find every project there, limited ones to join too
+        # (specs/handover.md)
+        "all_projects": not archived and request.user.is_admin,
         "archived": archived,
         "can_create": project_ops.can_create_project(request.user),
         "order": order,

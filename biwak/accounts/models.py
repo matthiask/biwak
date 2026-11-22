@@ -355,6 +355,7 @@ class User(AbstractBaseUser):
             "initials": self.initials,
             "color": self.avatar_color,
             "image_url": self.image_url,
+            "inactive": not self.is_active,
         }
 
     @property

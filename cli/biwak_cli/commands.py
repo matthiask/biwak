@@ -34,7 +34,11 @@ def clients(item):
 
 
 def names(people):
-    return ", ".join(p["short_name"] for p in people)
+    """Short names, "(inactive)" after people who left"""
+    return ", ".join(
+        p["short_name"] + ("" if p.get("is_active", True) else " (inactive)")
+        for p in people
+    )
 
 
 attach_option = click.option(
@@ -177,9 +181,36 @@ def me_image(path, remove, as_json):
     type=click.Choice(["activity", "name"]),
     help="Latest activity first or by name (default: your setting on the web).",
 )
-def projects(as_json, archived, joinable, order):
+@click.option(
+    "--all",
+    "everything",
+    is_flag=True,
+    help="Every project with counts, also those you can't open (admins).",
+)
+@click.option("--no-staff", is_flag=True, help="With --all: no active staff member.")
+@click.option("--limited", is_flag=True, help="With --all: limited projects.")
+@click.option(
+    "--inactive-todos",
+    is_flag=True,
+    help="With --all: with open to-dos whose assignees are all inactive.",
+)
+def projects(
+    as_json, archived, joinable, order, everything, no_staff, limited, inactive_todos
+):
     """The projects you can open, bookmarked ones (*) first, with the latest
     activity (for clients: of what they see)"""
+    if everything:
+        return all_projects(
+            as_json,
+            {
+                "archived": archived,
+                "no_staff": no_staff,
+                "limited": limited,
+                "inactive": inactive_todos,
+            },
+        )
+    if no_staff or limited or inactive_todos:
+        terminate("--no-staff, --limited and --inactive-todos go with --all.")
     if joinable:
         data = request("GET", "projects/joinable/")
         if as_json:
@@ -204,6 +235,37 @@ def projects(as_json, archived, joinable, order):
             p["color_name"],
             (p["last_activity_at"] or "")[:16].replace("T", " "),
             "" if p["is_all_access"] else "limited",
+        )
+    console.print(t)
+    return None
+
+
+def all_projects(as_json, filters):
+    """``biwak projects --all``: every project, for admins
+    (specs/handover.md); --archived includes the archived ones"""
+    data = request(
+        "GET", "projects/all/", params={k: v for k, v in filters.items() if v}
+    )
+    if as_json:
+        return echo_json(data)
+    t = table(
+        "ID", "Project", "", "Staff", "Clients", "Open", "Inactive", "Last activity"
+    )
+    for p in data:
+        marks = [
+            "" if p["is_all_access"] else "limited",
+            "archived" if p["archived"] else "",
+            "joinable" if p["joinable"] else "",
+        ]
+        t.add_row(
+            str(p["id"]),
+            p["name"],
+            " ".join(mark for mark in marks if mark),
+            str(p["active_staff"]),
+            ", ".join(p["client_organizations"]),
+            str(p["open_todos"]),
+            str(p["inactive_todos"]),
+            (p["last_activity_at"] or "")[:16].replace("T", " "),
         )
     console.print(t)
     return None
@@ -1101,6 +1163,41 @@ def todo_move(todo_id, todo_ids, list_id, group, as_json):
         return echo_json(data[0] if todo_id else data)
     for moved in data:
         click.echo(f"Moved #{moved['id']} {moved['title']}.")
+    return None
+
+
+@todo.command("assign")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@click.option(
+    "--to",
+    "people",
+    multiple=True,
+    type=int,
+    required=True,
+    help="A person's ID, repeatable.",
+)
+@click.option(
+    "--replace",
+    is_flag=True,
+    help="Instead of the current assignees (default: added to them).",
+)
+@json_option
+def todo_assign(todo_ids, people, replace, as_json):
+    """Assign the people --to to every TODO at once: all or nothing; each new
+    assignee is told once"""
+    data = request(
+        "POST",
+        "todos/assign/",
+        json={"ids": list(todo_ids), "people": list(people), "replace": replace},
+    )
+    if as_json:
+        return echo_json(data)
+    for assigned in data:
+        marker = f" {clients(assigned)}" if clients(assigned) else ""
+        click.echo(
+            f"#{assigned['id']} {assigned['title']}{marker}:"
+            f" {names(assigned['assignees'])}"
+        )
     return None
 
 

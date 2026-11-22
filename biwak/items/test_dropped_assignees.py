@@ -1,6 +1,7 @@
-"""People removed from a project or deactivated are dropped as assignees
-of its open to-dos (decided 2026-11-21, specs/todos.md): through
-``unassign()``, so the events and the history show it, telling nobody."""
+"""People removed from a project are dropped as assignees of its open
+to-dos (decided 2026-11-21, specs/todos.md): through ``unassign()``, so the
+events and the history show it, telling nobody. Deactivated people keep
+theirs (decided 2026-11-22, specs/handover.md)."""
 
 from django.core import mail
 from django.test import TestCase
@@ -63,18 +64,13 @@ class DroppedAssigneesTest(TestCase):
         self.assertEqual(self.assignees(self.todos["Website"]), {self.ada})
         self.assertEqual(Event.objects.get(action=Action.UNASSIGNED).actor, self.bob)
 
-    def test_deactivating(self):
+    def test_deactivating_keeps_them(self):
         with self.captureOnCommitCallbacks(execute=True):
             activation.deactivate([self.bob], actor=self.root)
-        self.assertEqual(self.assignees(self.todos["Website"]), {self.ada})
-        self.assertEqual(self.assignees(self.todos["Shop"]), {self.ada})
+        self.assertEqual(self.assignees(self.todos["Website"]), {self.ada, self.bob})
+        self.assertEqual(self.assignees(self.todos["Shop"]), {self.ada, self.bob})
         self.assertEqual(self.assignees(self.done), {self.bob})
-        events = Event.objects.filter(action=Action.UNASSIGNED)
-        self.assertEqual(
-            {e.item_id for e in events},
-            {self.todos["Website"].pk, self.todos["Shop"].pk},
-        )
-        self.assertEqual({e.actor for e in events}, {self.root})
+        self.assertFalse(Event.objects.filter(action=Action.UNASSIGNED).exists())
         self.assertEqual(mail.outbox, [])
 
     def test_trashed_open_todos_too(self):

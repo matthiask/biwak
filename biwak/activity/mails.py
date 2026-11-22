@@ -438,8 +438,10 @@ def _batch(notifications, user):
     return {
         "batch": batch,
         "title": batch.title,
+        "subject": batch.subject,
         "url": absolute(batch.url),
-        "project": batch.project,
+        # To-dos assigned together may be of several projects
+        "project": batch.project or "Biwak",
         "line": batch.line,
         "files": [
             {
@@ -455,14 +457,15 @@ def _batch(notifications, user):
 
 def batch_mail(user, notifications):
     """One mail about files uploaded together (specs/files.md, "Uploading files"):
-    "Ada uploaded 5 files to Minutes", the files linked"""
+    "Ada uploaded 5 files to Minutes", the files linked; or about the to-dos
+    of one "Assign…" (specs/handover.md): "Ada assigned you 23 to-dos" """
     context = _batch(notifications, user)
     if context is None:
         return None
     context |= {"user": user, "settings_url": absolute(reverse("settings"))}
     return build_mail(
         user,
-        subject=_("[%(project)s] %(title)s") % context,
+        subject=_("[%(project)s] %(subject)s") % context,
         template="mails/batch",
         context=context,
         from_name=_("%(name)s (Biwak)") % {"name": notifications[0].event.actor},
@@ -488,14 +491,14 @@ def digest_mail(user, notifications):
     """The notifications before today, grouped by project and item; None
     when there's nothing left to say"""
 
-    from biwak.activity.lantern import group_uploads
+    from biwak.activity.lantern import group_batches
 
     def key(notification):
-        entry = getattr(notification, "upload_entry", None)
+        entry = getattr(notification, "batch_entry", None)
         batch = repr(entry) if entry else ""
         return (batch, 0 if batch else notification.event.item_id)
 
-    group_uploads(notifications)
+    group_batches(notifications)
     notifications = sorted(
         notifications,
         key=lambda n: (
@@ -594,7 +597,7 @@ def send_mails(*, now=None):
     # Each change: per person and item, or one person's files uploaded into
     # one folder (specs/files.md) chained as the lantern does
     # (``lantern.chain()``), once the newest is 10 minutes old
-    from biwak.activity.lantern import chain
+    from biwak.activity.lantern import ASSIGNED, chain
 
     groups = {}
     chains = {}
@@ -604,6 +607,7 @@ def send_mails(*, now=None):
         item_id,
         batch,
         more,
+        action,
         actor,
         project,
         parent,
@@ -618,6 +622,7 @@ def send_mails(*, now=None):
             "event__item",
             "event__data__batch",
             "event__data__more",
+            "event__action",
             "event__actor",
             "event__project",
             "event__item__parent",
@@ -625,7 +630,12 @@ def send_mails(*, now=None):
         )
     ):
         if batch:
-            key = (user_id, actor, project, parent)
+            # To-dos of one "Assign…" across projects (specs/handover.md)
+            key = (
+                (user_id, ASSIGNED, actor)
+                if action == Action.ASSIGNED
+                else (user_id, actor, project, parent)
+            )
             what = ("batch", (*key, chain(chains, key, batch, created_at)))
         else:
             what = ("item", item_id)

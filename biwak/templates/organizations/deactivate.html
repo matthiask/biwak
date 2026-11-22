@@ -1,0 +1,29 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{% comment %}
+  The question before deactivating somebody (specs/handover.md): what they
+  leave behind, only in projects the person asking can open.
+{% endcomment %}
+{% block before_form %}
+  {% if left.open_todos or left.only_staff_in %}
+    <ul class="mb-3">
+      {% if left.open_todos %}
+        <li data-open-todos>
+          <a
+            href="{% url 'todos' %}?assignee={{ who.pk }}"
+          >{% blocktranslate count count=left.open_todos with name=who %}{{ name }} has {{ count }} open to-do.{% plural %}{{ name }} has {{ count }} open to-dos.{% endblocktranslate %}</a>
+        </li>
+      {% endif %}
+      {% if left.only_staff_in %}
+        <li data-only-staff>
+          {% blocktranslate with name=who %}{{ name }} is the only active staff member of:{% endblocktranslate %}
+          {% for project in left.only_staff_in %}<a
+              href="{{ project.get_absolute_url }}"
+            >{{ project }}</a>{% if not forloop.last %},
+            {% endif %}{% endfor %}
+        </li>
+      {% endif %}
+    </ul>
+    <p class="text-body-secondary small">{% translate "Deactivating doesn't wait for the handover." %}</p>
+  {% endif %}
+{% endblock before_form %}

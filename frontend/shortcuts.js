@@ -8,6 +8,7 @@
 // Ctrl, Alt or Meta held, never with a dialog open; the person's setting
 // turns all of it off (WCAG 2.1.4). Ctrl+K is the palette's, always.
 import { data, openPalette, runAction } from "./palette.js"
+import { extendSelection, toggleRow } from "./select-rows.js"
 
 const CURRENT = "wb-kb-current"
 const SEQUENCE_WAIT = 1000
@@ -130,7 +131,8 @@ if (data) {
       return
     }
 
-    switch (key) {
+    // Shift+x is "X" (or "x" with Shift, as some tools send it)
+    switch (event.shiftKey && key.toLowerCase() === "x" ? "X" : key) {
       case "j":
         move(1)
         break
@@ -143,11 +145,25 @@ if (data) {
         link.click()
         break
       }
+      // x selects the current row (decided 2026-11-22, specs/handover.md),
+      // Shift+x completes or reopens it, or the page's to-do
       case "x": {
+        if (!toggleRow(current())) return
+        break
+      }
+      case "X": {
         const form = current()?.querySelector("[data-kb-complete]")
         if (form) form.requestSubmit()
-        else if (byShortcut("x")) runAction(byShortcut("x"))
+        else if (byShortcut("Shift+x")) runAction(byShortcut("Shift+x"))
         else return
+        break
+      }
+      case "ArrowDown":
+      case "ArrowUp": {
+        if (!event.shiftKey) return
+        const next = extendSelection(current(), key === "ArrowDown" ? 1 : -1)
+        if (!next) return
+        select(next)
         break
       }
       case "Escape": {

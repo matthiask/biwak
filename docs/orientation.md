@@ -57,6 +57,15 @@ lists, messages, docs and files, check-ins, members.
   in any order, then choose with the arrow keys and Enter or a click.
 - Archived projects are out of the way; the projects page has an
   archive.
+- **All projects** (admins, linked below the cards, in your menu and in
+  the command palette) lists every project in a table: whether it's
+  limited or archived, how many active staff members it has, its
+  clients' organizations, its open to-dos and how many of them only
+  inactive people are assigned to, and the last activity. Filters show
+  projects without an active staff member, limited ones, those with
+  to-dos of inactive people, and archived ones too. For projects you
+  can't open it shows counts only; "Join" gets you into a limited one
+  (the project records it). `biwak projects --all` does the same.
 
 ## To-dos
 
@@ -132,8 +141,12 @@ page lists them; "Activate…" (there, or on the person's page) activates
 them, with a checkbox to send the invitation mail (not to addresses that
 bounced); nothing else changes. "Deactivate…" is for somebody who left:
 they are signed out everywhere, their API tokens and calendar link are
-deleted and they can't sign in, while what they did stays. They're taken
-off their open to-dos (the to-dos' history says so). Staff change clients, admins also staff and
+deleted and they can't sign in, while what they did stays. They stay
+assigned to their to-dos, marked as inactive, until someone hands them
+over. The question before deactivating says how many open to-dos they
+have (the link lists them on the to-dos page, where "Assign…" hands
+them over) and which projects they're the only active staff member of,
+counting only projects you can open; it never stops you. Staff change clients, admins also staff and
 partners; you can't deactivate yourself or the last active admin.
 `biwak people activate` and `deactivate` do the same for several people at
 once, all or nothing.

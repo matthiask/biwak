@@ -113,10 +113,13 @@ nobody gets mail or a sign-in before someone decides
   `sso.enforce_required_now_and_after_commit()`), so what other requests
   made meanwhile goes too.
 - Keeps everything they did and what points at them: memberships,
-  subscriptions (no mail goes to inactive people), comments, assignments
-  of completed to-dos. Open to-dos drop them (decided 2026-11-21,
-  `todos.md`: an "unassigned" event per to-do, nobody told); the
-  importer's inactive people aren't deactivated and keep theirs.
+  subscriptions (no mail goes to inactive people), comments and
+  assignments, open to-dos' too (decided 2026-11-22, replacing the
+  decision of 2026-11-21 to drop them, `handover.md`): they show as
+  inactive and are handed over with "Assign…".
+- **The question says what's left** (`handover.md`): their open to-dos
+  and the projects they're the only active staff member of, in projects
+  the deactivating person can open; it never blocks.
 - No mail to the person. Reactivating is "Activate" again.
 - **The Django admin** follows the same rules (fixed 2026-11-21 after a
   review): unticking "is active" deactivates through `deactivate()`
