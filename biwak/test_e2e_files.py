@@ -100,7 +100,8 @@ class TilesTest(E2ETestCase):
 
         # The keyboard: Ctrl+Space and Shift+arrows on the focused tile
         self.tile(page, a).focus()
-        page.keyboard.press("ControlOrMeta+Space")
+        # Ctrl on every platform (Cmd+Space is a Mac's Spotlight)
+        page.keyboard.press("Control+Space")
         expect(bar).to_contain_text("1 selected")
         page.keyboard.press("Shift+ArrowRight")
         expect(bar).to_contain_text("2 selected")
@@ -118,6 +119,26 @@ class TilesTest(E2ETestCase):
         self.assertEqual(self.parent_of(a), self.specs)
         self.assertEqual(self.parent_of(b), self.specs)
         self.assertIsNone(self.parent_of(c))
+        self.assertEqual(self.errors, [])
+
+    def test_on_a_mac(self):
+        """Cmd-click adds a tile, but Ctrl+Space selects one: Cmd+Space is
+        Spotlight (decided 2026-11-22)"""
+        page = self.page
+        page.add_init_script(
+            "Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel'})"
+        )
+        self.goto(page, self.root())
+        self.wait_for_files(page)
+        a, b, _c, _d = self.files
+        bar = page.locator("[data-selection-bar]")
+        self.tile(page, a).click(modifiers=["Meta"])
+        expect(bar).to_contain_text("1 selected")
+        self.tile(page, b).focus()
+        page.keyboard.press("Control+Space")
+        expect(bar).to_contain_text("2 selected")
+        page.keyboard.press("Meta+Space")
+        expect(bar).to_contain_text("2 selected")
         self.assertEqual(self.errors, [])
 
     def test_dragging_the_selection(self):

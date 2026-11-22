@@ -160,7 +160,8 @@ the counts of the top level's folders, docs and files.
   nicer, at the price of being less discoverable): Ctrl-click (Cmd on a
   Mac) adds or removes a tile, Shift-click a range, a plain click opens.
   Ctrl+Space and Shift+arrows on the focused tile do the same
-  (`palette/_shortcuts.html`). A bar offers "Move to…", "Move to trash"
+  (`palette/_shortcuts.html`); Ctrl+Space on a Mac too (decided
+  2026-11-22: Cmd+Space is Spotlight). A bar offers "Move to…", "Move to trash"
   and "Deselect" (Escape too); dragging a selected tile drags them all
   (`library.files_move`, `files_trash` taking `items`;
   `operations.move_items()`, `trash_items()`). A folder trashed with

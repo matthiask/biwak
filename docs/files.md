@@ -43,7 +43,7 @@ Clients see the colors too.
 the path above the title. **Several at once:** Ctrl-click (Cmd-click on
 a Mac) adds a tile to the selection or takes it out, Shift-click selects
 all tiles from the last one clicked; with the keyboard, Ctrl+Space
-selects the current tile and Shift with the arrow keys selects on to the
+(on a Mac too) selects the current tile and Shift with the arrow keys selects on to the
 next one. A plain click opens the tile as always. With a selection a bar
 shows "Move to…", "Move to trash" and "Deselect" (or press Escape);
 dragging one of the selected tiles moves them all. You move what you may
