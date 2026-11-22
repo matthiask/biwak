@@ -12,7 +12,14 @@ from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
-from biwak.api_conventions import ItemOut, Title, absolute, item_out
+from biwak.api_conventions import (
+    ItemOut,
+    Title,
+    absolute,
+    item_out,
+    page_of,
+    paginated,
+)
 from biwak.forwarding import operations as ops
 from biwak.forwarding.views import text_html
 from biwak.items.api import item_for
@@ -79,11 +86,20 @@ def _forwarded(request):
     return ops.forwarded_for(request.user).prefetch_related("files")
 
 
-@router.get("forwarded/", response=list[ForwardedOut])
-def forwarded_list(request):
+@router.get("forwarded/", response=page_of(ForwardedOut))
+def forwarded_list(request, cursor: str | None = None, page_size: int | None = None):
     """Your forwarded mails, newest first (kept 30 days unless filed);
-    the text references its files as ``forwarded:KEY`` until filed"""
-    return [forwarded_out(mail) for mail in _forwarded(request)]
+    the text references its files as ``forwarded:KEY`` until filed.
+    Paginated like other lists (decided 2026-11-22: a list that may grow
+    gets the paginated shape from the start)"""
+    return paginated(
+        request,
+        _forwarded(request),
+        forwarded_out,
+        ordering=("-received_at", "-pk"),
+        cursor=cursor,
+        page_size=page_size,
+    )
 
 
 class FileIn(Schema):

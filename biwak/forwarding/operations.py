@@ -125,7 +125,7 @@ def receive(message, mail, now):
     )
     if refused >= RATE_LIMIT:
         return InboundStatus.RATE_LIMITED
-    _refuse(mail, status, user=user, authenticated=authenticated)
+    _refuse(mail, status, user=user)
     return status
 
 
@@ -189,27 +189,17 @@ def store(user, mail, *, now=None):
     return forwarded
 
 
-def _refuse(mail, status, *, user, authenticated):
-    """A short answer saying why: to ``From`` when the receiving server
-    confirmed it, else to the staff member whose address it claims (the
-    answer could otherwise go to whoever was impersonated), else none"""
-    if authenticated and mail.sender:
-        recipient = mail.sender
-    elif user is not None:
-        recipient = user.email
-    else:
+def _refuse(mail, status, *, user):
+    """A short answer saying why, only to the staff member whose address it
+    comes from (the server couldn't confirm it); clients and outsiders get
+    nothing (decided 2026-11-22: no mails to outsiders, failing quietly is
+    fine)"""
+    if user is None:
         return
-    language = (
-        language_for(user)
-        if user is not None and recipient.lower() == user.email.lower()
-        else settings.LANGUAGE_CODE
-    )
-    with translation.override(language):
+    recipient = user.email
+    with translation.override(language_for(user)):
         reasons = {
-            InboundStatus.WRONG_SENDER: _(
-                "Forwarded mails are only kept when they come from the address"
-                " of a staff member."
-            ),
+            # Others aren't answered: only the staff member's own address
             InboundStatus.UNAUTHENTICATED: _(
                 "The receiving mail server couldn't confirm that the mail came"
                 " from your address (SPF, DKIM and DMARC)."

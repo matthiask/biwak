@@ -146,28 +146,25 @@ class RefusedTest(ForwardTestCase):
     def from_(self, address):
         return [("From: Ada Example <ada@example.org>", f"From: Someone <{address}>")]
 
-    def test_clients_are_refused(self):
+    def test_clients_are_refused_silently(self):
+        """Only staff hear about a refused forward: no mails to clients or
+        outsiders (decided 2026-11-22)"""
         message = self.receive(
             sample("gmail_en.eml", replace=self.from_(self.cleo.email))
         )
-        answer = self.assertRefused(
-            message, InboundStatus.WRONG_SENDER, to=self.cleo.email
-        )
-        self.assertEqual(answer.subject, "Your forwarded mail couldn't be kept")
-        self.assertIn("address of a staff member", answer.body)
-        self.assertIn("Fwd: Analytics export", answer.body)
+        self.assertRefused(message, InboundStatus.WRONG_SENDER)
 
     def test_unknown_senders_are_refused(self):
         message = self.receive(
             sample("outlook_en.eml", replace=self.from_("zoe@example.net"))
         )
-        self.assertRefused(message, InboundStatus.WRONG_SENDER, to="zoe@example.net")
+        self.assertRefused(message, InboundStatus.WRONG_SENDER)
 
     def test_inactive_staff_are_refused(self):
         self.ada.is_active = False
         self.ada.save()
         message = self.receive(sample("gmail_en.eml"))
-        self.assertRefused(message, InboundStatus.WRONG_SENDER, to=self.ada.email)
+        self.assertRefused(message, InboundStatus.WRONG_SENDER)
 
     def test_unconfirmed_staff_address_is_answered_to_them(self):
         self.ada.language = "de"
@@ -179,6 +176,8 @@ class RefusedTest(ForwardTestCase):
         self.assertEqual(
             answer.subject, "Deine weitergeleitete Mail konnte nicht behalten werden"
         )
+        self.assertIn("SPF, DKIM", answer.body)
+        self.assertIn("Fwd: Analytics export", answer.body)
 
     def test_unconfirmed_unknown_address_isnt_answered(self):
         message = self.receive(
@@ -187,10 +186,9 @@ class RefusedTest(ForwardTestCase):
         self.assertRefused(message, InboundStatus.WRONG_SENDER)
 
     def test_answers_are_limited_per_sender_and_hour(self):
-        replace = self.from_("zoe@example.net")
         with patch.object(operations, "RATE_LIMIT", 2):
             for _i in range(3):
-                message = self.receive(sample("gmail_en.eml", replace=replace))
+                message = self.receive(sample("gmail_en.eml", auth=FAIL))
         self.assertEqual(message.status, InboundStatus.RATE_LIMITED)
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(InboundMessage.objects.count(), 3)

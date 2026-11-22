@@ -24,8 +24,10 @@ Resend's webhook, the sender check, stripping), `files.md`
 - **Whose it is:** the sender check of replies (SPF/DKIM/DMARC results
   from Resend, the `From` matching an active staff member's address,
   own staff and externals alike, decided 2026-11-22); mails failing
-  it, from clients or from unknown addresses are dropped with a short
-  reply like refused replies.
+  it, from clients or from unknown addresses are dropped. Only a staff
+  member whose address the server couldn't confirm gets a short answer
+  saying why; clients and outsiders get nothing (decided 2026-11-22:
+  no mails to outsiders, failing quietly is fine).
 - **What's kept:** the forwarded mail's subject, the original sender,
   date and recipients when they can be read from the forward (the
   common forward formats of Outlook, Gmail, Apple Mail; else the
@@ -87,8 +89,9 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
 - API: `GET /forwarded/`, `POST /forwarded/{id}/file/` (message or
   to-do), `DELETE`; CLI `biwak forwarded [file ID --message PROJECT |
   --todo LIST] [delete ID]`, so agents can file mails too.
-  Built (`biwak/forwarding/api.py`, CLI 0.48.0): the list is complete
-  (kept 30 days, not paginated), each with `sender {name, email}`,
+  Built (`biwak/forwarding/api.py`, CLI 0.48.1): the list is paginated
+  like other lists (decided 2026-11-22: adding pagination later would
+  change the response's shape), each with `sender {name, email}`,
   `sent_on`, `to`, `cc`, `text` (files as `forwarded:KEY`),
   `text_html` and `files`; `file/` takes `kind` (`message`, `todo`),
   `title` (the subject when left out), `project_id` and `category_id`

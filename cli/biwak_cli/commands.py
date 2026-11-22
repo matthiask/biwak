@@ -2404,7 +2404,7 @@ def forwarded(ctx, as_json):
     one; unfiled ones are deleted after 30 days"""
     if ctx.invoked_subcommand is not None:
         return None
-    data = request("GET", "forwarded/")
+    data = paginate("forwarded/")
     if as_json:
         return echo_json(data)
     t = table("ID", "Subject", "From", "Sent", "Files")

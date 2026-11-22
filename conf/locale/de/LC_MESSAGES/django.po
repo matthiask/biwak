@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:48+0100\n"
+"POT-Creation-Date: 2026-11-22 16:56+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2223,10 +2223,6 @@ msgstr "weitergeleitete Dateien"
 #, python-format
 msgid "An attachment was too large and is not included: %(name)s"
 msgstr "Ein Anhang war zu gross und ist nicht dabei: %(name)s"
-
-#: biwak/forwarding/operations.py
-msgid "Forwarded mails are only kept when they come from the address of a staff member."
-msgstr "Weitergeleitete Mails werden nur behalten, wenn sie von der Adresse einer mitarbeitenden Person kommen."
 
 #: biwak/forwarding/operations.py
 msgid "The receiving mail server couldn't confirm that the mail came from your address (SPF, DKIM and DMARC)."
@@ -7162,6 +7158,3 @@ msgstr "gerade eben"
 #, python-format
 msgid "%(time)s ago"
 msgstr "vor %(time)s"
-
-#~ msgid "Choose an internal list."
-#~ msgstr "Wähle eine interne Liste."

@@ -25,7 +25,11 @@ class ForwardedAPITest(FilingTestCase):
         forwarded = self.forwarded()
         self.forwarded(user=self.bea)
         self.client.force_login(self.ada)
-        [data] = self.client.get("/api/v1/forwarded/").json()
+        page = self.client.get("/api/v1/forwarded/").json()
+        # Paginated from the start, like other lists (decided 2026-11-22):
+        # adding it later would have changed the response's shape
+        self.assertEqual(set(page), {"next", "previous", "results"})
+        [data] = page["results"]
         self.assertEqual(data["id"], forwarded.pk)
         self.assertEqual(data["subject"], "Revised quote for the landing page")
         self.assertEqual(
