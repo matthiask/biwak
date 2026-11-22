@@ -101,6 +101,18 @@ site).
 ## Stage 2 (later): choosing from drawn images
 
 Instead of uploading, people pick one of a small set of drawn images
-fitting Biwak's theme (a tent, a mountain, a lake, a fir, an ibex, a
-marmot, …), each on a palette color, shipped with the app as SVG; choosing
-stores its name. Waits for the drawings.
+fitting Biwak's theme, each on a palette color, shipped with the app as
+SVG; choosing stores its name.
+
+- **The drawings** (approved by the user 2026-11-22): 35 in
+  `biwak/static/biwak/marks/`, 23 alpine (tent, ibex, marmot, lantern,
+  cable car, …) and 12 generic (fox, owl, cup, rocket, …); `preview.html`
+  there shows them all at 20, 32 and 96 px.
+- **One color:** a shape in `currentColor` (shown white), a second tone
+  by opacity only, `viewBox="0 0 64 64"`, the motif inside a centered
+  circle of radius 24; the circle and its fill come from `.wb-avatar`,
+  so a mark works on every palette color and in dark mode. Readable at
+  20 px (`sm`): bold shapes, no lines under 4 units.
+- **Still to decide when building:** whether people pick the color too
+  or keep the one from their id, and how the settings offer the choice
+  next to uploading.
