@@ -56,15 +56,17 @@ def jumps(user, terms):
         return []
     results = []
     projects = has_words(Project.objects.accessible_to(user), "name", words)
-    for project in projects.order_by("archived_at", "name")[:LIMIT]:
+    projects = projects.order_by("archived_at", "is_template", "name")
+    for project in projects[:LIMIT]:
         results.append({
             "kind": "project",
-            "label": _("Project"),
+            "label": _("Template") if project.is_template else _("Project"),
             "title": project.name,
             "url": project.get_absolute_url(),
             "context": "",
             **color_of(project),
             "archived": project.archived_at is not None,
+            "template": project.is_template,
             "visible_to_clients": False,
         })
     items = has_words(
@@ -93,6 +95,7 @@ def jumps(user, terms):
             "context": item.project.name,
             **color_of(item.project),
             "archived": item.out_of_the_way,
+            "template": item.project.is_template,
             "visible_to_clients": item.is_client_visible,
         })
     people = people_visible_to(user).filter(is_active=True)
@@ -111,7 +114,15 @@ def jumps(user, terms):
             "archived": False,
             "visible_to_clients": False,
         })
-    results.sort(key=lambda r: (r["archived"], ORDER[r["kind"]], r["title"].lower()))
+    # Templates after the running projects too (specs/templates.md)
+    results.sort(
+        key=lambda r: (
+            r["archived"],
+            r.get("template", False),
+            ORDER[r["kind"]],
+            r["title"].lower(),
+        )
+    )
     return results[:LIMIT]
 
 

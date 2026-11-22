@@ -234,7 +234,10 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
     mentioning them again counts as new. ``credit`` gives others than
     ``actor`` and ``event`` the mentions they typed: ``{mentioned person's
     ID: (actor, event)}`` (docs edited live by several people). Returns
-    those newly mentioned."""
+    those newly mentioned. Nothing in a template (specs/templates.md):
+    mentions there tell nobody and subscribe nobody."""
+    if item.project.is_template:
+        return []
     ids = mentioned_ids(text)
     mentions = Mention.objects.filter(item=item, comment=comment)
     mentions.exclude(user__in=ids).delete()

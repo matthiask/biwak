@@ -2373,9 +2373,14 @@ def feed(project, person, kind, action, since, limit, as_json):
     is_flag=True,
     help="Include archived projects and lists, which are left out otherwise.",
 )
+@click.option(
+    "--templates",
+    is_flag=True,
+    help="Include templates, which are left out otherwise.",
+)
 @click.option("--limit", default=50, show_default=True, help="At most this many.")
 @json_option
-def search(terms, project, kind, mine, archived, limit, as_json):
+def search(terms, project, kind, mine, archived, templates, limit, as_json):
     """Find items by words in their title, text or comments, newest first.
     Every word also matches as the start of a word."""
     params = {"q": " ".join(terms)}
@@ -2387,6 +2392,8 @@ def search(terms, project, kind, mine, archived, limit, as_json):
         params["mine"] = "true"
     if archived:
         params["archived"] = "true"
+    if templates:
+        params["templates"] = "true"
     results = paginate("search/", params, limit=limit)
     if as_json:
         return echo_json(results)
@@ -2399,7 +2406,9 @@ def search(terms, project, kind, mine, archived, limit, as_json):
             str(result["id"]),
             result["kind"],
             result["title"],
-            result["project_name"] + (" (archived)" if result["archived"] else ""),
+            result["project_name"]
+            + (" (archived)" if result["archived"] else "")
+            + (" (template)" if result.get("project_is_template") else ""),
             found,
             clients(result),
         )

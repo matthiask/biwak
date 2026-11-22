@@ -615,7 +615,8 @@ def assign(item, users, *, actor, mentioned=None, assigned_by=None, batch=None):
         if user.pk not in allowed:
             raise ValueError(f"{user} can't be assigned to {item}")
     for user in users:
-        if not allowed[user.pk]:
+        # Nobody becomes a member of a template (specs/templates.md)
+        if not allowed[user.pk] and not item.project.is_template:
             project_ops.add_member(item.project, user, actor=actor)
     for user in users:
         by = actor if assigned_by is None else assigned_by.get(user.pk)
@@ -1468,7 +1469,17 @@ def _copy_attachments(text, source, target, *, actor):
 
 @attachments.cleans_up_files
 @transaction.atomic
-def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=False):
+def copy_list(
+    item,
+    *,
+    project,
+    title,
+    actor,
+    dates=Dates.KEEP,
+    days=0,
+    visible=False,
+    quiet=False,
+):
     """A copy of the list's open work in ``project`` (the same or another):
     its description, groups in order and open to-dos in order with their
     notes, checklists, recurrence and the assignees who are members of
@@ -1477,7 +1488,11 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
     comments, events, subscribers, reactions or public links. ``dates``
     keeps, shifts by ``days`` or removes the due dates. The copy gets
     ``project``'s visibility: internal unless ``visible``. One ``created``
-    event for the list, the copier subscribed to it."""
+    event for the list, the copier subscribed to it.
+
+    ``quiet`` (a new project from a template, specs/templates.md): the
+    title as it is, nobody added to ``project`` (assignees who don't see
+    it there are left out) and no event, the copier subscribed."""
     if item.kind != Kind.LIST:
         raise ValueError("Only lists are copied")
     if project.archived_at is not None:
@@ -1486,7 +1501,7 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
     copy = create_item(
         project=project,
         kind=Kind.LIST,
-        title=copy_title(title, project),
+        title=title if quiet else copy_title(title, project),
         creator=actor,
         visible=visible,
     )
@@ -1501,9 +1516,11 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
         )
         for group in source.groups.all()
     }
-    added, _dropped = copy_people(item, project, visible=visible)
-    for user in added:
-        project_ops.add_member(project, user, actor=actor)
+    if not quiet and not project.is_template:
+        # Nobody is added to a template (specs/templates.md)
+        added, _dropped = copy_people(item, project, visible=visible)
+        for user in added:
+            project_ops.add_member(project, user, actor=actor)
     staying_ids = set(
         User.objects.filter(staying(project, visible)).values_list("pk", flat=True)
     )
@@ -1555,7 +1572,10 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
         # one event for the copy
         for user in User.objects.filter(pk__in=assignees):
             subscribe(user, new, explicit=False)
-    created(copy, actor)
+    if quiet:
+        subscribe(actor, copy)
+    else:
+        created(copy, actor)
     return copy
 
 
@@ -1606,6 +1626,9 @@ def move_to_project(item, *, project, actor):
         raise ValueError(gettext("It's in this project already."))
     if source.archived_at is not None or project.archived_at is not None:
         raise ValueError(gettext("Nothing moves into or out of an archived project."))
+    if source.is_template or project.is_template:
+        # Templates change slowly and take nobody (specs/templates.md)
+        raise ValueError(gettext("Nothing moves into or out of a template."))
     pks = list(
         Item.objects.descendants(item, include_self=True).values_list("pk", flat=True)
     )
@@ -1655,4 +1678,154 @@ def move_to_project(item, *, project, actor):
         from_project_id=source.pk,
         to_project=project.name,
         to_project_id=project.pk,
+    )
+
+
+# New projects from templates (specs/templates.md) ---------------------------
+
+
+def _copy_message(item, project, actor):
+    message = item.message
+    copy = create_item(
+        project=project,
+        kind=Kind.MESSAGE,
+        title=item.title,
+        creator=actor,
+        visible=item.visible_to_clients,
+    )
+    Message.objects.create(
+        item=copy,
+        content=_copy_attachments(message.content, item, copy, actor=actor),
+        category=message.category,
+        pinned_at=copy.created_at if message.pinned_at else None,
+        last_activity_at=copy.created_at,
+    )
+    subscribe(actor, copy)
+
+
+def _copy_doc(item, project, parent, actor):
+    copy = create_item(
+        project=project,
+        kind=Kind.DOC,
+        title=item.title,
+        creator=actor,
+        parent=parent,
+        visible=item.visible_to_clients and parent is None,
+    )
+    content = _copy_attachments(item.doc.content, item, copy, actor=actor)
+    Doc.objects.create(item=copy, content=content, read_only=item.doc.read_only)
+    DocVersion.objects.create(
+        doc_id=copy.pk, title=copy.title, content=content, created_by=actor
+    )
+    subscribe(actor, copy)
+
+
+def _copy_upload(item, project, parent, actor):
+    """The newest version only, as a new file"""
+    version = item.upload.versions.first()
+    if version is None:
+        return
+    copy = create_item(
+        project=project,
+        kind=Kind.FILE,
+        title=item.title,
+        creator=actor,
+        parent=parent,
+        visible=item.visible_to_clients and parent is None,
+    )
+    upload = Upload.objects.create(
+        item=copy,
+        description=_copy_attachments(item.upload.description, item, copy, actor=actor),
+    )
+    new = FileVersion(
+        upload=upload,
+        name=version.name,
+        size=version.size,
+        content_type=version.content_type,
+        uploaded_by=actor,
+    )
+    with version.file.open("rb") as file:
+        attachments.store(new.file, version.name, File(file))
+    new.save()
+    subscribe(actor, copy)
+
+
+def _copy_files(items, project, parent, actor):
+    """Folders (with what's in them), docs and files of ``items``, in
+    their order"""
+    for item in items:
+        if item.kind == Kind.FOLDER:
+            copy = create_item(
+                project=project,
+                kind=Kind.FOLDER,
+                title=item.title,
+                creator=actor,
+                parent=parent,
+                visible=item.visible_to_clients and parent is None,
+            )
+            Folder.objects.create(
+                item=copy, color=item.folder.color, ordering=item.folder.ordering
+            )
+            _copy_files(_template_children(item.project, item), project, copy, actor)
+        elif item.kind == Kind.DOC:
+            _copy_doc(item, project, parent, actor)
+        elif item.kind == Kind.FILE:
+            _copy_upload(item, project, parent, actor)
+
+
+def _template_children(template, parent, kinds=None):
+    """What's copied of a template's level: not trashed, no drafts, in
+    order"""
+    items = (
+        Item.objects
+        .filter(project=template, parent=parent, is_draft=False)
+        .exclude(status=Status.TRASHED)
+        .order_by("position", "pk")
+    )
+    if kinds is not None:
+        items = items.filter(kind__in=kinds)
+    return items
+
+
+def template_contents(template):
+    """What a new project gets of the template: its active lists, messages,
+    folders, docs and files at the top level"""
+    return _template_children(
+        template, None, [Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.FILE]
+    ).filter(Q(status=Status.ACTIVE) | ~Q(kind=Kind.LIST))
+
+
+@attachments.cleans_up_files
+@transaction.atomic
+def copy_template(template, project, *, actor):
+    """Copies the template's top level into ``project`` as it is
+    (specs/templates.md): lists through ``copy_list()`` (open to-dos,
+    assignees who see them in ``project``, dates as they are), messages
+    (title, text, category, pinned), folders with their docs and files
+    (new files), and the client visibility. No comments, reactions,
+    history or events: created silently, the actor subscribed to what a
+    creator is. Archived lists, trashed items and drafts are left out."""
+    if not template.is_template:
+        raise ValueError("Only templates are copied into new projects.")
+    project.files_ordering = template.files_ordering
+    project.messages_order = template.messages_order
+    project.save(update_fields=["files_ordering", "messages_order"])
+    contents = list(template_contents(template).select_related("project"))
+    for item in contents:
+        if item.kind == Kind.LIST:
+            copy_list(
+                item,
+                project=project,
+                title=item.title,
+                actor=actor,
+                visible=item.visible_to_clients,
+                quiet=True,
+            )
+        elif item.kind == Kind.MESSAGE:
+            _copy_message(item, project, actor)
+    _copy_files(
+        [item for item in contents if item.kind in {Kind.FOLDER, Kind.DOC, Kind.FILE}],
+        project,
+        None,
+        actor,
     )

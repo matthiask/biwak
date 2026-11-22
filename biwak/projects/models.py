@@ -63,11 +63,18 @@ class ProjectQuerySet(models.QuerySet):
             return self.none()
         members = Q(memberships__user=user)
         if not user.sees_all_access:
-            return self.filter(members).distinct()
+            # Templates are the own staff's, whoever is a member
+            # (specs/templates.md)
+            return self.filter(members, is_template=False).distinct()
         return self.filter(members | Q(is_all_access=True)).distinct()
 
     def active(self):
-        return self.filter(archived_at__isnull=True)
+        """Running projects: not archived, not templates (templates are
+        left out wherever archived projects are, specs/templates.md)"""
+        return self.filter(archived_at__isnull=True, is_template=False)
+
+    def templates(self):
+        return self.filter(is_template=True)
 
 
 class Project(models.Model):
@@ -106,6 +113,9 @@ class Project(models.Model):
         default=MessagesOrder.LATEST,
         editable=False,
     )
+    # Set when creating it, never switched (specs/templates.md): the own
+    # staff's, all-access, quiet like an archived project
+    is_template = models.BooleanField(_("template"), default=False, editable=False)
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
     # Stored by record() and recomputed nightly (specs/projects-overview.md);
@@ -137,6 +147,12 @@ class Project(models.Model):
 
     def is_accessible_to(self, user):
         return Project.objects.accessible_to(user).filter(pk=self.pk).exists()
+
+    @property
+    def is_quiet(self):
+        """Archived or a template: out of the lists across projects, and
+        nothing in it tells anybody (specs/templates.md)"""
+        return self.archived_at is not None or self.is_template
 
     @property
     def color_label(self):

@@ -116,6 +116,7 @@ def bookmarked_items(user):
             item__isnull=False,
             item__status=Status.ACTIVE,
             item__project__archived_at__isnull=True,
+            item__project__is_template=False,
         )
         .select_related("item", "item__project", "item__answer")[:BOOKMARKS]
     )

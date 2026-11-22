@@ -39,7 +39,7 @@ def _list_context(request, archived):
     if archived:
         # A plain alphabetical list, without cards
         projects = Project.objects.accessible_to(request.user).filter(
-            archived_at__isnull=False
+            archived_at__isnull=False, is_template=False
         )
     else:
         projects = overview(request.user, order)

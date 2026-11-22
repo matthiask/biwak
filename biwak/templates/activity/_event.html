@@ -6,7 +6,14 @@
 <span class="fw-semibold">{% person_link event.actor %}</span>
 {% capture as subject %}{% include "activity/_subject.html" %}{% endcapture %}
 {% capture as names %}{{ event.assignee_links.values|join:", " }}{% endcapture %}
-{% if event.action == "created" and event.item.kind == "answer" %}
+{% if event.action == "created" and not event.item %}
+  {# A project from a template (specs/templates.md): the template named only to readers who may open it (feed.add_projects()) #}
+  {% if event.template_name %}
+    {% blocktranslate with project=event.project.name template=event.template_name %}created {{ project }} from the template {{ template }}{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate with project=event.project.name %}created {{ project }} from a template{% endblocktranslate %}
+  {% endif %}
+{% elif event.action == "created" and event.item.kind == "answer" %}
   {% blocktranslate %}answered {{ subject }}{% endblocktranslate %}
 {% elif event.action == "created" %}
   {% blocktranslate %}created {{ subject }}{% endblocktranslate %}

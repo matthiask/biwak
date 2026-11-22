@@ -557,7 +557,10 @@ def due(user, *, project=None):
     """The latest occurrences of questions the person was asked and
     hasn't answered, newest first: "due"."""
     visible = Item.objects.visible_to(user).filter(
-        kind=Kind.QUESTION, status=Status.ACTIVE, project__archived_at__isnull=True
+        kind=Kind.QUESTION,
+        status=Status.ACTIVE,
+        project__archived_at__isnull=True,
+        project__is_template=False,
     )
     if project is not None:
         visible = visible.filter(project=project)

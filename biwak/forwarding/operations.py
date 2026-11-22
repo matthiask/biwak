@@ -246,6 +246,7 @@ def todo_lists(user):
             parent=None,
             status=Status.ACTIVE,
             project__archived_at__isnull=True,
+            project__is_template=False,
         )
         .select_related("project")
         .prefetch_related("todolist__groups")

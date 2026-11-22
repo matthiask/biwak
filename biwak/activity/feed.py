@@ -50,8 +50,11 @@ def feed_events(
     if project is not None:
         events = events.filter(project=project)
     else:
-        # Archived projects are out of the feeds across projects
-        events = events.filter(project__archived_at__isnull=True)
+        # Archived projects and templates are out of the feeds across
+        # projects (specs/templates.md)
+        events = events.filter(
+            project__archived_at__isnull=True, project__is_template=False
+        )
     if person is not None:
         events = events.filter(actor=person)
     if kind:
@@ -231,11 +234,14 @@ def add_projects(events, user):
     """``event.source_project`` and ``event.target_project``: the names of
     the projects an item moved from and to (specs/lists-across-projects.md),
     each only if the viewer may open it now, else "". Checked now, in one
-    query for all events, with the project's current name."""
+    query for all events, with the project's current name. The same for
+    ``event.template_name``, the template a project was created from
+    (specs/templates.md)."""
     moves = [e for e in events if e.action == Action.MOVED and "to_project" in e.data]
     ids = {
         e.data.get(key) for e in moves for key in ("from_project_id", "to_project_id")
     }
+    ids |= {e.data.get("template_id") for e in events}
     ids -= {None}
     names = (
         dict(
@@ -250,6 +256,7 @@ def add_projects(events, user):
     for event in events:
         event.source_project = names.get(event.data.get("from_project_id"), "")
         event.target_project = names.get(event.data.get("to_project_id"), "")
+        event.template_name = names.get(event.data.get("template_id"), "")
 
 
 def _is_message_text(event):
@@ -357,6 +364,10 @@ def same_place(last, event):
     specs/reactions.md), the rest per list or project"""
     if last.action == Action.REACTED:
         return last.item_id == event.item_id
+    if (last.item_id is None) != (event.item_id is None):
+        # A project's events don't merge with its items' ("created Website
+        # from the template …" and "created Launch", specs/templates.md)
+        return False
     return container(last)[:2] == container(event)[:2]
 
 

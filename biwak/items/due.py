@@ -118,6 +118,7 @@ def todos(
         .filter(
             kind=Kind.TODO,
             project__archived_at__isnull=True,
+            project__is_template=False,
             parent__status=Status.ACTIVE,
             todo__completed_at__isnull=not completed,
         )
