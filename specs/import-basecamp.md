@@ -114,6 +114,9 @@ project. Waiting for Basecamp's account export to confirm the plan.
 - **Runtime:** about two requests per recording (comments,
   subscribers) at 50 per 10 seconds: hours for a big account. Reruns
   update, so an interrupted run is simply started again.
+- **After importing in production:** merge the imported organization of
+  the own company into the own organization, rename it and add the
+  domain (done locally, 2026-11-22).
 - **Open questions:** the person importing becomes a member of every
   project they were only added to for the import (the importer copies
   Basecamp's members): skip them in those projects, or remove them
