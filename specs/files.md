@@ -224,7 +224,10 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
 - **The title is the text's first line** (decided 2026-11-21: like a
   blog entry's H1; `titles.doc_title()`): a heading without its `#`s,
   else the line as plain text; cut at a word boundary below the field's
-  length with "…"; "Untitled" when empty. Stored as `Item.title`, set in
+  length with "…"; empty when there's none, shown as "Untitled" in the
+  reader's language (`Item.shown_title`, `mentions.title()`, the
+  `item_title` and `title_text` filters; the API returns it empty;
+  decided 2026-11-22). Stored as `Item.title`, set in
   `operations._save()`, which every change of the text goes through (the
   live editor, the API, ticks, restoring a version, the importer), so
   lists, the feed, search and mails use it. A changed title is an edit
@@ -249,7 +252,7 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   window).
 - **New docs are drafts** (decided 2026-11-21): "New doc" is a link
   making a draft and opening the editor with `# ` and the cursor after
-  it (`items.operations.create_draft()`: title "Untitled", no event, no
+  it (`items.operations.create_draft()`: no title yet, no event, no
   version, its creator subscribed). A draft (`Item.is_draft`) is
   nobody's business until written: `visible_to()` leaves it out, and
   `drafts=True` lets its creator's own in for the editor's pages and its

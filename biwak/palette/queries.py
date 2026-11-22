@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from biwak.activity.feed import people_visible_to
-from biwak.activity.mentions import plain
+from biwak.activity.mentions import title as plain_title
 from biwak.bookmarks.models import Bookmark
 from biwak.items import due
 from biwak.items.models import Item, Kind, Status
@@ -88,7 +88,7 @@ def jumps(user, terms):
         results.append({
             "kind": item.kind,
             "label": item.get_kind_display(),
-            "title": plain(item.title),
+            "title": plain_title(item.title),
             "url": item.get_absolute_url(),
             "context": item.project.name,
             **color_of(item.project),
@@ -151,7 +151,7 @@ def bookmarks(user):
             results.append({
                 "kind": item.kind,
                 "label": item.get_kind_display(),
-                "title": plain(item.title),
+                "title": plain_title(item.title),
                 "url": item.get_absolute_url(),
                 "context": item.project.name,
                 **color_of(item.project),

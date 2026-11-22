@@ -479,7 +479,7 @@ def unsubscribe(request, token):
     seen = can_see(user, item)
     if seen:
         with mentions.reading_as(user):
-            title = mentions.plain(item.title, item)
+            title = mentions.title(item.title, item)
     return render(
         request,
         "activity/unsubscribe.html",

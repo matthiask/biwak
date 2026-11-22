@@ -317,18 +317,18 @@ def _attachment_urls(tokens, item, *, absolute, public_token=None):
 @register.filter
 def item_title(item):
     """An item's title with the mentions as ``@`` and current names"""
-    from biwak.activity.mentions import plain as plain_mentions
+    from biwak.activity import mentions
 
-    return plain_mentions(item.title, item)
+    return mentions.title(item.title, item)
 
 
 @register.filter
 def title_text(title):
     """A stored title (e.g. an event's) with the mentions as ``@`` and their
     labels, without looking anybody up"""
-    from biwak.activity.mentions import plain as plain_mentions
+    from biwak.activity import mentions
 
-    return plain_mentions(title)
+    return mentions.title(title)
 
 
 @register.filter

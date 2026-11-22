@@ -278,7 +278,7 @@ def effects(event):
             result = []
             fields = _edit_fields(event)
             if "title" in fields:
-                title = mentions.plain(data.get("title", ""))
+                title = mentions.title(data.get("title", ""))
                 text = _("changed the title to “%(title)s”") % {"title": title}
                 was = data.get("title_was", UNKNOWN)
                 if was is not UNKNOWN:

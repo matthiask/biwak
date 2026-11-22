@@ -222,7 +222,7 @@ def calendar_for(user):
         for item in qs.order_by("todo__due_on", "pk"):
             event = CalendarEvent()
             event.add("uid", f"todo-{item.pk}@biwak")
-            event.add("summary", mentions.plain(item.title, item))
+            event.add("summary", mentions.title(item.title, item))
             event.add("dtstart", item.todo.due_on)
             event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
             event.add("dtstamp", item.updated_at)

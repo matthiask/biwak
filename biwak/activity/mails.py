@@ -264,7 +264,7 @@ def _item(item, user):
     """The item with its full text"""
     context = {
         "item": item,
-        "title": mentions.plain(item.title, item),
+        "title": mentions.title(item.title, item),
         "url": absolute(item.get_absolute_url()),
         "project": item.project,
         "kind": Kind(item.kind).label,
@@ -446,7 +446,7 @@ def _batch(notifications, user):
         "line": batch.line,
         "files": [
             {
-                "title": mentions.plain(item.title, item),
+                "title": mentions.title(item.title, item),
                 "url": absolute(item.get_absolute_url()),
             }
             for item in batch.files

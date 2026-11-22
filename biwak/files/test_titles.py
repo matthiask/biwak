@@ -19,7 +19,8 @@ class DocTitleTest(SimpleTestCase):
 
     def test_empty_is_untitled(self):
         for text in ["", "  \n\n", "# ", None]:
-            self.assertEqual(doc_title(text), "Untitled")
+            # Shown as "Untitled" in the reader's language (Item.shown_title)
+            self.assertEqual(doc_title(text), "")
 
     def test_a_long_line_is_cut_at_a_word(self):
         title = doc_title("# " + "word " * 200)

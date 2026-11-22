@@ -2,8 +2,6 @@
 
 import re
 
-from django.utils.translation import gettext as _
-
 from biwak.items.models import Item
 
 
@@ -13,8 +11,9 @@ HEADING = re.compile(r"^\s{0,3}#{1,6}[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$")
 def doc_title(text):
     """The first line of ``text`` (the first one with anything in it): a
     heading without its ``#``s, else the line as plain text; cut at a word
-    boundary within ``Item.title``'s length, with "…". "Untitled" for an
-    empty text."""
+    boundary within ``Item.title``'s length, with "…". Empty for an empty
+    text: shown as "Untitled" in the reader's language (``Item.shown_title``,
+    ``mentions.title()``)."""
     from biwak.templatetags.biwak import excerpt
 
     limit = Item._meta.get_field("title").max_length
@@ -22,10 +21,10 @@ def doc_title(text):
         if line.strip():
             break
     else:
-        return _("Untitled")
+        return ""
     heading = HEADING.match(line)
     # The limit minus the "…" the cut adds
-    return excerpt(heading[1] if heading else line, limit - 1) or _("Untitled")
+    return excerpt(heading[1] if heading else line, limit - 1)
 
 
 def with_heading(title, content=""):

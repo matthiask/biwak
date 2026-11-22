@@ -855,7 +855,7 @@ def item_trash(request, pk):
     messages.success(
         request,
         _("“%(title)s” is in the trash for %(days)s days.")
-        % {"title": item.title, "days": ops.TRASH_DAYS},
+        % {"title": item.shown_title, "days": ops.TRASH_DAYS},
     )
     return redirect(next_url(request) or item.parent or item.project)
 

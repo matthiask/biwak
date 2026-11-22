@@ -359,7 +359,7 @@ def selected(request, project):
 
 def _selection_title(items):
     if len(items) == 1:
-        return items[0].title
+        return items[0].shown_title
     return ngettext("%(count)s item", "%(count)s items", len(items)) % {
         "count": len(items)
     }
@@ -413,7 +413,11 @@ def files_trash(request, pk):
                 if len(items) == 1
                 else _("%(count)s items can be restored for %(days)s days.")
             )
-            % {"title": items[0].title, "count": len(items), "days": ops.TRASH_DAYS},
+            % {
+                "title": items[0].shown_title,
+                "count": len(items),
+                "days": ops.TRASH_DAYS,
+            },
             project=project,
             cancel_url=library_url(project, current),
             submit_label=_("Move to the trash"),
@@ -427,7 +431,7 @@ def files_trash(request, pk):
             if len(items) == 1
             else _("%(count)s items are in the trash for %(days)s days.")
         )
-        % {"title": items[0].title, "count": len(items), "days": ops.TRASH_DAYS},
+        % {"title": items[0].shown_title, "count": len(items), "days": ops.TRASH_DAYS},
     )
     return redirect(library_url(project, current))
 

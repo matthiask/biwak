@@ -109,7 +109,8 @@ class Item(TreeNode):
     kind = models.CharField(_("kind"), max_length=20, choices=Kind)
     # Within the parent; to-dos within their list and group
     position = models.PositiveIntegerField(_("position"), default=0)
-    title = models.CharField(_("title"), max_length=500)
+    # Empty only for a doc without a first line (shown as "Untitled")
+    title = models.CharField(_("title"), max_length=500, blank=True)
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -148,7 +149,13 @@ class Item(TreeNode):
         verbose_name_plural = _("items")
 
     def __str__(self):
-        return self.title
+        return self.shown_title
+
+    @property
+    def shown_title(self):
+        """The title, "Untitled" in the reader's language for a doc without
+        one (stored empty, specs/files.md)"""
+        return self.title or str(_("Untitled"))
 
     def get_absolute_url(self):
         """An answer's needs its occurrence: lists of items load it with
@@ -214,6 +221,11 @@ class Item(TreeNode):
             )
             if fields & self.TREE_FIELDS:
                 self.clean()
+        # Only a doc may be without a title (its first line, specs/files.md)
+        checked = update_fields is None or "title" in update_fields
+        if checked and not self.title and self.kind != Kind.DOC:
+            field = self._meta.get_field("title")
+            raise ValidationError({"title": field.error_messages["blank"]})
         super().save(*args, update_fields=update_fields, **kwargs)
 
 
@@ -502,7 +514,7 @@ class DocVersion(models.Model):
         related_name="versions",
         verbose_name=_("doc"),
     )
-    title = models.CharField(_("title"), max_length=500)
+    title = models.CharField(_("title"), max_length=500, blank=True)
     content = models.TextField(_("content"), blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -518,7 +530,7 @@ class DocVersion(models.Model):
         verbose_name_plural = _("doc versions")
 
     def __str__(self):
-        return f"{self.title} ({self.created_at:%Y-%m-%d %H:%M})"
+        return f"{self.title or _('Untitled')} ({self.created_at:%Y-%m-%d %H:%M})"
 
 
 class Upload(Checklist, Detail):

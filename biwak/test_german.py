@@ -304,3 +304,33 @@ class DateFormatsTest(TestCase):
                     ).render(Context({"d": march})),
                     {"en": "1 Mar 2027", "de": "1. März 2027"}[language],
                 )
+
+
+class UntitledTest(TestCase):
+    """A doc without a title stores it empty, shown in the reader's language"""
+
+    def test_shown_in_each_language_stored_empty(self):
+        from biwak.files import operations as file_ops
+
+        ada = person("Ada", language="de")
+        bob = person("Bob", language="en")
+        website = project("Webseite", members=[ada, bob])
+        doc = ops.create_doc(
+            project=website, title="Notizen", creator=ada, content="Etwas"
+        )
+        file_ops.update_doc(doc, actor=ada, content="")
+        doc.refresh_from_db()
+        self.assertEqual(doc.title, "")
+        for user, shown, other in [
+            (ada, "Unbenannt", "Untitled"),
+            (bob, "Untitled", "Unbenannt"),
+        ]:
+            self.client.force_login(user)
+            for url in [doc.get_absolute_url(), "/feed/", "/search/?q=Notizen"]:
+                with self.subTest(user=user, url=url):
+                    response = self.client.get(url)
+                    if url != "/search/?q=Notizen":
+                        self.assertContains(response, shown)
+                    self.assertNotContains(response, other)
+        response = self.client.get(f"/api/v1/docs/{doc.pk}/")
+        self.assertEqual(response.json()["title"], "")

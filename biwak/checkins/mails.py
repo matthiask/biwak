@@ -95,7 +95,7 @@ def _context(user, occurrence):
     return {
         "user": user,
         "item": item,
-        "title": mentions.plain(item.title, item),
+        "title": mentions.title(item.title, item),
         "project": item.project,
         "question": question,
         "occurrence": occurrence,

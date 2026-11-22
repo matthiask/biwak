@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:30+0100\n"
+"POT-Creation-Date: 2026-11-22 14:39+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -908,6 +908,10 @@ msgstr "Was vom %(first)s bis %(last)s passiert ist"
 #, python-format
 msgid "[Biwak] %(heading)s"
 msgstr "[Biwak] %(heading)s"
+
+#: biwak/activity/mentions.py biwak/items/models.py
+msgid "Untitled"
+msgstr "Unbenannt"
 
 #: biwak/activity/mentions.py biwak/teams/picking.py
 msgid "not a member of this project"
@@ -1941,10 +1945,6 @@ msgstr[1] "%(n)s Dateien"
 #: biwak/files/templatetags/folders.py
 msgid "Empty"
 msgstr "Leer"
-
-#: biwak/files/titles.py
-msgid "Untitled"
-msgstr "Ohne Titel"
 
 #: biwak/files/views.py
 msgid "No file."
