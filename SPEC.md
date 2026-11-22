@@ -57,6 +57,13 @@ In scope:
 13. An importer for Basecamp 4 accounts.
 14. Public links: one item shown read only to people outside, for at
     most 30 days (`specs/public-links.md`).
+15. Forwarding mails to one address and filing them as messages or
+    to-dos (`specs/forwarding.md`; out of scope until 2026-11-22, when
+    replying by mail had built most of it).
+16. Quiet hours and out of office, start dates, copying lists and
+    moving across projects (`specs/quiet-hours.md`, `start-dates.md`,
+    `lists-across-projects.md`). Project templates: an agent skill, not
+    a feature (decided 2026-11-22).
 
 Out of scope on purpose:
 
@@ -68,9 +75,6 @@ Out of scope on purpose:
   to-do of its own; discussion belongs on to-dos and messages.
 - **Hill charts, doors, time tracking, invoicing, planning**: other
   tools do that; link to them.
-- **Forwarding arbitrary mails into a project**: an agent with the CLI
-  can turn a mail into a to-do or a message. Replying to notification
-  mails is in scope.
 
 ## Stack
 

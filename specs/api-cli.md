@@ -59,3 +59,7 @@ telling agents to check visibility before writing anything a client
 could see. **Postponed** (decided 2026-11-21): no skill is needed yet;
 one-off work like activating imported people is a script on top of the
 API and the CLI (`activation.md`). Specified before building.
+The first candidate (decided 2026-11-22): **setting up a project**
+from a description of what it needs, with the user's customizations
+(lists with to-dos, folders, docs, check-ins, copying lists from other
+projects), instead of project templates in the app.
