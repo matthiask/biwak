@@ -1,0 +1,31 @@
+{% comment %}
+  Rendered without a request or the database: no base.html, a page of its own
+{% endcomment %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% translate "Server error" %} – Biwak</title>
+    <style>
+      body {
+        margin: 0;
+        line-height: 1.5;
+        font-family: system-ui, sans-serif;
+      }
+      main {
+        max-width: 40rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>{% translate "Server error" %}</h1>
+      <p>{% translate "Something went wrong. Please try again later." %}</p>
+      <p><a href="/">{% translate "Back to Home" %}</a></p>
+    </main>
+  </body>
+</html>
