@@ -54,10 +54,13 @@ def notifications_for(user, *, unread=None, mentions=False):
 def wanted(notifications, user):
     """Those the person may still get (``mails._deliverable()``: the item
     visible to them now, of the unread ones only the net change of
-    completing and reopening; the rest is in ``notifications_for()``)"""
-    from biwak.activity.mails import _deliverable
+    completing and reopening, counting those outside ``notifications``;
+    the rest is in ``notifications_for()``)"""
+    from biwak.activity.mails import _deliverable, done_neighbours
 
-    return _deliverable(notifications, user)
+    # The neighbours beyond a page's edge or the menu's limit count too
+    others = done_neighbours(notifications_for(user, unread=True), notifications)
+    return _deliverable(notifications, user, others=others)
 
 
 def upload_key(notification):

@@ -902,6 +902,20 @@ class BackAndForthTest(LanternTestCase):
         [(_item, entries)] = lantern.menu(self.bob)[1]
         self.assertEqual([n.event.action for n in entries], ["completed"])
 
+    def test_a_page_boundary_doesnt_split_them(self):
+        # The page's edge falls between the completing and the reopening
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        self.act(lambda: ops.reopen(self.todo, actor=self.ada))
+        self.comment(self.secret)
+        groups, cursor = lantern.page(self.bob, size=2)
+        self.assertEqual([item.title for item, _e in groups], ["Budget"])
+        groups, cursor = lantern.page(self.bob, size=2, before=cursor)
+        self.assertEqual(groups, [])
+        # And the menu's limit
+        with mock.patch.object(lantern, "MENU_UNREAD", 1):
+            unread = lantern.menu(self.bob)[1]
+        self.assertEqual([item.title for item, _e in unread], ["Budget"])
+
     def test_a_read_completion_stays_and_the_reopening_shows(self):
         self.act(lambda: ops.complete(self.todo, actor=self.ada))
         lantern.read(self.bob)

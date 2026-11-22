@@ -235,7 +235,11 @@ large).
   those of one person's consecutive completing and reopening of an item
   are mailed as the net change (`timeline.cancelled()` in
   `mails._deliverable()`): the last one, or nothing (and they're deleted)
-  when the to-do is back where it started. A completion already mailed is
+  when the to-do is back where it started. Those not mailed yet outside
+  the mail count too (`mails.done_neighbours()`, decided 2026-11-22): a
+  to-do completed in the evening and reopened before the 07:00 digest is
+  in no digest, and the cancelled ones after midnight are deleted with
+  the others. A completion already mailed is
   followed by a mail of the reopening, so the inbox ends up right. The
   lantern does the same with the unread ones (`lantern.md`).
 - **Checked again when sending:** inactive people and people who can't

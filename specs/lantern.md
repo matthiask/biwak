@@ -63,7 +63,9 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   the unread notifications, those of a person's consecutive completing
   and reopening of an item don't show when they cancel out; otherwise
   only the last shows (`mails._deliverable()`, `notifications.md`).
-  Read ones show as they were.
+  Read ones show as they were. The item's other unread completing and
+  reopening count too (`mails.done_neighbours()`, decided 2026-11-22), so
+  the page's edges and the menu's limit don't split a pair.
 - **The page** `/lantern/`: the same, paginated like the feed, filters
   "unread" and "mentions only".
 - **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", which
