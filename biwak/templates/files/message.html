@@ -67,12 +67,17 @@
   {% include "items/_client_tab.html" %}
   <div class="row g-4">
     <div class="col-lg-8">
-      <div id="live-text" data-live>
-        <div
-          class="wb-markdown mb-4{% if can_change %} wb-edit-hit{% endif %}"
-          {% if can_change %}data-edit-url="{% url 'message_edit' item.pk %}" data-edit-focus="content"{% endif %}
-        >
-          {% checklist_markdown message.content item %}
+      {# In a card like a doc's text and a to-do's facts #}
+      <div class="card mb-4">
+        <div class="card-body">
+          <div id="live-text" data-live>
+            <div
+              class="wb-markdown{% if can_change %} wb-edit-hit{% endif %}"
+              {% if can_change %}data-edit-url="{% url 'message_edit' item.pk %}" data-edit-focus="content"{% endif %}
+            >
+              {% checklist_markdown message.content item %}
+            </div>
+          </div>
         </div>
       </div>
       {% reactions item %}

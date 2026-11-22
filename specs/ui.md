@@ -55,7 +55,7 @@ feedback rounds (`ui-feedback.md`).
   check-in); elsewhere it's quiet (`btn-quiet`).
 - **Cards** (2026-11-21: pages looked unstructured): an item's page
   shows its content in one card (the to-do's facts and notes, the doc's
-  text, `todos.md`, `files.md`); collections are cards or tiles in a
+  and the message's text, a check-in answer, `todos.md`, `files.md`); collections are cards or tiles in a
   grid (the projects page, folders), not a list in a card.
 - **Empty lists say so** (2026-11-21): a `list-group-item` in a list
   group, else a `text-body-secondary` paragraph.
