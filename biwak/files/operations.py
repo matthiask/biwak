@@ -406,7 +406,7 @@ def tell(item, *, actor, also=(), note=""):
         return False
     people = [*default_told(item, actor), *also]
     if people:
-        share(item, people, actor=actor, notify=True, note=note)
+        share(item, people, actor=actor, notify=True, note=note, posted=True)
     doc.tell_pending = False
     doc.save(update_fields=["tell_pending"])
     return True

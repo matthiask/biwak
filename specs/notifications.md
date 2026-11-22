@@ -180,7 +180,9 @@ unseen, and counts again on coming back).
    **now** (`visible_to()`; `who_can_see(item)` for everybody at once).
 3. Told (`wanting()`): every subscriber of the item, whatever their
    level, and the people the event assigns; the newly mentioned and
-   `shared` and reactions except on "nothing"; the container's
+   `shared` and reactions except on "nothing" (a new doc's "Tell people
+   about it?", `posted` in the event, on every level like posting,
+   decided 2026-11-22); the container's
    subscribers about a new item on "everything" (`effective_levels()`,
    the same number of queries for any number of people). Check-in
    answers: `checkins.md`.
