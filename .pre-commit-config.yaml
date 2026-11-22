@@ -9,8 +9,14 @@ repos:
       - id: check-yaml
       - id: detect-private-key
       - id: end-of-file-fixer
+        # The editor's corpus tests these (specs/rich-editor.md)
+        exclude: ^biwak/richtext/corpus/
       - id: mixed-line-ending
+        # The editor's corpus tests these (specs/rich-editor.md)
+        exclude: ^biwak/richtext/corpus/
       - id: trailing-whitespace
+        # The editor's corpus tests these (specs/rich-editor.md)
+        exclude: ^biwak/richtext/corpus/
   - repo: local
     hooks:
       - id: django-check

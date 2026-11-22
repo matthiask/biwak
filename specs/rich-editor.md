@@ -164,6 +164,23 @@ in Python:
   keyboards, undo per person, cursors, the editor with our CSS,
   pasting into tables and lists. Try these early and report.
 
+## What's built
+
+- **The Markdown layer** (stage 1): `frontend/editor/schema.js` and
+  `markdown.js` (schema, parser, our serializer with the spike's nine
+  fixes, linked images as the image's `href`), the same in Python in
+  `biwak/richtext/` (`tree.py`, `parse.py`, `serialize.py`,
+  `preserve.py` keeping the old text and unchanged blocks' source,
+  `ydoc.py` for y-prosemirror's fragment). The corpus is
+  `biwak/richtext/corpus/` (made up; the hooks leave its whitespace
+  alone). Tests: `frontend/editor/tests/*.test.js` with Node's own runner
+  (no JavaScript test setup before; `biwak/richtext/test_js.py` runs it
+  in the Django tests), `biwak/richtext/test_parity.py` compares both
+  sides through `tests/dump.js` (corpus and 300 random documents:
+  documents, Markdown, Y documents both ways, checklist positions equal
+  to `checklists.boxes()`). Both skip without Node.
+  `prosemirror-markdown` and `markdown-it` are pinned exactly.
+
 ## Done when
 
 - Every Markdown field and the live doc editor are the rich editor,
