@@ -161,6 +161,9 @@ class Report:
         self.several = []
         # Tools switched off in Basecamp, not imported, with what's in them
         self.switched_off = []
+        # Files "downloaded", "cached" (from the cache), "not redirected"
+        # (not cacheable): the client's counts
+        self.files = Counter()
 
     def as_text(self):
         lines = ["Dry run, nothing was written." if self.dry_run else "Imported."]
@@ -172,6 +175,17 @@ class Report:
                 if counts["unchanged"]:
                     line += f", {counts['unchanged']} unchanged"
                 lines.append(line)
+        if self.files["downloaded"] or self.files["cached"]:
+            line = (
+                f"  Files: {self.files['downloaded']} downloaded,"
+                f" {self.files['cached']} from the cache"
+            )
+            if self.files["not redirected"]:
+                line += (
+                    f" ({self.files['not redirected']} answered without a"
+                    " redirect, not cached)"
+                )
+            lines.append(line)
         limit = file_models.MAX_SIZE // 2**20
         sections = [
             (
@@ -309,6 +323,7 @@ class Importer(Resolver):
         # (Basecamp type, ID) of the recordings unchanged since the last run
         self._skipped = set()
         self.report = Report(dry_run=dry_run)
+        self.report.files = client.file_counts
         self._users = {}  # Basecamp person ID: User, or None
         self._persons = {}  # Basecamp person ID: the person's record
         # The IDs of the account's people (``/people.json``), read once
@@ -632,7 +647,10 @@ class Importer(Resolver):
         rec = self.client.get(f"/people/{person['id']}.json")
         if not rec.get("avatar_url"):
             return None
-        return self.client.download(rec["avatar_url"], accept="image/png, image/webp")
+        # Not cached: the URL is the person's, whatever the image
+        return self.client.download(
+            rec["avatar_url"], accept="image/png, image/webp", cache=False
+        )
 
     def _organization(self, company):
         """Basecamp's company as an organization: the one it was imported as

@@ -15,7 +15,7 @@ from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.bookmarks.models import Bookmark
 from biwak.checkins.models import Answer, Occurrence, Question
 from biwak.files.models import Attachment
-from biwak.importer import importer as importer_module, support
+from biwak.importer import client as client_api, importer as importer_module, support
 from biwak.importer.importer import Importer, ImportRefused
 from biwak.importer.models import ImportedObject
 from biwak.items import visibility
@@ -975,6 +975,27 @@ class ArchivedTest(ImportCase):
         self.assertEqual(self.item("Old ideas").status, Status.ARCHIVED)
 
 
+class FileCountTest(ImportCase):
+    def test_the_report_counts_files_downloaded_and_from_the_cache(self):
+        """The client's counts; profile images (never cached) aren't files"""
+        report = self.run_import()
+        files = [url for url in self.client_.downloads if "avatar" not in url]
+        self.assertTrue(files)
+        self.assertEqual(report.files["downloaded"], len(files))
+        self.assertIn(
+            f"  Files: {len(files)} downloaded, 0 from the cache", report.as_text()
+        )
+        self.client_.file_counts.update({"cached": 2, "not redirected": 1})
+        self.assertIn(
+            " 2 from the cache (1 answered without a redirect, not cached)",
+            report.as_text(),
+        )
+
+    def test_a_dry_run_counts_no_files(self):
+        report = self.run_import(dry_run=True)
+        self.assertNotIn("Files:", report.as_text())
+
+
 class DryRunTest(ImportCase):
     def test_writes_nothing(self):
         report = self.run_import(dry_run=True)
@@ -1496,7 +1517,9 @@ class CommandTest(ImportCase):
     def test_runs_as_the_person_of_the_token(self):
         # The profile says Ada
         text, make = self.call("--account", "1000", "--project", str(support.PROJECT))
-        make.assert_called_once_with("1000", "secret")
+        make.assert_called_once_with(
+            "1000", "secret", cache_dir=client_api.default_cache_dir()
+        )
         self.assertIn("Imported.", text)
         self.assertIn("to-dos: 6 new", text)
         self.assertEqual(Project.objects.count(), 1)
@@ -1577,6 +1600,27 @@ class CommandTest(ImportCase):
                 "--account", "1000", "--project", str(support.PROJECT), "--archive"
             )
         self.assertEqual(self.client_.archived_projects, [])
+
+    def test_cache_options(self):
+        """On by default; --cache-dir elsewhere, --no-cache off (the client
+        is a fake: nothing touches a real cache)"""
+        args = ["--account", "1000", "--project", str(support.PROJECT)]
+        _text, make = self.call(*args, "--cache-dir", "/srv/somewhere")
+        make.assert_called_once_with("1000", "secret", cache_dir="/srv/somewhere")
+        _text, make = self.call(*args, "--no-cache")
+        make.assert_called_once_with("1000", "secret", cache_dir=None)
+        with self.assertRaisesMessage(CommandError, "not both"):
+            self.call(*args, "--no-cache", "--cache-dir", "/srv/somewhere")
+
+    def test_make_client(self):
+        import tempfile
+
+        from biwak.importer.management.commands.import_basecamp import make_client
+
+        with tempfile.TemporaryDirectory() as directory:
+            client = make_client("1000", "secret", cache_dir=directory)
+            self.assertEqual(str(client.cache.directory), directory)
+        self.assertIsNone(make_client("1000", "secret").cache)
 
     def test_needs_a_token(self):
         with (
