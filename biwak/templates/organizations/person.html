@@ -92,7 +92,7 @@
     {# Staff and the person themselves (specs/mail-sending.md) #}
     {% if not request.user.is_client or person == request.user %}
       <div class="alert alert-warning">
-        {% blocktranslate with since=person.mail_undeliverable_at|dateformat:"DATE_FORMAT" email=person.email %}Mail to {{ email }} bounced or was marked as spam on {{ since }}: no notification mails go there until the address changes or an admin clears it.{% endblocktranslate %}
+        {% blocktranslate with since=person.mail_undeliverable_at|moment:"on" email=person.email %}Mail to {{ email }} bounced or was marked as spam {{ since }}: no notification mails go there until the address changes or an admin clears it.{% endblocktranslate %}
       </div>
     {% endif %}
   {% endif %}

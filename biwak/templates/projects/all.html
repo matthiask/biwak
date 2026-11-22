@@ -59,7 +59,7 @@
             <td class="text-end">{{ project.open_todos }}</td>
             <td class="text-end{% if project.inactive_todos %} text-danger{% endif %}">{{ project.inactive_todos }}</td>
             <td class="small text-body-secondary">
-              {% if project.last_activity_at %}{{ project.last_activity_at|ago }}{% else %}–{% endif %}
+              {% if project.last_activity_at %}{{ project.last_activity_at|moment }}{% else %}–{% endif %}
             </td>
             <td class="text-end">
               {% if project.joinable %}

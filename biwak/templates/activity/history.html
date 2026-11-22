@@ -15,7 +15,7 @@
       <div class="card-body py-2">
         <div class="small text-body-secondary">
           <strong>{% if change.user %}{% person_link change.user %}{% else %}{{ change.user_name }}{% endif %}</strong>
-          · {{ change.when|dateformat:"SHORT_DATETIME_FORMAT" }}
+          · {{ change.when|moment }}
         </div>
         <div>
           <span class="fw-semibold">{{ change.label }}</span>

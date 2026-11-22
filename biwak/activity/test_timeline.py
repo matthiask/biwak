@@ -76,7 +76,7 @@ class LinesTest(TimelineBase):
         response = self.client.get(self.todo.get_absolute_url())
         when = Event.objects.get().created_at
         self.assertContains(
-            response, f'title="{timezone.localtime(when):%-d %b %Y, %H:%M}"'
+            response, f'title="{timezone.localtime(when):%a, %-d %b %Y, %H:%M}"'
         )
 
     def test_moved_to_a_list_and_a_group(self):

@@ -85,7 +85,11 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   card with the facts (assigned to, due on, repeats: "Nobody", "No
   date", "Doesn't repeat" when empty; the overdue or "Today" badge next
   to the date; last "Created 3 Dec 2026 by Ada", the person through
-  `{% person_page %}`, not editable, decided 2026-11-22) and, below a divider, the notes ("Add notes…" when
+  `{% person_page %}`, not editable, decided 2026-11-22; a moment, so
+  "Created 2 hours ago by Ada" within seven days, `ui.md`). Start and
+  due dates in the same short format as the created date ("3 Dec
+  2026", the weekday on hover, decided 2026-11-22: one format in one
+  card) and, below a divider, the notes ("Add notes…" when
   empty; checklists tickable). Reactions and the timeline (`timeline.md`)
   below the card. Clicking the facts or the notes edits in place
   (`ui.md`, "Click to edit"; `/todos/<id>/edit/`).

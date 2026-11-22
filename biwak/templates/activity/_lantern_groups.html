@@ -73,10 +73,7 @@
                 class="wb-excerpt"
               >{{ notification.event.excerpt }}</span>{% endif %}
           </a>
-          <time
-            class="small text-body-secondary"
-            datetime="{{ notification.created_at|date:'c' }}"
-          >{{ notification.created_at|dateformat:"MONTH_DAY_TIME_FORMAT" }}</time>
+          <span class="small text-body-secondary">{{ notification.created_at|moment }}</span>
           {% if item.is_batch %}
             <ul class="list-unstyled mb-0">
               {% for file in item.files %}

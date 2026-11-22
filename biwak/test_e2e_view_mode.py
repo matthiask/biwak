@@ -81,7 +81,7 @@ class ViewModeTest(E2ETestCase):
         page.keyboard.press("Escape")
         expect(self.form(page)).to_have_count(0)
         # The due date
-        page.get_by_text("Monday, 1 March 2027").click()
+        page.get_by_text("1 Mar 2027").click()
         expect(page.locator("#live-text input[name=due_on]")).to_be_focused()
         page.get_by_role("link", name="Cancel").click()
         self.assertEqual(self.errors, [])

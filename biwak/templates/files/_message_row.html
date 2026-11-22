@@ -12,10 +12,10 @@
     </div>
     <div class="small text-body-secondary">
       {% avatar item.creator %}
-      {% short_name item.creator %} · {{ item.created_at|dateformat:"SHORT_DATE_FORMAT" }}
+      {% short_name item.creator %} · {{ item.created_at|moment }}
       {% if order == "latest" and item.message.last_commenter and item.message.last_activity_at > item.created_at %}·
         {% short_name item.message.last_commenter as commenter %}
-        {% blocktranslate with when=item.message.last_activity_at|ago %}Last comment {{ when }} · {{ commenter }}{% endblocktranslate %}{% endif %}
+        {% blocktranslate with when=item.message.last_activity_at|moment %}Last comment {{ when }} · {{ commenter }}{% endblocktranslate %}{% endif %}
       {% if item.comment_count %}·
         {% blocktranslate count counter=item.comment_count %}{{ counter }} comment{% plural %}{{ counter }} comments{% endblocktranslate %}{% endif %}
       {% include "items/_checklist_signal.html" with done=item.message.checklist_done total=item.message.checklist_total %}

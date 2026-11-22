@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load biwak i18n %}
 {% comment %}
   An invitation (specs/activation.md, "Inviting"): "Invited, not signed in
   yet" and who invited the person and when for the staff managing members
@@ -11,9 +11,9 @@
     <span class="badge wb-tone-neutral">{% translate "Invited, not signed in yet" %}</span>
     <span>
       {% if person.invited_by %}
-        {% blocktranslate with name=person.invited_by date=person.invited_at|date %}by {{ name }} on {{ date }}{% endblocktranslate %}
+        {% blocktranslate with name=person.invited_by when=person.invited_at|moment:"on" %}by {{ name }} {{ when }}{% endblocktranslate %}
       {% else %}
-        {% blocktranslate with date=person.invited_at|date %}on {{ date }}{% endblocktranslate %}
+        {{ person.invited_at|moment:"on" }}
       {% endif %}
     </span>
     {% if person.manage_invitation %}

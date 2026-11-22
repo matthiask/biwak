@@ -28,7 +28,7 @@
               <tr>
                 <td>{{ token }}</td>
                 <td>{{ token.get_access_display }}</td>
-                <td>{{ token.last_used_at|dateformat:"SHORT_DATETIME_FORMAT"|default:"–" }}</td>
+                <td>{{ token.last_used_at|moment|default:"–" }}</td>
                 <td>{{ token.expires_at|dateformat:"SHORT_DATE_FORMAT" }}</td>
                 <td class="text-end">
                   <form method="post" action="{% url 'api_token_delete' token.pk %}">
