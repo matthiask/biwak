@@ -76,6 +76,42 @@ class DocPageTest(Fixture, TestCase):
             html.index("<strong>text</strong>"), html.index("</div>", card) + 200
         )
 
+    def text(self, user, doc):
+        self.client.force_login(user)
+        html = self.client.get(doc.get_absolute_url()).content.decode()
+        start = html.index('id="live-text"')
+        return html[start : html.index("</div>\n", start)]
+
+    def test_the_first_line_as_a_heading_is_the_title_only(self):
+        """The header shows it: the text leaves it out, also for people who
+        may tick its task list (the boxes keep their numbers)"""
+        doc = bare_doc(
+            project=self.project,
+            title="Plan",
+            content="# Plan\n\n- [ ] One\n- [x] Two\n\n## Next",
+            creator=self.ada,
+            visible=True,
+        )
+        for user in [self.ada, self.cleo, self.bob]:
+            with self.subTest(user=user):
+                text = self.text(user, doc)
+                self.assertNotIn("Plan", text)
+                self.assertIn("<h2>Next</h2>", text)
+                self.assertIn('data-index="0" aria-label="One"', text)
+                self.assertIn('data-index="1" aria-label="Two"', text)
+
+    def test_a_heading_after_the_first_line_stays(self):
+        for content in ["Intro\n\n# Plan", "[ref]: https://example.com\n# Plan"]:
+            with self.subTest(content=content):
+                doc = bare_doc(
+                    project=self.project,
+                    title="Intro",
+                    content=content,
+                    creator=self.ada,
+                    visible=True,
+                )
+                self.assertIn("<h1>Plan</h1>", self.text(self.ada, doc))
+
     def test_staff_and_clients_read_visible_docs(self):
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
@@ -624,7 +660,7 @@ class EditTest(Fixture, TestCase):
         self.assertContains(response, "Shared doc", html=False)  # crumbs, <title>
         response = self.client.get(self.shared.get_absolute_url())
         self.assertContains(response, '<h1 class="wb-title">')
-        self.assertContains(response, 'class="wb-markdown wb-doc-text"')
+        self.assertContains(response, 'class="wb-markdown" id="live-text"')
 
     def test_save_as_a_version_sets_the_title_from_the_typed_text(self):
         live.apply_text(self.shared.doc, "# Renamed\n\nText", user=self.bob)

@@ -226,9 +226,11 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   like any other. The page header shows the title as its `<h1>`, like
   other items' pages, and the text's first line, when it's a heading, is
   not shown again below it (decided 2026-11-22, replacing "no title in
-  the header": screen readers had no heading, phones no title; CSS,
-  `.wb-doc-text`). The live editor's heading is there for screen
-  readers only (the editor shows the first line, which changes as
+  the header": screen readers had no heading, phones no title; left out
+  when rendering, `checklist_markdown … without_title=True`, decided
+  2026-11-22: CSS hiding it missed texts whose task list can be ticked).
+  A first line that isn't a heading still shows below the title. The
+  live editor's heading is there for screen readers only (the editor shows the first line, which changes as
   people type). Messages keep their subject field. `create_doc()` (the API,
   the importer) puts `# <title>` and an empty line in front
   (`with_heading()`); the importer's second run doesn't add it twice.

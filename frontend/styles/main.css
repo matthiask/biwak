@@ -835,12 +835,6 @@ h3,
   overflow-wrap: anywhere;
 }
 
-/* A doc's page: its first line, when a heading, is the header's title
-   (files/doc.html) */
-.wb-doc-text > :is(h1, h2, h3, h4, h5, h6):first-child {
-  display: none;
-}
-
 .wb-markdown > :last-child {
   margin-bottom: 0;
 }
