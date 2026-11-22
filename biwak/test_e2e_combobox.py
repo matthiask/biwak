@@ -4,7 +4,7 @@
 import re
 
 from biwak.test_e2e import E2ETestCase, expect
-from biwak.test_utils import organization, person
+from biwak.test_utils import external, organization, person
 
 
 class ComboboxTest(E2ETestCase):
@@ -171,4 +171,50 @@ class InviteRowsTest(E2ETestCase):
         emails.nth(0).fill("bob@ours.example")
         emails.nth(0).press("Tab")
         expect(orgs.nth(0)).to_have_value("")
+        self.assertEqual(self.errors, [])
+
+    def test_new_project_rows_fill_in_too(self):
+        """The new-project modal's rows: the domain's organization if it's
+        one of those involved and Ada may put people there, no role"""
+        self.add_domain("Example Client Ltd", "client.example")
+        self.add_domain("Other Client Ltd", "other.example")
+        self.add_domain("Third Client Ltd", "third.example")
+        external(organization_name="Example External Agency")
+        self.add_domain("Example External Agency", "agency.example")
+        page = self.page
+        self.goto(page, "/projects/")
+        page.get_by_role("link", name="New project").click()
+        dialog = page.get_by_role("dialog", name="New project")
+        dialog.locator("[name=name]").fill("Camp")
+        for name in [
+            "Example Client Ltd",
+            "Other Client Ltd",
+            "Example External Agency",
+        ]:
+            dialog.get_by_label(name, exact=True).check()
+        dialog.get_by_role("button", name="Continue").click()
+        emails = dialog.get_by_role("textbox", name="Email")
+        orgs = dialog.get_by_role("combobox", name="Organization")
+        expect(emails).to_have_count(3)
+        expect(dialog.get_by_role("combobox", name="Staff or client")).to_have_count(0)
+        client = str(organization("Example Client Ltd").pk)
+        other = str(organization("Other Client Ltd").pk)
+
+        emails.nth(0).fill("dora@client.example")
+        emails.nth(0).press("Tab")
+        expect(orgs.nth(0)).to_have_value(client)
+        # Not involved, an external organization (staff can't put people
+        # there), free mail: by the address's domain
+        for email in ["eve@third.example", "paul@agency.example", "eve@gmail.com"]:
+            emails.nth(0).fill(email)
+            emails.nth(0).press("Tab")
+            expect(orgs.nth(0)).to_have_value("")
+        # A choice by hand stays
+        orgs.nth(1).select_option(other)
+        emails.nth(1).fill("fay@client.example")
+        emails.nth(1).press("Tab")
+        emails.nth(0).fill("gus@client.example")
+        emails.nth(0).press("Tab")
+        expect(orgs.nth(0)).to_have_value(client)
+        expect(orgs.nth(1)).to_have_value(other)
         self.assertEqual(self.errors, [])

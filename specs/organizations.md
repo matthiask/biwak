@@ -133,7 +133,13 @@ manage none (`access.md`).
   (externals included), all ticked, own staff to tick (externals come with
   their organization), and three rows to invite people without an
   account (address, name, organization: the domain's if left empty, else
-  the only one involved; invited as clients). Everybody picked becomes a
+  the only one involved; invited as clients). Leaving an address selects
+  the domain's organization if it's one of those involved and the
+  inviter may put people there (as in `activation.md`, "Filled in from
+  the address", decided 2026-11-22), else "By the address's domain"; only
+  while the inviter hasn't changed the row's organization. The
+  organizations involved can't change in that step (hidden there), so
+  nothing is filled in again for them. Everybody picked becomes a
   member, the invitations go out with the project, and an invitation
   that fails adds nothing. `form_response(template=)` takes a template
   extending `modal_form.html` (block `fields`) for the rows.

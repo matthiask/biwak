@@ -3,13 +3,14 @@
 {% comment %}
   The new project (biwak/projects/views.py, NewProjectForm): with the
   organizations involved, the second step lists their people, staff and
-  rows to invite people without an account
+  rows to invite people without an account, filled in from the address
+  like the invite form's (frontend/invite.js)
 {% endcomment %}
 {% block fields %}
   {{ block.super }}
   {% if form.stage == "people" %}
     {{ form.invites.management_form }}
-    <fieldset class="mb-3">
+    <fieldset class="mb-3" data-invite-address="{% url 'invite_address' %}">
       <legend class="form-label">{% translate "Invite people without an account" %}</legend>
       <p class="form-text">
         {% translate "As clients. Without an organization picked, the one of the address's domain." %}
@@ -18,7 +19,7 @@
         {% for error in row.non_field_errors %}<div class="alert alert-danger" role="alert">
             {{ error }}
           </div>{% endfor %}
-        <div class="d-flex flex-wrap gap-2 mb-2">
+        <div class="d-flex flex-wrap gap-2 mb-2" data-invite-row>
           {% for field in row %}
             <div class="flex-grow-1">
               <label class="visually-hidden" for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
