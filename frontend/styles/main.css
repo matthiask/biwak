@@ -2081,6 +2081,7 @@ button.wb-signal:hover {
 
 .wb-markdown .task-list-item-checkbox {
   margin-inline-end: 0.4rem;
+  accent-color: var(--wb-accent-fill);
 }
 
 .wb-checklist .task-list-item-checkbox:not(:disabled) {

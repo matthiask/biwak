@@ -73,9 +73,13 @@ class HashTest(SimpleTestCase):
 class RenderTest(SimpleTestCase):
     def test_disabled_numbered_checkboxes(self):
         html = str(render_markdown("- [ ] a\n- [x] b"))
-        self.assertIn('data-index="0" disabled>', html)
-        self.assertIn('data-index="1" checked disabled>', html)
+        self.assertIn('data-index="0" aria-label="a" disabled>', html)
+        self.assertIn('data-index="1" aria-label="b" checked disabled>', html)
         self.assertIn("contains-task-list", html)
+
+    def test_named_by_their_line(self):
+        html = str(render_markdown('- [ ] Buy "pegs" & `rope`'))
+        self.assertIn('aria-label="Buy &quot;pegs&quot; &amp; rope"', html)
 
     def test_tickable(self):
         html = str(render_markdown("- [ ] a", tickable=True))

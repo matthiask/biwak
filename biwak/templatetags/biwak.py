@@ -110,9 +110,16 @@ def _checkboxes(state):
         if state.env.get("glyphs"):
             box.content = "\u2611 " if checked else "\u2610 "
         else:
+            # Named by its line's text, for screen readers
+            label = "".join(
+                child.content
+                for child in block.children[1:]
+                if child.type in {"text", "code_inline"}
+            ).strip()
             box.content = (
                 f'<input class="task-list-item-checkbox" type="checkbox" '
                 f'data-index="{number}"'
+                f' aria-label="{escape(label)}"'
                 f"{' checked' if checked else ''}"
                 f"{'' if state.env.get('tickable') else ' disabled'}>"
             )

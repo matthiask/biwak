@@ -73,10 +73,16 @@
     </div>
     <div class="col-lg-4">
       {% if can_change %}
-        <h2 class="h6">{% translate "Replace" %}</h2>
+        <h2 class="h6" id="replace-file">{% translate "Replace" %}</h2>
         <form method="post" action="{% url 'file_replace' item.pk %}" enctype="multipart/form-data" class="mb-2">
           {% csrf_token %}
-          <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+          <input
+            type="file"
+            name="file"
+            class="form-control form-control-sm mb-2"
+            aria-labelledby="replace-file"
+            required
+          >
           <button type="submit" class="btn btn-sm btn-quiet">
             {% icon "upload" %}<span>{% translate "Upload a new version" %}</span>
           </button>

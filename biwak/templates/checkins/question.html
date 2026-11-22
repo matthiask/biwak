@@ -166,7 +166,7 @@
               value="{{ value }}"
               {% if value == mode %}checked{% endif %}
             >
-            <label class="form-check-label" for="mode-{{ value }}">{{ label }}</label>
+            <label class="form-check-label" for="mode-{{ value }}">{{ label|capfirst }}</label>
           </div>
         {% endfor %}
         <button type="submit" class="btn btn-sm btn-quiet mt-2">{% translate "Save" %}</button>

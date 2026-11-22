@@ -66,7 +66,7 @@
           <form method="post">
             {% csrf_token %}
             <div class="mb-3">
-              <label class="form-label" for="id_title">{% translate "title" %}</label>
+              <label class="form-label" for="id_title">{% translate "title"|capfirst %}</label>
               <input id="id_title" class="form-control" name="title" required maxlength="100">
             </div>
             <div class="mb-3">
@@ -80,7 +80,7 @@
                     value="{{ value }}"
                     required
                   >
-                  <label class="form-check-label" for="access_{{ value }}">{{ label }}</label>
+                  <label class="form-check-label" for="access_{{ value }}">{{ label|capfirst }}</label>
                 </div>
               {% endfor %}
             </div>
