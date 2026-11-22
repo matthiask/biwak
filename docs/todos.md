@@ -51,8 +51,9 @@ removes it.
   you assign them. Clients can only assign members. While somebody is
   assigned they can't unsubscribe from the to-do ("Unassign me"
   instead). Removing somebody from the project takes them off its open
-  to-dos, deactivating them off all open to-dos; the history shows it,
-  nobody gets a notification. Completed to-dos keep them.
+  to-dos; the history shows it, nobody gets a notification. Completed
+  to-dos keep them. Deactivated people stay assigned until someone hands
+  their to-dos over.
 - **Due on:** a date. Overdue to-dos are marked.
 - **Repeat:** see below.
 

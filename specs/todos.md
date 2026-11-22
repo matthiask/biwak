@@ -16,18 +16,20 @@ groupings and "assigned by" from the UI rounds, 2026-11-21).
   the project, inactive or no longer seeing it). Completing completes for
   everybody and records who did it; assigning subscribes the assignee
   (notifying them is `notifications.md`).
-- **Removed or deactivated people are dropped** (decided 2026-11-21: "the
-  removal will be visible in the history"): removing somebody from a
-  project (`remove_member()`, own staff removing themselves too) takes them off its open
-  to-dos, deactivating (`activation.deactivate()`, withdrawing an
-  invitation too) off the open to-dos of every project, trashed ones
-  included, through `unassign()` (`ops.unassign_dropped()`): an
-  "unassigned" event per to-do by whoever removed or deactivated them,
-  nobody told. Completed to-dos keep them: they're history (confirmed by the
-  user 2026-11-21: "historical information and accurate"), so a sweep doesn't fill the feed with old to-dos. Migration
-  `items.0015` dropped existing ones the same way (deactivated: the audit
-  log has `is_active` cleared, so people the importer created inactive
-  keep the import's assignments; confirmed 2026-11-21), without events.
+- **Removed people are dropped** (decided 2026-11-21: "the removal will
+  be visible in the history"): removing somebody from a project
+  (`remove_member()`, withdrawing an invitation too) takes them off its
+  open to-dos, trashed ones included, through `unassign()`
+  (`ops.unassign_dropped()`): an "unassigned" event per to-do by whoever
+  removed them, nobody told. Completed to-dos keep them: they're history
+  (confirmed by the user 2026-11-21: "historical information and
+  accurate"), so a sweep doesn't fill the feed with old to-dos.
+  **Deactivating keeps them** (decided 2026-11-22, replacing the
+  decision of 2026-11-21, `handover.md`): an assignment documents who
+  did or was to do the work; inactive people show as such and their
+  to-dos are handed over with "Assign…". Migration `items.0015` dropped
+  existing ones of removed and deactivated people (at the time) without
+  events.
 - **The edit form** offers who's still assigned but can't be assigned
   anymore, without dropping them automatically (confirmed 2026-11-21:
   a client on a to-do made internal, `ops.assignable_or_assigned()`),

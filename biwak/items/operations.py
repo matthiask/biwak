@@ -598,8 +598,9 @@ def unassign(item, users, *, actor):
 
 def unassign_dropped(user, *, actor, project=None):
     """Takes the person off the open to-dos (trashed ones too) of
-    ``project``, or of every project: removed from the project or
-    deactivated (decided 2026-11-21, specs/todos.md). Through ``unassign()``,
+    ``project``, or of every project: removed from the project (decided
+    2026-11-21, specs/todos.md; deactivating keeps them since 2026-11-22,
+    specs/handover.md). Through ``unassign()``,
     so the history shows it and nobody is told; completed to-dos are
     history and keep them."""
     items = Item.objects.filter(
