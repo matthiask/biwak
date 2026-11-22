@@ -1,6 +1,8 @@
 """Choosing a language (specs/languages.md, "Choosing"): the settings, the
 browser's before choosing, the API, and the language of mails"""
 
+from unittest.mock import patch
+
 from django.core import mail
 from django.test import TestCase
 from django.utils import translation
@@ -163,3 +165,25 @@ class MailLanguageTest(TestCase):
         self.assertEqual(dora.invitation_language, "")
         self.assertEqual(language_for(dora), "en")
         self.assertEqual(len(mail.outbox), 1)
+
+
+class CalendarLanguageTest(TestCase):
+    def test_the_feed_is_in_its_owners_language(self):
+        from biwak.accounts.models import CalendarToken
+        from biwak.items import by_due
+
+        ada = person("Ada", language="de")
+        link = CalendarToken.renew(ada)
+        seen = []
+        original = by_due.calendar_for
+
+        def calendar_for(user):
+            seen.append(translation.get_language())
+            return original(user)
+
+        with patch.object(by_due, "calendar_for", calendar_for):
+            response = self.client.get(
+                f"/calendar/{link.token}.ics", headers={"Accept-Language": "en"}
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(seen, ["de"])

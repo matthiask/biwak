@@ -187,20 +187,22 @@ def passkey_offer(request):
 
 
 class NameForm(Form):
-    full_name = forms.CharField(label=_("full name"), max_length=200)
+    full_name = forms.CharField(label=gettext_lazy("full name"), max_length=200)
     short_name = forms.CharField(
-        label=_("short name"),
+        label=gettext_lazy("short name"),
         max_length=30,
         required=False,
-        help_text=_("How you're listed (mentions, assignees); empty: your first name."),
+        help_text=gettext_lazy(
+            "How you're listed (mentions, assignees); empty: your first name."
+        ),
     )
 
 
 class KeyboardForm(Form):
     keyboard_shortcuts = forms.BooleanField(
-        label=_("Single-key shortcuts"),
+        label=gettext_lazy("Single-key shortcuts"),
         required=False,
-        help_text=_(
+        help_text=gettext_lazy(
             "Ctrl+K (Cmd+K) always opens the command palette; the other keys"
             " only work with this on."
         ),
@@ -220,13 +222,13 @@ class AppearanceForm(Form):
     # Only what's posted changes: the toggle in the navigation posts the
     # theme alone
     theme = forms.ChoiceField(
-        label=_("Theme"),
+        label=gettext_lazy("Theme"),
         choices=Theme.choices,
         required=False,
         widget=forms.RadioSelect,
     )
     accent = forms.ChoiceField(
-        label=_("Accent color"),
+        label=gettext_lazy("Accent color"),
         choices=Accent.choices,
         required=False,
         widget=forms.RadioSelect,

@@ -11,10 +11,9 @@ live in the database (not the cache) so that every process agrees.
 import datetime as dt
 
 from django.utils import timezone
-from django.utils.timesince import timesince
 from django.utils.translation import gettext as _
 
-from biwak import checklists
+from biwak import checklists, text
 from biwak.activity.models import Action, Event
 from biwak.items.models import Editing, Item, Kind
 from biwak.organizations.names import display_name
@@ -128,10 +127,7 @@ def name_for(viewer, project, person):
 
 def ago(when, *, now=None):
     """One unit, like the ``ago`` filter (decided 2026-11-22)"""
-    now = now or timezone.now()
-    if now - when < dt.timedelta(minutes=1):
-        return _("a moment ago")
-    return _("%(time)s ago") % {"time": timesince(when, now, depth=1)}
+    return text.ago(when, now=now, just_now=_("a moment ago"))
 
 
 def being_edited_message(viewer, project, users):
