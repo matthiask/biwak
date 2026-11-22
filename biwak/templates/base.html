@@ -12,22 +12,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Biwak{% endblock %}</title>
-    <script>
-      // Set the theme immediately to prevent a flash of the wrong theme, see
-      // theme.js: the person's choice, in the browser's storage for those who
-      // aren't logged in
-      (function () {
-        document.documentElement.classList.add("js")
-        let stored = document.documentElement.dataset.themeMode
-        if (!stored) {
-          try { stored = window.localStorage.getItem("theme") } catch {}
-        }
-        document.documentElement.dataset.bsTheme =
-          stored === "light" || stored === "dark"
-            ? stored
-            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-      })()
-    </script>
+    {% include "_theme_script.html" %}
     <link rel="icon" href="{% static 'biwak/favicon.svg' %}" type="image/svg+xml">
     <link rel="manifest" href="/manifest.webmanifest">
     <meta name="theme-color" content="#5b37b0" media="(prefers-color-scheme: light)">
@@ -148,6 +133,9 @@
                   >{% translate "My activity" %}</a>{% endif %}
                 <a class="dropdown-item" href="{% url 'settings' %}">{% translate "Settings" %}</a>
                 <a class="dropdown-item" href="{% url 'calendar_link' %}">{% translate "Calendar" %}</a>
+                {% if not request.user.is_client %}
+                  <a class="dropdown-item" href="{% url 'public_links' %}">{% translate "Public links" %}</a>
+                {% endif %}
                 <a class="dropdown-item" href="{% url 'help' %}">{% translate "Help" %}</a>
                 <hr class="dropdown-divider">
                 {% if request.user.is_staff %}

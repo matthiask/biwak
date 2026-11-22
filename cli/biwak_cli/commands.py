@@ -2159,6 +2159,74 @@ def search(terms, project, kind, mine, archived, limit, as_json):
     return None
 
 
+# Public links ---------------------------------------------------------------
+
+
+def show_public_link(link):
+    item = link["item"]
+    click.echo(f"#{item['id']} {item['title']} {clients(item)}".rstrip())
+    click.echo(link["url"])
+    click.echo(f"Expires {link['expires_at'][:16].replace('T', ' ')}")
+
+
+@cli.command("public-links")
+@json_option
+def public_links(as_json):
+    """The live public links in the projects you can open (admins: all),
+    the soonest expiry first (staff)"""
+    data = request("GET", "public-links/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Kind", "Title", "Project", "Expires", "By", "URL", "")
+    for link in data:
+        item = link["item"]
+        t.add_row(
+            str(item["id"]),
+            item["kind"],
+            item["title"],
+            str(item["project_id"]),
+            link["expires_at"][:16].replace("T", " "),
+            link["created_by"]["short_name"],
+            link["url"],
+            clients(item),
+        )
+    console.print(t)
+    return None
+
+
+@cli.command()
+@click.argument("item", type=int)
+@click.option(
+    "--days",
+    type=click.Choice(["1", "3", "7", "30"]),
+    default="7",
+    show_default=True,
+    help="How long the link works.",
+)
+@json_option
+def share(item, days, as_json):
+    """A public link to ITEM (a to-do, message, doc or file) for people
+    without an account, read only, until it expires;
+    replaces the one there is (staff)"""
+    data = request("POST", f"items/{item}/public-link/", json={"days": int(days)})
+    if as_json:
+        return echo_json(data)
+    show_public_link(data)
+    return None
+
+
+@cli.command()
+@click.argument("item", type=int)
+@json_option
+def unshare(item, as_json):
+    """Stop sharing ITEM publicly: its public link stops working (staff)"""
+    data = request("DELETE", f"items/{item}/public-link/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Stopped sharing #{item} publicly.")
+    return None
+
+
 # Bookmarks and links --------------------------------------------------------
 
 

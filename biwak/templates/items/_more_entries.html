@@ -4,7 +4,8 @@
   tile's menu (files/_tile_menu.html): a list's notification level (other
   items have none: subscribing is the switch, specs/notifications.md,
   "Levels"), its subscribers, editing and ordering (folders), moving,
-  archiving (lists) and trashing (who may change it); `more_history`: the
+  archiving (lists), sharing publicly (leaves, staff) and trashing (who
+  may change it); `more_history`: the
   history too, on phones, where the page's header doesn't show its link;
   each in a modal (frontend/modal.js) which is also a page. `can_change`
   comes from the page; `next_query` (`?next=…`) sends the modals back there.
@@ -48,6 +49,14 @@
       data-modal
     >{% translate "Show to clients…" %}</a>
   {% endif %}
+{% endif %}
+{% if item.is_shareable and not request.user.is_client %}
+  {# Public links, staff only (specs/public-links.md) #}
+  <a
+    class="dropdown-item"
+    href="{% url 'item_share' item.pk %}{{ next_query }}"
+    data-modal
+  >{% translate "Share…" %}</a>
 {% endif %}
 {% move_url item as move %}
 {# To-dos move for everybody who sees them (their fields are open to all, specs/access.md) #}

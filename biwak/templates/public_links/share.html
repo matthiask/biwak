@@ -1,0 +1,75 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{% comment %}
+  Share… (specs/public-links.md): the item's own link first, the one
+  primary thing; then the public link while one is live (Copy, when it
+  expires, Stop sharing), and the form creating one, which replaces it.
+{% endcomment %}
+{% block before_form %}
+  <div class="mb-3">
+    <label class="form-label" for="own-link">{% translate "Link for people with an account" %}</label>
+    <div class="input-group">
+      <input
+        type="text"
+        readonly
+        class="form-control user-select-all"
+        id="own-link"
+        value="{{ own_url }}"
+      >
+      <button type="button" class="btn btn-primary" data-copy="#own-link">{% translate "Copy" %}</button>
+    </div>
+    <div class="form-text">
+      {% translate "People with an account open this one and don’t need a public link. A public link is only for people outside." %}
+    </div>
+  </div>
+  <h2 class="h6 mt-4">{% translate "Public link" %}</h2>
+  {% if link %}
+    <div class="mb-2" data-public-link>
+      <div class="input-group">
+        <input
+          type="text"
+          readonly
+          class="form-control user-select-all"
+          id="public-link"
+          value="{{ public_url }}"
+          aria-label="{% translate 'Public link' %}"
+          {% if created %}autofocus{% endif %}
+        >
+        <button type="button" class="btn btn-quiet" data-copy="#public-link">{% translate "Copy" %}</button>
+      </div>
+      <div class="form-text">
+        {% blocktranslate trimmed with date=link.expires_at|date:"j. M Y, H:i" %}
+          Anybody with this link can read it without signing in, until {{ date }}.
+        {% endblocktranslate %}
+      </div>
+    </div>
+    <form
+      method="post"
+      action="{{ request.get_full_path }}"
+      class="mb-3"
+      {% if modal %}
+        hx-post="{{ request.get_full_path }}"
+        hx-target="#modal"
+        hx-headers='{"HX-Modal": "true"}'
+      {% endif %}
+    >
+      {% csrf_token %}
+      <button type="submit" name="stop" value="1" class="btn btn-sm btn-quiet">{% translate "Stop sharing" %}</button>
+    </form>
+  {% else %}
+    <p class="small text-body-secondary">
+      {% translate "Shows the title, the text and its attachments to anybody with the link, without signing in, until it expires: no comments, no project." %}
+    </p>
+  {% endif %}
+{% endblock before_form %}
+
+{% block fields %}
+  {{ block.super }}
+  {% if link %}
+    <p class="small text-body-secondary">{% translate "A new public link replaces this one." %}</p>
+  {% endif %}
+{% endblock fields %}
+
+{% block extra_actions %}
+  <a class="btn btn-quiet" href="{% url 'public_links' %}">{% translate "All public links" %}</a>
+{% endblock extra_actions %}

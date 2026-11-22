@@ -62,6 +62,11 @@ SWITCH_MESSAGE = _(
 # Kinds people can comment on (no comments on lists and folders)
 COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
+# Kinds with public links (specs/public-links.md): leaves only, a container
+# would show whatever is added to it later; not check-in answers (decided
+# 2026-11-22)
+SHAREABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE}
+
 
 class Status(models.TextChoices):
     # Archived is for lists only; ``operations.archive()`` is the one check
@@ -164,6 +169,11 @@ class Item(TreeNode):
     @property
     def is_commentable(self):
         return self.kind in COMMENTABLE
+
+    @property
+    def is_shareable(self):
+        """Whether it can have a public link (specs/public-links.md)"""
+        return self.kind in SHAREABLE and not self.is_draft
 
     @property
     def detail(self):

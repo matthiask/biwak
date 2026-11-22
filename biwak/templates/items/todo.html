@@ -18,6 +18,7 @@
       {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
       <span class="wb-todo-title" data-celebrate-title>{{ item|item_title }}</span>
       {% client_badge item %}
+      {% public_link_badge item %}
     </h1>
     <div class="wb-page-actions is-compact">
       {% bookmark_button item %}

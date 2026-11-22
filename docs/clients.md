@@ -61,12 +61,37 @@ Staff never have to guess:
   their organization uploaded.
 
 Clients can't create lists, folders, docs or files, pin messages, use
-the visibility switch, or see internal items, history and older
-versions. They sign in with a mail code or a passkey, or through their
+the visibility switch, share publicly, or see internal items, history
+and older versions. They sign in with a mail code or a passkey, or through their
 organization's Google or Microsoft account where it's set up, and may
 add an authenticator app as a second step ([Signing in](sign-in.md)).
 Their notification settings work like everybody's
 ([Notifications](notifications.md)).
+
+## Public links
+
+For people without an account (a supplier, somebody you send a single
+doc), staff can share one to-do, message, doc or file read only with a
+**public link**: **Share…** in the item's "More" menu, or in the
+palette.
+
+- The dialog first offers the item's **own link**: people with an
+  account open that one and never need a public link.
+- A public link expires after **1, 3, 7 or 30 days** (7 unless you
+  choose otherwise). Anybody with it can read the title, the text, its
+  attachments and the file, without signing in; no comments, no project,
+  nobody else. Links to other items in the text still need an account.
+- An item has one public link at a time: creating a new one replaces
+  it. **Stop sharing** ends it at once. While it's live, staff see a
+  **"Public link"** badge next to the item's title on its page, which
+  opens Share….
+- Trashing the item (or what it's in) or archiving the project ends its
+  link for good; restoring doesn't bring it back.
+- **Public links** in your account menu lists the live links in your
+  projects, each with "Stop sharing". Sharing and stopping show in the
+  activity for staff, they notify nobody.
+
+Clients can't create public links.
 
 ## Partners
 

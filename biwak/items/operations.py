@@ -48,6 +48,7 @@ from biwak.items.models import (
 from biwak.live import announce as live
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, knows_people_of
+from biwak.public_links.operations import end_links
 from biwak.text import line_breaks
 
 
@@ -1061,7 +1062,10 @@ def set_visibility(item, *, visible, actor):
 def trash(item, *, actor):
     """Soft and recoverable; active descendants follow, and come back with
     it, those trashed earlier stay trashed. An archived item comes back
-    archived."""
+    archived, its public links don't."""
+    # Its public links (and those of what's in it) end for good
+    # (specs/public-links.md)
+    end_links(item=item)
     item.archived_when_trashed = item.status == Status.ARCHIVED
     item.status = Status.TRASHED
     item.trashed_at = timezone.now()

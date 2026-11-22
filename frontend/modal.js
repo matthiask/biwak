@@ -17,9 +17,14 @@ let initial = null
 let opener = null
 let lastEscape = Number.NEGATIVE_INFINITY
 
+// All the dialog's forms (Share… has two)
 const serialize = () => {
-  const form = dialog.querySelector("form")
-  return form ? new URLSearchParams(new FormData(form)).toString() : null
+  const forms = [...dialog.querySelectorAll("form")]
+  return forms.length
+    ? forms
+        .map((form) => new URLSearchParams(new FormData(form)).toString())
+        .join("&")
+    : null
 }
 
 function getDialog() {

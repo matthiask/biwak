@@ -5,8 +5,10 @@ import re
 from django import template
 from django.conf import settings
 from django.urls import reverse
+from django.utils.dateformat import format as date_format
 from django.utils.html import escape, format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
+from django.utils.timezone import localtime
 from django.utils.translation import gettext
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
@@ -165,6 +167,24 @@ def checklist_markdown(context, text, item, comment=None, *, without_title=False
     )
 
 
+@register.simple_tag
+def public_markdown(text, link, *, without_title=False):
+    """The text on the public page of ``link`` (specs/public-links.md):
+    nobody looked up, checkboxes disabled, the item's attachments through
+    the token"""
+    return render_markdown(
+        text, link.item, without_title=without_title, public_token=link.token
+    )
+
+
+@register.filter
+def parse_datetime(value):
+    """A time stored as ISO text (an event's ``data``), or None"""
+    from django.utils.dateparse import parse_datetime as parse
+
+    return parse(value) if isinstance(value, str) else value
+
+
 @register.filter
 def mail_markdown(text, item=None):
     """For mails: like ``markdown``, attachment URLs with BASE_URL and
@@ -181,8 +201,12 @@ def render_markdown(
     tickable=False,
     glyphs=False,
     without_title=False,
+    public_token=None,
 ):
     """``absolute`` for the API and mails: attachment URLs with BASE_URL.
+    ``public_token``: the public page of the link with this token
+    (specs/public-links.md): mentions as written, nobody looked up, the
+    item's attachments through the token.
     ``attachment_urls=False`` skips looking them up (excerpts don't show
     them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
     turns them into ☐ and ☑ (mails). ``without_title`` leaves out the
@@ -191,11 +215,15 @@ def render_markdown(
     from biwak.activity.mentions import mentioned_ids, reader, visible_people
 
     text = str(text or "")
-    people = visible_people(item, mentioned_ids(text)) if item is not None else {}
+    people = (
+        visible_people(item, mentioned_ids(text))
+        if item is not None and public_token is None
+        else {}
+    )
     env = {
         "people": people,
         "reader": reader(),
-        "links": not absolute and not glyphs,
+        "links": not absolute and not glyphs and public_token is None,
         "tickable": tickable,
         "glyphs": glyphs,
     }
@@ -203,7 +231,7 @@ def render_markdown(
     if without_title:
         tokens = _without_title(text, tokens)
     if attachment_urls:
-        _attachment_urls(tokens, item, absolute=absolute)
+        _attachment_urls(tokens, item, absolute=absolute, public_token=public_token)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
@@ -230,7 +258,7 @@ def _attachment_reference(token):
     return None
 
 
-def _attachment_urls(tokens, item, *, absolute):
+def _attachment_urls(tokens, item, *, absolute, public_token=None):
     """``attachment:KEY`` (specs/files.md) becomes the download URL; images
     show inline, scaled to the text's width. Whoever reads the text may
     not see the attachment: the download checks. Only the item's own
@@ -262,7 +290,14 @@ def _attachment_urls(tokens, item, *, absolute):
                 continue
             attr, key = reference
             if attachment := found.get(key):
-                url = attachment.get_absolute_url()
+                url = (
+                    reverse(
+                        "public_attachment",
+                        args=[public_token, attachment.key, attachment.name],
+                    )
+                    if public_token
+                    else attachment.get_absolute_url()
+                )
                 child.attrSet(attr, settings.BASE_URL + url if absolute else url)
                 if attr == "src":
                     child.attrJoin("class", "wb-attachment-image")
@@ -496,6 +531,31 @@ def client_badge(item):
         '<span class="badge wb-client-badge" title="{}">{}</span>',
         gettext("Clients can see this"),
         gettext("Clients"),
+    )
+
+
+@register.simple_tag(takes_context=True)
+def public_link_badge(context, item):
+    """ "Public link" on the item's own page while a live one exists, for
+    staff, opening Share… (specs/public-links.md, decided 2026-11-22:
+    the page only, not rows or tiles)"""
+    from biwak.public_links.models import PublicLink
+
+    request = context.get("request")
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated or user.is_client:
+        return ""
+    if not item.is_shareable:
+        return ""
+    link = PublicLink.objects.live().filter(item=item).first()
+    if link is None:
+        return ""
+    return format_html(
+        '<a class="badge wb-public-badge" href="{}" data-modal title="{}">{}</a>',
+        reverse("item_share", args=[item.pk]),
+        gettext("Shared publicly until %(date)s")
+        % {"date": date_format(localtime(link.expires_at), "j. M Y, H:i")},
+        gettext("Public link"),
     )
 
 

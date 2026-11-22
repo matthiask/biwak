@@ -45,7 +45,7 @@ confirm: `decisions-to-confirm.md`.
 | `activation.md` | built | people: inviting several at once, invitations, activating, deactivating, resets |
 | `doc-titles.md` | built | pointer: a doc's title is its first line, now in `files.md` |
 | `two-factor.md` | built | passkeys as a way in, authenticator apps as an optional second factor, organizations requiring one |
-| `public-links.md` | open | read-only links to one item for people outside, expiring after 1 to 30 days |
+| `public-links.md` | built | read-only links to one item for people outside, expiring after 1 to 30 days |
 | `teams.md` | open | named sets of people, expanded into their members when assigning, subscribing or mentioning |
 
 ## Writing a spec for a new part

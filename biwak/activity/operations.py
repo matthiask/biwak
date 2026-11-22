@@ -31,6 +31,12 @@ ACCESS_CHANGES = {
     Action.LEFT,
 }
 
+# Events only staff see, also on items visible to clients: public links
+# (specs/public-links.md, decided 2026-11-22). Recorded as internal, so
+# every way clients read events (the feeds, the API, live updates) leaves
+# them out.
+STAFF_ONLY = {Action.SHARED_PUBLICLY, Action.STOPPED_SHARING}
+
 # An edit within this time of the person's last edit of the item updates
 # that event instead of writing a new one ("once per editing session")
 EDIT_SESSION = dt.timedelta(minutes=10)
@@ -84,11 +90,15 @@ def record(*, actor, action, project, item=None, **data):
     (project events notify nobody). The event stores whether the item is
     visible to clients now (read from the database, not the instance);
     edits only merge into an event of the same visibility, so an event
-    clients see never takes in what happened while the item was internal."""
+    clients see never takes in what happened while the item was internal.
+    ``STAFF_ONLY`` events are internal whatever the item."""
     visible = False
     if item is not None:
         data.setdefault("title", item.title)
-        visible = Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
+        visible = (
+            action not in STAFF_ONLY
+            and Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
+        )
     now = _occurred_at.get() or timezone.now()
     event = None
     # Edits merge, and so do moves between the groups of a list (board

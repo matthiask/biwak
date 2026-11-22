@@ -32,6 +32,7 @@ from biwak.activity.notify import (
 )
 from biwak.activity.operations import (
     NOTE_LENGTH,
+    STAFF_ONLY,
     is_assigned,
     set_level_override,
     share,
@@ -73,6 +74,12 @@ class FilterForm(Form):
         if user.is_client:
             # Everything a client sees is visible to clients
             del self.fields["clients"]
+            # Nor do they see the staff's events (public links)
+            self.fields["action"].choices = [
+                choice
+                for choice in self.fields["action"].choices
+                if choice[0] not in STAFF_ONLY
+            ]
 
 
 def feed_page(request, *, title, url, project=None, person=None):

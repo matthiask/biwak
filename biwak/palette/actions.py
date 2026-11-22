@@ -138,6 +138,9 @@ def everywhere(user):
         actions.append(modal(_("New project"), reverse("project_create")))
     if org_ops.can_manage(user):
         actions.append(link(_("Go to organizations"), reverse("organizations")))
+    if not user.is_client:
+        # Staff only (specs/public-links.md), like the account menu
+        actions.append(link(_("Public links"), reverse("public_links")))
     if user.is_admin:
         # Every project, for admins (specs/handover.md)
         actions.append(link(_("All projects"), reverse("all_projects")))
@@ -267,14 +270,24 @@ def on_item(request, item, context):
     actions.append(
         modal(_("Subscribers…"), reverse("item_subscribers", args=[item.pk]))
     )
-    if not user.is_client:
-        actions.append(link(_("History"), reverse("item_history", args=[item.pk])))
+    actions += _for_staff(user, item)
     actions.append({
         "label": _("Copy the link"),
         "type": "copy",
         "text": request.build_absolute_uri(url),
         "shortcut": "",
     })
+    return actions
+
+
+def _for_staff(user, item):
+    """The item's history, and Share… on leaves (specs/public-links.md, like
+    the "More" menu)"""
+    if user.is_client:
+        return []
+    actions = [link(_("History"), reverse("item_history", args=[item.pk]))]
+    if item.is_shareable:
+        actions.append(modal(_("Share…"), reverse("item_share", args=[item.pk])))
     return actions
 
 

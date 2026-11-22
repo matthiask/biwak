@@ -903,6 +903,20 @@ h3,
   --wb-tone-ink: var(--wb-warning-ink);
 }
 
+/* A live public link, on the item's page (specs/public-links.md): a palette
+   tint, quieter than the clients' yellow */
+:root {
+  --wb-public-bg: var(--wb-palette-lake-tint-bg);
+  --wb-public-ink: var(--wb-palette-lake-tint-ink);
+}
+
+.wb-public-badge {
+  background: var(--wb-public-bg);
+  color: var(--wb-public-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* Visible to clients (specs/access.md): bright yellow, impossible to miss */
 :root,
 [data-bs-theme="light"] {
