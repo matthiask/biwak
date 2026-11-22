@@ -2,6 +2,7 @@ import re
 
 from django.contrib.staticfiles import finders
 from django.core import mail
+from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -457,3 +458,18 @@ class ManifestTest(TestCase):
             'name="apple-mobile-web-app-title" content="Biwak"',
         ]:
             self.assertIn(needle, content)
+
+
+class ErrorPagesTest(TestCase):
+    """The error pages are pages of the app: the content in <main>, a heading"""
+
+    def test_not_found(self):
+        self.client.force_login(person("Ada"))
+        response = self.client.get("/does-not-exist/")
+        self.assertContains(response, "<h1>Not found</h1>", status_code=404)
+        self.assertContains(response, '<main id="main"', status_code=404)
+
+    def test_server_error_needs_no_request(self):
+        html = render_to_string("500.html")
+        self.assertIn("<main>", html)
+        self.assertIn("<h1>Server error</h1>", html)

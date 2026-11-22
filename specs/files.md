@@ -223,8 +223,13 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   `operations._save()`, which every change of the text goes through (the
   live editor, the API, ticks, restoring a version, the importer), so
   lists, the feed, search and mails use it. A changed title is an edit
-  like any other. The page header shows no title (the text has its
-  heading). Messages keep their subject field. `create_doc()` (the API,
+  like any other. The page header shows the title as its `<h1>`, like
+  other items' pages, and the text's first line, when it's a heading, is
+  not shown again below it (decided 2026-11-22, replacing "no title in
+  the header": screen readers had no heading, phones no title; CSS,
+  `.wb-doc-text`). The live editor's heading is there for screen
+  readers only (the editor shows the first line, which changes as
+  people type). Messages keep their subject field. `create_doc()` (the API,
   the importer) puts `# <title>` and an empty line in front
   (`with_heading()`); the importer's second run doesn't add it twice.
 - **Versions:** `DocVersion(doc, title, content, created_by,

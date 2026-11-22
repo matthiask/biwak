@@ -22,18 +22,24 @@
       {{ item|item_title }}
       {% client_badge item %}
     </h1>
-    <div class="wb-page-actions">
+    <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
       {% if can_pin %}
         <form method="post" action="{% url 'message_pin' item.pk %}">
           {% csrf_token %}
           {% if message.pinned_at %}
-            <button type="submit" name="unpin" value="1" class="btn btn-sm btn-quiet">
-              {% icon "pin-angle" %}<span>{% translate "Unpin" %}</span>
+            <button
+              type="submit"
+              name="unpin"
+              value="1"
+              class="btn btn-sm btn-quiet"
+              title="{% translate 'Unpin' %}"
+            >
+              {% icon "pin-angle" %}<span class="wb-label">{% translate "Unpin" %}</span>
             </button>
           {% else %}
-            <button type="submit" class="btn btn-sm btn-quiet">
-              {% icon "pin-angle" %}<span>{% translate "Pin" %}</span>
+            <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Pin' %}">
+              {% icon "pin-angle" %}<span class="wb-label">{% translate "Pin" %}</span>
             </button>
           {% endif %}
         </form>
@@ -42,10 +48,11 @@
         <a
           class="btn btn-sm btn-quiet"
           href="{% url 'message_edit' item.pk %}"
+          title="{% translate 'Edit' %}"
           data-edit-url="{% url 'message_edit' item.pk %}"
           data-edit-focus="title"
           data-edit-open
-        >{% icon "pencil" %}<span>{% translate "Edit" %}</span></a>
+        >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% endif %}
       {% include "items/_more.html" %}
     </div>

@@ -7,23 +7,33 @@
 {% block content %}
   {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
   <div class="wb-page-header" id="live-header" data-live>
-    {# The title is the text's first line (specs/doc-titles.md) #}
-    <div class="wb-title">
+    {# The title is the text's first line (specs/files.md, "Docs"): the header's, not the text's #}
+    <h1 class="wb-title">
       {% icon "file-earmark-text" %}
+      {{ item|item_title }}
       {% client_badge item %}
-    </div>
-    <div class="wb-page-actions">
+    </h1>
+    <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
       {% if is_staff %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'doc_versions' item.pk %}">{% icon "clock-history" %}<span
-          >{% translate "Versions" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'doc_versions' item.pk %}"
+          title="{% translate 'Versions' %}"
+        >{% icon "clock-history" %}<span class="wb-label">{% translate "Versions" %}</span></a>
       {% endif %}
       {% if can_edit %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "pencil" %}<span
-          >{% translate "Edit" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'doc_edit' item.pk %}"
+          title="{% translate 'Edit' %}"
+        >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% else %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'doc_edit' item.pk %}">{% icon "broadcast" %}<span
-          >{% translate "Watch live" %}</span></a>
+        <a
+          class="btn btn-sm btn-quiet"
+          href="{% url 'doc_edit' item.pk %}"
+          title="{% translate 'Watch live' %}"
+        >{% icon "broadcast" %}<span class="wb-label">{% translate "Watch live" %}</span></a>
       {% endif %}
       {% include "items/_more.html" %}
     </div>
@@ -45,7 +55,7 @@
     <div class="col-lg-8">
       <div class="card mb-4">
         <div class="card-body">
-          <div class="wb-markdown" id="live-text" data-live>{% checklist_markdown doc.content item %}</div>
+          <div class="wb-markdown wb-doc-text" id="live-text" data-live>{% checklist_markdown doc.content item %}</div>
         </div>
       </div>
       {% reactions item %}

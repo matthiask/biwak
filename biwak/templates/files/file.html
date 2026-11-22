@@ -19,18 +19,22 @@
       {{ item|item_title }}
       {% client_badge item %}
     </h1>
-    <div class="wb-page-actions">
+    <div class="wb-page-actions is-compact">
       {% bookmark_button item %}
-      <a class="btn btn-sm btn-primary" href="{% url 'file_download' item.pk %}">{% icon "download" %}<span
-        >{% translate "Download" %}</span></a>
+      <a
+        class="btn btn-sm btn-primary"
+        href="{% url 'file_download' item.pk %}"
+        title="{% translate 'Download' %}"
+      >{% icon "download" %}<span class="wb-label">{% translate "Download" %}</span></a>
       {% if can_change %}
         <a
           class="btn btn-sm btn-quiet"
           href="{% url 'file_edit' item.pk %}"
+          title="{% translate 'Edit' %}"
           data-edit-url="{% url 'file_edit' item.pk %}"
           data-edit-focus="title"
           data-edit-open
-        >{% icon "pencil" %}<span>{% translate "Edit" %}</span></a>
+        >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% endif %}
       {% include "items/_more.html" %}
     </div>
@@ -73,10 +77,16 @@
     </div>
     <div class="col-lg-4">
       {% if can_change %}
-        <h2 class="h6">{% translate "Replace" %}</h2>
+        <h2 class="h6" id="replace-file">{% translate "Replace" %}</h2>
         <form method="post" action="{% url 'file_replace' item.pk %}" enctype="multipart/form-data" class="mb-2">
           {% csrf_token %}
-          <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+          <input
+            type="file"
+            name="file"
+            class="form-control form-control-sm mb-2"
+            aria-labelledby="replace-file"
+            required
+          >
           <button type="submit" class="btn btn-sm btn-quiet">
             {% icon "upload" %}<span>{% translate "Upload a new version" %}</span>
           </button>

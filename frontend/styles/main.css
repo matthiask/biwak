@@ -19,6 +19,8 @@
   --wb-field-border: #c9c1b1;
   --wb-surface-border: #e2ddd2;
   --wb-shadow: 0 1px 2px rgba(40, 32, 16, 0.05);
+  /* Behind dialogs */
+  --wb-backdrop: rgb(20 16 30 / 0.45);
 }
 
 [data-bs-theme="dark"] {
@@ -27,10 +29,13 @@
   --bs-border-color: #2f2c36;
   --bs-secondary-color: rgba(226, 227, 220, 0.62);
   --wb-surface: #18161d;
-  --wb-field-bg: #000;
+  /* A little darker than the cards, not black (decided 2026-11-22) */
+  --wb-field-bg: #100e14;
   --wb-field-border: #474352;
   --wb-surface-border: #2f2c36;
   --wb-shadow: none;
+  /* Dimming a dark page needs more */
+  --wb-backdrop: rgb(0 0 0 / 0.7);
 }
 
 /* Old browsers without color-mix(): the plain stone */
@@ -403,6 +408,53 @@
   box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
 }
 
+/* Every button shows the keyboard's focus clearly (decided 2026-11-22):
+   Bootstrap's shadow needs a color the quiet buttons never set, and a
+   faint one is easy to miss. On the bar, in its light text's color. */
+.btn:focus-visible {
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+}
+
+.wb-navbar
+  :is(.btn, .nav-link, .navbar-brand):focus-visible:not(.dropdown-menu *) {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Errors and overdue: danger ink readable on the page (AA), not
+   Bootstrap's red */
+.text-danger {
+  color: var(--wb-danger-ink) !important;
+}
+
+.invalid-feedback,
+.form-control.is-invalid,
+.form-select.is-invalid {
+  --bs-form-invalid-color: var(--wb-danger-ink);
+}
+
+/* "Skip to content" (base.html): hidden until the keyboard reaches it */
+.wb-skip-link {
+  position: absolute;
+  z-index: 1100;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--bs-border-radius);
+  background: var(--wb-surface);
+  color: var(--bs-body-color);
+  box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 0.2);
+  transform: translateY(-200%);
+}
+
+.wb-skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+}
+
 /* Menus on the cards' surface, white in light mode, like the lantern's
    (decided 2026-11-21) */
 .dropdown-menu {
@@ -488,6 +540,13 @@ a {
   text-decoration: none;
 }
 
+/* What needs a keyboard (Home's "Search Ctrl+K"): not on phones */
+@media (pointer: coarse), (max-width: 575.98px) {
+  .wb-keyboard-only {
+    display: none !important;
+  }
+}
+
 /* Headings with badges: centered on the heading, not on the x-height */
 .wb-title {
   display: flex;
@@ -533,6 +592,9 @@ h3,
   --bs-navbar-brand-hover-color: #fff;
   background: var(--wb-accent-bar);
   border-bottom: 3px solid #e8a33d;
+  /* Its menus (the lantern, the account) open above the client tab */
+  position: relative;
+  z-index: 1020;
 }
 
 .wb-navbar .nav-link.active {
@@ -586,7 +648,6 @@ h3,
   color: inherit;
   background: transparent;
   box-shadow: none;
-  opacity: 0.75;
 }
 
 .btn-quiet {
@@ -695,6 +756,31 @@ h3,
   }
 }
 
+/* A filter form behind "Filters" on phones (activity/feed.html): on wider
+   screens the form shows as it is, where browsers can style the
+   disclosure's content; elsewhere it stays a disclosure */
+.wb-filter-disclosure > summary {
+  list-style: none;
+  margin-bottom: 0.5rem;
+}
+
+.wb-filter-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+@supports selector(::details-content) {
+  @media (min-width: 576px) {
+    .wb-filter-disclosure > summary {
+      display: none;
+    }
+
+    .wb-filter-disclosure::details-content {
+      content-visibility: visible;
+      height: auto;
+    }
+  }
+}
+
 /* Menus of what isn't needed often: a <details> working without
    JavaScript, Bootstrap's dropdown menu below its button (menus.js closes
    it when clicking elsewhere and with Escape) */
@@ -747,6 +833,12 @@ h3,
 /* Markdown texts: descriptions, notes, comments */
 .wb-markdown {
   overflow-wrap: anywhere;
+}
+
+/* A doc's page: its first line, when a heading, is the header's title
+   (files/doc.html) */
+.wb-doc-text > :is(h1, h2, h3, h4, h5, h6):first-child {
+  display: none;
 }
 
 .wb-markdown > :last-child {
@@ -861,6 +953,13 @@ h3,
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 0.15);
+}
+
+/* Below the bar, which takes two rows on small screens */
+@media (max-width: 991.98px) {
+  .wb-client-tab {
+    top: 7.5rem;
+  }
 }
 
 /* Room for the tab, so that it never covers the page's buttons */
@@ -1017,6 +1116,11 @@ html:not(.js) .wb-handle {
   color: var(--bs-body-color);
   padding: 0;
   font-size: 0.8rem;
+}
+
+/* In a button (the to-do's "Complete"): an empty box on the button */
+.btn .wb-check:not(.is-done) {
+  background: transparent;
 }
 
 .wb-check.is-done {
@@ -1960,7 +2064,7 @@ button.wb-signal:hover {
 }
 
 .wb-dialog::backdrop {
-  background: rgba(20, 16, 30, 0.45);
+  background: var(--wb-backdrop, rgb(0 0 0 / 0.45));
 }
 
 .wb-palette {
@@ -1998,16 +2102,26 @@ button.wb-signal:hover {
 
 .wb-palette-label {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: min(60%, 14rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* The title wins on narrow screens: the hint (the kind, the project, the
+   shortcut) is cut first */
 .wb-palette-hint {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.8rem;
   opacity: 0.8;
+}
+
+.wb-palette-option > .badge {
+  flex: none;
 }
 
 /* Task lists (specs/editor.md): the checkbox takes the bullet's place */
@@ -2022,6 +2136,7 @@ button.wb-signal:hover {
 
 .wb-markdown .task-list-item-checkbox {
   margin-inline-end: 0.4rem;
+  accent-color: var(--wb-accent-fill);
 }
 
 .wb-checklist .task-list-item-checkbox:not(:disabled) {
@@ -2205,7 +2320,7 @@ button.wb-signal:hover {
 }
 
 .wb-modal::backdrop {
-  background: rgb(0 0 0 / 0.4);
+  background: var(--wb-backdrop, rgb(0 0 0 / 0.45));
 }
 
 body:has(.wb-modal[open]) {
@@ -2598,6 +2713,15 @@ main:has([data-hide-title]) [data-edit-open] {
 .wb-person-link:hover,
 .wb-person-link:focus-visible {
   text-decoration: underline;
+}
+
+/* Links inside sentences are underlined: rendered Markdown (comments,
+   notes, the help) and the lines of the feed and Home. Links that are a
+   row, a title or navigation are not (specs/ui.md, decided 2026-11-22). */
+:is(.wb-markdown, .wb-event) a:not(.btn, .wb-person-link) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
 }
 
 /* Assignees in to-do rows: linked names like on the to-do's page, a name
@@ -3062,4 +3186,49 @@ a.is-drop-target {
   grid-column: 1 / -1;
   color: var(--bs-danger);
   font-size: 0.85rem;
+}
+
+/* Touch screens (decided 2026-11-22): small controls keep their look but
+   get a larger area taking the tap, an invisible box around them; boxes
+   to tick grow a little */
+@media (pointer: coarse) {
+  .wb-signal,
+  .wb-breadcrumbs a,
+  .wb-person-link,
+  .wb-event a {
+    position: relative;
+  }
+
+  button.wb-check:not(.is-bursting)::before,
+  .wb-signal::before,
+  .wb-breadcrumbs a::after,
+  .wb-person-link::after,
+  .wb-event a::after {
+    position: absolute;
+    inset: -0.4rem -0.25rem;
+    content: "";
+  }
+
+  button.wb-check:not(.is-bursting)::before {
+    inset: -0.5rem;
+  }
+
+  .wb-markdown .task-list-item-checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  /* Their labels take the tap too */
+  .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .wb-tiles .wb-tile-menu > summary {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

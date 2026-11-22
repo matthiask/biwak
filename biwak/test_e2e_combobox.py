@@ -17,6 +17,8 @@ class ComboboxTest(E2ETestCase):
         dialog = page.get_by_role("dialog", name="Add someone")
         field = dialog.get_by_role("combobox", name="Person")
         expect(field).to_be_visible()
+        # The hidden select isn't a second, nameless one for screen readers
+        expect(dialog.get_by_role("combobox")).to_have_count(1)
         listbox = dialog.get_by_role("listbox")
         expect(listbox).to_be_hidden()
 

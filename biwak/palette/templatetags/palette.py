@@ -26,7 +26,7 @@ def palette(context):
                 "actions": _("Actions"),
                 "jumps": _("Go to"),
                 "archived": _("Archived"),
-                "clients": _("For clients"),
+                "clients": _("Clients"),
                 "no_page_shortcuts": _("This page has none of its own."),
                 "copied": _("Link copied."),
                 "failed": _("That didn't work. Please try again."),

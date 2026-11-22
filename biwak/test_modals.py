@@ -44,7 +44,7 @@ class ModalMiddlewareTest(TestCase):
         self.assertFalse(self.client.get(url).context["modal"])
 
     def test_the_client_banner_in_the_dialog(self):
-        """On visible items, as on the form's page"""
+        """On visible items; the form's page has the tab instead (specs/ui.md)"""
         ada = person("Ada")
         camp = project(members=[ada])
         shared = ops.create_list(
@@ -57,3 +57,6 @@ class ModalMiddlewareTest(TestCase):
             response = self.client.get(url, headers=MODAL)
             self.assertNotContains(response, "<html")
             self.assertEqual("wb-client-banner" in response.content.decode(), shown)
+            response = self.client.get(url)
+            self.assertNotContains(response, "wb-client-banner")
+            self.assertEqual("wb-client-tab" in response.content.decode(), shown)

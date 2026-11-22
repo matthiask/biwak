@@ -98,6 +98,30 @@ class ViewModeTest(E2ETestCase):
         self.assertEqual(self.saved().item.title, "Order the tent")
         self.assertFalse(Editing.objects.exists())
 
+    def test_the_focus_comes_back_to_edit(self):
+        """Escape, Cancel and Save don't leave the focus on the page's body"""
+        page = self.page
+        self.goto(page, self.todo)
+        edit = page.get_by_role("link", name="Edit")
+        page.keyboard.press("e")
+        expect(page.locator("#live-text input[name=title]")).to_be_focused()
+        page.keyboard.press("Escape")
+        expect(self.form(page)).to_have_count(0)
+        expect(edit).to_be_focused()
+        # Clicking the text, then Cancel
+        page.locator("#live-text .wb-markdown em").click()
+        expect(self.form(page)).to_be_visible()
+        page.get_by_role("link", name="Cancel").click()
+        expect(self.form(page)).to_have_count(0)
+        expect(edit).to_be_focused()
+        # Save
+        edit.press("Enter")
+        expect(page.locator("#live-text input[name=title]")).to_be_focused()
+        page.get_by_role("button", name="Save").click()
+        expect(self.form(page)).to_have_count(0)
+        expect(edit).to_be_focused()
+        self.assertEqual(self.errors, [])
+
     def test_saving_swaps_the_view_and_the_heading_back(self):
         page = self.page
         self.goto(page, self.todo)

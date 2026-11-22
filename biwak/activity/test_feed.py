@@ -475,7 +475,7 @@ class FeedViewsTest(FeedBase):
         self.client.force_login(self.ada)
         response = self.client.get("/feed/")
         self.assertContains(response, "Older")
-        seen = response.text.count('<li class="mb-2" data-kb-row>')
+        seen = response.text.count('<li class="mb-2 wb-event" data-kb-row>')
         older = response.context["older"]
         self.assertIn("before=", older)
         response = self.client.get(older)

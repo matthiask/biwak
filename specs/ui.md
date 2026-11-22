@@ -28,7 +28,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   Cancel swap back. No special views: htmx takes the region out of the
   item's edit page (`hx-select`); without JavaScript "Edit" is that
   page. Escape cancels an unchanged form, a changed one needs it twice
-  within 1.5 seconds. Docs have the live editor instead.
+  within 1.5 seconds. When the form goes (Save, Cancel, Escape) the
+  focus returns to what opened it, else to "Edit" (decided 2026-11-22).
+  Docs have the live editor instead.
 - **Showing more without crowding:** small signals on many rows, short
   excerpts on few, full content on demand (`glance.md`).
 
@@ -48,7 +50,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   heights): page headers show icons only (`.wb-label` hidden, the label
   as `title`) and what isn't needed often moves into "More"
   (`.wb-phone-hide`, `.wb-phone-only`); on lists the bookmark, Edit and
-  List/Board stay, on to-dos Complete, Edit and the bookmark. Grids go
+  List/Board stay, on to-dos Complete, Edit and the bookmark. Every
+  item's page does this (`wb-page-actions is-compact`, `.wb-label` and a
+  `title` on every button with an icon; 2026-11-22: messages, files,
+  docs, check-ins and "Docs and files" showed their labels). Grids go
   to one column.
 - **Floating disclosures** (menus, the reaction picker, the people
   picker's list) close on a click elsewhere and Escape (`data-dismiss`;
@@ -64,6 +69,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   button is hidden with JavaScript; the changed field keeps the focus.
   Forms that change things never autosubmit. Filter buttons sit at the
   height of the fields (`wb-filters`, `_filter_buttons.html`).
+- **On phones** (2026-11-22: the feed's filters took five rows before
+  the first entry) a filter form with several fields sits behind a
+  "Filters" button saying how many are set (`.wb-filter-disclosure`,
+  open while one is set); wider screens show it as it is.
 - **Filters are remembered** per path in the browser (2026-11-21,
   adapted from Workbench; `frontend/filters.js`, `data-remember`; for
   to-dos, the feed and the lantern's page, not search): the page stores
@@ -100,6 +109,14 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   something to clients (`access.md`, "Making it obvious"); hiding is one
   click.
 
+## Links
+
+- **Links inside sentences are underlined** (decided 2026-11-22): in
+  rendered Markdown (notes, comments, the help) and in the lines of the
+  feed and Home (`.wb-event`). Links that are a row, a title or
+  navigation (breadcrumbs, the bar, lists of links) are not; people's
+  names (`.wb-person-link`) neither, they underline on hover.
+
 ## Clients, icons, colors
 
 - **Visible to clients** (2026-11-21: a banner on pages was too
@@ -113,6 +130,12 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Colors are palette tokens** (`--wb-palette-*`, `--wb-accent-*`),
   never hard-coded violet; the clients' amber stays out of the palette
   (`keyboard.md`, "The palette of colors").
+- **Danger ink** (`--wb-danger-ink`, also `.text-danger` and invalid
+  fields) instead of Bootstrap's red, which is below AA on the stone
+  page (2026-11-22).
+- **Dark mode** (2026-11-22): fields a little darker than cards, not
+  black (`--wb-field-bg`); dialogs dim the page more
+  (`--wb-backdrop`).
 - **Relative times** use the `ago` filter ("just now" under a minute).
 - **Overdue and today** are badges (`todos.md`, "The to-do's page").
 
@@ -123,7 +146,23 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **`prefers-reduced-motion: reduce` turns every animation off;** the
   scripts then don't intercept at all.
 
-## Keyboard
+## Keyboard and accessibility
+
+- **Focus is always visible** (decided 2026-11-22): every button gets a
+  2px outline in the accent's ring color when focused by keyboard
+  (white on the bar), whatever its variant.
+- **"Skip to content"** is the first link of every page, shown when
+  focused; `<main id="main">` is its target. Every `<nav>` has a label
+  ("Main", "Breadcrumbs", …) and error pages (403, 404, 500) put their
+  text in `<main>` with an `<h1>`.
+- **Every control has a name:** task list checkboxes are named by their
+  line, the combobox's hidden select is hidden from screen readers too.
+- **Touch targets** (2026-11-22): on coarse pointers small controls
+  (the to-do's check, row signals, breadcrumbs, names, the feed's
+  links) keep their look and get an invisible larger area taking the
+  tap; checkboxes grow a little; the tiles' "…" is 36 px. What needs a
+  keyboard (Home's "Search Ctrl+K", "Keyboard shortcuts") is not shown
+  on phones (`.wb-keyboard-only`).
 
 - **Rows people move through with j/k** (to-dos, messages, feed
   entries, search results) carry `data-kb-row`, `data-kb-open` and, for

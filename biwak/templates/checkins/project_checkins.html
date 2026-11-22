@@ -6,18 +6,21 @@
   {% include "_breadcrumbs.html" %}
   <div class="wb-page-header">
     <h1 class="wb-title">{% translate "Check-ins" %}</h1>
-    <div class="wb-page-actions">
+    <div class="wb-page-actions is-compact">
       {% if can_manage %}
         {% if any_paused %}
           <form method="post" action="{% url 'project_checkins_resume' project.pk %}">
             {% csrf_token %}
-            <button class="btn btn-sm btn-quiet" type="submit">
-              {% icon "play-circle" %}<span>{% translate "Resume all paused" %}</span>
+            <button class="btn btn-sm btn-quiet" type="submit" title="{% translate 'Resume all paused' %}">
+              {% icon "play-circle" %}<span class="wb-label">{% translate "Resume all paused" %}</span>
             </button>
           </form>
         {% endif %}
-        <a class="btn btn-sm btn-primary" href="{% url 'question_new' project.pk %}">{% icon "plus-lg" %}<span
-          >{% translate "New check-in" %}</span></a>
+        <a
+          class="btn btn-sm btn-primary"
+          href="{% url 'question_new' project.pk %}"
+          title="{% translate 'New check-in' %}"
+        >{% icon "plus-lg" %}<span class="wb-label">{% translate "New check-in" %}</span></a>
       {% endif %}
     </div>
   </div>

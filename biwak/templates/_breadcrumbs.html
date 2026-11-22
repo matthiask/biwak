@@ -1,10 +1,10 @@
-{% load biwak %}
+{% load biwak i18n %}
 {% comment %}
   The way to a page: the project (`project`), the area (`area` with its
   `area_url`: "Check-ins"), folders (`crumbs`) and the item above it
   (`parent`).
 {% endcomment %}
-<nav class="small mb-2">
+<nav class="small mb-2 wb-breadcrumbs" aria-label="{% translate 'Breadcrumbs' %}">
   <a href="{{ project.get_absolute_url }}">{{ project }}</a>
   {% if area_url %}/ <a href="{{ area_url }}" {% if drop %}data-drop-folder=""{% endif %}>{{ area }}</a>{% endif %}
   {% for crumb in crumbs %}

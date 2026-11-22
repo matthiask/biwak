@@ -122,9 +122,11 @@ def feed_page(request, *, title, url, project=None, person=None):
             "form": form,
             "days": days,
             "older": older,
-            "filtered": any(
-                request.GET.get(name)
+            # How many: "Filters" on phones says it (specs/ui.md)
+            "filtered": sum(
+                1
                 for name in ["kind", "person", "action", "clients"]
+                if request.GET.get(name)
             ),
         },
     )

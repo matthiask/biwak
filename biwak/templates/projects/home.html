@@ -105,11 +105,12 @@
               <a href="{% url 'todos' %}?assigned_by=me&amp;grouping=due">{% translate "To-dos I assigned" %}</a>
             </li>
           {% endif %}
-          <li>
+          {# For keyboards: not on phones (the bar has the search) #}
+          <li class="wb-keyboard-only">
             <a href="{% url 'search' %}" data-palette-open>{% translate "Search" %}</a>
             <kbd data-shortcut-hint>{% translate "Ctrl+K" %}</kbd>
           </li>
-          <li>
+          <li class="wb-keyboard-only">
             <a href="#wb-shortcuts" data-shortcuts-open hidden>{% translate "Keyboard shortcuts" %}</a>
             <span class="text-body-secondary" data-shortcuts-hint>{% translate "Keyboard shortcuts:" %}</span>
             <kbd>?</kbd>

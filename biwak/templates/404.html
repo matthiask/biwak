@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Not found" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1>{% translate "Not found" %}</h1>
+  <p>{% translate "This page doesn’t exist, or you can’t see it." %}</p>
+  <p><a href="{% url 'dashboard' %}">{% translate "Back to Home" %}</a></p>
+{% endblock content %}

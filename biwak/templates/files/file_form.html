@@ -6,7 +6,7 @@
 {% block content %}
   {% include "files/_crumbs.html" %}
   <h1 class="mb-3">{% if item %}{% translate "Edit the file" %}{% else %}{% translate "Upload a file" %}{% endif %}</h1>
-  {% if item %}{% include "items/_client_banner.html" %}{% else %}{% include "items/_client_banner.html" with item=folder %}{% endif %}
+  {% if item %}{% include "items/_client_tab.html" %}{% else %}{% include "items/_client_tab.html" with item=folder %}{% endif %}
   <div {% if item %}id="live-text" data-live data-view-form data-hide-title{% endif %}>
     <div class="card mb-4">
       <div class="card-body">

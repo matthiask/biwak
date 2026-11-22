@@ -27,7 +27,7 @@
     {% for choice in field %}
       <div class="form-check">
         {{ choice.tag }}
-        <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+        <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label|capfirst }}</label>
       </div>
     {% endfor %}
     {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}

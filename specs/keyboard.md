@@ -39,7 +39,9 @@ focus returns where it was.
   `accessible_to()`, `visible_to()` and `people_visible_to()`: a client
   never finds what they couldn't open or whom they may not know.
   Archived projects and their contents last, marked "Archived"; what
-  clients can see marked "For clients". "Search for '…'" is always last.
+  clients can see with the yellow "Clients" badge of the pages (decided
+  2026-11-22). The title wins the row: the hint (kind, project,
+  shortcut) is cut first. "Search for '…'" is always last.
 - **Actions** are decided on the server (`biwak/palette/actions.py`,
   rendered per page as JSON by `{% palette %}` in `base.html`): label,
   URL, type (link, post, focus, copy, theme) and an optional shortcut,

@@ -47,6 +47,8 @@ function attach(select) {
   // Still validated and posted, but neither shown nor focused
   select.classList.add("visually-hidden")
   select.tabIndex = -1
+  // The field is the control for screen readers, its label moves to it
+  select.setAttribute("aria-hidden", "true")
   select.dataset.comboboxInput = input.id
   // Focusing the select (its label, a restored focus) focuses the field
   select.addEventListener("focus", () => input.focus())
