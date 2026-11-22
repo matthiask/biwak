@@ -15,7 +15,7 @@ def forwards(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("activity", "0016_no_level_nothing"),
+        ("activity", "0017_alter_event_action"),
     ]
 
     operations = [migrations.RunPython(forwards, migrations.RunPython.noop)]

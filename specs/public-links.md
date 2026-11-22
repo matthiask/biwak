@@ -161,21 +161,3 @@ Where it lives and the choices made while building (2026-11-22):
   serve the current version and the item's own attachments only.
 - **API:** `GET /public-links/`, `GET`, `POST` (`{"days": 7}`) and
   `DELETE` `items/{id}/public-link/` (404 without a live link); CLI 0.43.0.
-
-## Done when
-
-- Staff create, replace and stop a link through the modal, the API and
-  the CLI; clients get 403/404 and see no "Share…".
-- Only 1, 3, 7 and 30 days are accepted, everywhere.
-- The public page shows title, text, attachments and the file, no
-  comments or project; 404 after expiry, stopping, trashing and
-  archiving the project.
-- Containers can't be shared.
-- The page of all public links lists exactly the live links in the
-  projects the person can open, all of them for admins, and stops one
-  with one click; clients get 404.
-- Restoring a trashed item or unarchiving its project leaves it
-  unshared; the events notify nobody.
-- The page and the downloads work without a session; a client's or
-  another project's item never becomes reachable through a token.
-- `fairy_tasks` deletes expired links.
