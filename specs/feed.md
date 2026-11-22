@@ -17,9 +17,11 @@ From the events (`biwak/activity/`, `notifications.md`);
   merge into one entry ("Ada completed 5 to-dos in Website relaunch",
   "items" for mixed kinds), the single items indented below it. "Within
   an hour" means each event at most an hour after the next older one of
-  the entry (chains merge), never across midnight. Merging works within a
-  page, so a page boundary can split an entry (a nicety, not a
-  requirement: confirmed 2026-11-20).
+  the entry (chains merge), never across midnight. A page ends between
+  entries (decided 2026-11-22, replacing "a page boundary can split an
+  entry"): after 50 events or later, looking ahead up to another 50 for
+  a place where no entry, conversation or pair cancelling out is split
+  (`feed._edge()`); only a merge reaching further is still split.
 - **Conversations, nothing collapses** (decided 2026-11-21): comments
   on the same item, by anyone, each within an hour of the one before and
   on the same day, become one entry, "Conversation on Order the tent",
@@ -78,8 +80,12 @@ Decisions (2026-11-20 unless dated):
   of it (`timeline.cancelled()`): a person's consecutive completing and
   reopening of an item (other events in between don't break it up,
   another person's completing or reopening does) is its net change, the
-  last one, or nothing when the to-do is back where it started. In the
-  feed (and the project page's latest events) each within an hour of the
+  last one, or nothing when the to-do is back where it started. Moves
+  too (decision B, decided 2026-11-22): a person's consecutive moves of
+  a to-do into other columns or lists are the last one, or nothing when
+  it's back where it was (`timeline.moved_back()`, from the moves'
+  `group_was` and `to_was`; older moves without them show as they are;
+  the feed and the timeline only, not the lantern and mails). In the feed (and the project page's latest events) each within an hour of the
   one before and on the same day, like merging; the to-do's timeline
   does the same within its lines (`combine()`, `timeline.md`); the
   lantern and the mails: `notifications.md`. The API lists single
