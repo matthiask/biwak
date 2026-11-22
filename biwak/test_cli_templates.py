@@ -35,8 +35,3 @@ class TemplatesCLITest(test_cli.CLITest):
         output = self.biwak("project", "add", "Event", "--as-template").output
         self.assertIn("Created the template", output)
         self.assertTrue(Project.objects.get(name="Event").is_template)
-
-    def test_search(self):
-        self.assertNotIn("Kick-off", self.biwak("search", "Kick-off").output)
-        output = self.biwak("search", "Kick-off", "--templates").output
-        self.assertIn("(template)", output)

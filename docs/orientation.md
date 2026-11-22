@@ -74,8 +74,7 @@ New projects can start from a template, a project kept for that
   are never asked.
 - **Nothing in a template tells anybody:** no notifications, no mails,
   no mentions. Templates stay out of the projects page, Home, the
-  activity across projects, your to-dos and the calendar link; search
-  finds them with "Include templates" or inside a template.
+  activity across projects, your to-dos, the calendar link and search.
 - **"New project from this…"** on a template's card or page (or "From
   a template" in the new project form) creates a project with a copy of
   everything at its top level: the lists with their groups and open

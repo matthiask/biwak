@@ -131,9 +131,10 @@ class TemplateTest(Fixture, TestCase):
         self.assertFalse(feed.feed_events(self.ada).exists())
         self.assertTrue(feed.feed_events(self.ada, project=self.template).exists())
         self.assertFalse(due.todos(self.bob, assignee="me").exists())
+        # Search never finds templates, not even searching in one
+        # (decided 2026-11-22)
         self.assertFalse(search.search(self.ada, "Kick-off").exists())
-        self.assertTrue(search.search(self.ada, "Kick-off", templates=True).exists())
-        self.assertTrue(
+        self.assertFalse(
             search.search(self.ada, "Kick-off", project=self.template).exists()
         )
 

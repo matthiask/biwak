@@ -14,7 +14,6 @@ router = Router(tags=["search"])
 class ResultOut(ItemOut):
     project_name: str
     project_archived: bool
-    project_is_template: bool
     # The project, the list or the list it is in is archived
     archived: bool
     # Escaped HTML with the matched words in <mark>; empty if only the title
@@ -31,7 +30,6 @@ def result_out(item):
     return item_out(item) | {
         "project_name": item.project.name,
         "project_archived": item.project.archived_at is not None,
-        "project_is_template": item.project.is_template,
         "archived": queries.is_archived(item),
         "title_html": hit.title,
         "excerpt": hit.text,
@@ -49,7 +47,6 @@ def search(
     kind: Kind | None = None,
     mine: bool = False,
     archived: bool = False,
-    templates: bool = False,
     cursor: str | None = None,
     page_size: int | None = None,
 ):
@@ -57,7 +54,7 @@ def search(
     title, text or comments, newest first; ``mine`` only what you
     created or what is assigned to you.
     Archived projects and lists (with their contents) are left out unless
-    ``archived``, templates unless ``templates`` (or searching in one)."""
+    ``archived``; templates always."""
     project = project_for(request, project_id) if project_id else None
     found = queries.search(
         request.user,
@@ -66,7 +63,6 @@ def search(
         kind=kind,
         mine=mine,
         archived=archived,
-        templates=templates,
     )
 
     def prepare(items):

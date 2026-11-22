@@ -121,14 +121,12 @@ def search(
     kind=None,
     mine=False,
     archived=False,
-    templates=False,
 ):
     """The items the person can see with all the words, newest first.
     ``project`` and ``kind`` narrow it down, ``mine`` keeps what the person
     created and the to-dos assigned to them, ``archived`` brings in the archived
-    projects and lists with their contents, which are left out otherwise,
-    ``templates`` the templates (specs/templates.md); searching in a
-    template finds what's in it."""
+    projects and lists with their contents, which are left out otherwise.
+    Never what's in templates (decided 2026-11-22, specs/templates.md)."""
     words = prefixes(terms)
     if not words:
         return Item.objects.none()
@@ -145,8 +143,7 @@ def search(
         items = items.filter(kind=kind)
     if mine:
         items = items.filter(Q(creator=user) | Q(todo__assignees=user)).distinct()
-    if not templates and not (project is not None and project.is_template):
-        items = items.filter(project__is_template=False)
+    items = items.filter(project__is_template=False)
     if not archived:
         items = items.filter(project__archived_at__isnull=True).exclude(
             Q(kind=Kind.LIST, status=Status.ARCHIVED)

@@ -155,6 +155,22 @@ class TemplatePageTest(Base, TestCase):
         self.assertNotIn("New list from a template…", labels)
 
 
+class SearchTest(Base, TestCase):
+    def test_never_found(self):
+        """No "Include templates", not offered as a project to search in,
+        nothing found inside one (decided 2026-11-22)"""
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("search"), {"q": "Kick-off"})
+        self.assertNotContains(response, "Include templates")
+        self.assertNotContains(response, "Web project")
+        self.assertEqual(response.context["results"], [])
+        response = self.client.get(
+            reverse("search"),
+            {"q": "Kick-off", "project": self.template.pk, "templates": "on"},
+        )
+        self.assertEqual(response.context["results"], [])
+
+
 class NewProjectTest(Base, TestCase):
     def test_from_this(self):
         """Prefilled from the template, saying what clients will see"""

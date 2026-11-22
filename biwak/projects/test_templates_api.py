@@ -89,13 +89,16 @@ class TemplatesAPITest(Fixture, TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_search(self):
+        """Never finds templates (decided 2026-11-22)"""
         data = self.api("get", "search/", self.ada, {"q": "Kick-off"}).json()
         self.assertEqual(data["results"], [])
         data = self.api(
-            "get", "search/", self.ada, {"q": "Kick-off", "templates": "true"}
+            "get",
+            "search/",
+            self.ada,
+            {"q": "Kick-off", "project_id": self.template.pk},
         ).json()
-        self.assertEqual([r["title"] for r in data["results"]], ["Kick-off"])
-        self.assertTrue(data["results"][0]["project_is_template"])
+        self.assertEqual(data["results"], [])
 
     def test_list_from_template(self):
         """The copy endpoint, the other way round"""

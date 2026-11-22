@@ -118,11 +118,10 @@ rebuilds them by hand.
   (`due.todos()`, so also Home and the calendar feed), Home's
   bookmarks, check-ins due (and `is_askable()`: questions in templates
   aren't asked), forwarding's lists, public links (they don't resolve),
-  the all-projects page, the archived projects. Search: `templates`
-  (the page's "Include templates", staff only; the API's `templates`;
-  `biwak search --templates`), and searching inside a template finds
-  its items. The palette lists templates after the projects, labelled
-  "Template".
+  the all-projects page, the archived projects. Search never finds
+  them (`search.queries.search()`; the search page doesn't offer them
+  as a project to search in). The palette lists templates after the
+  projects, labelled "Template".
 - **Quiet:** `notify()` tells nobody about events of templates (so no
   lantern, mails or digests), `mentions.update()` stores no mentions
   there, `notify_people()` subscribes nobody. Assigning inside a
@@ -183,9 +182,6 @@ rebuilds them by hand.
 
 ## To change (decided 2026-11-22, not built yet)
 
-- Search never finds templates: drop "Include templates", the API's
-  `templates`, `biwak search --templates` and searching inside a
-  template.
 - One "To-do list library" for the importer, whatever the bucket's
   name.
 - No "Share…" in templates, the API refusing public links there.
