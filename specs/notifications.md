@@ -144,14 +144,27 @@ level)`, the list's wins; decided 2026-11-21: other items have no level,
 other items). **Folders have no level of their own, they follow the
 project's** (confirmed 2026-11-21).
 
-- **Everything** (the default): a new message, doc or file they see
-  tells and subscribes them (`told_by_default()`); subscribed to a list,
-  they hear about every new to-do in it.
-- **Only what concerns me:** a new message, doc or file tells them only
-  when they follow its folder or the poster adds them; being mentioned
-  or assigned and their own things (creating, commenting) subscribe
-  them. New to-dos in a list they follow reach them only when they're
-  mentioned or assigned.
+- **Only what concerns me** (the default, decided 2026-11-22): a new
+  message, doc or file tells them only when they follow its folder or
+  the poster adds them; being mentioned or assigned and their own things
+  (creating, commenting) subscribe them. New to-dos in a list they
+  follow reach them only when they're mentioned or assigned.
+- **Everything:** a new message, doc or file they see tells and
+  subscribes them (`told_by_default()`); subscribed to a list, they hear
+  about every new to-do in it.
+
+**Why "only what concerns me" is the default** (decided 2026-11-22, it
+was "everything"): being told about a new post subscribes, so on
+"everything" a message meant as a hallway chat in a bigger project
+subscribed every member to every comment. Basecamp users expect to hear
+the follow-ups of what they were told about, so being told keeps
+subscribing; what changes is who is told by default. People who want
+everything opt in, for themselves or per project. `User.notification_level`
+and adding and inviting (`add_member()`, `invite()`, `invite_people()`,
+the forms, the API's `notify`, the importer through `add_member()`) all
+default to it; the API keeps the values `default` (everything) and
+`tagged`. Tests' made-up people (`test_utils.person()`) are on
+"everything", which most tests of telling rely on.
 
 Never a notification about one's own actions.
 
@@ -164,9 +177,9 @@ mention is someone deliberately asking for you.
 
 **Notified by default or only when tagged** (decided 2026-11-20): how
 someone is in a project is the project's level, not a new setting.
-Whoever adds or invites someone chooses "Notified by default"
-("everything", the default) or "Only when tagged" ("only what concerns
-me"), stored as the person's `LevelOverride` for the project
+Whoever adds or invites someone chooses "Only when tagged" ("only what
+concerns me", the default since 2026-11-22) or "Notified of everything
+new" ("everything", called "Notified by default" before), stored as the person's `LevelOverride` for the project
 (`add_member()`, `invite()`, `set_notify_choice()`,
 `notify_choice()` in `biwak/projects/operations.py`); adding someone
 again doesn't change it. The project's people page shows it under
@@ -177,7 +190,8 @@ it for others, clients and externals see and change only their own
 `can_change_notify_choice()`). API: `notify` (`default` or `tagged`;
 `null` for clients and externals about others) on the members list, adding
 and inviting; `biwak members --project ID`, `biwak members
-add|invite … [--only-tagged]`.
+add|invite … [--everything]` (`--only-tagged`, the default, still
+accepted).
 
 Pages: the level and delivery on `/accounts/notifications/`; a project's
 override in its "More" menu, a list's in the list's. The settings page

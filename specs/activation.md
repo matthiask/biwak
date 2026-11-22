@@ -50,7 +50,7 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
   without JavaScript, the first required, at most 50; an address twice is
   an error of the second row.
 - **The projects:** one set for all rows, those the inviter can open and
-  not archived, with one "Notified by default / Only when tagged" choice
+  not archived, with one "Only when tagged / Notified of everything new" choice
   for the round, stored per project.
 - **All or nothing:** errors per row (a deactivated person's address,
   staff invited by a non-admin, an organization the inviter may not
@@ -216,5 +216,5 @@ pages `biwak/organizations/people.py`, the API
   `…/deactivate/`, and in bulk `POST /api/v1/people/activate/` (`ids`,
   `mail`) and `/people/deactivate/` (`ids`), all or nothing.
 - **CLI:** `biwak invitations create EMAIL… --project ID…
-  [--only-tagged]`, `biwak invitations [resend|withdraw]`, `biwak people [--inactive|--left]`,
+  [--everything]`, `biwak invitations [resend|withdraw]`, `biwak people [--inactive|--left]`,
   `biwak people activate ID… [--mail]`, `biwak people deactivate ID…`.

@@ -2,7 +2,7 @@
 
 from html.parser import HTMLParser
 
-from biwak.accounts.models import User
+from biwak.accounts.models import NotificationLevel, User
 from biwak.organizations.models import Organization
 from biwak.projects.models import Membership, Project
 
@@ -23,7 +23,10 @@ def organization(name="Example Client Ltd", **kwargs):
 def person(name="Ada", *, client=False, **kwargs):
     """Clients belong to "Example Client Ltd", staff to the installation's
     own organization, unless ``organization`` says otherwise (a name, an
-    organization or None: an individual, an external if staff)"""
+    organization or None: an individual, an external if staff). Their level
+    is "everything", which most tests of telling people rely on; the real
+    default is "only what concerns me" (biwak/projects/test_notify_choice.py)."""
+    kwargs.setdefault("notification_level", NotificationLevel.EVERYTHING)
     if "organization" in kwargs:
         org = kwargs.pop("organization")
     else:

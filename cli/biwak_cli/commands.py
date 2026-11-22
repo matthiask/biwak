@@ -436,14 +436,14 @@ def project_join(project_id, as_json):
 
 
 NOTIFY_WORDS = {
-    "default": "notified by default",
+    "default": "notified of everything new",
     "tagged": "only when tagged",
 }
 
-only_tagged_option = click.option(
-    "--only-tagged",
-    is_flag=True,
-    help="Notify them only when tagged (default: notified by default).",
+notify_option = click.option(
+    "--everything/--only-tagged",
+    default=False,
+    help="Notify them of everything new, or only when tagged (the default).",
 )
 
 
@@ -461,8 +461,8 @@ def notify_word(person):
 @click.pass_context
 def members(ctx, project, as_json):
     """The people in projects; without a command those of --project: staff
-    see addresses and how each is notified (notified by default, only when
-    tagged, no mails), clients only their own"""
+    see addresses and how each is notified (notified of everything new,
+    only when tagged, no mails), clients only their own"""
     if ctx.invoked_subcommand is not None:
         return None
     need(project, "--project")
@@ -486,14 +486,14 @@ def members(ctx, project, as_json):
 @members.command("add")
 @click.argument("project", type=int)
 @click.argument("person", type=int)
-@only_tagged_option
+@notify_option
 @json_option
-def member_add(project, person, only_tagged, as_json):
+def member_add(project, person, everything, as_json):
     """Add the person with ID PERSON to PROJECT"""
     data = request(
         "POST",
         f"projects/{project}/members/",
-        json={"person_id": person, "notify": "tagged" if only_tagged else "default"},
+        json={"person_id": person, "notify": "default" if everything else "tagged"},
     )
     if as_json:
         return echo_json(data)
@@ -514,10 +514,10 @@ def member_add(project, person, only_tagged, as_json):
 )
 @click.option("--organization-id", type=int, help="The same by ID.")
 @click.option("--staff", is_flag=True, help="Staff instead of a client (admins).")
-@only_tagged_option
+@notify_option
 @json_option
 def member_invite(
-    project, email, name, organization, organization_id, staff, only_tagged, as_json
+    project, email, name, organization, organization_id, staff, everything, as_json
 ):
     """Add the person with this address to PROJECT, creating them (as a
     client) and mailing them how to log in if they're new"""
@@ -526,7 +526,7 @@ def member_invite(
         "name": name,
         "organization": organization,
         "is_client": not staff,
-        "notify": "tagged" if only_tagged else "default",
+        "notify": "default" if everything else "tagged",
     }
     if organization_id is not None:
         payload["organization_id"] = organization_id
@@ -697,10 +697,10 @@ def invitations(ctx, as_json):
 )
 @click.option("--organization-id", type=int, help="The same by ID.")
 @click.option("--staff", is_flag=True, help="Staff instead of clients (admins).")
-@only_tagged_option
+@notify_option
 @json_option
 def invitations_create(
-    emails, projects, organization, organization_id, staff, only_tagged, as_json
+    emails, projects, organization, organization_id, staff, everything, as_json
 ):
     """Invite the people with these addresses to every --project at once:
     new people (clients unless --staff) get one mail naming the projects,
@@ -715,7 +715,7 @@ def invitations_create(
         json={
             "people": [{"email": email, **person} for email in emails],
             "projects": list(projects),
-            "notify": "tagged" if only_tagged else "default",
+            "notify": "default" if everything else "tagged",
         },
     )
     if as_json:
