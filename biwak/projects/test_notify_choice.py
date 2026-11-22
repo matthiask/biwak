@@ -50,6 +50,18 @@ class OperationsTest(Fixture, TestCase):
         self.assertEqual(project_ops.notify_choice(self.bob, self.project), "default")
         self.assertEqual(project_ops.notify_choice(self.dan, self.project), "tagged")
 
+    def test_an_unknown_level_is_tagged(self):
+        # A level stored before the levels changed doesn't break the people
+        # page and the API: anything but everything is "tagged"
+        project_ops.add_member(self.project, self.dan, actor=self.ada)
+        User.objects.filter(pk=self.dan.pk).update(notification_level="nothing")
+        LevelOverride.objects.filter(user=self.dan).update(level="nothing")
+        self.dan.refresh_from_db()
+        self.assertEqual(project_ops.notify_choice(self.dan, self.project), "tagged")
+        self.client.force_login(self.ada)
+        response = self.client.get(f"/projects/{self.project.pk}/people/")
+        self.assertEqual(response.status_code, 200)
+
     def test_adding_again_keeps_the_existing_override(self):
         project_ops.add_member(
             self.project, self.dan, actor=self.ada, notify=project_ops.NOTIFY_TAGGED
