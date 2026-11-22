@@ -31,3 +31,25 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 ### Sign-in and people
 
 ### Phones and accessibility
+
+- **Doc pages show the title** in the header (an `<h1>`, as the findings
+  asked) and hide the text's first line when it's a heading, so that it
+  isn't there twice; the live editor's `<h1>` is for screen readers only,
+  because the editor's first line changes as people type (`files.md`).
+- **The feed's filters on phones** are behind "Filters" (with the count
+  of those set), open while one is set; wider screens unchanged
+  (`ui.md`, "Filters and view choices").
+- **Error pages:** 404 "Not found" ("This page doesn’t exist, or you
+  can’t see it.") and 403 "Not allowed" are pages with the bar; 500 is a
+  plain page of its own (no database, no request), "Server error".
+- **Focus ring:** a 2px outline in the accent's ring color on every
+  button, primary ones too, white on the bar.
+- **Touch:** invisible hit areas around small controls, checkboxes 20px
+  on touch screens, the tiles' "…" 36px; Home's "Search Ctrl+K" and
+  "Keyboard shortcuts" hidden on phones.
+- **Dark mode:** fields `#100e14` (a little darker than cards), dialog
+  backdrop 70% black.
+- **The palette** uses the pages' yellow "Clients" badge; its hint is
+  cut before the title.
+- **Full-page forms** (no JavaScript, or a modifier key) show the client
+  tab instead of the banner, the same for `modal_form.html`'s page.

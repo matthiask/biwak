@@ -64,7 +64,7 @@ every list has its to-dos too. See [To-dos](todos.md).
 **Activity** is what happened, newest first, grouped by day, across
 all your projects. Each project has its own, and "My activity" in your
 menu shows what you did. Filters narrow it to a kind of item, a person
-or an action. Comments on the same item close together are shown as one
+or an action (on a phone, behind "Filters"). Comments on the same item close together are shown as one
 conversation.
 
 ## The lantern

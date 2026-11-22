@@ -1,7 +1,7 @@
 {% load biwak i18n %}
 <ul class="list-unstyled">
   {% for event in events %}
-    <li class="mb-2" data-kb-row>
+    <li class="mb-2 wb-event" data-kb-row>
       {% include "activity/_event.html" %}
       <div class="small text-body-secondary">{{ event.created_at|ago }}</div>
     </li>

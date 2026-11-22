@@ -5,7 +5,7 @@
   </h2>
   <ul class="list-unstyled">
     {% for entry in entries %}
-      <li class="mb-2" data-kb-row>
+      <li class="mb-2 wb-event" data-kb-row>
         {% if entry.is_conversation %}
           {% with event=entry.latest %}
             <span class="fw-semibold">{% translate "Conversation on" %}</span>
@@ -25,22 +25,25 @@
             {% endfor %}
           </ul>
         {% elif entry.is_merged %}
-          {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents %}
+          {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents own_excerpt=True %}
           <span class="small text-body-secondary">· {{ entry.latest.created_at|date:"H:i" }}</span>
+          {% include "activity/_excerpt.html" with event=entry.latest what=entry.what %}
           <ul class="list-unstyled ms-4 small">
             {% for event in entry.events %}
               <li>
-                {% include "activity/_event.html" %}
+                {% include "activity/_event.html" with own_excerpt=True %}
                 <span class="text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
+                {% include "activity/_excerpt.html" %}
               </li>
             {% endfor %}
           </ul>
         {% else %}
           {% with event=entry.latest %}
-            {% include "activity/_event.html" %}
+            {% include "activity/_event.html" with own_excerpt=True %}
             <span class="small text-body-secondary">· {{ event.created_at|date:"H:i" }}</span>
             {% if not project %}<span class="small text-body-secondary">·
                 {% project_dot event.project %}{{ event.project }}</span>{% endif %}
+            {% include "activity/_excerpt.html" %}
           {% endwith %}
         {% endif %}
       </li>

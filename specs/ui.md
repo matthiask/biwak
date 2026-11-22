@@ -69,6 +69,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   button is hidden with JavaScript; the changed field keeps the focus.
   Forms that change things never autosubmit. Filter buttons sit at the
   height of the fields (`wb-filters`, `_filter_buttons.html`).
+- **On phones** (2026-11-22: the feed's filters took five rows before
+  the first entry) a filter form with several fields sits behind a
+  "Filters" button saying how many are set (`.wb-filter-disclosure`,
+  open while one is set); wider screens show it as it is.
 - **Filters are remembered** per path in the browser (2026-11-21,
   adapted from Workbench; `frontend/filters.js`, `data-remember`; for
   to-dos, the feed and the lantern's page, not search): links marked
@@ -103,6 +107,14 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   something to clients (`access.md`, "Making it obvious"); hiding is one
   click.
 
+## Links
+
+- **Links inside sentences are underlined** (decided 2026-11-22): in
+  rendered Markdown (notes, comments, the help) and in the lines of the
+  feed and Home (`.wb-event`). Links that are a row, a title or
+  navigation (breadcrumbs, the bar, lists of links) are not; people's
+  names (`.wb-person-link`) neither, they underline on hover.
+
 ## Clients, icons, colors
 
 - **Visible to clients** (2026-11-21: a banner on pages was too
@@ -116,6 +128,12 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Colors are palette tokens** (`--wb-palette-*`, `--wb-accent-*`),
   never hard-coded violet; the clients' amber stays out of the palette
   (`keyboard.md`, "The palette of colors").
+- **Danger ink** (`--wb-danger-ink`, also `.text-danger` and invalid
+  fields) instead of Bootstrap's red, which is below AA on the stone
+  page (2026-11-22).
+- **Dark mode** (2026-11-22): fields a little darker than cards, not
+  black (`--wb-field-bg`); dialogs dim the page more
+  (`--wb-backdrop`).
 - **Relative times** use the `ago` filter ("just now" under a minute).
 - **Overdue and today** are badges (`todos.md`, "The to-do's page").
 
