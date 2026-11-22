@@ -72,8 +72,8 @@ deleting, inviting into them (the invitation form, the new-project rows,
 the API's `organization_id`; the domain's suggestion of the own or an
 external organization is dropped for staff), and their domains
 (`can_change_domains()`, the field disabled for staff). Renaming the own
-or an external organization stays all staff's (a conservative choice
-while building). Staff keep everything for client organizations: create,
+or an external organization stays all staff's (confirmed by the user
+2026-11-22). Staff keep everything for client organizations: create,
 rename, merge (in the audit log), delete only without people. Externals
 manage none (`access.md`).
 

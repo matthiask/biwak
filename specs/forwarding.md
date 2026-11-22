@@ -90,7 +90,7 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   `biwak forwarded file ID --message PROJECT [--category ID] | --todo
   LIST [--group ID] [--title …]`, `biwak forwarded delete ID`.
 
-## Decisions made while building (to confirm)
+## Decisions made while building (confirmed by the user 2026-11-22)
 
 - A mail with a reply token is a reply, even when the inbox is among
   its recipients too; only mails without one reach the inbox.

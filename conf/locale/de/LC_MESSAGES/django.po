@@ -804,8 +804,8 @@ msgstr[1] "%(count)d Listen"
 #, python-format
 msgid "%(count)d message"
 msgid_plural "%(count)d messages"
-msgstr[0] "%(count)d Nachricht"
-msgstr[1] "%(count)d Nachrichten"
+msgstr[0] "%(count)d Mitteilung"
+msgstr[1] "%(count)d Mitteilungen"
 
 #: biwak/activity/feed.py
 #, python-format
@@ -1947,11 +1947,11 @@ msgstr "Diese Kategorie gibt es nicht."
 
 #: biwak/files/api.py
 msgid "You can only change messages you created."
-msgstr "Du kannst nur Nachrichten ändern, die du erstellt hast."
+msgstr "Du kannst nur Mitteilungen ändern, die du erstellt hast."
 
 #: biwak/files/api.py
 msgid "Only staff can pin messages."
-msgstr "Nur Mitarbeitende können Nachrichten anheften."
+msgstr "Nur Mitarbeitende können Mitteilungen anheften."
 
 #: biwak/files/api.py
 msgid "You can only change folders you created."
@@ -2025,7 +2025,7 @@ msgstr "Dateien dürfen höchstens %(size)s MB gross sein."
 
 #: biwak/files/board.py biwak/items/models.py biwak/outbox/models.py
 msgid "message"
-msgstr "Nachricht"
+msgstr "Mitteilung"
 
 #: biwak/files/board.py biwak/files/library.py biwak/items/views.py
 #: biwak/templates/forms/_toolbar.html
@@ -2426,15 +2426,15 @@ msgstr "Liste und Gruppe"
 
 #: biwak/forwarding/views.py
 msgid "File as message"
-msgstr "Als Nachricht ablegen"
+msgstr "Als Mitteilung ablegen"
 
 #: biwak/forwarding/views.py
 msgid "An internal message by you, with the mail's text and files."
-msgstr "Eine interne Nachricht von dir, mit dem Text und den Dateien der Mail."
+msgstr "Eine interne Mitteilung von dir, mit dem Text und den Dateien der Mail."
 
 #: biwak/forwarding/views.py
 msgid "Post message"
-msgstr "Nachricht veröffentlichen"
+msgstr "Mitteilung veröffentlichen"
 
 #: biwak/forwarding/views.py
 msgid "File as to-do"
@@ -2563,11 +2563,11 @@ msgstr "Antwort"
 
 #: biwak/inbound/models.py
 msgid "inbound message"
-msgstr "eingehende Nachricht"
+msgstr "eingehende Mail"
 
 #: biwak/inbound/models.py
 msgid "inbound messages"
-msgstr "eingehende Nachrichten"
+msgstr "eingehende Mails"
 
 #: biwak/inbound/receive.py
 msgid "Replies are only posted when they come from the address the notification was sent to."
@@ -2921,7 +2921,7 @@ msgstr "Ordner"
 
 #: biwak/items/models.py
 msgid "Only top-level lists, folders, messages, docs, files and check-ins have a switch."
-msgstr "Nur Listen, Ordner, Nachrichten, Dokumente, Dateien und Check-ins auf oberster Ebene haben einen Schalter."
+msgstr "Nur Listen, Ordner, Mitteilungen, Dokumente, Dateien und Check-ins auf oberster Ebene haben einen Schalter."
 
 #: biwak/items/models.py
 msgid "active"
@@ -3044,11 +3044,11 @@ msgstr "Emoji"
 
 #: biwak/items/models.py
 msgid "message category"
-msgstr "Nachrichtenkategorie"
+msgstr "Mitteilungskategorie"
 
 #: biwak/items/models.py
 msgid "message categories"
-msgstr "Nachrichtenkategorien"
+msgstr "Mitteilungskategorien"
 
 #: biwak/items/models.py
 msgid "category"
@@ -3068,7 +3068,7 @@ msgstr "zuletzt kommentiert von"
 
 #: biwak/items/models.py
 msgid "messages"
-msgstr "Nachrichten"
+msgstr "Mitteilungen"
 
 #: biwak/items/models.py
 msgid "order"
@@ -3254,7 +3254,7 @@ msgstr "Macht den Check-in, seine Antworten und deren Kommentare für %(clients)
 
 #: biwak/items/views.py
 msgid "Show this message to clients?"
-msgstr "Diese Nachricht Kund:innen zeigen?"
+msgstr "Diese Mitteilung Kund:innen zeigen?"
 
 #: biwak/items/views.py
 msgid "Show this folder to clients?"
@@ -4009,7 +4009,7 @@ msgstr "Neue Liste"
 #: biwak/templates/files/message_form.html
 #: biwak/templates/projects/project_detail.html
 msgid "New message"
-msgstr "Neue Nachricht"
+msgstr "Neue Mitteilung"
 
 #: biwak/palette/actions.py biwak/templates/files/library.html
 msgid "New doc"
@@ -4161,7 +4161,7 @@ msgstr "Letzte Aktivität zuerst"
 
 #: biwak/palette/actions.py
 msgid "Newest posts first"
-msgstr "Neueste Nachrichten zuerst"
+msgstr "Neueste Mitteilungen zuerst"
 
 #: biwak/palette/apps.py
 msgid "command palette"
@@ -4382,7 +4382,7 @@ msgstr "Letzte Aktivität"
 
 #: biwak/projects/models.py
 msgid "Newest posts"
-msgstr "Neueste Nachrichten"
+msgstr "Neueste Mitteilungen"
 
 #: biwak/projects/models.py
 msgid "Alphabetical"
@@ -4418,7 +4418,7 @@ msgstr "Reihenfolge der Dokumente und Dateien"
 
 #: biwak/projects/models.py
 msgid "order of messages"
-msgstr "Reihenfolge der Nachrichten"
+msgstr "Reihenfolge der Mitteilungen"
 
 #: biwak/projects/models.py
 msgid "archived at"
@@ -4592,7 +4592,7 @@ msgstr "Nur Mitarbeitende teilen Einträge öffentlich."
 
 #: biwak/public_links/api.py
 msgid "Only to-dos, messages, docs and files can be shared."
-msgstr "Nur To-dos, Nachrichten, Dokumente und Dateien können geteilt werden."
+msgstr "Nur To-dos, Mitteilungen, Dokumente und Dateien können geteilt werden."
 
 #: biwak/public_links/apps.py biwak/public_links/models.py
 msgid "public links"
@@ -6114,16 +6114,16 @@ msgstr "Auswahl aufheben"
 #: biwak/templates/files/message_form.html
 #: biwak/templates/projects/project_detail.html
 msgid "Messages"
-msgstr "Nachrichten"
+msgstr "Mitteilungen"
 
 #: biwak/templates/files/board.html
 #: biwak/templates/projects/project_detail.html
 msgid "No messages yet."
-msgstr "Noch keine Nachrichten."
+msgstr "Noch keine Mitteilungen."
 
 #: biwak/templates/files/board.html
 msgid "Older messages"
-msgstr "Ältere Nachrichten"
+msgstr "Ältere Mitteilungen"
 
 #: biwak/templates/files/doc.html biwak/templates/files/doc_versions.html
 msgid "Versions"
@@ -6248,7 +6248,7 @@ msgstr "Datei hochladen"
 
 #: biwak/templates/files/message_form.html
 msgid "Edit the message"
-msgstr "Nachricht bearbeiten"
+msgstr "Mitteilung bearbeiten"
 
 #: biwak/templates/files/message_form.html
 msgid "Post"
@@ -6437,8 +6437,8 @@ msgstr "Die Kund:innen dieses Projekts sehen das To-do mit dem Text der Mail, an
 #, python-format
 msgid "Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't file is deleted after %(days)s day."
 msgid_plural "Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't file is deleted after %(days)s days."
-msgstr[0] "Leite Mails an diese Adresse weiter, um sie als Nachricht oder To-do abzulegen. Nur du siehst sie hier; was du nicht ablegst, wird nach %(days)s Tag gelöscht."
-msgstr[1] "Leite Mails an diese Adresse weiter, um sie als Nachricht oder To-do abzulegen. Nur du siehst sie hier; was du nicht ablegst, wird nach %(days)s Tagen gelöscht."
+msgstr[0] "Leite Mails an diese Adresse weiter, um sie als Mitteilung oder To-do abzulegen. Nur du siehst sie hier; was du nicht ablegst, wird nach %(days)s Tag gelöscht."
+msgstr[1] "Leite Mails an diese Adresse weiter, um sie als Mitteilung oder To-do abzulegen. Nur du siehst sie hier; was du nicht ablegst, wird nach %(days)s Tagen gelöscht."
 
 #: biwak/templates/forwarding/list.html
 msgid "Address to forward to"
@@ -6460,7 +6460,7 @@ msgstr "Von %(sender)s"
 
 #: biwak/templates/forwarding/list.html
 msgid "File as message…"
-msgstr "Als Nachricht ablegen…"
+msgstr "Als Mitteilung ablegen…"
 
 #: biwak/templates/forwarding/list.html
 msgid "File as to-do…"
@@ -7225,7 +7225,7 @@ msgstr "Archivierte Listen"
 
 #: biwak/templates/projects/project_detail.html
 msgid "All messages"
-msgstr "Alle Nachrichten"
+msgstr "Alle Mitteilungen"
 
 #: biwak/templates/projects/project_detail.html
 msgid "No docs or files yet."

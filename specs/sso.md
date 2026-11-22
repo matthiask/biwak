@@ -295,9 +295,3 @@ Tests: `biwak/accounts/test_sso_social.py`, `test_sso_required.py`,
   `https://BIWAK/accounts/microsoft/login/callback/`, a client secret;
   `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` in the deployment's
   secrets. Each organization's tenant ID goes into its setting.
-- After deploying: check the own organization's domains. Migration
-  `organizations.0005` fills them from its active staff's addresses if it
-  had none (not free-mail domains or other organizations'), and prints
-  them. Not guessing would end staff's Google sign-in on deploying (a
-  sign-in counts only for the domains), so it guesses and says what
-  (decided 2026-11-21 after the review).

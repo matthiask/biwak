@@ -20,10 +20,8 @@ a third language is a catalog, nothing else.
 - **One glossary** (below), used everywhere; a test checks the catalog
   for the words the glossary replaces (e.g. no "Aufgabe" where it says
   "To-do", no "ß").
-- Written by the agent building this part, reviewed by the user
-  afterwards (changing a word in the catalog is cheap).
 
-### Glossary (proposed, for the user to review)
+### Glossary (reviewed by the user 2026-11-22)
 
 | English | German |
 |---|---|
@@ -31,7 +29,7 @@ a third language is a catalog, nothing else.
 | to-do, to-dos | To-do, To-dos |
 | list, group | Liste, Gruppe |
 | board (view) | Board |
-| message board, message | Nachrichten, Nachricht |
+| message board, message | Mitteilungen, Mitteilung (decided 2026-11-22 by the user: "Nachricht" sounds strange; "Beitrag" is taken by "posts to everyone"); a forwarded mail is "eingehende Mail" |
 | doc, file, folder | Dokument, Datei, Ordner |
 | check-in, question, answer | Check-in, Frage, Antwort |
 | comment | Kommentar |

@@ -128,6 +128,8 @@ AVOIDED = {
     "Kundinnen": "Kund:innen",
     "Abonnenten": "Abonnent:innen",
     "Feed": "Aktivität",
+    "Nachricht": "Mitteilung",
+    "Nachrichten": "Mitteilungen",
     "Mülleimer": "Papierkorb",
     "Lesezeichen setzen": "Lesezeichen",
     "einloggen": "anmelden",
