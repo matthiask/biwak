@@ -849,6 +849,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     siblings[index:index] = items
 
     for item in items:
+        list_was, group_was = item.parent_id, item.todo.group_id
         changed_list = item.parent_id != todolist.pk
         if changed_list:
             item.parent = todolist
@@ -866,6 +867,10 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 item=item,
                 group=group.title if group else "",
                 list=todolist.title,
+                # Where from and to, for leaving out moving back
+                # (specs/timeline.md); merging keeps the first "was"
+                group_id=group.pk if group else None,
+                group_was=group_was,
             )
         if changed_list:
             visibility.recompute(item)
@@ -876,6 +881,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 item=item,
                 to=todolist.title,
                 to_id=todolist.pk,
+                to_was=list_was,
             )
     _renumber(siblings)
     for list_id, group_id in sources:

@@ -67,6 +67,9 @@ def event_out(event, user):
         for key in PEOPLE_KEYS:
             if key in data and known is not None:
                 data[key] = [pk for pk in data[key] if pk in known]
+    # Where a to-do was moved from and to by ID: for the timeline only
+    for key in ("to_was", "group_id", "group_was"):
+        data.pop(key, None)
     # The list a to-do moved to: only if the viewer may see it now
     if "to" in data:
         data["to"] = event.target_list

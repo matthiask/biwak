@@ -146,8 +146,15 @@ def effects(event):
         return [Effect(str(action), group, value, lambda it: word % {"it": it})]
     match action:
         case Action.MOVED:
-            key = "group" if "group" in data else "list"
-            return [Effect("moved", key, None, lambda it: _move(event, it))]
+            if "group" in data:
+                key, to, was = "group", data.get("group_id"), "group_was"
+            else:
+                key, to, was = "list", data.get("to_id"), "to_was"
+            effect = Effect(
+                "moved", key, to, lambda it: _move(event, it), data.get(was, UNKNOWN)
+            )
+            # Dragged into a column and back (one event, record())
+            return [] if effect.was == to else [effect]
         case Action.ASSIGNED | Action.UNASSIGNED:
             sign = action == Action.ASSIGNED
             ids = event.data.get("assignees", [])
@@ -190,20 +197,21 @@ def combine(events):
     """The effects of several events one after the other, without what
     cancelled out (assigning then removing the
     same person, completing then reopening, setting the due date and
-    removing it) and with only the last of what was set several times (the
-    title, the due date, the place it was moved to)"""
+    removing it, moving it and moving it back) and with only the last of
+    what was set several times (the title, the due date, the place it was
+    moved to)"""
     result = []
     for event in events:
         for effect in effects(event):
             old = next((e for e in result if e.key == effect.key), None)
             if old is not None:
                 result.remove(old)
-                if effect.key in ("title", "due"):
+                if effect.key in ("title", "due", "list", "group"):
                     # Back to what it was before the first change?
                     effect.was = old.was
                     if effect.was is not UNKNOWN and effect.was == effect.value:
                         continue
-                elif effect.key not in ("list", "group") and old.value != effect.value:
+                elif old.value != effect.value:
                     continue
             result.append(effect)
     return result

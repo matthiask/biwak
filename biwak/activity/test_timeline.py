@@ -228,6 +228,24 @@ class CancellingTest(TimelineBase):
         ops.update_todo(self.todo, actor=self.ada, due_on=None)
         self.assertEqual(self.lines(), [])
 
+    def test_moved_and_moved_back(self):
+        # Into the board's "Done" column and back (decision B, 2026-11-22),
+        # and into another list and back
+        done = ops.create_group(todolist=self.shared.todolist, title="Done")
+        ops.move_todo(self.todo, todolist=self.shared, group=done, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=None, actor=self.ada)
+        self.assertEqual(self.lines(), [])
+        other = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada, visible=True
+        )
+        ops.move_todo(self.todo, todolist=other, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, actor=self.ada)
+        self.assertEqual(self.lines(), [])
+        # Elsewhere in the end, it says where
+        ops.move_todo(self.todo, todolist=self.shared, group=done, actor=self.ada)
+        (line,) = self.lines()
+        self.assertIn("moved this to Done", line)
+
     def test_the_same_person_assigned_and_removed(self):
         ops.assign(self.todo, [self.bob, self.ada], actor=self.ada)
         ops.unassign(self.todo, [self.bob], actor=self.ada)
