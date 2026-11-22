@@ -979,16 +979,18 @@ def restore(item, *, actor):
         raise ValueError("The item isn't in the trash")
     if item.parent_id and item.parent.status == Status.TRASHED:
         raise ValueError("Restore the parent first")
+    # A change, for what comes back with it too: a doc whose "Tell people
+    # about it?" is unanswered is told an hour after this, not at once
+    # (trashing isn't a way around telling)
+    now = timezone.now()
     Item.objects.filter(
         pk__in=list(Item.objects.descendants(item).values_list("pk", flat=True)),
         trashed_at=item.trashed_at,
-    ).update(status=Status.ACTIVE, trashed_at=None)
+    ).update(status=Status.ACTIVE, trashed_at=None, updated_at=now)
     item.status = Status.ARCHIVED if item.archived_when_trashed else Status.ACTIVE
     item.trashed_at = None
     item.archived_when_trashed = False
-    # A change: a doc whose "Tell people about it?" is unanswered is told an
-    # hour after this, not at once (trashing isn't a way around telling)
-    item.updated_at = timezone.now()
+    item.updated_at = now
     item.save(
         update_fields=["status", "trashed_at", "archived_when_trashed", "updated_at"]
     )

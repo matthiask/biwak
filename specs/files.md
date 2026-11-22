@@ -266,7 +266,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   not merged yet (`LiveUpdate` rows) waits for the next run; drafts and
   trashed docs are left alone. Restoring one from the trash counts as a
   change, so it's told an hour later (decided 2026-11-21: trash is
-  trash, but not a way around telling).
+  trash, but not a way around telling), also when it comes back with its
+  folder (`restore()` sets `updated_at` on everything it brings back,
+  decided 2026-11-22).
 - The API and CLI create docs with title and text, not as drafts.
 
 ## Files

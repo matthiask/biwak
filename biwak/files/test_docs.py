@@ -552,6 +552,20 @@ class TellTest(Fixture, TestCase):
         self.assertEqual(self.unanswered(150), 0)
         self.assertEqual(self.unanswered(181), 1)
 
+    def test_restoring_its_folder_counts_as_a_change(self):
+        """Trashed with its folder and restored with it: the hour starts
+        again too"""
+        doc = ops.create_draft(
+            project=self.project, creator=self.ada, parent=self.private
+        )
+        live.apply_text(doc.doc, "# Minutes\n\nText", user=self.ada)
+        operations.save_live(doc.pk)
+        ops.trash(self.private, actor=self.ada)
+        with time_machine.travel(timezone.now() + dt.timedelta(minutes=120)):
+            ops.restore(Item.objects.get(pk=self.private.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(150), 0)
+        self.assertEqual(self.unanswered(181), 1)
+
     def test_telling_is_claimed_once(self):
         """The creator's answer and the run every minute lock and check the
         doc: the second one tells nobody"""
