@@ -1,8 +1,8 @@
 // Filters remembered (specs/ui.md, "Filters and view choices"): a filter page (its
 // form or page has data-remember; view choices like the grouping and the
 // order are query parameters too) stores its query in the browser, per
-// path, when it
-// loads with one. The links marked data-restore-filters (the top bar's, the
+// path, whenever it loads: going back to the defaults (the empty choices, an
+// empty query) forgets the stored one. The links marked data-restore-filters (the top bar's, the
 // project page's "All to-dos") and the palette's links (through
 // withFilters()) go to such a page with the stored query. "Reset filters"
 // (data-reset-filters) forgets it. Other links keep their own query.
@@ -41,8 +41,7 @@ function filtersOf(search) {
 }
 
 if (document.querySelector("[data-remember]")) {
-  const query = filtersOf(window.location.search)
-  if (query) write(window.location.pathname, query)
+  write(window.location.pathname, filtersOf(window.location.search))
 }
 
 document.addEventListener("click", (event) => {

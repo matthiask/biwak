@@ -66,7 +66,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   height of the fields (`wb-filters`, `_filter_buttons.html`).
 - **Filters are remembered** per path in the browser (2026-11-21,
   adapted from Workbench; `frontend/filters.js`, `data-remember`; for
-  to-dos, the feed and the lantern's page, not search): links marked
+  to-dos, the feed and the lantern's page, not search): the page stores
+  its query whenever it loads, so going back to the defaults (an empty
+  query) is remembered too (decided 2026-11-22); links marked
   `data-restore-filters` (the top bar, the project's "All to-dos") go to
   the stored query; "Reset filters" clears it and shows only when a
   filter is set. Other links keep their own query.

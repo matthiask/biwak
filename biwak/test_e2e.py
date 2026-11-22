@@ -2824,6 +2824,32 @@ class FiltersTest(E2ETestCase):
         expect(page.locator("#id_grouping")).to_have_value("due")
         self.assertEqual(self.errors, [])
 
+    def test_going_back_to_the_defaults_is_remembered(self):
+        page = self.page
+        link = page.locator(".wb-nav-links a", has_text="To-dos")
+        # Back to "Me", the empty choice
+        self.goto(page, "/todos/?assignee=anybody")
+        page.locator("#id_assignee").select_option("")
+        page.wait_for_url("**/todos/")
+        self.goto(page, "/")
+        expect(link).to_have_attribute("href", "/todos/")
+        # Back to grouping by project, which shows no "Reset filters"
+        self.goto(page, "/todos/?grouping=due")
+        expect(page.get_by_role("link", name="Reset filters")).to_have_count(0)
+        page.locator("#id_grouping").select_option("")
+        page.wait_for_url("**/todos/")
+        self.goto(page, "/")
+        expect(link).to_have_attribute("href", "/todos/")
+        # The lantern's and the feed's too
+        for path, query in [("/lantern/", "unread=1"), ("/feed/", "kind=todo")]:
+            self.goto(page, f"{path}?{query}")
+            self.assertEqual(
+                page.evaluate(f"localStorage.getItem('filters:{path}')"), query
+            )
+            self.goto(page, path)
+            self.assertIsNone(page.evaluate(f"localStorage.getItem('filters:{path}')"))
+        self.assertEqual(self.errors, [])
+
     def test_the_projects_all_todos_button_restores_the_filters(self):
         page = self.page
         todos = f"/projects/{self.project.pk}/todos/"
