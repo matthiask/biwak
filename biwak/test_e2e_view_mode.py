@@ -100,6 +100,33 @@ class ViewModeTest(E2ETestCase):
         self.assertEqual(self.saved().item.title, "Order the tent")
         self.assertFalse(Editing.objects.exists())
 
+    def test_a_double_click_opens_the_form_and_nothing_else(self):
+        """The second click doesn't land on what moved under the pointer
+        ("Complete" where the title was; decided 2026-11-22)"""
+        page = self.page
+        for target in ["h1.wb-title", "#live-text .wb-markdown em", ".wb-facts dd"]:
+            with self.subTest(target=target):
+                self.goto(page, self.todo)
+                page.evaluate("window.marker = 1")
+                box = page.locator(target).first.bounding_box()
+                x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                # A double click whose second click comes once the form is
+                # there (the server was quick)
+                page.mouse.move(x, y)
+                page.mouse.down()
+                page.mouse.up()
+                expect(self.form(page)).to_be_visible()
+                page.mouse.down(click_count=2)
+                page.mouse.up(click_count=2)
+                # The same page, the form still there, the to-do open
+                self.assertEqual(page.evaluate("window.marker"), 1)
+                expect(page.get_by_role("button", name="Save")).to_be_visible()
+                self.assertFalse(self.saved().is_completed)
+        # A single click right after opening still works
+        page.get_by_role("link", name="Cancel").click()
+        expect(self.form(page)).to_have_count(0)
+        self.assertEqual(self.errors, [])
+
     def test_the_focus_comes_back_to_edit(self):
         """Escape, Cancel and Save don't leave the focus on the page's body"""
         page = self.page

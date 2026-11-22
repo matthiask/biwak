@@ -35,7 +35,13 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   page. Escape cancels an unchanged form, a changed one needs it twice
   within 1.5 seconds. When the form goes (Save, Cancel, Escape) the
   focus returns to what opened it, else to "Edit" (decided 2026-11-22).
-  Docs have the live editor instead.
+  **A double click opens the form and nothing else** (decided
+  2026-11-22: its second click landed on "Complete", which had moved
+  where the title was, and completed the to-do): the hidden title keeps
+  its place while the form is shown, and the further clicks of a double
+  click on buttons, links and boxes within 400 ms of opening do nothing
+  (`event.detail`, one place in the script for every form). Docs have
+  the live editor instead.
 - **Showing more without crowding:** small signals on many rows, short
   excerpts on few, full content on demand (`glance.md`).
 
