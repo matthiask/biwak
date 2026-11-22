@@ -13,11 +13,41 @@
 //
 // Never when the click is on a link, a button, a box of the checklist (they
 // do their own thing) or ends a text selection.
+//
+// A double click opens the form with its first click; its second one must
+// not land on whatever moved under the pointer (the page's "Complete" where
+// the title was): for a moment after opening, the further clicks of a
+// double click on buttons, links and boxes do nothing (decided 2026-11-22). The title keeps its place while
+// hidden (main.css), so nothing moves there in the first place.
 import htmx from "htmx.org"
 
 const INTERACTIVE =
   "a, button, input, textarea, select, label, summary, details"
 const ESCAPE_AGAIN = 1500
+// How long after opening clicks on actions are ignored
+const SETTLE = 400
+const ACTIONS =
+  "a, button, summary, label, input[type=checkbox], input[type=radio], input[type=submit]"
+
+let settlingUntil = Number.NEGATIVE_INFINITY
+
+function settle() {
+  settlingUntil = performance.now() + SETTLE
+}
+
+// Before everything else: the click never reaches the action
+document.addEventListener(
+  "click",
+  (event) => {
+    // Only the further clicks of a double (or triple) click: a single
+    // click right after opening is meant
+    if (event.detail < 2 || event.timeStamp > settlingUntil) return
+    if (!event.target.closest?.(ACTIONS)) return
+    event.preventDefault()
+    event.stopImmediatePropagation()
+  },
+  true,
+)
 
 function focusField(region, name) {
   const field = region?.querySelector(`[name="${name}"]`)
@@ -89,7 +119,16 @@ document.addEventListener("click", (event) => {
   if (inner && inner !== hit) return
   if (window.getSelection().toString()) return
   event.preventDefault()
+  settle()
   openEdit(hit)
+})
+
+// A double click on the view doesn't select a word either
+document.addEventListener("dblclick", (event) => {
+  if (event.target.closest?.("[data-edit-focus]")) {
+    event.preventDefault()
+    window.getSelection().removeAllRanges()
+  }
 })
 
 // Escape in a form shown in place
@@ -103,6 +142,7 @@ document.addEventListener("htmx:after:process", (event) => {
   ]
   for (const form of forms)
     serialized.set(form, new URLSearchParams(new FormData(form)).toString())
+  if (forms.length && !formShown) settle()
   if (forms.length) formShown = true
   else if (formShown && !document.querySelector("[data-view-edit-form]")) {
     formShown = false
