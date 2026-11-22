@@ -119,10 +119,11 @@ everything as it happens.
   itself and one mail says what happened meanwhile, respecting quiet
   hours; "I'm back" ends it earlier. Admins set somebody away on their
   page ("Set away…") when they forgot.
-- **Nothing skips the wait:** mentions and "Tell them now" wait too.
-  Sign-in codes, security mails, invitations, answers to replies that
-  couldn't be posted and check-in questions (asked at their own time)
-  go out at once.
+- **Nothing skips the wait:** mentions, "Tell them now" and check-in
+  summaries wait too. Sign-in codes, security mails, invitations,
+  answers to replies that couldn't be posted and check-in questions
+  (asked at their own time) go out at once; somebody away isn't asked
+  check-in questions at all.
 
 `biwak notifications --quiet-hours on --working-days mon-fri --from
 08:00 --until 18:00` and `biwak away --until 2026-12-03 --note "…"`

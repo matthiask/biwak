@@ -369,8 +369,9 @@ class AwayTest(QuietBase):
         (message,) = self.to_bob()
         self.assertTrue(message.subject.startswith("[Biwak] What happened"))
 
-    def test_mails_other_than_notifications_go(self):
-        """Check-in questions are asked at their own time (not held)"""
+    def test_questions_arent_held_by_quiet_hours(self):
+        """Check-in questions are asked at their own time; people away
+        aren't asked at all (biwak/checkins/test_quiet_hours.py)"""
         with time_machine.travel(at("2027-03-19 12:00"), tick=False):
             checkins.create_question(
                 project=self.project,
@@ -380,7 +381,7 @@ class AwayTest(QuietBase):
                 now=at("2027-03-19 12:00"),
                 **MONDAY_9,
             )
-        self.bob.away_until = dt.date(2027, 3, 31)
+        self.bob.away_until = None
         self.bob.quiet_hours = True
         self.bob.working_from = dt.time(10)
         self.bob.save()

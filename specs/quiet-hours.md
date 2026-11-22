@@ -47,6 +47,15 @@ question's time zone (`checkins.md`).
 - **Not held:** sign-in codes, security mails, invitations, mail reply
   errors, check-in questions (they're asked at their own time, which
   the person can set). Bounce handling unchanged.
+- **Check-in summaries are held** (decided 2026-11-22) during quiet
+  hours and while away, like other mails: `summarize_due()` keeps a
+  `HeldSummary` per person whose mails wait, `send_held_summaries()`
+  (part of `checkins.run()`, so of `send_mails`) mails it once they may
+  get mail again, as its own check-in mail next to the rest.
+- **People away aren't asked check-in questions** (decided 2026-11-22):
+  no question mail, not among the occurrence's people asked, so not
+  missing in it (`_ask()`; away on the day it's asked, in the
+  installation's time zone). Quiet hours don't keep questions back.
 - **Delivery "daily digest"** sends the digest at the start of the
   first working time of the day instead of its fixed time when quiet
   hours are on. "None" stays none.
@@ -73,7 +82,7 @@ question's time zone (`checkins.md`).
 - Clients see the away sign and note of people they may know, like the
   mark itself.
 
-## How it's built (2026-11-22)
+## How it's built (2026-11-22, confirmed by the user the same day)
 
 - **Held, then one mail:** every `send_mails` run marks the unsent
   notifications of people whose mails wait now (`hold()`: away today,
@@ -90,20 +99,33 @@ question's time zone (`checkins.md`).
   notifications before today's midnight and everything held; without
   quiet hours at 07:00 as before, plus what was held while away.
 - **Working time:** `working_from` inclusive, `working_until`
-  exclusive, both on the same day (no working time over midnight);
+  exclusive, both on the same day (no working time over midnight; quiet hours
+  need a working day, turning them off keeps the days and hours);
   `working_days` as `date.weekday()` (0 Monday). Away ends at the
-  installation's midnight after `away_until`; nothing clears the
+  installation's midnight after `away_until` (without quiet hours the
+  mail after being away goes then, a digest at 07:00); nothing clears the
   fields, `is_away` compares with today.
 - **Away for others:** admins only (`can_set_away()`), on the person's
   page ("Set away…" as a modal, "End away" while away) and the API;
   not for oneself there (the settings) and not for inactive people.
+- **One mail's worth:** "as usual when only one is waiting" means one
+  item, or one batch of files or assigned to-dos. What waited goes at
+  the start of the working time without the 10-minute merge. Digests
+  have no cap, so neither has the mail after being away.
+- **Wording:** "Out of office" (the settings' heading), "I'm back",
+  "Welcome back.", "Set away…" and "End away" (admins), "Set Ada away"
+  (the modal), "In the time zone Europe/Zurich, the same for
+  everybody."; German "Ruhezeiten", "Abwesenheit", "Abwesend bis 3.
+  Dez.: …", "Ich bin zurück". The CLI's `members` and `people` show
+  "(away until 2026-12-03)" after the name.
 - **Shown:** a small moon (`bi-moon-fill`) on the mark's lower right;
   the mark's title is the name and on a second line "Away until 3 Dec:
   <note>" (the date with the year when it isn't this one). Pickers and
   the `@` list add "away until 3 Dec" to the entry; the team's page and
   the People page's teams section after the member. The note shows in
   the form below the field (`.wb-away-notes`), once per person and form,
-  also for each member when a team is picked.
+  also for each member when a team is picked. "Teams' entries" are the
+  members on a team's page and in the People page's Teams section.
 
 ## Done when
 

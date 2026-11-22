@@ -104,6 +104,12 @@ Traps the tests cover (`schedule.py`):
   first date's week (fine as it is, 2026-11-20).
 - **People** added are asked from the next occurrence; removing keeps
   their answers.
+- **People away aren't asked** (decided 2026-11-22,
+  `quiet-hours.md`): away on the day the question is asked (the
+  installation's time zone), they get no question mail and aren't
+  among the occurrence's people asked, so they aren't missing; the next
+  occurrence asks them again. Their summaries wait while their mails
+  wait (`HeldSummary`).
 
 ## Summaries and replies
 

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:55+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -438,9 +438,9 @@ msgid "key hash"
 msgstr "Schlüssel-Hash"
 
 #: biwak/accounts/models.py biwak/activity/models.py biwak/bookmarks/models.py
-#: biwak/collab/models.py biwak/files/models.py biwak/inbound/models.py
-#: biwak/items/models.py biwak/organizations/models.py biwak/outbox/models.py
-#: biwak/projects/models.py biwak/public_links/models.py
+#: biwak/checkins/models.py biwak/collab/models.py biwak/files/models.py
+#: biwak/inbound/models.py biwak/items/models.py biwak/organizations/models.py
+#: biwak/outbox/models.py biwak/projects/models.py biwak/public_links/models.py
 #: biwak/reactions/models.py biwak/teams/models.py
 msgid "created at"
 msgstr "erstellt am"
@@ -1818,6 +1818,14 @@ msgstr "Fragen-Mail"
 #: biwak/checkins/models.py
 msgid "question mails"
 msgstr "Fragen-Mails"
+
+#: biwak/checkins/models.py
+msgid "held summary"
+msgstr "zurückgehaltene Zusammenfassung"
+
+#: biwak/checkins/models.py
+msgid "held summaries"
+msgstr "zurückgehaltene Zusammenfassungen"
 
 #: biwak/checkins/operations.py
 msgid "The question hasn't been asked yet."

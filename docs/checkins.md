@@ -35,7 +35,9 @@ mentions and attachments) and "Save the answer". When the mail says
 you shows on Home and on the project's page.
 
 There are no reminders: the mail is the only time you are asked. Who
-hasn't answered yet is listed on the question's page.
+hasn't answered yet is listed on the question's page. Somebody away
+(out of office, see [Notifications](notifications.md)) isn't asked that
+time and isn't missing.
 
 ## Reading the answers
 

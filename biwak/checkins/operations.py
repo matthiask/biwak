@@ -18,6 +18,7 @@ from django.utils.translation import gettext
 
 from biwak import schedules
 from biwak.accounts.models import User
+from biwak.accounts.quiet import is_away, mails_held
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
 from biwak.activity.notify import can_see, who_can_see
@@ -31,6 +32,7 @@ from biwak.checkins import mails, schedule
 from biwak.checkins.models import (
     DEFAULT_MODE,
     Answer,
+    HeldSummary,
     Mode,
     Occurrence,
     Question,
@@ -329,7 +331,9 @@ def _ask(question, date, now):
     )
     if not was_created:
         return None
-    people = _recipients(question)
+    # People away aren't asked: no mail, not missing (specs/quiet-hours.md)
+    today = timezone.localdate(now)
+    people = [person for person in _recipients(question) if not is_away(person, today)]
     occurrence.asked.set(people)
     mails.after_commit(mails.question_mail, occurrence, people)
     return occurrence
@@ -389,18 +393,44 @@ def summarize_due(*, now=None):
             answers = answers_of(occurrence)
             if answers:
                 people = summary_recipients(occurrence.question)
+                # Waiting while their mails wait (specs/quiet-hours.md)
+                held = [person for person in people if mails_held(person, now)]
+                HeldSummary.objects.bulk_create(
+                    [HeldSummary(occurrence=locked, user=person) for person in held],
+                    ignore_conflicts=True,
+                )
+                people = [person for person in people if person not in held]
                 if people:
                     mails.after_commit(mails.summary_mail, occurrence, people)
             done.append(occurrence)
     return done
 
 
+def send_held_summaries(*, now=None):
+    """The summaries which waited, to those who may get mail now; returns
+    how many people's"""
+    now = now or timezone.now()
+    count = 0
+    for held in HeldSummary.objects.select_related(
+        "user", "occurrence__question__item"
+    ).order_by("pk"):
+        if mails_held(held.user, now):
+            continue
+        with transaction.atomic():
+            if not HeldSummary.objects.filter(pk=held.pk).delete()[0]:
+                continue
+            mails.after_commit(mails.summary_mail, held.occurrence, [held.user])
+        count += 1
+    return count
+
+
 def run(*, now=None):
-    """What ``send_mails`` does about check-ins; returns the counts"""
+    """What ``send_mails`` does about check-ins; returns the counts (the
+    summaries which waited count as summarized)"""
     now = now or timezone.now()
     return {
         "asked": len(ask_due(now=now)),
-        "summarized": len(summarize_due(now=now)),
+        "summarized": len(summarize_due(now=now)) + send_held_summaries(now=now),
     }
 
 
