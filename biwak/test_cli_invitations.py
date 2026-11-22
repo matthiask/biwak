@@ -1,4 +1,4 @@
-"""``biwak invite`` and ``biwak invitations`` (specs/activation.md, "Inviting")"""
+"""``biwak invitations`` and its ``create`` (specs/activation.md, "Inviting")"""
 
 import json
 

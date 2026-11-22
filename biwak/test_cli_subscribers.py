@@ -1,4 +1,4 @@
-"""``biwak subscribers`` and ``biwak subscribe``; the CLI test case is the
+"""``biwak subscriptions``; the CLI test case is the
 one of test_cli.py"""
 
 import json

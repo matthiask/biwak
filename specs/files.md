@@ -189,8 +189,8 @@ the counts of the top level's folders, docs and files.
   apart by default; the conservative choice, folders are many and a
   color is a choice. API: `color` on `POST projects/{id}/folders/` and
   `PATCH folders/{id}/`; `color` and `color_name` on the folder, `color`
-  on folder entries. CLI: `biwak folder new --color`, `biwak folder
-  color FOLDER NAME|none`.
+  on folder entries. CLI: `biwak folders create --color`, `biwak folders
+  update FOLDER --color NAME|none`.
 - **Ordering per folder** (decided 2026-11-21: stored on the folder):
   alphabetical (the default), reverse alphabetical, newest or oldest
   first, by creation (the last change would reorder while people work).
@@ -384,6 +384,7 @@ with `base_version`, versions; a `title` alone is a 400, the title is the
 text's first line), files (upload, replace, versions, download URL).
 
 CLI: `--attach FILE` on commands writing texts (appended at the end),
-`biwak messages [--order latest|newest]`, `biwak message show|post`, `biwak files [FOLDER]`
-(with "Order:"), `biwak folder new|move|rename|color|order`, `biwak file
-upload|download`, `biwak doc show|edit` (`$EDITOR`).
+`biwak messages --project ID [--order latest|newest]`, `biwak messages show|create`,
+`biwak files --project ID [--folder FOLDER]` (with "Order:"), `biwak folders
+create|update|move|order`, `biwak files upload|replace|download`, `biwak docs
+show|create|update` (`update` in `$EDITOR`).

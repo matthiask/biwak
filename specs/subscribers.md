@@ -47,6 +47,6 @@ not only to hear about its next comment. The rules of subscribing
 `GET`/`POST /api/v1/items/{id}/subscribers/` (`{people: [ids], notify:
 bool, note: str}`), answering `{item_id, visible_to_clients,
 subscribers: [{person, added_by, created_at}]}`; people and `added_by`
-the viewer may not know are left out (`added_by` null). `biwak subscribe
-ITEM --people ID,ID [--notify] [--note TEXT]` and `biwak subscribers
-ITEM`, `[clients]`.
+the viewer may not know are left out (`added_by` null). `biwak subscriptions
+add ITEM --people ID,ID [--notify] [--note TEXT]` and `biwak
+subscriptions --item ITEM`, `[clients]`.

@@ -1,4 +1,4 @@
-"""``biwak share``, ``biwak unshare`` and ``biwak public-links``
+"""``biwak public-links`` and its ``create`` and ``delete``
 (specs/public-links.md); the CLI test case is the one of test_cli.py"""
 
 import json

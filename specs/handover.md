@@ -102,7 +102,7 @@ list's page (list and board).
 - **API:** `POST /api/v1/todos/assign/` with `ids`, `people`, `replace`
   (all or nothing), answering the to-dos (`TodoOut`); people not
   assignable to every to-do are a 400 without names (a client mustn't
-  learn who an ID is). **CLI:** `biwak todo assign TODO… --to PERSON…
+  learn who an ID is). **CLI:** `biwak todos assign TODO… --to PERSON…
   [--replace]` prints each to-do with its assignees.
 
 ## Deactivating says what's left

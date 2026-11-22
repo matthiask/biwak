@@ -1,4 +1,4 @@
-"""``biwak list copy`` and ``biwak move`` (specs/lists-across-projects.md);
+"""``biwak lists copy`` and ``biwak items move`` (specs/lists-across-projects.md);
 the CLI test case is the one of test_cli.py"""
 
 import datetime as dt

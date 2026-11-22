@@ -93,4 +93,4 @@ unread mark on rows, without a section of their own (decided
 ## API and CLI
 
 Nothing of its own: to-dos by due date, the feed, bookmarks, projects
-and `GET /api/v1/me/checkins/due/` (`biwak checkin due`) have it all.
+and `GET /api/v1/me/checkins/due/` (`biwak checkins due`) have it all.

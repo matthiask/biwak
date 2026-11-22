@@ -145,9 +145,9 @@ rebuilds them by hand.
   "New project from this…", "New list from a template…".
 - **API/CLI:** `ProjectOut.is_template`; `GET projects/?templates=true`
   (`biwak projects --templates`); `POST projects/` with `template`,
-  `member_ids` (added before copying) or `is_template` (`biwak project
-  add NAME --template ID --member PERSON`, `--as-template`); a list
-  from a template is `POST lists/{id}/copy/` (`biwak list copy`).
+  `member_ids` (added before copying) or `is_template` (`biwak projects
+  create NAME --template ID --member PERSON`, `--as-template`); a list
+  from a template is `POST lists/{id}/copy/` (`biwak lists copy`).
 - **Importer:** `import_basecamp --templates` (`import-basecamp.md`).
 
 ## Decisions made while building (confirmed by the user 2026-11-22)

@@ -51,6 +51,38 @@ A Python package in `cli/` (`biwak_cli`), the command is `biwak`:
   `X-Biwak-CLI`) and refuses CLIs older than `MINIMUM`; bump
   `cli/pyproject.toml` with new commands.
 
+### The rules
+
+The same as the other apps' CLIs (`gov`, Governance; `wb`, Workbench),
+decided 2026-11-22 (`cli-style.md`):
+
+- **One group per thing, in the plural:** `biwak todos`, `biwak lists`,
+  `biwak messages`, `biwak docs`, `biwak files`, `biwak folders`,
+  `biwak checkins`, `biwak links`, `biwak members`, `biwak projects`,
+  `biwak people`, `biwak teams`, `biwak bookmarks`, `biwak invitations`,
+  `biwak public-links`, `biwak forwarded`, `biwak orgs`.
+- **The group alone lists** (`invoke_without_command`, as `gov
+  proposals`); what it lists by is an option, needed only for listing:
+  `biwak todos --mine --due overdue`, `biwak todos --list LIST`, `biwak
+  lists --project ID`, `biwak subscriptions --item ID`. Groups with
+  nothing to list without an item (`docs`, `folders`, `reactions`,
+  `items`) show their help.
+- **Subcommands are verbs**, the same words across groups: `show`,
+  `create` (not `add`, `new` or `post`), `update` (not `edit`), `delete`,
+  and the group's own (`todos complete|reopen|assign|comment|move`,
+  `lists copy|archive|unarchive|add-from-text`, `messages pin`, `files
+  upload|replace|download`, `folders move|order`, `docs read-only`,
+  `checkins answer|due|pause|resume|mail`, `members add|invite|remove`,
+  `projects join`, `orgs merge|move`, `people
+  activate|deactivate|reset-sign-in`, `invitations resend|withdraw`,
+  `forwarded file`).
+- **Actions on any item** go to the group of what they make:
+  `subscriptions add|remove ITEM`, `public-links create|delete ITEM`,
+  `reactions create ITEM`, `bookmarks create|delete`, `items move ITEM`.
+- **Top level** only what isn't a thing: `login`, `logout`, `me`,
+  `search`, `feed`, `lantern`, `away`, `settings`, `notifications`.
+- **No aliases** for old names: `MINIMUM` refuses older CLIs instead.
+
 ## Agent skills
 
 Skills in the CLI package for common work (triaging what changed,

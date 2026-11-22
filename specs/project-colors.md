@@ -15,7 +15,7 @@ A color per project, so projects are told apart at a glance.
   "None", the name as accessible label and `title`, the checked one
   ringed in the accent color. API: `color` (a name or `""`) on `POST
   projects/` and `PATCH projects/{id}/`, `color` and `color_name` on
-  `ProjectOut` (clients see them). CLI: `biwak project add|edit
+  `ProjectOut` (clients see them). CLI: `biwak projects create|update
   --color NAME|none`.
 - **Folders** have colors too, chosen and never suggested
   (decided 2026-11-21, `files.md`, "Folders").

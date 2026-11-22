@@ -134,5 +134,5 @@ Templates copy lists the same way (`templates.md`).
   sentences, people added or dropped and clients who'd see it, unless
   `confirm: true`, like merging organizations; decided 2026-11-22).
   Copying doesn't ask: `visible_to_clients` is explicit, as when
-  creating a list. **CLI:** `biwak list copy LIST --to PROJECT [--shift DAYS|--no-dates]
-  [--title] [--visible]`, `biwak move ITEM --to PROJECT [--confirm]`.
+  creating a list. **CLI:** `biwak lists copy LIST --to PROJECT [--shift DAYS|--no-dates]
+  [--title] [--visible]`, `biwak items move ITEM --to PROJECT [--confirm]`.

@@ -147,5 +147,5 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   token. Tests through every entry point (`AGENTS.md`).
 - **API and CLI:** create, show and stop a public link (staff):
   `GET`, `POST` (`{"days": 7}`) and `DELETE` `items/{id}/public-link/`
-  (404 without a live link); `biwak share ITEM --days 7`,
-  `biwak unshare ITEM`.
+  (404 without a live link); `biwak public-links create ITEM
+  --days 7`, `biwak public-links delete ITEM`.

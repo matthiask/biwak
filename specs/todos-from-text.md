@@ -11,7 +11,7 @@ goes into **one existing list**, and **headings become groups**.
 `biwak/items/from_text_views.py` (`items/from_text_form.html`,
 `items/_from_text_preview.html`), dropping `frontend/from-text.js`
 (`items/_drop_text.html`), the event `added_todos`, the API and
-`biwak list add-from-text`.
+`biwak lists add-from-text`.
 
 ## Where
 
@@ -91,8 +91,8 @@ disabled and the preview says why.
 - `POST /api/v1/lists/{id}/todos/from-text/` with `text` and `preview`
   (true answers the plan without adding: groups new or existing, to-dos,
   what's left out); the same parser and operation.
-- `biwak list add-from-text LIST [FILE]` (stdin without a file; next to
-  `biwak list copy`: it acts on a list, decided 2026-11-22),
+- `biwak lists add-from-text LIST [FILE]` (stdin without a file; next to
+  `biwak lists copy`: it acts on a list, decided 2026-11-22),
   `--preview`, `--json`. `[clients]`. Agents get a simple way to turn a
   plan into to-dos.
 

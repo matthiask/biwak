@@ -1,5 +1,5 @@
-"""``biwak react`` and the reactions in ``biwak todo show``; the CLI test
-case is the one of test_cli.py"""
+"""``biwak reactions create`` and the reactions in ``biwak todos show``; the
+CLI test case is the one of test_cli.py"""
 
 import json
 

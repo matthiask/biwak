@@ -1,4 +1,4 @@
-"""``biwak list add-from-text`` (specs/todos-from-text.md)"""
+"""``biwak lists add-from-text`` (specs/todos-from-text.md)"""
 
 import json
 import tempfile

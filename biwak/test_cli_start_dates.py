@@ -1,4 +1,4 @@
-"""``biwak todo … --starts`` (specs/start-dates.md)"""
+"""``biwak todos create|update … --starts`` (specs/start-dates.md)"""
 
 import datetime as dt
 import json
