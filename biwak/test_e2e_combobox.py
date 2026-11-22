@@ -60,8 +60,8 @@ class ComboboxTest(E2ETestCase):
         # The people page again, with Dora under her organization
         expect(dialog).to_be_hidden()
         expect(
-            page.locator('[data-people-group="client"]').get_by_role(
-                "link", name="Dora Example"
+            page.locator('[data-people-group="client"] .wb-person-link').filter(
+                has_text="Dora Example"
             )
         ).to_be_visible()
         self.assertTrue(self.project.is_member(dora))
@@ -86,7 +86,9 @@ class InviteRowsTest(E2ETestCase):
         emails.nth(3).fill("eve@example.net")
         dialog.get_by_role("button", name="Invite").click()
         expect(dialog).to_be_hidden()
-        expect(page.get_by_role("link", name="eve@example.net")).to_be_visible()
+        expect(
+            page.locator(".wb-person-link", has_text="eve@example.net")
+        ).to_be_visible()
         self.assertTrue(
             self.project.memberships.filter(user__email="dora@example.net").exists()
         )
