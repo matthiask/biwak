@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:32+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2005,7 +2005,8 @@ msgstr "„%(title)s“ liegt %(days)s Tage lang im Papierkorb."
 msgid "%(count)s items are in the trash for %(days)s days."
 msgstr "%(count)s Einträge liegen %(days)s Tage lang im Papierkorb."
 
-#: biwak/files/library.py biwak/files/models.py biwak/items/models.py
+#: biwak/files/library.py biwak/files/models.py biwak/forwarding/models.py
+#: biwak/items/models.py
 msgid "file"
 msgstr "Datei"
 
@@ -2013,8 +2014,9 @@ msgstr "Datei"
 msgid "Files"
 msgstr "Dateien"
 
-#: biwak/files/library.py biwak/files/models.py biwak/items/models.py
-#: biwak/organizations/models.py biwak/projects/models.py biwak/teams/models.py
+#: biwak/files/library.py biwak/files/models.py biwak/forwarding/models.py
+#: biwak/items/models.py biwak/organizations/models.py biwak/projects/models.py
+#: biwak/teams/models.py
 msgid "name"
 msgstr "Name"
 
@@ -2037,15 +2039,15 @@ msgstr "Beschreibung"
 msgid "Choose a file."
 msgstr "Wähle eine Datei."
 
-#: biwak/files/models.py
+#: biwak/files/models.py biwak/forwarding/models.py
 msgid "key"
 msgstr "Schlüssel"
 
-#: biwak/files/models.py
+#: biwak/files/models.py biwak/forwarding/models.py
 msgid "size"
 msgstr "Grösse"
 
-#: biwak/files/models.py
+#: biwak/files/models.py biwak/forwarding/models.py
 msgid "content type"
 msgstr "Inhaltstyp"
 
@@ -2141,6 +2143,99 @@ msgstr "Nichts gefunden"
 msgid "staff"
 msgstr "Team"
 
+#: biwak/forwarding/apps.py biwak/forwarding/models.py
+msgid "forwarded mails"
+msgstr "weitergeleitete Mails"
+
+#: biwak/forwarding/models.py
+msgid "forwarded by"
+msgstr "weitergeleitet von"
+
+#: biwak/forwarding/models.py biwak/inbound/models.py
+msgid "received at"
+msgstr "empfangen am"
+
+#: biwak/forwarding/models.py
+msgid "subject"
+msgstr "Betreff"
+
+#: biwak/forwarding/models.py
+msgid "sender's name"
+msgstr "Name der Absender:in"
+
+#: biwak/forwarding/models.py
+msgid "sender's address"
+msgstr "Adresse der Absender:in"
+
+#: biwak/forwarding/models.py
+msgid "sent on"
+msgstr "gesendet am"
+
+#: biwak/forwarding/models.py biwak/outbox/admin.py biwak/outbox/models.py
+msgid "to"
+msgstr "an"
+
+#: biwak/forwarding/models.py
+msgid "cc"
+msgstr "Cc"
+
+#: biwak/forwarding/models.py
+msgid "text"
+msgstr "Text"
+
+#: biwak/forwarding/models.py
+msgid "forwarded mail"
+msgstr "weitergeleitete Mail"
+
+#: biwak/forwarding/models.py
+msgid "forwarded file"
+msgstr "weitergeleitete Datei"
+
+#: biwak/forwarding/models.py
+msgid "forwarded files"
+msgstr "weitergeleitete Dateien"
+
+#: biwak/forwarding/operations.py biwak/inbound/receive.py
+#, python-format
+msgid "An attachment was too large and is not included: %(name)s"
+msgstr "Ein Anhang war zu gross und ist nicht dabei: %(name)s"
+
+#: biwak/forwarding/operations.py
+msgid "Forwarded mails are only kept when they come from the address of a staff member."
+msgstr "Weitergeleitete Mails werden nur behalten, wenn sie von der Adresse einer mitarbeitenden Person kommen."
+
+#: biwak/forwarding/operations.py
+msgid "The receiving mail server couldn't confirm that the mail came from your address (SPF, DKIM and DMARC)."
+msgstr "Der empfangende Mailserver konnte nicht bestätigen, dass die Mail von deiner Adresse kam (SPF, DKIM und DMARC)."
+
+#: biwak/forwarding/operations.py
+msgid "Your forwarded mail couldn't be kept"
+msgstr "Deine weitergeleitete Mail konnte nicht behalten werden"
+
+#: biwak/forwarding/operations.py
+#, python-format
+msgid "Forwarded from %(sender)s, %(date)s"
+msgstr "Weitergeleitet von %(sender)s, %(date)s"
+
+#: biwak/forwarding/operations.py
+#, python-format
+msgid "Forwarded from %(sender)s"
+msgstr "Weitergeleitet von %(sender)s"
+
+#: biwak/forwarding/operations.py
+msgid "Forwarded"
+msgstr "Weitergeleitet"
+
+#: biwak/forwarding/operations.py
+#, python-format
+msgid "To: %(people)s"
+msgstr "An: %(people)s"
+
+#: biwak/forwarding/operations.py
+#, python-format
+msgid "Cc: %(people)s"
+msgstr "Cc: %(people)s"
+
 #: biwak/inbound/admin.py
 msgid "Revoke the selected reply tokens"
 msgstr "Ausgewählte Antwort-Tokens widerrufen"
@@ -2176,6 +2271,10 @@ msgstr "empfangen"
 #: biwak/inbound/models.py
 msgid "posted"
 msgstr "veröffentlicht"
+
+#: biwak/inbound/models.py
+msgid "forwarded"
+msgstr "weitergeleitet"
 
 #: biwak/inbound/models.py
 msgid "auto-reply or bounce"
@@ -2217,10 +2316,6 @@ msgstr "Anbieter"
 msgid "provider ID"
 msgstr "ID beim Anbieter"
 
-#: biwak/inbound/models.py
-msgid "received at"
-msgstr "empfangen am"
-
 #: biwak/inbound/models.py biwak/items/models.py
 msgid "status"
 msgstr "Status"
@@ -2244,11 +2339,6 @@ msgstr "eingehende Nachricht"
 #: biwak/inbound/models.py
 msgid "inbound messages"
 msgstr "eingehende Nachrichten"
-
-#: biwak/inbound/receive.py
-#, python-format
-msgid "An attachment was too large and is not included: %(name)s"
-msgstr "Ein Anhang war zu gross und ist nicht dabei: %(name)s"
 
 #: biwak/inbound/receive.py
 msgid "Replies are only posted when they come from the address the notification was sent to."
@@ -3428,10 +3518,6 @@ msgstr "gesendet"
 #: biwak/outbox/admin.py biwak/outbox/models.py
 msgid "given up"
 msgstr "aufgegeben"
-
-#: biwak/outbox/admin.py biwak/outbox/models.py
-msgid "to"
-msgstr "an"
 
 #: biwak/outbox/admin.py
 msgid "Deleted once sent; Resend's log has it."
@@ -5955,6 +6041,14 @@ msgctxt "repeats"
 msgid "left"
 msgstr "übrig"
 
+#: biwak/templates/forwarding/refused.txt
+msgid "Your forwarded mail couldn't be kept."
+msgstr "Deine weitergeleitete Mail konnte nicht behalten werden."
+
+#: biwak/templates/forwarding/refused.txt biwak/templates/inbound/rejection.txt
+msgid "Your mail:"
+msgstr "Deine Mail:"
+
 #: biwak/templates/help.html
 msgid "Chapters of the help"
 msgstr "Kapitel der Hilfe"
@@ -5966,10 +6060,6 @@ msgstr "Die Hilfe gibt es vorerst nur auf Englisch."
 #: biwak/templates/inbound/rejection.txt
 msgid "Your reply couldn't be posted."
 msgstr "Deine Antwort konnte nicht veröffentlicht werden."
-
-#: biwak/templates/inbound/rejection.txt
-msgid "Your mail:"
-msgstr "Deine Mail:"
 
 #: biwak/templates/items/_add_todo.html
 msgid "Add a to-do"

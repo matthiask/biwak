@@ -85,6 +85,8 @@ class ReplyToken(models.Model):
 class InboundStatus(models.TextChoices):
     RECEIVED = "received", _("received")
     POSTED = "posted", _("posted")
+    # Kept in the forwarder's list (specs/forwarding.md)
+    FORWARDED = "forwarded", _("forwarded")
     # Dropped without an answer
     LOOP = "loop", _("auto-reply or bounce")
     UNKNOWN_TOKEN = "unknown_token", _("no reply address")

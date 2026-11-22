@@ -71,6 +71,7 @@ INSTALLED_APPS = [
         "biwak.search",
         "biwak.palette",
         "biwak.inbound",
+        "biwak.forwarding",
         "biwak.outbox",
         "biwak.importer",
         "biwak.audit",

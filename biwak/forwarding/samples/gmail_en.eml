@@ -1,0 +1,63 @@
+Return-Path: <ada@example.org>
+MIME-Version: 1.0
+From: Ada Example <ada@example.org>
+Date: Mon, 23 Nov 2026 09:01:12 +0100
+Message-ID: <CAF1x+fwd-gmail-en-1@mail.example.com>
+Subject: Fwd: Analytics export
+To: inbox@reply.example.org
+Content-Type: multipart/mixed; boundary="000000000000fwdgmailmixed"
+
+--000000000000fwdgmailmixed
+Content-Type: multipart/alternative; boundary="000000000000fwdgmailalt"
+
+--000000000000fwdgmailalt
+Content-Type: text/plain; charset="UTF-8"
+
+Can we file this under Website?
+
+---------- Forwarded message ---------
+From: Dora Example <dora@example.com>
+Date: Fri, Nov 20, 2026 at 4:42 PM
+Subject: Analytics export
+To: Ada Example <ada@example.org>
+Cc: <finn@example.com>
+
+
+Hi Ada,
+
+Here's the export you asked for. Numbers are *up 12%* in November.
+
+> Could you send the numbers for November?
+
+Dora
+
+--000000000000fwdgmailalt
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Can we file this under Website?<br><br><div class=3D"gmail=
+_quote gmail_quote_container"><div dir=3D"ltr" class=3D"gmail_attr">-------=
+--- Forwarded message ---------<br>From: <strong class=3D"gmail_sendername"=
+ dir=3D"auto">Dora Example</strong> <span dir=3D"auto">&lt;<a href=3D"mailt=
+o:dora@example.com">dora@example.com</a>&gt;</span><br>Date: Fri, Nov 20, 2=
+026 at 4:42=E2=80=AFPM<br>Subject: Analytics export<br>To: Ada Example &lt;=
+<a href=3D"mailto:ada@example.org">ada@example.org</a>&gt;<br>Cc: &lt;<a hr=
+ef=3D"mailto:finn@example.com">finn@example.com</a>&gt;<br></div><br><br><d=
+iv dir=3D"ltr">Hi Ada,<div><br></div><div>Here&#39;s the export you asked f=
+or. Numbers are <b>up 12%</b> in November.</div><div><br></div><blockquote =
+class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex">Could you send the=
+ numbers for November?</blockquote><div><br></div><div>Dora</div></div></di=
+v></div>
+
+--000000000000fwdgmailalt--
+
+--000000000000fwdgmailmixed
+Content-Type: text/csv; charset="US-ASCII"; name="analytics-2026-11.csv"
+Content-Disposition: attachment; filename="analytics-2026-11.csv"
+Content-Transfer-Encoding: base64
+Content-ID: <f_m3fwd0010>
+X-Attachment-Id: f_m3fwd0010
+
+ZGF5LHZpc2l0cwoyMDI2LTExLTAxLDEyMAoyMDI2LTExLTAyLDE0Mwo=
+
+--000000000000fwdgmailmixed--

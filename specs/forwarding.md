@@ -29,6 +29,18 @@ Resend's webhook, the sender check, stripping), `files.md`
   converter to Markdown, quoted parts kept, signatures not stripped),
   and attachments (inline images too) up to the attachment limit.
 
+**Receiving** (`biwak/forwarding/`): `biwak.inbound.receive` hands
+mails to the inbox (and without a reply token) to
+`forwarding.operations.receive()`; `parse.py` reads the forward
+(`find_header()`, `parse_date()`, an attached `message/rfc822` read from
+its own headers), `store()` keeps a `ForwardedMail` with its
+`ForwardedFile`s, the text referencing them as `forwarded:KEY` (inline
+images where they were, the others below). Refused: the `InboundMessage`
+says why (`wrong_sender`, `unauthenticated`), an answer to `From` when
+the receiving server confirmed it, else to the staff member whose
+address it claims, else none; at most 20 answers per sender and hour.
+Made-up samples of each shape in `biwak/forwarding/samples/`.
+
 ## Filing
 
 - **"Forwarded"** (`/forwarded/`, in the person menu and the palette,

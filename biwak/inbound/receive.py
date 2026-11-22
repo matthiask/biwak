@@ -5,7 +5,8 @@ this order:
 
 1. Each mail once per provider and ID (providers retry webhooks).
 2. Auto-replies, out-of-office and bounces are dropped, never answered.
-3. Without a known reply token, dropped.
+3. Without a known reply token, dropped; mails to the inbox go to
+   ``biwak.forwarding`` (specs/forwarding.md).
 4. At most 20 mails per token and hour, the rest dropped.
 5. Posted as the token's person only if the ``From`` address is theirs,
    the receiving server's authentication passed, the token is valid and
@@ -32,6 +33,7 @@ from biwak.activity import mentions
 from biwak.activity.mails import sender
 from biwak.activity.notify import can_see
 from biwak.files import attachments
+from biwak.forwarding import operations as forwarding
 from biwak.inbound.models import InboundMessage, InboundStatus, ReplyToken
 from biwak.inbound.strip import reply_text
 from biwak.inbound.tokens import token_in
@@ -116,6 +118,8 @@ def _handle(message, mail, now):
     if is_automatic(mail):
         return InboundStatus.LOOP
     value = token_in(mail.recipients)
+    if value is None and forwarding.is_inbox(mail.recipients):
+        return forwarding.receive(message, mail, now)
     token = (
         ReplyToken.objects
         .select_for_update(of=("self",))
