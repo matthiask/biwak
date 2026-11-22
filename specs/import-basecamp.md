@@ -217,8 +217,8 @@ project. Waiting for Basecamp's account export to confirm the plan.
   bucket with a dock (fetched from `/templates/ID.json` when the listing
   has none), its tools imported as a project's; the library is `GET
   /template_library/todolists.json` → `{bucket, todolists}`, one
-  template named after the bucket ("To-do list library" when it has no
-  name) holding those lists. Mapped as `Template`, so a second run
+  template named "To-do list library" whatever the bucket's name
+  (decided 2026-11-22: one library) holding those lists. Mapped as `Template`, so a second run
   updates them; created with `create_template()`, so no members
   (Basecamp's people of a template aren't added), visibility as in
   Basecamp, archived templates archived. `Importer.run_templates()`.

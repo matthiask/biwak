@@ -53,6 +53,11 @@ COUNTED = [
         lambda n: ngettext("%(count)d to-do", "%(count)d to-dos", n),
     ),
     (
+        "checkins",
+        Q(kind=Kind.QUESTION, status=Status.ACTIVE),
+        lambda n: ngettext("%(count)d check-in", "%(count)d check-ins", n),
+    ),
+    (
         "messages",
         Q(kind=Kind.MESSAGE, status=Status.ACTIVE),
         lambda n: ngettext("%(count)d message", "%(count)d messages", n),

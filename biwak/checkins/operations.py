@@ -143,6 +143,51 @@ def create_question(
 
 
 @transaction.atomic
+def copy_question(item, project, *, actor, now=None):
+    """A copy of the question in ``project``, a new project from a template
+    (specs/templates.md): its schedule as it is (paused or not, asked
+    from the next date on) and the people asked, those who wouldn't see
+    it there added as members, as for assignees (``people_plan()``).
+    Created silently: no event; the creator and the people asked
+    subscribed, as by ``create_question()``. Not its answers."""
+    from biwak.projects import operations as project_ops
+
+    source = item.question
+    copy = items_ops.create_item(
+        project=project,
+        kind=Kind.QUESTION,
+        title=item.title,
+        creator=actor,
+        visible=item.visible_to_clients,
+        position=0,
+    )
+    visible = copy.visible_to_clients
+    asked = source.people.all()
+    added, _dropped = items_ops.people_plan(
+        asked, User.objects.none(), project, visible
+    )
+    for user in added:
+        project_ops.add_member(project, user, actor=actor)
+    people = list(asked.filter(items_ops.staying(project, visible)))
+    now = now or timezone.now()
+    question = Question.objects.create(
+        item=copy,
+        rule=source.rule,
+        starts_on=source.starts_on,
+        time_of_day=source.time_of_day,
+        paused_at=now if source.paused_at else None,
+    )
+    if question.paused_at is None:
+        question.next_at = schedule.next_fire_of(question, after=now)
+        question.save(update_fields=["next_at"])
+    question.people.set(people)
+    subscribe(actor, copy)
+    for user in people:
+        subscribe(user, copy, added_by=actor)
+    return copy
+
+
+@transaction.atomic
 def set_people(item, people, *, actor):
     """The complete set of people asked, from the next occurrence on. Only
     who gets asked: the subscribers, who hear about the answers, are a list

@@ -6,9 +6,11 @@ are maintained by people in the app (one person or role keeps them
 current) and used while projects run (an onboarding list, a list per
 event), which a skill setting up projects doesn't cover.
 
-**Status:** built (2026-11-22), branch `templates`; the decisions
-marked "proposed" below were made while building, for the user to
-confirm.
+**Status:** built (2026-11-22), branch `templates`; the changes
+decided afterwards (check-ins copied, assignments kept, search never
+finding templates, one library for the importer, no public links)
+built on `templates-fixes`. The decisions marked "proposed" below were
+made while building, for the user to confirm.
 
 ## What real templates hold
 
@@ -44,7 +46,7 @@ of what's needed:
   anybody. Its own feed and item history work as in any project.
 - **The templates page** (`/projects/templates/`, linked from the
   projects page and the palette): cards like projects, with what each
-  holds ("3 lists · 160 to-dos · 4 messages · 7 folders"), "New
+  holds ("3 lists · 160 to-dos · 1 check-in · 4 messages · 7 folders"), "New
   template", and per template "New project from this…".
 - Archiving and trashing a template work as for projects.
 
@@ -60,6 +62,12 @@ of what's needed:
   questions with their schedules (decided 2026-11-22: a weekly
   question belongs to a kind of project as much as its lists). Comments,
   reactions, history and events are not.
+- **Check-ins** keep their schedule (paused ones stay paused; asked from
+  the next date on) and the people asked, who are added as members when
+  they wouldn't see the new project, like assignees below (proposed
+  2026-11-22: a template has no members, but its questions can ask own
+  staff; a question asking nobody asks nobody in the new project
+  either). Questions in a template are never asked.
 - **Assignees and dates** are copied as they are (real templates have
   none; a template that has them means them). **Assignments are kept**
   (decided 2026-11-22: unless there's a good reason not to): assignees
@@ -88,7 +96,8 @@ of what's needed:
 - **One to-do list library** (decided 2026-11-22): a template project
   named "To-do list library" holding lists; no separate concept.
 - **No public links** in templates (decided 2026-11-22): "Share…" isn't
-  offered on their items, and the API refuses them.
+  offered on their items (the "More" menu, the palette; the page is
+  404), and the API and the operation refuse them.
 
 ## Importing
 
@@ -111,12 +120,13 @@ rebuilds them by hand.
   `project__is_template=False` in the feed across projects, the to-dos
   (`due.todos()`, so also Home and the calendar feed), Home's
   bookmarks, check-ins due (and `is_askable()`: questions in templates
-  aren't asked), forwarding's lists, public links (they don't resolve),
-  the all-projects page, the archived projects. Search: `templates`
-  (the page's "Include templates", staff only; the API's `templates`;
-  `biwak search --templates`), and searching inside a template finds
-  its items. The palette lists templates after the projects, labelled
-  "Template".
+  aren't asked), forwarding's lists, public links (they don't resolve;
+  `Item.is_shareable` is false in templates, so no "Share…",
+  `create_public_link()` refuses, the API answers 400),
+  the all-projects page, the archived projects. Search never finds
+  them (`search.queries.search()`; the search page doesn't offer them
+  as a project to search in). The palette lists templates after the
+  projects, labelled "Template".
 - **Quiet:** `notify()` tells nobody about events of templates (so no
   lantern, mails or digests), `mentions.update()` stores no mentions
   there, `notify_people()` subscribes nobody. Assigning inside a
@@ -130,8 +140,12 @@ rebuilds them by hand.
   `feed.add_projects()`; the API drops it otherwise) and
   `create_from_template(template, actor, members, **fields)`.
   `items.operations.copy_template()` copies with `copy_list(...,
-  quiet=True)` (the title as it is, nobody added, no event, the actor
-  subscribed), messages, folders with docs and files (the newest
+  quiet=True)` (the title as it is, no event, the actor subscribed;
+  assignees who wouldn't see the copy added as members, recording
+  "added"), check-in questions (`checkins.operations.copy_question()`:
+  the schedule, paused or not, and the people asked, added as members
+  the same way; the creator and the people asked subscribed, no event),
+  messages, folders with docs and files (the newest
   version, as a new file), attachments in texts as new files; the
   project's orders of files and messages too.
 - **Pages** (`biwak/projects/template_views.py`): `/projects/templates/`
@@ -148,7 +162,9 @@ rebuilds them by hand.
   `member_ids` (added before copying) or `is_template` (`biwak projects
   create NAME --template ID --member PERSON`, `--as-template`); a list
   from a template is `POST lists/{id}/copy/` (`biwak lists copy`).
-- **Importer:** `import_basecamp --templates` (`import-basecamp.md`).
+- **Importer:** `import_basecamp --templates` (`import-basecamp.md`);
+  the library always becomes "To-do list library"
+  (`importer.LIBRARY_NAME`), whatever Basecamp names its bucket.
 
 ## Decisions made while building (confirmed by the user 2026-11-22)
 
@@ -171,16 +187,6 @@ rebuilds them by hand.
   activity ("created Website from the template …" stays apart from
   "created Launch").
 
-## To change (decided 2026-11-22, not built yet)
-
-- Copy check-in questions; keep assignments, adding members (above).
-- Search never finds templates: drop "Include templates", the API's
-  `templates`, `biwak search --templates` and searching inside a
-  template.
-- One "To-do list library" for the importer, whatever the bucket's
-  name.
-- No "Share…" in templates, the API refusing public links there.
-
 ## Not planned
 
 - **"Save as template"** from a running project (decided 2026-11-22):
@@ -188,8 +194,9 @@ rebuilds them by hand.
 
 ## Done when
 
-- Tests for the operations (copying everything, assignees left out,
-  visibility, one event, nothing told), the pages as staff, a client
+- Tests for the operations (copying everything, assignees and people
+  asked kept and added as members, visibility, one event, nothing
+  told), no search and no public links in templates, the pages as staff, a client
   and an external getting 404, templates left out everywhere listed
   above, the API and the CLI. (`biwak/projects/test_templates*.py`,
   `biwak/test_cli_templates.py`, `biwak/importer/test_templates.py`)

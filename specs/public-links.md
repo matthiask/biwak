@@ -14,7 +14,8 @@ operations, views, API).
   (`Item.is_shareable`, `SHAREABLE` in `biwak/items/models.py`). Not lists or
   folders: a container would show whatever is added to it later. Not
   check-in answers either (decided 2026-11-22): they have no page and
-  no "More" menu of their own.
+  no "More" menu of their own. Nothing in templates (decided
+  2026-11-22, `templates.md`): no "Share…", the API answers 400.
 - **By staff, on any item they see** (internal or visible to clients):
   the second, destructive button is the safeguard. Clients can't create
   public links, like the visibility switches (`access.md`).

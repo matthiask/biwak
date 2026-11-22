@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from biwak.activity.models import Action, Event
+from biwak.checkins import operations as checkin_ops
+from biwak.checkins.support import MONDAY_9
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.palette.test_actions import palette_data
@@ -33,6 +35,25 @@ class TemplatesPageTest(Base, TestCase):
         )
         self.assertContains(
             response, f"{reverse('project_create')}?template={self.template.pk}"
+        )
+
+    def test_checkins(self):
+        """Counted on the card; one visible to clients named in the new
+        project form"""
+        checkin_ops.create_question(
+            project=self.template,
+            title="Anything blocking?",
+            creator=self.ada,
+            visible=True,
+            **MONDAY_9,
+        )
+        self.client.force_login(self.bob)
+        response = self.client.get(reverse("templates"))
+        self.assertContains(response, "1 list · 2 to-dos · 1 check-in · 2 messages")
+        url = f"{reverse('project_create')}?template={self.template.pk}"
+        response = self.client.get(url, headers=MODAL)
+        self.assertContains(
+            response, "Visible to clients: Anything blocking?, Onboarding and Welcome"
         )
 
     def test_others_get_404(self):
@@ -132,6 +153,36 @@ class TemplatePageTest(Base, TestCase):
         labels = [action["label"] for action in data["actions"]]
         self.assertNotIn("Go to templates", labels)
         self.assertNotIn("New list from a template…", labels)
+
+
+class NoPublicLinksTest(Base, TestCase):
+    def test_no_share(self):
+        """Not in the menu or the palette, the page 404 (decided
+        2026-11-22)"""
+        self.client.force_login(self.ada)
+        url = reverse("item_share", args=[self.welcome.pk])
+        response = self.client.get(self.welcome.get_absolute_url())
+        self.assertNotContains(response, url)
+        labels = [a["label"] for a in palette_data(response)["actions"]]
+        self.assertNotIn("Share…", labels)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, {"days": 7}).status_code, 404)
+
+
+class SearchTest(Base, TestCase):
+    def test_never_found(self):
+        """No "Include templates", not offered as a project to search in,
+        nothing found inside one (decided 2026-11-22)"""
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("search"), {"q": "Kick-off"})
+        self.assertNotContains(response, "Include templates")
+        self.assertNotContains(response, "Web project")
+        self.assertEqual(response.context["results"], [])
+        response = self.client.get(
+            reverse("search"),
+            {"q": "Kick-off", "project": self.template.pk, "templates": "on"},
+        )
+        self.assertEqual(response.context["results"], [])
 
 
 class NewProjectTest(Base, TestCase):

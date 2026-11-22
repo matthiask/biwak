@@ -47,6 +47,8 @@ def _staff_only(request):
 def _shareable(request, item_id):
     item = item_for(request, item_id)
     _staff_only(request)
+    if item.project.is_template:
+        raise HttpError(400, _("Items in templates can't be shared publicly."))
     if not item.is_shareable:
         raise HttpError(
             400,

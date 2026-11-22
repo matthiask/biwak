@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 19:40+0100\n"
+"POT-Creation-Date: 2026-11-22 19:55+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1005,7 +1005,7 @@ msgid_plural "%(count)d docs"
 msgstr[0] "%(count)d Dokument"
 msgstr[1] "%(count)d Dokumente"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/projects/template_views.py
 #, python-format
 msgid "%(count)d check-in"
 msgid_plural "%(count)d check-ins"
@@ -4957,6 +4957,10 @@ msgid "Only staff share items publicly."
 msgstr "Nur Mitarbeitende teilen Einträge öffentlich."
 
 #: biwak/public_links/api.py
+msgid "Items in templates can't be shared publicly."
+msgstr "Einträge in Vorlagen können nicht öffentlich geteilt werden."
+
+#: biwak/public_links/api.py
 msgid "Only to-dos, messages, docs and files can be shared."
 msgstr "Nur To-dos, Mitteilungen, Dokumente und Dateien können geteilt werden."
 
@@ -5284,10 +5288,6 @@ msgstr "Suche"
 #: biwak/search/views.py
 msgid "Only mine"
 msgstr "Nur meine"
-
-#: biwak/search/views.py
-msgid "Include templates"
-msgstr "Mit Vorlagen"
 
 #: biwak/settings.py
 msgid "German"
@@ -7966,6 +7966,9 @@ msgstr "vor %(time)s"
 #, python-format
 msgid "on %(date)s"
 msgstr "am %(date)s"
+
+#~ msgid "Include templates"
+#~ msgstr "Mit Vorlagen"
 
 #, python-format
 #~ msgid "Since %(date)s"

@@ -1494,8 +1494,8 @@ def copy_list(
     event for the list, the copier subscribed to it.
 
     ``quiet`` (a new project from a template, specs/templates.md): the
-    title as it is, nobody added to ``project`` (assignees who don't see
-    it there are left out) and no event, the copier subscribed."""
+    title as it is and no event, the copier subscribed. Nobody is added
+    to a template: assignees who don't see the copy there are left out."""
     if item.kind != Kind.LIST:
         raise ValueError("Only lists are copied")
     if project.archived_at is not None:
@@ -1519,7 +1519,7 @@ def copy_list(
         )
         for group in source.groups.all()
     }
-    if not quiet and not project.is_template:
+    if not project.is_template:
         # Nobody is added to a template (specs/templates.md)
         added, _dropped = copy_people(item, project, visible=visible)
         for user in added:
@@ -1881,10 +1881,13 @@ def _template_children(template, parent, kinds=None):
 
 
 def template_contents(template):
-    """What a new project gets of the template: its active lists, messages,
-    folders, docs and files at the top level"""
+    """What a new project gets of the template: its active lists and
+    check-in questions, messages, folders, docs and files at the top
+    level"""
     return _template_children(
-        template, None, [Kind.LIST, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.FILE]
+        template,
+        None,
+        [Kind.LIST, Kind.QUESTION, Kind.MESSAGE, Kind.FOLDER, Kind.DOC, Kind.FILE],
     ).filter(Q(status=Status.ACTIVE) | ~Q(kind=Kind.LIST))
 
 
@@ -1893,7 +1896,9 @@ def template_contents(template):
 def copy_template(template, project, *, actor):
     """Copies the template's top level into ``project`` as it is
     (specs/templates.md): lists through ``copy_list()`` (open to-dos,
-    assignees who see them in ``project``, dates as they are), messages
+    their assignees, added as members where they wouldn't see them, dates
+    as they are), check-in questions (``checkins.operations
+    .copy_question()``), messages
     (title, text, category, pinned), folders with their docs and files
     (new files), and the client visibility. No comments, reactions,
     history or events: created silently, the actor subscribed to what a
@@ -1916,6 +1921,10 @@ def copy_template(template, project, *, actor):
             )
         elif item.kind == Kind.MESSAGE:
             _copy_message(item, project, actor)
+        elif item.kind == Kind.QUESTION:
+            from biwak.checkins import operations as checkin_ops
+
+            checkin_ops.copy_question(item, project, actor=actor)
     _copy_files(
         [item for item in contents if item.kind in {Kind.FOLDER, Kind.DOC, Kind.FILE}],
         project,

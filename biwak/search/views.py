@@ -45,14 +45,13 @@ class SearchForm(Form):
     )
     mine = forms.BooleanField(label=_("Only mine"), required=False)
     archived = forms.BooleanField(label=_("Include archived"), required=False)
-    templates = forms.BooleanField(label=_("Include templates"), required=False)
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["project"].queryset = Project.objects.accessible_to(user)
-        if user.is_client or not user.sees_all_access:
-            # Templates are the own staff's (specs/templates.md)
-            del self.fields["templates"]
+        # Search never finds templates (specs/templates.md)
+        self.fields["project"].queryset = Project.objects.accessible_to(user).filter(
+            is_template=False
+        )
 
 
 def search(request):
@@ -68,7 +67,6 @@ def search(request):
             kind=data["kind"],
             mine=data["mine"],
             archived=data["archived"],
-            templates=data.get("templates", False),
         )
         if before := request.GET.get("before"):
             try:
@@ -105,7 +103,7 @@ def search(request):
             "older": older,
             "filtered": any(
                 request.GET.get(name)
-                for name in ["project", "kind", "mine", "archived", "templates"]
+                for name in ["project", "kind", "mine", "archived"]
             ),
         },
     )

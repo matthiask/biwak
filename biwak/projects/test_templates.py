@@ -3,11 +3,14 @@ leaves them out"""
 
 import datetime as dt
 
+from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from biwak.activity import feed, notify
 from biwak.activity.models import Action, Event, Mention, Notification, Subscription
+from biwak.checkins import operations as checkin_ops
+from biwak.checkins.support import MONDAY_9
 from biwak.files import attachments, operations as file_ops
 from biwak.files.models import Attachment
 from biwak.items import due, operations as ops
@@ -15,6 +18,7 @@ from biwak.items.models import Item, Kind, MessageCategory, Status
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
 from biwak.projects.overview import overview
+from biwak.public_links import operations as public_link_ops
 from biwak.search import queries as search
 from biwak.test_utils import external, person, project
 
@@ -116,6 +120,13 @@ class TemplateTest(Fixture, TestCase):
         with self.assertRaises(ValueError):
             project_ops.add_member(self.template, self.bob, actor=self.ada)
 
+    def test_no_public_links(self):
+        """Nothing in a template is shared publicly (decided 2026-11-22)"""
+        self.assertFalse(self.kickoff.is_shareable)
+        self.assertFalse(public_link_ops.can_share(self.ada, self.welcome))
+        with self.assertRaises(PermissionDenied):
+            public_link_ops.create_public_link(self.welcome, days=7, actor=self.ada)
+
     def test_stays_all_access(self):
         with self.assertRaises(ValueError):
             project_ops.update_project(
@@ -129,9 +140,10 @@ class TemplateTest(Fixture, TestCase):
         self.assertFalse(feed.feed_events(self.ada).exists())
         self.assertTrue(feed.feed_events(self.ada, project=self.template).exists())
         self.assertFalse(due.todos(self.bob, assignee="me").exists())
+        # Search never finds templates, not even searching in one
+        # (decided 2026-11-22)
         self.assertFalse(search.search(self.ada, "Kick-off").exists())
-        self.assertTrue(search.search(self.ada, "Kick-off", templates=True).exists())
-        self.assertTrue(
+        self.assertFalse(
             search.search(self.ada, "Kick-off", project=self.template).exists()
         )
 
@@ -215,18 +227,24 @@ class FromTemplateTest(Fixture, TestCase):
         self.assertFalse(items.get(kind=Kind.FOLDER, title="Design").is_client_visible)
 
     def test_assignees(self):
-        """Kept when they see the new project, left out (not added) when
-        they don't"""
+        """Kept: added as members when they wouldn't see the new project,
+        as "Copy…" does (decided 2026-11-22)"""
         website = self.create(is_all_access=True)
         kickoff = Item.objects.get(project=website, title="Kick-off")
         self.assertEqual(list(kickoff.todo.assignees.all()), [self.bob])
         self.assertTrue(
             Subscription.objects.filter(user=self.bob, item=kickoff).exists()
         )
+        self.assertFalse(website.memberships.filter(user=self.bob).exists())
         shop = self.create(name="Shop", is_all_access=False)
         kickoff = Item.objects.get(project=shop, title="Kick-off")
-        self.assertFalse(kickoff.todo.assignees.exists())
-        self.assertFalse(shop.memberships.filter(user=self.bob).exists())
+        self.assertEqual(list(kickoff.todo.assignees.all()), [self.bob])
+        self.assertTrue(shop.memberships.filter(user=self.bob).exists())
+        self.assertTrue(
+            Event.objects.filter(
+                project=shop, action=Action.ADDED, data__user=self.bob.pk
+            ).exists()
+        )
         with_bob = self.create(name="Bob's", is_all_access=False, members=[self.bob])
         kickoff = Item.objects.get(project=with_bob, title="Kick-off")
         self.assertEqual(list(kickoff.todo.assignees.all()), [self.bob])
@@ -314,6 +332,58 @@ class FromTemplateTest(Fixture, TestCase):
         self.assertEqual(events[0].template_name, "Web project")
         feed.add_projects(events, self.pia)
         self.assertEqual(events[0].template_name, "")
+
+
+class QuestionsFromTemplateTest(Fixture, TestCase):
+    """Check-in questions are copied with their schedules and the people
+    asked (decided 2026-11-22)"""
+
+    def setUp(self):
+        super().setUp()
+        self.weekly = checkin_ops.create_question(
+            project=self.template,
+            title="What are you working on?",
+            creator=self.ada,
+            people=[self.bob],
+            **MONDAY_9,
+        )
+
+    def create(self, **kwargs):
+        kwargs.setdefault("name", "Website")
+        return project_ops.create_from_template(self.template, actor=self.ada, **kwargs)
+
+    def test_copied(self):
+        shop = self.create(is_all_access=False)
+        copy = Item.objects.get(project=shop, kind=Kind.QUESTION)
+        self.assertEqual(copy.title, "What are you working on?")
+        question = copy.question
+        self.assertEqual(question.rule, MONDAY_9["rule"])
+        self.assertEqual(question.starts_on, MONDAY_9["starts_on"])
+        self.assertEqual(question.time_of_day, MONDAY_9["time_of_day"])
+        self.assertIsNotNone(question.next_at)
+        self.assertTrue(question.is_askable)
+        # Bob, asked, wouldn't see the limited project: added as member
+        self.assertEqual(list(question.people.all()), [self.bob])
+        self.assertTrue(shop.memberships.filter(user=self.bob).exists())
+        subscribed = set(
+            Subscription.objects.filter(item=copy).values_list("user", flat=True)
+        )
+        self.assertEqual(subscribed, {self.ada.pk, self.bob.pk})
+        # Silently: the project's one event, besides adding Bob
+        self.assertFalse(Event.objects.filter(item=copy).exists())
+        # The template's own question stays, still not asked
+        self.assertFalse(self.weekly.question.is_askable)
+
+    def test_paused_and_trashed(self):
+        checkin_ops.pause(self.weekly, actor=self.ada)
+        gone = checkin_ops.create_question(
+            project=self.template, title="Gone?", creator=self.ada, **MONDAY_9
+        )
+        ops.trash(gone, actor=self.ada)
+        website = self.create()
+        question = Item.objects.get(project=website, kind=Kind.QUESTION).question
+        self.assertTrue(question.is_paused)
+        self.assertIsNone(question.next_at)
 
 
 class ListFromTemplateTest(Fixture, TestCase):
