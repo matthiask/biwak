@@ -44,6 +44,14 @@ goes into internal containers, archived recordings skipped.
   tool as it starts, a line every 25 items with the requests sent and
   the time so far, a summary per project, and every wait of a second or
   more (the rate limit, a 429, a server error being retried).
+- **Several tools of a kind** (two to-do sets, several message boards
+  or Docs & Files) are merged as they come (decided 2026-11-22): their
+  lists, messages and files land together in the project. The report
+  lists the projects that had several, with the tools' names.
+- **Switched-off tools** are skipped unless `--include-disabled`
+  (decided 2026-11-22): the report (also a dry run's) lists those that
+  aren't empty, with what's in them; empty ones (Basecamp's defaults)
+  stay silent. Checking costs a request per switched-off tool.
 - **Files over the upload limit** (100 MB, `files.models.MAX_SIZE`;
   decided 2026-11-22: really large files belong elsewhere) aren't
   imported: the report lists each with its size, where it would have
