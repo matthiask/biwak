@@ -16,8 +16,10 @@ showing to clients asks first), `todos.md`, `files.md`,
 
 - **"Copy…"** in a list's "More" menu and the palette: a modal with
   the target project (the combobox of projects the person can open and
-  create lists in; the same project preselected), the new title
-  ("Launch checklist (copy)" preselected) and the dates (below).
+  create lists in; the same project preselected), the new title and
+  the dates (below). The title is the list's own; only when the target
+  project already has a list of that name (ignoring case) it gets
+  " (copy)", then " (copy 2)" and so on (decided 2026-11-22).
 - **The open work** (decided 2026-11-22): title, description, groups
   (in order), open to-dos in order with their notes and checklists
   (unticked as they are). Not completed to-dos, comments, history,

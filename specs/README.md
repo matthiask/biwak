@@ -49,7 +49,7 @@ confirm: `decisions-to-confirm.md`.
 | `teams.md` | built | named sets of people, expanded into their members when assigning, subscribing or mentioning |
 | `rich-editor.md` | built 2026-11-22 (branch `rich-editor`) | one rich-text editor (ProseMirror) for every text, live docs included, still storing Markdown |
 | `languages.md` | built 2026-11-22 (branch `languages`) | German, a language per person, everything following it |
-| `quiet-hours.md` | open | a time zone per person, quiet hours for mails, out of office |
+| `quiet-hours.md` | open | quiet hours for mails, out of office (one time zone) |
 | `start-dates.md` | open | start dates on to-dos, hidden from current work until they start |
 | `lists-across-projects.md` | open | copying lists, moving top-level items to another project |
 | `forwarding.md` | open | one address to forward mails to, filed as messages or to-dos |

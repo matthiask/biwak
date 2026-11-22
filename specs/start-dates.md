@@ -18,8 +18,7 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
   date a to-do isn't in "My to-dos", the to-dos page's default view and
   Home's current work; those show a collapsed "Starting later (3)"
   part at the end. Lists, the board and search show it as always.
-  "Today" is in the person's time zone (`quiet-hours.md`), else the
-  installation's.
+  "Today" is the installation's (one time zone, `quiet-hours.md`).
 - **The calendar feed** shows the range as an all-day event from start
   to due date.
 - **Recurrence:** the next to-do keeps the distance between start and
