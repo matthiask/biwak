@@ -119,3 +119,34 @@ Quoted text and signatures are cut off. If a reply can't be posted
 more) you get one short mail saying why. A mail's reply address works
 for six months. Replying works only where the installation has it
 switched on.
+
+## Forwarding mails
+
+Staff can forward a mail to Biwak and file it later. The address is on
+the "Forwarded" page (in your menu at the top right, and in the command
+palette), with "Copy"; it's the same for everybody. Forward from the
+address you sign in with: like replies, a forward is only kept when the
+receiving mail server confirms it came from there, and mails from
+clients or from addresses Biwak doesn't know are refused with a short
+mail saying why.
+
+"Forwarded" lists only your own forwarded mails, the newest first, with
+the original mail's subject, sender and date (read from the forward of
+Outlook, Gmail or Apple Mail, or from a mail forwarded as an
+attachment; otherwise your mail as it is), and a count in the menu while
+some wait. Open "Text" to read it. Then:
+
+- **File as message…**: pick a project and a category. The message is
+  yours and internal (show it to clients later like any message), with
+  a line saying whom it came from and when, the text and the files.
+  People are told as when you post a message.
+- **File as to-do…**: pick a list, or a group in it, of any project. The
+  mail's text becomes the notes, the files are attached. Lists clients
+  see are marked "(clients can see this)": a to-do there is visible to
+  them like any to-do in the list, with the text, whom the mail was sent
+  to and the files; the dialog says so when you choose one.
+- **Delete**: gone for good.
+
+Filed mails leave the list; mails you don't file are deleted after 30
+days. Attachments larger than 25 MB are left out, with a line saying
+which. Forwarding works only where replying by mail is switched on.

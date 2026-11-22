@@ -139,6 +139,13 @@
                 {% if not request.user.is_client %}
                   <a class="dropdown-item" href="{% url 'public_links' %}">{% translate "Public links" %}</a>
                 {% endif %}
+                {% forwarded_waiting request.user as forwarded %}
+                {% if forwarded is not None %}
+                  <a class="dropdown-item" href="{% url 'forwarded' %}">
+                    {% translate "Forwarded" %}
+                    {% if forwarded %}<span class="badge wb-tone-neutral ms-1">{{ forwarded }}</span>{% endif %}
+                  </a>
+                {% endif %}
                 <a class="dropdown-item" href="{% url 'help' %}">{% translate "Help" %}</a>
                 <hr class="dropdown-divider">
                 {% if request.user.is_staff %}

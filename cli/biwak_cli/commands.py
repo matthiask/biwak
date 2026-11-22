@@ -2392,6 +2392,74 @@ def unshare(item, as_json):
     return None
 
 
+# Forwarded mails --------------------------------------------------------------
+
+
+@cli.group(invoke_without_command=True)
+@json_option
+@click.pass_context
+def forwarded(ctx, as_json):
+    """Your forwarded mails, newest first (staff): `biwak forwarded file ID`
+    files one as a message or a to-do, `biwak forwarded delete ID` deletes
+    one; unfiled ones are deleted after 30 days"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    data = request("GET", "forwarded/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Subject", "From", "Sent", "Files")
+    for mail in data:
+        sender = mail["sender"]
+        t.add_row(
+            str(mail["id"]),
+            mail["subject"],
+            f"{sender['name']} <{sender['email']}>"
+            if sender["email"]
+            else sender["name"],
+            mail["sent_on"] or "",
+            str(len(mail["files"])),
+        )
+    console.print(t)
+    return None
+
+
+@forwarded.command("file")
+@click.argument("forwarded_id", type=int)
+@click.option("--message", "project", type=int, help="As a message in this project.")
+@click.option("--category", type=int, help="The message's category.")
+@click.option("--todo", "todolist", type=int, help="As a to-do in this list.")
+@click.option("--group", type=int, help="The to-do's group in the list.")
+@click.option("--title", help="Instead of the mail's subject.")
+@json_option
+def forwarded_file(forwarded_id, project, category, todolist, group, title, as_json):
+    """File the forwarded mail FORWARDED_ID as an internal message
+    (--message PROJECT) or as a to-do in a list (--todo LIST; clients
+    see it, its text and files when they see the list); it leaves your
+    forwarded mails"""
+    if (project is None) == (todolist is None):
+        terminate("Give --message PROJECT or --todo LIST.")
+    if project is not None:
+        payload = {"kind": "message", "project_id": project, "category_id": category}
+    else:
+        payload = {"kind": "todo", "list_id": todolist, "group_id": group}
+    if title:
+        payload["title"] = title
+    data = request("POST", f"forwarded/{forwarded_id}/file/", json=payload)
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Filed as #{data['id']} {data['title']}")
+    click.echo(data["url"])
+    return None
+
+
+@forwarded.command("delete")
+@click.argument("forwarded_id", type=int)
+def forwarded_delete(forwarded_id):
+    """Delete the forwarded mail FORWARDED_ID with its files"""
+    request("DELETE", f"forwarded/{forwarded_id}/")
+    click.echo(f"Deleted the forwarded mail {forwarded_id}.")
+
+
 # Bookmarks and links --------------------------------------------------------
 
 

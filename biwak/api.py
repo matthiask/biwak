@@ -14,6 +14,7 @@ from biwak.activity.api import (
 from biwak.bookmarks.api import router as bookmarks_router
 from biwak.checkins.api import router as checkins_router
 from biwak.files.api import router as files_router
+from biwak.forwarding.api import router as forwarding_router
 from biwak.items.api import router as items_router
 from biwak.organizations.api import router as organizations_router
 from biwak.projects.api import router as projects_router
@@ -62,6 +63,7 @@ api.add_router("/", activity_router)
 api.add_router("/", notifications_router)
 api.add_router("/", bookmarks_router)
 api.add_router("/", public_links_router)
+api.add_router("/", forwarding_router)
 api.add_router("/", reactions_router)
 api.add_router("/", checkins_router)
 api.add_router("/", search_router)

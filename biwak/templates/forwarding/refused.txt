@@ -1,0 +1,6 @@
+{% load i18n %}{% autoescape off %}{% translate "Your forwarded mail couldn't be kept." %}
+
+{{ reason }}
+{% if subject %}
+{% translate "Your mail:" %} {{ subject }}
+{% endif %}{% endautoescape %}

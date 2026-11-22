@@ -1,0 +1,18 @@
+{% extends "modal_form.html" %}
+{% load biwak i18n %}
+{% comment %}
+  File as to-do… (specs/forwarding.md): under the list, a note while the
+  list chosen is one clients see (frontend/clients-note.js follows the
+  choice).
+{% endcomment %}
+{% block fields %}
+  {% for field in form.visible_fields %}
+    {{ field.as_field_group }}
+    {% if field.name == "target" %}
+      <div class="wb-client-banner" role="note" id="clients-note" {% if not form.clients_see %}hidden{% endif %}>
+        {% icon "eye" %}
+        {% translate "Clients of this project will see the to-do with the mail’s text, whom it was sent to and its files." %}
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endblock fields %}

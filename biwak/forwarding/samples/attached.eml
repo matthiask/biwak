@@ -1,0 +1,46 @@
+Return-Path: <ada@example.org>
+From: Ada Example <ada@example.org>
+To: inbox@reply.example.org
+Subject: FW: Contract draft
+Date: Mon, 23 Nov 2026 09:40:00 +0000
+Message-ID: <AM0PR01MB5555FORWARD04@AM0PR01MB5555.eurprd01.prod.example.com>
+Content-Type: multipart/mixed; boundary="_006_FORWARD04_"
+MIME-Version: 1.0
+
+--_006_FORWARD04_
+Content-Type: text/plain; charset="us-ascii"
+
+See the attached mail.
+
+--_006_FORWARD04_
+Content-Type: message/rfc822
+Content-Disposition: attachment; filename="Contract draft.eml"
+
+From: Dora Example <dora@example.com>
+To: Ada Example <ada@example.org>
+CC: Finn Example <finn@example.com>
+Subject: Contract draft
+Date: Wed, 18 Nov 2026 14:05:00 +0100
+Message-ID: <contract-draft-1@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="inner"
+
+--inner
+Content-Type: text/plain; charset="utf-8"
+
+Dear Ada,
+
+the contract draft is attached. Please send comments by Friday.
+
+Dora
+
+--inner
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document; name="Contract draft.docx"
+Content-Disposition: attachment; filename="Contract draft.docx"
+Content-Transfer-Encoding: base64
+
+UEsDBBQAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAZHJhZnQ=
+
+--inner--
+
+--_006_FORWARD04_--
