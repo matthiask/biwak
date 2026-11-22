@@ -56,10 +56,15 @@ from biwak.projects.models import Project
 
 PERSON, PROJECT, ATTACHMENT = "Person", "Project", "Attachment"
 GROUP, COLUMN = "Todolist::Group", "Kanban::Column"
+# Project templates and the to-do list library's bucket (specs/templates.md)
+TEMPLATE = "Template"
+# The library's name when Basecamp gives its bucket none
+LIBRARY_NAME = "To-do list library"
 
 # Our names for what the counts and problems talk about
 KINDS = {
     "Project": "projects",
+    "Template": "templates",
     "Person": "people",
     "Todolist": "lists",
     "Todolist::Group": "groups",
@@ -700,12 +705,7 @@ class Importer(Resolver):
                     with importing(at=parse_time(rec["created_at"])):
                         self._add_member(project, user)
             self._dock(rec, project)
-            self._archived_recordings(project_id)
-            if not self.dry:
-                self._fix_links(project)
-                self._bookmarks(project)
-                project_ops.recompute_activity()
-            self._people_who_left()
+            self._finish(project_id, project)
         if self.archive and rec.get("status") != "archived":
             # Only reached when the import went through: a failure raises
             if not self.dry:
@@ -713,6 +713,90 @@ class Importer(Resolver):
             self.report.archived_projects.append(rec["name"])
         self.say(f"  done: {self._items} items, {self._so_far()}")
         return self.report
+
+    def _finish(self, bucket_id, project):
+        """What follows a project's or template's tools"""
+        self._archived_recordings(bucket_id)
+        if not self.dry:
+            self._fix_links(project)
+            self._bookmarks(project)
+            project_ops.recompute_activity()
+        self._people_who_left()
+
+    def run_templates(self):
+        """Basecamp's project templates and its to-do list library, as
+        templates (specs/templates.md): served like projects, a bucket with
+        a dock each, the library ``{bucket, todolists}``. No members:
+        templates have none. Returns the report."""
+        if self._started is None:
+            self._started = self._clock()
+        templates = list(self.client.paginate("/templates.json"))
+        for number, listed in enumerate(templates, 1):
+            rec = listed
+            if "dock" not in listed:
+                rec = self.client.get(f"/templates/{listed['id']}.json")
+            self._items = 0
+            self._project_name = rec["name"]
+            self.say(f"Template [{number}/{len(templates)}] {rec['name']}")
+            with importing():
+                template = self._template(rec)
+                self._dock(rec, template)
+                self._finish(rec["id"], template)
+            self.say(f"  done: {self._items} items, {self._so_far()}")
+        try:
+            library = self.client.get("/template_library/todolists.json")
+        except api.NotFound:
+            library = None
+        if library and library.get("todolists"):
+            bucket = library.get("bucket") or {}
+            rec = {
+                "id": bucket["id"],
+                "name": bucket.get("name") or LIBRARY_NAME,
+                "description": bucket.get("description") or "",
+                "created_at": bucket.get("created_at"),
+                "updated_at": bucket.get("updated_at"),
+            }
+            self._items = 0
+            self._project_name = rec["name"]
+            self.say(f"The to-do list library ({len(library['todolists'])} lists)")
+            with importing():
+                template = self._template(rec)
+                for list_rec in sorted(
+                    library["todolists"], key=lambda r: r.get("position", 0)
+                ):
+                    self._todolist(list_rec, template)
+                self._finish(rec["id"], template)
+            self.say(f"  done: {self._items} items, {self._so_far()}")
+        return self.report
+
+    def _template(self, rec):
+        """A template of a Basecamp template or the library's bucket"""
+
+        def create():
+            template = project_ops.create_template(
+                name=rec["name"],
+                description=rec.get("description") or "",
+                actor=self.actor,
+            )
+            if created_at := parse_time(rec.get("created_at")):
+                Project.objects.filter(pk=template.pk).update(created_at=created_at)
+            return template
+
+        def update(template):
+            project_ops.update_project(
+                template,
+                actor=self.actor,
+                name=rec["name"],
+                description=rec.get("description") or "",
+            )
+
+        template = self._upsert(TEMPLATE, rec, create=create, update=update)
+        if template is not None and rec.get("status") == "archived":
+            if template.archived_at is None:
+                project_ops.archive_project(template, actor=self.actor)
+        elif template is not None and template.archived_at is not None:
+            project_ops.unarchive_project(template, actor=self.actor)
+        return template
 
     def _archived_recordings(self, project_id):
         """Archived messages, docs, files and questions aren't imported

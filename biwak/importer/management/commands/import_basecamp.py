@@ -26,10 +26,18 @@ class Command(BaseCommand):
         parser.add_argument("--account", required=True, help="The account's ID")
         parser.add_argument(
             "--project",
-            required=True,
             action="append",
+            default=[],
             type=int,
             help="A project's ID; repeat for several",
+        )
+        parser.add_argument(
+            "--templates",
+            action="store_true",
+            help=(
+                "Import the account's project templates and its to-do list"
+                " library as templates (once per import is enough)"
+            ),
         )
         parser.add_argument(
             "--dry-run",
@@ -81,8 +89,11 @@ class Command(BaseCommand):
         archive,
         full,
         include_disabled,
+        templates,
         **options,
     ):
+        if not project and not templates:
+            raise CommandError("Give --project, --templates or both.")
         token = os.environ.get("BASECAMP_TOKEN")
         if not token:
             raise CommandError("Set BASECAMP_TOKEN to an OAuth token.")
@@ -120,4 +131,7 @@ class Command(BaseCommand):
         for number, project_id in enumerate(project, 1):
             progress(f"[{number}/{len(project)}] Basecamp project {project_id}")
             importer.run(project_id)
+        if templates:
+            progress("Templates")
+            importer.run_templates()
         self.stdout.write(importer.report.as_text())

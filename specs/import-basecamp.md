@@ -15,7 +15,7 @@ to Markdown, `importer.py`, `images.py`, `models.py` `ImportedObject`,
 the tests.
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
-[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--full]
+[--project ID ...] [--templates] [--dry-run] [--since YYYY-MM-DD] [--full]
 [--include-disabled] [--user EMAIL] [--archive]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
@@ -206,6 +206,18 @@ project. Waiting for Basecamp's account export to confirm the plan.
   person unless Basecamp names who completed it, with their comments;
   archived lists and projects stay archived; archived messages, docs,
   files and questions are skipped and listed in the report.
+- **Templates** (decided 2026-11-22, `templates.md`): `--templates`
+  imports the account's project templates and its to-do list library
+  as templates, once per import (with or without `--project`). The API
+  serves them like projects: `GET /templates.json`, each template a
+  bucket with a dock (fetched from `/templates/ID.json` when the listing
+  has none), its tools imported as a project's; the library is `GET
+  /template_library/todolists.json` → `{bucket, todolists}`, one
+  template named after the bucket ("To-do list library" when it has no
+  name) holding those lists. Mapped as `Template`, so a second run
+  updates them; created with `create_template()`, so no members
+  (Basecamp's people of a template aren't added), visibility as in
+  Basecamp, archived templates archived. `Importer.run_templates()`.
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
   to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.
