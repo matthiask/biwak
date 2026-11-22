@@ -34,8 +34,11 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
   On the to-dos page that's the open to-dos in either grouping (not
   "Completed"), flat, the next to start first, each row with its project
   and list; on Home the part closes "Due" and holds my to-dos which
-  would be there (due within the 7 days) but haven't started. "Waiting
-  on others" and the API's `GET /todos/` are unchanged.
+  would be there (due within the 7 days) but haven't started, and
+  "Waiting on others" has its own (decided 2026-11-22). The API's
+  `GET /todos/` takes `started` (true: started or without a start date;
+  false: starting later; absent: everything, decided 2026-11-22), the
+  CLI `biwak todos --started/--not-started`.
 - **The calendar feed** shows the range as an all-day event from start
   to due date.
 - **Recurrence:** the next to-do keeps the distance between start and
@@ -50,3 +53,23 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
   it isn't brought.
 - Copying a list (`lists-across-projects.md`) shifts start dates with
   due dates.
+
+## Decided on the way (confirmed by the user 2026-11-22)
+
+- Removing the due date removes the start date (API `due_on: null`, CLI
+  `--due none`); a start without a due date, or a due date moved before
+  the start, is refused.
+- "Starting later" on the to-dos page is one flat list by start date,
+  not grouped like the page; on Home only what would be in its section
+  (due within 7 days).
+- The inline form labels the start field "Starts" (the due field keeps
+  its icon); the to-do's page has a separate "Starts on" fact, mails a
+  "Starts on" line.
+- The timeline says "changed the dates to …" whenever a start date is or
+  was set, also when only the due date moved.
+- The overdue badge shows the range.
+- The importer drops a start date without a due date or after it,
+  silently.
+- German: "Beginnt am", "Beginnt", "Beginnt später (N)", "hat die Daten
+  auf … geändert", "Ein Startdatum braucht eine Fälligkeit.", "Das
+  Startdatum kann nicht nach der Fälligkeit liegen."
