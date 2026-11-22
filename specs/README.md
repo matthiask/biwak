@@ -53,7 +53,7 @@ confirm: `decisions-to-confirm.md`.
 | `start-dates.md` | built | start dates on to-dos, hidden from current work until they start |
 | `lists-across-projects.md` | built | copying lists, moving top-level items to another project |
 | `todos-from-text.md` | built | dropping or pasting a Markdown list onto a to-do list: headings become groups |
-| `templates.md` | built (decisions to confirm in the spec) | projects and lists started from templates kept in the app |
+| `templates.md` | built | projects and lists started from templates kept in the app |
 | `cli-style.md` | built (0.60.0) | the CLI in the style of gov and wb: one plural group per thing, verbs as subcommands |
 | `web-push.md` | built | push notifications on phones and desktops: mentions and assignments |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
