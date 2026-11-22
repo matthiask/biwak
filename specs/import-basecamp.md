@@ -44,6 +44,12 @@ goes into internal containers, archived recordings skipped.
   tool as it starts, a line every 25 items with the requests sent and
   the time so far, a summary per project, and every wait of a second or
   more (the rate limit, a 429, a server error being retried).
+- **Files over the upload limit** (100 MB, `files.models.MAX_SIZE`;
+  decided 2026-11-22: really large files belong elsewhere) aren't
+  imported: the report lists each with its size, where it would have
+  gone (project and folder, or "a text in" the project) and its link
+  in Basecamp. Known sizes skip the download; a text keeps "name (not
+  imported: too large)" in its place. The run goes on.
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
   subscribers, so big accounts take a while.

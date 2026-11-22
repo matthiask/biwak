@@ -1164,3 +1164,34 @@ class StartDatesTest(ImportCase):
                 self.run_import()
                 todo = self.item("Buy giraffe food").todo
                 self.assertIsNone(todo.starts_on)
+
+
+class TooLargeTest(ImportCase):
+    """Files over the upload limit aren't imported but listed, with where
+    they would have gone and their link in Basecamp, so they can be put
+    elsewhere (decided 2026-11-22); the run goes on"""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch("biwak.files.models.MAX_SIZE", 10)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch("biwak.files.attachments.MAX_SIZE", 10)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_files_too_large_are_listed_not_imported(self):
+        report = self.run_import()
+        self.assertFalse(Item.objects.filter(kind=Kind.FILE).exists())
+        self.assertFalse(Attachment.objects.exists())
+        text = report.as_text()
+        self.assertIn("Too large to import (at most 0 MB), put them elsewhere:", text)
+        # Where it would have gone and where it is in Basecamp
+        self.assertIn("plan.png", text)
+        self.assertIn(f"/buckets/{support.PROJECT}/uploads/4003", text)
+        # The rest is imported
+        self.assertTrue(Item.objects.filter(kind=Kind.TODO).exists())
+
+    def test_a_dry_run_lists_them_too(self):
+        report = self.run_import(dry_run=True)
+        self.assertIn("plan.png", report.as_text())

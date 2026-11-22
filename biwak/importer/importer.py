@@ -32,7 +32,7 @@ from biwak.activity.notify import who_can_see
 from biwak.activity.operations import importing, subscribe
 from biwak.bookmarks import operations as bookmark_ops
 from biwak.checkins import operations as checkin_ops
-from biwak.files import attachments, operations as file_ops
+from biwak.files import attachments, models as file_models, operations as file_ops
 from biwak.files.titles import with_heading
 from biwak.importer import client as api
 from biwak.importer.convert import Resolver, to_markdown
@@ -124,6 +124,9 @@ class Report:
         # Internal items inside containers visible to clients, which go
         # into internal containers of their own
         self.internal = []
+        # Files over the upload limit: not imported, listed with where they
+        # would have gone and their link in Basecamp
+        self.too_large = []
 
     def as_text(self):
         lines = ["Dry run, nothing was written." if self.dry_run else "Imported."]
@@ -146,6 +149,12 @@ class Report:
         if self.internal:
             lines.append("Internal inside containers visible to clients, moved:")
             lines += [f"  {line}" for line in self.internal]
+        if self.too_large:
+            limit = file_models.MAX_SIZE // 2**20
+            lines.append(
+                f"Too large to import (at most {limit} MB), put them elsewhere:"
+            )
+            lines += [f"  {line}" for line in self.too_large]
         if self.archived:
             lines.append("Archived in Basecamp, skipped:")
             lines += [f"  {line}" for line in self.archived]
@@ -197,6 +206,7 @@ class Importer(Resolver):
         self._clock = clock
         self._started = None
         self._items = 0
+        self._project_name = ""
         self.actor = actor
         self.dry = dry_run
         self.since = since
@@ -219,6 +229,15 @@ class Importer(Resolver):
 
     def problem(self, message):
         self.report.problems.append(message)
+
+    def _too_large(self, name, size, where, url):
+        """Records a file over the upload limit (``size`` in bytes, None when
+        unknown before downloading); True when it is one"""
+        if size is not None and size <= file_models.MAX_SIZE:
+            return False
+        megabytes = f"{size / 2**20:.0f} MB, " if size else ""
+        self.report.too_large.append(f"{name} ({megabytes}in {where}): {url}")
+        return True
 
     def _count(self, bc_type, what):
         self.report.counts[KINDS.get(bc_type, bc_type)][what] += 1
@@ -420,7 +439,14 @@ class Importer(Resolver):
             ),
             None,
         )
-        if entry is None or self.dry or text["project"] is None:
+        if entry is None:
+            return None
+        name = entry.get("filename") or "file"
+        where = f"a text in {self._project_name}"
+        url = entry.get("download_url", "")
+        if self._too_large(name, entry.get("byte_size") or 0, where, url):
+            return f"{name} (not imported: too large)"
+        if self.dry or text["project"] is None:
             return None
         known = self._find(ATTACHMENT, entry["id"])
         if known is None:
@@ -429,12 +455,15 @@ class Importer(Resolver):
             except (api.NotFound, api.ApiError, KeyError) as exc:
                 self.problem(f"File {entry.get('filename')} not downloaded: {exc}")
                 return None
-            name = entry.get("filename") or "file"
-            known = attachments.upload(
-                project=text["project"],
-                file=ContentFile(data, name=name),
-                uploaded_by=text["author"],
-            )
+            try:
+                known = attachments.upload(
+                    project=text["project"],
+                    file=ContentFile(data, name=name),
+                    uploaded_by=text["author"],
+                )
+            except attachments.UploadError:
+                self._too_large(name, None, where, url)
+                return f"{name} (not imported: too large)"
             self._remember(ATTACHMENT, entry["id"], known)
             self._count(ATTACHMENT, "created")
         else:
@@ -475,6 +504,7 @@ class Importer(Resolver):
             self._started = self._clock()
         self._items = 0
         rec = self.client.get(f"/projects/{project_id}.json")
+        self._project_name = rec["name"]
         archived = ", archived" if rec.get("status") == "archived" else ""
         self.say(f"{rec['name']} ({project_id}{archived})")
         with importing():
@@ -1139,6 +1169,11 @@ class Importer(Resolver):
     def _upload(self, rec, project, parent, parent_visible, nested, internal):
         if self._skip(rec):
             return
+        name = rec.get("filename") or rec["title"]
+        folder = (rec.get("parent") or {}).get("title")
+        where = " / ".join(filter(None, [self._project_name, folder]))
+        if self._too_large(name, rec.get("byte_size") or 0, where, rec.get("app_url")):
+            return
         parent, visible = self._place(
             rec, "file", parent, parent_visible, nested, internal
         )
@@ -1158,16 +1193,19 @@ class Importer(Resolver):
             except (api.NotFound, api.ApiError, KeyError) as exc:
                 self.problem(f"File {rec.get('filename')} not downloaded: {exc}")
                 raise _Skip from exc
-            name = rec.get("filename") or rec["title"]
-            with importing(at=parse_time(rec["created_at"])):
-                return ops.create_upload(
-                    project=project,
-                    file=ContentFile(data, name=name),
-                    creator=creator,
-                    parent=parent,
-                    description=description(),
-                    visible=visible,
-                )
+            try:
+                with importing(at=parse_time(rec["created_at"])):
+                    return ops.create_upload(
+                        project=project,
+                        file=ContentFile(data, name=name),
+                        creator=creator,
+                        parent=parent,
+                        description=description(),
+                        visible=visible,
+                    )
+            except attachments.UploadError as exc:
+                self._too_large(name, None, where, rec.get("app_url"))
+                raise _Skip from exc
 
         def update(item):
             with importing(at=parse_time(rec.get("updated_at"))):
