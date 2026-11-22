@@ -42,6 +42,14 @@ class Command(BaseCommand):
             help="Only what was changed on or after this date (YYYY-MM-DD)",
         )
         parser.add_argument(
+            "--archive",
+            action="store_true",
+            help=(
+                "Archive each project in Basecamp once it was imported (not"
+                " in a dry run); the token's person must be allowed to"
+            ),
+        )
+        parser.add_argument(
             "--user",
             help=(
                 "The email address of the Biwak person running the import"
@@ -49,7 +57,7 @@ class Command(BaseCommand):
             ),
         )
 
-    def handle(self, *, account, project, dry_run, since, user, **options):
+    def handle(self, *, account, project, dry_run, since, user, archive, **options):
         token = os.environ.get("BASECAMP_TOKEN")
         if not token:
             raise CommandError("Set BASECAMP_TOKEN to an OAuth token.")
@@ -63,7 +71,9 @@ class Command(BaseCommand):
             )
         set_user_name("Basecamp import")
         since = since and dt.datetime.combine(since, dt.time(), tzinfo=dt.UTC)
-        importer = Importer(client, actor=actor, dry_run=dry_run, since=since)
+        importer = Importer(
+            client, actor=actor, dry_run=dry_run, since=since, archive=archive
+        )
         for project_id in project:
             importer.run(project_id)
         self.stdout.write(importer.report.as_text())

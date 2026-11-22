@@ -118,6 +118,7 @@ class Report:
         self.generated = []  # those whose image Basecamp generated: skipped
         self.problems = []
         self.archived = []  # archived recordings which aren't imported
+        self.archived_projects = []  # archived in Basecamp after the import
         # Internal items inside containers visible to clients, which go
         # into internal containers of their own
         self.internal = []
@@ -146,6 +147,13 @@ class Report:
         if self.archived:
             lines.append("Archived in Basecamp, skipped:")
             lines += [f"  {line}" for line in self.archived]
+        if self.archived_projects:
+            lines.append(
+                "Projects to archive in Basecamp:"
+                if self.dry_run
+                else "Projects archived in Basecamp:"
+            )
+            lines += [f"  {name}" for name in self.archived_projects]
         if self.problems:
             lines.append("Problems:")
             lines += [f"  {problem}" for problem in self.problems]
@@ -157,13 +165,15 @@ def parse_time(value):
 
 
 class Importer(Resolver):
-    def __init__(self, client, *, actor, dry_run=False, since=None):
+    def __init__(self, client, *, actor, dry_run=False, since=None, archive=False):
         """``actor``: the Biwak person running the import (staff), who
-        creates the projects and owns the bookmarks"""
+        creates the projects and owns the bookmarks; ``archive``: archive
+        each project in Basecamp once it was imported"""
         self.client = client
         self.actor = actor
         self.dry = dry_run
         self.since = since
+        self.archive = archive
         self.report = Report(dry_run=dry_run)
         self._users = {}  # Basecamp person ID: User, or None
         self._people_by_sgid = {}
@@ -438,6 +448,11 @@ class Importer(Resolver):
                 self._fix_links(project)
                 self._bookmarks(project)
                 project_ops.recompute_activity()
+        if self.archive and rec.get("status") != "archived":
+            # Only reached when the import went through: a failure raises
+            if not self.dry:
+                self.client.archive_project(project_id)
+            self.report.archived_projects.append(rec["name"])
         return self.report
 
     def _archived_recordings(self, project_id):

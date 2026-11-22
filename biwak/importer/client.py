@@ -3,8 +3,9 @@ routes, pagination by ``Link`` headers, rate limits.
 
 Basecamp answers 429 with ``Retry-After``: wait as told. Otherwise at most
 50 requests per 10 seconds. Server errors are retried with a growing wait.
-The importer only uses ``get()``, ``paginate()`` and ``download()``; the
-tests give it a fake client with the same three methods.
+The importer uses ``get()``, ``paginate()`` and ``download()``, and
+``archive_project()`` with ``--archive``; the tests give it a fake client
+with the same methods.
 """
 
 import json
@@ -45,11 +46,11 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def urllib_transport(url, headers):
+def urllib_transport(url, headers, method="GET"):
     """One request, redirects not followed (downloads redirect to a URL
     which must not get our token)"""
     opener = urllib.request.build_opener(_NoRedirect)
-    request = urllib.request.Request(url, headers=headers)
+    request = urllib.request.Request(url, headers=headers, method=method)
     try:
         with opener.open(request, timeout=60) as response:
             return Response(response.status, dict(response.headers), response.read())
@@ -82,7 +83,7 @@ class BasecampClient:
             self.sleep(self._sent[0] + WINDOW - now)
         self._sent.append(self.clock())
 
-    def _request(self, url, *, auth=True, accept=None):
+    def _request(self, url, *, auth=True, accept=None, method="GET"):
         headers = {"User-Agent": USER_AGENT}
         if accept:
             headers["Accept"] = accept
@@ -90,7 +91,7 @@ class BasecampClient:
             headers["Authorization"] = f"Bearer {self.token}"
         for attempt in range(RETRIES):
             self._wait_for_slot()
-            response = self.transport(url, headers)
+            response = self.transport(url, headers, method=method)
             if response.status == 429:
                 wait = int(_header(response, "Retry-After") or WINDOW)
                 self.sleep(wait)
@@ -127,6 +128,18 @@ class BasecampClient:
             link = _header(response, "Link") or ""
             found = re.search(r'<([^>]+)>;\s*rel="next"', link)
             url = found[1] if found else None
+
+    def archive_project(self, project_id):
+        """Archives the project in Basecamp. Accounts may limit archiving
+        to administrators and the project's creator (403)."""
+        url = self._url(f"/projects/{project_id}/status/archived.json", None)
+        response = self._request(url, method="PUT")
+        if response.status == 404:
+            raise NotFound(url)
+        if response.status == 403:
+            raise ApiError(f"{url}: not allowed to archive the project (403)")
+        if response.status not in {200, 204}:
+            raise ApiError(f"{url}: status {response.status}")
 
     def download(self, url, *, accept=None):
         """The file's bytes: the API redirects to a short-lived URL, which

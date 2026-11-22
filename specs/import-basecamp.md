@@ -13,7 +13,8 @@ data and a fake client for the tests). Not built: `--lazy-files`
 ## Running it
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
-[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--user EMAIL]`.
+[--project ID ...] [--dry-run] [--since YYYY-MM-DD] [--user EMAIL]
+[--archive]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
 
@@ -30,6 +31,13 @@ goes into internal containers, archived recordings skipped.
   change imported comments, positions or files. `--since` skips leaves
   (to-dos, cards, messages, docs, files, answers, comments) last updated
   before the date; containers are always read.
+- **`--archive`** (decided 2026-11-22): archives each project in
+  Basecamp (`PUT /projects/ID/status/archived.json`) once its import went
+  through; a failed import archives nothing, projects already archived
+  are left alone, a dry run lists what it would archive. Accounts may
+  limit archiving to administrators and the project's creator: Basecamp
+  answers 403 and the import stops there (rerun without `--archive`, the
+  import itself is done).
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
   subscribers, so big accounts take a while.

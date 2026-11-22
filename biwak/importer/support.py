@@ -765,8 +765,8 @@ def make_data():
 
 
 class FakeClient:
-    """``BasecampClient``'s ``get()``, ``paginate()`` and ``download()``
-    over recorded data, counting the requests"""
+    """``BasecampClient``'s ``get()``, ``paginate()``, ``download()`` and
+    ``archive_project()`` over recorded data, counting the requests"""
 
     def __init__(self, data=None, files=None):
         made, made_files = make_data()
@@ -774,6 +774,7 @@ class FakeClient:
         self.files = made_files if files is None else files
         self.requests = []
         self.downloads = []
+        self.archived_projects = []
         # Called with the path of each request, to fail in the middle
         self.on_request = None
 
@@ -796,6 +797,9 @@ class FakeClient:
         found = self._lookup(path, params)
         # A collection without that variant is empty, not missing
         return iter(found)
+
+    def archive_project(self, project_id):
+        self.archived_projects.append(project_id)
 
     def download(self, url, *, accept=None):
         self.downloads.append(url)

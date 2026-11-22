@@ -12,9 +12,11 @@ class Transport:
     def __init__(self, *responses):
         self.responses = list(responses)
         self.requests = []
+        self.methods = []
 
-    def __call__(self, url, headers):
+    def __call__(self, url, headers, method="GET"):
         self.requests.append((url, headers))
+        self.methods.append(method)
         return self.responses.pop(0)
 
 
@@ -108,3 +110,18 @@ class ClientTest(SimpleTestCase):
         client = self.make(Response(404))
         with self.assertRaises(api.NotFound):
             client.download("https://3.basecampapi.com/x/download/a.png")
+
+    def test_archive_project(self):
+        client = self.make(Response(204))
+        client.archive_project(42)
+        self.assertEqual(
+            self.transport.requests[0][0],
+            "https://3.basecampapi.com/1000/projects/42/status/archived.json",
+        )
+        self.assertEqual(self.transport.methods, ["PUT"])
+        self.assertIn("Authorization", self.transport.requests[0][1])
+
+    def test_archive_project_not_allowed(self):
+        client = self.make(Response(403))
+        with self.assertRaisesMessage(api.ApiError, "not allowed"):
+            client.archive_project(42)

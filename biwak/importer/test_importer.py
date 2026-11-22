@@ -922,6 +922,40 @@ class CommandTest(ImportCase):
         )
         self.assertFalse(Item.objects.filter(title="Camp rules").exists())
 
+    def test_archive(self):
+        args = ("--account", "1000", "--project", str(support.PROJECT), "--archive")
+        text, _make = self.call(*args, "--dry-run")
+        self.assertIn("Projects to archive in Basecamp:\n  Camp kitchen", text)
+        self.assertEqual(self.client_.archived_projects, [])
+
+        text, _make = self.call(*args)
+        self.assertIn("Projects archived in Basecamp:\n  Camp kitchen", text)
+        self.assertEqual(self.client_.archived_projects, [support.PROJECT])
+
+    def test_no_archiving_without_the_option(self):
+        self.call("--account", "1000", "--project", str(support.PROJECT))
+        self.assertEqual(self.client_.archived_projects, [])
+
+    def test_archived_projects_are_not_archived_again(self):
+        self.client_.data[f"/projects/{support.PROJECT}.json"]["status"] = "archived"
+        text, _make = self.call(
+            "--account", "1000", "--project", str(support.PROJECT), "--archive"
+        )
+        self.assertNotIn("archived in Basecamp:", text)
+        self.assertEqual(self.client_.archived_projects, [])
+
+    def test_a_failed_import_archives_nothing(self):
+        def fail(path):
+            if path.startswith("/todolists/"):
+                raise RuntimeError("Connection lost")
+
+        self.client_.on_request = fail
+        with self.assertRaises(RuntimeError):
+            self.call(
+                "--account", "1000", "--project", str(support.PROJECT), "--archive"
+            )
+        self.assertEqual(self.client_.archived_projects, [])
+
     def test_needs_a_token(self):
         with (
             mock.patch.dict("os.environ", {}, clear=False),

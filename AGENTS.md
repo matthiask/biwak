@@ -38,8 +38,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   development), Resend's API with `EMAIL_URL=resend:`; the same webhook
   records bounces and complaints (`specs/mail-sending.md`).
 - `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
-  [--dry-run]` imports a Basecamp 4 project (`specs/import-basecamp.md`);
-  a second run updates. Always dry-run first.
+  [--dry-run] [--archive]` imports a Basecamp 4 project
+  (`specs/import-basecamp.md`); a second run updates, `--archive`
+  archives it in Basecamp afterwards. Always dry-run first.
 - The audit log (`biwak/audit/`) is a trigger on the main tables; new
   tables people change get `audit_tables()` in a migration. Requests,
   API tokens and `fairy_tasks` set who changes things (`set_user_name()`).
