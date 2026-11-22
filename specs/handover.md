@@ -131,7 +131,7 @@ Asked by the user 2026-11-22, on the same selection as "Assign…".
   dropped first, like "Move to…"). Dates: the `Dates` choices of
   copying (`KEEP` is "Set a date" here: one date, "Move by N days",
   "Remove"), through `ops.update_todo()` per to-do inside one
-  transaction. Tests next to `biwak/items/test_assigning.py`, a browser
+  transaction. Tests next to `biwak/items/test_assign_several.py`, a browser
   test only for the bar's new buttons (`test_e2e.py`, the selection
   class).
 - Both one event per action like "Assign…" (one entry in the lantern),
