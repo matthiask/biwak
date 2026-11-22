@@ -119,7 +119,7 @@ Decided with the user 2026-11-22. **Status:** built (2026-11-22).
   team of up to 35 has no repeats. Imported people get one the same way;
   people who left keep theirs. The color stays the id's: a repeated
   mark usually differs in color.
-  Built (2026-11-22, proposed, to confirm): `User.save()` gives it to
+  Confirmed by the user 2026-11-22: `User.save()` gives it to
   every new account without one (sign-up, invitation, the importer, the
   admin), `marks.mark_for()`; the list's order is `marks.MARKS` (the
   preview's: the alpine ones, then the generic ones), people without
@@ -136,7 +136,7 @@ Decided with the user 2026-11-22. **Status:** built (2026-11-22).
   the grid of all marks with one's own selected, a click chooses
   (saved at once, like the other choices there); **Photo**, uploading
   as now. A photo is shown instead of the mark; "Remove" brings the mark
-  back. Built (2026-11-22, proposed): each drawing is a submit button
+  back. Confirmed by the user 2026-11-22: each drawing is a submit button
   (`settings_mark`, `/accounts/settings/mark/`, no script), on the
   person's own color, the chosen one ringed (`aria-pressed`), named
   for screen readers (`MARKS`' names, translated); saving says "Your
