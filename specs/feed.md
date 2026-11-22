@@ -10,8 +10,10 @@ From the events (`biwak/activity/`, `notifications.md`);
 `biwak/activity/feed.py`, `views.py`.
 
 - **Pages:** `/feed/` (everything the person can see, in the
-  navigation), `/projects/<pk>/feed/`, `/people/<pk>/feed/` (what someone
-  did, within what the viewer can see).
+  navigation), `/projects/<pk>/feed/`. What someone did is the activity
+  with the person filter (`/feed/?person=<pk>`); their last 5 entries are
+  on their page (`people.md`). There is no person feed page anymore
+  (decided 2026-11-22: `/people/<pk>/feed/` is a 404, no redirect).
 - **Grouped by day** (in `TIME_ZONE`), newest first. Consecutive events
   by the same person with the same action in the same list or project
   merge into one entry ("Ada completed 5 to-dos in Website relaunch",
@@ -50,13 +52,20 @@ From the events (`biwak/activity/`, `notifications.md`);
 
 Decisions (2026-11-20 unless dated):
 
-- **A person's feed** exists for people the viewer shares a project with
-  as members (`people_visible_to()`), else 404, so it doesn't tell
-  whether a person exists; the person filter lists the same people. It's
-  linked from the actor's name in entries and on the project page, the
-  names in the members list and "My activity" in the "Me" menu, only
-  where the viewer wouldn't get a 404 (`can_open_feed`, `person_link` in
-  `templatetags/biwak.py`); otherwise the name is plain text.
+- **The person filter** lists the people the viewer shares a project
+  with as members (`people_visible_to()`) and ignores anybody else, so
+  it doesn't tell whether a person exists. "My activity" in the "Me" menu
+  is the activity filtered by oneself (`/feed/?person=<me>`), shown
+  where the filter takes oneself (`in_person_filter` in
+  `templatetags/biwak.py`; decided 2026-11-22, it was a person feed
+  page).
+- **Names link to the person's page** (decided 2026-11-22, they linked
+  to the person feed): the actor of every entry and the people an event
+  names ("assigned Bob to …", "shared … with Bob, Cleo"), in the feed,
+  Home and the project page, the to-do's timeline and the history, where
+  the viewer may open that page (`known_people()`), else plain text
+  (`{% person_link %}`, `people.linked_name()`; `feed.attach()` links
+  the named people as `event.assignee_links`).
 - **Moves between lists** (decided 2026-11-21): a client sees the target
   list ("moved … to Plans") when that list is visible to them now,
   checked when the feed, a mail or the API is shown, not when recorded,
@@ -88,8 +97,8 @@ Decisions (2026-11-20 unless dated):
   move into another list ends the column moves before it, see
   `timeline.md`; older moves without them show as they are;
   the feed and the timeline only, not the lantern and mails). Another
-  person's completing, reopening or move breaks it up in a person's feed
-  too, where that person's events are left out (`feed._others()`, fixed
+  person's completing, reopening or move breaks it up in the activity
+  filtered by a person (and their page's entries) too, where that person's events are left out (`feed._others()`, fixed
   2026-11-22): it shows the person's events as the whole feed does. In the feed (and the project page's latest events) each within an hour of the
   one before and on the same day, like merging; the to-do's timeline
   does the same within its lines (`combine()`, `timeline.md`); the

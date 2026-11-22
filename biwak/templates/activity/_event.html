@@ -3,9 +3,9 @@
 {# `own_excerpt`: the caller shows the excerpt itself, after the time (activity/_excerpt.html) #}
 {# Whole sentences after the actor, the subject a placeholder: a translation orders the words (specs/languages.md) #}
 {% if event.actor %}{% avatar event.actor %}{% endif %}
-<span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
+<span class="fw-semibold">{% person_link event.actor %}</span>
 {% capture as subject %}{% include "activity/_subject.html" %}{% endcapture %}
-{% capture as names %}{{ event.assignee_names|join:", " }}{% endcapture %}
+{% capture as names %}{{ event.assignee_links.values|join:", " }}{% endcapture %}
 {% if event.action == "created" and event.item.kind == "answer" %}
   {% blocktranslate %}answered {{ subject }}{% endblocktranslate %}
 {% elif event.action == "created" %}

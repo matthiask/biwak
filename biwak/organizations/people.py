@@ -14,11 +14,13 @@ from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.html import conditional_escape, format_html
 from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.http import require_POST
 
 from biwak.accounts import operations as accounts_ops
 from biwak.accounts.models import User, own_staff
+from biwak.activity import feed
 from biwak.activity.feed import people_visible_to
 from biwak.forms import Form, next_url
 from biwak.modals import form_response
@@ -69,11 +71,33 @@ def known_people(viewer):
     return people.filter(known)
 
 
+def known_ids(viewer):
+    """None if the viewer may know everybody, else the IDs of
+    ``known_people()``"""
+    if knows_everybody(viewer):
+        return None
+    return set(known_people(viewer).values_list("pk", flat=True))
+
+
+def linked_name(person, label, known):
+    """``label`` linked to the person's page (quiet, ``.wb-person-link``)
+    when the viewer may open it (``known``: ``known_ids()``), else plain
+    text: the one rule for names (specs/people.md)"""
+    if known is None or person.pk in known:
+        return format_html(
+            '<a href="{}" class="wb-person-link">{}</a>',
+            reverse("person", args=[person.pk]),
+            label,
+        )
+    return conditional_escape(label)
+
+
 def decorate(user, viewer, shared):
-    """What the People page and the person's page show of a person: ``role``,
-    ``feed`` (whether the viewer may open their feed, ``shared`` are the
-    people they share a project with), ``show_email`` and ``can_move`` (the
-    existing "Change organization" modal)"""
+    """What the People page and the person's page show of a person:
+    ``role``, ``feed`` (whether the activity's person filter takes them for
+    the viewer, ``shared`` are the people they share a project with),
+    ``show_email`` and ``can_move`` (the existing "Change organization"
+    modal)"""
     user.role = role(user)
     user.feed = user.pk in shared
     # Clients don't see addresses (as on a project's people page), but
@@ -114,8 +138,9 @@ def own_label(viewer, organization):
 
 def groups_for(viewer):
     """The groups in the page's order, each person with ``role``,
-    ``feed`` (whether the viewer may open their feed), ``show_email`` and
-    ``can_move`` (the existing "Change organization" modal)"""
+    ``feed`` (whether the activity's person filter takes them),
+    ``show_email`` and ``can_move`` (the existing "Change organization"
+    modal)"""
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
     people = list(
         known_people(viewer)
@@ -247,9 +272,9 @@ def people(request):
 
 
 def person(request, pk):
-    """The person's page: the mark, name, organization, role and the
-    projects both are in; for whoever may know the person (the rule of the
-    People page), else 404"""
+    """The person's page: the mark, name, organization, role, the
+    projects both are in and their last activity; for whoever may know the
+    person (the rule of the People page), else 404"""
     viewer = request.user
     who = get_object_or_404(known_people(viewer).select_related("invited_by"), pk=pk)
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
@@ -268,6 +293,9 @@ def person(request, pk):
         {
             "person": who,
             "projects": projects.distinct(),
+            # Their last entries, where the activity's person filter takes
+            # them (specs/people.md)
+            "days": feed.preview(viewer, who) if who.feed else [],
             "can_remove_image": bool(who.image)
             and accounts_ops.can_remove_image(viewer, who),
         },

@@ -272,7 +272,9 @@ class FeedTest(SubscribersTestCase):
         response = self.client.get("/feed/")
         self.assertRegex(
             response.content.decode(),
-            r"shared\s+<a[^>]*>Order the tent</a>\s+with\s+Bob,\s+Cleo",
+            r"shared\s+<a[^>]*>Order the tent</a>\s+with\s+"
+            r'<a href="/people/\d+/" class="wb-person-link">Bob</a>, '
+            r'<a href="/people/\d+/" class="wb-person-link">Cleo</a>',
         )
 
     def test_clients_follow_the_event_rules(self):
@@ -282,7 +284,7 @@ class FeedTest(SubscribersTestCase):
         self.act(lambda: share(self.secret, [self.dan], actor=self.ada, notify=True))
         self.client.force_login(self.cleo)
         response = self.client.get("/feed/")
-        self.assertRegex(response.content.decode(), r"with\s+Bob,\s+Cleo")
+        self.assertRegex(response.content.decode(), r"with\s+<a [^>]*>Bob</a>, <a")
         # Internal events never
         self.assertNotContains(response, "Budget")
         self.assertNotContains(response, "Dan")

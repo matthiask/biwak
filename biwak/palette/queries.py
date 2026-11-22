@@ -134,7 +134,7 @@ def due_label(item):
 
 
 def person_url(person):
-    return reverse("person_feed", args=[person.pk])
+    return reverse("person", args=[person.pk])
 
 
 def bookmarks(user):

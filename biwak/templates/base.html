@@ -126,10 +126,10 @@
               <div class="dropdown-menu dropdown-menu-end wb-me-menu">
                 <span class="dropdown-item-text fw-semibold">{{ request.user }}</span>
                 <hr class="dropdown-divider">
-                {% can_open_feed request.user as own_feed %}
+                {% in_person_filter request.user as own_feed %}
                 {% if own_feed %}<a
                     class="dropdown-item"
-                    href="{% url 'person_feed' request.user.pk %}"
+                    href="{% url 'feed' %}?person={{ request.user.pk }}"
                   >{% translate "My activity" %}</a>{% endif %}
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'all_projects' %}">{% translate "All projects" %}</a>

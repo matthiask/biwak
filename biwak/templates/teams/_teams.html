@@ -21,7 +21,7 @@
         <div>
           <a href="{{ team.get_absolute_url }}" data-kb-open>{{ team }}</a>
           <div class="small text-body-secondary">
-            {% for user in members %}{{ user.display_name }}{% if user.is_away %}
+            {% for user in members %}{% person_link user name=user.display_name %}{% if user.is_away %}
                 {% away_detail user parentheses=True %}{% endif %}{% if not forloop.last %},
               {% endif %}{% empty %}{% translate "Nobody yet." %}{% endfor %}
           </div>

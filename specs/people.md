@@ -51,14 +51,29 @@ Decided 2026-11-21:
 
 `/people/<id>/` (`organizations.people.person`), for whoever may know
 the person, else 404: the large mark, name, role, organization, the
-projects both people are in, "Activity" (their feed, where the viewer
-may open it), admins' "Remove image" and "Change organization".
+projects both people are in, admins' "Remove image" and "Change
+organization". The notice that mail to them bounces, for staff and the
+person (`mail-sending.md`).
+
+**Their recent activity** (decided 2026-11-22, replacing the person
+feed page): their last 5 entries ("Recent activity"), rendered and
+merged as the activity does with the person filter (`feed.preview()`,
+`activity/_entries.html`), only what the viewer sees, then "All
+activity" to `/feed/?person=<id>` (also in the palette). Only where the
+activity's person filter takes them (people the viewer shares a project
+with as members), and nothing at all when there are no entries.
 
 **Names and marks link here** (decided 2026-11-21) wherever people are
-listed (subscribers, a to-do's assignees, members) and in mentions, when
-the viewer may open it, else plain text: `{% person_page person %}` for
-lists, `{% person_link %}`, quiet (`.wb-person-link`). Mentions in mails
-and in the API's `*_html` aren't links (the text leaves the site).
+listed (subscribers, a to-do's assignees, members, a team's members, an
+organization's people) and in mentions, and (decided 2026-11-22) names
+in the activity (actors and the people an event names), the timeline,
+the history, comments, a message's and a version's author, when the
+viewer may open it (`known_people()`), else plain text: `{% person_page
+person %}` for lists (with the mark), `{% person_link %}` for a name
+alone, both through `people.linked_name()`, quiet (`.wb-person-link`).
+Names inside a link (rows, the lantern) and in mails stay text. Mentions
+in mails and in the API's `*_html` aren't links (the text leaves the
+site).
 
 ## Names
 

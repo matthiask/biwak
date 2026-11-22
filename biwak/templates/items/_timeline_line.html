@@ -14,7 +14,7 @@
     {% endwith %}
   </span>
   {% avatar line.actor %}
-  <span><strong>{% short_name line.actor %}</strong> {{ line.text }}
+  <span><strong>{% person_link line.actor %}</strong> {{ line.text }}
     <span class="text-body-secondary" title="{{ line.created_at|dateformat:'SHORT_DATETIME_FORMAT' }}">·
       {{ line.created_at|ago }}</span></span>
 </div>

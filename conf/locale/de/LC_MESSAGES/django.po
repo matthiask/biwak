@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:02+0100\n"
+"POT-Creation-Date: 2026-11-22 17:29+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1520,7 +1520,6 @@ msgid "Action"
 msgstr "Aktion"
 
 #: biwak/activity/views.py biwak/projects/overview.py biwak/templates/base.html
-#: biwak/templates/organizations/person.html
 #: biwak/templates/projects/project_detail.html
 msgid "Activity"
 msgstr "Aktivität"
@@ -1529,11 +1528,6 @@ msgstr "Aktivität"
 #, python-format
 msgid "Activity in %(project)s"
 msgstr "Aktivität in %(project)s"
-
-#: biwak/activity/views.py
-#, python-format
-msgid "Activity of %(person)s"
-msgstr "Aktivität von %(person)s"
 
 #: biwak/activity/views.py
 msgid "Notify me about"
@@ -4115,6 +4109,12 @@ msgstr "Personen einladen"
 msgid "New team"
 msgstr "Neues Team"
 
+#: biwak/palette/actions.py biwak/templates/organizations/person.html
+#: biwak/templates/projects/home.html
+#: biwak/templates/projects/project_detail.html
+msgid "All activity"
+msgstr "Alle Aktivität"
+
 #: biwak/palette/actions.py biwak/templates/organizations/people.html
 #: biwak/templates/organizations/person.html
 msgid "Activate…"
@@ -5719,11 +5719,6 @@ msgstr "Nichts Neues."
 msgid "All notifications"
 msgstr "Alle Benachrichtigungen"
 
-#: biwak/templates/activity/feed.html
-#, python-format
-msgid "Mail to %(email)s bounced or was marked as spam on %(since)s: no notification mails go there until the address changes or an admin clears it."
-msgstr "Mails an %(email)s kamen am %(since)s zurück oder wurden als Spam markiert: Dorthin gehen keine Benachrichtigungsmails mehr, bis sich die Adresse ändert oder ein Admin dies zurücksetzt."
-
 #: biwak/templates/activity/feed.html biwak/templates/projects/all.html
 msgid "Filters"
 msgstr "Filter"
@@ -6816,12 +6811,21 @@ msgid "End away"
 msgstr "Abwesenheit beenden"
 
 #: biwak/templates/organizations/person.html
+#, python-format
+msgid "Mail to %(email)s bounced or was marked as spam on %(since)s: no notification mails go there until the address changes or an admin clears it."
+msgstr "Mails an %(email)s kamen am %(since)s zurück oder wurden als Spam markiert: Dorthin gehen keine Benachrichtigungsmails mehr, bis sich die Adresse ändert oder ein Admin dies zurücksetzt."
+
+#: biwak/templates/organizations/person.html
 msgid "Projects in common"
 msgstr "Gemeinsame Projekte"
 
 #: biwak/templates/organizations/person.html
 msgid "No projects in common."
 msgstr "Keine gemeinsamen Projekte."
+
+#: biwak/templates/organizations/person.html
+msgid "Recent activity"
+msgstr "Neueste Aktivität"
 
 #: biwak/templates/organizations/person.html
 msgid "All people"
@@ -7021,11 +7025,6 @@ msgstr "Alle To-dos, die ich zugewiesen habe"
 #: biwak/templates/projects/home.html
 msgid "Recent updates"
 msgstr "Neueste Änderungen"
-
-#: biwak/templates/projects/home.html
-#: biwak/templates/projects/project_detail.html
-msgid "All activity"
-msgstr "Alle Aktivität"
 
 #: biwak/templates/projects/home.html
 msgid "Bookmark projects to keep them here."
@@ -7450,3 +7449,7 @@ msgstr "gerade eben"
 #, python-format
 msgid "%(time)s ago"
 msgstr "vor %(time)s"
+
+#, python-format
+#~ msgid "Activity of %(person)s"
+#~ msgstr "Aktivität von %(person)s"

@@ -114,7 +114,7 @@ manage none (`access.md`).
   externals see it by its name alone, here and on a project's people page
   (decided 2026-11-22).
 - **Each person:** name, address, role (admin, staff, external, client),
-  a link to their feed where the viewer may open it; inactive people
+  their name linking to their page; inactive people
   quietly, marked "inactive", last in their group. Own staff get "Change
   organization" (the own organization for admins only) and links to the
   organizations.

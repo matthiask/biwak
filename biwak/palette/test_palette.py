@@ -199,7 +199,7 @@ class PeopleTest(PaletteBase):
         self.assertEqual(self.titles(self.ada, "bo"), [])  # Bob is in no project
         result = self.jump(self.ada, "cle")[0]
         self.assertEqual(result["kind"], "person")
-        self.assertEqual(result["url"], f"/people/{self.cleo.pk}/feed/")
+        self.assertEqual(result["url"], f"/people/{self.cleo.pk}/")
 
     def test_a_client_finds_members_only(self):
         # Ada is a member of Camp; Bob is staff who sees Camp (all-access)

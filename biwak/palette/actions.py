@@ -342,15 +342,25 @@ def on_teams(user, name, team):
     ]
 
 
-def on_person(user, name, person):
-    """A person's page: Activate… or Deactivate… for those who may
-    (specs/activation.md), Edit the name… (specs/people.md), Reset sign-in… for somebody with an
-    authenticator app, passkeys or API tokens (specs/two-factor.md)"""
+def on_person(user, name, person, *, activity=False):
+    """A person's page: All activity when the page shows their last
+    entries (``activity``, specs/people.md), Activate… or Deactivate… for
+    those who may (specs/activation.md), Edit the name… (specs/people.md),
+    Reset sign-in… for somebody with an authenticator app, passkeys or API
+    tokens (specs/two-factor.md)"""
     from biwak.organizations import activation
 
     if name != "person" or not hasattr(person, "is_active"):
         return []
     actions = []
+    if activity:
+        actions.append(
+            link(
+                _("All activity"),
+                f"{reverse('feed')}?person={person.pk}",
+                exact=True,
+            )
+        )
     if not person.is_active and activation.can_change(user, person):
         actions.append(
             modal(_("Activate…"), reverse("person_activate", args=[person.pk]))
@@ -398,7 +408,9 @@ def for_page(request, context):
         page += on_item(request, item, context)
     page += on_organizations(user, name, context.get("organization"))
     page += on_people(user, name)
-    page += on_person(user, name, context.get("person"))
+    page += on_person(
+        user, name, context.get("person"), activity=bool(context.get("days"))
+    )
     page += on_teams(user, name, context.get("team"))
     return [{**a, "group": "page"} for a in page] + [
         {**a, "group": "everywhere"} for a in everywhere(user)

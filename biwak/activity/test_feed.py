@@ -361,8 +361,8 @@ class FeedViewsTest(FeedBase):
                 self.assertNotContains(response, "Secret")
                 self.assertNotContains(response, "Internal")
                 self.assertNotContains(response, "joined the project")
-        # The person's feed too
-        response = self.client.get(f"/people/{self.ada.pk}/feed/")
+        # Filtered by the person too
+        response = self.client.get("/feed/", {"person": self.ada.pk})
         self.assertContains(response, "Open point")
         self.assertNotContains(response, "Secret")
 
@@ -442,7 +442,7 @@ class FeedViewsTest(FeedBase):
         self.assertContains(response, "Bob Example · Our organization")
         self.assertNotContains(response, "data-search")
 
-    def test_project_and_person_feeds(self):
+    def test_project_feed_and_person_filter(self):
         other = project("Other", members=[self.ada, self.bob])
         item = ops.create_list(project=other, title="Elsewhere", creator=self.bob)
         record(actor=self.bob, action=Action.EDITED, project=other, item=item)
@@ -453,14 +453,13 @@ class FeedViewsTest(FeedBase):
         response = self.client.get(f"/projects/{self.project.pk}/feed/")
         self.assertContains(response, "Open point")
         self.assertNotContains(response, "Elsewhere")
-        response = self.client.get(f"/people/{self.bob.pk}/feed/")
+        response = self.client.get("/feed/", {"person": self.bob.pk})
         self.assertContains(response, "Elsewhere")
         self.assertNotContains(response, "Open point")
-        self.assertContains(response, "Activity of Bob Example")
-        # Somebody the viewer shares no project with
-        stranger = person("Dora")
+        # The person's own feed page is gone, without a redirect (decided
+        # 2026-11-22): their page shows their last entries
         self.assertEqual(
-            self.client.get(f"/people/{stranger.pk}/feed/").status_code, 404
+            self.client.get(f"/people/{self.bob.pk}/feed/").status_code, 404
         )
 
     def test_pagination(self):
@@ -526,55 +525,46 @@ class FeedViewsTest(FeedBase):
         self.assertEqual(timezone.localdate(), response.context["days"][0][0])
 
 
-class PersonFeedLinksTest(FeedBase):
+class PersonLinksTest(FeedBase):
+    """Names in the activity link to the person's page where the viewer may
+    open it, else they're plain text (decided 2026-11-22)"""
+
     def link(self, person):
-        return f'href="/people/{person.pk}/feed/"'
+        return f'href="/people/{person.pk}/"'
 
-    def test_staff_get_links_from_names_members_and_the_menu(self):
-        record(
-            actor=self.bob, action=Action.EDITED, project=self.project, item=self.todo
-        )
+    def test_staff_get_links_from_actors_and_the_people_named(self):
+        ops.assign(self.todo, [self.cleo], actor=self.bob)
         self.client.force_login(self.ada)
-        for url in ["/feed/", f"/projects/{self.project.pk}/"]:
+        for url in ["/feed/", f"/projects/{self.project.pk}/feed/"]:
             with self.subTest(url=url):
-                self.assertContains(self.client.get(url), self.link(self.bob))
-        page = self.client.get(f"/projects/{self.project.pk}/")
-        # The members list links to the person's page
-        self.assertContains(page, f'href="/people/{self.cleo.pk}/"')
-        self.assertContains(page, "My activity")
-        self.assertContains(page, self.link(self.ada))
+                response = self.client.get(url)
+                self.assertContains(response, self.link(self.bob))
+                self.assertContains(response, self.link(self.cleo))
+                self.assertIn("Bob assigned Cleo to", page_text(response))
 
-    def test_client_links_only_people_it_may_open(self):
-        stranger = person("Dora")
-        other = project("Other", members=[stranger])
-        item = ops.create_list(
-            project=other, title="Elsewhere", creator=stranger, visible=True
-        )
-        record(actor=stranger, action=Action.EDITED, project=other, item=item)
+    def test_a_client_gets_plain_text_for_somebody_it_may_not_know(self):
         record(
             actor=self.bob, action=Action.EDITED, project=self.project, item=self.todo
         )
-        self.client.force_login(self.cleo)
-        response = self.client.get("/feed/")
-        self.assertContains(response, self.link(self.bob))
-        self.assertEqual(
-            self.client.get(f"/people/{stranger.pk}/feed/").status_code, 404
-        )
-        self.assertNotContains(response, f"/people/{stranger.pk}/feed/")
-        self.assertContains(response, "My activity")
-
-    def test_no_link_to_somebody_who_left(self):
         record(
-            actor=self.bob, action=Action.EDITED, project=self.project, item=self.todo
+            actor=self.ada, action=Action.EDITED, project=self.project, item=self.todo
         )
+        # Bob left: Cleo shares no project with him anymore
         self.project.memberships.filter(user=self.bob).delete()
         self.client.force_login(self.cleo)
         response = self.client.get("/feed/")
-        self.assertContains(response, "Bob")
+        self.assertContains(response, self.link(self.ada))
+        self.assertIn("Bob", page_text(response))
         self.assertNotContains(response, self.link(self.bob))
-        self.assertEqual(
-            self.client.get(f"/people/{self.bob.pk}/feed/").status_code, 404
-        )
+        # Own staff may know everybody
+        self.client.force_login(self.ada)
+        self.assertContains(self.client.get("/feed/"), self.link(self.bob))
+
+    def test_my_activity_is_the_activity_filtered_by_me(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get("/feed/")
+        self.assertContains(response, f'href="/feed/?person={self.cleo.pk}"')
+        self.assertContains(response, "My activity")
 
     def test_no_menu_entry_without_a_project(self):
         loner = person("Eve")
@@ -641,7 +631,8 @@ class EventsBeforeVisibleTest(TestCase):
         for url in [
             "/feed/",
             f"/projects/{self.project.pk}/feed/",
-            f"/people/{self.ada.pk}/feed/",
+            f"/feed/?person={self.ada.pk}",
+            f"/people/{self.ada.pk}/",
             self.project.get_absolute_url(),
         ]:
             with self.subTest(url=url):
@@ -984,7 +975,7 @@ class MoveBackTest(FeedBase):
         self.client.force_login(self.ada)
         whole = page_text(self.client.get("/feed/"))
         self.assertEqual(whole.count("moved Open point"), 3)
-        for url in [f"/people/{self.ada.pk}/feed/", f"/feed/?person={self.ada.pk}"]:
+        for url in [f"/people/{self.ada.pk}/", f"/feed/?person={self.ada.pk}"]:
             with self.subTest(url=url):
                 text = page_text(self.client.get(url))
                 self.assertEqual(text.count("moved Open point"), 2)

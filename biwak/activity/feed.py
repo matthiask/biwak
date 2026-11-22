@@ -24,6 +24,8 @@ from biwak.projects.models import Project
 
 
 PAGE_SIZE = 50
+# Entries on a person's page (decided 2026-11-22)
+PREVIEW = 5
 # Consecutive events within this time of each other can be merged
 MERGE_WINDOW = dt.timedelta(hours=1)
 
@@ -119,26 +121,33 @@ def _named(person, viewer):
 
 def attach(events, user):
     """What rendering needs besides the event: the assigned people's names
-    (``event.assignee_names``, also those something was shared with), the target list of moves the viewer may
-    see (``event.target_list``) and the project on the item, which saves a
+    (``event.assignee_names``, also those something was shared with, and
+    ``event.assignee_links``, by ID, linked to their pages where the viewer
+    may open them), the target list of moves the viewer may see
+    (``event.target_list``) and the project on the item, which saves a
     query per link"""
+    from biwak.organizations.people import known_ids, linked_name
+
     ids = {pk for event in events for pk in _people_of(event)}
-    people = list(User.objects.filter(pk__in=ids))
+    people = {u.pk: u for u in User.objects.filter(pk__in=ids)} if ids else {}
     # Whom the viewer may know, per project (clients and externals: members)
     known = {}
+    pages = known_ids(user) if people else set()
     for event in events:
         if event.item is not None:
             event.item.project = event.project
         if event.project_id not in known and _people_of(event):
             known[event.project_id] = {
                 u.pk: _named(u, user)
-                for u in event.project.people_known_to(user, people)
+                for u in event.project.people_known_to(user, people.values())
             }
         names = known.get(event.project_id, {})
         event.assignee_names = [names[pk] for pk in _people_of(event) if pk in names]
         # By ID, for what puts several events together (specs/timeline.md)
-        event.assignee_by_id = {
-            pk: names[pk] for pk in _people_of(event) if pk in names
+        event.assignee_links = {
+            pk: linked_name(people[pk], names[pk], pages)
+            for pk in _people_of(event)
+            if pk in names
         }
     add_excerpts(events)
     add_target_lists(events, user)
@@ -475,6 +484,19 @@ def by_day(entries):
         else:
             days.append((day, [entry]))
     return days
+
+
+def preview(user, person):
+    """A person's last ``PREVIEW`` entries the viewer sees, merged as the
+    activity merges them with the person filter, grouped by day (the
+    person's page)"""
+    found = list(feed_events(user, person=person)[:PAGE_SIZE])
+    attach(found, user)
+    today = timezone.localdate()
+    return [
+        (day, day_label(day, today), entries)
+        for day, entries in by_day(merge(found)[:PREVIEW])
+    ]
 
 
 def day_label(day, today=None):
