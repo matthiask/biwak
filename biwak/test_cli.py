@@ -395,6 +395,14 @@ class CLICommandsTest(CLITest):
             self.biwak("todos", self.list.pk, "--assigned-by-me").exit_code, 1
         )
 
+    def test_optional_arguments_show_in_brackets(self):
+        for command, usage in [
+            (["todos"], "todos [OPTIONS] [LIST]"),
+            (["todo", "move"], "move [OPTIONS] [TODO]"),
+        ]:
+            with self.subTest(command=command):
+                self.assertIn(usage, self.biwak(*command, "--help").output)
+
     def test_read_only_and_errors(self):
         result = self.biwak("todo", "add", self.list.pk, "Nope", access="read")
         self.assertEqual(result.exit_code, 1)
