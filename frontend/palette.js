@@ -138,7 +138,7 @@ if (data && dialog) {
     {
       hint = "",
       context = "",
-      badge = "",
+      badge = null,
       due = null,
       color = null,
       run,
@@ -174,11 +174,12 @@ if (data && dialog) {
     return entry(result.title, {
       hint: result.kind === "project" ? "" : result.label,
       context: result.context,
+      // The badges the pages show: grey for archived, the clients' yellow
       badge: result.archived
-        ? data.texts.archived
+        ? { text: data.texts.archived, className: "wb-tone-neutral" }
         : result.visible_to_clients
-          ? data.texts.clients
-          : "",
+          ? { text: data.texts.clients, className: "wb-client-badge" }
+          : null,
       due: result.due ?? null,
       color: result.color
         ? { name: result.color, label: result.color_name }
@@ -252,8 +253,8 @@ if (data && dialog) {
       row.append(label)
       if (item.badge) {
         const badge = document.createElement("span")
-        badge.className = "badge wb-tone-neutral"
-        badge.textContent = item.badge
+        badge.className = `badge ${item.badge.className}`
+        badge.textContent = item.badge.text
         row.append(badge)
       }
       // An open to-do that's overdue or due today (specs/todos.md, "The to-do's page")

@@ -51,7 +51,8 @@
     data-live-gone="{% translate 'This isn’t here anymore: it was trashed, or you can’t see it anymore.' %}"
     data-live-back="{% translate 'Back' %}"
   >
-    <nav class="navbar navbar-expand wb-navbar mb-4">
+    <a class="wb-skip-link" href="#main">{% translate "Skip to content" %}</a>
+    <nav class="navbar navbar-expand wb-navbar mb-4" aria-label="{% translate 'Main' %}">
       <div class="container-xl">
         <a class="navbar-brand" href="{% url 'dashboard' %}" title="Biwak">
           <img src="{% static 'biwak/favicon.svg' %}" width="28" height="28" alt="">
@@ -175,7 +176,7 @@
       data-connection-not-sent="{% translate 'Not sent: you’re offline.' %}"
     >
     </div>
-    <main class="container-xl wb-main{% block main_class %}{% endblock %}">
+    <main id="main" class="container-xl wb-main{% block main_class %}{% endblock %}">
       {% block messages %}{% include "_messages.html" %}{% endblock %}
       {% block content %}{% endblock %}
     </main>

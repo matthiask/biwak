@@ -28,7 +28,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   Cancel swap back. No special views: htmx takes the region out of the
   item's edit page (`hx-select`); without JavaScript "Edit" is that
   page. Escape cancels an unchanged form, a changed one needs it twice
-  within 1.5 seconds. Docs have the live editor instead.
+  within 1.5 seconds. When the form goes (Save, Cancel, Escape) the
+  focus returns to what opened it, else to "Edit" (decided 2026-11-22).
+  Docs have the live editor instead.
 - **Showing more without crowding:** small signals on many rows, short
   excerpts on few, full content on demand (`glance.md`).
 
@@ -121,7 +123,23 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **`prefers-reduced-motion: reduce` turns every animation off;** the
   scripts then don't intercept at all.
 
-## Keyboard
+## Keyboard and accessibility
+
+- **Focus is always visible** (decided 2026-11-22): every button gets a
+  2px outline in the accent's ring color when focused by keyboard
+  (white on the bar), whatever its variant.
+- **"Skip to content"** is the first link of every page, shown when
+  focused; `<main id="main">` is its target. Every `<nav>` has a label
+  ("Main", "Breadcrumbs", …) and error pages (403, 404, 500) put their
+  text in `<main>` with an `<h1>`.
+- **Every control has a name:** task list checkboxes are named by their
+  line, the combobox's hidden select is hidden from screen readers too.
+- **Touch targets** (2026-11-22): on coarse pointers small controls
+  (the to-do's check, row signals, breadcrumbs, names, the feed's
+  links) keep their look and get an invisible larger area taking the
+  tap; checkboxes grow a little; the tiles' "…" is 36 px. What needs a
+  keyboard (Home's "Search Ctrl+K", "Keyboard shortcuts") is not shown
+  on phones (`.wb-keyboard-only`).
 
 - **Rows people move through with j/k** (to-dos, messages, feed
   entries, search results) carry `data-kb-row`, `data-kb-open` and, for

@@ -3,7 +3,9 @@
 {% block title %}{{ organization }} – Biwak{% endblock %}
 
 {% block content %}
-  <nav class="small mb-2"><a href="{% url 'organizations' %}">{% translate "Organizations" %}</a></nav>
+  <nav class="small mb-2 wb-breadcrumbs" aria-label="{% translate 'Breadcrumbs' %}">
+    <a href="{% url 'organizations' %}">{% translate "Organizations" %}</a>
+  </nav>
   <div class="wb-page-header">
     <h1 class="wb-title">
       {{ organization }}

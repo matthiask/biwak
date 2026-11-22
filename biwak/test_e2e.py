@@ -2344,6 +2344,50 @@ class KeyboardTest(E2ETestCase):
         page.wait_for_url("**/lists/*/")
         expect(page.locator("h1")).to_contain_text("Launch plan")
 
+    def test_every_button_shows_the_keyboards_focus(self):
+        """A ring in the accent's color, white on the bar (specs/ui.md)"""
+        page = self.page
+        todolist = self.make_list(todos=["Pack"])
+        self.goto(page, todolist)
+        ring = """el => {
+          const style = getComputedStyle(el)
+          return [el.matches(":focus-visible"), style.outlineStyle,
+                  style.outlineWidth, style.outlineColor]
+        }"""
+        for selector, color in [
+            # Quiet buttons on the page and as a menu's summary
+            (".wb-page-header a.btn-quiet[title=Edit]", "rgb(103, 65, 196)"),
+            (".wb-page-header .wb-menu > summary", "rgb(103, 65, 196)"),
+            (".wb-navbar .wb-lantern-button", "rgb(255, 255, 255)"),
+        ]:
+            with self.subTest(selector):
+                button = page.locator(selector).first
+                page.keyboard.press("Escape")
+                button.focus()
+                self.assertEqual(button.evaluate(ring), [True, "solid", "2px", color])
+        # The skip link shows when the keyboard reaches it, first
+        self.goto(page, todolist)
+        page.keyboard.press("Tab")
+        skip = page.get_by_role("link", name="Skip to content")
+        expect(skip).to_be_focused()
+        expect(skip).to_be_in_viewport()
+        # Tab goes on in the content, not in the bar
+        page.keyboard.press("Enter")
+        page.keyboard.press("Tab")
+        self.assertTrue(page.evaluate("!!document.activeElement.closest('main')"))
+
+    def test_the_clients_badge_is_the_pages_badge(self):
+        """Yellow "Clients" like everywhere on the pages"""
+        self.make_list("Launch plan for the hut with a rather long title", visible=True)
+        page = self.page
+        self.goto(page, self.project)
+        self.open_palette(page)
+        page.keyboard.type("launch")
+        option = self.options(page).filter(has_text="Launch plan")
+        badge = option.locator(".badge")
+        expect(badge).to_have_text("Clients")
+        expect(badge).to_have_class(re.compile(r"\bwb-client-badge\b"))
+
     def test_search_is_an_entry(self):
         page = self.page
         self.goto(page, self.project)

@@ -403,6 +403,53 @@
   box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
 }
 
+/* Every button shows the keyboard's focus clearly (decided 2026-11-22):
+   Bootstrap's shadow needs a color the quiet buttons never set, and a
+   faint one is easy to miss. On the bar, in its light text's color. */
+.btn:focus-visible {
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+}
+
+.wb-navbar
+  :is(.btn, .nav-link, .navbar-brand):focus-visible:not(.dropdown-menu *) {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Errors and overdue: danger ink readable on the page (AA), not
+   Bootstrap's red */
+.text-danger {
+  color: var(--wb-danger-ink) !important;
+}
+
+.invalid-feedback,
+.form-control.is-invalid,
+.form-select.is-invalid {
+  --bs-form-invalid-color: var(--wb-danger-ink);
+}
+
+/* "Skip to content" (base.html): hidden until the keyboard reaches it */
+.wb-skip-link {
+  position: absolute;
+  z-index: 1100;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--bs-border-radius);
+  background: var(--wb-surface);
+  color: var(--bs-body-color);
+  box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 0.2);
+  transform: translateY(-200%);
+}
+
+.wb-skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+}
+
 /* Menus on the cards' surface, white in light mode, like the lantern's
    (decided 2026-11-21) */
 .dropdown-menu {
@@ -533,6 +580,9 @@ h3,
   --bs-navbar-brand-hover-color: #fff;
   background: var(--wb-accent-bar);
   border-bottom: 3px solid #e8a33d;
+  /* Its menus (the lantern, the account) open above the client tab */
+  position: relative;
+  z-index: 1020;
 }
 
 .wb-navbar .nav-link.active {
@@ -586,7 +636,6 @@ h3,
   color: inherit;
   background: transparent;
   box-shadow: none;
-  opacity: 0.75;
 }
 
 .btn-quiet {
@@ -1998,16 +2047,26 @@ button.wb-signal:hover {
 
 .wb-palette-label {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: min(60%, 14rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* The title wins on narrow screens: the hint (the kind, the project, the
+   shortcut) is cut first */
 .wb-palette-hint {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.8rem;
   opacity: 0.8;
+}
+
+.wb-palette-option > .badge {
+  flex: none;
 }
 
 /* Task lists (specs/editor.md): the checkbox takes the bullet's place */

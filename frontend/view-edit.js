@@ -7,6 +7,10 @@
 // view comes back. Escape cancels a form nobody changed, a changed one needs
 // it twice. Without JavaScript "Edit" is a link to the form's own page.
 //
+// When the form goes (Save, Cancel, Escape), the focus goes back to what
+// opened it, else the page's "Edit" button ([data-edit-open]), instead of
+// being lost on the page.
+//
 // Never when the click is on a link, a button, a box of the checklist (they
 // do their own thing) or ends a text selection.
 import htmx from "htmx.org"
@@ -31,10 +35,28 @@ function focusField(region, name) {
   }
 }
 
+// What to focus when the form goes
+let opener = null
+let formShown = false
+let returningUntil = Number.NEGATIVE_INFINITY
+
+function returnFocus() {
+  const active = document.activeElement
+  if (active && active !== document.body) return
+  const target = [opener, document.querySelector("[data-edit-open]")].find(
+    (el) => el?.isConnected && el.checkVisibility(),
+  )
+  target?.focus()
+}
+
 export async function openEdit(source) {
   const hit = source.closest("[data-edit-focus]")
   const owner = hit?.closest("[data-edit-url]")
   if (!hit || !owner) return
+  const active = document.activeElement
+  // Opening again while open keeps the first one's
+  if (!active?.closest("[data-view-edit-form]"))
+    opener = active && active !== document.body ? active : null
   const regionId = owner.dataset.editRegion || "live-text"
   const region = document.getElementById(regionId)
   // Open already
@@ -81,6 +103,15 @@ document.addEventListener("htmx:after:process", (event) => {
   ]
   for (const form of forms)
     serialized.set(form, new URLSearchParams(new FormData(form)).toString())
+  if (forms.length) formShown = true
+  else if (formShown && !document.querySelector("[data-view-edit-form]")) {
+    formShown = false
+    returningUntil = event.timeStamp + 1000
+    returnFocus()
+  } else if (event.timeStamp < returningUntil) {
+    // The header swapped after the text (Save): its new "Edit"
+    returnFocus()
+  }
 })
 
 document.addEventListener("keydown", (event) => {
