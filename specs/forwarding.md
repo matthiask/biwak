@@ -6,7 +6,11 @@ replying by mail already receives, checks and parses mails, and one
 address avoids having to pick among many. Decided with the user
 2026-11-22.
 
-**Status:** open.
+**Status:** built 2026-11-22 (branch `forwarding`): `biwak/forwarding/`
+(receiving, the "Forwarded" page, filing, deleting, the 30-day cleanup in
+`fairy_tasks`, the API, `biwak forwarded`), the help in
+`docs/notifications.md`. Decisions made on the way are in
+`decisions-to-confirm.md`; one question is open (below).
 
 Depends on: `notifications.md` ("Replying by mail": `biwak/inbound/`,
 Resend's webhook, the sender check, stripping), `files.md`
@@ -87,14 +91,36 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   `biwak forwarded file ID --message PROJECT [--category ID] | --todo
   LIST [--group ID] [--title …]`, `biwak forwarded delete ID`.
 
-## Done when
+## Decisions made while building (to confirm)
 
-- A forward from a staff member's address passing the sender check
-  lands in their "Forwarded" list with the original's subject, sender,
-  date, text and attachments; others are refused (tests with the
-  recorded shapes of Outlook, Gmail and Apple Mail forwards, made up).
-- Filing makes an internal message or a to-do with everything, through
-  the page, the API and the CLI; deleting and the 30-day cleanup work.
-- Visibility: a filed mail is internal; nothing in "Forwarded" is
-  visible to anybody but its forwarder.
-- Help and the German catalog updated.
+- A mail with a reply token is a reply, even when the inbox is among
+  its recipients too; only mails without one reach the inbox.
+- Answers to refused forwards: to `From` when the receiving server
+  confirmed it, else to the staff member whose address it claims, else
+  none; at most 20 per sender and hour (then dropped silently), tagged
+  like refused replies in the outbox. Their wording: "Your forwarded
+  mail couldn't be kept" with the reason.
+- Files over 25 MB are left out with a line (like replies), inline parts
+  under 20 KB (signature logos) aren't files, like replies.
+- The text keeps the forwarder's own lines above the original; a mail
+  forwarded as an attachment is read from its own headers.
+- The original's date is a day (`sent_on`), as written in the forward;
+  dates that can't be read for sure (11/12/2026) are left out, and so is
+  the date in the line.
+- The filed text starts with the line, "To:" and "Cc:" lines below it
+  when known, on messages and to-dos alike; in the forwarder's language.
+- Both forms have a title, the subject filled in; the API's `title`
+  defaults to the subject.
+- Filing deletes the forwarded mail (and its files, copied into the
+  item's attachments); deleting asks first. Forwarded mails aren't in the
+  audit log nor in the admin: the forwarder's only.
+- The message form has no "Also tell…": the project is chosen in the same
+  form, so posting tells those told by default only.
+
+## Question
+
+- **To-dos into lists clients see?** The spec says a filed mail is
+  internal, so "File as to-do…" offers only internal lists (and the API
+  refuses the others). Should lists visible to clients be offered too,
+  marked "(clients can see this)" like "Move to…", making the to-do
+  visible to them?

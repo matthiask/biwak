@@ -220,6 +220,27 @@ class FiledItemsVisibilityTest(FilingTestCase):
         self.client.force_login(self.bea)
         self.assertEqual(self.client.get(item.get_absolute_url()).status_code, 200)
 
+    def test_clients_dont_find_the_filed_message_anywhere(self):
+        item = operations.file_as_message(
+            self.forwarded(),
+            project=self.project,
+            title="Zebra crossing",
+            actor=self.ada,
+        )
+        self.client.force_login(self.cleo)
+        self.assertNotContains(self.client.get(reverse("feed")), "Zebra crossing")
+        self.assertNotContains(
+            self.client.get(reverse("search"), {"q": "revised quote"}), "Zebra crossing"
+        )
+        self.assertEqual(
+            self.client.get(f"/api/v1/messages/{item.pk}/").status_code, 404
+        )
+        self.client.force_login(self.bea)
+        self.assertContains(self.client.get(reverse("feed")), "Zebra crossing")
+        self.assertContains(
+            self.client.get(reverse("search"), {"q": "revised quote"}), "Zebra crossing"
+        )
+
     def test_clients_get_404_for_the_filed_todo(self):
         item = operations.file_as_todo(
             self.forwarded("gmail_en.eml"),

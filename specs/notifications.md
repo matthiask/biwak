@@ -363,6 +363,10 @@ the webhook `/inbound/resend/`, `./manage.py receive_mail`.
   revoked more than 90 days ago are deleted by `fairy_tasks`
   (`tokens.prune()`, `RETENTION_DAYS`, decided 2026-11-20).
 
+**Forwarding** to `inbox@REPLY_DOMAIN` uses the same webhook, the same
+sender check and the same parser (`forwarding.md`): mails without a
+reply token sent to the inbox go to `biwak/forwarding/`.
+
 **Setting it up:** a receiving subdomain added to Resend with receiving
 enabled and its MX record; a webhook to `https://<host>/inbound/resend/`
 for `email.received`; an API key that can read received mails (full
