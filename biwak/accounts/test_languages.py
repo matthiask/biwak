@@ -190,13 +190,13 @@ class CalendarLanguageTest(TestCase):
 
 
 class HelpTest(TestCase):
-    def test_german_readers_are_told_the_help_is_english(self):
+    def test_german_readers_get_the_german_help(self):
+        """German pages since 2026-11-22 (specs/help.md, biwak.test_help)"""
         self.client.force_login(person("Ada", language="de"))
         response = self.client.get("/help/orientation/")
-        self.assertContains(response, "Die Hilfe gibt es vorerst nur auf Englisch.")
-        self.assertContains(response, '<div lang="en">')
-        # How to choose, in English
-        self.assertContains(response, "Settings, &quot;Language&quot;")
+        self.assertContains(response, "Sich zurechtfinden")
+        self.assertNotContains(response, 'id="help-in-english"')
         self.client.force_login(person("Bea", language="en"))
         response = self.client.get("/help/orientation/")
+        self.assertContains(response, "Finding your way")
         self.assertNotContains(response, 'id="help-in-english"')

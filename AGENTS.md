@@ -194,7 +194,7 @@ What every part does the same way. Look at how the core does it
     `biwak/help.py`, `specs/help.md`). A part that adds or changes what
     people see or do updates the chapter it belongs to (or adds one, in
     `help.py`'s table), in the same branch: what it does now, short,
-    no plans. Shortcuts stay in `palette/_shortcuts.html`, the one list.
+    no plans, in both languages (`name.md` and `name.de.md`). Shortcuts stay in `palette/_shortcuts.html`, the one list.
 12. **Tests.** Django tests next to the code (`test_*.py`): the
     operations, every page and endpoint as staff and as a client
     (including a client getting 404 for internal items), the CLI

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 20:19+0100\n"
+"POT-Creation-Date: 2026-11-22 21:43+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -6886,8 +6886,8 @@ msgid "Chapters of the help"
 msgstr "Kapitel der Hilfe"
 
 #: biwak/templates/help.html
-msgid "The help is in English for now."
-msgstr "Die Hilfe gibt es vorerst nur auf Englisch."
+msgid "This page of the help is in English for now."
+msgstr "Diese Seite der Hilfe gibt es vorerst nur auf Englisch."
 
 #: biwak/templates/inbound/rejection.txt
 msgid "Your reply couldn't be posted."

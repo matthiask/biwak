@@ -3,6 +3,7 @@
 """The help pages from docs/ (specs/help.md)"""
 
 import re
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -93,6 +94,59 @@ class HelpTest(TestCase):
         self.client.force_login(self.ada)
         for page in ["missing", "README", "constitution", "todos.md"]:
             self.assertEqual(self.client.get(f"/help/{page}/").status_code, 404)
+
+
+class LanguagesTest(TestCase):
+    """German readers get the German pages, English as the fallback per page
+    (decided 2026-11-22)"""
+
+    def test_a_german_reader_gets_the_german_page(self):
+        self.client.force_login(person("Ada", language="de"))
+        response = self.client.get("/help/todos/")
+        self.assertContains(response, "Mehrere auf einmal zuweisen")
+        self.assertNotContains(response, 'id="help-in-english"')
+        self.assertNotContains(response, '<div lang="en">')
+        # The chapters in German too
+        self.assertContains(
+            response,
+            '<a href="/help/orientation/">Sich zurechtfinden</a>',
+            html=True,
+        )
+
+    def test_an_english_reader_gets_the_english_page(self):
+        self.client.force_login(person("Bea", language="en"))
+        response = self.client.get("/help/todos/")
+        self.assertContains(response, "Assigning several at once")
+        self.assertNotContains(response, "Mehrere auf einmal zuweisen")
+        self.assertNotContains(response, 'id="help-in-english"')
+
+    def test_a_missing_german_page_falls_back_to_english(self):
+        self.client.force_login(person("Ada", language="de"))
+        with patch.dict(PAGES["de"], {"todos": "missing.de.md"}):
+            response = self.client.get("/help/todos/")
+            self.assertContains(response, "Assigning several at once")
+            self.assertContains(
+                response, "Diese Seite der Hilfe gibt es vorerst nur auf Englisch."
+            )
+            self.assertContains(response, '<div lang="en">')
+            # The other pages stay German
+            response = self.client.get("/help/")
+            self.assertContains(response, "Was Biwak nicht tut")
+            self.assertNotContains(response, 'id="help-in-english"')
+
+    def test_every_german_page_and_its_links(self):
+        self.client.force_login(person("Ada", language="de"))
+        for page in PAGES["de"]:
+            response = self.client.get(url(page))
+            with self.subTest(page=page):
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, 'id="help-in-english"')
+                self.assertEqual(
+                    re.findall(r'href="[^"]*\.md', response.content.decode()), []
+                )
+            for link in re.findall(r'href="(/help/[^"#]*)', article(response)):
+                with self.subTest(page=page, link=link):
+                    self.assertEqual(self.client.get(link).status_code, 200)
 
 
 class ShortcutsTest(TestCase):
