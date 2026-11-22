@@ -10,7 +10,6 @@ runs in threads or on requests.
 import datetime as dt
 import logging
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.utils import timezone
@@ -45,7 +44,7 @@ from biwak.projects.models import knows_people_of
 logger = logging.getLogger(__name__)
 
 # The morning after an occurrence the summary goes out at this time, in the
-# question's time zone (decided 2026-11-20)
+# installation's time zone (decided 2026-11-20)
 SUMMARY_AT = dt.time(7, 0)
 
 _UNCHANGED = object()
@@ -88,10 +87,6 @@ def _check_people(item, people, *, actor, kept=()):
             )
 
 
-def _clean_schedule(rule, time_zone):
-    return schedules.validate(rule), schedule.zone(time_zone).key
-
-
 def _newer():
     """Occurrences of the same question with a later date"""
     return Occurrence.objects.filter(
@@ -111,14 +106,13 @@ def create_question(
     rule,
     starts_on,
     time_of_day,
-    time_zone=None,
     people=(),
     visible=False,
     now=None,
 ):
     """Asks the first time on or after ``starts_on`` at ``time_of_day``
     (later than ``now``)"""
-    rule, time_zone = _clean_schedule(rule, time_zone or settings.TIME_ZONE)
+    rule = schedules.validate(rule)
     item = items_ops.create_item(
         project=project,
         kind=Kind.QUESTION,
@@ -133,7 +127,6 @@ def create_question(
         rule=rule,
         starts_on=starts_on,
         time_of_day=time_of_day,
-        time_zone=time_zone,
     )
     question.next_at = schedule.next_fire_of(question, after=now or timezone.now())
     question.save(update_fields=["next_at"])
@@ -170,7 +163,6 @@ def update_question(
     rule=_UNCHANGED,
     starts_on=_UNCHANGED,
     time_of_day=_UNCHANGED,
-    time_zone=_UNCHANGED,
     people=_UNCHANGED,
     now=None,
 ):
@@ -190,13 +182,10 @@ def update_question(
         changed.append("title")
     if rule is not _UNCHANGED:
         rule = schedules.validate(rule)
-    if time_zone is not _UNCHANGED:
-        time_zone = schedule.zone(time_zone).key
     given = {
         "rule": rule,
         "starts_on": starts_on,
         "time_of_day": time_of_day,
-        "time_zone": time_zone,
     }
     schedule_changed = False
     for name, value in given.items():
@@ -336,10 +325,10 @@ def _ask(question, date, now):
 
 
 def summary_due_at(occurrence):
-    """07:00 on the day after the occurrence's date, in the question's time
-    zone; after downtime, the day after it was really asked (people can
-    answer first)"""
-    time_zone = occurrence.question.time_zone
+    """07:00 on the day after the occurrence's date, in the installation's
+    time zone; after downtime, the day after it was really asked (people
+    can answer first)"""
+    time_zone = schedule.time_zone()
     day = max(occurrence.date, schedule.local_date(occurrence.asked_at, time_zone))
     return schedule.fire_at(day + dt.timedelta(days=1), SUMMARY_AT, time_zone)
 

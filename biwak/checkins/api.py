@@ -26,7 +26,7 @@ from biwak.api_conventions import (
     paginated,
     person_out,
 )
-from biwak.checkins import mails, operations as ops, schedule
+from biwak.checkins import mails, operations as ops
 from biwak.checkins.models import (
     DEFAULT_MODE,
     Answer,
@@ -68,13 +68,6 @@ def _rule(value, anchor):
         bad_request(str(exc))
 
 
-def _zone(name):
-    try:
-        return schedule.zone(name).key
-    except ValueError as exc:
-        bad_request(str(exc))
-
-
 # Questions --------------------------------------------------------------------
 
 
@@ -83,7 +76,6 @@ class QuestionOut(ItemOut):
     schedule_description: str
     starts_on: dt.date
     time_of_day: dt.time
-    time_zone: str
     people: list[PersonOut]
     paused: bool
     next_at: dt.datetime | None
@@ -128,7 +120,6 @@ def question_out(request, item, context=None):
         "schedule_description": question.schedule_description,
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
-        "time_zone": question.time_zone,
         # Clients only learn about the project's members
         "people": [
             person_out(user)
@@ -190,7 +181,6 @@ class QuestionIn(Schema):
     schedule: str
     time_of_day: dt.time
     starts_on: dt.date | None = None
-    time_zone: str | None = None
     people: list[int] = []
     visible_to_clients: bool = False
 
@@ -209,7 +199,7 @@ def question_create(request, project_id: int, data: QuestionIn):
     """Staff only. ``schedule`` is a preset (weekdays, weekly, biweekly,
     monthly, monthly-first, monthly-last, quarterly, yearly: counting from
     ``starts_on``, default today) or an RRULE (at most daily), asked at
-    ``time_of_day`` in ``time_zone`` (default: the installation's)."""
+    ``time_of_day`` in the installation's time zone."""
     project = project_for(request, project_id)
     staff_only(request)
     starts_on = data.starts_on or schedules.today()
@@ -221,7 +211,6 @@ def question_create(request, project_id: int, data: QuestionIn):
             rule=_rule(data.schedule, starts_on),
             starts_on=starts_on,
             time_of_day=data.time_of_day,
-            time_zone=_zone(data.time_zone) if data.time_zone else None,
             people=_people(data.people),
             visible=data.visible_to_clients,
         )
@@ -240,7 +229,6 @@ class QuestionPatch(Schema):
     schedule: str | None = None
     starts_on: dt.date | None = None
     time_of_day: dt.time | None = None
-    time_zone: str | None = None
     people: list[int] | None = None
     paused: bool | None = None
 
@@ -258,7 +246,6 @@ def question_update(request, question_id: int, data: QuestionPatch):
         "title",
         "starts_on",
         "time_of_day",
-        "time_zone",
         "schedule",
         "people",
     ]:
@@ -270,8 +257,6 @@ def question_update(request, question_id: int, data: QuestionPatch):
     if "schedule" in changes:
         anchor = changes.get("starts_on", item.question.starts_on)
         changes["rule"] = _rule(changes.pop("schedule"), anchor)
-    if "time_zone" in changes:
-        changes["time_zone"] = _zone(changes["time_zone"])
     if "people" in changes:
         changes["people"] = _people(changes["people"])
     try:

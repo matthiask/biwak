@@ -1,10 +1,8 @@
 """Pages of check-ins (specs/checkins.md)"""
 
 import datetime as dt
-import zoneinfo
 
 from django import forms
-from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -19,7 +17,7 @@ from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
-from biwak.forms import ComboboxSelect, Form, PeopleField, PeopleSelect
+from biwak.forms import Form, PeopleField, PeopleSelect
 from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
@@ -31,8 +29,6 @@ from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
 
 # How many occurrences a page shows (older ones: "Show more")
 OCCURRENCES_PER_PAGE = 5
-
-TIME_ZONES = sorted(zoneinfo.available_timezones())
 
 
 def question_for(request, pk):
@@ -59,12 +55,6 @@ class QuestionForm(RuleFormMixin, Form):
     time_of_day = forms.TimeField(
         label=_("Time of day"), widget=forms.TimeInput(attrs={"type": "time"})
     )
-    time_zone = forms.ChoiceField(
-        label=_("Time zone"),
-        choices=[(name, name) for name in TIME_ZONES],
-        initial=settings.TIME_ZONE,
-        widget=ComboboxSelect,
-    )
     # The people picker with teams (decided 2026-11-22, specs/checkins.md)
     people = PeopleField(
         label=_("People asked"),
@@ -77,7 +67,6 @@ class QuestionForm(RuleFormMixin, Form):
         "rule",
         "starts_on",
         "time_of_day",
-        "time_zone",
         "visible",
         "people",
     ]
@@ -181,7 +170,6 @@ def _form_initial(item):
         "rule": question.rule,
         "starts_on": question.starts_on,
         "time_of_day": question.time_of_day,
-        "time_zone": question.time_zone,
         "people": list(question.people.all()),
     }
 
@@ -204,7 +192,6 @@ def question_new(request, pk):
             rule=data["rule"],
             starts_on=data["starts_on"],
             time_of_day=data["time_of_day"],
-            time_zone=data["time_zone"],
             people=list(data["people"]),
             visible=data["visible"],
         )
@@ -235,7 +222,6 @@ def question_edit(request, pk):
             rule=data["rule"],
             starts_on=data["starts_on"],
             time_of_day=data["time_of_day"],
-            time_zone=data["time_zone"],
             people=list(data["people"]),
         )
         return redirect(item)

@@ -38,7 +38,7 @@
         </div>
         <div class="small text-body-secondary">
           {{ question.question.schedule_description|capfirst }},
-          {{ question.question.time_of_day|time:"H:i" }} {{ question.question.time_zone }}
+          {{ question.question.time_of_day|time:"H:i" }}
           {% if question.question.is_paused %}
             · <strong>{% translate "paused" %}</strong>
           {% elif question.question.next_local %}

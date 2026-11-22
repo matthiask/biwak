@@ -92,7 +92,7 @@ class PagesTest(ViewsTestCase):
         self.assertContains(response, "How are you?")
         self.assertContains(response, "Shared question")
         self.assertContains(response, "Every Monday")
-        self.assertContains(response, "09:00 Europe/Zurich")
+        self.assertContains(response, "09:00")
         self.assertContains(response, "next: Mon, 29 Mar 2027, 09:00")
         self.assertContains(response, "Waiting for your answer")
         self.assertContains(response, "New check-in")
@@ -134,7 +134,7 @@ class PagesTest(ViewsTestCase):
         self.assertContains(response, "Monday, 22 March 2027")
         self.assertContains(response, "Hasn't answered yet:")
         self.assertContains(response, "Bob")
-        self.assertContains(response, "Every Monday,\n    09:00 Europe/Zurich")
+        self.assertContains(response, "Every Monday,\n    09:00\n")
         self.assertContains(response, "Show to clients")
         self.assertNotContains(response, "Clients can see this")
         self.assertNotContains(response, "reminder")
@@ -332,7 +332,6 @@ class FormsTest(ViewsTestCase):
             "rule_weekdays": ["FR"],
             "starts_on": "2027-03-26",
             "time_of_day": "08:30",
-            "time_zone": "Europe/Zurich",
             "people": [self.ada.pk, self.bob.pk],
         } | kwargs
 
@@ -340,9 +339,8 @@ class FormsTest(ViewsTestCase):
         url = reverse("question_new", args=[self.project.pk])
         response = self.get(self.ada, url)
         self.assertContains(response, "New check-in")
-        # About 400 time zones: a combobox (specs/ui.md, "Forms")
-        self.assertContains(response, '<select name="time_zone" data-combobox=""')
-        self.assertContains(response, "data-combobox")
+        # The installation's time zone is the only one (decided 2026-11-22)
+        self.assertNotContains(response, 'name="time_zone"')
         response = self.post(self.ada, url, self.data())
         item = Item.objects.get(title="What did you read?")
         self.assertRedirects(response, item.get_absolute_url())
@@ -457,7 +455,6 @@ class FormsTest(ViewsTestCase):
             {"rule_frequency": ""},
             {"rule_weekdays": []},
             {"rule_interval": "100"},
-            {"time_zone": "Mars/Olympus"},
             {"time_of_day": ""},
             {"starts_on": ""},
             {"title": ""},
@@ -573,7 +570,6 @@ class FormsTest(ViewsTestCase):
                 title=item.title,
                 starts_on="2027-03-22",
                 time_of_day=before.time_of_day.strftime("%H:%M"),
-                time_zone=before.time_zone,
             )
             data = {k: v for k, v in data.items() if not k.startswith("rule_")}
             data |= rule_post(rule, "rule")

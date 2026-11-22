@@ -57,7 +57,7 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(question["rule"], "FREQ=WEEKLY;BYDAY=MO")
         self.assertEqual(question["schedule_description"], "every Monday")
         self.assertEqual(question["time_of_day"], "09:00:00")
-        self.assertEqual(question["time_zone"], "Europe/Zurich")
+        self.assertNotIn("time_zone", question, "the installation's only")
         self.assertNotIn("remind_after", question, "no reminders")
         self.assertEqual(
             sorted(p["short_name"] for p in question["people"]), ["Ada", "Bob"]
@@ -106,7 +106,6 @@ class QuestionsAPITest(APITestCase):
                 "schedule": "weekly",
                 "starts_on": "2027-03-26",
                 "time_of_day": "08:30",
-                "time_zone": "Europe/Zurich",
                 "people": [self.ada.pk, self.bob.pk],
             },
         )
@@ -123,7 +122,6 @@ class QuestionsAPITest(APITestCase):
             f"projects/{self.project.pk}/checkins/",
             {"title": "Defaults", "schedule": "FREQ=DAILY", "time_of_day": "09:00"},
         ).json()
-        self.assertEqual(data["time_zone"], "Europe/Zurich")
         self.assertEqual(data["starts_on"], dt.date.today().isoformat())
         data = self.post(
             self.ada,
@@ -141,7 +139,6 @@ class QuestionsAPITest(APITestCase):
         for changes in [
             {"schedule": "sometimes"},
             {"schedule": "FREQ=HOURLY"},
-            {"time_zone": "Mars/Olympus"},
             {"people": [999999]},
             {"people": [self.cleo.pk]},  # internal
             {"time_of_day": "late"},
@@ -193,7 +190,7 @@ class QuestionsAPITest(APITestCase):
             {
                 "title": "How is it going?", "schedule": "biweekly",
                 "starts_on": "2027-03-22", "time_of_day": "10:00",
-                "time_zone": "Asia/Tokyo", "people": [self.bob.pk],
+                "people": [self.bob.pk],
             },
         )  # fmt: skip
         self.assertEqual(response.status_code, 200, response.content)
@@ -201,7 +198,6 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(data["title"], "How is it going?")
         self.assertEqual(data["rule"], "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO")
         self.assertEqual(data["time_of_day"], "10:00:00")
-        self.assertEqual(data["time_zone"], "Asia/Tokyo")
         self.assertEqual([p["short_name"] for p in data["people"]], ["Bob"])
 
     def test_rules_are_stored_canonical(self):
@@ -253,10 +249,7 @@ class QuestionsAPITest(APITestCase):
                 self.patch(self.ada, f"checkins/{self.item.pk}/", body).status_code,
                 {400, 422},
             )
-        for body in [
-            {"schedule": "FREQ=SECONDLY"},
-            {"time_zone": "x/y"},
-        ]:
+        for body in [{"schedule": "FREQ=SECONDLY"}]:
             self.assertEqual(
                 self.patch(self.ada, f"checkins/{self.item.pk}/", body).status_code,
                 400,

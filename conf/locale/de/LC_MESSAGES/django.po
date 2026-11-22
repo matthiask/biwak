@@ -828,10 +828,6 @@ msgstr "Zum ersten Mal gefragt am"
 msgid "Time of day"
 msgstr "Uhrzeit"
 
-#: biwak/activity/history.py biwak/checkins/views.py
-msgid "Time zone"
-msgstr "Zeitzone"
-
 #: biwak/activity/history.py
 msgid "Paused"
 msgstr "Pausiert"
@@ -1614,10 +1610,6 @@ msgstr "zuerst gefragt am"
 #: biwak/checkins/models.py
 msgid "time of day"
 msgstr "Uhrzeit"
-
-#: biwak/checkins/models.py
-msgid "time zone"
-msgstr "Zeitzone"
 
 #: biwak/checkins/models.py
 msgid "paused at"

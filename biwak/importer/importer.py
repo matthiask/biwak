@@ -16,6 +16,7 @@ import re
 from collections import Counter, defaultdict
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -1200,7 +1201,7 @@ class Importer(Resolver):
             with importing(at=parse_time(rec["created_at"])):
                 schedule = question.question
                 asked_at = dt.datetime.combine(
-                    day, schedule.time_of_day, tzinfo=ZoneInfo(schedule.time_zone)
+                    day, schedule.time_of_day, tzinfo=ZoneInfo(settings.TIME_ZONE)
                 )
                 occurrence = checkin_ops.add_occurrence(
                     question, date=day, asked_at=asked_at

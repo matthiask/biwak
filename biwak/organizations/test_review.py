@@ -56,7 +56,6 @@ class CheckinFormTest(ReviewTestCase):
             **rule_post(MONDAY_9["rule"], "rule"),
             "starts_on": "2027-03-15",
             "time_of_day": "09:00",
-            "time_zone": "Europe/Zurich",
             "people": people,
         }
 

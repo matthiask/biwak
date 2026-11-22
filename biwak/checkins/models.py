@@ -14,10 +14,6 @@ from django.utils.translation import gettext_lazy as _
 from biwak.items.models import Detail, Item, Status
 
 
-def default_time_zone():
-    return settings.TIME_ZONE
-
-
 class Question(Detail):
     """The question itself is the item's title"""
 
@@ -27,9 +23,6 @@ class Question(Detail):
     # phase of "every two weeks"
     starts_on = models.DateField(_("first asked on"))
     time_of_day = models.TimeField(_("time of day"))
-    time_zone = models.CharField(
-        _("time zone"), max_length=64, default=default_time_zone
-    )
     people = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
@@ -37,8 +30,8 @@ class Question(Detail):
         verbose_name=_("people"),
     )
     paused_at = models.DateTimeField(_("paused at"), null=True, blank=True)
-    # When the question is asked next: derived from the rule, the time of
-    # day and the time zone whenever one of them changes, or after asking;
+    # When the question is asked next: derived from the rule and the time
+    # of day whenever one of them changes, or after asking;
     # empty while paused (``biwak.checkins.schedule``)
     next_at = models.DateTimeField(_("asked next at"), null=True, blank=True)
 
@@ -59,12 +52,13 @@ class Question(Detail):
 
     @property
     def next_local(self):
-        """When it's asked next, as wall clock time in its time zone"""
+        """When it's asked next, as wall clock time in the installation's
+        time zone"""
         if self.next_at is None:
             return None
         from biwak.checkins import schedule
 
-        return self.next_at.astimezone(schedule.zone(self.time_zone))
+        return self.next_at.astimezone(schedule.zone(schedule.time_zone()))
 
     @property
     def schedule_description(self):
@@ -86,7 +80,7 @@ class Question(Detail):
 
 class Occurrence(models.Model):
     """One time a question is asked. ``date`` is the scheduled date in the
-    question's time zone: one occurrence per question and date, however
+    installation's time zone: one occurrence per question and date, however
     often the schedule is edited on that day."""
 
     question = models.ForeignKey(

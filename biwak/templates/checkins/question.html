@@ -51,7 +51,7 @@
   {% include "items/_client_tab.html" %}
   <p class="text-body-secondary">
     {{ question.schedule_description|capfirst }},
-    {{ question.time_of_day|time:"H:i" }} {{ question.time_zone }}
+    {{ question.time_of_day|time:"H:i" }}
     {% if is_paused %}
       · {% translate "paused, not asked" %}
     {% elif question.next_local %}

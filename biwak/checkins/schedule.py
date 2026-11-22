@@ -1,9 +1,12 @@
 """When a question is asked (specs/checkins.md)
 
 A question is asked on the dates its rule produces (``biwak.schedules``),
-at its time of day in its own time zone: "09:00 Europe/Zurich" stays 09:00
-on the wall clock across daylight saving time changes, so in UTC it moves
-by an hour twice a year. Dates are calendar dates in that time zone.
+at its time of day in the installation's time zone (``TIME_ZONE``, the
+only one, decided 2026-11-22): "09:00 Europe/Zurich" stays 09:00 on the
+wall clock across daylight saving time changes, so in UTC it moves by an
+hour twice a year. Dates are calendar dates in that time zone. The
+functions below take the zone, the questions' are called with
+``time_zone()``.
 
 Two times of day are odd on the days the clocks change:
 
@@ -17,9 +20,15 @@ Two times of day are odd on the days the clocks change:
 import datetime as dt
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from django.conf import settings
 from django.utils.translation import gettext
 
 from biwak import schedules
+
+
+def time_zone():
+    """The installation's time zone, the one questions are asked in"""
+    return settings.TIME_ZONE
 
 
 def zone(name):
@@ -69,7 +78,7 @@ def next_occurrence_of(question, *, after):
         rule=question.rule,
         starts_on=question.starts_on,
         time_of_day=question.time_of_day,
-        time_zone=question.time_zone,
+        time_zone=time_zone(),
         after=after,
     )
 

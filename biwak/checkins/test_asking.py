@@ -203,6 +203,7 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(dates(item), [dt.date(2027, 10, 31)])
         self.assertEqual(next_at(item), "2027-11-01 02:30")
 
+    @override_settings(TIME_ZONE="America/Nuuk")
     def test_a_time_in_a_skipped_hour_before_midnight_keeps_its_date(self):
         """America/Nuuk goes from Saturday 27 March 2027 23:00 (-02) to
         Sunday 00:00 (-01): Saturday's 23:30 is asked at Sunday 00:30, and
@@ -210,8 +211,7 @@ class AskingTest(CheckinTestCase):
         nuuk = schedule.zone("America/Nuuk")
         item = self.question(
             "Nuuk", rule="FREQ=DAILY", starts_on=dt.date(2027, 3, 1),
-            time_of_day=dt.time(23, 30), time_zone="America/Nuuk",
-            now=at("2027-03-27 12:00", nuuk),
+            time_of_day=dt.time(23, 30), now=at("2027-03-27 12:00", nuuk),
         )  # fmt: skip
         self.run_at("2027-03-28 00:30", nuuk)
         self.run_at("2027-03-28 23:30", nuuk)
@@ -219,52 +219,28 @@ class AskingTest(CheckinTestCase):
 
     # Time zones --------------------------------------------------------------
 
-    def test_each_question_in_its_own_time_zone(self):
-        tokyo = self.question(
-            "Tokyo", time_zone="Asia/Tokyo", now=at("2027-03-19 12:00")
-        )
-        new_york = self.question(
-            "New York", time_zone="America/New_York", now=at("2027-03-19 12:00")
-        )
-        # Monday 22 March: 09:00 in Tokyo is 00:00 UTC, 09:00 in Zurich
-        # (winter time until the 28th) is 08:00 UTC, 09:00 in New York (summer
-        # time since the 14th) is 13:00 UTC
+    @override_settings(TIME_ZONE="Asia/Tokyo")
+    def test_asked_in_the_installations_time_zone(self):
+        """One time zone, the installation's (decided 2026-11-22)"""
+        tokyo = self.question("Tokyo", now=at("2027-03-19 12:00"))
+        # Monday 22 March: 09:00 in Tokyo is 00:00 UTC
         utc = schedule.zone("UTC")
+        self.run_at("2027-03-21 23:59", utc)
+        self.assertEqual(dates(tokyo), [])
         self.run_at("2027-03-22 00:00", utc)
         self.assertEqual(dates(tokyo), [dt.date(2027, 3, 22)])
-        self.assertEqual(dates(self.item), [])
-        self.assertEqual(dates(new_york), [])
-        self.run_at("2027-03-22 08:00", utc)
-        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22)])
-        self.assertEqual(dates(new_york), [])
-        self.run_at("2027-03-22 13:00", utc)
-        self.assertEqual(dates(new_york), [dt.date(2027, 3, 22)])
 
-    def test_the_date_is_the_date_in_the_questions_zone(self):
+    @override_settings(TIME_ZONE="Asia/Tokyo")
+    def test_the_date_is_the_date_in_the_installations_zone(self):
         """23:30 on Sunday in Zurich is Monday 07:30 in Tokyo, 09:00 there
         is next"""
-        tokyo = self.question(
-            "Tokyo", time_zone="Asia/Tokyo", now=at("2027-03-21 23:30")
-        )
+        tokyo = self.question("Tokyo", now=at("2027-03-21 23:30"))
         self.assertEqual(
             local(
                 Question.objects.get(item=tokyo).next_at, schedule.zone("Asia/Tokyo")
             ),
             "2027-03-22 09:00",
         )
-
-    def test_default_time_zone_is_the_installations(self):
-        item = ops.create_question(
-            project=self.project, title="Default", creator=self.ada,
-            now=at("2027-03-19 12:00"), **MONDAY_9,
-        )  # fmt: skip
-        self.assertEqual(item.question.time_zone, "Europe/Zurich")
-
-    def test_unknown_time_zone(self):
-        with self.assertRaises(ValueError):
-            self.question("Mars", time_zone="Mars/Olympus")
-        with self.assertRaises(ValueError):
-            ops.update_question(self.item, actor=self.ada, time_zone="Mars/Olympus")
 
     # Month ends --------------------------------------------------------------
 
@@ -524,19 +500,6 @@ class AskingTest(CheckinTestCase):
         )  # fmt: skip
         self.assertEqual(next_at(self.item), "2027-03-24 09:00")
 
-    def test_a_new_time_zone_moves_the_moment(self):
-        ops.update_question(
-            self.item, actor=self.ada, time_zone="Asia/Tokyo",
-            now=at("2027-03-19 12:00"),
-        )  # fmt: skip
-        self.assertEqual(
-            local(
-                Question.objects.get(item=self.item).next_at,
-                schedule.zone("Asia/Tokyo"),
-            ),
-            "2027-03-22 09:00",
-        )
-
     def test_a_new_rule_on_the_day_it_was_asked(self):
         """Current behaviour, to be confirmed (specs/checkins.md)"""
         self.run_at("2027-03-22 09:00")
@@ -547,55 +510,6 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(next_at(self.item), "2027-03-23 09:00")
         self.assertEqual(self.run_at("2027-03-23 09:00")["asked"], 1)
         self.assertEqual(dates(self.item), [dt.date(2027, 3, 22), dt.date(2027, 3, 23)])
-
-    def test_a_new_time_zone_on_the_day_it_was_asked(self):
-        """Current behaviour, to be confirmed (specs/checkins.md): a zone
-        where it is still Monday asks Monday's date there, which was asked
-        already; one where Monday's time passed asks next Monday"""
-        new_york = schedule.zone("America/New_York")
-        self.run_at("2027-03-22 09:00")
-        ops.update_question(
-            self.item, actor=self.ada, time_zone="America/New_York",
-            now=at("2027-03-22 10:00"),
-        )  # fmt: skip
-        self.assertEqual(
-            local(Question.objects.get(item=self.item).next_at, new_york),
-            "2027-03-22 09:00",
-        )
-        self.assertEqual(self.run_at("2027-03-22 09:00", new_york)["asked"], 0)
-        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22)])
-        self.assertEqual(
-            local(Question.objects.get(item=self.item).next_at, new_york),
-            "2027-03-29 09:00",
-        )
-        ops.update_question(
-            self.item, actor=self.ada, time_zone="Asia/Tokyo",
-            now=at("2027-03-22 10:00", new_york),
-        )  # fmt: skip
-        self.assertEqual(
-            local(
-                Question.objects.get(item=self.item).next_at,
-                schedule.zone("Asia/Tokyo"),
-            ),
-            "2027-03-29 09:00",
-        )
-
-    def test_a_new_time_zone_on_the_day_before_it_was_asked(self):
-        """Current behaviour, to be confirmed: at 08:00 in Zurich, 09:00
-        in Tokyo has passed, so Monday isn't asked at all"""
-        ops.update_question(
-            self.item, actor=self.ada, time_zone="Asia/Tokyo",
-            now=at("2027-03-22 08:00"),
-        )  # fmt: skip
-        self.assertEqual(
-            local(
-                Question.objects.get(item=self.item).next_at,
-                schedule.zone("Asia/Tokyo"),
-            ),
-            "2027-03-29 09:00",
-        )
-        self.run_at("2027-03-22 09:00")
-        self.assertEqual(dates(self.item), [])
 
     def test_editing_a_paused_question_leaves_it_paused(self):
         ops.pause(self.item, actor=self.ada)
