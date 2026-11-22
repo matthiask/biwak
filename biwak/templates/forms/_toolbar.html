@@ -3,9 +3,15 @@
   The buttons frontend/toolbar.js puts above every Markdown field
   (textarea[data-toolbar], specs/editor.md); here so that the icons and
   texts are in the templates; frontend/paste.js reads the URL of its
-  endpoint here.
+  endpoint here, the rich editor (frontend/editor/) where attachments are
+  (KEY stands for the key; the name doesn't matter).
 {% endcomment %}
-<template data-toolbar-template data-paste-url="{% url 'paste_markdown' %}">
+<template
+  data-toolbar-template
+  data-paste-url="{% url 'paste_markdown' %}"
+  data-attachment-url="{% url 'attachment' 'KEY' 'image' %}"
+  data-link-label="{% translate 'Link address' %}"
+>
   <button
     type="button"
     class="btn btn-sm btn-quiet"
@@ -71,5 +77,14 @@
   </button>
   <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="mention" title="{% translate 'Mention' %}">
     {% icon "at" %}<span class="visually-hidden">{% translate "Mention" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet ms-auto"
+    data-toolbar-action="source"
+    title="{% translate 'Edit the Markdown source' %}"
+    aria-pressed="false"
+  >
+    {% icon "markdown" %}<span class="visually-hidden">{% translate "Markdown" %}</span>
   </button>
 </template>

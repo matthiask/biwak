@@ -61,7 +61,9 @@ class ViewModeTest(E2ETestCase):
         # The notes: the form, focused on them, without a reload
         page.locator("#live-text .wb-markdown em").click()
         expect(self.form(page)).to_be_visible()
-        expect(page.locator("#live-text textarea[name=notes]")).to_be_focused()
+        expect(
+            self.editor(page.locator("#live-text textarea[name=notes]"))
+        ).to_be_focused()
         self.assertEqual(page.evaluate("window.marker"), 1)
         self.assertTrue(Editing.objects.filter(item=self.todo, user=self.ada).exists())
         # The heading and the Edit button give way to the form
@@ -128,7 +130,9 @@ class ViewModeTest(E2ETestCase):
         page.evaluate("window.marker = 1")
         page.locator("h1").click()
         page.locator("#live-text input[name=title]").fill("Order two tents")
-        page.locator("#live-text textarea[name=notes]").fill("Both **big**")
+        self.set_markdown(
+            page.locator("#live-text textarea[name=notes]"), "Both **big**"
+        )
         page.get_by_role("button", name="Save").click()
         expect(self.form(page)).to_have_count(0)
         expect(page.locator("h1")).to_contain_text("Order two tents")
@@ -162,7 +166,9 @@ class ViewModeTest(E2ETestCase):
         project_ops.add_member(self.project, self.bob, actor=self.ada)
         self.goto(bob, self.todo)
         bob.get_by_role("link", name="Edit").click()
-        expect(bob.locator("#live-text textarea[name=notes]")).to_be_visible()
+        expect(
+            self.editor(bob.locator("#live-text textarea[name=notes]"))
+        ).to_be_visible()
         boxes.last.check()
         expect(page.locator(".wb-tick-note[role=status]")).to_contain_text(
             "Bob is editing this"
@@ -208,8 +214,12 @@ class ViewModeTest(E2ETestCase):
         page = self.page
         self.goto(page, message)
         page.locator("#live-text em").click()
-        expect(page.locator("#live-text textarea[name=content]")).to_be_focused()
-        page.locator("#live-text textarea[name=content]").fill("Hello everybody")
+        expect(
+            self.editor(page.locator("#live-text textarea[name=content]"))
+        ).to_be_focused()
+        self.set_markdown(
+            page.locator("#live-text textarea[name=content]"), "Hello everybody"
+        )
         page.get_by_role("button", name="Save").click()
         expect(page.locator("#live-text")).to_have_text("Hello everybody")
         page.locator("h1").click()
@@ -228,8 +238,12 @@ class ViewModeTest(E2ETestCase):
         page = self.page
         self.goto(page, upload)
         page.get_by_text("Add a description…").click()
-        expect(page.locator("#live-text textarea[name=description]")).to_be_focused()
-        page.locator("#live-text textarea[name=description]").fill("The plan")
+        expect(
+            self.editor(page.locator("#live-text textarea[name=description]"))
+        ).to_be_focused()
+        self.set_markdown(
+            page.locator("#live-text textarea[name=description]"), "The plan"
+        )
         page.get_by_role("button", name="Save").click()
         expect(page.locator("#live-text")).to_contain_text("The plan")
         self.assertEqual(self.errors, [])
@@ -458,7 +472,7 @@ class LiveViewTest(E2ETestCase):
         bob = self.login(self.bob)
         self.goto(bob, self.todo)
         bob.locator("#live-text .wb-view-text").click()
-        bob.locator("#live-text textarea[name=notes]").fill("Fresh notes")
+        self.set_markdown(bob.locator("#live-text textarea[name=notes]"), "Fresh notes")
         bob.get_by_role("button", name="Save").click()
         expect(page.locator("#live-text")).to_contain_text("Fresh notes")
         bob.locator("h1").click()

@@ -70,6 +70,11 @@ Decided 2026-11-21: an open edit form is more important than a tick.
 
 ## The toolbar
 
+Since 2026-11-22 the fields are the rich editor (`rich-editor.md`): the
+buttons and keys below act on its document (`frontend/editor/commands.js`),
+and on the Markdown source as described here while its "Markdown"
+switch shows the source.
+
 Always visible above every Markdown field (`data-toolbar`, set on every
 `Textarea` by `BootstrapMixin`; `frontend/toolbar.js`,
 `forms/_toolbar.html`): bold, italic, link, heading, bulleted, numbered
@@ -102,3 +107,7 @@ attach.
   it is. A failing endpoint pastes the text.
 - **A URL over selected text** makes a link; **images** become
   attachments; **Ctrl+Shift+V** pastes plain text.
+- **In the rich editor** (`rich-editor.md`) the converter's Markdown is
+  parsed and inserted as blocks or inline; plain text stays text (lines
+  are breaks, blank lines paragraphs); copies from the editor itself
+  paste as they are, mentions included (decided 2026-11-22, to confirm).

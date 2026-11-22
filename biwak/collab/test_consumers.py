@@ -22,7 +22,9 @@ from django.utils import timezone
 from pycrdt import (
     Doc,
     Encoder,
-    Text,
+    XmlElement,
+    XmlFragment,
+    XmlText,
     YMessageType,
     YSyncMessageType,
     create_awareness_message,
@@ -64,12 +66,13 @@ application = AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
 
 
 class YClient:
-    """An editor: its own Yjs document, synced through the websocket"""
+    """An editor: its own Yjs document, synced through the websocket, typing
+    into the first paragraph like y-prosemirror does"""
 
     def __init__(self, communicator):
         self.communicator = communicator
         self.doc = Doc()
-        self.text = self.doc.get(ytext.TEXT, type=Text)
+        self.fragment = self.doc.get(ytext.FRAGMENT, type=XmlFragment)
         self.modes = []
         self.awareness = []
 
@@ -98,16 +101,32 @@ class YClient:
         await self.communicator.send_to(bytes_data=create_sync_message(self.doc))
         await self.drain()
 
+    @property
+    def text(self):
+        """The first paragraph's text (pycrdt counts UTF-8 bytes)"""
+        if not len(self.fragment.children):
+            self.fragment.children.append(XmlElement("paragraph"))
+        block = self.fragment.children[0]
+        for child in block.children:
+            if isinstance(child, XmlText):
+                return child
+        return block.children.insert(0, XmlText())
+
     async def type(self, at, value):
         before = self.doc.get_state()
-        self.text.insert(len(str(self.text)[:at].encode()), value)
+        text = self.text
+        text.insert(len(str(text)[:at].encode()), value)
         await self.send_update(self.doc.get_update(before))
+
+    async def edit(self, markdown):
+        """Changes the document like an editor would (a structural edit)"""
+        await self.send_update(ytext.edit(self.doc, markdown))
 
     async def send_update(self, update):
         await self.communicator.send_to(bytes_data=create_update_message(update))
 
     def __str__(self):
-        return str(self.text)
+        return ytext.text(self.doc)
 
 
 @patch.multiple(consumers, SAVE_AFTER=0.05, SAVE_AT_LEAST_EVERY=1)
@@ -174,7 +193,7 @@ class ConsumerTest(TransactionTestCase):
 
     async def test_the_doc_as_it_is(self):
         editor = await self.connect(self.ada, self.shared)
-        self.assertEqual(str(editor), "Agenda\n")
+        self.assertEqual(str(editor), "Agenda")
         self.assertEqual(editor.modes, [1])
 
     async def test_internal_docs_are_refused_to_clients_like_the_pages(self):
@@ -231,10 +250,11 @@ class ConsumerTest(TransactionTestCase):
         bob = await self.connect(self.bob, self.shared)
         await ada.type(6, " for Monday")
         await bob.drain()
-        self.assertEqual(str(bob), "Agenda for Monday\n")
-        await bob.type(0, "# ")
+        self.assertEqual(str(bob), "Agenda for Monday")
+        # A heading (the editor's "# " input rule)
+        await bob.edit("# Agenda for Monday")
         await ada.drain()
-        self.assertEqual(str(ada), "# Agenda for Monday\n")
+        self.assertEqual(str(ada), "# Agenda for Monday")
         self.assertEqual(await self.content(self.shared), "# Agenda for Monday\n")
 
     async def test_clients_watch_docs_they_did_not_create(self):
@@ -243,11 +263,11 @@ class ConsumerTest(TransactionTestCase):
         self.assertEqual(cleo.modes, [0])
         await ada.type(0, "Draft: ")
         await cleo.drain()
-        self.assertEqual(str(cleo), "Draft: Agenda\n")
+        self.assertEqual(str(cleo), "Draft: Agenda")
         # What a client types into the doc goes nowhere
         await cleo.type(0, "Approved. ")
         await ada.drain()
-        self.assertEqual(str(ada), "Draft: Agenda\n")
+        self.assertEqual(str(ada), "Draft: Agenda")
         await asyncio.sleep(0.1)
         self.assertEqual(await self.content(self.shared), "Draft: Agenda\n")
 
@@ -289,7 +309,7 @@ class ConsumerTest(TransactionTestCase):
             await ada.type(0, "Still ")
             await ada.drain()
         bob = await self.connect(self.bob, self.shared)
-        self.assertEqual(str(bob), "Still Agenda\n")
+        self.assertEqual(str(bob), "Still Agenda")
 
     # Losing access during a session ----------------------------------------
 
@@ -327,7 +347,7 @@ class ConsumerTest(TransactionTestCase):
         )()
         await ada.type(6, " for Monday")
         await self.assertClosed(cleo)
-        self.assertEqual(str(cleo), "Agenda\n")
+        self.assertEqual(str(cleo), "Agenda")
 
     async def test_moving_the_doc_into_an_internal_folder(self):
         folder = await database_sync_to_async(ops.create_folder)(
@@ -555,6 +575,7 @@ class ConsumerTest(TransactionTestCase):
         async def stored(text):
             return await self.content(self.shared) == text
 
+        # (the changed paragraph as the editor writes it)
         await eventually(lambda: stored("Agenda and minutes\n"))
         await ada.type(0, "Our ")
         await eventually(lambda: stored("Our Agenda and minutes\n"))
@@ -632,8 +653,8 @@ class ConsumerTest(TransactionTestCase):
         ada.communicator = communicator
         await ada.sync()
         await bob.drain()
-        self.assertEqual(str(ada), "Bob: Agenda (Ada)\n")
-        self.assertEqual(str(bob), "Bob: Agenda (Ada)\n")
+        self.assertEqual(str(ada), "Bob: Agenda (Ada)")
+        self.assertEqual(str(bob), "Bob: Agenda (Ada)")
 
     async def test_an_api_edit_arrives_in_the_editors(self):
         ada = await self.connect(self.ada, self.shared)
@@ -646,8 +667,8 @@ class ConsumerTest(TransactionTestCase):
         )
         await ada.drain()
         # The API changed the text as it saw it, what Ada typed stays
-        self.assertEqual(str(ada), "Live Agenda\n- one\n")
-        self.assertEqual(await self.content(self.shared), "Live Agenda\n- one\n")
+        self.assertEqual(str(ada), "Live Agenda\n\n- one")
+        self.assertEqual(await self.content(self.shared), "Live Agenda\n\n- one\n")
 
     async def test_a_tick_arrives_in_the_editors_and_keeps_what_was_typed(self):
         from biwak import checklists
@@ -663,10 +684,10 @@ class ConsumerTest(TransactionTestCase):
         bob = await self.connect(self.bob, doc)
         # Typed, not stored yet: the tick goes against the live text
         with patch.multiple(consumers, SAVE_AFTER=30, SAVE_AT_LEAST_EVERY=60):
-            await ada.type(len("Packing\n"), "Trip\n")
+            await ada.type(len("Packing"), " Trip")
             await bob.drain()
-            live_text = "Packing\nTrip\n\n- [ ] tent\n- [ ] rope\n"
-            self.assertEqual(str(bob), live_text)
+            live_text = "Packing Trip\n\n- [ ] tent\n- [ ] rope\n"
+            self.assertEqual(str(bob), live_text.strip())
             self.assertEqual(
                 await self.content(doc), "Packing\n\n- [ ] tent\n- [ ] rope\n"
             )
@@ -681,10 +702,11 @@ class ConsumerTest(TransactionTestCase):
             )
             await ada.drain()
             await bob.drain()
-        expected = "Packing\nTrip\n\n- [ ] tent\n- [x] rope\n"
+        # (the stored text keeps its line break at the end)
+        expected = "Packing Trip\n\n- [ ] tent\n- [x] rope\n"
         self.assertEqual(text, expected)
-        self.assertEqual(str(ada), expected)
-        self.assertEqual(str(bob), expected)
+        self.assertEqual(str(ada), expected.strip())
+        self.assertEqual(str(bob), expected.strip())
         self.assertEqual(await self.content(doc), expected)
 
     async def test_a_tick_of_the_stored_text_while_more_was_typed(self):
@@ -701,7 +723,7 @@ class ConsumerTest(TransactionTestCase):
         )
         ada = await self.connect(self.ada, doc)
         with patch.multiple(consumers, SAVE_AFTER=30, SAVE_AT_LEAST_EVERY=60):
-            await ada.type(0, "- [ ] new\n")
+            await ada.edit("- [ ] new\n- [ ] tent")
             await ada.drain()
             await database_sync_to_async(self.on_commit)(
                 ops.tick,
@@ -711,7 +733,7 @@ class ConsumerTest(TransactionTestCase):
                 version=checklists.text_hash("- [ ] tent\n"),
             )
             await ada.drain()
-        self.assertEqual(str(ada), "- [ ] new\n- [x] tent\n")
+        self.assertEqual(str(ada), "- [ ] new\n- [x] tent")
         self.assertEqual(await self.content(doc), "- [ ] new\n- [x] tent\n")
 
     async def test_a_tick_of_an_old_text_is_refused(self):

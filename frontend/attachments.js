@@ -9,7 +9,13 @@ import { csrfToken } from "./http.js"
 // The error message below each text field
 const errors = new WeakMap()
 
+// The rich editor (frontend/editor/) inserts into its document while the
+// field is hidden behind it
+const rich = (textarea) =>
+  textarea.richEditor?.active ? textarea.richEditor : null
+
 function insert(textarea, text) {
+  if (rich(textarea)) return rich(textarea).insertMarkdown(text)
   const { selectionStart: start, selectionEnd: end, value } = textarea
   const before = start > 0 && !/\s$/.test(value.slice(0, start)) ? " " : ""
   textarea.setRangeText(before + text, start, end, "end")
@@ -17,6 +23,7 @@ function insert(textarea, text) {
 }
 
 function replace(textarea, placeholder, text) {
+  if (rich(textarea)) return rich(textarea).replaceText(placeholder, text)
   const index = textarea.value.indexOf(placeholder)
   if (index < 0) {
     insert(textarea, text)
@@ -73,6 +80,15 @@ function uploadAll(container, textarea, files) {
   for (const file of files) upload(container, textarea, file)
 }
 
+// Files dropped or pasted into the rich editor of ``textarea``; whether it
+// takes files at all
+export function uploadFiles(textarea, files) {
+  const container = textarea.closest("[data-attachments]")
+  if (!container || !errors.has(textarea)) return false
+  uploadAll(container, textarea, files)
+  return true
+}
+
 function enhance(container, textarea) {
   const wrapper = document.createElement("div")
   wrapper.className = "wb-attach"
@@ -90,11 +106,13 @@ function enhance(container, textarea) {
       textarea.focus()
     })
     // The toolbar above the field has the button (specs/editor.md)
-    const bar = textarea.previousElementSibling
-    if (bar?.matches(".wb-toolbar")) {
+    const bar = textarea.toolbar
+    if (bar) {
       button.tabIndex = -1
-      bar.append(button)
-      bar.append(input)
+      // Before the rich editor's "Markdown" switch, the last
+      const source = bar.querySelector('[data-toolbar-action="source"]')
+      bar.insertBefore(button, source)
+      bar.insertBefore(input, source)
     } else {
       wrapper.append(button)
       wrapper.append(input)

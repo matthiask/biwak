@@ -24,7 +24,7 @@ inside pages, like GitHub's.
   "New doc" and so on; on a to-do "Complete", "Comment", "Edit",
   "Bookmark", "Subscribe", "Copy the link".
 
-Inside a Markdown text field <kbd>Ctrl</kbd>+<kbd>K</kbd> inserts a
+Inside a text field <kbd>Ctrl</kbd>+<kbd>K</kbd> makes a
 link instead. Press <kbd>Esc</kbd> first or click outside the field to
 reach the palette.
 

@@ -6,10 +6,12 @@ that shows what the text will look like: we mostly write prose, not
 code, and the source view looks like code. One editor for every text
 field, live docs included. Asked by the user 2026-11-22.
 
-**Status:** open, to be built (decided with the user 2026-11-22:
-ProseMirror, Markdown stored, a source toggle, live docs' conversion
-in Python; a spike confirmed it with the changes below, its code and
-report on the branch `spike-editor`, `spike/REPORT.md`).
+**Status:** built 2026-11-22 on the branch `rich-editor` (decided with
+the user 2026-11-22: ProseMirror, Markdown stored, a source toggle, live
+docs' conversion in Python; a spike confirmed it with the changes below,
+its code and report on the branch `spike-editor`, `spike/REPORT.md`).
+What was built, the sizes and what's left to confirm: "What's built"
+below and `decisions-to-confirm.md`.
 
 Depends on: `editor.md` (the toolbar, checklists, pasting),
 `collaboration.md` (live docs: Yjs, `pycrdt`, saving),
@@ -163,6 +165,81 @@ in Python:
 - Not tested in the spike (no browser): IME and composition, phone
   keyboards, undo per person, cursors, the editor with our CSS,
   pasting into tables and lists. Try these early and report.
+
+## What's built
+
+- **The Markdown layer** (stage 1): `frontend/editor/schema.js` and
+  `markdown.js` (schema, parser, our serializer with the spike's nine
+  fixes, linked images as the image's `href`), the same in Python in
+  `biwak/richtext/` (`tree.py`, `parse.py`, `serialize.py`,
+  `preserve.py` keeping the old text and unchanged blocks' source,
+  `ydoc.py` for y-prosemirror's fragment). The corpus is
+  `biwak/richtext/corpus/` (made up; the hooks leave its whitespace
+  alone). Tests: `frontend/editor/tests/*.test.js` with Node's own runner
+  (no JavaScript test setup before; `biwak/richtext/test_js.py` runs it
+  in the Django tests), `biwak/richtext/test_parity.py` compares both
+  sides through `tests/dump.js` (corpus and 300 random documents:
+  documents, Markdown, Y documents both ways, checklist positions equal
+  to `checklists.boxes()`). Both skip without Node.
+  `prosemirror-markdown` and `markdown-it` are pinned exactly.
+
+- **The field editor** (stage 2): `frontend/editor/fields.js` (a chunk,
+  `editor`, loaded by `main.js` where a `textarea[data-toolbar]` is,
+  also in forms htmx brings), `editor.js` (keys: Enter a paragraph or a
+  new item, a task item after a task item; Shift+Enter a break, not in
+  cells; Ctrl+Enter and Escape left to the form), `rules.js` (input
+  rules, Backspace takes one back), `commands.js` (the toolbar's
+  actions, `aria-pressed` on what's active), `plugins.js` (bare URLs
+  linked while typing like linkify, task boxes tick, the `@` list,
+  pasting), `link.js` (the address field). The textarea stays, hidden;
+  `textarea.richEditor` is the editor, `textarea.focus()` focuses it,
+  its `invalid` event and the form's `reset` are followed. The
+  toolbar (`toolbar.js`) hands its buttons to the editor, or to the
+  source while "Markdown" shows it; `mentions.js` has one list for
+  both (`mentionList()`), `attachments.js` inserts into either,
+  `paste.js` keeps the converter. Forms keep the source of unchanged
+  blocks on the server (`BootstrapMixin._clean_fields()`,
+  `richtext.preserve.keep_source()`). Browser tests:
+  `biwak/test_e2e_editor.py` (toolbar, keys, typing, unchanged texts,
+  the source, pasting into lists and tables, input methods); the other
+  browser tests type into the editor (`E2ETestCase.editor()`,
+  `set_markdown()`).
+
+- **Live docs** (stage 3): `frontend/editor/live.js` (`liveEditor()`:
+  y-prosemirror's sync, cursors and undo on the doc's fragment),
+  `frontend/collab.js` keeps the connection, the status, attachments
+  and offline storage; CodeMirror and `y-codemirror.next` are gone. The
+  server: `collab/ytext.py` reads and writes the fragment through
+  `biwak/richtext/` (`ydoc.py` in UTF-8 positions, `diff.py` the deep
+  diff, `preserve.py` keeping the stored text), `collab.0004` rebuilt
+  the states. Tests: `richtext/test_diff.py` (the spike's table plus
+  mentions, images, breaks and characters outside the Basic Plane, the
+  merged states read by y-prosemirror), the consumer's and `live`'s
+  tests with a Python client typing into the fragment, the browser's
+  `CollabTest` (typing at once, cursors, undo per person, composing
+  beside somebody typing, offline, ticks and API edits arriving).
+
+- **Sizes** (measured 2026-11-22, production bundle, gzip -9): a page
+  with a text field loads 129.6 KB of editor chunks beyond the main
+  bundle (34 KB): ProseMirror, markdown-it and prosemirror-markdown
+  117.5 KB, our editor modules 9.4 KB, the field code 2.7 KB; over the
+  budget of 125 KB by about 5 KB (markdown-it's HTML entities and
+  prosemirror-tables are the candidates if it matters). The live doc
+  page loads 167 KB (Yjs and y-prosemirror 37.6 KB more; CodeMirror's
+  was 136 KB).
+- **Tried in a browser** (Chromium through Playwright): composition
+  through the input method protocol (in a field, in a list with bold,
+  in a live doc while somebody else types in the same paragraph), undo
+  per person in live docs, the others' cursors with names, pasting into
+  lists and table cells, our CSS (screenshots). **Not verified:** real
+  input methods and phone keyboards (Android's composition, iOS's
+  Enter), Safari and Firefox, screen readers with the editor.
+- **Decided on the way** (2026-11-22): images with a link keep it as the
+  image's `href` also in fields (one schema); the stored text keeps its
+  line break at the end when the last block changes; forms keep the
+  source of unchanged blocks on the server (`keep_source()`); a run of
+  text split by a new mention keeps its Y text where most of it went
+  (the deep diff's pairing). The rest in `decisions-to-confirm.md`.
 
 ## Done when
 

@@ -535,7 +535,7 @@ class NewDocTest(E2ETestCase):
         )
         draft = Item.objects.filter(is_draft=True).latest("pk")
         # The cursor after "# ": the title is typed first
-        expect(page.locator(".cm-content")).to_be_focused()
+        expect(page.locator("[data-collab-editor] .ProseMirror")).to_be_focused()
         return page, draft
 
     def wait_for_doc(self, draft):
@@ -559,7 +559,9 @@ class NewDocTest(E2ETestCase):
         self.assertEqual(doc.doc.content, "# Kick-off")
         # Reloading opens the doc, not a new draft
         page.reload()
-        expect(page.locator(".cm-content")).to_contain_text("Kick-off")
+        expect(page.locator("[data-collab-editor] .ProseMirror")).to_contain_text(
+            "Kick-off"
+        )
         self.assertEqual(Item.objects.filter(kind="doc").count(), 1)
         self.assertEqual(self.errors, [])
 

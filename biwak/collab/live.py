@@ -2,7 +2,8 @@
 database, who may connect, and the messages to the open editors
 
 The state is ``LiveState`` (merged) plus the ``LiveUpdate`` rows after
-it. Its text equals ``Doc.content`` after every merge, so an edit through
+it, the rich editor's document (``ytext``). Its document is what
+``Doc.content`` says after every merge, so an edit through
 the API can be made on the state as the API client saw it and merges with
 what people type meanwhile. Merging (``files.operations.save_live()``)
 writes ``Doc.content``, the events and the versions.
@@ -20,7 +21,6 @@ from biwak.collab import ytext
 from biwak.collab.models import LiveState, LiveUpdate
 from biwak.items import operations as ops
 from biwak.items.models import Doc, Item, Kind
-from biwak.text import line_breaks
 
 
 # Who may do what in a doc's live session
@@ -58,15 +58,15 @@ def access(user, pk, *, session_key=None):
 
 def ensure_state(doc):
     """The doc's ``LiveState``, made from its content the first time; call
-    with the doc's row locked. A state whose text differs from the content
-    without updates pending (the content changed some other way) follows
-    the content."""
+    with the doc's row locked. A state whose document differs from the
+    content's without updates pending (the content changed some other way)
+    follows the content."""
     state = LiveState.objects.filter(doc=doc).first()
     if state is None:
         return LiveState.objects.create(doc=doc, state=ytext.initial_state(doc.content))
     if not doc.live_updates.exists():
         y = ytext.ydoc(state.state)
-        if ytext.text(y) != line_breaks(doc.content):
+        if not ytext.means(y, doc.content):
             ytext.edit(y, doc.content)
             state.state = y.get_update()
             state.updated_at = timezone.now()
@@ -141,7 +141,7 @@ def live_text(doc):
     """The doc's text as the open editors have it: ``Doc.content`` follows
     a few seconds after the typing. Call with the doc's row locked."""
     ensure_state(doc)
-    return ytext.text(load(doc.pk))
+    return ytext.text(load(doc.pk), doc.content)
 
 
 def may_write(user, item):
@@ -189,7 +189,7 @@ def merge(doc):
     state.state = y.get_update()
     state.updated_at = timezone.now()
     state.save(update_fields=["state", "updated_at"])
-    return ytext.text(y), list(authors.values()), typed
+    return ytext.text(y, doc.content), list(authors.values()), typed
 
 
 def _strands(state, updates, kept):

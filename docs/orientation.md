@@ -102,6 +102,37 @@ the end opens the search page, which finds words in titles and texts,
 comments and answers. Filters: project, kind, only mine, and "Include
 archived". You only find what you may see. See [Keyboard](keyboard.md).
 
+## Writing texts
+
+Every text field (notes, comments, messages, docs, file descriptions,
+answers) shows the text as it will look: bold is bold, a list is a
+list. The toolbar above it has bold, italic, link, heading, lists,
+checklist, quote, code, mention and "Attach files"; the buttons light
+up for what's under the cursor, and pressing one again takes it off.
+
+- <kbd>Enter</kbd> starts a new paragraph (in a list, a new item),
+  <kbd>Shift</kbd>+<kbd>Enter</kbd> a new line in the same one, and
+  <kbd>Ctrl</kbd>+<kbd>Enter</kbd> sends the form.
+- Typing Markdown works too: `**bold**`, `*italic*`, `` `code` ``,
+  `~~struck~~`, `# ` for a heading, `- ` or `1. ` for a list, `[ ] ` for
+  a checkbox, `> ` for a quote, three backticks for code, `---` for a
+  line. <kbd>Backspace</kbd> right after turns it back into what you
+  typed. Addresses like `www.example.org` become links.
+- Keys: <kbd>Ctrl</kbd>+<kbd>B</kbd>, <kbd>Ctrl</kbd>+<kbd>I</kbd>,
+  <kbd>Ctrl</kbd>+<kbd>K</kbd> (a link: type its address, Enter),
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>7</kbd>/<kbd>8</kbd>/<kbd>9</kbd>
+  (numbered list, bulleted list, checklist), <kbd>Tab</kbd> and
+  <kbd>Shift</kbd>+<kbd>Tab</kbd> move list items in and out.
+- Click a checkbox in the text to tick it.
+- Type `@` to mention somebody (staff can mention a team).
+- Paste from web pages, mails, Word or Google Docs and the formatting
+  stays; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> pastes plain
+  text. Pasted or dropped files are attached.
+- **Markdown** (the last button) shows the text's source, Markdown, for
+  what the editor doesn't show, such as pasting a piece of Markdown;
+  click it again to go back. Texts are stored as Markdown, and a text
+  you didn't change is saved exactly as it was.
+
 ## People
 
 **People** lists everybody you may know, with their organization. A

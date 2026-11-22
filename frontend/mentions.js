@@ -17,10 +17,12 @@ import { avatar, teamMark } from "./avatar.js"
 
 const DELAY = 150
 
-// The "@query" before the caret, if any: "@" at the start or after a
+const queryAt = (field) =>
+  mentionQuery(field.value.slice(0, field.selectionStart))
+
+// The "@query" at the end of the text before the caret, if any: "@" at the start or after a
 // space or an opening bracket, no line break, not already a mention
-function queryAt(field) {
-  const before = field.value.slice(0, field.selectionStart)
+export function mentionQuery(before) {
   const match = /(?:^|[\s(])@([^@\n[\]()]{0,40})$/.exec(before)
   return match
     ? { query: match[1], start: before.length - match[1].length - 1 }
@@ -87,17 +89,32 @@ function caretPosition(field, index) {
 
 let counter = 0
 
-function attach(field) {
-  const url = field.dataset.mentions
+// The list of people (and teams) for a query, below a place in a field:
+// shared by textareas (here) and the rich editor (editor/mentions.js).
+// ``anchor`` is the element the list goes after (its parent is made
+// relative); ``position(start)`` says where the "@" is, relative to that
+// parent; ``onPick(person, mentions)`` inserts: ``mentions`` is the
+// Markdown ("[@Ada](person:12) ", one per member for a team, without those
+// in ``mentioned()``); ``owner`` gets aria-controls and
+// aria-activedescendant.
+export function mentionList({
+  url,
+  visible,
+  anchor,
+  owner,
+  position,
+  onPick,
+  mentioned,
+}) {
   const list = document.createElement("ul")
   list.className = "wb-mentions list-group"
-  list.id = `${field.id || `mentions-${++counter}`}-mentions`
+  list.id = `${owner.id || `mentions-${++counter}`}-mentions`
   list.setAttribute("role", "listbox")
   list.hidden = true
-  field.after(list)
-  field.parentElement.classList.add("position-relative")
-  field.setAttribute("aria-autocomplete", "list")
-  field.setAttribute("aria-controls", list.id)
+  anchor.after(list)
+  anchor.parentElement.classList.add("position-relative")
+  owner.setAttribute("aria-autocomplete", "list")
+  owner.setAttribute("aria-controls", list.id)
 
   let results = []
   let active = -1
@@ -106,9 +123,12 @@ function attach(field) {
   let controller = null
 
   const close = () => {
+    clearTimeout(timer)
+    controller?.abort()
+    current = null
     list.hidden = true
     results = []
-    field.removeAttribute("aria-activedescendant")
+    owner.removeAttribute("aria-activedescendant")
   }
 
   // The next person who can be chosen, in the direction of step
@@ -132,26 +152,27 @@ function attach(field) {
         item.setAttribute("aria-disabled", person.available ? "false" : "true")
         const name = document.createElement("span")
         name.textContent = person.name
-        if (person.team) {
-          item.dataset.team = person.id
-          const detail = document.createElement("small")
-          detail.className = "wb-mentions-detail"
-          detail.textContent = person.detail
-          item.append(teamMark(), " ", name, " ", detail)
-          item.addEventListener("mousedown", (event) => {
-            event.preventDefault()
-            if (person.available) pick(person)
-          })
-          return item
-        }
         const detail = document.createElement("small")
         detail.className = "wb-mentions-detail"
-        detail.textContent = person.available ? person.email : person.reason
-        // "Ada Example, Example Ltd" (specs/organizations.md)
-        const organization = person.organization
-          ? `, ${person.organization}`
-          : ""
-        item.append(avatar(person.avatar), " ", name, organization, " ", detail)
+        if (person.team) {
+          item.dataset.team = person.id
+          detail.textContent = person.detail
+          item.append(teamMark(), " ", name, " ", detail)
+        } else {
+          detail.textContent = person.available ? person.email : person.reason
+          // "Ada Example, Example Ltd" (specs/organizations.md)
+          const organization = person.organization
+            ? `, ${person.organization}`
+            : ""
+          item.append(
+            avatar(person.avatar),
+            " ",
+            name,
+            organization,
+            " ",
+            detail,
+          )
+        }
         // mousedown keeps the focus in the field
         item.addEventListener("mousedown", (event) => {
           event.preventDefault()
@@ -162,48 +183,34 @@ function attach(field) {
     )
     list.hidden = !results.length
     if (active >= 0) {
-      field.setAttribute("aria-activedescendant", `${list.id}-${active}`)
+      owner.setAttribute("aria-activedescendant", `${list.id}-${active}`)
     } else {
-      field.removeAttribute("aria-activedescendant")
+      owner.removeAttribute("aria-activedescendant")
     }
     if (results.length) place()
   }
 
-  // Below the line with the "@", starting at it, inside the field's
-  // parent (which is relative)
+  // Below the line with the "@", starting at it
   const place = () => {
-    const caret = caretPosition(field, current.start)
-    const top = Math.min(
-      field.offsetTop + caret.top + caret.height - field.scrollTop,
-      field.offsetTop + field.offsetHeight,
-    )
-    const left = field.offsetLeft + caret.left - field.scrollLeft
-    const maxLeft = field.parentElement.clientWidth - list.offsetWidth
-    list.style.top = `${top}px`
-    list.style.left = `${Math.max(0, Math.min(left, maxLeft))}px`
-  }
-
-  // The short name: pages show the current one, the label is a fallback
-  const syntax = (person) => {
-    const label = (person.short_name || person.name).replace(/[[\]]/g, "")
-    return `[@${label}](person:${person.id}) `
+    const at = position(current.start)
+    const maxLeft = anchor.parentElement.clientWidth - list.offsetWidth
+    list.style.top = `${at.top}px`
+    list.style.left = `${Math.max(0, Math.min(at.left, maxLeft))}px`
   }
 
   const pick = (person) => {
     let mention = syntax(person)
     if (person.team) {
       // Not twice: those mentioned in the field already are left out
-      const mentioned = new Set(
-        [...field.value.matchAll(/\]\(person:(\d+)\)/g)].map((m) => m[1]),
-      )
+      const already = mentioned()
       mention = person.members
-        .filter((member) => !mentioned.has(String(member.id)))
+        .filter((member) => !already.has(String(member.id)))
         .map(syntax)
         .join("")
     }
-    field.setRangeText(mention, current.start, field.selectionStart, "end")
-    field.dispatchEvent(new Event("input", { bubbles: true }))
+    const typed = current
     close()
+    onPick(typed, mention)
   }
 
   const load = async (typed) => {
@@ -214,9 +221,7 @@ function attach(field) {
       const params = target.searchParams
       params.set("q", typed.query)
       // New items: who will see it depends on the visibility checkbox
-      const checkbox = field.dataset.mentionsVisible
-        ? document.querySelector(field.dataset.mentionsVisible)
-        : null
+      const checkbox = visible ? document.querySelector(visible) : null
       if (checkbox?.checked) params.set("visible", "1")
       const response = await fetch(target, {
         credentials: "same-origin",
@@ -231,39 +236,84 @@ function attach(field) {
     }
   }
 
-  field.addEventListener("input", () => {
-    current = queryAt(field)
-    clearTimeout(timer)
-    if (!current) {
-      close()
-      return
-    }
-    const typed = current
-    timer = setTimeout(() => load(typed), DELAY)
-  })
-
-  field.addEventListener("keydown", (event) => {
-    if (list.hidden) return
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault()
-      const found = next(active, event.key === "ArrowDown" ? 1 : -1)
-      if (found >= 0) active = found
-      render()
-    } else if (event.key === "Enter") {
-      if (active < 0) return
-      // Not submitting the form, and not Ctrl+Enter of the inline form
+  return {
+    // ``typed``: {query, start} or null
+    update(typed) {
+      clearTimeout(timer)
+      if (!typed) {
+        close()
+        return
+      }
+      if (
+        current &&
+        current.query === typed.query &&
+        current.start === typed.start
+      )
+        return
+      current = typed
+      timer = setTimeout(() => load(typed), DELAY)
+    },
+    close,
+    // Whether the key was the list's
+    keydown(event) {
+      if (list.hidden) return false
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        const found = next(active, event.key === "ArrowDown" ? 1 : -1)
+        if (found >= 0) active = found
+        render()
+      } else if (event.key === "Enter") {
+        if (active < 0) return false
+        pick(results[active])
+      } else if (event.key === "Escape") {
+        close()
+      } else return false
+      // Not submitting the form, closing the inline form or a menu as well
       event.preventDefault()
       event.stopPropagation()
-      pick(results[active])
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      // Not closing the inline form or a menu as well
-      event.stopPropagation()
-      close()
-    }
-  })
+      return true
+    },
+  }
+}
 
-  field.addEventListener("blur", close)
+// The short name: pages show the current one, the label is a fallback
+const syntax = (person) => {
+  const label = (person.short_name || person.name).replace(/[[\]]/g, "")
+  return `[@${label}](person:${person.id}) `
+}
+
+function attach(field) {
+  const list = mentionList({
+    url: field.dataset.mentions,
+    visible: field.dataset.mentionsVisible,
+    anchor: field,
+    owner: field,
+    position(start) {
+      const caret = caretPosition(field, start)
+      return {
+        top: Math.min(
+          field.offsetTop + caret.top + caret.height - field.scrollTop,
+          field.offsetTop + field.offsetHeight,
+        ),
+        left: field.offsetLeft + caret.left - field.scrollLeft,
+      }
+    },
+    mentioned: () =>
+      new Set(
+        [...field.value.matchAll(/\]\(person:(\d+)\)/g)].map((m) => m[1]),
+      ),
+    onPick(typed, mention) {
+      field.setRangeText(mention, typed.start, field.selectionStart, "end")
+      field.dispatchEvent(new Event("input", { bubbles: true }))
+    },
+  })
+  // The rich editor (frontend/editor/) writes into the hidden field: not
+  // typed here
+  const rich = () => field.richEditor?.active
+  field.addEventListener("input", () =>
+    list.update(rich() ? null : queryAt(field)),
+  )
+  field.addEventListener("keydown", (event) => list.keydown(event))
+  field.addEventListener("blur", () => list.close())
 }
 
 export const attachAll = (root) => {

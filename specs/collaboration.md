@@ -6,13 +6,19 @@ meeting notes. No office suite.
 **Status:** built (2026-11-20), deployed: `biwak/collab/` (the
 websocket, the shared state), `asgi.py`, the doc operations in
 `biwak/files/operations.py`, `files/doc_live.html`, `frontend/collab.js`.
+Since 2026-11-22 the editor is the rich editor (`rich-editor.md`), the
+shared document its `Y.XmlFragment` instead of the Markdown text.
 
 ## Approach
 
-- **Yjs** in the browser, bound to CodeMirror 6 (`y-codemirror.next`):
-  docs are Markdown (decided 2026-11-20), so the shared document is the
-  Markdown text itself (`content`). Cursors and names of the others,
-  offline edits merged on reconnect.
+- **Yjs** in the browser, bound to the rich editor (ProseMirror through
+  `y-prosemirror`, `frontend/editor/live.js`; decided 2026-11-22,
+  `rich-editor.md`): the shared document is the editor's document, a
+  `Y.XmlFragment` named `prosemirror`; docs stay Markdown in
+  `Doc.content`, which the server writes from it (`biwak/richtext/`).
+  Before, it was CodeMirror on the Markdown text itself (`content`,
+  decided 2026-11-20). Cursors and names of the others, offline edits
+  merged on reconnect.
 - **Server side: Channels with `pycrdt` and our own consumer** (decided
   2026-11-20 after a spike against Hocuspocus and pycrdt-websocket's
   `YjsConsumer`, which keeps a Y document per connection). The reasons:
@@ -82,28 +88,39 @@ for or removes somebody else.
   its 10 minutes). What people typed who can't change the doc anymore is
   dropped unless others' updates build on it; then it stays without
   credit (decided 2026-11-20).
+- **Storing writes Markdown** (`collab/ytext.py`): the document
+  serialized like the browser's editor would, keeping `Doc.content`
+  where the document is what it says and the source of unchanged blocks
+  (and its line break at the end), so saving changes only what was
+  edited.
 - **Edits from elsewhere** (the API, the CLI, restoring a version, a
-  tick): applied as a minimal diff to the stored state (a three-way
-  merge by Yjs, so unsaved typing stays), sent to the open editors after
-  the commit, saved at once.
-- **Line breaks are LF only** (`biwak/text.py`): CodeMirror counts CR LF
-  as one character, Yjs as two, and edits landed off.
+  tick): the Markdown parsed and applied as a deep diff to the stored
+  state (`biwak/richtext/diff.py`: attributes such as a tick set,
+  lists recursed into, text diffed by characters around mentions,
+  images and breaks; a merge by Yjs, so unsaved typing stays except in
+  a block the edit deletes), sent to the open editors after the commit,
+  saved at once.
+- **Line breaks are LF only** (`biwak/text.py`).
 - **The page:** "Edit" opens the editor (`/docs/<id>/edit/`), "Watch
   live" for who can't edit. A status line (connecting, saved as you
   type, offline, watching, gone), who else is here, "Save as a
   version", attaching files. Read-only until the first sync. The title
   is the text's first line (`files.md`, "Docs"). Without JavaScript the
-  page shows the text. Typing `@` doesn't complete names in the editor
-  yet (the syntax works).
+  page shows the text. Typing `@` lists people as in every field.
 - **Read-only** (`Doc.read_only`, staff on the page, `read_only` in
   `PATCH /api/v1/docs/{id}/`, `biwak doc read-only DOC [--off]`): nobody
   edits, staff neither, until staff switch it off; no event; its
   checkboxes can't be ticked, comments still can.
 - **Frontend:** `frontend/collab.js` is a chunk loaded on the editor
-  page only (about 400 KB, fine): Yjs, y-websocket (cross-tab
-  broadcasting off), CodeMirror with the Markdown language only, Yjs'
-  undo, the toolbar of `editor.md`. Unsent typing is kept in IndexedDB
-  (`connection.md`).
+  page only: Yjs, y-websocket (cross-tab broadcasting off), the rich
+  editor with y-prosemirror (its undo, per person; the others' cursors
+  and names), the toolbar of `editor.md` without the "Markdown" switch.
+  Unsent typing is kept in IndexedDB (`connection.md`).
+- **Existing live states** were rebuilt once (migration
+  `collab.0004_rich_editor`, no users yet): what was typed and not
+  merged went into `Doc.content`, the states were deleted; the first
+  editor makes a new one (a new history, so copies kept in browsers are
+  dropped, not merged).
 
 ## Running it
 

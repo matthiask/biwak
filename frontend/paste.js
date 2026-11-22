@@ -9,11 +9,11 @@ import { replace } from "./toolbar.js"
 
 // HTML with something worth keeping. Plain text copied from an editor comes
 // as HTML too (a div per line), which must stay as it is.
-const MARKUP =
+export const MARKUP =
   /<(a|b|strong|i|em|h[1-6]|ul|ol|li|blockquote|pre|code|table|del|s|strike)[\s>]|font-weight:\s*(bold|[6-9]00)|font-style:\s*italic|line-through/i
-const URL_ONLY = /^https?:\/\/\S+$/
+export const URL_ONLY = /^https?:\/\/\S+$/
 
-async function toMarkdown(url, html) {
+export async function toMarkdown(url, html) {
   const response = await send(url, { html })
   if (!response.ok) throw new Error(response.status)
   return (await response.json()).markdown
@@ -62,9 +62,11 @@ function attach(field, url) {
   })
 }
 
+export const pasteUrl = () =>
+  document.querySelector("template[data-toolbar-template]")?.dataset.pasteUrl
+
 function attachAll(root) {
-  const url = document.querySelector("template[data-toolbar-template]")?.dataset
-    .pasteUrl
+  const url = pasteUrl()
   if (!url) return
   for (const field of root.querySelectorAll("textarea[data-toolbar]")) {
     if (field.dataset.pasteAttached) continue

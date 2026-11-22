@@ -1,14 +1,20 @@
-"""The Markdown of a doc as a Yjs document (pycrdt), shared with the
-browsers' Yjs (``frontend/collab.js``: ``ydoc.getText("content")``)"""
+"""A doc's text as a Yjs document (pycrdt), shared with the browsers' rich
+editor (``frontend/editor/live.js``): y-prosemirror's ``Y.XmlFragment`` of
+the editor's document (specs/rich-editor.md, "Live docs"), read and written
+here through ``biwak.richtext``. ``Doc.content`` stays Markdown: written
+by our serializer, which writes what the browser's would, keeping the old
+text where the document didn't change."""
 
-from difflib import SequenceMatcher
+from pycrdt import Decoder, Doc
 
-from pycrdt import Decoder, Doc, Text
-
+from biwak.richtext import diff
+from biwak.richtext.parse import parse
+from biwak.richtext.preserve import to_markdown
+from biwak.richtext.ydoc import FRAGMENT, to_ydoc
 from biwak.text import line_breaks
 
 
-TEXT = "content"
+__all__ = ["FRAGMENT"]
 
 
 def ydoc(state=b"", updates=()):
@@ -20,45 +26,32 @@ def ydoc(state=b"", updates=()):
     return doc
 
 
-def text(doc):
-    return str(doc.get(TEXT, type=Text))
+def document(doc):
+    """The editor's document (``biwak.richtext.tree``)"""
+    return diff.document(doc)
+
+
+def text(doc, old=""):
+    """The document as Markdown; ``old``, the text it was made from (the
+    stored content), is kept where nothing changed"""
+    return to_markdown(document(doc), line_breaks(old or ""))
+
+
+def means(doc, content):
+    """Whether the document is what ``content`` says"""
+    return document(doc) == parse(line_breaks(content))
 
 
 def initial_state(content):
     """The state of a doc edited live for the first time"""
-    doc = Doc()
-    doc.get(TEXT, type=Text).insert(0, line_breaks(content))
-    return doc.get_update()
+    return to_ydoc(parse(line_breaks(content))).get_update()
 
 
 def edit(doc, new):
-    """Changes the text to ``new`` with as few edits as possible, so that
-    what others type at the same time stays; returns the update (empty
-    when nothing changed)"""
-    new = line_breaks(new)
-    ytext = doc.get(TEXT, type=Text)
-    old = str(ytext)
-    if old == new:
-        return b""
-    before = doc.get_state()
-    # pycrdt counts in UTF-8 bytes; the diff is in characters. Edited from
-    # the end, so that the positions before each edit stay valid.
-    opcodes = SequenceMatcher(None, old, new, autojunk=False).get_opcodes()
-    with doc.transaction():
-        for tag, i1, i2, j1, j2 in reversed(opcodes):
-            if tag == "equal":
-                continue
-            # Inserting first: the new text then follows what's before it
-            # and precedes what it replaces, so text others add after the
-            # replaced text stays after it
-            start = len(old[:i1].encode())
-            inserted = new[j1:j2].encode()
-            if inserted:
-                ytext.insert(start, new[j1:j2])
-            if i2 > i1:
-                begin = start + len(inserted)
-                del ytext[begin : begin + len(old[i1:i2].encode())]
-    return doc.get_update(before)
+    """Changes the document to the Markdown ``new`` with as few changes as
+    possible (a deep diff), so that what others type at the same time
+    stays; returns the update (empty when nothing changed)"""
+    return diff.edit(doc, line_breaks(new))
 
 
 def clocks(doc):

@@ -1,28 +1,20 @@
-// Docs edited live (specs/collaboration.md): the Markdown in CodeMirror,
-// shared through Yjs with the server's websocket (biwak/collab/), the
-// others' cursors and names (awareness). The server says whether we may
-// type (our message MODE) and closes with 4404 when the doc isn't ours to
-// see anymore. Offline, typing goes on, kept in the browser (collab-store.js);
-// Yjs merges it on reconnect.
+// Docs edited live (specs/collaboration.md, specs/rich-editor.md): the rich
+// editor (frontend/editor/live.js) on the doc's Yjs document, shared with the
+// server's websocket (biwak/collab/), the others' cursors and names
+// (awareness). The server says whether we may type (our message MODE) and
+// closes with 4404 when the doc isn't ours to see anymore. Offline, typing
+// goes on, kept in the browser (collab-store.js); Yjs merges it on
+// reconnect.
 
-import { defaultKeymap, indentWithTab } from "@codemirror/commands"
-import { markdownLanguage } from "@codemirror/lang-markdown"
-import {
-  defaultHighlightStyle,
-  LanguageSupport,
-  syntaxHighlighting,
-} from "@codemirror/language"
-import { Compartment, EditorState, Prec } from "@codemirror/state"
-import { drawSelection, EditorView, keymap } from "@codemirror/view"
 import * as decoding from "lib0/decoding"
-import { yCollab, yUndoManagerKeymap } from "y-codemirror.next"
 import { WebsocketProvider } from "y-websocket"
 import * as Y from "yjs"
 import { avatar } from "./avatar.js"
 import { keepInBrowser } from "./collab-store.js"
 import { report } from "./connection.js"
+import { liveEditor } from "./editor/live.js"
 import { csrfToken } from "./http.js"
-import { attachToEditor, editorKeys } from "./toolbar.js"
+import { attachToEditor } from "./toolbar.js"
 
 // biwak/collab/consumers.py
 const MESSAGE_MODE = 100
@@ -33,7 +25,6 @@ function setUp(container) {
   const status = container.querySelector("[data-collab-status]")
   const people = container.querySelector("[data-collab-people]")
   const ydoc = new Y.Doc()
-  const ytext = ydoc.getText("content")
   const scheme = location.protocol === "https:" ? "wss:" : "ws:"
   const [base, room] = container.dataset.collab
     .match(/^(.*)\/([^/]+)$/)
@@ -52,47 +43,38 @@ function setUp(container) {
   let mayType = false
   let synced = false
   let gone = false
-  const editable = new Compartment()
-  const editableNow = () => {
-    // Before the first sync the editor is empty: typing would go before
-    // the text
-    const yes = mayType && synced && !gone
-    return [EditorState.readOnly.of(!yes), EditorView.editable.of(yes)]
-  }
-  // The toolbar's shortcuts before CodeMirror's own keys
-  let toolbar = null
+  // Before the first sync the editor is empty: typing would go before the
+  // text
+  const editable = () => mayType && synced && !gone
   const editorElement = container.querySelector("[data-collab-editor]")
-  const view = new EditorView({
-    parent: editorElement,
-    state: EditorState.create({
-      doc: ytext.toString(),
-      extensions: [
-        drawSelection(),
-        EditorView.lineWrapping,
-        // Not markdown(): it brings HTML, CSS and JavaScript along
-        new LanguageSupport(markdownLanguage),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        keymap.of([...yUndoManagerKeymap, ...defaultKeymap, indentWithTab]),
-        editable.of(editableNow()),
-        yCollab(ytext, provider.awareness),
-        EditorView.contentAttributes.of({ "aria-label": document.title }),
-        Prec.highest(
-          EditorView.domEventHandlers({
-            keydown: (event) => editorKeys(toolbar, event),
-          }),
-        ),
-      ],
-    }),
+  let upload = null
+  const editor = liveEditor(editorElement, {
+    ydoc,
+    awareness: provider.awareness,
+    mayType: editable,
+    upload: (files) => {
+      if (!upload) return false
+      upload(files)
+      return true
+    },
+    mentionsUrl: container.dataset.mentions,
+    label: document.title,
+    attachmentUrl: document.querySelector("template[data-toolbar-template]")
+      ?.dataset.attachmentUrl,
   })
-  container.collab = { provider, view, ydoc }
+  container.collab = { provider, editor, ydoc }
   // The same toolbar as above every Markdown field (toolbar.js), shown
   // while one may type
-  toolbar = attachToEditor(view, editorElement)
+  const toolbar = attachToEditor(
+    editor,
+    editorElement,
+    container.dataset.mentions,
+  )
   const bar = toolbar && editorElement.previousElementSibling
 
   const update = () => {
-    view.dispatch({ effects: editable.reconfigure(editableNow()) })
-    if (bar) bar.hidden = !(mayType && synced && !gone)
+    editor.refresh()
+    if (bar) bar.hidden = !editable()
     let text = texts.collabConnecting
     if (gone) text = texts.collabGone
     else if (synced && !mayType) text = texts.collabWatching
@@ -130,22 +112,22 @@ function setUp(container) {
   const startDraft = () => {
     if (!draft || started || !mayType) return
     started = true
-    view.dispatch({ selection: { anchor: view.state.doc.length } })
-    view.focus()
+    editor.focusEnd()
   }
+  const fragment = ydoc.getXmlFragment("prosemirror")
   const written = () => {
-    if (!draft || !ytext.toString().replace(/#/g, "").trim()) return
+    if (!draft || !editor.text().trim()) return
     history.replaceState(history.state, "", draft)
     draft = null
-    ytext.unobserve(written)
+    fragment.unobserveDeep(written)
   }
-  ytext.observe(written)
+  fragment.observeDeep(written)
   provider.on("status", update)
   provider.on("closed", ({ code }) => {
     if (code !== CLOSE_NOT_FOUND) return
     gone = true
     provider.destroy()
-    view.destroy()
+    editor.destroy()
     people.textContent = ""
     update()
   })
@@ -166,12 +148,13 @@ function setUp(container) {
     )
   })
 
-  if (container.dataset.attachments) attachments(container, view)
+  if (container.dataset.attachments)
+    upload = attachments(container, editor, editable)
 }
 
 // Attaching files (specs/files.md): dropping, pasting or the button
-// uploads them and inserts the Markdown at the cursor
-function attachments(container, view) {
+// uploads them and inserts the Markdown at the cursor; returns the upload
+function attachments(container, editor, editable) {
   const {
     attachments: url,
     attachmentsMax,
@@ -205,19 +188,14 @@ function attachments(container, view) {
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail)
-      const { from, to } = view.state.selection.main
-      const before = view.state.sliceDoc(from - 1, from)
-      const text = (before && !/\s/.test(before) ? " " : "") + data.markdown
-      view.dispatch({
-        changes: { from, to, insert: text },
-        selection: { anchor: from + text.length },
-      })
+      if (editable()) editor.insertMarkdown(data.markdown)
       show("")
     } catch (exc) {
       show(exc.message || attachmentsFailed)
     }
   }
   const uploadAll = (files) => {
+    if (!editable()) return
     for (const file of files) upload(file)
   }
 
@@ -232,30 +210,14 @@ function attachments(container, view) {
     input.addEventListener("change", () => {
       uploadAll(input.files)
       input.value = ""
-      view.focus()
+      editor.view.focus()
     })
     const wrapper = document.createElement("div")
     wrapper.className = "wb-attach"
     wrapper.append(button, input)
     error.before(wrapper)
   }
-  view.dom.addEventListener("drop", (event) => {
-    if (
-      !event.dataTransfer?.files.length ||
-      !view.state.facet(EditorView.editable)
-    )
-      return
-    event.preventDefault()
-    const position = view.posAtCoords({ x: event.clientX, y: event.clientY })
-    if (position != null) view.dispatch({ selection: { anchor: position } })
-    uploadAll(event.dataTransfer.files)
-  })
-  view.dom.addEventListener("paste", (event) => {
-    const files = event.clipboardData?.files
-    if (!files?.length || !view.state.facet(EditorView.editable)) return
-    event.preventDefault()
-    uploadAll(files)
-  })
+  return uploadAll
 }
 
 for (const container of document.querySelectorAll("[data-collab]")) {
