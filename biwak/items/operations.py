@@ -1494,20 +1494,22 @@ def copy_list(item, *, project, title, actor, dates=Dates.KEEP, days=0, visible=
         )
         new.save()
         due_on = todo.due_on
+        starts_on = todo.starts_on
         ends_on = todo.recurrence_ends_on
         if dates == Dates.SHIFT:
             delta = dt.timedelta(days=days)
             due_on = due_on and due_on + delta
+            starts_on = starts_on and starts_on + delta
             ends_on = ends_on and ends_on + delta
         elif dates == Dates.REMOVE:
-            due_on = None
-        # TODO(start-dates): shift and remove ``starts_on`` with ``due_on``
-        # once start-dates.md is merged
+            # A start date needs a due date (start-dates.md)
+            due_on = starts_on = None
         Todo.objects.create(
             item=new,
             group=group,
             notes=_copy_attachments(todo.notes, todo_item, new, actor=actor),
             due_on=due_on,
+            starts_on=starts_on,
             recurrence=todo.recurrence,
             recurrence_ends_on=ends_on,
             recurrence_count=todo.recurrence_count,

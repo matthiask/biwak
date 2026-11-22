@@ -5,9 +5,8 @@ top-level items to another project. Decided with the user 2026-11-22.
 Project templates are left to an agent skill that sets up projects
 through the CLI (`api-cli.md`, "Agent skills").
 
-**Status:** built 2026-11-22 (branch `lists-across-projects`); start
-dates shift with due dates once `start-dates.md` is merged too (a TODO
-in `copy_list()`, done at the merge).
+**Status:** built 2026-11-22; start dates shift and go with due dates
+(added when both were merged).
 
 Depends on: `core.md` (moving, "Move to…"), `access.md` (visibility,
 showing to clients asks first), `todos.md`, `files.md`,

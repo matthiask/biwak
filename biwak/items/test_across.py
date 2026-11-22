@@ -151,9 +151,17 @@ class CopyListTest(Fixture, TestCase):
         self.assertEqual(self.copy(title="Other").title, "Other")
 
     def test_dates(self):
+        # Start dates move with due dates (start-dates.md)
+        ops.update_todo(self.tent, actor=self.ada, starts_on=dt.date(2026, 11, 29))
         copy = self.copy(dates=ops.Dates.SHIFT, days=7)
         tent = ops.open_todos(copy).first()
         self.assertEqual(tent.todo.due_on, dt.date(2026, 12, 8))
+        self.assertEqual(tent.todo.starts_on, dt.date(2026, 12, 6))
+        copy = self.copy()
+        self.assertEqual(
+            ops.open_todos(copy).first().todo.starts_on, dt.date(2026, 11, 29)
+        )
+        copy = self.copy(dates=ops.Dates.SHIFT, days=7)
         self.assertEqual(tent.todo.recurrence_ends_on, dt.date(2027, 3, 8))
         copy = self.copy(dates=ops.Dates.SHIFT, days=-1)
         self.assertEqual(
@@ -162,6 +170,7 @@ class CopyListTest(Fixture, TestCase):
         copy = self.copy(dates=ops.Dates.REMOVE)
         tent = ops.open_todos(copy).first()
         self.assertIsNone(tent.todo.due_on)
+        self.assertIsNone(tent.todo.starts_on)
         # The rule stays
         self.assertEqual(tent.todo.recurrence, "FREQ=WEEKLY")
 
