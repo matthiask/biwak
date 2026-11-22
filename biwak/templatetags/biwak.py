@@ -649,3 +649,26 @@ def posted_here(form, group):
     return form.is_bound and str(form.data.get("group") or "") == (
         str(group.pk) if group else ""
     )
+
+
+class CaptureNode(template.Node):
+    def __init__(self, nodelist, name):
+        self.nodelist = nodelist
+        self.name = name
+
+    def render(self, context):
+        context[self.name] = mark_safe(self.nodelist.render(context).strip())
+        return ""
+
+
+@register.tag
+def capture(parser, token):
+    """``{% capture as subject %}…{% endcapture %}``: the rendered block as a
+    variable, so that ``{% blocktranslate %}`` can place it in a whole
+    sentence (specs/languages.md: German orders the words differently)"""
+    bits = token.split_contents()
+    if len(bits) != 3 or bits[1] != "as":
+        raise template.TemplateSyntaxError("Usage: {% capture as name %}")
+    nodelist = parser.parse(("endcapture",))
+    parser.delete_first_token()
+    return CaptureNode(nodelist, bits[2])

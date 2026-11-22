@@ -431,9 +431,9 @@ def _occurrence(item, occurrence):
     if occurrence is None:
         occurrence = latest_occurrence(item)
         if occurrence is None:
-            raise ValueError("The question hasn't been asked yet.")
+            raise ValueError(gettext("The question hasn't been asked yet."))
     elif occurrence.question_id != item.pk:
-        raise ValueError("The occurrence belongs to another question.")
+        raise ValueError(gettext("The occurrence belongs to another question."))
     return occurrence
 
 

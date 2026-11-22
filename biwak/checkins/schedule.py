@@ -17,6 +17,8 @@ Two times of day are odd on the days the clocks change:
 import datetime as dt
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from django.utils.translation import gettext
+
 from biwak import schedules
 
 
@@ -25,7 +27,9 @@ def zone(name):
     try:
         return ZoneInfo(name)
     except (ZoneInfoNotFoundError, ValueError, OSError) as exc:
-        raise ValueError(f"Unknown time zone: {name}") from exc
+        raise ValueError(
+            gettext("Unknown time zone: %(name)s") % {"name": name}
+        ) from exc
 
 
 def fire_at(day, time_of_day, time_zone):

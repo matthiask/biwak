@@ -467,7 +467,8 @@ class LibraryTest(Fixture, TestCase):
         self.assertContains(response, "Show to clients")
         response = self.client.get(url)
         self.assertContains(response, "Show this folder to clients?")
-        self.assertContains(response, "items below it")
+        # One doc in it: the plural follows the count
+        self.assertContains(response, "1 item below it and 0 comments")
         self.assertContains(response, "visible to 1 client.")
         self.client.post(url, {"visible": "1"})
         self.private.refresh_from_db()

@@ -9,6 +9,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.urls import reverse
+from django.utils.dates import WEEKDAYS_ABBR
 from django.utils.formats import date_format
 from django.utils.html import format_html
 from django.utils.translation import gettext, gettext_lazy as _
@@ -126,8 +127,11 @@ class RuleWidget(forms.Widget):
                 ("yearly", gettext("Yearly")),
             ],
             weekdays=[
-                (code, str(full)[:3], full, code in fields["weekdays"])
-                for code, full in zip(schedules.DAYS, schedules.DAY_NAMES, strict=True)
+                # Django's abbreviations: "Mon", "Mo" (specs/languages.md)
+                (code, WEEKDAYS_ABBR[i], full, code in fields["weekdays"])
+                for i, (code, full) in enumerate(
+                    zip(schedules.DAYS, schedules.DAY_NAMES, strict=True)
+                )
             ],
             ordinals=[
                 (n, str(schedules.ORDINALS[n])) for n in schedules.ORDINAL_VALUES

@@ -177,7 +177,7 @@ function attachments(container, editor, editable) {
       show(attachmentsTooLarge)
       return
     }
-    show(`${attachmentsUploading} ${file.name}…`)
+    show(attachmentsUploading.replace("%(name)s", () => file.name))
     const body = new FormData()
     body.append("file", file, file.name)
     try {
@@ -191,7 +191,8 @@ function attachments(container, editor, editable) {
       if (editable()) editor.insertMarkdown(data.markdown)
       show("")
     } catch (exc) {
-      show(exc.message || attachmentsFailed)
+      // A network error's message is the browser's, in English
+      show((exc instanceof TypeError ? "" : exc.message) || attachmentsFailed)
     }
   }
   const uploadAll = (files) => {

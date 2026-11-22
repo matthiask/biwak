@@ -22,7 +22,12 @@ function size(bytes) {
     value /= 1024
     unit += 1
   }
-  return `${unit ? value.toFixed(1) : value} ${units[unit]}`
+  // The page's decimal separator: "1,5 MB" in German
+  const number = new Intl.NumberFormat(document.documentElement.lang || "en", {
+    maximumFractionDigits: unit ? 1 : 0,
+    minimumFractionDigits: unit ? 1 : 0,
+  }).format(value)
+  return `${number} ${units[unit]}`
 }
 
 function split(name) {
