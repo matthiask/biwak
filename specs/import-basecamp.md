@@ -44,6 +44,14 @@ goes into internal containers, archived recordings skipped.
   tool as it starts, a line every 25 items with the requests sent and
   the time so far, a summary per project, and every wait of a second or
   more (the rate limit, a 429, a server error being retried).
+- **Later runs skip what didn't change** (decided 2026-11-22): each
+  imported recording remembers Basecamp's `updated_at` and comment
+  count; when both are the same, the recording isn't updated and its
+  comments and subscribers aren't fetched (the two requests per
+  recording that made a second run as slow as the first). The report
+  counts them as unchanged. Changed subscriptions don't change
+  `updated_at`, so they come along only with `--full`, which reads
+  everything as before.
 - **Several tools of a kind** (two to-do sets, several message boards
   or Docs & Files) are merged as they come (decided 2026-11-22): their
   lists, messages and files land together in the project. The report
