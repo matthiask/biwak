@@ -285,16 +285,26 @@ def bookmarked(user, items=None):
     items = bookmarked_items(user) if items is None else items
     if not items:
         return []
-    latest = wanted(
-        list(
-            notifications_for(user)
-            .filter(event__item__in=items)
-            .order_by("event__item_id", "-created_at", "-pk")
-            .distinct("event__item_id")
-        ),
-        user,
-    )
-    latest.sort(key=lambda n: (n.created_at, n.pk), reverse=True)
+    notifications = notifications_for(user).filter(event__item__in=items)
+    # The unread ones and the latest read one of each item go through
+    # wanted(), then the latest left of each item: the latest may cancel
+    # out against another, an older one still shows the item (an unread
+    # one is in the badge's count)
+    candidates = [
+        *notifications.filter(read_at__isnull=True),
+        *notifications
+        .filter(read_at__isnull=False)
+        .order_by("event__item_id", "-created_at", "-pk")
+        .distinct("event__item_id"),
+    ]
+    latest = {}
+    for notification in sorted(
+        wanted(candidates, user),
+        key=lambda n: (n.created_at, n.pk),
+        reverse=True,
+    ):
+        latest.setdefault(notification.event.item_id, notification)
+    latest = list(latest.values())
     groups = by_item(prepare(latest, user), batches=False)
     for item, _entries in groups:
         item.is_bookmarked = True
