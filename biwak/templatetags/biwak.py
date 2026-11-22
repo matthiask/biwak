@@ -165,6 +165,24 @@ def checklist_markdown(context, text, item, comment=None, *, without_title=False
     )
 
 
+@register.simple_tag
+def public_markdown(text, link, *, without_title=False):
+    """The text on the public page of ``link`` (specs/public-links.md):
+    nobody looked up, checkboxes disabled, the item's attachments through
+    the token"""
+    return render_markdown(
+        text, link.item, without_title=without_title, public_token=link.token
+    )
+
+
+@register.filter
+def parse_datetime(value):
+    """A time stored as ISO text (an event's ``data``), or None"""
+    from django.utils.dateparse import parse_datetime as parse
+
+    return parse(value) if isinstance(value, str) else value
+
+
 @register.filter
 def mail_markdown(text, item=None):
     """For mails: like ``markdown``, attachment URLs with BASE_URL and
@@ -181,8 +199,12 @@ def render_markdown(
     tickable=False,
     glyphs=False,
     without_title=False,
+    public_token=None,
 ):
     """``absolute`` for the API and mails: attachment URLs with BASE_URL.
+    ``public_token``: the public page of the link with this token
+    (specs/public-links.md): mentions as written, nobody looked up, the
+    item's attachments through the token.
     ``attachment_urls=False`` skips looking them up (excerpts don't show
     them). ``tickable`` leaves task list checkboxes enabled, ``glyphs``
     turns them into ☐ and ☑ (mails). ``without_title`` leaves out the
@@ -191,11 +213,15 @@ def render_markdown(
     from biwak.activity.mentions import mentioned_ids, reader, visible_people
 
     text = str(text or "")
-    people = visible_people(item, mentioned_ids(text)) if item is not None else {}
+    people = (
+        visible_people(item, mentioned_ids(text))
+        if item is not None and public_token is None
+        else {}
+    )
     env = {
         "people": people,
         "reader": reader(),
-        "links": not absolute and not glyphs,
+        "links": not absolute and not glyphs and public_token is None,
         "tickable": tickable,
         "glyphs": glyphs,
     }
@@ -203,7 +229,7 @@ def render_markdown(
     if without_title:
         tokens = _without_title(text, tokens)
     if attachment_urls:
-        _attachment_urls(tokens, item, absolute=absolute)
+        _attachment_urls(tokens, item, absolute=absolute, public_token=public_token)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
@@ -230,7 +256,7 @@ def _attachment_reference(token):
     return None
 
 
-def _attachment_urls(tokens, item, *, absolute):
+def _attachment_urls(tokens, item, *, absolute, public_token=None):
     """``attachment:KEY`` (specs/files.md) becomes the download URL; images
     show inline, scaled to the text's width. Whoever reads the text may
     not see the attachment: the download checks. Only the item's own
@@ -262,7 +288,14 @@ def _attachment_urls(tokens, item, *, absolute):
                 continue
             attr, key = reference
             if attachment := found.get(key):
-                url = attachment.get_absolute_url()
+                url = (
+                    reverse(
+                        "public_attachment",
+                        args=[public_token, attachment.key, attachment.name],
+                    )
+                    if public_token
+                    else attachment.get_absolute_url()
+                )
                 child.attrSet(attr, settings.BASE_URL + url if absolute else url)
                 if attr == "src":
                     child.attrJoin("class", "wb-attachment-image")

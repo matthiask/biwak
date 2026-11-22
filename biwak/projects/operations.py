@@ -517,7 +517,11 @@ def projects_to_join(user):
 
 @transaction.atomic
 def archive_project(project, *, actor):
-    """Out of the lists and the feed; everything stays readable"""
+    """Out of the lists and the feed; everything stays readable. Its
+    public links end for good (specs/public-links.md)."""
+    from biwak.public_links.operations import end_links
+
+    end_links(project=project)
     project.archived_at = timezone.now()
     project.save(update_fields=["archived_at"])
     record(actor=actor, action=Action.ARCHIVED, project=project)

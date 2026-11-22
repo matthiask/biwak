@@ -26,13 +26,15 @@ from biwak.live import announce as live
 
 # Events which tell nobody: pinning (specs/files.md), taking somebody off a
 # to-do (specs/timeline.md: the timeline and the feed say it), archiving a
-# list (specs/archiving.md)
+# list (specs/archiving.md), public links (specs/public-links.md)
 SILENT = {
     Action.PINNED,
     Action.UNPINNED,
     Action.UNASSIGNED,
     Action.ARCHIVED,
     Action.UNARCHIVED,
+    Action.SHARED_PUBLICLY,
+    Action.STOPPED_SHARING,
 }
 
 

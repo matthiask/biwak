@@ -28,6 +28,13 @@
   {% if what %}{{ what }}{% else %}{% include "activity/_subject.html" %}
     {% if event.assignee_names %}{% translate "with" %}
       {{ event.assignee_names|join:", " }}{% endif %}{% endif %}
+{% elif event.action == "shared_publicly" %}
+  {% translate "shared" %}
+  {% include "activity/_subject.html" %}
+  {% translate "publicly" %}
+  {% if event.data.expires_at and not what %}{% blocktranslate with date=event.data.expires_at|parse_datetime|date:"j. M Y" %}until {{ date }}{% endblocktranslate %}{% endif %}
+{% elif event.action == "stopped_sharing" %}
+  {% translate "stopped sharing" %} {% include "activity/_subject.html" %} {% translate "publicly" %}
 {% elif event.action == "commented" %}
   {% translate "commented on" %} {% include "activity/_subject.html" %}
 {% elif event.action == "reacted" %}

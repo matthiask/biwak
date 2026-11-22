@@ -64,6 +64,7 @@ INSTALLED_APPS = [
         "biwak.activity",
         "biwak.files",
         "biwak.bookmarks",
+        "biwak.public_links",
         "biwak.reactions",
         "biwak.checkins",
         "biwak.search",
