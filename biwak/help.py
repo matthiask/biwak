@@ -100,6 +100,9 @@ def help_page(request, page=""):
     if page not in _pages(language):
         raise Http404
     context = {
+        # German readers see the English help for now, with a line saying so
+        # (specs/languages.md, decided 2026-11-22)
+        "english_only": _pages(language) is not PAGES[language],
         "chapters": chapters(page, language),
         "shortcuts": page in WITH_SHORTCUTS,
     }

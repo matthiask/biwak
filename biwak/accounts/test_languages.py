@@ -187,3 +187,16 @@ class CalendarLanguageTest(TestCase):
             )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(seen, ["de"])
+
+
+class HelpTest(TestCase):
+    def test_german_readers_are_told_the_help_is_english(self):
+        self.client.force_login(person("Ada", language="de"))
+        response = self.client.get("/help/orientation/")
+        self.assertContains(response, "Die Hilfe gibt es vorerst nur auf Englisch.")
+        self.assertContains(response, '<div lang="en">')
+        # How to choose, in English
+        self.assertContains(response, "Settings, &quot;Language&quot;")
+        self.client.force_login(person("Bea", language="en"))
+        response = self.client.get("/help/orientation/")
+        self.assertNotContains(response, 'id="help-in-english"')
