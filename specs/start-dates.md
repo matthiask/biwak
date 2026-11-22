@@ -48,7 +48,7 @@ recurrence), `dashboard.md` (Home), `glance.md` (rows), `editor.md`,
   timeline says "changed the dates to 3–7 Dec 2026" once a start date is
   or was involved, else as before. Notifications as for due dates.
 - **API and CLI:** `starts_on` next to `due_on`; `biwak todo … --starts
-  DATE` (`none` removes it; CLI 0.46.0), tables show "start – due".
+  DATE` (`none` removes it; CLI 0.47.0, 0.46.0 on its branch), tables show "start – due".
   **Importer:** Basecamp's `starts_on`; one without a due date or after
   it isn't brought.
 - Copying a list (`lists-across-projects.md`) shifts start dates with
