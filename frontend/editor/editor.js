@@ -26,6 +26,7 @@ import { ACTIONS } from "./commands.js"
 import { clipboardTextParser, linkify, tasks } from "./plugins.js"
 import { fenceOnEnter, rules } from "./rules.js"
 import { schema } from "./schema.js"
+import { tableShape } from "./tables.js"
 
 const { nodes } = schema
 
@@ -150,6 +151,7 @@ export function plugins({ extra = [], undo: commands, link } = {}) {
     ...keys({ commands, link }),
     ...(commands ? [] : [history()]),
     tableEditing(),
+    tableShape,
     linkify,
     tasks,
   ]

@@ -19,6 +19,7 @@ import { askLink } from "./link.js"
 import { parse, serialize } from "./markdown.js"
 import { markdownSlice, mentions, pasting } from "./plugins.js"
 import { setAttachmentUrl } from "./schema.js"
+import { tableBar } from "./tables.js"
 
 const template = () => document.querySelector("template[data-toolbar-template]")
 
@@ -74,6 +75,8 @@ function upgrade(textarea) {
           ]
         : []),
       pasting({ upload }),
+      // (after the hidden field: the editor stays right before it)
+      tableBar({ anchor: place, after: textarea }),
     ],
     link: (view) => askLink(view, place.parentElement),
   })

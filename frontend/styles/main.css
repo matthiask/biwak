@@ -2290,6 +2290,32 @@ button.wb-signal:hover {
   box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
 }
 
+/* The bar of the table the cursor is in (frontend/editor/tables.js):
+   above the table, wrapping on narrow screens */
+.wb-table-bar {
+  position: absolute;
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  max-width: 100%;
+  padding: 0.125rem;
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
+  border-radius: var(--bs-border-radius);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
+}
+
+.wb-table-bar .btn[aria-pressed="true"] {
+  background-color: var(--wb-primary-bg);
+  color: var(--wb-primary-ink);
+}
+
+.wb-table-bar .btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* The toolbar above Markdown fields (toolbar.js, specs/editor.md): always
    visible; on narrow screens it wraps into a second row, so the paperclip
    is always there */

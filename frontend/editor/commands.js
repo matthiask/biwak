@@ -6,6 +6,7 @@ import { lift, setBlockType, toggleMark, wrapIn } from "prosemirror-commands"
 import { liftListItem, wrapInList } from "prosemirror-schema-list"
 import { TextSelection } from "prosemirror-state"
 import { schema } from "./schema.js"
+import { insertTable } from "./tables.js"
 
 const { nodes, marks } = schema
 
@@ -183,6 +184,7 @@ export const ACTIONS = {
   quote: toggleQuote,
   code: toggleCode,
   mention: startMention,
+  table: insertTable,
 }
 
 // Which buttons show as pressed (aria-pressed)

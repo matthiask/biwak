@@ -241,3 +241,33 @@
 .bi-moon-stars::before {
   content: "\f496";
 }
+.bi-table::before {
+  content: "\f5aa";
+}
+.bi-arrow-bar-up::before {
+  content: "\f115";
+}
+.bi-arrow-bar-down::before {
+  content: "\f112";
+}
+.bi-arrow-bar-left::before {
+  content: "\f113";
+}
+.bi-arrow-bar-right::before {
+  content: "\f114";
+}
+.bi-dash-square::before {
+  content: "\f2e9";
+}
+.bi-x-square::before {
+  content: "\f629";
+}
+.bi-text-left::before {
+  content: "\f5c7";
+}
+.bi-text-center::before {
+  content: "\f5c4";
+}
+.bi-text-right::before {
+  content: "\f5c9";
+}

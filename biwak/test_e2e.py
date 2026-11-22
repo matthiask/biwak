@@ -1252,6 +1252,22 @@ class CollabTest(E2ETestCase):
         expect(bar.locator('[data-toolbar-action="source"]')).to_be_hidden()
         self.assertEqual(self.errors, [])
 
+    def test_tables_in_a_live_doc(self):
+        page = self.editor(self.ada)
+        self.content(page).click()
+        page.keyboard.press("ControlOrMeta+End")
+        page.keyboard.press("Enter")
+        page.locator('[data-collab] [data-toolbar-action="table"]').click()
+        page.keyboard.type("Day")
+        bar = page.locator(".wb-table-bar")
+        bar.locator('[data-table-action="align-center"]').click()
+        bar.locator('[data-table-action="row-below"]').click()
+        self.wait_for_text(
+            page, "Agenda\n\n| Day |  |\n| :---: | --- |\n|  |  |\n|  |  |"
+        )
+        self.wait_for_stored("Agenda\n\n| Day |  |\n| :---: | --- |\n|  |  |\n|  |  |")
+        self.assertFalse(self.errors)
+
     def test_a_tick_in_another_browser_arrives_in_the_open_editor(self):
         """Ticks on docs never wait (specs/editor.md): one browser has the
         editor open and typed something not stored yet, another ticks the

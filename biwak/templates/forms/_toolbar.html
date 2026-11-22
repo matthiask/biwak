@@ -75,6 +75,9 @@
   <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="code" title="{% translate 'Code' %}">
     {% icon "code-slash" %}<span class="visually-hidden">{% translate "Code" %}</span>
   </button>
+  <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="table" title="{% translate 'Insert table' %}">
+    {% icon "table" %}<span class="visually-hidden">{% translate "Insert table" %}</span>
+  </button>
   <button type="button" class="btn btn-sm btn-quiet" data-toolbar-action="mention" title="{% translate 'Mention' %}">
     {% icon "at" %}<span class="visually-hidden">{% translate "Mention" %}</span>
   </button>
@@ -86,5 +89,84 @@
     aria-pressed="false"
   >
     {% icon "markdown" %}<span class="visually-hidden">{% translate "Markdown" %}</span>
+  </button>
+</template>
+{% comment %}
+  The bar of a table in the rich editor (frontend/editor/tables.js,
+  specs/rich-editor.md, "Tables"): shown while the cursor is in a table.
+{% endcomment %}
+<template data-table-bar-template data-label="{% translate 'Table' %}">
+  <button type="button" class="btn btn-sm btn-quiet" data-table-action="row-above" title="{% translate 'Row above' %}">
+    {% icon "arrow-bar-up" %}<span class="visually-hidden">{% translate "Row above" %}</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-quiet" data-table-action="row-below" title="{% translate 'Row below' %}">
+    {% icon "arrow-bar-down" %}<span class="visually-hidden">{% translate "Row below" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="column-left"
+    title="{% translate 'Column left' %}"
+  >
+    {% icon "arrow-bar-left" %}<span class="visually-hidden">{% translate "Column left" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="column-right"
+    title="{% translate 'Column right' %}"
+  >
+    {% icon "arrow-bar-right" %}<span class="visually-hidden">{% translate "Column right" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="delete-row"
+    title="{% translate 'Delete row' %}"
+  >
+    {% icon "dash-square" %}<span class="visually-hidden">{% translate "Delete row" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="delete-column"
+    title="{% translate 'Delete column' %}"
+  >
+    {% icon "x-square" %}<span class="visually-hidden">{% translate "Delete column" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="delete-table"
+    title="{% translate 'Delete table' %}"
+  >
+    {% icon "trash" %}<span class="visually-hidden">{% translate "Delete table" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="align-left"
+    title="{% translate 'Align left' %}"
+    aria-pressed="false"
+  >
+    {% icon "text-left" %}<span class="visually-hidden">{% translate "Align left" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="align-center"
+    title="{% translate 'Center' %}"
+    aria-pressed="false"
+  >
+    {% icon "text-center" %}<span class="visually-hidden">{% translate "Center" %}</span>
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-quiet"
+    data-table-action="align-right"
+    title="{% translate 'Align right' %}"
+    aria-pressed="false"
+  >
+    {% icon "text-right" %}<span class="visually-hidden">{% translate "Align right" %}</span>
   </button>
 </template>

@@ -660,3 +660,138 @@ class CompositionTest(E2ETestCase):
         compose(self.page, ["さ", "さく"], "作")
         self.assertEqual(self.field.input_value(), "- **ü作**")
         self.assertEqual(self.errors, [])
+
+
+class TableTest(E2ETestCase):
+    """Inserting tables and the table's bar (specs/rich-editor.md,
+    "Tables")"""
+
+    def setUp(self):
+        super().setUp()
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+        self.bar = self.page.locator(".wb-table-bar")
+
+    def action(self, name):
+        return self.bar.locator(f'[data-table-action="{name}"]')
+
+    def test_inserting_and_changing_a_table(self):
+        self.box.click()
+        self.box.press_sequentially("Plan")
+        self.box.press("Enter")
+        self.page.locator('[data-toolbar-action="table"]').click()
+        expect(self.bar).to_be_visible()
+        expect(self.bar).to_have_attribute("role", "toolbar")
+        self.box.press_sequentially("Day")
+        self.assertEqual(
+            self.field.input_value(), "Plan\n\n| Day |  |\n| --- | --- |\n|  |  |"
+        )
+        # In the header row: no deleting it, no row above it
+        expect(self.action("delete-row")).to_have_attribute("aria-disabled", "true")
+        expect(self.action("row-above")).to_have_attribute("aria-disabled", "true")
+        self.action("delete-row").click(force=True)
+        self.action("row-below").click()
+        self.action("column-right").click()
+        self.action("align-right").click()
+        expect(self.action("align-right")).to_have_attribute("aria-pressed", "true")
+        self.assertEqual(
+            self.field.input_value(),
+            "Plan\n\n| Day |  |  |\n| ---: | --- | --- |\n|  |  |  |\n|  |  |  |",
+        )
+        self.action("align-right").click()
+        expect(self.action("align-right")).to_have_attribute("aria-pressed", "false")
+        self.action("delete-table").click()
+        expect(self.bar).to_be_hidden()
+        self.assertEqual(self.field.input_value(), "Plan")
+        self.assertEqual(self.errors, [])
+
+    def test_the_bar_by_keyboard(self):
+        self.set_markdown(self.field, "| a | b |\n| --- | --- |\n| 1 | 2 |")
+        self.box.locator("td").first.click()
+        expect(self.bar).to_be_visible()
+        # Alt+F10 goes to the bar, the arrows move
+        self.box.press("Alt+F10")
+        first = self.action("row-above")
+        expect(first).to_be_focused()
+        self.page.keyboard.press("ArrowRight")
+        expect(self.action("row-below")).to_be_focused()
+        self.page.keyboard.press("Enter")
+        self.assertEqual(
+            self.field.input_value(), "| a | b |\n| --- | --- |\n| 1 | 2 |\n|  |  |"
+        )
+        expect(self.bar).to_be_visible()
+        self.page.keyboard.press("End")
+        expect(self.action("align-right")).to_be_focused()
+        self.page.keyboard.press("Escape")
+        expect(self.box).to_be_focused()
+        # Back where it was
+        self.box.press("Alt+F10")
+        expect(self.action("align-right")).to_be_focused()
+        self.page.keyboard.press("Escape")
+        # Tab leaves the field as everywhere, past the bar
+        self.box.press("Tab")
+        expect(self.box).not_to_be_focused()
+        for button in self.bar.locator("button").all():
+            expect(button).not_to_be_focused()
+        # Out of the table: no bar
+        self.box.press("ControlOrMeta+Home")
+        self.set_markdown(self.field, "Text only")
+        expect(self.bar).to_be_hidden()
+
+    def test_the_source_gets_a_table_too(self):
+        self.set_markdown(self.field, "Plan")
+        self.page.locator('[data-toolbar-action="source"]').click()
+        self.field.evaluate("el => el.setSelectionRange(4, 4)")
+        self.page.locator('[data-toolbar-action="table"]').click()
+        self.assertEqual(
+            self.field.input_value(), "Plan\n\n|  |  |\n| --- | --- |\n|  |  |\n"
+        )
+
+
+class PasteMarkdownTest(E2ETestCase):
+    """Plain text that is clearly Markdown is parsed when pasted
+    (specs/rich-editor.md); detect.test.js has the detection's cases"""
+
+    def setUp(self):
+        super().setUp()
+        self.page = self.login(
+            self.ada, permissions=["clipboard-read", "clipboard-write"]
+        )
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+
+    def paste(self, text, key="Control+v"):
+        self.page.evaluate("text => navigator.clipboard.writeText(text)", text)
+        self.box.focus()
+        self.box.press(key)
+
+    def test_markdown_is_parsed_and_undo_makes_it_text(self):
+        self.paste("## Packing\n\n- tent\n- stove")
+        expect(self.box.locator("h2")).to_have_text("Packing")
+        expect(self.field).to_have_value("## Packing\n\n- tent\n- stove")
+        self.box.press("ControlOrMeta+z")
+        expect(self.box.locator("h2")).to_have_count(0)
+        expect(self.field).to_have_value("\\## Packing\n\n\\- tent\n\\- stove")
+        self.box.press("ControlOrMeta+z")
+        expect(self.field).to_have_value("")
+
+    def test_a_table_and_links(self):
+        self.paste("| a | b |\n| :--- | --- |\n| 1 | 2 |")
+        expect(self.box.locator("table")).to_have_count(1)
+        self.box.press("ControlOrMeta+End")
+        self.paste("See [the plan](https://example.org/plan).")
+        expect(self.box.locator("a")).to_have_text("the plan")
+
+    def test_code_and_mails_stay_text(self):
+        self.paste("# set up\nx = pitch(tent)")
+        expect(self.box.locator("h1")).to_have_count(0)
+        expect(self.field).to_have_value("\\# set up\nx = pitch(tent)")
+        self.set_markdown(self.field, "")
+        self.paste("Hi,\n* the tent is ordered\nBob")
+        expect(self.box.locator("ul")).to_have_count(0)
+
+    def test_ctrl_shift_v_is_always_text(self):
+        self.paste("- tent\n- stove", key="Control+Shift+v")
+        expect(self.box.locator("ul")).to_have_count(0)

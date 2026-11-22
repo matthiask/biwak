@@ -85,8 +85,9 @@ attach.
   toggle; they edit through `execCommand("insertText")`, so undo works,
   and only touch the range they change.
 - Keys: Ctrl+B, Ctrl+I, Ctrl+Shift+7/8/9 (numbered, bulleted,
-  checklist), Tab and Shift+Tab indent list lines (elsewhere Tab leaves
-  the field), **Ctrl+K** a link (decided 2026-11-21: in fields Ctrl+K is
+  checklist), Alt+F10 in a table its bar (`rich-editor.md`), Tab and
+  Shift+Tab indent list lines (elsewhere Tab leaves the field),
+  **Ctrl+K** a link (decided 2026-11-21: in fields Ctrl+K is
   "link", elsewhere the palette; Escape leaves the field).
 - Roving tab stop. On narrow screens the toolbar wraps into a second
   row (decided 2026-11-21), the paperclip always reachable.
@@ -109,5 +110,6 @@ attach.
   attachments; **Ctrl+Shift+V** pastes plain text.
 - **In the rich editor** (`rich-editor.md`) the converter's Markdown is
   parsed and inserted as blocks or inline; plain text stays text (lines
-  are breaks, blank lines paragraphs); copies from the editor itself
+  are breaks, blank lines paragraphs) unless it is clearly Markdown
+  (`rich-editor.md`, decided 2026-11-22); copies from the editor itself
   paste as they are, mentions included (decided 2026-11-22, to confirm).

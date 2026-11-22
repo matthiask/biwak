@@ -150,6 +150,14 @@ function lines(field, kind) {
   }
 }
 
+// A 2×2 table with a header row, on lines of its own
+function table(field) {
+  const { value, selectionEnd: end } = field
+  const lead = end > 0 && value[end - 1] !== "\n" ? "\n\n" : ""
+  const text = `${lead}|  |  |\n| --- | --- |\n|  |  |\n`
+  edit(field, end, end, text, lead.length + 2)
+}
+
 function mention(field) {
   const { value, selectionStart: start, selectionEnd: end } = field
   const lead = start > 0 && !/[\s(]/.test(value[start - 1]) ? " " : ""
@@ -189,6 +197,7 @@ const ACTIONS = {
   numbers: (field) => lines(field, KINDS.numbers),
   tasks: (field) => lines(field, KINDS.tasks),
   quote: (field) => lines(field, KINDS.quote),
+  table,
 }
 
 // What the keys do, by `event.code` (Shift+7 is "&" on some layouts)

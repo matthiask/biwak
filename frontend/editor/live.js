@@ -10,6 +10,7 @@ import {
   yCursorPlugin,
   ySyncPlugin,
   yUndoPlugin,
+  yUndoPluginKey,
 } from "y-prosemirror"
 import { ACTIONS } from "./commands.js"
 import { createView, plugins } from "./editor.js"
@@ -18,6 +19,7 @@ import { FRAGMENT } from "./live-schema.js"
 import { serialize } from "./markdown.js"
 import { markdownSlice, mentions, pasting } from "./plugins.js"
 import { schema, setAttachmentUrl } from "./schema.js"
+import { tableBar } from "./tables.js"
 
 export { FRAGMENT }
 
@@ -39,7 +41,15 @@ export function liveEditor(
         yCursorPlugin(awareness),
         yUndoPlugin(),
         ...(mentionsUrl ? [mentions({ url: mentionsUrl, anchor: place })] : []),
-        pasting({ upload: (files) => (upload ? upload(files) : false) }),
+        pasting({
+          upload: (files) => (upload ? upload(files) : false),
+          // Pasted Markdown's parsing is an undo step of its own
+          separate: () =>
+            yUndoPluginKey
+              .getState(editor.view.state)
+              ?.undoManager.stopCapturing(),
+        }),
+        tableBar({ anchor: place }),
       ],
       // Yjs' undo: one's own changes only
       undo: { undo, redo },

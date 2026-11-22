@@ -1,10 +1,13 @@
 // The editor's behaviour beyond typing (specs/rich-editor.md): bare URLs
 // becoming links while typing, ticking task items, the `@` list, pasting.
+
+import { closeHistory } from "prosemirror-history"
 import { Fragment, Slice } from "prosemirror-model"
 import { Plugin, PluginKey, Selection } from "prosemirror-state"
 import { Mapping } from "prosemirror-transform"
 import { mentionList, mentionQuery } from "../mentions.js"
 import { MARKUP, pasteUrl, toMarkdown, URL_ONLY } from "../paste.js"
+import { isMarkdown } from "./detect.js"
 import { md, parse } from "./markdown.js"
 import { schema } from "./schema.js"
 
@@ -261,7 +264,27 @@ export function markdownSlice(markdown) {
 // link, rich text goes through the server's converter (/paste/markdown/,
 // specs/editor.md) and is parsed; the editor's own copies paste as
 // themselves; Ctrl+Shift+V pastes plain text
-export function pasting({ upload }) {
+// Plain text that is clearly Markdown (detect.js): pasted as text first,
+// then parsed in a step of its own, so that undo right after turns it back
+// into the text; ``separate()`` closes the undo step of other undo
+// managers (Yjs')
+function pasteMarkdown(view, text, separate) {
+  const start = view.state.selection.from
+  const first = view.state.tr.replaceSelection(
+    clipboardTextParser(text, view.state.selection.$from),
+  )
+  view.dispatch(first)
+  separate?.()
+  const end = view.state.selection.to
+  const second = view.state.tr.replaceRange(
+    first.mapping.map(start, -1),
+    end,
+    markdownSlice(text),
+  )
+  view.dispatch(closeHistory(second).scrollIntoView())
+}
+
+export function pasting({ upload, separate }) {
   return new Plugin({
     props: {
       handleDOMEvents: {
@@ -299,16 +322,20 @@ export function pasting({ upload }) {
           return true
         }
         const html = data.getData("text/html")
-        // Plain text pasting (Ctrl+Shift+V) and plain text: ProseMirror's
-        // own (clipboardTextParser); the editor's own copies too
-        if (view.input?.shiftKey || !html || /data-pm-slice/.test(html))
+        const plain = data.getData("text/plain")
+        // Ctrl+Shift+V: ProseMirror's own plain text (clipboardTextParser),
+        // the editor's own copies too
+        if (view.input?.shiftKey || /data-pm-slice/.test(html || ""))
           return false
-        if (!MARKUP.test(html)) {
-          // HTML without formatting (code from an editor: a div per line)
-          const slice = clipboardTextParser(
-            data.getData("text/plain"),
-            state.selection.$from,
-          )
+        if (!html || !MARKUP.test(html)) {
+          // Plain text, or HTML without formatting (code from an editor: a
+          // div per line); clear Markdown is parsed
+          if (!$inCode(state) && isMarkdown(plain)) {
+            pasteMarkdown(view, plain, separate)
+            return true
+          }
+          if (!html) return false
+          const slice = clipboardTextParser(plain, state.selection.$from)
           view.dispatch(state.tr.replaceSelection(slice).scrollIntoView())
           return true
         }
