@@ -5,7 +5,7 @@ from django.test import TestCase
 from biwak import test_cli
 from biwak.accounts.models import APIToken
 from biwak.organizations.models import Organization
-from biwak.test_utils import organization, partner, person
+from biwak.test_utils import external, organization, person
 
 
 class APITest(TestCase):
@@ -29,7 +29,7 @@ class APITest(TestCase):
         )
 
     def test_only_own_staff(self):
-        for user in [self.cleo, partner("Pia")]:
+        for user in [self.cleo, external("Pia")]:
             with self.subTest(user=user):
                 self.assertEqual(
                     self.call("get", "organizations/", user=user).status_code, 403

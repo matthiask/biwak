@@ -23,7 +23,7 @@ def organization(name="Example Client Ltd", **kwargs):
 def person(name="Ada", *, client=False, **kwargs):
     """Clients belong to "Example Client Ltd", staff to the installation's
     own organization, unless ``organization`` says otherwise (a name, an
-    organization or None: an individual, a partner if staff)"""
+    organization or None: an individual, an external if staff)"""
     if "organization" in kwargs:
         org = kwargs.pop("organization")
     else:
@@ -39,7 +39,7 @@ def person(name="Ada", *, client=False, **kwargs):
     )
 
 
-def partner(name="Pia", *, organization_name="Example Partner Agency", **kwargs):
+def external(name="Pia", *, organization_name="Example External Agency", **kwargs):
     """Staff of another organization: sees only the projects they're
     members of (specs/access.md)"""
     return person(name, organization=organization_name, **kwargs)

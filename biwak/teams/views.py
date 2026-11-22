@@ -1,6 +1,6 @@
 """The pages of teams (specs/teams.md, "Managing teams"): a section of the
 People page, a page per team, and modals to create, edit and delete them
-(``biwak/modals.py``). Staff see teams (partners the members they may
+(``biwak/modals.py``). Staff see teams (externals the members they may
 know), own staff manage them; clients get 404."""
 
 from django import forms
@@ -60,7 +60,7 @@ class TeamForm(Form):
         queryset=User.objects.none(),
         widget=PeopleSelect(attrs={"data-placeholder": gettext_lazy("Add people…")}),
         help_text=gettext_lazy(
-            "Anyone, staff, partners and clients. Picking the team picks its"
+            "Anyone, staff, externals and clients. Picking the team picks its"
             " members; changing the team later doesn't change earlier picks."
         ),
     )

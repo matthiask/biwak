@@ -11,7 +11,7 @@ from biwak.accounts import operations
 from biwak.accounts.test_images import picture
 from biwak.activity import operations as activity_ops
 from biwak.items import operations as item_ops
-from biwak.test_utils import check_in_answers, organization, partner, person, project
+from biwak.test_utils import check_in_answers, external, organization, person, project
 
 
 class PlacesTest(TestCase):
@@ -20,7 +20,7 @@ class PlacesTest(TestCase):
         self.ada = person("Ada")
         self.ben = person("Ben")
         self.cleo = person("Cleo", client=True)
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         self.camp = project("Camp", members=[self.ada, self.cleo, self.pia])
         operations.set_image(self.ada, picture(), actor=self.ada)
         self.image = self.ada.image_url

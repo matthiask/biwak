@@ -5,7 +5,7 @@ import re
 
 from django.test import TestCase
 
-from biwak.test_utils import organization, partner, person, project
+from biwak.test_utils import external, organization, person, project
 
 
 class PeoplePageTest(TestCase):
@@ -16,7 +16,7 @@ class PeoplePageTest(TestCase):
         self.zed = person("Zed", is_active=False)
         self.cleo = person("Cleo", client=True, organization="Zebra Clients")
         self.dora = person("Dora", client=True, organization="Zebra Clients")
-        self.pia = partner("Pia", organization_name="Alpine Agency")
+        self.pia = external("Pia", organization_name="Alpine Agency")
         self.finn = person("Finn", organization=None)  # a freelancer
         self.ivy = person("Ivy", client=True, organization=None)
         self.camp = project("Camp", members=[self.ada, self.pia, self.cleo])
@@ -58,7 +58,7 @@ class PeoplePageTest(TestCase):
                 "Ivy Example",
             ],
         )
-        self.assertContains(response, "Partner organization")
+        self.assertContains(response, "External organization")
         self.assertContains(response, "Client organization")
         self.assertContains(response, "inactive")
         self.assertContains(response, f'href="{self.own.get_absolute_url()}"')
@@ -66,10 +66,10 @@ class PeoplePageTest(TestCase):
         self.assertContains(response, f'href="/people/{self.cleo.pk}/"')
         self.assertContains(response, f"/people/{self.cleo.pk}/organization/")
         # Roles
-        for word in ["admin", "staff", "partner", "client"]:
+        for word in ["admin", "staff", "external", "client"]:
             self.assertContains(response, f">{word}</span>")
 
-    def test_a_partner_sees_the_people_of_their_projects(self):
+    def test_an_external_sees_the_people_of_their_projects(self):
         response = self.page(self.pia)
         self.assertEqual(
             self.headings_and_names(response),
@@ -113,7 +113,7 @@ class PeoplePageTest(TestCase):
         self.assertNotContains(response, "/organization/")
 
     def test_your_own_organization_only_for_its_people(self):
-        """Clients and partners see the own organization by its name, not as
+        """Clients and externals see the own organization by its name, not as
         "Your own organization" (fixed 2026-11-22)"""
         self.assertContains(self.page(self.ada), "Your own organization")
         for viewer in [self.cleo, self.pia]:

@@ -1,7 +1,7 @@
 """Activating and deactivating people (specs/activation.md): the importer
 creates people without an account inactive on purpose; deactivating ends
 the access of somebody who left. Own staff change clients, admins also own
-staff and partners (decided 2026-11-21); clients never. Both are all or
+staff and externals (decided 2026-11-21); clients never. Both are all or
 nothing for several people."""
 
 from typing import NamedTuple

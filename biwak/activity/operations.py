@@ -219,7 +219,7 @@ NOTE_LENGTH = 200
 
 def subscribable_people(item, by):
     """Whom ``by`` may subscribe to the item: the active people who can see
-    it (``mentions.mentionable_people()``), and for clients and partners
+    it (``mentions.mentionable_people()``), and for clients and externals
     only those they may know (``mentions.known_to()``), as everywhere;
     not ``by`` themselves, who has their own button"""
     from biwak.activity import mentions

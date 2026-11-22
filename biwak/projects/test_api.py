@@ -135,7 +135,7 @@ class ProjectGapsAPITest(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_only_own_staff_remove_themselves(self):
-        """Clients and partners don't leave (decided 2026-11-22)"""
+        """Clients and externals don't leave (decided 2026-11-22)"""
         pia = person("Pia", organization="Example Agency")
         for user in [self.cleo, pia]:
             Membership.objects.create(project=self.open, user=user)

@@ -134,7 +134,7 @@ class MembersTest(TestCase):
         self.assertNotContains(response, "/remove/")
         self.assertNotContains(response, "Leave")
 
-    def test_partners_dont_remove_themselves(self):
+    def test_externals_dont_remove_themselves(self):
         pia = person("Pia", organization="Example Agency")
         Membership.objects.create(project=self.project, user=pia)
         self.client.force_login(pia)

@@ -279,14 +279,14 @@ class Importer(Resolver):
         client = bool(person.get("client"))
         company = (person.get("company") or {}).get("name", "")
         # Basecamp's employees are the account's own company; other staff
-        # ("collaborators") are partners (specs/organizations.md)
-        partner = not client and not person.get("employee", True)
-        kind = "client" if client else "partner" if partner else "staff"
+        # ("collaborators") are externals (specs/organizations.md)
+        external = not client and not person.get("employee", True)
+        kind = "client" if client else "external" if external else "staff"
         label = f"{name} <{email}> ({kind}{', ' + company if company else ''})"
         self.report.people.append(label)
         if self.dry:
             return None
-        if client or partner:
+        if client or external:
             organization = self._organization(company)
         else:
             organization = Organization.objects.own()

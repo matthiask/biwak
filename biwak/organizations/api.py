@@ -23,7 +23,7 @@ class OrganizationOut(Schema):
     name: str
     domains: list[str]
     # The own organization: its staff see all-access projects, staff of
-    # the others (partners) only the projects they're members of
+    # the others (externals) only the projects they're members of
     is_own: bool
     # How its people sign in (specs/sso.md): "codes", "sso_allowed" or
     # "sso_required", and the identity provider ("google", "microsoft" or

@@ -49,7 +49,7 @@ def all_projects(
     user, *, no_staff=False, limited=False, inactive=False, archived=False
 ):
     """Every project (not archived ones unless ``archived``) by name, with
-    ``active_staff`` (active staff and partners among the members),
+    ``active_staff`` (active staff and externals among the members),
     ``client_organizations`` (of the active client members, by name),
     ``open_todos`` and ``inactive_todos`` (open, with assignees who are
     all inactive) in lists not archived, ``can_open`` and ``joinable``
@@ -117,7 +117,7 @@ def all_projects(
 
 def all_projects_page(request):
     """``/projects/all/``: the table with its filters; 404 for clients and
-    partners, 403 for other staff (as activation's pages)"""
+    externals, 403 for other staff (as activation's pages)"""
     user = request.user
     if not can_see(user):
         if user.is_client or not project_ops.can_manage_members(user):

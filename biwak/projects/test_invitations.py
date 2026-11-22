@@ -13,7 +13,7 @@ from biwak.activity.models import Action, Event, LevelOverride
 from biwak.items import operations as ops
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import organization, partner, person, project
+from biwak.test_utils import external, organization, person, project
 
 
 def row(email, **kwargs):
@@ -106,7 +106,7 @@ class OperationTest(TestCase):
             {
                 1: "This person has been deactivated.",
                 2: "Only admins can invite staff.",
-                3: "Only admins add people to your own organization or a partner"
+                3: "Only admins add people to your own organization or an external"
                 " organization.",
                 4: "This address is in another row too.",
             },
@@ -121,9 +121,9 @@ class OperationTest(TestCase):
         )
         self.assertFalse(invited.user.is_client)
 
-    def test_clients_and_partners_dont_invite(self):
+    def test_clients_and_externals_dont_invite(self):
         cleo = person("Cleo", client=True)
-        pia = partner()
+        pia = external()
         for actor in [cleo, pia]:
             with self.assertRaises(PermissionError):
                 self.invite([row("dora@example.net")], actor=actor)
@@ -275,7 +275,7 @@ class FormTest(TestCase):
         # Staff can't choose: the field isn't there, they're clients
         self.assertContains(
             response,
-            "Only admins add people to your own organization or a partner"
+            "Only admins add people to your own organization or an external"
             " organization.",
         )
         self.assertContains(response, "This address is in another row too.")
@@ -313,8 +313,8 @@ class FormTest(TestCase):
         )
         self.assertFalse(User.objects.get(email="staff@example.net").is_client)
 
-    def test_clients_and_partners_cant(self):
-        pia = partner()
+    def test_clients_and_externals_cant(self):
+        pia = external()
         Membership.objects.create(project=self.website, user=pia)
         for user in [self.cleo, pia]:
             self.client.force_login(user)
@@ -655,8 +655,8 @@ class APITest(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_clients_and_partners_cant(self):
-        pia = partner()
+    def test_clients_and_externals_cant(self):
+        pia = external()
         Membership.objects.create(project=self.website, user=pia)
         dora, _created = project_ops.invite(
             self.website, email="dora@example.net", actor=self.ada

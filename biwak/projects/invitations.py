@@ -170,7 +170,7 @@ def member_invite(request, pk):
 
 def invitation_for(request, pk):
     """An invitation the person may manage, else 404 (for people who aren't
-    invitations) or 403 (clients, partners, staff for staff's)"""
+    invitations) or 403 (clients, externals, staff for staff's)"""
     if not project_ops.can_manage_members(request.user):
         raise PermissionDenied
     user = get_object_or_404(User.objects.invited(), pk=pk)

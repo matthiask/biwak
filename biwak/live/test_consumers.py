@@ -291,17 +291,17 @@ class LiveConsumerTest(TransactionTestCase):
 
     # Losing access -----------------------------------------------------------
 
-    async def test_partners_only_in_their_projects(self):
+    async def test_externals_only_in_their_projects(self):
         """Staff of another organization (specs/access.md): all-access
-        projects they aren't members of are refused, and becoming a partner
+        projects they aren't members of are refused, and becoming an external
         closes the page"""
         bob = await self.connect(self.bob, self.todo)
 
-        def make_partner():
-            self.bob.organization = organization("Example Partner Agency")
+        def make_external():
+            self.bob.organization = organization("Example External Agency")
             self.bob.save()
 
-        await self.run_op(make_partner)
+        await self.run_op(make_external)
         await self.assertClosed(bob)
         bob = await self.connect(self.bob, self.todo, ready=False)
         await self.assertClosed(bob)

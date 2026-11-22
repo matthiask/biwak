@@ -27,7 +27,7 @@ class OrganizationForm(forms.ModelForm):
             )
         if data.get("is_own") and not was_own:
             for old in Organization.objects.filter(is_own=True):
-                org_ops._no_admin_partners(org_ops._admins_in(old), own_after=False)
+                org_ops._no_admin_externals(org_ops._admins_in(old), own_after=False)
         # The same checks as the organization's page (specs/sso.md)
         if {"signin", "idp", "tenant_id"} & set(self.changed_data):
             org = Organization(pk=self.instance.pk, domains=data.get("domains") or [])

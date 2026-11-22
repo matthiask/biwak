@@ -4,7 +4,7 @@ among the people. Picking one adds its members at once, only those who'd be
 offered and available there, as if picked one by one; the entry says
 beforehand how many are left out and why (the reasons of greyed-out
 people). A team never adds anyone to a project. Clients never see teams;
-partners see only the members they may know (``known_people()``), as on
+externals see only the members they may know (``known_people()``), as on
 the People page."""
 
 from collections import Counter
@@ -32,7 +32,7 @@ def internal():
 def visible_teams(viewer, query=""):
     """``[(team, [members])]`` the viewer sees, by name, the members by name;
     teams whose name has every word of ``query``. Nothing for clients;
-    partners get the members they may know."""
+    externals get the members they may know."""
     if not can_see(viewer):
         return []
     teams = Team.objects.order_by(Lower("name"))

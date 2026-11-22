@@ -297,7 +297,7 @@ def todo_out(item, user):
 
 def _assignees_out(item, todo, user):
     """Those the reader may know (``people_known_to()``: clients and
-    partners don't learn about people removed from the project)"""
+    externals don't learn about people removed from the project)"""
     from biwak.projects.models import known_ids_for
 
     known = known_ids_for(user, item)
@@ -771,7 +771,7 @@ class SubscribersOut(Schema):
 
 
 def subscribers_out(item, user):
-    """The item's subscribers the person may know (clients and partners:
+    """The item's subscribers the person may know (clients and externals:
     the members), by name"""
     subscriptions = list(
         item.subscriptions.select_related("user", "added_by").order_by(

@@ -14,18 +14,18 @@ from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.organizations import activation
 from biwak.outbox.models import OutgoingMail
 from biwak.palette.test_actions import palette_data
-from biwak.test_utils import assert_modal, partner, person, project
+from biwak.test_utils import assert_modal, external, person, project
 
 
 class Base(TestCase):
     def setUp(self):
         self.root = person("Root", is_admin=True)
         self.ada = person("Ada")  # staff, no admin
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         self.cleo = person("Cleo", client=True, is_active=False)
         self.dora = person("Dora", client=True, is_active=False)
         self.staffer = person("Stan", is_active=False)
-        self.parter = partner("Paul", is_active=False)
+        self.extern = external("Paul", is_active=False)
         self.site = project("Site", members=[self.cleo, self.ada])
         self.archived = project("Old", members=[self.cleo])
         self.archived.archived_at = timezone.now()
@@ -77,10 +77,10 @@ class ActivateTest(Base):
         for actor, target, allowed in [
             (self.ada, self.cleo, True),
             (self.ada, self.staffer, False),
-            (self.ada, self.parter, False),
+            (self.ada, self.extern, False),
             (self.root, self.cleo, True),
             (self.root, self.staffer, True),
-            (self.root, self.parter, True),
+            (self.root, self.extern, True),
             (self.pia, self.cleo, False),
             (self.cleo, self.dora, False),
         ]:
@@ -118,8 +118,8 @@ class ActivateTest(Base):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_several_by_an_admin(self):
-        activation.activate([self.cleo, self.staffer, self.parter], actor=self.root)
-        for user in [self.cleo, self.staffer, self.parter]:
+        activation.activate([self.cleo, self.staffer, self.extern], actor=self.root)
+        for user in [self.cleo, self.staffer, self.extern]:
             self.assertTrue(self.active(user))
 
 
@@ -210,7 +210,7 @@ class DeactivateTest(Base):
         self.assertTrue(self.active(self.cleo))
         self.assertTrue(APIToken.objects.filter(user=self.cleo).exists())
 
-    def test_staff_and_partners_by_an_admin_only(self):
+    def test_staff_and_externals_by_an_admin_only(self):
         with self.assertRaises(PermissionError):
             activation.deactivate([self.pia], actor=self.ada)
         activation.deactivate([self.pia, self.ada], actor=self.root)
@@ -312,9 +312,9 @@ class PagesTest(Base):
             self.client.get(f"/people/{self.root.pk}/"), "Deactivate…"
         )
 
-    def test_staff_may_not_change_staff_and_partners(self):
+    def test_staff_may_not_change_staff_and_externals(self):
         self.client.force_login(self.ada)
-        for target in [self.staffer, self.parter]:
+        for target in [self.staffer, self.extern]:
             for name in ["activate", "deactivate"]:
                 with self.subTest(target=target, name=name):
                     url = f"/people/{target.pk}/{name}/"
@@ -326,7 +326,7 @@ class PagesTest(Base):
 
     def test_admins_change_everybody(self):
         self.client.force_login(self.root)
-        for target in [self.staffer, self.parter]:
+        for target in [self.staffer, self.extern]:
             response = self.client.post(f"/people/{target.pk}/activate/")
             self.assertEqual(response.status_code, 302)
             self.assertTrue(self.active(target))
@@ -341,7 +341,7 @@ class PagesTest(Base):
         self.assertContains(response, "You can&#x27;t deactivate yourself.")
         self.assertTrue(self.active(self.root))
 
-    def test_clients_and_partners(self):
+    def test_clients_and_externals(self):
         client = person("Chris", client=True)
         for user, status in [(client, 404), (self.pia, 404)]:
             self.client.force_login(user)
@@ -426,8 +426,8 @@ class APITest(Base):
         self.assertFalse(self.active(self.cleo))
         self.assertEqual(self.post("people/activate/", {"ids": []}).status_code, 400)
 
-    def test_staff_may_not_change_staff_or_partners(self):
-        for target in [self.staffer, self.parter]:
+    def test_staff_may_not_change_staff_or_externals(self):
+        for target in [self.staffer, self.extern]:
             self.assertEqual(
                 self.post(f"people/{target.pk}/activate/").status_code, 403
             )
@@ -439,7 +439,7 @@ class APITest(Base):
     def test_admins_change_everybody(self):
         self.api.force_login(self.root)
         response = self.post(
-            "people/activate/", {"ids": [self.staffer.pk, self.parter.pk]}
+            "people/activate/", {"ids": [self.staffer.pk, self.extern.pk]}
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(self.active(self.staffer))
@@ -470,7 +470,7 @@ class APITest(Base):
         self.assertEqual(response.status_code, 400)
         self.assertTrue(self.active(self.ada))
 
-    def test_clients_and_partners_get_403(self):
+    def test_clients_and_externals_get_403(self):
         for user in [person("Chris", client=True), self.pia]:
             self.api.force_login(user)
             with self.subTest(user=user):
@@ -489,7 +489,7 @@ class APITest(Base):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             {p["id"] for p in response.json()},
-            {self.cleo.pk, self.dora.pk, self.staffer.pk, self.parter.pk},
+            {self.cleo.pk, self.dora.pk, self.staffer.pk, self.extern.pk},
         )
         active = {p["id"] for p in self.api.get("/api/v1/people/").json()}
         self.assertIn(self.ada.pk, active)

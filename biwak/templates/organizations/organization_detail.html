@@ -49,7 +49,7 @@
     {% if organization.is_own %}
       {% translate "Its staff see all-access projects. Only admins move people in or out." %}
     {% else %}
-      {% translate "Its staff are partners: they only see the projects they're members of." %}
+      {% translate "Its staff are external: they only see the projects they're members of." %}
     {% endif %}
   </p>
   <p class="text-body-secondary" id="sign-in">
@@ -76,9 +76,9 @@
           {{ user }}
           {% if user.is_client %}<span
               class="badge wb-client-badge"
-            >{% translate "Client" %}</span>{% elif user.is_partner %}<span
+            >{% translate "Client" %}</span>{% elif user.is_external %}<span
               class="badge wb-tone-neutral"
-            >{% translate "Partner" %}</span>{% endif %}
+            >{% translate "External" %}</span>{% endif %}
           {% if not user.is_active %}<span class="badge wb-tone-neutral">{% translate "Inactive" %}</span>{% endif %}
           <div class="small text-body-secondary">{{ user.email }}</div>
         </div>

@@ -89,13 +89,13 @@ class OrganizationForm(Form):
         super().__init__(*args, **kwargs)
         if instance is not None and not org_ops.can_change_domains(user, instance):
             # They decide whose sign-ins count (specs/sso.md), or who is
-            # suggested for a partner organization (decided 2026-11-21)
+            # suggested for an external organization (decided 2026-11-21)
             self.fields["domains"].disabled = True
             self.fields["domains"].help_text = (
                 _("It signs in with %(provider)s: only admins change its domains.")
                 % {"provider": instance.idp_name}
                 if instance.sso
-                else _("A partner organization: only admins change its domains.")
+                else _("An external organization: only admins change its domains.")
             )
 
     def clean_name(self):
@@ -157,7 +157,7 @@ class MergeForm(Form):
         others = Organization.objects.exclude(pk=organization.pk)
         if not user.is_admin:
             others = others.exclude(is_own=True).exclude(
-                pk__in=org_ops.partner_organizations().values("pk")
+                pk__in=org_ops.external_organizations().values("pk")
             )
         self.fields["into"].queryset = others
 

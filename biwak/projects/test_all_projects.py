@@ -12,7 +12,7 @@ from biwak.items import operations as ops
 from biwak.organizations import activation
 from biwak.palette.test_actions import palette_data
 from biwak.projects.all_projects import all_projects
-from biwak.test_utils import organization, partner, person, project
+from biwak.test_utils import external, organization, person, project
 
 
 class Data:
@@ -116,7 +116,7 @@ class AllProjectsTest(Data, TestCase):
         self.assertNotContains(self.client.get("/projects/"), "/projects/all/")
         self.client.force_login(self.cleo)
         self.assertEqual(self.client.get("/projects/all/").status_code, 404)
-        self.client.force_login(partner("Pia"))
+        self.client.force_login(external("Pia"))
         self.assertEqual(self.client.get("/projects/all/").status_code, 404)
 
     def test_the_projects_page_links_it(self):

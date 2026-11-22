@@ -390,7 +390,7 @@ def item_subscribers(request, pk):
             Lower("user__full_name"), "user__email"
         )
     )
-    # Clients and partners only learn about the members
+    # Clients and externals only learn about the members
     known = {
         user.pk
         for user in item.project.people_known_to(

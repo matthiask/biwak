@@ -1,10 +1,10 @@
-"""Partners (specs/access.md, specs/organizations.md): staff of an
+"""Externals (specs/access.md, specs/organizations.md): staff of an
 organization other than the own one see only the projects
-they're members of, through every entry point. Pia is a partner and a
+they're members of, through every entry point. Pia is an external and a
 member of "Camp"; "Lodge" is all-access, without her; "Salaries" is
 limited. In Camp she knows its people (decided 2026-11-21): the members
 and the own staff, who open it as it's all-access; not Dora, a client of
-Lodge, nor Pat, a partner in no project."""
+Lodge, nor Pat, an external in no project."""
 
 import json
 
@@ -24,17 +24,17 @@ from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.organizations import operations as org_ops
 from biwak.projects.models import Project
-from biwak.test_utils import organization, partner, person, project
+from biwak.test_utils import external, organization, person, project
 
 
-class PartnerTestCase(TestCase):
+class ExternalTestCase(TestCase):
     def setUp(self):
         self.own = organization("Example Team", is_own=True)
         self.ada = person("Ada", organization=self.own)
         self.bob = person("Bob")  # without an organization: the own staff too
         self.cleo = person("Cleo", client=True)
-        self.pia = partner("Pia")
-        self.pat = partner("Pat")  # a partner in no project
+        self.pia = external("Pia")
+        self.pat = external("Pat")  # an external in no project
         self.dora = person("Dora", client=True)  # a client of Lodge only
         self.camp = project("Camp", members=[self.ada, self.pia, self.cleo])
         self.lodge = project("Lodge", members=[self.ada, self.dora])
@@ -56,7 +56,7 @@ class PartnerTestCase(TestCase):
         )
 
 
-class QueriesTest(PartnerTestCase):
+class QueriesTest(ExternalTestCase):
     def test_projects_and_items(self):
         accessible = Project.objects.accessible_to
         self.assertEqual(set(accessible(self.pia)), {self.camp})
@@ -86,14 +86,14 @@ class QueriesTest(PartnerTestCase):
                         can_see(user, item), user in set(who_can_see(item))
                     )
 
-    def test_partner_made_own_and_back(self):
+    def test_external_made_own_and_back(self):
         """An admin moving them in makes them see all-access projects"""
         root = person("Root", is_admin=True)
         org_ops.set_organization(self.pia, self.own, actor=root)
         self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
-        # Without one, an individual: a partner (decided 2026-11-21)
+        # Without one, an individual: an external (decided 2026-11-21)
         org_ops.set_organization(self.pia, None, actor=root)
-        self.assertTrue(self.pia.is_partner)
+        self.assertTrue(self.pia.is_external)
         self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
         org_ops.set_organization(self.pia, organization("Other Agency"), actor=root)
         self.assertNotIn(self.lodge, Project.objects.accessible_to(self.pia))
@@ -103,7 +103,7 @@ class QueriesTest(PartnerTestCase):
         self.assertIn(self.lodge, Project.objects.accessible_to(self.pia))
 
     def test_assignable_and_mentionable(self):
-        """Partners are assigned and mentioned as members only; they assign
+        """Externals are assigned and mentioned as members only; they assign
         and mention the project's people, like own staff, nobody else"""
         assignable = set(ops.assignable_people(self.camp_todo, self.ada))
         self.assertEqual(assignable, {self.ada, self.bob, self.pia})
@@ -151,7 +151,7 @@ class QueriesTest(PartnerTestCase):
             [self.bob, self.ada],
         )
 
-    def test_mentions_by_partners_reach_the_project_s_people(self):
+    def test_mentions_by_externals_reach_the_project_s_people(self):
         # Bob is own staff, not a member: he sees Camp's internal to-do
         with self.captureOnCommitCallbacks(execute=True):
             ops.add_comment(
@@ -164,7 +164,7 @@ class QueriesTest(PartnerTestCase):
         self.assertNotIn(self.pat, told)
 
 
-class PagesTest(PartnerTestCase):
+class PagesTest(ExternalTestCase):
     def setUp(self):
         super().setUp()
         self.client.force_login(self.pia)
@@ -197,7 +197,7 @@ class PagesTest(PartnerTestCase):
                 self.assertEqual(self.client.get(url).status_code, 200)
 
     def test_no_new_projects_or_members(self):
-        """The forms offer people and organizations partners don't know"""
+        """The forms offer people and organizations externals don't know"""
         self.assertEqual(self.client.get("/projects/new/").status_code, 403)
         people = f"/projects/{self.camp.pk}/people/"
         self.assertEqual(self.client.get(f"{people}add/").status_code, 403)
@@ -256,10 +256,10 @@ class PagesTest(PartnerTestCase):
         self.client.force_login(self.ada)
         response = self.client.get(f"/items/{self.camp_todo.pk}/mentionable/?q=Pia")
         [pia] = response.json()
-        self.assertEqual(pia["organization"], "Example Partner Agency")
+        self.assertEqual(pia["organization"], "Example External Agency")
 
 
-class NotificationsTest(PartnerTestCase):
+class NotificationsTest(ExternalTestCase):
     def told(self, run):
         before = set(Notification.objects.values_list("pk", flat=True))
         with self.captureOnCommitCallbacks(execute=True):
@@ -270,7 +270,7 @@ class NotificationsTest(PartnerTestCase):
         }
 
     def test_lantern_and_mails(self):
-        """Subscribed (e.g. before becoming a partner) to an item of a
+        """Subscribed (e.g. before becoming an external) to an item of a
         project they're not in: neither the lantern nor mails tell them"""
         subscribe(self.pia, self.lodge_todo)
         subscribe(self.bob, self.lodge_todo)
@@ -294,7 +294,7 @@ class NotificationsTest(PartnerTestCase):
         self.assertEqual(len(to_pia), 1)
         self.assertIn("Pitch the tents", to_pia[0].subject)
 
-    def test_mentions_dont_reach_partners_outside(self):
+    def test_mentions_dont_reach_externals_outside(self):
         mention = mentions.syntax(self.pia)
         told = self.told(
             lambda: ops.add_comment(
@@ -323,7 +323,7 @@ class NotificationsTest(PartnerTestCase):
                 self.assertEqual(mentions.plain(text, self.camp_todo), expected)
 
 
-class APITest(PartnerTestCase):
+class APITest(ExternalTestCase):
     def setUp(self):
         super().setUp()
         _token, secret = APIToken.create_for(user=self.pia, title="T", access="write")
@@ -356,13 +356,13 @@ class APITest(PartnerTestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_people(self):
-        """The person's organization and whether they're a partner"""
+        """The person's organization and whether they're an external"""
         member = next(
             m
             for m in self.get(f"projects/{self.camp.pk}/members/").json()
             if m["id"] == self.pia.pk
         )
-        self.assertEqual(member["organization"], "Example Partner Agency")
+        self.assertEqual(member["organization"], "Example External Agency")
         self.assertEqual(member["organization_id"], self.pia.organization_id)
 
     def send(self, method, path, data):
@@ -423,15 +423,15 @@ class APITest(PartnerTestCase):
 
 
 class CLITest(test_cli.CLITest):
-    def test_partners_assign_the_project_s_people(self):
-        """Ada, a partner now, assigns Bob (own staff with access to the
+    def test_externals_assign_the_project_s_people(self):
+        """Ada, an external now, assigns Bob (own staff with access to the
         all-access project) by ID, not Dora of another project"""
         bob = person("Bob")
         dora = person("Dora", client=True)
         project("Lodge", members=[dora])
         org_ops.set_organization(
             self.ada,
-            organization("Example Partner Agency"),
+            organization("Example External Agency"),
             actor=person("Root", is_admin=True),
         )
         result = self.biwak(
@@ -448,7 +448,7 @@ class CLITest(test_cli.CLITest):
         lodge = project("Lodge")
         org_ops.set_organization(
             self.ada,
-            organization("Example Partner Agency"),
+            organization("Example External Agency"),
             actor=person("Root", is_admin=True),
         )
         names = {p["name"] for p in json.loads(self.biwak("projects", "--json").stdout)}

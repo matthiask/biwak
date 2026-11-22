@@ -16,7 +16,7 @@ from PIL import Image
 from biwak.accounts import operations
 from biwak.accounts.models import PALETTE, APIToken
 from biwak.audit.models import LoggedAction
-from biwak.test_utils import partner, person, project
+from biwak.test_utils import external, person, project
 
 
 def picture(width=400, height=200, format="PNG", color=(200, 30, 30)):
@@ -105,8 +105,8 @@ class ServingTest(TestCase):
     def setUp(self):
         self.ada = person("Ada")
         self.ben = person("Ben")
-        self.pia = partner("Pia")
-        self.paul = partner("Paul")
+        self.pia = external("Pia")
+        self.paul = external("Paul")
         self.cleo = person("Cleo", client=True)
         self.dora = person("Dora", client=True, organization="Other Clients")
         self.camp = project("Camp", members=[self.pia, self.cleo], all_access=False)
@@ -130,15 +130,15 @@ class ServingTest(TestCase):
         self.assertIn("immutable", cache)
         self.assertIn("private", cache)
 
-    def test_partners_and_clients_get_the_images_of_members_of_their_projects(self):
+    def test_externals_and_clients_get_the_images_of_members_of_their_projects(self):
         self.client.force_login(self.pia)
         self.assertEqual(self.client.get(self.url(self.cleo)).status_code, 200)
         self.assertEqual(self.client.get(self.url(self.pia)).status_code, 200)
         self.client.force_login(self.cleo)
         self.assertEqual(self.client.get(self.url(self.pia)).status_code, 200)
 
-    def test_partners_get_those_of_staff_with_access_to_their_projects(self):
-        # Partners know a project's people (decided 2026-11-21): Ada opens
+    def test_externals_get_those_of_staff_with_access_to_their_projects(self):
+        # Externals know a project's people (decided 2026-11-21): Ada opens
         # the all-access project without being a member; clients don't
         open_camp = project("Open camp", members=[self.pia, self.cleo])
         self.client.force_login(self.pia)

@@ -1,5 +1,5 @@
-"""Admins manage the internal team and partners, staff the clients
-(decided 2026-11-21, specs/organizations.md): who belongs to a partner
+"""Admins manage the internal team and externals, staff the clients
+(decided 2026-11-21, specs/organizations.md): who belongs to an external
 organization (one with staff), its domains, merging it and moving staff
 are for admins; client organizations stay all staff's. Through the
 operations, the pages, the invitations, the API and the CLI."""
@@ -15,28 +15,28 @@ from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
 from biwak.palette.test_actions import palette_data
 from biwak.projects import operations as project_ops
-from biwak.test_utils import invite_data, organization, partner, person, project
+from biwak.test_utils import external, invite_data, organization, person, project
 
 
-class PartnerOrgsTestCase(TestCase):
+class ExternalOrgsTestCase(TestCase):
     def setUp(self):
         self.own = organization("Example Team", is_own=True)
         self.ada = person("Ada")  # own staff, no admin
         self.root = person("Root", is_admin=True)
         self.agency = organization("Example Agency", domains=["agency.example"])
-        self.pia = partner("Pia", organization_name="Example Agency")
+        self.pia = external("Pia", organization_name="Example Agency")
         self.clients = organization("Example Ltd", domains=["clients.example"])
         self.cleo = person("Cleo", client=True, organization=self.clients)
         self.others = organization("Other Ltd")
         self.project = project("Camp", members=[self.ada])
 
 
-class OperationsTest(PartnerOrgsTestCase):
-    def test_partner_organization(self):
-        self.assertTrue(org_ops.is_partner_organization(self.agency))
-        self.assertFalse(org_ops.is_partner_organization(self.clients))
-        self.assertFalse(org_ops.is_partner_organization(self.own))
-        self.assertEqual(set(org_ops.partner_organizations()), {self.agency})
+class OperationsTest(ExternalOrgsTestCase):
+    def test_external_organization(self):
+        self.assertTrue(org_ops.is_external_organization(self.agency))
+        self.assertFalse(org_ops.is_external_organization(self.clients))
+        self.assertFalse(org_ops.is_external_organization(self.own))
+        self.assertEqual(set(org_ops.external_organizations()), {self.agency})
 
     def test_staff_change_client_organizations_only(self):
         refused = [
@@ -52,7 +52,7 @@ class OperationsTest(PartnerOrgsTestCase):
         for change in refused:
             with self.assertRaises(PermissionError), transaction.atomic():
                 change(self.ada)
-        # A staff member without an organization (a partner) too
+        # A staff member without an organization (an external) too
         finn = person("Finn", organization=None)
         with self.assertRaises(PermissionError):
             org_ops.set_organization(finn, self.clients, actor=self.ada)
@@ -73,7 +73,7 @@ class OperationsTest(PartnerOrgsTestCase):
             self.agency, domains=["agency.example", "more.example"], actor=self.root
         )
         org_ops.set_organization(self.pia, self.others, actor=self.root)
-        self.assertTrue(org_ops.is_partner_organization(self.others))
+        self.assertTrue(org_ops.is_external_organization(self.others))
         org_ops.merge(self.agency, self.others, actor=self.root)
         self.assertFalse(Organization.objects.filter(pk=self.agency.pk).exists())
 
@@ -86,7 +86,7 @@ class OperationsTest(PartnerOrgsTestCase):
             )
 
         with self.assertRaisesMessage(
-            project_ops.InvitationErrors, "or a partner organization"
+            project_ops.InvitationErrors, "or an external organization"
         ):
             invite("dora@example.org", self.ada, self.agency)
         # The domain's suggestion only counts for admins
@@ -103,7 +103,7 @@ class OperationsTest(PartnerOrgsTestCase):
         invite("hal@example.org", self.root, self.agency)
 
 
-class PagesTest(PartnerOrgsTestCase):
+class PagesTest(ExternalOrgsTestCase):
     def test_moving_people(self):
         self.client.force_login(self.ada)
         url = f"/people/{self.cleo.pk}/organization/"
@@ -183,7 +183,7 @@ class PagesTest(PartnerOrgsTestCase):
                 {"email": "eve@example.org", "organization": "Example Ltd"},
             ),
         )
-        self.assertContains(response, "or a partner organization")
+        self.assertContains(response, "or an external organization")
         self.assertFalse(User.objects.filter(email="eve@example.org").exists())
         response = self.client.post(
             f"/projects/{self.project.pk}/people/invite/",
@@ -195,7 +195,7 @@ class PagesTest(PartnerOrgsTestCase):
         self.assertEqual(response.status_code, 302)
 
 
-class APITest(PartnerOrgsTestCase):
+class APITest(ExternalOrgsTestCase):
     def call(self, method, path, data=None, *, user):
         _token, secret = APIToken.create_for(user=user, title="T", access="write")
         return getattr(self.client, method)(
@@ -231,7 +231,7 @@ class APITest(PartnerOrgsTestCase):
             user=self.ada,
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("partner organization", response.json()["detail"])
+        self.assertIn("external organization", response.json()["detail"])
         # Client organizations: staff
         response = self.call(
             "put",
@@ -251,7 +251,7 @@ class CLITest(test_cli.CLITest):
     def setUp(self):
         super().setUp()
         self.agency = organization("Example Agency")
-        self.pia = partner("Pia", organization_name="Example Agency")
+        self.pia = external("Pia", organization_name="Example Agency")
         self.clients = organization("Example Ltd")
         self.cleo = person("Cleo", client=True, organization=self.clients)
 

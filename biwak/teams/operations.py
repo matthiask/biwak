@@ -1,5 +1,5 @@
 """Managing teams (specs/teams.md): any own staff creates, renames, changes
-and deletes them; partners and clients don't. The audit log records it
+and deletes them; externals and clients don't. The audit log records it
 (the trigger on the tables). Teams aren't items: no events, nobody is
 told."""
 
@@ -21,7 +21,7 @@ def can_manage(user):
 
 
 def can_see(user):
-    """Staff, own staff and partners; clients never see a team's name"""
+    """Staff, own staff and externals; clients never see a team's name"""
     return user is not None and user.is_authenticated and not user.is_client
 
 

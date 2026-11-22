@@ -1,5 +1,5 @@
 """Admins are always own staff (decided 2026-11-21):
-every change that would make an admin a partner is refused, with what to
+every change that would make an admin an external is refused, with what to
 do first"""
 
 from django.core.exceptions import ValidationError
@@ -8,7 +8,7 @@ from django.test import TestCase
 from biwak.accounts.models import APIToken
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
-from biwak.test_utils import organization, partner, person
+from biwak.test_utils import external, organization, person
 
 
 class AdminsTest(TestCase):
@@ -18,14 +18,14 @@ class AdminsTest(TestCase):
         self.other_admin = person("Ora", is_admin=True)  # the own one too
         self.agency = organization("Example Agency")
 
-    def test_no_admin_partners(self):
-        pia = partner("Pia")
+    def test_no_admin_externals(self):
+        pia = external("Pia")
         pia.is_admin = True
-        with self.assertRaisesMessage(ValidationError, "partner"):
+        with self.assertRaisesMessage(ValidationError, "external"):
             pia.full_clean()
 
-    def test_the_django_admin_refuses_ticking_admin_on_a_partner(self):
-        pia = partner("Pia")
+    def test_the_django_admin_refuses_ticking_admin_on_an_external(self):
+        pia = external("Pia")
         self.client.force_login(self.root)
         response = self.client.post(
             f"/admin/accounts/user/{pia.pk}/change/",
@@ -106,15 +106,15 @@ class AdminsTest(TestCase):
 
 
 class IndividualsTest(TestCase):
-    """Staff without an organization are individuals, partners (decided
+    """Staff without an organization are individuals, externals (decided
     2026-11-21); the own organization always exists"""
 
-    def test_staff_without_an_organization_are_partners(self):
+    def test_staff_without_an_organization_are_externals(self):
         gus = person("Gus", organization=None)
-        self.assertTrue(gus.is_partner)
+        self.assertTrue(gus.is_external)
         self.assertFalse(gus.sees_all_access)
         cleo = person("Cleo", client=True, organization=None)
-        self.assertFalse(cleo.is_partner)
+        self.assertFalse(cleo.is_external)
 
     def test_superusers_are_the_own_staff(self):
         from biwak.accounts.models import User
@@ -133,12 +133,12 @@ class IndividualsTest(TestCase):
             camp, email="gus@example.net", is_client=False, actor=root
         )
         self.assertIsNone(gus.organization)
-        self.assertTrue(gus.is_partner)
+        self.assertTrue(gus.is_external)
         own = Organization.objects.own()
         hal, _created = project_ops.invite(
             camp, email="hal@example.net", is_client=False, organization=own, actor=root
         )
-        self.assertFalse(hal.is_partner)
+        self.assertFalse(hal.is_external)
 
     def test_the_migration(self):
         from importlib import import_module

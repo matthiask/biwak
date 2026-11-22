@@ -1,7 +1,7 @@
 """To-do assignees are shown only where the reader may know them
 (``Project.people_known_to()``, specs/access.md): people removed from the
 project stay assigned to completed to-dos (open ones drop them, decided
-2026-11-21), but clients and partners don't learn their names, the way
+2026-11-21), but clients and externals don't learn their names, the way
 history and the feed do it. Every entry point: the list, the
 to-do's page, "By due date", the API, mails."""
 
@@ -13,7 +13,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity import mails
 from biwak.items import operations as ops
 from biwak.projects.models import Membership
-from biwak.test_utils import partner, person, project
+from biwak.test_utils import external, person, project
 
 
 class KnownAssigneesTest(TestCase):
@@ -21,7 +21,7 @@ class KnownAssigneesTest(TestCase):
         self.ada = person("Ada")
         self.cleo = person("Cleo", client=True)
         self.dora = person("Dora", client=True)
-        self.pia = partner()
+        self.pia = external()
         self.project = project(members=[self.ada, self.cleo, self.dora, self.pia])
         self.list = ops.create_list(
             project=self.project, title="Launch", creator=self.ada, visible=True

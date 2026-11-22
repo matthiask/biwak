@@ -477,20 +477,20 @@ def assignable_people(item, by=None):
     of all-access projects whether they're members or not (assigning makes
     them members), clients only members and only on visible to-dos. The
     one rule for the forms, the API and the next to-do of a recurring
-    one. Partners of all-access projects only as members (specs/access.md).
+    one. Externals of all-access projects only as members (specs/access.md).
     Clients (``by``) assign members only: they don't learn about other
-    staff; partners in the project know its people (decided 2026-11-21).
+    staff; externals in the project know its people (decided 2026-11-21).
     """
     project = item.project
     members = Q(memberships__project=project)
     # Clients (``by``) don't learn about others than members; the importer
-    # assigns as in Basecamp, also for a creator who's a partner now
+    # assigns as in Basecamp, also for a creator who's an external now
     everybody = project.is_all_access and (
         by is None or knows_people_of(by, project) or is_importing()
     )
     staff = Q(is_client=False) & members
     if everybody:
-        # Own staff; partners only as members
+        # Own staff; externals only as members
         staff |= own_staff()
     who = staff | (Q(is_client=True) & members) if item.is_client_visible else staff
     # Inactive people only while importing (they have no account yet)

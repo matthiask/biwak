@@ -440,10 +440,10 @@ class ProjectsTest(HomeTestCase):
         project("Other", members=[self.ada])
         self.assertEqual(self.cards(self.cleo), ["Website"])
 
-    def test_a_partner_sees_only_their_projects(self):
-        from biwak.test_utils import partner
+    def test_an_external_sees_only_their_projects(self):
+        from biwak.test_utils import external
 
-        pia = partner("Pia")
+        pia = external("Pia")
         project("Joint", members=[self.ada, pia])
         self.assertEqual(self.cards(pia), ["Joint"])
 
@@ -500,10 +500,10 @@ class LinksTest(HomeTestCase):
         for text in ["New project", "To-dos I assigned", "API tokens"]:
             self.assertNotIn(text, links)
 
-    def test_partners_cannot_create_projects(self):
-        from biwak.test_utils import partner
+    def test_externals_cannot_create_projects(self):
+        from biwak.test_utils import external
 
-        pia = partner("Pia")
+        pia = external("Pia")
         project("Joint", members=[self.ada, pia])
         self.assertNotContains(self.page(pia), "New project")
 
