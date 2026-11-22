@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load biwak humanize i18n %}
+{% load biwak i18n %}
 {% block title %}{% translate "Settings" %} – Biwak{% endblock %}
 
 {% block content %}
@@ -217,7 +217,7 @@
                   <td>{{ passkey.created_at|date:"j. M Y" }}</td>
                   <td>
                     {% if passkey.last_used_at %}
-                      <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|naturaltime }}</span>
+                      <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|ago }}</span>
                     {% else %}
                       <span class="text-body-secondary">{% translate "Never" %}</span>
                     {% endif %}
@@ -294,7 +294,7 @@
               </td>
               <td>{{ session.ip }}</td>
               <td>
-                <span title="{{ session.created_at|date:'j. M Y, H:i' }}">{{ session.created_at|naturaltime }}</span>
+                <span title="{{ session.created_at|date:'j. M Y, H:i' }}">{{ session.created_at|ago }}</span>
               </td>
               <td class="text-end">
                 {% if session.current %}

@@ -11,6 +11,7 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from biwak.accounts.models import APIToken, User
 from biwak.activity.models import Action, Event
@@ -442,6 +443,12 @@ class CardsTest(OverviewTestCase):
         _, response = self.names(self.ada)
         self.assertNotContains(response, " open")
         self.assertNotContains(response, "overdue")
+
+    def test_activity_just_now(self):
+        # The ago filter, like everywhere (specs/ui.md), not "now"
+        Project.objects.update(last_activity_at=timezone.now())
+        _, response = self.names(self.ada)
+        self.assertContains(response, "just now")
 
     def test_no_activity_no_time(self):
         Project.objects.update(last_activity_at=None, last_client_activity_at=None)
