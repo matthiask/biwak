@@ -37,6 +37,7 @@ confirm: `decisions-to-confirm.md`.
 | `dashboard.md` | built | Home: what needs me, recent updates, my projects |
 | `help.md` | built | the help pages from `docs/` |
 | `celebrations.md` | built | small celebrations and animations |
+| `handover.md` | specified | when somebody leaves: assignments stay, assigning several to-dos, all projects for admins |
 | `timeline.md` | built | what happened between a to-do's comments |
 | `pwa.md` | built | installable as an app |
 | `mail-sending.md` | built | the outbox and sending through Resend, bounces |
