@@ -5,7 +5,9 @@ top-level items to another project. Decided with the user 2026-11-22.
 Project templates are left to an agent skill that sets up projects
 through the CLI (`api-cli.md`, "Agent skills").
 
-**Status:** open.
+**Status:** built 2026-11-22 (branch `lists-across-projects`); start
+dates shift with due dates once `start-dates.md` is merged too (a TODO
+in `copy_list()`, done at the merge).
 
 Depends on: `core.md` (moving, "Move to…"), `access.md` (visibility,
 showing to clients asks first), `todos.md`, `files.md`,
@@ -63,6 +65,44 @@ showing to clients asks first), `todos.md`, `files.md`,
 - **Records** a `moved` event in both projects' terms ("moved Launch
   checklist from Pitch to Website"); notifies nobody.
 - Moving into or out of an archived project is refused.
+
+## How it's built
+
+- **Operations** (`biwak/items/operations.py`): `copy_list()` (with
+  `copy_title()`, `open_todos()`, `copy_dropped()`, attachments copied
+  as new files with new keys and the text pointing at them) and
+  `move_to_project()` (with `move_dropped()`, `new_clients()`): the
+  subtree's items, events and attachments get the new project, dropped
+  assignees go through `unassign()` (recorded, telling nobody; completed
+  to-dos keep theirs, as when someone is removed from a project),
+  dropped subscriptions are deleted, open doc editors check their access
+  again. Who stays: `staying()`, the members of the target.
+- **Modals** (`biwak/items/across.py`, `items/across_form.html`):
+  "Copy…" (`list_copy`, staff) and "Move to…" of lists and messages
+  (`item_move_project`), the project as a combobox; folders, docs and
+  files at the top keep their "Move to…" (`files/library.item_move`),
+  the select becoming a combobox with "This project" (its folders) and
+  "Other projects". The menu offers "Move to…" for lists and messages
+  only where there is another project to go to. **Asking:** when
+  people would be dropped or clients would see it, the dialog comes
+  back with the sentences (who isn't in the target; "Makes this list, 12
+  to-dos and 34 comments visible to 3 clients.", counting the target's
+  clients who aren't the source's) and `confirmed` set to the target;
+  submitting it again with the same target does it. The palette offers
+  "Copy…" on lists (staff).
+- **The `moved` event** is one event in the target project, its data
+  `from_project`, `to_project` and their IDs; shown "moved Launch from
+  Pitch to Website", each project named only to people who may open it
+  now (`feed.add_projects()`; the API's event data drops the other's
+  keys), so clients of the target read "moved Launch to Website". It
+  notifies nobody (`notify()`). The history shows the project
+  ("another project" for one the reader can't open).
+- **API:** `POST /lists/{id}/copy/` (`project_id`, `title`, `dates`
+  keep|shift|remove, `days`, `visible_to_clients`; staff), and `POST
+  /items/{id}/move/` with `project_id` (top-level items; a 400 with the
+  sentences unless `confirm: true`, like merging organizations). **CLI**
+  0.46.0: `biwak list copy LIST --to PROJECT [--shift DAYS|--no-dates]
+  [--title] [--visible]`, `biwak move ITEM --to PROJECT [--confirm]`.
 
 ## Done when
 

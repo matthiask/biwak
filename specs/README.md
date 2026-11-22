@@ -51,7 +51,7 @@ confirm: `decisions-to-confirm.md`.
 | `languages.md` | built 2026-11-22 (branch `languages`) | German, a language per person, everything following it |
 | `quiet-hours.md` | open | quiet hours for mails, out of office (one time zone) |
 | `start-dates.md` | open | start dates on to-dos, hidden from current work until they start |
-| `lists-across-projects.md` | open | copying lists, moving top-level items to another project |
+| `lists-across-projects.md` | built 2026-11-22 (branch `lists-across-projects`) | copying lists, moving top-level items to another project |
 | `forwarding.md` | open | one address to forward mails to, filed as messages or to-dos |
 
 ## Writing a spec for a new part
