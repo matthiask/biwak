@@ -64,6 +64,12 @@ class LinesTest(TimelineBase):
         self.assertTrue(second.startswith("Bob reopened this"), second)
         self.assertIn("2 hours ago", first)
 
+    def test_relative_times_say_just_now(self):
+        # The ago filter, like everywhere (specs/ui.md), not "now"
+        ops.complete(self.todo, actor=self.ada)
+        (line,) = self.lines()
+        self.assertTrue(line.endswith("· just now"), line)
+
     def test_the_exact_time_is_the_title(self):
         ops.complete(self.todo, actor=self.ada)
         self.client.force_login(self.ada)
