@@ -157,7 +157,9 @@ class MembersTest(TestCase):
         )
         response = self.client.get(url)
         self.assertContains(response, "Remove Cleo Example from Website?")
-        self.assertContains(response, "won&#x27;t see the project any more")
+        self.assertContains(
+            response, "won&#x27;t see the project or hear about it any more"
+        )
         self.assertContains(response, "lose Cleo Example as assignee")
         self.assertTrue(self.project.is_member(self.cleo))
         response = self.client.get(url, headers={"HX-Modal": "true"})

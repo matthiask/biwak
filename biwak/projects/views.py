@@ -461,7 +461,7 @@ def member_remove(request, pk, user_pk):
         intro = (
             _("%(name)s still sees the project, as all staff see all-access projects.")
             if keeps_access
-            else _("%(name)s won't see the project any more nor hear about it.")
+            else _("%(name)s won't see the project or hear about it any more.")
         ) % {"name": name}
         intro += " " + _(
             "Open to-dos in it assigned to %(name)s lose %(name)s as assignee."
