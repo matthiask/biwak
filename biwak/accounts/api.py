@@ -12,6 +12,7 @@ from ninja.errors import HttpError
 
 from biwak.accounts import operations
 from biwak.accounts.api_auth import user_auth
+from biwak.accounts.marks import MARKS
 from biwak.accounts.models import Accent, APIToken, Theme
 from biwak.api_conventions import PersonOut, person_out
 
@@ -54,11 +55,17 @@ def me(request):
     return me_out(request)
 
 
+Mark = Literal[tuple(MARKS)]
+
+
 class MeIn(Schema):
     keyboard_shortcuts: bool | None = None
     theme: Theme | None = None
     accent: Accent | None = None
     language: Literal["", "de", "en"] | None = None
+    mark: Mark | None = Field(
+        None, description="Your drawn mark, shown while you have no profile image."
+    )
 
 
 @router.put("me/", response=MeOut)
@@ -70,6 +77,7 @@ def me_update(request, data: MeIn):
         theme=data.theme,
         accent=data.accent,
         language=data.language,
+        mark=data.mark,
     )
     return me_out(request)
 
@@ -91,7 +99,7 @@ def me_image(request, image: File[UploadedFile]):
 
 @router.delete("me/image/", response=MeOut)
 def me_image_remove(request):
-    """Removes your profile image: the initials are shown again"""
+    """Removes your profile image: your drawn mark is shown again"""
     operations.remove_image(request.user, actor=request.user)
     return me_out(request)
 

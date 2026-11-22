@@ -26,11 +26,25 @@ def set_name(user, *, full_name, short_name):
 
 
 def set_preferences(
-    user, *, keyboard_shortcuts=None, theme=None, accent=None, language=None
+    user,
+    *,
+    keyboard_shortcuts=None,
+    theme=None,
+    accent=None,
+    language=None,
+    mark=None,
 ):
-    """The person's keyboard setting, theme, accent color and language
-    (``""`` for the browser's), what's given"""
+    """The person's keyboard setting, theme, accent color, language
+    (``""`` for the browser's) and drawn mark (specs/people.md), what's
+    given"""
+    from biwak.accounts.marks import MARKS
+
     fields = []
+    if mark is not None:
+        if mark not in MARKS:
+            raise ValueError(f"Unknown mark {mark!r}")
+        user.mark = mark
+        fields.append("mark")
     if language is not None:
         if language and language not in dict(settings.LANGUAGES):
             raise ValueError(f"Unknown language {language!r}")
@@ -169,7 +183,7 @@ def store_image(person, data):
 
 @transaction.atomic
 def remove_image(person, *, actor):
-    """Back to the initials; recorded in the audit log (the person's row)"""
+    """Back to the drawn mark; recorded in the audit log (the person's row)"""
     if not can_remove_image(actor, person):
         raise PermissionDenied
     previous = person.image

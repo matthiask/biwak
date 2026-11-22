@@ -1,8 +1,9 @@
 // The mark of a person (specs/people.md) for lists the scripts build, like
-// {% avatar person size %} on the server: the image, or the initials on the
-// palette color chosen from the ID (data from User.avatar_data). An image
-// which doesn't load (the person isn't known to the viewer) falls back to
-// the initials.
+// {% avatar person size %} on the server: the image, or the drawn mark in
+// white on the palette color chosen from the ID (data from
+// User.avatar_data; the drawing is a CSS mask, frontend/styles/marks.css).
+// An image which doesn't load (the person isn't known to the viewer) falls
+// back to the drawn mark.
 
 // Inactive people's marks are greyed (specs/handover.md)
 function className(person, size) {
@@ -28,26 +29,24 @@ function withAwaySign(person, mark) {
   return wrapper
 }
 
-function plainInitialsMark(person, size) {
-  const { initials, color } = person
+function plainDrawnMark(person, size) {
   const name = title(person)
   const mark = document.createElement("span")
-  mark.className = className(person, size)
-  mark.dataset.avatarColor = color
+  mark.className = `${className(person, size)} wb-mark wb-mark-${person.mark}`
+  mark.dataset.avatarColor = person.color
   mark.title = name
   mark.setAttribute("role", "img")
   mark.setAttribute("aria-label", name)
-  mark.textContent = initials
   return mark
 }
 
-export function initialsMark(person, size = "sm") {
-  return withAwaySign(person, plainInitialsMark(person, size))
+export function drawnMark(person, size = "sm") {
+  return withAwaySign(person, plainDrawnMark(person, size))
 }
 
 export function avatar(person, size = "sm") {
   if (!person) return document.createDocumentFragment()
-  if (!person.image_url) return initialsMark(person, size)
+  if (!person.image_url) return drawnMark(person, size)
   const image = document.createElement("img")
   image.className = className(person, size)
   image.src = person.image_url
@@ -55,7 +54,7 @@ export function avatar(person, size = "sm") {
   image.title = title(person)
   image.addEventListener(
     "error",
-    () => image.replaceWith(plainInitialsMark(person, size)),
+    () => image.replaceWith(plainDrawnMark(person, size)),
     {
       once: true,
     },

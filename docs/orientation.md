@@ -159,6 +159,15 @@ and who belongs to them. Admins manage your own organization and
 externals' (organizations with staff): who belongs to them, inviting
 people into them, merging them and their email domains.
 
+**Marks:** everybody has a mark next to their name: their photo, or a
+small drawing (an ibex, a tent, a fox, …) in white on their color.
+Everybody gets a drawing when their account is created, one few people
+of their organization have. Choose yours in Settings, "Profile image":
+under **Drawn**, a click on a drawing saves it; under **Photo**, upload
+a JPEG, PNG or WebP image instead. The photo is shown while you have
+one, "Remove" brings the drawing back. The color comes with your
+account and can't be chosen.
+
 **Away:** somebody out of office has a small moon on their mark;
 hovering over it says until when, with their note ("Away until 3 Dec:
 back on the 4th"). Their page says so too, and picking them as an

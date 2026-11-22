@@ -16,6 +16,7 @@ urlpatterns = [
         name="person_image_remove",
     ),
     path("settings/image/", views.settings_image, name="settings_image"),
+    path("settings/mark/", views.settings_mark, name="settings_mark"),
     path("settings/", views.settings, name="settings"),
     path(
         "settings/notifications/",

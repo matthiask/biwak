@@ -146,7 +146,7 @@ def me(ctx, as_json):
 
 @me.command("image")
 @click.argument("path", required=False, type=click.Path(exists=True, dir_okay=False))
-@click.option("--remove", is_flag=True, help="Back to the initials.")
+@click.option("--remove", is_flag=True, help="Back to the drawn mark.")
 @json_option
 def me_image(path, remove, as_json):
     """Set your profile image to the JPEG, PNG or WebP at PATH (at most 5 MB;

@@ -179,6 +179,10 @@ project. Waiting for Basecamp's account export to confirm the plan.
   people again get it cleared ("Back in Basecamp:", decided 2026-11-22
   by the user), only when the importer set it (`left_in_basecamp`), not
   when somebody was deactivated in Biwak.
+- **Marks:** imported people get a drawn mark like everybody when
+  they're created (`people.md`, "Stage 2: drawn marks"), counted with
+  the organization's people who haven't left, so those imported
+  together, waiting to be activated, get different ones.
 - **Profile images** (decided 2026-11-21): for people without an image
   in Biwak, `avatar_url` from `people/<id>.json` (`people.json` has
   null), processed like an upload, never overwriting one. Basecamp's

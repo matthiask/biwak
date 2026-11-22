@@ -250,6 +250,9 @@ class User(AbstractBaseUser):
     # The profile image (specs/people.md): 256 pixel WebP in the default
     # storage as people/<id>/<version>.webp, served by ``person_image``
     image = models.CharField(_("profile image"), max_length=200, blank=True)
+    # The drawn mark shown without an image (specs/people.md): a name of
+    # ``biwak.accounts.marks.MARKS``, given when the account is created
+    mark = models.CharField(_("mark"), max_length=30, blank=True)
 
     objects = UserManager()
 
@@ -262,6 +265,12 @@ class User(AbstractBaseUser):
         return self.full_name or self.email
 
     def save(self, *args, **kwargs):
+        if self._state.adding and not self.mark:
+            # Everybody has one, whoever creates the account (sign-up,
+            # invitation, the importer, the admin)
+            from biwak.accounts.marks import mark_for
+
+            self.mark = mark_for(self.organization_id)
         fields = kwargs.get("update_fields")
         stored = None
         if self.pk and (
@@ -389,15 +398,6 @@ class User(AbstractBaseUser):
         return reverse("person_image", args=[self.pk, self.image_version])
 
     @property
-    def initials(self):
-        """ "AE" for "Ada Example", "A" for a single name, the address's
-        first letter without a name"""
-        words = (self.full_name or self.email).split()
-        if len(words) > 1:
-            return (words[0][0] + words[-1][0]).upper()
-        return words[0][0].upper() if words else "?"
-
-    @property
     def avatar_color(self):
         """One of the palette's names, from the ID: the same every time"""
         return PALETTE[self.pk % len(PALETTE)]
@@ -408,7 +408,7 @@ class User(AbstractBaseUser):
         ``away`` only for people away (specs/quiet-hours.md)"""
         data = {
             "name": str(self),
-            "initials": self.initials,
+            "mark": self.mark,
             "color": self.avatar_color,
             "image_url": self.image_url,
             "inactive": not self.is_active,

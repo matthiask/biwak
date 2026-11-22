@@ -100,7 +100,8 @@ one form per section, each posting to its own URL; the old
 `/accounts/notifications/` redirects (301). Sections:
 
 - **Appearance** first, so the navigation bar, which shows the accent
-  most, stays in view while choosing: the profile image (`people.md`),
+  most, stays in view while choosing: the profile image, drawn or a
+  photo (`people.md`),
   the theme (light, dark, as the system) and the accent color, stored on
   the person (`User.theme`, `User.accent`) so they follow them to other
   devices; the navigation's theme toggle saves there too. Choosing

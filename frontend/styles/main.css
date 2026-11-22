@@ -1354,8 +1354,8 @@ html:not(.js) .wb-handle {
 }
 
 /* The mark of a person ({% avatar person size %}, specs/people.md): the
-   image, or white initials on the fill of one of the palette's colors,
-   chosen from the person's ID */
+   image, or the white drawn mark (marks.css) on the fill of one of the
+   palette's colors, chosen from the person's ID */
 .wb-avatar {
   --wb-avatar-size: 1.25rem;
   display: inline-flex;
@@ -3523,4 +3523,39 @@ a.is-drop-target {
     align-items: center;
     justify-content: center;
   }
+}
+
+/* The settings' choice of the drawn mark (specs/people.md): the grid of
+   all drawings on the person's color, one's own ringed */
+.wb-profile-image-choices {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.wb-mark-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.wb-mark-choice {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.wb-mark-choice:hover .wb-avatar {
+  filter: brightness(1.1);
+}
+
+.wb-mark-choice[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--wb-accent-fill);
+}
+
+.wb-mark-choice:focus-visible {
+  outline: 2px solid var(--bs-body-color);
+  outline-offset: 2px;
 }

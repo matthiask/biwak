@@ -20,36 +20,66 @@
     </div>
     <div class="card-body border-bottom" id="profile-image">
       <h3 class="h6">{% translate "Profile image" %}</h3>
-      <div class="d-flex flex-wrap align-items-center gap-3">
+      <div class="d-flex flex-wrap align-items-start gap-3">
         {% avatar request.user "lg" %}
-        <form
-          method="post"
-          action="{% url 'settings_image' %}"
-          enctype="multipart/form-data"
-          class="d-flex flex-wrap align-items-center gap-2"
-        >
-          {% csrf_token %}
-          <input
-            type="file"
-            name="image"
-            class="form-control form-control-sm w-auto"
-            accept="image/jpeg, image/png, image/webp"
-            aria-label="{% translate 'Profile image' %}"
-            required
-          >
-          <button type="submit" class="btn btn-sm btn-primary">{% translate "Upload" %}</button>
-        </form>
-        {% if request.user.image %}
-          <a
-            href="{% url 'person_image_remove' request.user.pk %}"
-            data-modal
-            class="btn btn-sm btn-quiet"
-          >{% translate "Remove" %}</a>
-        {% endif %}
-      </div>
-      <div class="form-text">
-        {{ image_help }}
-        {% translate "Cut to a square in the middle. Without one, your initials are shown." %}
+        <div class="wb-profile-image-choices">
+          {# A click on a drawing saves it (specs/people.md) #}
+          <h4 class="h6 fw-normal mb-2">{% translate "Drawn" %}</h4>
+          <form method="post" action="{% url 'settings_mark' %}" class="wb-mark-choices">
+            {% csrf_token %}
+            {% for value, label in marks %}
+              <button
+                type="submit"
+                name="mark"
+                value="{{ value }}"
+                class="wb-mark-choice"
+                title="{{ label }}"
+                aria-pressed="{% if request.user.mark == value %}true{% else %}false{% endif %}"
+              >
+                <span
+                  class="wb-avatar wb-avatar-md wb-mark wb-mark-{{ value }}"
+                  data-avatar-color="{{ request.user.avatar_color }}"
+                  aria-hidden="true"
+                ></span>
+                <span class="visually-hidden">{{ label }}</span>
+              </button>
+            {% endfor %}
+          </form>
+          <div class="form-text mb-3">
+            {% translate "In white on your color, chosen for you. A photo is shown instead while you have one." %}
+          </div>
+          <h4 class="h6 fw-normal mb-2">{% translate "Photo" %}</h4>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <form
+              method="post"
+              action="{% url 'settings_image' %}"
+              enctype="multipart/form-data"
+              class="d-flex flex-wrap align-items-center gap-2"
+            >
+              {% csrf_token %}
+              <input
+                type="file"
+                name="image"
+                class="form-control form-control-sm w-auto"
+                accept="image/jpeg, image/png, image/webp"
+                aria-label="{% translate 'Profile image' %}"
+                required
+              >
+              <button type="submit" class="btn btn-sm btn-primary">{% translate "Upload" %}</button>
+            </form>
+            {% if request.user.image %}
+              <a
+                href="{% url 'person_image_remove' request.user.pk %}"
+                data-modal
+                class="btn btn-sm btn-quiet"
+              >{% translate "Remove" %}</a>
+            {% endif %}
+          </div>
+          <div class="form-text">
+            {{ image_help }}
+            {% translate "Cut to a square in the middle. Remove it to show your drawn mark again." %}
+          </div>
+        </div>
       </div>
     </div>
     <div class="card-body">

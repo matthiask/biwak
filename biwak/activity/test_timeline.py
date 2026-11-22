@@ -16,9 +16,7 @@ def region(response):
     """The text of the timeline's lines, one string per line"""
     html = response.content.decode()
     lines = re.findall(r'<div class="wb-timeline-line".*?</div>', html, flags=re.DOTALL)
-    texts = [" ".join(re.sub(r"<[^>]+>", " ", line).split()) for line in lines]
-    # Without the avatar's initials
-    return [re.sub(r"^[A-Z]{1,2} ", "", text) for text in texts]
+    return [" ".join(re.sub(r"<[^>]+>", " ", line).split()) for line in lines]
 
 
 class TimelineBase(TestCase):

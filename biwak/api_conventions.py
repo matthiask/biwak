@@ -57,6 +57,11 @@ class PersonOut(Schema):
         description="The profile image (WebP, 256 pixels), served only to"
         " those who may know the person (as for names); null without one."
     )
+    mark: str = Field(
+        description="The drawn mark shown without a profile image (the name"
+        " of a drawing, e.g. ibex; specs/people.md), in white on a color"
+        " chosen from the id."
+    )
     away_until: dt.date | None = Field(
         None,
         description="Away up to and including this day (out of office,"
@@ -79,6 +84,7 @@ def person_out(user):
         "organization": user.organization_name,
         "organization_id": user.organization_id,
         "image_url": absolute(user.image_url) if user.image else None,
+        "mark": user.mark,
         "away_until": user.away_until if user.is_away else None,
         "away_note": user.away_note if user.is_away else "",
     }

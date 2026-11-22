@@ -204,26 +204,20 @@ class AvatarTagTest(TestCase):
             Context({"request": request, "who": who})
         )
 
-    def test_initials_on_a_palette_color_chosen_from_the_id(self):
+    def test_the_drawn_mark_on_a_palette_color_chosen_from_the_id(self):
         html = self.render(self.ada, self.ben)
-        self.assertIn(">BE</span>", html)
+        self.assertIn(f"wb-mark wb-mark-{self.ben.mark}", html)
+        self.assertIn('role="img" aria-label="Ben Example"></span>', html)
         self.assertIn(f'data-avatar-color="{PALETTE[self.ben.pk % 10]}"', html)
         self.assertIn('title="Ben Example"', html)
         self.assertEqual(
             html, self.render(self.cleo, self.ben).replace("Cleo", "Ada")
         )  # the same for everybody
 
-    def test_initials_of_single_names_and_addresses(self):
-        self.ben.full_name = "Ben"
-        self.assertEqual(self.ben.initials, "B")
-        self.ben.full_name = "ada maria von lovelace"
-        self.assertEqual(self.ben.initials, "AL")
-        self.ben.full_name = ""
-        self.assertEqual(self.ben.initials, "B")  # from ben@example.org
-
     def test_the_image_with_alt_and_title(self):
         operations.set_image(self.ben, picture(), actor=self.ben)
         html = self.render(self.ada, self.ben, "lg")
+        self.assertNotIn("wb-mark", html)
         self.assertIn(
             f"/accounts/people/{self.ben.pk}/image/{self.ben.image_version}.webp", html
         )
@@ -235,9 +229,9 @@ class AvatarTagTest(TestCase):
         operations.set_image(self.ben, picture(), actor=self.ben)
         html = self.render(self.cleo, self.ben)  # not in a project of Cleo's
         self.assertNotIn("<img", html)
-        self.assertIn(">BE</span>", html)
+        self.assertIn(f"wb-mark-{self.ben.mark}", html)
 
-    def test_without_a_request_only_initials(self):
+    def test_without_a_request_only_the_drawn_mark(self):
         operations.set_image(self.ben, picture(), actor=self.ben)
         html = Template("{% load biwak %}{% avatar who %}").render(
             Context({"who": self.ben})
@@ -283,7 +277,7 @@ class SettingsTest(TestCase):
         response = self.client.post(reverse("settings_image"), follow=True)
         self.assertContains(response, "Please choose an image.")
 
-    def test_removing_asks_first_then_goes_back_to_the_initials(self):
+    def test_removing_asks_first_then_goes_back_to_the_drawn_mark(self):
         self.upload(picture())
         url = reverse("person_image_remove", args=[self.cleo.pk])
         self.assertContains(self.client.get(url), "Remove the profile image?")

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 18:15+0100\n"
+"POT-Creation-Date: 2026-11-22 19:25+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -215,6 +215,181 @@ msgstr "Angemeldet bleiben"
 msgid "Automatic (the browser's language)"
 msgstr "Automatisch (Sprache des Browsers)"
 
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Tent"
+msgstr "Zelt"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Mountain"
+msgstr "Berg"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Alphorn"
+msgstr "Alphorn"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Lake"
+msgstr "See"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Fir"
+msgstr "Tanne"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Ibex"
+msgstr "Steinbock"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Marmot"
+msgstr "Murmeltier"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Edelweiss"
+msgstr "Edelweiss"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Gentian"
+msgstr "Enzian"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Ice axe"
+msgstr "Pickel"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Campfire"
+msgstr "Lagerfeuer"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Lantern"
+msgstr "Laterne"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Backpack"
+msgstr "Rucksack"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Boot"
+msgstr "Bergschuh"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Cable car"
+msgstr "Seilbahn"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Hut"
+msgstr "Hütte"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Sunrise"
+msgstr "Sonnenaufgang"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Moon"
+msgstr "Mond"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Snowflake"
+msgstr "Schneeflocke"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Cloud"
+msgstr "Wolke"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Eagle"
+msgstr "Adler"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Cowbell"
+msgstr "Kuhglocke"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Cheese"
+msgstr "Käse"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Fox"
+msgstr "Fuchs"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Owl"
+msgstr "Eule"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Cat"
+msgstr "Katze"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Fish"
+msgstr "Fisch"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Leaf"
+msgstr "Blatt"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Mushroom"
+msgstr "Pilz"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Cup"
+msgstr "Tasse"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Paper plane"
+msgstr "Papierflieger"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Anchor"
+msgstr "Anker"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Heart"
+msgstr "Herz"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Rocket"
+msgstr "Rakete"
+
+#: biwak/accounts/marks.py
+msgctxt "mark"
+msgid "Star"
+msgstr "Stern"
+
 #: biwak/accounts/models.py biwak/items/by_due.py
 msgid "Everything"
 msgstr "Alles"
@@ -406,6 +581,10 @@ msgstr "Akzentfarbe"
 #: biwak/accounts/models.py
 msgid "profile image"
 msgstr "Profilbild"
+
+#: biwak/accounts/models.py
+msgid "mark"
+msgstr "Zeichnung"
 
 #: biwak/accounts/models.py biwak/activity/models.py biwak/bookmarks/models.py
 #: biwak/checkins/models.py biwak/inbound/models.py biwak/projects/models.py
@@ -729,6 +908,10 @@ msgid "Your appearance settings have been saved."
 msgstr "Deine Einstellungen zur Darstellung wurden gespeichert."
 
 #: biwak/accounts/views.py
+msgid "Your mark has been saved."
+msgstr "Deine Zeichnung wurde gespeichert."
+
+#: biwak/accounts/views.py
 msgid "Please choose an image."
 msgstr "Bitte wähle ein Bild."
 
@@ -755,8 +938,8 @@ msgid "Remove the profile image of %(name)s?"
 msgstr "Profilbild von %(name)s entfernen?"
 
 #: biwak/accounts/views.py
-msgid "The initials are shown instead."
-msgstr "Stattdessen werden die Initialen angezeigt."
+msgid "The drawn mark is shown instead."
+msgstr "Stattdessen wird die Zeichnung angezeigt."
 
 #: biwak/accounts/views.py biwak/items/operations.py biwak/projects/views.py
 #: biwak/templates/accounts/settings.html
@@ -5317,8 +5500,24 @@ msgid "Profile image"
 msgstr "Profilbild"
 
 #: biwak/templates/accounts/settings.html
-msgid "Cut to a square in the middle. Without one, your initials are shown."
-msgstr "Wird in der Mitte quadratisch zugeschnitten. Ohne Bild werden deine Initialen angezeigt."
+msgid "Drawn"
+msgstr "Gezeichnet"
+
+#: biwak/templates/accounts/settings.html
+msgid "In white on your color, chosen for you. A photo is shown instead while you have one."
+msgstr ""
+"In Weiss auf deiner Farbe, die für dich gewählt ist. Solange du ein Foto "
+"hast, wird stattdessen das Foto angezeigt."
+
+#: biwak/templates/accounts/settings.html
+msgid "Photo"
+msgstr "Foto"
+
+#: biwak/templates/accounts/settings.html
+msgid "Cut to a square in the middle. Remove it to show your drawn mark again."
+msgstr ""
+"Wird in der Mitte quadratisch zugeschnitten. Entfernst du es, wird wieder "
+"deine Zeichnung angezeigt."
 
 #: biwak/templates/accounts/settings.html
 msgid "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see."

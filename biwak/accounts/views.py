@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
 from biwak.accounts import languages, operations, passkeys, signin, sso
+from biwak.accounts.marks import MARKS
 from biwak.accounts.models import (
     API_TOKEN_LIFETIME,
     Accent,
@@ -283,6 +284,7 @@ def _settings_page(request, *, notifications=None, name_form=None, away_form=Non
             ),
             "themes": Theme.choices,
             "image_help": _("JPEG, PNG or WebP, at most 5 MB."),
+            "marks": MARKS.items(),
             "accents": Accent.choices,
             "project_overrides": project_overrides,
             "item_overrides": item_overrides,
@@ -444,6 +446,19 @@ def settings_appearance(request):
 
 @never_cache
 @require_POST
+def settings_mark(request):
+    """Choosing one's own drawn mark (specs/people.md): a click in the
+    grid, saved at once"""
+    mark = request.POST.get("mark", "")
+    if mark not in MARKS:
+        return HttpResponseBadRequest("Unknown mark.")
+    operations.set_preferences(request.user, mark=mark)
+    messages.success(request, _("Your mark has been saved."))
+    return redirect(reverse("settings") + "#profile-image")
+
+
+@never_cache
+@require_POST
 def settings_image(request):
     """Uploading one's own profile image"""
     upload = request.FILES.get("image")
@@ -465,7 +480,7 @@ def settings_image(request):
 
 @never_cache
 def person_image_remove(request, pk):
-    """Back to the initials: people remove their own image, admins anybody's
+    """Back to the drawn mark: people remove their own image, admins anybody's
     (an unfitting one); the audit log has it. A question, as a modal or a
     page."""
     from biwak.organizations.people import known_people
@@ -491,7 +506,7 @@ def person_image_remove(request, pk):
         title=_("Remove the profile image?")
         if own
         else _("Remove the profile image of %(name)s?") % {"name": person},
-        intro=_("The initials are shown instead."),
+        intro=_("The drawn mark is shown instead."),
         cancel_url=back,
         submit_label=_("Remove"),
         destructive=True,
