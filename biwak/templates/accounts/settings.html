@@ -239,6 +239,7 @@
                 <tr>
                   <th>{% translate "Browser" %}</th>
                   <th>{% translate "Added" %}</th>
+                  <th>{% translate "Last used" %}</th>
                   <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
                 </tr>
               </thead>
@@ -250,6 +251,13 @@
                       <span class="badge wb-tone-neutral ms-1" data-push-this hidden>{% translate "This one" %}</span>
                     </td>
                     <td>{{ device.created_at|moment }}</td>
+                    <td>
+                      {% if device.last_success_at %}
+                        {{ device.last_success_at|moment }}
+                      {% else %}
+                        <span class="text-body-secondary">{% translate "Never" %}</span>
+                      {% endif %}
+                    </td>
                     <td class="text-end">
                       <form method="post" action="{% url 'push_subscription_remove' device.pk %}">
                         {% csrf_token %}

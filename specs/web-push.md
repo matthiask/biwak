@@ -4,8 +4,7 @@ Notifications on the phone (and the desktop) while Biwak isn't open,
 through the browsers' Web Push. Asked by the user 2026-11-22: installed as
 an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
-**Status:** built (2026-11-22), except closing a shown push when it's
-read elsewhere (below, "Open").
+**Status:** built (2026-11-22).
 
 ## What pushes
 
@@ -17,8 +16,11 @@ read elsewhere (below, "Open").
   working time or while away; nothing is sent later (the lantern has
   it).
 - **Read in the lantern:** a push isn't sent for a notification already
-  read; when it's read elsewhere, the shown push is closed on the
-  devices that support it (`tag` per item, a `close` message).
+  read. A push already shown stays when it's read elsewhere (decided
+  2026-11-22: no silent push to close it, "let's not punish ourselves":
+  Safari revokes subscriptions after a few pushes showing nothing,
+  Chrome shows "This site has been updated in the background"); the
+  `tag` per item replaces an item's older push.
 - **Coalesced like mails** (decided 2026-11-22: Biwak isn't chat): a
   push waits the same merge window as the notification mail
   (`MERGE_AFTER`, `notifications.md`), so quick edits are one push.
@@ -35,6 +37,18 @@ read elsewhere (below, "Open").
   without a click.
 - **Independent of mail:** mail delivery (each, digest, none) stays as
   it is; someone may want both, or only pushes (mail "none").
+- **Several devices per person** (decided 2026-11-22: people have a
+  phone, a laptop, a desktop): each push goes to every device of the
+  person; the list tells them apart by browser and system, when added
+  and when last used.
+- **One browser, one person** (decided 2026-11-22): a browser never has
+  subscriptions for several people; the last one to subscribe on it
+  replaces the other person's subscription there (nothing of before
+  pushed). It never touches the same person's other devices.
+- **Signing out ends pushes on that device** (decided 2026-11-22): an
+  explicit sign-out removes the browser's device and says so on the
+  next page ("Push notifications on this device are off."); a session
+  that expires doesn't.
 
 ## How
 
@@ -52,8 +66,8 @@ read elsewhere (below, "Open").
   run (every minute), through a `PushSubscription` (person, endpoint,
   keys, user agent, created, last success); a 404 or 410 deletes it.
   Not on requests or in threads.
-- Audit log for the new table; API: list and delete one's own devices;
-  the CLI doesn't push.
+- Audit log for the new table; API: list and delete one's own devices.
+  **No CLI support** (decided 2026-11-22): no commands for the devices.
 
 ## Building it
 
@@ -138,16 +152,27 @@ In this order, each step with its tests:
   (`push_subscription`, JSON, the CSRF token in `X-CSRFToken`, 204, 400
   for anything but a subscription with an `https` endpoint, 404 without
   the keys); "Remove" in the list posts to `/accounts/push/<id>/remove/`
-  (works without JavaScript). One browser has one subscription: whoever
-  subscribes on it last gets its pushes (somebody else's subscription
-  there is replaced, nothing of before pushed).
+  (works without JavaScript). One browser, one person (above): the
+  endpoint is unique, a subscription of somebody else with this
+  browser's endpoint is replaced; other endpoints, the person's other
+  devices, are never touched.
+- **Signing out:** subscribing sets a signed cookie with the device's ID
+  (`biwak_push_device`, httponly, 400 days); `user_logged_out`
+  (`biwak/accounts/signals.py`, `views.signed_out()`) removes the
+  person's device of that cookie, and the one whose endpoint
+  `frontend/push.js` adds to every sign-out form (`push_endpoint`; the
+  page's `data-sign-out` names the URL) after unsubscribing the browser.
+  Without JavaScript the cookie alone does it; the browser's own
+  subscription then stays, unused. Only Django's `logout()` sends the
+  signal, so expired sessions keep the device.
 - **The settings' section** (`#devices`, only with the keys):
   `frontend/push.js` looks without registering anything; it shows the
   button, marks this device in the list ("This one", its "Remove" also
   unsubscribes the browser), says why there's no button (blocked, an
   iPhone outside the home screen) or that it failed. The texts are in
   the page. The list: the browser and system (`describe_agent()`, like
-  the sessions), when added.
+  the sessions), when added, when last used (the last push its push
+  service took, "Never").
 - **The service worker** is `frontend/sw.js` as it is, served by Django
   at `/sw.js` (public, `no-cache`), registered at the click. A push's
   JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap
@@ -161,34 +186,16 @@ In this order, each step with its tests:
   "When you're mentioned or assigned, also while Biwak isn't open; not
   in your quiet hours or while you're away.", "Notifications are blocked
   for Biwak in this browser's settings.", a failure "That didn't work.
-  Please try again." (German "Push-Benachrichtigungen", "Auf diesem
-  Gerät benachrichtigen", "Füge Biwak zum Home-Bildschirm hinzu, …").
+  Please try again.", after signing out "Push notifications on this
+  device are off." (German "Push-Benachrichtigungen", "Auf diesem
+  Gerät benachrichtigen", "Füge Biwak zum Home-Bildschirm hinzu, …",
+  "Push-Benachrichtigungen auf diesem Gerät sind aus.").
 - **API:** `GET /api/v1/me/push-subscriptions/` (`id`, `device`,
   `user_agent`, `created_at`, `last_success_at`; no endpoint or keys),
-  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens). No CLI
-  commands.
+  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens).
 - **Tests:** `biwak/activity/test_push.py` (what pushes, quiet hours,
   away, visibility, failures; `pywebpush.webpush` stubbed),
-  `biwak/accounts/test_push_devices.py` (the section, subscribing, the
-  API, the audit log), `biwak/test_e2e_push.py` (subscribing in
+  `biwak/accounts/test_push_devices.py` (the section, subscribing,
+  several devices, signing out, the API, the audit log), `biwak/test_e2e_push.py` (subscribing in
   Chromium with its `PushManager` stubbed; a push delivered to the
   worker through the DevTools protocol).
-
-## Open
-
-- **Closing a shown push when it's read elsewhere** ("Read in the
-  lantern" above) isn't built: it needs a push without a notification of
-  its own, which Safari answers by revoking the subscription after a few
-  and Chrome by showing "This site has been updated in the background".
-  Options: leave it (the tag replaces the item's older push anyway);
-  close only on the device where Biwak is open (the page can close its
-  worker's notifications when the lantern reads); or a `close` push
-  that also shows something. Waiting for the user.
-- **Signing out** doesn't remove the browser's device: on a shared
-  computer the pushes keep coming until someone removes it. Remove it
-  when signing out there (the subscription can't be tied to a session
-  today)?
-- **The CLI** has no commands for the devices (the spec says "the CLI
-  doesn't push"); `biwak devices` (list, remove) if wanted.
-- The proposals above (content, wording, only what came after
-  subscribing, giving up after the TTL) wait for confirmation.

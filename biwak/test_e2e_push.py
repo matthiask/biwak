@@ -86,6 +86,32 @@ class SubscribingTest(E2ETestCase):
         self.assertEqual(page.evaluate("sessionStorage.getItem('unsubscribed')"), "1")
         self.assertEqual(self.errors, [])
 
+    def test_signing_out_ends_it_on_this_device(self):
+        """The page unsubscribes the browser and names the device, also
+        when its cookie is gone; the person's other devices stay"""
+        phone = PushSubscription.objects.create(
+            user=self.cleo,
+            endpoint="https://push.example.org/send/phone",
+            p256dh="BKey",
+            auth="secret",
+        )
+        page = self.page_with(self.cleo)
+        page.goto(f"{self.live_server_url}/accounts/settings/")
+        page.get_by_role("button", name="Notify me on this device").click()
+        expect(page.locator("[data-push-this]:visible")).to_have_count(1)
+        page.context.clear_cookies(name="biwak_push_device")
+        # The menu's sign-out
+        menu = page.locator("details", has=page.locator("button.dropdown-item"))
+        menu.locator("summary").click()
+        menu.get_by_role("button", name="Sign out").click()
+        expect(
+            page.get_by_text("Push notifications on this device are off.")
+        ).to_be_visible()
+        self.assertEqual(list(PushSubscription.objects.all()), [phone])
+        self.assertEqual(page.evaluate("sessionStorage.getItem('unsubscribed')"), "1")
+        # The sign-in page's allauth scripts aren't in the test's bundle
+        self.assertEqual([e for e in self.errors if "/static/mfa/" not in e], [])
+
     def test_another_device_in_the_list(self):
         PushSubscription.objects.create(
             user=self.ada,

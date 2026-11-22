@@ -17,6 +17,14 @@ SUBSCRIPTION = {
     "keys": {"p256dh": "BKeyOfTheDevice", "auth": "secret"},
 }
 FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0"
+IPHONE = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15"
+    " (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+)
+CHROME = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    " (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+)
 
 
 @override_settings(**KEYS)
@@ -85,6 +93,42 @@ class DevicesTest(TestCase):
         device = PushSubscription.objects.get()
         self.assertEqual(device.user, self.ada)
         self.assertGreater(device.created_at, old.created_at)
+
+    def test_several_devices_of_one_person(self):
+        """Phone, laptop and desktop: each its own device, listed so they
+        can be told apart; another person on one of the browsers takes only
+        that one"""
+        self.client.force_login(self.ada)
+        for name, agent in [
+            ("phone", IPHONE),
+            ("laptop", FIREFOX),
+            ("desktop", CHROME),
+        ]:
+            self.client.post(
+                "/accounts/push/",
+                json.dumps(
+                    SUBSCRIPTION | {"endpoint": f"https://push.example.org/{name}"}
+                ),
+                content_type="application/json",
+                headers={"user-agent": agent},
+            )
+        self.assertEqual(self.ada.push_subscriptions.count(), 3)
+        response = self.client.get("/accounts/settings/")
+        for name in ["Safari on iPhone", "Firefox on Linux", "Chrome on Windows"]:
+            self.assertContains(response, name)
+        self.assertContains(response, "Last used")
+        self.assertContains(response, "data-push-endpoint=", count=3)
+        # Subscribing on the phone again keeps the others
+        self.post(SUBSCRIPTION | {"endpoint": "https://push.example.org/phone"})
+        self.assertEqual(self.ada.push_subscriptions.count(), 3)
+        # Cleo on Ada's laptop: the laptop is Cleo's, Ada keeps the others
+        self.client.force_login(self.cleo)
+        self.post(SUBSCRIPTION | {"endpoint": "https://push.example.org/laptop"})
+        self.assertEqual(
+            sorted(self.ada.push_subscriptions.values_list("endpoint", flat=True)),
+            ["https://push.example.org/desktop", "https://push.example.org/phone"],
+        )
+        self.assertEqual(self.cleo.push_subscriptions.count(), 1)
 
     def test_unsubscribing(self):
         mine = subscribe_device(self.ada)
@@ -156,6 +200,69 @@ class DevicesTest(TestCase):
         self.assertEqual(change.row_data["endpoint"], SUBSCRIPTION["endpoint"])
         self.assertNotIn("auth", change.row_data)
         self.assertNotIn("p256dh", change.row_data)
+
+
+@override_settings(**KEYS)
+class SignOutTest(TestCase):
+    """Signing out explicitly ends pushes on that browser, and says so"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.phone = subscribe_device(self.ada)
+        self.client.force_login(self.ada)
+
+    def subscribe(self):
+        response = self.client.post(
+            "/accounts/push/", json.dumps(SUBSCRIPTION), content_type="application/json"
+        )
+        self.assertIn("biwak_push_device", response.cookies)
+        return PushSubscription.objects.get(endpoint=SUBSCRIPTION["endpoint"])
+
+    def test_the_browsers_device_by_its_cookie(self):
+        self.subscribe()
+        response = self.client.post("/accounts/logout/", follow=True)
+        self.assertContains(response, "Push notifications on this device are off.")
+        # Only this browser's: the phone keeps getting them
+        self.assertEqual(list(self.ada.push_subscriptions.all()), [self.phone])
+
+    def test_by_the_endpoint_the_page_sends(self):
+        response = self.client.post(
+            "/accounts/logout/", {"push_endpoint": self.phone.endpoint}, follow=True
+        )
+        self.assertContains(response, "Push notifications on this device are off.")
+        self.assertFalse(self.ada.push_subscriptions.exists())
+
+    def test_not_somebody_elses(self):
+        theirs = subscribe_device(person("Bob"))
+        response = self.client.post(
+            "/accounts/logout/", {"push_endpoint": theirs.endpoint}, follow=True
+        )
+        self.assertNotContains(response, "Push notifications on this device")
+        self.assertTrue(PushSubscription.objects.filter(pk=theirs.pk).exists())
+
+    def test_nothing_to_end(self):
+        response = self.client.post("/accounts/logout/", follow=True)
+        self.assertNotContains(response, "Push notifications on this device")
+        self.assertEqual(list(self.ada.push_subscriptions.all()), [self.phone])
+
+    def test_not_when_the_session_ends_otherwise(self):
+        """An expired session (here: deleted) isn't signing out"""
+        device = self.subscribe()
+        self.client.session.delete()
+        self.client.get("/accounts/settings/")
+        self.assertTrue(PushSubscription.objects.filter(pk=device.pk).exists())
+
+    def test_removing_it_in_the_settings_forgets_the_cookie(self):
+        device = self.subscribe()
+        response = self.client.delete(
+            "/accounts/push/", json.dumps(SUBSCRIPTION), content_type="application/json"
+        )
+        self.assertEqual(response.cookies["biwak_push_device"].value, "")
+        self.assertFalse(PushSubscription.objects.filter(pk=device.pk).exists())
+
+    def test_the_pages_know_where_signing_out_is(self):
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, 'data-sign-out="/accounts/logout/"')
 
 
 class ServiceWorkerTest(TestCase):

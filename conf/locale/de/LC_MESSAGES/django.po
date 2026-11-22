@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 22:04+0100\n"
+"POT-Creation-Date: 2026-11-22 22:12+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -975,6 +975,10 @@ msgstr "Stattdessen wird die Zeichnung angezeigt."
 #: biwak/templates/reactions/confirm_remove.html
 msgid "Remove"
 msgstr "Entfernen"
+
+#: biwak/accounts/views.py
+msgid "Push notifications on this device are off."
+msgstr "Push-Benachrichtigungen auf diesem Gerät sind aus."
 
 #: biwak/activity/api.py
 msgid "The history is for staff only."
@@ -5784,8 +5788,16 @@ msgid "Added"
 msgstr "Hinzugefügt"
 
 #: biwak/templates/accounts/settings.html
+msgid "Last used"
+msgstr "Zuletzt verwendet"
+
+#: biwak/templates/accounts/settings.html
 msgid "This one"
 msgstr "Diese"
+
+#: biwak/templates/accounts/settings.html
+msgid "Never"
+msgstr "Nie"
 
 #: biwak/templates/accounts/settings.html
 msgid "Out of office"
@@ -5839,14 +5851,6 @@ msgstr "Melde dich mit Fingerabdruck, Gesicht oder der PIN deines Geräts an sta
 #: biwak/templates/accounts/settings.html
 msgid "Passkey"
 msgstr "Passkey"
-
-#: biwak/templates/accounts/settings.html
-msgid "Last used"
-msgstr "Zuletzt verwendet"
-
-#: biwak/templates/accounts/settings.html
-msgid "Never"
-msgstr "Nie"
 
 #: biwak/templates/accounts/settings.html
 msgid "No passkeys yet."

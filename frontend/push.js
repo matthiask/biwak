@@ -5,10 +5,44 @@
 // of devices marks this one, whose "Remove" also unsubscribes the browser.
 // The texts are on the page (data-push-state); without support the button
 // stays hidden, on an iPhone not on the home screen the page says why.
+// Signing out ends pushes on this device: every sign-out form unsubscribes
+// the browser and tells Django which device it was (push_endpoint); the
+// server removes it by its cookie too, also without JavaScript.
 import { csrfToken } from "./http.js"
 
 const section = document.querySelector("[data-push]")
 if (section) setUp()
+
+document.addEventListener("submit", (event) => {
+  const form = event.target
+  const signOut = document.body.dataset.signOut
+  if (
+    !signOut ||
+    !("serviceWorker" in navigator) ||
+    form.dataset.pushSignedOut ||
+    new URL(form.action, window.location.href).pathname !== signOut
+  )
+    return
+  event.preventDefault()
+  form.dataset.pushSignedOut = "1"
+  unsubscribeOnSignOut(form).finally(() => form.submit())
+})
+
+async function unsubscribeOnSignOut(form) {
+  try {
+    const registration = await navigator.serviceWorker.getRegistration("/")
+    const subscription = await registration?.pushManager?.getSubscription()
+    if (!subscription) return
+    const field = document.createElement("input")
+    field.type = "hidden"
+    field.name = "push_endpoint"
+    field.value = subscription.endpoint
+    form.append(field)
+    await subscription.unsubscribe()
+  } catch {
+    // Signing out goes on; the server removes the device by its cookie
+  }
+}
 
 function supported() {
   return (

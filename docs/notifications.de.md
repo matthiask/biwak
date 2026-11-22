@@ -133,6 +133,12 @@ oder nur Push-Benachrichtigungen mit „Keine Mails“.
 - Nicht in deinen Ruhezeiten und nicht, während du abwesend bist, und
   auch nicht später: Die Laterne hat es.
 - Ein Tippen öffnet den Eintrag.
+- Jedes Gerät, auf dem du sie eingeschaltet hast, bekommt jede
+  Benachrichtigung; die Liste zeigt sie nach Browser und System, wann
+  hinzugefügt und wann zuletzt verwendet.
+- Abmelden auf einem Gerät beendet seine Benachrichtigungen
+  („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
+  nach dem Anmelden wieder ein.
 - Auf einem iPhone oder iPad füge Biwak zuerst zum Home-Bildschirm
   hinzu (in Safari im Teilen-Menü „Zum Home-Bildschirm“) und schalte es
   dann in der App ein.

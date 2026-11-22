@@ -548,20 +548,66 @@ def push_subscription(request):
     if not push.enabled():
         raise Http404
     try:
-        data = json.loads(request.body)
-        if request.method == "DELETE":
-            operations.remove_device(
-                request.user, endpoint=operations.subscription_data(data)[0]
-            )
-        else:
-            operations.add_device(
-                request.user,
-                data,
-                user_agent=request.headers.get("User-Agent", ""),
-            )
+        device = _push_change(request, json.loads(request.body))
     except ValueError, ValidationError:
         return HttpResponseBadRequest()
-    return HttpResponse(status=204)
+    response = HttpResponse(status=204)
+    if device is None:
+        response.delete_cookie(DEVICE_COOKIE)
+    else:
+        # Which device this browser is, for signing out (``signed_out()``)
+        response.set_signed_cookie(
+            DEVICE_COOKIE,
+            device.pk,
+            salt=DEVICE_COOKIE,
+            max_age=DEVICE_COOKIE_AGE,
+            secure=request.is_secure(),
+            httponly=True,
+            samesite="Lax",
+        )
+    return response
+
+
+def _push_change(request, data):
+    """Subscribes or (``DELETE``) unsubscribes the device; returns it, or
+    None when unsubscribed"""
+    if request.method == "DELETE":
+        operations.remove_device(
+            request.user, endpoint=operations.subscription_data(data)[0]
+        )
+        return None
+    return operations.add_device(
+        request.user, data, user_agent=request.headers.get("User-Agent", "")
+    )
+
+
+# This browser's device (``push_subscription``): signing out removes it,
+# also without JavaScript (specs/web-push.md). As long as browsers keep a
+# cookie (Chrome: 400 days); the browser's own subscription outlives it.
+DEVICE_COOKIE = "biwak_push_device"
+DEVICE_COOKIE_AGE = 400 * 24 * 3600
+
+
+def signed_out(request, user):
+    """Signing out explicitly ends pushes on this browser: its device (the
+    cookie, or the endpoint ``frontend/push.js`` adds to the sign-out
+    form) is removed, and a message says so. Sessions that expire don't
+    get here (``user_logged_out``)."""
+    if user is None:
+        return False
+    removed = False
+    pk = request.get_signed_cookie(DEVICE_COOKIE, default=None, salt=DEVICE_COOKIE)
+    if pk is not None and str(pk).isdigit():
+        removed |= operations.remove_device(user, pk=int(pk))
+    if (
+        endpoint := request.POST.get("push_endpoint", "")
+        if request.method == "POST"
+        else ""
+    ):
+        removed |= operations.remove_device(user, endpoint=endpoint)
+    if removed:
+        messages.info(request, _("Push notifications on this device are off."))
+    return removed
 
 
 @never_cache

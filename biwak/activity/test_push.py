@@ -225,12 +225,35 @@ class WhatPushesTest(PushBase):
         self.bob.mail_delivery = "none"
         self.bob.save()
         laptop = subscribe_device(self.bob, "laptop", created_at=self.start)
+        desktop = subscribe_device(self.bob, "desktop", created_at=self.start)
         self.mention(self.bob)
         self.assertEqual(push.send_due(self.later()), 1)
+        pushes = self.pushed()
+        # The same push on each of his devices, once
         self.assertEqual(
-            {endpoint for endpoint, _payload in self.pushed()},
-            {self.phone.endpoint, laptop.endpoint},
+            sorted(endpoint for endpoint, _payload in pushes),
+            sorted([self.phone.endpoint, laptop.endpoint, desktop.endpoint]),
         )
+        self.assertEqual(len({json.dumps(payload) for _e, payload in pushes}), 1)
+        self.assertEqual(
+            PushSubscription.objects.filter(last_success_at__isnull=False).count(), 3
+        )
+
+    def test_one_device_failing_doesnt_keep_the_others(self):
+        laptop = subscribe_device(self.bob, "laptop", created_at=self.start)
+
+        def webpush(info, **kwargs):
+            if info["endpoint"] == self.phone.endpoint:
+                raise ConnectionError("unreachable")
+
+        self.webpush.side_effect = webpush
+        self.mention(self.bob)
+        with self.assertLogs("biwak.activity.push", "ERROR"):
+            self.assertEqual(push.send_due(self.later()), 1)
+        laptop.refresh_from_db()
+        self.assertIsNotNone(laptop.last_success_at)
+        # Pushed: not again to the laptop next time
+        self.assertIsNotNone(Notification.objects.get(user=self.bob).pushed_at)
 
     def test_not_what_was_before_subscribing(self):
         self.mention(self.bob)

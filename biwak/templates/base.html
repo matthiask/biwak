@@ -30,6 +30,7 @@
     {% if request.user.is_authenticated %}
       {% block live_socket %}data-live-socket="/ws/live/"{% endblock %}
       {% if request.user.lantern_in_favicon %}data-lantern-favicon{% endif %}
+      data-sign-out="{% url 'account_logout' %}"
     {% endif %}
     data-live-item="{% block live_item %}{% endblock %}"
     data-live-changed="{% translate 'Changed meanwhile: shown once you save or close this.' %}"

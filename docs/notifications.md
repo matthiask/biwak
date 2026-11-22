@@ -115,6 +115,10 @@ only with "No mails".
 - Not in your quiet hours or while you're away, and not later either:
   the lantern has it.
 - A tap opens the item.
+- Every device you turned it on for gets each notification; the list
+  shows them by browser and system, when added and when last used.
+- Signing out on a device ends its notifications ("Push notifications on
+  this device are off."); turn them on again after signing in.
 - On an iPhone or iPad, add Biwak to the home screen first (Safari's
   Share menu, "Add to Home Screen"), then turn it on in the app.
 
