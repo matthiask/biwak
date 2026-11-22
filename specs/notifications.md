@@ -179,10 +179,10 @@ me"), stored as the person's `LevelOverride` for the project
 again doesn't change it. The project's people page shows it under
 each member to own staff, as a select in the row saving itself
 (decided 2026-11-22, `organizations.md`); own staff change
-it for others, clients and partners see and change only their own
-(partners too, decided 2026-11-21 after a review:
+it for others, clients and externals see and change only their own
+(externals too, decided 2026-11-21 after a review:
 `can_change_notify_choice()`). API: `notify` (`default` or `tagged`;
-`null` for clients and partners about others) on the members list, adding
+`null` for clients and externals about others) on the members list, adding
 and inviting; `biwak members`, `biwak member add|invite …
 [--only-tagged]`.
 

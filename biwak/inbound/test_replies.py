@@ -354,12 +354,12 @@ class VisibilityTest(ReceiveMixin, ReplyTestCase):
         project_ops.remove_member(self.project, self.cleo, actor=self.bea)
         self.assert_no_access(token)
 
-    def test_staff_now_a_partner_and_not_a_member(self):
+    def test_staff_now_an_external_and_not_a_member(self):
         """Ada saw the all-access project as own staff;
-        as a partner she sees only the projects she's a member of"""
+        as an external she sees only the projects she's a member of"""
         token = self.token()
         project_ops.remove_member(self.project, self.ada, actor=self.bea)
-        self.ada.organization = organization("Example Partner Agency")
+        self.ada.organization = organization("Example External Agency")
         self.ada.save()
         self.assert_no_access(token, "gmail_en.eml")
 

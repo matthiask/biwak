@@ -28,8 +28,8 @@ from biwak.projects.models import Membership, Project
 
 
 def can_manage_members(user):
-    """Own staff manage members; clients and partners
-    don't (adding offers everybody, which partners mustn't learn about)"""
+    """Own staff manage members; clients and externals
+    don't (adding offers everybody, which externals mustn't learn about)"""
     return user.is_authenticated and user.sees_all_access
 
 
@@ -58,7 +58,7 @@ def notify_choice(user, project):
 
 
 def can_change_notify_choice(actor, user):
-    """Own staff change (and see) everybody's; clients and partners only
+    """Own staff change (and see) everybody's; clients and externals only
     their own (decided 2026-11-21 after a review)"""
     return actor.is_authenticated and (can_manage_members(actor) or actor == user)
 
@@ -69,7 +69,7 @@ def set_notify_choice(project, user, notify, *, actor):
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")
     if not can_change_notify_choice(actor, user):
-        raise PermissionError("Clients and partners change only their own choice.")
+        raise PermissionError("Clients and externals change only their own choice.")
     set_level_override(user, NOTIFY_CHOICES[notify], project=project)
 
 
@@ -170,7 +170,7 @@ def _invitee(email, *, actor, full_name, is_client, organization):
     if organization is not None and not org_ops.can_touch(actor, organization):
         raise InvitationError(
             _(
-                "Only admins add people to your own organization or a partner"
+                "Only admins add people to your own organization or an external"
                 " organization."
             )
         )
@@ -426,7 +426,7 @@ def can_manage_project(user):
 
 def can_create_project(user):
     """Own staff: the form offers the organizations and
-    their people, which partners mustn't learn about"""
+    their people, which externals mustn't learn about"""
     return user.is_authenticated and user.sees_all_access
 
 

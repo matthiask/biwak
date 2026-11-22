@@ -128,7 +128,7 @@ containers, checked in one place (`specs/access.md`).
 ## Glossary
 
 - **Staff**: members of the organization running the installation.
-- **Partner**: staff outside the own organization (freelancers, other
+- **External**: staff outside the own organization (freelancers, other
   agencies); sees only the projects they're members of
   (`specs/organizations.md`).
 - **Client**: a person outside the organization, invited to projects.
@@ -267,7 +267,7 @@ building it.
   parameters remembered in the browser, never fields on `User`
   (`specs/ui.md`, "Filters and view choices").
 - 2026-11-22: Nobody leaves a project: own staff remove people,
-  themselves included, after a question; clients and partners can't
+  themselves included, after a question; clients and externals can't
   remove themselves, so that they can't get around the organization's
   decisions about who works on a project, and notifications cover not
   hearing about it (`specs/organizations.md`).

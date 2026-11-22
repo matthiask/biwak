@@ -236,7 +236,7 @@ def history(item, viewer):
         )
     }
     # Assigned and asked: named only if the viewer may know them (clients
-    # and partners: members, specs/access.md), else "somebody"
+    # and externals: members, specs/access.md), else "somebody"
     known = {u.pk: u for u in item.project.people_known_to(viewer, people.values())}
     changes = []
     for row in rows:

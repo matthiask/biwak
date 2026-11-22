@@ -1,12 +1,19 @@
 """A project's people page grouped by organization (specs/organizations.md,
-decided 2026-11-21): own staff, client organizations, partner
+decided 2026-11-21): own staff, client organizations, external
 organizations, people without one; "Add people from …" for staff"""
 
 import re
 
 from django.test import TestCase
 
-from biwak.test_utils import MODAL, assert_modal, organization, partner, person, project
+from biwak.test_utils import (
+    MODAL,
+    assert_modal,
+    external,
+    organization,
+    person,
+    project,
+)
 
 
 class PeopleGroupsTest(TestCase):
@@ -17,7 +24,7 @@ class PeopleGroupsTest(TestCase):
         self.zoe = person("Zoe", client=True, organization="Zebra Clients")
         self.cleo = person("Cleo", client=True, organization="Alpine Clients")
         self.carl = person("Carl", client=True, organization="Alpine Clients")
-        self.pia = partner("Pia", organization_name="Beta Agency")
+        self.pia = external("Pia", organization_name="Beta Agency")
         self.ivy = person("Ivy", client=True, organization=None)
         self.gone = person(
             "Gil", client=True, organization="Alpine Clients", is_active=False
@@ -51,12 +58,12 @@ class PeopleGroupsTest(TestCase):
                 ("own", ["Ada Example"]),
                 ("client", ["Cleo Example"]),
                 ("client", ["Zoe Example"]),
-                ("partner", ["Pia Example"]),
+                ("external", ["Pia Example"]),
                 ("none", ["Ivy Example"]),
             ],
         )
         self.assertIn("Client organization", html)
-        self.assertIn("Partner organization", html)
+        self.assertIn("External organization", html)
         self.assertIn("Without an organization", html)
         self.assertIn(f'href="{self.own.get_absolute_url()}"', html)
 
@@ -98,13 +105,13 @@ class PeopleGroupsTest(TestCase):
         self.assertEqual(self.client.get(f"{url}?organization=x").status_code, 404)
         self.assertEqual(self.client.get(f"{url}?organization=999999").status_code, 404)
 
-    def test_clients_and_partners_see_the_groups_without_actions(self):
+    def test_clients_and_externals_see_the_groups_without_actions(self):
         for viewer in [self.zoe, self.pia]:
             with self.subTest(viewer=viewer):
                 html = self.page(viewer)
                 self.assertEqual(
                     [kind for kind, _names in self.groups(html)],
-                    ["own", "client", "client", "partner", "none"],
+                    ["own", "client", "client", "external", "none"],
                 )
                 self.assertNotIn("Add people from", html)
                 self.assertNotIn("/organizations/", html)

@@ -36,7 +36,7 @@ Decided 2026-11-21:
   `/accounts/people/<id>/image/<version>.webp`): visible exactly where
   the person's name is, to whoever `organizations.people.known_people()`
   lists (own staff everybody, clients the members of their projects,
-  partners their projects' people), else 404, also for an old version.
+  externals their projects' people), else 404, also for an old version.
   `Cache-Control: private, max-age=1 year, immutable`; streamed through
   the app also with a bucket (a presigned redirect would be cached past
   its expiry).

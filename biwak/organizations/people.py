@@ -1,6 +1,6 @@
 """The People page (specs/organizations.md, decided 2026-11-21): everybody
 the viewer may know, by organization: the own organization first, then the
-other organizations by name, then people without one. Clients and partners
+other organizations by name, then people without one. Clients and externals
 see the people they share a project with (the members rule of
 specs/access.md), own staff everybody."""
 
@@ -31,7 +31,7 @@ from biwak.teams.picking import visible_teams
 @dataclass
 class Group:
     organization: object  # None: people without one
-    kind: str  # "own", "client", "partner" or "none"
+    kind: str  # "own", "client", "external" or "none"
     label: str
     people: list = field(default_factory=list)
     addable: int = 0  # project_groups(): active people who aren't members
@@ -42,15 +42,15 @@ def role(user):
         return _("client")
     if user.is_admin:
         return _("admin")
-    if user.is_partner:
-        return _("partner")
+    if user.is_external:
+        return _("external")
     return _("staff")
 
 
 def known_people(viewer):
     """The people the viewer may know (specs/people.md): everybody for the
     installation's own staff, else those they share a project with, and
-    themselves; for partners also the own staff of the all-access projects
+    themselves; for externals also the own staff of the all-access projects
     they're in, who are among those projects' people (decided 2026-11-21,
     ``Project.people_q()``). The People page, the person's page, the
     images and the names use it."""
@@ -61,7 +61,7 @@ def known_people(viewer):
     known = Q(pk__in=shared) | Q(pk=viewer.pk)
     if (
         viewer.is_authenticated
-        and viewer.is_partner
+        and viewer.is_external
         and Project.objects.accessible_to(viewer).filter(is_all_access=True).exists()
     ):
         known |= own_staff()
@@ -97,7 +97,7 @@ def decorate(user, viewer, shared):
 
 
 def own_label(viewer, organization):
-    """ "Your own organization" for its people; clients and partners see it
+    """ "Your own organization" for its people; clients and externals see it
     by its name alone (fixed 2026-11-22)"""
     if viewer.organization_id == organization.pk:
         return _("Your own organization")
@@ -114,7 +114,7 @@ def groups_for(viewer):
         .select_related("invited_by")
         .order_by("-is_active", Lower("full_name"), "email")
     )
-    _note_partners(viewer, people)
+    _note_externals(viewer, people)
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))
     for user in people:
         decorate(user, viewer, shared)
@@ -128,9 +128,9 @@ def groups_for(viewer):
         else:
             others.setdefault(org.pk, Group(org, "client", "")).people.append(user)
     for group in others.values():
-        # A partner organization has staff, a client organization only clients
+        # An external organization has staff, a client organization only clients
         if any(not user.is_client for user in group.people):
-            group.kind, group.label = "partner", _("Partner organization")
+            group.kind, group.label = "external", _("External organization")
         else:
             group.label = _("Client organization")
     ordered = sorted(others.values(), key=lambda g: g.organization.name.lower())
@@ -140,12 +140,12 @@ def groups_for(viewer):
 def project_groups(project, rows, *, can_add, viewer):
     """A project's members by organization (specs/organizations.md, decided
     2026-11-21): the own staff first, then the client organizations, then
-    the partner organizations (by name; partner: a member is staff), then
+    the external organizations (by name; external: a member is staff), then
     people without one. ``rows`` are ``(membership, anything)`` pairs in
     the order shown within a group. With ``can_add`` each organization's
     group says how many of its active people aren't members yet
     (``group.addable``, for "Add people from …")."""
-    own, clients, partners = None, {}, {}
+    own, clients, externals = None, {}, {}
     without = Group(None, "none", _("Without an organization"))
     for row in rows:
         org = row[0].user.organization
@@ -159,15 +159,15 @@ def project_groups(project, rows, *, can_add, viewer):
             clients.setdefault(org.pk, Group(org, "client", "")).people.append(row)
     for pk, group in list(clients.items()):
         if any(not m.user.is_client for m, *_rest in group.people):
-            group.kind, group.label = "partner", _("Partner organization")
-            partners[pk] = clients.pop(pk)
+            group.kind, group.label = "external", _("External organization")
+            externals[pk] = clients.pop(pk)
         else:
             group.label = _("Client organization")
 
     def by_name(groups):
         return sorted(groups.values(), key=lambda g: g.organization.name.lower())
 
-    groups = [own, *by_name(clients), *by_name(partners)]
+    groups = [own, *by_name(clients), *by_name(externals)]
     groups = [g for g in groups if g is not None]
     if can_add and groups:
         addable = dict(
@@ -190,15 +190,15 @@ def invitations_for(viewer):
     the oldest invitation first (own staff, who manage members)"""
     shared = set(people_visible_to(viewer).values_list("pk", flat=True))
     people = list(User.objects.invited().select_related("organization", "invited_by"))
-    _note_partners(viewer, people)
+    _note_externals(viewer, people)
     return [decorate(user, viewer, shared) for user in people]
 
 
-def _note_partners(viewer, people):
-    """Which of their organizations are partners', one query instead of
+def _note_externals(viewer, people):
+    """Which of their organizations are externals', one query instead of
     one per person for ``can_move`` (staff who aren't admins)"""
     if org_ops.can_manage(viewer) and not viewer.is_admin:
-        org_ops.note_partners([user.organization for user in people])
+        org_ops.note_externals([user.organization for user in people])
 
 
 def inactive_for(viewer):
@@ -210,7 +210,7 @@ def inactive_for(viewer):
         .select_related("organization")
         .order_by(Lower("full_name"), "email")
     )
-    _note_partners(viewer, people)
+    _note_externals(viewer, people)
     return [decorate(user, viewer, shared) for user in people]
 
 

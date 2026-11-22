@@ -199,7 +199,7 @@ class InviteRow(Form):
         ):
             # No domain matching: the only one involved. The domain's is
             # ``invite()``'s, which drops it where the actor may not put
-            # people (the own or a partner organization, for staff), as on
+            # people (the own or an external organization, for staff), as on
             # the invite page and in the API
             data["organization"] = self.chosen[0]
         return data
@@ -426,7 +426,7 @@ def member_add(request, pk):
 
 
 def member_remove(request, pk, user_pk):
-    """Own staff remove anybody, themselves included; clients and partners
+    """Own staff remove anybody, themselves included; clients and externals
     nobody, not even themselves (decided 2026-11-22: notifications cover
     not hearing about a project, and the organization decides who works
     on it). GET asks, POST removes. Non-members are 404 like IDs nobody

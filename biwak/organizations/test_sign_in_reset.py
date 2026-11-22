@@ -13,7 +13,7 @@ from biwak.audit.models import LoggedAction
 from biwak.organizations import activation
 from biwak.outbox.models import OutgoingMail
 from biwak.palette.test_actions import palette_data
-from biwak.test_utils import assert_modal, partner, person, project
+from biwak.test_utils import assert_modal, external, person, project
 
 
 class Base(TestCase):
@@ -21,7 +21,7 @@ class Base(TestCase):
         self.root = person("Root", is_admin=True)
         self.ada = person("Ada")  # staff, no admin
         self.bob = person("Bob")
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         self.cleo = person("Cleo", client=True)
         project("Site", members=[self.cleo, self.ada, self.pia])
         for user in [self.root, self.ada, self.bob, self.pia, self.cleo]:
@@ -80,7 +80,7 @@ class OperationTest(Base):
         # Others keep theirs
         self.assertTrue(self.has_app(self.bob))
 
-    def test_staff_may_not_reset_staff_or_partners(self):
+    def test_staff_may_not_reset_staff_or_externals(self):
         for user in [self.bob, self.pia, self.root]:
             with self.subTest(user=user), self.assertRaises(PermissionError):
                 activation.reset_sign_in(user, actor=self.ada)
@@ -102,7 +102,7 @@ class OperationTest(Base):
                 activation.reset_sign_in(user, actor=user)
             self.assertTrue(self.has_app(user))
 
-    def test_clients_and_partners_never(self):
+    def test_clients_and_externals_never(self):
         for actor in [self.cleo, self.pia]:
             with self.subTest(actor=actor), self.assertRaises(PermissionError):
                 activation.reset_sign_in(self.ada, actor=actor)

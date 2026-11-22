@@ -11,7 +11,7 @@ from biwak.accounts.models import Color, User, own_staff
 
 def knows_everybody(viewer):
     """Whether the viewer may learn about everybody, in any project: own
-    staff, not partners, not clients and not nobody (mails rendered for
+    staff, not externals, not clients and not nobody (mails rendered for
     nobody in particular)"""
     return viewer is not None and viewer.is_authenticated and viewer.sees_all_access
 
@@ -19,7 +19,7 @@ def knows_everybody(viewer):
 def knows_people_of(viewer, project):
     """Whether the viewer may learn about all the project's people
     (``Project.people()``: the members and the staff with access), not only
-    its members: own staff, and partners in the projects they're in, like
+    its members: own staff, and externals in the projects they're in, like
     staff of a limited project (decided 2026-11-21, specs/access.md).
     Clients and nobody learn about members only."""
     if knows_everybody(viewer):
@@ -47,7 +47,7 @@ class ProjectQuerySet(models.QuerySet):
     def accessible_to(self, user):
         """The projects a person may open (specs/access.md): the
         own staff all all-access projects and those they're
-        members of, partners (staff of other organizations) and clients
+        members of, externals (staff of other organizations) and clients
         only those they're members of. Admins aren't special here: they see
         limited projects in the list of all projects, not their content."""
         if not user.is_authenticated or not user.is_active:
@@ -140,7 +140,7 @@ class Project(models.Model):
 
     def people_known_to(self, viewer, people):
         """Those of ``people`` the viewer may see named: everybody for the
-        own staff, the project's people (``people_q()``) for partners in it
+        own staff, the project's people (``people_q()``) for externals in it
         (decided 2026-11-21), the members for clients and for nobody in
         particular (as on the project page; staff of all-access projects
         needn't be members).

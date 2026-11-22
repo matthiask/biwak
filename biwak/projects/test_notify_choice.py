@@ -14,8 +14,8 @@ from biwak.projects.models import Membership
 from biwak.test_utils import (
     MODAL,
     assert_modal,
+    external,
     invite_data,
-    partner,
     person,
     project,
     tags,
@@ -95,13 +95,13 @@ class OperationsTest(Fixture, TestCase):
         project_ops.set_notify_choice(self.project, self.eve, "tagged", actor=self.ada)
 
 
-class PartnersTest(Fixture, TestCase):
-    """Partners set their own choice, not others' (decided 2026-11-21 after
+class ExternalsTest(Fixture, TestCase):
+    """Externals set their own choice, not others' (decided 2026-11-21 after
     a review): the operation, the page and the API"""
 
     def setUp(self):
         super().setUp()
-        self.pia = partner()
+        self.pia = external()
         Membership.objects.create(project=self.project, user=self.pia)
 
     def call(self, method, path, data=None):

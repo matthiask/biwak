@@ -44,7 +44,7 @@ below is what prevents that.
   laptop" and "someone else may have had access"; it was "Reset
   two-factor…", only for people with an app): "Reset sign-in…" with the
   split of `activation.md`: staff reset clients, admins also own staff
-  and partners; nobody resets themselves this way (they change their
+  and externals; nobody resets themselves this way (they change their
   own in the settings). Offered whenever the person has any of an
   authenticator app, passkeys or API tokens; it deletes all of them,
   ends their sessions and mails them what was removed and by whom ("Ada

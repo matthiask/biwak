@@ -124,7 +124,7 @@ def attach(events, user):
     query per link"""
     ids = {pk for event in events for pk in _people_of(event)}
     people = list(User.objects.filter(pk__in=ids))
-    # Whom the viewer may know, per project (clients and partners: members)
+    # Whom the viewer may know, per project (clients and externals: members)
     known = {}
     for event in events:
         if event.item is not None:
@@ -183,7 +183,7 @@ def add_target_lists(events, user):
     current title if it is visible to them, and nothing for events without
     the list's ID (recorded before it was stored); the own organization
     staff fall back to the title at the time for lists they can't find any
-    more, partners (who may not see that project) don't."""
+    more, externals (who may not see that project) don't."""
     moves = [e for e in events if e.action == Action.MOVED and e.data.get("to")]
     ids = {e.data.get("to_id") for e in moves} - {None}
     lists = dict(

@@ -1,5 +1,5 @@
 """Teams (``biwak teams``, specs/teams.md): staff list and read them
-(partners with the members they may know), own staff create, change and
+(externals with the members they may know), own staff create, change and
 delete them; clients get 404. Teams aren't expanded through the API: an
 agent reads a team's members and sends the people."""
 
@@ -21,7 +21,7 @@ router = Router(tags=["teams"])
 class TeamOut(Schema):
     id: int
     name: str
-    # Partners get those they may know
+    # Externals get those they may know
     members: list[PersonOut]
     url: str
 
@@ -70,7 +70,7 @@ def team_list(request):
 
 class TeamIn(Schema):
     name: str
-    # The people's IDs: anyone, active or not, staff, partners and clients
+    # The people's IDs: anyone, active or not, staff, externals and clients
     members: list[int] = []
 
 

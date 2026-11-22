@@ -39,7 +39,7 @@ time arithmetic, `operations.py` asking, summaries and answering,
   user: choosing several at once; `PeopleField` with
   `offer_teams()`, `teams.md`), offering who sees the question once
   visible (the project's people, staff of an all-access project too;
-  partners and clients as `access.md` says), by name. "Visible to
+  externals and clients as `access.md` says), by name. "Visible to
   clients" comes before it in "New check-in", and clients are offered
   only while it's ticked (`data-clients-follow`, `frontend/told.js`,
   like "Also tell…"; unticking takes them away). Editing offers clients

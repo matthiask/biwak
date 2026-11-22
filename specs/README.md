@@ -31,7 +31,7 @@ confirm: `decisions-to-confirm.md`.
 | `editor.md` | built | checklists, the toolbar, pasting, ticking while someone edits |
 | `archiving.md` | built | archiving projects and lists, nothing smaller |
 | `connection.md` | built | the offline banner, nothing lost silently |
-| `organizations.md` | built | organizations, partners, the People page |
+| `organizations.md` | built | organizations, externals, the People page |
 | `people.md` | built; drawn images postponed | the mark, profile images, names, the person's page |
 | `subscribers.md` | built | assigned means subscribed, adding others, telling them now |
 | `dashboard.md` | built | Home: what needs me, recent updates, my projects |

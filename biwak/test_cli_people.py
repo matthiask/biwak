@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from biwak import test_cli
 from biwak.accounts.models import User
-from biwak.test_utils import partner, person
+from biwak.test_utils import external, person
 
 
 class PeopleCLITest(test_cli.CLITest):
@@ -15,7 +15,7 @@ class PeopleCLITest(test_cli.CLITest):
         super().setUp()
         self.cleo = person("Cleo", client=True, is_active=False)
         self.dora = person("Dora", client=True, is_active=False)
-        self.pia = partner("Pia", is_active=False)
+        self.pia = external("Pia", is_active=False)
 
     def active(self, user):
         user.refresh_from_db()
@@ -45,7 +45,7 @@ class PeopleCLITest(test_cli.CLITest):
         self.assertTrue(self.active(self.cleo))
         self.assertEqual(len(mail.outbox), 0)
 
-    def test_staff_may_not_activate_partners_and_nothing_changes(self):
+    def test_staff_may_not_activate_externals_and_nothing_changes(self):
         result = self.biwak("people", "activate", self.cleo.pk, self.pia.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("only admins change staff", result.output)

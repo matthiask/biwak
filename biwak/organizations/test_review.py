@@ -1,4 +1,4 @@
-"""Gaps the review of partners found (specs/access.md): who partners learn
+"""Gaps the review of externals found (specs/access.md): who externals learn
 about through check-ins, the history, mails and the feed; subscriptions
 when leaving the own organization; the importer"""
 
@@ -15,13 +15,13 @@ from biwak.checkins.support import MONDAY_9
 from biwak.items import operations as ops
 from biwak.organizations import operations as org_ops
 from biwak.projects.models import Membership
-from biwak.test_utils import organization, partner, person, project, rule_post
+from biwak.test_utils import external, organization, person, project, rule_post
 
 
 class ReviewTestCase(TestCase):
-    """Ada (own staff) and Pia (a partner) in the all-access "Camp" with
+    """Ada (own staff) and Pia (an external) in the all-access "Camp" with
     Cleo (a client); Bob is own staff, not a member, whom Pia knows as one
-    of Camp's people (decided 2026-11-21); Paul is a partner of another
+    of Camp's people (decided 2026-11-21); Paul is an external of another
     project, whom she doesn't"""
 
     def setUp(self):
@@ -30,8 +30,8 @@ class ReviewTestCase(TestCase):
         self.ada = person("Ada", organization=self.own)
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
-        self.pia = partner("Pia")
-        self.paul = partner("Paul", organization_name="Example Other Agency")
+        self.pia = external("Pia")
+        self.paul = external("Paul", organization_name="Example Other Agency")
         self.camp = project("Camp", members=[self.ada, self.pia, self.cleo])
         self.lake = project("Lake", members=[self.paul])
         self.tents = ops.create_list(project=self.camp, title="Tents", creator=self.ada)
@@ -60,7 +60,7 @@ class CheckinFormTest(ReviewTestCase):
             "people": people,
         }
 
-    def test_partners_are_offered_the_project_s_people(self):
+    def test_externals_are_offered_the_project_s_people(self):
         self.client.force_login(self.pia)
         url = f"/projects/{self.camp.pk}/checkins/new/"
         response = self.client.get(url)
@@ -75,7 +75,7 @@ class CheckinFormTest(ReviewTestCase):
         question = checkin_ops.Question.objects.get(item__title="How is it?")
         self.assertEqual(set(question.people.all()), {self.bob})
 
-    def test_partners_ask_the_project_s_people(self):
+    def test_externals_ask_the_project_s_people(self):
         item = self.question([self.ada])
         gus = person("Gus")  # own staff, not a member either
         checkin_ops.set_people(item, [self.ada, self.bob, gus], actor=self.pia)
@@ -95,7 +95,7 @@ class CheckinAPITest(ReviewTestCase):
             headers={"authorization": f"Bearer {secret}"},
         )
 
-    def test_partners_ask_the_project_s_people_and_learn_no_names(self):
+    def test_externals_ask_the_project_s_people_and_learn_no_names(self):
         paul = self.call(self.pia, {"people": [self.paul.pk]})
         self.assertEqual(paul.status_code, 400)
         self.assertNotIn("Paul", paul.json()["detail"])
@@ -120,8 +120,8 @@ class CheckinAPITest(ReviewTestCase):
 
 
 class HistoryTest(ReviewTestCase):
-    def test_partners_learn_the_names_of_the_project_s_people_only(self):
-        """Bob (own staff) and Paul (a partner) were members and left:
+    def test_externals_learn_the_names_of_the_project_s_people_only(self):
+        """Bob (own staff) and Paul (an external) were members and left:
         Bob still opens the all-access project, Paul doesn't"""
         LoggedAction.objects.all().delete()
         Membership.objects.create(project=self.camp, user=self.paul)
@@ -207,7 +207,7 @@ class SubscriptionsTest(ReviewTestCase):
             Subscription.objects.filter(user=self.bob).values_list("item", flat=True)
         )
 
-    def test_moved_to_a_partner_organization(self):
+    def test_moved_to_an_external_organization(self):
         org_ops.set_organization(
             self.bob, organization("Example Agency"), actor=self.root
         )
@@ -226,7 +226,7 @@ class SubscriptionsTest(ReviewTestCase):
 
 
 class ImporterTest(ReviewTestCase):
-    def test_a_partner_creator_keeps_assignees_and_mentions(self):
+    def test_an_external_creator_keeps_assignees_and_mentions(self):
         with importing():
             ops.assign(self.todo, [self.bob], actor=self.pia)
             mentioned = mentions.update(

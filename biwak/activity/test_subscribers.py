@@ -20,7 +20,7 @@ from biwak.activity.operations import (
 )
 from biwak.items import operations as ops
 from biwak.palette.test_actions import palette_data
-from biwak.test_utils import MODAL, assert_modal, assert_page, partner, person, project
+from biwak.test_utils import MODAL, assert_modal, assert_page, external, person, project
 
 
 class SubscribersTestCase(TestCase):
@@ -30,7 +30,7 @@ class SubscribersTestCase(TestCase):
         self.dan = person("Dan")  # staff, not a member
         self.cleo = person("Cleo", client=True)
         self.eli = person("Eli", client=True)
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         self.project = project(
             members=[self.ada, self.bob, self.cleo, self.eli, self.pia]
         )
@@ -133,7 +133,7 @@ class OperationTest(SubscribersTestCase):
             (self.ada, {self.bob, self.dan, self.cleo, self.eli, self.pia}),
             # Clients: the members
             (self.cleo, {self.ada, self.bob, self.eli, self.pia}),
-            # Partners: the project's people, staff with access too (decided
+            # Externals: the project's people, staff with access too (decided
             # 2026-11-21)
             (self.pia, {self.ada, self.bob, self.cleo, self.dan, self.eli}),
         ]:
@@ -360,7 +360,7 @@ class ModalTest(SubscribersTestCase):
         self.assertContains(response, "Select a valid choice")
         self.assertFalse(Subscription.objects.filter(user=self.cleo, item=self.secret))
 
-    def test_partner_offered_the_project_s_people(self):
+    def test_external_offered_the_project_s_people(self):
         outsider = person("Olga")  # staff, in another limited project only
         project("Elsewhere", members=[outsider], all_access=False)
         self.project.is_all_access = False
@@ -375,7 +375,7 @@ class ModalTest(SubscribersTestCase):
         )
         self.assertContains(response, "Select a valid choice")
 
-    def test_partner_offered_staff_with_access(self):
+    def test_external_offered_staff_with_access(self):
         self.client.force_login(self.pia)
         response = self.client.get(self.url(self.todo), headers=MODAL)
         self.assertIn(self.dan.pk, self.options(response))

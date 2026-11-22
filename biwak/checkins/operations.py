@@ -67,7 +67,7 @@ def can_answer(user, item):
 
 def _check_people(item, people, *, actor, kept=()):
     """Only people who can see the question are asked, and by clients
-    (``actor``) only members, whom they may know (specs/access.md; partners
+    (``actor``) only members, whom they may know (specs/access.md; externals
     know the project's people, decided 2026-11-21). ``kept``: people
     already in the list, who stay when the question turns internal
     (clients aren't asked then, but aren't removed) and when somebody who

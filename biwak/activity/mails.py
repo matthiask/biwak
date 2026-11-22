@@ -125,7 +125,7 @@ def plain_text(text, item):
 
 
 def _names(ids, user, item):
-    """The people the reader may know (clients and partners: members,
+    """The people the reader may know (clients and externals: members,
     specs/access.md)"""
     people = item.project.people_known_to(user, User.objects.filter(pk__in=ids))
     return ", ".join(_("you") if person == user else str(person) for person in people)

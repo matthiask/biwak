@@ -94,7 +94,7 @@ class InviteTest(TestCase):
         self.post(email="gus@example.net", is_client="")
         gus = User.objects.get(email="gus@example.net")
         self.assertEqual(gus.organization, self.own)
-        self.assertFalse(gus.is_partner)
+        self.assertFalse(gus.is_external)
 
     def test_existing_people_keep_theirs(self):
         cleo = person("Cleo", client=True)

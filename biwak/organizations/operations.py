@@ -2,9 +2,9 @@
 own staff create, rename and merge client organizations and change their
 domains; the audit log records it (the trigger on the tables). Deleting
 only organizations without people. Anything touching the own organization
-or a partner organization (merging into or out of it, moving people in or
+or an external organization (merging into or out of it, moving people in or
 out, inviting people into it, its domains, marking the own) and moving
-staff is for admins only: admins manage the internal team and partners,
+staff is for admins only: admins manage the internal team and externals,
 staff the clients (decided 2026-11-21); it decides who sees which
 projects."""
 
@@ -39,24 +39,24 @@ def _access_changed(people):
 
 
 def can_manage(user):
-    """Own staff; partners and clients don't learn which
+    """Own staff; externals and clients don't learn which
     organizations and people there are"""
     return user.is_authenticated and user.is_active and user.sees_all_access
 
 
-def is_partner_organization(org):
-    """Whether staff belong to it and it isn't the own organization: a
-    partner organization (as on the People page); remembered on the
-    object, ``note_partners()`` does it for many at once"""
+def is_external_organization(org):
+    """Whether staff belong to it and it isn't the own organization: an
+    external organization (as on the People page); remembered on the
+    object, ``note_externals()`` does it for many at once"""
     if org is None or org.is_own:
         return False
-    if getattr(org, "_is_partner", None) is None:
-        org._is_partner = org.people.filter(is_client=False).exists()
-    return org._is_partner
+    if getattr(org, "_is_external", None) is None:
+        org._is_external = org.people.filter(is_client=False).exists()
+    return org._is_external
 
 
-def partner_organizations():
-    """The organizations ``is_partner_organization()`` is true for"""
+def external_organizations():
+    """The organizations ``is_external_organization()`` is true for"""
     return Organization.objects.filter(is_own=False, pk__in=_staff_organizations())
 
 
@@ -68,24 +68,24 @@ def _staff_organizations():
     )
 
 
-def note_partners(organizations):
-    """``is_partner_organization()`` for these at once, one query"""
+def note_externals(organizations):
+    """``is_external_organization()`` for these at once, one query"""
     organizations = [org for org in organizations if org is not None]
-    partners = set(
-        partner_organizations()
+    externals = set(
+        external_organizations()
         .filter(pk__in={org.pk for org in organizations})
         .values_list("pk", flat=True)
     )
     for org in organizations:
-        org._is_partner = org.pk in partners
+        org._is_external = org.pk in externals
 
 
 def can_touch(user, *organizations, person=None):
     """Whether the person may change who belongs to these organizations
     (and move ``person``): admins any; other staff only client
-    organizations and only clients, not the own organization, partner
+    organizations and only clients, not the own organization, external
     organizations or staff (decided 2026-11-21: admins manage the internal
-    team and partners, staff the clients)"""
+    team and externals, staff the clients)"""
     if not can_manage(user):
         return False
     if user.is_admin:
@@ -93,12 +93,12 @@ def can_touch(user, *organizations, person=None):
     if person is not None and not person.is_client:
         return False
     return not any(
-        org is not None and (org.is_own or is_partner_organization(org))
+        org is not None and (org.is_own or is_external_organization(org))
         for org in organizations
     )
 
 
-def _no_admin_partners(admins, *, own_after):
+def _no_admin_externals(admins, *, own_after):
     """Admins are always own staff (decided 2026-11-21):
     ``ValidationError`` if any of these admins would be in another
     organization than the own one (``own_after``) afterwards"""
@@ -126,7 +126,7 @@ def _check_manage(actor):
 
 
 TOUCH_MESSAGE = _lazy(
-    "Only admins change who belongs to your own organization or a partner"
+    "Only admins change who belongs to your own organization or an external"
     " organization, and move staff."
 )
 
@@ -197,19 +197,19 @@ def create_organization(*, name, domains=(), actor):
 def can_change_domains(user, org):
     """The domains of an organization with single sign-on decide whose
     sign-ins count (Google's Workspace domains, the addresses Microsoft's
-    tenant speaks for, specs/sso.md), those of a partner organization who
+    tenant speaks for, specs/sso.md), those of an external organization who
     is suggested for it (decided 2026-11-21), so only admins change them"""
     return can_manage(user) and (
-        user.is_admin or not (org.sso or is_partner_organization(org))
+        user.is_admin or not (org.sso or is_external_organization(org))
     )
 
 
 def _check_domains(actor, org, domains):
-    """Admins only for organizations with single sign-on and partner
+    """Admins only for organizations with single sign-on and external
     organizations, and never none with single sign-on"""
     if not can_change_domains(actor, org) and not org.sso:
         raise PermissionError(
-            _("Only admins change the domains of a partner organization.")
+            _("Only admins change the domains of an external organization.")
         )
     if not can_change_domains(actor, org):
         raise PermissionError(
@@ -311,7 +311,7 @@ def merge(source, target, *, actor, confirmed=False):
             )
             % {"organization": target}
         )
-    _no_admin_partners(_admins_in(source), own_after=target.is_own)
+    _no_admin_externals(_admins_in(source), own_after=target.is_own)
     # The domains move with the people: between the same sign-in settings
     # they counted the same way already, stricter merges are admins' anyway
     direction = merge_direction(source, target)
@@ -383,7 +383,7 @@ def set_organization(user, org, *, actor):
         )
     if user.is_admin:
         # Without an organization, staff are the own organization
-        _no_admin_partners([user], own_after=org is not None and org.is_own)
+        _no_admin_externals([user], own_after=org is not None and org.is_own)
     user.organization = org
     user.save(update_fields=["organization"])
     _access_changed([user.pk])
@@ -403,7 +403,7 @@ def mark_own(org, *, actor):
     if org.is_own:
         return org
     for old in Organization.objects.filter(is_own=True):
-        _no_admin_partners(_admins_in(old), own_after=False)
+        _no_admin_externals(_admins_in(old), own_after=False)
     unmarked = list(
         Organization.objects.filter(is_own=True).values_list("people", flat=True)
     )

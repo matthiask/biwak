@@ -161,7 +161,7 @@ Built (2026-11-22): `activation.what_is_left()` (two queries) and
 a `before_form` block). The count is the to-dos page's
 (`due.todos(viewer, assignee=ID)`: what the link lists, so archived
 projects and lists don't count), the sentence the link; "the only active
-staff member" counts staff and partners who are active members, of
+staff member" counts staff and externals who are active members, of
 projects not archived (decided 2026-11-22: archived ones need nobody).
 The names are full names ("Ada Example has 23 open to-dos."), not the
 display name with the organization. Below them: "Deactivating doesn't
@@ -198,10 +198,10 @@ in "Administration"'s group, which is the Django admin's own) and in the palette
 admins). Choices made on the way (decided 2026-11-22):
 
 - **Who:** admins (`is_admin`); the page answers 404 to clients and
-  partners and 403 to other staff (as `activation.md`'s pages), the API
+  externals and 403 to other staff (as `activation.md`'s pages), the API
   403 to everybody else.
 - **Columns:** "active staff" counts active members who aren't clients
-  (partners too), shown in the danger color at 0; "clients" names the
+  (externals too), shown in the danger color at 0; "clients" names the
   organizations of active client members; "open to-dos" are open, not
   trashed, in lists not archived; "of inactive people" those with at
   least one assignee and no active one (danger color when not 0); the

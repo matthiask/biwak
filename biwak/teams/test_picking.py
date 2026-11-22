@@ -14,7 +14,7 @@ from biwak.activity.models import Subscription
 from biwak.activity.operations import subscribe
 from biwak.items import operations as ops
 from biwak.teams import operations as team_ops
-from biwak.test_utils import partner, person, project
+from biwak.test_utils import external, person, project
 
 
 def picker_teams(response):
@@ -34,7 +34,7 @@ class Base(TestCase):
         self.cleo = person("Cleo", client=True)
         self.dora = person("Dora", client=True, organization="Other Client Ltd")
         self.ian = person("Ian", is_active=False)
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         self.project = project(members=[self.ada, self.cleo, self.ian, self.pia])
         self.internal = ops.create_list(
             project=self.project, title="Internal", creator=self.ada
@@ -142,7 +142,7 @@ class MentionsTest(Base):
             self.assertEqual(entries, [])
             self.assertNotIn("Design", json.dumps(entries))
 
-    def test_partners_see_the_members_they_may_know(self):
+    def test_externals_see_the_members_they_may_know(self):
         """Pia knows the project's people (Bob through its all-access) but
         not Dora, who isn't counted"""
         [team] = self.teams(self.pia, reverse("mentionable", args=[self.todo.pk]))

@@ -7,7 +7,7 @@ shown as plain text.
 
 Clients learn about the project's members only (specs/access.md): their
 ``@`` resolves and notifies members only, and they read the label as
-written for anybody else, never the current name. Partners learn about the
+written for anybody else, never the current name. Externals learn about the
 project's people (members and the staff with access) in the projects
 they're in (``known_to()``). Who reads is
 ``reader()``: the person of the request (the middleware, also for API
@@ -132,7 +132,7 @@ def candidates_for(project, visible, query, *, for_user):
             models.Q(memberships__project=project) | models.Q(is_client=False)
         )
     elif knows_people_of(for_user, project):
-        # Partners: the project's people, nobody from outside it
+        # Externals: the project's people, nobody from outside it
         people = User.objects.active().filter(project.people_q())
     fields = ["full_name", "short_name"] + ([] if for_user.is_client else ["email"])
     for word in query.split():

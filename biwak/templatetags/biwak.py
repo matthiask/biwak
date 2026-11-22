@@ -458,7 +458,7 @@ def _known_people(request):
 @register.simple_tag(takes_context=True)
 def known_in(context, item, people):
     """Those of ``people`` the viewer may see named in the item's project
-    (``Project.people_known_to()``: clients and partners don't learn about
+    (``Project.people_known_to()``: clients and externals don't learn about
     people removed from it), looked up once per project and request"""
     from django.contrib.auth.models import AnonymousUser
 

@@ -728,14 +728,14 @@ class PeopleTest(ImportCase):
         report = self.run_import()
         bob = User.objects.get(email="bob@example.org")
         self.assertEqual(bob.organization, own)
-        self.assertFalse(bob.is_partner)
+        self.assertFalse(bob.is_external)
         cleo = User.objects.get(email="cleo@example.org")
         self.assertEqual(cleo.organization, existing)
         finn = User.objects.get(email="finn@example.org")
         self.assertEqual(finn.organization.name, "Example Freelance")
-        self.assertTrue(finn.is_partner)
+        self.assertTrue(finn.is_external)
         self.assertIn(
-            "Finn Example <finn@example.org> (partner, Example  Freelance)",
+            "Finn Example <finn@example.org> (external, Example  Freelance)",
             report.people,
         )
 
@@ -743,9 +743,9 @@ class PeopleTest(ImportCase):
         self.run_import()
         bob = User.objects.get(email="bob@example.org")
         self.assertTrue(bob.organization.is_own)
-        self.assertFalse(bob.is_partner)
+        self.assertFalse(bob.is_external)
 
-    def test_collaborators_without_a_company_are_individual_partners(self):
+    def test_collaborators_without_a_company_are_individual_externals(self):
         people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
         people.append(
             support.person(6, "Gus Example", "gus@example.org") | {"employee": False}
@@ -753,7 +753,7 @@ class PeopleTest(ImportCase):
         self.run_import()
         gus = User.objects.get(email="gus@example.org")
         self.assertIsNone(gus.organization)
-        self.assertTrue(gus.is_partner)
+        self.assertTrue(gus.is_external)
 
     def test_redacted_addresses_become_placeholders(self):
         # Only administrators get addresses (sections/people.md)

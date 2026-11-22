@@ -51,7 +51,7 @@ def people_who_see(project, visible):
     members = models.Q(memberships__project=project)
     can_see = models.Q(is_client=False) & members
     if project.is_all_access:
-        # Not partners: own staff (specs/access.md)
+        # Not externals: own staff (specs/access.md)
         can_see |= own_staff()
     if visible:
         can_see |= models.Q(is_client=True, memberships__project=project)

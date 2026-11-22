@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from biwak.accounts import operations
 from biwak.accounts.test_images import picture
-from biwak.test_utils import organization, partner, person, project
+from biwak.test_utils import external, organization, person, project
 
 
 class PersonPageTest(TestCase):
@@ -15,8 +15,8 @@ class PersonPageTest(TestCase):
         self.root = person("Root", is_admin=True)
         self.ada = person("Ada")
         self.ben = person("Ben")
-        self.pia = partner("Pia", organization_name="Alpine Agency")
-        self.paul = partner("Paul")
+        self.pia = external("Pia", organization_name="Alpine Agency")
+        self.paul = external("Paul")
         self.cleo = person("Cleo", client=True, organization="Zebra Clients")
         self.dora = person("Dora", client=True, organization="Zebra Clients")
         self.camp = project("Camp", members=[self.ada, self.pia, self.cleo])
@@ -43,7 +43,7 @@ class PersonPageTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No projects in common.")
 
-    def test_a_partner_sees_the_people_of_their_projects_only(self):
+    def test_an_external_sees_the_people_of_their_projects_only(self):
         response = self.get(self.pia, self.cleo)
         self.assertContains(response, "Cleo Example")
         self.assertContains(response, "Camp")

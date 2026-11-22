@@ -7,7 +7,7 @@ from django.test import TestCase
 from biwak.audit.models import LoggedAction
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization, domain_of, normalize_name
-from biwak.test_utils import organization, partner, person
+from biwak.test_utils import external, organization, person
 
 
 class ModelTest(TestCase):
@@ -33,20 +33,20 @@ class ModelTest(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Organization.objects.create(name="Other Team", is_own=True)
 
-    def test_partners(self):
+    def test_externals(self):
         ada = person("Ada")
-        self.assertFalse(ada.is_partner)
+        self.assertFalse(ada.is_external)
         self.assertTrue(ada.sees_all_access)
-        pia = partner("Pia")
-        self.assertTrue(pia.is_partner)
+        pia = external("Pia")
+        self.assertTrue(pia.is_external)
         self.assertFalse(pia.sees_all_access)
-        self.assertEqual(pia.display_name, "Pia Example, Example Partner Agency")
+        self.assertEqual(pia.display_name, "Pia Example, Example External Agency")
         own = organization("Example Team", is_own=True)
         ada.organization = own
         self.assertTrue(ada.sees_all_access)
         self.assertEqual(ada.display_name, "Ada Example")
         cleo = person("Cleo", client=True)
-        self.assertFalse(cleo.is_partner)
+        self.assertFalse(cleo.is_external)
         self.assertFalse(cleo.sees_all_access)
         self.assertEqual(cleo.display_name, "Cleo Example, Example Client Ltd")
 
@@ -79,8 +79,8 @@ class OperationsTest(TestCase):
         org_ops.update_organization(org, name="Example Limited", actor=self.bob)
         org.refresh_from_db()
         self.assertEqual(org.name, "Example Limited")
-        # Clients and partners don't manage organizations
-        for nobody in [person("Cleo", client=True), partner("Pia")]:
+        # Clients and externals don't manage organizations
+        for nobody in [person("Cleo", client=True), external("Pia")]:
             with self.assertRaises(PermissionError):
                 org_ops.create_organization(name="Other", actor=nobody)
 
@@ -131,7 +131,7 @@ class OperationsTest(TestCase):
     def test_the_own_organization_is_for_admins(self):
         org = organization("Example Ltd")
         other = organization("Other Ltd")
-        pia = partner("Pia")
+        pia = external("Pia")
         # Merging into or out of it, moving people in or out, deleting it
         for change in [
             lambda actor: org_ops.merge(org, self.own, actor=actor),
@@ -145,7 +145,7 @@ class OperationsTest(TestCase):
         org_ops.set_organization(self.bob, self.own, actor=self.admin)
         with self.assertRaises(PermissionError):
             org_ops.set_organization(self.bob, other, actor=self.bob)
-        # Partners and partner organizations: admins (decided 2026-11-21)
+        # Externals and external organizations: admins (decided 2026-11-21)
         with self.assertRaises(PermissionError):
             org_ops.set_organization(pia, other, actor=self.bob)
         org_ops.set_organization(pia, other, actor=self.admin)
@@ -154,7 +154,7 @@ class OperationsTest(TestCase):
         # Client organizations: all staff
         org_ops.merge(org, organization("Third Ltd"), actor=self.bob)
         # The own one always exists: not deleted, not merged away, the mark
-        # not removed; moving it would make the admins partners
+        # not removed; moving it would make the admins externals
         with self.assertRaisesMessage(ValidationError, "always exists"):
             org_ops.delete_organization(self.own, actor=self.admin)
         with self.assertRaisesMessage(ValidationError, "always exists"):

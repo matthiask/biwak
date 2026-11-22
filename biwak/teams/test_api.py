@@ -9,7 +9,7 @@ from biwak import test_cli
 from biwak.accounts.models import APIToken
 from biwak.teams import operations as team_ops
 from biwak.teams.models import Team
-from biwak.test_utils import partner, person, project
+from biwak.test_utils import external, person, project
 
 
 class APITest(TestCase):
@@ -18,7 +18,7 @@ class APITest(TestCase):
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
         self.dora = person("Dora", client=True, organization="Other Client Ltd")
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         project(members=[self.pia, self.cleo])
         self.team = team_ops.create_team(
             name="Design team", members=[self.bob, self.cleo, self.dora], actor=self.ada
@@ -43,7 +43,7 @@ class APITest(TestCase):
         detail = self.api(self.ada, "get", f"teams/{self.team.pk}/").json()
         self.assertEqual(detail, team)
 
-    def test_partners_read_the_members_they_may_know(self):
+    def test_externals_read_the_members_they_may_know(self):
         # Bob through the all-access project, not Dora
         [team] = self.api(self.pia, "get", "teams/").json()
         self.assertEqual(

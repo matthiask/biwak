@@ -1,6 +1,6 @@
 """Managing teams (specs/teams.md): the operations, the People page's
 section, a team's page and its modals, the palette; own staff manage,
-partners see, clients never do"""
+externals see, clients never do"""
 
 import json
 import re
@@ -12,7 +12,7 @@ from django.urls import reverse
 from biwak.audit.models import LoggedAction
 from biwak.teams import operations as team_ops
 from biwak.teams.models import Team, TeamMember
-from biwak.test_utils import partner, person, project
+from biwak.test_utils import external, person, project
 
 
 class OperationsTest(TestCase):
@@ -20,7 +20,7 @@ class OperationsTest(TestCase):
         self.ada = person("Ada")
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
 
     def test_create_update_delete(self):
         LoggedAction.objects.all().delete()
@@ -114,7 +114,7 @@ class PagesTest(TestCase):
         self.bob = person("Bob")
         self.cleo = person("Cleo", client=True)
         self.dora = person("Dora", client=True, organization="Other Client Ltd")
-        self.pia = partner("Pia")
+        self.pia = external("Pia")
         project(members=[self.pia, self.cleo])
         self.team = team_ops.create_team(
             name="Design team", members=[self.bob, self.cleo, self.dora], actor=self.ada
@@ -131,8 +131,8 @@ class PagesTest(TestCase):
         response = self.client.get(reverse("people") + "?inactive=1")
         self.assertNotContains(response, "Design team")
 
-    def test_people_page_as_partner(self):
-        """Partners see the teams with the members they may know, and can't
+    def test_people_page_as_external(self):
+        """Externals see the teams with the members they may know, and can't
         manage them"""
         self.client.force_login(self.pia)
         response = self.client.get(reverse("people"))

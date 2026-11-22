@@ -1,6 +1,6 @@
 {% load biwak %}
 {% comment %}The assignees of a to-do's row: linked names with their marks, like the to-do's page (decided 2026-11-21).{% endcomment %}
-{# Only those the viewer may know (known_in): not people removed from the project, for clients and partners #}
+{# Only those the viewer may know (known_in): not people removed from the project, for clients and externals #}
 {% known_in todo todo.todo.assignees.all as people %}{% if people %}<span
     class="small wb-row-people"
   >{% for person in people %}{% person_page person %}{% if not forloop.last %},

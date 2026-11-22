@@ -324,7 +324,7 @@ def member_invite(request, project_id: int, data: InviteIn):
 
 @router.delete("projects/{project_id}/members/{person_id}/", response=MemberOut)
 def member_remove(request, project_id: int, person_id: int):
-    """Own staff remove anybody, themselves included; clients and partners
+    """Own staff remove anybody, themselves included; clients and externals
     get 403, for themselves too (decided 2026-11-22); returns the person
     removed"""
     project = project_for(request, project_id)

@@ -114,7 +114,7 @@ project. Waiting for Basecamp's account export to confirm the plan.
   the operations accept inactive people only inside `importing()`.
   Companies become organizations by name, ignoring case and spaces:
   employees get the own organization, clients and collaborators their
-  company's (collaborators become partners). Existing people keep theirs.
+  company's (collaborators become externals). Existing people keep theirs.
 - **Profile images** (decided 2026-11-21): for people without an image
   in Biwak, `avatar_url` from `people/<id>.json` (`people.json` has
   null), processed like an upload, never overwriting one. Basecamp's

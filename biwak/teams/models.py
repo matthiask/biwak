@@ -1,7 +1,7 @@
 """Teams (specs/teams.md): named sets of people for picking several at
 once. A team is a shortcut, not a thing items point at: picking it adds its
 members, and only the people are stored. Only staff (own staff and
-partners) see teams; own staff manage them."""
+externals) see teams; own staff manage them."""
 
 from django.conf import settings
 from django.db import models

@@ -118,7 +118,7 @@ def own_staff(prefix=""):
 class User(AbstractBaseUser):
     """Staff or client (specs/access.md). Everybody can belong to an
     organization (specs/organizations.md); staff of an organization other
-    than the own one are partners."""
+    than the own one are externals."""
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -288,12 +288,12 @@ class User(AbstractBaseUser):
 
     def clean(self):
         super().clean()
-        if self.is_admin and self.is_partner:
+        if self.is_admin and self.is_external:
             # Admins are own staff (decided 2026-11-21)
             raise ValidationError(
                 _(
-                    "Admins belong to your own organization, a"
-                    " partner can't be an admin: move them into it first."
+                    "Admins belong to your own organization, an"
+                    " external can't be an admin: move them into it first."
                 )
             )
 
@@ -306,9 +306,9 @@ class User(AbstractBaseUser):
         )
 
     @property
-    def is_partner(self):
+    def is_external(self):
         """Staff who aren't in the own organization: of
-        another one (partner agencies) or of none (individuals, e.g.
+        another one (external agencies) or of none (individuals, e.g.
         freelancers, decided 2026-11-21). They see only the projects
         they're members of."""
         if self.is_client:
@@ -325,7 +325,7 @@ class User(AbstractBaseUser):
     def sees_all_access(self):
         """Opens all-access projects without being a member: the
         own staff (``own_staff()`` for querysets)"""
-        return not self.is_client and not self.is_partner
+        return not self.is_client and not self.is_external
 
     @property
     def image_version(self):
@@ -385,7 +385,7 @@ class User(AbstractBaseUser):
 
     @property
     def display_name(self):
-        """With the organization for clients and partners: "Ada, Example
+        """With the organization for clients and externals: "Ada, Example
         Ltd"; own staff without it"""
         if self.organization_id and not self.sees_all_access:
             return f"{self}, {self.organization.name}"

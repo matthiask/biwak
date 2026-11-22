@@ -386,7 +386,7 @@ msgid "people"
 msgstr "Personen"
 
 #: biwak/accounts/models.py
-msgid "Admins belong to your own organization, a partner can't be an admin: move them into it first."
+msgid "Admins belong to your own organization, an external can't be an admin: move them into it first."
 msgstr "Admins gehören zur eigenen Organisation, Externe können keine Admins sein: Verschiebe die Person zuerst dorthin."
 
 #: biwak/accounts/models.py
@@ -3008,7 +3008,7 @@ msgid "your own organization"
 msgstr "eigene Organisation"
 
 #: biwak/organizations/models.py
-msgid "Its staff see all-access projects; staff of other organizations (partners) only the projects they're members of."
+msgid "Its staff see all-access projects; staff of other organizations (externals) only the projects they're members of."
 msgstr "Die Mitarbeitenden dieser Organisation sehen offene Projekte; Mitarbeitende anderer Organisationen (Externe) nur die Projekte, in denen sie Mitglied sind."
 
 #: biwak/organizations/models.py
@@ -3057,7 +3057,7 @@ msgid "%(domain)s belongs to %(organization)s already."
 msgstr "%(domain)s gehört bereits zu %(organization)s."
 
 #: biwak/organizations/operations.py
-msgid "Only admins change the domains of a partner organization."
+msgid "Only admins change the domains of an external organization."
 msgstr "Nur Admins ändern die Domains einer externen Organisation."
 
 #: biwak/organizations/operations.py
@@ -3159,7 +3159,7 @@ msgid "admin"
 msgstr "Admin"
 
 #: biwak/organizations/people.py
-msgid "partner"
+msgid "external"
 msgstr "extern"
 
 #: biwak/organizations/people.py
@@ -3171,7 +3171,7 @@ msgid "Without an organization"
 msgstr "Ohne Organisation"
 
 #: biwak/organizations/people.py
-msgid "Partner organization"
+msgid "External organization"
 msgstr "Externe Organisation"
 
 #: biwak/organizations/people.py
@@ -3294,7 +3294,7 @@ msgid "It signs in with %(provider)s: only admins change its domains."
 msgstr "Die Organisation meldet sich mit %(provider)s an: Nur Admins ändern ihre Domains."
 
 #: biwak/organizations/views.py
-msgid "A partner organization: only admins change its domains."
+msgid "An external organization: only admins change its domains."
 msgstr "Eine externe Organisation: Nur Admins ändern ihre Domains."
 
 #: biwak/organizations/views.py biwak/palette/actions.py
@@ -3994,7 +3994,7 @@ msgid "Only admins can invite staff."
 msgstr "Nur Admins können Mitarbeitende einladen."
 
 #: biwak/projects/operations.py
-msgid "Only admins add people to your own organization or a partner organization."
+msgid "Only admins add people to your own organization or an external organization."
 msgstr "Nur Admins fügen Personen der eigenen Organisation oder einer externen Organisation hinzu."
 
 #: biwak/projects/operations.py
@@ -4544,7 +4544,7 @@ msgid "Members"
 msgstr "Mitglieder"
 
 #: biwak/teams/views.py
-msgid "Anyone, staff, partners and clients. Picking the team picks its members; changing the team later doesn't change earlier picks."
+msgid "Anyone, staff, externals and clients. Picking the team picks its members; changing the team later doesn't change earlier picks."
 msgstr "Alle: Mitarbeitende, Externe und Kund:innen. Wer das Team wählt, wählt seine Mitglieder; spätere Änderungen am Team ändern frühere Auswahlen nicht."
 
 #: biwak/teams/views.py
@@ -6252,7 +6252,7 @@ msgid "Its staff see all-access projects. Only admins move people in or out."
 msgstr "Die Mitarbeitenden dieser Organisation sehen offene Projekte. Nur Admins verschieben Personen hinein oder hinaus."
 
 #: biwak/templates/organizations/organization_detail.html
-msgid "Its staff are partners: they only see the projects they're members of."
+msgid "Its staff are external: they only see the projects they're members of."
 msgstr "Die Mitarbeitenden dieser Organisation sind extern und sehen nur die Projekte, in denen sie Mitglied sind."
 
 #: biwak/templates/organizations/organization_detail.html
@@ -6274,7 +6274,7 @@ msgid "A second factor is required: a passkey, the identity provider, or a code 
 msgstr "Ein zweiter Faktor ist nötig: ein Passkey, der Identity-Provider oder ein Code und eine Authenticator-App."
 
 #: biwak/templates/organizations/organization_detail.html
-msgid "Partner"
+msgid "External"
 msgstr "Extern"
 
 #: biwak/templates/organizations/organization_detail.html
@@ -6284,7 +6284,7 @@ msgid "Change organization"
 msgstr "Organisation ändern"
 
 #: biwak/templates/organizations/organization_list.html
-msgid "The organizations people belong to: clients' companies, your own and partners'. Staff of other organizations only see the projects they're members of."
+msgid "The organizations people belong to: clients' companies, your own and those of externals. Staff of other organizations only see the projects they're members of."
 msgstr "Die Organisationen, zu denen Personen gehören: die Firmen der Kund:innen, die eigene und die der Externen. Mitarbeitende anderer Organisationen sehen nur die Projekte, in denen sie Mitglied sind."
 
 #: biwak/templates/organizations/organization_list.html

@@ -1,6 +1,6 @@
 """Organizations people belong to (specs/organizations.md): the clients'
-companies, the own organization (``is_own``) and partners'. Staff of an
-organization other than the own one are partners and see only
+companies, the own organization (``is_own``) and externals'. Staff of an
+organization other than the own one are externals and see only
 the projects they're members of (specs/access.md)."""
 
 import re
@@ -67,7 +67,7 @@ def domain_of(email):
 OWN_NAME = "Our organization"
 
 # The own organization's ID, remembered for a request (``remembering_own()``,
-# the middleware): whether somebody is a partner then costs a query per
+# the middleware): whether somebody is an external then costs a query per
 # request, not one per person shown
 _own_pk = ContextVar("own_organization_pk", default=None)
 
@@ -176,7 +176,7 @@ class Organization(models.Model):
         default=False,
         help_text=_(
             "Its staff see all-access projects; staff of other organizations"
-            " (partners) only the projects they're members of."
+            " (externals) only the projects they're members of."
         ),
     )
     # Single sign-on (specs/sso.md): admins only

@@ -20,7 +20,7 @@ assignee picker), `activity.operations.share()` and
   messages, docs, files, folders, check-ins.
 - **In it:** the subscribers, linked to their pages, with who added them
   (`Subscription.added_by`); a picker offering people not subscribed yet
-  who can see the item, for clients and partners only people they may
+  who can see the item, for clients and externals only people they may
   know (`known_to`, `subscribable_people()` is the one rule); **"Tell
   them now"**, off by default, with an optional note (one line,
   whitespace collapsed, at most 200 characters, ignored without "Tell

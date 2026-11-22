@@ -2,7 +2,7 @@
 
 Who gets into Biwak and who leaves: inviting people (several at once),
 the invitations still waiting, activating people the importer created
-inactive, deactivating people who left, and resetting someone's sign-in. Organizations, the People page and partners are in
+inactive, deactivating people who left, and resetting someone's sign-in. Organizations, the People page and externals are in
 `organizations.md`; sign-in in `access.md`.
 
 **Status:** built (2026-11-21). Inviting several: `biwak/projects/invitations.py`
@@ -17,13 +17,13 @@ inactive, deactivating people who left, and resetting someone's sign-in. Organiz
 
 One split for inviting, activating, deactivating and resets
 (`activation.can_change()`): staff for clients; admins also for own
-staff and partners (people of partner organizations); clients and
-partners never (`can_manage_members()`: the forms offer everybody,
-whom partners mustn't learn about). Putting
-people into the own or a partner organization is for admins too
+staff and externals (people of external organizations); clients and
+externals never (`can_manage_members()`: the forms offer everybody,
+whom externals mustn't learn about). Putting
+people into the own or an external organization is for admins too
 (`organizations.md`). Several people at once with someone the actor may
 not change is refused as a whole. Pages answer 404 to clients and
-partners and 403 to staff for somebody they may not change; the API 403
+externals and 403 to staff for somebody they may not change; the API 403
 to both.
 
 ## Inviting
@@ -59,7 +59,7 @@ to both.
   (`User.objects.invited()`). Marked "Invited, not signed in yet" with
   who and when on the project's people page, `/people/` and the person's
   page; `/people/?invited=1` lists them oldest first. The mark is for own
-  staff only (clients and partners don't learn who invited whom); Resend
+  staff only (clients and externals don't learn who invited whom); Resend
   and Withdraw follow the split above (`can_manage_invitation()`: staff
   for clients, admins for everybody, decided 2026-11-21 after a review),
   on the pages, the API and the CLI.
@@ -144,7 +144,7 @@ does.
 - **API:** `GET|POST /api/v1/invitations/` (per-row errors as `{"detail",
   "errors": [{"index", "detail"}]}`, 400), `POST
   /api/v1/invitations/{id}/resend/`, `DELETE /api/v1/invitations/{id}/`
-  (403 for clients and partners, 404 for people who aren't invitations);
+  (403 for clients and externals, 404 for people who aren't invitations);
   `GET /api/v1/people/` (active people, `?inactive=true` the inactive
   ones; own staff), `POST /api/v1/people/{id}/activate/` and
   `…/deactivate/`, and in bulk `POST /api/v1/people/activate/` (`ids`,

@@ -392,16 +392,16 @@ class ConsumerTest(TransactionTestCase):
         await database_sync_to_async(self.on_commit)(deactivate)
         await self.assertClosed(bob)
 
-    async def test_a_partner_now(self):
+    async def test_an_external_now(self):
         """Bob is staff, not a member: in another organization than the
-        own, he's a partner and doesn't see the project"""
+        own, he's an external and doesn't see the project"""
         bob = await self.connect(self.bob, self.shared)
 
-        def make_partner():
-            self.bob.organization = organization("Example Partner Agency")
+        def make_external():
+            self.bob.organization = organization("Example External Agency")
             self.bob.save()
 
-        await database_sync_to_async(self.on_commit)(make_partner)
+        await database_sync_to_async(self.on_commit)(make_external)
         await self.assertClosed(bob)
         bob = await self.connect(self.bob, self.shared, sync=False)
         await self.assertClosed(bob)
