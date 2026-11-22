@@ -288,6 +288,7 @@ def todolist(request, pk):
             "people_teams": form.fields["assignees"].widget.team_attrs(),
             "view": view,
             "can_change": ops.can_change(request.user, item),
+            "can_add_from_text": ops.may_add_to(request.user, item),
         },
     )
 

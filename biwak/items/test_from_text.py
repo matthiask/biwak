@@ -1,13 +1,24 @@
 """Adding to-dos from text (specs/todos-from-text.md): the parser, the
 operation, the modal and its preview, the API"""
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.urls import reverse
 
+from biwak.activity import mails
 from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.activity.operations import subscribe
 from biwak.items import from_text, operations as ops
 from biwak.items.models import Item, Kind
-from biwak.test_utils import person, project
+from biwak.palette.test_actions import palette_data
+from biwak.test_utils import (
+    MODAL,
+    assert_modal,
+    assert_modal_redirect,
+    assert_page,
+    person,
+    project,
+)
 
 
 EXAMPLE = """\
@@ -249,3 +260,142 @@ class OperationTest(Fixture, TestCase):
         ops.archive(self.list, actor=self.ada)
         with self.assertRaises(ops.FromTextRefused):
             ops.add_from_text(self.list, "- One\n", actor=self.ada)
+
+
+class ViewTest(Fixture, TestCase):
+    def url(self, item=None):
+        return reverse("list_from_text", args=[(item or self.list).pk])
+
+    def test_modal_and_page(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url(), headers=MODAL)
+        assert_modal(self, response, title="Add from text…")
+        self.assertContains(response, "Paste a text or choose a file.")
+        self.assertContains(response, 'data-ready="false"')
+        # A plain textarea, not the editor
+        self.assertNotContains(response, "data-toolbar")
+        assert_page(self, self.client.get(self.url()), title="Add from text…")
+
+    def test_adding_as_staff(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.url(),
+            {"todolist": self.list.pk, "text": "# Later\n- One\n- Two\n"},
+            headers=MODAL,
+        )
+        assert_modal_redirect(self, response, self.list.get_absolute_url())
+        self.assertEqual([t.title for t in self.todos()][1:], ["One", "Two"])
+
+    def test_another_list(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            self.url(), {"todolist": self.internal.pk, "text": "- Elsewhere\n"}
+        )
+        self.assertRedirects(response, self.internal.get_absolute_url())
+        self.assertEqual([t.title for t in self.todos(self.internal)], ["Elsewhere"])
+
+    def test_a_file_without_javascript(self):
+        self.client.force_login(self.ada)
+        upload = SimpleUploadedFile(
+            "plan.md", b"- From the file\n", content_type="text/markdown"
+        )
+        self.client.post(
+            self.url(), {"todolist": self.list.pk, "text": "- Typed\n", "file": upload}
+        )
+        self.assertEqual(
+            [t.title for t in self.todos()][1:], ["Typed", "From the file"]
+        )
+
+    def test_other_files_are_refused(self):
+        self.client.force_login(self.ada)
+        upload = SimpleUploadedFile("a.png", b"\x89PNG", content_type="image/png")
+        response = self.client.post(
+            self.url(), {"todolist": self.list.pk, "file": upload}
+        )
+        self.assertContains(response, "Only text files can be added as to-dos.")
+        self.assertEqual(len(self.todos()), 1)
+
+    def test_errors_and_the_preview_after_posting(self):
+        self.client.force_login(self.ada)
+        text = "".join(f"- {n}\n" for n in range(501))
+        response = self.client.post(
+            self.url(), {"todolist": self.list.pk, "text": text}, headers=MODAL
+        )
+        self.assertContains(response, "This text has 501 to-dos")
+        self.assertEqual(len(self.todos()), 1)
+
+    def test_preview(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            reverse("list_from_text_preview", args=[self.list.pk]),
+            {"todolist": self.list.pk, "text": EXAMPLE},
+        )
+        self.assertContains(response, 'data-label="Add 5 to-dos"')
+        self.assertContains(response, 'data-ready="true"')
+        self.assertContains(response, "Design")
+        self.assertContains(response, ">existing<")
+        self.assertContains(response, ">new<")
+        self.assertContains(response, "1/2")
+        self.assertContains(
+            response, "2 paragraphs aren’t list items and are left out."
+        )
+        self.assertEqual(len(self.todos()), 1)
+
+    def test_clients(self):
+        self.client.force_login(self.cleo)
+        # Internal lists aren't there
+        self.assertEqual(self.client.get(self.url(self.internal)).status_code, 404)
+        response = self.client.get(self.url(), headers=MODAL)
+        assert_modal(self, response, title="Add from text…")
+        self.assertNotContains(response, "Internal")
+        # New groups only in lists they created
+        response = self.client.post(
+            reverse("list_from_text_preview", args=[self.list.pk]),
+            {"todolist": self.list.pk, "text": "# New\n- One\n"},
+        )
+        self.assertContains(response, "Only the list’s creator can add groups.")
+        self.assertContains(response, 'data-ready="false"')
+        response = self.client.post(
+            self.url(), {"todolist": self.list.pk, "text": "- One\n"}, headers=MODAL
+        )
+        assert_modal_redirect(self, response)
+        self.assertEqual(Item.objects.get(title="One").creator, self.cleo)
+        # Not into the internal list by its ID either
+        response = self.client.post(
+            self.url(), {"todolist": self.internal.pk, "text": "- Two\n"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(title="Two").exists())
+
+    def test_the_more_menu_and_the_drop_zone(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.list.get_absolute_url())
+        self.assertContains(response, self.url())
+        self.assertContains(response, "data-drop-text-page")
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertContains(response, f'data-drop-text="{self.url()}"')
+        ops.archive(self.list, actor=self.ada)
+        response = self.client.get(self.list.get_absolute_url())
+        self.assertNotContains(response, self.url())
+        self.assertEqual(self.client.get(self.url()).status_code, 403)
+
+    def test_palette(self):
+        for user in [self.ada, self.cleo]:
+            self.client.force_login(user)
+            response = self.client.get(self.list.get_absolute_url())
+            actions = {a["label"]: a for a in palette_data(response)["actions"]}
+            self.assertEqual(actions["Add from text…"]["url"], self.url())
+        ops.archive(self.list, actor=self.ada)
+        response = self.client.get(self.list.get_absolute_url())
+        labels = {a["label"] for a in palette_data(response)["actions"]}
+        self.assertNotIn("Add from text…", labels)
+
+    def test_feed_and_mail(self):
+        subscribe(self.ada, self.list)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.add_from_text(self.list, "- One\n- Two\n", actor=self.bob)
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("feed"))
+        self.assertContains(response, "added 2 to-dos to")
+        event = Event.objects.get(action=Action.ADDED_TODOS)
+        self.assertEqual(mails.describe(event, self.ada), "Bob Example added 2 to-dos.")

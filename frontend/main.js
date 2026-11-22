@@ -106,6 +106,16 @@ if (document.querySelector("[data-tiles]")) {
   })
 }
 
+// Adding to-dos from text (specs/todos-from-text.md): dropping text files
+// onto a list, the modal's preview
+if (
+  document.querySelector(
+    "[data-drop-text], [data-drop-text-page], [data-from-text]",
+  )
+) {
+  import(/* webpackChunkName: "from-text" */ "./from-text.js")
+}
+
 // Docs edited live (specs/collaboration.md), the doc's editor page only
 if (document.querySelector("[data-collab]")) {
   import(/* webpackChunkName: "collab" */ "./collab.js")

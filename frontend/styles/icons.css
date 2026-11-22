@@ -274,3 +274,9 @@
 .bi-moon-fill::before {
   content: "\f494";
 }
+.bi-square::before {
+  content: "\f584";
+}
+.bi-check-square::before {
+  content: "\f26d";
+}

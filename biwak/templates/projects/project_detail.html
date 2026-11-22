@@ -108,6 +108,7 @@
         ·
         <a href="{% url 'project_todos' project.pk %}?grouping=due">{% translate "by due date" %}</a>
       </p>
+      {% if lists and not project.archived_at %}{% include "items/_drop_text.html" %}{% endif %}
       <div
         class="list-group mb-3"
         {% if can_manage %}
@@ -119,6 +120,7 @@
           <div
             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
             data-sortable-item="{{ list.pk }}"
+            {% if not project.archived_at %}data-drop-text="{% url 'list_from_text' list.pk %}"{% endif %}
           >
             <a
               class="d-flex flex-grow-1 justify-content-between align-items-center text-reset text-decoration-none"
