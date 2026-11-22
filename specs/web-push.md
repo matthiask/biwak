@@ -8,10 +8,10 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
 ## What pushes
 
-- **What the lantern counts** (`lantern.md`): one push per notification
-  the lantern gets, the same grouping (files uploaded together, the
-  to-dos of one "Assign…" are one push). Not reactions, not what the
-  person did themselves.
+- **Only what's for the person** (decided 2026-11-22: high priority
+  only, a quiet phone): being mentioned and being assigned, the to-dos
+  of one "Assign…" one push. Not the rest of what the lantern counts,
+  not reactions, not what the person did themselves.
 - **Quiet hours and out of office** (`quiet-hours.md`): no pushes outside
   working time or while away; nothing is sent later (the lantern has
   it).
@@ -39,7 +39,9 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
 - A small service worker (`frontend/sw.js`, served at `/sw.js`) that only
   shows pushes and opens their URL on a tap: still no caching of pages
-  (decided 2026-11-21, `pwa.md`).
+  (decided 2026-11-21, `pwa.md`). On iPhones Web Push needs Biwak added
+  to the home screen; the setting says so in Safari (fine, decided
+  2026-11-22).
 - No service of our own and no account anywhere: the browser's push
   service (Google's for Chrome, Mozilla's, Apple's) delivers what we send
   to the subscription's endpoint, encrypted end to end; VAPID is only a
@@ -52,16 +54,10 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 - Audit log for the new table; API: list and delete one's own devices;
   the CLI doesn't push.
 
-## Questions
-
-1. **Mentions and assignments only?** Proposed: everything the lantern
-   counts; the alternative is a quieter phone.
-2. **iOS** needs the app installed to the home screen for Web Push: the
-   setting says so on iPhones that open Biwak in Safari. Fine?
-
 ## Done when
 
-- Tests: what pushes and what doesn't (own actions, read, quiet hours,
+- Tests: what pushes and what doesn't (mentions and assignments only,
+  own actions, read, quiet hours,
   away, clients' visibility), subscriptions deleted on 410, the setting
   only with keys; a browser test of subscribing (Chromium's push service
   can be stubbed).
