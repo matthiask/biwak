@@ -6,7 +6,9 @@ are maintained by people in the app (one person or role keeps them
 current) and used while projects run (an onboarding list, a list per
 event), which a skill setting up projects doesn't cover.
 
-**Status:** open.
+**Status:** built (2026-11-22), branch `templates`; the decisions
+marked "proposed" below were made while building, for the user to
+confirm.
 
 ## What real templates hold
 
@@ -88,6 +90,82 @@ library over as templates (`import-basecamp.md`): the API serves both
 like projects (decided 2026-11-22), once per import, so nobody
 rebuilds them by hand.
 
+## How it's built
+
+- **Model:** `Project.is_template` (not editable), `is_quiet` (archived
+  or a template). `ProjectQuerySet.active()` leaves out archived
+  projects *and* templates, so everything listing running projects
+  (the projects page, Home's cards, the to-dos page's projects,
+  invitations, forwarding, suggested colors, joinable projects) leaves
+  templates out; `templates()` lists them. `accessible_to()` gives
+  templates to the own staff only, members or not.
+- **Left out** next to `project__archived_at__isnull=True`:
+  `project__is_template=False` in the feed across projects, the to-dos
+  (`due.todos()`, so also Home and the calendar feed), Home's
+  bookmarks, check-ins due (and `is_askable()`: questions in templates
+  aren't asked), forwarding's lists, public links (they don't resolve),
+  the all-projects page, the archived projects. Search: `templates`
+  (the page's "Include templates", staff only; the API's `templates`;
+  `biwak search --templates`), and searching inside a template finds
+  its items. The palette lists templates after the projects, labelled
+  "Template".
+- **Quiet:** `notify()` tells nobody about events of templates (so no
+  lantern, mails or digests), `mentions.update()` stores no mentions
+  there, `notify_people()` subscribes nobody. Assigning inside a
+  template adds nobody as member; `add_member()` refuses templates
+  ("Templates have no members."), `update_project()` refuses making one
+  limited; joining, "Add someone" and "Invite by email" are 404.
+- **Operations:** `project_ops.create_template()`,
+  `fill_from_template(project, template, actor)` (the one event:
+  `created` without item, `template` and `template_id` in its data;
+  the feed names the template only to readers who can open it,
+  `feed.add_projects()`; the API drops it otherwise) and
+  `create_from_template(template, actor, members, **fields)`.
+  `items.operations.copy_template()` copies with `copy_list(...,
+  quiet=True)` (the title as it is, nobody added, no event, the actor
+  subscribed), messages, folders with docs and files (the newest
+  version, as a new file), attachments in texts as new files; the
+  project's orders of files and messages too.
+- **Pages** (`biwak/projects/template_views.py`): `/projects/templates/`
+  (`?archived=1`), "New template" (`template_create`), the new project
+  form's "From a template" select and `?template=ID` ("New project
+  from this…" on the cards and the template's page, prefilled with the
+  description and the color, the banner "Visible to clients: …"),
+  `list_from_template` (two steps: the combobox, then the copy form).
+  The template's page says it's a template, has no "Members", "Join"
+  or "Notifications". Palette: "Go to templates", "New template",
+  "New project from this…", "New list from a template…".
+- **API/CLI:** `ProjectOut.is_template`; `GET projects/?templates=true`
+  (`biwak projects --templates`); `POST projects/` with `template`,
+  `member_ids` (added before copying) or `is_template` (`biwak project
+  add NAME --template ID --member PERSON`, `--as-template`); a list
+  from a template is `POST lists/{id}/copy/` (`biwak list copy`).
+- **Importer:** `import_basecamp --templates` (`import-basecamp.md`).
+
+## Decisions made while building (proposed, 2026-11-22)
+
+- **Not copied:** archived lists, trashed items, drafts, completed
+  to-dos (as `copy_list()`), check-in questions and the project's links
+  (the spec lists neither); pinned messages stay pinned.
+- **Assignees "who aren't members"** read as "who don't see the new
+  project" (`staying()`): own staff of an all-access project keep their
+  assignments without being members.
+- **The new project form** is prefilled with the template's description
+  and color, not its name. The clients' banner shows when the template
+  is known (from "New project from this…", or the organizations step);
+  choosing a template in the select of a form without organizations
+  doesn't ask first (no clients yet).
+- **Copying lists into templates** ("Copy…") is allowed, templates
+  listed after the projects; moving into or out of a template is
+  refused ("Nothing moves into or out of a template."), and templates'
+  items offer no other projects to move to.
+- **Archived templates** have their own archive on the templates page,
+  not on the projects page's archive. Projects have no trash, so
+  neither do templates.
+- **Search** asks with its own checkbox, "Include templates" (staff).
+- **The library's name** is its bucket's, "To-do list library" when it
+  has none.
+
 ## Not planned
 
 - **"Save as template"** from a running project (decided 2026-11-22):
@@ -98,5 +176,7 @@ rebuilds them by hand.
 - Tests for the operations (copying everything, assignees left out,
   visibility, one event, nothing told), the pages as staff, a client
   and an external getting 404, templates left out everywhere listed
-  above, the API and the CLI.
-- The help's chapter on projects says how templates work.
+  above, the API and the CLI. (`biwak/projects/test_templates*.py`,
+  `biwak/test_cli_templates.py`, `biwak/importer/test_templates.py`)
+- The help's chapter on projects says how templates work
+  (`docs/orientation.md`, "Templates").

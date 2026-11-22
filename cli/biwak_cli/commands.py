@@ -204,6 +204,11 @@ def settings(language, as_json):
 @json_option
 @click.option("--archived", is_flag=True, help="Archived projects instead.")
 @click.option(
+    "--templates",
+    is_flag=True,
+    help="Templates instead (own staff); with --archived the archived ones.",
+)
+@click.option(
     "--joinable",
     is_flag=True,
     help="Limited projects you're not in instead, which admins can join.",
@@ -227,7 +232,15 @@ def settings(language, as_json):
     help="With --all: with open to-dos whose assignees are all inactive.",
 )
 def projects(
-    as_json, archived, joinable, order, everything, no_staff, limited, inactive_todos
+    as_json,
+    archived,
+    templates,
+    joinable,
+    order,
+    everything,
+    no_staff,
+    limited,
+    inactive_todos,
 ):
     """The projects you can open, bookmarked ones (*) first, with the latest
     activity (for clients: of what they see)"""
@@ -253,6 +266,8 @@ def projects(
         console.print(t)
         return None
     params = {"archived": archived}
+    if templates:
+        params["templates"] = True
     if order:
         params["order"] = order
     data = request("GET", "projects/", params=params)
@@ -324,18 +339,49 @@ color_option = click.option(
     help="Only members see it (default: all staff can see it).",
 )
 @color_option
+@click.option(
+    "--template",
+    "template",
+    type=int,
+    metavar="ID",
+    help="Start as a copy of this template (biwak projects --templates).",
+)
+@click.option(
+    "--member",
+    "members",
+    type=int,
+    multiple=True,
+    metavar="PERSON",
+    help="Add this person (repeatable), before the template is copied.",
+)
+@click.option(
+    "--as-template",
+    is_flag=True,
+    help="A template instead of a project (own staff; all staff see it).",
+)
 @json_option
-def project_add(name, description, limited, color, as_json):
+def project_add(
+    name, description, limited, color, template, members, as_template, as_json
+):
     """Create the project NAME (staff); you become a member. Without --color
-    it gets one no other active project has."""
+    it gets one no other active project has. With --template it starts as a
+    copy of the template's lists, messages, folders, docs and files;
+    assignees who don't see the new project are left out."""
     body = {"name": name, "description": description, "is_all_access": not limited}
     if color is not None:
         body["color"] = "" if color == "none" else color
+    if template is not None:
+        body["template"] = template
+    if members:
+        body["member_ids"] = list(members)
+    if as_template:
+        body["is_template"] = True
     data = request("POST", "projects/", json=body)
     if as_json:
         return echo_json(data)
+    kind = "template" if data["is_template"] else "project"
     click.echo(
-        f"Created #{data['id']} {data['name']}"
+        f"Created the {kind} #{data['id']} {data['name']}"
         f"{'' if data['is_all_access'] else ' (limited)'}."
     )
     return None
@@ -2419,9 +2465,14 @@ def feed(project, person, kind, action, since, limit, as_json):
     is_flag=True,
     help="Include archived projects and lists, which are left out otherwise.",
 )
+@click.option(
+    "--templates",
+    is_flag=True,
+    help="Include templates, which are left out otherwise.",
+)
 @click.option("--limit", default=50, show_default=True, help="At most this many.")
 @json_option
-def search(terms, project, kind, mine, archived, limit, as_json):
+def search(terms, project, kind, mine, archived, templates, limit, as_json):
     """Find items by words in their title, text or comments, newest first.
     Every word also matches as the start of a word."""
     params = {"q": " ".join(terms)}
@@ -2433,6 +2484,8 @@ def search(terms, project, kind, mine, archived, limit, as_json):
         params["mine"] = "true"
     if archived:
         params["archived"] = "true"
+    if templates:
+        params["templates"] = "true"
     results = paginate("search/", params, limit=limit)
     if as_json:
         return echo_json(results)
@@ -2445,7 +2498,9 @@ def search(terms, project, kind, mine, archived, limit, as_json):
             str(result["id"]),
             result["kind"],
             result["title"],
-            result["project_name"] + (" (archived)" if result["archived"] else ""),
+            result["project_name"]
+            + (" (archived)" if result["archived"] else "")
+            + (" (template)" if result.get("project_is_template") else ""),
             found,
             clients(result),
         )

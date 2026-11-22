@@ -81,6 +81,7 @@ def event_out(event, user):
     for key, name in [
         ("from_project", event.source_project),
         ("to_project", event.target_project),
+        ("template", event.template_name),
     ]:
         if key in data and not name:
             del data[key]

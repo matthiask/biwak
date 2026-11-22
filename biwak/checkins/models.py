@@ -74,7 +74,7 @@ class Question(Detail):
         return (
             self.paused_at is None
             and item.status == Status.ACTIVE
-            and item.project.archived_at is None
+            and not item.project.is_quiet
         )
 
 

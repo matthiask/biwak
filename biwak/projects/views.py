@@ -21,9 +21,10 @@ from biwak.modals import form_response
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
 from biwak.organizations.people import project_groups
-from biwak.projects import operations as project_ops
+from biwak.projects import operations as project_ops, template_views
 from biwak.projects.models import Project
 from biwak.projects.overview import ProjectOrder, overview
+from biwak.projects.template_views import clients_note, templates_for
 
 
 def project_for(request, pk):
@@ -39,7 +40,7 @@ def _list_context(request, archived):
     if archived:
         # A plain alphabetical list, without cards
         projects = Project.objects.accessible_to(request.user).filter(
-            archived_at__isnull=False
+            archived_at__isnull=False, is_template=False
         )
     else:
         projects = overview(request.user, order)
@@ -50,6 +51,7 @@ def _list_context(request, archived):
         "all_projects": not archived and request.user.is_admin,
         "archived": archived,
         "can_create": project_ops.can_create_project(request.user),
+        "can_use_templates": project_ops.can_use_templates(request.user),
         "order": order,
         "orders": ProjectOrder.choices,
     }
@@ -83,6 +85,9 @@ class ProjectForm(ModelForm):
         self.fields["color"].choices = [("", _("None")), *Color.choices]
         if not self.instance.pk:
             self.fields["color"].initial = project_ops.suggested_color()
+        elif self.instance.is_template:
+            # Templates are for all staff (specs/templates.md)
+            del self.fields["is_all_access"]
 
 
 ORGANIZATIONS, PEOPLE = "organizations", "people"
@@ -104,6 +109,16 @@ class NewProjectForm(ProjectForm):
     step = forms.CharField(
         widget=forms.HiddenInput, initial=ORGANIZATIONS, required=False
     )
+    template = forms.ModelChoiceField(
+        label=_("From a template"),
+        queryset=Project.objects.none(),
+        required=False,
+        empty_label=_("None"),
+        help_text=_(
+            "Its lists, messages, folders, docs and files are copied into"
+            " the new project."
+        ),
+    )
 
     def __init__(self, *args, actor, step=None, organizations=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -112,8 +127,16 @@ class NewProjectForm(ProjectForm):
         self.fields["organizations"].queryset = Organization.objects.filter(
             is_own=False
         )
+        templates = templates_for(actor).filter(archived_at__isnull=True)
+        if templates.exists():
+            self.fields["template"].queryset = templates
+            self.order_fields(["template"])
+        else:
+            del self.fields["template"]
         if self.stage != PEOPLE:
             return
+        if "template" in self.fields:
+            self.fields["template"].widget = forms.HiddenInput()
         if organizations is None:
             organizations = self.fields["organizations"].queryset.filter(
                 pk__in=[pk for pk in self.data.getlist("organizations") if pk.isdigit()]
@@ -208,12 +231,68 @@ class InviteRow(Form):
 InviteRows = forms.formset_factory(InviteRow, extra=3)
 
 
+@transaction.atomic
+def _create_project(form, data, *, actor):
+    """The new project with its people, invitations and, chosen, the copy of
+    a template; ``InvitationError`` rolls it all back"""
+    project = project_ops.create_project(
+        actor=actor,
+        **{
+            field: data[field]
+            for field in ["name", "description", "is_all_access", "color"]
+        },
+    )
+    for user in [*data.get("people", []), *data.get("staff", [])]:
+        project_ops.add_member(project, user, actor=actor)
+    for row in form.invites.cleaned_data if form.stage == PEOPLE else []:
+        if row.get("email"):
+            project_ops.invite(
+                project,
+                email=row["email"],
+                full_name=row["full_name"],
+                organization=row["organization"],
+                actor=actor,
+            )
+    if data.get("template"):
+        # After the members: assignees who don't see the copy are left out
+        project_ops.fill_from_template(project, data["template"], actor=actor)
+    return project
+
+
+def _template_of(request, form):
+    """The template chosen (posted, or ``?template=ID`` of "New project
+    from this…"), or None"""
+    if "template" not in form.fields:
+        return None
+    value = form["template"].value()
+    if isinstance(value, Project):
+        return value
+    if not str(value or "").isdigit():
+        return None
+    return form.fields["template"].queryset.filter(pk=value).first()
+
+
 def project_create(request):
     """A modal in two steps (specs/organizations.md), also a page: without
-    organizations involved, the project is added at once"""
+    organizations involved, the project is added at once. With a template
+    (``?template=ID``, "New project from this…", or chosen in the form):
+    prefilled from it, saying what clients will see, and filled with a
+    copy of it (specs/templates.md)."""
     if not project_ops.can_create_project(request.user):
         raise PermissionDenied
-    form = NewProjectForm(request.POST or None, actor=request.user)
+    initial = {}
+    if request.method == "GET" and (pk := request.GET.get("template", "")):
+        template = (
+            templates_for(request.user).filter(pk=pk if pk.isdigit() else None).first()
+        )
+        if template is None:
+            raise Http404
+        initial = {
+            "template": template,
+            "description": template.description,
+            "color": template.color,
+        }
+    form = NewProjectForm(request.POST or None, actor=request.user, initial=initial)
     if form.is_valid():
         data = form.cleaned_data
         if form.stage == ORGANIZATIONS and data["organizations"]:
@@ -225,43 +304,22 @@ def project_create(request):
             )
         else:
             try:
-                with transaction.atomic():
-                    project = project_ops.create_project(
-                        actor=request.user,
-                        **{
-                            field: data[field]
-                            for field in [
-                                "name",
-                                "description",
-                                "is_all_access",
-                                "color",
-                            ]
-                        },
-                    )
-                    for user in [*data.get("people", []), *data.get("staff", [])]:
-                        project_ops.add_member(project, user, actor=request.user)
-                    for row in (
-                        form.invites.cleaned_data if form.stage == PEOPLE else []
-                    ):
-                        if row.get("email"):
-                            project_ops.invite(
-                                project,
-                                email=row["email"],
-                                full_name=row["full_name"],
-                                organization=row["organization"],
-                                actor=request.user,
-                            )
+                project = _create_project(form, data, actor=request.user)
             except project_ops.InvitationError as exc:
                 form.add_error(None, str(exc))
             else:
                 return redirect(project)
+    template = _template_of(request, form)
     return form_response(
         request,
         form,
-        title=_("New project"),
-        cancel_url=reverse("projects"),
+        title=_("New project from %(template)s") % {"template": template}
+        if template
+        else _("New project"),
+        cancel_url=reverse("templates") if template else reverse("projects"),
         submit_label=_("Continue") if form.stage == ORGANIZATIONS else _("Add project"),
         template="projects/project_new.html",
+        extra={"clients_note": clients_note(template) if template else ""},
     )
 
 
@@ -356,7 +414,10 @@ def project_people(request, pk):
     an organization), invite (modals) and remove people, and see who
     hasn't signed in yet (specs/activation.md, "Invitations")"""
     project = project_for(request, pk)
-    can_manage = project_ops.can_manage_members(request.user)
+    # Templates have no members (specs/templates.md)
+    can_manage = (
+        project_ops.can_manage_members(request.user) and not project.is_template
+    )
     memberships = list(
         project.memberships.select_related(
             "user__organization", "user__invited_by"
@@ -379,9 +440,8 @@ def project_people(request, pk):
             "notify_choices": [
                 (value, NOTIFY_LABELS[value]) for value in project_ops.NOTIFY_CHOICES
             ],
-            "can_manage": project_ops.can_manage_members(request.user),
-            "can_add": project_ops.can_manage_members(request.user)
-            and project_ops.addable_people(project).exists(),
+            "can_manage": can_manage,
+            "can_add": can_manage and project_ops.addable_people(project).exists(),
         },
     )
 
@@ -393,6 +453,9 @@ def member_add(request, pk):
     project = project_for(request, pk)
     if not project_ops.can_manage_members(request.user):
         raise PermissionDenied
+    if project.is_template:
+        # Templates have no members (specs/templates.md)
+        raise Http404
     people = project_ops.addable_people(project)
     title = _("Add someone")
     if organization := request.GET.get("organization"):
@@ -493,7 +556,7 @@ def project_edit(request, pk):
     return form_response(
         request,
         form,
-        title=_("Edit the project"),
+        title=_("Edit the template") if project.is_template else _("Edit the project"),
         project=project,
         cancel_url=project.get_absolute_url(),
         # Its name and description are what the project's clients see too
@@ -584,6 +647,12 @@ def list_new(request, pk):
         project=project,
         cancel_url=project.get_absolute_url(),
         submit_label=_("Add list"),
+        template="projects/list_new.html",
+        extra={
+            "from_template_url": reverse("list_from_template", args=[project.pk])
+            if template_views.offers_template_lists(request.user, project)
+            else ""
+        },
     )
 
 

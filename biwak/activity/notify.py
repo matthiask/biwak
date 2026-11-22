@@ -242,6 +242,10 @@ def notify(event_pk):
         # Moved to another project: nobody is told
         # (specs/lists-across-projects.md)
         return []
+    if event.project.is_template:
+        # Nothing that happens inside a template tells anybody
+        # (specs/templates.md)
+        return []
     seeing = who_can_see(event.item)
     if not event.is_client_visible:
         # The event happened while the item was internal: clients never
@@ -367,6 +371,9 @@ def notify_people(item, *, actor, also=()):
     subscriptions. Returns them."""
     from biwak.activity.operations import is_importing
 
+    if item.project.is_template:
+        # Nobody hears about a template's items (specs/templates.md)
+        return []
     people = (
         []
         if is_importing()

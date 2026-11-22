@@ -80,6 +80,10 @@ def add_member(project, user, *, actor, notify=NOTIFY_DEFAULT):
     they have one already: adding again never changes it."""
     if not user.is_active and not is_importing():
         raise ValueError("Inactive people can't be added.")
+    if project.is_template:
+        # The people come with the project, not the template
+        # (specs/templates.md)
+        raise ValueError(_("Templates have no members."))
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")
     _membership, created = Membership.objects.get_or_create(project=project, user=user)
@@ -457,6 +461,64 @@ def create_project(*, name, description="", is_all_access=True, color=None, acto
     return project
 
 
+# Templates (specs/templates.md) ----------------------------------------------
+
+
+def can_use_templates(user):
+    """Own staff see, use and change all templates; clients and externals
+    never see them"""
+    return user.is_authenticated and user.sees_all_access
+
+
+@transaction.atomic
+def create_template(*, name, description="", color="", actor):
+    """A template: all-access, without members, never switched to a
+    project"""
+    if not can_use_templates(actor):
+        raise PermissionError("Only own staff create templates.")
+    project = Project(
+        name=name.strip(),
+        description=description,
+        is_all_access=True,
+        color=color,
+        is_template=True,
+    )
+    project.full_clean()
+    project.save()
+    return project
+
+
+@transaction.atomic
+def fill_from_template(project, template, *, actor):
+    """Copies the template into the new ``project``
+    (``items.operations.copy_template()``) and records the one event
+    "created Website from the template Web project". Members are added
+    before: assignees who don't see the copy are left out."""
+    from biwak.items import operations as item_ops
+
+    if not can_use_templates(actor):
+        raise PermissionError("Only own staff use templates.")
+    item_ops.copy_template(template, project, actor=actor)
+    return record(
+        actor=actor,
+        action=Action.CREATED,
+        project=project,
+        template=template.name,
+        template_id=template.pk,
+    )
+
+
+@transaction.atomic
+def create_from_template(template, *, actor, members=(), **fields):
+    """A new project (``create_project()`` with ``fields``) with
+    ``members`` and everything the template holds"""
+    project = create_project(actor=actor, **fields)
+    for user in members:
+        add_member(project, user, actor=actor)
+    fill_from_template(project, template, actor=actor)
+    return project
+
+
 _UNCHANGED = object()
 
 
@@ -490,6 +552,8 @@ def update_project(
     if not fields:
         return project
     limited = "is_all_access" in fields and not is_all_access
+    if limited and project.is_template:
+        raise ValueError(_("Templates are for all staff."))
     for field in fields:
         setattr(project, field, given[field])
     project.full_clean()
@@ -513,10 +577,12 @@ def joinable_projects(user):
 
 def projects_to_join(user):
     """What somebody can join: the projects they can open, and for admins
-    the limited ones ``joinable_projects()`` lists (not archived ones)"""
+    the limited ones ``joinable_projects()`` lists (not archived ones);
+    no templates, which have no members (specs/templates.md)"""
     return Project.objects.filter(
         Q(pk__in=Project.objects.accessible_to(user).values("pk"))
-        | Q(pk__in=joinable_projects(user).values("pk"))
+        | Q(pk__in=joinable_projects(user).values("pk")),
+        is_template=False,
     )
 
 

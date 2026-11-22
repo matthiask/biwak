@@ -30,20 +30,20 @@ NO_NOTES = ("", "")
 
 def target_projects(user, item):
     """The projects the person may move the top-level ``item`` to: those
-    they open, not archived, where they may create such items, not its
-    own. None for items in a folder (they move with it, or to the top
-    first)."""
+    they open, not archived, no templates, where they may create such
+    items, not its own. None for items in a folder (they move with it, or
+    to the top first), and for items of templates (specs/templates.md)."""
     if (
         item.kind not in ops.MOVABLE
         or item.parent_id is not None
-        or item.project.archived_at is not None
+        or item.project.is_quiet
         or not ops.can_create(user, item.kind)
     ):
         return Project.objects.none()
     return (
         Project.objects
         .accessible_to(user)
-        .filter(archived_at__isnull=True)
+        .active()
         .exclude(pk=item.project_id)
         .order_by(Lower("name"), "pk")
     )
@@ -258,14 +258,15 @@ class CopyForm(Confirming):
 
 def copy_targets(user):
     """The projects the person may copy a list to: those they open and
-    create lists in, not archived"""
+    create lists in, not archived; templates too, for the own staff
+    (specs/templates.md), after the projects"""
     if not ops.can_create(user, Kind.LIST):
         return Project.objects.none()
     return (
         Project.objects
         .accessible_to(user)
         .filter(archived_at__isnull=True)
-        .order_by(Lower("name"), "pk")
+        .order_by("is_template", Lower("name"), "pk")
     )
 
 

@@ -39,6 +39,9 @@
           hx-push-url="true"
           class="btn btn-sm btn-quiet"
         >{% translate "Archive" %}</a>
+        {% if can_use_templates %}
+          <a href="{% url 'templates' %}" class="btn btn-sm btn-quiet">{% translate "Templates" %}</a>
+        {% endif %}
         {% if can_create %}
           <a href="{% url 'project_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
             >{% translate "New project" %}</span></a>

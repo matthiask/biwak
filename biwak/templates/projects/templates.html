@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Templates" %} – Biwak{% endblock %}
+
+{% block content %}
+  {% comment %}
+    The templates page (biwak/projects/template_views.py, specs/templates.md):
+    cards like the projects page's with what each template holds, and per
+    template "New project from this…"; `archived` lists the archived ones.
+  {% endcomment %}
+  <div class="wb-page-header">
+    <div>
+      <h1>{% if archived %}{% translate "Archived templates" %}{% else %}{% translate "Templates" %}{% endif %}</h1>
+      <p class="text-body-secondary mb-0">
+        {% translate "New projects start as a copy of a template. Nothing in a template tells anybody." %}
+      </p>
+    </div>
+    <div class="wb-page-actions">
+      {% if archived %}
+        <a href="{% url 'templates' %}" class="btn btn-sm btn-quiet">{% translate "Active templates" %}</a>
+      {% else %}
+        <a href="{% url 'projects' %}" class="btn btn-sm btn-quiet">{% translate "Projects" %}</a>
+        <a href="{% url 'templates' %}?archived=1" class="btn btn-sm btn-quiet">{% translate "Archive" %}</a>
+        <a href="{% url 'template_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
+          >{% translate "New template" %}</span></a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="wb-project-grid mb-4">
+    {% for template in templates %}
+      <div>
+        <div class="card wb-project-card" {% if template.color %}data-project-color="{{ template.color }}"{% endif %}>
+          <div class="card-body">
+            <h2 class="h6 mb-0 text-truncate">
+              <a
+                href="{{ template.get_absolute_url }}"
+                class="text-decoration-none wb-card-link"
+              >{% project_dot template %}{{ template }}</a>
+            </h2>
+            {% if template.description_first_line %}
+              <p class="small text-body-secondary text-truncate mb-1">
+                {{ template.description_first_line|excerpt:160 }}
+              </p>
+            {% endif %}
+            <p class="small mb-2" data-template-holds>
+              {% if template.holds %}{{ template.holds }}{% else %}<span
+                  class="text-body-secondary"
+                >{% translate "Empty" %}</span>{% endif %}
+            </p>
+            {% if not archived %}
+              <a
+                href="{% url 'project_create' %}?template={{ template.pk }}"
+                data-modal
+                class="btn btn-sm btn-quiet wb-above-card-link"
+              >{% icon "plus-lg" %}<span>{% translate "New project from this…" %}</span></a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% if not templates %}
+    <p class="text-body-secondary">
+      {% if archived %}{% translate "No archived templates." %}{% else %}{% translate "No templates yet." %}{% endif %}
+    </p>
+  {% endif %}
+{% endblock content %}

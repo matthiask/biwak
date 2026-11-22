@@ -74,6 +74,8 @@ def all_projects(
         open_todos=_count(open_todos),
         inactive_todos=_count(left_behind),
     ).order_by(Lower("name"), "pk")
+    # Templates have their own page (specs/templates.md)
+    projects = projects.filter(is_template=False)
     if not archived:
         projects = projects.filter(archived_at__isnull=True)
     if no_staff:

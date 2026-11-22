@@ -55,6 +55,7 @@ class PublicLinkQuerySet(models.QuerySet):
                 item__is_draft=False,
                 item__status=Status.ACTIVE,
                 item__project__archived_at__isnull=True,
+                item__project__is_template=False,
             )
             .select_related("item", "item__creator")
             .first()

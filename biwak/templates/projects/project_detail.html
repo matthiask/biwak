@@ -7,6 +7,9 @@
     <div>
       <h1 class="wb-title">
         {% project_dot project %}{{ project }}
+        {% if project.is_template %}<span
+            class="badge wb-tone-neutral fs-6"
+          >{% translate "Template" %}</span>{% endif %}
         {% if not project.is_all_access %}<span
             class="text-body-secondary fs-6"
             title="{% translate 'Limited: members only' %}"
@@ -27,7 +30,14 @@
         href="{% url 'project_checkins' project.pk %}"
       >{% icon "chat-square-text" %}<span>{% translate "Check-ins" %}</span></a>
       {% bookmark_button project %}
-      {% if not is_member and not request.user.is_client %}
+      {% if project.is_template and not project.archived_at %}
+        <a
+          class="btn btn-sm btn-primary"
+          href="{% url 'project_create' %}?template={{ project.pk }}"
+          data-modal
+        >{% icon "plus-lg" %}<span>{% translate "New project from this…" %}</span></a>
+      {% endif %}
+      {% if not is_member and not request.user.is_client and not project.is_template %}
         <form method="post" action="{% url 'project_join' project.pk %}" class="wb-phone-hide">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm btn-quiet">
@@ -51,23 +61,25 @@
             class="dropdown-item wb-phone-only"
             href="{% url 'project_checkins' project.pk %}"
           >{% translate "Check-ins" %}</a>
-          {% if not is_member and not request.user.is_client %}
+          {% if not is_member and not request.user.is_client and not project.is_template %}
             <form method="post" action="{% url 'project_join' project.pk %}" class="wb-phone-only">
               {% csrf_token %}
               <button type="submit" class="dropdown-item">{% translate "Join" %}</button>
             </form>
           {% endif %}
-          <a
-            class="dropdown-item"
-            href="{% url 'project_notifications' project.pk %}"
-            data-modal
-          >{% translate "Notifications" %}</a>
+          {% if not project.is_template %}
+            <a
+              class="dropdown-item"
+              href="{% url 'project_notifications' project.pk %}"
+              data-modal
+            >{% translate "Notifications" %}</a>
+          {% endif %}
           {% if can_manage %}
             <a
               class="dropdown-item"
               href="{% url 'project_edit' project.pk %}"
               data-modal
-            >{% translate "Edit the project" %}</a>
+            >{% if project.is_template %}{% translate "Edit the template" %}{% else %}{% translate "Edit the project" %}{% endif %}</a>
             <a class="dropdown-item" href="{% url 'project_trash' project.pk %}">{% translate "Trash" %}</a>
             <form method="post" action="{% url 'project_archive' project.pk %}">
               {% csrf_token %}
@@ -76,7 +88,9 @@
                   {% translate "Bring back from the archive" %}
                 </button>
               {% else %}
-                <button type="submit" class="dropdown-item">{% translate "Archive the project" %}</button>
+                <button type="submit" class="dropdown-item">
+                  {% if project.is_template %}{% translate "Archive the template" %}{% else %}{% translate "Archive the project" %}{% endif %}
+                </button>
               {% endif %}
             </form>
           {% endif %}
@@ -86,6 +100,12 @@
   </div>
   {% if project.color %}<div class="wb-project-line" data-project-color="{{ project.color }}" aria-hidden="true">
     </div>{% endif %}
+  {% if project.is_template %}
+    <div class="alert alert-info" data-template-note>
+      {% translate "A template: new projects start as a copy of what's in it, client visibility included. Nothing in it tells anybody." %}
+      <a href="{% url 'templates' %}">{% translate "All templates" %}</a>
+    </div>
+  {% endif %}
   {% if project.archived_at %}
     <div class="alert alert-info">
       {% blocktranslate with when=project.archived_at|moment:"on" %}Archived {{ when }}. Everything stays readable.{% endblocktranslate %}
@@ -217,16 +237,18 @@
       {% show_links project %}
     </div>
     <div class="col-lg-4">
-      <h2 class="h5 d-flex justify-content-between align-items-center">
-        {% translate "Members" %}
-        <a class="btn btn-sm btn-quiet" href="{% url 'project_people' project.pk %}">{% icon "person-plus" %}<span
-          >{% if request.user.is_client %}{% translate "All" %}{% else %}{% translate "Manage" %}{% endif %}</span></a>
-      </h2>
-      <ul class="list-unstyled mb-4">
-        {% for m in members %}<li>
-            {% person_page m.user name=m.user.display_name %}
-          </li>{% endfor %}
-      </ul>
+      {% if not project.is_template %}
+        <h2 class="h5 d-flex justify-content-between align-items-center">
+          {% translate "Members" %}
+          <a class="btn btn-sm btn-quiet" href="{% url 'project_people' project.pk %}">{% icon "person-plus" %}<span
+            >{% if request.user.is_client %}{% translate "All" %}{% else %}{% translate "Manage" %}{% endif %}</span></a>
+        </h2>
+        <ul class="list-unstyled mb-4">
+          {% for m in members %}<li>
+              {% person_page m.user name=m.user.display_name %}
+            </li>{% endfor %}
+        </ul>
+      {% endif %}
       <h2 class="h5">{% translate "Activity" %}</h2>
       {% include "activity/_events.html" %}
       <p class="small"><a href="{% url 'project_feed' project.pk %}">{% translate "All activity" %}</a></p>

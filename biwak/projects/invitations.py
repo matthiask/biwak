@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models.functions import Lower
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.translation import gettext as _, gettext_lazy, ngettext
@@ -195,7 +195,11 @@ def invite_address(request):
 def member_invite(request, pk):
     """ "Invite by email" on a project's people page: the same form, with
     the project chosen"""
-    return invite_people(request, project_for(request, pk))
+    project = project_for(request, pk)
+    if project.is_template:
+        # Templates have no members (specs/templates.md)
+        raise Http404
+    return invite_people(request, project)
 
 
 def invitation_for(request, pk):

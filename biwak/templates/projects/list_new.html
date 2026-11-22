@@ -1,0 +1,8 @@
+{% extends "modal_form.html" %}
+{% load i18n %}
+{# "New list", and a list from a template instead (specs/templates.md) #}
+{% block before_form %}
+  {% if from_template_url %}
+    <p class="small"><a href="{{ from_template_url }}" data-modal>{% translate "From a template…" %}</a></p>
+  {% endif %}
+{% endblock before_form %}

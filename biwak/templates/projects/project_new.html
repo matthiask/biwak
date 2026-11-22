@@ -1,11 +1,21 @@
 {% extends "modal_form.html" %}
-{% load i18n %}
+{% load biwak i18n %}
 {% comment %}
   The new project (biwak/projects/views.py, NewProjectForm): with the
   organizations involved, the second step lists their people, staff and
   rows to invite people without an account, filled in from the address
   like the invite form's (frontend/invite.js)
 {% endcomment %}
+{% block before_form %}
+  {# What clients will see of the copy of the template (specs/templates.md) #}
+  {% if clients_note %}
+    <div class="wb-client-banner" role="note" data-template-clients>
+      {% icon "eye" %}
+      {{ clients_note }}
+    </div>
+  {% endif %}
+{% endblock before_form %}
+
 {% block fields %}
   {{ block.super }}
   {% if form.stage == "people" %}

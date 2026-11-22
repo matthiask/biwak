@@ -34,6 +34,9 @@
             {% client_badge item %}
             {% include "items/_checklist_signal.html" with done=item.checklist_done total=item.checklist_total %}
             {% if result.archived %}<span class="badge wb-tone-neutral">{% translate "Archived" %}</span>{% endif %}
+            {% if item.project.is_template %}<span
+                class="badge wb-tone-neutral"
+              >{% translate "Template" %}</span>{% endif %}
             {% if hit.excerpt_html %}
               <div class="small">
                 {% if hit.in_comment %}<span class="text-body-secondary">{% translate "Comment:" %}</span>{% endif %}
