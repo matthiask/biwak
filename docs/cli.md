@@ -35,7 +35,7 @@ biwak projects
 biwak todos --mine --due overdue
 biwak todos --mine --started
 biwak todo add LIST "Order the tent" --due 2026-12-01 --starts 2026-11-28 --assign 3
-biwak todo add-from-text LIST plan.md --preview
+biwak list add-from-text LIST plan.md --preview
 biwak todo done TODO
 biwak todo assign 12 13 14 --to 7 --replace
 biwak todo comment TODO "The plan" --attach plan.pdf

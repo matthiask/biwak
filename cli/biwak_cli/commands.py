@@ -1005,7 +1005,7 @@ def lists(project, archived, as_json):
 
 @cli.group("list")
 def list_group():
-    """Archive, unarchive and copy to-do lists"""
+    """Archive, unarchive and copy to-do lists, add to-dos from text"""
 
 
 @list_group.command("copy")
@@ -1292,12 +1292,12 @@ def todo_add(
     return None
 
 
-@todo.command("add-from-text")
+@list_group.command("add-from-text")
 @click.argument("list_id", metavar="LIST", type=int)
 @click.argument("file", type=click.File(encoding="utf-8-sig"), required=False)
 @click.option("--preview", is_flag=True, help="Show what would be added, add nothing.")
 @json_option
-def todo_add_from_text(list_id, file, preview, as_json):
+def list_add_from_text(list_id, file, preview, as_json):
     """Add the to-dos of FILE (Markdown or plain text) or standard input to
     LIST: headings become groups (existing ones of that name are used),
     list items to-dos, what's indented under them their notes, ticked
