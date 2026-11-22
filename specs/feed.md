@@ -17,7 +17,9 @@ From the events (`biwak/activity/`, `notifications.md`);
 - **Grouped by day** (in `TIME_ZONE`), newest first. Consecutive events
   by the same person with the same action in the same list or project
   merge into one entry ("Ada completed 5 to-dos in Website relaunch",
-  "items" for mixed kinds), the single items indented below it. "Within
+  "items" for mixed kinds), the single items indented below it, a little
+  room between them so their marks don't touch (`.wb-event-entries`,
+  decided 2026-11-22; conversations' comments too). "Within
   an hour" means each event at most an hour after the next older one of
   the entry (chains merge), never across midnight. A page ends between
   entries (decided 2026-11-22, replacing "a page boundary can split an

@@ -14,7 +14,7 @@
             {% if not project %}<span class="small text-body-secondary">·
                 {% project_dot event.project %}{{ event.project }}</span>{% endif %}
           {% endwith %}
-          <ul class="list-unstyled ms-4 small">
+          <ul class="list-unstyled ms-4 small wb-event-entries">
             {% for event in entry.comments %}
               <li>
                 {% if event.actor %}{% avatar event.actor %}{% endif %}
@@ -28,7 +28,7 @@
           {% include "activity/_event.html" with event=entry.latest what=entry.what where=entry.where contents=entry.contents own_excerpt=True %}
           <span class="small text-body-secondary">· {{ entry.latest.created_at|dateformat:"TIME_FORMAT" }}</span>
           {% include "activity/_excerpt.html" with event=entry.latest what=entry.what %}
-          <ul class="list-unstyled ms-4 small">
+          <ul class="list-unstyled ms-4 small wb-event-entries">
             {% for event in entry.events %}
               <li>
                 {% include "activity/_event.html" with own_excerpt=True %}

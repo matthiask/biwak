@@ -1786,6 +1786,13 @@ button.wb-signal:hover {
   justify-content: center;
 }
 
+/* The events of a merged entry or a conversation in the activity
+   (activity/_entries.html): a little room between them, so that the
+   marks of consecutive lines don't touch */
+.wb-event-entries > li + li {
+  margin-top: 0.25rem;
+}
+
 .wb-excerpt {
   display: -webkit-box;
   -webkit-box-orient: vertical;
