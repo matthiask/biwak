@@ -73,23 +73,39 @@ def _always(older, newer):
     return True
 
 
-def cancelled(events, *, together=_always):
+def _in_order(events, others, actions):
+    """``events`` and ``others`` of ``actions`` on items, oldest first, each
+    with whether it's one of ``others``"""
+    return sorted(
+        [
+            *((e, False) for e in events if e.action in actions and e.item_id),
+            *((e, True) for e in others if e.action in actions and e.item_id),
+        ],
+        key=lambda pair: (pair[0].created_at, pair[0].pk),
+    )
+
+
+def cancelled(events, *, together=_always, others=()):
     """The IDs of the completing and reopening events (of ``events``, in
     any order) a later one undoes: each person's consecutive completing
     and reopening of an item (other events don't break it up, another
     person's completing or reopening does; ``together(older, newer)``
     for neighbours) is its net change, the last one or nothing when the
     item is back where it started (decided 2026-11-21, replacing deleting
-    the earlier event when recording). For the feed, the lantern and the
-    mails; the timeline's lines do the same through ``combine()``."""
+    the earlier event when recording). ``others`` are events left out of
+    ``events`` (a person's feed: the others' events) which still break
+    runs up. For the feed, the lantern and the mails; the timeline's
+    lines do the same through ``combine()``."""
     done = {Action.COMPLETED, Action.REOPENED}
     runs = {}  # item ID -> the runs of its completing and reopening
-    for event in sorted(
-        (e for e in events if e.action in done and e.item_id),
-        key=lambda e: (e.created_at, e.pk),
-    ):
+    for event, other in _in_order(events, others, done):
         item_runs = runs.setdefault(event.item_id, [])
-        last = item_runs[-1][-1] if item_runs else None
+        last = item_runs[-1][-1] if item_runs and item_runs[-1] else None
+        if other:
+            # Another person's event left out ends the run before it
+            if last is not None and last.actor_id != event.actor_id:
+                item_runs.append([])
+            continue
         if (
             last is not None
             and last.actor_id == event.actor_id
@@ -100,7 +116,7 @@ def cancelled(events, *, together=_always):
             item_runs.append([event])
     result = set()
     for item_runs in runs.values():
-        for run in item_runs:
+        for run in filter(None, item_runs):
             if run[0].action != run[-1].action:
                 result.update(e.pk for e in run)
             else:
@@ -123,24 +139,26 @@ def _move_kind(event):
     return kind, to, was
 
 
-def moved_back(events, *, together=_always):
+def moved_back(events, *, together=_always, others=()):
     """The IDs of the moves (of ``events``, in any order) a later one makes
     pointless: each person's consecutive moves of an item into other
     columns or lists (other events don't break them up, another person's
-    move does) are their net change, the last one, or nothing when the
-    to-do is back where it was (decision B, decided 2026-11-22). Like
-    ``cancelled()``, for the feed; the timeline does it in ``combine()``."""
+    move does, also one of ``others`` like in ``cancelled()``) are their
+    net change, the last one, or nothing when the to-do is back where it
+    was (decision B, decided 2026-11-22). Like ``cancelled()``, for the
+    feed; the timeline does it in ``combine()``."""
     runs = {}  # (item ID, kind) -> runs of [(event, to, was)]
-    for event in sorted(
-        (e for e in events if e.action == Action.MOVED and e.item_id),
-        key=lambda e: (e.created_at, e.pk),
-    ):
+    for event, other in _in_order(events, others, {Action.MOVED}):
         move = _move_kind(event)
         if move is None:
             continue
         kind, to, was = move
         item_runs = runs.setdefault((event.item_id, kind), [])
-        last = item_runs[-1][-1][0] if item_runs else None
+        last = item_runs[-1][-1][0] if item_runs and item_runs[-1] else None
+        if other:
+            if last is not None and last.actor_id != event.actor_id:
+                item_runs.append([])
+            continue
         if (
             last is not None
             and last.actor_id == event.actor_id
@@ -151,7 +169,7 @@ def moved_back(events, *, together=_always):
             item_runs.append([(event, to, was)])
     result = set()
     for item_runs in runs.values():
-        for run in item_runs:
+        for run in filter(None, item_runs):
             back = run[-1][1] == run[0][2]
             result.update(event.pk for event, _to, _was in (run if back else run[:-1]))
     return result

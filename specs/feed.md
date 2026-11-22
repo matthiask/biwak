@@ -85,7 +85,10 @@ Decisions (2026-11-20 unless dated):
   a to-do into other columns or lists are the last one, or nothing when
   it's back where it was (`timeline.moved_back()`, from the moves'
   `group_was` and `to_was`; older moves without them show as they are;
-  the feed and the timeline only, not the lantern and mails). In the feed (and the project page's latest events) each within an hour of the
+  the feed and the timeline only, not the lantern and mails). Another
+  person's completing, reopening or move breaks it up in a person's feed
+  too, where that person's events are left out (`feed._others()`, fixed
+  2026-11-22): it shows the person's events as the whole feed does. In the feed (and the project page's latest events) each within an hour of the
   one before and on the same day, like merging; the to-do's timeline
   does the same within its lines (`combine()`, `timeline.md`); the
   lantern and the mails: `notifications.md`. The API lists single

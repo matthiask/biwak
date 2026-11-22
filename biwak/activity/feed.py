@@ -374,6 +374,27 @@ def _edge(events, size):
     return len(events)
 
 
+def _others(events):
+    """The toggles and moves of the items of ``events`` between the first
+    and the last of them which aren't in ``events`` (a person's feed leaves
+    out the others'): another person's still breaks up what cancels out,
+    so a person's feed shows that person's events as the whole feed does"""
+    changes = [e for e in events if e.action in NET_CHANGES and e.item_id]
+    if not changes:
+        return []
+    times = [e.created_at for e in changes]
+    return list(
+        Event.objects
+        .filter(
+            item__in={e.item_id for e in changes},
+            action__in=NET_CHANGES,
+            created_at__range=(min(times), max(times)),
+        )
+        .exclude(pk__in=[e.pk for e in changes])
+        .only("pk", "item_id", "actor_id", "action", "created_at", "data")
+    )
+
+
 def merge(events):
     """Entries from events newest first: comments on the same item become
     conversations (``conversations()``); consecutive events of the same
@@ -384,8 +405,9 @@ def merge(events):
     day) shows as the net change (``timeline.cancelled()``)."""
     from biwak.activity.timeline import cancelled, moved_back
 
-    hidden = cancelled(events, together=_together) | moved_back(
-        events, together=_together
+    others = _others(events)
+    hidden = cancelled(events, together=_together, others=others) | moved_back(
+        events, together=_together, others=others
     )
     events = [event for event in events if event.pk not in hidden]
     entries = []
