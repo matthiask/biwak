@@ -80,8 +80,8 @@ A separate project built from the code and conventions of
 depending on it: Django, PostgreSQL, a reduced `User`, django-ninja for
 the API, the audit log trigger, the page layout (light and dark mode),
 htmx, sortable lists, mentions, modals, daily and hourly tasks, one
-frontend bundle (rspack). English first, German at the end of the build
-(texts are marked for translation from the start).
+frontend bundle (rspack). English and German, chosen per person
+(`specs/languages.md`).
 
 Files go through Django's storage API: local disk in development, an
 S3-compatible bucket when deployed, chosen by settings
@@ -145,9 +145,8 @@ containers, checked in one place (`specs/access.md`).
 The core came first; every part since builds on it and on the shared
 foundations (mentions and mails, storage and attachments, schedules).
 What's built and what's open is in `specs/README.md`. The German
-translation is `specs/languages.md` (started 2026-11-22; texts are
-marked with `gettext`; the wording of mails, the editor and the lantern
-is reviewed with it).
+translation is `specs/languages.md` (built 2026-11-22; the user reviews
+the glossary and the wording).
 
 Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
 same branch. `AGENTS.md` has the checklist every part follows.
@@ -194,7 +193,8 @@ building it.
   for subtree operations; effective visibility stored per item, so the
   visibility check needs no recursive query.
 - 2026-11-20: Translations postponed to the end; texts are marked with
-  `gettext` but there's no German catalog until then.
+  `gettext`. 2026-11-22: the German catalog came (`specs/languages.md`);
+  new texts are translated in the branch that adds them.
 - 2026-11-20: Resend sends and receives mail: it reports SPF, DKIM and
   DMARC results for incoming mail, which the sender check of replies
   needs; Brevo's inbound parsing doesn't. Providers stay behind one

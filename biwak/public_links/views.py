@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.translation import gettext_lazy as _, ngettext_lazy
+from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
@@ -25,11 +25,9 @@ class ShareForm(Form):
     days = forms.TypedChoiceField(
         label=_("Expires after"),
         coerce=int,
-        choices=[
-            (
-                days,
-                ngettext_lazy("%(days)s day", "%(days)s days", days) % {"days": days},
-            )
+        # A callable: in the language of the request, not of the import
+        choices=lambda: [
+            (days, ngettext("%(days)s day", "%(days)s days", days) % {"days": days})
             for days in DAYS
         ],
         initial=DEFAULT_DAYS,

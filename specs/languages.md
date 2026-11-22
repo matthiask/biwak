@@ -6,7 +6,16 @@ this part adds the German catalog and makes everything follow the
 person's choice. Decided with the user 2026-11-22. German only for now;
 a third language is a catalog, nothing else.
 
-**Status:** open.
+**Status:** built 2026-11-22 (branch `languages`). Choosing:
+`biwak/accounts/languages.py` (`language_for()`), the settings' Language
+section, `language` on `/api/v1/me/`, `biwak settings --language`.
+`User.invitation_language` remembers the language of the last invitation
+mail. The catalog: `conf/locale/de/LC_MESSAGES/django.po` (`fl mm -l de`,
+`fl cm`); `biwak/test_catalog.py` (complete, compiled, current with the
+code, the glossary, no `gettext()` at import), `biwak/test_german.py`
+(pages and mails). Relative times: `biwak/text.py` (`ago()`, units of
+their own for German's dative). The feed's events are whole sentences
+(`activity/_event.html`, the `{% capture %}` tag).
 
 Depends on: everything with texts; `accounts` (the `language` field,
 `middleware.py` activating it), `notifications.md` and `mail-sending.md`
@@ -44,7 +53,7 @@ Depends on: everything with texts; `accounts` (the `language` field,
 | mention | Erwähnung |
 | client, clients | Kund:in, Kund:innen |
 | staff | Team (the own people), Mitarbeitende |
-| partner | Partner:in |
+| partner (staff outside the own organization) | Externe ("die Externen", "eine externe Person", "Ada ist extern", badge "extern"; decided 2026-11-22: "Partner" is taken by Holacracy and the co-owners) |
 | visible to clients | für Kund:innen sichtbar |
 | team (the named set) | Team |
 | lantern | Laterne |
@@ -85,8 +94,10 @@ Depends on: everything with texts; `accounts` (the `language` field,
   `aria-label`s, messages) and moves them into data attributes or a
   small catalog the page renders (`json_script`); no runtime catalog
   fetch.
-- **Dates, times, numbers:** Django's formats for the language
-  (`USE_L10N`): "22. Nov. 2026", 24-hour times; relative times ("vor 13
+- **Dates, times, numbers:** formats per language (`biwak/formats/`,
+  `FORMAT_MODULE_PATH`; templates name them, `|dateformat:"SHORT_DATE_FORMAT"`):
+  English "22 Nov 2026", German "22. Nov. 2026" (decided 2026-11-22),
+  24-hour times in both; relative times ("vor 13
   Stunden", one unit, `ui-feedback.md` round 8); weekday and month
   names in the rule widget and check-ins' schedules; file sizes.
 - **Mails** in the recipient's language: their choice, else for an
@@ -118,6 +129,37 @@ Depends on: everything with texts; `accounts` (the `language` field,
   finds no English left from a list of common words, and mails in each
   recipient's language (one German, one English in the same event).
 - The glossary test (above).
+
+## Decided while building (2026-11-22, confirmed by the user)
+
+- The Language section comes after Appearance: three radios (each
+  language in itself, `lang` set), saved with its button like the
+  others; the page comes back in the new language.
+- Mails before a choice: the language of the last invitation mail
+  (resending sets it again), else English. Login codes and allauth's
+  mails: the recipient's language if they have one, else the page's
+  (they asked for it in their browser just now).
+- Feed sentences in the perfect tense ("hat „Zelt bestellen“ erstellt");
+  the actions as filter labels have a context of their own (`action`,
+  participles: "erstellt").
+- Key names stay as on Swiss keyboards: Ctrl, Shift, Enter, Alt, Esc.
+- The palette's color names are translated: Heide, See, Wald,
+  Gletscher, Glut, Alpenglühen, Moos, Schiefer, Rinde, Beere; the
+  clients' amber is Bernstein.
+- "all-access" projects are "offene Projekte", limited ones
+  "eingeschränkt"; "Only when tagged" is "Nur wenn markiert"; Monday to
+  Friday is "Werktag".
+- The rule widget's controls stay pieces around the fields ("alle [3]
+  Tage", "am [März] [5]"); the description below them is a whole
+  sentence ("alle 2 Jahre am 5. März").
+- allauth's texts people see when signing in (form errors, messages, the
+  login-code mails) are in our catalog with our German
+  (`biwak/accounts/allauth_texts.py`, its exact English; ours wins). The
+  Django admin keeps Django's German ("Sie").
+- A doc without a title is stored empty and shown as "Untitled" /
+  "Unbenannt" (`files.md`). The own organization's "Our organization" and
+  the importer's " (internal)" stay: names people rename.
+- New texts are translated in the branch that adds them (`AGENTS.md`).
 
 ## Done when
 

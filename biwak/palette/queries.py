@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from biwak.activity.feed import people_visible_to
-from biwak.activity.mentions import plain
+from biwak.activity.mentions import title as plain_title
 from biwak.bookmarks.models import Bookmark
 from biwak.items import due
 from biwak.items.models import Item, Kind, Status
@@ -88,7 +88,7 @@ def jumps(user, terms):
         results.append({
             "kind": item.kind,
             "label": item.get_kind_display(),
-            "title": plain(item.title),
+            "title": plain_title(item.title),
             "url": item.get_absolute_url(),
             "context": item.project.name,
             **color_of(item.project),
@@ -126,7 +126,7 @@ def due_label(item):
     todo = getattr(item, "todo", None) if item.kind == Kind.TODO else None
     state = due.badge_state(todo) if todo else ""
     if state == due.OVERDUE:
-        day = date_filter(todo.due_on, "j. M")
+        day = date_filter(todo.due_on, "MONTH_DAY_FORMAT")
         return {"state": state, "label": _("Overdue · %(day)s") % {"day": day}}
     if state == due.TODAY:
         return {"state": state, "label": _("Today")}
@@ -151,7 +151,7 @@ def bookmarks(user):
             results.append({
                 "kind": item.kind,
                 "label": item.get_kind_display(),
-                "title": plain(item.title),
+                "title": plain_title(item.title),
                 "url": item.get_absolute_url(),
                 "context": item.project.name,
                 **color_of(item.project),

@@ -10,7 +10,7 @@ clients only see events of the time the item was visible to them
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, pgettext_lazy
 
 from biwak.accounts.models import NotificationLevel
 from biwak.items.models import Item
@@ -18,30 +18,38 @@ from biwak.projects.models import Project
 
 
 class Action(models.TextChoices):
-    CREATED = "created", _("created")
-    EDITED = "edited", _("edited")
-    COMPLETED = "completed", _("completed")
-    REOPENED = "reopened", _("reopened")
-    ASSIGNED = "assigned", _("assigned")
-    UNASSIGNED = "unassigned", _("unassigned")
-    COMMENTED = "commented", _("commented")
-    REACTED = "reacted", _("reacted")
-    MOVED = "moved", _("moved")
-    VISIBILITY_CHANGED = "visibility_changed", _("visibility changed")
-    ARCHIVED = "archived", _("archived")
-    UNARCHIVED = "unarchived", _("unarchived")
-    EDITED_PROJECT = "edited_project", _("edited the project")
-    TRASHED = "trashed", _("trashed")
-    RESTORED = "restored", _("restored")
-    JOINED = "joined", _("joined")
-    ADDED = "added", _("added")
-    REMOVED = "removed", _("removed")
-    LEFT = "left", _("left")
-    PINNED = "pinned", _("pinned")
-    UNPINNED = "unpinned", _("unpinned")
-    SHARED = "shared", _("shared")
-    SHARED_PUBLICLY = "shared_publicly", _("shared publicly")
-    STOPPED_SHARING = "stopped_sharing", _("stopped sharing publicly")
+    # A context of their own: the filters' labels, not the feed's sentences
+    # (activity/_event.html), and "left" isn't the rule widget's
+    CREATED = "created", pgettext_lazy("action", "created")
+    EDITED = "edited", pgettext_lazy("action", "edited")
+    COMPLETED = "completed", pgettext_lazy("action", "completed")
+    REOPENED = "reopened", pgettext_lazy("action", "reopened")
+    ASSIGNED = "assigned", pgettext_lazy("action", "assigned")
+    UNASSIGNED = "unassigned", pgettext_lazy("action", "unassigned")
+    COMMENTED = "commented", pgettext_lazy("action", "commented")
+    REACTED = "reacted", pgettext_lazy("action", "reacted")
+    MOVED = "moved", pgettext_lazy("action", "moved")
+    VISIBILITY_CHANGED = (
+        "visibility_changed",
+        pgettext_lazy("action", "visibility changed"),
+    )
+    ARCHIVED = "archived", pgettext_lazy("action", "archived")
+    UNARCHIVED = "unarchived", pgettext_lazy("action", "unarchived")
+    EDITED_PROJECT = "edited_project", pgettext_lazy("action", "edited the project")
+    TRASHED = "trashed", pgettext_lazy("action", "trashed")
+    RESTORED = "restored", pgettext_lazy("action", "restored")
+    JOINED = "joined", pgettext_lazy("action", "joined")
+    ADDED = "added", pgettext_lazy("action", "added")
+    REMOVED = "removed", pgettext_lazy("action", "removed")
+    LEFT = "left", pgettext_lazy("action", "left")
+    PINNED = "pinned", pgettext_lazy("action", "pinned")
+    UNPINNED = "unpinned", pgettext_lazy("action", "unpinned")
+    SHARED = "shared", pgettext_lazy("action", "shared")
+    SHARED_PUBLICLY = "shared_publicly", pgettext_lazy("action", "shared publicly")
+    STOPPED_SHARING = (
+        "stopped_sharing",
+        pgettext_lazy("action", "stopped sharing publicly"),
+    )
 
 
 class EventQuerySet(models.QuerySet):

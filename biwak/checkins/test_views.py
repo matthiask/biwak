@@ -93,7 +93,7 @@ class PagesTest(ViewsTestCase):
         self.assertContains(response, "Shared question")
         self.assertContains(response, "Every Monday")
         self.assertContains(response, "09:00 Europe/Zurich")
-        self.assertContains(response, "next: Mon 29. Mar 2027, 09:00")
+        self.assertContains(response, "next: Mon, 29 Mar 2027, 09:00")
         self.assertContains(response, "Waiting for your answer")
         self.assertContains(response, "New check-in")
 
@@ -104,7 +104,7 @@ class PagesTest(ViewsTestCase):
             self.ada, reverse("project_checkins", args=[self.project.pk])
         )
         self.assertContains(response, "paused")
-        self.assertNotContains(response, "next: Mon 29. Mar 2027")
+        self.assertNotContains(response, "next: Mon, 29 Mar 2027")
 
     def test_a_client_sees_only_visible_questions(self):
         response = self.get(
@@ -130,8 +130,8 @@ class PagesTest(ViewsTestCase):
         ops.answer(self.item, user=self.bob, content="Reading", occurrence=self.first)
         response = self.get(self.ada, self.item.get_absolute_url())
         self.assertContains(response, "<strong>launch</strong>")
-        self.assertContains(response, "Monday, 29. March 2027")
-        self.assertContains(response, "Monday, 22. March 2027")
+        self.assertContains(response, "Monday, 29 March 2027")
+        self.assertContains(response, "Monday, 22 March 2027")
         self.assertContains(response, "Hasn't answered yet:")
         self.assertContains(response, "Bob")
         self.assertContains(response, "Every Monday,\n    09:00 Europe/Zurich")
@@ -652,7 +652,7 @@ class AnsweringPagesTest(ViewsTestCase):
         self.assertContains(response, "How are you?")
         self.assertNotContains(response, ">Skip<")
         self.assertContains(response, "data-attachments")
-        self.assertContains(response, "Monday, 22. March 2027")
+        self.assertContains(response, "Monday, 22 March 2027")
         self.assertEqual(response.context["occurrence"], self.first)
 
     def test_answering(self):

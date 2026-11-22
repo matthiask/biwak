@@ -8,9 +8,9 @@
   <div class="list-group">
     {% for version in versions %}
       <a class="list-group-item list-group-item-action" href="{% url 'doc_version' item.pk version.pk %}">
-        {{ version.created_at|date:"j. M Y, H:i" }} · {% short_name version.created_by %}
+        {{ version.created_at|dateformat:"SHORT_DATETIME_FORMAT" }} · {% short_name version.created_by %}
         {% if forloop.first %}<span class="badge wb-tone-neutral">{% translate "current" %}</span>{% endif %}
-        <div class="small text-body-secondary">{{ version.title }}</div>
+        <div class="small text-body-secondary">{{ version.title|title_text }}</div>
       </a>
     {% endfor %}
   </div>

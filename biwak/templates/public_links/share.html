@@ -1,5 +1,5 @@
 {% extends "modal_form.html" %}
-{% load i18n %}
+{% load biwak i18n %}
 {% comment %}
   Share… (specs/public-links.md): the item's own link first, the one
   primary thing; then the public link while one is live (Copy, when it
@@ -38,7 +38,7 @@
         <button type="button" class="btn btn-quiet" data-copy="#public-link">{% translate "Copy" %}</button>
       </div>
       <div class="form-text">
-        {% blocktranslate trimmed with date=link.expires_at|date:"j. M Y, H:i" %}
+        {% blocktranslate trimmed with date=link.expires_at|dateformat:"SHORT_DATETIME_FORMAT" %}
           Anybody with this link can read it without signing in, until {{ date }}.
         {% endblocktranslate %}
       </div>

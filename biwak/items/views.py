@@ -693,15 +693,19 @@ def _show_texts(item):
     clients = ngettext("%(count)d client", "%(count)d clients", affected["clients"]) % {
         "count": affected["clients"]
     }
-    values = {"comments": affected["comments"], "clients": clients}
+    comments = ngettext(
+        "%(count)d comment", "%(count)d comments", affected["comments"]
+    ) % {"count": affected["comments"]}
+    values = {"comments": comments, "clients": clients}
     match item.kind:
         case Kind.LIST:
             title = _("Show this list to clients?")
-            intro = ngettext(
-                "Makes this list, %(count)d to-do and %(comments)d comments visible to %(clients)s.",
-                "Makes this list, %(count)d to-dos and %(comments)d comments visible to %(clients)s.",
-                affected["items"],
-            ) % {"count": affected["items"], **values}
+            todos = ngettext(
+                "%(count)d to-do", "%(count)d to-dos", affected["items"]
+            ) % {"count": affected["items"]}
+            intro = _(
+                "Makes this list, %(todos)s and %(comments)s visible to %(clients)s."
+            ) % {"todos": todos, **values}
         case Kind.QUESTION:
             title = _("Show this check-in to clients?")
             intro = (
@@ -717,9 +721,12 @@ def _show_texts(item):
                 Kind.DOC: _("Show this doc to clients?"),
                 Kind.FILE: _("Show this file to clients?"),
             }[item.kind]
+            items = ngettext(
+                "%(count)d item below it", "%(count)d items below it", affected["items"]
+            ) % {"count": affected["items"]}
             intro = _(
-                "Makes it, %(items)d items below it and %(comments)d comments visible to %(clients)s."
-            ) % {"items": affected["items"], **values}
+                "Makes it, %(items)s and %(comments)s visible to %(clients)s."
+            ) % {"items": items, **values}
     return title, intro
 
 
@@ -848,7 +855,7 @@ def item_trash(request, pk):
     messages.success(
         request,
         _("“%(title)s” is in the trash for %(days)s days.")
-        % {"title": item.title, "days": ops.TRASH_DAYS},
+        % {"title": item.shown_title, "days": ops.TRASH_DAYS},
     )
     return redirect(next_url(request) or item.parent or item.project)
 

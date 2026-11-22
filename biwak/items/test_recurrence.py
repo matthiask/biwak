@@ -542,7 +542,7 @@ class PagesTest(RecurrenceTestCase):
         new = self.following(item)
         response = self.client.get(new.get_absolute_url())
         self.assertContains(response, "Previous:")
-        self.assertContains(response, "completed on 20. November 2026 by Ada")
+        self.assertContains(response, "completed on 20 November 2026 by Ada")
         self.assertContains(response, item.get_absolute_url())
 
     def test_a_client_doesnt_see_an_internal_previous(self):

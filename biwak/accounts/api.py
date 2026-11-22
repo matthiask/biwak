@@ -28,6 +28,10 @@ class MeOut(PersonOut):
     )
     theme: Theme
     accent: Accent
+    language: Literal["", "de", "en"] = Field(
+        description="The language of pages and mails: de, en, or empty for the"
+        " browser's (mails: English or the invitation's)."
+    )
 
 
 def me_out(request):
@@ -39,6 +43,7 @@ def me_out(request):
         "keyboard_shortcuts": request.user.keyboard_shortcuts,
         "theme": request.user.theme,
         "accent": request.user.accent,
+        "language": request.user.language,
     }
 
 
@@ -53,6 +58,7 @@ class MeIn(Schema):
     keyboard_shortcuts: bool | None = None
     theme: Theme | None = None
     accent: Accent | None = None
+    language: Literal["", "de", "en"] | None = None
 
 
 @router.put("me/", response=MeOut)
@@ -63,6 +69,7 @@ def me_update(request, data: MeIn):
         keyboard_shortcuts=data.keyboard_shortcuts,
         theme=data.theme,
         accent=data.accent,
+        language=data.language,
     )
     return me_out(request)
 

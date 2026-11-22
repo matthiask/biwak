@@ -69,7 +69,7 @@ class DueBadgeTest(Base):
         item = self.todo(self.today - DAY)
         self.assert_badge(item, "overdue")
         html = self.client.get(self.todolist.get_absolute_url()).content.decode()
-        self.assertIn("Overdue · 19. Nov", html)
+        self.assertIn("Overdue · 19 Nov", html)
         self.assertIn("wb-tone-danger", html)
 
     def test_today(self):
@@ -113,7 +113,7 @@ class PaletteBadgeTest(Base):
     def test_overdue_today_later_and_completed(self):
         self.assertEqual(
             self.bookmarked(self.todo(self.today - DAY)),
-            {"state": "overdue", "label": "Overdue · 19. Nov"},
+            {"state": "overdue", "label": "Overdue · 19 Nov"},
         )
         self.assertEqual(
             self.bookmarked(self.todo(self.today)),
@@ -142,17 +142,17 @@ class TodoPageBadgeTest(Base):
         facts = self.facts(self.todo(self.today - DAY))
         self.assertRegex(
             facts,
-            r"Thursday, 19. November 2026\s*<span\s+class=\"badge wb-tone-danger\""
+            r"Thursday, 19 November 2026\s*<span\s+class=\"badge wb-tone-danger\""
             r"[^>]*>Overdue</span>",
         )
 
     def test_today_next_to_the_date(self):
         facts = self.facts(self.todo(self.today))
-        self.assertRegex(facts, r"Friday, 20. November 2026\s*<span[^>]*>Today</span>")
+        self.assertRegex(facts, r"Friday, 20 November 2026\s*<span[^>]*>Today</span>")
 
     def test_later_is_just_the_date(self):
         facts = self.facts(self.todo(self.today + DAY))
-        self.assertIn("Saturday, 21. November 2026", facts)
+        self.assertIn("Saturday, 21 November 2026", facts)
         self.assertNotIn("data-due", facts)
 
     def test_no_badge_line_above_the_facts(self):

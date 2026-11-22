@@ -165,6 +165,31 @@ def me_image(path, remove, as_json):
     return None
 
 
+LANGUAGES = {"auto": "", "de": "de", "en": "en"}
+
+
+@cli.command()
+@click.option(
+    "--language",
+    type=click.Choice(list(LANGUAGES)),
+    help="The web interface's and the mails' language; auto follows the browser.",
+)
+@json_option
+def settings(language, as_json):
+    """Your preferences for the web interface; the options change them"""
+    if language is not None:
+        data = request("PUT", "me/", json={"language": LANGUAGES[language]})
+    else:
+        data = request("GET", "me/")
+    if as_json:
+        return echo_json(data)
+    shortcuts = "on" if data["keyboard_shortcuts"] else "off"
+    click.echo(f"Language: {data['language'] or 'auto'}")
+    click.echo(f"Theme: {data['theme']}, accent: {data['accent']}")
+    click.echo(f"Single-key shortcuts: {shortcuts}")
+    return None
+
+
 # Projects and lists ---------------------------------------------------------
 
 

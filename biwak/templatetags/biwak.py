@@ -1,11 +1,10 @@
-import datetime as dt
 import html
 import re
 
 from django import template
 from django.conf import settings
 from django.urls import reverse
-from django.utils.dateformat import format as date_format
+from django.utils.formats import date_format
 from django.utils.html import escape, format_html, format_html_join, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.timezone import localtime
@@ -318,18 +317,18 @@ def _attachment_urls(tokens, item, *, absolute, public_token=None):
 @register.filter
 def item_title(item):
     """An item's title with the mentions as ``@`` and current names"""
-    from biwak.activity.mentions import plain as plain_mentions
+    from biwak.activity import mentions
 
-    return plain_mentions(item.title, item)
+    return mentions.title(item.title, item)
 
 
 @register.filter
 def title_text(title):
     """A stored title (e.g. an event's) with the mentions as ``@`` and their
     labels, without looking anybody up"""
-    from biwak.activity.mentions import plain as plain_mentions
+    from biwak.activity import mentions
 
-    return plain_mentions(title)
+    return mentions.title(title)
 
 
 @register.filter
@@ -554,13 +553,13 @@ def public_link_badge(context, item):
         '<a class="badge wb-public-badge" href="{}" data-modal title="{}">{}</a>',
         reverse("item_share", args=[item.pk]),
         gettext("Shared publicly until %(date)s")
-        % {"date": date_format(localtime(link.expires_at), "j. M Y, H:i")},
+        % {"date": date_format(localtime(link.expires_at), "SHORT_DATETIME_FORMAT")},
         gettext("Public link"),
     )
 
 
 @register.inclusion_tag("items/_due_badge.html")
-def due_badge(todo, date_format="j. M", *, badge_only=False):
+def due_badge(todo, date_format="MONTH_DAY_FORMAT", *, badge_only=False):
     """A to-do's due date (``todo``: the item's ``Todo`` detail), as a
     danger badge when it's open and past due, as a quiet "Today" badge on
     the day, else as plain text; nothing without a date. ``badge_only``:
@@ -581,15 +580,10 @@ def due_badge(todo, date_format="j. M", *, badge_only=False):
 @register.filter
 def ago(when):
     """How long ago, "just now" under a minute (``timesince`` says "0
-    minutes"), else "5 minutes ago": one unit, "13 hours ago", not "13
-    hours, 37 minutes ago" (decided 2026-11-22)"""
-    from django.utils import timezone
-    from django.utils.timesince import timesince
+    minutes"), else "5 minutes ago": one unit (``biwak.text.ago``)"""
+    from biwak import text
 
-    now = timezone.now()
-    if now - when < dt.timedelta(minutes=1):
-        return gettext("just now")
-    return gettext("%(time)s ago") % {"time": timesince(when, now, depth=1)}
+    return text.ago(when)
 
 
 @register.simple_tag
@@ -655,3 +649,37 @@ def posted_here(form, group):
     return form.is_bound and str(form.data.get("group") or "") == (
         str(group.pk) if group else ""
     )
+
+
+class CaptureNode(template.Node):
+    def __init__(self, nodelist, name):
+        self.nodelist = nodelist
+        self.name = name
+
+    def render(self, context):
+        context[self.name] = mark_safe(self.nodelist.render(context).strip())
+        return ""
+
+
+@register.tag
+def capture(parser, token):
+    """``{% capture as subject %}…{% endcapture %}``: the rendered block as a
+    variable, so that ``{% blocktranslate %}`` can place it in a whole
+    sentence (specs/languages.md: German orders the words differently)"""
+    bits = token.split_contents()
+    if len(bits) != 3 or bits[1] != "as":
+        raise template.TemplateSyntaxError("Usage: {% capture as name %}")
+    nodelist = parser.parse(("endcapture",))
+    parser.delete_first_token()
+    return CaptureNode(nodelist, bits[2])
+
+
+@register.filter(expects_localtime=True, is_safe=False)
+def dateformat(value, name):
+    """``{{ day|dateformat:"SHORT_DATE_FORMAT" }}``: a format of the active
+    language by its name, Django's or ours (``biwak.formats``)"""
+    from biwak.formats import format_date
+
+    if value in {None, ""}:
+        return ""
+    return format_date(value, name)

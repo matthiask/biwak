@@ -10,6 +10,8 @@ from django.urls import reverse
 from django.utils import formats, timezone, translation
 from django.utils.translation import gettext_lazy
 
+from biwak.accounts.languages import language_for
+
 
 SUBJECTS = {
     "webauthn_added": gettext_lazy("A passkey was added to your Biwak account"),
@@ -52,7 +54,7 @@ def send(change, user, *, now=None):
     if change == "webauthn_added" and sso.requires_sso(user):
         return
     when = timezone.localtime(now or timezone.now())
-    with translation.override(user.language or translation.get_language()):
+    with translation.override(language_for(user)):
         message = EmailMessage(
             str(SUBJECTS[change]),
             render_to_string(

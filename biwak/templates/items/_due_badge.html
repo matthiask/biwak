@@ -7,14 +7,14 @@
   {% if state == "overdue" %}<span
       class="badge wb-tone-danger"
       data-due="overdue"
-      title="{{ due_on|date:'l, j. F Y' }}"
-    >{% if badge_only %}{% translate "Overdue" %}{% else %}{% blocktranslate with day=due_on|date:"j. M" %}Overdue · {{ day }}{% endblocktranslate %}{% endif %}</span>{% elif state == "today" %}<span
+      title="{{ due_on|dateformat:'WEEKDAY_DATE_FORMAT' }}"
+    >{% if badge_only %}{% translate "Overdue" %}{% else %}{% blocktranslate with day=due_on|dateformat:"MONTH_DAY_FORMAT" %}Overdue · {{ day }}{% endblocktranslate %}{% endif %}</span>{% elif state == "today" %}<span
       class="badge wb-tone-neutral"
       data-due="today"
-      title="{{ due_on|date:'l, j. F Y' }}"
+      title="{{ due_on|dateformat:'WEEKDAY_DATE_FORMAT' }}"
     >{% translate "Today" %}</span>{% elif not badge_only %}<span
       class="small text-body-secondary"
       data-due="later"
     >{% icon "calendar-event" %}
-      {{ due_on|date:date_format }}</span>{% endif %}
+      {{ due_on|dateformat:date_format }}</span>{% endif %}
 {% endif %}

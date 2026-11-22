@@ -57,7 +57,7 @@
       {% endif %}
       <p class="small text-body-secondary">
         {{ version.name }} · {{ version.size|filesizeformat }} · {% short_name version.uploaded_by %},
-        {{ version.uploaded_at|date:"j. M Y, H:i" }}
+        {{ version.uploaded_at|dateformat:"SHORT_DATETIME_FORMAT" }}
       </p>
       <div id="live-text" data-live>
         {% if upload.description %}<div
@@ -101,7 +101,7 @@
             <li>
               <a href="{% url 'file_version_download' item.pk old.pk %}">{{ old.name }}</a>
               · {{ old.size|filesizeformat }} · {% short_name old.uploaded_by %},
-              {{ old.uploaded_at|date:"j. M Y" }}
+              {{ old.uploaded_at|dateformat:"SHORT_DATE_FORMAT" }}
             </li>
           {% endfor %}
         </ul>

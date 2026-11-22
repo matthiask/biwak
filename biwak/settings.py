@@ -160,6 +160,7 @@ MIDDLEWARE = [
         "debug_toolbar.middleware.DebugToolbarMiddleware" if DEBUG_TOOLBAR else "",
         "django.contrib.sessions.middleware.SessionMiddleware",
         "django.middleware.common.CommonMiddleware",
+        "biwak.accounts.middleware.language_middleware",
         "django.middleware.locale.LocaleMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -247,6 +248,8 @@ DATABASES["default"] |= {
 LANGUAGE_CODE = "en"
 LANGUAGES = [("de", _("German")), ("en", _("English"))]
 TIME_ZONE = "Europe/Zurich"
+# Dates per language: biwak/formats/<language>/formats.py
+FORMAT_MODULE_PATH = ["biwak.formats"]
 USE_I18N = True
 USE_TZ = True
 

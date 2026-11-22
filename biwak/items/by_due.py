@@ -7,12 +7,14 @@ from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse
 from django.shortcuts import render
+from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from icalendar import Calendar, Event as CalendarEvent
 
 from biwak import schedules
 from biwak.accounts import sso
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import CalendarToken, User
 from biwak.activity import mentions
 from biwak.api_conventions import absolute
@@ -220,7 +222,7 @@ def calendar_for(user):
         for item in qs.order_by("todo__due_on", "pk"):
             event = CalendarEvent()
             event.add("uid", f"todo-{item.pk}@biwak")
-            event.add("summary", mentions.plain(item.title, item))
+            event.add("summary", mentions.title(item.title, item))
             event.add("dtstart", item.todo.due_on)
             event.add("dtend", item.todo.due_on + dt.timedelta(days=1))
             event.add("dtstamp", item.updated_at)
@@ -242,8 +244,9 @@ def calendar_feed(request, token):
         # Not for organizations requiring single sign-on (specs/sso.md): a
         # link nobody signs in for would outlast leaving the company
         raise Http404
-    response = HttpResponse(
-        calendar_for(link.user).to_ical(), content_type="text/calendar; charset=utf-8"
-    )
+    # In its owner's language, not the calendar app's (specs/languages.md)
+    with translation.override(language_for(link.user)):
+        ical = calendar_for(link.user).to_ical()
+    response = HttpResponse(ical, content_type="text/calendar; charset=utf-8")
     response["Cache-Control"] = "private, no-store"
     return response

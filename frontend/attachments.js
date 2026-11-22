@@ -56,7 +56,9 @@ async function upload(container, textarea, file) {
     showError(textarea, attachmentsTooLarge)
     return
   }
-  const placeholder = `[${container.dataset.attachmentsUploading || "Uploading"} ${file.name}…]`
+  const uploading =
+    container.dataset.attachmentsUploading || "Uploading %(name)s…"
+  const placeholder = `[${uploading.replace("%(name)s", () => file.name)}]`
   insert(textarea, placeholder)
   const body = new FormData()
   body.append("file", file, file.name)
@@ -72,7 +74,9 @@ async function upload(container, textarea, file) {
     showError(textarea, "")
   } catch (exc) {
     replace(textarea, placeholder, "")
-    showError(textarea, exc.message || container.dataset.attachmentsFailed)
+    // A network error's message is the browser's, in English
+    const message = exc instanceof TypeError ? "" : exc.message
+    showError(textarea, message || container.dataset.attachmentsFailed)
   }
 }
 

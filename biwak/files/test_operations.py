@@ -228,7 +228,8 @@ class DocTest(Fixture, TestCase):
         self.assertEqual(self.doc.title, "Plain line")
         operations.update_doc(self.doc, actor=self.bob, content="")
         self.doc.refresh_from_db()
-        self.assertEqual(self.doc.title, "Untitled")
+        self.assertEqual(self.doc.title, "")
+        self.assertEqual(self.doc.shown_title, "Untitled")
 
     def test_a_save_without_a_new_text_keeps_the_title(self):
         operations.save_version(self.doc, actor=self.bob)

@@ -6,8 +6,8 @@
   {% with project=item.project %}{% include "files/_crumbs.html" %}{% endwith %}
   <div class="wb-page-header">
     <h1 class="wb-title">
-      {{ version.title }}
-      <span class="text-body-secondary fs-6">{{ version.created_at|date:"j. M Y, H:i" }} ·
+      {{ version.title|title_text }}
+      <span class="text-body-secondary fs-6">{{ version.created_at|dateformat:"SHORT_DATETIME_FORMAT" }} ·
         {% short_name version.created_by %}</span>
     </h1>
     <div class="wb-page-actions">

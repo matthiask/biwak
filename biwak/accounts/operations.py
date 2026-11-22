@@ -3,6 +3,7 @@ page and the API's ``me/`` call these"""
 
 import io
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -23,9 +24,17 @@ def set_name(user, *, full_name, short_name):
     user.save(update_fields=["full_name", "short_name"])
 
 
-def set_preferences(user, *, keyboard_shortcuts=None, theme=None, accent=None):
-    """The person's keyboard setting, theme and accent color, what's given"""
+def set_preferences(
+    user, *, keyboard_shortcuts=None, theme=None, accent=None, language=None
+):
+    """The person's keyboard setting, theme, accent color and language
+    (``""`` for the browser's), what's given"""
     fields = []
+    if language is not None:
+        if language and language not in dict(settings.LANGUAGES):
+            raise ValueError(f"Unknown language {language!r}")
+        user.language = language
+        fields.append("language")
     if keyboard_shortcuts is not None:
         user.keyboard_shortcuts = bool(keyboard_shortcuts)
         fields.append("keyboard_shortcuts")

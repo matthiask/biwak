@@ -109,6 +109,12 @@ def plain(text, item=None):
     return MENTION.sub(show, text)
 
 
+def title(text, item=None):
+    """A title as ``plain()`` shows it; "Untitled" for a doc without one
+    (stored empty, specs/files.md)"""
+    return plain(text, item) or _("Untitled")
+
+
 def candidates(item, query, *, for_user):
     """The ``@`` list: people matching ``query``, those who can see the item
     first; the others greyed out with the reason. Clients only find the

@@ -14,7 +14,7 @@ from django.db import transaction
 from django.db.models import Exists, Max, OuterRef, Q
 from django.db.models.functions import Lower
 from django.utils import timezone
-from django.utils.translation import ngettext
+from django.utils.translation import gettext, ngettext
 
 from biwak import checklists, schedules
 from biwak.accounts.models import User, own_staff
@@ -1080,9 +1080,9 @@ def trash(item, *, actor):
 @transaction.atomic
 def restore(item, *, actor):
     if item.status != Status.TRASHED:
-        raise ValueError("The item isn't in the trash")
+        raise ValueError(gettext("The item isn't in the trash."))
     if item.parent_id and item.parent.status == Status.TRASHED:
-        raise ValueError("Restore the parent first")
+        raise ValueError(gettext("Restore what it's in first."))
     # A change, for what comes back with it too: a doc whose "Tell people
     # about it?" is unanswered is told an hour after this, not at once
     # (trashing isn't a way around telling)

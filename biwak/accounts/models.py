@@ -126,8 +126,18 @@ class User(AbstractBaseUser):
     email = models.EmailField(_("email"), max_length=254, unique=True)
     full_name = models.CharField(_("full name"), max_length=200, blank=True)
     short_name = models.CharField(_("short name"), max_length=30, blank=True)
+    # Chosen in the settings; empty is "Automatic": pages follow the
+    # browser, mails ``invitation_language`` (specs/languages.md)
     language = models.CharField(
         _("language"), max_length=10, choices=settings.LANGUAGES, blank=True
+    )
+    # The language of the last invitation mail, the inviter's at the time:
+    # mails use it until the person chooses one (``language_for()``)
+    invitation_language = models.CharField(
+        _("invitation's language"),
+        max_length=10,
+        choices=settings.LANGUAGES,
+        blank=True,
     )
     is_active = models.BooleanField(_("is active"), default=True)
     is_admin = models.BooleanField(_("is admin"), default=False)

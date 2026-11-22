@@ -6,14 +6,15 @@ from django.core.files.storage import default_storage
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import translation
 from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak import cli_version
-from biwak.accounts import operations, passkeys, signin, sso
+from biwak.accounts import languages, operations, passkeys, signin, sso
 from biwak.accounts.models import (
     API_TOKEN_LIFETIME,
     Accent,
@@ -186,23 +187,34 @@ def passkey_offer(request):
 
 
 class NameForm(Form):
-    full_name = forms.CharField(label=_("full name"), max_length=200)
+    full_name = forms.CharField(label=gettext_lazy("full name"), max_length=200)
     short_name = forms.CharField(
-        label=_("short name"),
+        label=gettext_lazy("short name"),
         max_length=30,
         required=False,
-        help_text=_("How you're listed (mentions, assignees); empty: your first name."),
+        help_text=gettext_lazy(
+            "How you're listed (mentions, assignees); empty: your first name."
+        ),
     )
 
 
 class KeyboardForm(Form):
     keyboard_shortcuts = forms.BooleanField(
-        label=_("Single-key shortcuts"),
+        label=gettext_lazy("Single-key shortcuts"),
         required=False,
-        help_text=_(
+        help_text=gettext_lazy(
             "Ctrl+K (Cmd+K) always opens the command palette; the other keys"
             " only work with this on."
         ),
+    )
+
+
+class LanguageForm(Form):
+    language = forms.ChoiceField(
+        label=gettext_lazy("Language"),
+        choices=languages.choices,
+        required=False,
+        widget=forms.RadioSelect,
     )
 
 
@@ -210,13 +222,13 @@ class AppearanceForm(Form):
     # Only what's posted changes: the toggle in the navigation posts the
     # theme alone
     theme = forms.ChoiceField(
-        label=_("Theme"),
+        label=gettext_lazy("Theme"),
         choices=Theme.choices,
         required=False,
         widget=forms.RadioSelect,
     )
     accent = forms.ChoiceField(
-        label=_("Accent color"),
+        label=gettext_lazy("Accent color"),
         choices=Accent.choices,
         required=False,
         widget=forms.RadioSelect,
@@ -263,6 +275,7 @@ def _settings_page(request, *, notifications=None, name_form=None):
                     "lantern_in_favicon": user.lantern_in_favicon,
                 }
             ),
+            "language_form": LanguageForm(initial={"language": user.language}),
             "keyboard_form": KeyboardForm(
                 initial={"keyboard_shortcuts": user.keyboard_shortcuts}
             ),
@@ -322,6 +335,22 @@ def settings_keyboard(request):
         request.user, keyboard_shortcuts=form.cleaned_data["keyboard_shortcuts"]
     )
     messages.success(request, _("Your keyboard settings have been saved."))
+    return redirect("settings")
+
+
+@never_cache
+@require_POST
+def settings_language(request):
+    """The language of the pages and mails; the page comes back in it"""
+    form = LanguageForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest("Invalid language.")
+    operations.set_preferences(request.user, language=form.cleaned_data["language"])
+    # The message in the new language, the next page shows it
+    with translation.override(
+        request.user.language or translation.get_language_from_request(request)
+    ):
+        messages.success(request, _("Your language has been saved."))
     return redirect("settings")
 
 

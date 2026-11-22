@@ -222,7 +222,7 @@ def hits(items, terms):
     an excerpt of the text, or of the first comment if only a comment has
     the words (none if only the title has them). Two queries per kind at
     most, the items are the person's, so nothing else is checked here."""
-    from biwak.activity.mentions import plain
+    from biwak.activity.mentions import title as mentions_title
 
     words = prefixes(terms)
     items = list(items)
@@ -248,7 +248,7 @@ def hits(items, terms):
         # The first match in time
         comments[item_id] = content
     # Titles first, then the texts, then the comments: one query
-    sources = [plain(item.title, item) for item in items]
+    sources = [mentions_title(item.title, item) for item in items]
     # Texts as plain text, like the excerpts elsewhere (specs/glance.md):
     # no Markdown, mentions as written (no query per result)
     sources += [as_text(texts.get(item.pk, "")) for item in items]

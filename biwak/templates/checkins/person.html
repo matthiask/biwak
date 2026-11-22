@@ -9,7 +9,7 @@
     <div class="card mb-2" id="answer-{{ answer.pk }}">
       <div class="card-body">
         <div class="small text-body-secondary mb-1">
-          <a href="{{ answer.item.get_absolute_url }}">{{ answer.occurrence.date|date:"l, j. F Y" }}</a>
+          <a href="{{ answer.item.get_absolute_url }}">{{ answer.occurrence.date|dateformat:"WEEKDAY_DATE_FORMAT" }}</a>
         </div>
         <div class="wb-markdown">{{ answer.content|markdown:answer.item }}</div>
       </div>

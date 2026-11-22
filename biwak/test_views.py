@@ -226,7 +226,7 @@ class ViewsTest(TestCase):
         # The question says what becomes visible, as a page and as a modal
         response = self.client.get(url)
         self.assertContains(response, "Show this list to clients?")
-        self.assertContains(response, "Makes this list, 1 to-do and 1 comments")
+        self.assertContains(response, "Makes this list, 1 to-do and 1 comment visible")
         self.assertContains(response, "visible to 1 client.")
         self.assertContains(response, "Show to clients")
         self.assertContains(response, "btn-destructive")

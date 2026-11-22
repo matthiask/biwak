@@ -12,14 +12,14 @@ import dataclasses
 import datetime as dt
 import difflib
 
-from django.db.models import Q
+from django.db.models import Choices, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext
 
 from biwak.accounts.models import User
 from biwak.audit.models import LoggedAction
-from biwak.items.models import Group, Item, Kind
+from biwak.items.models import Group, Item, Kind, Status, TodoList
 
 
 # table → column → (label, kind of value); the other columns are ignored
@@ -48,7 +48,7 @@ def _fields(item):
                 ITEM,
             ),
             "is_client_visible": (gettext("Visible to clients"), BOOL),
-            "status": (gettext("Status"), VALUE),
+            "status": (gettext("Status"), Status),
         },
         "items_todo": {
             "notes": (gettext("Notes"), TEXT),
@@ -59,7 +59,7 @@ def _fields(item):
         },
         "items_todolist": {
             "description": (gettext("Description"), TEXT),
-            "view": (gettext("View"), VALUE),
+            "view": (gettext("View"), TodoList.View),
         },
         "items_message": {"content": (gettext("Content"), TEXT)},
         "items_upload": {"description": (gettext("Description"), TEXT)},
@@ -165,6 +165,9 @@ def _show(rows, viewer, item):
     def show(kind, raw):
         if raw in {None, ""}:
             return None
+        if isinstance(kind, type) and issubclass(kind, Choices):
+            # The label in the reader's language, not the stored value
+            return str(dict(kind.choices).get(raw, raw))
         if kind == BOOL:
             return gettext("yes") if raw in {"t", "true", True} else gettext("no")
         if kind == ITEM:

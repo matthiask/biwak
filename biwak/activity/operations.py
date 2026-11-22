@@ -5,6 +5,7 @@ from contextvars import ContextVar
 from django.db import transaction
 from django.db.models.functions import Greatest
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from biwak.accounts.models import MailDelivery, NotificationLevel
 from biwak.activity.models import (
@@ -199,7 +200,7 @@ class StillAssigned(ValueError):
 
     def __init__(self):
         super().__init__(
-            "You're assigned, so you hear about it. Unassign yourself first."
+            gettext("You're assigned, so you hear about it. Unassign yourself first.")
         )
 
 

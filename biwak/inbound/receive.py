@@ -26,6 +26,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 
+from biwak.accounts.languages import language_for
 from biwak.accounts.middleware import set_user_name
 from biwak.activity import mentions
 from biwak.activity.mails import sender
@@ -177,7 +178,7 @@ def _post(message, mail, token):
         )
         for attachment in files
     ]
-    with translation.override(user.language or settings.LANGUAGE_CODE):
+    with translation.override(language_for(user)):
         too_large = [
             _("An attachment was too large and is not included: %(name)s")
             % {"name": name}
@@ -215,9 +216,12 @@ def _reject(token, mail, status, *, authenticated, now):
     if to_user and not user.is_active:
         return
     recipient = user.email if to_user else mail.sender
+    # Somebody else's address: they never chose
     language = (
-        user.language if recipient.lower() == user.email.lower() else ""
-    ) or settings.LANGUAGE_CODE
+        language_for(user)
+        if recipient.lower() == user.email.lower()
+        else settings.LANGUAGE_CODE
+    )
     with translation.override(language):
         reasons = {
             InboundStatus.WRONG_SENDER: _(

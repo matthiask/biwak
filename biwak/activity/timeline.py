@@ -53,7 +53,7 @@ def _due(value):
     if not value:
         return _("removed the due date")
     return _("set the due date to %(date)s") % {
-        "date": date_format(dt.date.fromisoformat(value), "j. M Y")
+        "date": date_format(dt.date.fromisoformat(value), "SHORT_DATE_FORMAT")
     }
 
 
@@ -278,7 +278,7 @@ def effects(event):
             result = []
             fields = _edit_fields(event)
             if "title" in fields:
-                title = mentions.plain(data.get("title", ""))
+                title = mentions.title(data.get("title", ""))
                 text = _("changed the title to “%(title)s”") % {"title": title}
                 was = data.get("title_was", UNKNOWN)
                 if was is not UNKNOWN:

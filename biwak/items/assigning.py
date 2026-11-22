@@ -103,8 +103,11 @@ def todos_assign(request):
         request,
         form,
         title=_("Assign…"),
-        intro=ngettext("“%(title)s”", "%(count)s to-dos", len(todos))
-        % {"title": todos[0].title, "count": len(todos)},
+        intro=(
+            f"“{todos[0].title}”"
+            if len(todos) == 1
+            else _("%(count)s to-dos") % {"count": len(todos)}
+        ),
         project=todos[0].project if len({t.project_id for t in todos}) == 1 else None,
         cancel_url=next_url(request) or "/todos/",
         submit_label=_("Assign"),

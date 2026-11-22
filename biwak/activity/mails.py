@@ -19,6 +19,7 @@ from django.utils import timezone, translation
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery, User
 from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Notification
@@ -263,7 +264,7 @@ def _item(item, user):
     """The item with its full text"""
     context = {
         "item": item,
-        "title": mentions.plain(item.title, item),
+        "title": mentions.title(item.title, item),
         "url": absolute(item.get_absolute_url()),
         "project": item.project,
         "kind": Kind(item.kind).label,
@@ -445,7 +446,7 @@ def _batch(notifications, user):
         "line": batch.line,
         "files": [
             {
-                "title": mentions.plain(item.title, item),
+                "title": mentions.title(item.title, item),
                 "url": absolute(item.get_absolute_url()),
             }
             for item in batch.files
@@ -478,7 +479,10 @@ def digest_heading(notifications):
     """ "What happened on 19. November 2026", or the days it covers when
     there's more than one (after a downtime, or switching to digests)"""
     days = sorted({timezone.localdate(n.created_at) for n in notifications})
-    first, last = date_format(days[0], "j. F Y"), date_format(days[-1], "j. F Y")
+    first, last = (
+        date_format(days[0], "DATE_FORMAT"),
+        date_format(days[-1], "DATE_FORMAT"),
+    )
     if first == last:
         return _("What happened on %(day)s") % {"day": first}
     return _("What happened from %(first)s to %(last)s") % {
@@ -569,7 +573,7 @@ def _prepare(user, pks, now, build, kind):
     message = None
     if deliverable:
         with (
-            translation.override(user.language or settings.LANGUAGE_CODE),
+            translation.override(language_for(user)),
             mentions.reading_as(user),
         ):
             message = build(deliverable)

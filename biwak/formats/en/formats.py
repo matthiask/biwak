@@ -1,0 +1,14 @@
+# English dates (specs/languages.md): "22 Nov 2026", 24-hour times
+DATE_FORMAT = "j F Y"
+SHORT_DATE_FORMAT = "j M Y"
+DATETIME_FORMAT = "j F Y, H:i"
+SHORT_DATETIME_FORMAT = "j M Y, H:i"
+TIME_FORMAT = "H:i"
+MONTH_DAY_FORMAT = "j M"
+YEAR_MONTH_FORMAT = "F Y"
+# Ours (biwak.formats)
+WEEKDAY_DATE_FORMAT = "l, j F Y"
+WEEKDAY_DATETIME_FORMAT = "l, j F Y, H:i"
+SHORT_WEEKDAY_DATE_FORMAT = "D, j M Y"
+SHORT_WEEKDAY_DATETIME_FORMAT = "D, j M Y, H:i"
+MONTH_DAY_TIME_FORMAT = "j M, H:i"

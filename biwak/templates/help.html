@@ -11,11 +11,14 @@
     {% endfor %}
   </nav>
   <div class="wb-page-header">
-    <h1 class="wb-title">{{ title }}</h1>
+    <h1 class="wb-title" {% if english_only %}lang="en"{% endif %}>{{ title }}</h1>
   </div>
+  {% if english_only %}
+    <p class="text-body-secondary" id="help-in-english">{% translate "The help is in English for now." %}</p>
+  {% endif %}
   <article class="card">
     <div class="card-body wb-markdown wb-help">
-      {{ html }}
+      {% if english_only %}<div lang="en">{{ html }}</div>{% else %}{{ html }}{% endif %}
       {% if shortcuts %}
         {# The one list of shortcuts, also in the "?" dialog (palette/_shortcuts.html) #}
         <h2>{% translate "All shortcuts" %}</h2>

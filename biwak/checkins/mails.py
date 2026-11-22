@@ -5,13 +5,13 @@ notifications (``biwak.activity``)."""
 
 import logging
 
-from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
 from django.utils import translation
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery
 from biwak.activity import mentions
 from biwak.activity.mails import (
@@ -55,7 +55,7 @@ def _send_all(build, occurrence, pks):
     for user in people.order_by("pk"):
         try:
             with (
-                translation.override(user.language or settings.LANGUAGE_CODE),
+                translation.override(language_for(user)),
                 mentions.reading_as(user),
             ):
                 message = build(user, occurrence)
@@ -95,7 +95,7 @@ def _context(user, occurrence):
     return {
         "user": user,
         "item": item,
-        "title": mentions.plain(item.title, item),
+        "title": mentions.title(item.title, item),
         "project": item.project,
         "question": question,
         "occurrence": occurrence,
@@ -140,7 +140,7 @@ def summary_mail(user, occurrence):
     from biwak.checkins.operations import answers_of
 
     context = _context(user, occurrence)
-    context["day"] = date_format(occurrence.date, "j. F Y")
+    context["day"] = date_format(occurrence.date, "DATE_FORMAT")
     context["answers"] = [
         {
             "author": answer.author,

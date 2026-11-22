@@ -209,11 +209,21 @@ a team's name isn't expanded.
 
 ## Your menu
 
-Your name in the bar opens: My activity, Settings (your name, notifications, the
-keyboard, appearance, profile image, sign-in: connected accounts,
-passkeys, the authenticator app and sessions), Calendar,
+Your name in the bar opens: My activity, Settings (your name, the
+language, notifications, the keyboard, appearance, profile image,
+sign-in: connected accounts, passkeys, the authenticator app and
+sessions), Calendar,
 Help and Sign out. Staff also find Public links there; administrators
 All projects, after My activity, and the link to the administration.
+
+## Language
+
+Biwak speaks English and German. Settings, "Language": Automatic
+follows your browser's language, or choose Deutsch or English; the page
+reloads in it. Mails follow your choice too; with Automatic they're in
+English, or in the language you were invited in. `biwak settings
+--language de` (or `en`, `auto`) does the same from the command line.
+This help is in English for now, also when Biwak is in German.
 
 ## Trash
 

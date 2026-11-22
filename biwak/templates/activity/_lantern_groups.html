@@ -76,7 +76,7 @@
           <time
             class="small text-body-secondary"
             datetime="{{ notification.created_at|date:'c' }}"
-          >{{ notification.created_at|date:"j. M, H:i" }}</time>
+          >{{ notification.created_at|dateformat:"MONTH_DAY_TIME_FORMAT" }}</time>
           {% if item.is_batch %}
             <ul class="list-unstyled mb-0">
               {% for file in item.files %}

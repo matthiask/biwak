@@ -43,7 +43,7 @@
             · <strong>{% translate "paused" %}</strong>
           {% elif question.question.next_local %}
             ·
-            {% blocktranslate with when=question.question.next_local|date:"D j. M Y, H:i" %}next: {{ when }}{% endblocktranslate %}
+            {% blocktranslate with when=question.question.next_local|dateformat:"SHORT_WEEKDAY_DATETIME_FORMAT" %}next: {{ when }}{% endblocktranslate %}
           {% endif %}
         </div>
       </a>

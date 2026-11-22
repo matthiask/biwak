@@ -20,6 +20,7 @@ def attachments_attrs(project):
         reverse("attachment_upload", kwargs={"pk": project.pk}),
         MAX_SIZE,
         gettext("Files can be at most %(size)s MB.") % {"size": MAX_SIZE // 2**20},
-        gettext("Uploading"),
+        # The scripts put in the name (specs/languages.md: words in any order)
+        gettext("Uploading %(name)s…"),
         gettext("Not uploaded, please try again."),
     )

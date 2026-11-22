@@ -1,75 +1,94 @@
 {% load biwak i18n %}
 {# One event, or a merged entry: pass `what` ("5 to-dos") and `where` (the list or project) with its latest event. Later parts add their actions here. #}
 {# `own_excerpt`: the caller shows the excerpt itself, after the time (activity/_excerpt.html) #}
+{# Whole sentences after the actor, the subject a placeholder: a translation orders the words (specs/languages.md) #}
 {% if event.actor %}{% avatar event.actor %}{% endif %}
 <span class="fw-semibold">{% person_link event.actor css="text-reset text-decoration-none" %}</span>
+{% capture as subject %}{% include "activity/_subject.html" %}{% endcapture %}
+{% capture as names %}{{ event.assignee_names|join:", " }}{% endcapture %}
 {% if event.action == "created" and event.item.kind == "answer" %}
-  {% translate "answered" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}answered {{ subject }}{% endblocktranslate %}
 {% elif event.action == "created" %}
-  {% translate "created" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}created {{ subject }}{% endblocktranslate %}
 {% elif event.action == "edited" %}
-  {% translate "edited" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}edited {{ subject }}{% endblocktranslate %}
 {% elif event.action == "completed" %}
-  {% translate "completed" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}completed {{ subject }}{% endblocktranslate %}
 {% elif event.action == "reopened" %}
-  {% translate "reopened" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}reopened {{ subject }}{% endblocktranslate %}
 {% elif event.action == "assigned" %}
-  {% translate "assigned" %}
-  {% if what %}{{ what }}{% else %}{{ event.assignee_names|join:", " }}
-    {% translate "to" %}
-    {% include "activity/_subject.html" %}{% endif %}
+  {% if what %}
+    {% blocktranslate %}assigned {{ what }}{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate %}assigned {{ names }} to {{ subject }}{% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "unassigned" %}
-  {% translate "removed" %}
-  {% if what %}{{ what }}{% else %}{{ event.assignee_names|join:", " }}
-    {% translate "from" %}
-    {% include "activity/_subject.html" %}{% endif %}
+  {% if what %}
+    {% blocktranslate %}removed {{ what }}{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate %}removed {{ names }} from {{ subject }}{% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "shared" %}
-  {% translate "shared" %}
-  {% if what %}{{ what }}{% else %}{% include "activity/_subject.html" %}
-    {% if event.assignee_names %}{% translate "with" %}
-      {{ event.assignee_names|join:", " }}{% endif %}{% endif %}
+  {% if what %}
+    {% blocktranslate %}shared {{ what }}{% endblocktranslate %}
+  {% elif names %}
+    {% blocktranslate %}shared {{ subject }} with {{ names }}{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate %}shared {{ subject }}{% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "shared_publicly" %}
-  {% translate "shared" %}
-  {% include "activity/_subject.html" %}
-  {% translate "publicly" %}
-  {% if event.data.expires_at and not what %}{% blocktranslate with date=event.data.expires_at|parse_datetime|date:"j. M Y" %}until {{ date }}{% endblocktranslate %}{% endif %}
+  {% if event.data.expires_at and not what %}
+    {% blocktranslate trimmed with date=event.data.expires_at|parse_datetime|dateformat:"SHORT_DATE_FORMAT" %}
+      shared {{ subject }} publicly until {{ date }}
+    {% endblocktranslate %}
+  {% else %}
+    {% blocktranslate %}shared {{ subject }} publicly{% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "stopped_sharing" %}
-  {% translate "stopped sharing" %} {% include "activity/_subject.html" %} {% translate "publicly" %}
+  {% blocktranslate %}stopped sharing {{ subject }} publicly{% endblocktranslate %}
 {% elif event.action == "commented" %}
-  {% translate "commented on" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}commented on {{ subject }}{% endblocktranslate %}
 {% elif event.action == "reacted" %}
-  {% translate "reacted to" %}
-  {% if event.data.comment %}{% translate "a comment on" %}{% endif %}
-  {% include "activity/_subject.html" with what="" %}
+  {% capture as subject %}{% include "activity/_subject.html" with what="" %}{% endcapture %}
+  {% if event.data.comment %}
+    {% blocktranslate %}reacted to a comment on {{ subject }}{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate %}reacted to {{ subject }}{% endblocktranslate %}
+  {% endif %}
   <span>{% if contents %}{{ contents|join:" " }}{% else %}{{ event.data.content }}{% endif %}</span>
 {% elif event.action == "moved" %}
-  {% translate "moved" %}
-  {% include "activity/_subject.html" %}
-  {# The list: only if the viewer may see it now (attach()) #}
-  {% if event.target_list and not what %}{% translate "to" %} {{ event.target_list|title_text }}{% endif %}
-  {# A group of the to-do's own list: as visible as the to-do #}
-  {% if event.data.group and not what %}{% translate "to" %}
-    {{ event.data.group|title_text }}{% elif event.data.list and not event.data.group and not what %}{% translate "out of its group" %}{% endif %}
+  {# The list: only if the viewer may see it now (attach()); a group of the to-do's own list: as visible as the to-do #}
+  {% if what %}
+    {% blocktranslate %}moved {{ subject }}{% endblocktranslate %}
+  {% elif event.data.group %}
+    {% blocktranslate with target=event.data.group|title_text %}moved {{ subject }} to {{ target }}{% endblocktranslate %}
+  {% elif event.target_list %}
+    {% blocktranslate with target=event.target_list|title_text %}moved {{ subject }} to {{ target }}{% endblocktranslate %}
+  {% elif event.data.list %}
+    {% blocktranslate %}moved {{ subject }} out of its group{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate %}moved {{ subject }}{% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "visibility_changed" %}
   {% if what %}
-    {% translate "changed the visibility of" %} {{ what }}
+    {% blocktranslate %}changed the visibility of {{ what }}{% endblocktranslate %}
   {% elif event.data.visible %}
-    {% translate "made" %} {% include "activity/_subject.html" %} {% translate "visible to clients" %}
+    {% blocktranslate %}made {{ subject }} visible to clients{% endblocktranslate %}
   {% else %}
-    {% translate "hid" %} {% include "activity/_subject.html" %} {% translate "from clients" %}
+    {% blocktranslate %}hid {{ subject }} from clients{% endblocktranslate %}
   {% endif %}
 {% elif event.action == "archived" %}
-  {% translate "archived" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}archived {{ subject }}{% endblocktranslate %}
 {% elif event.action == "unarchived" %}
-  {% translate "brought back from the archive" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}brought {{ subject }} back from the archive{% endblocktranslate %}
 {% elif event.action == "trashed" %}
-  {% translate "trashed" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}trashed {{ subject }}{% endblocktranslate %}
 {% elif event.action == "restored" %}
-  {% translate "restored" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}restored {{ subject }}{% endblocktranslate %}
 {% elif event.action == "pinned" %}
-  {% translate "pinned" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}pinned {{ subject }}{% endblocktranslate %}
 {% elif event.action == "unpinned" %}
-  {% translate "unpinned" %} {% include "activity/_subject.html" %}
+  {% blocktranslate %}unpinned {{ subject }}{% endblocktranslate %}
 {% elif event.action == "edited_project" %}
   {% translate "edited the project" %}
 {% elif event.action == "joined" %}
@@ -77,11 +96,11 @@
 {% elif event.action == "left" %}
   {% translate "left the project" %}
 {% elif event.action == "added" %}
-  {% translate "added" %} {{ event.data.name }}
+  {% blocktranslate with name=event.data.name %}added {{ name }}{% endblocktranslate %}
 {% elif event.action == "removed" %}
-  {% translate "removed" %} {{ event.data.name }}
+  {% blocktranslate with name=event.data.name %}removed {{ name }}{% endblocktranslate %}
 {% else %}
-  {{ event.get_action_display }} {% include "activity/_subject.html" %}
+  {{ event.get_action_display }} {{ subject }}
 {% endif %}
 {% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
 {# No client badge in the feed and the lantern (decided 2026-11-21) #}

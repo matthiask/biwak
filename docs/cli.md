@@ -49,6 +49,7 @@ biwak people deactivate 14
 biwak projects --all --inactive-todos
 biwak people reset-sign-in 12
 biwak teams show 3
+biwak settings --language de
 ```
 
 The numbers are the IDs in the pages' addresses. Every command takes

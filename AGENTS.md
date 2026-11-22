@@ -225,9 +225,15 @@ projects, people and clients. The same in issues and commit messages.
 
 # Language
 
-Code, specs, commits and issues in English. The interface is English for
-now, with texts marked for translation (`gettext`) but no catalog; the
-German translation comes at the end (decided 2026-11-20: churn while
-exploring). Then gender-neutral German or use the colon
-(Teilnehmer:innen). Do not use the asterisk because broken Markdown parsers
-do not like it.
+Code, specs, commits and issues in English. The interface is English and
+German, chosen per person (`specs/languages.md`). Every text is marked for
+translation (`gettext`, `gettext_lazy` outside functions, whole sentences
+with placeholders, `ngettext` for counts) and translated in the same
+branch: `fl mm -l de`, translate the new entries in
+`conf/locale/de/LC_MESSAGES/django.po`, `fl cm`, commit both files;
+`biwak/test_catalog.py` fails on a text without its translation. The
+German: "du", Swiss spelling (ss, never ß), gender-neutral with the colon
+(Teilnehmer:innen) or neutral words, the glossary in
+`specs/languages.md`. Do not use the asterisk because broken Markdown
+parsers do not like it. Mails go out in `language_for(recipient)`
+(`biwak/accounts/languages.py`); scripts get their texts from the page.
