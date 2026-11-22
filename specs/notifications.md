@@ -142,15 +142,18 @@ level)`, the list's wins; decided 2026-11-21: other items have no level,
 other items). **Folders have no level of their own, they follow the
 project's** (confirmed 2026-11-21).
 
-- **Everything** (the default): posting to everybody subscribes the
-  person; subscribed to a list, they hear about every new to-do in it.
-- **Only what concerns me:** posting to everybody doesn't subscribe
-  them; being mentioned or assigned and their own things (creating,
-  commenting) do. New to-dos in a list they follow reach them only when
-  they're mentioned or assigned.
+- **Everything** (the default): a new message, doc or file they see
+  tells and subscribes them (`told_by_default()`); subscribed to a list,
+  they hear about every new to-do in it.
+- **Only what concerns me:** a new message, doc or file tells them only
+  when they follow its folder or the poster adds them; being mentioned
+  or assigned and their own things (creating, commenting) subscribe
+  them. New to-dos in a list they follow reach them only when they're
+  mentioned or assigned.
 - **Nothing:** only what they do themselves (commenting, being
-  assigned) subscribes them; mentions neither notify nor subscribe. The
-  feed still shows everything.
+  assigned), following a folder and being added by others subscribe
+  them; mentions neither notify nor subscribe. The feed still shows
+  everything.
 
 Never a notification about one's own actions.
 

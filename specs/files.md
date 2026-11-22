@@ -1,7 +1,9 @@
 # Messages, docs and files
 
 **Status:** built (2026-11-20; tiles, ordering, drag and drop, uploading
-several and new docs as drafts 2026-11-21). `biwak/files/`: attachments
+several, new docs as drafts, folder colors, a "…" menu on every tile and
+"Tell people about it?" with the announcement an hour after the last
+change 2026-11-21). `biwak/files/`: attachments
 (`attachments.py`), the board (`board.py`), folders and files
 (`library.py`, previews in `previews.py`), docs (`docs.py`, titles in
 `titles.py`), the operations in `operations.py` (creating in
@@ -112,9 +114,12 @@ the counts of the top level's folders, docs and files.
   open, select or drag the tile, and Tab reaches it after the tile. It
   offers what the item's own "More" menu does, with the same checks
   (the shared `items/_more_entries.html`): Subscribers…, for folders
-  Edit… and Order…, Move to… and Trash for who may change it; a client
-  without changes gets Subscribers… only. Its modals come back to the
-  grid (`?next=`, `forms.next_url()`, in `folder_edit`, `folder_order`,
+  Edit… and Order…, for staff on top-level items the visibility switch
+  ("Show to clients…", a modal, or "Hide from clients"; an item's page
+  has it below its content), Move to… and "Move to trash" for who may
+  change it; a client without changes gets Subscribers… only. Its
+  modals and the switch come back to the grid (`?next=`,
+  `forms.next_url()`, in `folder_edit`, `folder_order`, `switch`,
   `item_move`, `item_subscribers`, `item_trash`). ".." has none.
 - **".."** (decided 2026-11-21): inside a folder the first tile leads to
   the parent (the top level from a first-level folder), also a drop

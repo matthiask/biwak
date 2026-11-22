@@ -222,8 +222,9 @@ requests. Clients get it too.
 
 **Addresses:** everybody's address is allauth's verified primary
 address (`User.verify_email()`, also when it changes): allauth confirms
-who someone is (by code, sent only to verified addresses) before adding
-a passkey. A changed address replaces the old one (after the second
+who someone is before adding a passkey (by code, sent only to verified
+addresses; with an authenticator app by the app or a passkey,
+`two-factor.md`). A changed address replaces the old one (after the second
 visibility review): the old one no longer signs in and can be given to
 somebody else. Nobody changes their own address (allauth's address pages
 answer 404, `sso.md`); admins do (`mail-sending.md`).
