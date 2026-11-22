@@ -59,8 +59,8 @@ def activate(users, *, actor, mail=False):
     for user in users:
         if user.is_active:
             continue
-        user.is_active, user.left_at = True, None
-        fields = ["is_active", "left_at"]
+        user.is_active, user.left_at, user.left_in_basecamp = True, None, False
+        fields = ["is_active", "left_at", "left_in_basecamp"]
         mailed = mail and user.mail_undeliverable_at is None
         if mailed:
             user.invited_by, user.invited_at = actor, timezone.now()
@@ -121,7 +121,8 @@ def deactivate(users, *, actor):
         if user.pk not in leaving:
             continue
         user.is_active, user.left_at = False, timezone.localdate()
-        user.save(update_fields=["is_active", "left_at"])
+        user.left_in_basecamp = False
+        user.save(update_fields=["is_active", "left_at", "left_in_basecamp"])
         # Their assignments stay (decided 2026-11-22, specs/handover.md)
         done.append(user)
     end_access_now_and_after_commit([user.pk for user in done])
@@ -141,26 +142,32 @@ def mark_left(users, *, on):
         .order_by("pk")
     )
     for user in marked:
-        user.left_at = on
-        user.save(update_fields=["left_at"])
+        user.left_at, user.left_in_basecamp = on, True
+        user.save(update_fields=["left_at", "left_in_basecamp"])
     return marked
 
 
 @transaction.atomic
 def clear_left(users):
     """Clears ``left_at`` of those of these people who are inactive and
-    left: the importer, for people back among Basecamp's account people
-    (decided 2026-11-22). They wait to be activated then. Returns the
-    people cleared."""
+    left Basecamp (``left_in_basecamp``, set by ``mark_left()``): the
+    importer, for people back among Basecamp's account people (decided
+    2026-11-22). A date set by deactivating in Biwak stays. They wait to be
+    activated then. Returns the people cleared."""
     cleared = list(
         User.objects
         .select_for_update()
-        .filter(pk__in=[u.pk for u in users], is_active=False, left_at__isnull=False)
+        .filter(
+            pk__in=[u.pk for u in users],
+            is_active=False,
+            left_at__isnull=False,
+            left_in_basecamp=True,
+        )
         .order_by("pk")
     )
     for user in cleared:
-        user.left_at = None
-        user.save(update_fields=["left_at"])
+        user.left_at, user.left_in_basecamp = None, False
+        user.save(update_fields=["left_at", "left_in_basecamp"])
     return cleared
 
 

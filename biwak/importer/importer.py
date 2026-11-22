@@ -519,7 +519,9 @@ class Importer(Resolver):
             cleared = {
                 user.pk
                 for user in users
-                if not user.is_active and user.left_at is not None
+                if not user.is_active
+                and user.left_at is not None
+                and user.left_in_basecamp
             }
         else:
             cleared = {user.pk for user in activation.clear_left(users)}

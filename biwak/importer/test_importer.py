@@ -1168,18 +1168,38 @@ class PeopleWhoLeftTest(ImportCase):
         self.assertEqual(report.left, [])
 
     def test_people_back_in_the_account_are_cleared(self):
-        """Decided 2026-11-22: they wait to be activated again"""
+        """Decided 2026-11-22: a date the import set (gone from Basecamp) is
+        cleared when they are back; they wait to be activated again"""
+        account = list(self.client_.data["/people.json"])
+        self.leave(support.BOB)
         self.run_import()
-        User.objects.filter(email="bob@example.org").update(left_at=LEFT_ON)
+        bob = User.objects.get(email="bob@example.org")
+        self.assertTrue(bob.left_in_basecamp)
+        self.client_.data["/people.json"] = account
         report = self.run_import(dry_run=True)
         self.assertEqual(report.back, ["Bob Example <bob@example.org>"])
         self.assertIn("Back in Basecamp:\n  Bob Example", report.as_text())
-        self.assertEqual(self.left_at("bob@example.org"), LEFT_ON)
+        self.assertEqual(self.left_at("bob@example.org"), timezone.localdate())
         report = self.run_import()
         self.assertEqual(report.back, ["Bob Example <bob@example.org>"])
         self.assertEqual(report.left, [])
-        self.assertIsNone(self.left_at("bob@example.org"))
+        bob.refresh_from_db()
+        self.assertIsNone(bob.left_at)
+        self.assertFalse(bob.left_in_basecamp)
         self.assertEqual(self.run_import().back, [])
+
+    def test_deactivated_in_biwak_stays_whatever_basecamp_lists(self):
+        from biwak.organizations import activation
+
+        self.run_import()
+        bob = User.objects.get(email="bob@example.org")
+        User.objects.filter(pk=bob.pk).update(is_active=True)
+        activation.deactivate([bob], actor=self.ada)
+        for dry_run in [True, False]:
+            with self.subTest(dry_run=dry_run):
+                report = self.run_import(dry_run=dry_run)
+                self.assertEqual(report.back, [])
+                self.assertEqual(self.left_at("bob@example.org"), timezone.localdate())
 
     def test_a_dry_run_reports_and_writes_nothing(self):
         self.leave(support.BOB)

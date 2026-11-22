@@ -168,7 +168,8 @@ project. Waiting for Basecamp's account export to confirm the plan.
   report lists them ("People who left Basecamp:"), a dry run too
   without writing. People with `left_at` who are among the account's
   people again get it cleared ("Back in Basecamp:", decided 2026-11-22
-  by the user).
+  by the user), only when the importer set it (`left_in_basecamp`), not
+  when somebody was deactivated in Biwak.
 - **Profile images** (decided 2026-11-21): for people without an image
   in Biwak, `avatar_url` from `people/<id>.json` (`people.json` has
   null), processed like an upload, never overwriting one. Basecamp's

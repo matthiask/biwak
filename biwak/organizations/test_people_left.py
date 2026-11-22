@@ -63,11 +63,27 @@ class OperationsTest(Base):
         self.assertEqual(self.left_at(self.lena), LEFT_ON)
         self.assertIsNone(self.left_at(self.chris))
 
-    def test_clear_left_only_inactive_people_who_left(self):
+    def test_mark_left_says_basecamp_deactivating_doesnt(self):
+        activation.mark_left([self.wade], on=LEFT_ON)
+        self.wade.refresh_from_db()
+        self.assertTrue(self.wade.left_in_basecamp)
+        activation.deactivate([self.chris], actor=self.ada)
+        self.chris.refresh_from_db()
+        self.assertFalse(self.chris.left_in_basecamp)
+        activation.activate([self.wade], actor=self.ada)
+        self.wade.refresh_from_db()
+        self.assertFalse(self.wade.left_in_basecamp)
+
+    def test_clear_left_only_what_basecamp_set(self):
+        """A date set by deactivating in Biwak (Lena's) stays"""
+        activation.mark_left([self.wade], on=LEFT_ON)
         cleared = activation.clear_left([self.wade, self.lena, self.chris])
-        self.assertEqual(cleared, [self.lena])
-        self.assertIsNone(self.left_at(self.lena))
-        self.assertFalse(self.lena.is_active)
+        self.assertEqual(cleared, [self.wade])
+        self.wade.refresh_from_db()
+        self.assertIsNone(self.wade.left_at)
+        self.assertFalse(self.wade.left_in_basecamp)
+        self.assertFalse(self.wade.is_active)
+        self.assertEqual(self.left_at(self.lena), LEFT_ON)
 
 
 class PageTest(Base):

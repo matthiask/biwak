@@ -17,7 +17,7 @@ row. Activating and deactivating:
 `biwak/organizations/activation.py`, the pages in
 `biwak/organizations/people.py`, the API in `biwak/organizations/api.py`
 (CLI 0.34.0). People who left (2026-11-22): `User.left_at`,
-`activation.mark_left()` (the importer's `_people_who_left()`), the
+`left_in_basecamp`, `activation.mark_left()` and `clear_left()` (the importer's `_people_who_left()`), the
 "People who left" filter (`?left=1`), CLI 0.52.0.
 
 ## Who may (decided 2026-11-21)
@@ -153,8 +153,10 @@ couldn't hide one without the other.
   `left_at` who are among the account's people again get it cleared by
   the importer (`activation.clear_left()`, inactive people only), and
   the report lists them ("Back in Basecamp: …", a dry run too without
-  writing). They wait to be activated then. This includes people
-  deactivated in Biwak whom Basecamp still has.
+  writing). They wait to be activated then. Only a date the importer
+  set (decided 2026-11-22 by the user): `User.left_in_basecamp`, set
+  with it by `mark_left()` and cleared with it; deactivating in Biwak
+  sets the date without it, and that date stays whatever Basecamp lists.
 - **Their own page** says "left on 3 Mar 2025" (instead of "inactive")
   to own staff, not to clients or externals (decided 2026-11-22 by the
   user; `decorate()`'s `show_left`, the same check as the filter).
