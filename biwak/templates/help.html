@@ -14,7 +14,9 @@
     <h1 class="wb-title" {% if english_only %}lang="en"{% endif %}>{{ title }}</h1>
   </div>
   {% if english_only %}
-    <p class="text-body-secondary" id="help-in-english">{% translate "The help is in English for now." %}</p>
+    <p class="text-body-secondary" id="help-in-english">
+      {% translate "This page of the help is in English for now." %}
+    </p>
   {% endif %}
   <article class="card">
     <div class="card-body wb-markdown wb-help">

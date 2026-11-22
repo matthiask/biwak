@@ -132,8 +132,8 @@ The search field in the bar opens the command palette (<kbd>Ctrl</kbd>+<kbd>K</k
 or <kbd>/</kbd>): type to jump to a project, list, message, doc, file,
 check-in or person, or to run an action of the page. "Search for ..." at
 the end opens the search page, which finds words in titles and texts,
-comments and answers. Filters: project, kind, only mine, "Include
-archived" and, for staff, "Include templates". You only find what you may see. See [Keyboard](keyboard.md).
+comments and answers. Filters: project, kind, "Only mine" and "Include
+archived". You only find what you may see. See [Keyboard](keyboard.md).
 
 ## Writing texts
 
@@ -285,7 +285,8 @@ follows your browser's language, or choose Deutsch or English; the page
 reloads in it. Mails follow your choice too; with Automatic they're in
 English, or in the language you were invited in. `biwak settings
 --language de` (or `en`, `auto`) does the same from the command line.
-This help is in English for now, also when Biwak is in German.
+This help is in English and German; a page not translated yet is in
+English.
 
 ## Trash
 

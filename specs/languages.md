@@ -101,8 +101,8 @@ activated by `biwak/accounts/middleware.py`.
 - **The calendar feed** (`/calendar/<token>.ics`): its owner's language.
 - **Not translated:** people's texts, names of projects and items,
   categories, the API's field names, the CLI's output (English, for
-  agents; its help too), the help pages (decided 2026-11-22: later; a
-  German reader sees the English help with a line saying so).
+  agents; its help too). The help pages are in German too (decided
+  2026-11-22, `help.md`).
 - **Search** stays as it is (`search.md`: no stemming, both languages).
 
 ## Checks

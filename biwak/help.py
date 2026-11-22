@@ -2,10 +2,11 @@
 # governance/help.py, see NOTICE)
 """The user documentation in docs/ as help pages
 
-English in ``name.md``, German in ``name.de.md`` (not written yet, the table
-below keeps the place), shown in the page's language. The Markdown files link
-each other relatively (``todos.md``), which works on GitHub; here the links
-lead to the help pages instead.
+English in ``name.md``, German in ``name.de.md``, shown in the page's
+language; a page without a German file is shown in English (decided
+2026-11-22, specs/help.md). The Markdown files link each other relatively
+(``todos.md``, ``todos.de.md``), which works on GitHub; here the links lead to
+the help pages instead.
 """
 
 import posixpath
@@ -53,37 +54,38 @@ def _title(line):
     return re.sub(r"[*_]", "", line.removeprefix("# ")).strip()
 
 
-def _pages(language):
-    # No German files yet: they come with the German translation
-    german = PAGES["de"]
-    english = PAGES["en"]
-    if language == "de" and all(
-        (settings.BASE_DIR / "docs" / file).exists() for file in german.values()
-    ):
-        return german
-    return english
+def _file(page, language):
+    """The page's file in the language, else the English one"""
+    file = PAGES.get(language, {}).get(page)
+    if file and (settings.BASE_DIR / "docs" / file).exists():
+        return file
+    return PAGES["en"][page]
 
 
 def chapters(page, language="en"):
     """All pages in their order (the start page first), for the navigation
     above each: their titles, the current one"""
     result = []
-    for key, file in _pages(language).items():
-        with (settings.BASE_DIR / "docs" / file).open() as f:
+    for key in PAGES["en"]:
+        with (settings.BASE_DIR / "docs" / _file(key, language)).open() as f:
             title = _title(f.readline())
         result.append({"url": url(key), "title": title, "current": key == page})
     return result
 
 
 def render_page(page, language="en"):
-    pages = _pages(language)
-    if page not in pages:
+    if page not in PAGES["en"]:
         raise Http404
-    text = (settings.BASE_DIR / "docs" / pages[page]).read_text()
+    file = _file(page, language)
+    text = (settings.BASE_DIR / "docs" / file).read_text()
     title = _title(text.split("\n", 1)[0])
-    # Links relative to the page's file
-    here = posixpath.dirname(pages[page])
-    files = {posixpath.relpath(file, here or "."): key for key, file in pages.items()}
+    # Links relative to the page's file, to the files of either language
+    here = posixpath.dirname(file)
+    files = {
+        posixpath.relpath(name, here or "."): key
+        for pages in PAGES.values()
+        for key, name in pages.items()
+    }
 
     def link(match):
         if match[1] not in files:
@@ -97,12 +99,12 @@ def render_page(page, language="en"):
 
 def help_page(request, page=""):
     language = "de" if get_language() == "de" else "en"
-    if page not in _pages(language):
+    if page not in PAGES["en"]:
         raise Http404
     context = {
-        # German readers see the English help for now, with a line saying so
-        # (specs/languages.md, decided 2026-11-22)
-        "english_only": _pages(language) is not PAGES[language],
+        # A page without a German file is shown in English, with a line
+        # saying so (specs/help.md)
+        "english_only": _file(page, language) != PAGES[language][page],
         "chapters": chapters(page, language),
         "shortcuts": page in WITH_SHORTCUTS,
     }
