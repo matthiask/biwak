@@ -131,6 +131,9 @@
                     class="dropdown-item"
                     href="{% url 'person_feed' request.user.pk %}"
                   >{% translate "My activity" %}</a>{% endif %}
+                {% if request.user.is_staff %}
+                  <a class="dropdown-item" href="{% url 'all_projects' %}">{% translate "All projects" %}</a>
+                {% endif %}
                 <a class="dropdown-item" href="{% url 'settings' %}">{% translate "Settings" %}</a>
                 <a class="dropdown-item" href="{% url 'calendar_link' %}">{% translate "Calendar" %}</a>
                 {% if not request.user.is_client %}
@@ -140,7 +143,6 @@
                 <hr class="dropdown-divider">
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
-                  <a class="dropdown-item" href="{% url 'all_projects' %}">{% translate "All projects" %}</a>
                   <hr class="dropdown-divider">
                 {% endif %}
                 <form method="post" action="{% url 'account_logout' %}">

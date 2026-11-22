@@ -193,8 +193,8 @@ Built (2026-11-22): `biwak/projects/all_projects.py` (four queries:
 the projects with their counts as subqueries, the client organizations,
 which the admin can open, and the admin's own row through
 `accessible_to()`), `projects/all.html`; linked below the projects
-page's cards, in the person menu next to "Administration" (the Django
-admin's index is Django's own) and in the palette ("All projects",
+page's cards, in the person menu after "My activity" (decided 2026-11-22: not
+in "Administration"'s group, which is the Django admin's own) and in the palette ("All projects",
 admins). Choices made on the way (decided 2026-11-22):
 
 - **Who:** admins (`is_admin`); the page answers 404 to clients and
