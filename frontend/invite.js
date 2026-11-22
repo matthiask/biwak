@@ -4,7 +4,8 @@
 // JavaScript the button stays hidden and the form has a few empty rows.
 // Leaving an address fills in the row's organization and, for admins, the
 // role from its domain ("Filled in from the address", invite_address), as
-// long as the inviter hasn't changed those fields in that row.
+// long as the inviter hasn't changed those fields in that row; the same in
+// the new-project modal's rows (projects/project_new.html), without a role.
 
 function show(root) {
   for (const button of root.querySelectorAll?.("[data-invite-add]") ?? [])
@@ -36,6 +37,15 @@ const touched = new WeakSet()
 // The latest lookup per row: an older answer arriving later is ignored
 const latest = new WeakMap()
 
+// The organization field's value: the name in the invite form's text field;
+// in the new-project rows' select the organization if it's one of those
+// involved, else the empty choice (by the address's domain)
+function organizationValue(field, organization) {
+  if (field.tagName !== "SELECT") return organization?.name ?? ""
+  const id = String(organization?.id ?? "")
+  return [...field.options].some((option) => option.value === id) ? id : ""
+}
+
 document.addEventListener("input", (event) => {
   if (event.target.closest("[data-invite-row]")) touched.add(event.target)
 })
@@ -58,7 +68,7 @@ document.addEventListener("change", async (event) => {
   const { organization, role } = await response.json()
   if (latest.get(row) !== lookup) return
   const org = row.querySelector("[name$=-organization]")
-  if (org && !touched.has(org)) org.value = organization?.name ?? ""
+  if (org && !touched.has(org)) org.value = organizationValue(org, organization)
   const isClient = row.querySelector("[name$=-is_client]")
   if (isClient && role && !touched.has(isClient))
     isClient.value = role === "staff" ? "" : "1"

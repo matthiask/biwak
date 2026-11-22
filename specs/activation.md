@@ -62,8 +62,9 @@ to both.
   Biwak" with a line per project. People who already have an account are
   added and get the "added to" notification, no invitation; their
   organization doesn't change.
-- The new-project modal invites from its rows the same way
-  (`organizations.md`).
+- The new-project modal invites from its rows the same way, filled in
+  from the address too, without a role (`organizations.md`, decided
+  2026-11-22).
 
 ## Invitations
 
