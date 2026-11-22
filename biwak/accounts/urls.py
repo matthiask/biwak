@@ -40,6 +40,12 @@ urlpatterns = [
         signin.disconnect,
         name="social_disconnect",
     ),
+    path("push/", views.push_subscription, name="push_subscription"),
+    path(
+        "push/<int:pk>/remove/",
+        views.push_subscription_remove,
+        name="push_subscription_remove",
+    ),
     path("api-tokens/", views.api_tokens, name="api_tokens"),
     path(
         "api-tokens/<int:pk>/delete/",

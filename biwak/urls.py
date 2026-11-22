@@ -6,7 +6,7 @@ from allauth.mfa.webauthn import views as webauthn_views
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import include, path, re_path
@@ -55,6 +55,19 @@ def manifest(request):
 
 
 @login_not_required
+def service_worker(request):
+    """The service worker showing push notifications (specs/web-push.md),
+    at the root for the whole site as its scope; public like the manifest,
+    always checked for a new version"""
+    response = HttpResponse(
+        (settings.BASE_DIR / "frontend" / "sw.js").read_bytes(),
+        content_type="text/javascript; charset=utf-8",
+    )
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+@login_not_required
 def no_passwords(request, *args, **kwargs):
     """Login is by code and passkeys (specs/access.md): allauth's password
     pages (set, change, reset) don't exist, nor its pages changing one's
@@ -65,6 +78,7 @@ def no_passwords(request, *args, **kwargs):
 urlpatterns = [
     path("favicon.ico", favicon),
     path("manifest.webmanifest", manifest),
+    path("sw.js", service_worker),
     path("", include("biwak.projects.urls")),
     path("", include("biwak.organizations.urls")),
     path("", include("biwak.teams.urls")),

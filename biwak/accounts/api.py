@@ -213,3 +213,43 @@ def api_token_delete(request, token_id: int):
     result = api_token_out(token, request)
     token.delete()
     return result
+
+
+class PushSubscriptionOut(Schema):
+    id: int
+    device: str = Field(description='The browser and system, "Firefox on Linux".')
+    user_agent: str
+    created_at: dt.datetime
+    last_success_at: dt.datetime | None = Field(
+        description="When a push last reached the browser's push service."
+    )
+
+
+def push_subscription_out(subscription):
+    from biwak.accounts.signin import describe_agent
+
+    return {
+        "id": subscription.pk,
+        "device": describe_agent(subscription.user_agent),
+        "user_agent": subscription.user_agent,
+        "created_at": subscription.created_at,
+        "last_success_at": subscription.last_success_at,
+    }
+
+
+@router.get("me/push-subscriptions/", response=list[PushSubscriptionOut])
+def push_subscription_list(request):
+    """The person's devices getting push notifications (specs/web-push.md);
+    devices subscribe in the browser, not through the API"""
+    return [push_subscription_out(s) for s in request.user.push_subscriptions.all()]
+
+
+@router.delete("me/push-subscriptions/{subscription_id}/", response=PushSubscriptionOut)
+def push_subscription_delete(request, subscription_id: int):
+    """Stop pushing to one of the person's devices"""
+    subscription = get_object_or_404(
+        request.user.push_subscriptions, pk=subscription_id
+    )
+    result = push_subscription_out(subscription)
+    operations.remove_device(request.user, pk=subscription.pk)
+    return result

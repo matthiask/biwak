@@ -14,6 +14,7 @@ import logging
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, F, Func, JSONField, OuterRef, Q
+from django.templatetags.static import static
 from django.utils import timezone, translation
 
 from biwak.accounts.languages import language_for
@@ -172,6 +173,7 @@ def content(user, notifications, *, batch=False):
     on a tap"""
     from biwak.activity import lantern
 
+    icon = absolute(static("biwak/icon-192.png"))
     newest = max(notifications, key=lambda n: (n.created_at, n.pk))
     if batch:
         entry = lantern.Batch(
@@ -184,6 +186,7 @@ def content(user, notifications, *, batch=False):
             ),
             "tag": f"biwak-{entry.pk}",
             "url": absolute(entry.url),
+            "icon": icon,
         }
     (notification,) = lantern.prepare([newest], user)
     event = notification.event
@@ -198,6 +201,7 @@ def content(user, notifications, *, batch=False):
         ),
         "tag": f"biwak-item-{item.pk}",
         "url": absolute(notification.url),
+        "icon": icon,
     }
 
 

@@ -32,6 +32,8 @@ import "./combobox.js"
 import "./invite.js"
 import "./view-edit.js"
 import "./lantern.js"
+// Push notifications on this device, in the settings (specs/web-push.md)
+import "./push.js"
 import "./autosubmit.js"
 import "./submit-shortcut.js"
 import "./save-on-change.js"

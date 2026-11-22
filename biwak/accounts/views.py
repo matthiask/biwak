@@ -1,8 +1,10 @@
+import json
 import re
 
 from django import forms
 from django.conf import settings as django_settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,7 +14,11 @@ from django.utils.cache import patch_cache_control
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, gettext_lazy
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import (
+    require_GET,
+    require_http_methods,
+    require_POST,
+)
 
 from biwak import cli_version
 from biwak.accounts import languages, operations, passkeys, signin, sso
@@ -288,6 +294,7 @@ def _settings_page(request, *, notifications=None, name_form=None, away_form=Non
             "accents": Accent.choices,
             "project_overrides": project_overrides,
             "item_overrides": item_overrides,
+            "push": _push_context(user),
             **signin.context(request),
         },
     )
@@ -511,3 +518,56 @@ def person_image_remove(request, pk):
         submit_label=_("Remove"),
         destructive=True,
     )
+
+
+# Push notifications (specs/web-push.md) -------------------------------------
+
+
+def _push_context(user):
+    """The settings' devices, None without the VAPID keys (nothing
+    offered)"""
+    from biwak.activity import push
+
+    if not push.enabled():
+        return None
+    devices = list(user.push_subscriptions.all())
+    for device in devices:
+        device.name = signin.describe_agent(device.user_agent)
+    return {"key": django_settings.WEBPUSH_VAPID_PUBLIC_KEY, "devices": devices}
+
+
+@never_cache
+@require_http_methods(["POST", "DELETE"])
+def push_subscription(request):
+    """``POST`` subscribes this device, ``DELETE`` unsubscribes it: the
+    JSON of the browser's ``PushSubscription.toJSON()`` (frontend/push.js),
+    with the CSRF token in its header. 204, or 400 for anything else, 404
+    without the VAPID keys."""
+    from biwak.activity import push
+
+    if not push.enabled():
+        raise Http404
+    try:
+        data = json.loads(request.body)
+        if request.method == "DELETE":
+            operations.remove_device(
+                request.user, endpoint=operations.subscription_data(data)[0]
+            )
+        else:
+            operations.add_device(
+                request.user,
+                data,
+                user_agent=request.headers.get("User-Agent", ""),
+            )
+    except ValueError, ValidationError:
+        return HttpResponseBadRequest()
+    return HttpResponse(status=204)
+
+
+@never_cache
+@require_POST
+def push_subscription_remove(request, pk):
+    """The settings' "Remove" of a device"""
+    if not operations.remove_device(request.user, pk=pk):
+        raise Http404
+    return redirect(reverse("settings") + "#devices")

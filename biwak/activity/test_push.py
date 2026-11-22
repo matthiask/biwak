@@ -2,6 +2,7 @@
 after the mails' merge window, not when read, not in quiet hours or while
 away, only what the person may see; the browsers' push services stubbed"""
 
+import base64
 import datetime as dt
 import json
 from io import StringIO
@@ -23,18 +24,25 @@ from biwak.activity.test_quiet_hours import at
 from biwak.items import operations as ops
 
 
-def _pem():
+def _keys():
+    """A VAPID key pair: the private key as PEM, the public one as the
+    browsers take it (base64url of the uncompressed point)"""
     key = ec.generate_private_key(ec.SECP256R1())
-    return key.private_bytes(
+    pem = key.private_bytes(
         serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption(),
     ).decode()
+    point = key.public_key().public_bytes(
+        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
+    )
+    return pem, base64.urlsafe_b64encode(point).decode().rstrip("=")
 
 
+_PRIVATE, _PUBLIC = _keys()
 KEYS = {
-    "WEBPUSH_VAPID_PUBLIC_KEY": "BPublicKeyForTheBrowser",
-    "WEBPUSH_VAPID_PRIVATE_KEY": _pem(),
+    "WEBPUSH_VAPID_PUBLIC_KEY": _PUBLIC,
+    "WEBPUSH_VAPID_PRIVATE_KEY": _PRIVATE,
     "WEBPUSH_SUBJECT": "mailto:biwak@example.org",
 }
 

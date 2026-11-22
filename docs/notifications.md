@@ -100,6 +100,24 @@ What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. Mails carry the full text; the
 first line says when clients can see the item.
 
+## Push notifications
+
+Biwak can notify you on your phone or computer while it isn't open, when
+you're **mentioned** or **assigned** (the to-dos of one "Assign…" are one
+notification), not about anything else. Under Settings, "Notifications",
+"Notify me on this device" asks your browser for permission and adds the
+device to the list below it; "Remove" stops it. Each device is chosen on
+its own, and it's independent of mails: you may want both, or pushes
+only with "No mails".
+
+- They come like mails, about ten minutes after the change, one per
+  item, and not when you read it in the lantern before.
+- Not in your quiet hours or while you're away, and not later either:
+  the lantern has it.
+- A tap opens the item.
+- On an iPhone or iPad, add Biwak to the home screen first (Safari's
+  Share menu, "Add to Home Screen"), then turn it on in the app.
+
 ## Quiet hours and away
 
 Mails wait while you aren't working; the lantern keeps showing

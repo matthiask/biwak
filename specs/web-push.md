@@ -132,3 +132,43 @@ In this order, each step with its tests:
 - **The VAPID private key** may be the PEM or its lines between the
   markers joined into one (base64url DER or raw also work), for an
   environment variable.
+- **Subscribing:** `add_device()` and `remove_device()` in
+  `biwak/accounts/operations.py`; `POST`/`DELETE /accounts/push/`
+  (`push_subscription`, JSON, the CSRF token in `X-CSRFToken`, 204, 400
+  for anything but a subscription with an `https` endpoint, 404 without
+  the keys); "Remove" in the list posts to `/accounts/push/<id>/remove/`
+  (works without JavaScript). One browser has one subscription: whoever
+  subscribes on it last gets its pushes (somebody else's subscription
+  there is replaced, nothing of before pushed).
+- **The settings' section** (`#devices`, only with the keys):
+  `frontend/push.js` looks without registering anything; it shows the
+  button, marks this device in the list ("This one", its "Remove" also
+  unsubscribes the browser), says why there's no button (blocked, an
+  iPhone outside the home screen) or that it failed. The texts are in
+  the page. The list: the browser and system (`describe_agent()`, like
+  the sessions), when added.
+- **The service worker** is `frontend/sw.js` as it is, served by Django
+  at `/sw.js` (public, `no-cache`), registered at the click. A push's
+  JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap
+  focuses an open Biwak window and goes to the URL, or opens one.
+- **Content** (proposed 2026-11-22: the lantern's entry): title the
+  item's title (a batch: "To-dos"), body the lantern's line with "You
+  were mentioned." where the lantern says it, the lantern's excerpt (a
+  comment's or message's text, about 200 characters) and the project;
+  `tag` `biwak-item-<id>`.
+- **Wording** (proposed 2026-11-22): the heading "Push notifications",
+  "When you're mentioned or assigned, also while Biwak isn't open; not
+  in your quiet hours or while you're away.", "Notifications are blocked
+  for Biwak in this browser's settings.", a failure "That didn't work.
+  Please try again." (German "Push-Benachrichtigungen", "Auf diesem
+  Gerät benachrichtigen", "Füge Biwak zum Home-Bildschirm hinzu, …").
+- **API:** `GET /api/v1/me/push-subscriptions/` (`id`, `device`,
+  `user_agent`, `created_at`, `last_success_at`; no endpoint or keys),
+  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens). No CLI
+  commands.
+- **Tests:** `biwak/activity/test_push.py` (what pushes, quiet hours,
+  away, visibility, failures; `pywebpush.webpush` stubbed),
+  `biwak/accounts/test_push_devices.py` (the section, subscribing, the
+  API, the audit log), `biwak/test_e2e_push.py` (subscribing in
+  Chromium with its `PushManager` stubbed; a push delivered to the
+  worker through the DevTools protocol).

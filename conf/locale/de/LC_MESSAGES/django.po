@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 21:52+0100\n"
+"POT-Creation-Date: 2026-11-22 22:04+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4541,7 +4541,7 @@ msgstr "Diese Seite hat keine eigenen."
 msgid "Link copied."
 msgstr "Link kopiert."
 
-#: biwak/palette/templatetags/palette.py
+#: biwak/palette/templatetags/palette.py biwak/templates/accounts/settings.html
 msgid "That didn't work. Please try again."
 msgstr "Das hat nicht geklappt. Bitte versuche es noch einmal."
 
@@ -5756,6 +5756,38 @@ msgid "How notifications work"
 msgstr "So funktionieren Benachrichtigungen"
 
 #: biwak/templates/accounts/settings.html
+msgid "Push notifications"
+msgstr "Push-Benachrichtigungen"
+
+#: biwak/templates/accounts/settings.html
+msgid "When you're mentioned or assigned, also while Biwak isn't open; not in your quiet hours or while you're away."
+msgstr "Wenn du erwähnt oder zugewiesen wirst, auch wenn Biwak nicht offen ist; nicht in deinen Ruhezeiten und nicht, während du abwesend bist."
+
+#: biwak/templates/accounts/settings.html
+msgid "Notify me on this device"
+msgstr "Auf diesem Gerät benachrichtigen"
+
+#: biwak/templates/accounts/settings.html
+msgid "Add Biwak to your home screen to get notifications on this iPhone."
+msgstr "Füge Biwak zum Home-Bildschirm hinzu, um auf diesem iPhone benachrichtigt zu werden."
+
+#: biwak/templates/accounts/settings.html
+msgid "Notifications are blocked for Biwak in this browser's settings."
+msgstr "Benachrichtigungen sind für Biwak in den Einstellungen dieses Browsers blockiert."
+
+#: biwak/templates/accounts/settings.html
+msgid "Browser"
+msgstr "Browser"
+
+#: biwak/templates/accounts/settings.html
+msgid "Added"
+msgstr "Hinzugefügt"
+
+#: biwak/templates/accounts/settings.html
+msgid "This one"
+msgstr "Diese"
+
+#: biwak/templates/accounts/settings.html
 msgid "Out of office"
 msgstr "Abwesenheit"
 
@@ -5809,10 +5841,6 @@ msgid "Passkey"
 msgstr "Passkey"
 
 #: biwak/templates/accounts/settings.html
-msgid "Added"
-msgstr "Hinzugefügt"
-
-#: biwak/templates/accounts/settings.html
 msgid "Last used"
 msgstr "Zuletzt verwendet"
 
@@ -5858,20 +5886,12 @@ msgid "Sessions"
 msgstr "Sitzungen"
 
 #: biwak/templates/accounts/settings.html
-msgid "Browser"
-msgstr "Browser"
-
-#: biwak/templates/accounts/settings.html
 msgid "IP address"
 msgstr "IP-Adresse"
 
 #: biwak/templates/accounts/settings.html
 msgid "Signed in"
 msgstr "Angemeldet"
-
-#: biwak/templates/accounts/settings.html
-msgid "This one"
-msgstr "Diese"
 
 #: biwak/templates/accounts/settings.html
 msgid "Sign out here"

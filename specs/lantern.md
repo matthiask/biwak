@@ -19,7 +19,8 @@ and pages that update while they're open.
   questions), lists and the board, reactions included. Not the feed or
   the project page. What's new slides in quietly; nothing moves what
   you're reading or typing in.
-- **Browser notifications** (Web Push) later, not now.
+- **Browser notifications** (Web Push): mentions and assignments only,
+  `web-push.md` (built 2026-11-22).
 
 ## The lantern
 
