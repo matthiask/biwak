@@ -252,6 +252,26 @@ class CancellingTest(TimelineBase):
         (line,) = self.lines()
         self.assertIn("moved this to Done", line)
 
+    def test_a_column_move_before_moving_to_another_list_and_back(self):
+        # It's back in the column it started in: no line says "ColY"
+        x = ops.create_group(todolist=self.shared.todolist, title="ColX")
+        y = ops.create_group(todolist=self.shared.todolist, title="ColY")
+        other = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada, visible=True
+        )
+        ops.move_todo(self.todo, todolist=self.shared, group=x, actor=self.ada)
+        Event.objects.all().delete()
+        ops.move_todo(self.todo, todolist=self.shared, group=y, actor=self.ada)
+        ops.move_todo(self.todo, todolist=other, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=x, actor=self.ada)
+        self.assertEqual(self.lines(), [])
+        # Into Y in the end: it says where it ended up
+        ops.move_todo(self.todo, todolist=other, actor=self.ada)
+        ops.move_todo(self.todo, todolist=self.shared, group=y, actor=self.ada)
+        (line,) = self.lines()
+        self.assertIn("moved this to Shared plans", line)
+        self.assertNotIn("Plans and", line)
+
     def test_the_same_person_assigned_and_removed(self):
         ops.assign(self.todo, [self.bob, self.ada], actor=self.ada)
         ops.unassign(self.todo, [self.bob], actor=self.ada)

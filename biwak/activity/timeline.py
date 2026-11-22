@@ -125,18 +125,56 @@ def cancelled(events, *, together=_always, others=()):
 
 
 def _move_kind(event):
-    """A move's kind ("group" or "list"), where to and where from, or None
-    for moves recorded before they said where from"""
+    """A move's kind ("group" or "list"), where to and where from, and the
+    column it ended up in and came from (a list move's ``group_id`` and
+    ``group_was``, ``UNKNOWN`` for older ones); None for moves recorded
+    before they said where from"""
     data = event.data
     if "group" in data:
         to, was = data.get("group_id"), data.get("group_was", UNKNOWN)
         kind = "group"
+        column, column_was = to, was
     else:
         to, was = data.get("to_id"), data.get("to_was", UNKNOWN)
         kind = "list"
+        column = data.get("group_id", UNKNOWN)
+        column_was = data.get("group_was", UNKNOWN)
     if was is UNKNOWN:
         return None
-    return kind, to, was
+    return kind, to, was, column, column_was
+
+
+def _same(a, b):
+    """Columns are the same, or one isn't known (older list moves)"""
+    return a is UNKNOWN or b is UNKNOWN or a == b
+
+
+def _net_moves(run):
+    """The moves of a run (``[(event, kind, to, was, column, column_was)]``)
+    which don't show: all of them when the to-do is back in the list and
+    the column it started in; otherwise all but the last move into
+    another list and the last column move after it (a list move ends the
+    column moves before it: they're about a column it left), and those
+    too if it's back in the column the list move put it in"""
+    hidden = set()
+    lists = [n for n, move in enumerate(run) if move[1] == "list"]
+    # Where it started and ended up (the list: only if it moved to another)
+    start_list = run[lists[0]][3] if lists else None
+    end_list = run[lists[-1]][2] if lists else None
+    start_column, end_column = run[0][5], run[-1][4]
+    if end_list == start_list and _same(end_column, start_column):
+        return {move[0].pk for move in run}
+    if lists:
+        last = lists[-1]
+        hidden.update(move[0].pk for move in run[:last])
+        columns = run[last + 1 :]
+        if columns and columns[-1][4] == run[last][4]:
+            hidden.update(move[0].pk for move in columns)
+        else:
+            hidden.update(move[0].pk for move in columns[:-1])
+    else:
+        hidden.update(move[0].pk for move in run[:-1])
+    return hidden
 
 
 def moved_back(events, *, together=_always, others=()):
@@ -144,16 +182,15 @@ def moved_back(events, *, together=_always, others=()):
     pointless: each person's consecutive moves of an item into other
     columns or lists (other events don't break them up, another person's
     move does, also one of ``others`` like in ``cancelled()``) are their
-    net change, the last one, or nothing when the to-do is back where it
+    net change (``_net_moves()``), nothing when the to-do is back where it
     was (decision B, decided 2026-11-22). Like ``cancelled()``, for the
     feed; the timeline does it in ``combine()``."""
-    runs = {}  # (item ID, kind) -> runs of [(event, to, was)]
+    runs = {}  # item ID -> runs of [(event, kind, to, was, column, column_was)]
     for event, other in _in_order(events, others, {Action.MOVED}):
         move = _move_kind(event)
         if move is None:
             continue
-        kind, to, was = move
-        item_runs = runs.setdefault((event.item_id, kind), [])
+        item_runs = runs.setdefault(event.item_id, [])
         last = item_runs[-1][-1][0] if item_runs and item_runs[-1] else None
         if other:
             if last is not None and last.actor_id != event.actor_id:
@@ -164,14 +201,13 @@ def moved_back(events, *, together=_always, others=()):
             and last.actor_id == event.actor_id
             and together(last, event)
         ):
-            item_runs[-1].append((event, to, was))
+            item_runs[-1].append((event, *move))
         else:
-            item_runs.append([(event, to, was)])
+            item_runs.append([(event, *move)])
     result = set()
     for item_runs in runs.values():
         for run in filter(None, item_runs):
-            back = run[-1][1] == run[0][2]
-            result.update(event.pk for event, _to, _was in (run if back else run[:-1]))
+            result |= _net_moves(run)
     return result
 
 
@@ -180,10 +216,12 @@ class Effect:
     effect on the same key replaces it), ``value`` what it set,
     ``make(it)`` the phrase"""
 
-    def __init__(self, kind, key, value, make, was=UNKNOWN):
+    def __init__(self, kind, key, value, make, was=UNKNOWN, column=UNKNOWN):
         self.kind, self.key, self.value, self.make = kind, key, value, make
         # What it was before (title, due date), if the event says
         self.was = was
+        # A list move: the column it ended up in and came from, if it says
+        self.column, self.column_was = column, UNKNOWN
 
 
 def _move(event, it):
@@ -220,6 +258,9 @@ def effects(event):
             effect = Effect(
                 "moved", key, to, lambda it: _move(event, it), data.get(was, UNKNOWN)
             )
+            if key == "list":
+                effect.column = data.get("group_id", UNKNOWN)
+                effect.column_was = data.get("group_was", UNKNOWN)
             # Dragged into a column and back (one event, record())
             return [] if effect.was == to else [effect]
         case Action.ASSIGNED | Action.UNASSIGNED:
@@ -270,13 +311,25 @@ def combine(events):
     result = []
     for event in events:
         for effect in effects(event):
+            if effect.key == "list":
+                # A list move ends the column moves before it (_net_moves())
+                column = next((e for e in result if e.key == "group"), None)
+                if column is not None:
+                    result.remove(column)
+                    effect.column_was = column.was
             old = next((e for e in result if e.key == effect.key), None)
             if old is not None:
                 result.remove(old)
                 if effect.key in ("title", "due", "list", "group"):
                     # Back to what it was before the first change?
                     effect.was = old.was
-                    if effect.was is not UNKNOWN and effect.was == effect.value:
+                    if effect.key == "list":
+                        effect.column_was = old.column_was
+                    if (
+                        effect.was is not UNKNOWN
+                        and effect.was == effect.value
+                        and _same(effect.column, effect.column_was)
+                    ):
                         continue
                 elif old.value != effect.value:
                     continue

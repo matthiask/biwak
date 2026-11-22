@@ -83,8 +83,10 @@ Decisions (2026-11-20 unless dated):
   last one, or nothing when the to-do is back where it started. Moves
   too (decision B, decided 2026-11-22): a person's consecutive moves of
   a to-do into other columns or lists are the last one, or nothing when
-  it's back where it was (`timeline.moved_back()`, from the moves'
-  `group_was` and `to_was`; older moves without them show as they are;
+  it's back where it was, in its list and its column
+  (`timeline.moved_back()`, from the moves' `group_was` and `to_was`; a
+  move into another list ends the column moves before it, see
+  `timeline.md`; older moves without them show as they are;
   the feed and the timeline only, not the lantern and mails). Another
   person's completing, reopening or move breaks it up in a person's feed
   too, where that person's events are left out (`feed._others()`, fixed

@@ -882,6 +882,10 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 to=todolist.title,
                 to_id=todolist.pk,
                 to_was=list_was,
+                # The column it ends up in and came from: moving back
+                # cancels out only if it's back in its column too
+                group_id=group.pk if group else None,
+                group_was=group_was,
             )
     _renumber(siblings)
     for list_id, group_id in sources:
