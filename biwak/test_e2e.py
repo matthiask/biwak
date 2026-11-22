@@ -2273,7 +2273,14 @@ class ModalTest(E2ETestCase):
         dialog.get_by_label("Email").first.fill("dora@example.org")
         dialog.get_by_role("button", name="Invite").click()
         # Listed: their mark links to their page, the email below the name
-        expect(page.get_by_text("dora@example.org", exact=True)).to_be_visible()
+        # (named by the address: no name was given)
+        expect(
+            page.locator("div.small", has_text="dora@example.org").first
+        ).to_be_visible()
+        dora = User.objects.get(email="dora@example.org")
+        expect(
+            page.locator(f"a.wb-person-link[href='/people/{dora.pk}/']")
+        ).to_be_visible()
 
 
 class NavSearchTest(E2ETestCase):
