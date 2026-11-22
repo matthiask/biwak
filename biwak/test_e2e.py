@@ -3127,7 +3127,10 @@ class TeamsTest(E2ETestCase):
         self.goto(page, todolist)
         add = page.locator("[data-add-todo]").first
         add.locator("summary").click()
+        # Opening focuses the title: only then to the picker
+        expect(add.locator("[name=title]")).to_be_focused()
         picker = add.locator(".wb-picker-input")
+        picker.click()
         picker.press_sequentially("desi")
         team = add.locator(".wb-picker-list li[data-team]")
         expect(team).to_contain_text("Design team")
