@@ -413,6 +413,32 @@ class TellTest(Fixture, TestCase):
         self.doc.refresh_from_db()
         self.assertFalse(self.doc.doc.tell_pending)
 
+    def test_people_on_nothing_are_told_too(self):
+        """Told like posting, whatever their level (specs/notifications.md):
+        those added and a folder's subscribers on "Nothing" alike, at
+        "Done" and after the hour without an answer"""
+        self.bob.notification_level = NotificationLevel.NOTHING
+        self.bob.save()
+        self.write()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(self.tell, {"people": [self.bob.pk]})
+        event = Event.objects.get(item=self.doc, action=Action.SHARED)
+        self.assertEqual(
+            [n.user for n in Notification.objects.filter(event=event)], [self.bob]
+        )
+        # In a folder Bob follows, nobody answering
+        subscribe(self.bob, self.private)
+        doc = ops.create_draft(
+            project=self.project, creator=self.ada, parent=self.private
+        )
+        live.apply_text(doc.doc, "# Minutes\n\nText", user=self.ada)
+        operations.save_live(doc.pk)
+        self.assertEqual(self.unanswered(61), 1)
+        event = Event.objects.get(item=doc, action=Action.SHARED)
+        self.assertEqual(
+            [n.user for n in Notification.objects.filter(event=event)], [self.bob]
+        )
+
     def test_nobody_to_tell(self):
         self.bob.notification_level = NotificationLevel.CONCERNS_ME
         self.bob.save()
@@ -433,6 +459,16 @@ class TellTest(Fixture, TestCase):
         form = response.context["form"]
         self.assertEqual(form["people"].value(), None)
         self.assertNotIn(self.bob, form.fields["people"].queryset)
+
+    def test_also_tell_offers_members_only(self):
+        """The same control as posting (``NotifyForm``): own staff who
+        aren't members of the project aren't offered"""
+        dan = person("Dan")
+        self.write()
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertNotIn(dan, response.context["form"].fields["people"].queryset)
+        self.client.post(self.tell, {"people": [dan.pk]})
+        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
 
     def test_only_its_creator_is_asked(self):
         self.write()
@@ -523,6 +559,20 @@ class TellTest(Fixture, TestCase):
         self.assertEqual(self.unanswered(61), 0)
         with time_machine.travel(timezone.now() + dt.timedelta(minutes=120)):
             ops.restore(Item.objects.get(pk=self.doc.pk), actor=self.ada)
+        self.assertEqual(self.unanswered(150), 0)
+        self.assertEqual(self.unanswered(181), 1)
+
+    def test_restoring_its_folder_counts_as_a_change(self):
+        """Trashed with its folder and restored with it: the hour starts
+        again too"""
+        doc = ops.create_draft(
+            project=self.project, creator=self.ada, parent=self.private
+        )
+        live.apply_text(doc.doc, "# Minutes\n\nText", user=self.ada)
+        operations.save_live(doc.pk)
+        ops.trash(self.private, actor=self.ada)
+        with time_machine.travel(timezone.now() + dt.timedelta(minutes=120)):
+            ops.restore(Item.objects.get(pk=self.private.pk), actor=self.ada)
         self.assertEqual(self.unanswered(150), 0)
         self.assertEqual(self.unanswered(181), 1)
 

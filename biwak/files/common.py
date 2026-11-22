@@ -3,6 +3,7 @@
 from django.db.models.functions import Lower
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts.models import User
@@ -29,18 +30,60 @@ class NotifyForm(Form):
 
     def __init__(self, *args, project, user, folder=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Who'd see it: in a folder as the folder says, at the top what
-        # clients post (``message_visibility()``)
-        visible = folder.is_client_visible if folder else user.is_client
-        told = told_by_default(project, folder, visible=visible, actor=user)
         field = self.fields["also"]
-        field.intro = told_line(told, project, user)
-        field.queryset = (
-            people_who_see(project, visible)
-            .filter(memberships__project=project)
-            .exclude(pk__in=[user.pk, *(person.pk for person in told)])
-            .order_by(Lower("full_name"), "email")
+        seeing = people_who_see(project, visible=True).filter(
+            memberships__project=project
         )
+        if folder is None and "visible" in self.fields and not user.is_client:
+            # At the top staff choose (decided 2026-11-22): the line and
+            # the clients offered follow "Visible to clients"
+            # (frontend/told.js); both lines, the current one shown
+            told = {
+                visible: told_by_default(project, None, visible=visible, actor=user)
+                for visible in (False, True)
+            }
+            field.intro_lines = tuple(
+                told_line(told[visible], project, user) for visible in (False, True)
+            )
+            current = self.is_bound and self["visible"].data
+            field.intro = format_html_join(
+                "",
+                '<span data-told="{}"{}>{}</span>',
+                [
+                    (name, "" if visible == current else " hidden", line)
+                    for name, visible, line in zip(
+                        ("internal", "visible"),
+                        (False, True),
+                        field.intro_lines,
+                        strict=True,
+                    )
+                ],
+            )
+            field.widget.attrs["data-clients-follow"] = "#id_visible"
+            field.widget.clients_shown = bool(current)
+            told = told[True]
+        else:
+            # Who'd see it: in a folder as the folder says, at the top what
+            # clients post (``message_visibility()``)
+            visible = folder.is_client_visible if folder else user.is_client
+            told = told_by_default(project, folder, visible=visible, actor=user)
+            field.intro_lines = (told_line(told, project, user),)
+            field.intro = field.intro_lines[0]
+            if not visible:
+                seeing = seeing.filter(is_client=False)
+        field.queryset = seeing.exclude(
+            pk__in=[user.pk, *(person.pk for person in told)]
+        ).order_by(Lower("full_name"), "email")
+
+    def clean(self):
+        data = super().clean()
+        if (
+            "visible" in self.fields
+            and not data.get("visible")
+            and any(person.is_client for person in data.get("also") or ())
+        ):
+            self.add_error("also", _("Clients can't see it."))
+        return data
 
     def mention_fields(self, project, *names, folder=None):
         """The ``@`` list of the fields: whoever will see the new item"""

@@ -1,7 +1,9 @@
 # Messages, docs and files
 
 **Status:** built (2026-11-20; tiles, ordering, drag and drop, uploading
-several and new docs as drafts 2026-11-21). `biwak/files/`: attachments
+several, new docs as drafts, folder colors, a "…" menu on every tile and
+"Tell people about it?" with the announcement an hour after the last
+change 2026-11-21). `biwak/files/`: attachments
 (`attachments.py`), the board (`board.py`), folders and files
 (`library.py`, previews in `previews.py`), docs (`docs.py`, titles in
 `titles.py`), the operations in `operations.py` (creating in
@@ -112,9 +114,12 @@ the counts of the top level's folders, docs and files.
   open, select or drag the tile, and Tab reaches it after the tile. It
   offers what the item's own "More" menu does, with the same checks
   (the shared `items/_more_entries.html`): Subscribers…, for folders
-  Edit… and Order…, Move to… and Trash for who may change it; a client
-  without changes gets Subscribers… only. Its modals come back to the
-  grid (`?next=`, `forms.next_url()`, in `folder_edit`, `folder_order`,
+  Edit… and Order…, for staff on top-level items the visibility switch
+  ("Show to clients…", a modal, or "Hide from clients"; an item's page
+  has it below its content), Move to… and "Move to trash" for who may
+  change it; a client without changes gets Subscribers… only. Its
+  modals and the switch come back to the grid (`?next=`,
+  `forms.next_url()`, in `folder_edit`, `folder_order`, `switch`,
   `item_move`, `item_subscribers`, `item_trash`). ".." has none.
 - **".."** (decided 2026-11-21): inside a folder the first tile leads to
   the parent (the top level from a first-level folder), also a drop
@@ -160,7 +165,8 @@ the counts of the top level's folders, docs and files.
   nicer, at the price of being less discoverable): Ctrl-click (Cmd on a
   Mac) adds or removes a tile, Shift-click a range, a plain click opens.
   Ctrl+Space and Shift+arrows on the focused tile do the same
-  (`palette/_shortcuts.html`). A bar offers "Move to…", "Move to trash"
+  (`palette/_shortcuts.html`); Ctrl+Space on a Mac too (decided
+  2026-11-22: Cmd+Space is Spotlight). A bar offers "Move to…", "Move to trash"
   and "Deselect" (Escape too); dragging a selected tile drags them all
   (`library.files_move`, `files_trash` taking `items`;
   `operations.move_items()`, `trash_items()`). A folder trashed with
@@ -190,7 +196,9 @@ the counts of the top level's folders, docs and files.
   the lantern and the mails merge it (`lantern.md`, `notifications.md`).
   One person's batches into the same folder (or the top level), each
   within 10 minutes of the one before, merge into one entry and one
-  mail too (decided 2026-11-21, like the feed).
+  mail too (decided 2026-11-21, like the feed); the files of one batch
+  stay together however long one takes (`lantern.chain()`, one rule
+  for the lantern and the mails, decided 2026-11-22).
 - **A batch's mail waits until it's complete** (decided 2026-11-21,
   the simplest robust way): the modal sends `more` with every file but
   the last it will send (`UploadOneForm`, `create_upload(more=)`,
@@ -266,7 +274,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   not merged yet (`LiveUpdate` rows) waits for the next run; drafts and
   trashed docs are left alone. Restoring one from the trash counts as a
   change, so it's told an hour later (decided 2026-11-21: trash is
-  trash, but not a way around telling).
+  trash, but not a way around telling), also when it comes back with its
+  folder (`restore()` sets `updated_at` on everything it brings back,
+  decided 2026-11-22).
 - The API and CLI create docs with title and text, not as drafts.
 
 ## Files

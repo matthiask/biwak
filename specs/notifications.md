@@ -72,11 +72,19 @@ it for the first time.
   told.", `told_line()`: the names the poster may know, the others
   counted; "Nobody is told unless you add people."), below it "Also
   tell…", the people picker (`PeopleField`) of the members who see it
-  (the visibility the form starts with: the folder's; at the top
-  internal, a client's visible) and aren't told already, nothing
-  preselected. A doc begun as a draft asks at its first "Done" ("Tell
-  people about it?", `docs.TellForm`): the same line and "Also tell…"
-  with a note; "Tell them too" records `shared` to those told by default
+  (in a folder as the folder says; what clients post is visible) and
+  aren't told already, nothing preselected. **At the top the line
+  follows "Visible to clients"** (decided 2026-11-22): staff's form
+  renders the line for both (`intro_lines`) and shows the one ticked,
+  and offers the clients of the project in "Also tell…" only while it's
+  ticked (`frontend/told.js`: unticking takes the clients picked away);
+  the server tells exactly that (`notify_people()` with the item's
+  visibility). Clients picked for an internal item are a form error,
+  and a 400 in the API ("Clients can't see it."). A doc begun as a
+  draft asks at its first "Done" ("Tell people about it?",
+  `docs.TellForm`): the same line and "Also tell…" (the project's
+  members too, decided 2026-11-22) with a note; "Tell them too" records
+  `shared` to those told by default
   (not subscribed yet) and those added, "No one else" to those told by
   default only; without an answer, an hour after the last change, as
   "No one else" (`files.md`, decided 2026-11-21).
@@ -134,15 +142,18 @@ level)`, the list's wins; decided 2026-11-21: other items have no level,
 other items). **Folders have no level of their own, they follow the
 project's** (confirmed 2026-11-21).
 
-- **Everything** (the default): posting to everybody subscribes the
-  person; subscribed to a list, they hear about every new to-do in it.
-- **Only what concerns me:** posting to everybody doesn't subscribe
-  them; being mentioned or assigned and their own things (creating,
-  commenting) do. New to-dos in a list they follow reach them only when
-  they're mentioned or assigned.
+- **Everything** (the default): a new message, doc or file they see
+  tells and subscribes them (`told_by_default()`); subscribed to a list,
+  they hear about every new to-do in it.
+- **Only what concerns me:** a new message, doc or file tells them only
+  when they follow its folder or the poster adds them; being mentioned
+  or assigned and their own things (creating, commenting) subscribe
+  them. New to-dos in a list they follow reach them only when they're
+  mentioned or assigned.
 - **Nothing:** only what they do themselves (commenting, being
-  assigned) subscribes them; mentions neither notify nor subscribe. The
-  feed still shows everything.
+  assigned), following a folder and being added by others subscribe
+  them; mentions neither notify nor subscribe. The feed still shows
+  everything.
 
 Never a notification about one's own actions.
 
@@ -181,7 +192,9 @@ unseen, and counts again on coming back).
    **now** (`visible_to()`; `who_can_see(item)` for everybody at once).
 3. Told (`wanting()`): every subscriber of the item, whatever their
    level, and the people the event assigns; the newly mentioned and
-   `shared` and reactions except on "nothing"; the container's
+   `shared` and reactions except on "nothing" (a new doc's "Tell people
+   about it?", `posted` in the event, on every level like posting,
+   decided 2026-11-22); the container's
    subscribers about a new item on "everything" (`effective_levels()`,
    the same number of queries for any number of people). Check-in
    answers: `checkins.md`.
@@ -209,8 +222,11 @@ large).
   `files.md`), whose unsubscribe link is the settings page (there's no
   one item); one person's uploads into one folder (or the top level)
   are one group, so rounds within the 10 minutes merge too (decided
-  2026-11-21). A batch still going up waits: while the newest file's
-  event says `more` follow, up to `BATCH_WAIT` (an hour) after it.
+  2026-11-21), chained as the lantern does (`lantern.chain()`, decided
+  2026-11-22: a round more than 10 minutes after the one before is a
+  mail of its own unless it's the same batch). A batch still going up
+  waits: while the newest file's event says `more` follow, up to
+  `BATCH_WAIT` (an hour) after it.
 - **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
   day before, grouped by project and item, a batch as one entry; nothing
   to say, no mail. Subject `[Biwak] What happened on 19. November 2026`

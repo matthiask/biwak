@@ -69,23 +69,36 @@ def upload_key(notification):
     return (event.actor_id, event.project_id, event.item.parent_id)
 
 
+def chain(chains, key, batch, at):
+    """The number of the entry (and mail) an upload belongs to, the uploads
+    taken oldest first: one person's uploads into one folder (``key``) are
+    one chain while each comes within ``mails.MERGE_AFTER`` of the one
+    before or belongs to its batch (still going up, however long a file
+    takes). ``chains`` keeps the state, one dict per run. The one rule of
+    the lantern and the mails (decided 2026-11-22)."""
+    from biwak.activity.mails import MERGE_AFTER
+
+    number, last, last_batch = chains.get(key, (0, None, None))
+    if last is not None and at - last > MERGE_AFTER and batch != last_batch:
+        number += 1
+    chains[key] = (number, at, batch)
+    return number
+
+
 def group_uploads(notifications):
     """Sets ``upload_entry`` on the notifications of files uploaded in
     batches: one person's uploads into one folder (or the top level), each
-    within ``mails.MERGE_AFTER`` of the one before, are one entry, also
-    from separate rounds (decided 2026-11-21, like the feed merges).
-    Returns the notifications."""
-    from biwak.activity.mails import MERGE_AFTER
-
-    chains = {}  # upload key -> (number, the latest's time)
+    within ``mails.MERGE_AFTER`` of the one before or of its batch, are one
+    entry, also from separate rounds (decided 2026-11-21, like the feed
+    merges; ``chain()``). Returns the notifications."""
+    chains = {}
     for notification in sorted(notifications, key=lambda n: (n.created_at, n.pk)):
         key = upload_key(notification)
         if key is None:
             continue
-        number, last = chains.get(key, (0, None))
-        if last is not None and notification.created_at - last > MERGE_AFTER:
-            number += 1
-        chains[key] = (number, notification.created_at)
+        number = chain(
+            chains, key, notification.event.data["batch"], notification.created_at
+        )
         notification.upload_entry = (*key, number)
     return notifications
 

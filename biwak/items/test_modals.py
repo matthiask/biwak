@@ -134,7 +134,7 @@ class TrashModalTest(ItemModalBase):
 
     def test_the_page_has_menu_entries_for_staff(self):
         response = self.client.get(self.todo.get_absolute_url())
-        self.assertContains(response, f'href="{self.url}" data-modal')
+        self.assertRegex(response.content.decode(), rf'href="{self.url}"\s+data-modal')
         self.assertContains(response, f'href="/todos/{self.todo.pk}/move-to/"')
         # No level of its own: subscribing is the switch
         # (specs/notifications.md, "Levels")

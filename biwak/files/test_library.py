@@ -13,7 +13,7 @@ from moto import mock_aws
 from PIL import Image
 
 from biwak.accounts.models import NotificationLevel
-from biwak.activity.models import Action, Event
+from biwak.activity.models import Action, Event, Notification
 from biwak.files import attachments, operations, previews
 from biwak.files.models import preview_name
 from biwak.items import operations as ops, visibility
@@ -891,6 +891,31 @@ class UploadPageTest(Fixture, TestCase):
         self.assertEqual(
             set(response.context["form"].fields["also"].queryset), {self.bob}
         )
+
+    def test_visible_at_the_top_tells_clients(self):
+        """At the top the line follows "Visible to clients" (decided
+        2026-11-22): the clients are listed with it and told; internal,
+        none is told, also not one added by hand"""
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url(), headers={"HX-Modal": "true"})
+        self.assertEqual(
+            response.context["form"].fields["also"].intro_lines,
+            ("Bob will be told.", "Bob and Cleo will be told."),
+        )
+        upload = {"files": [SimpleUploadedFile("a.txt", b"A")], "also": [self.cleo.pk]}
+        self.client.post(self.url(), upload)
+        self.assertFalse(Item.objects.filter(title="a.txt").exists())
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(self.url(), {"files": [SimpleUploadedFile("b.txt", b"B")]})
+            self.client.post(
+                self.url(),
+                {"files": [SimpleUploadedFile("c.txt", b"C")], "visible": "on"},
+            )
+        for name, told in [("b.txt", {self.bob}), ("c.txt", {self.bob, self.cleo})]:
+            item = Item.objects.get(title=name)
+            self.assertEqual(
+                {n.user for n in Notification.objects.filter(event__item=item)}, told
+            )
 
     def test_a_modal_and_a_page(self):
         self.client.force_login(self.ada)

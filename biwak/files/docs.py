@@ -115,7 +115,7 @@ class TellForm(SubscribersForm):
     """ "Tell people about it?" (decided 2026-11-21, additive like posting,
     ``files.common.NotifyForm``): a line saying who is told by default
     (``default_told()``), "Also tell…" the subscribers' picker of the
-    others, nothing preselected, and the note"""
+    other members, nothing preselected, and the note"""
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, item=item, user=user, **kwargs)
@@ -125,7 +125,10 @@ class TellForm(SubscribersForm):
         field.label = _("Also tell…")
         field.required = False
         field.intro = told_line(self.told, item.project, user)
-        field.queryset = field.queryset.exclude(pk__in=[u.pk for u in self.told])
+        # The project's members, as when posting (``NotifyForm``)
+        field.queryset = field.queryset.filter(
+            memberships__project=item.project
+        ).exclude(pk__in=[u.pk for u in self.told])
 
 
 @never_cache

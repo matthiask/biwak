@@ -12,7 +12,9 @@ number of comments.
   wants to hear about something new (notified of everything, or
   subscribed to the folder; [Notifications](notifications.md)). You
   can't leave them out, only add others under "Also tell…" (type a
-  name), for example people who hear only when tagged.
+  name), for example people who hear only when tagged. Ticking "Visible
+  to clients" adds the clients who will be told to the line and lets
+  you add clients of the project; an internal message tells no client.
 - Staff **pin** a message (its page or the row's menu) to keep it on
   top for everybody. The categories are set up by an administrator.
 - Messages have comments and reactions like to-dos. Clients can post
@@ -27,11 +29,12 @@ how many are done. Inside a folder the first tile, "..", leads to the
 folder above (or the project's top level); the path above the title
 does too. Staff create what is here: "New folder", "New doc", "Upload
 files". A folder's "More" menu has "Edit…" (its title and color); move things between
-folders with "Move to..." in their "More" menu. Every tile has the same
+folders with "Move to…" in their "More" menu. Every tile has the same
 menu behind its "…" button in the top-right corner (it shows when you
-point at the tile or reach it with Tab), so you can rename, move or trash
-something without opening it. Staff also show top-level folders, docs and
-files to clients there, or hide them again.
+point at the tile or reach it with Tab), so you can edit a folder, move
+something or move it to the trash without opening it. Staff also show
+top-level folders, docs and files to clients there ("Show to
+clients…"), or hide them again ("Hide from clients").
 
 **Folder colors:** a folder can have a color, chosen as a row of swatches
 in "New folder" and "Edit…" (staff; "None" is the default). Its tile and
@@ -43,7 +46,7 @@ Clients see the colors too.
 the path above the title. **Several at once:** Ctrl-click (Cmd-click on
 a Mac) adds a tile to the selection or takes it out, Shift-click selects
 all tiles from the last one clicked; with the keyboard, Ctrl+Space
-selects the current tile and Shift with the arrow keys selects on to the
+(on a Mac too) selects the current tile and Shift with the arrow keys selects on to the
 next one. A plain click opens the tile as always. With a selection a bar
 shows "Move to…", "Move to trash" and "Deselect" (or press Escape);
 dragging one of the selected tiles moves them all. You move what you may
@@ -72,7 +75,8 @@ first time, you're asked "Tell people about it?": those who want to
 hear about something new are told either way; add others under "Also
 tell…" (and a note) and "Tell them too", or "No one else" to add nobody.
 If you never click "Done", those who want to hear are told an hour after
-your last change. You're asked only once; later, add
+your last change (restoring the doc from the trash, also with its
+folder, starts the hour again). You're asked only once; later, add
 people with "Manage…" next to the subscribers.
 
 - **Edit** opens the doc for editing together: everybody who edits it
@@ -100,7 +104,7 @@ a file that can't be uploaded (too big) says so on its row while the
 others go on. The people notified get one notification and one mail for
 all of them ("Ada uploaded 5 files to Minutes"), not one per file; more
 files uploaded into the same folder within ten minutes join it, and the
-mail waits until all files are up.
+mail waits until all files are up, or an hour at most.
 
 A file's page shows a preview for images and PDFs, its description,
 comments and "Download". "Replace" (or "Upload a new version") puts a

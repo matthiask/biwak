@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from biwak.accounts.models import NotificationLevel
-from biwak.activity.models import Action, Event
+from biwak.activity.models import Action, Event, Notification
 from biwak.files import board, operations, queries
 from biwak.items import operations as ops
 from biwak.items.models import Item, MessageCategory
@@ -176,6 +176,60 @@ class MessageNewTest(Fixture, TestCase):
         self.assertEqual(
             set(item.subscriptions.values_list("user", flat=True)),
             {self.ada.pk, self.bob.pk, dan.pk},
+        )
+
+    def test_visible_to_clients_lists_and_offers_clients(self):
+        """At the top the line follows "Visible to clients" (decided
+        2026-11-22): ticked, the clients who'll be told and "Also tell…"
+        the project's clients too, told exactly so; unticked, no client is
+        listed, offered or told"""
+        eve = person("Eve", client=True)
+        Membership.objects.create(project=self.project, user=eve)
+        eve.notification_level = NotificationLevel.CONCERNS_ME
+        eve.save()
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url())
+        form = response.context["form"]
+        self.assertEqual(form.fields["also"].intro_lines, (
+            "Bob will be told.",
+            "Bob and Cleo will be told.",
+        ))  # fmt: skip
+        self.assertContains(response, '<span data-told="internal">Bob will be told.')
+        self.assertContains(
+            response, '<span data-told="visible" hidden>Bob and Cleo will be told.'
+        )
+        self.assertEqual(set(form.fields["also"].queryset), {eve})
+        self.assertContains(response, 'data-client="true"')
+        self.assertContains(response, 'data-clients-follow="#id_visible"')
+        # Internal: no client, also not one picked by hand
+        response = self.post_form(self.ada, also=[eve.pk])
+        self.assertContains(response, "Clients can&#x27;t see it")
+        self.assertFalse(Item.objects.filter(title="Hello").exists())
+        with self.captureOnCommitCallbacks(execute=True):
+            self.post_form(self.ada, title="Internal")
+        item = Item.objects.get(title="Internal")
+        self.assertEqual(
+            set(item.subscriptions.values_list("user", flat=True)),
+            {self.ada.pk, self.bob.pk},
+        )
+        self.assertFalse(
+            Notification.objects.filter(event__item=item, user__is_client=True)
+        )
+        # Visible: Cleo by default, Eve added
+        with self.captureOnCommitCallbacks(execute=True):
+            self.post_form(self.ada, visible="on", also=[eve.pk])
+        item = Item.objects.get(title="Hello")
+        self.assertEqual(
+            set(Notification.objects.filter(event__item=item).values_list(
+                "user", flat=True
+            )),
+            {self.bob.pk, self.cleo.pk, eve.pk},
+        )  # fmt: skip
+        # Shown again ticked: the visible line
+        response = self.post_form(self.ada, title="", visible="on")
+        self.assertContains(response, '<span data-told="internal" hidden>')
+        self.assertContains(
+            response, '<span data-told="visible">Bob and Cleo will be told.'
         )
 
     def test_who_is_told_of_a_clients_message(self):

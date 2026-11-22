@@ -55,7 +55,8 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   `files.md`, "Uploading files"), and so are one person's batches into
   the same folder (or the top level) each within 10 minutes
   (`MERGE_AFTER`) of the one before (`group_uploads()`, decided
-  2026-11-21): its folder, "Ada uploaded 5 files to
+  2026-11-21), and a batch's files however far apart (decided
+  2026-11-22; `chain()`, the mails' rule too): its folder, "Ada uploaded 5 files to
   Minutes.", the files linked; counted once; following it, "Mark as
   read" and "Mark as unread" act on all its files. No bookmark button:
   bookmarks are per item.

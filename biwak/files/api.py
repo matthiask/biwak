@@ -128,15 +128,19 @@ def attachment_download(request, key: str):
 Notify = Literal["everybody", "nobody"] | list[int] | None
 
 
-def also_people(project, also, notify=None):
+def also_people(project, also, notify=None, *, visible):
     """The people ``also`` names (IDs of the project's members), and those
-    of an older CLI's ``notify`` list; 400 for anybody else"""
+    of an older CLI's ``notify`` list; 400 for anybody else, and for
+    clients when the new item is internal (``visible``, decided
+    2026-11-22: as the forms)"""
     ids = [*(also or []), *(notify if isinstance(notify, list) else [])]
     people = list(
         User.objects.active().filter(pk__in=ids, memberships__project=project)
     )
     if len(people) != len(set(ids)):
         raise HttpError(400, _("Only members of the project can be told."))
+    if not visible and any(person.is_client for person in people):
+        raise HttpError(400, _("Clients can't see it."))
     return people
 
 
@@ -322,7 +326,7 @@ def message_create(request, project_id: int, data: MessageIn):
         category=_category(data.category_id),
         creator=request.user,
         visible=visible,
-        also=also_people(project, data.also, data.notify),
+        also=also_people(project, data.also, data.notify, visible=visible),
     )
     return Status(201, message_out(_message(request, item.pk), request.user))
 
@@ -601,7 +605,12 @@ def doc_create(request, project_id: int, data: DocIn):
         creator=request.user,
         parent=folder,
         visible=data.visible_to_clients,
-        also=also_people(project, data.also, data.notify),
+        also=also_people(
+            project,
+            data.also,
+            data.notify,
+            visible=visible_in(folder, data.visible_to_clients),
+        ),
     )
     return Status(201, doc_out(item_for(request, item.pk, Kind.DOC), request.user))
 
@@ -847,7 +856,10 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
             parent=folder,
             visible=data.visible_to_clients,
             also=also_people(
-                project, ids_from_form(data.also), ids_from_form(data.notify)
+                project,
+                ids_from_form(data.also),
+                ids_from_form(data.notify),
+                visible=visible_in(folder, data.visible_to_clients),
             ),
         )
     except attachments.UploadError as exc:

@@ -24,8 +24,9 @@ You are subscribed to an item when you:
 Subscribing to a list or a folder also tells you about what is created
 in it later. Joining a project subscribes you to nothing that exists
 already. "Unsubscribe" works on anything, except a to-do you are
-assigned to: "Unassign me" instead. Every mail has a link to unsubscribe
-from its item.
+assigned to: "Unassign me" instead. A mail about one item has a link to
+unsubscribe from it; a mail about several uploaded files and the daily
+digest link to your notification settings.
 
 You are never told about what you did yourself, and only about what you
 can see.
@@ -36,13 +37,15 @@ Levels decide what you are subscribed to automatically, and whether a
 new to-do in a list you follow reaches you. In **Settings**, under
 Notifications, "Notify me about" is one of:
 
-- **Everything** (the default): posts to everybody subscribe you, and
-  you hear about everything new in the lists you follow;
-- **Only what concerns me:** only being mentioned or assigned and your
-  own things subscribe you;
+- **Everything** (the default): every new message, doc or file you can
+  see tells and subscribes you, and you hear about everything new in the
+  lists you follow;
+- **Only what concerns me:** being mentioned or assigned and your own
+  things subscribe you; new messages, docs and files only when you
+  follow their folder or the poster adds you;
 - **Nothing:** only what you do yourself (commenting, being assigned)
-  subscribes you; mentions don't reach you. The activity feed still
-  shows everything.
+  subscribes you, and following a folder or being added by others;
+  mentions don't reach you. The activity feed still shows everything.
 
 A project can have its own level ("More", then "Notifications" on the
 project's page), and so can a list ("Notifications..." in its "More"
@@ -61,7 +64,11 @@ latest read ones. The page "All notifications" has the whole list with
 
 - **Opening an entry reads it** (with the item's comments) and takes you
   to the item, at the comment where it applies.
-- **Mark all as read**, or mark one item as read or unread.
+- **Mark all as read**, or mark one item as read or unread. What you
+  mark as unread stays in the lantern and isn't mailed any more.
+- A to-do completed and reopened by the same person shows only the
+  change in the end, or nothing when it's back where it started; mails
+  do the same.
 - **Acting on an item reads it:** completing or reopening a to-do,
   changing it, ticking its checklist, commenting, reacting, or
   answering a check-in. Only looking doesn't: opening an item from the
@@ -81,7 +88,8 @@ Under Settings, "Mails":
   comments arrive together;
 - **A daily digest** at 07:00, with what happened the day before;
 - **No mails:** the lantern only, also no check-in questions and
-  summaries.
+  summaries. Switching back to mails sends what is still unread then
+  (except what you marked as unread) with the next mail or digest.
 
 What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. Mails carry the full text; the

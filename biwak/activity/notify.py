@@ -124,8 +124,11 @@ def wanting(people, event):
     mentioned on every level except "nothing"; the subscribers of the
     container hear about what's new in it (``created``) on "everything".
     Reactions and sharing tell on every level except "nothing", like a
-    mention."""
+    mention; telling about a new doc (``posted``) on every level, like
+    posting."""
     item = event.item
+    if event.action == Action.SHARED and event.data.get("posted"):
+        return list(people)
     levels = effective_levels(people, item)
     if event.action in {Action.REACTED, Action.SHARED}:
         return [u for u in people if levels[u.pk] != NotificationLevel.NOTHING]

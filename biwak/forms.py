@@ -98,6 +98,8 @@ class PeopleSelect(forms.SelectMultiple):
     makes them one)."""
 
     placeholder = None
+    # With ``data-clients-follow``: whether the checkbox starts ticked
+    clients_shown = True
 
     def __init__(self, attrs=None):
         super().__init__({**people_picker_attrs(self.placeholder), **(attrs or {})})
@@ -107,6 +109,11 @@ class PeopleSelect(forms.SelectMultiple):
         instance = getattr(value, "instance", None)
         if instance is not None and hasattr(instance, "is_member"):
             option["attrs"]["data-member"] = "true" if instance.is_member else "false"
+        if instance is not None and getattr(instance, "is_client", False):
+            # Offered only while clients see it (frontend/told.js)
+            option["attrs"]["data-client"] = "true"
+            if self.attrs.get("data-clients-follow") and not self.clients_shown:
+                option["attrs"]["disabled"] = True
         if instance is not None and hasattr(instance, "avatar_json"):
             option["attrs"]["data-avatar"] = instance.avatar_json
         return option

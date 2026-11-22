@@ -100,7 +100,8 @@ class TilesTest(E2ETestCase):
 
         # The keyboard: Ctrl+Space and Shift+arrows on the focused tile
         self.tile(page, a).focus()
-        page.keyboard.press("ControlOrMeta+Space")
+        # Ctrl on every platform (Cmd+Space is a Mac's Spotlight)
+        page.keyboard.press("Control+Space")
         expect(bar).to_contain_text("1 selected")
         page.keyboard.press("Shift+ArrowRight")
         expect(bar).to_contain_text("2 selected")
@@ -118,6 +119,26 @@ class TilesTest(E2ETestCase):
         self.assertEqual(self.parent_of(a), self.specs)
         self.assertEqual(self.parent_of(b), self.specs)
         self.assertIsNone(self.parent_of(c))
+        self.assertEqual(self.errors, [])
+
+    def test_on_a_mac(self):
+        """Cmd-click adds a tile, but Ctrl+Space selects one: Cmd+Space is
+        Spotlight (decided 2026-11-22)"""
+        page = self.page
+        page.add_init_script(
+            "Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel'})"
+        )
+        self.goto(page, self.root())
+        self.wait_for_files(page)
+        a, b, _c, _d = self.files
+        bar = page.locator("[data-selection-bar]")
+        self.tile(page, a).click(modifiers=["Meta"])
+        expect(bar).to_contain_text("1 selected")
+        self.tile(page, b).focus()
+        page.keyboard.press("Control+Space")
+        expect(bar).to_contain_text("2 selected")
+        page.keyboard.press("Meta+Space")
+        expect(bar).to_contain_text("2 selected")
         self.assertEqual(self.errors, [])
 
     def test_dragging_the_selection(self):
@@ -400,6 +421,55 @@ class UploadTest(E2ETestCase):
         self.assertEqual(
             set(upload.subscriptions.values_list("user", flat=True)),
             {self.ada.pk, self.cleo.pk, dan.pk},
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_who_is_told_follows_visible_to_clients(self):
+        """At the top the line and "Also tell…" follow "Visible to
+        clients" (decided 2026-11-22): clients only while it's ticked"""
+        eve = person("Eve", client=True)
+        eve.notification_level = "concerns_me"
+        eve.save()
+        Membership.objects.create(project=self.project, user=eve)
+        page = self.page
+        self.goto(page, reverse("project_files", args=[self.project.pk]))
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("link", name="Upload files").click()
+        dialog = page.get_by_role("dialog", name="Upload files")
+        dialog.get_by_label("Files").set_input_files([
+            {"name": "a.txt", "mimeType": "text/plain", "buffer": b"A"},
+        ])
+        internal = dialog.get_by_text("Nobody is told unless you add people.")
+        visible = dialog.get_by_text("Cleo will be told.")
+        expect(internal).to_be_visible()
+        expect(visible).to_be_hidden()
+        picker = dialog.locator(".wb-picker-input")
+        picker.fill("ev")
+        expect(dialog.get_by_text("Nobody found")).to_be_visible()
+        picker.press("Escape")
+        checkbox = dialog.get_by_label("Visible to clients")
+        checkbox.check()
+        expect(visible).to_be_visible()
+        expect(internal).to_be_hidden()
+        pills = dialog.locator(".wb-pill")
+        picker.fill("ev")
+        picker.press("Enter")
+        expect(pills).to_have_text([re.compile("Eve")])
+        # Unticked: Eve is taken away
+        checkbox.uncheck()
+        expect(pills).to_have_count(0)
+        expect(internal).to_be_visible()
+        checkbox.check()
+        picker.fill("ev")
+        picker.press("Enter")
+        expect(pills).to_have_count(1)
+        dialog.get_by_role("button", name="Upload").click(timeout=2000)
+        expect(page.locator(".wb-tile-file")).to_have_count(1)
+        upload = Item.objects.get(parent=None, kind="file")
+        self.assertTrue(upload.is_client_visible)
+        self.assertEqual(
+            set(upload.subscriptions.values_list("user", flat=True)),
+            {self.ada.pk, self.cleo.pk, eve.pk},
         )
         self.assertEqual(self.errors, [])
 
