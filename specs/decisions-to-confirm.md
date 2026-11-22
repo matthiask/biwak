@@ -13,11 +13,6 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
   the button said: "Complete" on a to-do somebody completed meanwhile
   leaves it completed (by them), instead of reopening it (`done=1/0`,
   `todos.md`).
-- **"To-dos I assigned" leaves out those you gave yourself** (the spec's
-  "to anybody else", as Home), also in the API and the CLI; with
-  "Assigned by: Me" the empty "Assigned to" choice is "Anybody" across
-  projects too (not "Me", which would show only those you gave
-  yourself), so `/todos/?assigned_by=me` is the whole list.
 - **Links leave out defaults and empty values**: Home's, the palette's
   and the project page's links, "Assigned to me" and the completed
   to-dos' pages (`/todos/?assigned_by=me`, `?grouping=due`).
@@ -51,10 +46,12 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 
 ### Phones and accessibility
 
-- **Doc pages show the title** in the header (an `<h1>`, as the findings
-  asked) and hide the text's first line when it's a heading, so that it
-  isn't there twice; the live editor's `<h1>` is for screen readers only,
-  because the editor's first line changes as people type (`files.md`).
+- **Doc pages show the title** in the header (an `<h1>`) and leave out
+  the text's first line when rendering if it's a heading, so it isn't
+  there twice (a first line that isn't a heading stays); the live
+  editor's `<h1>` is for screen readers only (`files.md`).
+- **x selects a tile** also with shortcuts turned off (it works only on
+  the focused tile; `keyboard.md`).
 - **The feed's filters on phones** are behind "Filters" (with the count
   of those set), open while one is set; wider screens unchanged
   (`ui.md`, "Filters and view choices").
@@ -63,7 +60,8 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
   plain page of its own (no database, no request), "Server error".
 - **Focus ring:** a 2px outline in the accent's ring color on every
   button, primary ones too, white on the bar.
-- **Touch:** invisible hit areas around small controls, checkboxes 20px
+- **Touch:** hit areas that grow sideways and fill their own line (about
+  22px high, never over a neighbour), checkboxes 20px
   on touch screens, the tiles' "…" 36px; Home's "Search Ctrl+K" and
   "Keyboard shortcuts" hidden on phones.
 - **Dark mode:** fields `#100e14` (a little darker than cards), dialog
