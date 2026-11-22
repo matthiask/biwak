@@ -374,6 +374,17 @@ def _feed_people(request):
     return request._feed_people
 
 
+@register.simple_tag
+def forwarded_waiting(user):
+    """The person menu's "Forwarded" (specs/forwarding.md): None while
+    forwarding is off or for clients, else how many mails wait"""
+    from biwak.forwarding import operations
+
+    if not operations.enabled() or not operations.can_forward(user):
+        return None
+    return operations.waiting(user)
+
+
 @register.simple_tag(takes_context=True)
 def can_open_feed(context, person):
     """Whether the viewer gets the person's feed (else a 404, see

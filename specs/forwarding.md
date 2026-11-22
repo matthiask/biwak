@@ -57,6 +57,21 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   title from the subject, the text as notes, attachments attached.
 - **"Delete"**: gone. Filed mails leave the list; unfiled ones are kept
   30 days, then deleted by `fairy_tasks` (the page says so).
+- **Built** (`biwak/forwarding/views.py`, `forwarding/list.html`): the
+  page (404 for clients and while forwarding is off), the address with
+  "Copy", per mail "File as message…", "File as to-do…" and "Delete"
+  (asking first: it can't be restored) as modals, "Text" folding the
+  recipients and the text with its images inline (the files through
+  `/forwarded/<id>/files/<key>/<name>`, the forwarder's only); the
+  count in the person menu (`{% forwarded_waiting %}`) and "Forwarded"
+  in the palette (`palette/actions.py`). Filing (`file_as_message()`,
+  `file_as_todo()`) copies the files into attachments of the project,
+  puts the line about the original first (in the forwarder's language,
+  with "To:" and "Cc:" lines when known) and deletes the forwarded
+  mail. The message form: title (the subject), project (combobox of the
+  open, not archived projects), category; the to-do form: title, one
+  combobox of the active internal lists and their groups ("List /
+  Group"), grouped by project.
 - API: `GET /forwarded/`, `POST /forwarded/{id}/file/` (message or
   to-do), `DELETE`; CLI `biwak forwarded [file ID --message PROJECT |
   --todo LIST] [delete ID]`, so agents can file mails too.

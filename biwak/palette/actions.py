@@ -26,6 +26,7 @@ from django.utils.translation import gettext as _
 
 from biwak.activity.operations import is_assigned, is_subscribed
 from biwak.bookmarks.operations import can_manage_links, is_bookmarked
+from biwak.forwarding import operations as forwarding
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind, Status
 from biwak.organizations import operations as org_ops
@@ -141,6 +142,9 @@ def everywhere(user):
     if not user.is_client:
         # Staff only (specs/public-links.md), like the account menu
         actions.append(link(_("Public links"), reverse("public_links")))
+    if forwarding.enabled() and forwarding.can_forward(user):
+        # Staff only (specs/forwarding.md), like the account menu
+        actions.append(link(_("Forwarded"), reverse("forwarded")))
     if user.is_admin:
         # Every project, for admins (specs/handover.md)
         actions.append(link(_("All projects"), reverse("all_projects")))

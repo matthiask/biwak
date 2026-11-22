@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 16:32+0100\n"
+"POT-Creation-Date: 2026-11-22 16:37+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -398,8 +398,9 @@ msgid "read and write"
 msgstr "lesen und schreiben"
 
 #: biwak/accounts/models.py biwak/bookmarks/models.py biwak/files/board.py
-#: biwak/files/library.py biwak/items/models.py biwak/items/views.py
-#: biwak/projects/views.py biwak/templates/accounts/api_tokens.html
+#: biwak/files/library.py biwak/forwarding/views.py biwak/items/models.py
+#: biwak/items/views.py biwak/projects/views.py
+#: biwak/templates/accounts/api_tokens.html
 #: biwak/templates/items/_add_todo.html
 msgid "title"
 msgstr "Titel"
@@ -1199,7 +1200,8 @@ msgid "stopped sharing publicly"
 msgstr "nicht mehr öffentlich geteilt"
 
 #: biwak/activity/models.py biwak/bookmarks/models.py biwak/files/models.py
-#: biwak/items/by_due.py biwak/items/models.py biwak/projects/models.py
+#: biwak/forwarding/views.py biwak/items/by_due.py biwak/items/models.py
+#: biwak/projects/models.py
 msgid "project"
 msgstr "Projekt"
 
@@ -1882,12 +1884,12 @@ msgstr "Nachricht"
 msgid "Markdown"
 msgstr "Markdown"
 
-#: biwak/files/board.py
+#: biwak/files/board.py biwak/forwarding/views.py
 msgid "Category"
 msgstr "Kategorie"
 
-#: biwak/files/board.py biwak/files/library.py biwak/organizations/views.py
-#: biwak/projects/views.py
+#: biwak/files/board.py biwak/files/library.py biwak/forwarding/views.py
+#: biwak/organizations/views.py biwak/projects/views.py
 msgid "None"
 msgstr "Keine"
 
@@ -2222,19 +2224,69 @@ msgstr "Weitergeleitet von %(sender)s, %(date)s"
 msgid "Forwarded from %(sender)s"
 msgstr "Weitergeleitet von %(sender)s"
 
-#: biwak/forwarding/operations.py
+#: biwak/forwarding/operations.py biwak/palette/actions.py
+#: biwak/templates/base.html biwak/templates/forwarding/list.html
 msgid "Forwarded"
 msgstr "Weitergeleitet"
 
-#: biwak/forwarding/operations.py
+#: biwak/forwarding/operations.py biwak/templates/forwarding/list.html
 #, python-format
 msgid "To: %(people)s"
 msgstr "An: %(people)s"
 
-#: biwak/forwarding/operations.py
+#: biwak/forwarding/operations.py biwak/templates/forwarding/list.html
 #, python-format
 msgid "Cc: %(people)s"
 msgstr "Cc: %(people)s"
+
+#: biwak/forwarding/views.py biwak/items/views.py
+msgid "List and group"
+msgstr "Liste und Gruppe"
+
+#: biwak/forwarding/views.py
+msgid "File as message"
+msgstr "Als Nachricht ablegen"
+
+#: biwak/forwarding/views.py
+msgid "An internal message by you, with the mail's text and files."
+msgstr "Eine interne Nachricht von dir, mit dem Text und den Dateien der Mail."
+
+#: biwak/forwarding/views.py
+msgid "Post message"
+msgstr "Nachricht veröffentlichen"
+
+#: biwak/forwarding/views.py
+msgid "Choose an internal list."
+msgstr "Wähle eine interne Liste."
+
+#: biwak/forwarding/views.py
+msgid "File as to-do"
+msgstr "Als To-do ablegen"
+
+#: biwak/forwarding/views.py
+msgid "A to-do in an internal list, with the mail's text as its notes and its files."
+msgstr "Ein To-do in einer internen Liste, mit dem Text der Mail als Notizen und ihren Dateien."
+
+#: biwak/forwarding/views.py
+msgid "Add to-do"
+msgstr "To-do hinzufügen"
+
+#: biwak/forwarding/views.py
+msgid "Delete the forwarded mail?"
+msgstr "Die weitergeleitete Mail löschen?"
+
+#: biwak/forwarding/views.py
+#, python-format
+msgid "“%(subject)s” is deleted with its files. It can't be restored."
+msgstr "„%(subject)s“ wird mit ihren Dateien gelöscht. Das lässt sich nicht rückgängig machen."
+
+#: biwak/forwarding/views.py biwak/organizations/views.py
+#: biwak/palette/actions.py biwak/teams/views.py
+#: biwak/templates/bookmarks/_links.html biwak/templates/forwarding/list.html
+#: biwak/templates/organizations/organization_detail.html
+#: biwak/templates/teams/team_detail.html
+msgid "Delete"
+msgstr "Löschen"
 
 #: biwak/inbound/admin.py
 msgid "Revoke the selected reply tokens"
@@ -2856,10 +2908,6 @@ msgid "Rename"
 msgstr "Umbenennen"
 
 #: biwak/items/views.py
-msgid "List and group"
-msgstr "Liste und Gruppe"
-
-#: biwak/items/views.py
 msgid "Position"
 msgstr "Position"
 
@@ -3447,13 +3495,6 @@ msgstr "%(organization)s löschen?"
 #: biwak/templates/organizations/organization_detail.html
 msgid "Nobody belongs to it."
 msgstr "Niemand gehört dazu."
-
-#: biwak/organizations/views.py biwak/palette/actions.py biwak/teams/views.py
-#: biwak/templates/bookmarks/_links.html
-#: biwak/templates/organizations/organization_detail.html
-#: biwak/templates/teams/team_detail.html
-msgid "Delete"
-msgstr "Löschen"
 
 #: biwak/organizations/views.py
 msgid "Empty: none. Staff without an organization see only the projects they're added to."
@@ -4833,7 +4874,8 @@ msgstr "Das README der CLI"
 #: biwak/templates/accounts/api_tokens.html
 #: biwak/templates/accounts/calendar.html
 #: biwak/templates/accounts/two_factor_setup.html
-#: biwak/templates/modal_form.html biwak/templates/public_links/list.html
+#: biwak/templates/forwarding/list.html biwak/templates/modal_form.html
+#: biwak/templates/public_links/list.html
 msgid "More in the help"
 msgstr "Mehr in der Hilfe"
 
@@ -4858,7 +4900,7 @@ msgstr "Deine offenen To-dos mit Fälligkeit als Kalender-Abo (iCal): Füge den 
 msgid "Calendar link"
 msgstr "Kalenderlink"
 
-#: biwak/templates/accounts/calendar.html
+#: biwak/templates/accounts/calendar.html biwak/templates/forwarding/list.html
 #: biwak/templates/public_links/list.html
 #: biwak/templates/public_links/share.html
 msgid "Copy"
@@ -6040,6 +6082,47 @@ msgstr "bis"
 msgctxt "repeats"
 msgid "left"
 msgstr "übrig"
+
+#: biwak/templates/forwarding/list.html
+#, python-format
+msgid "Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't file is deleted after %(days)s day."
+msgid_plural "Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't file is deleted after %(days)s days."
+msgstr[0] "Leite Mails an diese Adresse weiter, um sie als Nachricht oder To-do abzulegen. Nur du siehst sie hier; was du nicht ablegst, wird nach %(days)s Tag gelöscht."
+msgstr[1] "Leite Mails an diese Adresse weiter, um sie als Nachricht oder To-do abzulegen. Nur du siehst sie hier; was du nicht ablegst, wird nach %(days)s Tagen gelöscht."
+
+#: biwak/templates/forwarding/list.html
+msgid "Address to forward to"
+msgstr "Adresse zum Weiterleiten"
+
+#: biwak/templates/forwarding/list.html
+msgid "(no subject)"
+msgstr "(kein Betreff)"
+
+#: biwak/templates/forwarding/list.html
+#, python-format
+msgid "From %(sender)s, %(date)s"
+msgstr "Von %(sender)s, %(date)s"
+
+#: biwak/templates/forwarding/list.html
+#, python-format
+msgid "From %(sender)s"
+msgstr "Von %(sender)s"
+
+#: biwak/templates/forwarding/list.html
+msgid "File as message…"
+msgstr "Als Nachricht ablegen…"
+
+#: biwak/templates/forwarding/list.html
+msgid "File as to-do…"
+msgstr "Als To-do ablegen…"
+
+#: biwak/templates/forwarding/list.html
+msgid "Text"
+msgstr "Text"
+
+#: biwak/templates/forwarding/list.html
+msgid "Nothing forwarded."
+msgstr "Nichts weitergeleitet."
 
 #: biwak/templates/forwarding/refused.txt
 msgid "Your forwarded mail couldn't be kept."

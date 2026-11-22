@@ -14,7 +14,7 @@ it.
   docs written together, versions, uploads, attachments
 - [Check-ins](checkins.md): questions asked on a schedule
 - [Notifications](notifications.md): the lantern, mails, digests,
-  levels, replying by mail
+  levels, replying by mail, forwarding mails to file them
 - [Clients](clients.md): what clients see, showing and hiding, what
   they can do
 - [Keyboard](keyboard.md): the command palette and the shortcuts

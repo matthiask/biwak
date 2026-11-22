@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "Forwarded" %} – Biwak{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{% translate "Forwarded" %}</h1>
+  <div class="row">
+    <div class="col-lg-9">
+      <p class="text-body-secondary">
+        {% blocktranslate trimmed count days=keep_days %}
+          Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't
+          file is deleted after {{ days }} day.
+        {% plural %}
+          Forward mails to this address to file them as a message or a to-do. Only you see them here; what you don't
+          file is deleted after {{ days }} days.
+        {% endblocktranslate %}
+        <a href="{% url 'help' 'notifications' %}">{% translate "More in the help" %}</a>
+      </p>
+      <div class="input-group mb-4">
+        <input
+          type="text"
+          readonly
+          class="form-control user-select-all"
+          id="forward-address"
+          value="{{ address }}"
+          aria-label="{% translate 'Address to forward to' %}"
+        >
+        <button type="button" class="btn btn-quiet" data-copy="#forward-address">{% translate "Copy" %}</button>
+      </div>
+      <ul class="list-group" id="forwarded">
+        {% for mail, text in mails %}
+          <li class="list-group-item" data-forwarded="{{ mail.pk }}">
+            <div class="fw-semibold">{{ mail.subject|default:_("(no subject)") }}</div>
+            <div class="small text-body-secondary mb-2">
+              {% if mail.sent_on %}
+                {% blocktranslate trimmed with sender=mail.sender date=mail.sent_on|date:"SHORT_DATE_FORMAT" %}
+                  From {{ sender }}, {{ date }}
+                {% endblocktranslate %}
+              {% else %}
+                {% blocktranslate trimmed with sender=mail.sender %}From {{ sender }}{% endblocktranslate %}
+              {% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <a
+                class="btn btn-sm btn-quiet"
+                href="{% url 'forwarded_file_message' mail.pk %}"
+                data-modal
+              >{% translate "File as message…" %}</a>
+              <a
+                class="btn btn-sm btn-quiet"
+                href="{% url 'forwarded_file_todo' mail.pk %}"
+                data-modal
+              >{% translate "File as to-do…" %}</a>
+              <a
+                class="btn btn-sm btn-quiet"
+                href="{% url 'forwarded_delete' mail.pk %}"
+                data-modal
+              >{% translate "Delete" %}</a>
+            </div>
+            <details class="mt-2">
+              <summary class="small">{% translate "Text" %}</summary>
+              <div class="small text-body-secondary mt-2">
+                {% if mail.to %}<div>
+                    {% blocktranslate trimmed with people=mail.to %}To: {{ people }}{% endblocktranslate %}
+                  </div>{% endif %}
+                {% if mail.cc %}<div>
+                    {% blocktranslate trimmed with people=mail.cc %}Cc: {{ people }}{% endblocktranslate %}
+                  </div>{% endif %}
+              </div>
+              <div class="wb-markdown mt-2">{{ text }}</div>
+            </details>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-body-secondary">{% translate "Nothing forwarded." %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endblock content %}
