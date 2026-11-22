@@ -81,19 +81,10 @@
     </div>
     {% if not projects %}<p class="text-body-secondary">{% translate "No projects yet." %}</p>{% endif %}
   {% endif %}
-  {% if others %}
-    <h2 class="h5">{% translate "Limited projects you're not a member of" %}</h2>
-    <p class="text-body-secondary">{% translate "As admin you can join them; joining is recorded in the project." %}</p>
-    <div class="list-group">
-      {% for project in others %}
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-          <span>{% icon "lock" %} {{ project }}</span>
-          <form method="post" action="{% url 'project_join' project.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-elevated">{% translate "Join" %}</button>
-          </form>
-        </div>
-      {% endfor %}
-    </div>
+  {% if all_projects %}
+    <p class="text-body-secondary small">
+      <a href="{% url 'all_projects' %}">{% translate "All projects" %}</a>:
+      {% translate "every project, also the limited ones you're not a member of (to join them), with what's left to do." %}
+    </p>
   {% endif %}
 </div>

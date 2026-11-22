@@ -138,6 +138,9 @@ def everywhere(user):
         actions.append(modal(_("New project"), reverse("project_create")))
     if org_ops.can_manage(user):
         actions.append(link(_("Go to organizations"), reverse("organizations")))
+    if user.is_admin:
+        # Every project, for admins (specs/handover.md)
+        actions.append(link(_("All projects"), reverse("all_projects")))
     return actions
 
 

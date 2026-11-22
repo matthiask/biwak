@@ -152,6 +152,7 @@
                 <hr class="dropdown-divider">
                 {% if request.user.is_staff %}
                   <a class="dropdown-item" href="{% url 'admin:index' %}">{% translate "Administration" %}</a>
+                  <a class="dropdown-item" href="{% url 'all_projects' %}">{% translate "All projects" %}</a>
                   <hr class="dropdown-divider">
                 {% endif %}
                 <form method="post" action="{% url 'account_logout' %}">

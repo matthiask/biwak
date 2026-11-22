@@ -179,6 +179,34 @@ projects page (`projects-overview.md`) with a link "All projects"
 - API: `GET /api/v1/projects/all/` (admins only, the same columns and
   filters); CLI: `biwak projects --all` (admins).
 
+Built (2026-11-22): `biwak/projects/all_projects.py` (four queries:
+the projects with their counts as subqueries, the client organizations,
+which the admin can open, and the admin's own row through
+`accessible_to()`), `projects/all.html`; linked below the projects
+page's cards, in the person menu next to "Administration" (the Django
+admin's index is Django's own) and in the palette ("All projects",
+admins). Choices made on the way (decided 2026-11-22):
+
+- **Who:** admins (`is_admin`); the page answers 404 to clients and
+  partners and 403 to other staff (as `activation.md`'s pages), the API
+  403 to everybody else.
+- **Columns:** "active staff" counts active members who aren't clients
+  (partners too), shown in the danger color at 0; "clients" names the
+  organizations of active client members; "open to-dos" are open, not
+  trashed, in lists not archived; "of inactive people" those with at
+  least one assignee and no active one (danger color when not 0); the
+  last activity as on the cards (`last_activity_at`, "3 hours ago").
+- **Filters** are checkboxes (`no_staff`, `limited`, `inactive`,
+  `archived`), remembered like the other filters; "Archived" is labelled
+  "Include archived", as in search, since it adds them.
+- **Join** where the existing joining offers it: limited, not archived,
+  the admin not a member (`joinable_projects()`); the name links where
+  the admin can open the project.
+- **API** `GET /api/v1/projects/all/?no_staff=&limited=&inactive=&archived=`
+  with `can_open`, `joinable` and `url` (null for projects the admin
+  can't open); **CLI** `biwak projects --all [--no-staff] [--limited]
+  [--inactive-todos] [--archived]` (CLI 0.42.0).
+
 ## Projects whose only staff member left
 
 Nothing happens to them (decided 2026-11-22): an all-access project

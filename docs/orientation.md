@@ -57,6 +57,15 @@ lists, messages, docs and files, check-ins, members.
   in any order, then choose with the arrow keys and Enter or a click.
 - Archived projects are out of the way; the projects page has an
   archive.
+- **All projects** (admins, linked below the cards, in your menu and in
+  the command palette) lists every project in a table: whether it's
+  limited or archived, how many active staff members it has, its
+  clients' organizations, its open to-dos and how many of them only
+  inactive people are assigned to, and the last activity. Filters show
+  projects without an active staff member, limited ones, those with
+  to-dos of inactive people, and archived ones too. For projects you
+  can't open it shows counts only; "Join" gets you into a limited one
+  (the project records it). `biwak projects --all` does the same.
 
 ## To-dos
 

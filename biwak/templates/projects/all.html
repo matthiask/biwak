@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{% translate "All projects" %} – Biwak{% endblock %}
+
+{% block content %}
+  {% comment %}
+    Every project, for admins (specs/handover.md): counts only, no to-dos and
+    no people of projects they can't open; joining is how they get in.
+  {% endcomment %}
+  <div class="wb-page-header">
+    <h1 class="wb-title">{% translate "All projects" %}</h1>
+  </div>
+  <form method="get" data-autosubmit data-remember class="wb-filters mb-3">
+    {% for field in form %}
+      <label class="form-check">{{ field }} {{ field.label|capfirst }}</label>
+    {% endfor %}
+    {% include "_filter_buttons.html" with reset_url=request.path %}
+  </form>
+  <div class="card mb-3 wb-table-scroll">
+    <table class="wb-table">
+      <thead>
+        <tr>
+          <th>{% translate "project" %}</th>
+          <th class="text-end">{% translate "active staff" %}</th>
+          <th>{% translate "clients" %}</th>
+          <th class="text-end">{% translate "open to-dos" %}</th>
+          <th class="text-end">{% translate "of inactive people" %}</th>
+          <th>{% translate "last activity" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+          <tr data-project="{{ project.pk }}">
+            <td>
+              {% if project.can_open %}<a
+                  href="{{ project.get_absolute_url }}"
+                >{% project_dot project %}{{ project }}</a>{% else %}{% project_dot project %}{{ project }}{% endif %}
+              {% if not project.is_all_access %}<span
+                  class="text-body-secondary"
+                  title="{% translate 'Limited: members only' %}"
+                >{% icon "lock" %}<span
+                    class="visually-hidden"
+                  >{% translate "Limited: members only" %}</span></span>{% endif %}
+              {% if project.archived_at %}<span
+                  class="badge wb-tone-neutral"
+                >{% translate "Archived" %}</span>{% endif %}
+            </td>
+            <td class="text-end{% if not project.active_staff %} text-danger{% endif %}">{{ project.active_staff }}</td>
+            <td class="small">{{ project.client_organizations|join:", " }}</td>
+            <td class="text-end">{{ project.open_todos }}</td>
+            <td class="text-end{% if project.inactive_todos %} text-danger{% endif %}">{{ project.inactive_todos }}</td>
+            <td class="small text-body-secondary">
+              {% if project.last_activity_at %}{{ project.last_activity_at|ago }}{% else %}–{% endif %}
+            </td>
+            <td class="text-end">
+              {% if project.joinable %}
+                <form method="post" action="{% url 'project_join' project.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-elevated">{% translate "Join" %}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-body-secondary">{% translate "No projects." %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock content %}

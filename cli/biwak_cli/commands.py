@@ -181,9 +181,36 @@ def me_image(path, remove, as_json):
     type=click.Choice(["activity", "name"]),
     help="Latest activity first or by name (default: your setting on the web).",
 )
-def projects(as_json, archived, joinable, order):
+@click.option(
+    "--all",
+    "everything",
+    is_flag=True,
+    help="Every project with counts, also those you can't open (admins).",
+)
+@click.option("--no-staff", is_flag=True, help="With --all: no active staff member.")
+@click.option("--limited", is_flag=True, help="With --all: limited projects.")
+@click.option(
+    "--inactive-todos",
+    is_flag=True,
+    help="With --all: with open to-dos whose assignees are all inactive.",
+)
+def projects(
+    as_json, archived, joinable, order, everything, no_staff, limited, inactive_todos
+):
     """The projects you can open, bookmarked ones (*) first, with the latest
     activity (for clients: of what they see)"""
+    if everything:
+        return all_projects(
+            as_json,
+            {
+                "archived": archived,
+                "no_staff": no_staff,
+                "limited": limited,
+                "inactive": inactive_todos,
+            },
+        )
+    if no_staff or limited or inactive_todos:
+        terminate("--no-staff, --limited and --inactive-todos go with --all.")
     if joinable:
         data = request("GET", "projects/joinable/")
         if as_json:
@@ -208,6 +235,37 @@ def projects(as_json, archived, joinable, order):
             p["color_name"],
             (p["last_activity_at"] or "")[:16].replace("T", " "),
             "" if p["is_all_access"] else "limited",
+        )
+    console.print(t)
+    return None
+
+
+def all_projects(as_json, filters):
+    """``biwak projects --all``: every project, for admins
+    (specs/handover.md); --archived includes the archived ones"""
+    data = request(
+        "GET", "projects/all/", params={k: v for k, v in filters.items() if v}
+    )
+    if as_json:
+        return echo_json(data)
+    t = table(
+        "ID", "Project", "", "Staff", "Clients", "Open", "Inactive", "Last activity"
+    )
+    for p in data:
+        marks = [
+            "" if p["is_all_access"] else "limited",
+            "archived" if p["archived"] else "",
+            "joinable" if p["joinable"] else "",
+        ]
+        t.add_row(
+            str(p["id"]),
+            p["name"],
+            " ".join(mark for mark in marks if mark),
+            str(p["active_staff"]),
+            ", ".join(p["client_organizations"]),
+            str(p["open_todos"]),
+            str(p["inactive_todos"]),
+            (p["last_activity_at"] or "")[:16].replace("T", " "),
         )
     console.print(t)
     return None

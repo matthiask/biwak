@@ -9,6 +9,7 @@ biwak login https://biwak.example.org --write   # or --read
 biwak projects
 biwak project add "New project" --limited   # staff; you become a member
 biwak project join ID                        # admins: biwak projects --joinable
+biwak projects --all --no-staff              # admins: every project with counts; --limited, --inactive-todos, --archived
 biwak lists PROJECT                        # --archived for the archived ones
 biwak list archive LIST                     # and unarchive: out of the way, still readable
 biwak todos LIST
@@ -22,6 +23,7 @@ biwak subscribe ITEM --people 3,4 --notify --note "Have a look"   # --notify: te
 biwak subscribe ITEM                   # yourself: you hear about everything on it
 biwak unsubscribe ITEM                 # stop hearing about it
 biwak todo done TODO
+biwak todo assign TODO TODO --to PERSON --replace   # several at once, all or nothing; each assignee told once
 biwak todo move TODO --list LIST --group GROUP   # or --todos 1,2,3
 biwak checkins PROJECT
 biwak checkin due

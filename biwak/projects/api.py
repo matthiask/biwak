@@ -110,6 +110,64 @@ def project_joinable(request):
     ]
 
 
+class AllProjectOut(Schema):
+    id: int
+    name: str
+    is_all_access: bool
+    archived: bool
+    # Whether the admin can open it, and whether they can join it
+    can_open: bool
+    joinable: bool
+    active_staff: int
+    client_organizations: list[str]
+    open_todos: int
+    # Open to-dos whose assignees are all inactive
+    inactive_todos: int
+    last_activity_at: dt.datetime | None
+    # Only for projects the admin can open
+    url: str | None
+
+
+@router.get("projects/all/", response=list[AllProjectOut])
+def project_all(
+    request,
+    *,
+    no_staff: bool = False,
+    limited: bool = False,
+    inactive: bool = False,
+    archived: bool = False,
+):
+    """Every project, for admins (specs/handover.md), by name: counts only,
+    the filters of the page; 403 for everybody else"""
+    from biwak.projects.all_projects import all_projects, can_see
+
+    if not can_see(request.user):
+        raise HttpError(403, _("Only admins see all projects."))
+    return [
+        {
+            "id": p.pk,
+            "name": p.name,
+            "is_all_access": p.is_all_access,
+            "archived": p.archived_at is not None,
+            "can_open": p.can_open,
+            "joinable": p.joinable,
+            "active_staff": p.active_staff,
+            "client_organizations": p.client_organizations,
+            "open_todos": p.open_todos,
+            "inactive_todos": p.inactive_todos,
+            "last_activity_at": p.last_activity_at,
+            "url": absolute(p.get_absolute_url()) if p.can_open else None,
+        }
+        for p in all_projects(
+            request.user,
+            no_staff=no_staff,
+            limited=limited,
+            inactive=inactive,
+            archived=archived,
+        )
+    ]
+
+
 class ProjectIn(Schema):
     name: str
     description: str = ""
