@@ -14,6 +14,11 @@ urlpatterns = [
     path(
         "projects/<int:pk>/messages/", board.project_messages, name="project_messages"
     ),
+    path(
+        "projects/<int:pk>/messages/order/",
+        board.project_messages_order,
+        name="project_messages_order",
+    ),
     path("projects/<int:pk>/messages/new/", board.message_new, name="message_new"),
     path("messages/<int:pk>/", board.message, name="message"),
     path("messages/<int:pk>/edit/", board.message_edit, name="message_edit"),

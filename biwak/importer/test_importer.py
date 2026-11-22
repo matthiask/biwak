@@ -155,6 +155,14 @@ class ImportEveryKindTest(ImportCase):
         )
         self.assertIn(f"](/todos/{food.pk}/)", announcement.message.content)
         self.assertEqual(MessageCategory.objects.count(), 1)
+        # The board's order from the original times (specs/files.md)
+        self.assertEqual(
+            announcement.message.last_activity_at,
+            max([
+                announcement.created_at,
+                *announcement.comments.values_list("created_at", flat=True),
+            ]),
+        )
 
         # Folders, docs, files
         self.assertEqual(

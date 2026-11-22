@@ -454,6 +454,12 @@ class Message(Checklist, Detail):
     # Pinned for everybody, by staff; the latest pinned first. Kept when
     # the message is trashed, so restoring brings the pin back.
     pinned_at = models.DateTimeField(_("pinned at"), null=True, blank=True)
+    # The later of posting and the latest comment, for the board's "Latest
+    # update" order (specs/files.md); edits don't count. Kept by
+    # ``operations.refresh_message_activity()``.
+    last_activity_at = models.DateTimeField(
+        _("last activity at"), default=timezone.now, editable=False
+    )
 
     class Meta:
         verbose_name = _("message")

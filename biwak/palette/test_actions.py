@@ -216,6 +216,21 @@ class ProjectActionsTest(ActionsBase):
             actions["Order…"]["url"], f"/projects/{self.camp.pk}/files/order/"
         )
 
+    def test_the_message_boards_order(self):
+        """Looking the other way, for everybody (specs/files.md, "The
+        message board"); staff change the setting on the page"""
+        url = f"/projects/{self.camp.pk}/messages/"
+        for user in [self.ada, self.cleo]:
+            actions = self.actions(user, url)
+            self.assertEqual(
+                actions["Newest posts first"]["url"], f"{url}?order=newest"
+            )
+            self.assertNotIn("Latest update first", actions)
+            actions = self.actions(user, f"{url}?order=newest")
+            self.assertEqual(
+                actions["Latest update first"]["url"], f"{url}?order=latest"
+            )
+
     def test_clients_dont_rename_folders(self):
         folder = ops.create_folder(
             project=self.camp, title="Maps", creator=self.ada, visible=True

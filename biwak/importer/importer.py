@@ -1074,6 +1074,8 @@ class Importer(Resolver):
         self._top_visibility(item, visible, rec)
         self._stamp(item, rec)
         self._comments(rec, item)
+        # From the original times, for the board's order
+        ops.refresh_message_activity(item)
         self._subscriptions(rec, item)
 
     # Docs & Files -------------------------------------------------------------------------------
