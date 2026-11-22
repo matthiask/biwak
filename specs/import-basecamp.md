@@ -30,7 +30,12 @@ goes into internal containers, archived recordings skipped.
   content_type, object_id)` maps what was imported, so a second run
   updates titles, texts, due dates, assignees, completion, archived
   lists, categories and visibility, and adds new comments; it doesn't
-  change imported comments, positions or files. `--since` skips leaves
+  change imported comments, positions or files. **Basecamp wins**
+  (decided 2026-11-22, for now): a recording changed in Basecamp since
+  the last run (every one with `--full`) gets Basecamp's state, also
+  where it was changed in Biwak meanwhile (a to-do completed in Biwak
+  and open in Basecamp is reopened); comments made in Biwak stay.
+  Unchanged recordings aren't touched. `--since` skips leaves
   (to-dos, cards, messages, docs, files, answers, comments) last updated
   before the date; containers are always read.
 - **`--archive`** (decided 2026-11-22): archives each project in
