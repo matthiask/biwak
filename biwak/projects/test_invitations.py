@@ -330,6 +330,116 @@ class FormTest(TestCase):
         self.assertFalse(User.objects.filter(email="x@example.net").exists())
 
 
+class FilledInFromTheAddressTest(TestCase):
+    """What a row fills in from its address (specs/activation.md, "Filled in
+    from the address"): the organization the inviter may put people into,
+    the role for admins only; nothing for those who can't open the form"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.root = person("Root", is_admin=True)
+        organization("Our organization", is_own=True, domains=["ours.example"])
+        organization("Example Client Ltd", domains=["client.example"])
+        self.pia = external(organization_name="Example External Agency")
+        self.pia.organization.domains = ["agency.example"]
+        self.pia.organization.save()
+        self.url = reverse("invite_address")
+
+    def lookup(self, email):
+        response = self.client.get(self.url, {"email": email})
+        self.assertEqual(response.status_code, 200)
+        return response.json()
+
+    def test_admins_get_the_organization_and_the_role(self):
+        self.client.force_login(self.root)
+        client = organization("Example Client Ltd")
+        self.assertEqual(
+            self.lookup("dora@client.example"),
+            {
+                "organization": {"id": client.pk, "name": "Example Client Ltd"},
+                "role": "client",
+            },
+        )
+        self.assertEqual(
+            self.lookup("bob@ours.example"),
+            {
+                "organization": {
+                    "id": organization("Our organization").pk,
+                    "name": "Our organization",
+                },
+                "role": "staff",
+            },
+        )
+        self.assertEqual(
+            self.lookup("Paul@Agency.example"),
+            {
+                "organization": {
+                    "id": self.pia.organization_id,
+                    "name": "Example External Agency",
+                },
+                "role": "staff",
+            },
+        )
+        # Free mail and unknown domains: no organization, a client
+        for email in ["eve@gmail.com", "eve@unknown.example"]:
+            self.assertEqual(
+                self.lookup(email), {"organization": None, "role": "client"}
+            )
+        # Not an address (yet): nothing
+        for email in ["", "eve", "eve@"]:
+            self.assertEqual(self.lookup(email), {"organization": None, "role": None})
+
+    def test_staff_get_client_organizations_and_no_role(self):
+        self.client.force_login(self.ada)
+        self.assertEqual(
+            self.lookup("dora@client.example"),
+            {
+                "organization": {
+                    "id": organization("Example Client Ltd").pk,
+                    "name": "Example Client Ltd",
+                },
+                "role": None,
+            },
+        )
+        # Not the own or an external organization: they can't put people
+        # there (org_ops.can_touch())
+        for email in ["bob@ours.example", "paul@agency.example", "eve@gmail.com"]:
+            self.assertEqual(self.lookup(email), {"organization": None, "role": None})
+
+    def test_clients_and_externals_cant(self):
+        cleo = person("Cleo", client=True)
+        for user in [cleo, self.pia]:
+            self.client.force_login(user)
+            response = self.client.get(self.url, {"email": "dora@client.example"})
+            self.assertEqual(response.status_code, 403)
+            self.assertNotContains(response, "Example Client Ltd", status_code=403)
+        self.client.logout()
+        response = self.client.get(self.url, {"email": "dora@client.example"})
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_the_form_takes_the_domains_organization_when_empty(self):
+        self.client.force_login(self.ada)
+        project_ = project("Website", members=[self.ada])
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(
+                reverse("invite_people"),
+                {
+                    "projects": [project_.pk],
+                    "notify": "default",
+                    "person-TOTAL_FORMS": "1",
+                    "person-INITIAL_FORMS": "0",
+                    "person-MIN_NUM_FORMS": "1",
+                    "person-MAX_NUM_FORMS": "50",
+                    "person-0-email": "dora@client.example",
+                    "person-0-organization": "",
+                },
+            )
+        self.assertEqual(
+            User.objects.get(email="dora@client.example").organization.name,
+            "Example Client Ltd",
+        )
+
+
 class InvitationsVisibleTest(TestCase):
     def setUp(self):
         self.ada = person("Ada")

@@ -4,7 +4,7 @@
 import re
 
 from biwak.test_e2e import E2ETestCase, expect
-from biwak.test_utils import person
+from biwak.test_utils import organization, person
 
 
 class ComboboxTest(E2ETestCase):
@@ -92,4 +92,83 @@ class InviteRowsTest(E2ETestCase):
         self.assertTrue(
             self.project.memberships.filter(user__email="dora@example.net").exists()
         )
+        self.assertEqual(self.errors, [])
+
+    def add_domain(self, name, domain):
+        # Cleo's organization exists already (setUp)
+        org = organization(name)
+        org.domains = [domain]
+        org.save()
+
+    def open_form(self, page):
+        self.goto(page, f"/projects/{self.project.pk}/people/")
+        page.get_by_role("link", name="Invite by email").click()
+        return page.get_by_role("dialog", name="Invite people")
+
+    def test_filled_in_from_the_address(self):
+        organization("Our organization", is_own=True, domains=["ours.example"])
+        self.add_domain("Example Client Ltd", "client.example")
+        organization("Other Client Ltd", domains=["other.example"])
+        root = person("Root", is_admin=True)
+        page = self.login(root)
+        dialog = self.open_form(page)
+        emails = dialog.get_by_role("textbox", name="Email")
+        orgs = dialog.get_by_role("combobox", name="Organization")
+        roles = dialog.get_by_role("combobox", name="Staff or client")
+        expect(roles.nth(0)).to_have_value("1")
+
+        # Leaving the address fills in the organization and the role
+        emails.nth(0).fill("bob@ours.example")
+        emails.nth(0).press("Tab")
+        expect(orgs.nth(0)).to_have_value("Our organization")
+        expect(roles.nth(0)).to_have_value("")
+        # Another address refills the fields nobody changed
+        emails.nth(0).fill("dora@client.example")
+        emails.nth(0).press("Tab")
+        expect(orgs.nth(0)).to_have_value("Example Client Ltd")
+        expect(roles.nth(0)).to_have_value("1")
+
+        # A field changed by hand stays, the other one still follows
+        orgs.nth(1).fill("Other Client Ltd")
+        emails.nth(1).fill("bob@ours.example")
+        emails.nth(1).press("Tab")
+        expect(roles.nth(1)).to_have_value("")
+        expect(orgs.nth(1)).to_have_value("Other Client Ltd")
+        roles.nth(1).select_option("1")
+        emails.nth(1).fill("carl@ours.example")
+        emails.nth(1).press("Tab")
+        emails.nth(0).fill("bob@ours.example")
+        emails.nth(0).press("Tab")
+        expect(roles.nth(0)).to_have_value("")
+        expect(roles.nth(1)).to_have_value("1")
+        expect(orgs.nth(1)).to_have_value("Other Client Ltd")
+
+        # Free mail and an unknown domain: no organization, a client
+        for email in ["eve@gmail.com", "eve@unknown.example"]:
+            emails.nth(0).fill(email)
+            emails.nth(0).press("Tab")
+            expect(orgs.nth(0)).to_have_value("")
+            expect(roles.nth(0)).to_have_value("1")
+
+        # A row added later fills in too
+        dialog.get_by_role("button", name="Add another").click()
+        emails.nth(3).fill("fay@client.example")
+        emails.nth(3).press("Tab")
+        expect(orgs.nth(3)).to_have_value("Example Client Ltd")
+        self.assertEqual(self.errors, [])
+
+    def test_staff_get_no_role_and_only_client_organizations(self):
+        organization("Our organization", is_own=True, domains=["ours.example"])
+        self.add_domain("Example Client Ltd", "client.example")
+        dialog = self.open_form(self.page)
+        emails = dialog.get_by_role("textbox", name="Email")
+        orgs = dialog.get_by_role("combobox", name="Organization")
+        expect(dialog.get_by_role("combobox", name="Staff or client")).to_have_count(0)
+        emails.nth(0).fill("dora@client.example")
+        emails.nth(0).press("Tab")
+        expect(orgs.nth(0)).to_have_value("Example Client Ltd")
+        # Not the own organization: staff can't invite into it
+        emails.nth(0).fill("bob@ours.example")
+        emails.nth(0).press("Tab")
+        expect(orgs.nth(0)).to_have_value("")
         self.assertEqual(self.errors, [])

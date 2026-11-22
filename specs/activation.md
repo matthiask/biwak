@@ -8,7 +8,12 @@ inactive, deactivating people who left, and resetting someone's sign-in. Organiz
 **Status:** built (2026-11-21). Inviting several: `biwak/projects/invitations.py`
 (the form), `invite_people()`, `invite()`, `resend_invitation()`,
 `withdraw_invitation()` in `biwak/projects/operations.py`,
-`frontend/invite.js`. Activating and deactivating:
+`frontend/invite.js`; filled in from the address (2026-11-22):
+`invite_address()` (`/people/invite/address/?email=`, JSON
+`{organization: {id, name} | null, role: "staff" | "client" | null}`,
+403 like the form, the organization only where `can_touch()`, the role
+only for admins), `invite.js` remembering the fields changed by hand per
+row. Activating and deactivating:
 `biwak/organizations/activation.py`, the pages in
 `biwak/organizations/people.py`, the API in `biwak/organizations/api.py`
 (CLI 0.34.0).

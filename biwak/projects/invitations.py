@@ -6,9 +6,11 @@ invitation while the person hasn't signed in."""
 
 from django import forms
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models.functions import Lower
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.translation import gettext as _, gettext_lazy, ngettext
@@ -17,6 +19,7 @@ from django.views.decorators.http import require_POST
 from biwak.accounts.models import User
 from biwak.forms import Form, next_url
 from biwak.modals import form_response
+from biwak.organizations import operations as org_ops
 from biwak.organizations.forms import OrganizationFieldMixin, organization_field
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
@@ -160,6 +163,33 @@ def invite_people(request, project=None):
         submit_label=_("Invite"),
         template="projects/invite.html",
     )
+
+
+def invite_address(request):
+    """What a row fills in from its address (specs/activation.md, "Filled
+    in from the address", invite.js): the domain's organization if the
+    inviter may put people into it, and for admins the role, staff for the
+    own and external organizations. For those who may open the form."""
+    if not project_ops.can_manage_members(request.user):
+        raise PermissionDenied
+    email = request.GET.get("email", "").strip()
+    try:
+        validate_email(email)
+    except ValidationError:
+        return JsonResponse({"organization": None, "role": None})
+    org = org_ops.for_new_person(email)
+    role = None
+    if request.user.is_admin:
+        staff = org is not None and (
+            org.is_own or org_ops.is_external_organization(org)
+        )
+        role = "staff" if staff else "client"
+    if org is not None and not org_ops.can_touch(request.user, org):
+        org = None
+    return JsonResponse({
+        "organization": {"id": org.pk, "name": org.name} if org else None,
+        "role": role,
+    })
 
 
 def member_invite(request, pk):
