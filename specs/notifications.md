@@ -264,7 +264,10 @@ large).
   in no digest, and the cancelled ones after midnight are deleted with
   the others. A completion already mailed is
   followed by a mail of the reopening, so the inbox ends up right. The
-  lantern does the same with the unread ones (`lantern.md`).
+  lantern does the same with the unread ones (`lantern.md`), also when
+  one of them was mailed already: someone may get both mails while the
+  lantern shows neither, by design (the inbox ends up right, the lantern
+  shows what's left to see).
 - **Checked again when sending:** inactive people and people who can't
   see the item any more get nothing (their notifications are deleted),
   and read ones are left out (`lantern.md`); the level decided who was

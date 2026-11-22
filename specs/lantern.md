@@ -66,7 +66,9 @@ the views in `biwak/activity/views.py` (`/lantern/`, `/lantern/menu/`,
   only the last shows (`mails._deliverable()`, `notifications.md`).
   Read ones show as they were. The item's other unread completing and
   reopening count too (`mails.done_neighbours()`, decided 2026-11-22), so
-  the page's edges and the menu's limit don't split a pair.
+  the page's edges and the menu's limit don't split a pair. They cancel
+  out also when one was mailed already: someone may have got both mails
+  while the lantern shows neither, by design (`notifications.md`).
 - **The page** `/lantern/`: the same, paginated like the feed, filters
   "unread" and "mentions only".
 - **Bookmarking** (decided 2026-11-21; "Bookmark", not "Pin", which

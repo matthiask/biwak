@@ -30,7 +30,9 @@ below is what prevents that.
   reading). Confirming with a passkey needs the PIN or fingerprint, as
   signing in does (decided 2026-11-22, `MFA_WEBAUTHN_USER_VERIFICATION =
   "required"`; allauth's default "preferred" let a key only proving it's
-  present do).
+  present do). Every key was already registered with user verification
+  (allauth requires it for passkeys, and every key added is one), which
+  is why requiring it for confirming breaks no key people have.
 - **A mail on every change** (decided 2026-11-21 after a review): adding
   or removing a passkey and turning the app on or off mail the person
   what changed and when, with "if it wasn't you, tell an admin", so a
