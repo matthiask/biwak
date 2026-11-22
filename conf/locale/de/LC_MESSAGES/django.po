@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:30+0100\n"
+"POT-Creation-Date: 2026-11-22 17:35+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -337,7 +337,7 @@ msgstr "eingeladen am"
 
 #: biwak/accounts/models.py
 msgid "left on"
-msgstr "gegangen am"
+msgstr "nicht mehr dabei seit"
 
 #: biwak/accounts/models.py biwak/activity/models.py
 msgid "notifications"
@@ -6831,7 +6831,7 @@ msgstr "Eingeladen"
 
 #: biwak/templates/organizations/people.html
 msgid "People who left"
-msgstr "Gegangene Personen"
+msgstr "Ehemalige"
 
 #: biwak/templates/organizations/people.html
 msgid "Nobody is waiting to sign in."
@@ -6842,13 +6842,14 @@ msgid "Nobody is inactive."
 msgstr "Niemand ist inaktiv."
 
 #: biwak/templates/organizations/people.html
+#: biwak/templates/organizations/person.html
 #, python-format
 msgid "left on %(date)s"
-msgstr "gegangen am %(date)s"
+msgstr "nicht mehr dabei seit %(date)s"
 
 #: biwak/templates/organizations/people.html
 msgid "Nobody has left."
-msgstr "Niemand ist gegangen."
+msgstr "Keine Ehemaligen."
 
 #: biwak/templates/organizations/person.html
 msgid "Remove image"
