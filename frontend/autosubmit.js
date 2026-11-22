@@ -63,9 +63,11 @@ document.addEventListener("submit", (event) => {
   const form = event.target
   if (!form.matches?.("[data-autosubmit]")) return
   remember(form)
-  if (form.method !== "get") return
+  // The attributes, not form.method and form.action: a field named
+  // "action" (the activity's filter) hides the property
+  if ((form.getAttribute("method") || "get").toLowerCase() !== "get") return
   event.preventDefault()
-  const url = new URL(form.action || location.href)
+  const url = new URL(form.getAttribute("action") || "", location.href)
   url.search = query(form, event.submitter)
   location.assign(url)
 })

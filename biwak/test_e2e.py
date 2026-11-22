@@ -2976,6 +2976,15 @@ class FiltersTest(E2ETestCase):
         expect(page.locator("#id_assignee")).to_have_value("nobody")
         self.assertEqual(self.errors, [])
 
+    def test_a_form_with_a_field_named_action_applies_itself(self):
+        """The activity's filter has a field named "action", which hides the
+        form's own action from scripts: the filter still applies"""
+        page = self.page
+        self.goto(page, "/feed/")
+        page.locator("#id_action").select_option(index=1)
+        page.wait_for_url("**/feed/?action=*")
+        self.assertEqual(self.errors, [])
+
     def test_a_checkbox_applies_the_lantern_filter(self):
         page = self.page
         self.goto(page, "/lantern/")
