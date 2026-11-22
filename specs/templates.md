@@ -58,8 +58,10 @@ of what's needed:
 - **Assignees and dates** are copied as they are (real templates have
   none; a template that has them means them); assignees who aren't
   members of the new project are left out, not added.
-- **Client visibility** is copied: a template may prepare a welcome
-  message for the client. Question below.
+- **Client visibility** is copied (decided 2026-11-22): a template
+  prepares what the client sees from day one, e.g. a welcome message.
+  The new project form says what clients will see ("Visible to
+  clients: Welcome, Questions for you").
 - **One event** "created Website from the template Web project" in the
   new project; the copied items are created silently (like
   `copy_list()`'s to-dos), and the creator is subscribed to what they
@@ -83,18 +85,13 @@ of what's needed:
 
 The importer brings Basecamp's project templates and its to-do list
 library over as templates (`import-basecamp.md`): the API serves both
-like projects. Question below.
+like projects (decided 2026-11-22), once per import, so nobody
+rebuilds them by hand.
 
-## Questions
+## Not planned
 
-1. **Client visibility in templates:** copy it (a template prepares
-   what the client sees from day one), or make everything copied
-   internal and let staff show it? Copying it is proposed; the new
-   project form would say what clients will see.
-2. **Importing the templates:** proposed yes, once per import, so
-   nobody rebuilds them by hand.
-3. **Making a template from a project** ("Save as template"): not
-   proposed; templates are kept separately and change slowly.
+- **"Save as template"** from a running project (decided 2026-11-22):
+  templates are kept separately and change slowly.
 
 ## Done when
 
