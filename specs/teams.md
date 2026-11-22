@@ -34,16 +34,20 @@ Depends on: `people.md`, `organizations.md` (the People page),
 - Deactivating someone keeps them in their teams (they're skipped when
   expanding, below); deleting a person's account removes them.
 - `Team(name)`, `TeamMember(team, user)`, through operations, audited
-  (`audit_tables()`). Names up to 100 characters. Changing teams records
-  no event: the audit log has it, nobody is told.
-- **Pages:** "Teams" at the end of the People page ("Everybody" only),
+  (`audit_tables()`). Names up to 100 characters (confirmed by the user
+  2026-11-22). Changing teams records no event: the audit log has it,
+  nobody is told.
+- **Pages** (confirmed by the user 2026-11-22): "Teams" at the end of
+  the People page ("Everybody" only),
   each team with its members; "New team" for own staff (also in the
   palette). A team's page (`/teams/<id>/`, for staff) lists its members;
   own staff get Edit (name and the people picker offering everybody,
   inactive people too) and Delete (a question), also in the palette.
-  Partners see teams with only the members they may know
+- **Partners see teams with only the members they may know**
   (`known_people()`, as on the People page), everywhere: pages, picker,
-  `@` list, API.
+  `@` list, API; the counts ("3 of 5") count only those, so a team
+  doesn't tell a partner about clients of other projects (confirmed by
+  the user 2026-11-22).
 
 ## Using a team
 
@@ -63,7 +67,10 @@ marked as a team with its number of members:
   picking ("3 of 5: 2 can't see internal items"; the same reasons as
   greyed-out people). A team never adds anyone to a project.
 - Members already picked or mentioned aren't added twice.
-- **How it shows:** teams come first in both lists, with a people mark,
+- **How it shows** (confirmed by the user 2026-11-22, except the order):
+  **teams come last** in both lists, after the people (decided by the
+  user 2026-11-22: "Teams are a special case"; it was first), and don't
+  count towards the `@` list's 10 people. A people mark,
   "team · 5 members" or "team · 3 of 5: 1 not a member of this project,
   1 inactive" (the reasons: "can't see internal items", "not a member of
   this project", "inactive"; across projects in "Assign…": "can't be

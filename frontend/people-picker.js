@@ -16,7 +16,7 @@
 // Teams (specs/teams.md, staff only): data-teams lists them with their
 // members, each with the reason the server knows for leaving them out; the
 // options disabled now (clients while a post is internal) are left out too.
-// Matching teams come first, saying how many of their members they'd add
+// Matching teams come last, saying how many of their members they'd add
 // and why the others are left out; picking one picks its members, as if
 // picked one by one. A team with nobody left to add isn't offered.
 
@@ -158,23 +158,22 @@ function attach(select) {
       .replace("%(reasons)s", reasons)
   }
 
-  // Teams first ({team, state}), then the people (options)
+  // The people (options), then the teams ({team, state}; decided
+  // 2026-11-22: teams are a special case)
   const matches = () => {
     const query = input.value.trim().toLowerCase()
-    const found = []
+    const found = options.filter(
+      (option) =>
+        !option.selected &&
+        !option.disabled &&
+        option.textContent.toLowerCase().includes(query),
+    )
     for (const team of teams) {
       if (!team.name.toLowerCase().includes(query)) continue
       const state = teamState(team)
       if (state.add.length) found.push({ team, state })
     }
-    return found.concat(
-      options.filter(
-        (option) =>
-          !option.selected &&
-          !option.disabled &&
-          option.textContent.toLowerCase().includes(query),
-      ),
-    )
+    return found
   }
 
   const renderList = () => {

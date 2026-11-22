@@ -3131,6 +3131,10 @@ class TeamsTest(E2ETestCase):
         expect(add.locator("[name=title]")).to_be_focused()
         picker = add.locator(".wb-picker-input")
         picker.click()
+        # Teams come after the people (decided 2026-11-22)
+        options = add.locator(".wb-picker-list li")
+        expect(options.last).to_have_attribute("data-team", re.compile(r"\d"))
+        expect(options.first).not_to_have_attribute("data-team", re.compile(".*"))
         picker.press_sequentially("desi")
         team = add.locator(".wb-picker-list li[data-team]")
         expect(team).to_contain_text("Design team")
@@ -3139,7 +3143,7 @@ class TeamsTest(E2ETestCase):
             "team · 2 of 4: 1 not a member of this project, 1 can't see internal items"
         )
         expect(team.locator(".wb-team-mark")).to_have_count(1)
-        # First, so Enter picks it
+        # The only match, so Enter picks it
         picker.press("Enter")
         pills = add.locator(".wb-pill")
         expect(pills).to_have_text([re.compile("Ada"), re.compile("Dan")])

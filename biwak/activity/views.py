@@ -185,7 +185,7 @@ def mentionable(request, pk, kind=None):
 
 
 def _with_teams(request, project, visible, people):
-    """The teams before the people, for staff (specs/teams.md): choosing
+    """The teams after the people, for staff (specs/teams.md): choosing
     one mentions its members who can see it; only on the web, the API's
     list has people only"""
     teams = mention_teams(
@@ -195,7 +195,7 @@ def _with_teams(request, project, visible, people):
         for_user=request.user,
         names=display_names(request.user),
     )
-    return JsonResponse(teams + people, safe=False)
+    return JsonResponse(people + teams, safe=False)
 
 
 def mentionable_list(request, pk):

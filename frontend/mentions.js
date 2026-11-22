@@ -8,7 +8,7 @@
 // "[@Ada](person:ID)", Escape closes. Without JavaScript the fields stay
 // plain fields. Adapted from Governance's mentions.js.
 //
-// Teams (specs/teams.md, staff only) come first, saying how many of their
+// Teams (specs/teams.md, staff only) come last, saying how many of their
 // members can see the item and why the others are left out; choosing one
 // inserts a mention per member who can, but not of those mentioned in the
 // field already.

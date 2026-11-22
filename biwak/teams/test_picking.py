@@ -65,9 +65,7 @@ class MentionsTest(Base):
     def test_staff_get_the_members_who_can_see_it(self):
         url = reverse("mentionable", args=[self.todo.pk]) + "?q=design"
         entries = self.mentionable(self.ada, url)
-        # Teams first
         [team] = [entry for entry in entries if entry.get("team")]
-        self.assertTrue(entries[0].get("team"))
         self.assertEqual(team["name"], "Design team")
         self.assertTrue(team["available"])
         # Bob sees the all-access project's internal items, Cleo doesn't,
@@ -80,6 +78,19 @@ class MentionsTest(Base):
             team["detail"],
             "2 of 5: 1 can't see internal items, 1 not a member of this project,"
             " 1 inactive",
+        )
+
+    def test_teams_come_after_the_people(self):
+        """Decided 2026-11-22: teams are a special case; not counted in
+        the 10 people"""
+        for index in range(12):
+            person(f"Eve{index}")
+        entries = self.mentionable(
+            self.ada, reverse("mentionable", args=[self.todo.pk])
+        )
+        self.assertEqual(len(entries), 11)
+        self.assertEqual(
+            [bool(entry.get("team")) for entry in entries], [False] * 10 + [True]
         )
 
     def test_on_a_visible_item(self):
