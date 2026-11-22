@@ -560,7 +560,7 @@ def people(ctx, inactive, as_json):
 @json_option
 def people_activate(ids, mail, as_json):
     """Activate the people with these IDs, all or nothing: staff activate
-    clients, admins also staff and partners"""
+    clients, admins also staff and externals"""
     data = request("POST", "people/activate/", json={"ids": list(ids), "mail": mail})
     if as_json:
         return echo_json(data)
@@ -592,7 +592,7 @@ def people_reset_sign_in(person_id, as_json):
     """Remove the person's authenticator app, passkeys and API tokens, sign
     them out everywhere and mail them what was removed; for a lost device or
     when someone else may have had access. Staff reset clients, admins also
-    staff and partners, not yourself (change your own in the settings)"""
+    staff and externals, not yourself (change your own in the settings)"""
     data = request("POST", f"people/{person_id}/reset-sign-in/")
     if as_json:
         return echo_json(data)
@@ -1454,7 +1454,7 @@ def subscribers(item, as_json):
 def subscribe(item, people, notify, note, as_json):
     """Subscribe yourself or other people to ITEM: subscribed, you hear
     about everything on it. Others: people who can see it (clients and
-    partners: whom they may know). Quietly, or with --notify: "Ada wants
+    externals: whom they may know). Quietly, or with --notify: "Ada wants
     you to see this". Marked [clients] if clients can see it."""
     if not people.strip():
         data = request("PUT", f"items/{item}/subscription/")
