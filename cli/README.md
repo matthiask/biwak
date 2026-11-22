@@ -38,6 +38,8 @@ biwak invitations                           # not signed in yet (staff); resend 
 biwak people --inactive                      # who can't sign in; activate ID… [--mail], deactivate ID…, reset-sign-in ID
 biwak orgs                                  # organizations (staff); show, add, edit, merge, delete, move
 biwak orgs merge 12 7                       # people and domains of 12 into 7
+biwak teams                                 # teams with their members (staff); show, add, edit, delete
+biwak teams add "Design team" --members 3,4  # own staff; on the web picking a team picks its members
 biwak member remove PROJECT PERSON          # staff anybody, everybody themselves
 biwak messages PROJECT
 biwak message post PROJECT "Kick-off" "We start Monday" --notify nobody   # default: everybody
