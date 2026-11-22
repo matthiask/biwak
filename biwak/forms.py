@@ -1,3 +1,5 @@
+import json
+
 from django import forms
 from django.forms.renderers import TemplatesSetting
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -103,6 +105,23 @@ class PeopleSelect(forms.SelectMultiple):
 
     def __init__(self, attrs=None):
         super().__init__({**people_picker_attrs(self.placeholder), **(attrs or {})})
+        # A function returning the teams to offer (``PeopleField.offer_teams()``)
+        self.teams = None
+
+    def team_attrs(self):
+        """``data-teams`` and its texts, for staff where teams are offered
+        (specs/teams.md); nothing otherwise"""
+        teams = self.teams() if self.teams is not None else None
+        if not teams:
+            return {}
+        from biwak.teams.picking import picker_texts
+
+        return {"data-teams": json.dumps(teams), **picker_texts()}
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["attrs"].update(self.team_attrs())
+        return context
 
     def create_option(self, name, value, *args, **kwargs):
         option = super().create_option(name, value, *args, **kwargs)
@@ -127,6 +146,32 @@ class PeopleField(forms.ModelMultipleChoiceField):
     def __init__(self, queryset, **kwargs):
         kwargs.setdefault("required", False)
         super().__init__(queryset, **kwargs)
+
+    def offer_teams(self, *, project, visible, already=()):
+        """Offers teams in the picker (specs/teams.md): picking one adds
+        the members among the options (not those who aren't members yet:
+        a team never adds anyone to a project). ``project`` and ``visible``
+        say why the others are left out; ``already`` (IDs, or a function
+        returning them when rendering) are in already, like the subscribers."""
+
+        def teams():
+            from biwak.activity.mentions import reader
+            from biwak.teams.operations import can_see
+            from biwak.teams.picking import picker_teams
+
+            viewer = reader()
+            if not can_see(viewer):
+                return []
+            queryset = self.queryset
+            if "is_member" in queryset.query.annotations:
+                offered = dict(queryset.values_list("pk", "is_member"))
+            else:
+                offered = dict.fromkeys(queryset.values_list("pk", flat=True))
+            return picker_teams(
+                viewer, offered, project=project, visible=visible, already=already
+            )
+
+        self.widget.teams = teams
 
     def label_from_instance(self, obj):
         # Who is looking: the request's user (biwak.activity.mentions)

@@ -115,6 +115,7 @@ manage none (`access.md`).
   addresses as on a project's people page; clients only those of their
   own organization.
 - Invitations and the "Invited" and "Inactive" filters: `activation.md`.
+- Teams, at the end for staff: `teams.md`.
 
 ## Projects and organizations
 

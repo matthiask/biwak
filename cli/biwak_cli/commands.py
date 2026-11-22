@@ -819,6 +819,116 @@ def orgs_move(person, org, as_json):
     return None
 
 
+@cli.group(invoke_without_command=True)
+@json_option
+@click.pass_context
+def teams(ctx, as_json):
+    """Teams, named sets of people (staff; own staff change them): without a
+    command, all of them. Picking a team on the web picks its members; through
+    the API send the people (biwak teams show)."""
+    if ctx.invoked_subcommand is not None:
+        return None
+    data = request("GET", "teams/")
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Team", "Members")
+    for team in data:
+        t.add_row(
+            str(team["id"]),
+            team["name"],
+            ", ".join(f"{p['name']} ({p['id']})" for p in team["members"]),
+        )
+    console.print(t)
+    return None
+
+
+def show_team(data):
+    click.echo(f"{data['name']} ({data['id']})")
+    for person in data["members"]:
+        kind = "client" if person["is_client"] else "staff"
+        inactive = ", inactive" if not person["is_active"] else ""
+        click.echo(f"  {person['name']} ({person['id']}, {kind}{inactive})")
+
+
+def member_ids(value):
+    """The IDs of ``--members`` as a list"""
+    try:
+        return [int(part) for part in value.split(",") if part.strip()]
+    except ValueError:
+        terminate("--members is people's IDs separated by commas.")
+
+
+members_option = click.option(
+    "--members",
+    default=None,
+    metavar="IDS",
+    help="People's IDs separated by commas (replacing the members).",
+)
+
+
+@teams.command("show")
+@click.argument("team", type=int)
+@json_option
+def teams_show(team, as_json):
+    """The team with ID TEAM and its members"""
+    data = request("GET", f"teams/{team}/")
+    if as_json:
+        return echo_json(data)
+    show_team(data)
+    return None
+
+
+@teams.command("add")
+@click.argument("name")
+@members_option
+@json_option
+def teams_add(name, members, as_json):
+    """Create a team (own staff)"""
+    data = request(
+        "POST",
+        "teams/",
+        json={"name": name, "members": member_ids(members or "")},
+    )
+    if as_json:
+        return echo_json(data)
+    click.echo("Created: ", nl=False)
+    show_team(data)
+    return None
+
+
+@teams.command("edit")
+@click.argument("team", type=int)
+@click.option("--name", help="The new name.")
+@members_option
+@json_option
+def teams_edit(team, name, members, as_json):
+    """Rename the team with ID TEAM or replace its members (own staff);
+    what was picked with it before stays"""
+    payload = {}
+    if name is not None:
+        payload["name"] = name
+    if members is not None:
+        payload["members"] = member_ids(members)
+    data = request("PATCH", f"teams/{team}/", json=payload)
+    if as_json:
+        return echo_json(data)
+    show_team(data)
+    return None
+
+
+@teams.command("delete")
+@click.argument("team", type=int)
+@json_option
+def teams_delete(team, as_json):
+    """Delete the team with ID TEAM (own staff); assignees, subscribers and
+    mentions picked with it stay"""
+    data = request("DELETE", f"teams/{team}/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Deleted {data['name']} ({data['id']}).")
+    return None
+
+
 @member.command("remove")
 @click.argument("project", type=int)
 @click.argument("person", type=int)

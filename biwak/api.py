@@ -20,6 +20,7 @@ from biwak.projects.api import router as projects_router
 from biwak.public_links.api import router as public_links_router
 from biwak.reactions.api import router as reactions_router
 from biwak.search.api import router as search_router
+from biwak.teams.api import router as teams_router
 
 
 api = NinjaAPI(
@@ -54,6 +55,7 @@ api.add_exception_handler(BadRequest, _shared_check(400))
 api.add_router("/", accounts_router)
 api.add_router("/", projects_router)
 api.add_router("/", organizations_router)
+api.add_router("/", teams_router)
 api.add_router("/", items_router)
 api.add_router("/", files_router)
 api.add_router("/", activity_router)

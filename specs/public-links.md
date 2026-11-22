@@ -152,8 +152,8 @@ Where it lives and the choices made while building (2026-11-22):
   same whether signed in or not, no scripts of the app's own beyond the
   bundle) shows the title and mentions as written (nobody looked up),
   the creator's name and the date of the last change, the text with disabled
-  checkboxes (a doc's without its title line), the file's preview and
-  download for files. `noindex` and `no-referrer` as meta tags and
+  checkboxes (a doc's without its title line), the file's preview,
+  name, size and download for files (confirmed 2026-11-22). `noindex` and `no-referrer` as meta tags and
   headers (`X-Robots-Tag`, `Referrer-Policy`), `no-store`.
   `PublicLink.objects.open()` checks expiry, the item's status, drafts
   and the project's archive on every request; the downloads

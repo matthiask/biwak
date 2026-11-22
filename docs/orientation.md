@@ -151,6 +151,22 @@ partners; you can't deactivate yourself or the last active admin.
 `biwak people activate` and `deactivate` do the same for several people at
 once, all or nothing.
 
+**Teams:** a team is a named set of people ("Design team") for picking
+several at once. Staff find teams among the people wherever they pick
+several: assignees, subscribers, whom to tell, and the list that opens
+when typing `@`. Picking a team picks its members at once, as if you had
+picked each of them: a pill per member, a mention per member. Only the
+members who can be there are added: active, able to see the item and in
+the project (a team never adds anyone to a project), and not those
+picked or mentioned already; the entry says beforehand how many are
+left out and why ("3 of 5: 2 can't see internal items"). Only the people
+are kept: changing or deleting the team later doesn't change who was
+assigned, subscribed or mentioned with it. Your own staff create, change
+and delete teams under "Teams" on the People page; members can be
+anyone, staff, partners and clients. Clients never see teams. Teams are
+a shortcut of the pages: through the CLI, the API and replies by mail
+a team's name isn't expanded.
+
 ## Your menu
 
 Your name in the bar opens: My activity, Settings (your name, notifications, the

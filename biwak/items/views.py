@@ -138,6 +138,10 @@ class TodoFieldsForm(RepeatForm):
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["assignees"].queryset = ops.assignable_people(item, user)
+        # Teams add their members (specs/teams.md)
+        self.fields["assignees"].offer_teams(
+            project=item.project, visible=item.is_client_visible
+        )
 
 
 class TodoForm(TodoFieldsForm):
@@ -263,6 +267,7 @@ def todolist(request, pk):
             "all_done": bool(completed_count) and not any(by_group.values()),
             "form": form,
             "people": form.fields["assignees"].queryset,
+            "people_teams": form.fields["assignees"].widget.team_attrs(),
             "view": view,
             "can_switch": item.has_switch and not request.user.is_client,
             "can_change": ops.can_change(request.user, item),

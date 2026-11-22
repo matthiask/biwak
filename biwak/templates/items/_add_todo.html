@@ -47,7 +47,7 @@
           multiple
           class="form-select form-select-sm"
           aria-label="{% translate 'assignees' %}"
-          {% assignee_attrs %}
+          {% assignee_attrs people_teams %}
         >
           {% for person in people %}
             <option

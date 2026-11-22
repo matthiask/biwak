@@ -317,6 +317,24 @@ def on_people(user, name):
     return [modal(_("Invite people"), reverse("invite_people"))]
 
 
+def on_teams(user, name, team):
+    """The People page and a team's page (specs/teams.md): own staff add,
+    edit and delete teams, as the buttons"""
+    from biwak.teams import operations as team_ops
+    from biwak.teams.models import Team
+
+    if name not in {"people", "team"} or not team_ops.can_manage(user):
+        return []
+    if name == "people":
+        return [modal(_("New team"), reverse("team_create"))]
+    if not isinstance(team, Team):
+        return []
+    return [
+        modal(_("Edit"), reverse("team_edit", args=[team.pk]), "e"),
+        modal(_("Delete"), reverse("team_delete", args=[team.pk])),
+    ]
+
+
 def on_person(user, name, person):
     """A person's page: Activate… or Deactivate… for those who may
     (specs/activation.md), Edit the name… (specs/people.md), Reset sign-in… for somebody with an
@@ -374,6 +392,7 @@ def for_page(request, context):
     page += on_organizations(user, name, context.get("organization"))
     page += on_people(user, name)
     page += on_person(user, name, context.get("person"))
+    page += on_teams(user, name, context.get("team"))
     return [{**a, "group": "page"} for a in page] + [
         {**a, "group": "everywhere"} for a in everywhere(user)
     ]

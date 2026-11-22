@@ -129,6 +129,11 @@ class TellForm(SubscribersForm):
         field.queryset = field.queryset.filter(
             memberships__project=item.project
         ).exclude(pk__in=[u.pk for u in self.told])
+        field.offer_teams(
+            project=item.project,
+            visible=item.is_client_visible,
+            already={user.pk, *(u.pk for u in self.told)},
+        )
 
 
 @never_cache

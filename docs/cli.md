@@ -48,6 +48,7 @@ biwak people activate 12 13 --mail
 biwak people deactivate 14
 biwak projects --all --inactive-todos
 biwak people reset-sign-in 12
+biwak teams show 3
 ```
 
 The numbers are the IDs in the pages' addresses. Every command takes
@@ -55,6 +56,11 @@ The numbers are the IDs in the pages' addresses. Every command takes
 before you write anything a client could read. Writes through the CLI
 and the API do what the pages do: they record the same events and send
 the same notifications.
+
+Teams are a shortcut of the web pages: a team's name in a text or
+among the assignees sent through the CLI, the API or a reply by mail
+isn't expanded. `biwak teams show TEAM` lists its members; send them
+instead.
 
 `biwak --help` lists the commands. The CLI's
 [README](https://github.com/matthiask/biwak/tree/main/cli) has more

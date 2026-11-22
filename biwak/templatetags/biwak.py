@@ -638,10 +638,12 @@ def rule_widget(bound_field, uid, *, posted=False):
 
 
 @register.simple_tag
-def assignee_attrs():
+def assignee_attrs(teams=None):
     """The attributes of the inline form's select of people
-    (``frontend/people-picker.js``)"""
-    return format_html_join(" ", '{}="{}"', forms.people_picker_attrs().items())
+    (``frontend/people-picker.js``), with the teams' (``teams``,
+    ``PeopleSelect.team_attrs()``, specs/teams.md)"""
+    attrs = {**forms.people_picker_attrs(), **(teams or {})}
+    return format_html_join(" ", '{}="{}"', attrs.items())
 
 
 @register.simple_tag

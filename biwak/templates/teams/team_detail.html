@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load biwak i18n %}
+{% block title %}{{ team }} – Biwak{% endblock %}
+
+{% block content %}
+  <nav class="small mb-2 wb-breadcrumbs" aria-label="{% translate 'Breadcrumbs' %}">
+    <a href="{% url 'people' %}#teams">{% translate "People" %}</a>
+  </nav>
+  <div class="wb-page-header">
+    <h1 class="wb-title">{{ team }} <span class="badge wb-tone-neutral">{% translate "team" %}</span></h1>
+    {% if can_manage %}
+      <div class="d-flex gap-2">
+        <a
+          href="{% url 'team_edit' team.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Edit" %}</a>
+        <a
+          href="{% url 'team_delete' team.pk %}"
+          data-modal
+          class="btn btn-sm btn-quiet"
+        >{% translate "Delete" %}</a>
+      </div>
+    {% endif %}
+  </div>
+  <p class="text-body-secondary">
+    {% translate "Picking the team when assigning, adding subscribers or mentioning picks its members who can be there. Changing the team later doesn't change earlier picks. Clients never see teams." %}
+  </p>
+  <h2 class="h5">{% translate "Members" %}</h2>
+  <div class="list-group">
+    {% for user in members %}
+      <div
+        class="list-group-item d-flex align-items-center gap-2{% if not user.is_active %} text-body-secondary{% endif %}"
+        data-kb-row
+      >
+        {% avatar user "md" %}
+        <div>
+          <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
+          {% if user.is_client %}<span class="badge wb-client-badge">{% translate "client" %}</span>{% endif %}
+          {% if not user.is_active %}<span class="badge wb-tone-neutral">{% translate "inactive" %}</span>{% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="list-group-item text-body-secondary">{% translate "Nobody yet." %}</div>
+    {% endfor %}
+  </div>
+{% endblock content %}
