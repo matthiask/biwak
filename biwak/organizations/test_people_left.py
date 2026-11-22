@@ -63,6 +63,12 @@ class OperationsTest(Base):
         self.assertEqual(self.left_at(self.lena), LEFT_ON)
         self.assertIsNone(self.left_at(self.chris))
 
+    def test_clear_left_only_inactive_people_who_left(self):
+        cleared = activation.clear_left([self.wade, self.lena, self.chris])
+        self.assertEqual(cleared, [self.lena])
+        self.assertIsNone(self.left_at(self.lena))
+        self.assertFalse(self.lena.is_active)
+
 
 class PageTest(Base):
     def get(self, viewer, query=""):
@@ -122,12 +128,25 @@ class PageTest(Base):
         self.assertIsNone(self.lena.left_at)
         self.assertContains(self.get(self.ada), "Lena Example")
 
+    def test_their_page_says_when_to_staff(self):
+        """Decided 2026-11-22: "left on <date>" for own staff, not clients"""
+        for viewer in [self.root, self.ada]:
+            with self.subTest(viewer=viewer):
+                self.client.force_login(viewer)
+                response = self.client.get(f"/people/{self.lena.pk}/")
+                self.assertContains(response, f"left on {date_format(LEFT_ON)}")
+                waiting = self.client.get(f"/people/{self.wade.pk}/")
+                self.assertNotContains(waiting, "left on")
+                self.assertContains(waiting, "inactive")
+
     def test_clients_and_externals_see_their_pages_as_before(self):
         for viewer in [self.pia, self.chris]:
             with self.subTest(viewer=viewer):
                 self.client.force_login(viewer)
                 response = self.client.get(f"/people/{self.lena.pk}/")
                 self.assertContains(response, "Lena Example")
+                self.assertContains(response, "inactive")
+                self.assertNotContains(response, "left on")
 
 
 class APITest(Base):

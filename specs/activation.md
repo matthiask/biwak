@@ -139,7 +139,7 @@ couldn't hide one without the other.
   to-dos, messages and comments stay, shown as inactive.
 - API: `left_at` on people, the people list's `left` filter; CLI
   `biwak people --left`.
-- **Built so** (2026-11-22): the importer marks only people inactive in
+- **Built so** (2026-11-22, confirmed by the user the same day): the importer marks only people inactive in
   Biwak without `left_at` (active people and the day already set stay;
   a dry run reports who would be marked, people it would create too);
   "Inactive" (`?inactive=1`, the API's `inactive`, `biwak people
@@ -149,6 +149,15 @@ couldn't hide one without the other.
   on every person in the API. The filter isn't remembered: the page's
   other filters aren't either (`data-remember` is for to-dos, the feed
   and the lantern).
+- **Back in Basecamp** (decided 2026-11-22 by the user): people with
+  `left_at` who are among the account's people again get it cleared by
+  the importer (`activation.clear_left()`, inactive people only), and
+  the report lists them ("Back in Basecamp: …", a dry run too without
+  writing). They wait to be activated then. This includes people
+  deactivated in Biwak whom Basecamp still has.
+- **Their own page** says "left on 3 Mar 2025" (instead of "inactive")
+  to own staff, not to clients or externals (decided 2026-11-22 by the
+  user; `decorate()`'s `show_left`, the same check as the filter).
 
 ## Deactivating
 

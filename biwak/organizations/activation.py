@@ -146,6 +146,24 @@ def mark_left(users, *, on):
     return marked
 
 
+@transaction.atomic
+def clear_left(users):
+    """Clears ``left_at`` of those of these people who are inactive and
+    left: the importer, for people back among Basecamp's account people
+    (decided 2026-11-22). They wait to be activated then. Returns the
+    people cleared."""
+    cleared = list(
+        User.objects
+        .select_for_update()
+        .filter(pk__in=[u.pk for u in users], is_active=False, left_at__isnull=False)
+        .order_by("pk")
+    )
+    for user in cleared:
+        user.left_at = None
+        user.save(update_fields=["left_at"])
+    return cleared
+
+
 class Left(NamedTuple):
     """What somebody leaving leaves behind, as far as the viewer may know
     (specs/handover.md)"""

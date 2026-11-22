@@ -1100,6 +1100,9 @@ class PeopleTest(ImportCase):
         self.assertEqual(User.objects.filter(is_admin=True).count(), 1)
 
 
+LEFT_ON = dt.date(2025, 3, 3)
+
+
 class PeopleWhoLeftTest(ImportCase):
     """Who turns up in a project but isn't among the account's people
     anymore has left Basecamp (specs/activation.md, "People who left")"""
@@ -1163,6 +1166,20 @@ class PeopleWhoLeftTest(ImportCase):
         report = self.run_import()
         self.assertEqual(self.left_at("bob@example.org"), dt.date(2025, 3, 3))
         self.assertEqual(report.left, [])
+
+    def test_people_back_in_the_account_are_cleared(self):
+        """Decided 2026-11-22: they wait to be activated again"""
+        self.run_import()
+        User.objects.filter(email="bob@example.org").update(left_at=LEFT_ON)
+        report = self.run_import(dry_run=True)
+        self.assertEqual(report.back, ["Bob Example <bob@example.org>"])
+        self.assertIn("Back in Basecamp:\n  Bob Example", report.as_text())
+        self.assertEqual(self.left_at("bob@example.org"), LEFT_ON)
+        report = self.run_import()
+        self.assertEqual(report.back, ["Bob Example <bob@example.org>"])
+        self.assertEqual(report.left, [])
+        self.assertIsNone(self.left_at("bob@example.org"))
+        self.assertEqual(self.run_import().back, [])
 
     def test_a_dry_run_reports_and_writes_nothing(self):
         self.leave(support.BOB)

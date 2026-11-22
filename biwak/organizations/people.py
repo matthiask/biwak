@@ -88,6 +88,8 @@ def decorate(user, viewer, shared):
     user.show_invitation = user.is_invited and project_ops.can_manage_members(viewer)
     # Resend and Withdraw: staff for clients, admins for everybody
     user.manage_invitation = project_ops.can_manage_invitation(viewer, user)
+    # "left on 3 Mar 2025" for own staff, not clients (decided 2026-11-22)
+    user.show_left = user.left_at is not None and project_ops.can_manage_members(viewer)
     # Activating and deactivating (specs/activation.md)
     user.can_activate = not user.is_active and activation.can_change(viewer, user)
     user.can_deactivate = user.is_active and activation.can_deactivate(viewer, user)

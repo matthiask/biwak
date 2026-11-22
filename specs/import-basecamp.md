@@ -166,7 +166,9 @@ project. Waiting for Basecamp's account export to confirm the plan.
   later runs skip unchanged recordings; inactive people who turn up in a
   project but aren't among them get `left_at` (the run's date). The
   report lists them ("People who left Basecamp:"), a dry run too
-  without writing.
+  without writing. People with `left_at` who are among the account's
+  people again get it cleared ("Back in Basecamp:", decided 2026-11-22
+  by the user).
 - **Profile images** (decided 2026-11-21): for people without an image
   in Biwak, `avatar_url` from `people/<id>.json` (`people.json` has
   null), processed like an upload, never overwriting one. Basecamp's

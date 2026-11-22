@@ -205,8 +205,9 @@ once, all or nothing.
 
 **People who left** (deactivated, or no longer in Basecamp when
 imported) don't show on the People page; the filter "People who left"
-lists them with the day they left. "Inactive" lists only people waiting
-to be activated; somebody who left is activated again from their page.
+lists them with the day they left, as does their page. "Inactive" lists
+only people waiting to be activated; somebody who left is activated
+again from their page.
 
 **Teams:** a team is a named set of people ("Design team") for picking
 several at once. Staff find teams among the people wherever they pick
