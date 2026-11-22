@@ -6,8 +6,10 @@ that shows what the text will look like: we mostly write prose, not
 code, and the source view looks like code. One editor for every text
 field, live docs included. Asked by the user 2026-11-22.
 
-**Status:** open (decided with the user 2026-11-22: ProseMirror,
-Markdown stored, a source toggle, live docs' conversion in Python).
+**Status:** open, to be built (decided with the user 2026-11-22:
+ProseMirror, Markdown stored, a source toggle, live docs' conversion
+in Python; a spike confirmed it with the changes below, its code and
+report on the branch `spike-editor`, `spike/REPORT.md`).
 
 Depends on: `editor.md` (the toolbar, checklists, pasting),
 `collaboration.md` (live docs: Yjs, `pycrdt`, saving),
@@ -51,13 +53,28 @@ additions).
   (`[@Ada](person:12)`), horizontal rules. What the schema can't hold
   (raw HTML is off already) stays as text.
 - **Round trips must not change texts nobody edited.** Serializing
-  normalizes (`*` vs `_`, list markers, escaping, numbering), so
-  opening and saving an unchanged text would record an edit, a doc
-  version, events. Rule: the editor submits the original text when its
-  document is unchanged; a test suite round-trips a corpus of our own
-  texts (and imported ones) and lists what changes, and the serializer
-  is configured to our style (`-` bullets, `**`, `_`?) so the first
-  real edit changes little.
+  normalizes, so opening and saving an unchanged text would record an
+  edit, a doc version, events. Rule: the editor (and the source toggle
+  switching back) submits the original text when its document is
+  unchanged; the server keeps the saved text when new Markdown parses
+  to the same document, and the source of unchanged blocks
+  (`pymd/preserve.py` in the spike).
+- **Our serializer style** (decided 2026-11-22 after the spike): `-`
+  bullets, `*` emphasis (`_` can't emphasize inside a word), `**`
+  strong, a newline for a break (`\` for an empty line), bare URLs
+  stay bare, backtick fences, `---` rules; the source's style choices
+  kept in the document. With the spike's nine fixes on top of
+  prosemirror-markdown's defaults (adjacent lists alternate markers,
+  compact items with blank lines or numbered sublists, only
+  `[@…](person:N)` is a mention, escaping at line starts after a
+  break, double breaks, entities and autolinks typed as text, pipes in
+  cells, linkifying `www.` and bare domains like the server). Typed
+  bare URLs become links while typing, as the page shows them.
+- **One corpus, both sides, in CI:** the same texts (made up: our
+  shapes, the help, paste and importer outputs) and random documents,
+  run through the JavaScript and Python serializers: byte-identical
+  output, checklist positions equal to `checklists.boxes()`.
+  prosemirror-markdown pinned.
 - **Ticking** keeps working: a box is a task item in reading order,
   the same index the server counts (`biwak/checklists.py`).
 
@@ -68,6 +85,9 @@ additions).
   inline forms) becomes the editor; the textarea stays in the form,
   hidden, and gets the Markdown on every change, so forms post as now
   and work without JavaScript.
+- **Enter starts a paragraph** (decided 2026-11-22, like every rich
+  editor), Shift+Enter a line break (not in table cells: Markdown
+  can't hold one there), Ctrl+Enter submits.
 - **Input rules:** typing Markdown still works (`**bold**`, `# `, `- `,
   `1. `, `[ ] `, `> `, backticks), so nobody has to learn anything.
 - **The toolbar** (`editor.md`) becomes the editor's: the same buttons,
@@ -104,9 +124,20 @@ in Python:
   versions, mentions credited).
 - **Edits from elsewhere** (API, CLI, restoring a version, a tick):
   Markdown parsed with `markdown-it-py` (already ours) into the
-  fragment's structure. Today a three-way text merge keeps unsaved
-  typing; with a tree, proposed: replace only the top-level blocks
-  that differ (a block diff), so typing in other blocks stays.
+  fragment's structure and applied as a **deep diff** (decided
+  2026-11-22 after the spike, `pymd/blockdiff.py`): nodes of the same
+  kind paired in the changed ranges, changed attributes set (a tick is
+  one), lists and quotes recursed into, paragraphs' and headings'
+  characters and marks diffed, also those with mentions, images and
+  breaks. Replacing whole changed top-level blocks lost typing whenever
+  both sides touched the same block (a tick in a list while someone
+  types in it). Typing in a block the API deletes is lost (accepted).
+- **Inline nodes keep what y-prosemirror drops** (decided 2026-11-22):
+  it loses marks on inline nodes, so an image's link is an attribute of
+  the image node; a mention's bold is dropped (cosmetic).
+- **pycrdt counts UTF-8 bytes, Yjs UTF-16 units:** positions are
+  converted (the spike's trap, with markdown-it-py's horizontal rule
+  markup and `\w` meaning different things in JavaScript and Python).
 - **Existing live states** are rebuilt from `Doc.content` once (a
   migration; there are no users yet).
 - Cursors and names of others, offline typing (IndexedDB), undo per
@@ -118,15 +149,20 @@ in Python:
 ## Loading
 
 - The editor is its own chunk, loaded on pages with a text field
-  (most pages: comments). Proposed: fields upgrade on load (no jump on
-  the first click); the bundle grows by roughly ProseMirror's size, to
-  be measured, Yjs only on live docs as now.
+  (most pages: comments), parsing Markdown in the browser (decided
+  2026-11-22: simpler, works offline, cached), fields upgraded on load.
+  The spike measured about 123 KB gzipped (the main bundle is 34 KB),
+  the live doc chunk 161 KB (136 today); budget 125 KB, measured again
+  with the toolbar, mentions and attachments.
 
 ## Questions while building
 
 - Anything that should look or behave differently from the Markdown it
   stands for (how mentions, task lists or tables look while editing):
   ask, don't decide.
+- Not tested in the spike (no browser): IME and composition, phone
+  keyboards, undo per person, cursors, the editor with our CSS,
+  pasting into tables and lists. Try these early and report.
 
 ## Done when
 
@@ -142,6 +178,9 @@ in Python:
   and Escape behave as `editor.md` says (browser tests).
 - The source toggle switches both ways without losing anything the
   schema holds.
+- Edits from elsewhere keep concurrent typing in every scenario of the
+  spike's table (`spike/REPORT.md`) except a deleted block; linked
+  images keep their link in live docs.
 - Live docs: several editors type at once, saving writes the same
   Markdown as before, edits from the API, the CLI, restoring and ticks
   arrive in open editors without losing typing in other blocks;
