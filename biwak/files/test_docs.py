@@ -460,6 +460,16 @@ class TellTest(Fixture, TestCase):
         self.assertEqual(form["people"].value(), None)
         self.assertNotIn(self.bob, form.fields["people"].queryset)
 
+    def test_also_tell_offers_members_only(self):
+        """The same control as posting (``NotifyForm``): own staff who
+        aren't members of the project aren't offered"""
+        dan = person("Dan")
+        self.write()
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertNotIn(dan, response.context["form"].fields["people"].queryset)
+        self.client.post(self.tell, {"people": [dan.pk]})
+        self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
+
     def test_only_its_creator_is_asked(self):
         self.write()
         self.client.get(self.tell)  # saves
