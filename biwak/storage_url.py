@@ -7,6 +7,7 @@ disposition per request, ``biwak/files/attachments.py``), so its options are
 translated here. Options nobody translated are an error, not ignored.
 """
 
+from botocore.config import Config
 from django.core.exceptions import ImproperlyConfigured
 from speckenv_django import django_storage_url
 
@@ -50,5 +51,13 @@ def storage_from_url(url, *, base_dir):
             "querystring_auth": True,
             "file_overwrite": False,
             "signature_version": "s3v4",
+            # botocore 1.36 and later add a CRC32 checksum to every upload,
+            # sent chunked; S3-compatible stores which don't know it answer
+            # InvalidArgument (Nine's, 2026-11-22): checksums only where an
+            # operation requires one, as before
+            "client_config": Config(
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
         },
     }

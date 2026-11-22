@@ -27,7 +27,10 @@ decided 2026-11-20):
   private, presigned URLs always. The first deployment uses this.
   Options without a translation are an error at startup. No ACLs are set
   on objects (some providers refuse them): the bucket itself must be
-  private.
+  private. Checksums only where an operation requires one
+  (`request_checksum_calculation="when_required"`, decided 2026-11-22):
+  botocore 1.36 and later add a CRC32 checksum to every upload, sent
+  chunked, and S3-compatible stores like Nine's answer InvalidArgument.
 - Paths: `files/<project id>/<random 16 characters>/<file name>`, so
   names never collide and URLs can't be guessed.
 - **Files are deleted** with their rows (`post_delete`, after the commit):
