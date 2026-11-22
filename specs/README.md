@@ -4,7 +4,8 @@ One spec per part: what it does, the decisions in force and where it
 lives in the code. Open questions go to the user and the answer into
 the part's spec (`AGENTS.md`). The
 rules every page follows: `ui.md`; the user's feedback notes, round by
-round: `ui-feedback.md`.
+round: `ui-feedback.md`; decisions made without asking, for the user to
+confirm: `decisions-to-confirm.md`.
 
 | Part | Status | What |
 |---|---|---|
