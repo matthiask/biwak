@@ -46,6 +46,16 @@
   {% endif %}
 {% elif event.action == "stopped_sharing" %}
   {% blocktranslate %}stopped sharing {{ subject }} publicly{% endblocktranslate %}
+{% elif event.action == "added_todos" %}
+  {% if what %}
+    {% blocktranslate %}added to-dos to {{ what }}{% endblocktranslate %}
+  {% else %}
+    {% blocktranslate trimmed count counter=event.data.todos|default:0 %}
+      added {{ counter }} to-do to {{ subject }}
+    {% plural %}
+      added {{ counter }} to-dos to {{ subject }}
+    {% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "commented" %}
   {% blocktranslate %}commented on {{ subject }}{% endblocktranslate %}
 {% elif event.action == "reacted" %}

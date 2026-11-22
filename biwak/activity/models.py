@@ -50,6 +50,9 @@ class Action(models.TextChoices):
         "stopped_sharing",
         pgettext_lazy("action", "stopped sharing publicly"),
     )
+    # To-dos added to a list from a text, one event for all
+    # (specs/todos-from-text.md)
+    ADDED_TODOS = "added_todos", pgettext_lazy("action", "added to-dos")
 
 
 class EventQuerySet(models.QuerySet):
