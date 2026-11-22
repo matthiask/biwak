@@ -137,12 +137,12 @@ In this order, each step with its tests:
   What the person may see is `mails._deliverable()`, checked when
   pushing; what they mustn't see any more is marked pushed without a
   push.
-- **Only what came after subscribing** (proposed 2026-11-22): a
+- **Only what came after subscribing** (confirmed 2026-11-22): a
   notification pushes only for people with a device subscribed before
   it, so turning pushes on doesn't bring old mentions.
 - **Failures:** a 404 or 410 deletes that device; when every device
   failed otherwise (logged), the notifications stay unpushed for the
-  next run, until the `TTL` (12 hours) has passed (proposed 2026-11-22:
+  next run, until the `TTL` (12 hours) has passed (confirmed 2026-11-22:
   the push service would drop it by then anyway).
 - **The VAPID private key** may be the PEM or its lines between the
   markers joined into one (base64url DER or raw also work), for an
@@ -177,12 +177,12 @@ In this order, each step with its tests:
   at `/sw.js` (public, `no-cache`), registered at the click. A push's
   JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap
   focuses an open Biwak window and goes to the URL, or opens one.
-- **Content** (proposed 2026-11-22: the lantern's entry): title the
+- **Content** (confirmed 2026-11-22: the lantern's entry): title the
   item's title (a batch: "To-dos"), body the lantern's line with "You
   were mentioned." where the lantern says it, the lantern's excerpt (a
   comment's or message's text, about 200 characters) and the project;
   `tag` `biwak-item-<id>`.
-- **Wording** (proposed 2026-11-22): the heading "Push notifications",
+- **Wording** (confirmed 2026-11-22): the heading "Push notifications",
   "When you're mentioned or assigned, also while Biwak isn't open; not
   in your quiet hours or while you're away.", "Notifications are blocked
   for Biwak in this browser's settings.", a failure "That didn't work.

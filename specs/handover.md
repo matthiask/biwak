@@ -173,8 +173,7 @@ across projects, told once about dates, moving telling nobody.
 - **"New list"** (staff, who create lists): created in the chosen
   project inside the move's transaction, internal, named after the list
   the to-dos come from when it's one, else "Moved to-dos" (in the
-  mover's language), renamed later (to confirm,
-  `decisions-to-confirm.md`).
+  mover's language), renamed later (confirmed 2026-11-22).
 - **Across projects** (`ops.move_todos_to()`, built 2026-11-22):
   to-dos from other projects come along with comments, reactions,
   events and attachments (their project updated), completed ones too;
