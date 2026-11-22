@@ -762,8 +762,8 @@ def orgs_move(person, org, as_json):
 @click.argument("person", type=int)
 @json_option
 def member_remove(project, person, as_json):
-    """Remove the person with ID PERSON from PROJECT; staff remove anybody,
-    everybody can remove themselves (leave)"""
+    """Remove the person with ID PERSON from PROJECT; own staff only,
+    themselves included"""
     data = request("DELETE", f"projects/{project}/members/{person}/")
     if as_json:
         return echo_json(data)

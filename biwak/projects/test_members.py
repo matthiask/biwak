@@ -125,10 +125,69 @@ class MembersTest(TestCase):
         response = self.client.post(f"{self.url}{self.ada.pk}/remove/")
         self.assertEqual(response.status_code, 403)
         self.assertTrue(self.project.is_member(self.ada))
-        # But they can leave
-        self.client.post(f"{self.url}{self.cleo.pk}/remove/")
+        # Nor themselves (decided 2026-11-22, specs/organizations.md)
+        remove_self = f"{self.url}{self.cleo.pk}/remove/"
+        self.assertEqual(self.client.get(remove_self).status_code, 403)
+        self.assertEqual(self.client.post(remove_self).status_code, 403)
+        self.assertTrue(self.project.is_member(self.cleo))
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "/remove/")
+        self.assertNotContains(response, "Leave")
+
+    def test_partners_dont_remove_themselves(self):
+        pia = person("Pia", organization="Example Agency")
+        Membership.objects.create(project=self.project, user=pia)
+        self.client.force_login(pia)
+        response = self.client.post(f"{self.url}{pia.pk}/remove/")
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(self.project.is_member(pia))
+        self.assertNotContains(self.client.get(self.url), "/remove/")
+
+    def test_removing_asks_first(self):
+        """GET is the question (a modal, or a page without JavaScript),
+        POST removes"""
+        self.client.force_login(self.ada)
+        url = f"{self.url}{self.cleo.pk}/remove/"
+        response = self.client.get(self.url)
+        self.assertContains(
+            response,
+            f'<a class="dropdown-item" href="{url}" data-modal>'
+            "Remove from the project…</a>",
+            html=True,
+        )
+        response = self.client.get(url)
+        self.assertContains(response, "Remove Cleo Example from Website?")
+        self.assertContains(response, "won&#x27;t see the project any more")
+        self.assertContains(response, "lose Cleo Example as assignee")
+        self.assertTrue(self.project.is_member(self.cleo))
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        self.assertNotContains(response, "<html")
+        self.assertContains(response, "Remove")
+        response = self.client.post(url)
+        self.assertRedirects(response, self.url)
         self.assertFalse(self.project.is_member(self.cleo))
-        self.assertEqual(self.client.get(self.url).status_code, 404)
+
+    def test_removing_staff_from_an_all_access_project(self):
+        Membership.objects.create(project=self.project, user=self.bob)
+        self.client.force_login(self.ada)
+        response = self.client.get(f"{self.url}{self.bob.pk}/remove/")
+        self.assertContains(response, "still sees the project")
+        self.assertNotContains(response, "won&#x27;t see")
+
+    def test_staff_remove_themselves(self):
+        self.client.force_login(self.ada)
+        url = f"{self.url}{self.ada.pk}/remove/"
+        response = self.client.get(url)
+        self.assertContains(response, "Remove yourself from Website?")
+        self.assertContains(response, "You still see it")
+        self.assertRedirects(self.client.post(url), "/projects/")
+        self.assertFalse(self.project.is_member(self.ada))
+        limited = project("Salaries", members=[self.ada], all_access=False)
+        url = f"/projects/{limited.pk}/people/{self.ada.pk}/remove/"
+        response = self.client.get(url)
+        self.assertContains(response, "You won&#x27;t see it any more")
+        self.client.post(url)
+        self.assertFalse(limited.is_member(self.ada))
 
     def test_removing_says_nothing_about_who_exists(self):
         """Non-members answer 404 like IDs nobody has, as in the API"""

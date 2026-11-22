@@ -263,3 +263,8 @@ building it.
 - 2026-11-21: View choices (groupings, orderings) and filters are query
   parameters remembered in the browser, never fields on `User`
   (`specs/ui.md`, "Filters and view choices").
+- 2026-11-22: Nobody leaves a project: own staff remove people,
+  themselves included, after a question; clients and partners can't
+  remove themselves, so that they can't get around the organization's
+  decisions about who works on a project, and notifications cover not
+  hearing about it (`specs/organizations.md`).

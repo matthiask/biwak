@@ -1,4 +1,4 @@
-"""Creating, joining and leaving projects through the API: what the web
+"""Creating, joining and removing people from projects through the API: what the web
 does (specs/api-cli.md, "Closing the gaps to the web")"""
 
 from django.test import TestCase
@@ -134,19 +134,22 @@ class ProjectGapsAPITest(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_everybody_leaves(self):
-        Membership.objects.create(project=self.open, user=self.cleo)
-        response = self.api(
-            "delete", f"projects/{self.open.pk}/members/{self.cleo.pk}/", self.cleo
-        )
-        self.assertEqual(response.status_code, 200, response.content)
-        self.assertFalse(self.open.is_member(self.cleo))
-        self.assertTrue(Event.objects.filter(action=Action.LEFT).exists())
-        # Staff too
+    def test_only_own_staff_remove_themselves(self):
+        """Clients and partners don't leave (decided 2026-11-22)"""
+        pia = person("Pia", organization="Example Agency")
+        for user in [self.cleo, pia]:
+            Membership.objects.create(project=self.open, user=user)
+            response = self.api(
+                "delete", f"projects/{self.open.pk}/members/{user.pk}/", user
+            )
+            self.assertEqual(response.status_code, 403, user)
+            self.assertTrue(self.open.is_member(user))
         response = self.api(
             "delete", f"projects/{self.open.pk}/members/{self.bob.pk}/", self.bob
         )
         self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.open.is_member(self.bob))
+        self.assertTrue(Event.objects.filter(action=Action.LEFT).exists())
 
     def test_clients_dont_remove_others(self):
         Membership.objects.create(project=self.open, user=self.cleo)

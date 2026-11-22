@@ -204,7 +204,8 @@ class PagesTest(PartnerTestCase):
         self.assertEqual(self.client.get(f"{people}invite/").status_code, 403)
         response = self.client.get(people)
         self.assertNotContains(response, "Invite by email")
-        self.assertContains(response, "Leave")
+        # Nor remove themselves (decided 2026-11-22)
+        self.assertNotContains(response, "/remove/")
         palette = self.client.get("/palette/").content.decode()
         self.assertNotIn("New project", palette)
 

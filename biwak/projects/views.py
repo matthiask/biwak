@@ -427,18 +427,55 @@ def member_add(request, pk):
     )
 
 
-@require_POST
 def member_remove(request, pk, user_pk):
-    """Staff remove anybody; everybody can leave. Non-members are 404 like
-    IDs nobody has (as in the API): nothing said about who exists"""
+    """Own staff remove anybody, themselves included; clients and partners
+    nobody, not even themselves (decided 2026-11-22: notifications cover
+    not hearing about a project, and the organization decides who works
+    on it). GET asks, POST removes. Non-members are 404 like IDs nobody
+    has (as in the API): nothing said about who exists"""
     project = project_for(request, pk)
     user = get_object_or_404(User, pk=user_pk, memberships__project=project)
-    if user != request.user and not project_ops.can_manage_members(request.user):
+    if not project_ops.can_manage_members(request.user):
         raise PermissionDenied
-    project_ops.remove_member(project, user, actor=request.user)
+    if request.method == "POST":
+        project_ops.remove_member(project, user, actor=request.user)
+        if user == request.user:
+            return redirect("projects")
+        return redirect("project_people", pk=project.pk)
+    # Own staff see all-access projects without being members
+    keeps_access = project.is_all_access and user.sees_all_access
     if user == request.user:
-        return redirect("projects")
-    return redirect("project_people", pk=project.pk)
+        title = _("Remove yourself from %(project)s?") % {"project": project.name}
+        intro = (
+            _("You still see it, as all staff see all-access projects.")
+            if keeps_access
+            else _("You won't see it any more.")
+        )
+        intro += " " + _("Open to-dos in it assigned to you lose you as assignee.")
+    else:
+        name = user.full_name or user.email
+        title = _("Remove %(name)s from %(project)s?") % {
+            "name": name,
+            "project": project.name,
+        }
+        intro = (
+            _("%(name)s still sees the project, as all staff see all-access projects.")
+            if keeps_access
+            else _("%(name)s won't see the project any more nor hear about it.")
+        ) % {"name": name}
+        intro += " " + _(
+            "Open to-dos in it assigned to %(name)s lose %(name)s as assignee."
+        ) % {"name": name}
+    return form_response(
+        request,
+        None,
+        title=title,
+        intro=intro,
+        project=project,
+        cancel_url=reverse("project_people", args=[project.pk]),
+        submit_label=_("Remove"),
+        destructive=True,
+    )
 
 
 class ListForm(Form):
