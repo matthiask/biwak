@@ -144,9 +144,10 @@ containers, checked in one place (`specs/access.md`).
 
 The core came first; every part since builds on it and on the shared
 foundations (mentions and mails, storage and attachments, schedules).
-What's built and what's open is in `specs/README.md`. Still to come:
-the German translation, last (texts are marked with `gettext`; the
-wording of mails, the editor and the lantern is reviewed with it).
+What's built and what's open is in `specs/README.md`. The German
+translation is `specs/languages.md` (started 2026-11-22; texts are
+marked with `gettext`; the wording of mails, the editor and the lantern
+is reviewed with it).
 
 Each part adds its API endpoints and CLI commands (`api-cli.md`) in the
 same branch. `AGENTS.md` has the checklist every part follows.

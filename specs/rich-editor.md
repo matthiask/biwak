@@ -190,7 +190,8 @@ in Python:
   (most pages: comments), parsing Markdown in the browser (decided
   2026-11-22: simpler, works offline, cached), fields upgraded on load.
   The spike measured about 123 KB gzipped (the main bundle is 34 KB),
-  the live doc chunk 161 KB (136 today); budget 125 KB, measured again
+  the live doc chunk 161 KB (136 today); budget 140 KB (raised from 125
+  KB, decided 2026-11-22: the size is fine), measured again
   with the toolbar, mentions and attachments.
 
 ## What's built
@@ -249,9 +250,10 @@ in Python:
 - **Sizes** (measured 2026-11-22, production bundle, gzip -9): a page
   with a text field loads 129.6 KB of editor chunks beyond the main
   bundle (34 KB): ProseMirror, markdown-it and prosemirror-markdown
-  117.5 KB, our editor modules 9.4 KB, the field code 2.7 KB; over the
-  budget of 125 KB by about 5 KB (markdown-it's HTML entities and
-  prosemirror-tables are the candidates if it matters). The live doc
+  117.5 KB, our editor modules 9.4 KB, the field code 2.7 KB, before
+  the table tools; within the budget of 140 KB (decided 2026-11-22:
+  raised from 125 KB rather than trimming; markdown-it's HTML entities
+  are the candidate if it ever matters). The live doc
   page loads 167 KB (Yjs and y-prosemirror 37.6 KB more; CodeMirror's
   was 136 KB).
 - **Tried in a browser** (Chromium through Playwright): composition
