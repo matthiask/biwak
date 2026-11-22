@@ -26,8 +26,11 @@ from biwak.live import announce as live
 
 # Events which tell nobody: pinning (specs/files.md), taking somebody off a
 # to-do (specs/timeline.md: the timeline and the feed say it), archiving a
-# list (specs/archiving.md), public links (specs/public-links.md)
+# list (specs/archiving.md), public links (specs/public-links.md), moving
+# (to-dos, files, lists and messages to another project; decided
+# 2026-11-22, specs/handover.md: the feed and the history say it)
 SILENT = {
+    Action.MOVED,
     Action.PINNED,
     Action.UNPINNED,
     Action.UNASSIGNED,
@@ -237,10 +240,6 @@ def notify(event_pk):
     same number of queries for any number of people."""
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
     if event is None or event.item is None or event.action in SILENT:
-        return []
-    if "to_project" in event.data:
-        # Moved to another project: nobody is told
-        # (specs/lists-across-projects.md)
         return []
     if event.project.is_template:
         # Nothing that happens inside a template tells anybody

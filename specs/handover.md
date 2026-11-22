@@ -171,8 +171,8 @@ lantern entry) open, questions below.
   merging and telling as any edit of the dates):
   - "Set a date" sets the due date and keeps start dates, as the to-do's
     page and the API do; a start date after the new date refuses all
-    with "The start date can't be after the due date." (proposed: the
-    existing rule rather than moving or dropping the start).
+    with "The start date can't be after the due date." (the existing
+    rule rather than moving or dropping the start; confirmed 2026-11-22).
   - "Move by" moves due date, start date and "repeats until" (as
     copying does); to-dos without a due date stay as they are.
   - "Remove" removes due and start dates; the repeat rule and its end
@@ -193,30 +193,26 @@ lantern entry) open, questions below.
   `biwak/test_cli_handover.py`, the bar's buttons in
   `biwak/test_e2e_handover.py` (`SelectingTodosTest`).
 
-### Open questions (2026-11-22)
+### Answers (decided by the user 2026-11-22)
 
-1. **Telling subscribers once.** Moving and dating record an event per
-   to-do (`moved`, `edited`), and both tell the to-dos' subscribers, so
-   a person subscribed to 23 of them gets 23 lantern entries. One entry
-   needs a `batch` on the events (as "Assign…") and its wording: the
-   lantern's line, the mail's subject and the entry's title, e.g. "Ada
-   moved 23 to-dos to Launch." and "Ada changed the dates of 23
-   to-dos."? Should moving within a project tell anybody at all (a
-   single to-do's move to another list does now)?
-2. **Across projects**, if built now: where the target list comes
-   from (a combobox of the lists of every project the person can open,
-   grouped by project?); one `moved` event per to-do naming both
-   projects and telling nobody, as for lists; the trace in the old
-   project per to-do or one line for all ("moved 23 to-dos to
-   Website")?; may clients move to-dos into other projects they're
-   members of (they move only messages they created there now)?;
-   completed to-dos too?; the API's `POST /todos/move/` with
-   `confirm`, as `/items/{id}/move/`. Until then a selection from
-   several projects is refused.
-3. **Wording to confirm** (proposed, built): the refusal for several
-   projects (above), "Set a date" keeping start dates, the API's "Send
-   the due date." and "Send at least one to-do.", the German
-   "Verschieben…", "Fälligkeit…", "Ein Datum setzen".
+1. **Moving tells nobody**, within a project too (a single to-do's
+   "Move to…" and dragging are the same code, `move_todos()`); the feed
+   and the history show it as before. One rule for every move
+   (`Action.MOVED` in `notify.SILENT`): files moved into folders and
+   items moved to other projects tell nobody either.
+2. **Told once:** the events of one action share a `batch`; one
+   lantern entry and one mail per person: "Ada changed the dates of 23
+   to-dos." (the subscribers of the to-dos told once each).
+3. **Moving across projects is built** (staff only; clients move within
+   a project): first the project, then a list of it or "New list"
+   (renamed later); the old project keeps one line for all moved
+   to-dos; completed to-dos move too; who's added and dropped is shown
+   first, like "Move to…"; `POST /api/v1/todos/move/` with `confirm`;
+   `biwak todos move ID… --list` across projects. Used sparingly, so
+   kept simple.
+4. **Confirmed:** "Set a date" keeps start dates and refuses all when
+   one would start after it; completed to-dos are moved and dated; the
+   wording and the German labels above.
 
 ## Deactivating says what's left
 

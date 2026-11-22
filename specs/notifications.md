@@ -17,7 +17,10 @@ trashed, restored, pinned, shared, project events (joined, added,
 removed). Events store enough to render without the item (the title at
 the time, in `data`) and respect visibility like their item
 (`Event.objects.visible_to()`). They feed the activity feed (`feed.md`)
-and notifications.
+and notifications. **Moving tells nobody** (decided 2026-11-22,
+`handover.md`): to-dos to another list or group, files into folders,
+anything into another project; the feed and the history say it
+(`notify.SILENT`).
 
 **Edits merge:** an `edited` event by the same person on the same item
 within 10 minutes of their last one updates that event's time instead of
@@ -241,7 +244,8 @@ large).
   message), plain text and HTML (`templates/mails/`). Attachments are
   links (the download checks access). The first line says when the item
   is visible to clients (`access.md`). Clients aren't told where an item
-  moved: the name may be internal.
+  moved (notifications of moves from before moving became silent): the
+  name may be internal.
 - **Headers:** `From: "Ada Lovelace (Biwak)" <DEFAULT_FROM_EMAIL>`;
   `Subject: [Project] Item title`, the same for every mail about an
   item; `In-Reply-To` and `References` `<item-<pk>@<host>>` for one
