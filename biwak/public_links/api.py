@@ -50,7 +50,7 @@ def _shareable(request, item_id):
     if not item.is_shareable:
         raise HttpError(
             400,
-            _("Only to-dos, messages, docs, files and check-in answers can be shared."),
+            _("Only to-dos, messages, docs and files can be shared."),
         )
     return item
 

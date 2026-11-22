@@ -2205,8 +2205,8 @@ def public_links(as_json):
 )
 @json_option
 def share(item, days, as_json):
-    """A public link to ITEM (a to-do, message, doc, file or check-in
-    answer) for people without an account, read only, until it expires;
+    """A public link to ITEM (a to-do, message, doc or file) for people
+    without an account, read only, until it expires;
     replaces the one there is (staff)"""
     data = request("POST", f"items/{item}/public-link/", json={"days": int(days)})
     if as_json:

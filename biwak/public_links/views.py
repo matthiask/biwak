@@ -149,7 +149,8 @@ def _private(response):
 @require_GET
 def public_page(request, token):
     """One item, read only, without sign-in: its title, its text (no
-    ticking), its attachments, the file itself, the author and the date;
+    ticking), its attachments, the file itself, the author and the date
+    of the last change (decided 2026-11-22);
     nothing else of the app (decided 2026-11-22)"""
     link = _open(token)
     item = link.item

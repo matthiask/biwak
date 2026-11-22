@@ -71,9 +71,9 @@ Their notification settings work like everybody's
 ## Public links
 
 For people without an account (a supplier, somebody you send a single
-doc), staff can share one to-do, message, doc, file or check-in answer
-read only with a **public link**: **Share…** in the item's "More" menu
-(on a check-in answer next to it), or in the palette.
+doc), staff can share one to-do, message, doc or file read only with a
+**public link**: **Share…** in the item's "More" menu, or in the
+palette.
 
 - The dialog first offers the item's **own link**: people with an
   account open that one and never need a public link.

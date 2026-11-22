@@ -14,6 +14,7 @@ from biwak.projects import operations as project_ops
 from biwak.public_links import operations as link_ops
 from biwak.public_links.models import PublicLink
 from biwak.test_utils import (
+    check_in_answers,
     person,
     project,
 )
@@ -89,6 +90,10 @@ class OperationsTest(Fixture, TestCase):
             self.share(folder)
         with self.assertRaises(PermissionDenied):
             self.share(actor=self.cleo)
+        # Nor check-in answers (decided 2026-11-22)
+        answer = check_in_answers(self.project, [self.ada])[0]
+        with self.assertRaises(PermissionDenied):
+            self.share(answer)
 
     def test_the_events_notify_nobody(self):
         ops.assign(self.todo, [self.bob], actor=self.ada)

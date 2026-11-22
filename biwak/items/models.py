@@ -63,8 +63,9 @@ SWITCH_MESSAGE = _(
 COMMENTABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
 
 # Kinds with public links (specs/public-links.md): leaves only, a container
-# would show whatever is added to it later
-SHAREABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE, Kind.ANSWER}
+# would show whatever is added to it later; not check-in answers (decided
+# 2026-11-22)
+SHAREABLE = {Kind.TODO, Kind.MESSAGE, Kind.DOC, Kind.FILE}
 
 
 class Status(models.TextChoices):

@@ -14,11 +14,8 @@ entry; git keeps it.
 - **Deactivating** the person who created a link keeps it (unlike their
   calendar link): the link is the item's, it expires within 30 days and
   shows on the page of all public links with their name.
-- **Answers:** "Share…" next to the answer on the check-in's page (they
-  have no page and no "More" menu); not in the palette.
 - **Replacing in the modal:** with a live link the expiry form stays
   below it, its button still "Create public link", with "A new public
   link replaces this one."
-- **The public page** shows the creator's name and the creation date
-  (not the last change), and for files the preview, the name and the
+- **The public page** shows for files the preview, the name and the
   size.

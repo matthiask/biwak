@@ -112,11 +112,12 @@ class ShareModalTest(Fixture, TestCase):
         self.assertNotIn("Share…", labels)
         self.assertNotIn("Public links", labels)
 
-    def test_answers_have_it_on_the_question(self):
+    def test_not_check_in_answers(self):
+        """Decided 2026-11-22: answers can't be shared"""
         answer = check_in_answers(self.project, [self.ada])[0]
         response = self.client.get(answer.parent.get_absolute_url())
-        self.assertContains(response, f'href="{self.url(answer)}"')
-        self.assertEqual(self.client.get(self.url(answer)).status_code, 200)
+        self.assertNotContains(response, "Share…")
+        self.assertEqual(self.client.get(self.url(answer)).status_code, 404)
 
     def test_the_feed_says_it(self):
         self.share()
@@ -309,7 +310,7 @@ class PublicPageTest(Fixture, TestCase):
         ops.trash(item, actor=self.ada)
         self.assertEqual(self.client.get(f"/p/{link.token}/download/").status_code, 404)
 
-    def test_doc_message_and_answer(self):
+    def test_doc_and_message(self):
         doc = ops.create_doc(
             project=self.project,
             title="Packing list",
@@ -319,12 +320,23 @@ class PublicPageTest(Fixture, TestCase):
         message = ops.create_message(
             project=self.project, title="News", creator=self.ada, content="Hello"
         )
-        answer = check_in_answers(self.project, [self.ada], content="Fine")[0]
-        for item, text in [(doc, "Boots"), (message, "Hello"), (answer, "Fine")]:
+        for item, text in [(doc, "Boots"), (message, "Hello")]:
             with self.subTest(item.kind):
                 response = self.client.get(f"/p/{self.share(item).token}/")
                 self.assertContains(response, item.title)
                 self.assertContains(response, text)
+
+    def test_the_date_of_the_last_change(self):
+        """Decided 2026-11-22: when it was last changed, not created"""
+        from biwak.items.models import Item
+
+        Item.objects.filter(pk=self.todo.pk).update(
+            created_at=timezone.make_aware(dt.datetime(2026, 1, 5, 12)),
+            updated_at=timezone.make_aware(dt.datetime(2026, 3, 9, 12)),
+        )
+        response = self.client.get(f"/p/{self.share().token}/")
+        self.assertContains(response, "9. Mar 2026")
+        self.assertNotContains(response, "5. Jan 2026")
 
     def test_a_client_never_reaches_anything_else(self):
         """A client with a token gets the item and nothing pointing elsewhere"""

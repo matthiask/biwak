@@ -6,8 +6,8 @@ the item's own link, because people with an account never need a public
 one. Decided with the user 2026-11-22.
 
 **Status:** built 2026-11-22 (branch `public-links`): `biwak/public_links/`
-(model, operations, views, API), Share… in `items/_more_entries.html`,
-on check-in answers and in the palette, the CLI's `share`, `unshare` and
+(model, operations, views, API), Share… in `items/_more_entries.html`
+and in the palette, the CLI's `share`, `unshare` and
 `public-links`; the decisions made on the way are in "Built" below and
 in `decisions-to-confirm.md`.
 
@@ -18,9 +18,10 @@ secret URL, the model to copy).
 
 ## What can be shared
 
-- **Leaves only:** to-dos, messages, docs, files, check-in answers. Not
-  lists or folders: a container would show whatever is added to it
-  later.
+- **Leaves only:** to-dos, messages, docs and files. Not lists or
+  folders: a container would show whatever is added to it later. Not
+  check-in answers either (decided 2026-11-22): they have no page and
+  no "More" menu of their own.
 - **By staff, on any item they see** (internal or visible to clients):
   the second, destructive button is the safeguard. Clients can't create
   public links, like the visibility switches (`access.md`).
@@ -65,7 +66,7 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   sent on.
 - **Little context:** the title, the text (Markdown rendered, ticking
   off), its attachments, the file itself for files, the author's name
-  and the date. No comments, no project name, no other people, no
+  and the date of the last change (`updated_at`, decided 2026-11-22). No comments, no project name, no other people, no
   navigation, no links into the app; links to other items in the text
   stay as they are (they need an account).
 - **Attachments and the file download** through the token
@@ -123,9 +124,6 @@ Where it lives and the choices made while building (2026-11-22):
   focused) instead of a redirect, so it can be copied; the page
   redirects to itself. "Stop sharing" posts `stop` to the same URL.
   `modal.js` compares all of a dialog's forms for Escape.
-- **Check-in answers** have no page and no "More" menu: "Share…" is a
-  link next to the answer's author and date, staff only; the palette
-  offers "Share…" on the pages of to-dos, messages, docs and files.
 - **Refusals:** clients get 403 for what they see and 404 for internal
   items (the pages and the API); containers 404 on the page, 400 in the
   API. Admins stop links in projects they can't open from the page of
@@ -133,7 +131,7 @@ Where it lives and the choices made while building (2026-11-22):
 - **The public page** (`public_links/public.html`, not `base.html`: the
   same whether signed in or not, no scripts of the app's own beyond the
   bundle) shows the title and mentions as written (nobody looked up),
-  the creator's name and the creation date, the text with disabled
+  the creator's name and the date of the last change, the text with disabled
   checkboxes (a doc's without its title line), the file's preview and
   download for files. `noindex` and `no-referrer` as meta tags and
   headers (`X-Robots-Tag`, `Referrer-Policy`), `no-store`.
