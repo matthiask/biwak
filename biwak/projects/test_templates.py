@@ -334,3 +334,24 @@ class ListFromTemplateTest(Fixture, TestCase):
         self.assertIsNone(ops.open_todos(copy).first().todo.due_on)
         # Told like any copy
         self.assertTrue(Event.objects.filter(item=copy, action=Action.CREATED).exists())
+
+
+class CopyIntoTemplateTest(Fixture, TestCase):
+    def test_nobody_added(self):
+        """A running list copied into a template: its client assignees are
+        left out, nobody becomes a member"""
+        website = project("Website", members=[self.ada, self.cleo])
+        launch = ops.create_list(
+            project=website, title="Launch", creator=self.ada, visible=True
+        )
+        ops.create_todo(
+            todolist=launch, title="Tent", creator=self.ada, assignees=[self.cleo]
+        )
+        added, dropped = ops.copy_people(launch, self.template, visible=True)
+        self.assertEqual(list(added), [])
+        self.assertEqual(list(dropped), [self.cleo])
+        copy = ops.copy_list(
+            launch, project=self.template, title="Launch", actor=self.ada
+        )
+        self.assertFalse(self.template.memberships.exists())
+        self.assertFalse(ops.open_todos(copy).get().todo.assignees.exists())
