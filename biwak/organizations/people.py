@@ -92,14 +92,11 @@ def linked_name(person, label, known):
     return conditional_escape(label)
 
 
-def decorate(user, viewer, shared):
+def decorate(user, viewer):
     """What the People page and the person's page show of a person:
-    ``role``, ``feed`` (whether the activity's person filter takes them for
-    the viewer, ``shared`` are the people they share a project with),
-    ``show_email`` and ``can_move`` (the existing "Change organization"
-    modal)"""
+    ``role``, ``show_email`` and ``can_move`` (the existing "Change
+    organization" modal)"""
     user.role = role(user)
-    user.feed = user.pk in shared
     # Clients don't see addresses (as on a project's people page), but
     # those of their own organization
     user.show_email = not viewer.is_client or (
@@ -138,10 +135,8 @@ def own_label(viewer, organization):
 
 def groups_for(viewer):
     """The groups in the page's order, each person with ``role``,
-    ``feed`` (whether the activity's person filter takes them),
     ``show_email`` and ``can_move`` (the existing "Change organization"
     modal)"""
-    shared = set(people_visible_to(viewer).values_list("pk", flat=True))
     people = list(
         known_people(viewer)
         .select_related("invited_by")
@@ -150,7 +145,7 @@ def groups_for(viewer):
     _note_externals(viewer, people)
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))
     for user in people:
-        decorate(user, viewer, shared)
+        decorate(user, viewer)
         org = user.organization
         if org is None:
             without.people.append(user)
@@ -221,10 +216,9 @@ def project_groups(project, rows, *, can_add, viewer):
 def invitations_for(viewer):
     """The "Invited" filter: everybody invited who hasn't signed in yet,
     the oldest invitation first (own staff, who manage members)"""
-    shared = set(people_visible_to(viewer).values_list("pk", flat=True))
     people = list(User.objects.invited().select_related("organization", "invited_by"))
     _note_externals(viewer, people)
-    return [decorate(user, viewer, shared) for user in people]
+    return [decorate(user, viewer) for user in people]
 
 
 def _note_externals(viewer, people):
@@ -236,7 +230,6 @@ def _note_externals(viewer, people):
 
 def inactive_for(viewer):
     """The "Inactive" filter: people who can't sign in, by name"""
-    shared = set(people_visible_to(viewer).values_list("pk", flat=True))
     people = list(
         known_people(viewer)
         .filter(is_active=False)
@@ -244,7 +237,7 @@ def inactive_for(viewer):
         .order_by(Lower("full_name"), "email")
     )
     _note_externals(viewer, people)
-    return [decorate(user, viewer, shared) for user in people]
+    return [decorate(user, viewer) for user in people]
 
 
 def people(request):
@@ -277,8 +270,7 @@ def person(request, pk):
     person (the rule of the People page), else 404"""
     viewer = request.user
     who = get_object_or_404(known_people(viewer).select_related("invited_by"), pk=pk)
-    shared = set(people_visible_to(viewer).values_list("pk", flat=True))
-    decorate(who, viewer, shared)
+    decorate(who, viewer)
     projects = Project.objects.accessible_to(viewer).filter(memberships__user=who)
     if who.pk != viewer.pk:
         projects = projects.filter(memberships__user=viewer)
@@ -293,9 +285,8 @@ def person(request, pk):
         {
             "person": who,
             "projects": projects.distinct(),
-            # Their last entries, where the activity's person filter takes
-            # them (specs/people.md)
-            "days": feed.preview(viewer, who) if who.feed else [],
+            # Their last entries the viewer sees (specs/people.md)
+            "days": feed.preview(viewer, who),
             "can_remove_image": bool(who.image)
             and accounts_ops.can_remove_image(viewer, who),
         },

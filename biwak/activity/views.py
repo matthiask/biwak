@@ -68,7 +68,7 @@ class FilterForm(Form):
 
     def __init__(self, *args, user, project=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["person"].queryset = feed_module.people_visible_to(user, project)
+        self.fields["person"].queryset = feed_module.filter_people(user, project)
         if user.is_client:
             # Everything a client sees is visible to clients
             del self.fields["clients"]

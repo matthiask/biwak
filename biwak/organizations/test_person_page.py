@@ -195,14 +195,40 @@ class PersonActivityTest(TestCase):
     def labels(self, viewer, who):
         return {a["label"] for a in palette_data(self.get(viewer, who))["actions"]}
 
-    def test_nobody_the_person_filter_does_not_take(self):
-        # Own staff may know Ivy, but she's in no project: neither the
-        # activity's filter nor her page shows her activity
+    def test_whoever_the_viewer_may_know(self):
+        """One rule with the page (decided 2026-11-22): whoever's page the
+        viewer may open, the preview and the person filter too"""
+        root = person("Root", is_admin=True)
         ivy = person("Ivy", client=True)
-        response = self.get(self.ben, ivy)
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Recent activity")
-        self.assertNotContains(response, self.all_activity(ivy))
+        lake = project("Lake", members=[ivy])
+        lake_list = ops.create_list(
+            project=lake, title="Lake plans", creator=self.ada, visible=True
+        )
+        ops.create_todo(todolist=lake_list, title="Lake tent", creator=ivy)
+        # The admin shares no project with Ivy
+        response = self.get(root, ivy)
+        self.assertContains(response, "Lake tent")
+        self.assertContains(response, self.all_activity(ivy))
+        response = self.client.get("/feed/", {"person": ivy.pk})
+        self.assertTrue(response.context["form"].is_valid())
+        self.assertContains(response, "Lake tent")
+
+    def test_an_external_sees_the_entries_it_may_see(self):
+        # Bea is own staff, in no project: Pia may open her page (the
+        # all-access Camp's people), and sees only what she did in Camp
+        bea = person("Bea")
+        ops.create_todo(todolist=self.shared, title="Camp tent", creator=bea)
+        lake = project("Lake", members=[self.ada])
+        lake_list = ops.create_list(project=lake, title="Lake plans", creator=bea)
+        ops.create_todo(todolist=lake_list, title="Lake tent", creator=bea)
+        response = self.get(self.pia, bea)
+        self.assertContains(response, "Camp tent")
+        self.assertNotContains(response, "Lake tent")
+        self.assertContains(response, self.all_activity(bea))
+        response = self.client.get("/feed/", {"person": bea.pk})
+        self.assertTrue(response.context["form"].is_valid())
+        self.assertContains(response, "Camp tent")
+        self.assertNotContains(response, "Lake tent")
 
     def test_the_person_feed_page_is_gone(self):
         self.client.force_login(self.ada)

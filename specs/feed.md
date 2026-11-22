@@ -52,13 +52,19 @@ From the events (`biwak/activity/`, `notifications.md`);
 
 Decisions (2026-11-20 unless dated):
 
-- **The person filter** lists the people the viewer shares a project
-  with as members (`people_visible_to()`) and ignores anybody else, so
-  it doesn't tell whether a person exists. "My activity" in the "Me" menu
-  is the activity filtered by oneself (`/feed/?person=<me>`), shown
-  where the filter takes oneself (`in_person_filter` in
-  `templatetags/biwak.py`; decided 2026-11-22, it was a person feed
-  page).
+- **The person filter** (decided 2026-11-22, one rule with the person's
+  page, replacing "shares a project as members") takes anybody whose
+  page the viewer may open (`known_people()`, `feed.filter_people()`;
+  in a project's activity the members the viewer shares it with) and
+  ignores anybody else, so it doesn't tell whether a person exists; the
+  entries stay only those the viewer sees. The API's `person_id` and
+  `people/{id}/feed/` the same. "My activity" in the "Me" menu, always
+  there, is the activity filtered by oneself (`/feed/?person=<me>`;
+  it was a person feed page).
+- **Remembered filters** (decided 2026-11-22): a link with `?person=`
+  ("My activity", "All activity") applies its own filter and is then
+  remembered like any other; the navigation's "Activity" restores the
+  last filters, as everywhere (`ui.md`).
 - **Names link to the person's page** (decided 2026-11-22, they linked
   to the person feed): the actor of every entry and the people an event
   names ("assigned Bob to …", "shared … with Bob, Cleo"), in the feed,

@@ -566,11 +566,18 @@ class PersonLinksTest(FeedBase):
         self.assertContains(response, f'href="/feed/?person={self.cleo.pk}"')
         self.assertContains(response, "My activity")
 
-    def test_no_menu_entry_without_a_project(self):
+    def test_the_menu_entry_without_a_project_too(self):
         loner = person("Eve")
         self.client.force_login(loner)
         response = self.client.get("/feed/")
-        self.assertNotContains(response, "My activity")
+        self.assertContains(response, f'href="/feed/?person={loner.pk}"')
+        self.assertTrue(
+            response
+            .context["form"]
+            .fields["person"]
+            .queryset.filter(pk=loner.pk)
+            .exists()
+        )
 
 
 class EventsBeforeVisibleTest(TestCase):

@@ -364,16 +364,6 @@ def excerpt(text, chars=200, item=None):
     return cut.rstrip() + "…"
 
 
-def _feed_people(request):
-    from biwak.activity.feed import people_visible_to
-
-    if not hasattr(request, "_feed_people"):
-        request._feed_people = set(
-            people_visible_to(request.user).values_list("pk", flat=True)
-        )
-    return request._feed_people
-
-
 @register.simple_tag
 def forwarded_waiting(user):
     """The person menu's "Forwarded" (specs/forwarding.md): None while
@@ -383,13 +373,6 @@ def forwarded_waiting(user):
     if not operations.enabled() or not operations.can_forward(user):
         return None
     return operations.waiting(user)
-
-
-@register.simple_tag(takes_context=True)
-def in_person_filter(context, person):
-    """Whether the activity's person filter takes the person (else it
-    ignores them, see ``people_visible_to``); looked up once per request"""
-    return person.pk in _feed_people(context["request"])
 
 
 def _viewer(context):

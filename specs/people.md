@@ -59,9 +59,9 @@ person (`mail-sending.md`).
 feed page): their last 5 entries ("Recent activity"), rendered and
 merged as the activity does with the person filter (`feed.preview()`,
 `activity/_entries.html`), only what the viewer sees, then "All
-activity" to `/feed/?person=<id>` (also in the palette). Only where the
-activity's person filter takes them (people the viewer shares a project
-with as members), and nothing at all when there are no entries.
+activity" to `/feed/?person=<id>` (also in the palette), for whoever
+may open the page (one rule with the activity's person filter, decided
+2026-11-22), and nothing at all when there are no entries.
 
 **Names and marks link here** (decided 2026-11-21) wherever people are
 listed (subscribers, a to-do's assignees, members, a team's members, an

@@ -75,6 +75,17 @@ def people_visible_to(user, project=None):
     return User.objects.filter(memberships__project__in=projects).distinct()
 
 
+def filter_people(user, project=None):
+    """Whom the person filter takes (decided 2026-11-22): anybody whose
+    page the viewer may open (``known_people()``); in a project, the
+    people the viewer shares it with as members (``people_visible_to()``)"""
+    if project is not None:
+        return people_visible_to(user, project)
+    from biwak.organizations.people import known_people
+
+    return known_people(user)
+
+
 def cursor_for(event):
     return cursors.encode(event.created_at, event.pk)
 
