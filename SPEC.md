@@ -55,6 +55,8 @@ In scope:
 11. Bookmarks, and links to outside tools on projects (not on items).
 12. API, CLI, agent skills.
 13. An importer for Basecamp 4 accounts.
+14. Public links: one item shown read only to people outside, for at
+    most 30 days (`specs/public-links.md`).
 
 Out of scope on purpose:
 
