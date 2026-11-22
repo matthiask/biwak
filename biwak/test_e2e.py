@@ -3098,3 +3098,128 @@ class CompletionTest(E2ETestCase):
         # The animations alone take over a second, with the burst
         expect(page.locator(".wb-all-done")).to_have_text("All done.", timeout=700)
         self.assertEqual(Item.objects.get(title="Plan").todo.is_completed, True)
+
+
+class TeamsTest(E2ETestCase):
+    """Picking a team (specs/teams.md) in the people picker and the @ list:
+    its members who can be there, the entry saying how many are left out
+    and why"""
+
+    def setUp(self):
+        super().setUp()
+        from biwak.projects.models import Membership
+        from biwak.teams import operations as team_ops
+
+        self.dan = person("Dan", notification_level="concerns_me")
+        Membership.objects.create(project=self.project, user=self.dan)
+        self.cleo.notification_level = "concerns_me"
+        self.cleo.save()
+        # Bob isn't a member, Cleo is a client
+        team_ops.create_team(
+            name="Design team",
+            members=[self.ada, self.bob, self.cleo, self.dan],
+            actor=self.ada,
+        )
+
+    def test_the_picker_adds_the_members_who_can_be_assigned(self):
+        todolist = self.make_list()
+        page = self.page
+        self.goto(page, todolist)
+        add = page.locator("[data-add-todo]").first
+        add.locator("summary").click()
+        picker = add.locator(".wb-picker-input")
+        picker.press_sequentially("desi")
+        team = add.locator(".wb-picker-list li[data-team]")
+        expect(team).to_contain_text("Design team")
+        # Assigning Bob would make him a member; Cleo can't see the list
+        expect(team).to_contain_text(
+            "team · 2 of 4: 1 not a member of this project, 1 can't see internal items"
+        )
+        expect(team.locator(".wb-team-mark")).to_have_count(1)
+        # First, so Enter picks it
+        picker.press("Enter")
+        pills = add.locator(".wb-pill")
+        expect(pills).to_have_text([re.compile("Ada"), re.compile("Dan")])
+        # Nobody left to add: not offered any more
+        picker.press_sequentially("desi")
+        expect(add.locator(".wb-picker-list")).to_contain_text("Nobody found")
+        picker.press("Escape")
+        # Removing a pill is removing a person; the team adds only Dan then
+        picker.press("Backspace")
+        expect(pills).to_have_text([re.compile("Ada")])
+        picker.press_sequentially("desi")
+        picker.press("Enter")
+        expect(pills).to_have_text([re.compile("Ada"), re.compile("Dan")])
+        add.locator("[name=title]").fill("Sketch")
+        add.locator("[name=title]").press("ControlOrMeta+Enter")
+        page.locator("[data-todo]", has_text="Sketch").wait_for()
+        todo = Item.objects.get(title="Sketch")
+        self.assertEqual(
+            set(todo.todo.assignees.all()), {self.ada, self.dan}, "people only"
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_the_picker_follows_visible_to_clients(self):
+        """ "Also tell…" when posting at the top: the client is added only
+        while the message is visible to clients"""
+        page = self.page
+        page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
+        picker = page.locator(".wb-picker-input")
+        picker.press_sequentially("design")
+        team = page.locator(".wb-picker-list li[data-team]")
+        # Ada posts (in already), Bob isn't a member
+        expect(team).to_contain_text(
+            "2 of 4: 1 not a member of this project, 1 can't see internal items"
+        )
+        picker.press("Escape")
+        page.get_by_label("Visible to clients").check()
+        picker.press_sequentially("design")
+        expect(team).to_contain_text("3 of 4: 1 not a member of this project")
+        picker.press("Enter")
+        expect(page.locator(".wb-pill")).to_have_text([
+            re.compile("Cleo"),
+            re.compile("Dan"),
+        ])
+        self.assertEqual(self.errors, [])
+
+    def test_the_mention_list_inserts_a_mention_per_member(self):
+        self.make_list(todos=["Plan"])
+        todo = Item.objects.get(title="Plan")
+        page = self.page
+        self.goto(page, todo)
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.click()
+        # Dan is mentioned already: not twice
+        textarea.fill(f"[@Dan](person:{self.dan.pk}) and ")
+        textarea.press_sequentially("@desi")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        team = listbox.locator("li[data-team]")
+        expect(team).to_contain_text("Design team")
+        # Bob sees the all-access project's internal items
+        expect(team).to_contain_text("3 of 4: 1 can't see internal items")
+        expect(team).to_have_class(re.compile("active"))
+        textarea.press("Enter")
+        self.assertEqual(
+            textarea.input_value(),
+            f"[@Dan](person:{self.dan.pk}) and [@Ada](person:{self.ada.pk})"
+            f" [@Bob](person:{self.bob.pk}) ",
+        )
+        page.get_by_role("button", name="Add comment").click()
+        page.locator(".wb-markdown .wb-mention").first.wait_for()
+        content = Comment.objects.get(item=todo).content
+        self.assertNotIn("Design", content)
+        self.assertEqual(self.errors, [])
+
+    def test_clients_find_no_teams(self):
+        self.make_list("Shared", visible=True, todos=["Review"])
+        todo = Item.objects.get(title="Review")
+        page = self.login(self.cleo)
+        self.goto(page, todo)
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.click()
+        textarea.press_sequentially("@Example")
+        listbox = page.locator(".wb-mentions:not([hidden])")
+        listbox.wait_for()
+        expect(listbox.locator("li[data-team]")).to_have_count(0)
+        self.assertNotIn("Design", listbox.inner_text())

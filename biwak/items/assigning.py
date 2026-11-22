@@ -59,6 +59,12 @@ class AssignForm(Form):
         self.fields["people"].queryset = (
             ops.assignable_to_all(todos, user) if todos else User.objects.none()
         )
+        # Teams add their members (specs/teams.md)
+        projects = {todo.project for todo in todos}
+        self.fields["people"].offer_teams(
+            project=projects.pop() if len(projects) == 1 else None,
+            visible=all(todo.is_client_visible for todo in todos),
+        )
 
 
 def todos_assign(request):

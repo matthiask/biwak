@@ -47,3 +47,15 @@ export function optionAvatar(option) {
     return null
   }
 }
+
+// The mark of a team (specs/teams.md) in the people picker and the @ list,
+// like {% team_mark %} on the server
+export function teamMark(size = "sm") {
+  const mark = document.createElement("span")
+  mark.className = `wb-avatar wb-avatar-${size} wb-team-mark`
+  const icon = document.createElement("i")
+  icon.className = "bi bi-people"
+  icon.setAttribute("aria-hidden", "true")
+  mark.append(icon)
+  return mark
+}

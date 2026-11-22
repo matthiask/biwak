@@ -12,8 +12,23 @@
 // stays in the form (hidden), so the form posts it as it always did and
 // without JavaScript it's usable as it is.
 // Keyboard handling as in mentions.js.
+//
+// Teams (specs/teams.md, staff only): data-teams lists them with their
+// members, each with the reason the server knows for leaving them out; the
+// options disabled now (clients while a post is internal) are left out too.
+// Matching teams come first, saying how many of their members they'd add
+// and why the others are left out; picking one picks its members, as if
+// picked one by one. A team with nobody left to add isn't offered.
 
-import { avatar, optionAvatar } from "./avatar.js"
+import { avatar, optionAvatar, teamMark } from "./avatar.js"
+
+function parse(json) {
+  try {
+    return JSON.parse(json || "[]")
+  } catch {
+    return []
+  }
+}
 
 let counter = 0
 
@@ -26,7 +41,14 @@ function attach(select) {
     empty: select.dataset.empty || "Nobody found",
     remove: select.dataset.remove || "Remove %(name)s",
     new: select.dataset.new || "not in the project yet",
+    team: select.dataset.team || "team",
+    teamOne: select.dataset.teamOne || "%(count)s member",
+    teamMany: select.dataset.teamMany || "%(count)s members",
+    teamPartial:
+      select.dataset.teamPartial || "%(count)s of %(total)s: %(reasons)s",
+    teamInternal: select.dataset.teamInternal || "can't see internal items",
   }
+  const teams = parse(select.dataset.teams)
 
   const root = document.createElement("div")
   root.className = "wb-picker"
@@ -62,6 +84,7 @@ function attach(select) {
       forLabel.htmlFor = inputId
 
   const options = [...select.options]
+  const byId = new Map(options.map((option) => [option.value, option]))
   let shown = []
   let active = -1
 
@@ -99,13 +122,58 @@ function attach(select) {
     if (!list.hidden) renderList()
   }
 
+  // What picking the team would do now: the options it adds, how many
+  // members are in then and why the others are left out
+  const teamState = (team) => {
+    const add = []
+    const leftOut = new Map()
+    let inside = 0
+    for (const member of team.members) {
+      const option = byId.get(String(member.id))
+      let reason = member.reason
+      if (!(reason || member.already) && (!option || option.disabled))
+        reason = texts.teamInternal
+      if (reason) {
+        leftOut.set(reason, (leftOut.get(reason) || 0) + 1)
+        continue
+      }
+      inside++
+      if (option && !member.already && !option.selected) add.push(option)
+    }
+    return { add, inside, leftOut, total: team.members.length }
+  }
+
+  const teamDetail = ({ inside, leftOut, total }) => {
+    if (!leftOut.size)
+      return (total === 1 ? texts.teamOne : texts.teamMany).replace(
+        "%(count)s",
+        total,
+      )
+    const reasons = [...leftOut]
+      .map(([reason, count]) => `${count} ${reason}`)
+      .join(", ")
+    return texts.teamPartial
+      .replace("%(count)s", inside)
+      .replace("%(total)s", total)
+      .replace("%(reasons)s", reasons)
+  }
+
+  // Teams first ({team, state}), then the people (options)
   const matches = () => {
     const query = input.value.trim().toLowerCase()
-    return options.filter(
-      (option) =>
-        !option.selected &&
-        !option.disabled &&
-        option.textContent.toLowerCase().includes(query),
+    const found = []
+    for (const team of teams) {
+      if (!team.name.toLowerCase().includes(query)) continue
+      const state = teamState(team)
+      if (state.add.length) found.push({ team, state })
+    }
+    return found.concat(
+      options.filter(
+        (option) =>
+          !option.selected &&
+          !option.disabled &&
+          option.textContent.toLowerCase().includes(query),
+      ),
     )
   }
 
@@ -116,6 +184,7 @@ function attach(select) {
     list.replaceChildren(
       ...(shown.length
         ? shown.map((option, index) => {
+            if (option.team) return teamItem(option, index)
             const item = document.createElement("li")
             item.id = `${listId}-${index}`
             item.className = `list-group-item list-group-item-action${index === active ? " active" : ""}`
@@ -148,6 +217,26 @@ function attach(select) {
     } else input.removeAttribute("aria-activedescendant")
   }
 
+  const teamItem = (entry, index) => {
+    const item = document.createElement("li")
+    item.id = `${listId}-${index}`
+    item.className = `list-group-item list-group-item-action${index === active ? " active" : ""}`
+    item.setAttribute("role", "option")
+    item.setAttribute("aria-selected", index === active ? "true" : "false")
+    item.dataset.team = entry.team.id
+    const name = document.createElement("span")
+    name.textContent = entry.team.name
+    const detail = document.createElement("small")
+    detail.className = "wb-mentions-detail"
+    detail.textContent = `${texts.team} · ${teamDetail(entry.state)}`
+    item.append(teamMark(), " ", name, " ", detail)
+    item.addEventListener("mousedown", (event) => {
+      event.preventDefault()
+      pick(entry)
+    })
+    return item
+  }
+
   const emptyItem = () => {
     const item = document.createElement("li")
     item.className = "list-group-item text-body-secondary"
@@ -171,7 +260,9 @@ function attach(select) {
   }
 
   const pick = (option) => {
-    option.selected = true
+    if (option.team) {
+      for (const member of option.state.add) member.selected = true
+    } else option.selected = true
     input.value = ""
     close()
     changed()

@@ -62,6 +62,8 @@ class NotifyForm(Form):
             field.widget.attrs["data-clients-follow"] = "#id_visible"
             field.widget.clients_shown = bool(current)
             told = told[True]
+            # The clients follow the checkbox in the browser
+            visible = True
         else:
             # Who'd see it: in a folder as the folder says, at the top what
             # clients post (``message_visibility()``)
@@ -71,9 +73,12 @@ class NotifyForm(Form):
             field.intro = field.intro_lines[0]
             if not visible:
                 seeing = seeing.filter(is_client=False)
-        field.queryset = seeing.exclude(
-            pk__in=[user.pk, *(person.pk for person in told)]
-        ).order_by(Lower("full_name"), "email")
+        already = {user.pk, *(person.pk for person in told)}
+        field.queryset = seeing.exclude(pk__in=already).order_by(
+            Lower("full_name"), "email"
+        )
+        # Teams add their members (specs/teams.md)
+        field.offer_teams(project=project, visible=visible, already=already)
 
     def clean(self):
         data = super().clean()

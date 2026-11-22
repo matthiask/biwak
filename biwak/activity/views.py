@@ -42,7 +42,9 @@ from biwak.forms import Form, PeopleField, PersonChoiceField, next_url
 from biwak.items.models import Item, Kind
 from biwak.items.views import item_for
 from biwak.modals import form_response
+from biwak.organizations.names import display_names
 from biwak.projects.views import project_for
+from biwak.teams.picking import mention_teams
 
 
 class FilterForm(Form):
@@ -174,10 +176,26 @@ def mentionable(request, pk, kind=None):
     """The @ list (frontend/mentions.js): ``?q=``, at most 10 people, those
     who can't see the item greyed out with the reason"""
     item = item_for(request, pk, kind)
-    return JsonResponse(
+    return _with_teams(
+        request,
+        item.project,
+        item.is_client_visible,
         mentions.candidates(item, request.GET.get("q", ""), for_user=request.user),
-        safe=False,
     )
+
+
+def _with_teams(request, project, visible, people):
+    """The teams before the people, for staff (specs/teams.md): choosing
+    one mentions its members who can see it; only on the web, the API's
+    list has people only"""
+    teams = mention_teams(
+        project,
+        visible,
+        request.GET.get("q", ""),
+        for_user=request.user,
+        names=display_names(request.user),
+    )
+    return JsonResponse(teams + people, safe=False)
 
 
 def mentionable_list(request, pk):
@@ -199,11 +217,13 @@ def mentionable_new(request, pk):
         if folder.project_id != project.pk:
             raise Http404
         visible = folder.is_client_visible
-    return JsonResponse(
+    return _with_teams(
+        request,
+        project,
+        visible,
         mentions.candidates_for(
             project, visible, request.GET.get("q", ""), for_user=request.user
         ),
-        safe=False,
     )
 
 
@@ -318,6 +338,16 @@ class SubscribersForm(Form):
             .order_by(Lower("full_name"), "email")
         )
         field.error_messages["required"] = _("Pick at least one person.")
+        # Teams add their members (specs/teams.md); the subscribers are in
+        # already, and the person has their own button
+        field.offer_teams(
+            project=item.project,
+            visible=item.is_client_visible,
+            already=lambda: {
+                user.pk,
+                *item.subscriptions.values_list("user", flat=True),
+            },
+        )
         # The picker hides the select: the browser couldn't focus it to say
         # so, the server does
         field.widget.use_required_attribute = lambda initial: False

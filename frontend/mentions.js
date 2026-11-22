@@ -7,8 +7,13 @@
 // Up/Down choose, Enter or a click inserts
 // "[@Ada](person:ID)", Escape closes. Without JavaScript the fields stay
 // plain fields. Adapted from Governance's mentions.js.
+//
+// Teams (specs/teams.md, staff only) come first, saying how many of their
+// members can see the item and why the others are left out; choosing one
+// inserts a mention per member who can, but not of those mentioned in the
+// field already.
 
-import { avatar } from "./avatar.js"
+import { avatar, teamMark } from "./avatar.js"
 
 const DELAY = 150
 
@@ -127,6 +132,18 @@ function attach(field) {
         item.setAttribute("aria-disabled", person.available ? "false" : "true")
         const name = document.createElement("span")
         name.textContent = person.name
+        if (person.team) {
+          item.dataset.team = person.id
+          const detail = document.createElement("small")
+          detail.className = "wb-mentions-detail"
+          detail.textContent = person.detail
+          item.append(teamMark(), " ", name, " ", detail)
+          item.addEventListener("mousedown", (event) => {
+            event.preventDefault()
+            if (person.available) pick(person)
+          })
+          return item
+        }
         const detail = document.createElement("small")
         detail.className = "wb-mentions-detail"
         detail.textContent = person.available ? person.email : person.reason
@@ -166,10 +183,24 @@ function attach(field) {
     list.style.left = `${Math.max(0, Math.min(left, maxLeft))}px`
   }
 
-  const pick = (person) => {
-    // The short name: pages show the current one, the label is a fallback
+  // The short name: pages show the current one, the label is a fallback
+  const syntax = (person) => {
     const label = (person.short_name || person.name).replace(/[[\]]/g, "")
-    const mention = `[@${label}](person:${person.id}) `
+    return `[@${label}](person:${person.id}) `
+  }
+
+  const pick = (person) => {
+    let mention = syntax(person)
+    if (person.team) {
+      // Not twice: those mentioned in the field already are left out
+      const mentioned = new Set(
+        [...field.value.matchAll(/\]\(person:(\d+)\)/g)].map((m) => m[1]),
+      )
+      mention = person.members
+        .filter((member) => !mentioned.has(String(member.id)))
+        .map(syntax)
+        .join("")
+    }
     field.setRangeText(mention, current.start, field.selectionStart, "end")
     field.dispatchEvent(new Event("input", { bubbles: true }))
     close()
