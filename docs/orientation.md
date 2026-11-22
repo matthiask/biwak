@@ -46,11 +46,11 @@ lists, messages, docs and files, check-ins, members.
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page or in the command palette.
 - **Members** lists who is in the project, by organization: your own
-  first, then the clients' organizations, then partners'. Staff add
+  first, then the clients' organizations, then externals'. Staff add
   people there, "Add people from …" an organization in the project, or
   invite them by email (see [People](#people)), and remove them with
   "Remove" in their row, which asks first.
-  Clients and partners can't remove anybody, themselves included: to
+  Clients and externals can't remove anybody, themselves included: to
   hear less about a project, change its notifications instead (see
   [Notifications](notifications.md)). "Add someone" and other long lists of choices
   (the person filter of the activity, a check-in's time zone) have a
@@ -147,11 +147,11 @@ person's page shows the projects you have in common and what they did.
 Your own name is in Settings; "Edit the name…" on a person's page
 corrects somebody else's (staff correct clients' names, admins
 everybody's).
-Clients only see members of their projects; partners see the people of
+Clients only see members of their projects; externals see the people of
 their projects, including staff who open them without being members.
 Staff manage organizations from the People page: clients' organizations
 and who belongs to them. Admins manage your own organization and
-partners' (organizations with staff): who belongs to them, inviting
+externals' (organizations with staff): who belongs to them, inviting
 people into them, merging them and their email domains.
 
 **Inviting people:** "Invite people" on the People page, or "Invite by
@@ -186,7 +186,7 @@ over. The question before deactivating says how many open to-dos they
 have (the link lists them on the to-dos page, where "Assign…" hands
 them over) and which projects they're the only active staff member of,
 counting only projects you can open; it never stops you. Staff change clients, admins also staff and
-partners; you can't deactivate yourself or the last active admin.
+externals; you can't deactivate yourself or the last active admin.
 `biwak people activate` and `deactivate` do the same for several people at
 once, all or nothing.
 
@@ -203,7 +203,7 @@ left out and why ("3 of 5: 2 can't see internal items"). Only the people
 are kept: changing or deleting the team later doesn't change who was
 assigned, subscribed or mentioned with it. Your own staff create, change
 and delete teams under "Teams" on the People page; members can be
-anyone, staff, partners and clients. Clients never see teams. Teams are
+anyone, staff, externals and clients. Clients never see teams. Teams are
 a shortcut of the pages: through the CLI, the API and replies by mail
 a team's name isn't expanded.
 

@@ -1,7 +1,7 @@
 # Access: client visibility and sign-in
 
 **Status:** built (2026-11-20), reviewed twice for visibility
-(2026-11-20) and for partners (2026-11-21); the rules marked "after the
+(2026-11-20) and for externals (2026-11-21); the rules marked "after the
 visibility review" came from those reviews.
 
 The most delicate part of the app: a bug here shows internal content to a
@@ -30,23 +30,23 @@ through every entry point (`AGENTS.md`).
     `biwak/projects/operations.py`). Open pages and editors check their
     access again.
   - Only own staff remove members, anybody including themselves;
-    clients and partners can't leave (decided 2026-11-22: notifications
+    clients and externals can't leave (decided 2026-11-22: notifications
     cover not hearing about a project, and leaving let them get around
     the organization's decisions about who works on it,
     `organizations.md`).
 - **Staff** with access to a project see everything in it.
-- **Partners see only their projects** (decided 2026-11-21,
+- **Externals see only their projects** (decided 2026-11-21,
   `organizations.md`): staff whose organization isn't the own one
-  (freelancers, partner agencies) and staff without an organization
+  (freelancers, other agencies) and staff without an organization
   (individuals) see only the projects they're members of; all-access
   projects open only to the own organization's staff. The own
   organization always exists and admins are always in it
-  (`User.is_partner`, `User.sees_all_access`, `own_staff()`).
+  (`User.is_external`, `User.sees_all_access`, `own_staff()`).
   `Project.objects.accessible_to()` and `notify.people_who_see()` decide
   it, so pages, the feed, search, the palette, the lantern, mails, mail
-  replies, the API, the CLI and both websockets follow. Partners are
+  replies, the API, the CLI and both websockets follow. Externals are
   assigned and mentioned in all-access projects only as members.
-  - **Partners know all the people of their projects** (changed
+  - **Externals know all the people of their projects** (changed
     2026-11-21, it was "members only, like clients"), like staff of a
     limited project: the members and the own staff of an all-access
     project (`knows_people_of()`, `Project.people_q()`), in the `@` list,
@@ -59,9 +59,9 @@ through every entry point (`AGENTS.md`).
     project's people (names in histories); the old title of a list moved
     out of sight shows in the feed only to own staff. Errors naming
     people by ID say nothing about who exists.
-  - Partners don't create projects, add or invite people or manage
+  - Externals don't create projects, add or invite people or manage
     organizations: those forms offer everybody (decided 2026-11-21).
-  - Admins manage the internal team and partners, staff the clients
+  - Admins manage the internal team and externals, staff the clients
     (decided 2026-11-21, `organizations.md`, `org_ops.can_touch()`).
 - **Clients** are never covered by all-access: they see a project only
   if they're members, and in it only what is visible to clients.
@@ -90,12 +90,12 @@ through every entry point (`AGENTS.md`).
   can be assigned wherever they can see the to-do; assigning someone who
   isn't a member adds them to the project (recorded as added, decided
   2026-11-21, `ops.assignable_people()`). Clients assign members only.
-- **Clients learn about the project's members only** (not partners,
+- **Clients learn about the project's members only** (not externals,
   above), not about staff who see the project because it's all-access
   (after the visibility review): subscribers on item pages, the people a
   check-in asks and who hasn't answered (`Project.people_known_to()`).
   People removed from the project who stay assigned to to-dos aren't
-  named to clients and partners either: the rows, the to-do's page, the
+  named to clients and externals either: the rows, the to-do's page, the
   API's `assignees` and mails show only the people they may know (fixed
   2026-11-21 after a review: `{% known_in %}`, `known_ids_for()`). The
   feed API's event data (`mentioned`, `assigned`, `people`, `assignees`,
@@ -275,4 +275,4 @@ allauth's `/accounts/2fa/…` and `/accounts/sessions/` pages lead there.
 - Deactivated people can't sign in by any way (`activation.md`).
 - Staff or client is a property of the person, set by admins; everybody
   can belong to an organization (`organizations.md`), shown for clients
-  and partners: "Ada, Example Ltd".
+  and externals: "Ada, Example Ltd".

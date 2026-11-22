@@ -1,10 +1,18 @@
 # Organizations
 
 The organizations people belong to: the clients' companies, the own
-organization, and partners (freelancers, other agencies). Who sees what
+organization, and externals (freelancers, other agencies). Who sees what
 because of them is in `access.md`; inviting, activating and
 deactivating people in `activation.md`; how an organization's people
 sign in in `sso.md` and `two-factor.md`.
+
+**"External", not "partner"** (decided by the user 2026-11-22):
+"partner" is overloaded (Holacracy, the company's co-owners) and German
+already says "Externe", so English follows: "externals" for the people,
+"Ada is external", the badge "external", "external organization". The
+code, API, CLI, specs and help were renamed with it (`User.is_external`,
+`is_external_organization()`, `external_organizations()`), without
+backwards compatibility (no users yet).
 
 **Status:** built (2026-11-21), `biwak/organizations/`.
 
@@ -21,15 +29,15 @@ sign in in `sso.md` and `two-factor.md`.
   outlook.com, … a small list) can't be added and never match. With
   single sign-on the domains also decide whose sign-ins count, and only
   admins change them (`sso.md`).
-- **Everyone can belong to one:** clients, staff, partners; clients of
+- **Everyone can belong to one:** clients, staff, externals; clients of
   any number of organizations per project.
 - **No organization is an individual:** staff without one (freelancers)
-  are partners, clients without one are fine.
-- **Partners** are staff not in the own organization (`User.is_partner`;
-  own staff: `own_staff()`, not clients, `organization__is_own`). A
-  partner organization is one with staff that isn't the own
-  (`is_partner_organization()`, `partner_organizations()`; no stored
-  mark). Partners see only the projects they're members of and know all
+  are externals, clients without one are fine.
+- **Externals** are staff not in the own organization (`User.is_external`;
+  own staff: `own_staff()`, not clients, `organization__is_own`). An
+  external organization is one with staff that isn't the own
+  (`is_external_organization()`, `external_organizations()`; no stored
+  mark). Externals see only the projects they're members of and know all
   of those projects' people (`access.md`); they edit and archive the
   projects they're in and change members' notification choices on the
   people page, like other staff.
@@ -40,35 +48,35 @@ sign in in `sso.md` and `two-factor.md`.
   `mark_own()`) while no admin would be left out. In practice: rename it,
   or merge others into it.
 - **Admins are always own staff:** every change that would make an admin
-  a partner is refused with a message saying what to do first: ticking
-  "is admin" on a partner (`User.clean()`, the Django admin), moving an
+  an external is refused with a message saying what to do first: ticking
+  "is admin" on an external (`User.clean()`, the Django admin), moving an
   admin into another organization, merging an organization with admins
   into one that isn't the own, unmarking or moving the own mark
-  (`_no_admin_partners()`, on the pages, the API and the Django admin).
+  (`_no_admin_externals()`, on the pages, the API and the Django admin).
 - **Leaving the own organization** (moved, merged, another one marked,
   unmarked in the admin) drops the person's subscriptions in projects
   they can't open anymore (`forget_lost_access()`).
 - **The display** "Ada, Example Ltd", with the organization's current
-  name, for clients and partners, not own staff; also in the `@` list.
+  name, for clients and externals, not own staff; also in the `@` list.
 - **Files:** "clients of the same organization replace, rename and move
   each other's files" (`files.md`) compares the foreign key.
 
 ## Managing (decided 2026-11-21)
 
-**Admins manage the internal team and partners, staff the clients**
+**Admins manage the internal team and externals, staff the clients**
 (decided by the user, it was "all staff, but the own organization"):
 `org_ops.can_touch(user, *organizations, person=)` refuses others than
-admins for the own and partner organizations and for moving staff (which
-is how an organization becomes a partner's). It guards moving people in
+admins for the own and external organizations and for moving staff (which
+is how an organization becomes external). It guards moving people in
 or out (pages, API, CLI), merging into or out of them (the merge modal
-and the palette's "Merge…" don't offer partner organizations to staff),
+and the palette's "Merge…" don't offer external organizations to staff),
 deleting, inviting into them (the invitation form, the new-project rows,
-the API's `organization_id`; the domain's suggestion of the own or a
-partner organization is dropped for staff), and their domains
+the API's `organization_id`; the domain's suggestion of the own or an
+external organization is dropped for staff), and their domains
 (`can_change_domains()`, the field disabled for staff). Renaming the own
-or a partner organization stays all staff's (a conservative choice
+or an external organization stays all staff's (a conservative choice
 while building). Staff keep everything for client organizations: create,
-rename, merge (in the audit log), delete only without people. Partners
+rename, merge (in the audit log), delete only without people. Externals
 manage none (`access.md`).
 
 - **Pages** (`/organizations/`, own staff only; linked from the People
@@ -86,7 +94,7 @@ manage none (`access.md`).
   organization is suggested for admins only. People who exist keep their
   organization.
 - **Inviting staff:** without an organization the person is an
-  individual partner, and the form says so ("No organization: staff see
+  individual external, and the form says so ("No organization: staff see
   only the projects they're added to"); admins can pick the own
   organization.
   Made-up staff in the tests (`biwak/test_utils.py`) belong to the own
@@ -99,19 +107,19 @@ manage none (`access.md`).
 - **`/people/`, "People" in the navigation** and "Go to people" in the
   palette; the way into the organizations pages.
 - **Order:** the own organization first, then the other organizations by
-  name, each marked as a client or partner organization, then people
+  name, each marked as a client or external organization, then people
   without an organization (freelancers, individual clients). Headings
   link to the organization's page for own staff. The own organization
   is marked "Your own organization" only for its people; clients and
-  partners see it by its name alone, here and on a project's people page
+  externals see it by its name alone, here and on a project's people page
   (decided 2026-11-22).
-- **Each person:** name, address, role (admin, staff, partner, client),
+- **Each person:** name, address, role (admin, staff, external, client),
   a link to their feed where the viewer may open it; inactive people
   quietly, marked "inactive", last in their group. Own staff get "Change
   organization" (the own organization for admins only) and links to the
   organizations.
-- **Clients and partners** see the people they share a project with
-  (`known_people()`, `access.md`), grouped the same way. Partners see
+- **Clients and externals** see the people they share a project with
+  (`known_people()`, `access.md`), grouped the same way. Externals see
   addresses as on a project's people page; clients only those of their
   own organization.
 - Invitations and the "Invited" and "Inactive" filters: `activation.md`.
@@ -122,7 +130,7 @@ manage none (`access.md`).
 - **The new-project modal** (`biwak/projects/views.py`, two steps) asks
   for the organizations involved (all but the own). Without any it adds
   the project at once. With some, "Continue" shows their people
-  (partners included), all ticked, own staff to tick (partners come with
+  (externals included), all ticked, own staff to tick (externals come with
   their organization), and three rows to invite people without an
   account (address, name, organization: the domain's if left empty, else
   the only one involved; invited as clients). Everybody picked becomes a
@@ -131,12 +139,12 @@ manage none (`access.md`).
   extending `modal_form.html` (block `fields`) for the rows.
 - **A project's people page by organization** (`project_groups()` in
   `biwak/organizations/people.py`): own staff, client organizations,
-  partner organizations (by name), then people without an organization;
+  external organizations (by name), then people without an organization;
   within a group by name, the full name without the organization under
   its heading. For own staff each organization with active people who
   aren't members gets "Add people from …": the "Add someone" modal with
   `?organization=ID`, offering only them, preselected when there's one.
-  Clients and partners see the same groups without actions (clients
+  Clients and externals see the same groups without actions (clients
   without addresses).
 - **The page's actions** (decided 2026-11-22): "Add someone", "Invite by
   email" and "Organizations" in the page header (all quiet, icons only on
@@ -163,11 +171,11 @@ manage none (`access.md`).
   doesn't any more and stops hearing about it, and that Bob's open
   to-dos in it lose Bob as assignee; for oneself "Remove yourself from
   …?", then the projects page. Only own staff (`can_manage_members()`)
-  remove people, anybody including themselves; clients and partners
+  remove people, anybody including themselves; clients and externals
   can't leave any more (403 on the page and in the API). "Leave the
   project" existed so that people could drop a project or stop hearing
   about it; notifications cover that now ("Only when tagged", "No
-  mails", unsubscribing), and letting clients and partners leave let
+  mails", unsubscribing), and letting clients and externals leave let
   them get around the organization's decisions about who works on a
   project.
 
@@ -188,6 +196,6 @@ manage none (`access.md`).
 - **The importer** (`biwak/importer/importer.py`): Basecamp's companies
   become organizations by name (ignoring case and spaces); clients and
   collaborators (staff who aren't Basecamp employees) get theirs, which
-  makes collaborators partners; employees the own organization. The dry
-  run says "partner" and the company. It assigns and mentions as in
-  Basecamp, also for a creator who's a partner now.
+  makes collaborators externals; employees the own organization. The dry
+  run says "external" and the company. It assigns and mentions as in
+  Basecamp, also for a creator who's an external now.

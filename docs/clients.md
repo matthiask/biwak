@@ -96,9 +96,9 @@ palette.
 
 Clients can't create public links.
 
-## Partners
+## Externals
 
-Staff of another organization (freelancers, partner agencies) are staff
+Staff of another organization (freelancers, other agencies) are staff
 who see only the projects they are members of. In those projects they
 know everybody, like your own staff: the members and the staff who open
 the project without being members. They can mention, assign and ask

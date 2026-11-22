@@ -25,11 +25,11 @@ Depends on: `people.md`, `organizations.md` (the People page),
 
 - **Any own staff** creates, renames, changes and deletes teams, on the
   People page (a "Teams" section, each team's page or modal listing its
-  members with the people picker). Partners and clients don't.
+  members with the people picker). Externals and clients don't.
 - **A team** has a name (unique, ignoring case) and members: any active
-  or inactive person, staff, partners and clients alike ("Client X's
+  or inactive person, staff, externals and clients alike ("Client X's
   people").
-- **Only staff see teams** (own staff and partners): their names and
+- **Only staff see teams** (own staff and externals): their names and
   members never show to clients, in pages, the API or mails.
 - Deactivating someone keeps them in their teams (they're skipped when
   expanding, below); deleting a person's account removes them.
@@ -43,10 +43,10 @@ Depends on: `people.md`, `organizations.md` (the People page),
   palette). A team's page (`/teams/<id>/`, for staff) lists its members;
   own staff get Edit (name and the people picker offering everybody,
   inactive people too) and Delete (a question), also in the palette.
-- **Partners see teams with only the members they may know**
+- **Externals see teams with only the members they may know**
   (`known_people()`, as on the People page), everywhere: pages, picker,
   `@` list, API; the counts ("3 of 5") count only those, so a team
-  doesn't tell a partner about clients of other projects (confirmed by
+  doesn't tell an external about clients of other projects (confirmed by
   the user 2026-11-22).
 
 ## Using a team
@@ -89,7 +89,7 @@ marked as a team with its number of members:
 
 - Staff list and show teams with their members, own staff create,
   change and delete them (`/api/v1/teams/`, `{name, members: [IDs]}`,
-  PATCH replaces the members; partners 403), the CLI `biwak teams
+  PATCH replaces the members; externals 403), the CLI `biwak teams
   [show|add|edit|delete]` with `--json` and `--members 3,4`. Clients get
   404.
 - **`@Team` is only expanded on the web** (decided 2026-11-22): texts
@@ -105,6 +105,6 @@ now and changing the team later doesn't change earlier picks.
 
 `biwak/teams/test_teams.py` (operations, pages, palette),
 `test_picking.py` (the picker's `data-teams`, the `@` list's JSON, as
-staff, partner and client), `test_api.py` (API and CLI);
+staff, external and client), `test_api.py` (API and CLI);
 `TeamsTest` in `biwak/test_e2e.py` (the picker, "Also tell…" following
 the checkbox, the `@` list).
