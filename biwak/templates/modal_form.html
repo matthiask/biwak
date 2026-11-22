@@ -25,6 +25,7 @@
     {% if help_page %}
       <p class="small"><a href="{% url 'help' help_page %}">{% translate "More in the help" %}</a></p>
     {% endif %}
+    {% block before_form %}{% endblock %}
     <form
       method="post"
       action="{{ request.get_full_path }}"

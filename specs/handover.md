@@ -146,6 +146,17 @@ deactivates:
 It never blocks deactivating: people leave whether or not the handover
 is done.
 
+Built (2026-11-22): `activation.what_is_left()` (two queries) and
+`organizations/deactivate.html` (extending `modal_form.html`, which got
+a `before_form` block). The count is the to-dos page's
+(`due.todos(viewer, assignee=ID)`: what the link lists, so archived
+projects and lists don't count), the sentence the link; "the only active
+staff member" counts staff and partners who are active members, of
+projects not archived (decided 2026-11-22: archived ones need nobody).
+The names are full names ("Ada Example has 23 open to-dos."), not the
+display name with the organization. Below them: "Deactivating doesn't
+wait for the handover."; nothing shows when nothing is left.
+
 ## All projects, for admins
 
 Decided 2026-11-22: admins want a list of every project anyway. It

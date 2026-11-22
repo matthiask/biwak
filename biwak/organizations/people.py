@@ -343,6 +343,12 @@ def person_deactivate(request, pk):
         cancel_url=back(request, who),
         submit_label=_("Deactivate"),
         destructive=True,
+        # What's left to hand over (specs/handover.md)
+        template="organizations/deactivate.html",
+        extra={
+            "who": who,
+            "left": activation.what_is_left(who, viewer=request.user),
+        },
     )
 
 

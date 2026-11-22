@@ -134,7 +134,10 @@ bounced); nothing else changes. "Deactivate…" is for somebody who left:
 they are signed out everywhere, their API tokens and calendar link are
 deleted and they can't sign in, while what they did stays. They stay
 assigned to their to-dos, marked as inactive, until someone hands them
-over. Staff change clients, admins also staff and
+over. The question before deactivating says how many open to-dos they
+have (the link lists them on the to-dos page, where "Assign…" hands
+them over) and which projects they're the only active staff member of,
+counting only projects you can open; it never stops you. Staff change clients, admins also staff and
 partners; you can't deactivate yourself or the last active admin.
 `biwak people activate` and `deactivate` do the same for several people at
 once, all or nothing.

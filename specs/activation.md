@@ -117,6 +117,9 @@ nobody gets mail or a sign-in before someone decides
   assignments, open to-dos' too (decided 2026-11-22, replacing the
   decision of 2026-11-21 to drop them, `handover.md`): they show as
   inactive and are handed over with "Assign…".
+- **The question says what's left** (`handover.md`): their open to-dos
+  and the projects they're the only active staff member of, in projects
+  the deactivating person can open; it never blocks.
 - No mail to the person. Reactivating is "Activate" again.
 - **The Django admin** follows the same rules (fixed 2026-11-21 after a
   review): unticking "is active" deactivates through `deactivate()`

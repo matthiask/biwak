@@ -10,6 +10,7 @@ from allauth.mfa.models import Authenticator
 from allauth.usersessions.models import UserSession
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext as _, ngettext
 
@@ -124,6 +125,42 @@ def deactivate(users, *, actor):
         done.append(user)
     end_access_now_and_after_commit([user.pk for user in done])
     return done
+
+
+class Left(NamedTuple):
+    """What somebody leaving leaves behind, as far as the viewer may know
+    (specs/handover.md)"""
+
+    open_todos: int
+    # Projects they're the only active staff member of
+    only_staff_in: list
+
+
+def what_is_left(user, *, viewer):
+    """``Left``: the person's open to-dos and the projects (not archived)
+    they're the only active staff member of, counting only projects the
+    viewer can open (decided 2026-11-22: nothing about the others, not even
+    their titles or counts). Two queries."""
+    from django.db.models import Exists, OuterRef
+
+    from biwak.items import due
+    from biwak.projects.models import Membership, Project
+
+    open_todos = due.todos(viewer, assignee=user.pk).count()
+    only = []
+    if not user.is_client:
+        others = Membership.objects.filter(
+            project=OuterRef("pk"), user__is_active=True, user__is_client=False
+        ).exclude(user=user)
+        only = list(
+            Project.objects
+            .accessible_to(viewer)
+            .active()
+            .filter(memberships__user=user)
+            .filter(~Exists(others))
+            .order_by(Lower("name"))
+        )
+    return Left(open_todos, only)
 
 
 def end_access(users):
