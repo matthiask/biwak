@@ -1,10 +1,13 @@
 """Adding to-dos from text (specs/todos-from-text.md): the parser, the
 operation, the modal and its preview, the API"""
 
+import json
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from biwak.accounts.models import APIToken
 from biwak.activity import mails
 from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.activity.operations import subscribe
@@ -399,3 +402,68 @@ class ViewTest(Fixture, TestCase):
         self.assertContains(response, "added 2 to-dos to")
         event = Event.objects.get(action=Action.ADDED_TODOS)
         self.assertEqual(mails.describe(event, self.ada), "Bob Example added 2 to-dos.")
+
+
+class APITest(Fixture, TestCase):
+    def api(self, user):
+        _token, secret = APIToken.create_for(user=user, title="T", access="write")
+        return {"authorization": f"Bearer {secret}"}
+
+    def post(self, user, text, *, preview=False, item=None):
+        return self.client.post(
+            f"/api/v1/lists/{(item or self.list).pk}/todos/from-text/",
+            {"text": text, "preview": preview},
+            content_type="application/json",
+            headers=self.api(user),
+        )
+
+    def test_preview(self):
+        response = self.post(self.ada, EXAMPLE, preview=True)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["added"])
+        self.assertEqual(data["count"], 5)
+        self.assertEqual(data["left_out"], 2)
+        self.assertEqual(
+            [(g["title"], g["new"], g["id"]) for g in data["groups"]],
+            [
+                (None, False, None),
+                ("Design", False, self.design.pk),
+                ("Later", True, None),
+            ],
+        )
+        logo = data["groups"][1]["todos"][0]
+        self.assertEqual(
+            (logo["title"], logo["checklist_done"], logo["checklist_total"]),
+            ("Draw the logo", 1, 2),
+        )
+        self.assertEqual(len(self.todos()), 1)
+
+    def test_adding(self):
+        response = self.post(self.ada, EXAMPLE)
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertTrue(data["added"])
+        later = data["groups"][2]
+        self.assertTrue(later["new"])
+        self.assertIsNotNone(later["id"])
+        ids = [t["id"] for g in data["groups"] for t in g["todos"]]
+        self.assertEqual(len(self.todos()), 6)
+        self.assertTrue(all(ids))
+
+    def test_problems(self):
+        response = self.post(self.ada, "")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            self.post(self.ada, "", preview=True).json()["problem"],
+            "Paste a text or choose a file.",
+        )
+
+    def test_clients(self):
+        self.assertEqual(
+            self.post(self.cleo, "- x\n", item=self.internal).status_code, 404
+        )
+        response = self.post(self.cleo, "# New\n- x\n")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("creator", json.dumps(response.json()))
+        self.assertEqual(self.post(self.cleo, "- x\n").status_code, 201)
