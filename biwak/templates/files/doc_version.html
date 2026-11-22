@@ -7,7 +7,7 @@
   <div class="wb-page-header">
     <h1 class="wb-title">
       {{ version.title|title_text }}
-      <span class="text-body-secondary fs-6">{{ version.created_at|dateformat:"SHORT_DATETIME_FORMAT" }} ·
+      <span class="text-body-secondary fs-6">{{ version.created_at|moment }} ·
         {% person_link version.created_by %}</span>
     </h1>
     <div class="wb-page-actions">

@@ -603,12 +603,21 @@ def due_badge(todo, date_format="MONTH_DAY_FORMAT", *, badge_only=False):
 
 
 @register.filter
-def ago(when):
-    """How long ago, "just now" under a minute (``timesince`` says "0
-    minutes"), else "5 minutes ago": one unit (``biwak.text.ago``)"""
+def moment(when, on=None):
+    """A past moment by the one rule (``biwak.text.moment``, specs/ui.md):
+    "3 hours ago" within seven days, then the date, the exact time on
+    hover. ``{{ x|moment:"on" }}`` for sentences: "on 12 Nov 2026"."""
     from biwak import text
+    from biwak.formats import format_date
 
-    return text.ago(when)
+    if not when:
+        return ""
+    return format_html(
+        '<time datetime="{}" title="{}">{}</time>',
+        when.isoformat(),
+        format_date(localtime(when), "SHORT_WEEKDAY_DATETIME_FORMAT"),
+        text.moment(when, on=on == "on"),
+    )
 
 
 @register.simple_tag

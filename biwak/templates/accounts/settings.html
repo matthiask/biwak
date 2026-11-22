@@ -135,7 +135,7 @@
       {% if request.user.mail_undeliverable_at %}
         {# Resend reported a hard bounce or a complaint (specs/mail-sending.md) #}
         <div class="alert alert-warning">
-          {% blocktranslate with since=request.user.mail_undeliverable_at|dateformat:"DATE_FORMAT" email=request.user.email %}Mail to your address {{ email }} bounced or was marked as spam on {{ since }}, so you get no notification mails. Ask an admin to change the address or to clear this once it works again.{% endblocktranslate %}
+          {% blocktranslate with since=request.user.mail_undeliverable_at|moment:"on" email=request.user.email %}Mail to your address {{ email }} bounced or was marked as spam {{ since }}, so you get no notification mails. Ask an admin to change the address or to clear this once it works again.{% endblocktranslate %}
         </div>
       {% endif %}
       <form method="post" action="{% url 'settings_notifications' %}">
@@ -295,10 +295,10 @@
               {% for passkey in passkeys %}
                 <tr>
                   <td>{{ passkey }}</td>
-                  <td>{{ passkey.created_at|dateformat:"SHORT_DATE_FORMAT" }}</td>
+                  <td>{{ passkey.created_at|moment }}</td>
                   <td>
                     {% if passkey.last_used_at %}
-                      <span title="{{ passkey.last_used_at }}">{{ passkey.last_used_at|ago }}</span>
+                      {{ passkey.last_used_at|moment }}
                     {% else %}
                       <span class="text-body-secondary">{% translate "Never" %}</span>
                     {% endif %}
@@ -333,8 +333,8 @@
           <div>
             {% translate "On" %}
             <div class="small text-body-secondary">
-              {% blocktranslate trimmed with date=authenticator_app.created_at|dateformat:"SHORT_DATE_FORMAT" %}
-                Since {{ date }}
+              {% blocktranslate trimmed with when=authenticator_app.created_at|moment:"on" %}
+                Set up {{ when }}
               {% endblocktranslate %}
             </div>
           </div>
@@ -375,9 +375,7 @@
               </td>
               <td>{{ session.ip }}</td>
               <td>
-                <span
-                  title="{{ session.created_at|dateformat:'SHORT_DATETIME_FORMAT' }}"
-                >{{ session.created_at|ago }}</span>
+                {{ session.created_at|moment }}
               </td>
               <td class="text-end">
                 {% if session.current %}

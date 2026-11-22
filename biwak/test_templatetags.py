@@ -3,7 +3,8 @@ import datetime as dt
 import time_machine
 from django.template import Context, Template
 from django.test import TestCase
-from django.utils import timezone
+from django.utils import timezone, translation
+from django.utils.html import strip_tags
 
 from biwak.items import operations as ops
 from biwak.templatetags.biwak import excerpt
@@ -59,26 +60,63 @@ class ExcerptTest(TestCase):
         self.assertEqual(html, "alpha…")
 
 
-class AgoTest(TestCase):
-    def ago(self, delta):
-        return Template("{% load biwak %}{{ when|ago }}").render(
+class MomentTest(TestCase):
+    """One rule for moments (decided 2026-11-22, specs/ui.md): relative
+    within seven days, then the date, the exact time on hover"""
+
+    def moment(self, delta, arg=""):
+        return Template("{% load biwak %}{{ when|moment" + arg + " }}").render(
             Context({"when": timezone.now() - delta})
         )
 
+    def text(self, delta, arg=""):
+        return strip_tags(self.moment(delta, arg))
+
     def test_under_a_minute_is_just_now_never_0_minutes(self):
-        self.assertEqual(self.ago(dt.timedelta(0)), "just now")
-        self.assertEqual(self.ago(dt.timedelta(seconds=59)), "just now")
+        self.assertEqual(self.text(dt.timedelta(0)), "just now")
+        self.assertEqual(self.text(dt.timedelta(seconds=59)), "just now")
 
     def test_longer_ago(self):
-        self.assertEqual(self.ago(dt.timedelta(minutes=5)), "5\xa0minutes ago")
-        self.assertEqual(self.ago(dt.timedelta(hours=3)), "3\xa0hours ago")
+        self.assertEqual(self.text(dt.timedelta(minutes=5)), "5\xa0minutes ago")
+        self.assertEqual(self.text(dt.timedelta(hours=3)), "3\xa0hours ago")
+        self.assertEqual(self.text(dt.timedelta(days=6, hours=23)), "6\xa0days ago")
 
     def test_one_unit_only(self):
         # Decided 2026-11-22: "13 hours ago", not "13 hours, 37 minutes ago"
         self.assertEqual(
-            self.ago(dt.timedelta(hours=13, minutes=37)), "13\xa0hours ago"
+            self.text(dt.timedelta(hours=13, minutes=37)), "13\xa0hours ago"
         )
-        self.assertEqual(self.ago(dt.timedelta(days=9)), "1\xa0week ago")
+
+    @time_machine.travel(dt.datetime(2026, 11, 22, 12, tzinfo=dt.UTC), tick=False)
+    def test_the_date_from_seven_days_on(self):
+        self.assertEqual(self.text(dt.timedelta(days=7)), "15 Nov 2026")
+        self.assertEqual(self.text(dt.timedelta(days=400)), "18 Oct 2025")
+
+    @time_machine.travel(dt.datetime(2026, 11, 22, 12, tzinfo=dt.UTC), tick=False)
+    def test_on_for_sentences(self):
+        self.assertEqual(self.text(dt.timedelta(days=9), ':"on"'), "on 13 Nov 2026")
+        self.assertEqual(self.text(dt.timedelta(days=2), ':"on"'), "2\xa0days ago")
+
+    @time_machine.travel(dt.datetime(2026, 11, 22, 12, tzinfo=dt.UTC), tick=False)
+    def test_the_exact_time_on_hover(self):
+        html = self.moment(dt.timedelta(hours=3))
+        self.assertIn('datetime="2026-11-22T09:00:00+00:00"', html)
+        self.assertIn('title="Sun, 22 Nov 2026, 10:00"', html)  # Zurich
+        self.assertTrue(html.startswith("<time "))
+
+    @time_machine.travel(dt.datetime(2026, 11, 22, 12, tzinfo=dt.UTC), tick=False)
+    def test_german(self):
+        with translation.override("de"):
+            self.assertEqual(self.text(dt.timedelta(days=2)), "vor 2\xa0Tagen")
+            self.assertEqual(
+                self.text(dt.timedelta(days=9), ':"on"'), "am 13. Nov. 2026"
+            )
+
+    def test_nothing_for_none(self):
+        html = Template("{% load biwak %}{{ when|moment }}").render(
+            Context({"when": None})
+        )
+        self.assertEqual(html, "")
 
     def test_a_project_pages_activity(self):
         ada = person("Ada")

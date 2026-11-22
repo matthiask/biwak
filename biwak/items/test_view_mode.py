@@ -9,6 +9,7 @@ import re
 from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.html import strip_tags
 
 from biwak import checklists
 from biwak.checkins.models import Answer
@@ -70,14 +71,14 @@ class TodoViewTest(ViewModeBase):
 
     def test_the_page_says_when_and_by_whom_it_was_created(self):
         type(self.todo).objects.filter(pk=self.todo.pk).update(
-            created_at="2026-12-03T10:00:00+01:00"
+            created_at="2026-11-03T10:00:00+01:00"
         )
         for user in [self.ada, self.cleo]:
             self.client.force_login(user)
             html = self.client.get(self.url).content.decode()
             fact = html[html.index("<dt>Created</dt>") :]
             fact = re.sub(r"\s+", " ", fact[: fact.index("</dd>")])
-            self.assertIn("3 Dec 2026 by", fact)
+            self.assertIn("3 Nov 2026 by", strip_tags(fact))
             self.assertIn(f'href="/people/{self.ada.pk}/"', fact)
             self.assertIn("Ada", fact)
 

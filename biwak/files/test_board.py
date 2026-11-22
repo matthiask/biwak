@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event, Notification
@@ -695,7 +696,7 @@ class OrderTest(Fixture, TestCase):
             self.client.force_login(user)
             for url in [self.url(), self.project.get_absolute_url()]:
                 response = self.client.get(url)
-                self.assertContains(response, line, count=1)
+                self.assertEqual(strip_tags(response.content.decode()).count(line), 1)
                 self.assertNotContains(response, "Last comment 1 day")
             response = self.client.get(self.url(), {"order": "newest"})
             self.assertNotContains(response, "Last comment")
@@ -703,7 +704,8 @@ class OrderTest(Fixture, TestCase):
         self.assertNotContains(
             self.client.get(self.project.get_absolute_url()), "Last comment"
         )
-        self.assertContains(self.client.get(self.url(), {"order": "latest"}), line)
+        response = self.client.get(self.url(), {"order": "latest"})
+        self.assertIn(line, strip_tags(response.content.decode()))
 
     def test_pinned_stay_on_top(self):
         operations.pin_message(self.secret, actor=self.ada)

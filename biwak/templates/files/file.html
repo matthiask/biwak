@@ -57,7 +57,7 @@
       {% endif %}
       <p class="small text-body-secondary">
         {{ version.name }} · {{ version.size|filesizeformat }} · {% person_link version.uploaded_by %},
-        {{ version.uploaded_at|dateformat:"SHORT_DATETIME_FORMAT" }}
+        {{ version.uploaded_at|moment }}
       </p>
       <div id="live-text" data-live>
         {% if upload.description %}<div
@@ -101,7 +101,7 @@
             <li>
               <a href="{% file_url old %}">{{ old.name }}</a>
               · {{ old.size|filesizeformat }} · {% person_link old.uploaded_by %},
-              {{ old.uploaded_at|dateformat:"SHORT_DATE_FORMAT" }}
+              {{ old.uploaded_at|moment }}
             </li>
           {% endfor %}
         </ul>

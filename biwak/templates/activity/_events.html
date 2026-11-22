@@ -3,7 +3,7 @@
   {% for event in events %}
     <li class="mb-2 wb-event" data-kb-row>
       {% include "activity/_event.html" %}
-      <div class="small text-body-secondary">{{ event.created_at|ago }}</div>
+      <div class="small text-body-secondary">{{ event.created_at|moment }}</div>
     </li>
   {% empty %}
     <li class="text-body-secondary">{% translate "Nothing yet." %}</li>

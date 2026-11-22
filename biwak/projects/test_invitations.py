@@ -467,7 +467,7 @@ class InvitationsVisibleTest(TestCase):
         ]:
             response = self.client.get(url)
             self.assertContains(response, "Invited, not signed in yet")
-            self.assertContains(response, "by Ada Example on")
+            self.assertContains(response, "by Ada Example <time")
             self.assertContains(
                 response, reverse("invitation_resend", args=[self.dora.pk])
             )

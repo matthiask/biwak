@@ -67,7 +67,7 @@
       {% translate "Previous:" %}
       <a
         href="{{ previous.get_absolute_url }}"
-      >{% if previous.todo.is_completed %}{% short_name previous.todo.completed_by as who %}{% blocktranslate with when=previous.todo.completed_at|dateformat:"DATE_FORMAT" %}completed on {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous|item_title }}{% endif %}</a>
+      >{% if previous.todo.is_completed %}{% short_name previous.todo.completed_by as who %}{% blocktranslate with when=previous.todo.completed_at|moment:"on" %}completed {{ when }} by {{ who }}{% endblocktranslate %}{% else %}{{ previous|item_title }}{% endif %}</a>
     </p>
   {% endif %}
   <div class="row g-4">

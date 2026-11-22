@@ -62,7 +62,7 @@
     {% if message.category %}<span class="wb-category">{{ message.category }}</span> ·{% endif %}
     {% avatar item.creator %}
     {% person_link item.creator name=item.creator.display_name %} ·
-    {{ item.created_at|dateformat:"SHORT_DATETIME_FORMAT" }}
+    {{ item.created_at|moment }}
   </p>
   {% include "items/_client_tab.html" %}
   <div class="row g-4">

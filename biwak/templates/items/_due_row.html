@@ -18,7 +18,7 @@
         {% if todo.todo.due_on %}{% if not in_project %}·{% endif %}
           {% due_badge todo.todo "SHORT_WEEKDAY_DATE_FORMAT" %}{% endif %}
         {% if todo.todo.is_completed %}·
-          {% blocktranslate with day=todo.todo.completed_at|dateformat:"SHORT_DATE_FORMAT" %}completed {{ day }}{% endblocktranslate %}{% endif %}
+          {% blocktranslate with when=todo.todo.completed_at|moment:"on" %}completed {{ when }}{% endblocktranslate %}{% endif %}
       </span>
     </div>
   </div>

@@ -41,3 +41,21 @@ def ago(when, *, now=None, just_now=None):
     return gettext("%(time)s ago") % {
         "time": timesince(when, now, depth=1, time_strings=AGO_UNITS)
     }
+
+
+# Moments within this show how long ago, older ones their date (decided
+# 2026-11-22, specs/ui.md)
+RELATIVE = dt.timedelta(days=7)
+
+
+def moment(when, *, now=None, on=False):
+    """A past moment, one rule everywhere on pages: "3 hours ago" within
+    seven days, then the date ("12 Nov 2026"), "on 12 Nov 2026" with ``on``
+    for sentences ("completed on …", "completed 3 days ago")"""
+    from biwak.formats import format_date
+
+    now = now or timezone.now()
+    if now - when < RELATIVE:
+        return ago(when, now=now)
+    date = format_date(timezone.localtime(when), "SHORT_DATE_FORMAT")
+    return gettext("on %(date)s") % {"date": date} if on else date

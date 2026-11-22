@@ -17,7 +17,7 @@
           <div class="small text-body-secondary">
             {{ item.get_kind_display|capfirst }}{% if item.parent %}
               · {{ item.parent }}{% endif %}
-            · {% blocktranslate with when=item.trashed_at|ago %}trashed {{ when }}{% endblocktranslate %}
+            · {% blocktranslate with when=item.trashed_at|moment:"on" %}trashed {{ when }}{% endblocktranslate %}
           </div>
         </div>
         <form method="post" action="{% url 'item_restore' item.pk %}">

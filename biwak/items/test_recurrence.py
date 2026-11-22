@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 import time_machine
 from django.test import TestCase
+from django.utils.html import strip_tags
 
 from biwak import schedules
 from biwak.accounts.models import APIToken
@@ -540,9 +541,12 @@ class PagesTest(RecurrenceTestCase):
         with at("2026-11-20 12:00"):
             self.client.post(f"/todos/{item.pk}/toggle/", {"done": "1"})
         new = self.following(item)
-        response = self.client.get(new.get_absolute_url())
+        with at("2026-12-01 12:00"):
+            response = self.client.get(new.get_absolute_url())
         self.assertContains(response, "Previous:")
-        self.assertContains(response, "completed on 20 November 2026 by Ada")
+        self.assertIn(
+            "completed on 20 Nov 2026 by Ada", strip_tags(response.content.decode())
+        )
         self.assertContains(response, item.get_absolute_url())
 
     def test_a_client_doesnt_see_an_internal_previous(self):

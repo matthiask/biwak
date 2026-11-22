@@ -89,7 +89,7 @@
                     {% avatar answer.author %}
                     <a href="{% url 'question_person' item.pk answer.author_id %}"><strong
                       >{{ answer.author.display_name }}</strong></a>
-                    · {{ answer.item.created_at|dateformat:"SHORT_DATETIME_FORMAT" }}
+                    · {{ answer.item.created_at|moment }}
                     {% if answer.author_id == request.user.pk %}
                       ·
                       <a
@@ -117,7 +117,7 @@
                     <div class="border-top mt-2 pt-2" id="comment-{{ comment.pk }}">
                       <div class="small text-body-secondary">
                         <strong>{% person_link comment.author name=comment.author.display_name %}</strong> ·
-                        {{ comment.created_at|dateformat:"SHORT_DATETIME_FORMAT" }}
+                        {{ comment.created_at|moment }}
                       </div>
                       <div class="wb-markdown">{% checklist_markdown comment.content answer.item comment %}</div>
                       {% reactions answer.item comment %}

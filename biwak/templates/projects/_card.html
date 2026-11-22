@@ -35,7 +35,7 @@
           >{% translate "Clients" %}</span>
         {% endif %}
         {% if project.activity %}
-          <span class="text-body-secondary">{{ project.activity|ago }}</span>
+          <span class="text-body-secondary">{{ project.activity|moment }}</span>
         {% endif %}
         {% if project.open_count %}
           <span

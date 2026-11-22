@@ -11,6 +11,7 @@ from django.db import close_old_connections, connection
 from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
@@ -57,7 +58,9 @@ class ManageTest(TestCase):
         self.assertContains(
             self.client.get(reverse("projects"), {"archived": 1}), "Renamed"
         )
-        self.assertContains(self.client.get(url), "Archived on")
+        self.assertIn(
+            "Archived just now.", strip_tags(self.client.get(url).content.decode())
+        )
         self.client.post(url + "archive/", {"unarchive": "1"})
         self.assertContains(self.client.get(reverse("projects")), "Renamed")
         # Clients don't

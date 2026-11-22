@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:55+0100\n"
+"POT-Creation-Date: 2026-11-22 18:15+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -5330,8 +5330,8 @@ msgstr "Für die Seiten und die Mails. „Automatisch“ folgt deinem Browser; M
 
 #: biwak/templates/accounts/settings.html
 #, python-format
-msgid "Mail to your address %(email)s bounced or was marked as spam on %(since)s, so you get no notification mails. Ask an admin to change the address or to clear this once it works again."
-msgstr "Mails an deine Adresse %(email)s kamen am %(since)s zurück oder wurden als Spam markiert, deshalb erhältst du keine Benachrichtigungsmails. Bitte einen Admin, die Adresse zu ändern oder dies zurückzusetzen, sobald sie wieder funktioniert."
+msgid "Mail to your address %(email)s bounced or was marked as spam %(since)s, so you get no notification mails. Ask an admin to change the address or to clear this once it works again."
+msgstr "Mails an deine Adresse %(email)s kamen %(since)s zurück oder wurden als Spam markiert, deshalb erhältst du keine Benachrichtigungsmails. Bitte einen Admin, die Adresse zu ändern oder dies zurückzusetzen, sobald sie wieder funktioniert."
 
 #: biwak/templates/accounts/settings.html
 #, python-format
@@ -5425,8 +5425,8 @@ msgstr "Ein"
 
 #: biwak/templates/accounts/settings.html
 #, python-format
-msgid "Since %(date)s"
-msgstr "Seit %(date)s"
+msgid "Set up %(when)s"
+msgstr "Eingerichtet %(when)s"
 
 #: biwak/templates/accounts/settings.html
 msgid "Turn off…"
@@ -6541,8 +6541,8 @@ msgstr "Kommentare"
 
 #: biwak/templates/items/_due_row.html
 #, python-format
-msgid "completed %(day)s"
-msgstr "erledigt am %(day)s"
+msgid "completed %(when)s"
+msgstr "erledigt %(when)s"
 
 #: biwak/templates/items/_more_entries.html
 msgid "Notifications…"
@@ -6641,8 +6641,8 @@ msgstr "Vorheriges:"
 
 #: biwak/templates/items/todo.html
 #, python-format
-msgid "completed on %(when)s by %(who)s"
-msgstr "erledigt am %(when)s von %(who)s"
+msgid "completed %(when)s by %(who)s"
+msgstr "erledigt %(when)s von %(who)s"
 
 #: biwak/templates/items/todolist.html
 msgid "Board"
@@ -6732,13 +6732,8 @@ msgstr "Eingeladen, noch nicht angemeldet"
 
 #: biwak/templates/organizations/_invitation.html
 #, python-format
-msgid "by %(name)s on %(date)s"
-msgstr "von %(name)s am %(date)s"
-
-#: biwak/templates/organizations/_invitation.html
-#, python-format
-msgid "on %(date)s"
-msgstr "am %(date)s"
+msgid "by %(name)s %(when)s"
+msgstr "von %(name)s %(when)s"
 
 #: biwak/templates/organizations/_invitation.html
 msgid "Resend"
@@ -6879,8 +6874,8 @@ msgstr "Abwesenheit beenden"
 
 #: biwak/templates/organizations/person.html
 #, python-format
-msgid "Mail to %(email)s bounced or was marked as spam on %(since)s: no notification mails go there until the address changes or an admin clears it."
-msgstr "Mails an %(email)s kamen am %(since)s zurück oder wurden als Spam markiert: Dorthin gehen keine Benachrichtigungsmails mehr, bis sich die Adresse ändert oder ein Admin dies zurücksetzt."
+msgid "Mail to %(email)s bounced or was marked as spam %(since)s: no notification mails go there until the address changes or an admin clears it."
+msgstr "Mails an %(email)s kamen %(since)s zurück oder wurden als Spam markiert: Dorthin gehen keine Benachrichtigungsmails mehr, bis sich die Adresse ändert oder ein Admin dies zurücksetzt."
 
 #: biwak/templates/organizations/person.html
 msgid "Projects in common"
@@ -7191,8 +7186,8 @@ msgstr "Projekt archivieren"
 
 #: biwak/templates/projects/project_detail.html
 #, python-format
-msgid "Archived on %(when)s. Everything stays readable."
-msgstr "Archiviert am %(when)s. Alles bleibt lesbar."
+msgid "Archived %(when)s. Everything stays readable."
+msgstr "Archiviert %(when)s. Alles bleibt lesbar."
 
 #: biwak/templates/projects/project_detail.html
 msgid "To-do lists"
@@ -7508,6 +7503,23 @@ msgstr "gerade eben"
 #, python-format
 msgid "%(time)s ago"
 msgstr "vor %(time)s"
+
+#: biwak/text.py
+#, python-format
+msgid "on %(date)s"
+msgstr "am %(date)s"
+
+#, python-format
+#~ msgid "Since %(date)s"
+#~ msgstr "Seit %(date)s"
+
+#, python-format
+#~ msgid "completed %(day)s"
+#~ msgstr "erledigt am %(day)s"
+
+#, python-format
+#~ msgid "by %(name)s on %(date)s"
+#~ msgstr "von %(name)s am %(date)s"
 
 #~ msgid "All people"
 #~ msgstr "Alle Personen"

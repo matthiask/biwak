@@ -156,10 +156,18 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Dark mode** (2026-11-22): fields a little darker than cards, not
   black (`--wb-field-bg`); dialogs dim the page more
   (`--wb-backdrop`).
-- **Relative times** use the `ago` filter ("just now" under a minute),
-  with one unit only: "13 hours ago", not "13 hours, 37 minutes ago"
-  (decided 2026-11-22; also the "Changed by … ago" of conflicts,
-  `editing.ago()`).
+- **One rule for moments** (decided 2026-11-22): every past moment on a
+  page (created, commented, uploaded, completed, trashed, archived,
+  last used, invited, the lantern, the timeline) goes through the
+  `moment` filter: relative within seven days ("just now" under a
+  minute, one unit only: "13 hours ago", not "13 hours, 37 minutes
+  ago"), then the date ("12 Nov 2026"), the exact time on hover
+  (`<time title=…>`). In sentences `moment:"on"`: "completed on 12 Nov
+  2026", "completed 3 days ago". Not for: dates without a time (due,
+  start, left on), future moments (expiry, the next check-in), the
+  activity feed's entries under their day's heading (the time of day),
+  mails and the API (exact). The "Changed by … ago" of conflicts stays
+  relative (`editing.ago()`).
 - **Overdue and today** are badges (`todos.md`, "The to-do's page").
 
 ## Motion

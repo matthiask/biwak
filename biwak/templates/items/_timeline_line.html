@@ -15,6 +15,6 @@
   </span>
   {% avatar line.actor %}
   <span><strong>{% person_link line.actor %}</strong> {{ line.text }}
-    <span class="text-body-secondary" title="{{ line.created_at|dateformat:'SHORT_DATETIME_FORMAT' }}">·
-      {{ line.created_at|ago }}</span></span>
+    <span class="text-body-secondary">·
+      {{ line.created_at|moment }}</span></span>
 </div>
