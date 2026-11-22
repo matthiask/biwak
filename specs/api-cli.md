@@ -34,8 +34,8 @@ API first: everything the web interface does is possible through the API
   member, own staff only, themselves included (clients and externals get
   403, for themselves too: nobody leaves, decided 2026-11-22,
   `organizations.md`).
-- Webhooks for events: later (signed, retried, per project or
-  installation), specified before building.
+- No webhooks (decided 2026-11-22: no use case now); specified before
+  building when one comes up.
 
 ## CLI
 
