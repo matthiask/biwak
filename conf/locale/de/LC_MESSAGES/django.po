@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 17:16+0100\n"
+"POT-Creation-Date: 2026-11-22 17:22+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3063,6 +3063,10 @@ msgid "last activity at"
 msgstr "letzte Aktivität am"
 
 #: biwak/items/models.py
+msgid "last commenter"
+msgstr "zuletzt kommentiert von"
+
+#: biwak/items/models.py
 msgid "messages"
 msgstr "Nachrichten"
 
@@ -4139,7 +4143,7 @@ msgstr "Anmeldung zurücksetzen…"
 
 #: biwak/palette/actions.py
 msgid "Latest update first"
-msgstr "Zuletzt aktualisierte zuerst"
+msgstr "Letzte Aktivität zuerst"
 
 #: biwak/palette/actions.py
 msgid "Newest posts first"
@@ -4360,7 +4364,7 @@ msgstr "Zurückziehen"
 
 #: biwak/projects/models.py
 msgid "Latest update"
-msgstr "Zuletzt aktualisiert"
+msgstr "Letzte Aktivität"
 
 #: biwak/projects/models.py
 msgid "Newest posts"
@@ -6034,6 +6038,11 @@ msgstr "Dateien anhängen"
 #: biwak/templates/files/_message_row.html biwak/templates/files/message.html
 msgid "Pinned"
 msgstr "Angeheftet"
+
+#: biwak/templates/files/_message_row.html
+#, python-format
+msgid "Last comment %(when)s · %(commenter)s"
+msgstr "Letzter Kommentar %(when)s · %(commenter)s"
 
 #: biwak/templates/files/_message_row.html
 #, python-format

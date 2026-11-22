@@ -92,14 +92,24 @@ with an "All messages" link (`queries.front_messages()`).
   way for a moment; pinned messages stay on top either way. The project
   page's messages follow the board's order. API: `order` on the board
   and as a parameter of its list; CLI `biwak messages --order`.
-  Built (2026-11-22): `Message.last_activity_at`, set by
-  `create_message()` and `add_comment()` (`refresh_message_activity()`,
-  also the importer's after setting the original times), left out of the
-  audit log; `Project.messages_order` (`MessagesOrder`) set by
-  `set_messages_order()`, staff only, no event (just a setting, like the
-  files' order). On the board staff get the two orders as buttons saving
-  the setting, clients as `?order=` links; the palette offers the other
-  order as a link. `GET`/`PATCH projects/{id}/message-board/`.
+  Built (2026-11-22): `Message.last_activity_at` and `last_commenter`,
+  set by `create_message()` and `add_comment()`
+  (`refresh_message_activity()`, also the importer's after setting the
+  original times), left out of the audit log; `Project.messages_order`
+  (`MessagesOrder`) set by `set_messages_order()`. Confirmed by the user
+  (2026-11-22): on the board staff get the two orders as buttons saving
+  the setting for everybody at once, clients the same two as `?order=`
+  links (looking only); staff look the other way only through `?order=`
+  or the palette, which offers the other order as a link for everybody
+  ("Newest posts first", "Latest update first"); changing the order
+  records no event and notifies nobody (like the files' order); the
+  API's board is `GET`/`PATCH projects/{id}/message-board/` with
+  `{"order"}`, messages carry `last_activity_at`.
+- **Who commented last** (decided 2026-11-22): in "Latest update" order
+  a row (board and project page) whose latest comment is newer than its
+  posting adds "Last comment 2 hours ago · Bob" (the `ago` filter's one
+  unit, the short name as plain text: the row is one link). In German
+  the order is "Letzte Aktivität", so nobody thinks edits count.
 - A message: title, Markdown, optional category, comments, attachments,
   the visibility switch. Categories (`MessageCategory(name, emoji,
   position)`) are one list for the installation, edited by admins in the

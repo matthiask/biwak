@@ -8,8 +8,9 @@ messages on top, then the rest, each with its category, author, date and
 number of comments.
 
 - **Order:** "Latest update" (the default: a new comment brings a
-  message up, editing doesn't) or "Newest posts", chosen by staff on the
-  board for everybody and followed by the project page.
+  message up and its row says who commented last and when, editing
+  doesn't count) or "Newest posts", chosen by staff on the board for
+  everybody and followed by the project page.
 - **New message:** title, text (Markdown), an optional category,
   "Visible to clients" (staff). A line says who will be told: whoever
   wants to hear about something new (notified of everything, or
