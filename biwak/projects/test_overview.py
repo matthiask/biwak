@@ -20,7 +20,7 @@ from biwak.bookmarks import operations as bookmarks
 from biwak.items import operations as ops
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
-from biwak.test_utils import person, project
+from biwak.test_utils import person, project, tags
 
 
 def at(text):
@@ -476,6 +476,16 @@ class CardsTest(OverviewTestCase):
         names, response = self.names(admin)
         self.assertNotIn("Secret", names)
         self.assertContains(response, "not a member of")
+
+    def test_the_whole_card_is_the_link(self):
+        # Decided 2026-11-22: the name's link covers the card, the bookmark
+        # button sits above it
+        _, response = self.names(self.ada)
+        html = response.content.decode()
+        (link,) = tags(html, cls="wb-card-link")
+        self.assertEqual(link["href"], self.project.get_absolute_url())
+        self.assertEqual(len(tags(html, cls="wb-above-card-link")), 1)
+        self.assertLess(html.index("wb-card-link"), html.index('title="Bookmark"'))
 
     def test_bookmark_from_a_card(self):
         self.client.force_login(self.ada)

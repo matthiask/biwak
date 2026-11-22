@@ -32,7 +32,8 @@ A project is the place where the work on one thing happens: to-do
 lists, messages, docs and files, check-ins, members.
 
 - **Projects** in the bar lists the projects you can open as cards, with
-  your open and overdue to-dos and the last activity. Bookmarked
+  your open and overdue to-dos and the last activity; click anywhere on
+  a card to open the project. Bookmarked
   projects (the bookmark icon on a card) come first. "Activity" and
   "A–Z" switch the order; your choice is remembered.
 - A project is open to all staff or limited to its members; clients

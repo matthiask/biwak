@@ -1898,7 +1898,36 @@ button.wb-signal:hover {
 }
 
 .wb-project-card {
+  position: relative;
   height: 100%;
+}
+
+/* The whole card is the name's link (decided 2026-11-22,
+   specs/projects-overview.md): its ::after covers the card, the buttons
+   sit above it; the keyboard's focus outlines the card */
+.wb-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.wb-card-link:focus-visible {
+  outline: none;
+}
+
+.wb-project-card:has(.wb-card-link:focus-visible) {
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+}
+
+.wb-project-card:has(.wb-card-link:hover) {
+  border-color: var(--wb-accent-ring);
+}
+
+.wb-above-card-link {
+  position: relative;
+  z-index: 2;
 }
 
 /* Project colors (specs/project-colors.md): the palette's fill, as a stripe

@@ -33,6 +33,7 @@ from django.views.static import serve as static_serve
 from biwak import schedules
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.activity.models import LevelOverride, Notification
+from biwak.bookmarks import operations as bookmarks
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
@@ -991,6 +992,26 @@ class ProjectsPageTest(E2ETestCase):
         ).to_have_count(0)
         page.get_by_role("link", name="Active projects").click()
         expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
+
+
+class ProjectCardTest(E2ETestCase):
+    def test_the_whole_card_opens_the_project_the_bookmark_stays_a_button(self):
+        camp = project("Camp", members=[self.ada])
+        camp.description = "Tents and stoves"
+        camp.save()
+        page = self.page
+        self.goto(page, reverse("projects"))
+        card = page.locator(".wb-project-card", has_text="Camp")
+        # The bookmark (htmx) above the card's link
+        card.get_by_role("button", name="Bookmark").click()
+        expect(card.get_by_role("button", name="Remove the bookmark")).to_be_visible()
+        self.assertTrue(bookmarks.is_bookmarked(self.ada, project=camp))
+        self.assertTrue(page.url.endswith(reverse("projects")))
+        # Anywhere else on the card opens the project (the link covers the
+        # text: force clicks where it is, without Playwright's check)
+        card.get_by_text("Tents and stoves").click(force=True)
+        page.wait_for_url(f"**{camp.get_absolute_url()}")
+        self.assertEqual(self.errors, [])
 
 
 class ProjectsOrderTest(E2ETestCase):

@@ -40,7 +40,14 @@ Decided 2026-11-20: by activity by default, or alphabetical.
 ## Cards
 
 A grid of cards (one column on phones, two on tablets, three on wide
-screens), favorites first. Each card, and nothing more:
+screens), favorites first. **The whole card is the link** to the
+project (decided 2026-11-22, the user: not just the title): the name's
+link covers the card (`.wb-card-link`, its `::after`), the bookmark
+button sits above it (`.wb-above-card-link`) and stays a button; Tab
+reaches the link, then the bookmark, and the focus outlines the whole
+card. The lock's and the "Clients" badge's titles don't show on hover
+any more (under the link). Home's cards are the same include. Each
+card, and nothing more:
 
 - the name, the project's color as a stripe (`project-colors.md`), the
   lock icon for limited projects, the bookmark button;
