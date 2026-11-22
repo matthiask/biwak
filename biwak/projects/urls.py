@@ -1,6 +1,6 @@
 from django.urls import path
 
-from biwak.projects import all_projects, home, invitations, views
+from biwak.projects import all_projects, home, invitations, template_views, views
 
 
 urlpatterns = [
@@ -8,6 +8,17 @@ urlpatterns = [
     path("projects/", views.project_list, name="projects"),
     path("projects/all/", all_projects.all_projects_page, name="all_projects"),
     path("projects/new/", views.project_create, name="project_create"),
+    path("projects/templates/", template_views.template_list, name="templates"),
+    path(
+        "projects/templates/new/",
+        template_views.template_create,
+        name="template_create",
+    ),
+    path(
+        "projects/<int:pk>/lists/from-template/",
+        template_views.list_from_template,
+        name="list_from_template",
+    ),
     path("projects/<int:pk>/", views.project_detail, name="project"),
     path("projects/<int:pk>/join/", views.project_join, name="project_join"),
     path("projects/<int:pk>/people/", views.project_people, name="project_people"),

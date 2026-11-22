@@ -577,10 +577,12 @@ def joinable_projects(user):
 
 def projects_to_join(user):
     """What somebody can join: the projects they can open, and for admins
-    the limited ones ``joinable_projects()`` lists (not archived ones)"""
+    the limited ones ``joinable_projects()`` lists (not archived ones);
+    no templates, which have no members (specs/templates.md)"""
     return Project.objects.filter(
         Q(pk__in=Project.objects.accessible_to(user).values("pk"))
-        | Q(pk__in=joinable_projects(user).values("pk"))
+        | Q(pk__in=joinable_projects(user).values("pk")),
+        is_template=False,
     )
 
 

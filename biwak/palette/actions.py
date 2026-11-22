@@ -33,6 +33,7 @@ from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
 from biwak.projects import operations as project_ops
 from biwak.projects.models import MessagesOrder, Project
+from biwak.projects.template_views import offers_template_lists
 
 
 # Pages of a project, which show its actions
@@ -137,6 +138,9 @@ def everywhere(user):
     ]
     if project_ops.can_create_project(user):
         actions.append(modal(_("New project"), reverse("project_create")))
+    if project_ops.can_use_templates(user):
+        # Own staff (specs/templates.md), like the projects page's link
+        actions.append(link(_("Go to templates"), reverse("templates")))
     if org_ops.can_manage(user):
         actions.append(link(_("Go to organizations"), reverse("organizations")))
     if not user.is_client:
@@ -154,8 +158,22 @@ def everywhere(user):
 def in_project(user, project, folder=None):
     """What a project's pages offer"""
     actions = []
+    if project.is_template and project.archived_at is None:
+        actions.append(
+            modal(
+                _("New project from this…"),
+                reverse("project_create") + f"?template={project.pk}",
+            )
+        )
     if ops.can_create(user, Kind.LIST):
         actions.append(modal(_("New list"), reverse("list_new", args=[project.pk])))
+    if offers_template_lists(user, project):
+        actions.append(
+            modal(
+                _("New list from a template…"),
+                reverse("list_from_template", args=[project.pk]),
+            )
+        )
     if ops.can_create(user, Kind.MESSAGE):
         actions.append(
             link(_("New message"), reverse("message_new", args=[project.pk]))
@@ -419,6 +437,8 @@ def for_page(request, context):
         user, name, context.get("person"), activity=bool(context.get("days"))
     )
     page += on_teams(user, name, context.get("team"))
+    if name == "templates" and project_ops.can_use_templates(user):
+        page.append(modal(_("New template"), reverse("template_create")))
     return [{**a, "group": "page"} for a in page] + [
         {**a, "group": "everywhere"} for a in everywhere(user)
     ]
