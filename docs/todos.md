@@ -103,7 +103,8 @@ The filters apply as you change them:
   anybody's by default;
 - **assigned by**: "Me" shows the to-dos you gave to others, assigned
   to anybody else unless you choose who (with "Me" as the assignee,
-  those you gave yourself);
+  those you gave yourself); one you gave yourself and someone else
+  counts too, though Home's "waiting on others" leaves out your own;
 - **state**: "Completed" shows finished to-dos, latest first, instead
   of the sections;
 - **visibility** (staff): visible to clients or internal;
