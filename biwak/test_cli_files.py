@@ -55,6 +55,28 @@ class FilesCLITest(test_cli.CLITest):
         self.assertIn("(pinned)", output)
         self.assertIn("[clients]", output)
 
+    def test_messages_in_either_order(self):
+        """``--order`` looks the other way (specs/files.md, "The message
+        board")"""
+        first = ops.create_message(
+            project=self.project, title="First", creator=self.ada, visible=True
+        )
+        ops.create_message(
+            project=self.project, title="Second", creator=self.ada, visible=True
+        )
+        ops.add_comment(first, author=self.cleo, content="Bump")
+        for user, order, expected in [
+            (self.ada, None, ["First", "Second"]),
+            (self.ada, "newest", ["Second", "First"]),
+            (self.cleo, "latest", ["First", "Second"]),
+            (self.cleo, "newest", ["Second", "First"]),
+        ]:
+            with self.subTest(user=user, order=order):
+                args = ["messages", self.project.pk, "--json"]
+                args += ["--order", order] if order else []
+                data = json.loads(self.cli_as(user, *args))
+                self.assertEqual([m["title"] for m in data["results"]], expected)
+
     def test_post(self):
         result = self.biwak(
             "message",

@@ -129,6 +129,72 @@ class MessageAPITest(APIFixture, TestCase):
         self.assertEqual(len(seen), 7)
         self.assertEqual(len(set(seen)), 7)
 
+    def test_the_order(self):
+        """Latest update by default, newest posts as the board's setting or
+        a parameter, pinned first either way (specs/files.md, "The message
+        board"); across pages"""
+        old = ops.create_message(
+            project=self.project, title="Old", creator=self.ada, visible=True
+        )
+        Item.objects.filter(pk=old.pk).update(
+            created_at=timezone.now() - dt.timedelta(days=1)
+        )
+        ops.refresh_message_activity(old)
+        for number in range(3):
+            ops.create_message(
+                project=self.project, title=f"M{number}", creator=self.ada
+            )
+        comment = ops.add_comment(old, author=self.cleo, content="Still on?")
+        operations.pin_message(self.shared_message, actor=self.ada)
+
+        def titles(user, **params):
+            page = self.messages(user, page_size=2, **params)
+            seen = [m["title"] for m in page["results"]]
+            while page["next"]:
+                cursor = page["next"].split("cursor=")[1].split("&")[0]
+                page = self.messages(
+                    user, page_size=2, cursor=unquote(cursor), **params
+                )
+                seen += [m["title"] for m in page["results"]]
+            return seen
+
+        latest = ["Shared news", "Old", "M2", "M1", "M0", "Secret"]
+        newest = ["Shared news", "M2", "M1", "M0", "Secret", "Old"]
+        self.assertEqual(titles(self.ada), latest)
+        self.assertEqual(titles(self.ada, order="newest"), newest)
+        self.assertEqual(titles(self.cleo), ["Shared news", "Old"])
+        self.assertEqual(titles(self.cleo, order="newest"), ["Shared news", "Old"])
+        results = self.messages(self.cleo)["results"]
+        self.assertAlmostEqual(  # The API gives milliseconds
+            dt.datetime.fromisoformat(results[1]["last_activity_at"]),
+            comment.created_at,
+            delta=dt.timedelta(milliseconds=1),
+        )
+        self.assertEqual(
+            self.call(
+                self.ada, "get", f"projects/{self.project.pk}/messages/?order=x"
+            ).status_code,
+            422,
+        )
+
+        url = f"projects/{self.project.pk}/message-board/"
+        for user in [self.ada, self.cleo]:
+            self.assertEqual(self.call(user, "get", url).json(), {"order": "latest"})
+        response = self.call(self.cleo, "patch", url, {"order": "newest"})
+        self.assertEqual(response.status_code, 403)
+        response = self.call(self.ada, "patch", url, {"order": "sideways"})
+        self.assertEqual(response.status_code, 422)
+        response = self.call(self.ada, "patch", url, {"order": "newest"})
+        self.assertEqual(response.json(), {"order": "newest"})
+        self.assertEqual(self.call(self.cleo, "get", url).json(), {"order": "newest"})
+        self.assertEqual(titles(self.ada), newest)
+        self.assertEqual(titles(self.ada, order="latest"), latest)
+        outsider = person("Dan", client=True)
+        self.assertEqual(self.call(outsider, "get", url).status_code, 404)
+        self.assertEqual(
+            self.call(outsider, "patch", url, {"order": "latest"}).status_code, 404
+        )
+
     def test_non_members_get_404(self):
         outsider = person("Dan", client=True)
         response = self.call(outsider, "get", f"projects/{self.project.pk}/messages/")
