@@ -87,7 +87,7 @@ palette.
   link for good; restoring doesn't bring it back.
 - **Public links** in your account menu lists the live links in your
   projects, each with "Stop sharing". Sharing and stopping show in the
-  activity, they notify nobody.
+  activity for staff, they notify nobody.
 
 Clients can't create public links.
 

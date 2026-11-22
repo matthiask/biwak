@@ -126,6 +126,52 @@ class ShareModalTest(Fixture, TestCase):
         self.assertContains(response, "publicly")
         self.assertContains(response, "stopped sharing")
 
+    def test_clients_dont_see_the_events(self):
+        """Decided 2026-11-22: staff only, also on items visible to clients,
+        through every way clients read events"""
+        from biwak.projects.models import Project
+
+        visible = ops.create_message(
+            project=self.project, title="Hello", creator=self.ada, visible=True
+        )
+        before = Project.objects.get(pk=self.project.pk).last_client_activity_at
+        self.share(visible)
+        link_ops.stop_public_link(visible, actor=self.ada)
+        events = Event.objects.filter(
+            action__in=[Action.SHARED_PUBLICLY, Action.STOPPED_SHARING]
+        )
+        self.assertEqual(events.count(), 2)
+        self.assertFalse(events.filter(is_client_visible=True).exists())
+        self.assertEqual(
+            Project.objects.get(pk=self.project.pk).last_client_activity_at, before
+        )
+        pages = [
+            reverse("feed"),
+            reverse("project_feed", args=[self.project.pk]),
+            self.project.get_absolute_url(),
+        ]
+        for url in pages:
+            with self.subTest(url, who="staff"):
+                self.assertContains(self.client.get(url), "publicly")
+        api = [
+            "/api/v1/feed/",
+            f"/api/v1/projects/{self.project.pk}/feed/",
+            f"/api/v1/people/{self.ada.pk}/feed/",
+        ]
+        actions = {Action.SHARED_PUBLICLY, Action.STOPPED_SHARING}
+        self.client.force_login(self.cleo)
+        for url in pages:
+            with self.subTest(url, who="client"):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "Hello")
+                self.assertNotContains(response, "publicly")
+        for url in api:
+            with self.subTest(url, who="client"):
+                results = self.client.get(url).json()["results"]
+                self.assertTrue(results)
+                self.assertFalse(actions & {r["action"] for r in results})
+
 
 class AllPublicLinksTest(Fixture, TestCase):
     def setUp(self):

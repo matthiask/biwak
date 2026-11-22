@@ -93,9 +93,11 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
 - **Operations** `create_public_link(item, days, actor)` and
   `stop_public_link(item, actor)` in `biwak/items/operations.py` (or an
   app of their own), recording an event (`shared_publicly`,
-  `stopped_sharing`) so the item's history and the feed say who shared
-  what until when. They notify nobody: no mails, no lantern
-  (decided 2026-11-22).
+  `stopped_sharing`) so the feed says who shared what until when. They
+  notify nobody: no mails, no lantern (decided 2026-11-22). **Staff
+  only** (decided 2026-11-22): clients don't see them, also on items
+  visible to them. The item's History (the audit log) doesn't show
+  sharing, the feed does (decided 2026-11-22).
 - **Visibility:** the public page shows exactly one item and what's
   inside its text; nothing pointing elsewhere is reachable through the
   token. Tests through every entry point (`AGENTS.md`).
@@ -114,7 +116,9 @@ Where it lives and the choices made while building (2026-11-22):
   `delete_expired()` in `fairy_tasks`); `Item.is_shareable`
   (`SHAREABLE` in `biwak/items/models.py`, not drafts). The events
   `shared_publicly` (with `days` and `expires_at`) and `stopped_sharing`
-  are in `notify.SILENT`; the feed says "shared … publicly until …" and
+  are in `notify.SILENT` and `activity.operations.STAFF_ONLY` (recorded
+  as internal, so the feeds, the API and live updates leave them out for
+  clients, and the feed's action filter doesn't offer them); the feed says "shared … publicly until …" and
   "stopped sharing … publicly". Ending a link by trashing, archiving or
   expiring records no event of its own.
 - **The modal** (`public_links/share.html`, `item_share`): the own link's
