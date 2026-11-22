@@ -120,6 +120,10 @@ LINK_TYPES = {
 # The kinds of ``/people.json`` entries that are the account's people
 ACCOUNT_PEOPLE = {"User", "Client"}
 
+# Basecamp projects never imported, whoever asks (decided 2026-11-22 by
+# the user)
+EXCLUDED = {24268932}
+
 # Basecamp's sample people (its demo project's, example.com): never imported
 SAMPLE = "DummyUser"
 
@@ -730,6 +734,11 @@ class Importer(Resolver):
         self._items = 0
         rec = self.client.get(f"/projects/{project_id}.json")
         self._project_name = rec["name"]
+        if int(project_id) in EXCLUDED:
+            self.problem(
+                f"Skipped {rec['name']} ({project_id}): excluded from importing"
+            )
+            return self.report
         archived = ", archived" if rec.get("status") == "archived" else ""
         self.say(f"{rec['name']} ({project_id}{archived})")
         people = list(self.client.paginate(f"/projects/{project_id}/people.json"))

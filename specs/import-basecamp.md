@@ -172,6 +172,9 @@ project. Waiting for Basecamp's account export to confirm the plan.
   nobody else gets mail or a login before someone decides
   (`activation.md`); the operations accept inactive people only inside
   `importing()`. Active people are never marked as left by a later run.
+- **Excluded projects** (decided 2026-11-22): `importer.EXCLUDED` lists
+  Basecamp project IDs never imported; a run for one reads only the
+  project and reports it as skipped.
 - **Basecamp's sample people are never imported** (decided 2026-11-22):
   `DummyUser` entries (made-up colleagues with `example.com` addresses,
   from the demo project every new account gets). A project with any of

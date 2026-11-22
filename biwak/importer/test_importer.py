@@ -15,7 +15,7 @@ from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.bookmarks.models import Bookmark
 from biwak.checkins.models import Answer, Occurrence, Question
 from biwak.files.models import Attachment
-from biwak.importer import support
+from biwak.importer import importer as importer_module, support
 from biwak.importer.importer import Importer, ImportRefused
 from biwak.importer.models import ImportedObject
 from biwak.items import visibility
@@ -1096,6 +1096,17 @@ class PeopleTest(ImportCase):
         people[1] = tombstone
         self.run_import()
         self.assertFalse(User.objects.get(email="bob@example.org").is_active)
+
+    def test_excluded_projects_are_skipped(self):
+        with mock.patch.object(importer_module, "EXCLUDED", {support.PROJECT}):
+            report = self.run_import()
+        self.assertFalse(Project.objects.exists())
+        self.assertFalse(User.objects.filter(email="bob@example.org").exists())
+        self.assertTrue(any("excluded" in p for p in report.problems))
+        # Only the project itself was read
+        self.assertEqual(
+            [r[0] for r in self.client_.requests], [f"/projects/{support.PROJECT}.json"]
+        )
 
     def test_basecamps_sample_project_is_refused(self):
         # Its people are made up: DummyUser, example.com (checked against a
