@@ -2,6 +2,7 @@ import datetime as dt
 from contextlib import contextmanager
 from contextvars import ContextVar
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.functions import Greatest
 from django.utils import timezone
@@ -277,9 +278,21 @@ def is_subscribed(user, item):
 
 
 @transaction.atomic
-def set_notification_settings(user, *, level=None, delivery=None, favicon=None):
-    """The person's level, mail delivery and whether the tab's icon shows
-    unread notifications, what's given"""
+def set_notification_settings(
+    user,
+    *,
+    level=None,
+    delivery=None,
+    favicon=None,
+    quiet_hours=None,
+    working_days=None,
+    working_from=None,
+    working_until=None,
+):
+    """The person's level, mail delivery, whether the tab's icon shows
+    unread notifications and the quiet hours (specs/quiet-hours.md), what's
+    given; raises ``ValidationError`` for working hours which end before
+    they start or quiet hours without working days"""
     fields = []
     if favicon is not None:
         user.lantern_in_favicon = favicon
@@ -290,6 +303,25 @@ def set_notification_settings(user, *, level=None, delivery=None, favicon=None):
     if delivery is not None:
         user.mail_delivery = MailDelivery(delivery)
         fields.append("mail_delivery")
+    if quiet_hours is not None:
+        user.quiet_hours = bool(quiet_hours)
+        fields.append("quiet_hours")
+    if working_days is not None:
+        days = sorted(set(working_days))
+        if any(day not in range(7) for day in days):
+            raise ValidationError(gettext("Working days are 0 (Monday) to 6 (Sunday)."))
+        user.working_days = days
+        fields.append("working_days")
+    if working_from is not None:
+        user.working_from = working_from
+        fields.append("working_from")
+    if working_until is not None:
+        user.working_until = working_until
+        fields.append("working_until")
+    if user.working_from >= user.working_until:
+        raise ValidationError(gettext("The working hours end after they start."))
+    if user.quiet_hours and not user.working_days:
+        raise ValidationError(gettext("Choose at least one working day."))
     if fields:
         user.save(update_fields=fields)
 

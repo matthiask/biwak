@@ -142,6 +142,12 @@ class PeopleSelect(forms.SelectMultiple):
                 option["attrs"]["disabled"] = True
         if instance is not None and hasattr(instance, "avatar_json"):
             option["attrs"]["data-avatar"] = instance.avatar_json
+        if instance is not None and hasattr(instance, "away_until"):
+            # "away until 3 Dec" in the list, the note once in the form when
+            # picked (specs/quiet-hours.md)
+            from biwak.accounts.quiet import option_attrs
+
+            option["attrs"].update(option_attrs(instance))
         return option
 
 

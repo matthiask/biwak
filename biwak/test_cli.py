@@ -469,7 +469,16 @@ class CLICommandsTest(CLITest):
         data = json.loads(self.biwak("notifications", "--json").stdout)
         self.assertEqual(
             data,
-            {"level": "concerns_me", "delivery": "digest", "lantern_in_favicon": True},
+            {
+                "level": "concerns_me",
+                "delivery": "digest",
+                "lantern_in_favicon": True,
+                "quiet_hours": False,
+                "working_days": [0, 1, 2, 3, 4],
+                "working_from": "08:00:00",
+                "working_until": "18:00:00",
+                "time_zone": "Europe/Zurich",
+            },
         )
         self.biwak("notifications", "--delivery", "none")
         self.ada.refresh_from_db()

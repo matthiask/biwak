@@ -38,6 +38,7 @@
           <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
           {% if user.is_client %}<span class="badge wb-client-badge">{% translate "client" %}</span>{% endif %}
           {% if not user.is_active %}<span class="badge wb-tone-neutral">{% translate "inactive" %}</span>{% endif %}
+          {% away_detail user %}
         </div>
       </div>
     {% empty %}

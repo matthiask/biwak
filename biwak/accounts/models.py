@@ -396,16 +396,18 @@ class User(AbstractBaseUser):
 
     @property
     def avatar_data(self):
-        """What the scripts need to draw the mark (``frontend/avatar.js``)"""
-        return {
+        """What the scripts need to draw the mark (``frontend/avatar.js``);
+        ``away`` only for people away (specs/quiet-hours.md)"""
+        data = {
             "name": str(self),
             "initials": self.initials,
             "color": self.avatar_color,
             "image_url": self.image_url,
             "inactive": not self.is_active,
-            # The away sign (specs/quiet-hours.md)
-            "away": self.away_text,
         }
+        if away := self.away_text:
+            data["away"] = away
+        return data
 
     @property
     def avatar_json(self):

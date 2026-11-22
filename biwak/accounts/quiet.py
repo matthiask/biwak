@@ -77,3 +77,17 @@ def away_notice(user, name=None):
     if user.away_note:
         return _("%(name)s is away until %(date)s: %(note)s") % context
     return _("%(name)s is away until %(date)s.") % context
+
+
+def option_attrs(user):
+    """``data-away`` and ``data-away-note`` for an option of the people
+    picker (frontend/people-picker.js), nothing when not away"""
+    if not is_away(user):
+        return {}
+    from biwak.activity.mentions import reader
+    from biwak.organizations.names import display_name
+
+    return {
+        "data-away": away_detail(user),
+        "data-away-note": away_notice(user, display_name(user, reader())),
+    }

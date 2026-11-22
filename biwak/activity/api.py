@@ -5,6 +5,7 @@ paginated. Notification settings and the @ list (specs/notifications.md,
 
 import datetime as dt
 
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -286,12 +287,27 @@ class SettingsOut(Schema):
     level: NotificationLevel
     delivery: MailDelivery
     lantern_in_favicon: bool
+    quiet_hours: bool = Field(
+        description="Mails and digests wait outside the working days and hours"
+        " (specs/quiet-hours.md)."
+    )
+    working_days: list[int] = Field(description="0 (Monday) to 6 (Sunday).")
+    working_from: dt.time = Field(
+        description="In the installation's time zone (time_zone), the same for"
+        " everybody."
+    )
+    working_until: dt.time
+    time_zone: str
 
 
 class SettingsIn(Schema):
     level: NotificationLevel | None = None
     delivery: MailDelivery | None = None
     lantern_in_favicon: bool | None = None
+    quiet_hours: bool | None = None
+    working_days: list[int] | None = None
+    working_from: dt.time | None = None
+    working_until: dt.time | None = None
 
 
 def settings_out(user):
@@ -299,14 +315,19 @@ def settings_out(user):
         "level": user.notification_level,
         "delivery": user.mail_delivery,
         "lantern_in_favicon": user.lantern_in_favicon,
+        "quiet_hours": user.quiet_hours,
+        "working_days": user.working_days,
+        "working_from": user.working_from,
+        "working_until": user.working_until,
+        "time_zone": settings.TIME_ZONE,
     }
 
 
 @notifications_router.get("me/notifications/", response=SettingsOut)
 def settings_detail(request):
     """Your level (everything or only what concerns you), how mails
-    come (each change, a daily digest, or none: the lantern only) and
-    whether the tab's icon shows unread notifications"""
+    come (each change, a daily digest, or none: the lantern only),
+    whether the tab's icon shows unread notifications and the quiet hours"""
     return settings_out(request.user)
 
 
@@ -318,6 +339,10 @@ def settings_update(request, data: SettingsIn):
         level=data.level,
         delivery=data.delivery,
         favicon=data.lantern_in_favicon,
+        quiet_hours=data.quiet_hours,
+        working_days=data.working_days,
+        working_from=data.working_from,
+        working_until=data.working_until,
     )
     return settings_out(request.user)
 
@@ -412,6 +437,10 @@ class MentionableOut(Schema):
     email: str
     available: bool
     reason: str
+    away_until: dt.date | None = Field(
+        description="The last day the person is away (they can still be"
+        " mentioned); null when not away (specs/quiet-hours.md)."
+    )
 
 
 @notifications_router.get("items/{item_id}/mentionable/", response=list[MentionableOut])

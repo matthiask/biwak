@@ -1383,6 +1383,58 @@ html:not(.js) .wb-handle {
   --wb-avatar-size: 4.5rem;
 }
 
+/* Away (specs/quiet-hours.md): a small moon on the mark's lower right,
+   the mark's title says until when */
+.wb-away-mark {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  vertical-align: middle;
+}
+
+.wb-away-sign {
+  position: absolute;
+  right: -0.2em;
+  bottom: -0.2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 50%;
+  background: var(--bs-body-bg);
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.wb-away-sign .bi::before {
+  font-size: 0.55rem;
+  vertical-align: 0;
+}
+
+.wb-avatar-lg + .wb-away-sign {
+  font-size: 1.75rem;
+}
+
+.wb-avatar-lg + .wb-away-sign .bi::before {
+  font-size: 1.1rem;
+}
+
+/* "away until 3 Dec" in pickers, the @ list and teams; the line on the
+   person's page */
+.wb-away-line,
+.wb-away-detail {
+  color: var(--bs-secondary-color);
+}
+
+/* Shown once in a form assigning or mentioning someone away, on a line
+   of its own also in a row of fields */
+.wb-away-notes {
+  flex-basis: 100%;
+}
+
 [data-avatar-color="heather"] {
   --wb-avatar-bg: var(--wb-palette-heather-fill);
 }

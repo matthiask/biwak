@@ -55,6 +55,7 @@
               data-member="{{ person.is_member|yesno:'true,false' }}"
               {% if posted and person.pk|stringformat:"s" in form.assignees.value %}selected{% endif %}
               data-avatar="{{ person.avatar_json }}"
+              {% away_attrs person %}
             >
               {% short_name person %}
             </option>

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:42+0100\n"
+"POT-Creation-Date: 2026-11-22 16:42+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -348,6 +348,30 @@ msgid "unread notifications on the tab's icon"
 msgstr "ungelesene Benachrichtigungen im Symbol des Tabs"
 
 #: biwak/accounts/models.py
+msgid "quiet hours"
+msgstr "Ruhezeiten"
+
+#: biwak/accounts/models.py
+msgid "working days"
+msgstr "Arbeitstage"
+
+#: biwak/accounts/models.py
+msgid "working from"
+msgstr "Arbeitsbeginn"
+
+#: biwak/accounts/models.py
+msgid "working until"
+msgstr "Arbeitsende"
+
+#: biwak/accounts/models.py
+msgid "away until"
+msgstr "abwesend bis"
+
+#: biwak/accounts/models.py
+msgid "away note"
+msgstr "Abwesenheitsnotiz"
+
+#: biwak/accounts/models.py
 msgid "passkey offer done"
 msgstr "Passkey-Angebot erledigt"
 
@@ -451,6 +475,15 @@ msgstr "Kalender-Link"
 msgid "calendar links"
 msgstr "Kalender-Links"
 
+#: biwak/accounts/operations.py biwak/accounts/views.py
+msgid "Choose today or a later day."
+msgstr "Wähle heute oder einen späteren Tag."
+
+#: biwak/accounts/operations.py
+#, python-format
+msgid "The note is too long (%(count)s characters at most)."
+msgstr "Die Notiz ist zu lang (höchstens %(count)s Zeichen)."
+
 #: biwak/accounts/operations.py
 msgid "The image is too big (5 MB at most)."
 msgstr "Das Bild ist zu gross (höchstens 5 MB)."
@@ -458,6 +491,31 @@ msgstr "Das Bild ist zu gross (höchstens 5 MB)."
 #: biwak/accounts/operations.py
 msgid "Please upload a JPEG, PNG or WebP image."
 msgstr "Bitte lade ein JPEG-, PNG- oder WebP-Bild hoch."
+
+#: biwak/accounts/quiet.py
+#, python-format
+msgid "Away until %(date)s: %(note)s"
+msgstr "Abwesend bis %(date)s: %(note)s"
+
+#: biwak/accounts/quiet.py
+#, python-format
+msgid "Away until %(date)s"
+msgstr "Abwesend bis %(date)s"
+
+#: biwak/accounts/quiet.py
+#, python-format
+msgid "away until %(date)s"
+msgstr "abwesend bis %(date)s"
+
+#: biwak/accounts/quiet.py
+#, python-format
+msgid "%(name)s is away until %(date)s: %(note)s"
+msgstr "%(name)s ist bis %(date)s abwesend: %(note)s"
+
+#: biwak/accounts/quiet.py biwak/organizations/people.py
+#, python-format
+msgid "%(name)s is away until %(date)s."
+msgstr "%(name)s ist bis %(date)s abwesend."
 
 #: biwak/accounts/security_mails.py
 msgid "A passkey was added to your Biwak account"
@@ -619,6 +677,31 @@ msgstr "JPEG, PNG oder WebP, höchstens 5 MB."
 #: biwak/accounts/views.py biwak/activity/views.py
 msgid "Your notification settings have been saved."
 msgstr "Deine Einstellungen für Benachrichtigungen wurden gespeichert."
+
+#: biwak/accounts/views.py
+msgid "Away until"
+msgstr "Abwesend bis"
+
+#: biwak/accounts/views.py
+msgid "The last day away. Nothing is mailed meanwhile; the day after, one mail says what happened."
+msgstr "Der letzte Tag der Abwesenheit. Bis dahin wird nichts gemailt; am Tag danach sagt eine Mail, was passiert ist."
+
+#: biwak/accounts/views.py biwak/activity/views.py
+msgid "Note"
+msgstr "Notiz"
+
+#: biwak/accounts/views.py
+msgid "Optional, one line shown with the name: when back, whom to ask meanwhile."
+msgstr "Optional, eine Zeile beim Namen: wann zurück, wen man inzwischen fragen kann."
+
+#: biwak/accounts/views.py
+#, python-format
+msgid "You're away until %(date)s."
+msgstr "Du bist bis %(date)s abwesend."
+
+#: biwak/accounts/views.py
+msgid "Welcome back."
+msgstr "Willkommen zurück."
 
 #: biwak/accounts/views.py
 msgid "Your name has been saved."
@@ -1278,6 +1361,10 @@ msgstr "gelesen am"
 msgid "marked unread at"
 msgstr "als ungelesen markiert am"
 
+#: biwak/activity/models.py
+msgid "held at"
+msgstr "zurückgehalten am"
+
 #: biwak/activity/models.py biwak/outbox/models.py
 msgid "notification"
 msgstr "Benachrichtigung"
@@ -1319,6 +1406,18 @@ msgstr "Wie üblich (%(level)s)"
 #: biwak/activity/operations.py
 msgid "You're assigned, so you hear about it. Unassign yourself first."
 msgstr "Du bist zugewiesen, darum erfährst du davon. Entferne zuerst deine Zuweisung."
+
+#: biwak/activity/operations.py
+msgid "Working days are 0 (Monday) to 6 (Sunday)."
+msgstr "Arbeitstage sind 0 (Montag) bis 6 (Sonntag)."
+
+#: biwak/activity/operations.py biwak/activity/views.py
+msgid "The working hours end after they start."
+msgstr "Die Arbeitszeit endet nach ihrem Beginn."
+
+#: biwak/activity/operations.py biwak/activity/views.py
+msgid "Choose at least one working day."
+msgstr "Wähle mindestens einen Arbeitstag."
 
 #: biwak/activity/timeline.py
 msgid "removed the due date"
@@ -1444,6 +1543,26 @@ msgid "A dot on the tab's icon while there are unread notifications"
 msgstr "Ein Punkt auf dem Icon des Tabs, solange es ungelesene Benachrichtigungen gibt"
 
 #: biwak/activity/views.py
+msgid "Quiet hours"
+msgstr "Ruhezeiten"
+
+#: biwak/activity/views.py
+msgid "Mails and digests wait outside your working days and hours and go out as one mail when your working time starts. The lantern shows everything as it happens."
+msgstr "Mails und Zusammenfassungen warten ausserhalb deiner Arbeitstage und -zeiten und gehen zu Beginn deiner Arbeitszeit als eine Mail hinaus. Die Laterne zeigt alles sofort."
+
+#: biwak/activity/views.py
+msgid "Working days"
+msgstr "Arbeitstage"
+
+#: biwak/activity/views.py
+msgid "From"
+msgstr "Von"
+
+#: biwak/activity/views.py
+msgid "Until"
+msgstr "Bis"
+
+#: biwak/activity/views.py
 msgid "Notifications for this project"
 msgstr "Benachrichtigungen für dieses Projekt"
 
@@ -1462,10 +1581,6 @@ msgstr "Jetzt benachrichtigen"
 #: biwak/activity/views.py
 msgid "Otherwise they hear about the next change."
 msgstr "Sonst erfahren sie von der nächsten Änderung."
-
-#: biwak/activity/views.py
-msgid "Note"
-msgstr "Notiz"
 
 #: biwak/activity/views.py
 msgid "One line, sent with “Tell them now”."
@@ -3242,6 +3357,16 @@ msgstr "Name von %(name)s bearbeiten"
 
 #: biwak/organizations/people.py
 #, python-format
+msgid "Set %(name)s away"
+msgstr "Abwesenheit von %(name)s eintragen"
+
+#: biwak/organizations/people.py
+#, python-format
+msgid "%(name)s is back."
+msgstr "%(name)s ist zurück."
+
+#: biwak/organizations/people.py
+#, python-format
 msgid "%(name)s has no authenticator app, passkeys or API tokens."
 msgstr "%(name)s hat keine Authenticator-App, keine Passkeys und keine API-Tokens."
 
@@ -4888,8 +5013,21 @@ msgid "Mail to your address %(email)s bounced or was marked as spam on %(since)s
 msgstr "Mails an deine Adresse %(email)s kamen am %(since)s zurück oder wurden als Spam markiert, deshalb erhältst du keine Benachrichtigungsmails. Bitte einen Admin, die Adresse zu ändern oder dies zurückzusetzen, sobald sie wieder funktioniert."
 
 #: biwak/templates/accounts/settings.html
+#, python-format
+msgid "In the time zone %(zone)s, the same for everybody."
+msgstr "In der Zeitzone %(zone)s, für alle dieselbe."
+
+#: biwak/templates/accounts/settings.html
 msgid "How notifications work"
 msgstr "So funktionieren Benachrichtigungen"
+
+#: biwak/templates/accounts/settings.html
+msgid "Out of office"
+msgstr "Abwesenheit"
+
+#: biwak/templates/accounts/settings.html
+msgid "I'm back"
+msgstr "Ich bin zurück"
 
 #: biwak/templates/accounts/settings.html
 msgid "Different in some places"
@@ -6313,6 +6451,14 @@ msgstr "Niemand ist inaktiv."
 #: biwak/templates/organizations/person.html
 msgid "Remove image"
 msgstr "Bild entfernen"
+
+#: biwak/templates/organizations/person.html
+msgid "Set away…"
+msgstr "Abwesenheit eintragen…"
+
+#: biwak/templates/organizations/person.html
+msgid "End away"
+msgstr "Abwesenheit beenden"
 
 #: biwak/templates/organizations/person.html
 msgid "Projects in common"

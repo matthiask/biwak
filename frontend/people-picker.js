@@ -16,7 +16,9 @@
 // isn't a member yet says so, since assigning makes them one. The select
 // stays in the form (hidden), so the form posts it as it always did and
 // without JavaScript it's usable as it is.
-// Keyboard handling as in mentions.js.
+// People away (specs/quiet-hours.md) say until when (data-away), and
+// picking them shows their note once in the form (data-away-note,
+// frontend/away.js). Keyboard handling as in mentions.js.
 //
 // Teams (specs/teams.md, staff only): data-teams lists them with their
 // members, each with the reason the server knows for leaving them out; the
@@ -26,6 +28,7 @@
 // picked one by one. A team with nobody left to add isn't offered.
 
 import { avatar, optionAvatar, teamMark } from "./avatar.js"
+import { awayNote } from "./away.js"
 
 function parse(json) {
   try {
@@ -255,10 +258,14 @@ function attach(select) {
             const name = document.createElement("span")
             name.textContent = option.textContent
             item.append(avatar(optionAvatar(option)), " ", name)
-            if (option.dataset.member === "false") {
+            const details = [
+              option.dataset.member === "false" ? texts.new : "",
+              option.dataset.away || "",
+            ].filter(Boolean)
+            if (details.length) {
               const detail = document.createElement("small")
               detail.className = "wb-mentions-detail"
-              detail.textContent = texts.new
+              detail.textContent = details.join(" · ")
               item.append(" ", detail)
             }
             // mousedown keeps the focus in the field
@@ -319,12 +326,12 @@ function attach(select) {
   }
 
   const pick = (option) => {
-    if (option.team) {
-      for (const member of option.state.add) member.selected = true
-    } else option.selected = true
+    const picked = option.team ? option.state.add : [option]
+    for (const one of picked) one.selected = true
     input.value = ""
     close()
     changed()
+    for (const one of picked) awayNote(root, one.value, one.dataset.awayNote)
   }
 
   root.addEventListener("click", (event) => {

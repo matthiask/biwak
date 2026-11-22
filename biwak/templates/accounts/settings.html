@@ -140,12 +140,60 @@
       {% endif %}
       <form method="post" action="{% url 'settings_notifications' %}">
         {% csrf_token %}
-        {{ form }}
+        {{ form.notification_level.as_field_group }}
+        {{ form.mail_delivery.as_field_group }}
+        {{ form.lantern_in_favicon.as_field_group }}
+        <div id="quiet-hours">
+          {{ form.quiet_hours.as_field_group }}
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6">{{ form.working_days.label }}</legend>
+            <div class="wb-assignees">
+              {% for choice in form.working_days %}
+                <label class="wb-chip">
+                  {{ choice.tag }}
+                  <span>{{ choice.choice_label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            {% for error in form.working_days.errors %}<div class="invalid-feedback d-block">
+                {{ error }}
+              </div>{% endfor %}
+          </fieldset>
+          <div class="row">
+            <div class="col-6 col-lg-3">{{ form.working_from.as_field_group }}</div>
+            <div class="col-6 col-lg-3">{{ form.working_until.as_field_group }}</div>
+          </div>
+          <p class="form-text mt-0">
+            {% blocktranslate trimmed with zone=time_zone %}
+              In the time zone {{ zone }}, the same for everybody.
+            {% endblocktranslate %}
+          </p>
+        </div>
         <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
       </form>
       <p class="small mt-3 mb-0">
         <a href="{% url 'help' 'notifications' %}">{% translate "How notifications work" %}</a>
       </p>
+    </div>
+    <div class="card-body border-top" id="away">
+      <h3 class="h6">{% translate "Out of office" %}</h3>
+      {% if request.user.is_away %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span>{{ request.user.away_text }}</span>
+          <form method="post" action="{% url 'settings_back' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-quiet">{% translate "I'm back" %}</button>
+          </form>
+        </div>
+      {% endif %}
+      <form method="post" action="{% url 'settings_away' %}" class="row">
+        {% csrf_token %}
+        <div class="col-lg-4">{{ away_form.away_until.as_field_group }}</div>
+        <div class="col-lg-8">{{ away_form.away_note.as_field_group }}</div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        </div>
+      </form>
     </div>
     {% if project_overrides or item_overrides %}
       <div class="card-body border-top">

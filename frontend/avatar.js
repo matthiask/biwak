@@ -9,8 +9,28 @@ function className(person, size) {
   return `wb-avatar wb-avatar-${size}${person.inactive ? " wb-avatar-inactive" : ""}`
 }
 
-export function initialsMark(person, size = "sm") {
-  const { name, initials, color } = person
+// The name, and until when they're away (specs/quiet-hours.md)
+const title = (person) =>
+  person.away ? `${person.name}\n${person.away}` : person.name
+
+// Away: the small moon on the mark, like {% avatar %}
+function withAwaySign(person, mark) {
+  if (!person.away || person.inactive) return mark
+  const wrapper = document.createElement("span")
+  wrapper.className = "wb-away-mark"
+  const sign = document.createElement("span")
+  sign.className = "wb-away-sign"
+  sign.setAttribute("aria-hidden", "true")
+  const icon = document.createElement("i")
+  icon.className = "bi bi-moon-fill"
+  sign.append(icon)
+  wrapper.append(mark, sign)
+  return wrapper
+}
+
+function plainInitialsMark(person, size) {
+  const { initials, color } = person
+  const name = title(person)
   const mark = document.createElement("span")
   mark.className = className(person, size)
   mark.dataset.avatarColor = color
@@ -21,22 +41,26 @@ export function initialsMark(person, size = "sm") {
   return mark
 }
 
+export function initialsMark(person, size = "sm") {
+  return withAwaySign(person, plainInitialsMark(person, size))
+}
+
 export function avatar(person, size = "sm") {
   if (!person) return document.createDocumentFragment()
   if (!person.image_url) return initialsMark(person, size)
   const image = document.createElement("img")
   image.className = className(person, size)
   image.src = person.image_url
-  image.alt = person.name
-  image.title = person.name
+  image.alt = title(person)
+  image.title = title(person)
   image.addEventListener(
     "error",
-    () => image.replaceWith(initialsMark(person, size)),
+    () => image.replaceWith(plainInitialsMark(person, size)),
     {
       once: true,
     },
   )
-  return image
+  return withAwaySign(person, image)
 }
 
 // The data of an <option data-avatar="{…}">, or null

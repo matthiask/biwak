@@ -12,8 +12,12 @@
 // members can see the item and why the others are left out; choosing one
 // inserts a mention per member who can, but not of those mentioned in the
 // field already.
+//
+// People away (specs/quiet-hours.md) say until when, and mentioning them
+// shows their note once in the form (frontend/away.js).
 
 import { avatar, teamMark } from "./avatar.js"
+import { awayNote } from "./away.js"
 
 const DELAY = 150
 
@@ -159,7 +163,12 @@ export function mentionList({
           detail.textContent = person.detail
           item.append(teamMark(), " ", name, " ", detail)
         } else {
-          detail.textContent = person.available ? person.email : person.reason
+          detail.textContent = [
+            person.available ? person.email : person.reason,
+            person.away,
+          ]
+            .filter(Boolean)
+            .join(" · ")
           // "Ada Example, Example Ltd" (specs/organizations.md)
           const organization = person.organization
             ? `, ${person.organization}`
@@ -199,18 +208,15 @@ export function mentionList({
   }
 
   const pick = (person) => {
-    let mention = syntax(person)
-    if (person.team) {
-      // Not twice: those mentioned in the field already are left out
-      const already = mentioned()
-      mention = person.members
-        .filter((member) => !already.has(String(member.id)))
-        .map(syntax)
-        .join("")
-    }
+    // Not twice: a team leaves out those mentioned in the field already
+    const people = person.team
+      ? person.members.filter((member) => !mentioned().has(String(member.id)))
+      : [person]
+    const mention = people.map(syntax).join("")
     const typed = current
     close()
     onPick(typed, mention)
+    for (const one of people) awayNote(anchor, one.id, one.away_note)
   }
 
   const load = async (typed) => {

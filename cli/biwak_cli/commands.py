@@ -41,6 +41,13 @@ def names(people):
     )
 
 
+def with_away(person):
+    """The name, "(away until 2026-12-03)" after people away"""
+    if person.get("away_until"):
+        return f"{person['name']} (away until {person['away_until']})"
+    return person["name"]
+
+
 attach_option = click.option(
     "--attach",
     "attach",
@@ -410,7 +417,7 @@ def members(project, as_json):
     for person in data:
         t.add_row(
             str(person["id"]),
-            person["name"],
+            with_away(person),
             person.get("organization") or "",
             person["email"] or "",
             notify_word(person),
@@ -544,7 +551,10 @@ def people(ctx, inactive, as_json):
     t = table("ID", "Name", "Email", "Organization")
     for person in data:
         t.add_row(
-            str(person["id"]), person["name"], person["email"], person["organization"]
+            str(person["id"]),
+            with_away(person),
+            person["email"],
+            person["organization"],
         )
     console.print(t)
     return None
@@ -2471,6 +2481,27 @@ def link_delete(link_id):
 LEVELS = ["everything", "concerns_me"]
 
 
+WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+def parse_days(value):
+    """ "mon-fri", "mon,wed,fri" or "sat,sun" as 0 (Monday) to 6"""
+    days = set()
+    for part in value.lower().replace(" ", "").split(","):
+        first, _dash, last = part.partition("-")
+        if first not in WEEKDAYS or (last and last not in WEEKDAYS):
+            raise click.BadParameter(f"{part!r}: use mon, tue, …, sun or mon-fri.")
+        start, end = WEEKDAYS.index(first), WEEKDAYS.index(last or first)
+        if end < start:
+            raise click.BadParameter(f"{part!r}: from an earlier day to a later one.")
+        days.update(range(start, end + 1))
+    return sorted(days)
+
+
+def show_days(days):
+    return ",".join(WEEKDAYS[day] for day in days) or "none"
+
+
 @cli.command()
 @click.option(
     "--level",
@@ -2480,6 +2511,23 @@ LEVELS = ["everything", "concerns_me"]
 @click.option(
     "--delivery", type=click.Choice(["each", "digest", "none"]), help="Mails."
 )
+@click.option(
+    "--quiet-hours",
+    type=click.Choice(["on", "off"]),
+    help="Mails and digests wait outside your working days and hours.",
+)
+@click.option(
+    "--working-days", help="The working days for quiet hours: mon-fri, mon,wed,fri…"
+)
+@click.option(
+    "--from",
+    "working_from",
+    metavar="HH:MM",
+    help="When the working time starts (the installation's time zone).",
+)
+@click.option(
+    "--until", "working_until", metavar="HH:MM", help="When the working time ends."
+)
 @click.option("--project", type=int, help="Show or set the level for PROJECT.")
 @click.option(
     "--item",
@@ -2488,16 +2536,33 @@ LEVELS = ["everything", "concerns_me"]
     " biwak subscribe or unsubscribe them).",
 )
 @json_option
-def notifications(level, delivery, project, item, as_json):
-    """Show and set your notification level and mail delivery. Levels
-    decide what you're subscribed to automatically; subscribed, you hear
-    about everything on the item."""
+def notifications(
+    level,
+    delivery,
+    quiet_hours,
+    working_days,
+    working_from,
+    working_until,
+    project,
+    item,
+    as_json,
+):
+    """Show and set your notification level, mail delivery and quiet hours.
+    Levels decide what you're subscribed to automatically; subscribed, you
+    hear about everything on the item."""
+    quiet = {
+        "quiet_hours": None if quiet_hours is None else quiet_hours == "on",
+        "working_days": parse_days(working_days) if working_days else None,
+        "working_from": working_from,
+        "working_until": working_until,
+    }
     if project and item:
         terminate("A project or an item, not both.")
     if project or item:
-        if delivery:
+        if delivery or any(value is not None for value in quiet.values()):
             terminate(
-                "The delivery is the same everywhere; leave out --project and --item."
+                "The delivery and quiet hours are the same everywhere; leave out"
+                " --project and --item."
             )
         path = (
             f"projects/{project}/notifications/"
@@ -2516,19 +2581,60 @@ def notifications(level, delivery, project, item, as_json):
         return None
     if level == "default":
         terminate("'default' is for --project and --item.")
-    if level or delivery:
-        changes = {"level": level, "delivery": delivery}
-        data = request(
-            "PUT",
-            "me/notifications/",
-            json={k: v for k, v in changes.items() if v},
-        )
+    changes = {"level": level, "delivery": delivery} | quiet
+    changes = {k: v for k, v in changes.items() if v is not None}
+    if changes:
+        data = request("PUT", "me/notifications/", json=changes)
     else:
         data = request("GET", "me/notifications/")
     if as_json:
         return echo_json(data)
     click.echo(f"Level: {data['level']}")
     click.echo(f"Delivery: {data['delivery']}")
+    working = (
+        f"{show_days(data['working_days'])}"
+        f" {data['working_from'][:5]}-{data['working_until'][:5]}"
+        f" ({data['time_zone']})"
+    )
+    if data["quiet_hours"]:
+        click.echo(f"Quiet hours: on, mails go {working}")
+    else:
+        click.echo("Quiet hours: off")
+    return None
+
+
+@cli.command()
+@click.option(
+    "--until",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="The last day away (YYYY-MM-DD).",
+)
+@click.option("--note", default="", help="One line shown with your name.")
+@click.option("--back", is_flag=True, help="End being away early.")
+@click.option("--person", type=int, help="Somebody else (admins, when someone forgot).")
+@json_option
+def away(until, note, back, person, as_json):
+    """Show whether you're away, or set an away time: nothing is mailed
+    meanwhile, the day after one digest says what happened"""
+    if until and back:
+        terminate("--until or --back, not both.")
+    path = f"people/{person}/away/" if person else "me/away/"
+    if until:
+        payload = {"until": until.date().isoformat(), "note": note}
+        data = request("PUT", path, json=payload)
+    elif back:
+        data = request("DELETE", path)
+    elif person:
+        terminate("With --person: --until or --back.")
+    else:
+        data = request("GET", "me/")
+    if as_json:
+        return echo_json(data)
+    if data.get("away_until"):
+        note = f": {data['away_note']}" if data.get("away_note") else ""
+        click.echo(f"{data['name']} is away until {data['away_until']}{note}")
+    else:
+        click.echo(f"{data['name']} isn't away.")
     return None
 
 

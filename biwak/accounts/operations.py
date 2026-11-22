@@ -4,10 +4,11 @@ page and the API's ``me/`` call these"""
 import io
 
 from django.conf import settings
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext as _
 from PIL import Image, ImageOps
@@ -46,6 +47,52 @@ def set_preferences(
         fields.append("accent")
     if fields:
         user.save(update_fields=fields)
+
+
+# Out of office (specs/quiet-hours.md) --------------------------------------
+
+
+def can_set_away(actor, person):
+    """People set their own; admins others' (when someone forgot)"""
+    return actor.pk == person.pk or (actor.is_admin and actor.is_active)
+
+
+def one_line(note):
+    """The note as one line"""
+    return " ".join((note or "").split())
+
+
+@transaction.atomic
+def set_away(person, *, until, note="", actor):
+    """Away up to and including ``until`` (today or later) with an optional
+    note of one line; raises ``PermissionDenied`` and ``ValidationError``"""
+    from biwak.accounts.quiet import NOTE_LENGTH
+
+    if not can_set_away(actor, person):
+        raise PermissionDenied
+    if until < timezone.localdate():
+        raise ValidationError(_("Choose today or a later day."))
+    note = one_line(note)
+    if len(note) > NOTE_LENGTH:
+        raise ValidationError(
+            _("The note is too long (%(count)s characters at most).")
+            % {"count": NOTE_LENGTH}
+        )
+    person.away_until = until
+    person.away_note = note
+    person.save(update_fields=["away_until", "away_note"])
+    return person
+
+
+@transaction.atomic
+def end_away(person, *, actor):
+    """ "I'm back": ends it early; what waited goes with the next mail"""
+    if not can_set_away(actor, person):
+        raise PermissionDenied
+    person.away_until = None
+    person.away_note = ""
+    person.save(update_fields=["away_until", "away_note"])
+    return person
 
 
 # Profile images (specs/people.md) ------------------------------------------

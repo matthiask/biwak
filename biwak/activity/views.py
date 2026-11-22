@@ -10,6 +10,7 @@ from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonRespo
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dates import WEEKDAYS
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -261,6 +262,70 @@ class SettingsForm(Form):
         label=_("A dot on the tab's icon while there are unread notifications"),
         required=False,
     )
+    # Quiet hours (specs/quiet-hours.md), in the installation's time zone
+    quiet_hours = forms.BooleanField(
+        label=_("Quiet hours"),
+        required=False,
+        help_text=_(
+            "Mails and digests wait outside your working days and hours and"
+            " go out as one mail when your working time starts. The lantern"
+            " shows everything as it happens."
+        ),
+    )
+    working_days = forms.TypedMultipleChoiceField(
+        label=_("Working days"),
+        choices=list(WEEKDAYS.items()),
+        coerce=int,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    # Not posted: unchanged
+    working_from = forms.TimeField(
+        label=_("From"),
+        required=False,
+        widget=forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+    )
+    working_until = forms.TimeField(
+        label=_("Until"),
+        required=False,
+        widget=forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean(self):
+        data = super().clean()
+        if self.user is not None:
+            data["working_from"] = data.get("working_from") or self.user.working_from
+            data["working_until"] = data.get("working_until") or self.user.working_until
+            if not data.get("working_days") and not data.get("quiet_hours"):
+                # Kept for turning them on again
+                data["working_days"] = None
+        start, end = data.get("working_from"), data.get("working_until")
+        if start and end and start >= end:
+            self.add_error(
+                "working_until", _("The working hours end after they start.")
+            )
+        if data.get("quiet_hours") and not data.get("working_days"):
+            self.add_error("working_days", _("Choose at least one working day."))
+        return data
+
+    @classmethod
+    def for_user(cls, user):
+        return cls(
+            user=user,
+            initial={
+                "notification_level": user.notification_level,
+                "mail_delivery": user.mail_delivery,
+                "lantern_in_favicon": user.lantern_in_favicon,
+                "quiet_hours": user.quiet_hours,
+                "working_days": user.working_days,
+                "working_from": user.working_from,
+                "working_until": user.working_until,
+            },
+        )
 
 
 def _level(request):

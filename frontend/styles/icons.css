@@ -271,3 +271,6 @@
 .bi-text-right::before {
   content: "\f5c9";
 }
+.bi-moon-fill::before {
+  content: "\f494";
+}

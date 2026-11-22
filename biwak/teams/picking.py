@@ -12,6 +12,7 @@ from collections import Counter
 from django.db.models.functions import Lower
 from django.utils.translation import gettext as _, ngettext
 
+from biwak.accounts.quiet import away_notice
 from biwak.activity.notify import people_who_see
 from biwak.teams.models import Team, TeamMember
 from biwak.teams.operations import can_see
@@ -136,7 +137,7 @@ def picker_texts():
 def mention_teams(project, visible, query, *, for_user, names):
     """The teams for the ``@`` list (``frontend/mentions.js``), before the
     people: ``[{team: true, id, name, available, detail, members: [{id,
-    short_name}]}]``, the members who can see the item (and whom the
+    short_name, away_note}]}]``, the members who can see the item (and whom the
     viewer may know); ``available`` while there's somebody to mention.
     ``names`` are the short names the viewer sees (``display_names()``)."""
     teams = [
@@ -167,7 +168,9 @@ def mention_teams(project, visible, query, *, for_user, names):
             "members": [
                 {
                     "id": user.pk,
-                    "short_name": names.get(user.pk) or user.get_short_name(),
+                    "short_name": (name := names.get(user.pk) or user.get_short_name()),
+                    # Shown once when mentioned (specs/quiet-hours.md)
+                    "away_note": away_notice(user, name),
                 }
                 for user in available
             ],

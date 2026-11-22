@@ -23,6 +23,8 @@ urlpatterns = [
         name="settings_notifications",
     ),
     path("settings/name/", views.settings_name, name="settings_name"),
+    path("settings/away/", views.settings_away, name="settings_away"),
+    path("settings/back/", views.settings_back, name="settings_back"),
     path("settings/keyboard/", views.settings_keyboard, name="settings_keyboard"),
     path("settings/language/", views.settings_language, name="settings_language"),
     path("settings/appearance/", views.settings_appearance, name="settings_appearance"),
