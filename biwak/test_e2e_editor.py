@@ -660,3 +660,51 @@ class CompositionTest(E2ETestCase):
         compose(self.page, ["さ", "さく"], "作")
         self.assertEqual(self.field.input_value(), "- **ü作**")
         self.assertEqual(self.errors, [])
+
+
+class PasteMarkdownTest(E2ETestCase):
+    """Plain text that is clearly Markdown is parsed when pasted
+    (specs/rich-editor.md); detect.test.js has the detection's cases"""
+
+    def setUp(self):
+        super().setUp()
+        self.page = self.login(
+            self.ada, permissions=["clipboard-read", "clipboard-write"]
+        )
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+
+    def paste(self, text, key="Control+v"):
+        self.page.evaluate("text => navigator.clipboard.writeText(text)", text)
+        self.box.focus()
+        self.box.press(key)
+
+    def test_markdown_is_parsed_and_undo_makes_it_text(self):
+        self.paste("## Packing\n\n- tent\n- stove")
+        expect(self.box.locator("h2")).to_have_text("Packing")
+        expect(self.field).to_have_value("## Packing\n\n- tent\n- stove")
+        self.box.press("ControlOrMeta+z")
+        expect(self.box.locator("h2")).to_have_count(0)
+        expect(self.field).to_have_value("\\## Packing\n\n\\- tent\n\\- stove")
+        self.box.press("ControlOrMeta+z")
+        expect(self.field).to_have_value("")
+
+    def test_a_table_and_links(self):
+        self.paste("| a | b |\n| :--- | --- |\n| 1 | 2 |")
+        expect(self.box.locator("table")).to_have_count(1)
+        self.box.press("ControlOrMeta+End")
+        self.paste("See [the plan](https://example.org/plan).")
+        expect(self.box.locator("a")).to_have_text("the plan")
+
+    def test_code_and_mails_stay_text(self):
+        self.paste("# set up\nx = pitch(tent)")
+        expect(self.box.locator("h1")).to_have_count(0)
+        expect(self.field).to_have_value("\\# set up\nx = pitch(tent)")
+        self.set_markdown(self.field, "")
+        self.paste("Hi,\n* the tent is ordered\nBob")
+        expect(self.box.locator("ul")).to_have_count(0)
+
+    def test_ctrl_shift_v_is_always_text(self):
+        self.paste("- tent\n- stove", key="Control+Shift+v")
+        expect(self.box.locator("ul")).to_have_count(0)
