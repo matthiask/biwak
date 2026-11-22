@@ -141,14 +141,16 @@ class LiveTest(TestCase):
         self.type(self.bob, "Agenda\n- Budget")
         self.assertTrue(operations.save_live(self.doc.pk, self.bob))
         self.refresh()
-        self.assertEqual(self.doc.content, "Agenda\n- Budget")
+        # (a list after a paragraph: a blank line between them, like the
+        # editor writes it)
+        self.assertEqual(self.doc.content, "Agenda\n\n- Budget")
         self.assertFalse(LiveUpdate.objects.exists())
-        self.assertEqual(ytext.text(live.load(self.doc.pk)), "Agenda\n- Budget")
+        self.assertEqual(ytext.text(live.load(self.doc.pk)), "Agenda\n\n- Budget")
         event = Event.objects.get(item=self.item, action="edited")
         self.assertEqual(event.actor, self.bob)
         self.assertEqual(
             [(v.content, v.created_by) for v in self.doc.versions.all()],
-            [("Agenda\n- Budget", self.bob), ("Agenda", self.ada)],
+            [("Agenda\n\n- Budget", self.bob), ("Agenda", self.ada)],
         )
         # Nothing new: nothing happens
         self.assertFalse(operations.save_live(self.doc.pk, self.bob))

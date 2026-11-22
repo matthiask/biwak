@@ -272,8 +272,9 @@ class ConnectionTest(E2ETestCase):
             "document.querySelector('[data-collab]').collab.provider.ws.close()"
         )
         expect(self.banner(page)).to_contain_text("What you type is kept")
-        page.locator(".cm-content").click()
+        page.locator("[data-collab-editor] .ProseMirror").click()
         page.keyboard.press("ControlOrMeta+End")
+        page.keyboard.press("Enter")
         page.keyboard.type("Typed offline")
         page.wait_for_function(
             """async () => (await indexedDB.databases())
@@ -288,12 +289,16 @@ class ConnectionTest(E2ETestCase):
         self.offline = False
         page = context.new_page()
         self.edit(page, doc)
-        expect(page.locator(".cm-content")).to_contain_text("Typed offline")
+        expect(page.locator("[data-collab-editor] .ProseMirror")).to_contain_text(
+            "Typed offline"
+        )
         for _ in range(100):
             if "Typed offline" in Doc.objects.get(pk=doc.pk).content:
                 break
             time.sleep(0.1)
-        self.assertEqual(Doc.objects.get(pk=doc.pk).content, "Agenda\nTyped offline")
+        self.assertEqual(
+            Doc.objects.get(pk=doc.pk).content, "Agenda\n\nTyped offline\n"
+        )
         # The stored copy goes once the server has it
         page.wait_for_function(
             """async () => !(await indexedDB.databases())
@@ -344,8 +349,9 @@ class ConnectionTest(E2ETestCase):
             "document.querySelector('[data-collab]').collab.provider.ws.close()"
         )
         expect(self.banner(page)).to_contain_text("What you type is kept")
-        page.locator(".cm-content").click()
+        page.locator("[data-collab-editor] .ProseMirror").click()
         page.keyboard.press("ControlOrMeta+End")
+        page.keyboard.press("Enter")
         page.keyboard.type("Typed offline")
         # The server drops what the editor sends until we say otherwise
         dropping = [True]
@@ -370,7 +376,9 @@ class ConnectionTest(E2ETestCase):
                 if "Typed offline" in Doc.objects.get(pk=doc.pk).content:
                     break
                 time.sleep(0.1)
-        self.assertEqual(Doc.objects.get(pk=doc.pk).content, "Agenda\nTyped offline")
+        self.assertEqual(
+            Doc.objects.get(pk=doc.pk).content, "Agenda\n\nTyped offline\n"
+        )
         page.wait_for_function(
             """async () => !(await indexedDB.databases())
                 .some((db) => db.name.startsWith("biwak-doc-"))""",
@@ -392,8 +400,9 @@ class ConnectionTest(E2ETestCase):
         page.evaluate(
             "document.querySelector('[data-collab]').collab.provider.ws.close()"
         )
-        page.locator(".cm-content").click()
+        page.locator("[data-collab-editor] .ProseMirror").click()
         page.keyboard.press("ControlOrMeta+End")
+        page.keyboard.press("Enter")
         page.keyboard.type("Typed offline")
         page.wait_for_function(
             """async () => (await indexedDB.databases())
@@ -409,13 +418,15 @@ class ConnectionTest(E2ETestCase):
         self.offline = False
         page = context.new_page()
         self.edit(page, doc)
-        expect(page.locator(".cm-content")).to_contain_text("Agenda")
+        expect(page.locator("[data-collab-editor] .ProseMirror")).to_contain_text(
+            "Agenda"
+        )
         time.sleep(1)
         self.assertEqual(
             page.evaluate(
-                "document.querySelector('[data-collab]').collab.view.state.doc.toString()"
+                "document.querySelector('[data-collab]').collab.editor.markdown()"
             ),
-            "Agenda\n",
+            "Agenda",
         )
         self.assertNotIn("Typed offline", Doc.objects.get(pk=doc.pk).content)
         # The old copy is gone, a new one made and cleared

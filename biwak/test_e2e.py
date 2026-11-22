@@ -1174,18 +1174,18 @@ class CollabTest(E2ETestCase):
         return page
 
     def content(self, page):
-        return page.locator(".cm-content")
+        return page.locator("[data-collab-editor] .ProseMirror")
 
     def text(self, page):
-        """The editor's text (without the others' cursors)"""
+        """The editor's document as Markdown (without the others' cursors)"""
         return page.evaluate(
-            "document.querySelector('[data-collab]').collab.view.state.doc.toString()"
+            "document.querySelector('[data-collab]').collab.editor.markdown()"
         )
 
     def wait_for_text(self, page, expected):
         page.wait_for_function(
             """(expected) => document.querySelector('[data-collab]')
-                .collab.view.state.doc.toString() === expected""",
+                .collab.editor.markdown() === expected""",
             arg=expected,
         )
 
@@ -1201,26 +1201,29 @@ class CollabTest(E2ETestCase):
         return texts.pop()
 
     def type(self, page, text, *, end=True):
+        """Types a paragraph at the end (``end``), or where the caret is"""
         content = self.content(page)
         content.click()
         if end:
             page.keyboard.press("ControlOrMeta+End")
+            page.keyboard.press("Enter")
         page.keyboard.type(text)
 
     def stored(self, doc=None):
         return Doc.objects.get(pk=(doc or self.doc).pk).content
 
     def wait_for_stored(self, expected, doc=None):
-        """Doc.content follows a few seconds after the last keystroke"""
+        """Doc.content follows a few seconds after the last keystroke (a
+        line break at the end stays when the last block does)"""
         for _ in range(100):
-            if self.stored(doc) == expected:
+            if self.stored(doc).rstrip("\n") == expected.rstrip("\n"):
                 return
             time.sleep(0.1)
-        self.assertEqual(self.stored(doc), expected)
+        self.assertEqual(self.stored(doc).rstrip("\n"), expected.rstrip("\n"))
 
     def test_the_toolbar_and_its_keys(self):
         """The same toolbar as above Markdown fields, working on the live
-        editor's text, undone by its undo"""
+        editor's document, undone by its undo (Yjs')"""
         page = self.editor(self.ada)
         bar = page.locator("[data-collab] .wb-toolbar")
         expect(bar).to_be_visible()
@@ -1232,16 +1235,21 @@ class CollabTest(E2ETestCase):
 
         select_agenda()
         bar.locator('[data-toolbar-action="bold"]').click()
-        self.wait_for_text(page, "**Agenda**\n")
+        self.wait_for_text(page, "**Agenda**")
         page.keyboard.press("ControlOrMeta+z")
-        self.wait_for_text(page, "Agenda\n")
-        # The keys, before CodeMirror's own
+        self.wait_for_text(page, "Agenda")
+        page.keyboard.press("ControlOrMeta+Shift+z")
+        self.wait_for_text(page, "**Agenda**")
+        page.keyboard.press("ControlOrMeta+z")
+        # The keys
         select_agenda()
         page.keyboard.press("ControlOrMeta+i")
-        self.wait_for_text(page, "_Agenda_\n")
+        self.wait_for_text(page, "*Agenda*")
         bar.locator('[data-toolbar-action="quote"]').click()
-        self.wait_for_text(page, "> _Agenda_\n")
-        self.wait_for_stored("> _Agenda_\n")
+        self.wait_for_text(page, "> *Agenda*")
+        self.wait_for_stored("> *Agenda*\n")
+        # No "Markdown" switch: the shared document is the editor's
+        expect(bar.locator('[data-toolbar-action="source"]')).to_be_hidden()
         self.assertEqual(self.errors, [])
 
     def test_a_tick_in_another_browser_arrives_in_the_open_editor(self):
@@ -1260,14 +1268,15 @@ class CollabTest(E2ETestCase):
         ticking = self.login(self.bob)
         self.goto(ticking, doc)
         expect(ticking.locator("p[role=status]")).to_contain_text("Ada is editing this")
-        self.type(editor, "- [ ] fuel")
+        # A new task item
+        self.type(editor, "fuel")
         self.wait_for_text(editor, "- [ ] tent\n- [ ] rope\n- [ ] fuel")
         box = ticking.locator(".wb-checklist input[type=checkbox]").nth(1)
         box.check()
         expect(box).to_be_enabled()
         expect(box).to_be_checked()
         self.wait_for_text(editor, "- [ ] tent\n- [x] rope\n- [ ] fuel")
-        self.wait_for_stored("- [ ] tent\n- [x] rope\n- [ ] fuel", doc)
+        self.wait_for_stored("- [ ] tent\n- [x] rope\n- [ ] fuel\n", doc)
         self.assertFalse(self.errors)
 
     def test_three_people_typing_at_once(self):
@@ -1299,8 +1308,12 @@ class CollabTest(E2ETestCase):
                 expect(self.content(page)).to_contain_text(word)
         final = self.converged(*pages)
         # The others' cursors with their names, and who is here
-        expect(pages[0].locator(".cm-ySelectionInfo", has_text="Bob")).to_have_count(1)
-        expect(pages[0].locator(".cm-ySelectionInfo", has_text="Cleo")).to_have_count(1)
+        expect(
+            pages[0].locator(".ProseMirror-yjs-cursor", has_text="Bob")
+        ).to_have_count(1)
+        expect(
+            pages[0].locator(".ProseMirror-yjs-cursor", has_text="Cleo")
+        ).to_have_count(1)
         expect(pages[2].locator("[data-collab-people]")).to_contain_text("Ada")
         expect(pages[2].locator("[data-collab-people]")).to_contain_text("Bob")
         expect(pages[2].locator("[data-collab-people] .wb-avatar")).to_have_count(2)
@@ -1347,11 +1360,11 @@ class CollabTest(E2ETestCase):
         expect(self.content(cleo)).to_have_attribute("contenteditable", "false")
         self.type(ada, "Decided: yes")
         expect(self.content(cleo)).to_contain_text("Decided: yes")
-        expect(cleo.locator(".cm-ySelectionInfo", has_text="Ada")).to_have_count(1)
+        expect(cleo.locator(".ProseMirror-yjs-cursor", has_text="Ada")).to_have_count(1)
         # Typing does nothing
         self.content(cleo).click()
         cleo.keyboard.type("No!")
-        self.wait_for_stored("Agenda\nDecided: yes")
+        self.wait_for_stored("Agenda\n\nDecided: yes\n")
         expect(self.content(ada)).not_to_contain_text("No!")
         # No form to rename it, no attaching
         self.assertEqual(cleo.get_by_role("button", name="Rename").count(), 0)
@@ -1371,7 +1384,7 @@ class CollabTest(E2ETestCase):
         expect(cleo.locator("[data-collab-status]")).to_have_text(
             "You can’t see this doc anymore."
         )
-        expect(cleo.locator(".cm-content")).to_have_count(0)
+        expect(self.content(cleo)).to_have_count(0)
         self.assertFalse(self.errors)
 
     def test_becoming_read_only_during_the_session(self):
@@ -1384,15 +1397,44 @@ class CollabTest(E2ETestCase):
         expect(self.content(bob)).to_have_attribute("contenteditable", "false")
         expect(bob.locator("[data-collab-status]")).to_contain_text("watching")
 
+    def test_undo_is_ones_own_and_composition_beside_typing(self):
+        """Undo takes back one's own typing, not the other's; composing
+        (an input method) while somebody else types in the same paragraph"""
+        from biwak.test_e2e_editor import compose
+
+        ada = self.editor(self.ada, page=self.page)
+        bob = self.editor(self.bob)
+        self.type(bob, "Bob's line")
+        self.wait_for_text(ada, "Agenda\n\nBob's line")
+        self.content(ada).click()
+        ada.keyboard.press("ControlOrMeta+Home")
+        ada.keyboard.press("End")
+        ada.keyboard.type(" by Ada")
+        self.wait_for_text(bob, "Agenda by Ada\n\nBob's line")
+        ada.keyboard.press("ControlOrMeta+z")
+        self.wait_for_text(bob, "Agenda\n\nBob's line")
+        ada.keyboard.press("ControlOrMeta+Shift+z")
+        self.wait_for_text(bob, "Agenda by Ada\n\nBob's line")
+        # Composing on Ada's side while Bob types
+        self.content(ada).click()
+        ada.keyboard.press("ControlOrMeta+Home")
+        compose(ada, ["に", "にほ"], "日本")
+        bob.keyboard.type("!")
+        final = self.converged(ada, bob)
+        self.assertEqual(final, "日本Agenda by Ada\n\nBob's line!")
+        # The others' cursors carry their names
+        expect(ada.locator(".ProseMirror-yjs-cursor", has_text="Bob")).to_have_count(1)
+        self.assertFalse(self.errors)
+
     def test_an_api_edit_arrives_in_the_open_editor(self):
         ada = self.editor(self.ada, page=self.page)
         self.type(ada, "Typed live", end=True)
-        self.wait_for_stored("Agenda\nTyped live")
+        self.wait_for_stored("Agenda\n\nTyped live\n")
         _token, secret = APIToken.create_for(user=self.bob, title="CLI", access="write")
         api = self.playwright.request.new_context(base_url=self.live_server_url)
         response = api.patch(
             f"/api/v1/docs/{self.doc.pk}/",
-            data={"content": "Agenda for Monday\nTyped live"},
+            data={"content": "Agenda for Monday\n\nTyped live"},
             headers={"Authorization": f"Bearer {secret}"},
         )
         self.assertEqual(response.status, 200, response.text())

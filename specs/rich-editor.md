@@ -203,6 +203,20 @@ in Python:
   browser tests type into the editor (`E2ETestCase.editor()`,
   `set_markdown()`).
 
+- **Live docs** (stage 3): `frontend/editor/live.js` (`liveEditor()`:
+  y-prosemirror's sync, cursors and undo on the doc's fragment),
+  `frontend/collab.js` keeps the connection, the status, attachments
+  and offline storage; CodeMirror and `y-codemirror.next` are gone. The
+  server: `collab/ytext.py` reads and writes the fragment through
+  `biwak/richtext/` (`ydoc.py` in UTF-8 positions, `diff.py` the deep
+  diff, `preserve.py` keeping the stored text), `collab.0004` rebuilt
+  the states. Tests: `richtext/test_diff.py` (the spike's table plus
+  mentions, images, breaks and characters outside the Basic Plane, the
+  merged states read by y-prosemirror), the consumer's and `live`'s
+  tests with a Python client typing into the fragment, the browser's
+  `CollabTest` (typing at once, cursors, undo per person, composing
+  beside somebody typing, offline, ticks and API edits arriving).
+
 ## Done when
 
 - Every Markdown field and the live doc editor are the rich editor,

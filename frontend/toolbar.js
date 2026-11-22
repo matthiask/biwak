@@ -9,15 +9,6 @@
 // typing. Without JavaScript the fields stay plain.
 
 export function replace(field, start, end, text) {
-  if (field.editorView) {
-    // The live editor (collab.js): its own change, undone by its own undo
-    field.editorView.dispatch({
-      changes: { from: start, to: end, insert: text },
-      selection: { anchor: start + text.length },
-    })
-    field.focus()
-    return
-  }
   field.focus()
   field.setSelectionRange(start, end)
   if (start === end && text === "") return
@@ -273,7 +264,6 @@ function build(field, template) {
       event.stopPropagation()
       ACTIONS[action](field)
     } else if (
-      !field.editorView &&
       event.key === "Tab" &&
       !event.ctrlKey &&
       !event.metaKey &&
@@ -288,36 +278,17 @@ function build(field, template) {
   })
 }
 
-// The live editor of docs (collab.js, a CodeMirror view) gets the same
-// toolbar above it: the buttons work on an object that looks like a
-// textarea to them. Its keys come through ``editorKeys()``, which runs
-// before CodeMirror's own; Tab stays CodeMirror's.
-export function attachToEditor(view, element) {
+// The live editor of docs (collab.js, the rich editor's ``liveEditor()``)
+// gets the same toolbar above it, without the "Markdown" switch (the
+// shared document is the editor's); its keys are the editor's own
+export function attachToEditor(editor, element, mentions) {
   const template = document.querySelector("template[data-toolbar-template]")
   if (!template) return null
   const field = {
-    editorView: view,
-    dataset: {},
-    get value() {
-      return view.state.doc.toString()
-    },
-    get selectionStart() {
-      return view.state.selection.main.from
-    },
-    get selectionEnd() {
-      return view.state.selection.main.to
-    },
-    setSelectionRange(start, end) {
-      view.dispatch({ selection: { anchor: start, head: end } })
-    },
-    focus() {
-      view.focus()
-    },
-    blur() {
-      view.contentDOM.blur()
-    },
+    richEditor: editor,
+    dataset: { mentions: mentions || "" },
     addEventListener() {
-      // The keys: editorKeys()
+      // The keys: the editor's
     },
     before(bar) {
       element.before(bar)
@@ -325,16 +296,6 @@ export function attachToEditor(view, element) {
   }
   build(field, template)
   return field
-}
-
-// A keydown handler for the live editor: the toolbar's shortcuts
-export function editorKeys(field, event) {
-  const action = keyAction(event)
-  if (!action || event.isComposing || !field) return false
-  event.preventDefault()
-  event.stopPropagation()
-  ACTIONS[action](field)
-  return true
 }
 
 export function attachAll(root) {

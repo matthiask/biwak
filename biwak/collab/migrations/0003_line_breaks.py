@@ -6,10 +6,30 @@ what was typed and not merged yet) is kept; open editors resync."""
 
 from django.db import migrations
 from django.utils import timezone
+from pycrdt import Doc, Text
+
+
+# The live state as it was then: the Markdown in a Y.Text "content" (the
+# rich editor's document replaced it, 0004)
+def _ydoc(state, updates=()):
+    doc = Doc()
+    for update in [state, *updates]:
+        if update:
+            doc.apply_update(bytes(update))
+    return doc
+
+
+def _text(doc):
+    return str(doc.get("content", type=Text))
+
+
+def _initial_state(content):
+    doc = Doc()
+    doc.get("content", type=Text).insert(0, content)
+    return doc.get_update()
 
 
 def line_breaks(apps, schema_editor):
-    from biwak.collab import ytext
     from biwak.text import line_breaks
 
     Doc = apps.get_model("items", "Doc")
@@ -23,7 +43,7 @@ def line_breaks(apps, schema_editor):
             .order_by("pk")
             .values_list("data", flat=True)
         )
-        live = ytext.text(ytext.ydoc(state.state, updates)) if state else None
+        live = _text(_ydoc(state.state, updates)) if state else None
         if "\r" not in doc.content and (live is None or "\r" not in live):
             continue
         text = line_breaks(live if live is not None else doc.content)
@@ -33,7 +53,7 @@ def line_breaks(apps, schema_editor):
             LiveUpdate.objects.filter(doc=doc).delete()
             state.delete()
             LiveState.objects.create(
-                doc=doc, state=ytext.initial_state(text), created_at=timezone.now()
+                doc=doc, state=_initial_state(text), created_at=timezone.now()
             )
 
 

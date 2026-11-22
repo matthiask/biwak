@@ -44,7 +44,7 @@
     data-collab-watching="{% translate 'You are watching. You can’t change this doc.' %}"
     data-collab-gone="{% translate 'You can’t see this doc anymore.' %}"
     data-collab-here="{% translate 'Also here:' %}"
-    {% if can_edit %}{% attachments_attrs project %}{% endif %}
+    {% if can_edit %}{% attachments_attrs project %} data-mentions="{% url 'mentionable' item.pk %}"{% endif %}
   >
     <div class="d-flex flex-wrap align-items-center gap-3 small text-body-secondary mb-2">
       <span data-collab-status role="status">{% translate "Connecting…" %}</span>
@@ -58,7 +58,7 @@
         </form>
       {% endif %}
     </div>
-    <div data-collab-editor class="wb-live-editor"></div>
+    <div data-collab-editor class="wb-live-editor wb-markdown"></div>
     {% if can_edit %}
       {% csrf_token %}
       {% include "files/_attach_button.html" %}
