@@ -15,6 +15,7 @@ from biwak.files import attachments, operations as file_ops
 from biwak.files.models import Attachment
 from biwak.items import due, operations as ops
 from biwak.items.models import Item, Kind, MessageCategory, Status
+from biwak.palette import queries as palette
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
 from biwak.projects.overview import overview
@@ -146,6 +147,11 @@ class TemplateTest(Fixture, TestCase):
         self.assertFalse(
             search.search(self.ada, "Kick-off", project=self.template).exists()
         )
+        # Nor does the palette, neither the template nor what's in it
+        # (decided 2026-11-22: they're used from the templates page and
+        # "New project/list from a template")
+        self.assertEqual(palette.jumps(self.ada, "Web project"), [])
+        self.assertEqual(palette.jumps(self.ada, "Kick-off"), [])
 
     def test_tells_nobody(self):
         """Nothing inside a template tells anybody: assigning, commenting,

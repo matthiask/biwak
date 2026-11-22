@@ -55,22 +55,29 @@ def jumps(user, terms):
     if not words:
         return []
     results = []
-    projects = has_words(Project.objects.accessible_to(user), "name", words)
-    projects = projects.order_by("archived_at", "is_template", "name")
+    # Never templates, nor what's in them (decided 2026-11-22,
+    # specs/templates.md): they're used from the templates page
+    projects = has_words(
+        Project.objects.accessible_to(user).filter(is_template=False), "name", words
+    )
+    projects = projects.order_by("archived_at", "name")
     for project in projects[:LIMIT]:
         results.append({
             "kind": "project",
-            "label": _("Template") if project.is_template else _("Project"),
+            "label": _("Project"),
             "title": project.name,
             "url": project.get_absolute_url(),
             "context": "",
             **color_of(project),
             "archived": project.archived_at is not None,
-            "template": project.is_template,
             "visible_to_clients": False,
         })
     items = has_words(
-        Item.objects.visible_to(user).filter(kind__in=ITEM_KINDS), "title", words
+        Item.objects.visible_to(user).filter(
+            kind__in=ITEM_KINDS, project__is_template=False
+        ),
+        "title",
+        words,
     ).select_related("project")
     # Archived projects and lists (and what is in them) last, so they don't
     # crowd out the rest
@@ -95,7 +102,6 @@ def jumps(user, terms):
             "context": item.project.name,
             **color_of(item.project),
             "archived": item.out_of_the_way,
-            "template": item.project.is_template,
             "visible_to_clients": item.is_client_visible,
         })
     people = people_visible_to(user).filter(is_active=True)
@@ -114,15 +120,7 @@ def jumps(user, terms):
             "archived": False,
             "visible_to_clients": False,
         })
-    # Templates after the running projects too (specs/templates.md)
-    results.sort(
-        key=lambda r: (
-            r["archived"],
-            r.get("template", False),
-            ORDER[r["kind"]],
-            r["title"].lower(),
-        )
-    )
+    results.sort(key=lambda r: (r["archived"], ORDER[r["kind"]], r["title"].lower()))
     return results[:LIMIT]
 
 

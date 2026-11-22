@@ -6,11 +6,7 @@ are maintained by people in the app (one person or role keeps them
 current) and used while projects run (an onboarding list, a list per
 event), which a skill setting up projects doesn't cover.
 
-**Status:** built (2026-11-22), branch `templates`; the changes
-decided afterwards (check-ins copied, assignments kept, search never
-finding templates, one library for the importer, no public links)
-built on `templates-fixes`. The decisions marked "proposed" below were
-made while building, for the user to confirm.
+**Status:** built (2026-11-22).
 
 ## What real templates hold
 
@@ -64,8 +60,8 @@ of what's needed:
   reactions, history and events are not.
 - **Check-ins** keep their schedule (paused ones stay paused; asked from
   the next date on) and the people asked, who are added as members when
-  they wouldn't see the new project, like assignees below (proposed
-  2026-11-22: a template has no members, but its questions can ask own
+  they wouldn't see the new project, like assignees below (confirmed
+  by the user 2026-11-22: a template has no members, but its questions can ask own
   staff; a question asking nobody asks nobody in the new project
   either). Questions in a template are never asked.
 - **Assignees and dates** are copied as they are (real templates have
@@ -125,8 +121,9 @@ rebuilds them by hand.
   `create_public_link()` refuses, the API answers 400),
   the all-projects page, the archived projects. Search never finds
   them (`search.queries.search()`; the search page doesn't offer them
-  as a project to search in). The palette lists templates after the
-  projects, labelled "Template".
+  as a project to search in), nor does the palette's jumping
+  (decided 2026-11-22): templates are used from the templates page and
+  "New project/list from a template".
 - **Quiet:** `notify()` tells nobody about events of templates (so no
   lantern, mails or digests), `mentions.update()` stores no mentions
   there, `notify_people()` subscribes nobody. Assigning inside a

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 19:55+0100\n"
+"POT-Creation-Date: 2026-11-22 20:19+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4460,11 +4460,6 @@ msgstr "Neue Vorlage"
 msgid "command palette"
 msgstr "Befehlspalette"
 
-#: biwak/palette/queries.py biwak/templates/projects/project_detail.html
-#: biwak/templates/search/search.html
-msgid "Template"
-msgstr "Vorlage"
-
 #: biwak/palette/queries.py biwak/templates/items/_due_badge.html
 #, python-format
 msgid "Overdue · %(day)s"
@@ -7596,6 +7591,11 @@ msgstr "Eingeschränktes Projekt: Nur Mitglieder können es öffnen."
 #: biwak/templates/projects/people.html
 msgid "Clients only see what is visible to clients."
 msgstr "Kund:innen sehen nur, was für Kund:innen sichtbar ist."
+
+#: biwak/templates/projects/project_detail.html
+#: biwak/templates/search/search.html
+msgid "Template"
+msgstr "Vorlage"
 
 #: biwak/templates/projects/project_detail.html
 #: biwak/templates/projects/trash.html
