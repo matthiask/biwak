@@ -296,7 +296,11 @@ class EntryPointsTest(ReadingTestCase):
     def test_the_page_toggle(self):
         self.prime(self.todo)
         self.client.force_login(self.ada)
-        self.act(lambda: self.client.post(reverse("todo_toggle", args=[self.todo.pk])))
+        self.act(
+            lambda: self.client.post(
+                reverse("todo_toggle", args=[self.todo.pk]), {"done": "1"}
+            )
+        )
         self.assertReadFor(self.ada, self.todo, others=[self.bob])
 
     def test_the_api(self):

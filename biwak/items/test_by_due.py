@@ -318,7 +318,8 @@ class PageTest(ByDueTestCase):
         response = self.client.get("/todos/?assignee=nobody")
         self.assertContains(response, 'value="/todos/?assignee=nobody"')
         response = self.client.post(
-            f"/todos/{item.pk}/toggle/", {"next": "/todos/?assignee=nobody"}
+            f"/todos/{item.pk}/toggle/",
+            {"next": "/todos/?assignee=nobody", "done": "1"},
         )
         self.assertRedirects(response, "/todos/?assignee=nobody")
         item.todo.refresh_from_db()
@@ -331,7 +332,7 @@ class PageTest(ByDueTestCase):
         )
         # Not off to other sites
         response = self.client.post(
-            f"/todos/{item.pk}/toggle/", {"next": "https://example.com/"}
+            f"/todos/{item.pk}/toggle/", {"next": "https://example.com/", "done": "1"}
         )
         self.assertRedirects(response, self.shared.get_absolute_url())
 
@@ -342,7 +343,7 @@ class PageTest(ByDueTestCase):
         self.assertEqual(
             self.client.post(f"/todos/{secret.pk}/toggle/").status_code, 404
         )
-        self.client.post(f"/todos/{item.pk}/toggle/", {"next": "/todos/"})
+        self.client.post(f"/todos/{item.pk}/toggle/", {"next": "/todos/", "done": "1"})
         item.todo.refresh_from_db()
         self.assertEqual(item.todo.completed_by, self.cleo)
 

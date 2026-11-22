@@ -294,6 +294,8 @@ class ItemActionsTest(ActionsBase):
             self.assertEqual(
                 actions["Complete"]["url"], f"/todos/{self.todo.pk}/toggle/"
             )
+            # What it says, not the other way round on a page from before
+            self.assertEqual(actions["Complete"]["data"]["done"], "1")
             self.assertEqual(actions["Comment"]["shortcut"], "c")
             # Everybody who sees a to-do edits it
             self.assertEqual(actions["Edit"]["shortcut"], "e")
@@ -302,7 +304,8 @@ class ItemActionsTest(ActionsBase):
                 actions["Copy the link"]["text"].endswith(f"/todos/{self.todo.pk}/")
             )
         ops.complete(self.todo, actor=self.ada)
-        self.assertIn("Reopen", self.actions(self.ada, self.todo.get_absolute_url()))
+        reopen = self.actions(self.ada, self.todo.get_absolute_url())["Reopen"]
+        self.assertEqual(reopen["data"]["done"], "0")
 
     def test_toggles_follow_the_state(self):
         url = self.todo.get_absolute_url()

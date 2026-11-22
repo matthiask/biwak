@@ -192,7 +192,7 @@ def on_item(request, item, context):
             post(
                 _("Reopen") if completed else _("Complete"),
                 reverse("todo_toggle", args=[item.pk]),
-                {"next": url},
+                {"next": url, "done": "0" if completed else "1"},
                 "x",
             )
         )

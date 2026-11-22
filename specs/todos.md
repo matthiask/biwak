@@ -170,6 +170,11 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
 - **Left out:** trashed to-dos, archived projects and archived lists
   (also in the API and the calendar feed).
 - Rows complete in place (the list's toggle, `next` back to the page).
+- **Completing says what it does** (decided 2026-11-22): the rows, the
+  to-do's page, the palette and `x` post `done=1` (Complete) or `done=0`
+  (Reopen) to `/todos/<id>/toggle/`; a to-do already so stays as it is,
+  so a page from before someone else completed it never reopens it. The
+  API has `complete/` and `reopen/`.
 - **From the project page:** "All to-dos: by list · by due date" below
   the lists' heading, each keeping its own query; the header's "All
   to-dos" restores the remembered filters.

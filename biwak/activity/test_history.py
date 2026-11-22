@@ -67,7 +67,7 @@ class HistoryTest(TestCase):
         )
         ops.assign(self.item(), [self.bob], actor=self.ada)
         self.client.force_login(self.bob)
-        self.client.post(f"/todos/{self.todo.pk}/toggle/")
+        self.client.post(f"/todos/{self.todo.pk}/toggle/", {"done": "1"})
         ops.move_todo(
             self.item(), todolist=self.shared, group=self.group, actor=self.bob
         )

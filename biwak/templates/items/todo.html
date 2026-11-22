@@ -32,6 +32,7 @@
       >
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ item.get_absolute_url }}">
+        <input type="hidden" name="done" value="{% if todo.is_completed %}0{% else %}1{% endif %}">
         {% if todo.is_completed %}
           <button type="submit" class="btn btn-sm wb-completed" title="{% translate 'Reopen' %}">
             <span class="wb-check is-done">{% icon "check-lg" %}</span><span class="wb-label"><span

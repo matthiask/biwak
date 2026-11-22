@@ -11,6 +11,7 @@
   data-celebrate="{% if todo.todo.is_completed %}reopen{% else %}complete{% endif %}"
 >
   {% csrf_token %}
+  <input type="hidden" name="done" value="{% if todo.todo.is_completed %}0{% else %}1{% endif %}">
   {% if keep_page %}<input type="hidden" name="next" value="{{ request.get_full_path }}">{% endif %}
   <button
     type="submit"

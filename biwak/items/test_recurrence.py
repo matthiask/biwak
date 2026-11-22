@@ -538,7 +538,7 @@ class PagesTest(RecurrenceTestCase):
         item = self.todo("FREQ=DAILY", "2026-11-20")
         self.client.force_login(self.ada)
         with at("2026-11-20 12:00"):
-            self.client.post(f"/todos/{item.pk}/toggle/")
+            self.client.post(f"/todos/{item.pk}/toggle/", {"done": "1"})
         new = self.following(item)
         response = self.client.get(new.get_absolute_url())
         self.assertContains(response, "Previous:")

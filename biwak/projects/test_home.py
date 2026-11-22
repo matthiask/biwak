@@ -182,7 +182,9 @@ class DueTest(HomeTestCase):
         self.client.force_login(self.ada)
         content = self.client.get("/").content.decode()
         self.assertIn(f'action="/todos/{item.pk}/toggle/"', content)
-        response = self.client.post(f"/todos/{item.pk}/toggle/", {"next": "/"})
+        response = self.client.post(
+            f"/todos/{item.pk}/toggle/", {"next": "/", "done": "1"}
+        )
         self.assertRedirects(response, "/")
         self.assertNotIn("Pack", self.section(self.ada, "due"))
 

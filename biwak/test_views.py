@@ -134,9 +134,39 @@ class ViewsTest(TestCase):
         self.client.post(self.shared.get_absolute_url(), {"title": "From client"})
         new = Item.objects.get(title="From client")
         self.assertTrue(new.is_client_visible)
-        self.client.post(f"/todos/{new.pk}/toggle/")
+        self.client.post(f"/todos/{new.pk}/toggle/", {"done": "1"})
         new.refresh_from_db()
         self.assertEqual(new.todo.completed_by, self.cleo)
+
+    def test_completing_does_what_the_button_said(self):
+        # A page from before someone else completed the to-do still says
+        # "Complete": it doesn't reopen it, and the same for "Reopen"
+        self.client.force_login(self.ada)
+        url = f"/todos/{self.todo.pk}/toggle/"
+        ops.complete(self.todo, actor=self.cleo)
+        self.client.post(url, {"done": "1"})
+        self.todo.todo.refresh_from_db()
+        self.assertEqual(self.todo.todo.completed_by, self.cleo)
+        self.client.post(url, {"done": "0"})
+        self.todo.todo.refresh_from_db()
+        self.assertIsNone(self.todo.todo.completed_at)
+        self.client.post(url, {"done": "0"})
+        self.todo.todo.refresh_from_db()
+        self.assertIsNone(self.todo.todo.completed_at)
+        self.assertEqual(
+            Event.objects.filter(item=self.todo, action=Action.REOPENED).count(), 1
+        )
+        # Without saying which, nothing
+        self.assertEqual(self.client.post(url).status_code, 400)
+        self.assertEqual(self.client.post(url, {"done": "x"}).status_code, 400)
+        self.todo.todo.refresh_from_db()
+        self.assertIsNone(self.todo.todo.completed_at)
+        # Every form posting there says it
+        for page in [self.todo.get_absolute_url(), self.shared.get_absolute_url()]:
+            with self.subTest(page=page):
+                self.assertContains(
+                    self.client.get(page), '<input type="hidden" name="done" value="1">'
+                )
 
     def test_todo_detail_and_comments(self):
         self.client.force_login(self.ada)

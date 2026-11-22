@@ -2414,6 +2414,26 @@ class KeyboardTest(E2ETestCase):
         page.keyboard.press("o")
         page.wait_for_url("**/todos/*/")
 
+    def test_x_on_a_todos_page_does_what_it_says(self):
+        self.make_list("Launch", todos=["Plan"])
+        item = Item.objects.get(title="Plan")
+        page = self.page
+        self.goto(page, item)
+        # Someone else completes it meanwhile: x said "Complete", so it stays
+        # completed instead of being reopened
+        ops.complete(item, actor=self.bob)
+        with page.expect_navigation():
+            page.keyboard.press("x")
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.completed_by, self.bob)
+        # Now it says "Reopen"
+        expect(page.get_by_role("button", name="Reopen")).to_be_visible()
+        with page.expect_navigation():
+            page.keyboard.press("x")
+        item.todo.refresh_from_db()
+        self.assertIsNone(item.todo.completed_at)
+        self.assertEqual(self.errors, [])
+
     def test_rows_of_my_todos_and_the_feed_and_search(self):
         ops.create_todo(todolist=self.make_list(), title="Alpha", creator=self.ada)
         page = self.page

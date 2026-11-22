@@ -26,6 +26,11 @@ through. Once confirmed (or changed), delete the entry; git keeps it.
 
 ### To-dos and filters
 
+- **Completing from a page from before** someone else's change does what
+  the button said: "Complete" on a to-do somebody completed meanwhile
+  leaves it completed (by them), instead of reopening it (`done=1/0`,
+  `todos.md`).
+
 ### Notifications and files
 
 ### Sign-in and people

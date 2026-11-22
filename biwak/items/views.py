@@ -496,11 +496,17 @@ def todos_move(request, pk):
 
 @require_POST
 def todo_toggle(request, pk):
+    """Completes (``done=1``) or reopens (``done=0``) a to-do: what the
+    button said, so a page from before someone else's change doesn't undo
+    it; already so, nothing happens"""
     item = item_for(request, pk, Kind.TODO)
-    if item.todo.is_completed:
-        ops.reopen(item, actor=request.user)
-    else:
+    done = request.POST.get("done")
+    if done not in {"0", "1"}:
+        return HttpResponse(status=400)
+    if done == "1" and not item.todo.is_completed:
         ops.complete(item, actor=request.user)
+    elif done == "0" and item.todo.is_completed:
+        ops.reopen(item, actor=request.user)
     return redirect(next_url(request) or item.parent)
 
 
