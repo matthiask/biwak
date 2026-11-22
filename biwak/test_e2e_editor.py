@@ -662,6 +662,84 @@ class CompositionTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
 
+class TableTest(E2ETestCase):
+    """Inserting tables and the table's bar (specs/rich-editor.md,
+    "Tables")"""
+
+    def setUp(self):
+        super().setUp()
+        self.goto(self.page, reverse("message_new", args=[self.project.pk]))
+        self.field = self.page.locator("textarea[name=content]")
+        self.box = self.editor(self.field)
+        self.bar = self.page.locator(".wb-table-bar")
+
+    def action(self, name):
+        return self.bar.locator(f'[data-table-action="{name}"]')
+
+    def test_inserting_and_changing_a_table(self):
+        self.box.click()
+        self.box.press_sequentially("Plan")
+        self.box.press("Enter")
+        self.page.locator('[data-toolbar-action="table"]').click()
+        expect(self.bar).to_be_visible()
+        expect(self.bar).to_have_attribute("role", "toolbar")
+        self.box.press_sequentially("Day")
+        self.assertEqual(
+            self.field.input_value(), "Plan\n\n| Day |  |\n| --- | --- |\n|  |  |"
+        )
+        # In the header row: no deleting it, no row above it
+        expect(self.action("delete-row")).to_have_attribute("aria-disabled", "true")
+        expect(self.action("row-above")).to_have_attribute("aria-disabled", "true")
+        self.action("delete-row").click(force=True)
+        self.action("row-below").click()
+        self.action("column-right").click()
+        self.action("align-right").click()
+        expect(self.action("align-right")).to_have_attribute("aria-pressed", "true")
+        self.assertEqual(
+            self.field.input_value(),
+            "Plan\n\n| Day |  |  |\n| ---: | --- | --- |\n|  |  |  |\n|  |  |  |",
+        )
+        self.action("align-right").click()
+        expect(self.action("align-right")).to_have_attribute("aria-pressed", "false")
+        self.action("delete-table").click()
+        expect(self.bar).to_be_hidden()
+        self.assertEqual(self.field.input_value(), "Plan")
+        self.assertEqual(self.errors, [])
+
+    def test_the_bar_by_keyboard(self):
+        self.set_markdown(self.field, "| a | b |\n| --- | --- |\n| 1 | 2 |")
+        self.box.locator("td").first.click()
+        expect(self.bar).to_be_visible()
+        # Tab leaves the table for its bar: one tab stop, arrows move
+        self.box.press("Tab")
+        first = self.action("row-above")
+        expect(first).to_be_focused()
+        self.page.keyboard.press("ArrowRight")
+        expect(self.action("row-below")).to_be_focused()
+        self.page.keyboard.press("Enter")
+        self.assertEqual(
+            self.field.input_value(), "| a | b |\n| --- | --- |\n| 1 | 2 |\n|  |  |"
+        )
+        expect(self.bar).to_be_visible()
+        self.page.keyboard.press("End")
+        expect(self.action("align-right")).to_be_focused()
+        self.page.keyboard.press("Escape")
+        expect(self.box).to_be_focused()
+        # Out of the table: no bar
+        self.box.press("ControlOrMeta+Home")
+        self.set_markdown(self.field, "Text only")
+        expect(self.bar).to_be_hidden()
+
+    def test_the_source_gets_a_table_too(self):
+        self.set_markdown(self.field, "Plan")
+        self.page.locator('[data-toolbar-action="source"]').click()
+        self.field.evaluate("el => el.setSelectionRange(4, 4)")
+        self.page.locator('[data-toolbar-action="table"]').click()
+        self.assertEqual(
+            self.field.input_value(), "Plan\n\n|  |  |\n| --- | --- |\n|  |  |\n"
+        )
+
+
 class PasteMarkdownTest(E2ETestCase):
     """Plain text that is clearly Markdown is parsed when pasted
     (specs/rich-editor.md); detect.test.js has the detection's cases"""

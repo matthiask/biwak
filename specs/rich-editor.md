@@ -6,8 +6,9 @@ that shows what the text will look like: we mostly write prose, not
 code, and the source view looks like code. One editor for every text
 field, live docs included. Asked by the user 2026-11-22.
 
-**Status:** built 2026-11-22; open: pasting Markdown detected, the
-table tools (both decided 2026-11-22). (Decided with the user 2026-11-22:
+**Status:** built 2026-11-22, with pasting detected Markdown and the
+table tools (both decided and built 2026-11-22, branch `editor-tables`;
+the visible details in `decisions-to-confirm.md`). (Decided with the user 2026-11-22:
 ProseMirror, Markdown stored, a source toggle, live docs' conversion in
 Python; a spike confirmed it with the changes below; the choices made
 while building confirmed 2026-11-22). What was built and the sizes:
@@ -252,6 +253,20 @@ in Python:
   source of unchanged blocks on the server (`keep_source()`); a run of
   text split by a new mention keeps its Y text where most of it went
   (the deep diff's pairing).
+
+- **Pasting clear Markdown and tables** (2026-11-22, branch
+  `editor-tables`): `frontend/editor/detect.js` (`isMarkdown()`, its
+  cases in `tests/detect.test.js`), pasted as text first and parsed in an
+  undo step of its own (`closeHistory()`, Yjs' `stopCapturing()` in
+  live docs). `frontend/editor/tables.js`: `insertTable()` (the
+  toolbar's "Insert table"; in the source it inserts the Markdown of
+  one), the bar (`tableBar()`, after the field in the page so that Tab
+  from a cell reaches it, `aria-disabled` where an action doesn't
+  apply) and `tableShape`, which keeps the first row the header and
+  every cell at its column's alignment after any change. Alignment
+  round-trips on both sides (corpus `hand/32-table-alignment.md`).
+  Tests: `tests/tables.test.js`, `test_e2e_editor.py` (`TableTest`,
+  `PasteMarkdownTest`), `CollabTest.test_tables_in_a_live_doc`.
 
 ## Choices confirmed by the user (2026-11-22)
 

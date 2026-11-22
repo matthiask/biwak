@@ -19,6 +19,7 @@ import { FRAGMENT } from "./live-schema.js"
 import { serialize } from "./markdown.js"
 import { markdownSlice, mentions, pasting } from "./plugins.js"
 import { schema, setAttachmentUrl } from "./schema.js"
+import { tableBar } from "./tables.js"
 
 export { FRAGMENT }
 
@@ -48,6 +49,7 @@ export function liveEditor(
               .getState(editor.view.state)
               ?.undoManager.stopCapturing(),
         }),
+        tableBar({ anchor: place }),
       ],
       // Yjs' undo: one's own changes only
       undo: { undo, redo },

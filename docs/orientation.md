@@ -125,8 +125,15 @@ up for what's under the cursor, and pressing one again takes it off.
   <kbd>Shift</kbd>+<kbd>Tab</kbd> move list items in and out.
 - Click a checkbox in the text to tick it.
 - Type `@` to mention somebody (staff can mention a team).
+- **Tables:** "Insert table" in the toolbar. While you're in a table a
+  small bar above it adds rows and columns, deletes them or the table,
+  and aligns the column left, center or right. <kbd>Tab</kbd> from the
+  table reaches it.
 - Paste from web pages, mails, Word or Google Docs and the formatting
-  stays; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> pastes plain
+  stays. Pasted plain text that is clearly Markdown (headings, lists,
+  tables, code blocks, links) is formatted too, and
+  <kbd>Ctrl</kbd>+<kbd>Z</kbd> right after turns it back into the text;
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> pastes plain
   text. Pasted or dropped files are attached.
 - **Markdown** (the last button) shows the text's source, Markdown, for
   what the editor doesn't show, such as pasting a piece of Markdown;
