@@ -294,6 +294,20 @@ def merge_warning(source, target):
     ) % {"source": source, "target": target, "provider": target.idp_name}
 
 
+def _relink_imported(source, target):
+    """The Basecamp companies imported as ``source`` are ``target`` from now
+    on, so the next import doesn't create ``source`` again (decided
+    2026-11-22, specs/import-basecamp.md)"""
+    from django.contrib.contenttypes.models import ContentType
+
+    from biwak.importer.models import ImportedObject
+
+    ImportedObject.objects.filter(
+        content_type=ContentType.objects.get_for_model(Organization),
+        object_id=source.pk,
+    ).update(object_id=target.pk)
+
+
 @transaction.atomic
 def merge(source, target, *, actor, confirmed=False):
     """Moves the people and domains of ``source`` to ``target`` and deletes
@@ -340,6 +354,7 @@ def merge(source, target, *, actor, confirmed=False):
     if domains:
         target.domains = [*target.domains, *domains]
         target.save(update_fields=["domains"])
+    _relink_imported(source, target)
     source.delete()
     _access_changed(moved)
     if target.requires_sso:

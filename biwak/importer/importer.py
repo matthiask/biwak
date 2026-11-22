@@ -55,6 +55,7 @@ from biwak.projects.models import Project
 
 
 PERSON, PROJECT, ATTACHMENT = "Person", "Project", "Attachment"
+COMPANY = "Company"
 GROUP, COLUMN = "Todolist::Group", "Kanban::Column"
 # Project templates and the to-do list library's bucket (specs/templates.md)
 TEMPLATE = "Template"
@@ -312,6 +313,7 @@ class Importer(Resolver):
         self._persons = {}  # Basecamp person ID: the person's record
         # The IDs of the account's people (``/people.json``), read once
         self._account_people = None
+        self._own_company_ids = set()
         # Basecamp person IDs already compared with the account's people
         self._looked_at = set()
         self._today = timezone.localdate()
@@ -509,7 +511,7 @@ class Importer(Resolver):
         if self.dry:
             return None
         if client or external:
-            organization = self._organization(company)
+            organization = self._organization(person.get("company") or {})
         else:
             organization = Organization.objects.own()
         return User.objects.create_user(
@@ -531,13 +533,28 @@ class Importer(Resolver):
         also lists removed people (``Tombstone``), people from outside
         (``Outsider``) and placeholders (``DummyUser``, ``Integration``):
         only users are in the account (checked 2026-11-22)."""
-        if self._account_people is None:
-            self._account_people = {
-                person["id"]
-                for person in self.client.paginate("/people.json")
-                if person.get("personable_type", "User") in ACCOUNT_PEOPLE
-            }
+        self._read_account()
         return self._account_people
+
+    def _own_companies(self):
+        """The Basecamp IDs of the account's own company: its employees'"""
+        self._read_account()
+        return self._own_company_ids
+
+    def _read_account(self):
+        if self._account_people is not None:
+            return
+        people = [
+            person
+            for person in self.client.paginate("/people.json")
+            if person.get("personable_type", "User") in ACCOUNT_PEOPLE
+        ]
+        self._account_people = {person["id"] for person in people}
+        self._own_company_ids = {
+            person["company"]["id"]
+            for person in people
+            if person.get("employee") and (person.get("company") or {}).get("id")
+        }
 
     def _people_who_left(self):
         """Inactive people (created by an import, or deactivated) who turn up
@@ -617,17 +634,28 @@ class Importer(Resolver):
             return None
         return self.client.download(rec["avatar_url"], accept="image/png, image/webp")
 
-    def _organization(self, name):
-        """Basecamp's company as an organization, by name (ignoring case and
-        spaces, like the migration from texts); not the own organization,
-        which only admins give people"""
-        name = normalize_name(name)
-        if not name:
+    def _organization(self, company):
+        """Basecamp's company as an organization: the one it was imported as
+        before (merges move that, ``organizations.operations.merge()``), else
+        by name (ignoring case and spaces, like the migration from texts),
+        else a new one. Never the own organization, which only admins give
+        people: the account's own company (its employees', whatever either
+        is called, decided 2026-11-22) and a company named like the own
+        organization give none."""
+        cid = company.get("id")
+        name = normalize_name(company.get("name") or "")
+        if cid is not None and cid in self._own_companies():
             return None
-        found = Organization.objects.named(name)
-        if found is not None and found.is_own:
+        found = self._find(COMPANY, cid) if cid is not None else None
+        if found is None and name:
+            found = Organization.objects.named(name)
+            if found is None:
+                found = Organization.objects.create(name=name)
+        if found is None or found.is_own:
             return None
-        return found or Organization.objects.create(name=name)
+        if cid is not None:
+            self._remember(COMPANY, cid, found)
+        return found
 
     def user_for_sgid(self, sgid):
         pid = self._people_by_sgid.get(sgid)

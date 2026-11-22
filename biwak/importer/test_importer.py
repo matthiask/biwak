@@ -29,6 +29,7 @@ from biwak.items.models import (
     Todo,
     TodoList,
 )
+from biwak.organizations.models import Organization
 from biwak.projects.models import Membership, Project
 from biwak.test_utils import organization, person
 
@@ -1079,6 +1080,51 @@ class PeopleTest(ImportCase):
         bob = User.objects.get(email="bob@example.org")
         self.assertTrue(bob.organization.is_own)
         self.assertFalse(bob.is_external)
+
+    def test_the_own_company_is_the_own_organization_whatever_its_name(self):
+        # On a real account the own organization was renamed: collaborators
+        # of the employees' company got a new organization of its old name
+        # on every run (fixed 2026-11-22)
+        own = Organization.objects.own()
+        own.name = "Our Agency AG"
+        own.save()
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people.append(
+            support.person(
+                7, "Hal Example", "hal@example.org", company=support.BOB["company"]
+            )
+            | {"employee": False}
+        )
+        self.run_import()
+        self.assertEqual(User.objects.get(email="bob@example.org").organization, own)
+        hal = User.objects.get(email="hal@example.org")
+        self.assertTrue(hal.is_external)
+        self.assertIsNone(hal.organization)
+        self.assertFalse(Organization.objects.filter(name="Example Team").exists())
+
+    def test_merged_organizations_stay_merged(self):
+        from biwak.organizations import operations as org_ops
+
+        self.run_import()
+        cleo = User.objects.get(email="cleo@example.org")
+        imported = cleo.organization
+        clients = Organization.objects.create(name="Clients AG")
+        org_ops.merge(imported, clients, actor=self.ada)
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people.append(
+            support.person(
+                8,
+                "Ivy Example",
+                "ivy@example.org",
+                client=True,
+                company=support.CLEO["company"],
+            )
+        )
+        self.run_import()
+        self.assertEqual(
+            User.objects.get(email="ivy@example.org").organization, clients
+        )
+        self.assertFalse(Organization.objects.filter(name=imported.name).exists())
 
     def test_collaborators_without_a_company_are_individual_externals(self):
         people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]

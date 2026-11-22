@@ -181,9 +181,17 @@ project. Waiting for Basecamp's account export to confirm the plan.
   them among its people is Basecamp's sample project: skipped before
   anything is written, reported as a problem. One turning up anywhere
   else stops the run (`ImportRefused`, the command's error).
-  Companies become organizations by name, ignoring case and spaces:
-  employees get the own organization, clients and collaborators their
-  company's (collaborators become externals). Existing people keep theirs.
+  Companies become organizations: employees get the own organization,
+  clients and collaborators their company's (collaborators become
+  externals). Existing people keep theirs. A company is the organization
+  it was imported as before (by Basecamp's company ID, `Company` in the
+  mapping), else the one of its name (ignoring case and spaces), else a
+  new one. **The account's own company** (its employees') never becomes
+  an organization, whatever it or the own organization is called
+  (decided 2026-11-22: renaming the own organization made every run
+  create the company again); its collaborators are externals without
+  one. **Merging organizations** moves the mapping to the organization
+  merged into (`organizations.operations.merge()`), so a merge sticks.
 - **People who left** (decided 2026-11-22, `activation.md`): the
   account's people (`/people.json`) are read once per run, also when
   later runs skip unchanged recordings; inactive people who turn up in a
