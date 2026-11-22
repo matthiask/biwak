@@ -87,7 +87,7 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
 - API: `GET /forwarded/`, `POST /forwarded/{id}/file/` (message or
   to-do), `DELETE`; CLI `biwak forwarded [file ID --message PROJECT |
   --todo LIST] [delete ID]`, so agents can file mails too.
-  Built (`biwak/forwarding/api.py`, CLI 0.46.0): the list is complete
+  Built (`biwak/forwarding/api.py`, CLI 0.48.0): the list is complete
   (kept 30 days, not paginated), each with `sender {name, email}`,
   `sent_on`, `to`, `cc`, `text` (files as `forwarded:KEY`),
   `text_html` and `files`; `file/` takes `kind` (`message`, `todo`),
