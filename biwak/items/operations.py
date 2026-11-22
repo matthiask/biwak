@@ -90,8 +90,11 @@ def create_item(
 
 def created(item, creator, **data):
     """The creator subscribed and the event recorded (returned), with
-    ``data`` (a ``batch`` of files uploaded together)"""
-    subscribe(creator, item)
+    ``data`` (a ``batch`` of files uploaded together). Not for folders:
+    creating one is housekeeping, and following a folder brings every new
+    file whatever the level (decided 2026-11-22, specs/notifications.md)"""
+    if item.kind != Kind.FOLDER:
+        subscribe(creator, item)
     return record(
         actor=creator, action=Action.CREATED, project=item.project, item=item, **data
     )

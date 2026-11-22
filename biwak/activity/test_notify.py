@@ -390,6 +390,19 @@ class ToldByDefaultTest(TestCase):
             [self.dan],
         )
 
+    def test_creating_a_folder_doesnt_subscribe_its_creator(self):
+        """Creating a folder is housekeeping, not following it: on "only
+        what concerns me" its creator isn't told about new files (decided
+        2026-11-22)"""
+        folder = ops.create_folder(
+            project=self.project, title="Drafts", creator=self.bob
+        )
+        self.assertFalse(Subscription.objects.filter(item=folder).exists())
+        self.assertEqual(
+            told_by_default(self.project, folder, visible=False, actor=self.dan),
+            [self.ada],  # on "everything"
+        )
+
     def test_posting_into_the_folder_tells_them(self):
         subscribe(self.dan, self.folder)
         with self.captureOnCommitCallbacks(execute=True):

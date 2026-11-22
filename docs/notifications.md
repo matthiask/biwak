@@ -12,7 +12,8 @@ unsubscribe from it.
 
 You are subscribed to an item when you:
 
-- create it, are assigned to it or comment on it;
+- create it (except a folder: follow it with "Subscribe"), are
+  assigned to it or comment on it;
 - are mentioned in it (type `@` and a name in any text), whatever your
   level;
 - are in the project when somebody posts a message, doc or file, if

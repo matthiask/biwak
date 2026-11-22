@@ -35,7 +35,10 @@ it for the first time.
 - Subscribing to a container also means hearing about items created in
   it later (subscribing to a list: new to-dos, even when not assigned).
 - **Automatic:** the author, assignees, people mentioned, people
-  commenting. They respect an earlier unsubscribing
+  commenting. **Not a folder's creator** (decided 2026-11-22: creating
+  a folder is housekeeping, and following one brings every new file
+  whatever the level; a migration removed the creators' automatic
+  subscriptions). They respect an earlier unsubscribing
   (`Unsubscription`); being assigned or mentioned, being added, or
   subscribing oneself overrides it (`subscribe(..., explicit=True)`).
 - **Joining a project subscribes to nothing that exists already**
