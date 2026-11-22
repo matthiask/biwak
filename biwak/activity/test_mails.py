@@ -161,7 +161,9 @@ class MailsTest(MailsBase):
             self.cleo.mail_delivery = delivery
             self.cleo.save()
             Notification.objects.create(user=self.cleo, event=event)
-            self.send(timezone.now() + dt.timedelta(days=1, minutes=11))
+            # After the next digest, whatever the time of day
+            tomorrow = timezone.localtime() + dt.timedelta(days=1)
+            self.send(tomorrow.replace(hour=7, minute=11))
             self.assertFalse([
                 m for m in mail.outbox if "Secret" in m.body and self.cleo.email in m.to
             ])
