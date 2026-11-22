@@ -12,10 +12,9 @@ from biwak.accounts.models import MailDelivery, NotificationLevel
 from biwak.activity import lantern, mails as mails_module, mentions
 from biwak.activity.mails import send_mails, unsubscribe_token
 from biwak.activity.models import Action, Event, Notification, Subscription
-from biwak.activity.operations import record, subscribe
+from biwak.activity.operations import subscribe
 from biwak.files import attachments
 from biwak.items import operations as ops
-from biwak.items.models import Item
 from biwak.outbox import sending as outbox
 from biwak.outbox.models import OutgoingMail
 from biwak.reactions.operations import add_reaction
@@ -343,23 +342,12 @@ class MailsTest(MailsBase):
             self.assertNotIn("Salaries", text)
             self.assertNotIn(salaries.key, text)
 
-    def test_moves_and_attachments(self):
-        """Clients don't learn where it moved (the name may be internal);
-        attachments are links with BASE_URL"""
-        subscribe(self.cleo, self.todo)
+    def test_attachments(self):
+        """Attachments are links with BASE_URL"""
         attachment = attachments.upload(
             project=self.project,
             file=ContentFile(b"%PDF-", name="plan.pdf"),
             uploaded_by=self.ada,
-        )
-        self.act(
-            lambda: record(
-                actor=self.ada,
-                action=Action.MOVED,
-                project=self.project,
-                item=self.todo,
-                to="Internal plans",
-            )
         )
         self.act(
             lambda: ops.add_comment(
@@ -369,54 +357,62 @@ class MailsTest(MailsBase):
             )
         )
         self.send(timezone.now() + dt.timedelta(minutes=11))
-        by = {m.to[0]: m for m in mail.outbox}
+        bob = next(m for m in mail.outbox if m.to == [self.bob.email])
         url = f"https://biwak.example.org{attachment.get_absolute_url()}"
-        bob, cleo = by[self.bob.email], by[self.cleo.email]
-        self.assertIn("moved it to Internal plans.", bob.body)
-        self.assertIn("Ada Example moved it.", cleo.body)
-        self.assertNotIn("Internal plans", cleo.body + cleo.alternatives[0].content)
         self.assertIn(f"The [plan]({url})", bob.body)
         self.assertIn(f'href="{url}"', bob.alternatives[0].content)
 
-    def test_clients_get_the_target_list_if_it_is_visible_to_them(self):
-        """Checked when the mail is made, not when the move happened"""
+    def test_moving_tells_nobody(self):
+        """Moving notifies nobody (decided 2026-11-22, specs/handover.md):
+        the feed and the history say it"""
         subscribe(self.cleo, self.todo)
         plans = ops.create_list(
             project=self.project, title="Plans", creator=self.ada, visible=True
         )
+        group = ops.create_group(todolist=plans.todolist, title="Done")
         self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
-        self.send(timezone.now() + dt.timedelta(minutes=11))
-        by = {m.to[0]: m for m in mail.outbox}
-        for user in [self.bob, self.cleo]:
-            self.assertIn("Ada Example moved it to Plans.", by[user.email].body)
-
-    def test_a_list_made_internal_since_is_left_out_for_clients(self):
-        subscribe(self.cleo, self.todo)
-        plans = ops.create_list(
-            project=self.project, title="Plans", creator=self.ada, visible=True
-        )
-        self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
-        ops.set_visibility(plans, visible=False, actor=self.ada)
-        Item.objects.filter(pk=self.todo.pk).update(is_client_visible=True)
-        self.send(timezone.now() + dt.timedelta(minutes=11))
-        by = {m.to[0]: m for m in mail.outbox}
-        self.assertIn("moved it to Plans.", by[self.bob.email].body)
-        self.assertIn("Ada Example moved it.", by[self.cleo.email].body)
-        self.assertNotIn("moved it to", by[self.cleo.email].body)
-
-    def test_moving_out_of_its_group(self):
-        subscribe(self.cleo, self.todo)
-        group = ops.create_group(todolist=self.shared.todolist, title="Done")
-        ops.move_todo(self.todo, todolist=self.shared, group=group, actor=self.ada)
-        Event.objects.all().delete()
         self.act(
             lambda: ops.move_todo(
-                self.todo, todolist=self.shared, group=None, actor=self.ada
+                self.todo, todolist=plans, group=group, actor=self.ada
             )
         )
+        self.assertFalse(Notification.objects.exists())
         self.send(timezone.now() + dt.timedelta(minutes=11))
-        for message in mail.outbox:
-            self.assertIn("Ada Example moved it out of its group.", message.body)
+        self.assertEqual(mail.outbox, [])
+
+    def test_describing_a_move(self):
+        """Notifications of moves from before: clients don't learn where it
+        moved (the name may be internal), the list checked now"""
+        plans = ops.create_list(
+            project=self.project, title="Plans", creator=self.ada, visible=True
+        )
+
+        def moved(**data):
+            return Event(
+                actor=self.ada,
+                action=Action.MOVED,
+                project=self.project,
+                item=self.todo,
+                data=data,
+            )
+
+        describe = mails_module.describe
+        internal = moved(to="Internal plans")
+        self.assertEqual(
+            describe(internal, self.bob), "Ada Example moved it to Internal plans."
+        )
+        self.assertEqual(
+            describe(moved(to="Internal plans"), self.cleo), "Ada Example moved it."
+        )
+        visible = moved(to="Plans", to_id=plans.pk)
+        self.assertEqual(describe(visible, self.cleo), "Ada Example moved it to Plans.")
+        ops.set_visibility(plans, visible=False, actor=self.ada)
+        hidden = moved(to="Plans", to_id=plans.pk)
+        self.assertEqual(describe(hidden, self.cleo), "Ada Example moved it.")
+        self.assertEqual(
+            describe(moved(group=""), self.bob),
+            "Ada Example moved it out of its group.",
+        )
 
     def test_mentions_in_the_lists_title(self):
         ops.update_list(

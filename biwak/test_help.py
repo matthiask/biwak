@@ -103,7 +103,7 @@ class LanguagesTest(TestCase):
     def test_a_german_reader_gets_the_german_page(self):
         self.client.force_login(person("Ada", language="de"))
         response = self.client.get("/help/todos/")
-        self.assertContains(response, "Mehrere auf einmal zuweisen")
+        self.assertContains(response, "Mehrere auf einmal ändern")
         self.assertNotContains(response, 'id="help-in-english"')
         self.assertNotContains(response, '<div lang="en">')
         # The chapters in German too
@@ -116,15 +116,15 @@ class LanguagesTest(TestCase):
     def test_an_english_reader_gets_the_english_page(self):
         self.client.force_login(person("Bea", language="en"))
         response = self.client.get("/help/todos/")
-        self.assertContains(response, "Assigning several at once")
-        self.assertNotContains(response, "Mehrere auf einmal zuweisen")
+        self.assertContains(response, "Changing several at once")
+        self.assertNotContains(response, "Mehrere auf einmal ändern")
         self.assertNotContains(response, 'id="help-in-english"')
 
     def test_a_missing_german_page_falls_back_to_english(self):
         self.client.force_login(person("Ada", language="de"))
         with patch.dict(PAGES["de"], {"todos": "missing.de.md"}):
             response = self.client.get("/help/todos/")
-            self.assertContains(response, "Assigning several at once")
+            self.assertContains(response, "Changing several at once")
             self.assertContains(
                 response, "Diese Seite der Hilfe gibt es vorerst nur auf Englisch."
             )

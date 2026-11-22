@@ -46,7 +46,7 @@ clicking its button, and pressing it twice sends it once.
 - <kbd>x</kbd> selects the current to-do (on a list, the board and the
   to-dos page) or a folder's tile, or takes it out of the selection;
   <kbd>Shift</kbd> with the arrow keys selects on. See
-  [Assigning several at once](todos.md#assigning-several-at-once).
+  [Changing several at once](todos.md#changing-several-at-once).
 - <kbd>c</kbd> writes a comment, <kbd>e</kbd> edits, <kbd>b</kbd>
   bookmarks, <kbd>s</kbd> subscribes or unsubscribes, on an item's page.
 - <kbd>g</kbd>, then a letter, goes somewhere: <kbd>g</kbd> <kbd>h</kbd>

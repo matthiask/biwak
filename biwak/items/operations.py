@@ -8,6 +8,7 @@ don't save items themselves.
 
 import datetime as dt
 import uuid
+from collections import Counter
 
 from django.core.exceptions import PermissionDenied
 from django.core.files import File
@@ -797,13 +798,16 @@ def update_todo(
     recurrence_ends_on=_UNCHANGED,
     recurrence_count=_UNCHANGED,
     base=None,
+    batch=None,
 ):
     """Changes what's given (the to-do's page and the API); assignees are
     the complete new set. Removing the recurrence removes its end and
     count too, removing the due date its start date (``InvalidDates`` for
     a start date without a due date or after it). ``base``: the
     ``editing.version()`` the form carried, so ``editing.StaleEdit`` if
-    somebody saved since. Saving ends one's editing."""
+    somebody saved since. Saving ends one's editing. ``batch``: the to-dos
+    of one "Due date…" share it on their events, told once
+    (specs/handover.md)."""
     Todo.objects.select_for_update().get(item=item)
     editing.check_base(item, base, actor=actor)
     editing.stop(item, actor)
@@ -851,6 +855,8 @@ def update_todo(
         # went back (the first one stays when edits merge, record())
         if edited:
             extra["title_was"] = title_was
+        if batch:
+            extra["batch"] = batch
         if {"due_on", "starts_on"} & set(fields):
             # Both dates, what they are and were (specs/start-dates.md)
             for name, value in [
@@ -886,6 +892,36 @@ def update_todo(
     if edited or fields or (assignees is not _UNCHANGED and new != old):
         read_by_acting(actor, item)
     return item
+
+
+@transaction.atomic
+def date_todos(items, *, actor, dates, due_on=None, days=0):
+    """ "Due date…" for several to-dos (specs/handover.md), the choices of
+    copying a list (``Dates``): ``KEEP`` sets ``due_on`` on all of them
+    (start dates stay, so one after it is refused, as on the to-do's
+    page), ``SHIFT`` moves due dates, start dates and "repeats until" by
+    ``days`` (to-dos without a due date stay as they are), ``REMOVE``
+    removes due and start dates. Through ``update_todo()`` per to-do, so
+    an event each, sharing a ``batch`` (one entry in the lantern, one mail).
+    All or nothing: ``InvalidDates`` changes nothing."""
+    delta = dt.timedelta(days=days)
+    batch = uuid.uuid4().hex if len(items) > 1 else None
+    for item in items:
+        todo = Todo.objects.get(item=item)
+        if dates == Dates.KEEP:
+            update_todo(item, actor=actor, due_on=due_on, batch=batch)
+        elif dates == Dates.REMOVE:
+            update_todo(item, actor=actor, due_on=None, batch=batch)
+        elif dates != Dates.SHIFT:
+            raise ValueError(f"Unknown dates: {dates}")
+        elif todo.due_on is not None:
+            changes = {
+                "due_on": todo.due_on + delta,
+                "starts_on": todo.starts_on and todo.starts_on + delta,
+            }
+            if todo.recurrence_ends_on:
+                changes["recurrence_ends_on"] = todo.recurrence_ends_on + delta
+            update_todo(item, actor=actor, batch=batch, **changes)
 
 
 @transaction.atomic
@@ -1000,13 +1036,15 @@ def move_todo(item, *, todolist, group=None, index=None, actor):
 
 
 @transaction.atomic
-def move_todos(items, *, todolist, group=None, index=None, actor):
+def move_todos(items, *, todolist, group=None, index=None, actor, _from=None):
     """Moves to-dos together (dragging several at once) into a list's group
     (or ungrouped), next to each other in the given order, starting at
     ``index`` among the others there (0-based, None: at the end). Locks the
     lists, so concurrent moves don't mix up positions. Moving into another
     list recomputes the visibility. Raises ``ValueError`` for a to-do given
-    twice."""
+    twice. The events of more than one share a ``batch``
+    (specs/handover.md). Into another project: ``move_todos_to()``, which
+    passes ``_from``, the projects they come from by to-do."""
     if not items:
         return
     if len({i.pk for i in items}) != len(items):
@@ -1016,8 +1054,10 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
     list(TodoList.objects.select_for_update().filter(item__in=lists).order_by("pk"))
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
-    if any(i.project_id != todolist.project_id for i in items):
+    _from = _from or {}
+    if any(i.project_id != todolist.project_id and i.pk not in _from for i in items):
         raise ValueError("Moving to-dos between projects isn't possible")
+    batch = {"batch": uuid.uuid4().hex} if len(items) > 1 else {}
 
     moved = {i.pk for i in items}
     siblings = [i for i in _todos_in(todolist, group) if i.pk not in moved]
@@ -1028,6 +1068,16 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
 
     for item in items:
         list_was, group_was = item.parent_id, item.todo.group_id
+        across = {}
+        if source := _from.get(item.pk):
+            # Named in the target's terms (feed.add_projects())
+            item.project = todolist.project
+            across = {
+                "from_project": source.name,
+                "from_project_id": source.pk,
+                "to_project": todolist.project.name,
+                "to_project_id": todolist.project_id,
+            }
         changed_list = item.parent_id != todolist.pk
         if changed_list:
             item.parent = todolist
@@ -1049,6 +1099,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 # (specs/timeline.md); merging keeps the first "was"
                 group_id=group.pk if group else None,
                 group_was=group_was,
+                **batch,
             )
         if changed_list:
             visibility.recompute(item)
@@ -1064,6 +1115,8 @@ def move_todos(items, *, todolist, group=None, index=None, actor):
                 # cancels out only if it's back in its column too
                 group_id=group.pk if group else None,
                 group_was=group_was,
+                **across,
+                **batch,
             )
     _renumber(siblings)
     for list_id, group_id in sources:
@@ -1682,6 +1735,91 @@ def move_to_project(item, *, project, actor):
         to_project=project.name,
         to_project_id=project.pk,
     )
+
+
+def todos_move_people(items, project, *, visible):
+    """``people_plan()`` of moving the to-dos into a list of ``project``
+    (``visible`` to clients or not): the assignees of the open ones and the
+    subscribers of those coming from other projects"""
+    foreign = [item.pk for item in items if item.project_id != project.pk]
+    return people_plan(
+        User.objects.filter(
+            assigned_todos__item__in=foreign,
+            assigned_todos__completed_at__isnull=True,
+        ),
+        User.objects.filter(subscriptions__item__in=foreign),
+        project,
+        visible,
+    )
+
+
+@transaction.atomic
+def move_todos_to(items, *, todolist, group=None, index=None, actor):
+    """``move_todos()`` into a list of any project (the selection's
+    "Move…", specs/handover.md): to-dos from other projects come along
+    with their comments, reactions, events and attachments, completed ones
+    too. Their assignees who don't see them there are added as members or,
+    clients, dropped; subscribers who don't are dropped
+    (``todos_move_people()``, as ``move_to_project()``). Each to-do's
+    ``moved`` event names both projects; each project they left keeps one
+    line for all of them (an event without item, for its staff) pointing
+    to the list. Nobody is told."""
+    project = todolist.project
+    foreign = [item for item in items if item.project_id != project.pk]
+    if not foreign:
+        return move_todos(
+            items, todolist=todolist, group=group, index=index, actor=actor
+        )
+    sources = {item.project_id: item.project for item in foreign}
+    counts = Counter(item.project_id for item in foreign)
+    if project.archived_at is not None or any(
+        source.archived_at is not None for source in sources.values()
+    ):
+        raise ValueError(gettext("Nothing moves into or out of an archived project."))
+    if project.is_template or any(s.is_template for s in sources.values()):
+        raise ValueError(gettext("Nothing moves into or out of a template."))
+    added, dropped = (
+        list(people)
+        for people in todos_move_people(
+            items, project, visible=todolist.is_client_visible
+        )
+    )
+    for user in added:
+        project_ops.add_member(project, user, actor=actor)
+    pks = [item.pk for item in foreign]
+    if dropped:
+        todos = Item.objects.filter(
+            pk__in=pks,
+            todo__completed_at__isnull=True,
+            todo__assignees__in=dropped,
+        ).distinct()
+        for todo in todos.select_related("todo", "project"):
+            unassign(todo, dropped, actor=actor)
+        Subscription.objects.filter(item__in=pks, user__in=dropped).delete()
+    Item.objects.filter(pk__in=pks).update(project=project)
+    Event.objects.filter(item__in=pks).update(project=project)
+    Attachment.objects.filter(item__in=pks).update(project=project)
+    move_todos(
+        items,
+        todolist=todolist,
+        group=group,
+        index=index,
+        actor=actor,
+        _from={item.pk: sources[item.project_id] for item in foreign},
+    )
+    # One line for all in each project they left (decided 2026-11-22)
+    for source_id, source in sources.items():
+        record(
+            actor=actor,
+            action=Action.MOVED,
+            project=source,
+            todos=counts[source_id],
+            to=todolist.title,
+            to_id=todolist.pk,
+            to_project=project.name,
+            to_project_id=project.pk,
+        )
+    return None
 
 
 class FromTextRefused(ValueError):

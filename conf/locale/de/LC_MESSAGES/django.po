@@ -1238,6 +1238,13 @@ msgid_plural "%(actor)s assigned people to %(count)s to-dos."
 msgstr[0] "%(actor)s hat einem To-do Personen zugewiesen."
 msgstr[1] "%(actor)s hat %(count)s To-dos Personen zugewiesen."
 
+#: biwak/activity/lantern.py
+#, python-format
+msgid "%(actor)s changed the dates of a to-do."
+msgid_plural "%(actor)s changed the dates of %(count)s to-dos."
+msgstr[0] "%(actor)s hat die Daten eines To-dos geändert."
+msgstr[1] "%(actor)s hat die Daten von %(count)s To-dos geändert."
+
 #: biwak/activity/mails.py biwak/files/models.py biwak/templatetags/biwak.py
 msgid "attachment"
 msgstr "Anhang"
@@ -1525,8 +1532,8 @@ msgid "added to-dos"
 msgstr "To-dos hinzugefügt"
 
 #: biwak/activity/models.py biwak/bookmarks/models.py biwak/files/models.py
-#: biwak/forwarding/views.py biwak/items/across.py biwak/items/by_due.py
-#: biwak/items/models.py biwak/projects/models.py
+#: biwak/forwarding/views.py biwak/items/across.py biwak/items/assigning.py
+#: biwak/items/by_due.py biwak/items/models.py biwak/projects/models.py
 msgid "project"
 msgstr "Projekt"
 
@@ -2331,8 +2338,8 @@ msgstr "Ordner kommen zuerst, in der gleichen Reihenfolge. Alle sehen sie."
 msgid "Edit…"
 msgstr "Bearbeiten…"
 
-#: biwak/files/library.py biwak/items/views.py biwak/organizations/people.py
-#: biwak/projects/views.py biwak/teams/views.py
+#: biwak/files/library.py biwak/items/assigning.py biwak/items/views.py
+#: biwak/organizations/people.py biwak/projects/views.py biwak/teams/views.py
 #: biwak/templates/accounts/settings.html
 #: biwak/templates/checkins/question.html
 #: biwak/templates/checkins/question_form.html
@@ -2367,7 +2374,8 @@ msgstr "Andere Projekte"
 msgid "Move to…"
 msgstr "Verschieben nach…"
 
-#: biwak/files/library.py biwak/items/across.py biwak/items/views.py
+#: biwak/files/library.py biwak/items/across.py biwak/items/assigning.py
+#: biwak/items/views.py
 msgid "Move"
 msgstr "Verschieben"
 
@@ -2658,7 +2666,7 @@ msgstr "An: %(people)s"
 msgid "Cc: %(people)s"
 msgstr "Cc: %(people)s"
 
-#: biwak/forwarding/views.py biwak/items/views.py
+#: biwak/forwarding/views.py biwak/items/assigning.py biwak/items/views.py
 msgid "List and group"
 msgstr "Liste und Gruppe"
 
@@ -2834,7 +2842,7 @@ msgid_plural "%(count)d other people"
 msgstr[0] "%(count)d weitere Person"
 msgstr[1] "%(count)d weitere Personen"
 
-#: biwak/items/across.py
+#: biwak/items/across.py biwak/items/assigning.py
 #, python-format
 msgid "%(names)s will be added to %(project)s."
 msgid_plural "%(names)s will be added to %(project)s."
@@ -2871,19 +2879,19 @@ msgstr[1] "%(count)d Kund:innen"
 msgid "Gets “(copy)” if the project has a list of that name."
 msgstr "Erhält „(Kopie)“, wenn das Projekt schon eine Liste mit diesem Namen hat."
 
-#: biwak/items/across.py
+#: biwak/items/across.py biwak/items/assigning.py
 msgid "Due dates"
 msgstr "Fälligkeiten"
 
-#: biwak/items/across.py
+#: biwak/items/across.py biwak/items/assigning.py
 msgid "Days"
 msgstr "Tage"
 
-#: biwak/items/across.py
+#: biwak/items/across.py biwak/items/assigning.py
 msgid "For “Move by”: negative numbers move them earlier."
 msgstr "Für „Verschieben um“: Negative Zahlen verschieben sie nach vorne."
 
-#: biwak/items/across.py
+#: biwak/items/across.py biwak/items/assigning.py
 msgid "By how many days?"
 msgstr "Um wie viele Tage?"
 
@@ -2942,13 +2950,29 @@ msgstr "Sende mindestens ein To-do und eine Person."
 msgid "Only people who can be assigned to every one of the to-dos can be assigned."
 msgstr "Nur Personen, die jedem der To-dos zugewiesen werden können, können zugewiesen werden."
 
-#: biwak/items/api.py biwak/items/views.py
-msgid "To-dos can't move to another project."
-msgstr "To-dos können nicht in ein anderes Projekt verschoben werden."
+#: biwak/items/api.py
+msgid "Send at least one to-do."
+msgstr "Sende mindestens ein To-do."
+
+#: biwak/items/api.py
+msgid "Send the due date."
+msgstr "Sende die Fälligkeit."
 
 #: biwak/items/api.py
 msgid "Send each to-do once."
 msgstr "Sende jedes To-do einmal."
+
+#: biwak/items/api.py
+msgid "Only staff move to-dos into other projects."
+msgstr "Nur Mitarbeitende verschieben To-dos in andere Projekte."
+
+#: biwak/items/api.py
+msgid "Send “confirm”: true to move them anyway."
+msgstr "Sende „confirm“: true, um sie trotzdem zu verschieben."
+
+#: biwak/items/api.py biwak/items/views.py
+msgid "To-dos can't move to another project."
+msgstr "To-dos können nicht in ein anderes Projekt verschoben werden."
 
 #: biwak/items/api.py biwak/items/models.py
 msgid "Lists and folders have no comments."
@@ -3010,6 +3034,42 @@ msgstr "%(count)s To-dos"
 msgid "Assign"
 msgstr "Zuweisen"
 
+#: biwak/items/assigning.py biwak/palette/actions.py biwak/projects/views.py
+#: biwak/templates/projects/project_detail.html
+msgid "New list"
+msgstr "Neue Liste"
+
+#: biwak/items/assigning.py
+msgid "Moved to-dos"
+msgstr "Verschobene To-dos"
+
+#: biwak/items/assigning.py
+#, python-format
+msgid "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
+msgid_plural "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
+msgstr[0] "%(names)s sieht die To-dos in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
+msgstr[1] "%(names)s sehen die To-dos in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
+
+#: biwak/items/assigning.py biwak/templates/items/_selection_bar.html
+msgid "Move…"
+msgstr "Verschieben…"
+
+#: biwak/items/assigning.py
+msgid "The selected to-dos are in several projects: to-dos move to the lists of their own project."
+msgstr "Die ausgewählten To-dos sind in mehreren Projekten: To-dos lassen sich nur in Listen ihres eigenen Projekts verschieben."
+
+#: biwak/items/assigning.py
+msgid "Set a date"
+msgstr "Ein Datum setzen"
+
+#: biwak/items/assigning.py biwak/items/by_due.py
+msgid "Due date"
+msgstr "Fälligkeit"
+
+#: biwak/items/assigning.py biwak/templates/items/_selection_bar.html
+msgid "Due date…"
+msgstr "Fälligkeit…"
+
 #: biwak/items/by_due.py biwak/palette/actions.py biwak/search/views.py
 #: biwak/templates/base.html biwak/templates/projects/_page.html
 #: biwak/templates/projects/all.html biwak/templates/projects/home.html
@@ -3047,10 +3107,6 @@ msgstr "Intern"
 #: biwak/items/by_due.py
 msgid "group by"
 msgstr "gruppieren nach"
-
-#: biwak/items/by_due.py
-msgid "Due date"
-msgstr "Fälligkeit"
 
 #: biwak/items/by_due.py
 msgid "Nobody active"
@@ -4323,11 +4379,6 @@ msgstr "Öffentliche Links"
 #: biwak/templates/projects/templates.html
 msgid "New project from this…"
 msgstr "Neues Projekt daraus…"
-
-#: biwak/palette/actions.py biwak/projects/views.py
-#: biwak/templates/projects/project_detail.html
-msgid "New list"
-msgstr "Neue Liste"
 
 #: biwak/palette/actions.py
 msgid "New list from a template…"
@@ -6067,6 +6118,27 @@ msgstr "hat auf einen Kommentar zu %(subject)s reagiert"
 #, python-format
 msgid "reacted to %(subject)s"
 msgstr "hat auf %(subject)s reagiert"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(counter)s to-do to %(target)s in %(project)s"
+msgid_plural "moved %(counter)s to-dos to %(target)s in %(project)s"
+msgstr[0] "hat %(counter)s To-do nach %(target)s in %(project)s verschoben"
+msgstr[1] "hat %(counter)s To-dos nach %(target)s in %(project)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(counter)s to-do to %(project)s"
+msgid_plural "moved %(counter)s to-dos to %(project)s"
+msgstr[0] "hat %(counter)s To-do nach %(project)s verschoben"
+msgstr[1] "hat %(counter)s To-dos nach %(project)s verschoben"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "moved %(counter)s to-do to another project"
+msgid_plural "moved %(counter)s to-dos to another project"
+msgstr[0] "hat %(counter)s To-do in ein anderes Projekt verschoben"
+msgstr[1] "hat %(counter)s To-dos in ein anderes Projekt verschoben"
 
 #: biwak/templates/activity/_event.html
 #, python-format

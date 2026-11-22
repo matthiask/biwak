@@ -52,7 +52,7 @@ ab.
   auf der To-do-Seite) oder die Kachel eines Ordners aus oder nimmt es
   aus der Auswahl; <kbd>Shift</kbd> mit den Pfeiltasten wählt weiter.
   Siehe [Mehrere auf einmal
-  zuweisen](todos.de.md#mehrere-auf-einmal-zuweisen).
+  ändern](todos.de.md#mehrere-auf-einmal-ändern).
 - <kbd>c</kbd> schreibt einen Kommentar, <kbd>e</kbd> bearbeitet,
   <kbd>b</kbd> setzt ein Lesezeichen, <kbd>s</kbd> abonniert oder
   beendet das Abonnement, auf der Seite eines Eintrags.

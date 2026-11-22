@@ -75,7 +75,31 @@
   <span>{% if contents %}{{ contents|join:" " }}{% else %}{{ event.data.content }}{% endif %}</span>
 {% elif event.action == "moved" %}
   {# The list: only if the viewer may see it now (attach()); a group of the to-do's own list: as visible as the to-do #}
-  {% if what %}
+  {% if event.data.todos and not event.item %}
+    {# To-dos moved to another project, one line for all in the one they left (specs/handover.md) #}
+    {% if event.target_project and event.target_list %}
+      {% capture as target %}<a
+        href="{% url 'list' event.data.to_id %}"
+      >{{ event.target_list|title_text }}</a>{% endcapture %}
+      {% blocktranslate trimmed count counter=event.data.todos with project=event.target_project %}
+        moved {{ counter }} to-do to {{ target }} in {{ project }}
+      {% plural %}
+        moved {{ counter }} to-dos to {{ target }} in {{ project }}
+      {% endblocktranslate %}
+    {% elif event.target_project %}
+      {% blocktranslate trimmed count counter=event.data.todos with project=event.target_project %}
+        moved {{ counter }} to-do to {{ project }}
+      {% plural %}
+        moved {{ counter }} to-dos to {{ project }}
+      {% endblocktranslate %}
+    {% else %}
+      {% blocktranslate trimmed count counter=event.data.todos %}
+        moved {{ counter }} to-do to another project
+      {% plural %}
+        moved {{ counter }} to-dos to another project
+      {% endblocktranslate %}
+    {% endif %}
+  {% elif what %}
     {% blocktranslate %}moved {{ subject }}{% endblocktranslate %}
   {% elif event.source_project and event.target_project %}
     {# Into another project: each named only if the viewer may open it now (feed.add_projects()) #}

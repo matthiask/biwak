@@ -473,7 +473,8 @@ def _batch(notifications, user):
 def batch_mail(user, notifications):
     """One mail about files uploaded together (specs/files.md, "Uploading files"):
     "Ada uploaded 5 files to Minutes", the files linked; or about the to-dos
-    of one "Assign…" (specs/handover.md): "Ada assigned you 23 to-dos" """
+    of one "Assign…" or "Due date…" (specs/handover.md): "Ada assigned you
+    23 to-dos", "Ada changed the dates of 23 to-dos" """
     context = _batch(notifications, user)
     if context is None:
         return None
@@ -605,7 +606,7 @@ def _groups(notifications):
     per person and item, or one person's files uploaded into one folder
     (specs/files.md) chained as the lantern does (``lantern.chain()``);
     ``{(user ID, ("item" or "batch", key)): {"pks", "newest", "more"}}``"""
-    from biwak.activity.lantern import ASSIGNED, chain
+    from biwak.activity.lantern import chain, todo_batch
 
     groups = {}
     chains = {}
@@ -632,11 +633,12 @@ def _groups(notifications):
         "event__item__parent",
         "created_at",
     ):
-        if batch:
-            # To-dos of one "Assign…" across projects (specs/handover.md)
+        if batch and (todo_batch(action) or action == Action.CREATED):
+            # To-dos of one "Assign…" or "Due date…" across projects
+            # (specs/handover.md), else files uploaded together
             key = (
-                (user_id, ASSIGNED, actor)
-                if action == Action.ASSIGNED
+                (user_id, todo_batch(action), actor)
+                if todo_batch(action)
                 else (user_id, actor, project, parent)
             )
             what = ("batch", (*key, chain(chains, key, batch, created_at)))

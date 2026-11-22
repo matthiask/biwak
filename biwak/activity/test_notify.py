@@ -134,13 +134,18 @@ class NotifyTest(TestCase):
     def test_other_events(self):
         subscribe(self.bob, self.shared)
         subscribe(self.bob, self.todo)
+        self.assertTrue(
+            self.told(
+                lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada)
+            )
+        )
+        # Moving tells nobody (decided 2026-11-22, specs/handover.md)
         for action in [
             lambda: ops.move_todo(self.todo, todolist=self.internal, actor=self.ada),
             lambda: ops.move_todo(self.todo, todolist=self.shared, actor=self.ada),
-            lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada),
         ]:
             with self.subTest(action=action):
-                self.assertTrue(self.told(action))
+                self.assertEqual(self.told(action), set())
         # Trashed: nobody can see it any more, nobody is told
         self.assertEqual(self.told(lambda: ops.trash(self.todo, actor=self.ada)), set())
         self.assertEqual(

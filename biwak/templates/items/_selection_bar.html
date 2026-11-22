@@ -12,5 +12,12 @@
   ></span>
   <a class="btn btn-sm btn-quiet" href="{% url 'todos_assign' %}" data-selection-action>{% icon "person-plus" %}<span
     >{% translate "Assign…" %}</span></a>
+  <a
+    class="btn btn-sm btn-quiet"
+    href="{% url 'todos_move_selected' %}"
+    data-selection-action
+  >{% icon "arrow-right" %}<span>{% translate "Move…" %}</span></a>
+  <a class="btn btn-sm btn-quiet" href="{% url 'todos_dates' %}" data-selection-action>{% icon "calendar-event" %}<span
+    >{% translate "Due date…" %}</span></a>
   <button type="button" class="btn btn-sm btn-quiet" data-selection-clear>{% translate "Deselect" %}</button>
 </div>

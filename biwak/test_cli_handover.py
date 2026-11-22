@@ -5,7 +5,7 @@ import json
 from biwak import test_cli
 from biwak.items import operations as ops
 from biwak.organizations import activation
-from biwak.test_utils import person
+from biwak.test_utils import person, project
 
 
 class HandoverCLITest(test_cli.CLITest):
@@ -46,3 +46,46 @@ class HandoverCLITest(test_cli.CLITest):
         result = self.biwak("todos", "assign", self.todo.pk, 999999, "--to", bob.pk)
         self.assertNotEqual(result.exit_code, 0)
         self.assertEqual(set(self.todo.todo.assignees.all()), {self.ada})
+
+    def test_dates_several(self):
+        other = ops.create_todo(todolist=self.list, title="Photos", creator=self.ada)
+        output = self.biwak(
+            "todos", "dates", self.todo.pk, other.pk, "--due", "2026-12-20"
+        ).output
+        self.assertIn("Copy: 2026-12-20", output)
+        self.assertIn("Photos: 2026-12-20", output)
+        data = json.loads(
+            self.biwak("todos", "dates", other.pk, "--shift", "-2", "--json").stdout
+        )
+        self.assertEqual(data[0]["due_on"], "2026-12-18")
+        output = self.biwak("todos", "dates", other.pk, "--remove").output
+        self.assertIn("Photos: -", output)
+        for args in [[], ["--remove", "--shift", "1"]]:
+            with self.subTest(args=args):
+                result = self.biwak("todos", "dates", other.pk, *args)
+                self.assertNotEqual(result.exit_code, 0)
+
+    def test_move_several(self):
+        later = ops.create_list(project=self.project, title="Later", creator=self.ada)
+        other = ops.create_todo(todolist=self.list, title="Photos", creator=self.ada)
+        output = self.biwak(
+            "todos", "move", other.pk, self.todo.pk, "--list", later.pk
+        ).output
+        self.assertIn(f"Moved #{other.pk} Photos.", output)
+        self.todo.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.todo.parent_id, later.pk)
+        self.assertLess(other.position, self.todo.position)
+
+    def test_move_across_projects(self):
+        other = project("Other", members=[self.ada], all_access=False)
+        later = ops.create_list(project=other, title="Later", creator=self.ada)
+        result = self.biwak("todos", "move", self.todo.pk, "--list", later.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Gil Example will be added to Other.", result.output)
+        output = self.biwak(
+            "todos", "move", self.todo.pk, "--list", later.pk, "--confirm"
+        ).output
+        self.assertIn(f"Moved #{self.todo.pk} Copy.", output)
+        self.todo.refresh_from_db()
+        self.assertEqual(self.todo.project, other)

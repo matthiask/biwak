@@ -7,6 +7,7 @@ import re
 from biwak.items import operations as ops
 from biwak.items.models import Item
 from biwak.test_e2e import E2ETestCase, expect
+from biwak.test_utils import project
 
 
 SELECTED = re.compile(r"\bis-selected\b")
@@ -168,3 +169,83 @@ class SelectingTodosTest(E2ETestCase):
             modifiers=["ControlOrMeta"]
         )
         expect(bar).to_contain_text("2 selected")
+
+    def test_moving_from_the_bar(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        bar = page.locator("[data-row-selection-bar]")
+        self.row(page, "One").locator("[data-kb-open]").click(
+            modifiers=["ControlOrMeta"]
+        )
+        self.row(page, "Two").locator("[data-kb-open]").click(
+            modifiers=["ControlOrMeta"]
+        )
+        bar.get_by_role("link", name="Move…").click()
+        dialog = page.get_by_role("dialog", name="Move…")
+        expect(dialog).to_contain_text("2 to-dos")
+        dialog.get_by_label("List and group").select_option(label="Launch / Later")
+        dialog.get_by_role("button", name="Move").click()
+        expect(
+            page.locator("[data-group-item]", has_text="Later").locator("[data-todo]")
+        ).to_have_count(3)
+        self.assertTrue(page.url.endswith(self.todolist.get_absolute_url()))
+        self.assertEqual(
+            self.order(self.todolist),
+            [("Three", None), ("Four", "Later"), ("One", "Later"), ("Two", "Later")],
+        )
+        self.assertEqual(self.errors, [])
+
+    def test_dating_from_the_bar(self):
+        page = self.page
+        self.goto(page, "/todos/?assignee=anybody")
+        bar = page.locator("[data-row-selection-bar]")
+        self.row(page, "One").locator("[data-kb-open]").click(
+            modifiers=["ControlOrMeta"]
+        )
+        self.row(page, "Three").locator("[data-kb-open]").click(modifiers=["Shift"])
+        bar.get_by_role("link", name="Due date…").click()
+        dialog = page.get_by_role("dialog", name="Due date…")
+        expect(dialog).to_contain_text("3 to-dos")
+        dialog.get_by_label("Due date", exact=True).fill("2026-12-20")
+        dialog.get_by_role("button", name="Save").click()
+        expect(self.row(page, "One")).to_contain_text("20")
+        self.assertTrue(page.url.endswith("/todos/?assignee=anybody"))
+        for title in ["One", "Two", "Three"]:
+            self.assertEqual(self.todo(title).todo.due_on.isoformat(), "2026-12-20")
+        self.assertIsNone(self.todo("Four").todo.due_on)
+        self.assertEqual(self.errors, [])
+
+    def test_moving_to_another_project(self):
+        """Choosing the project shows its lists at once (htmx); who's added
+        is said first, in the dialog"""
+        shop = project("Shop", members=[self.ada], all_access=False)
+        orders = ops.create_list(project=shop, title="Orders", creator=self.ada)
+        ops.assign(self.todo("One"), [self.bob], actor=self.ada)
+        page = self.page
+        self.goto(page, self.todolist)
+        bar = page.locator("[data-row-selection-bar]")
+        self.row(page, "One").locator("[data-kb-open]").click(
+            modifiers=["ControlOrMeta"]
+        )
+        self.row(page, "Two").locator("[data-kb-open]").click(
+            modifiers=["ControlOrMeta"]
+        )
+        bar.get_by_role("link", name="Move…").click()
+        dialog = page.get_by_role("dialog", name="Move…")
+        field = dialog.get_by_role("combobox", name="Project")
+        expect(field).to_have_value("Website")
+        field.click()
+        field.fill("sho")
+        dialog.get_by_role("option", name="Shop").click()
+        target = dialog.get_by_label("List and group")
+        expect(target.locator("option", has_text="Orders")).to_have_count(1)
+        expect(target.locator("option", has_text="Launch")).to_have_count(0)
+        dialog.get_by_role("button", name="Move").click()
+        expect(dialog.locator("[data-dropped]")).to_contain_text(
+            "Bob Example will be added to Shop."
+        )
+        dialog.get_by_role("button", name="Move").click()
+        expect(dialog).to_be_hidden()
+        for title in ["One", "Two"]:
+            self.assertEqual(self.todo(title).parent_id, orders.pk)
+        self.assertEqual(self.errors, [])

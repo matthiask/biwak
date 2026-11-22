@@ -68,11 +68,11 @@ auf der Seite des Projekts.
   Website verschoben“. Einzelne To-dos werden nur zwischen den Listen
   ihres Projekts verschoben.
 
-## Mehrere auf einmal zuweisen
+## Mehrere auf einmal ändern
 
 In einer Liste (auch als Board) und auf der To-do-Seite kannst du
-To-dos auswählen und zusammen zuweisen, zum Beispiel, wenn jemand geht
-und die To-dos an jemand anderen gehen:
+To-dos auswählen und zusammen zuweisen, verschieben oder datieren, zum
+Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
 
 - **Auswählen:** <kbd>Ctrl</kbd>-Klick (<kbd>⌘</kbd>-Klick auf einem
   Mac) auf ein To-do nimmt es in die Auswahl auf oder heraus,
@@ -90,8 +90,32 @@ und die To-dos an jemand anderen gehen:
   Liegt eines der To-dos im Papierkorb oder kannst du es nicht mehr
   sehen, ändert sich nichts, und das Formular sagt es. Jemanden
   herausnehmen geht pro To-do.
+- **Verschieben…** verschiebt sie, erledigte auch, in eine Liste oder
+  eine ihrer Gruppen, an den Anfang oder ans Ende, nebeneinander. Staff
+  wählen zuerst das Projekt, auch ein anderes, dann die Liste oder „Neue
+  Liste“ (benannt nach der Liste, aus der sie kommen, oder „Verschobene
+  To-dos“; später umbenennen). In ein anderes Projekt sagt das Formular
+  zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
+  (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf
+  kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in
+  seiner Aktivität („hat 23 To-dos nach Pläne in Website verschoben“).
+  Kund:innen verschieben innerhalb des Projekts und nur To-dos eines
+  Projekts. Verschieben benachrichtigt niemanden.
+- **Fälligkeit…** gibt allen dieselbe Fälligkeit („Ein Datum setzen“;
+  Startdaten bleiben, also kann sie nicht vor einem davon liegen),
+  verschiebt ihre Daten um eine Anzahl Tage („Verschieben um“, Startdaten
+  und „Wiederholt sich bis“ mit; To-dos ohne Fälligkeit bleiben, wie sie
+  sind) oder entfernt sie („Entfernen“, die Startdaten mit). Wer sie
+  abonniert hat, erfährt es einmal für alle („Ada hat die Daten von 23
+  To-dos geändert“).
 
-`biwak todos assign 12 13 14 --to 7 [--replace]` tut dasselbe.
+Jede Änderung gilt für alle oder keines: Liegt eines der To-dos im
+Papierkorb oder kannst du es nicht mehr sehen, ändert sich nichts.
+
+`biwak todos assign 12 13 14 --to 7 [--replace]`, `biwak todos move 12
+13 --list 5 [--group 8] [--confirm]` (`--confirm` in ein anderes
+Projekt, wenn du gelesen hast, wer hinzugefügt wird und wegfällt) und `biwak todos dates 12 13 --due 2026-12-20`
+(oder `--shift 7`, `--remove`) tun dasselbe.
 
 ## Ein To-do
 

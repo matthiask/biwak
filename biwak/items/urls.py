@@ -6,6 +6,8 @@ from biwak.items import across, assigning, by_due, from_text_views, views
 urlpatterns = [
     path("todos/", by_due.todos_by_due, name="todos"),
     path("todos/assign/", assigning.todos_assign, name="todos_assign"),
+    path("todos/move/", assigning.todos_move, name="todos_move_selected"),
+    path("todos/dates/", assigning.todos_dates, name="todos_dates"),
     path("projects/<int:pk>/todos/", by_due.project_todos, name="project_todos"),
     path("calendar/<str:token>.ics", by_due.calendar_feed, name="calendar_feed"),
     path("lists/<int:pk>/", views.todolist, name="list"),

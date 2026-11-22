@@ -233,7 +233,7 @@ requires-dist = [
     { name = "pycrdt", specifier = ">=0.14.13" },
     { name = "pypdfium2", specifier = ">=5.15.2" },
     { name = "python-dateutil", specifier = ">=2.9" },
-    { name = "pywebpush", specifier = ">=2.5.0" },
+    { name = "pywebpush", specifier = ">=2.5" },
     { name = "sentry-sdk", specifier = "<3" },
     { name = "speckenv", specifier = ">=7" },
     { name = "time-machine", specifier = ">=3.6" },
@@ -251,7 +251,7 @@ dev = [
 
 [[package]]
 name = "biwak-cli"
-version = "0.61.0"
+version = "0.62.0"
 source = { editable = "cli" }
 dependencies = [
     { name = "click" },
