@@ -190,8 +190,8 @@ it for others, clients and externals see and change only their own
 `can_change_notify_choice()`). API: `notify` (`default` or `tagged`;
 `null` for clients and externals about others) on the members list, adding
 and inviting; `biwak members --project ID`, `biwak members
-add|invite … [--everything]` (`--only-tagged`, the default, still
-accepted).
+add|invite … [--notify-about-everything]` (decided 2026-11-22: no
+switch for the default; `--everything` read like "add to everything").
 
 Pages: the level and delivery on `/accounts/notifications/`; a project's
 override in its "More" menu, a list's in the list's. The settings page

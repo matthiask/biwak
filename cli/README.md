@@ -31,7 +31,7 @@ biwak checkins answer QUESTION "Busy with the launch"   # or standard input
 biwak checkins create PROJECT "Read any good books?" --schedule weekly --time 09:00
 biwak notifications --level concerns_me --delivery digest
 biwak members --project PROJECT
-biwak members add PROJECT PERSON --everything       # notified of everything new
+biwak members add PROJECT PERSON --notify-about-everything
 biwak members invite PROJECT ada@example.org --name "Ada" --organization "Example Ltd"
 biwak invitations create ada@example.org bob@example.org --project 4 --project 7   # several at once, all or nothing
 biwak invitations                           # not signed in yet (staff); resend PERSON, withdraw PERSON

@@ -441,9 +441,9 @@ NOTIFY_WORDS = {
 }
 
 notify_option = click.option(
-    "--everything/--only-tagged",
-    default=False,
-    help="Notify them of everything new, or only when tagged (the default).",
+    "--notify-about-everything",
+    is_flag=True,
+    help="Notify them of everything new (default: only when tagged).",
 )
 
 
@@ -488,12 +488,15 @@ def members(ctx, project, as_json):
 @click.argument("person", type=int)
 @notify_option
 @json_option
-def member_add(project, person, everything, as_json):
+def member_add(project, person, notify_about_everything, as_json):
     """Add the person with ID PERSON to PROJECT"""
     data = request(
         "POST",
         f"projects/{project}/members/",
-        json={"person_id": person, "notify": "default" if everything else "tagged"},
+        json={
+            "person_id": person,
+            "notify": "default" if notify_about_everything else "tagged",
+        },
     )
     if as_json:
         return echo_json(data)
@@ -517,7 +520,14 @@ def member_add(project, person, everything, as_json):
 @notify_option
 @json_option
 def member_invite(
-    project, email, name, organization, organization_id, staff, everything, as_json
+    project,
+    email,
+    name,
+    organization,
+    organization_id,
+    staff,
+    notify_about_everything,
+    as_json,
 ):
     """Add the person with this address to PROJECT, creating them (as a
     client) and mailing them how to log in if they're new"""
@@ -526,7 +536,7 @@ def member_invite(
         "name": name,
         "organization": organization,
         "is_client": not staff,
-        "notify": "default" if everything else "tagged",
+        "notify": "default" if notify_about_everything else "tagged",
     }
     if organization_id is not None:
         payload["organization_id"] = organization_id
@@ -700,7 +710,13 @@ def invitations(ctx, as_json):
 @notify_option
 @json_option
 def invitations_create(
-    emails, projects, organization, organization_id, staff, everything, as_json
+    emails,
+    projects,
+    organization,
+    organization_id,
+    staff,
+    notify_about_everything,
+    as_json,
 ):
     """Invite the people with these addresses to every --project at once:
     new people (clients unless --staff) get one mail naming the projects,
@@ -715,7 +731,7 @@ def invitations_create(
         json={
             "people": [{"email": email, **person} for email in emails],
             "projects": list(projects),
-            "notify": "default" if everything else "tagged",
+            "notify": "default" if notify_about_everything else "tagged",
         },
     )
     if as_json:

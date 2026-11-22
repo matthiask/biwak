@@ -216,5 +216,5 @@ pages `biwak/organizations/people.py`, the API
   `…/deactivate/`, and in bulk `POST /api/v1/people/activate/` (`ids`,
   `mail`) and `/people/deactivate/` (`ids`), all or nothing.
 - **CLI:** `biwak invitations create EMAIL… --project ID…
-  [--everything]`, `biwak invitations [resend|withdraw]`, `biwak people [--inactive|--left]`,
+  [--notify-about-everything]`, `biwak invitations [resend|withdraw]`, `biwak people [--inactive|--left]`,
   `biwak people activate ID… [--mail]`, `biwak people deactivate ID…`.

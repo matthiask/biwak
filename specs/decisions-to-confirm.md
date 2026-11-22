@@ -7,4 +7,4 @@ entry; git keeps it.
 - **Wording of the project choice** (`notifications.md`, 2026-11-22):
   with "only when tagged" the default, "Notified by default" became
   "Notified of everything new" ("Über alles Neue benachrichtigt"),
-  listed second; the CLI's flag `--everything`.
+  listed second.

@@ -457,14 +457,14 @@ class CLITest(Fixture, test_cli.CLITest):
         self.assertIn("only when tagged", result.output)
         self.assertEqual(self.level(self.bob), NotificationLevel.CONCERNS_ME)
         result = self.biwak(
-            "members", "add", self.project.pk, self.dan.pk, "--everything"
+            "members", "add", self.project.pk, self.dan.pk, "--notify-about-everything"
         )
         self.assertIn("notified of everything new", result.output)
         self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
         with self.captureOnCommitCallbacks(execute=True):
             result = self.biwak(
                 "members", "invite", self.project.pk, "new@example.org",
-                "--name", "New", "--only-tagged", "--json",
+                "--name", "New", "--json",
             )  # fmt: skip
         self.assertEqual(result.exit_code, 0, result.output)
         user = User.objects.get(email="new@example.org")
