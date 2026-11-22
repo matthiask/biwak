@@ -7,6 +7,7 @@ from django import forms
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,7 +19,7 @@ from biwak.activity.notify import people_who_see
 from biwak.activity.operations import is_subscribed
 from biwak.checkins import operations as ops
 from biwak.checkins.models import Answer, Mode, Occurrence, mail_mode
-from biwak.forms import ComboboxSelect, Form
+from biwak.forms import ComboboxSelect, Form, PeopleField, PeopleSelect
 from biwak.items import editing, operations as item_ops
 from biwak.items.models import Comment, Item, Kind
 from biwak.items.views import CommentForm, item_for
@@ -64,11 +65,11 @@ class QuestionForm(RuleFormMixin, Form):
         initial=settings.TIME_ZONE,
         widget=ComboboxSelect,
     )
-    people = forms.ModelMultipleChoiceField(
+    # The people picker with teams (decided 2026-11-22, specs/checkins.md)
+    people = PeopleField(
         label=_("People asked"),
         queryset=User.objects.none(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
+        widget=PeopleSelect(attrs={"data-placeholder": _("Add people…")}),
     )
     visible = forms.BooleanField(label=_("Visible to clients"), required=False)
     field_order = [
@@ -77,8 +78,8 @@ class QuestionForm(RuleFormMixin, Form):
         "starts_on",
         "time_of_day",
         "time_zone",
-        "people",
         "visible",
+        "people",
     ]
 
     def __init__(self, *args, project, actor, item=None, **kwargs):
@@ -89,15 +90,29 @@ class QuestionForm(RuleFormMixin, Form):
         # by ``clean()`` and ``operations.set_people()``; clients offer
         # members and those already asked (specs/access.md)
         people = people_who_see(project, visible=True)
+        asked = item.question.people.all() if item else User.objects.none()
         if not knows_people_of(actor, project):
-            asked = item.question.people.all() if item else User.objects.none()
             people = people.filter(
                 Q(memberships__project=project) | Q(pk__in=asked.values("pk"))
             ).distinct()
-        self.fields["people"].queryset = people
-        if item is not None:
-            # The switch is on the page
+        field = self.fields["people"]
+        if item is None:
+            # Clients are offered while "Visible to clients" is ticked
+            # (frontend/told.js, like "Also tell…"); the teams add them then
+            field.widget.attrs["data-clients-follow"] = "#id_visible"
+            field.widget.clients_shown = bool(self.is_bound and self["visible"].data)
+            visible = True
+        else:
+            # The switch is in the page's "More" menu; clients only while
+            # the question is visible, those asked already stay in the list
             del self.fields["visible"]
+            visible = item.is_client_visible
+            if not visible:
+                people = people.filter(
+                    Q(is_client=False) | Q(pk__in=asked.values("pk"))
+                ).distinct()
+        field.queryset = people.order_by(Lower("full_name"), "email")
+        field.offer_teams(project=project, visible=visible)
 
     def clean(self):
         data = super().clean()
@@ -354,7 +369,6 @@ def question(request, pk):
                 user, [s.user for s in item.subscriptions.select_related("user")]
             ),
             "can_manage": not user.is_client,
-            "can_switch": not user.is_client,
             "is_paused": question.is_paused,
         },
     )

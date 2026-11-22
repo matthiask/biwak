@@ -16,10 +16,15 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   `form_response(help_page=…)` adds a quiet "More in the help" link.
 - **Trashing asks:** "Move to the trash? It can be restored for 30
   days."
-- **Items' "More" menu** (`items/_more.html`): Move to…, Trash, and
-  "Notifications…" on lists only (`notifications.md`). Its entries
+- **Items' "More" menu** (`items/_more.html`, on every item's page,
+  check-ins too): Move to…, Trash, "Notifications…" on lists only
+  (`notifications.md`), and for staff the visibility switch on items
+  that have one and History (decided 2026-11-22: neither is a button of
+  its own on the page, `access.md`, `feed.md`). Check-ins have it too,
+  with Subscribers… and "Move to trash" like every item (confirmed by
+  the user 2026-11-22). Its entries
   (`items/_more_entries.html`) are also the "…" menu of the folders'
-  tiles (`files.md`, "Folders").
+  tiles (`files.md`, "Folders"), without History.
 - **Click to edit** (2026-11-21: the to-do's page was an edit form, not
   a page to read): the pages of to-dos, messages, files and check-in
   answers show the item; clicking its title, text or facts (or "Edit",
@@ -59,7 +64,7 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   picker's list) close on a click elsewhere and Escape (`data-dismiss`;
   elements other than `<details>` get a `dismiss` event).
 - **Shared pieces come from an include** (comments, subscribers, the
-  visibility switch, breadcrumbs, the to-do row), not a copy.
+  "More" menu's entries, breadcrumbs, the to-do row), not a copy.
 
 ## Filters and view choices
 
@@ -67,7 +72,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   Governance; `data-autosubmit`, `frontend/autosubmit.js`): selects,
   checkboxes and radios at once, text after 400 ms and on Enter; the
   button is hidden with JavaScript; the changed field keeps the focus.
-  Forms that change things never autosubmit. Filter buttons sit at the
+  Forms that change things never autosubmit, except a single choice in
+  a row saving itself (the people page's notification choice,
+  decided 2026-11-22, `organizations.md`). Filter buttons sit at the
   height of the fields (`wb-filters`, `_filter_buttons.html`).
 - **On phones** (2026-11-22: the feed's filters took five rows before
   the first entry) a filter form with several fields sits behind a
@@ -108,6 +115,8 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   "Comments".
 - **Every `Textarea` is a Markdown field** with the toolbar
   (`data-toolbar`, `editor.md`).
+- **Ctrl+Enter submits** the form the focus is in, every form (decided
+  2026-11-22, `keyboard.md`).
 - **Destructive or revealing actions ask first:** trashing, and showing
   something to clients (`access.md`, "Making it obvious"); hiding is one
   click.
@@ -123,7 +132,9 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 ## Clients, icons, colors
 
 - **Visible to clients** (2026-11-21: a banner on pages was too
-  imposing): the badge on rows (`{% client_badge item %}`, not in the
+  imposing): the switch only in the "More" menu (decided 2026-11-22:
+  less visible than a button below the content; creating something
+  visible, like "New folder" with its checkbox, stays), the badge on rows (`{% client_badge item %}`, not in the
   feed and the lantern, which tell what happened), the tab at the
   window's edge on pages (`items/_client_tab.html`), the banner
   (`items/_client_banner.html`) only above forms in modals (`access.md`,
@@ -139,7 +150,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
 - **Dark mode** (2026-11-22): fields a little darker than cards, not
   black (`--wb-field-bg`); dialogs dim the page more
   (`--wb-backdrop`).
-- **Relative times** use the `ago` filter ("just now" under a minute).
+- **Relative times** use the `ago` filter ("just now" under a minute),
+  with one unit only: "13 hours ago", not "13 hours, 37 minutes ago"
+  (decided 2026-11-22; also the "Changed by … ago" of conflicts,
+  `editing.ago()`).
 - **Overdue and today** are badges (`todos.md`, "The to-do's page").
 
 ## Motion
@@ -148,6 +162,10 @@ feedback rounds (`ui-feedback.md`), all built (2026-11-21).
   blocking, nothing on page load, CSS first, one celebration per action.
 - **`prefers-reduced-motion: reduce` turns every animation off;** the
   scripts then don't intercept at all.
+- **A save that failed shakes** what was changed, side to side for 0.4 s
+  (`.wb-shake`, decided 2026-11-22: the people page's notification
+  choice, `organizations.md`); a changed modal asked to close pulses
+  (`.wb-modal-shake`).
 
 ## Keyboard and accessibility
 

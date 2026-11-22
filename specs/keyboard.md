@@ -77,6 +77,18 @@ never with Ctrl, Alt or Meta (except Ctrl+K). The one list is
 - **?** the shortcuts dialog, **Escape** closes dialogs and menus and
   clears the current row.
 
+**Ctrl+Enter** (Cmd+Enter on a Mac) **submits the form the focus is
+in, every form** (decided 2026-11-22, the user: "for example the comment
+form"): comments, modals, edit forms in place, new messages and docs.
+One handler on the document (`frontend/submit-shortcut.js`), not one
+per form, independent of the shortcuts setting: it presses the form's
+default button (the first submit button, `requestSubmit()`, so htmx and
+the browser's checks run as with a click), once per key press (a held
+key or a second press within a second doesn't submit again). A form's
+own handling comes first and wins by preventing the default: the
+inline "Add a to-do" saves itself, the people picker's and the `@`
+list's Enter pick while their list is open.
+
 Rows say what they are through attributes, so one script serves every
 page (`frontend/shortcuts.js`): `data-kb-row`, `data-kb-open`,
 `data-kb-complete`, `data-select-row`. No page-specific JavaScript.

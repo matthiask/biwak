@@ -1898,7 +1898,36 @@ button.wb-signal:hover {
 }
 
 .wb-project-card {
+  position: relative;
   height: 100%;
+}
+
+/* The whole card is the name's link (decided 2026-11-22,
+   specs/projects-overview.md): its ::after covers the card, the buttons
+   sit above it; the keyboard's focus outlines the card */
+.wb-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.wb-card-link:focus-visible {
+  outline: none;
+}
+
+.wb-project-card:has(.wb-card-link:focus-visible) {
+  outline: 2px solid var(--wb-accent-ring);
+  outline-offset: 2px;
+}
+
+.wb-project-card:has(.wb-card-link:hover) {
+  border-color: var(--wb-accent-ring);
+}
+
+.wb-above-card-link {
+  position: relative;
+  z-index: 2;
 }
 
 /* Project colors (specs/project-colors.md): the palette's fill, as a stripe
@@ -2176,15 +2205,6 @@ button.wb-signal:hover {
   margin-bottom: 0.25rem;
 }
 
-/* The visibility switch: the help below the button on phones, not wrapped
-   around it */
-@media (max-width: 575.98px) {
-  .wb-switch-help {
-    display: block;
-    margin-top: 0.25rem;
-  }
-}
-
 .wb-toolbar .btn {
   flex: none;
 }
@@ -2370,6 +2390,24 @@ body:has(.wb-modal[open]) {
   }
 }
 
+/* A choice that couldn't be saved (frontend/save-on-change.js): a short
+   "no" from side to side */
+.wb-shake {
+  animation: wb-shake 0.4s ease-in-out;
+}
+
+@keyframes wb-shake {
+  20%,
+  60% {
+    transform: translateX(-0.25rem);
+  }
+
+  40%,
+  80% {
+    transform: translateX(0.25rem);
+  }
+}
+
 /* Small transitions (specs/celebrations.md): modals scale in, menus and the
    reaction picker fade in, rows that arrive live slide in. Closed things
    aren't rendered, so nothing animates on page load. */
@@ -2468,6 +2506,7 @@ body:has(.wb-modal[open]) {
   }
 
   .wb-modal-shake,
+  .wb-shake,
   .wb-modal[open]::backdrop,
   .wb-menu[open] > .dropdown-menu,
   .wb-reaction-add[open] > .wb-reaction-picker,
@@ -2759,6 +2798,12 @@ main:has([data-hide-title]) [data-edit-open] {
 /* Filter forms apply themselves: the button is for people without JavaScript
    (frontend/autosubmit.js) */
 .js [data-autosubmit] [data-autosubmit-button] {
+  display: none;
+}
+
+/* Choices saving themselves with htmx (a member's notifications on the
+   project's people page): Save is for people without JavaScript */
+.js [data-save-on-change] [data-save-button] {
   display: none;
 }
 

@@ -33,6 +33,7 @@ from django.views.static import serve as static_serve
 from biwak import schedules
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.activity.models import LevelOverride, Notification
+from biwak.bookmarks import operations as bookmarks
 from biwak.bookmarks.models import Link
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
@@ -993,6 +994,26 @@ class ProjectsPageTest(E2ETestCase):
         expect(page.locator(".wb-project-card", has_text="Camp")).to_have_count(1)
 
 
+class ProjectCardTest(E2ETestCase):
+    def test_the_whole_card_opens_the_project_the_bookmark_stays_a_button(self):
+        camp = project("Camp", members=[self.ada])
+        camp.description = "Tents and stoves"
+        camp.save()
+        page = self.page
+        self.goto(page, reverse("projects"))
+        card = page.locator(".wb-project-card", has_text="Camp")
+        # The bookmark (htmx) above the card's link
+        card.get_by_role("button", name="Bookmark").click()
+        expect(card.get_by_role("button", name="Remove the bookmark")).to_be_visible()
+        self.assertTrue(bookmarks.is_bookmarked(self.ada, project=camp))
+        self.assertTrue(page.url.endswith(reverse("projects")))
+        # Anywhere else on the card opens the project (the link covers the
+        # text: force clicks where it is, without Playwright's check)
+        card.get_by_text("Tents and stoves").click(force=True)
+        page.wait_for_url(f"**{camp.get_absolute_url()}")
+        self.assertEqual(self.errors, [])
+
+
 class ProjectsOrderTest(E2ETestCase):
     def test_the_order_is_restored_through_the_navigation(self):
         project("Camp", members=[self.ada])
@@ -1320,6 +1341,7 @@ class CollabTest(E2ETestCase):
         # Ada hides the doc on its page
         page = self.page
         self.goto(page, self.doc)
+        page.locator(".wb-page-actions summary", has_text="More").click()
         page.get_by_role("button", name="Hide from clients").click()
         page.wait_for_load_state()
         live = cleo.locator("[data-collab]")
@@ -2333,6 +2355,43 @@ class KeyboardTest(E2ETestCase):
         self.assertEqual(page.locator("#wb-palette-input").input_value(), "/")
         self.assertEqual(self.errors, [])
 
+    def test_ctrl_enter_submits_the_form_once(self):
+        """Every form (decided 2026-11-22): a comment, a modal's form; the
+        people picker's Enter still picks"""
+        self.make_list(todos=["Plan"])
+        todo = Item.objects.get(title="Plan")
+        page = self.page
+        self.goto(page, todo)
+        textarea = page.locator("form:has([name=form][value=comment]) textarea")
+        textarea.fill("Looks good")
+        # Twice quickly, or held: one comment
+        textarea.press("ControlOrMeta+Enter")
+        textarea.press("ControlOrMeta+Enter")
+        expect(page.locator(".wb-markdown", has_text="Looks good")).to_have_count(1)
+        self.assertEqual(Comment.objects.filter(item=todo).count(), 1)
+        # A modal's form, from any field of it
+        self.goto(page, self.project)
+        page.get_by_role("link", name="New list").click()
+        dialog = page.get_by_role("dialog", name="New list")
+        dialog.get_by_label("Title").fill("Packing")
+        dialog.get_by_label("Title").press("ControlOrMeta+Enter")
+        expect(page.locator("main h1")).to_contain_text("Packing")
+        self.assertEqual(Item.objects.filter(title="Packing").count(), 1)
+        # The picker picks with the list open, then the form submits
+        # Bob hears only when tagged: offered in "Also tell…"
+        project_ops.add_member(self.project, self.bob, actor=self.ada, notify="tagged")
+        page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
+        page.get_by_label("Title").fill("Kickoff")
+        picker = page.locator(".wb-picker-input")
+        picker.press_sequentially("bob")
+        expect(page.locator(".wb-picker-list li").first).to_be_visible()
+        picker.press("Enter")
+        expect(page.locator(".wb-pill")).to_have_count(1)
+        picker.press("ControlOrMeta+Enter")
+        page.wait_for_url(re.compile(r"/messages/\d+/"))
+        self.assertEqual(Item.objects.filter(title="Kickoff").count(), 1)
+        self.assertEqual(self.errors, [])
+
     def test_focus_returns_where_it_was(self):
         page = self.page
         self.goto(page, self.project)
@@ -3202,6 +3261,33 @@ class TeamsTest(E2ETestCase):
             re.compile("Cleo"),
             re.compile("Dan"),
         ])
+        self.assertEqual(self.errors, [])
+
+    def test_check_ins_people_asked_follow_visible_to_clients(self):
+        """A check-in's "People asked" is the picker with teams (decided
+        2026-11-22); clients only while it's visible to clients"""
+        page = self.page
+        page.goto(
+            self.live_server_url + reverse("question_new", args=[self.project.pk])
+        )
+        pills = page.locator(".wb-pill")
+        # The one creating it is asked by default
+        expect(pills).to_have_text([re.compile("Ada")])
+        picker = page.locator(".wb-picker-input")
+        picker.press_sequentially("design")
+        team = page.locator(".wb-picker-list li[data-team]")
+        expect(team).to_contain_text("1 can't see internal items")
+        picker.press("Escape")
+        page.get_by_label("Visible to clients").check()
+        picker.press_sequentially("design")
+        expect(team).not_to_contain_text("can't see internal items")
+        picker.press("Enter")
+        expect(pills).to_have_count(4)
+        expect(page.locator(".wb-picker")).to_contain_text("Cleo")
+        # Unticking takes the client away again
+        page.get_by_label("Visible to clients").uncheck()
+        expect(pills).to_have_count(3)
+        expect(page.locator(".wb-picker")).not_to_contain_text("Cleo")
         self.assertEqual(self.errors, [])
 
     def test_the_mention_list_inserts_a_mention_per_member(self):

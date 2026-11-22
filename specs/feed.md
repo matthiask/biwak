@@ -111,7 +111,8 @@ The audit log (`biwak/audit/`) records every change with who made it; a
 page per item condenses it (`biwak/activity/history.py`, like
 Governance's history): `/items/<pk>/history/` and `GET
 /api/v1/items/{id}/history/`, newest first, complete, for every kind of
-item; the to-do page links to it.
+item; every item's page links to it in its "More" menu, for staff
+(decided 2026-11-22, not a button of its own), and the palette offers it.
 
 - Read from `LoggedAction` rows of the item's tables (`items_item`, its
   detail table, `items_todo_assignees`) by primary key; the person from

@@ -166,12 +166,13 @@ class LinesTest(TimelineBase):
         ]
         self.assertEqual(positions, sorted(positions))
 
-    def test_history_link_at_the_end_for_staff(self):
+    def test_history_in_the_more_menu_for_staff(self):
+        # Not below the timeline (decided 2026-11-22): in the "More" menu
         self.client.force_login(self.ada)
         html = self.client.get(self.todo.get_absolute_url()).content.decode()
-        link = f"/items/{self.todo.pk}/history/"
-        self.assertEqual(html.count(link), 2)  # here and in the "More" menu
-        self.assertLess(html.index('id="comments"'), html.index(link))
+        link = f'<a class="dropdown-item" href="/items/{self.todo.pk}/history/">'
+        self.assertEqual(html.count(link), 1)
+        self.assertLess(html.index(link), html.index('id="comments"'))
         self.client.force_login(self.cleo)
         html = self.client.get(self.todo.get_absolute_url()).content.decode()
         self.assertNotIn(link, html)

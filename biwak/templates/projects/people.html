@@ -57,46 +57,69 @@
           </div>
           <div class="list-group">
             {% for m, notify in group.people %}
-              <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
-                <div>
-                  {% person_page m.user size="md" name=m.user.full_name|default:m.user.email %}
-                  {% if m.user.is_client %}<span
-                      class="badge wb-client-badge"
-                    >{% translate "Client" %}</span>{% endif %}
-                  {% if not request.user.is_client %}<div class="small text-body-secondary">
-                      {{ m.user.email }}
-                    </div>{% endif %}
-                  {% include "organizations/_invitation.html" with person=m.user next=request.get_full_path %}
-                  {% if notify %}<div class="small text-body-secondary">{{ notify.label }}</div>{% endif %}
-                </div>
-                {% if notify or can_manage %}
-                  <details class="dropdown wb-menu">
-                    <summary
-                      class="btn btn-sm btn-quiet"
-                      title="{% translate 'More' %}"
-                      aria-label="{% blocktranslate with name=m.user.full_name|default:m.user.email %}More: {{ name }}{% endblocktranslate %}"
-                    >
-                      {% icon "three-dots" %}
-                    </summary>
-                    <div class="dropdown-menu dropdown-menu-end">
+              {% with name=m.user.full_name|default:m.user.email %}
+                <div
+                  class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2"
+                  id="member-{{ m.user.pk }}"
+                >
+                  <div>
+                    {% person_page m.user size="md" name=name %}
+                    {% if m.user.is_client %}<span
+                        class="badge wb-client-badge"
+                      >{% translate "Client" %}</span>{% endif %}
+                    {% if not request.user.is_client %}<div class="small text-body-secondary">
+                        {{ m.user.email }}
+                      </div>{% endif %}
+                    {% include "organizations/_invitation.html" with person=m.user next=request.get_full_path %}
+                  </div>
+                  {% if notify or can_manage %}
+                    <div class="d-flex align-items-center gap-2">
                       {% if notify %}
-                        <a
-                          class="dropdown-item"
-                          href="{% url 'member_notify' project.pk m.user.pk %}"
-                          data-modal
-                        >{% translate "Notifications…" %}</a>
+                        {% comment %}
+                          The choice saves itself (frontend/save-on-change.js, decided
+                          2026-11-22); Save without JavaScript
+                        {% endcomment %}
+                        {% url 'member_notify' project.pk m.user.pk as notify_url %}
+                        <form
+                          method="post"
+                          action="{{ notify_url }}"
+                          class="d-flex align-items-center gap-1"
+                          data-save-on-change
+                        >
+                          {% csrf_token %}
+                          <label class="visually-hidden" for="notify-{{ m.user.pk }}">
+                            {% if m.user == request.user %}
+                              {% translate "Your notifications" %}
+                            {% else %}
+                              {% blocktranslate %}Notifications of {{ name }}{% endblocktranslate %}
+                            {% endif %}
+                          </label>
+                          <select name="notify" id="notify-{{ m.user.pk }}" class="form-select form-select-sm">
+                            {% for value, label in notify_choices %}
+                              <option value="{{ value }}" {% if value == notify.value %}selected{% endif %}>
+                                {{ label }}
+                              </option>
+                            {% endfor %}
+                          </select>
+                          <button type="submit" class="btn btn-sm btn-quiet" data-save-button>
+                            {% translate "Save" %}
+                          </button>
+                        </form>
                       {% endif %}
                       {% if can_manage %}
+                        {# Asks first (a modal, also a page; decided 2026-11-22) #}
                         <a
-                          class="dropdown-item"
+                          class="btn btn-sm btn-quiet"
                           href="{% url 'member_remove' project.pk m.user.pk %}"
+                          title="{% blocktranslate %}Remove {{ name }} from the project{% endblocktranslate %}"
+                          aria-label="{% blocktranslate %}Remove {{ name }} from the project{% endblocktranslate %}"
                           data-modal
-                        >{% translate "Remove from the project…" %}</a>
+                        >{% translate "Remove" %}</a>
                       {% endif %}
                     </div>
-                  </details>
-                {% endif %}
-              </div>
+                  {% endif %}
+                </div>
+              {% endwith %}
             {% endfor %}
           </div>
         </section>

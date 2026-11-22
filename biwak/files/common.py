@@ -129,5 +129,4 @@ def sidebar_context(request, item):
         "is_subscribed": is_subscribed(request.user, item),
         "is_assigned": is_assigned(request.user, item),
         "can_change": ops.can_change(request.user, item),
-        "can_switch": item.has_switch and not request.user.is_client,
     }

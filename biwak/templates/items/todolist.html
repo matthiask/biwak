@@ -22,7 +22,6 @@
           {% if view == "board" %}aria-current="page"{% endif %}
         >{% translate "Board" %}</a>
       </div>
-      {% include "items/_history_link.html" with phone_hide=True %}
       {% if can_change %}
         <a
           class="btn btn-sm btn-quiet"
@@ -31,7 +30,7 @@
           title="{% translate 'Edit' %}"
         >{% icon "pencil" %}<span class="wb-label">{% translate "Edit" %}</span></a>
       {% endif %}
-      {% include "items/_more.html" with more_history=True %}
+      {% include "items/_more.html" %}
     </div>
   </div>
   {% if item.status == "archived" %}
@@ -158,6 +157,5 @@
       </details>
     {% endif %}
   </div>
-  {% include "items/_switch.html" with kind="list" %}
   {% include "items/_selection_bar.html" %}
 {% endblock content %}

@@ -1,5 +1,9 @@
 {% load biwak i18n %}
-{% comment %}A project's card (the projects page and Home): `project` annotated by `overview()`.{% endcomment %}
+{% comment %}
+  A project's card (the projects page and Home): `project` annotated by
+  `overview()`. The name's link covers the whole card (`wb-card-link`,
+  decided 2026-11-22); the bookmark button sits above it.
+{% endcomment %}
 <div>
   <div class="card wb-project-card" {% if project.color %}data-project-color="{{ project.color }}"{% endif %}>
     <div class="card-body">
@@ -7,14 +11,14 @@
         <h2 class="h6 mb-0 text-truncate">
           <a
             href="{{ project.get_absolute_url }}"
-            class="text-decoration-none"
+            class="text-decoration-none wb-card-link"
           >{% project_dot project %}{{ project }}</a>
           {% if not project.is_all_access %}<span
               class="text-body-secondary ms-1"
               title="{% translate 'Limited: members only' %}"
             >{% icon "lock" %}</span>{% endif %}
         </h2>
-        <div class="d-flex align-items-center gap-1">
+        <div class="d-flex align-items-center gap-1 wb-above-card-link">
           {% include "bookmarks/_bookmark_button.html" with target=project is_bookmarked=project.is_bookmarked card=True %}
         </div>
       </div>

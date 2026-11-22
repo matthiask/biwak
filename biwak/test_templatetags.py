@@ -73,6 +73,13 @@ class AgoTest(TestCase):
         self.assertEqual(self.ago(dt.timedelta(minutes=5)), "5\xa0minutes ago")
         self.assertEqual(self.ago(dt.timedelta(hours=3)), "3\xa0hours ago")
 
+    def test_one_unit_only(self):
+        # Decided 2026-11-22: "13 hours ago", not "13 hours, 37 minutes ago"
+        self.assertEqual(
+            self.ago(dt.timedelta(hours=13, minutes=37)), "13\xa0hours ago"
+        )
+        self.assertEqual(self.ago(dt.timedelta(days=9)), "1\xa0week ago")
+
     def test_a_project_pages_activity(self):
         ada = person("Ada")
         self.client.force_login(ada)

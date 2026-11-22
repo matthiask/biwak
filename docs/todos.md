@@ -99,7 +99,7 @@ the same person, a due date set and removed) leave nothing, and of a
 title or due date changed several times the last one is shown. Clients see the lines of the
 time the to-do was visible to them, and "another list" where a list's
 name isn't theirs to know. Edits of the notes aren't listed; staff find
-them in the History, linked below the timeline.
+them in the History, in the to-do's "More" menu.
 
 ## Repeating
 

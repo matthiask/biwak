@@ -117,8 +117,8 @@ the counts of the top level's folders, docs and files.
   offers what the item's own "More" menu does, with the same checks
   (the shared `items/_more_entries.html`): Subscribers…, for folders
   Edit… and Order…, for staff on top-level items the visibility switch
-  ("Show to clients…", a modal, or "Hide from clients"; an item's page
-  has it below its content), Move to… and "Move to trash" for who may
+  ("Show to clients…", a modal, or "Hide from clients", the same as the
+  item's page), Move to… and "Move to trash" for who may
   change it; a client without changes gets Subscribers… only. Its
   modals and the switch come back to the grid (`?next=`,
   `forms.next_url()`, in `folder_edit`, `folder_order`, `switch`,

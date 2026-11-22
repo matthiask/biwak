@@ -35,7 +35,8 @@ comments, like a GitHub issue but simpler.
 - **Live:** new lines arrive like new comments (a line is the live
   region `event-<first event's id>`, so a merge updates it and an undone
   completion removes it).
-- The link to the history (staff) is at the end of the timeline.
+- The link to the history (staff) is in the to-do's "More" menu
+  (decided 2026-11-22: not below the timeline, `feed.md`).
 
 ## Where it comes from
 

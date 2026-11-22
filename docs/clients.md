@@ -24,7 +24,10 @@ What is inside a list or folder follows it and has no switch of its
 own. Everything is internal until it is shown: better to show too little
 once.
 
-- **Show to clients** asks first and says what changes ("Makes 12
+- The switch is in the item's **More** menu (staff), and in the "…"
+  menu of tiles in "Docs and files". When you create a list, folder,
+  message, doc, file or check-in you can make it visible right away.
+- **Show to clients…** asks first and says what changes ("Makes 12
   to-dos and 34 comments visible to 3 clients"). Hiding is one click
   ("Hide from clients") and hides the content again, with what clients
   wrote in it.

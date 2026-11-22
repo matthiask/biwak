@@ -32,7 +32,8 @@ A project is the place where the work on one thing happens: to-do
 lists, messages, docs and files, check-ins, members.
 
 - **Projects** in the bar lists the projects you can open as cards, with
-  your open and overdue to-dos and the last activity. Bookmarked
+  your open and overdue to-dos and the last activity; click anywhere on
+  a card to open the project. Bookmarked
   projects (the bookmark icon on a card) come first. "Activity" and
   "A–Z" switch the order; your choice is remembered.
 - A project is open to all staff or limited to its members; clients
@@ -48,7 +49,7 @@ lists, messages, docs and files, check-ins, members.
   first, then the clients' organizations, then partners'. Staff add
   people there, "Add people from …" an organization in the project, or
   invite them by email (see [People](#people)), and remove them with
-  "Remove from the project…" in the row's "…" menu, which asks first.
+  "Remove" in their row, which asks first.
   Clients and partners can't remove anybody, themselves included: to
   hear less about a project, change its notifications instead (see
   [Notifications](notifications.md)). "Add someone" and other long lists of choices
@@ -153,7 +154,8 @@ once, all or nothing.
 
 **Teams:** a team is a named set of people ("Design team") for picking
 several at once. Staff find teams among the people wherever they pick
-several: assignees, subscribers, whom to tell, and the list that opens
+several: assignees, subscribers, whom to tell, the people a check-in
+asks, and the list that opens
 when typing `@`. Picking a team picks its members at once, as if you had
 picked each of them: a pill per member, a mention per member. Only the
 members who can be there are added: active, able to see the item and in
