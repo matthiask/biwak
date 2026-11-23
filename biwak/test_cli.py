@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import biwak_cli
+from click.shell_completion import get_completion_class
 from click.testing import CliRunner
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -163,6 +164,38 @@ class CLICommandsTest(CLITest):
                 self.assertIn("\x1b]8;", linked)
                 self.assertNotIn("\x1b]8;", self.biwak(*args).output)
         self.assertIn(url, self.biwak("todos", "show", todo.pk, terminal=True).output)
+
+    def test_completion_scripts(self):
+        for shell in ["bash", "zsh", "fish"]:
+            with self.subTest(shell=shell):
+                self.assertIn("_BIWAK_COMPLETE", self.biwak("completion", shell).output)
+
+    def test_bash_completion(self):
+        """Commands with their descriptions when there are several (bash
+        has none of its own), a single one alone, which bash inserts"""
+
+        def complete(words):
+            env = {"COMP_WORDS": words, "COMP_CWORD": str(len(words.split(" ")) - 1)}
+            with patch.dict("os.environ", env):
+                bash = get_completion_class("bash")(
+                    biwak_cli.cli, {}, "biwak", "_BIWAK_COMPLETE"
+                )
+                return bash.complete().splitlines()
+
+        self.assertEqual(complete("biwak complet"), ["plain,completion"])
+        listed = complete("biwak todos ")
+        self.assertTrue(
+            any(
+                line.startswith("plain,complete ") and "  -- " in line
+                for line in listed
+            ),
+            listed,
+        )
+        # Nothing typed after a command without subcommands: its options
+        options = complete("biwak settings ")
+        self.assertTrue(
+            any(line.startswith("plain,--language") for line in options), options
+        )
 
     def test_workflow(self):
         self.assertIn("Ada Example", self.biwak("me").output)

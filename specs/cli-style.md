@@ -55,8 +55,10 @@ What was decided on the way (by the rules, 2026-11-22):
   (`bookmark`), `items move ITEM` (`move`).
 - **Top level** only what isn't a thing: `login`, `logout`, `me`,
   `search`, `feed`, `lantern`, `away`, `settings`, `notifications`, as
-  in gov and wb (`auth`, `tokens`, `completion` and `skills` there,
-  when Biwak gets them).
+  in gov and wb (`auth` and `tokens` there, when Biwak gets them);
+  `skills`, and `completion bash|zsh|fish` (2026-11-23, copied from gov:
+  bash lists the descriptions with several candidates, options are
+  offered when nothing else is; CLI 0.65.0; IDs aren't completed yet).
 - **Titles link to their page** (2026-11-23, as in gov and wb): in a
   terminal, the titles and names in tables and the heading of `show`
   are OSC 8 hyperlinks to the item's `url` (`link()` and `echo_linked()`

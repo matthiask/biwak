@@ -1,8 +1,15 @@
-"""Logging in and out, who you are and your settings"""
+"""Logging in and out, who you are, your settings and shell completion"""
 
 import os
 
 import click
+from click.shell_completion import (
+    BashComplete,
+    FishComplete,
+    ZshComplete,
+    add_completion_class,
+    get_completion_class,
+)
 
 from biwak_cli.core import (
     _send,
@@ -124,3 +131,59 @@ def settings(language, as_json):
     click.echo(f"Theme: {data['theme']}, accent: {data['accent']}")
     click.echo(f"Single-key shortcuts: {shortcuts}")
     return None
+
+
+# Shell completion, copied from gov (Governance, BSD-3, Feinheit AG) -----------
+
+
+class _CompleteOptions:
+    """Offer the options when there's nothing else to complete, Click only
+    does this when a dash has been typed"""
+
+    def get_completions(self, args, incomplete):
+        completions = super().get_completions(args, incomplete)
+        # After an option its value may be expected, e.g. an ID
+        if not (completions or incomplete or (args and args[-1].startswith("-"))):
+            completions = super().get_completions(args, "-")
+        return completions
+
+
+class _BashDescriptions(BashComplete):
+    """Bash has no descriptions: list them with the values when there are
+    several (bash inserts only what they have in common), the value alone
+    when there's one (bash inserts it)"""
+
+    def complete(self):
+        args, incomplete = self.get_completion_args()
+        completions = self.get_completions(args, incomplete)
+        if len(completions) < 2 or not any(item.help for item in completions):
+            return "\n".join(self.format_completion(item) for item in completions)
+        width = max(len(item.value) for item in completions)
+        return "\n".join(
+            f"plain,{item.value:<{width}}  -- {item.help.splitlines()[0]}"
+            if item.help and item.type == "plain"
+            else self.format_completion(item)
+            for item in completions
+        )
+
+
+for _shell, _class in [
+    ("bash", _BashDescriptions),
+    ("zsh", ZshComplete),
+    ("fish", FishComplete),
+]:
+    add_completion_class(type(_class.__name__, (_CompleteOptions, _class), {}), _shell)
+
+
+@cli.command()
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]))
+def completion(shell):
+    """Print the script which completes biwak's commands in your shell
+
+    bash: echo 'eval "$(biwak completion bash)"' >> ~/.bashrc
+
+    zsh: echo 'eval "$(biwak completion zsh)"' >> ~/.zshrc
+
+    fish: biwak completion fish > ~/.config/fish/completions/biwak.fish"""
+    complete = get_completion_class(shell)(cli, {}, "biwak", "_BIWAK_COMPLETE")
+    click.echo(complete.source())
