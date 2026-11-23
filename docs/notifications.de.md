@@ -77,7 +77,9 @@ wenn markiert“, ausser es wird anders gewählt.
 
 Das Laternen-Symbol in der Leiste zeigt einen Punkt, solange etwas
 ungelesen ist. Öffnest du sie, zeigt sie die ungelesenen Einträge nach
-Eintrag gruppiert, die neuesten zuerst, dann die zuletzt gelesenen. Die
+Eintrag gruppiert, die neuesten zuerst, dann die zuletzt gelesenen.
+Jeder Eintrag kommt einmal vor: Ist bei einem etwas ungelesen, steht das
+schon Gelesene im selben Eintrag, unauffälliger. Die
 Seite „Alle Benachrichtigungen“ hat die ganze Liste mit „Ungelesen“ und
 „Nur Erwähnungen“.
 

@@ -416,13 +416,20 @@ def menu(user):
         ),
         user,
     )
-    prepare(unread[:MENU_UNREAD] + read, user)
-    return (
-        marks,
-        by_item(unread[:MENU_UNREAD]),
-        by_item(read),
-        len(unread) > MENU_UNREAD,
+    more = len(unread) > MENU_UNREAD
+    unread = unread[:MENU_UNREAD]
+    prepare(unread + read, user)
+    # One entry per item (decided 2026-11-23): an item with unread
+    # notifications shows its read ones in its entry among the unread,
+    # not a second time among the read
+    unread_items = {n.event.item_id for n in unread}
+    shown = sorted(
+        [*unread, *(n for n in read if n.event.item_id in unread_items)],
+        key=lambda n: (n.created_at, n.pk),
+        reverse=True,
     )
+    read = [n for n in read if n.event.item_id not in unread_items]
+    return marks, by_item(shown), by_item(read), more
 
 
 @transaction.atomic
