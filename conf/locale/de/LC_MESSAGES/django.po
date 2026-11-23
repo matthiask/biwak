@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 15:12+0100\n"
+"POT-Creation-Date: 2026-11-23 16:51+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3805,6 +3805,11 @@ msgid "Only staff manage organizations."
 msgstr "Nur Mitarbeitende verwalten Organisationen."
 
 #: biwak/organizations/api.py
+#, python-format
+msgid "%(people)s. Send the IDs of those who move along in move_ids ([] for nobody)."
+msgstr "%(people)s. Schick die IDs derer, die mitverschoben werden, in move_ids ([] für niemanden)."
+
+#: biwak/organizations/api.py
 msgid "Only staff activate and deactivate people."
 msgstr "Nur Mitarbeitende aktivieren und deaktivieren Personen."
 
@@ -3915,6 +3920,27 @@ msgstr "%(domain)s ist eine Freemail-Domain: Alle können dort eine Adresse habe
 #, python-format
 msgid "%(domain)s belongs to %(organization)s already."
 msgstr "%(domain)s gehört bereits zu %(organization)s."
+
+#: biwak/organizations/operations.py
+#, python-format
+msgid "One person with an address at %(domains)s has no organization. Move them to %(organization)s too?"
+msgid_plural "%(count)s people with addresses at %(domains)s have no organization. Move them to %(organization)s too?"
+msgstr[0] "Eine Person mit einer Adresse bei %(domains)s hat keine Organisation. Auch zu %(organization)s verschieben?"
+msgstr[1] "%(count)s Personen mit Adressen bei %(domains)s haben keine Organisation. Auch zu %(organization)s verschieben?"
+
+#: biwak/organizations/operations.py
+#, python-format
+msgid "Left out: %(names)s. %(reason)s"
+msgstr "Nicht dabei: %(names)s. %(reason)s"
+
+#: biwak/organizations/operations.py
+msgid "Admins are always in your own organization."
+msgstr "Admins sind immer in der eigenen Organisation."
+
+#: biwak/organizations/operations.py
+#, python-format
+msgid "%(name)s can't move along: only people without an organization with an address at a new domain do."
+msgstr "%(name)s kann nicht mitverschoben werden: nur Personen ohne Organisation mit einer Adresse bei einer neuen Domain."
 
 #: biwak/organizations/operations.py
 msgid "Only admins change the domains of an external organization."

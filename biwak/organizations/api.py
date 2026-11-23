@@ -13,7 +13,7 @@ from ninja.errors import HttpError
 from biwak.accounts.models import User
 from biwak.api_conventions import PersonOut, absolute, person_out
 from biwak.organizations import activation, operations as org_ops
-from biwak.organizations.models import Organization
+from biwak.organizations.models import Organization, normalize_name
 from biwak.projects import operations as project_ops
 
 
@@ -97,20 +97,68 @@ def organization_list(request):
     ]
 
 
+def people_to_move(request, move_ids, domains, *, name, org=None):
+    """The people moving along into an organization getting new domains
+    (decided 2026-11-23, ``org_ops.newcomers()``): those of ``move_ids``;
+    without it a 400 asks about the people without an organization at the
+    new domains, as the form does, if there are any the actor may move"""
+    if move_ids is not None:
+        move_ids = list(dict.fromkeys(move_ids))
+        users = list(User.objects.filter(pk__in=move_ids))
+        if len(users) != len(move_ids):
+            raise HttpError(404, _("Not found."))
+        return users
+    if domains is None:
+        return []
+    before = org.domains if org is not None else []
+    found = org_ops.newcomers(
+        [d for d in org_ops.clean_domains(domains, instance=org) if d not in before],
+        actor=request.user,
+        org=org,
+    )
+    if found.movable:
+        people = ", ".join(f"{user} ({user.pk})" for user in found.movable)
+        raise HttpError(
+            400,
+            " ".join(
+                part
+                for part in [
+                    found.question(normalize_name(name)),
+                    _(
+                        "%(people)s. Send the IDs of those who move along in"
+                        " move_ids ([] for nobody)."
+                    )
+                    % {"people": people},
+                    found.left_out(),
+                ]
+                if part
+            ),
+        )
+    return []
+
+
 class OrganizationIn(Schema):
     name: str
     # e.g. ["example.org"]; free-mail domains are refused
     domains: list[str] = []
+    # People without an organization with an address at one of the domains
+    # who move into it; without it, a 400 asks when there are any
+    # ([] for nobody)
+    move_ids: list[int] | None = None
 
 
 @router.post("organizations/", response={201: OrganizationDetailOut})
 def organization_create(request, data: OrganizationIn):
+    """A new organization; people without an organization at its domains
+    move along with ``move_ids``"""
     managing(request)
+    move = people_to_move(request, data.move_ids, data.domains, name=data.name)
     org = allowed(
         org_ops.create_organization,
         name=data.name,
         domains=data.domains,
         actor=request.user,
+        move=move,
     )
     return Status(201, organization_out(org, people=True))
 
@@ -124,18 +172,29 @@ class OrganizationPatch(Schema):
     name: str | None = None
     # Replaces the domains
     domains: list[str] | None = None
+    # As when creating: people without an organization at a new domain
+    move_ids: list[int] | None = None
 
 
 @router.patch("organizations/{organization_id}/", response=OrganizationDetailOut)
 def organization_update(request, organization_id: int, data: OrganizationPatch):
-    """Renames (once, for everybody) and replaces the domains"""
+    """Renames (once, for everybody) and replaces the domains; people without
+    an organization at a new domain move along with ``move_ids``"""
     org = organization_for(request, organization_id)
+    move = people_to_move(
+        request,
+        data.move_ids,
+        data.domains,
+        name=data.name if data.name is not None else org.name,
+        org=org,
+    )
     allowed(
         org_ops.update_organization,
         org,
         name=data.name,
         domains=data.domains,
         actor=request.user,
+        move=move,
     )
     return organization_out(org, people=True)
 

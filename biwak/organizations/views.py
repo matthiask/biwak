@@ -16,7 +16,13 @@ from biwak.forms import Form
 from biwak.modals import form_response
 from biwak.organizations import operations as org_ops
 from biwak.organizations.forms import OrganizationFieldMixin, organization_field
-from biwak.organizations.models import IdP, Organization, SignIn
+from biwak.organizations.models import (
+    IdP,
+    Organization,
+    SignIn,
+    normalize_domain,
+    normalize_name,
+)
 
 
 def managing(request):
@@ -68,6 +74,11 @@ def organization_detail(request, pk):
 
 
 class OrganizationForm(Form):
+    """Its name and domains. New domains matching the addresses of people
+    without an organization ask once before saving whether they move along
+    (decided 2026-11-23): ``asking`` after ``is_valid()``, ``question()``
+    is the form asking, with them all ticked (``offered``, ``move``)."""
+
     name = forms.CharField(label=gettext_lazy("Name"), max_length=200)
     domains = forms.CharField(
         label=gettext_lazy("Email domains"),
@@ -78,9 +89,13 @@ class OrganizationForm(Form):
             " domains never do."
         ),
     )
+    # The IDs of the people asked about
+    offered = forms.CharField(required=False, widget=forms.HiddenInput)
 
-    def __init__(self, *args, instance=None, user=None, **kwargs):
+    def __init__(self, *args, instance=None, user=None, newcomers=None, **kwargs):
         self.instance = instance
+        self.user = user
+        self.asking = False
         if instance is not None:
             kwargs.setdefault(
                 "initial",
@@ -97,6 +112,50 @@ class OrganizationForm(Form):
                 if instance.sso
                 else _("An external organization: only admins change its domains.")
             )
+        if newcomers is None and self._offered():
+            # Asked before: the question again, from what was typed
+            newcomers = org_ops.newcomers(
+                self._new_domains(
+                    normalize_domain(domain)
+                    for domain in str(self.data.get("domains", ""))
+                    .replace(",", " ")
+                    .split()
+                ),
+                actor=user,
+                org=instance,
+            )
+        if newcomers is not None:
+            self._ask(newcomers)
+
+    def _offered(self):
+        value = (
+            self.data.get("offered") if self.is_bound else self.initial.get("offered")
+        )
+        return {int(pk) for pk in str(value or "").split() if pk.isdigit()}
+
+    def _new_domains(self, domains):
+        before = self.instance.domains if self.instance is not None else []
+        return [
+            domain
+            for domain in dict.fromkeys(domains)
+            if domain and domain not in before
+        ]
+
+    def _ask(self, newcomers):
+        name = normalize_name(
+            self.data.get("name") if self.is_bound else self.initial.get("name")
+        )
+        field = forms.ModelMultipleChoiceField(
+            label=newcomers.question(name),
+            queryset=User.objects.filter(pk__in=self._offered()).order_by(
+                Lower("full_name"), "email"
+            ),
+            required=False,
+            widget=forms.CheckboxSelectMultiple,
+            help_text=newcomers.left_out(),
+        )
+        field.label_from_instance = lambda user: f"{user} ({user.email})"
+        self.fields["move"] = field
 
     def clean_name(self):
         return org_ops.clean_name(self.cleaned_data["name"], instance=self.instance)
@@ -106,13 +165,50 @@ class OrganizationForm(Form):
             self.cleaned_data["domains"], instance=self.instance
         )
 
+    def clean(self):
+        data = super().clean()
+        asked = self._offered()
+        ticked = {user.pk for user in data.pop("move", None) or []}
+        data.pop("offered", None)
+        if "name" not in data or "domains" not in data:
+            return data
+        self.newcomers = org_ops.newcomers(
+            self._new_domains(data["domains"]), actor=self.user, org=self.instance
+        )
+        offered = {user.pk for user in self.newcomers.movable}
+        # Asked again when others than those asked about would move: those
+        # unticked stay so, new ones are ticked
+        self.asking = bool(offered) and offered != asked
+        self.ticked = (ticked & offered) | (offered - asked)
+        data["move"] = [user for user in self.newcomers.movable if user.pk in ticked]
+        return data
+
+    def question(self):
+        """The form asking about ``newcomers``, all ticked but those unticked
+        before"""
+        data = self.cleaned_data
+        return OrganizationForm(
+            initial={
+                "name": data["name"],
+                "domains": " ".join(data["domains"]),
+                "offered": " ".join(str(user.pk) for user in self.newcomers.movable),
+                "move": sorted(self.ticked),
+            },
+            instance=self.instance,
+            user=self.user,
+            newcomers=self.newcomers,
+        )
+
 
 def organization_create(request):
     managing(request)
-    form = OrganizationForm(request.POST or None)
+    form = OrganizationForm(request.POST or None, user=request.user)
     if form.is_valid():
-        org = org_ops.create_organization(actor=request.user, **form.cleaned_data)
-        return redirect(org)
+        if form.asking:
+            form = form.question()
+        else:
+            org = org_ops.create_organization(actor=request.user, **form.cleaned_data)
+            return redirect(org)
     return form_response(
         request,
         form,
@@ -126,12 +222,17 @@ def organization_edit(request, pk):
     org = organization_for(request, pk)
     form = OrganizationForm(request.POST or None, instance=org, user=request.user)
     if form.is_valid():
-        try:
-            org_ops.update_organization(org, actor=request.user, **form.cleaned_data)
-        except ValidationError as exc:
-            form.add_error("domains", exc)
+        if form.asking:
+            form = form.question()
         else:
-            return redirect(org)
+            try:
+                org_ops.update_organization(
+                    org, actor=request.user, **form.cleaned_data
+                )
+            except ValidationError as exc:
+                form.add_error("domains", exc)
+            else:
+                return redirect(org)
     return form_response(
         request,
         form,
