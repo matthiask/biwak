@@ -247,7 +247,7 @@
               <thead>
                 <tr>
                   <th>{% translate "Device" %}</th>
-                  <th>{% translate "Added" %}</th>
+                  <th class="d-none d-sm-table-cell">{% translate "Added" %}</th>
                   <th>{% translate "Last used" %}</th>
                   <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
                 </tr>
@@ -259,7 +259,7 @@
                       {{ device.label }}
                       <span class="badge wb-tone-neutral ms-1" data-push-this hidden>{% translate "This one" %}</span>
                     </td>
-                    <td>{{ device.created_at|moment }}</td>
+                    <td class="d-none d-sm-table-cell">{{ device.created_at|moment }}</td>
                     <td>
                       {% if device.last_success_at %}
                         {{ device.last_success_at|moment }}
@@ -267,22 +267,32 @@
                         <span class="text-body-secondary">{% translate "Never" %}</span>
                       {% endif %}
                     </td>
-                    <td>
-                      <div class="d-flex justify-content-end gap-2">
-                        <form method="post" action="{% url 'push_subscription_test' device.pk %}">
-                          {% csrf_token %}
-                          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Send a test" %}</button>
-                        </form>
-                        <a
-                          href="{% url 'push_subscription_rename' device.pk %}"
-                          data-modal
+                    <td class="text-end">
+                      {# One menu: three buttons were cramped on phones and scrolled sideways #}
+                      <details class="dropdown wb-menu">
+                        <summary
                           class="btn btn-sm btn-quiet"
-                        >{% translate "Rename…" %}</a>
-                        <form method="post" action="{% url 'push_subscription_remove' device.pk %}" data-push-remove>
-                          {% csrf_token %}
-                          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
-                        </form>
-                      </div>
+                          title="{% translate 'More' %}"
+                          aria-label="{% blocktranslate with title=device.label %}More: {{ title }}{% endblocktranslate %}"
+                        >
+                          {% icon "three-dots" %}
+                        </summary>
+                        <div class="dropdown-menu dropdown-menu-end">
+                          <form method="post" action="{% url 'push_subscription_test' device.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">{% translate "Send a test" %}</button>
+                          </form>
+                          <a
+                            href="{% url 'push_subscription_rename' device.pk %}"
+                            data-modal
+                            class="dropdown-item"
+                          >{% translate "Rename…" %}</a>
+                          <form method="post" action="{% url 'push_subscription_remove' device.pk %}" data-push-remove>
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">{% translate "Remove" %}</button>
+                          </form>
+                        </div>
+                      </details>
                     </td>
                   </tr>
                 {% endfor %}
