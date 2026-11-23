@@ -1985,3 +1985,100 @@ class GroupColorTest(TestCase):
                 "brown",
             ]),
         )
+
+
+def repetition(frequency, days, **extra):
+    """A to-do's ``repetition_schedule`` as the API gives it"""
+    return {
+        "days": days,
+        "duration": None,
+        "end_date": None,
+        "frequency": frequency,
+        "hour": 0,
+        "minute": 0,
+        "month_interval": None,
+        "start_date": "2026-12-17",
+        "week_instance": None,
+        "week_interval": None,
+    } | extra
+
+
+class RepeatTest(ImportCase):
+    """Repeating to-dos (specs/import-basecamp.md): the newest to-do of a
+    series has Basecamp's schedule, which becomes its rule"""
+
+    def test_the_shapes(self):
+        for schedule, rule in [
+            (repetition("every_week", [1]), "FREQ=WEEKLY;BYDAY=MO"),
+            (repetition("every_day_of_month", [17]), "FREQ=MONTHLY;BYMONTHDAY=17"),
+            (
+                repetition("every_month", [1], week_instance=1),
+                "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1",
+            ),
+            (
+                repetition("custom_month", [10], month_interval=3),
+                "FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY=10",
+            ),
+            (
+                repetition("every_day_of_month", [31]),
+                "FREQ=MONTHLY;BYMONTHDAY=28,29,30,31;BYSETPOS=-1",
+            ),
+        ]:
+            with self.subTest(schedule["frequency"]):
+                self.assertEqual(importer_module.recurrence_of(schedule), (rule, None))
+        self.assertEqual(
+            importer_module.recurrence_of(
+                repetition("every_week", [1], end_date="2027-06-30")
+            ),
+            ("FREQ=WEEKLY;BYDAY=MO", dt.date(2027, 6, 30)),
+        )
+
+    def todos(self, *, completed=False):
+        key = "/todolists/301/todos.json" + ("?completed=true" if completed else "")
+        return self.client_.data[key]
+
+    def test_an_open_one_repeats(self):
+        self.todos()[0]["repetition_schedule"] = repetition(
+            "custom_month", [1], month_interval=3, end_date="2027-12-31"
+        )
+        self.run_import()
+        food = Todo.objects.get(item__title="Buy giraffe food")
+        self.assertEqual(food.recurrence, "FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY=1")
+        self.assertEqual(food.recurrence_ends_on, dt.date(2027, 12, 31))
+        self.assertFalse(Todo.objects.filter(previous=food.item).exists())
+
+    def test_a_done_one_neither_repeats_nor_makes_a_next_one(self):
+        # Basecamp moves the schedule on; if a done one had it all the same,
+        # completing it while importing would make a next one
+        self.todos(completed=True)[0]["repetition_schedule"] = repetition(
+            "every_week", [1]
+        )
+        self.run_import()
+        done = Todo.objects.get(item__title="Pick a camp date")
+        self.assertTrue(done.is_completed)
+        self.assertEqual(done.recurrence, "")
+        self.assertFalse(Todo.objects.filter(previous=done.item).exists())
+
+    def test_an_unknown_schedule_is_a_problem(self):
+        self.todos()[0]["repetition_schedule"] = repetition("every_full_moon", [1])
+        report = self.run_import(dry_run=True)
+        self.assertIn(
+            "To-do 'Buy giraffe food' (3011) in Camp kitchen doesn't repeat: its"
+            " schedule isn't known (unknown frequency 'every_full_moon')",
+            report.problems,
+        )
+        self.run_import()
+        self.assertEqual(
+            Todo.objects.get(item__title="Buy giraffe food").recurrence, ""
+        )
+
+    def test_a_later_run_takes_the_change(self):
+        food = self.todos()[0]
+        food["repetition_schedule"] = repetition("every_week", [1])
+        self.run_import()
+        food["repetition_schedule"] = None
+        food["updated_at"] = "2026-02-01T08:00:00.000Z"
+        self.run_import()
+        self.assertEqual(
+            Todo.objects.get(item__title="Buy giraffe food").recurrence, ""
+        )

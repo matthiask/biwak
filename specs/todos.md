@@ -137,8 +137,13 @@ groupings and "assigned by" 2026-11-21).
   `recurrence_count` (how many more after this one: 2 makes two more, the
   last has 0), `previous`.
 - **Completing** a recurring to-do creates the next one in the same list
-  and group, at the end, with the same title, notes, assignees,
-  subscribers and rule, due on the rule's next date after today, or
+  and group, at the end, with the same title, notes, assignees and
+  subscribers. **The rule moves** to it with its end date and count
+  (decided 2026-11-23 by the user, as Basecamp does): the completed one
+  keeps none, so changing an old to-do's due date never touches the
+  schedule; a rule used up (no next one) stays where it is. Migration
+  `items/0021_recurrence_moves` cleared the rule of completed to-dos
+  which had a next one. The next one is due on the rule's next date after today, or
   after the due date when completed early (decided 2026-11-20: a weekly
   to-do due Friday and done on Wednesday is next due the Friday after).
   Never a stack of open copies. A start date keeps its distance to the

@@ -1483,6 +1483,7 @@ class Importer(Resolver):
                 starts = None
             return {"due_on": due, "starts_on": starts}
 
+        repeat = self._repeat(rec, title)
         created = []
 
         def create():
@@ -1495,6 +1496,7 @@ class Importer(Resolver):
                     group=group,
                     notes=notes(),
                     **dates(),
+                    **repeat,
                 )
 
         def update(todo):
@@ -1505,6 +1507,7 @@ class Importer(Resolver):
                     title=title,
                     notes=notes(),
                     **dates(),
+                    **repeat,
                 )
 
         todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
@@ -1519,6 +1522,26 @@ class Importer(Resolver):
                 self._completion(todo, rec)
             self._stamp(todo, rec)
         self._follow(bc_type, rec, todo)
+
+    def _repeat(self, rec, title):
+        """Basecamp's schedule (``repetition_schedule``), which only the
+        newest to-do of a series has (it moves on, as ours does,
+        specs/todos.md). Only for an open one: completing one with a rule,
+        as the import does with done and archived ones, would make a next
+        one. What we don't know is a problem, and the to-do doesn't repeat."""
+        none = {"recurrence": "", "recurrence_ends_on": None}
+        schedule = rec.get("repetition_schedule")
+        if not schedule or rec.get("completed") or rec.get("status") == "archived":
+            return none
+        try:
+            rule, ends_on = recurrence_of(schedule)
+        except (ValueError, KeyError, TypeError, schedules.InvalidRule) as exc:
+            self.problem(
+                f"To-do {title!r} ({rec['id']}) in {self._project_name} doesn't"
+                f" repeat: its schedule isn't known ({exc})"
+            )
+            return none
+        return {"recurrence": rule, "recurrence_ends_on": ends_on}
 
     def _completion(self, todo, rec):
         """Archived to-dos come in completed (specs/archiving.md), at the
@@ -2078,6 +2101,36 @@ class Importer(Resolver):
             item = self._find(recording["type"], recording["id"])
             if isinstance(item, Item) and item.project_id == project.pk:
                 bookmark_ops.add_bookmark(self.actor, item=item)
+
+
+def recurrence_of(schedule):
+    """A to-do's ``repetition_schedule`` (not in Basecamp's documentation,
+    seen in the API 2026-11-23) as (RRULE, end date); ``ValueError`` for
+    what we don't know. Monthly by day of the month comes as
+    ``every_day_of_month`` and ``custom_month`` (with ``month_interval``),
+    whose ``days`` are days of the month; the rest are a check-in's shapes
+    (``schedule_of()``), whose ``days`` are weekdays"""
+    ends_on = schedule.get("end_date")
+    ends_on = dt.date.fromisoformat(ends_on) if ends_on else None
+    frequency = schedule.get("frequency")
+    if frequency in {"every_day_of_month", "custom_month"}:
+        interval = schedule.get("month_interval") or 1
+        days = sorted({int(day) for day in schedule.get("days") or []})
+        if not days:
+            days = [dt.date.fromisoformat(schedule["start_date"]).day]
+        if any(day < 1 or day > 31 for day in days):
+            raise ValueError(f"days of the month {days!r}")
+        if len(days) == 1 and days[0] >= 29:
+            # The 29th to 31st: the last day of shorter months
+            # (specs/todos.md), as for check-ins
+            rule = (
+                f"FREQ=MONTHLY;INTERVAL={interval};BYMONTHDAY=28,29,30,31;BYSETPOS=-1"
+            )
+        else:
+            rule = f"FREQ=MONTHLY;INTERVAL={interval};BYMONTHDAY={','.join(map(str, days))}"
+        return schedules.validate(rule), ends_on
+    rule, _start, _time = schedule_of(schedule)
+    return rule, ends_on
 
 
 class _Skip(Exception):

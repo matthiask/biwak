@@ -211,7 +211,9 @@ heute (oder nach der Fälligkeit, wenn du es früher erledigst). Ein
 Beginn behält seinen Abstand: Beginnt es vier Tage vor der Fälligkeit,
 tut es das nächste auch. Es gibt nie einen Stapel offener Kopien.
 Kommentare und Anhänge bleiben beim erledigten To-do, und das neue
-verlinkt zurück („Vorheriges: …“). Ein erledigtes To-do wieder zu
+verlinkt zurück („Vorheriges: …“). Die Wiederholung geht auf das neue
+To-do über: Das erledigte wiederholt sich nicht mehr, sein Datum zu
+ändern ändert also nichts anderes. Ein erledigtes To-do wieder zu
 öffnen entfernt das nächste nicht.
 
 ## Die To-do-Seite
