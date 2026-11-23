@@ -124,6 +124,27 @@ feedback rounds (`ui-feedback.md`).
   (`data-toolbar`, `editor.md`).
 - **Ctrl+Enter submits** the form the focus is in, every form (decided
   2026-11-22, `keyboard.md`).
+- **Saving on change** (decided 2026-11-23 by the user: the settings page
+  had six Save buttons): a `<form data-save-on-change>`
+  (`frontend/save-on-change.js`) saves a choice (select, radio button,
+  checkbox) when it changes and a text field (text, date, time) when it's
+  left changed, and on Enter; its Save button (`data-save-button`) is for
+  people without JavaScript. The view answers the script's request
+  (`X-Biwak-Fragment`) with 204 and no message for the next page, or 400
+  with `{"errors": {field: [messages]}}`, shown below the fields as Django
+  shows them until the next save. A required field still empty waits
+  (the away note before its day), unless it's the one just left. Failing
+  otherwise, the field shakes; a choice goes back to the stored value, a
+  text keeps what was typed and is saved when it's left again. A select
+  is disabled while it saves; other fields stay usable and a change
+  meanwhile is saved afterwards. Where the page has a `[data-save-status]`
+  live region (the settings page; not the project's people page, which
+  says nothing, decided 2026-11-22), "Saved" is announced there and shown
+  for two seconds in the top right corner of the field's group, over a
+  long label rather than taking space (decided 2026-11-23: no layout
+  shift, no extra room). `data-save-reload` reloads once saved (the
+  language, the keyboard shortcuts, which the page read when it loaded).
+  The profile photo uploads once it's chosen (`data-upload-on-choose`).
 - **Destructive or revealing actions ask first:** trashing, and showing
   something to clients (`access.md`, "Making it obvious"); hiding is one
   click.

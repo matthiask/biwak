@@ -3011,10 +3011,44 @@ main:has([data-hide-title]) [data-edit-open] {
   display: none;
 }
 
-/* Choices saving themselves with htmx (a member's notifications on the
-   project's people page): Save is for people without JavaScript */
-.js [data-save-on-change] [data-save-button] {
+/* Forms saving themselves (frontend/save-on-change.js: a member's
+   notifications on the project's people page, the settings page): Save is
+   for people without JavaScript */
+.js [data-save-on-change] [data-save-button],
+.js [data-upload-on-choose] [data-save-button] {
   display: none;
+}
+
+/* "Saved" in the top right corner of the field's group, on the label's
+   line: positioned, so it takes no space and moves nothing */
+.wb-saved-host {
+  position: relative;
+}
+
+.wb-saved {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  padding-inline-start: 0.5rem;
+  /* Over a long label rather than next to it, in a card or not */
+  background: var(--bs-card-bg, var(--bs-body-bg));
+  color: var(--wb-success-ink);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+}
+
+.wb-saved.is-shown {
+  opacity: 1;
+  transition-duration: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-saved {
+    transition: none;
+  }
 }
 
 /* specs/ui.md, "Filters and view choices": the buttons of a filter form

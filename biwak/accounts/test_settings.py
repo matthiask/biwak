@@ -1,6 +1,7 @@
 """The settings page's keyboard, appearance and sign-in sections and the
 API's ``me/`` preferences (specs/keyboard.md)"""
 
+import datetime as dt
 from unittest.mock import patch
 
 from allauth.mfa.models import Authenticator
@@ -329,3 +330,92 @@ class NameTest(TestCase):
         self.assertContains(response, "This field is required")
         ada.refresh_from_db()
         self.assertNotEqual(ada.full_name, "")
+
+
+class SaveOnChangeTest(TestCase):
+    """The settings page's forms save themselves (frontend/save-on-change.js):
+    the script's requests get 204 and no message for the next page, or 400
+    with the errors by field; without the script everything stays as it
+    was (the tests above)"""
+
+    FRAGMENT = {"X-Biwak-Fragment": "1"}
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.client.force_login(self.ada)
+
+    def post(self, url, data):
+        return self.client.post(url, data, headers=self.FRAGMENT)
+
+    def assertNoMessageNext(self):
+        page = self.client.get("/accounts/settings/")
+        self.assertEqual(list(page.context["messages"]), [])
+
+    def test_the_forms_save_themselves(self):
+        page = self.client.get("/accounts/settings/")
+        for url in ("name", "appearance", "notifications", "away"):
+            self.assertContains(page, f'action="/accounts/settings/{url}/"', count=1)
+        self.assertContains(page, "data-save-on-change", count=6)
+        # Language and keyboard come back in the new state
+        self.assertContains(page, "data-save-reload", count=2)
+        self.assertContains(page, "data-upload-on-choose", count=1)
+        self.assertContains(page, "data-save-button", count=7)
+        self.assertContains(page, 'data-save-status data-saved="Saved"')
+        self.assertNotContains(page, "data-appearance-reset")
+
+    def test_saved_without_a_message(self):
+        tomorrow = dt.date.today() + dt.timedelta(days=1)
+        for url, data in [
+            ("name", {"full_name": "Ada Lovelace", "short_name": ""}),
+            ("appearance", {"theme": "dark", "accent": "lake"}),
+            ("keyboard", {"keyboard_shortcuts": "on"}),
+            ("language", {"language": "de"}),
+            (
+                "notifications",
+                {"notification_level": "everything", "mail_delivery": "digest"},
+            ),
+            ("away", {"away_until": tomorrow.isoformat(), "away_note": "Hiking"}),
+        ]:
+            with self.subTest(url):
+                response = self.post(f"/accounts/settings/{url}/", data)
+                self.assertEqual(response.status_code, 204)
+                self.assertNoMessageNext()
+        self.ada.refresh_from_db()
+        self.assertEqual(self.ada.full_name, "Ada Lovelace")
+        self.assertEqual((self.ada.theme, self.ada.accent), ("dark", "lake"))
+        self.assertTrue(self.ada.keyboard_shortcuts)
+        self.assertEqual(self.ada.language, "de")
+        self.assertEqual(self.ada.mail_delivery, "digest")
+        self.assertEqual(self.ada.away_note, "Hiking")
+
+    def test_errors_by_field(self):
+        yesterday = dt.date.today() - dt.timedelta(days=1)
+        for url, data, errors in [
+            (
+                "name",
+                {"full_name": "", "short_name": ""},
+                {"full_name": ["This field is required."]},
+            ),
+            (
+                "notifications",
+                {
+                    "notification_level": "everything",
+                    "mail_delivery": "digest",
+                    "working_from": "17:00",
+                    "working_until": "08:00",
+                },
+                {"working_until": ["The working hours end after they start."]},
+            ),
+            (
+                "away",
+                {"away_until": yesterday.isoformat(), "away_note": ""},
+                {"away_until": ["Choose today or a later day."]},
+            ),
+        ]:
+            with self.subTest(url):
+                response = self.post(f"/accounts/settings/{url}/", data)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json(), {"errors": errors})
+        self.ada.refresh_from_db()
+        self.assertNotEqual(self.ada.full_name, "")
+        self.assertFalse(self.ada.is_away)
