@@ -241,7 +241,9 @@ Profilbild; mit der Maus darüber steht, bis wann, mit der Notiz
 auch, und wenn du sie als zugewiesene Person wählst, `@` tippst oder ein
 Team ansiehst, steht „abwesend bis 3. Dez.“. Weist du sie zu oder
 erwähnst sie, steht ihre Notiz einmal unter dem Feld, und auf der
-Seite einer offenen Aufgabe unter „Zugewiesen an“; zuweisen und
+Seite einer offenen Aufgabe unter „Zugewiesen an“, in ihrer Zeile
+„(abwesend bis 3. Dez.)“ nach dem Namen, auch in den Listen nach
+Fälligkeit; zuweisen und
 erwähnen kannst du sie trotzdem. Kund:innen sehen es bei den Personen,
 die sie kennen dürfen. Dich selbst abwesend melden:
 [Benachrichtigungen](notifications.de.md).

@@ -286,12 +286,20 @@ def clients(item):
     return "[clients]" if item.get("visible_to_clients") else ""
 
 
-def names(people):
-    """Short names, "(inactive)" after people who left"""
-    return ", ".join(
-        p["short_name"] + ("" if p.get("is_active", True) else " (inactive)")
-        for p in people
-    )
+def names(people, *, away=False, notes=False):
+    """Short names, "(inactive)" after people who left; with ``away``
+    "(away until 2026-12-03)" after people away, with ``notes`` their note
+    too"""
+
+    def name(p):
+        if not p.get("is_active", True):
+            return f"{p['short_name']} (inactive)"
+        if away and p.get("away_until"):
+            note = f": {p['away_note']}" if notes and p.get("away_note") else ""
+            return f"{p['short_name']} (away until {p['away_until']}{note})"
+        return p["short_name"]
+
+    return ", ".join(name(p) for p in people)
 
 
 def with_away(person):

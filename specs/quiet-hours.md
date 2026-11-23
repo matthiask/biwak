@@ -66,7 +66,13 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   3 Dec: back on the 4th, ask Bob meanwhile"). Their person page says
   so. An open to-do's page shows that note under "Assigned to" for
   each assignee away, overdue or not (decided 2026-11-23: overdue
-  to-dos especially, but useful on all; not once it's completed). Not a reason to leave them out: they can still be assigned.
+  to-dos especially, but useful on all; not once it's completed). Its
+  row (lists, Home, by due date) says "(away until 3 Dec)" after the
+  name, also only while open. The CLI's `todos` lists add "(away until
+  2026-12-03)", `todos show` and `todos assign` with the note; the
+  triage skill mentions it for to-dos the user waits on. Not told when
+  assigning or mentioning through the API, the CLI or a mail reply, nor
+  later in the lantern or mails (decided 2026-11-23: too much). Not a reason to leave them out: they can still be assigned.
 - **Mails held** (decided 2026-11-22): nothing is mailed while away
   (also not digests); the lantern collects as usual. When the away
   time ends, one digest of what happened meanwhile goes out (grouped by

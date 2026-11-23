@@ -286,7 +286,7 @@ def todos(
             f"{todo['project_name']} / {todo['list_title']}"
             if "project_name" in todo
             else (todo["group"] or {}).get("title", ""),
-            names(todo["assignees"]),
+            names(todo["assignees"], away=True),
             dates(todo),
             clients(todo),
         )
@@ -325,7 +325,7 @@ def show_todos_by_project(data):
         t.add_row(
             str(todo["id"]),
             link(todo["title"], todo.get("url")),
-            names(todo["assignees"]),
+            names(todo["assignees"], away=True),
             dates(todo),
             clients(todo),
         )
@@ -361,7 +361,8 @@ def show_todo(data):
     echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), done, marker)
     for label, value in [
         ("Group", (data["group"] or {}).get("title")),
-        ("Assignees", names(data["assignees"])),
+        # Who is away, with the note, while it's open (specs/quiet-hours.md)
+        ("Assignees", names(data["assignees"], away=not done, notes=True)),
         ("Due", data["due_on"]),
         ("Starts", data.get("starts_on")),
         ("Repeats", data.get("recurrence_description")),
@@ -647,7 +648,7 @@ def todo_assign(todo_ids, people, replace, as_json):
         marker = f" {clients(assigned)}" if clients(assigned) else ""
         click.echo(
             f"#{assigned['id']} {assigned['title']}{marker}:"
-            f" {names(assigned['assignees'])}"
+            f" {names(assigned['assignees'], away=True, notes=True)}"
         )
     return None
 

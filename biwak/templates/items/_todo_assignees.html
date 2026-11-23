@@ -1,7 +1,8 @@
 {% load biwak %}
 {% comment %}The assignees of a to-do's row: linked names with their marks, like the to-do's page (decided 2026-11-21).{% endcomment %}
+{# "(away until 3 Dec)" after who is away, while it's open (decided 2026-11-23) #}
 {# Only those the viewer may know (known_in): not people removed from the project, for clients and externals #}
 {% known_in todo todo.todo.assignees.all as people %}{% if people %}<span
     class="small wb-row-people"
-  >{% for person in people %}{% person_page person %}{% if not forloop.last %},
+  >{% for person in people %}{% person_page person %}{% if not todo.todo.is_completed %}{% away_detail person parentheses=True %}{% endif %}{% if not forloop.last %},
       {% endif %}{% endfor %}</span>{% endif %}

@@ -60,7 +60,9 @@ one line: "3 comments by Ada and Bob"), in three groups:
   overdue ones first.
 - **Wait:** where the ball is with others: to-dos the user assigned to
   others (`--assigned-by-me`) that are overdue or due within 7 days,
-  with who has them.
+  with who has them. When an assignee is away (`away_until` set), say
+  until when, with their `away_note` ("Bob is away until 3 Dec: ask
+  Ada"): the user may want to ask somebody else.
 - **Keep an eye on:** the rest of the unread entries, briefly, newest
   first.
 
