@@ -1,7 +1,8 @@
 """Copying a list and moving it to another project in the browser: the
 project combobox in the modal, the question coming back into the dialog
 (htmx), then the page of the copy or the moved list
-(specs/lists-across-projects.md)"""
+(specs/lists-across-projects.md); the days field only with "Move by"
+(frontend/shown-for.js)"""
 
 from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
@@ -40,6 +41,14 @@ class AcrossTest(E2ETestCase):
         dialog = page.get_by_role("dialog", name="Copy…")
         # This project first
         expect(dialog.get_by_role("combobox", name="Project")).to_have_value("Website")
+        # The days only with "Move by"
+        days = dialog.get_by_label("Days", exact=True)
+        expect(days).to_be_hidden()
+        dialog.get_by_label("Move by").check()
+        expect(days).to_be_visible()
+        dialog.get_by_label("Remove").check()
+        expect(days).to_be_hidden()
+        dialog.get_by_label("Keep").check()
         self.choose(dialog, "Project", "sho", "Shop")
         dialog.get_by_role("button", name="Copy").click()
         # Asked in the dialog: Cleo isn't in Shop

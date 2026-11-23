@@ -248,6 +248,8 @@ class CopyForm(Confirming):
     def __init__(self, *args, projects, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["project"].queryset = projects
+        # Shown only with "Move by" (frontend/shown-for.js)
+        self.fields["days"].shown_for = f"dates={ops.Dates.SHIFT.value}"
 
     def clean(self):
         data = super().clean()
