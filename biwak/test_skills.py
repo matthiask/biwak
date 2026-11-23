@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 
 SKILLS = settings.BASE_DIR / "cli" / "biwak_cli" / "skills"
-NAMES = []
+NAMES = ["biwak-triage"]
 
 
 def biwak_commands(text):
@@ -49,7 +49,7 @@ class SkillTest(SimpleTestCase):
                     command = biwak_cli.cli
                     rest = iter(words[1:])
                     for word in rest:
-                        if word in {"<", "|", ">"}:
+                        if word in {"<", "|", ">", "--help"}:
                             break
                         if len(word) > 1 and word.startswith("-"):  # Not stdin
                             options = {
