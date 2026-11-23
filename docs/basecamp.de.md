@@ -1,10 +1,20 @@
 # Von Basecamp her
 
-Biwak folgt Basecamp eng: Projekte mit To-do-Listen, Mitteilungen,
+Biwak hat von Basecamp gelernt: Projekte mit To-do-Listen, Mitteilungen,
 Dokumente und Dateien, Check-ins, Kund:innen, die nur sehen, was ihnen
 gezeigt wird, und Mails, auf die du antworten kannst. Das meiste, was du
 kennst, funktioniert gleich. Diese Seite zeigt, wo Biwak anders ist und
 warum, damit dich nichts überrascht.
+
+## Gleich wie in Basecamp
+
+Benachrichtigungen in der App (die Laterne), die nicht mehr gemailt
+werden, wenn du sie gelesen hast, Ruhezeiten und Abwesenheit,
+Reaktionen, das Abzeichen und der Reiter an dem, was Kund:innen sehen,
+keine internen Kommentare zu dem, was Kund:innen sehen, live gemeinsam
+geschriebene Dokumente, To-dos aus einer hineingezogenen Datei,
+Startdaten, Teams und öffentliche Links funktionieren weitgehend, wie du
+sie kennst.
 
 ## Weniger Orte zum Suchen
 
@@ -22,10 +32,8 @@ warum, damit dich nichts überrascht.
 - **Nur Projekte und Listen werden archiviert.** To-dos werden
   erledigt, alles andere kommt in den Papierkorb, wenn es nicht mehr
   gebraucht wird.
-- **Start** zeigt, was heute dich braucht und wo etwas los ist, und
-  lässt Abschnitte ohne Inhalt weg.
 
-## Von weniger hören, aber vom Richtigen
+## Von weniger hören
 
 - **Neue Mitglieder werden nicht überflutet.** Wer einem Projekt
   beitritt, abonniert nichts, was schon da ist; du hörst von dem, was ab
@@ -36,43 +44,26 @@ warum, damit dich nichts überrascht.
   ([Benachrichtigungen](notifications.de.md)).
 - **Eine Benachrichtigung pro Änderung.** In derselben Änderung
   zugewiesen und erwähnt ergibt eine Benachrichtigung, nicht zwei.
-- **In der App gelesen, nicht gemailt.** Die Laterne (das „Hey!“ von
-  Biwak) gruppiert Benachrichtigungen nach Eintrag. Was du dort liest,
-  bevor seine Mail rausgeht, fehlt in der Mail oder der Zusammenfassung;
-  du kannst Mails auch ganz abstellen und nur die Laterne nutzen.
-- **Ruhezeiten und Abwesenheit** halten Mails zurück, während du nicht
-  arbeitest, wie „Work can wait“, und andere sehen beim Zuweisen oder
-  Erwähnen, dass du abwesend bist.
-- **Reaktionen** haben 32 Emoji und kurze Texte bis 40 Zeichen und
-  sagen es nur der Autorin oder dem Autor, in der nächsten Mail oder der
-  Zusammenfassung.
 
-## Kund:innen: schwer, es falsch zu machen
+## Kund:innen
 
-- **Der Schalter ist am Behälter.** Listen und Ordner sind für
-  Kund:innen sichtbar oder intern; was darin ist, folgt ihnen. Neues ist
-  intern, bis es gezeigt wird.
+- **Den Schalter gibt es nur zuoberst:** an Listen, Ordnern, Check-ins
+  und an Mitteilungen, Dokumenten und Dateien ausserhalb von Ordnern.
+  Was darin ist, folgt seiner Liste oder seinem Ordner und hat keinen
+  eigenen Schalter. Das zählt vor allem bei Dateien: Ein Ordner, der
+  Kund:innen gezeigt wird, zeigt alles darin, Unterordner inbegriffen,
+  und eine Datei, die in einen internen Ordner verschoben wird, ist
+  verborgen ([Kund:innen](clients.de.md)).
 - **Zeigen fragt zuerst** und sagt, was sich ändert. Verbergen ist ein
   Klick.
-- **Keine internen Kommentare zu sichtbaren Einträgen:** Was dort steht,
-  lesen Kund:innen mit. Intern besprecht ihr es in einer internen
-  Mitteilung.
-- **Ein Reiter am Fensterrand** sagt, dass Kund:innen es sehen, und
-  bleibt beim Scrollen sichtbar, dazu das Abzeichen auf jeder Zeile
-  ([Kund:innen](clients.de.md)).
 
 ## Schreiben
 
 - **Checklisten in jedem Text.** Notizen, Kommentare, Mitteilungen und
   Dokumente können Checklisten haben (`- [ ]`), direkt auf der Seite
   abgehakt und auf der Zeile des To-dos gezählt.
-- **Dokumente werden live gemeinsam geschrieben**, vor allem Notizen
-  von Sitzungen: mehrere Personen gleichzeitig, ohne Sperren, mit
-  Versionen, zu denen ihr zurückkönnt
-  ([Mitteilungen, Dokumente und Dateien](files.de.md)).
 - **Texte werden als Markdown gespeichert**, so kommen sie aus der API
-  und der CLI als einfacher Text und lassen sich von überall einfügen.
-  Der Editor sieht aus wie jeder andere.
+  und der CLI als einfacher Text. Der Editor sieht aus wie jeder andere.
 - **To-dos aus Text hinzufügen** legt alles in die Liste, auf die du ihn
   ziehst: Überschriften werden Gruppen, nicht neue Listen.
 
@@ -82,13 +73,9 @@ warum, damit dich nichts überrascht.
   <kbd>/</kbd>) springt zu Projekten, Personen und Einträgen und führt
   Aktionen der Seite aus; einzelne Tasten wirken innerhalb der Seiten
   und lassen sich abschalten ([Tastatur](keyboard.de.md)).
-- **Startdaten** halten ein To-do aus der laufenden Arbeit, bis es
-  beginnen kann.
-- **Teams** werden beim Auswählen zu ihren Mitgliedern: Ändert sich ein
-  Team später, ändert das nichts an dem, was damit zugewiesen wurde.
-- **Öffentliche Links** gelten 1 bis 30 Tage, und der Dialog bietet
-  zuerst den eigenen Link des Eintrags an: Wer ein Konto hat, braucht nie
-  einen öffentlichen.
+- **Öffentliche Links laufen ab**, nach 1 bis 30 Tagen, und der Dialog
+  bietet zuerst den eigenen Link des Eintrags an: Wer ein Konto hat,
+  braucht nie einen öffentlichen.
 - **Wenn jemand nicht mehr dabei ist**, bleiben die Zuweisungen, so
   lassen sich die offenen To-dos noch finden und übergeben, mehrere auf
   einmal.
@@ -98,9 +85,6 @@ warum, damit dich nichts überrascht.
 - **Keine Passwörter.** Du meldest dich mit einem Code per Mail, einem
   Passkey oder mit Google oder Microsoft an, wie es deine Organisation
   erlaubt ([Anmelden](sign-in.de.md)).
-- **Alles, was die Seiten können, können auch die API und der Befehl
-  `biwak`**, für Skripte und KI-Agenten
-  ([Die CLI und die API](cli.de.md)).
 - **Biwak läuft auf dem eigenen Server deiner Organisation**, auf
   Deutsch und Englisch, gewählt pro Person.
 - **Basecamp-Projekte lassen sich importieren**, durch Admins, mit

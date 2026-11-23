@@ -1,10 +1,18 @@
 # Coming from Basecamp
 
-Biwak follows Basecamp closely: projects with to-do lists, a message
+Biwak learned from Basecamp: projects with to-do lists, a message
 board, docs and files, check-ins, clients who see only what's shown
 to them, and mails you can answer. Most of what you know works the
 same. This page lists where Biwak is different and why, so that
 nothing surprises you.
+
+## The same as in Basecamp
+
+Notifications in the app (the lantern) that aren't mailed once read,
+quiet hours and out of office, reactions, the badge and the tab on what
+clients see, no internal comments on what clients see, docs written
+together live, adding to-dos from a dropped file, start dates, teams
+and public links all work much as you know them.
 
 ## Fewer places to look
 
@@ -20,10 +28,8 @@ nothing surprises you.
   post a message.
 - **Only projects and lists are archived.** To-dos are completed,
   everything else is trashed when it's no longer needed.
-- **Home** shows what needs you today and where something is going on,
-  and leaves out sections with nothing in them.
 
-## Hearing about less, but about the right things
+## Hearing about less
 
 - **New members aren't flooded.** Joining a project subscribes you to
   nothing that's already there; you hear about what happens from now
@@ -35,54 +41,37 @@ nothing surprises you.
 - **One notification per change.** Assigned and mentioned in the same
   change is one notification ("assigned you (and mentioned you)"), not
   two.
-- **Read in the app, not mailed.** The lantern (Biwak's "Hey!") groups
-  notifications by item. What you read there before its mail goes out
-  is left out of the mail or the digest; you can also turn mails off
-  and use only the lantern.
-- **Quiet hours and out of office** hold mails back while you aren't
-  working, like "Work can wait", and others see that you're away when
-  they assign or mention you.
-- **Reactions** have 32 emoji and short texts of up to 40 characters,
-  and tell only the author, in their next mail or the digest.
 
-## Clients: hard to get wrong
+## Clients
 
-- **The switch is on the container.** Lists and folders are visible to
-  clients or internal; what's in them follows. New things are internal
-  until they're shown.
+- **The switch is only on what's at the top**: lists, folders,
+  check-ins, and messages, docs and files outside folders. What's inside
+  follows its list or folder and has no switch of its own. That matters
+  most for files: a folder shown to clients shows everything in it,
+  subfolders included, and a file moved into an internal folder is
+  hidden ([clients](clients.md)).
 - **Showing asks first** and says what changes ("Makes 12 to-dos and
   34 comments visible to 3 clients"). Hiding is one click.
-- **No internal comments on visible items**: whatever is written there,
-  clients can read. Talk internally on an internal message instead.
-- **A tab at the window's edge**, "Clients can see this.", stays in
-  view while you scroll, besides the badge on every row
-  ([clients](clients.md)).
 
 ## Writing
 
 - **Checklists in any text.** Notes, comments, messages and docs can
   have checklists (`- [ ]`), ticked right on the page and counted on
   the to-do's row.
-- **Docs are written together live**, for meeting notes above all:
-  several people at once, no locks, with versions to go back to
-  ([messages, docs and files](files.md)).
 - **Texts are stored as Markdown**, so they come out of the API and the
-  CLI as plain text and can be pasted in from anywhere. The editor
-  looks the same as any other.
+  CLI as plain text. The editor looks the same as any other.
 - **Adding to-dos from text** puts everything into the list you drop it
   on: headings become groups, not new lists.
 
 ## Getting around
 
 - **The command palette** (<kbd>Ctrl</kbd>+<kbd>K</kbd> or <kbd>/</kbd>)
-  jumps to projects, people and items and runs actions on the page;
+  jumps to projects, people and items and runs the page's actions;
   single keys work inside pages and can be turned off
   ([keyboard](keyboard.md)).
-- **Start dates** keep a to-do out of current work until it can start.
-- **Teams** expand into their members when you pick them: changing a
-  team later changes nothing that was assigned with it.
-- **Public links** last 1 to 30 days, and the dialog first offers the
-  item's own link: people with an account never need a public one.
+- **Public links expire** after 1 to 30 days, and the dialog first
+  offers the item's own link: people with an account never need a
+  public one.
 - **When somebody leaves**, their assignments stay, so their open to-dos
   can still be found and handed over, several at once.
 
@@ -91,8 +80,6 @@ nothing surprises you.
 - **No passwords.** You sign in with a code by mail, a passkey, or
   Google or Microsoft, as your organization allows
   ([signing in](sign-in.md)).
-- **Everything the pages do, the API and the `biwak` command do too**,
-  for scripts and AI agents ([the CLI and the API](cli.md)).
 - **Biwak runs on your organization's own server**, in English and
   German, chosen per person.
 - **Basecamp projects can be imported** by an admin, with their
