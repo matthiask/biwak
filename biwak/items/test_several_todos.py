@@ -415,15 +415,26 @@ class MovePageTest(Selection):
 
     def test_moving(self):
         self.client.force_login(self.ada)
+        data = {
+            "project": self.website.pk,
+            "shown": self.website.pk,
+            "target": f"{self.internal.pk}:{self.soon.pk}",
+            "index": "end",
+        }
+        response = self.post(
+            self.photos, self.copy, data=data, next="&next=/todos/", modal=True
+        )
+        # Visible to-dos into an internal list: it says so first (decided
+        # 2026-11-23)
+        self.assertContains(
+            response, "Clients won&#x27;t see 2 to-dos any more: the list is internal."
+        )
+        self.assertIn_([self.copy, self.photos], self.launch)
         response = self.post(
             self.photos,
             self.copy,
-            data={
-                "project": self.website.pk,
-                "shown": self.website.pk,
-                "target": f"{self.internal.pk}:{self.soon.pk}",
-                "index": "end",
-            },
+            data=data
+            | {"confirmed": f"{self.website.pk}:{self.internal.pk}:{self.soon.pk}"},
             next="&next=/todos/",
             modal=True,
         )
@@ -491,22 +502,31 @@ class MovePageTest(Selection):
         self.copy.refresh_from_db()
         new = self.copy.parent
         self.assertEqual((new.project, new.title), (self.shop, "Launch"))
-        self.assertFalse(new.is_client_visible)
+        # Visible as the list they came from (decided 2026-11-23)
+        self.assertTrue(new.is_client_visible)
+        self.assertTrue(self.copy.is_client_visible)
         self.assertIn_([self.photos], new)
-        # From several lists: "Moved to-dos"
+        # From several lists: "Moved to-dos", internal unless all of them
+        # are visible, and it says so first
+        data = {
+            "project": self.website.pk,
+            "shown": self.website.pk,
+            "target": "new",
+            "index": "end",
+        }
+        response = self.post(self.copy, self.budget, data=data)
+        self.assertContains(
+            response, "Clients won&#x27;t see 1 to-do any more: the list is internal."
+        )
         self.post(
             self.copy,
             self.budget,
-            data={
-                "project": self.website.pk,
-                "shown": self.website.pk,
-                "target": "new",
-                "index": "end",
-            },
+            data=data | {"confirmed": f"{self.website.pk}:new"},
         )
         self.budget.refresh_from_db()
         self.assertEqual(self.budget.parent.title, "Moved to-dos")
         self.assertEqual(self.budget.project, self.website)
+        self.assertFalse(self.budget.parent.is_client_visible)
 
     def test_a_todo_gone_changes_nothing(self):
         self.client.force_login(self.ada)

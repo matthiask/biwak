@@ -163,17 +163,24 @@ across projects, told once about dates, moving telling nobody.
   Example will be added to Shop.", "Cleo Example won't see the to-dos
   in Shop: they'll be unassigned and unsubscribed.", as a warning) and
   `confirmed` is set, as "Move to…" of lists; there is no question about
-  clients: the list's choice says "(clients can see this)", as for one
-  to-do moved between lists. Then `ops.move_todos_to()`. Completed
+  showing them to clients: the list's choice says "(clients can see
+  this)", as for one to-do moved between lists. Hiding them is said
+  first (decided 2026-11-23): where to-dos clients see go into an
+  internal list (any list, a new one too), the dialog's `clients_note`
+  says "Clients won't see 2 to-dos any more: the list is internal."
+  (`hidden_note()`) and asks again, as for who's added and dropped. Then `ops.move_todos_to()`. Completed
   to-dos move too (decided 2026-11-22). **Clients** (decided
   2026-11-22) get no project field and no "New list": the lists of the
   to-dos' project they see; a selection from several projects is
   refused for them: "The selected to-dos are in several projects:
   to-dos move to the lists of their own project."
 - **"New list"** (staff, who create lists): created in the chosen
-  project inside the move's transaction, internal, named after the list
-  the to-dos come from when it's one, else "Moved to-dos" (in the
-  mover's language), renamed later (confirmed 2026-11-22).
+  project inside the move's transaction, named after the list the
+  to-dos come from when it's one, else "Moved to-dos" (in the mover's
+  language), renamed later (confirmed 2026-11-22). Visible to clients
+  when every list the to-dos come from is, else internal
+  (`new_list_visible()`, decided 2026-11-23: client-visible to-dos
+  shouldn't silently disappear for clients).
 - **Across projects** (`ops.move_todos_to()`, built 2026-11-22):
   to-dos from other projects come along with comments, reactions,
   events and attachments (their project updated), completed ones too;

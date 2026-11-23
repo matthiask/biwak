@@ -94,7 +94,10 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   eine ihrer Gruppen, an den Anfang oder ans Ende, nebeneinander. Staff
   wählen zuerst das Projekt, auch ein anderes, dann die Liste oder „Neue
   Liste“ (benannt nach der Liste, aus der sie kommen, oder „Verschobene
-  To-dos“; später umbenennen). In ein anderes Projekt sagt das Formular
+  To-dos“; später umbenennen), für Kund:innen sichtbar, wenn die Listen,
+  aus denen sie kommen, es sind. Bevor To-dos, die Kund:innen sehen, in
+  eine interne Liste kommen, sagt das Formular, dass Kund:innen sie
+  nicht mehr sehen. In ein anderes Projekt sagt das Formular
   zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
   (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf
   kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in
