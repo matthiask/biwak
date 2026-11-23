@@ -114,7 +114,13 @@ manage none (`access.md`).
 - **Each person:** name, address, role (admin, staff, external, client),
   their name linking to their page. Own staff get "Change
   organization" (the own organization for admins only) and links to the
-  organizations.
+  organizations. "Change organization" in a row (here and on an
+  organization's page) is a quiet icon (the building, no border; decided
+  2026-11-23, the user: "the repeating change organization button is
+  somewhat ugly"), named "Change the organization of Cleo Example" as
+  its `title` and `aria-label`, a modal and also a page
+  (`organizations/_change_organization.html`); the person's page keeps
+  the labelled button.
 - **Clients and externals** see the people they share a project with
   (`known_people()`, `access.md`), grouped the same way. Externals see
   addresses as on a project's people page; clients only those of their

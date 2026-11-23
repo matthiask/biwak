@@ -160,13 +160,7 @@
                 {% include "organizations/_invitation.html" with person=user next=request.get_full_path %}
               </div>
             </div>
-            {% if user.can_move %}
-              <a
-                class="btn btn-sm btn-quiet"
-                href="{% url 'person_organization' user.pk %}"
-                data-modal
-              >{% translate "Change organization" %}</a>
-            {% endif %}
+            {% if user.can_move %}{% include "organizations/_change_organization.html" with person=user %}{% endif %}
           </div>
         {% endfor %}
       </div>
