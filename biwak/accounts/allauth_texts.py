@@ -4,7 +4,7 @@ its own words; ours wins (``LOCALE_PATHS`` comes before the apps' catalogs).
 Exactly allauth's English, nothing imports this module. The Django admin
 keeps Django's German."""
 
-from django.utils.translation import gettext_noop as _, pgettext_noop
+from django.utils.translation import gettext_noop as _, pgettext
 
 
 TEXTS = [
@@ -19,7 +19,7 @@ TEXTS = [
     _("Use a security key"),
     _("Email"),
     _("Code"),
-    pgettext_noop("field label", "Login"),
+    pgettext("field label", "Login"),
     # Two factors (mfa/)
     _("Authenticator code"),
     _("Master key"),
