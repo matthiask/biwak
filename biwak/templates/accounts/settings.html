@@ -237,7 +237,7 @@
             <table class="wb-table" id="push-devices">
               <thead>
                 <tr>
-                  <th>{% translate "Browser" %}</th>
+                  <th>{% translate "Device" %}</th>
                   <th>{% translate "Added" %}</th>
                   <th>{% translate "Last used" %}</th>
                   <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
@@ -247,7 +247,7 @@
                 {% for device in push.devices %}
                   <tr data-push-endpoint="{{ device.endpoint }}">
                     <td title="{{ device.user_agent }}">
-                      {{ device.name }}
+                      {{ device.label }}
                       <span class="badge wb-tone-neutral ms-1" data-push-this hidden>{% translate "This one" %}</span>
                     </td>
                     <td>{{ device.created_at|moment }}</td>
@@ -258,11 +258,18 @@
                         <span class="text-body-secondary">{% translate "Never" %}</span>
                       {% endif %}
                     </td>
-                    <td class="text-end">
-                      <form method="post" action="{% url 'push_subscription_remove' device.pk %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
-                      </form>
+                    <td>
+                      <div class="d-flex justify-content-end gap-2">
+                        <a
+                          href="{% url 'push_subscription_rename' device.pk %}"
+                          data-modal
+                          class="btn btn-sm btn-quiet"
+                        >{% translate "Rename…" %}</a>
+                        <form method="post" action="{% url 'push_subscription_remove' device.pk %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 {% endfor %}

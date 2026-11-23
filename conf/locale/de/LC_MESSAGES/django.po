@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 07:25+0100\n"
+"POT-Creation-Date: 2026-11-23 07:54+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -679,6 +679,12 @@ msgstr "Authentifizierungsgeheimnis"
 msgid "user agent"
 msgstr "User-Agent"
 
+#: biwak/accounts/models.py biwak/accounts/views.py biwak/files/library.py
+#: biwak/files/models.py biwak/forwarding/models.py biwak/items/models.py
+#: biwak/organizations/models.py biwak/projects/models.py biwak/teams/models.py
+msgid "name"
+msgstr "Name"
+
 #: biwak/accounts/models.py
 msgid "last success at"
 msgstr "zuletzt erfolgreich am"
@@ -707,6 +713,11 @@ msgstr "Das Bild ist zu gross (höchstens 5 MB)."
 #: biwak/accounts/operations.py
 msgid "Please upload a JPEG, PNG or WebP image."
 msgstr "Bitte lade ein JPEG-, PNG- oder WebP-Bild hoch."
+
+#: biwak/accounts/operations.py biwak/teams/operations.py
+#, python-format
+msgid "At most %(count)s characters."
+msgstr "Höchstens %(count)s Zeichen."
 
 #: biwak/accounts/quiet.py
 #, python-format
@@ -867,6 +878,10 @@ msgid "How you're listed (mentions, assignees); empty: your first name."
 msgstr "Wie du aufgeführt wirst (Erwähnungen, Zugewiesene); leer: dein Vorname."
 
 #: biwak/accounts/views.py
+msgid "Empty: the browser and system."
+msgstr "Leer: der Browser und das System."
+
+#: biwak/accounts/views.py
 msgid "Single-key shortcuts"
 msgstr "Tastenkürzel mit einer Taste"
 
@@ -979,6 +994,14 @@ msgstr "Entfernen"
 #: biwak/accounts/views.py
 msgid "Push notifications on this device are off."
 msgstr "Push-Benachrichtigungen auf diesem Gerät sind aus."
+
+#: biwak/accounts/views.py
+msgid "Rename the device"
+msgstr "Gerät umbenennen"
+
+#: biwak/accounts/views.py biwak/items/views.py
+msgid "Rename"
+msgstr "Umbenennen"
 
 #: biwak/activity/api.py
 msgid "The history is for staff only."
@@ -2427,12 +2450,6 @@ msgstr "Datei"
 msgid "Files"
 msgstr "Dateien"
 
-#: biwak/files/library.py biwak/files/models.py biwak/forwarding/models.py
-#: biwak/items/models.py biwak/organizations/models.py biwak/projects/models.py
-#: biwak/teams/models.py
-msgid "name"
-msgstr "Name"
-
 #: biwak/files/library.py biwak/palette/actions.py
 #: biwak/templates/files/library.html
 msgid "Upload files"
@@ -3579,10 +3596,6 @@ msgstr "Gruppe hinzufügen"
 #: biwak/items/views.py biwak/templates/items/todolist.html
 msgid "Rename the group"
 msgstr "Gruppe umbenennen"
-
-#: biwak/items/views.py
-msgid "Rename"
-msgstr "Umbenennen"
 
 #: biwak/items/views.py
 msgid "Position"
@@ -5417,11 +5430,6 @@ msgstr "Teammitglieder"
 
 #: biwak/teams/operations.py
 #, python-format
-msgid "At most %(count)s characters."
-msgstr "Höchstens %(count)s Zeichen."
-
-#: biwak/teams/operations.py
-#, python-format
 msgid "There is a team called “%(name)s” already."
 msgstr "Es gibt bereits ein Team namens „%(name)s“."
 
@@ -5838,8 +5846,8 @@ msgid "Notifications are blocked for Biwak in this browser's settings."
 msgstr "Benachrichtigungen sind für Biwak in den Einstellungen dieses Browsers blockiert."
 
 #: biwak/templates/accounts/settings.html
-msgid "Browser"
-msgstr "Browser"
+msgid "Device"
+msgstr "Gerät"
 
 #: biwak/templates/accounts/settings.html
 msgid "Added"
@@ -5856,6 +5864,10 @@ msgstr "Diese"
 #: biwak/templates/accounts/settings.html
 msgid "Never"
 msgstr "Nie"
+
+#: biwak/templates/accounts/settings.html
+msgid "Rename…"
+msgstr "Umbenennen…"
 
 #: biwak/templates/accounts/settings.html
 msgid "Out of office"
@@ -5946,6 +5958,10 @@ msgstr "Einrichten…"
 #: biwak/templates/accounts/settings.html
 msgid "Sessions"
 msgstr "Sitzungen"
+
+#: biwak/templates/accounts/settings.html
+msgid "Browser"
+msgstr "Browser"
 
 #: biwak/templates/accounts/settings.html
 msgid "IP address"

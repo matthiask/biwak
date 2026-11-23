@@ -120,6 +120,7 @@ only with "No mails".
 - A tap opens the item.
 - Every device you turned it on for gets each notification; the list
   shows them by browser and system, when added and when last used.
+  "Rename…" gives a device a name ("Work laptop") to tell them apart.
 - Signing out on a device ends its notifications ("Push notifications on
   this device are off."); turn them on again after signing in.
 - To stop them on a device where you aren't signed in: "Turn off on this

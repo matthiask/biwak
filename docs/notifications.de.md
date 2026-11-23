@@ -139,7 +139,8 @@ oder nur Push-Benachrichtigungen mit „Keine Mails“.
 - Ein Tippen öffnet den Eintrag.
 - Jedes Gerät, auf dem du sie eingeschaltet hast, bekommt jede
   Benachrichtigung; die Liste zeigt sie nach Browser und System, wann
-  hinzugefügt und wann zuletzt verwendet.
+  hinzugefügt und wann zuletzt verwendet. „Umbenennen…“ gibt einem Gerät
+  einen Namen („Arbeitslaptop“), damit du die Geräte auseinanderhältst.
 - Abmelden auf einem Gerät beendet seine Benachrichtigungen
   („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
   nach dem Anmelden wieder ein.

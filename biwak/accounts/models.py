@@ -611,6 +611,8 @@ class PushSubscription(models.Model):
     p256dh = models.CharField(_("public key"), max_length=200)
     auth = models.CharField(_("authentication secret"), max_length=100)
     user_agent = models.CharField(_("user agent"), max_length=500, blank=True)
+    # What the person calls it; empty: the browser and system (``label``)
+    name = models.CharField(_("name"), max_length=100, blank=True)
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
     last_success_at = models.DateTimeField(_("last success at"), null=True, blank=True)
 
@@ -621,6 +623,13 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"{self.user}: {self.user_agent or self.endpoint}"
+
+    @property
+    def label(self):
+        """The name, or the browser and system ("Firefox on Linux")"""
+        from biwak.accounts.signin import describe_agent
+
+        return self.name or describe_agent(self.user_agent)
 
     def info(self):
         """What ``pywebpush.webpush()`` takes"""

@@ -39,8 +39,12 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
   it is; someone may want both, or only pushes (mail "none").
 - **Several devices per person** (decided 2026-11-22: people have a
   phone, a laptop, a desktop): each push goes to every device of the
-  person; the list tells them apart by browser and system, when added
-  and when last used.
+  person; the list tells them apart by name, when added and when last
+  used.
+- **Devices have names** (decided 2026-11-23: two laptops with the same
+  browser and system looked the same): by default the browser and system
+  ("Firefox on Linux"); people rename their own devices ("Rename…" in the
+  list).
 - **One browser, one person** (decided 2026-11-22): a browser never has
   subscriptions for several people; the last one to subscribe on it
   replaces the other person's subscription there (nothing of before
@@ -192,9 +196,22 @@ In this order, each step with its tests:
   button, marks this device in the list ("This one", its "Remove" also
   unsubscribes the browser), says why there's no button (blocked, an
   iPhone outside the home screen) or that it failed. The texts are in
-  the page. The list: the browser and system (`describe_agent()`, like
-  the sessions), when added, when last used (the last push its push
-  service took, "Never").
+  the page. The list: the device's name (`PushSubscription.label`: the
+  name, or the browser and system, `describe_agent()`, like the
+  sessions), when added, when last used (the last push its push service
+  took, "Never").
+- **Names** (decided 2026-11-23): `PushSubscription.name`, empty for the
+  browser and system (so a browser updating its user agent shows the new
+  one). "Rename…" in the list opens the modal form
+  `/accounts/push/<id>/rename/` (also a page; the browser and system as
+  the field's placeholder, "Empty: the browser and system."), only for
+  one's own devices (others' 404); `rename_device()` in
+  `biwak/accounts/operations.py`. Spaces collapsed, at most 100
+  characters (like teams' names), empty back to the default. The audit
+  log has it (the trigger takes the whole row but the keys and
+  `last_success_at`). Wording: the column "Device", "Rename…", the
+  heading "Rename the device", the button "Rename" (German "Gerät",
+  "Umbenennen…", "Gerät umbenennen").
 - **The service worker** is `frontend/sw.js` as it is, served by Django
   at `/sw.js` (public, `no-cache`), registered at the click. A push's
   JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap
@@ -212,8 +229,10 @@ In this order, each step with its tests:
   device are off." (German "Push-Benachrichtigungen", "Auf diesem
   Gerät benachrichtigen", "Füge Biwak zum Home-Bildschirm hinzu, …",
   "Push-Benachrichtigungen auf diesem Gerät sind aus.").
-- **API:** `GET /api/v1/me/push-subscriptions/` (`id`, `device`,
-  `user_agent`, `created_at`, `last_success_at`; no endpoint or keys),
+- **API:** `GET /api/v1/me/push-subscriptions/` (`id`, `name` (the
+  list's: the given one or the browser and system), `device` (the
+  browser and system), `user_agent`, `created_at`, `last_success_at`; no
+  endpoint or keys; renaming only in the settings),
   `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens).
 - **Tests:** `biwak/activity/test_push.py` (what pushes, quiet hours,
   away, visibility, failures; `pywebpush.webpush` stubbed),

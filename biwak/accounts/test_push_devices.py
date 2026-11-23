@@ -3,8 +3,10 @@ section, subscribing and removing, the service worker, the API"""
 
 import json
 
+from django.core.exceptions import ValidationError
 from django.test import Client, TestCase, override_settings
 
+from biwak.accounts import operations
 from biwak.accounts.models import APIToken, PushSubscription
 from biwak.activity.test_push import KEYS, subscribe_device
 from biwak.audit.models import LoggedAction
@@ -191,6 +193,58 @@ class DevicesTest(TestCase):
         self.assertRedirects(response, "/accounts/settings/#devices")
         self.assertEqual(list(PushSubscription.objects.all()), [theirs])
 
+    def test_renaming(self):
+        """Two laptops with the same browser and system: a name tells them
+        apart; empty is the browser and system again"""
+        device = subscribe_device(self.cleo)
+        device.user_agent = FIREFOX
+        device.save()
+        self.assertEqual(device.label, "Firefox on Linux")
+        renamed = operations.rename_device(
+            self.cleo, pk=device.pk, name="  Work \n laptop "
+        )
+        self.assertEqual(renamed.name, "Work laptop")
+        self.assertEqual(renamed.label, "Work laptop")
+        with self.assertRaises(ValidationError):
+            operations.rename_device(self.cleo, pk=device.pk, name="x" * 101)
+        renamed = operations.rename_device(self.cleo, pk=device.pk, name=" ")
+        self.assertEqual((renamed.name, renamed.label), ("", "Firefox on Linux"))
+        # Only one's own
+        self.assertIsNone(operations.rename_device(self.ada, pk=device.pk, name="Mine"))
+        device.refresh_from_db()
+        self.assertEqual(device.name, "")
+
+    def test_renaming_in_the_list(self):
+        device = subscribe_device(self.cleo)
+        device.user_agent = FIREFOX
+        device.save()
+        url = f"/accounts/push/{device.pk}/rename/"
+        self.client.force_login(self.cleo)
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, f'href="{url}"')
+        self.assertContains(response, "Rename…")
+        # The form, as a modal and as a page
+        response = self.client.get(url, headers={"HX-Modal": "true"})
+        self.assertContains(response, "Rename the device")
+        self.assertContains(response, 'placeholder="Firefox on Linux"')
+        self.assertContains(response, 'maxlength="100"')
+        self.assertContains(self.client.get(url), "Rename the device")
+        response = self.client.post(url, {"name": "x" * 101})
+        self.assertContains(response, "Ensure this value has at most 100 characters")
+        response = self.client.post(url, {"name": "Work  laptop"})
+        self.assertRedirects(response, "/accounts/settings/#devices")
+        device.refresh_from_db()
+        self.assertEqual(device.name, "Work laptop")
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, "Work laptop")
+        self.assertNotContains(response, "Firefox on Linux")
+        # Somebody else's device isn't there for them
+        self.client.force_login(self.ada)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, {"name": "Mine"}).status_code, 404)
+        device.refresh_from_db()
+        self.assertEqual(device.name, "Work laptop")
+
     def test_in_the_audit_log_without_the_keys(self):
         LoggedAction.objects.all().delete()
         self.client.force_login(self.ada)
@@ -295,6 +349,12 @@ class APITest(TestCase):
         self.assertEqual(response.status_code, 200)
         (device,) = response.json()
         self.assertEqual(device["id"], mine.pk)
+        self.assertEqual(device["device"], "Safari on iPhone")
+        self.assertEqual(device["name"], "Safari on iPhone")
+        operations.rename_device(self.cleo, pk=mine.pk, name="Old phone")
+        response = self.client.get("/api/v1/me/push-subscriptions/", headers=headers)
+        (device,) = response.json()
+        self.assertEqual(device["name"], "Old phone")
         self.assertEqual(device["device"], "Safari on iPhone")
         self.assertIsNone(device["last_success_at"])
         self.assertNotIn("endpoint", device)
