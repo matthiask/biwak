@@ -147,6 +147,8 @@ oder nur Push-Benachrichtigungen mit „Keine Mails“.
   auch in deinen Ruhezeiten oder während du abwesend bist; die Seite
   sagt, ob sie rausging. Ist das Abonnement des Geräts abgelaufen, wird
   es entfernt: Schalte die Benachrichtigungen auf dem Gerät wieder ein.
+  Ein Gerät, das offline ist, bekommt ihn nicht später: Der Test
+  verfällt nach einer Minute.
 - Abmelden auf einem Gerät beendet seine Benachrichtigungen
   („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
   nach dem Anmelden wieder ein.

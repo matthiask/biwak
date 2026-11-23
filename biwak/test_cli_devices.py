@@ -39,6 +39,8 @@ class DevicesCLITest(test_cli.CLITest):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("Sent. It should show up in a few seconds.", result.output)
         self.assertEqual(self.webpush.call_count, 1)
+        # A late "it works" says nothing: dropped after a minute
+        self.assertEqual(self.webpush.call_args.kwargs["ttl"], 60)
         data = json.loads(self.biwak("devices", "test", phone.pk, "--json").output)
         self.assertEqual(data["sent"], True)
         # Read-only tokens don't send
@@ -58,4 +60,14 @@ class DevicesCLITest(test_cli.CLITest):
         result = self.biwak("devices", "test", phone.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("had expired and was removed", result.output)
+        self.assertEqual(list(PushSubscription.objects.all()), [theirs])
+
+    def test_deleting(self):
+        phone = subscribe_device(self.ada)
+        theirs = subscribe_device(person("Bob"))
+        self.assertNotEqual(self.biwak("devices", "delete", theirs.pk).exit_code, 0)
+        result = self.biwak("devices", "delete", phone.pk, access="read")
+        self.assertNotEqual(result.exit_code, 0)
+        output = self.biwak("devices", "delete", phone.pk).output
+        self.assertIn(f"Removed Safari on iPhone ({phone.pk}).", output)
         self.assertEqual(list(PushSubscription.objects.all()), [theirs])
