@@ -100,12 +100,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "--answers-max-age",
             type=float,
-            default=6,
+            default=1,
             metavar="HOURS",
             help=(
                 "How long the API's answers are reused from the cache, so a"
                 " dry run and the run after it read Basecamp once (default:"
-                " 6; 0: always ask)"
+                " 1; 0: always ask)"
             ),
         )
         parser.add_argument(

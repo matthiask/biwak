@@ -1627,7 +1627,7 @@ class CommandTest(ImportCase):
             "1000",
             "secret",
             cache_dir=client_api.default_cache_dir(),
-            answers_max_age=6 * 3600,
+            answers_max_age=3600,
         )
         self.assertIn("Imported.", text)
         self.assertIn("to-dos: 6 new", text)
@@ -1716,11 +1716,11 @@ class CommandTest(ImportCase):
         args = ["--account", "1000", "--project", str(support.PROJECT)]
         _text, make = self.call(*args, "--cache-dir", "/srv/somewhere")
         make.assert_called_once_with(
-            "1000", "secret", cache_dir="/srv/somewhere", answers_max_age=6 * 3600
+            "1000", "secret", cache_dir="/srv/somewhere", answers_max_age=3600
         )
         _text, make = self.call(*args, "--no-cache")
         make.assert_called_once_with(
-            "1000", "secret", cache_dir=None, answers_max_age=6 * 3600
+            "1000", "secret", cache_dir=None, answers_max_age=3600
         )
         _text, make = self.call(*args, "--answers-max-age", "0.5")
         self.assertEqual(make.call_args.kwargs["answers_max_age"], 1800)
