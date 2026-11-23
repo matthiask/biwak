@@ -8,9 +8,18 @@ staff is for admins only: admins manage the internal team and externals,
 staff the clients (decided 2026-11-21); it decides who sees which
 projects."""
 
+from dataclasses import dataclass, field
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.utils.translation import gettext as _, gettext_lazy as _lazy
+from django.db.models import Q
+from django.db.models.functions import Lower
+from django.utils.text import get_text_list
+from django.utils.translation import (
+    gettext as _,
+    gettext_lazy as _lazy,
+    ngettext,
+)
 
 from biwak.organizations.models import (
     DOMAIN,
@@ -186,11 +195,108 @@ def clean_domains(domains, *, instance=None):
     return result
 
 
+@dataclass
+class Newcomers:
+    """The people without an organization whose addresses are at
+    ``domains``, the domains an organization gets (decided 2026-11-23):
+    ``movable`` those the actor may move into it, ``refused`` the others,
+    ``(person, reason)``"""
+
+    domains: list
+    movable: list = field(default_factory=list)
+    refused: list = field(default_factory=list)
+
+    def question(self, organization):
+        """What the form asks"""
+        count = len(self.movable)
+        return ngettext(
+            "One person with an address at %(domains)s has no organization."
+            " Move them to %(organization)s too?",
+            "%(count)s people with addresses at %(domains)s have no"
+            " organization. Move them to %(organization)s too?",
+            count,
+        ) % {
+            "count": count,
+            "domains": get_text_list(self.domains),
+            "organization": organization,
+        }
+
+    def left_out(self):
+        """Who isn't offered and why, a sentence per reason"""
+        reasons = {}
+        for user, reason in self.refused:
+            reasons.setdefault(reason, []).append(str(user))
+        return " ".join(
+            _("Left out: %(names)s. %(reason)s")
+            % {"names": ", ".join(names), "reason": reason}
+            for reason, names in reasons.items()
+        )
+
+
+def _why_not_move(actor, user, org):
+    """Why ``actor`` can't move ``user`` (without an organization) into
+    ``org`` (None: a new one), or None: what ``set_organization()`` checks"""
+    if not can_touch(actor, org, person=user):
+        return str(TOUCH_MESSAGE)
+    if user.is_admin and not (org is not None and org.is_own):
+        return _("Admins are always in your own organization.")
+    return None
+
+
+def newcomers(domains, *, actor, org=None):
+    """The people without an organization (inactive people and people who
+    left too) with an address at one of ``domains``, the domains ``org``
+    (None: a new organization) gets; by name"""
+    from biwak.accounts.models import User
+
+    result = Newcomers(list(domains))
+    if not result.domains:
+        return result
+    at = Q()
+    for domain in result.domains:
+        at |= Q(email__iendswith=f"@{domain}")
+    for user in User.objects.filter(at, organization__isnull=True).order_by(
+        Lower("full_name"), "email"
+    ):
+        if reason := _why_not_move(actor, user, org):
+            result.refused.append((user, reason))
+        else:
+            result.movable.append(user)
+    return result
+
+
+def _move_newcomers(org, domains, move, *, actor):
+    """Moves ``move``, people without an organization at the new
+    ``domains``, into ``org``; others are refused"""
+    move = list(move)
+    if not move:
+        return
+    found = newcomers(domains, actor=actor, org=org)
+    movable = {user.pk for user in found.movable}
+    refused = {user.pk: reason for user, reason in found.refused}
+    for user in move:
+        if user.pk in refused:
+            raise PermissionError(refused[user.pk])
+        if user.pk not in movable:
+            raise ValidationError(
+                _(
+                    "%(name)s can't move along: only people without an"
+                    " organization with an address at a new domain do."
+                )
+                % {"name": user}
+            )
+    for user in move:
+        set_organization(user, org, actor=actor)
+
+
 @transaction.atomic
-def create_organization(*, name, domains=(), actor):
+def create_organization(*, name, domains=(), actor, move=()):
+    """A new organization; ``move`` are people without an organization at
+    its domains who move into it (``newcomers()``)"""
     _check_manage(actor)
     org = Organization(name=clean_name(name), domains=clean_domains(domains))
     org.save()
+    _move_newcomers(org, org.domains, move, actor=actor)
     return org
 
 
@@ -230,10 +336,13 @@ def _check_domains(actor, org, domains):
 
 
 @transaction.atomic
-def update_organization(org, *, actor, name=None, domains=None):
-    """Renames (once, for everybody) and replaces the domains, what's given"""
+def update_organization(org, *, actor, name=None, domains=None, move=()):
+    """Renames (once, for everybody) and replaces the domains, what's given;
+    ``move`` are people without an organization at its new domains who
+    move into it (``newcomers()``)"""
     _check_manage(actor)
     fields = []
+    before = list(org.domains)
     if name is not None and normalize_name(name) != org.name:
         org.name = clean_name(name, instance=org)
         fields.append("name")
@@ -252,6 +361,7 @@ def update_organization(org, *, actor, name=None, domains=None):
         sso.enforce_required_now_and_after_commit(
             org.people.values_list("pk", flat=True)
         )
+    _move_newcomers(org, [d for d in org.domains if d not in before], move, actor=actor)
     return org
 
 

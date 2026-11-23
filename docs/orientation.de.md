@@ -217,7 +217,13 @@ verwalten Organisationen auf der Seite Personen: die Organisationen
 der Kund:innen und wer dazugehört. Admins verwalten die eigene
 Organisation und die der Externen (Organisationen mit Mitarbeitenden):
 wer dazugehört, Personen dorthin einladen, sie zusammenführen und ihre
-Mail-Domains.
+Mail-Domains. Die Mail-Domains einer Organisation schlagen sie vor,
+wenn jemand mit einer solchen Adresse eingeladen wird. Bekommt eine
+Organisation eine neue Domain, fragt das Formular vor dem Speichern
+einmal, ob die Personen ohne Organisation mit einer Adresse dort auch
+dazukommen, alle angekreuzt (inaktive und ehemalige Personen
+eingeschlossen); wen du nicht verschieben darfst (Mitarbeitende, ausser
+du bist Admin), fehlt in der Liste.
 
 **Profilbilder:** Alle haben ein Profilbild neben ihrem Namen: ihr Foto
 oder eine kleine Zeichnung (ein Steinbock, ein Zelt, ein Fuchs, …) in

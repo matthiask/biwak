@@ -52,7 +52,7 @@ from biwak.items.models import (
     Todo,
     TodoList,
 )
-from biwak.organizations import activation
+from biwak.organizations import activation, operations as org_ops
 from biwak.organizations.models import Organization, normalize_name
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
@@ -637,12 +637,24 @@ class Importer(Resolver):
         # Own staff active in Basecamp can work in Biwak at once; clients
         # and externals wait to be activated (decided 2026-11-22)
         active = kind == "staff" and not redacted and self._active_in_basecamp(person)
+        # Without a company (people removed from Basecamp have none) the
+        # address's domain decides, as for invitations (decided 2026-11-23)
+        by_domain = (
+            self._organization_by_domain(email)
+            if (client or external) and not company
+            else None
+        )
+        if by_domain is not None and by_domain.is_own and external:
+            kind = "staff"
         label = f"{name} <{email}> ({kind}{', active' if active else ''}"
-        label += f"{', ' + company if company else ''})"
+        label += f"{', ' + company if company else ''}"
+        label += f"{', ' + by_domain.name + ' by the address' if by_domain else ''})"
         self.report.people.append(label)
         if self.dry:
             return None
-        if client or external:
+        if by_domain is not None:
+            organization = by_domain
+        elif client or external:
             organization = self._organization(person.get("company") or {})
         else:
             organization = Organization.objects.own()
@@ -823,6 +835,16 @@ class Importer(Resolver):
         if cid is not None:
             self._remember(COMPANY, cid, found)
         return found
+
+    def _organization_by_domain(self, email):
+        """The organization whose domains include the address's (free-mail
+        domains never match), if the importing person may put people there
+        (``org_ops.can_touch()``, as invitations: the own and external
+        organizations only for admins)"""
+        org = org_ops.for_new_person(email)
+        if org is not None and not org_ops.can_touch(self.actor, org):
+            return None
+        return org
 
     def user_for_sgid(self, sgid):
         pid = self._people_by_sgid.get(sgid)

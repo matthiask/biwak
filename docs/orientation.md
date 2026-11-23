@@ -189,6 +189,12 @@ Staff manage organizations from the People page: clients' organizations
 and who belongs to them. Admins manage your own organization and
 externals' (organizations with staff): who belongs to them, inviting
 people into them, merging them and their email domains.
+An organization's email domains suggest it when somebody with such an
+address is invited. When an organization gets a new domain, the form
+asks once before saving whether the people without an organization who
+have an address there move into it too, all ticked (inactive people and
+people who left included); people you may not move (staff, unless
+you're an admin) are left out.
 
 **Marks:** everybody has a mark next to their name: their photo, or a
 small drawing (an ibex, a tent, a fox, …) in white on their color.

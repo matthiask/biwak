@@ -12,7 +12,8 @@ already says "Externe", so English follows: "externals" for the people,
 "Ada is external", the badge "external", "external organization", in
 the code, API and CLI too.
 
-**Status:** built (2026-11-21), `biwak/organizations/`.
+**Status:** built (2026-11-21), `biwak/organizations/`; new domains
+moving people without an organization along 2026-11-23.
 
 ## The model (decided 2026-11-21)
 
@@ -27,6 +28,30 @@ the code, API and CLI too.
   outlook.com, … a small list) can't be added and never match. With
   single sign-on the domains also decide whose sign-ins count, and only
   admins change them (`sso.md`).
+- **New domains ask about people without an organization** (decided by
+  the user 2026-11-23: after adding `feinheit.ch` to an organization,
+  many people who left with such addresses stayed without one, so own
+  staff showed as externals; domains were only used for invitations).
+  When an organization is created or gets a domain it didn't have, the
+  people **without an organization** whose address is at one of the new
+  domains (`org_ops.newcomers()`: inactive people and people who left
+  too; never people in another organization) are offered, once, before
+  saving: the form shows "4 people with addresses at feinheit.ch have
+  no organization. Move them to Feinheit too?" with each of them by
+  name and address, all ticked; unticked, they stay without one. Moving
+  is `set_organization()` with its checks: the people the actor may not
+  move (staff for others than admins, anybody into the own or an
+  external organization for others than admins, an admin into another
+  than the own) aren't offered, the question says so ("Left out: Finn
+  Example." and the reason); with nobody to offer it saves without
+  asking. The form remembers whom it asked (`offered`); when the domains
+  change in between and others would be offered, it asks again, the new
+  ones ticked, those unticked staying so. The operations take `move=`
+  (`create_organization()`, `update_organization()`) and refuse anybody
+  else (`ValidationError`) or anybody the actor may not move
+  (`PermissionError`). The API asks with a 400 listing them with their
+  IDs until `move_ids` says whom (`[]` for nobody), like merge's
+  `confirm`; the CLI's `--move ID` and `--move-nobody`.
 - **Everyone can belong to one:** clients, staff, externals; clients of
   any number of organizations per project.
 - **No organization is an individual:** staff without one (freelancers)
@@ -196,18 +221,22 @@ manage none (`access.md`).
 - **API** (`biwak/organizations/api.py`), own staff only, with the
   pages' rules: `GET|POST /api/v1/organizations/`, `GET|PATCH|DELETE
   /api/v1/organizations/{id}/` (with its people and the read-only sign-in
-  setting), `POST /api/v1/organizations/{id}/merge/` (`into_id`,
+  setting; `move_ids` for people without an organization at new domains,
+  above), `POST /api/v1/organizations/{id}/merge/` (`into_id`,
   `confirm`, `sso.md`), `PUT /api/v1/people/{id}/organization/`
   (`organization_id`, null for none). People carry `organization` (the
   name) and `organization_id`; invitations take `organization_id` or an
   existing `organization` by name (400 for an unknown one: create it
   first), else the address's domain decides.
-- **CLI:** `biwak orgs [show|create|update|merge|delete|move]`, `biwak members
+- **CLI:** `biwak orgs [show|create|update|merge|delete|move]` (`create`
+  and `update` with `--move ID`, `--move-nobody`), `biwak members
   invite … --organization NAME | --organization-id ID`; `biwak members`
   shows the organization.
 - **The importer** (`biwak/importer/importer.py`): Basecamp's companies
   become organizations by name (ignoring case and spaces); clients and
   collaborators (staff who aren't Basecamp employees) get theirs, which
   makes collaborators externals; employees the own organization. The dry
-  run says "external" and the company. It assigns and mentions as in
+  run says "external" and the company. Clients and collaborators without
+  a company get the organization of their address's domain, as
+  invitations do (decided by the user 2026-11-23, `import-basecamp.md`). It assigns and mentions as in
   Basecamp, also for a creator who's an external now.

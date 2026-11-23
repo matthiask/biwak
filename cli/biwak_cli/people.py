@@ -306,16 +306,44 @@ def orgs_show(org, as_json):
     return None
 
 
+def move_options(function):
+    """Who moves along when an organization gets new domains"""
+    function = click.option(
+        "--move-nobody",
+        is_flag=True,
+        help="Nobody without an organization moves along.",
+    )(function)
+    return click.option(
+        "--move",
+        "move",
+        multiple=True,
+        type=int,
+        help="The ID of a person without an organization with an address at"
+        " a new domain who moves into it, repeatable.",
+    )(function)
+
+
+def with_move(payload, move, move_nobody):
+    if move or move_nobody:
+        payload["move_ids"] = list(move)
+    return payload
+
+
 @orgs.command("create")
 @click.argument("name")
 @click.option(
     "--domain", "domains", multiple=True, help="e.g. example.org, repeatable."
 )
+@move_options
 @json_option
-def orgs_add(name, domains, as_json):
-    """Create an organization"""
+def orgs_add(name, domains, move, move_nobody, as_json):
+    """Create an organization. When people without an organization have
+    addresses at its domains, it asks first: repeat with --move ID for
+    each who moves along, or --move-nobody."""
     data = request(
-        "POST", "organizations/", json={"name": name, "domains": list(domains)}
+        "POST",
+        "organizations/",
+        json=with_move({"name": name, "domains": list(domains)}, move, move_nobody),
     )
     if as_json:
         return echo_json(data)
@@ -334,15 +362,23 @@ def orgs_add(name, domains, as_json):
     help="Replaces the domains, repeatable.",
 )
 @click.option("--no-domains", is_flag=True, help="Remove all domains.")
+@move_options
 @json_option
-def orgs_edit(org, name, domains, no_domains, as_json):
-    """Rename the organization with ID ORG or replace its domains"""
+def orgs_edit(org, name, domains, no_domains, move, move_nobody, as_json):
+    """Rename the organization with ID ORG or replace its domains. When
+    people without an organization have addresses at a new domain, it asks
+    first: repeat with --move ID for each who moves along, or
+    --move-nobody."""
     payload = {}
     if name is not None:
         payload["name"] = name
     if domains or no_domains:
         payload["domains"] = list(domains)
-    data = request("PATCH", f"organizations/{org}/", json=payload)
+    data = request(
+        "PATCH",
+        f"organizations/{org}/",
+        json=with_move(payload, move, move_nobody),
+    )
     if as_json:
         return echo_json(data)
     show_org(data)

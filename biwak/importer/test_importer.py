@@ -1267,6 +1267,65 @@ class PeopleTest(ImportCase):
         self.assertIsNone(gus.organization)
         self.assertTrue(gus.is_external)
 
+    def test_without_a_company_the_domain_decides(self):
+        """As for invitations (decided 2026-11-23): people removed from
+        Basecamp have no company; free-mail domains never match, a company
+        keeps deciding"""
+        own = organization("Example Team", is_own=True, domains=["team.example"])
+        client_org = organization("Example Shop", domains=["shop.example"])
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people.extend([
+            support.person(6, "Gus Example", "gus@team.example") | {"employee": False},
+            support.person(7, "Hal Example", "hal@shop.example", client=True),
+            support.person(8, "Ivy Example", "ivy@gmail.com", client=True),
+            support.person(
+                9,
+                "Jo Example",
+                "jo@shop.example",
+                client=True,
+                company={"id": 12, "name": "Example Market"},
+            ),
+        ])
+        report = self.run_import(dry_run=True)
+        self.assertIn(
+            "Gus Example <gus@team.example> (staff, Example Team by the address)",
+            report.people,
+        )
+        self.assertIn(
+            "Hal Example <hal@shop.example> (client, Example Shop by the address)",
+            report.people,
+        )
+        self.assertIn("Ivy Example <ivy@gmail.com> (client)", report.people)
+        self.assertIn(
+            "Jo Example <jo@shop.example> (client, Example Market)", report.people
+        )
+        self.run_import()
+        gus = User.objects.get(email="gus@team.example")
+        self.assertEqual(gus.organization, own)
+        self.assertFalse(gus.is_external)
+        self.assertFalse(gus.is_active)  # Waits to be activated, as before
+        self.assertEqual(
+            User.objects.get(email="hal@shop.example").organization, client_org
+        )
+        self.assertIsNone(User.objects.get(email="ivy@gmail.com").organization)
+        self.assertEqual(
+            User.objects.get(email="jo@shop.example").organization.name,
+            "Example Market",
+        )
+
+    def test_the_domain_gives_the_own_organization_only_for_admins(self):
+        self.ada.is_admin = False
+        self.ada.save()
+        organization("Example Team", is_own=True, domains=["team.example"])
+        people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
+        people.append(
+            support.person(6, "Gus Example", "gus@team.example") | {"employee": False}
+        )
+        report = self.run_import(dry_run=True)
+        self.assertIn("Gus Example <gus@team.example> (external)", report.people)
+        self.run_import()
+        self.assertIsNone(User.objects.get(email="gus@team.example").organization)
+
     def test_own_staff_gone_from_basecamp_stay_inactive(self):
         tombstone = support.BOB | {"personable_type": "Tombstone"}
         people = self.client_.data[f"/projects/{support.PROJECT}/people.json"]
