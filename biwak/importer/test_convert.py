@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from biwak.importer.convert import Resolver, to_markdown
+from biwak.importer.convert import Resolver, plain_to_markdown, to_markdown
 
 
 class Known(Resolver):
@@ -90,3 +90,25 @@ class ConvertTest(SimpleTestCase):
 
     def test_no_html_survives(self):
         self.assertEqual(to_markdown("<script>alert(1)</script><span>x</span>"), "x")
+
+
+class PlainTest(SimpleTestCase):
+    """A forwarded mail's text: plain lines with autolinks"""
+
+    def test_lines_stay(self):
+        html = (
+            'Hi Ada\n\nSee\n<a href="https://example.org">https://example.org</a>'
+            ' &lt;<a href="mailto:bob@example.org">bob@example.org</a>&gt;\n\n\n\n'
+            "&gt; Quoted\n"
+            '<bc-attachment sgid="IMG"><figure><img src="x">'
+            "<figcaption>a.png</figcaption></figure></bc-attachment>"
+            '<bc-attachment sgid="GONE"></bc-attachment>'
+        )
+        self.assertEqual(
+            plain_to_markdown(html, Known()),
+            "Hi Ada\n\nSee\nhttps://example.org <bob@example.org>\n\n"
+            "> Quoted\n\n![a.png](attachment:abc)",
+        )
+
+    def test_empty(self):
+        self.assertEqual(plain_to_markdown(""), "")

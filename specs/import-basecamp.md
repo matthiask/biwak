@@ -3,7 +3,7 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23. Not built: `--lazy-files` (fetching
+**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23. Not built: `--lazy-files` (fetching
 old attachments when first opened), other people's bookmarks (the API
 only gives the token owner's).
 
@@ -82,7 +82,7 @@ goes into internal containers, archived recordings skipped.
   columns' `cards_count`; `/questionnaires/ID.json`: `questions_count`),
   e.g. "Camp kitchen, Card table "Planning": 12 cards". A tool that can't
   be checked is a problem in the report. Tools never imported (schedule,
-  chat, forwards, …) are ignored, on or off.
+  chat, …) are ignored, on or off.
 - **Files over the upload limit** (100 MB, `files.models.MAX_SIZE`;
   decided 2026-11-22: really large files belong elsewhere) aren't
   imported: the report lists each with its size, where it would have
@@ -201,7 +201,8 @@ neither `suspend` nor `resources` yet.
 | Comment | Comment |
 | Client visibility | Visible to clients on the container or item |
 | Subscriptions, bookmarks | Subscriptions (who can see it), bookmarks |
-| Schedule, chat, pings, forwards, wormholes | Not imported |
+| Email forwards, forward | Message (see below) |
+| Schedule, chat, pings, wormholes | Not imported |
 
 ## Rules
 
@@ -293,6 +294,21 @@ neither `suspend` nor `resources` yet.
   date. Imported **paused**, so Biwak doesn't start mailing people
   unasked. Occurrences come from the
   answers' `group_on`.
+- **Email forwards** (decided 2026-11-23 by the user): each forward
+  becomes an internal message (also when a client forwarded it) in the
+  category "Email forwards" with 📨, created when missing like the
+  others. By the forwarder, with the line about the original sender above
+  the text as when filing a forwarded mail (`forwarding.md`: "Forwarded
+  from <ada@example.org>, 3 Dec 2026"; Basecamp gives only the sender's
+  address, the date is the forward's), in the forwarder's language. The
+  text is the mail's plain lines (Basecamp keeps them with autolinks,
+  `convert.plain_to_markdown()`), files as in other texts; replies become
+  comments. The API wants the bucket in the path here
+  (`/buckets/ID/inboxes/ID/forwards.json`,
+  `/buckets/ID/inbox_forwards/ID/replies.json`; without it 404, checked
+  2026-11-23). Archived forwards can't be found: the recordings' listing
+  refuses the type, the forwards' listing ignores `status=archived`
+  (both checked 2026-11-23).
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
   come in completed at the recording's `updated_at`, by the importing
   person unless Basecamp names who completed it, with their comments;
