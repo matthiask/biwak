@@ -114,6 +114,15 @@ goes into internal containers, archived recordings skipped.
   anyway. The report counts files downloaded and from the cache ("Files:
   3 downloaded, 12 from the cache"), and those answered without a
   redirect. A dry run downloads nothing.
+- **Few queries** (decided 2026-11-23: the import may run locally
+  against production through an SSH tunnel, ~6 ms per query): the
+  mappings of a listing's records (`ImportedObject`) are read with one
+  query per listing and kept for the project (`Importer._preload()`,
+  `_remember()` keeps them up to date), not per Basecamp type for the
+  whole account: what was moved to another project in Biwak is still
+  found. Everybody (by ID and address) and the people's mappings are
+  read once per run. The objects themselves are still read each time.
+  `QueriesTest` keeps the first run's count from creeping back.
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
   subscribers (on later runs only for changed ones), so big accounts take

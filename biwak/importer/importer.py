@@ -288,6 +288,10 @@ def tool_contents(name, rec):
     return ", ".join(_amount(*amount) for amount in amounts if amount[0])
 
 
+# Not looked up yet (``Importer._mappings``)
+UNKNOWN = object()
+
+
 class Importer(Resolver):
     def __init__(
         self,
@@ -325,6 +329,11 @@ class Importer(Resolver):
         self.report = Report(dry_run=dry_run)
         self.report.files = client.file_counts
         self._users = {}  # Basecamp person ID: User, or None
+        # (Basecamp type, ID): ``ImportedObject``, None when not imported
+        # (``_preload()``); for one project at a time, people's for the run
+        self._mappings = {}
+        # ({ID: User}, {address in upper case: User}), read once (``_people()``)
+        self._everybody = None
         self._persons = {}  # Basecamp person ID: the person's record
         # The IDs of the account's people (``/people.json``), read once
         self._account_people = None
@@ -382,29 +391,71 @@ class Importer(Resolver):
         deleted since)"""
         return self._mapping(bc_type, bc_id)[1]
 
+    def _preload(self, bc_type, records):
+        """The mappings of a listing's records, with one query instead of
+        one per record (decided 2026-11-23: the import may run against
+        production through a tunnel). Kept in ``_mappings`` for the
+        project: None for what wasn't imported, ``_remember()`` keeps it
+        up to date."""
+        ids = {
+            rec["id"] for rec in records if (bc_type, rec["id"]) not in self._mappings
+        }
+        if not ids:
+            return
+        self._mappings |= dict.fromkeys(((bc_type, bc_id) for bc_id in ids), None)
+        for mapped in ImportedObject.objects.filter(
+            basecamp_type=bc_type, basecamp_id__in=ids
+        ):
+            self._mappings[bc_type, mapped.basecamp_id] = mapped
+
+    def _forget_mappings(self):
+        """Before the next project: only the people's are kept"""
+        self._mappings = {
+            key: mapped for key, mapped in self._mappings.items() if key[0] == PERSON
+        }
+
     def _mapping(self, bc_type, bc_id):
-        """(``ImportedObject``, its Biwak object), or (None, None)"""
-        mapped = ImportedObject.objects.filter(
-            basecamp_type=bc_type, basecamp_id=bc_id
-        ).first()
+        """(``ImportedObject``, its Biwak object), or (None, None). The
+        object is read from the database each time, the mapping only once
+        per project."""
+        key = (bc_type, bc_id)
+        if key in self._mappings:
+            mapped = self._mappings[key]
+        else:
+            mapped = self._mappings[key] = ImportedObject.objects.filter(
+                basecamp_type=bc_type, basecamp_id=bc_id
+            ).first()
         if mapped is None:
             return None, None
-        target = mapped.target
+        model = ContentType.objects.get_for_id(mapped.content_type_id).model_class()
+        target = model._base_manager.filter(pk=mapped.object_id).first()
         if target is None:
             mapped.delete()
+            self._mappings[key] = None
             return None, None
         return mapped, target
 
     def _remember(self, bc_type, bc_id, obj):
-        ImportedObject.objects.update_or_create(
-            basecamp_type=bc_type,
-            basecamp_id=bc_id,
-            defaults={
-                "content_type": ContentType.objects.get_for_model(obj),
-                "object_id": obj.pk,
-                "imported_at": timezone.now(),
-            },
-        )
+        key = (bc_type, bc_id)
+        fields = {
+            "content_type": ContentType.objects.get_for_model(obj),
+            "object_id": obj.pk,
+            "imported_at": timezone.now(),
+        }
+        mapped = self._mappings.get(key, UNKNOWN)
+        if mapped is UNKNOWN:
+            mapped, _created = ImportedObject.objects.update_or_create(
+                basecamp_type=bc_type, basecamp_id=bc_id, defaults=fields
+            )
+        elif mapped is None:
+            mapped = ImportedObject.objects.create(
+                basecamp_type=bc_type, basecamp_id=bc_id, **fields
+            )
+        else:
+            for name, value in fields.items():
+                setattr(mapped, name, value)
+            mapped.save(update_fields=list(fields))
+        self._mappings[key] = mapped
 
     def _upsert(self, bc_type, rec, *, create, update=None, follow=False):
         """Creates the Biwak object of the recording or updates the one
@@ -447,12 +498,16 @@ class Importer(Resolver):
         """Stores the state of the recording, read completely now"""
         if self.dry:
             return
+        state = {
+            "basecamp_updated_at": parse_time(rec.get("updated_at")),
+            "basecamp_comments_count": comment_count(rec),
+        }
         ImportedObject.objects.filter(
             basecamp_type=bc_type, basecamp_id=rec["id"]
-        ).update(
-            basecamp_updated_at=parse_time(rec.get("updated_at")),
-            basecamp_comments_count=comment_count(rec),
-        )
+        ).update(**state)
+        if mapped := self._mappings.get((bc_type, rec["id"])):
+            for name, value in state.items():
+                setattr(mapped, name, value)
 
     def _follow(self, bc_type, rec, item, *, comments=True, subscriptions=True):
         """The comments and subscribers of a recording (two requests), not
@@ -484,7 +539,7 @@ class Importer(Resolver):
         if pid in self._users:
             return self._users[pid]
         self._persons[pid] = person
-        user = self._find(PERSON, pid)
+        user = self._known_person(pid)
         if user is None:
             user = self._match_or_create(person)
             if user is not None and not self.dry:
@@ -508,7 +563,7 @@ class Importer(Resolver):
                 " imported as a placeholder, the token needs an administrator"
             )
             email = f"basecamp-{person['id']}@import.invalid"
-        user = User.objects.filter(email__iexact=email).first()
+        user = self._people()[1].get(email.upper())
         if user is not None:
             return user
         client = bool(person.get("client"))
@@ -529,13 +584,45 @@ class Importer(Resolver):
             organization = self._organization(person.get("company") or {})
         else:
             organization = Organization.objects.own()
-        return User.objects.create_user(
+        user = User.objects.create_user(
             email,
             full_name=name,
             is_client=client,
             organization=organization,
             is_active=active,
         )
+        by_pk, by_email = self._people()
+        by_pk[user.pk] = user
+        by_email.setdefault(user.email.upper(), user)
+        return user
+
+    def _people(self):
+        """Everybody, by ID and by address (``iexact`` compares in upper
+        case; the first by ID when two differ only in case), and the
+        mapping of the Basecamp people imported before: read once per run
+        (decided 2026-11-23), instead of a few queries per person"""
+        if self._everybody is None:
+            by_pk, by_email = {}, {}
+            for user in User.objects.order_by("pk"):
+                by_pk[user.pk] = user
+                by_email.setdefault(user.email.upper(), user)
+            self._everybody = by_pk, by_email
+            for mapped in ImportedObject.objects.filter(basecamp_type=PERSON):
+                self._mappings[PERSON, mapped.basecamp_id] = mapped
+        return self._everybody
+
+    def _known_person(self, pid):
+        """The Biwak person a Basecamp person was imported as, or None"""
+        by_pk = self._people()[0]
+        mapped = self._mappings.setdefault((PERSON, pid), None)
+        if mapped is None:
+            return None
+        user = by_pk.get(mapped.object_id)
+        if user is None:
+            # Deleted since
+            mapped.delete()
+            self._mappings[PERSON, pid] = None
+        return user
 
     def _active_in_basecamp(self, person):
         """Still among the account's people, not a removed one's tombstone"""
@@ -778,6 +865,7 @@ class Importer(Resolver):
         if self._started is None:
             self._started = self._clock()
         self._items = 0
+        self._forget_mappings()
         rec = self.client.get(f"/projects/{project_id}.json")
         self._project_name = rec["name"]
         if int(project_id) in EXCLUDED:
@@ -838,6 +926,7 @@ class Importer(Resolver):
             if "dock" not in listed:
                 rec = self.client.get(f"/templates/{listed['id']}.json")
             self._items = 0
+            self._forget_mappings()
             self._project_name = rec["name"]
             self.say(f"Template [{number}/{len(templates)}] {rec['name']}")
             with importing():
@@ -859,6 +948,7 @@ class Importer(Resolver):
                 "updated_at": bucket.get("updated_at"),
             }
             self._items = 0
+            self._forget_mappings()
             self._project_name = rec["name"]
             self.say(f"The to-do list library ({len(library['todolists'])} lists)")
             with importing():
@@ -1131,6 +1221,7 @@ class Importer(Resolver):
             )
         except api.NotFound:
             return
+        self._preload("Comment", comments)
         for comment in comments:
             if self._skip(comment):
                 continue
@@ -1195,6 +1286,7 @@ class Importer(Resolver):
             lists += self.client.paginate(
                 f"/todosets/{todoset_id}/todolists.json", **status
             )
+        self._preload("Todolist", lists)
         for rec in sorted(lists, key=lambda r: r.get("position", 0)):
             self._todolist(rec, project)
 
@@ -1248,6 +1340,7 @@ class Importer(Resolver):
             groups = list(self.client.paginate(f"/todolists/{rec['id']}/groups.json"))
         except api.NotFound:
             groups = []
+        self._preload(GROUP, groups)
         for group_rec in sorted(groups, key=lambda r: r.get("position", 0)):
             self._group(group_rec, item, visible, project, rec_type=GROUP)
 
@@ -1276,6 +1369,7 @@ class Importer(Resolver):
                 )
             except api.NotFound:
                 pass
+        self._preload("Todo", found)
         seen = set()
         for rec in found:
             if rec["id"] in seen:
@@ -1406,6 +1500,7 @@ class Importer(Resolver):
             self._stamp(item, rec)
         self._container, self._container_is_board = rec, True
         self._container_project = project
+        self._preload(COLUMN, rec.get("lists", []))
         for column in rec.get("lists", []):
             self._group(column, item, visible, project, rec_type=COLUMN, cards=True)
         self._follow("Kanban::Board", rec, item, comments=False)
@@ -1417,6 +1512,7 @@ class Importer(Resolver):
             )
         except api.NotFound:
             return
+        self._preload("Kanban::Card", cards)
         for rec in cards:
             self._todo(rec, item, group, parent_visible, project, "Kanban::Card")
 
@@ -1440,6 +1536,7 @@ class Importer(Resolver):
         messages = list(
             self.client.paginate(f"/message_boards/{board_id}/messages.json")
         )
+        self._preload("Message", messages)
         # Oldest first: the board lists newest first by creation
         for rec in sorted(messages, key=lambda r: r["created_at"]):
             self._message(rec, project)
@@ -1494,12 +1591,17 @@ class Importer(Resolver):
         self, vault_id, project, parent, *, parent_visible, nested, internal=None
     ):
         """The children of a vault: the root vault is the project's root"""
-        folders = self.client.paginate(f"/vaults/{vault_id}/vaults.json")
+        folders = list(self.client.paginate(f"/vaults/{vault_id}/vaults.json"))
+        self._preload("Vault", folders)
         for rec in sorted(folders, key=lambda r: r.get("position", 0)):
             self._folder(rec, project, parent, parent_visible, nested, internal)
-        for rec in self.client.paginate(f"/vaults/{vault_id}/documents.json"):
+        documents = list(self.client.paginate(f"/vaults/{vault_id}/documents.json"))
+        self._preload("Document", documents)
+        for rec in documents:
             self._document(rec, project, parent, parent_visible, nested, internal)
-        for rec in self.client.paginate(f"/vaults/{vault_id}/uploads.json"):
+        uploads = list(self.client.paginate(f"/vaults/{vault_id}/uploads.json"))
+        self._preload("Upload", uploads)
+        for rec in uploads:
             self._upload(rec, project, parent, parent_visible, nested, internal)
 
     def _folder(self, rec, project, parent, parent_visible, nested, internal):
@@ -1636,9 +1738,11 @@ class Importer(Resolver):
     # Check-ins ------------------------------------------------------------------------------------
 
     def _questionnaire(self, questionnaire_id, project):
-        for rec in self.client.paginate(
-            f"/questionnaires/{questionnaire_id}/questions.json"
-        ):
+        questions = list(
+            self.client.paginate(f"/questionnaires/{questionnaire_id}/questions.json")
+        )
+        self._preload("Question", questions)
+        for rec in questions:
             self._question(rec, project)
 
     def _question(self, rec, project):
@@ -1667,6 +1771,7 @@ class Importer(Resolver):
 
         item = self._upsert("Question", rec, create=create, follow=True)
         answers = list(self.client.paginate(f"/questions/{rec['id']}/answers.json"))
+        self._preload("Question::Answer", answers)
         if item is not None:
             self._stamp(item, rec)
         asked = []
@@ -1803,6 +1908,11 @@ class Importer(Resolver):
             bookmarks = list(self.client.paginate("/my/bookmarks.json"))
         except api.NotFound:
             return
+        recordings = defaultdict(list)
+        for bookmark in bookmarks:
+            recordings[bookmark["recording"]["type"]].append(bookmark["recording"])
+        for bc_type, listed in recordings.items():
+            self._preload(bc_type, listed)
         for bookmark in bookmarks:
             recording = bookmark["recording"]
             item = self._find(recording["type"], recording["id"])

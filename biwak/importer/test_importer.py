@@ -7,7 +7,9 @@ from unittest import mock
 
 from django.core import mail
 from django.core.management import CommandError, call_command
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from biwak.accounts.models import User
@@ -482,6 +484,20 @@ class NotifyNobodyTest(ImportCase):
         self.assertEqual(
             Comment.objects.get(content="Done by Friday.").author, self.bob
         )
+
+
+class QueriesTest(ImportCase):
+    """The import may run against production through a tunnel, where every
+    query counts (decided 2026-11-23): mappings and people are looked up
+    once, not per object"""
+
+    def test_the_first_run_stays_cheap(self):
+        # 1,680 before the caches. At most what it takes now, so lookups
+        # per object don't creep back; not assertNumQueries, which every
+        # change to the operations would break.
+        with CaptureQueriesContext(connection) as queries:
+            self.run_import()
+        self.assertLessEqual(len(queries.captured_queries), 1419)
 
 
 class SecondRunTest(ImportCase):
