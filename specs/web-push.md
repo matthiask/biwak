@@ -229,7 +229,9 @@ In this order, each step with its tests:
   page must say whether it worked. Only the test; everything else stays
   in `send_mails`. `push.send_test()` builds on `push.send()`, which
   sends one payload to one device (also what `deliver()` loops over),
-  `TTL` and `TIMEOUT` as for every push. Content: title "Biwak", body
+  `TIMEOUT` as for every push, but a `TTL` of a minute (`TEST_TTL`,
+  decided 2026-11-23: a late "it works" says nothing, an offline
+  device shouldn't get it hours later). Content: title "Biwak", body
   "Push notifications work on this device." (German
   "Push-Benachrichtigungen funktionieren auf diesem Gerät."), `url` the
   settings' devices section, `tag` `biwak-test` (never replacing an
@@ -242,13 +244,14 @@ In this order, each step with its tests:
   couldn't be sent." (no answer), "… the server's push key is broken."
   (the private key doesn't parse); a 404 or 410 removes the device like
   a real push and says "This device's subscription had expired and was
-  removed. Turn push notifications on again on it." No rate limit (not
-  decided: it only reaches one's own devices). API: `POST
+  removed. Turn push notifications on again on it." No rate limit
+  (decided 2026-11-23: it only reaches one's own devices). API: `POST
   /api/v1/me/push-subscriptions/{id}/test/` (write tokens; 404 for
   others' devices and without the keys) answers `sent`, `removed` and
   `detail` (the message), 200 whatever the push service said. CLI:
   `biwak devices` (the list), `biwak devices test ID` (exits 1 when it
-  wasn't sent), in `cli/biwak_cli/notifications.py`.
+  wasn't sent), `biwak devices delete ID` (the API's `DELETE`, decided
+  2026-11-23), in `cli/biwak_cli/notifications.py`.
 - **The service worker** is `frontend/sw.js` as it is, served by Django
   at `/sw.js` (public, `no-cache`), registered at the click. A push's
   JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap

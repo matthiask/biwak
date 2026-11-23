@@ -126,6 +126,8 @@ only with "No mails".
   your quiet hours or while you're away; the page says whether it went
   out. If the device's subscription has expired, it's removed: turn
   notifications on again on it.
+  A device that's offline doesn't get it later: the test is dropped
+  after a minute.
 - Signing out on a device ends its notifications ("Push notifications on
   this device are off."); turn them on again after signing in.
 - To stop them on a device where you aren't signed in: "Turn off on this

@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 # How long a push service keeps a push for a device which is offline
 # (decided 2026-11-22); a push not delivered meanwhile is dropped
 TTL = dt.timedelta(hours=12)
+# The test push: a late "it works" says nothing (decided 2026-11-23)
+TEST_TTL = dt.timedelta(minutes=1)
 # One request to a push service
 TIMEOUT = 10
 
@@ -281,7 +283,7 @@ def deliver(user, payload, key):
 SENT, GONE, FAILED = "sent", "gone", "failed"
 
 
-def send(subscription, payload, key):
+def send(subscription, payload, key, *, ttl=TTL):
     """Sends the payload to one device; returns the outcome and the push
     service's HTTP status (None when there's none): ``SENT`` (its
     ``last_success_at`` updated), ``GONE`` (a 404 or 410: the browser
@@ -295,7 +297,7 @@ def send(subscription, payload, key):
             vapid_private_key=key,
             # webpush() adds to the claims: a new dict each time
             vapid_claims={"sub": settings.WEBPUSH_SUBJECT},
-            ttl=int(TTL.total_seconds()),
+            ttl=int(ttl.total_seconds()),
             timeout=TIMEOUT,
         )
     except WebPushException as exc:
@@ -356,7 +358,7 @@ def send_test(subscription):
         )
     with translation.override(language_for(subscription.user)):
         payload = _test_payload()
-    outcome, status = send(subscription, payload, key)
+    outcome, status = send(subscription, payload, key, ttl=TEST_TTL)
     if outcome == SENT:
         message = gettext("Sent. It should show up in a few seconds.")
     elif outcome == GONE:

@@ -151,6 +151,19 @@ def devices_test(device, as_json):
         raise SystemExit(1)
 
 
+@devices.command("delete")
+@click.argument("device", type=int)
+@json_option
+def devices_delete(device, as_json):
+    """Stop pushing to DEVICE (the browser keeps its subscription, unused,
+    until it's turned off there)"""
+    data = request("DELETE", f"me/push-subscriptions/{device}/")
+    if as_json:
+        return echo_json(data)
+    click.echo(f"Removed {data['name']} ({data['id']}).")
+    return None
+
+
 # Notifications --------------------------------------------------------------
 
 

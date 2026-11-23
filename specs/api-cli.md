@@ -79,7 +79,7 @@ decided 2026-11-22 (`cli-style.md`):
   `checkins answer|due|pause|resume|mail`, `members add|invite|remove`,
   `projects join`, `orgs merge|move`, `people
   activate|deactivate|reset-sign-in`, `invitations resend|withdraw`,
-  `forwarded file`, `devices test`).
+  `forwarded file`, `devices test|delete`).
 - **Actions on any item** go to the group of what they make:
   `subscriptions add|remove ITEM`, `public-links create|delete ITEM`,
   `reactions create ITEM`, `bookmarks create|delete`, `items move ITEM`.
