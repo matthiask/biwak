@@ -276,6 +276,27 @@ class APITest(Base):
         response = self.api("delete", path, self.cleo, {"content": "🎉"})
         self.assertEqual(response.json(), [])
 
+    def test_the_todo_lists_its_completions(self):
+        self.api(
+            "post", f"events/{self.event.pk}/reactions/", self.ada, {"content": "🎉"}
+        )
+        ops.reopen(self.todo, actor=self.bob)
+        data = self.api("get", f"todos/{self.todo.pk}/", self.cleo).json()
+        [completion] = data["completions"]
+        self.assertEqual(completion["id"], self.event.pk)
+        self.assertEqual(completion["completed_by"]["id"], self.bob.pk)
+        self.assertEqual(completion["reactions"][0]["content"], "🎉")
+        # Not in lists, and not those of the time clients didn't see it
+        listed = self.api("get", f"lists/{self.shared.pk}/todos/", self.ada).json()
+        self.assertNotIn("completions", listed[0])
+        ops.set_visibility(self.shared, visible=False, actor=self.ada)
+        self.complete()
+        ops.set_visibility(self.shared, visible=True, actor=self.ada)
+        data = self.api("get", f"todos/{self.todo.pk}/", self.cleo).json()
+        self.assertEqual([c["id"] for c in data["completions"]], [self.event.pk])
+        data = self.api("get", f"todos/{self.todo.pk}/", self.ada).json()
+        self.assertEqual(len(data["completions"]), 2)
+
     def test_404(self):
         secret = self.complete(self.secret)
         path = f"events/{secret.pk}/reactions/"

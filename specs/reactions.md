@@ -108,5 +108,8 @@ messages, docs, files, answers and comments carry `reactions`
 (`{content, count, people, mine}`, loaded with
 `reactions.operations.prefetch()`), a to-do's own only. `biwak
 reactions create TODO CONTENT [--comment ID | --event ID]` toggles
-(CLI 0.67.0). The API has no timeline of a to-do: the `completed`
-events' IDs are the feed's (`biwak feed --action completed --json`).
+(CLI 0.67.0). A to-do's detail (`GET /api/v1/todos/{id}/`, not the
+lists) has `completions`: each `completed` event the reader may see,
+oldest first, with `id`, `completed_by`, `completed_at` and its
+`reactions`; `biwak todos show` prints them with the event's ID
+(decided 2026-11-23, CLI 0.68.0).

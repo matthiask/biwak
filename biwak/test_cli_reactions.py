@@ -73,6 +73,9 @@ class ReactionsCLITest(test_cli.CLITest):
         output = self.biwak(*args).output
         self.assertIn(f"Reacted with 🎉 on completing #{self.todo.pk}", output)
         self.assertEqual(Reaction.objects.get().event, event)
+        output = self.biwak("todos", "show", self.todo.pk).output
+        self.assertIn("Completed by Bob, ", output)
+        self.assertIn(f"(event {event.pk}): 🎉 1* (Ada)", output)
         self.assertIn("Removed your 🎉", self.biwak(*args).output)
         self.assertFalse(Reaction.objects.exists())
         result = self.biwak(*args, "--comment", self.comment.pk)

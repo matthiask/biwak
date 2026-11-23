@@ -17,6 +17,7 @@ from pydantic import StringConstraints
 from biwak import schedules
 from biwak.accounts.models import Color
 from biwak.activity.mentions import resolve as resolve_mentions
+from biwak.activity.models import Action, Event
 from biwak.activity.operations import (
     NOTE_LENGTH,
     StillAssigned,
@@ -808,9 +809,46 @@ def todos_move_selected(request, data: MoveSelectedIn):
     return [todo_out(found[todo.pk], request.user) for todo in todos]
 
 
-@router.get("todos/{todo_id}/", response=TodoOut)
+class CompletionOut(Schema):
+    id: int = Field(description="The event's ID, to react to it.")
+    completed_by: PersonOut | None
+    completed_at: dt.datetime
+    reactions: list[ReactionOut]
+
+
+class TodoDetailOut(TodoOut):
+    completions: list[CompletionOut] = Field(
+        description="Each time it was completed, oldest first, with the"
+        " reactions to it (specs/reactions.md); clients only those of the time"
+        " they saw it. Only here, not in lists."
+    )
+
+
+def completions_out(item, user):
+    events = (
+        Event.objects
+        .visible_to(user)
+        .filter(item=item, action=Action.COMPLETED)
+        .select_related("actor")
+        .order_by("created_at", "pk")
+    )
+    return [
+        {
+            "id": event.pk,
+            "completed_by": person_out(event.actor),
+            "completed_at": event.created_at,
+            "reactions": reactions_out(item, None, user, event),
+        }
+        for event in events
+    ]
+
+
+@router.get("todos/{todo_id}/", response=TodoDetailOut)
 def todo_detail(request, todo_id: int):
-    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
+    item = item_for(request, todo_id, Kind.TODO)
+    return todo_out(item, request.user) | {
+        "completions": completions_out(item, request.user)
+    }
 
 
 class TodoPatch(Schema):
