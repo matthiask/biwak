@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from biwak import links
+from biwak.bookmarks import links
 from biwak.items.models import Item
 from biwak.projects.models import Project
 
@@ -105,7 +105,7 @@ class Link(models.Model):
     )
     url = models.URLField(_("URL"), max_length=2000, validators=[validate_url])
     title = models.CharField(_("title"), max_length=200)
-    # From the URL's host (biwak/links.py)
+    # From the URL's host (biwak/bookmarks/links.py)
     kind = models.CharField(
         _("kind"),
         max_length=20,

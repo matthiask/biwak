@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 07:25+0100\n"
+"POT-Creation-Date: 2026-11-23 07:54+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1903,6 +1903,26 @@ msgstr "Sende die IDs aller Links in der neuen Reihenfolge."
 msgid "bookmarks and links"
 msgstr "Lesezeichen und Links"
 
+#: biwak/bookmarks/links.py
+msgid "Figma"
+msgstr "Figma"
+
+#: biwak/bookmarks/links.py
+msgid "GitHub"
+msgstr "GitHub"
+
+#: biwak/bookmarks/links.py
+msgid "GitLab"
+msgstr "GitLab"
+
+#: biwak/bookmarks/links.py
+msgid "Google Drive"
+msgstr "Google Drive"
+
+#: biwak/bookmarks/links.py biwak/bookmarks/models.py
+msgid "link"
+msgstr "Link"
+
 #: biwak/bookmarks/models.py
 msgid "bookmark"
 msgstr "Lesezeichen"
@@ -1930,10 +1950,6 @@ msgstr "Intern, ausser du schaltest es um."
 #: biwak/bookmarks/models.py biwak/items/models.py biwak/public_links/models.py
 msgid "created by"
 msgstr "erstellt von"
-
-#: biwak/bookmarks/models.py biwak/links.py
-msgid "link"
-msgstr "Link"
 
 #: biwak/bookmarks/models.py
 msgid "links"
@@ -3678,22 +3694,6 @@ msgstr "Anzeigen als"
 #: biwak/items/views.py
 msgid "Edit the list"
 msgstr "Liste bearbeiten"
-
-#: biwak/links.py
-msgid "Figma"
-msgstr "Figma"
-
-#: biwak/links.py
-msgid "GitHub"
-msgstr "GitHub"
-
-#: biwak/links.py
-msgid "GitLab"
-msgstr "GitLab"
-
-#: biwak/links.py
-msgid "Google Drive"
-msgstr "Google Drive"
 
 #: biwak/organizations/activation.py
 #, python-format
