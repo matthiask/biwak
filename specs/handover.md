@@ -200,7 +200,11 @@ across projects, told once about dates, moving telling nobody.
   "This field is required." / "By how many days?" at the fields.
   `ops.date_todos(items, actor=, dates=, due_on=, days=)` calls
   `update_todo()` per to-do in one transaction (an `edited` event each,
-  merging as any edit; more than one share a `batch`, so a subscriber
+  merging as any edit, but with an edit outside the batch only when
+  that one changed nothing but fields the batch changed, so "changed
+  the dates" never hides a change of the notes or the title (decided
+  2026-11-23: it's the kind of edit that matters, `_mergeable()` in
+  `biwak/activity/operations.py`); more than one share a `batch`, so a subscriber
   is told once: one lantern entry and one mail, "Ada changed the dates
   of 23 to-dos.", the title "To-dos" linking `/todos/`, as "Assign…";
   `lantern.TODO_BATCHES`, `lantern.dated_line()`):

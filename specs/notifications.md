@@ -26,7 +26,10 @@ anything into another project; the feed and the history say it
 within 10 minutes of their last one updates that event's time instead of
 creating a new one, even when others' events came in between; a merged
 edit tells nobody again who was told already, except people mentioned in
-it for the first time.
+it for the first time. An edit of a batch ("Due date…" of several
+to-dos, `handover.md`) and one outside it merge only when the one
+outside changed nothing but fields the batch changed (decided
+2026-11-23).
 
 ## Subscriptions
 

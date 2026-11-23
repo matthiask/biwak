@@ -145,6 +145,50 @@ class DatedOnceTest(TestCase):
         self.assertNotIn("batch", Event.objects.get(action=Action.EDITED).data)
         self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
 
+    def edits(self, item):
+        return [
+            (e.data["fields"], e.data.get("batch"))
+            for e in Event.objects.filter(item=item, action=Action.EDITED).order_by(
+                "created_at", "pk"
+            )
+        ]
+
+    def test_an_edit_of_other_fields_before_stays_its_own(self):
+        """Notes edited, then "Due date…" within the editing session: the
+        notes change isn't folded into "changed the dates" (review
+        2026-11-23)"""
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, notes="Ask Cleo")
+        self.date(self.todos)
+        [(notes, first), (dated, batch)] = self.edits(self.todos[0])
+        self.assertEqual((notes, first), (["notes"], None))
+        self.assertEqual(dated, ["due_on"])
+        self.assertIsNotNone(batch)
+
+    def test_an_edit_of_other_fields_after_stays_its_own(self):
+        self.date(self.todos)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, title="Copy, finally")
+        [(dated, batch), (title, last)] = self.edits(self.todos[0])
+        self.assertEqual(dated, ["due_on"])
+        self.assertIsNotNone(batch)
+        self.assertEqual((title, last), (["title"], None))
+        _marks, entries, _read, _more = lantern.menu(self.bob)
+        self.assertEqual(len(entries), 2)
+
+    def test_edits_of_the_same_dates_merge(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, due_on=D(2026, 12, 1))
+        self.date(self.todos)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, due_on=D(2026, 12, 21))
+        [(fields, batch)] = self.edits(self.todos[0])
+        self.assertEqual(fields, ["due_on"])
+        self.assertIsNotNone(batch)
+        event = Event.objects.get(item=self.todos[0], action=Action.EDITED)
+        self.assertEqual(event.data["due_was"], None)
+        self.assertEqual(event.data["due_on"], "2026-12-21")
+
 
 class MoveAcrossTest(TestCase):
     """Moving to-dos to a list of another project (decided 2026-11-22)"""
