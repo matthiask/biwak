@@ -88,7 +88,9 @@ sie kennst.
 - **Biwak läuft auf dem eigenen Server deiner Organisation**, auf
   Deutsch und Englisch, gewählt pro Person.
 - **Basecamp-Projekte lassen sich importieren**, durch Admins, mit
-  ihren Personen, Kommentaren und Dateien.
+  ihren Personen, Kommentaren und Dateien. Personen bekommen die
+  Organisation ihrer Firma in Basecamp, ohne Firma die Organisation der
+  Domain ihrer Adresse.
 
 ## Was Biwak nicht tut
 

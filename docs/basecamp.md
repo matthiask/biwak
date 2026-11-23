@@ -83,7 +83,9 @@ and public links all work much as you know them.
 - **Biwak runs on your organization's own server**, in English and
   German, chosen per person.
 - **Basecamp projects can be imported** by an admin, with their
-  people, comments and files.
+  people, comments and files. People get the organization of their
+  Basecamp company; without one, the organization of their address's
+  domain.
 
 ## What Biwak doesn't do
 

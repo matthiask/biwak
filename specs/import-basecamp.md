@@ -3,7 +3,7 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23. Not built: `--lazy-files` (fetching
+**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23, organizations by domain 2026-11-23. Not built: `--lazy-files` (fetching
 old attachments when first opened), other people's bookmarks (the API
 only gives the token owner's).
 
@@ -302,6 +302,18 @@ same way.
   create the company again); its collaborators are externals without
   one. **Merging organizations** moves the mapping to the organization
   merged into (`organizations.operations.merge()`), so a merge sticks.
+  **Without a company the domain decides** (decided by the user
+  2026-11-23: people removed from Basecamp have no company, so staff of
+  the own organization's domain who left were imported as individual
+  externals): a new client or collaborator without a company gets the
+  organization whose domains include the address's, as invitations do
+  (`org_ops.for_new_person()`; free-mail domains never match; the own
+  and external organizations only when an admin imports,
+  `org_ops.can_touch()`). A collaborator who gets the own organization
+  so is own staff, still inactive like collaborators (waiting to be
+  activated). The dry run says so after the kind: "Gus Example
+  <gus@team.example> (staff, Example Team by the address)". People with
+  a company (also the own company's collaborators) keep the rule above.
 - **People who left** (decided 2026-11-22, `activation.md`): the
   account's people (`/people.json`) are read once per run, also when
   later runs skip unchanged recordings; inactive people who turn up in a

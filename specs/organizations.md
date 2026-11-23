@@ -209,5 +209,7 @@ manage none (`access.md`).
   become organizations by name (ignoring case and spaces); clients and
   collaborators (staff who aren't Basecamp employees) get theirs, which
   makes collaborators externals; employees the own organization. The dry
-  run says "external" and the company. It assigns and mentions as in
+  run says "external" and the company. Clients and collaborators without
+  a company get the organization of their address's domain, as
+  invitations do (decided by the user 2026-11-23, `import-basecamp.md`). It assigns and mentions as in
   Basecamp, also for a creator who's an external now.
