@@ -192,7 +192,9 @@ def folder_new(request, pk):
     parent = folder_param(request, project)
     if not ops.can_create(request.user, Kind.FOLDER):
         raise PermissionDenied
-    form = (FolderForm if parent else NewFolderForm)(request.POST or None)
+    # At the top level, in projects with clients (decided 2026-11-23)
+    switch = parent is None and project.offers_client_switch()
+    form = (NewFolderForm if switch else FolderForm)(request.POST or None)
     if form.is_valid():
         item = ops.create_folder(
             project=project,
@@ -522,7 +524,7 @@ class UploadSettingsForm(NotifyForm, Form):
     def __init__(self, *args, folder=None, **kwargs):
         super().__init__(*args, folder=folder, **kwargs)
         if folder is not None:
-            del self.fields["visible"]
+            self.fields.pop("visible", None)
 
 
 class UploadFilesForm(UploadSettingsForm):

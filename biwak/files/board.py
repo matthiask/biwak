@@ -105,7 +105,7 @@ class MessageForm(NotifyForm, MessageEditForm):
         super().__init__(*args, user=user, **kwargs)
         if user.is_client:
             # What clients create is visible to clients (specs/access.md)
-            del self.fields["visible"]
+            self.fields.pop("visible", None)
 
 
 def message_new(request, pk):

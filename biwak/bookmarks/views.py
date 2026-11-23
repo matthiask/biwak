@@ -91,6 +91,9 @@ def project_link_new(request, pk):
     project = project_for(request, pk)
     staff_only(request)
     form = LinkForm(request.POST or None)
+    if not project.offers_client_switch():
+        # No clients, no switch (decided 2026-11-23, specs/access.md)
+        del form.fields["visible_to_clients"]
     if form.is_valid():
         data = form.cleaned_data
         try:
@@ -98,7 +101,7 @@ def project_link_new(request, pk):
                 project=project,
                 url=data["url"],
                 title=data["title"],
-                visible=data["visible_to_clients"],
+                visible=data.get("visible_to_clients", False),
                 created_by=request.user,
             )
         except ValidationError as exc:

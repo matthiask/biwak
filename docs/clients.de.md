@@ -28,8 +28,11 @@ intern, bis es gezeigt wird: lieber einmal zu wenig zeigen.
 
 - Der Schalter ist im Menü **Mehr** des Eintrags (Mitarbeitende) und im
   Menü „…“ der Kacheln in „Dokumente & Dateien“. Wenn du eine Liste,
-  einen Ordner, eine Mitteilung, ein Dokument, eine Datei oder einen
-  Check-in erstellst, kannst du sie gleich sichtbar machen.
+  einen Ordner, eine Mitteilung, eine Datei oder einen Check-in in einem
+  Projekt mit Kund:innen erstellst (auch eingeladenen), kannst du sie
+  gleich sichtbar machen; Projekte ohne Kund:innen fragen nicht danach.
+  Um vorzubereiten, was Kund:innen sehen werden, bevor du sie einlädst,
+  nimm „Kund:innen zeigen…“.
 - **Kund:innen zeigen…** fragt vorher und sagt, was sich ändert („Macht
   diese Liste, 12 To-dos und 34 Kommentare für 3 Kund:innen sichtbar.“).
   Verbergen ist ein Klick („Vor Kund:innen verbergen“) und verbirgt den

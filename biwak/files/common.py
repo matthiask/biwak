@@ -85,6 +85,9 @@ class NotifyForm(Form):
 
     def __init__(self, *args, project, user, folder=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if "visible" in self.fields and not project.offers_client_switch():
+            # No clients, no switch (decided 2026-11-23, specs/access.md)
+            del self.fields["visible"]
         field = self.fields["also"]
         seeing = people_who_see(project, visible=True).filter(
             memberships__project=project

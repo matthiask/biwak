@@ -155,6 +155,18 @@ on the hot path.
   `check_visibility` does the same on real data, daily in `fairy_tasks`,
   mailing admins on any difference.
 
+## No clients, no switch
+
+Decided with the user 2026-11-23: the forms creating things (a list, a
+folder, a message, uploading files, a check-in, a project link) offer
+"Visible to clients" only in projects with a client member, invited
+ones included, and in templates, whose visibility is copied
+(`Project.offers_client_switch()`). Without it, what's created is
+internal. "Show to clients…" in the "More" menu, the tiles' menu and the
+palette stays everywhere: staff prepare what a client will see before
+inviting them. The API and CLI keep their `visible` options. Tests:
+`biwak/projects/test_client_switch.py`.
+
 ## Making it obvious
 
 Like Basecamp's bright yellow:

@@ -162,6 +162,15 @@ class Project(models.Model):
     def is_member(self, user):
         return self.memberships.filter(user=user).exists()
 
+    def offers_client_switch(self):
+        """Whether the forms creating things offer "Visible to clients"
+        (decided 2026-11-23, specs/access.md): in projects with clients,
+        invited ones too, and in templates, whose visibility is copied.
+        The "More" menu's "Show to clients…" stays everywhere."""
+        return (
+            self.is_template or self.memberships.filter(user__is_client=True).exists()
+        )
+
     def people_q(self):
         """``Q()`` for the project's people: its members and, in an
         all-access project, the own staff, who open it without being

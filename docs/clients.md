@@ -26,7 +26,10 @@ once.
 
 - The switch is in the item's **More** menu (staff), and in the "…"
   menu of tiles in "Docs and files". When you create a list, folder,
-  message, doc, file or check-in you can make it visible right away.
+  message, file or check-in in a project with clients (invited ones
+  too) you can make it visible right away; projects without clients
+  don't ask. To prepare what a client will see before inviting them, use
+  "Show to clients…".
 - **Show to clients…** asks first and says what changes ("Makes 12
   to-dos and 34 comments visible to 3 clients"). Hiding is one click
   ("Hide from clients") and hides the content again, with what clients

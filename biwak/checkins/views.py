@@ -85,7 +85,11 @@ class QuestionForm(RuleFormMixin, Form):
                 Q(memberships__project=project) | Q(pk__in=asked.values("pk"))
             ).distinct()
         field = self.fields["people"]
-        if item is None:
+        if item is None and not project.offers_client_switch():
+            # No clients, no switch (decided 2026-11-23, specs/access.md)
+            del self.fields["visible"]
+            visible = False
+        elif item is None:
             # Clients are offered while "Visible to clients" is ticked
             # (frontend/told.js, like "Also tell…"); the teams add them then
             field.widget.attrs["data-clients-follow"] = "#id_visible"
@@ -193,7 +197,7 @@ def question_new(request, pk):
             starts_on=data["starts_on"],
             time_of_day=data["time_of_day"],
             people=list(data["people"]),
-            visible=data["visible"],
+            visible=data.get("visible", False),
         )
         return redirect(item)
     return render(

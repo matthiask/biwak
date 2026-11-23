@@ -629,12 +629,15 @@ def list_new(request, pk):
     if not ops.can_create(request.user, Kind.LIST):
         raise PermissionDenied
     form = ListForm(request.POST or None)
+    if not project.offers_client_switch():
+        # No clients, no switch (decided 2026-11-23, specs/access.md)
+        del form.fields["visible"]
     if form.is_valid():
         item = ops.create_list(
             project=project,
             title=form.cleaned_data["title"],
             creator=request.user,
-            visible=form.cleaned_data["visible"],
+            visible=form.cleaned_data.get("visible", False),
         )
         return redirect(item)
     return form_response(
