@@ -29,8 +29,11 @@ coming in are `notifications.md`.
   attempt (the run stops, the row waits a minute).
 - **No double sends:** `deliver()` locks the row
   (`select_for_update(skip_locked)`), and an `Idempotency-Key`
-  (`<host>/outgoing-mail/<id>`: installations may share a Resend
-  account) makes Resend answer a repeat with the first mail's ID. Resend
+  (`<host>/outgoing-mail/<id>/<created>`: installations may share a
+  Resend account, and a recreated database starts at the same IDs again,
+  which Resend refuses for 24 hours when the body differs; the creation
+  time added 2026-11-23 after that happened) makes Resend answer a repeat
+  with the first mail's ID. Resend
   keeps keys 24 hours, **so nothing is tried after 24 hours**: such rows
   are given up. With other transports (SMTP) a crash between sending and
   our commit would send twice.
