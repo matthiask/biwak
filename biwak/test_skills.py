@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 
 SKILLS = settings.BASE_DIR / "cli" / "biwak_cli" / "skills"
-NAMES = ["biwak-from-mail", "biwak-triage", "biwak-weekly-summary"]
+NAMES = ["biwak-from-mail", "biwak-handover", "biwak-triage", "biwak-weekly-summary"]
 
 
 def biwak_commands(text):
@@ -60,7 +60,8 @@ class SkillTest(SimpleTestCase):
                             self.assertIn(word, options)
                             param = options[word]
                             if not param.is_flag:
-                                value = next(rest)  # Its value
+                                # Its value (none where prose names the option)
+                                value = next(rest, "<value>")
                                 if isinstance(param.type, click.Choice) and not (
                                     value.startswith("<")
                                 ):
