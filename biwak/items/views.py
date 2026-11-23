@@ -499,7 +499,8 @@ def todos_move(request, pk):
     a ``group`` (empty: ungrouped), next to each other at ``index`` among
     the others there; ``todos`` in their new order"""
     target = item_for(request, pk, Kind.LIST)
-    ids = [_number(value) for value in request.POST.getlist("todos")]
+    # A repeated ID counts once, as in the API
+    ids = list(dict.fromkeys(_number(value) for value in request.POST.getlist("todos")))
     todos = todos_to_move(request, target, ids)
     group = None
     if group_id := request.POST.get("group"):

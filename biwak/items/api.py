@@ -887,23 +887,23 @@ def todos_move(request, list_id: int, data: MoveManyIn):
     """Moves several to-dos together into the list's group (or ungrouped),
     next to each other in the given order at ``index`` (default: the end)"""
     target = item_for(request, list_id, Kind.LIST)
-    todos = todos_to_move(request, target, data.todo_ids)
+    # A repeated ID counts once, as in todos/move/
+    ids = list(dict.fromkeys(data.todo_ids))
+    todos = todos_to_move(request, target, ids)
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
     try:
         ops.move_todos(
-            [todos[pk] for pk in data.todo_ids],
+            [todos[pk] for pk in ids],
             todolist=target,
             group=group,
             index=data.index,
             actor=request.user,
         )
-    except ValueError:
-        bad_request(_("Send each to-do once."))
-    return [
-        todo_out(item_for(request, pk, Kind.TODO), request.user) for pk in data.todo_ids
-    ]
+    except ValueError as exc:
+        bad_request(str(exc))
+    return [todo_out(item_for(request, pk, Kind.TODO), request.user) for pk in ids]
 
 
 # Comments and subscriptions -------------------------------------------------
