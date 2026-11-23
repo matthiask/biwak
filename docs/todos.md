@@ -33,8 +33,8 @@ project. Staff create lists with "New list" on the project's page.
   board). Dragging between columns moves the to-do to that group. When
   the columns don't fit, the board takes the window's width and scrolls
   sideways.
-- **Completed:** finished to-dos collapse into "Completed (N)" below
-  the list; "Show more" loads older ones.
+- **Completed:** the latest finished to-dos show below the list, under
+  "Completed (N)", newest first; "Show more" adds older ones.
 - **Archive:** finished lists go out of the way with "Archive" in the
   list's "More" menu or in the command palette; "Unarchive" brings them back. An archived list
   stays readable, but is left out of the project's lists (it is under

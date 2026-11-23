@@ -41,8 +41,9 @@ auf der Seite des Projekts.
   Spalten verschiebt das To-do in diese Gruppe. Haben die Spalten
   keinen Platz, nimmt das Board die Breite des Fensters und scrollt
   seitwärts.
-- **Erledigt:** Erledigte To-dos klappen unter der Liste in „Erledigt
-  (N)“ zusammen; „Mehr anzeigen“ lädt ältere.
+- **Erledigt:** Die zuletzt erledigten To-dos stehen unter der Liste,
+  unter „Erledigt (N)“, die neuesten zuerst; „Mehr anzeigen“ fügt
+  ältere hinzu.
 - **Archivieren:** Fertige Listen kommen mit „Archivieren“ im Menü
   „Mehr“ der Liste oder in der Befehlspalette aus dem Weg; „Archivierung
   aufheben“ holt sie zurück. Eine archivierte Liste bleibt lesbar, fehlt

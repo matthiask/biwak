@@ -39,15 +39,64 @@ class CompletedTest(TestCase):
         return self.client.get(reverse("list", args=[self.list.pk]), query)
 
     def test_count_and_first_page(self):
+        """The latest few shown at once, no collapsible (decided
+        2026-11-23)"""
         self.complete(25)
         ops.create_todo(todolist=self.list, title="Open", creator=self.ada)
         response = self.page(self.ada)
         self.assertContains(response, "Completed (25)")
+        self.assertNotContains(response, '<details class="mt-4 wb-completed')
         titles = self.titles(response)
-        self.assertEqual(len(titles), 20)
+        self.assertEqual(len(titles), views.COMPLETED_FIRST)
         self.assertEqual(titles[0], "Done 024")
         self.assertContains(response, "Show more")
         self.assertEqual(response.context["completed_count"], 25)
+
+    def test_show_more_without_javascript(self):
+        """The link is the page with more of them; htmx puts it into the
+        address bar, so reloading (and live updates) keep them"""
+        self.complete(40)
+        response = self.page(self.ada)
+        url = f"{self.list.get_absolute_url()}?completed={5 + 25}"
+        self.assertContains(response, f'href="{url}#completed"')
+        self.assertContains(response, f'hx-replace-url="{url}"')
+        response = self.page(self.ada, completed=30)
+        self.assertEqual(len(self.titles(response)), 30)
+        self.assertContains(response, f"?completed={30 + 25}#completed")
+        response = self.page(self.ada, completed=55)
+        self.assertEqual(len(self.titles(response)), 40)
+        self.assertNotContains(response, "Show more")
+        # Nonsense is the default, never fewer
+        for value in ["x", "-3", "1", ""]:
+            with self.subTest(value=value):
+                response = self.page(self.ada, completed=value)
+                self.assertEqual(len(self.titles(response)), 5)
+
+    def test_show_more_keeps_the_view(self):
+        self.complete(8)
+        response = self.page(self.ada, view="board")
+        self.assertContains(response, "?view=board&amp;completed=30#completed")
+        match = re.search(
+            r'hx-get="(/lists/[^"]+/completed/[^"]+)"', response.content.decode()
+        )
+        more = self.client.get(match.group(1).replace("&amp;", "&"))
+        self.assertEqual(len(self.titles(more)), 3)
+        self.assertNotContains(more, "Show more")
+
+    @patch.object(views, "COMPLETED_FIRST", 2)
+    @patch.object(views, "COMPLETED_MORE", 3)
+    def test_the_fragment_links_to_the_page_showing_as_many(self):
+        self.complete(10)
+        response = self.page(self.ada)
+        match = re.search(
+            r'hx-get="(/lists/[^"]+/completed/[^"]+)"', response.content.decode()
+        )
+        more = self.client.get(match.group(1).replace("&amp;", "&"))
+        self.assertEqual(len(self.titles(more)), 3)
+        # 2 + 3 shown now: the next link shows 8
+        self.assertContains(
+            more, f'href="{self.list.get_absolute_url()}?completed=8#completed"'
+        )
 
     def test_no_completed_no_section(self):
         response = self.page(self.ada)
@@ -66,9 +115,9 @@ class CompletedTest(TestCase):
         self.assertContains(more, "Done 001")
 
     def test_short_list_has_no_show_more(self):
-        self.complete(20)
+        self.complete(5)
         response = self.page(self.ada)
-        self.assertContains(response, "Completed (20)")
+        self.assertContains(response, "Completed (5)")
         self.assertNotContains(response, "Show more")
 
     def test_board_columns_have_no_completed(self):
@@ -119,7 +168,7 @@ class CompletedTest(TestCase):
         self.complete(10)
         first = self.page(self.ada)
         self.assertEqual(len(self.titles(first)), 5)
-        cursor = re.search(r'before=([^"]+)"', first.content.decode()).group(1)
+        cursor = re.search(r'before=([^&"]+)', first.content.decode()).group(1)
         url = reverse("list_completed", args=[self.list.pk])
         second = self.client.get(url, {"before": unquote(cursor)})
         # Not the whole page: no layout
@@ -144,6 +193,7 @@ class CompletedTest(TestCase):
         response = self.page(self.cleo)
         self.assertContains(response, "Completed (25)")
         self.assertEqual(len(self.walk(self.cleo)), 25)
+        self.assertEqual(len(self.titles(self.page(self.cleo, completed=30))), 25)
 
     def test_client_gets_404_for_internal_list(self):
         internal = ops.create_list(

@@ -533,6 +533,26 @@ class LiveTest(E2ETestCase):
         expect(section).not_to_have_attribute("data-group-color", re.compile("."))
         self.assertFalse(self.errors)
 
+    def test_a_completion_keeps_the_completed_loaded_with_show_more(self):
+        for i in range(6):
+            todo = ops.create_todo(
+                todolist=self.todolist, title=f"Done {i}", creator=self.ada
+            )
+            ops.complete(todo, actor=self.ada)
+        ada = self.open(self.ada, self.todolist, page=self.page)
+        rows = ada.locator("#completed .wb-todo")
+        expect(rows).to_have_count(5)
+        ada.get_by_role("link", name="Show more").click()
+        expect(rows).to_have_count(6)
+        bob = self.open(self.bob, self.todolist)
+        bob.locator("[data-todos] .wb-todo", has_text="Order the tent").get_by_role(
+            "button", name="Complete"
+        ).click()
+        expect(ada.locator("#completed")).to_contain_text("Completed (7)")
+        expect(rows).to_have_count(7)
+        expect(rows.first).to_contain_text("Order the tent")
+        self.assertFalse(self.errors)
+
     def test_a_form_being_edited_isnt_replaced(self):
         ada = self.open(self.ada, self.todo, page=self.page)
         bob = self.open(self.bob, self.todo)

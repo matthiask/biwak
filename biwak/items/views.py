@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import BadRequest, PermissionDenied
@@ -190,8 +192,11 @@ def _todos(todolist_item):
     )
 
 
-COMPLETED_FIRST = 20
-COMPLETED_MORE = 50
+# The completed to-dos below a list (specs/todos.md, "Completed to-dos";
+# Basecamp's numbers, to be confirmed by the user): shown at first, and
+# added by each "Show more"
+COMPLETED_FIRST = 5
+COMPLETED_MORE = 25
 
 
 def _completed_page(todos, *, size, before=None):
@@ -217,16 +222,45 @@ def _completed_page(todos, *, size, before=None):
     return rows, cursor
 
 
+def _shown(value, default):
+    """A count from the query, ``default`` for anything else"""
+    try:
+        return max(default, int(value))
+    except TypeError, ValueError:
+        return default
+
+
+def _completed_more(item, *, cursor, shown, view):
+    """ "Show more": the list's page showing ``COMPLETED_MORE`` more (the
+    way without JavaScript, and the address htmx puts in the bar, so that
+    reloading and live updates keep them) and the fragment htmx loads"""
+    if cursor is None:
+        return {}
+    page = {"view": view} if view else {}
+    fragment = {"before": cursor, "shown": shown, **page}
+    page["completed"] = shown + COMPLETED_MORE
+    return {
+        "more_url": f"{item.get_absolute_url()}?{urlencode(page)}",
+        "more_fragment_url": (
+            f"{reverse('list_completed', args=[item.pk])}?{urlencode(fragment)}"
+        ),
+    }
+
+
 def completed_todos(request, pk):
     """The next page of a list's completed to-dos, for "Show more" (htmx)"""
     item = item_for(request, pk, Kind.LIST)
     rows, cursor = _completed_page(
         _todos(item), size=COMPLETED_MORE, before=request.GET.get("before")
     )
+    shown = _shown(request.GET.get("shown"), 0) + len(rows)
     return render(
         request,
         "items/_completed.html",
-        {"item": item, "completed": rows, "cursor": cursor},
+        {"item": item, "completed": rows}
+        | _completed_more(
+            item, cursor=cursor, shown=shown, view=request.GET.get("view", "")
+        ),
     )
 
 
@@ -271,7 +305,9 @@ def todolist(request, pk):
                 return render(request, "items/_todo.html", {"todo": todo}, status=201)
             return redirect(item)
     view = request.GET.get("view") or todolist.view
-    completed, completed_cursor = _completed_page(todos, size=COMPLETED_FIRST)
+    completed, completed_cursor = _completed_page(
+        todos, size=_shown(request.GET.get("completed"), COMPLETED_FIRST)
+    )
     return render(
         request,
         "items/todolist.html",
@@ -281,8 +317,13 @@ def todolist(request, pk):
             "ungrouped": by_group[None],
             "groups": [(g, by_group[g.pk]) for g in groups],
             "completed": completed,
-            "completed_cursor": completed_cursor,
             "completed_count": completed_count,
+            **_completed_more(
+                item,
+                cursor=completed_cursor,
+                shown=len(completed),
+                view=request.GET.get("view", ""),
+            ),
             "all_done": bool(completed_count) and not any(by_group.values()),
             "form": form,
             "people": form.fields["assignees"].queryset,

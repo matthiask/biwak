@@ -77,11 +77,21 @@ groupings and "assigned by" 2026-11-21).
   checkbox and content; the title wraps in the content column, then a
   line with assignees, the due badge and the signals (`glance.md`,
   checklist counts from `editor.md`).
-- **Completed to-dos** (decided 2026-11-20, for lists used for years):
-  below the list or board, collapsed, "Completed (142)" (a `COUNT` query,
-  trashed ones not counted); opening shows the latest 20, "Show more" the
-  next 50 (`/lists/<pk>/completed/?before=<completed_at ISO>,<pk>`, an
-  HTML fragment; a malformed cursor is a 404). The API
+- **Completed to-dos** (decided 2026-11-20, for lists used for years;
+  shown at once since 2026-11-23, the user: "Basecamp shows the last few
+  completed to dos and allows loading more. That's more useful than the
+  collapsible we have now."): below the list or board, under the heading
+  "Completed (142)" (a `COUNT` query, trashed ones not counted), the
+  latest few in a card, newest first, and "Show more" adding the next
+  (`COMPLETED_FIRST` and `COMPLETED_MORE` in `biwak/items/views.py`,
+  **5 and 25, Basecamp's look, to confirm with the user**) until none
+  are left. "Show more" is a link to the list's page showing that many
+  (`?completed=30`, the view kept; nonsense or fewer is the default),
+  the way without JavaScript; htmx loads only the next ones
+  (`/lists/<pk>/completed/?before=<completed_at ISO>,<pk>&shown=N`, an
+  HTML fragment; a malformed cursor is a 404) and puts the page's
+  address in the bar (`hx-replace-url`), so reloading and live updates
+  (which fetch the page's address) keep what was loaded. The API
   (`lists/{id}/todos/completed/`) has its cursor.
 
 ## The to-do's page
