@@ -234,9 +234,10 @@ What every part does the same way. Look at how the core does it
     the test modules or classes covering the code you changed
     (`./runtests.sh biwak.items.test_start_dates …`), not whole apps;
     browser tests only when you changed JavaScript or htmx, and only
-    those classes. No full runs while building: `./runtests.sh` without
-    arguments is for integration after merging, and CI runs everything.
-    Failures elsewhere are fixed during or after integration.
+    those classes. **No full runs locally**, not after merging either
+    (decided 2026-11-23: a full run per merge had the machine at a load
+    of 21): CI runs everything. Push `main` in batches, after a few
+    merges, and fix what CI finds.
 
 # Fixing bugs
 
