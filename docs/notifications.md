@@ -117,6 +117,16 @@ Then what happened: what mentions you or assigns you a to-do first,
 changed it. 3 comments by Ada and Bob."), linked to the item. Without
 notifications there's no digest.
 
+**A weekly mail with my open to-dos** (under "Mails", off unless you
+turn it on): on Monday at 07:00, with quiet hours at the start of your
+first working day of the week, your open to-dos by due date, "Overdue",
+"This week", "Next week" and "Later", each with its project, list and
+dates, then one line saying how many have no date, linked to the to-dos
+page. Then the overdue to-dos you're waiting on, as in the digest. It
+comes whatever you chose above, with the daily digest too, except with
+"No mails"; not when you have no open to-dos and wait on nothing, and
+not while you're away (that week has none).
+
 ## Push notifications
 
 Biwak can notify you on your phone or computer while it isn't open, when

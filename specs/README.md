@@ -13,7 +13,7 @@ confirm: `decisions-to-confirm.md`.
 | `ui.md` | built | the rules every page follows: modals, quiet pages, filters, phones, motion |
 | `access.md` | built | client visibility (one function decides what clients see) and sign-in: the ways in, the sign-in page, sessions |
 | `api-cli.md` | built | the API's conventions, the CLI |
-| `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, mails and digests, replying by mail |
+| `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, mails, digests and the weekly to-dos, replying by mail |
 | `files.md` | built | attachments, the message board, folders as tiles with ordering, drag and drop and uploading several, docs (title from the first line, versions, drafts), files |
 | `todos.md` | built | assignees, the board, the to-do's page, recurrence, the to-dos page, the calendar feed |
 | `rule-widget.md` | built | one control for repeat rules |

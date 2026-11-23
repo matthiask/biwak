@@ -1,6 +1,7 @@
 """Notification mails (specs/notifications.md): one mail per person and
 item once its newest notification is 10 minutes old, or a daily digest at
-07:00. ``./manage.py send_mails`` runs ``send_mails()`` every minute."""
+07:00, and the weekly to-dos (``weekly.py``). ``./manage.py send_mails``
+runs ``send_mails()`` every minute."""
 
 import datetime as dt
 import logging
@@ -22,7 +23,7 @@ from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery, User
-from biwak.activity import digest, feed, mentions
+from biwak.activity import digest, feed, mentions, weekly
 from biwak.activity.models import Action, Notification
 from biwak.activity.operations import is_subscribed
 from biwak.api_conventions import absolute
@@ -813,4 +814,8 @@ def send_mails(*, now=None):
             ),
             MailKind.DIGEST,
         )
+
+    # The weekly to-dos of those who want them (Monday morning), whatever
+    # the delivery: on Mondays digest people get both
+    count += weekly.send_weekly(now)
     return count

@@ -46,7 +46,8 @@ coming in are `notifications.md`.
   accepted a mail its content is deleted; recipients, kind, Resend's ID,
   attempts and delivery state stay. Mails given up keep their content.
   `fairy_tasks` deletes rows 30 days after they were queued.
-- **Kinds** (Resend's tag `kind`): `notification`, `digest`, `checkin`,
+- **Kinds** (Resend's tag `kind`): `notification`, `digest`, `weekly`
+  (the weekly to-dos, `notifications.md`), `checkin`,
   `login-code`, `invitation`, `reply-refused`, `account`, and `admin`
   for `mail_admins`.
 - **From:** `DEFAULT_FROM_EMAIL`, with the acting person's name where
@@ -62,7 +63,8 @@ coming in are `notifications.md`.
   `User.mail_undeliverable_at` on the recipients (not allauth's
   `EmailAddress`: a person has one address, and the queries choosing who
   gets mail are on `User`); a temporary bounce is only noted on the row.
-- **What it stops:** notification mails, digests and check-in mails.
+- **What it stops:** notification mails, digests, the weekly to-dos
+  and check-in mails.
   Their notifications stay in the lantern and are dropped (marked sent)
   when the mark clears. Login codes, invitations and answers to refused
   replies still go out: someone asked for them.
