@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 
 SKILLS = settings.BASE_DIR / "cli" / "biwak_cli" / "skills"
-NAMES = ["biwak-triage"]
+NAMES = ["biwak-from-mail", "biwak-triage"]
 
 
 def biwak_commands(text):
