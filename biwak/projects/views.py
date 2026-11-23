@@ -680,7 +680,10 @@ def project_detail(request, pk):
             "archived_lists": archived_lists,
             "can_manage": project_ops.can_manage_project(request.user),
             "can_create_lists": ops.can_create(request.user, Kind.LIST),
-            "members": project.memberships.select_related("user"),
+            # By name, as on the people page
+            "members": project.memberships.select_related("user").order_by(
+                Lower("user__full_name"), "user__email"
+            ),
             "front_messages": file_queries.front_messages(project, request.user),
             "front_files": file_queries.front_files(project, request.user),
             "root_counts": file_queries.root_counts(project, request.user),

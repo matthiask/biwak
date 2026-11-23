@@ -353,3 +353,20 @@ class MemberModalsTest(TestCase):
             "/projects/new/",
         ):
             self.assertEqual(self.client.get(url, **self.headers).status_code, 403)
+
+
+class MembersBoxTest(TestCase):
+    def test_the_project_page_lists_members_by_name(self):
+        """The "Members" box sorts like the people page: by name, ignoring
+        case (it had no order at all)"""
+        zoe = person("zoe")
+        ada = person("Ada")
+        mia = person("Mia")
+        p = project(members=[zoe, mia, ada])
+        self.client.force_login(ada)
+        page = self.client.get(f"/projects/{p.pk}/").content.decode()
+        box = page[page.index("Members") :]
+        positions = [
+            box.index(name) for name in ("Ada Example", "Mia Example", "zoe Example")
+        ]
+        self.assertEqual(positions, sorted(positions))
