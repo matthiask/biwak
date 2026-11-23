@@ -1,15 +1,20 @@
 {% load i18n %}
+{% comment %}
+  Completed to-dos, the latest first, and "Show more" (specs/todos.md,
+  "Completed to-dos"): htmx swaps the next ones in for the button's line and
+  puts the page's address showing them in the bar; without JavaScript the
+  link is that page.
+{% endcomment %}
 {% for todo in completed %}{% include "items/_todo.html" %}{% endfor %}
-{% if cursor %}
-  <div class="my-2">
-    <button
-      type="button"
+{% if more_url %}
+  <div class="wb-completed-more">
+    <a
       class="btn btn-sm btn-quiet"
-      hx-get="{% url 'list_completed' item.pk %}?before={{ cursor|urlencode }}"
+      href="{{ more_url }}#completed"
+      hx-get="{{ more_fragment_url }}"
       hx-target="closest div"
       hx-swap="outerHTML"
-    >
-      {% translate "Show more" %}
-    </button>
+      hx-replace-url="{{ more_url }}"
+    >{% translate "Show more" %}</a>
   </div>
 {% endif %}

@@ -154,12 +154,13 @@
   <div id="live-completed" data-live>
     {% if all_done %}<p class="text-body-secondary wb-all-done">{% translate "All done." %}</p>{% endif %}
     {% if completed_count %}
-      <details class="mt-4 wb-completed">
-        <summary class="text-body-secondary">
+      {# The latest few, "Show more" for the next (decided 2026-11-23, specs/todos.md) #}
+      <section class="mt-4 wb-completed" id="completed" aria-labelledby="completed-title">
+        <h2 class="h6 text-body-secondary" id="completed-title">
           {% blocktranslate %}Completed ({{ completed_count }}){% endblocktranslate %}
-        </summary>
-        <div class="mt-2">{% include "items/_completed.html" with cursor=completed_cursor %}</div>
-      </details>
+        </h2>
+        <div class="wb-completed-rows">{% include "items/_completed.html" %}</div>
+      </section>
     {% endif %}
   </div>
   {% include "items/_selection_bar.html" %}

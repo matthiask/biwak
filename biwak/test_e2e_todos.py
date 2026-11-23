@@ -734,6 +734,36 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(Attachment.objects.count(), 0)
 
 
+class CompletedListTest(E2ETestCase):
+    """The latest completed to-dos below a list, "Show more" loading the
+    next with htmx (specs/todos.md, "Completed to-dos")"""
+
+    def test_show_more(self):
+        todolist = self.make_list("Launch", todos=[f"Done {i}" for i in range(8)])
+        for item in Item.objects.filter(parent=todolist).order_by("pk"):
+            ops.complete(item, actor=self.ada)
+        page = self.page
+        self.goto(page, todolist)
+        page.evaluate("window.notReloaded = true")
+        rows = page.locator("#completed .wb-todo")
+        expect(rows).to_have_count(5)
+        expect(rows.first).to_contain_text("Done 7")
+        page.get_by_role("link", name="Show more").click()
+        expect(rows).to_have_count(8)
+        expect(rows.last).to_contain_text("Done 0")
+        expect(page.get_by_role("link", name="Show more")).to_have_count(0)
+        self.assertTrue(page.evaluate("window.notReloaded"))
+        # The address shows as many, for reloading and live updates
+        self.assertTrue(page.url.endswith("?completed=30"), page.url)
+        # A loaded one reopens like the others
+        row = rows.filter(has_text="Done 0")
+        row.get_by_role("button", name="Reopen").click()
+        expect(page.locator("[data-todos] .wb-todo", has_text="Done 0")).to_have_count(
+            1
+        )
+        self.assertFalse(self.errors)
+
+
 class CompletionTest(E2ETestCase):
     """Completing a to-do (specs/celebrations.md): classes the script sets
     for the animation, the row gone after it, nothing waiting on it with
@@ -792,7 +822,7 @@ class CompletionTest(E2ETestCase):
         todolist = self.make_list("Launch", todos=["Plan"])
         ops.complete(Item.objects.get(title="Plan"), actor=self.ada)
         self.goto(page, todolist)
-        page.get_by_text("Completed (1)").click()
+        # Shown at once, no collapsible to open (decided 2026-11-23)
         row = page.locator(".wb-completed .wb-todo", has_text="Plan")
         row.get_by_role("button", name="Reopen").click()
         expect(row).to_have_class(re.compile(r"\bis-reopening\b"))

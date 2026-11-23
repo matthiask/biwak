@@ -1282,11 +1282,17 @@ html:not(.js) .wb-handle {
   color: var(--wb-success-ink);
 }
 
-.wb-completed .wb-check.is-done {
-  flex: none;
-  background: var(--wb-success-ink);
-  border-color: var(--wb-success-ink);
-  color: var(--wb-success-bg);
+/* The completed to-dos below a list (items/todolist.html): a card like
+   the groups', "Show more" on its last line */
+.wb-completed-rows {
+  background: var(--wb-surface);
+  border: 1px solid var(--wb-surface-border);
+  border-radius: var(--bs-border-radius);
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.wb-completed-more {
+  margin-top: 0.25rem;
 }
 
 .wb-completed .wb-check.is-done {
