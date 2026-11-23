@@ -147,9 +147,10 @@ item; every item's page links to it in its "More" menu, for staff
   a visible list shows "Visible to clients: no, yes". Lists the viewer
   can't see read "another list".
 - Only the item's own rows: comments have their place on the page,
-  files' versions are `files.md`'s, the to-do's timeline (`timeline.md`)
+  files' versions are `files.md`'s, the timeline (`timeline.md`)
   shows the events between comments. Events say what happened, the
-  history the details.
+  history the details: on messages, docs and files the timeline's
+  "edited this" links here for staff (decided 2026-11-23).
 
 ## Bookmarks
 

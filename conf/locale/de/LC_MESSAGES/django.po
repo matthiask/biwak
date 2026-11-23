@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 18:06+0100\n"
+"POT-Creation-Date: 2026-11-23 20:32+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1199,7 +1199,7 @@ msgstr "Nicht mehr gefragt"
 msgid "no"
 msgstr "nein"
 
-#: biwak/activity/history.py
+#: biwak/activity/history.py biwak/activity/timeline.py
 msgid "another folder"
 msgstr "ein anderer Ordner"
 
@@ -1761,8 +1761,28 @@ msgstr "hat die Fälligkeit auf %(date)s gesetzt"
 
 #: biwak/activity/timeline.py
 #, python-format
+msgid "moved %(it)s out of its folder"
+msgstr "hat %(it)s aus dem Ordner genommen"
+
+#: biwak/activity/timeline.py
+#, python-format
 msgid "moved %(it)s to %(to)s"
 msgstr "hat %(it)s nach %(to)s verschoben"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "moved %(it)s from %(project)s"
+msgstr "hat %(it)s aus %(project)s verschoben"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "moved %(it)s from another project"
+msgstr "hat %(it)s aus einem anderen Projekt verschoben"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "moved %(it)s"
+msgstr "hat %(it)s verschoben"
 
 #: biwak/activity/timeline.py
 #, python-format
@@ -1795,8 +1815,27 @@ msgstr "jemanden"
 
 #: biwak/activity/timeline.py
 #, python-format
+msgid "showed %(it)s to clients"
+msgstr "hat %(it)s Kund:innen gezeigt"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "made %(it)s internal"
+msgstr "hat %(it)s intern gemacht"
+
+#: biwak/activity/timeline.py
+#, python-format
 msgid "changed the title to “%(title)s”"
 msgstr "hat den Titel in „%(title)s“ geändert"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "edited %(it)s"
+msgstr "hat %(it)s bearbeitet"
+
+#: biwak/activity/timeline.py
+msgid "uploaded a new version"
+msgstr "hat eine neue Version hochgeladen"
 
 #: biwak/activity/timeline.py
 #, python-format
@@ -6052,6 +6091,19 @@ msgid "Never"
 msgstr "Nie"
 
 #: biwak/templates/accounts/settings.html
+#: biwak/templates/files/_message_row.html
+#: biwak/templates/files/_tile_menu.html biwak/templates/files/library.html
+#: biwak/templates/items/_more.html
+#: biwak/templates/projects/project_detail.html
+msgid "More"
+msgstr "Mehr"
+
+#: biwak/templates/accounts/settings.html biwak/templates/files/_tile_menu.html
+#, python-format
+msgid "More: %(title)s"
+msgstr "Mehr: %(title)s"
+
+#: biwak/templates/accounts/settings.html
 msgid "Send a test"
 msgstr "Test senden"
 
@@ -6805,13 +6857,6 @@ msgid_plural "%(counter)s comments"
 msgstr[0] "%(counter)s Kommentar"
 msgstr[1] "%(counter)s Kommentare"
 
-#: biwak/templates/files/_message_row.html
-#: biwak/templates/files/_tile_menu.html biwak/templates/files/library.html
-#: biwak/templates/items/_more.html
-#: biwak/templates/projects/project_detail.html
-msgid "More"
-msgstr "Mehr"
-
 #: biwak/templates/files/_message_row.html biwak/templates/files/message.html
 msgid "Unpin"
 msgstr "Lösen"
@@ -6819,11 +6864,6 @@ msgstr "Lösen"
 #: biwak/templates/files/_message_row.html biwak/templates/files/message.html
 msgid "Pin"
 msgstr "Anheften"
-
-#: biwak/templates/files/_tile_menu.html
-#, python-format
-msgid "More: %(title)s"
-msgstr "Mehr: %(title)s"
 
 #: biwak/templates/files/_tiles.html
 msgid "Up to the folder above"

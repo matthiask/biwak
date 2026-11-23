@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak import cursors
+from biwak.activity import timeline as timelines
 from biwak.files import operations
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import (
@@ -24,6 +25,7 @@ from biwak.items.models import Kind, MessageCategory
 from biwak.items.views import item_for
 from biwak.projects.models import MessagesOrder
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 # Messages per page of the board besides the pinned ones (not decided in
@@ -136,6 +138,8 @@ def message(request, pk):
     comment_form, done = comments_context(request, item)
     if done:
         return done
+    # The reactions of the item and its comments in one query
+    prefetch(item)
     return render(
         request,
         "files/message.html",
@@ -143,7 +147,10 @@ def message(request, pk):
             "item": item,
             "message": item.message,
             "comment_form": comment_form,
-            "comments": item.comments.select_related("author"),
+            # Comments and what happened between them (specs/timeline.md)
+            "timeline": timelines.entries_for(
+                item, request.user, item.comments.select_related("author")
+            ),
             "can_pin": not request.user.is_client,
         }
         | sidebar_context(request, item),

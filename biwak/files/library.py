@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak.accounts.models import Color
+from biwak.activity import timeline as timelines
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import folder_counts
@@ -32,6 +33,7 @@ from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.models import FilesOrdering
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 CONTAINED = [Kind.FOLDER, Kind.DOC, Kind.FILE]
@@ -670,6 +672,8 @@ def file(request, pk):
     upload = item.upload
     versions = list(upload.versions.select_related("uploaded_by"))
     staff = not request.user.is_client
+    # The reactions of the item and its comments in one query
+    prefetch(item)
     return render(
         request,
         "files/file.html",
@@ -681,7 +685,10 @@ def file(request, pk):
             "older_versions": versions[1:] if staff else [],
             "breadcrumbs": breadcrumbs(item),
             "comment_form": comment_form,
-            "comments": item.comments.select_related("author"),
+            # Comments and what happened between them (specs/timeline.md)
+            "timeline": timelines.entries_for(
+                item, request.user, item.comments.select_related("author")
+            ),
             "replace_form": UploadForm(),
             "move_choices": folder_choices(request.user, item.project, exclude=item),
         }

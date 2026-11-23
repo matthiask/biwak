@@ -110,3 +110,67 @@ class EditEventsTest(TestCase):
         self.assertEqual(describe(event, self.ada), "Ada Example removed Bob Example.")
         self.assertEqual(describe(event, self.bob), "Ada Example removed you.")
         self.assertEqual(feed.feed_events(self.ada).get().pk, event.pk)
+
+
+class ItemEditEventsTest(TestCase):
+    """Edits of messages, docs and files say what changed, moves between
+    folders where from and to (specs/timeline.md)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.project = project(members=[self.ada])
+
+    def data(self, action=Action.EDITED):
+        return Event.objects.get(action=action).data
+
+    def test_messages(self):
+        from biwak.files.operations import update_message
+
+        item = ops.create_message(
+            project=self.project, title="News", content="Hello", creator=self.ada
+        )
+        update_message(item, actor=self.ada, title="Big news", content="Hi")
+        self.assertEqual(self.data()["fields"], ["title", "content"])
+
+    def test_docs(self):
+        from biwak.files.operations import save_version, update_doc
+
+        item = ops.create_doc(
+            project=self.project, title="Brief", content="Tent", creator=self.ada
+        )
+        update_doc(item, actor=self.ada, content="# Brief\n\nTents")
+        self.assertEqual(self.data()["fields"], ["content"])
+        Event.objects.filter(action=Action.EDITED).delete()
+        update_doc(item, actor=self.ada, content="# Plan\n\nTents")
+        self.assertEqual(self.data()["fields"], ["title", "content"])
+        Event.objects.filter(action=Action.EDITED).delete()
+        # "Save as a version" changes nothing
+        save_version(item, actor=self.ada)
+        self.assertEqual(self.data()["fields"], [])
+
+    def test_files(self):
+        from django.core.files.base import ContentFile
+
+        from biwak.files.operations import replace_upload, update_upload
+
+        item = ops.create_upload(
+            project=self.project,
+            file=ContentFile(b"x", name="plan.txt"),
+            creator=self.ada,
+        )
+        replace_upload(item, ContentFile(b"y", name="plan.txt"), actor=self.ada)
+        update_upload(item, actor=self.ada, description="The plan")
+        self.assertEqual(self.data()["fields"], ["file", "description"])
+
+    def test_moves_between_folders(self):
+        folder = ops.create_folder(
+            project=self.project, title="Minutes", creator=self.ada
+        )
+        item = ops.create_doc(project=self.project, title="Brief", creator=self.ada)
+        ops.move_item(item, parent=folder, actor=self.ada)
+        data = self.data(Action.MOVED)
+        self.assertEqual((data["folder_id"], data["folder_was"]), (folder.pk, None))
+        Event.objects.filter(action=Action.MOVED).delete()
+        ops.move_item(item, parent=None, actor=self.ada)
+        data = self.data(Action.MOVED)
+        self.assertEqual((data["folder_id"], data["folder_was"]), (None, folder.pk))

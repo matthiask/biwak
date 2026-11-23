@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
+from biwak.activity import timeline as timelines
 from biwak.activity.history import diff_lines
 from biwak.activity.notify import told_line
 from biwak.activity.views import SubscribersForm
@@ -32,6 +33,7 @@ from biwak.items.views import item_for
 from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 # Docs -------------------------------------------------------------------
@@ -81,13 +83,18 @@ def doc(request, pk):
     comment_form, done = comments_context(request, item)
     if done:
         return done
+    # The reactions of the item and its comments in one query
+    prefetch(item)
     return render(
         request,
         "files/doc.html",
         _doc_context(request, item)
         | {
             "comment_form": comment_form,
-            "comments": item.comments.select_related("author"),
+            # Comments and what happened between them (specs/timeline.md)
+            "timeline": timelines.entries_for(
+                item, request.user, item.comments.select_related("author")
+            ),
         },
     )
 
