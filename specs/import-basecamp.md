@@ -208,7 +208,7 @@ neither `suspend` nor `resources` yet.
 | Project | Project, members with staff/client from Basecamp |
 | To-do set, to-do list | List |
 | To-do list group | Group of the list |
-| To-do | To-do (assignees, due and start dates, completion, notes) |
+| To-do | To-do (assignees, due and start dates, completion, notes, repeating) |
 | Card table | List with its columns as groups, shown as board; the columns' colors as below |
 | Card | To-do in its column's group; steps as a checklist in the notes (confirmed 2026-11-21: the reason for checklists in Markdown) |
 | Message board, message | Message board, message (category by name, ignoring case, in the installation's one list; created when missing, with Basecamp's icon as its emoji; confirmed 2026-11-21) |
@@ -348,6 +348,29 @@ same way.
   2026-11-23). Archived forwards can't be found: the recordings' listing
   refuses the type, the forwards' listing ignores `status=archived`
   (both checked 2026-11-23).
+- **Repeating to-dos** (2026-11-23; an earlier version of this spec said
+  the API has none): a to-do's `repetition_schedule`, in the to-do and
+  in its list's listing, though not in Basecamp's documentation. Only
+  the newest to-do of a series has it: Basecamp creates the next one
+  ahead and moves the schedule on, as Biwak moves the rule
+  (`todos.md`), so older ones, open or done, come in without a rule and
+  nothing branches. Only open, active to-dos get a rule (completing one
+  with a rule while importing would make a next one); `end_date` is the
+  end date, the time of day is dropped (to-dos have dates). A schedule
+  we don't know is a problem in the report and the to-do doesn't repeat.
+  `recurrence_of()`:
+
+  | `frequency` | `days` | Rule |
+  | --- | --- | --- |
+  | `every_week` | weekdays (0 Sunday) | weekly on those days |
+  | `every_day_of_month` | days of the month | monthly on those days |
+  | `custom_month` (`month_interval`) | days of the month | every n months on those days |
+  | `every_month` (`week_instance`) | a weekday | monthly on the nth weekday |
+  | `every_day`, `every_other_week` | weekdays | as for check-ins |
+
+  The 29th to 31st alone fall on the last day of shorter months. Seen in
+  the API 2026-11-23: the first four. Unlike Basecamp, the next to-do
+  only comes once the current one is completed.
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
   come in completed at the recording's `updated_at`, by the importing
   person unless Basecamp names who completed it, with their comments;
@@ -368,4 +391,3 @@ same way.
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
   to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.
-  Basecamp's API has no repeating to-dos.
