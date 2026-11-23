@@ -28,7 +28,9 @@ project. Staff create lists with "New list" on the project's page.
   to..." in the to-do's "More" menu.
 - **Board:** "Board" shows the groups as columns, "List" goes back, for
   this visit. How a list opens is its "Shown as" in "Edit" (list or
-  board). Dragging between columns moves the to-do to that group.
+  board). Dragging between columns moves the to-do to that group. When
+  the columns don't fit, the board takes the window's width and scrolls
+  sideways.
 - **Completed:** finished to-dos collapse into "Completed (N)" below
   the list; "Show more" loads older ones.
 - **Archive:** finished lists go out of the way with "Archive" in the

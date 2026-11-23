@@ -43,112 +43,115 @@
   {% include "items/_client_tab.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
   {% csrf_token %}
-  {# Live updates (frontend/live.js): every child of a data-live-list has an id #}
-  <div
-    class="wb-todolist{% if view == 'board' %} is-board{% endif %}"
-    data-all-done="{% translate 'All done.' %}"
-    data-groups="{{ item.pk }}"
-    id="live-groups"
-    data-live-list
-  >
-    {# On the board, the ungrouped to-dos get a column only if there are any #}
-    <section
-      class="wb-group"
-      id="group-none"
+  {# The board widens beyond the page when its columns need it (specs/todos.md, "Lists and the board") #}
+  <div class="{% if view == 'board' %}wb-board-frame{% endif %}">
+    {# Live updates (frontend/live.js): every child of a data-live-list has an id #}
+    <div
+      class="wb-todolist{% if view == 'board' %} is-board{% endif %}"
+      data-all-done="{% translate 'All done.' %}"
+      data-groups="{{ item.pk }}"
+      id="live-groups"
       data-live-list
-      {% if view == "board" and groups and not ungrouped %}hidden{% endif %}
     >
-      <div
-        id="todos-none"
-        data-live-list
-        class="wb-todos"
-        data-todos
-        data-list="{{ item.pk }}"
-        data-group=""
-        data-move-url="{% url 'todos_move' item.pk %}"
-      >
-        {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
-      </div>
-      <div id="add-none" data-live class="wb-add-row">
-        {% include "items/_add_todo.html" with group=None %}
-        {% if not groups and can_change %}{% include "items/_new_group.html" %}{% endif %}
-      </div>
-    </section>
-    {% for group, todos in groups %}
+      {# On the board, the ungrouped to-dos get a column only if there are any #}
       <section
         class="wb-group"
-        id="group-{{ group.pk }}"
+        id="group-none"
         data-live-list
-        data-group-item="{{ group.pk }}"
-        {% if can_change %}data-move-url="{% url 'group_move' group.pk %}"{% endif %}
+        {% if view == "board" and groups and not ungrouped %}hidden{% endif %}
       >
-        <h2 class="h6 wb-group-title" id="group-{{ group.pk }}-title" data-live>
-          {% if can_change %}
-            <span
-              class="wb-handle"
-              data-group-handle
-              title="{% translate 'Drag to move the group' %}"
-            >{% icon "grip-vertical" %}</span>
-          {% endif %}
-          <span class="wb-group-name">{{ group }}</span>
-          {% if can_change %}
-            <span class="wb-group-tools ms-auto">
-              {% if not forloop.first %}
-                <form method="post" action="{% url 'group_move' group.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
-                  <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group up' %}">
-                    {% icon "arrow-up" %}
-                  </button>
-                </form>
-              {% endif %}
-              {% if not forloop.last %}
-                <form method="post" action="{% url 'group_move' group.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="index" value="{{ forloop.counter }}">
-                  <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group down' %}">
-                    {% icon "arrow-down" %}
-                  </button>
-                </form>
-              {% endif %}
-              <details class="dropdown wb-menu">
-                <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
-                  {% icon "pencil" %}
-                </summary>
-                <div class="dropdown-menu dropdown-menu-end wb-group-menu">
-                  <a
-                    class="dropdown-item"
-                    href="{% url 'group_rename' group.pk %}"
-                    data-modal
-                  >{% translate "Rename the group" %}</a>
-                  <form method="post" action="{% url 'group_delete' group.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="dropdown-item">
-                      {% translate "Remove the group; its to-dos stay" %}
-                    </button>
-                  </form>
-                </div>
-              </details>
-            </span>
-          {% endif %}
-        </h2>
         <div
-          id="todos-{{ group.pk }}"
+          id="todos-none"
           data-live-list
           class="wb-todos"
           data-todos
           data-list="{{ item.pk }}"
-          data-group="{{ group.pk }}"
+          data-group=""
           data-move-url="{% url 'todos_move' item.pk %}"
         >
-          {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
+          {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
         </div>
-        <div id="add-{{ group.pk }}" data-live class="wb-add-row">
-          {% include "items/_add_todo.html" %}
-          {% if forloop.last and can_change %}{% include "items/_new_group.html" %}{% endif %}
+        <div id="add-none" data-live class="wb-add-row">
+          {% include "items/_add_todo.html" with group=None %}
+          {% if not groups and can_change %}{% include "items/_new_group.html" %}{% endif %}
         </div>
       </section>
-    {% endfor %}
+      {% for group, todos in groups %}
+        <section
+          class="wb-group"
+          id="group-{{ group.pk }}"
+          data-live-list
+          data-group-item="{{ group.pk }}"
+          {% if can_change %}data-move-url="{% url 'group_move' group.pk %}"{% endif %}
+        >
+          <h2 class="h6 wb-group-title" id="group-{{ group.pk }}-title" data-live>
+            {% if can_change %}
+              <span
+                class="wb-handle"
+                data-group-handle
+                title="{% translate 'Drag to move the group' %}"
+              >{% icon "grip-vertical" %}</span>
+            {% endif %}
+            <span class="wb-group-name">{{ group }}</span>
+            {% if can_change %}
+              <span class="wb-group-tools ms-auto">
+                {% if not forloop.first %}
+                  <form method="post" action="{% url 'group_move' group.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
+                    <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group up' %}">
+                      {% icon "arrow-up" %}
+                    </button>
+                  </form>
+                {% endif %}
+                {% if not forloop.last %}
+                  <form method="post" action="{% url 'group_move' group.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="index" value="{{ forloop.counter }}">
+                    <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group down' %}">
+                      {% icon "arrow-down" %}
+                    </button>
+                  </form>
+                {% endif %}
+                <details class="dropdown wb-menu">
+                  <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
+                    {% icon "pencil" %}
+                  </summary>
+                  <div class="dropdown-menu dropdown-menu-end wb-group-menu">
+                    <a
+                      class="dropdown-item"
+                      href="{% url 'group_rename' group.pk %}"
+                      data-modal
+                    >{% translate "Rename the group" %}</a>
+                    <form method="post" action="{% url 'group_delete' group.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="dropdown-item">
+                        {% translate "Remove the group; its to-dos stay" %}
+                      </button>
+                    </form>
+                  </div>
+                </details>
+              </span>
+            {% endif %}
+          </h2>
+          <div
+            id="todos-{{ group.pk }}"
+            data-live-list
+            class="wb-todos"
+            data-todos
+            data-list="{{ item.pk }}"
+            data-group="{{ group.pk }}"
+            data-move-url="{% url 'todos_move' item.pk %}"
+          >
+            {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
+          </div>
+          <div id="add-{{ group.pk }}" data-live class="wb-add-row">
+            {% include "items/_add_todo.html" %}
+            {% if forloop.last and can_change %}{% include "items/_new_group.html" %}{% endif %}
+          </div>
+        </section>
+      {% endfor %}
+    </div>
   </div>
   <div id="live-completed" data-live>
     {% if all_done %}<p class="text-body-secondary wb-all-done">{% translate "All done." %}</p>{% endif %}

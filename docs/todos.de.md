@@ -36,7 +36,9 @@ auf der Seite des Projekts.
 - **Board:** „Board“ zeigt die Gruppen als Spalten, „Liste“ geht
   zurück, für diesen Besuch. Wie sich eine Liste öffnet, ist ihr
   „Anzeigen als“ unter „Bearbeiten“ (Liste oder Board). Ziehen zwischen
-  Spalten verschiebt das To-do in diese Gruppe.
+  Spalten verschiebt das To-do in diese Gruppe. Haben die Spalten
+  keinen Platz, nimmt das Board die Breite des Fensters und scrollt
+  seitwärts.
 - **Erledigt:** Erledigte To-dos klappen unter der Liste in „Erledigt
   (N)“ zusammen; „Mehr anzeigen“ lädt ältere.
 - **Archivieren:** Fertige Listen kommen mit „Archivieren“ im Menü

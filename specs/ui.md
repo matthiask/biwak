@@ -60,6 +60,13 @@ feedback rounds (`ui-feedback.md`).
   list's groups are cards, in the list as on the board (decided
   2026-11-23, the user: "the to do list view doesn't use any cards at
   all"; `todos.md`).
+- **Page width:** pages keep the container's width, except a list's
+  board (decided 2026-11-23 by the user: "the project board should use
+  the full width of the browser window, at least when the columns do
+  not fit"): as wide as its columns, at least the page's width, at most
+  the window's less the usual gutter on both sides (and the clients'
+  tab), centered on the page; beyond that its columns scroll inside it,
+  never the page (`.wb-board-frame`). It's the only page with columns.
 - **Empty lists say so** (2026-11-21): a `list-group-item` in a list
   group, else a `text-body-secondary` paragraph.
 - **Phones** (under 576 px, 2026-11-21: header buttons of varying

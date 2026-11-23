@@ -67,7 +67,8 @@ groupings and "assigned by" 2026-11-21).
 - **Board view:** a list's groups as columns, ungrouped to-dos in a
   first column shown only when there are any; a per-list setting (list
   or board) with `?view=` to switch; dragging between columns is
-  `move_todos()`. The board never shows completed to-dos in its columns.
+  `move_todos()`. Columns that don't fit the page widen the board up
+  to the window's width (`ui.md`, "Page width", decided 2026-11-23). The board never shows completed to-dos in its columns.
 - **Adding inline:** "Add a to-do" opens a form in place (title, notes,
   assignees, due date, repeat); Ctrl+Enter adds and starts the next one,
   Escape or a click elsewhere closes (`frontend/add-todo.js`). "Add a

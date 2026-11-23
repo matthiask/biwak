@@ -1033,6 +1033,27 @@ body:has(.wb-client-tab) .wb-main {
   padding: 0;
 }
 
+/* The board takes the window's width when its columns don't fit the page
+   (decided 2026-11-23, specs/ui.md, "Layout"): as wide as its columns,
+   at least the page's width, at most the window's less the gutter on both
+   sides, centered on the page; beyond that the columns scroll inside it */
+.wb-board-frame {
+  --wb-board-room: calc(var(--bs-gutter-x, 1.5rem) * 0.5);
+  display: flex;
+  justify-content: center;
+}
+
+body:has(.wb-client-tab) .wb-board-frame {
+  --wb-board-room: calc(var(--bs-gutter-x, 1.5rem) * 0.5 + 1.75rem);
+}
+
+.wb-board-frame > .wb-todolist.is-board {
+  flex: none;
+  width: max-content;
+  min-width: 100%;
+  max-width: calc(100vw - 2 * var(--wb-board-room));
+}
+
 .wb-todolist.is-board .wb-group {
   flex: 0 0 18rem;
   padding: 0.5rem;
