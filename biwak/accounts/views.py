@@ -208,6 +208,18 @@ class NameForm(Form):
     )
 
 
+class DeviceNameForm(Form):
+    name = forms.CharField(
+        label=gettext_lazy("name"),
+        max_length=operations.DEVICE_NAME_LENGTH,
+        required=False,
+        help_text=gettext_lazy("Empty: the browser and system."),
+    )
+
+    def clean_name(self):
+        return operations.clean_device_name(self.cleaned_data["name"])
+
+
 class KeyboardForm(Form):
     keyboard_shortcuts = forms.BooleanField(
         label=gettext_lazy("Single-key shortcuts"),
@@ -530,10 +542,10 @@ def _push_context(user):
 
     if not push.enabled():
         return None
-    devices = list(user.push_subscriptions.all())
-    for device in devices:
-        device.name = signin.describe_agent(device.user_agent)
-    return {"key": django_settings.WEBPUSH_VAPID_PUBLIC_KEY, "devices": devices}
+    return {
+        "key": django_settings.WEBPUSH_VAPID_PUBLIC_KEY,
+        "devices": list(user.push_subscriptions.all()),
+    }
 
 
 @never_cache
@@ -617,3 +629,25 @@ def push_subscription_remove(request, pk):
     if not operations.remove_device(request.user, pk=pk):
         raise Http404
     return redirect(reverse("settings") + "#devices")
+
+
+@never_cache
+def push_subscription_rename(request, pk):
+    """The settings' "Rename…" of a device: a modal, also a page"""
+    device = get_object_or_404(request.user.push_subscriptions, pk=pk)
+    form = DeviceNameForm(request.POST or None, initial={"name": device.name})
+    form.fields["name"].widget.attrs["placeholder"] = signin.describe_agent(
+        device.user_agent
+    )
+    if form.is_valid():
+        operations.rename_device(
+            request.user, pk=device.pk, name=form.cleaned_data["name"]
+        )
+        return redirect(reverse("settings") + "#devices")
+    return form_response(
+        request,
+        form,
+        title=_("Rename the device"),
+        cancel_url=reverse("settings") + "#devices",
+        submit_label=_("Rename"),
+    )

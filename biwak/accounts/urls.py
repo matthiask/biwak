@@ -46,6 +46,11 @@ urlpatterns = [
         views.push_subscription_remove,
         name="push_subscription_remove",
     ),
+    path(
+        "push/<int:pk>/rename/",
+        views.push_subscription_rename,
+        name="push_subscription_rename",
+    ),
     path("api-tokens/", views.api_tokens, name="api_tokens"),
     path(
         "api-tokens/<int:pk>/delete/",

@@ -217,6 +217,10 @@ def api_token_delete(request, token_id: int):
 
 class PushSubscriptionOut(Schema):
     id: int
+    name: str = Field(
+        description="What the person calls the device in the settings, or the"
+        " browser and system when they didn't name it."
+    )
     device: str = Field(description='The browser and system, "Firefox on Linux".')
     user_agent: str
     created_at: dt.datetime
@@ -230,6 +234,7 @@ def push_subscription_out(subscription):
 
     return {
         "id": subscription.pk,
+        "name": subscription.label,
         "device": describe_agent(subscription.user_agent),
         "user_agent": subscription.user_agent,
         "created_at": subscription.created_at,

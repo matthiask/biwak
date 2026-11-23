@@ -13,7 +13,7 @@ from django.utils.crypto import get_random_string
 from django.utils.translation import gettext as _
 from PIL import Image, ImageOps
 
-from biwak.accounts.models import Accent, Theme
+from biwak.accounts.models import Accent, PushSubscription, Theme
 
 
 @transaction.atomic
@@ -253,3 +253,30 @@ def remove_device(user, *, pk=None, endpoint=None):
     )
     deleted, _rows = devices.delete()
     return bool(deleted)
+
+
+# As long as teams' names
+DEVICE_NAME_LENGTH = PushSubscription._meta.get_field("name").max_length
+
+
+def clean_device_name(name):
+    """The name with single spaces, ``ValidationError`` when too long;
+    empty is the browser and system again"""
+    name = " ".join(str(name or "").split())
+    if len(name) > DEVICE_NAME_LENGTH:
+        raise ValidationError(
+            _("At most %(count)s characters.") % {"count": DEVICE_NAME_LENGTH}
+        )
+    return name
+
+
+@transaction.atomic
+def rename_device(user, *, pk, name):
+    """Names one of the person's devices (empty: the browser and system);
+    returns it, None when there's no such device of the person's"""
+    device = user.push_subscriptions.select_for_update().filter(pk=pk).first()
+    if device is None:
+        return None
+    device.name = clean_device_name(name)
+    device.save(update_fields=["name"])
+    return device
