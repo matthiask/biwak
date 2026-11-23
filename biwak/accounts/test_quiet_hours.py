@@ -289,6 +289,18 @@ class ShownTest(QuietBase):
                 self.assertContains(response, f'title="Bob Example\n{TITLE}"')
                 self.assertContains(response, 'class="wb-away-sign"')
 
+    def test_the_note_on_the_to_dos_page(self):
+        """Under "Assigned to", while the to-do is open (decided 2026-11-23)"""
+        line = f'<div class="wb-away-line small">{NOTICE}</div>'
+        for user in [self.ada, self.cleo]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                response = self.client.get(self.todo.get_absolute_url())
+                self.assertContains(response, line, html=True)
+        ops.complete(self.todo, actor=self.ada)
+        response = self.client.get(self.todo.get_absolute_url())
+        self.assertNotContains(response, "is away until")
+
     def test_not_after_the_return(self):
         self.client.force_login(self.ada)
         with time_machine.travel(dt.datetime(2026, 12, 4, 8, tzinfo=ZURICH)):
