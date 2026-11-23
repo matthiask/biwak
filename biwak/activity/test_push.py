@@ -12,6 +12,7 @@ import time_machine
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from django.core.management import call_command
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 from pywebpush import WebPushException
@@ -387,6 +388,23 @@ class FailuresTest(PushBase):
         self.assertIsNone(Notification.objects.get(user=self.bob).pushed_at)
         self.webpush.side_effect = None
         self.assertEqual(push.send_due(self.later(12)), 1)
+
+    def test_sent_outside_a_transaction(self):
+        """The notifications are claimed in a short transaction and pushed
+        outside it, so marking them read in the lantern doesn't wait for
+        the push services (review 2026-11-23); claimed, a second run
+        doesn't push them again"""
+        depth = len(connection.atomic_blocks)
+        during = []
+
+        def webpush(info, **kwargs):
+            during.append((len(connection.atomic_blocks), push.pending().count()))
+
+        self.webpush.side_effect = webpush
+        self.mention(self.bob)
+        self.assertEqual(push.send_due(self.later()), 1)
+        self.assertEqual(during, [(depth, 0)])
+        self.assertIsNotNone(Notification.objects.get(user=self.bob).pushed_at)
 
     def test_given_up_after_the_ttl(self):
         self.webpush.side_effect = ConnectionError("unreachable")

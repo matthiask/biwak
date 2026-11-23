@@ -152,6 +152,14 @@ In this order, each step with its tests:
   failed otherwise (logged), the notifications stay unpushed for the
   next run, until the `TTL` (12 hours) has passed (confirmed 2026-11-22:
   the push service would drop it by then anyway).
+- **No locks while sending** (decided 2026-11-23, from a review): a
+  group's notifications are claimed in a short transaction (`_claim()`:
+  `select_for_update(skip_locked=True)`, `pushed_at` set), the push
+  services are called outside it (up to `TIMEOUT` each), so marking
+  them read in the lantern never waits; when every device failed, the
+  claim is undone for the next run (within the `TTL`). A run dying
+  between claiming and sending loses that push rather than pushing it
+  twice.
 - **The VAPID private key** may be the PEM or its lines between the
   markers joined into one (base64url DER or raw also work), for an
   environment variable.

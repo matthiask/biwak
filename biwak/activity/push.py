@@ -125,11 +125,39 @@ def send_due(now=None):
     return count
 
 
-@transaction.atomic
 def _push(user, pks, kind, now):
-    """Claims the notifications, pushes them as one to the person's
-    devices and marks them pushed; left for the next run when no device
-    took it and none is gone, until ``TTL`` has passed"""
+    """Claims the notifications (marks them pushed in a short transaction,
+    so no other run takes them), pushes them as one to the person's
+    devices outside it, so nothing waits for the push services, and gives
+    them back for the next run when no device took it and none is gone,
+    until ``TTL`` has passed"""
+    claimed = _claim(pks, now)
+    if not claimed:
+        return 0
+    deliverable = mails._deliverable(claimed, user)
+    payload = None
+    if deliverable:
+        with (
+            translation.override(language_for(user)),
+            mentions.reading_as(user),
+        ):
+            payload = content(user, deliverable, batch=kind == "batch")
+    pushed = deliver(user, payload) if payload else False
+    newest = max(n.created_at for n in claimed)
+    if pushed is None and newest > now - TTL:
+        # Every device failed for now: the next run tries again (unless
+        # read meanwhile, which pending() leaves out anyway)
+        Notification.objects.filter(
+            pk__in=[n.pk for n in claimed], pushed_at=now
+        ).update(pushed_at=None)
+        return 0
+    return int(bool(pushed))
+
+
+@transaction.atomic
+def _claim(pks, now):
+    """The notifications still to push among ``pks``, marked pushed at
+    ``now``; those another run holds are skipped"""
     claimed = list(
         Notification.objects
         .select_for_update(skip_locked=True, of=("self",))
@@ -146,23 +174,8 @@ def _push(user, pks, kind, now):
             "user",
         )
     )
-    if not claimed:
-        return 0
-    deliverable = mails._deliverable(claimed, user)
-    payload = None
-    if deliverable:
-        with (
-            translation.override(language_for(user)),
-            mentions.reading_as(user),
-        ):
-            payload = content(user, deliverable, batch=kind == "batch")
-    pushed = deliver(user, payload) if payload else False
-    newest = max(n.created_at for n in claimed)
-    if pushed is None and newest > now - TTL:
-        # Every device failed for now: the next run tries again
-        return 0
     Notification.objects.filter(pk__in=[n.pk for n in claimed]).update(pushed_at=now)
-    return int(bool(pushed))
+    return claimed
 
 
 def content(user, notifications, *, batch=False):
