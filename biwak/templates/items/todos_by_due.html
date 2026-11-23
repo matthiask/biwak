@@ -70,7 +70,7 @@
     {% endfor %}
   {% else %}
     {% for key, label, todos in sections %}
-      <section class="mb-4" data-section="{{ key }}">
+      <section class="mb-4" id="due-{{ key }}" data-section="{{ key }}">
         <h2 class="h6{% if key == 'overdue' %} text-danger{% endif %}">{{ label }}</h2>
         {% for todo in todos %}{% include "items/_due_row.html" %}{% endfor %}
       </section>

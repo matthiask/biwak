@@ -17,23 +17,27 @@ from biwak.formats import format_range
 from biwak.items import due
 
 
-def _row(item, user, today, *, others=False):
-    """A to-do as one line: its title and link, its project, what's urgent
-    about it ("Overdue", "Today", "Starts today") and its dates; with
-    ``others`` who has it, by the names the person may know, those away
-    with "(away until 3 Dec)" """
+def todo_row(item, user, today, *, others=False):
+    """A to-do as one line: its title and link, its project and list, what's
+    urgent about it ("Overdue", "Today", "Starts today", else nothing) and
+    its dates; with ``others`` who has it, by the names the person may
+    know, those away with "(away until 3 Dec)". The weekly mail's rows too
+    (``biwak.activity.weekly``)."""
     todo = item.todo
     state = due.badge_state(todo, today)
     if state == due.OVERDUE:
         label = _("Overdue")
     elif state == due.TODAY:
         label = _("Today")
-    else:
+    elif todo.starts_on == today:
         label = _("Starts today")
+    else:
+        label = ""
     row = {
         "title": mentions.title(item.title, item),
         "url": absolute(item.get_absolute_url()),
         "project": item.project,
+        "list": mentions.plain(item.parent.title, item.parent),
         "label": label,
         "overdue": state == due.OVERDUE,
         # "Today" alone on the due date, as on the rows (specs/start-dates.md)
@@ -60,7 +64,7 @@ def needs_you(user, today):
     todos = due.todos(user, assignee="me").filter(
         Q(todo__due_on__lte=today) | Q(todo__starts_on=today)
     )
-    return [_row(item, user, today) for item in due.ordered(todos)]
+    return [todo_row(item, user, today) for item in due.ordered(todos)]
 
 
 def waiting_on(user, today):
@@ -72,7 +76,7 @@ def waiting_on(user, today):
         .exclude(todo__assignees=user)
         .filter(todo__due_on__lt=today)
     )
-    return [_row(item, user, today, others=True) for item in due.ordered(todos)]
+    return [todo_row(item, user, today, others=True) for item in due.ordered(todos)]
 
 
 def todos(user, today):
