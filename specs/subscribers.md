@@ -59,7 +59,10 @@ quick). Not for assigning and not for the people a check-in asks.
 - They work like teams (`teams.md`): picking one adds a pill per member
   who's offered and not in already, nothing is stored but the people;
   an entry adding nobody isn't offered, nor "Everybody" while it would
-  add the same people as "Staff". Staff only (own staff and externals,
+  add the same people as "Staff". The entry says how many it adds
+  ("2 people"), not how many members the project has: oneself and
+  those in already aren't added (decided 2026-11-23, the user: it said
+  3 and added 2). Staff only (own staff and externals,
   who get the members they may know), like teams.
 - `biwak/teams/picking.py` (`project_groups()`), the picker's
   `data-project-groups` (`PeopleField.offer_teams(everybody=True)`,

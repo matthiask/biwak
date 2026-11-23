@@ -182,6 +182,10 @@ def picker_texts():
         "data-team-many": ngettext("%(count)s member", "%(count)s members", 2),
         "data-team-partial": _("%(count)s of %(total)s: %(reasons)s"),
         "data-team-internal": internal(),
+        # The project's groups say how many they add (not oneself or those
+        # in already)
+        "data-group-one": ngettext("%(count)s person", "%(count)s people", 1),
+        "data-group-many": ngettext("%(count)s person", "%(count)s people", 2),
     }
 
 

@@ -61,6 +61,8 @@ function attach(select) {
     teamPartial:
       select.dataset.teamPartial || "%(count)s of %(total)s: %(reasons)s",
     teamInternal: select.dataset.teamInternal || "can't see internal items",
+    groupOne: select.dataset.groupOne || "%(count)s person",
+    groupMany: select.dataset.groupMany || "%(count)s people",
   }
   const teams = parse(select.dataset.teams)
   const groups = parse(select.dataset.projectGroups)
@@ -313,8 +315,12 @@ function attach(select) {
     name.textContent = entry.team.name
     const detail = document.createElement("small")
     detail.className = "wb-mentions-detail"
+    // A group says how many it adds: oneself and those in already aren't
     detail.textContent = entry.group
-      ? teamDetail(entry.state)
+      ? (entry.state.add.length === 1
+          ? texts.groupOne
+          : texts.groupMany
+        ).replace("%(count)s", entry.state.add.length)
       : `${texts.team} · ${teamDetail(entry.state)}`
     item.append(teamMark(), " ", name, " ", detail)
     item.addEventListener("mousedown", (event) => {

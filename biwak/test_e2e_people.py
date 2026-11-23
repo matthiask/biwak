@@ -186,6 +186,8 @@ class TeamsTest(E2ETestCase):
         options = page.locator(".wb-picker-list li")
         expect(options.first).to_have_attribute("data-group", "staff")
         expect(options.first).to_contain_text("Staff on this project")
+        # How many it adds: Dan, not Ada, who posts and is told anyway
+        expect(options.first.locator(".wb-mentions-detail")).to_have_text("1 person")
         # Everybody would add the same as staff while the message is internal
         expect(page.locator(".wb-picker-list li[data-group]")).to_have_count(1)
         picker.press("Escape")
