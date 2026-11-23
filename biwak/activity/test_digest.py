@@ -1,7 +1,7 @@
 """The daily digest (specs/notifications.md, "Digest", decided 2026-11-23):
 the to-dos needing the person today and those they wait on at the top,
-mentions and assignments in full, one line per item for the rest, and a
-digest on working days without notifications"""
+mentions and assignments in full, one line per item for the rest; no
+digest without notifications"""
 
 import datetime as dt
 
@@ -10,13 +10,11 @@ from django.core import mail
 
 from biwak.accounts.models import MailDelivery
 from biwak.activity.models import Notification
+from biwak.activity.operations import subscribe
 from biwak.activity.test_quiet_hours import MONDAY, QuietBase, at
 from biwak.items import operations as ops
 from biwak.items.models import Assignment, Item
 from biwak.test_utils import person
-
-
-SATURDAY = "2026-11-28"
 
 
 class DigestBase(QuietBase):
@@ -43,9 +41,12 @@ class DigestBase(QuietBase):
             )
         return Item.objects.get(title=title)
 
-    def quiet_day(self):
-        """No notifications: the digest is about the to-dos only"""
+    def news(self):
+        """Only a comment of yesterday for Bob and Cleo to be told about:
+        the to-do sections enrich a digest with notifications"""
         Notification.objects.all().delete()
+        subscribe(self.cleo, self.todo)
+        self.comment("2026-11-22 14:00")
 
 
 class TodoSectionsTest(DigestBase):
@@ -68,10 +69,10 @@ class TodoSectionsTest(DigestBase):
         self.make("Not mine", to=[self.ada], due_on=dt.date(2026, 11, 20))
         done = self.make("Done", to=[self.bob], due_on=dt.date(2026, 11, 20))
         self.act(lambda: ops.complete(done, actor=self.bob))
-        self.quiet_day()
+        self.news()
         self.send(f"{MONDAY} 07:00")
         (message,) = self.to_bob()
-        self.assertEqual(message.subject, "[Biwak] Your to-dos on 23 November 2026")
+        self.assertEqual(message.subject, "[Biwak] What happened on 22 November 2026")
         overdue = Item.objects.get(title="Overdue")
         self.assertIn(
             "# Needs you today\n\n"
@@ -87,7 +88,6 @@ class TodoSectionsTest(DigestBase):
         for title in ["Due later", "Starts later", "Not mine", "Done"]:
             self.assertNotIn(title, message.body)
         self.assertNotIn("Waiting on others", message.body)
-        self.assertNotIn("What happened", message.body)
         html = message.alternatives[0][0]
         self.assertIn("Needs you today", html)
         self.assertIn(
@@ -105,7 +105,7 @@ class TodoSectionsTest(DigestBase):
         self.make(
             "Together", by=self.bob, to=[self.bob, dan], due_on=dt.date(2026, 11, 20)
         )
-        self.quiet_day()
+        self.news()
         self.send(f"{MONDAY} 07:00")
         (message,) = self.to_bob()
         self.assertIn(
@@ -144,7 +144,7 @@ class TodoSectionsTest(DigestBase):
         Assignment.objects.create(
             todo=hidden.todo, user=self.bob, assigned_by=self.cleo
         )
-        self.quiet_day()
+        self.news()
         self.send(f"{MONDAY} 07:00")
         (message,) = [m for m in mail.outbox if m.to == [self.cleo.email]]
         self.assertIn("- For Cleo (Website)", message.body)
@@ -159,8 +159,7 @@ class TodoSectionsTest(DigestBase):
     def test_with_the_notifications(self):
         """On top of yesterday's notifications, which keep the subject"""
         self.make("Overdue", to=[self.bob], due_on=dt.date(2026, 11, 20))
-        self.quiet_day()
-        self.comment("2026-11-22 14:00")
+        self.news()
         self.send(f"{MONDAY} 07:00")
         (message,) = self.to_bob()
         self.assertEqual(message.subject, "[Biwak] What happened on 22 November 2026")
@@ -182,90 +181,27 @@ class TodoSectionsTest(DigestBase):
             due_on=dt.date(2026, 11, 27),
         )
         self.make("Late", by=self.bob, to=[self.ada], due_on=dt.date(2026, 11, 20))
-        self.quiet_day()
+        self.news()
         self.send(f"{MONDAY} 07:00")
         (message,) = self.to_bob()
-        self.assertEqual(message.subject, "[Biwak] Deine To-dos am 23. November 2026")
+        self.assertEqual(
+            message.subject, "[Biwak] Was am 22. November 2026 passiert ist"
+        )
         self.assertIn("# Braucht dich heute", message.body)
         self.assertIn("Beginnt heute · 23.–27. Nov.", message.body)
         self.assertIn("# Warten auf andere", message.body)
         self.assertIn("Überfällig · 20. Nov.", message.body)
 
 
-class TodoDigestDaysTest(DigestBase):
-    """A digest also on days without notifications: on working days, once,
-    not while away, not without a digest"""
-
-    def setUp(self):
-        super().setUp()
+class NothingHappenedTest(DigestBase):
+    def test_no_digest_for_the_to_dos_alone(self):
+        """No notifications, no digest, however much is overdue (decided
+        2026-11-23: the to-dos only enrich a digest)"""
         self.make("Overdue", to=[self.bob], due_on=dt.date(2026, 11, 20))
-        self.quiet_day()
-
-    def test_once_a_day_from_seven(self):
-        self.send(f"{MONDAY} 06:59")
-        self.assertEqual(self.to_bob(), [])
-        self.send(f"{MONDAY} 07:00")
-        self.assertEqual(len(self.to_bob()), 1)
-        self.send(f"{MONDAY} 07:01")
-        self.send(f"{MONDAY} 18:00")
-        self.assertEqual(self.to_bob(), [])
-        self.send("2026-11-24 07:00")
-        self.assertEqual(len(self.to_bob()), 1)
-
-    def test_monday_to_friday(self):
-        self.send("2026-11-27 07:00")
-        self.assertEqual(len(self.to_bob()), 1)
-        self.send(SATURDAY + " 07:00")
-        self.send("2026-11-29 07:00")
-        self.assertEqual(self.to_bob(), [])
-
-    def test_the_working_days_with_quiet_hours(self):
-        """At the start of the working time on the working days"""
-        self.bob.quiet_hours = True
-        self.bob.working_days = [5]
-        self.bob.working_from = dt.time(9, 30)
-        self.bob.save()
-        self.send(f"{MONDAY} 09:30")
-        self.send(SATURDAY + " 07:00")
-        self.send(SATURDAY + " 09:29")
-        self.assertEqual(self.to_bob(), [])
-        self.send(SATURDAY + " 09:30")
-        self.assertEqual(len(self.to_bob()), 1)
-
-    def test_not_while_away(self):
-        self.bob.away_until = dt.date(2026, 11, 24)
-        self.bob.save()
+        self.make("Late", by=self.bob, to=[self.ada], due_on=dt.date(2026, 11, 20))
+        Notification.objects.all().delete()
         self.send(f"{MONDAY} 07:00")
         self.send("2026-11-24 07:00")
-        self.assertEqual(self.to_bob(), [])
-        self.send("2026-11-25 07:00")
-        self.assertEqual(len(self.to_bob()), 1)
-
-    def test_only_with_the_daily_digest(self):
-        for delivery in [MailDelivery.EACH, MailDelivery.NONE]:
-            self.bob.mail_delivery = delivery
-            self.bob.save()
-            self.send(f"{MONDAY} 07:00")
-            self.assertEqual(self.to_bob(), [], delivery)
-
-    def test_nothing_to_say(self):
-        """Nothing overdue, nothing waited on: no mail; something becoming
-        due later that day waits for tomorrow's"""
-        Item.objects.filter(title="Overdue").delete()
-        self.send(f"{MONDAY} 07:00")
-        self.assertEqual(self.to_bob(), [])
-        self.make("Now", to=[self.bob], due_on=dt.date(2026, 11, 23))
-        self.quiet_day()
-        self.send(f"{MONDAY} 08:00")
-        self.assertEqual(self.to_bob(), [])
-        self.send("2026-11-24 07:00")
-        (message,) = self.to_bob()
-        self.assertIn("- Now (Website)", message.body)
-
-    def test_not_to_bounced_addresses(self):
-        self.bob.mail_undeliverable_at = at(f"{MONDAY} 06:00")
-        self.bob.save()
-        self.send(f"{MONDAY} 07:00")
         self.assertEqual(self.to_bob(), [])
 
 

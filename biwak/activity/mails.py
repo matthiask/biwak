@@ -21,7 +21,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.languages import language_for
-from biwak.accounts.models import MailDelivery, User, default_working_days
+from biwak.accounts.models import MailDelivery, User
 from biwak.activity import digest, feed, mentions
 from biwak.activity.models import Action, Notification
 from biwak.activity.operations import is_subscribed
@@ -569,24 +569,22 @@ def digest_mail(user, notifications, *, todos=None, short=True):
                 (for_you if mine else items).append(entry)
         if items:
             projects.append({"project": project, "items": items})
-    todos = todos or {}
-    if not (for_you or projects or todos.get("needs_you") or todos.get("waiting")):
+    # The to-do sections only enrich a digest with notifications (decided
+    # 2026-11-23): nothing happened, no mail
+    if not (for_you or projects):
         return None
-    heading = digest_heading(notifications) if for_you or projects else ""
+    heading = digest_heading(notifications)
     context = {
         "user": user,
         "heading": heading,
         "for_you": for_you,
         "projects": projects,
         "settings_url": absolute(reverse("settings")),
-        **todos,
-    }
-    subject = heading or _("Your to-dos on %(day)s") % {
-        "day": date_format(todos.get("today") or timezone.localdate(), "DATE_FORMAT")
+        **(todos or {}),
     }
     return build_mail(
         user,
-        subject=_("[Biwak] %(heading)s") % {"heading": subject},
+        subject=_("[Biwak] %(heading)s") % context,
         template="mails/digest",
         context=context,
         # No one-click unsubscribing from everything: the settings page
@@ -806,7 +804,7 @@ def send_mails(*, now=None):
         user = users[user_id]
         if not _digest_due(user, local):
             continue
-        sent = _mail(
+        count += _mail(
             user,
             pks,
             now,
@@ -815,61 +813,4 @@ def send_mails(*, now=None):
             ),
             MailKind.DIGEST,
         )
-        if sent:
-            User.objects.filter(pk=user.pk).update(digest_on=today)
-        count += sent
-    return count + _todo_digests(now)
-
-
-def working_day(user, day):
-    """The person's working days with quiet hours on, else Monday to Friday
-    (the days of the daily digest without notifications)"""
-    days = user.working_days if user.quiet_hours else default_working_days()
-    return day.weekday() in (days or ())
-
-
-def _todo_digests(now):
-    """The daily digest on days without notifications (decided 2026-11-23):
-    the to-dos needing the person today and those they wait on, once a day
-    (``User.digest_on``), on their working days, when it's due (07:00, with
-    quiet hours the start of the working time) and not while away; nothing
-    to say, no mail"""
-    from biwak.accounts.quiet import mails_held
-
-    local = timezone.localtime(now)
-    today = local.date()
-    people = User.objects.filter(
-        Q(digest_on__isnull=True) | Q(digest_on__lt=today),
-        is_active=True,
-        mail_delivery=MailDelivery.DIGEST,
-        mail_undeliverable_at__isnull=True,
-    )
-    if local.time() < DIGEST_AT:
-        people = people.filter(quiet_hours=True)
-    count = 0
-    for user in people:
-        if not _digest_due(user, local) or mails_held(user, now):
-            # Later today (quiet hours), or once back (away)
-            continue
-        if working_day(user, today):
-            count += _todo_digest(user, today)
-        User.objects.filter(pk=user.pk).update(digest_on=today)
     return count
-
-
-def _todo_digest(user, today):
-    """One digest without notifications into the outbox; whether it went"""
-    try:
-        with (
-            transaction.atomic(),
-            translation.override(language_for(user)),
-            mentions.reading_as(user),
-        ):
-            message = digest_mail(user, [], todos=digest.todos(user, today))
-            if message is None:
-                return False
-            outbox.send(message, MailKind.DIGEST)
-            return True
-    except Exception:
-        logger.exception("Building a digest failed")
-        return False

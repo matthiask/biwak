@@ -76,12 +76,8 @@ def waiting_on(user, today):
 
 
 def todos(user, today):
-    """Both to-do sections, ``{"needs_you": […], "waiting": […], "today"}``"""
-    return {
-        "needs_you": needs_you(user, today),
-        "waiting": waiting_on(user, today),
-        "today": today,
-    }
+    """Both to-do sections, ``{"needs_you": […], "waiting": […]}``"""
+    return {"needs_you": needs_you(user, today), "waiting": waiting_on(user, today)}
 
 
 def for_you(notification):

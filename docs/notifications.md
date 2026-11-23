@@ -114,11 +114,8 @@ first line says when clients can see the item.
 
 Then what happened: what mentions you or assigns you a to-do first,
 "For you", in full; the rest one line per item, by project ("Ada
-changed it. 3 comments by Ada and Bob."), linked to the item. On days
-without notifications the digest comes anyway when you have to-dos in
-the first two parts ("Your to-dos on 24 November 2026"), but only on
-your working days (Monday to Friday, or your quiet hours' days) and
-not while you're away.
+changed it. 3 comments by Ada and Bob."), linked to the item. Without
+notifications there's no digest.
 
 ## Push notifications
 

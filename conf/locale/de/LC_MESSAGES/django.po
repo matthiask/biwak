@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 20:30+0100\n"
+"POT-Creation-Date: 2026-11-23 20:55+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -562,10 +562,6 @@ msgstr "abwesend bis"
 #: biwak/accounts/models.py
 msgid "away note"
 msgstr "Abwesenheitsnotiz"
-
-#: biwak/accounts/models.py
-msgid "last digest"
-msgstr "letzte Zusammenfassung"
 
 #: biwak/accounts/models.py
 msgid "passkey offer done"
@@ -1460,11 +1456,6 @@ msgstr "Was am %(day)s passiert ist"
 #, python-format
 msgid "What happened from %(first)s to %(last)s"
 msgstr "Was vom %(first)s bis %(last)s passiert ist"
-
-#: biwak/activity/mails.py
-#, python-format
-msgid "Your to-dos on %(day)s"
-msgstr "Deine To-dos am %(day)s"
 
 #: biwak/activity/mails.py
 #, python-format

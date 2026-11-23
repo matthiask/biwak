@@ -221,12 +221,6 @@ class User(AbstractBaseUser):
     # time zone; ends by itself the day after (``is_away``)
     away_until = models.DateField(_("away until"), null=True, blank=True)
     away_note = models.CharField(_("away note"), max_length=200, blank=True)
-    # The day of the last daily digest, sent or with nothing to say
-    # (specs/notifications.md, "Digest"): one a day, also on days without
-    # notifications; left out of the audit log
-    digest_on = models.DateField(
-        _("last digest"), null=True, blank=True, editable=False
-    )
 
     # The offer to add a passkey after logging in by code (specs/access.md)
     # stops for good once the person dismissed it or added a passkey

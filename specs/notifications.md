@@ -267,9 +267,8 @@ large).
   day before, grouped by project and item, a batch as one entry; nothing
   to say, no mail. Subject `[Biwak] What happened on 19. November 2026`
   (or "from … to …" for more than one day, the first and last day with
-  notifications), from `Biwak <DEFAULT_FROM_EMAIL>`. What it holds and
-  when it goes without notifications: "The daily digest" below
-  (decided 2026-11-23).
+  notifications), from `Biwak <DEFAULT_FROM_EMAIL>`. What it holds:
+  "The daily digest" below (decided 2026-11-23).
 - **Content:** the full text (the comment, the to-do with its notes, the
   message), plain text and HTML (`templates/mails/`). Attachments are
   links (the download checks access). The first line says when the item
@@ -350,31 +349,20 @@ text and HTML, in `language_for(recipient)`.
    but no to-do sections.
 
 Sections 1 and 2 are in every daily digest (delivery "daily digest"),
-with notifications or without. The heading "What happened on …"
-follows them when there are notifications.
+before the heading "What happened on …", on any day the digest goes
+(weekends included), with the held digest after being away too; the
+subject stays "What happened on …". Clients get them too: only to-dos
+visible to them (`visible_to()`), only names of people they may know.
 
-**On days without notifications** the digest goes when sections 1 or 2
-have something (`mails._todo_digests()`), subject `[Biwak] Your to-dos
-on 24 November 2026` (German "Deine To-dos am …"); with notifications
-the subject stays "What happened on …".
+**No digest without notifications** (decided 2026-11-23 by the user:
+"no mails when the digest would be empty; just enrich the digest with
+additional useful info"): overdue to-dos alone send nothing. The
+choices above (digest people only, the "each change" mail after quiet
+hours or away in full without to-do sections, assignments in full, no
+unsubscribe link on the one-liners, "Waiting on others" without the
+to-dos also one's own, the wording) were confirmed the same day.
 
-- Only for people with delivery "daily digest" (not "each change", not
-  "No mails"), active, whose address doesn't bounce.
-- Only on their **working days**: those of their quiet hours when quiet
-  hours are on, else Monday to Friday. A digest with notifications
-  still goes on any day, as before, with the to-do sections.
-- **When:** at 07:00, or with quiet hours at the start of the first
-  working time of the day, like the digest with notifications.
-- **Not while away** (away holds every mail, `quiet-hours.md`); back,
-  the digest of what was held goes as before (07:00 or the start of the
-  working time) with the to-do sections, or, without notifications,
-  the to-do digest on a working day.
-- **Once a day:** `User.digest_on`, the day of the last daily digest
-  (sent, or looked at with nothing to say, or a day off), left out of
-  the audit log. Something becoming overdue later that day waits for
-  tomorrow's.
-- Clients get it too: only to-dos visible to them (`visible_to()`), only
-  names of people they may know.
+## API and CLI
 
 `GET/PUT /api/v1/me/notifications/` (level, delivery),
 `GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and

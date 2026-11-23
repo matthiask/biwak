@@ -134,11 +134,8 @@ Kund:innen den Eintrag sehen können.
 Dann, was passiert ist: was dich erwähnt oder dir ein To-do zuweist
 zuerst, „Für dich“, vollständig; der Rest eine Zeile pro Eintrag, nach
 Projekt („Ada hat es geändert. 3 Kommentare von Ada und Bob.“), mit
-einem Link zum Eintrag. An Tagen ohne Benachrichtigungen kommt die
-Zusammenfassung trotzdem, wenn du To-dos in den ersten beiden Teilen
-hast („Deine To-dos am 24. November 2026“), aber nur an deinen
-Arbeitstagen (Montag bis Freitag oder die Tage deiner Ruhezeiten) und
-nicht, während du abwesend bist.
+einem Link zum Eintrag. Ohne
+Benachrichtigungen gibt es keine Zusammenfassung.
 
 ## Push-Benachrichtigungen
 
