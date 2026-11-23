@@ -35,7 +35,7 @@ def todos_for(user, ids):
         for item in Item.objects
         .visible_to(user)
         .filter(pk__in=ids, kind=Kind.TODO)
-        .select_related("project", "todo")
+        .select_related("project", "todo", "parent")
     }
     return [found[pk] for pk in ids if pk in found], len(set(ids) - set(found))
 
@@ -211,6 +211,25 @@ def new_list_title(todos):
     return gettext("Moved to-dos")
 
 
+def new_list_visible(todos):
+    """Whether a new list for the moved to-dos is visible to clients: when
+    every list they come from is (decided 2026-11-23)"""
+    return all(todo.parent.is_client_visible for todo in todos)
+
+
+def hidden_note(todos, visible):
+    """What moving the to-dos into an internal list hides from clients, as
+    a sentence (empty when the list is visible or hides nothing)"""
+    count = 0 if visible else sum(todo.is_client_visible for todo in todos)
+    if not count:
+        return ""
+    return ngettext(
+        "Clients won't see %(count)d to-do any more: the list is internal.",
+        "Clients won't see %(count)d to-dos any more: the list is internal.",
+        count,
+    ) % {"count": count}
+
+
 def move_notes(todos, project, visible, viewer):
     """Who moving the to-dos into a list of ``project`` adds there and who
     it drops, as sentences (empty when nobody)"""
@@ -270,7 +289,7 @@ def todos_move(request):
         )
 
     form = make(post)
-    note = ""
+    note = clients_note = ""
     if _refuse_missing(form, missing):
         pass
     elif projects is None and own is None:
@@ -282,7 +301,7 @@ def todos_move(request):
         value = form.cleaned_data["target"]
         if value == NEW_LIST:
             target, group = None, None
-            visible = False
+            visible = new_list_visible(todos)
         else:
             list_id, _sep, group_id = value.partition(":")
             target = item_for(request, int(list_id), Kind.LIST)
@@ -293,7 +312,8 @@ def todos_move(request):
                 )
             visible = target.is_client_visible
         note = move_notes(todos, chosen, visible, request.user)
-        if not note or form.asked(f"{chosen.pk}:{value}"):
+        clients_note = hidden_note(todos, visible)
+        if not (note or clients_note) or form.asked(f"{chosen.pk}:{value}"):
             try:
                 with transaction.atomic():
                     if target is None:
@@ -301,6 +321,7 @@ def todos_move(request):
                             project=chosen,
                             title=new_list_title(todos),
                             creator=request.user,
+                            visible=visible,
                         )
                     ops.move_todos_to(
                         todos,
@@ -311,7 +332,7 @@ def todos_move(request):
                     )
             except ValueError as exc:
                 form.add_error(None, str(exc))
-                note = ""
+                note = clients_note = ""
             else:
                 return redirect(next_url(request) or "todos")
     return form_response(
@@ -323,7 +344,8 @@ def todos_move(request):
         cancel_url=next_url(request) or "/todos/",
         submit_label=_("Move"),
         template="items/across_form.html",
-        extra={"note": note, "clients_note": ""},
+        destructive=bool(clients_note),
+        extra={"note": note, "clients_note": clients_note},
     )
 
 

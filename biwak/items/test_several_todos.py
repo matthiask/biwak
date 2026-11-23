@@ -145,6 +145,50 @@ class DatedOnceTest(TestCase):
         self.assertNotIn("batch", Event.objects.get(action=Action.EDITED).data)
         self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
 
+    def edits(self, item):
+        return [
+            (e.data["fields"], e.data.get("batch"))
+            for e in Event.objects.filter(item=item, action=Action.EDITED).order_by(
+                "created_at", "pk"
+            )
+        ]
+
+    def test_an_edit_of_other_fields_before_stays_its_own(self):
+        """Notes edited, then "Due date…" within the editing session: the
+        notes change isn't folded into "changed the dates" (review
+        2026-11-23)"""
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, notes="Ask Cleo")
+        self.date(self.todos)
+        [(notes, first), (dated, batch)] = self.edits(self.todos[0])
+        self.assertEqual((notes, first), (["notes"], None))
+        self.assertEqual(dated, ["due_on"])
+        self.assertIsNotNone(batch)
+
+    def test_an_edit_of_other_fields_after_stays_its_own(self):
+        self.date(self.todos)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, title="Copy, finally")
+        [(dated, batch), (title, last)] = self.edits(self.todos[0])
+        self.assertEqual(dated, ["due_on"])
+        self.assertIsNotNone(batch)
+        self.assertEqual((title, last), (["title"], None))
+        _marks, entries, _read, _more = lantern.menu(self.bob)
+        self.assertEqual(len(entries), 2)
+
+    def test_edits_of_the_same_dates_merge(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, due_on=D(2026, 12, 1))
+        self.date(self.todos)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.update_todo(self.todos[0], actor=self.ada, due_on=D(2026, 12, 21))
+        [(fields, batch)] = self.edits(self.todos[0])
+        self.assertEqual(fields, ["due_on"])
+        self.assertIsNotNone(batch)
+        event = Event.objects.get(item=self.todos[0], action=Action.EDITED)
+        self.assertEqual(event.data["due_was"], None)
+        self.assertEqual(event.data["due_on"], "2026-12-21")
+
 
 class MoveAcrossTest(TestCase):
     """Moving to-dos to a list of another project (decided 2026-11-22)"""
@@ -374,15 +418,26 @@ class MovePageTest(Selection):
 
     def test_moving(self):
         self.client.force_login(self.ada)
+        data = {
+            "project": self.website.pk,
+            "shown": self.website.pk,
+            "target": f"{self.internal.pk}:{self.soon.pk}",
+            "index": "end",
+        }
+        response = self.post(
+            self.photos, self.copy, data=data, next="&next=/todos/", modal=True
+        )
+        # Visible to-dos into an internal list: it says so first (decided
+        # 2026-11-23)
+        self.assertContains(
+            response, "Clients won&#x27;t see 2 to-dos any more: the list is internal."
+        )
+        self.assertIn_([self.copy, self.photos], self.launch)
         response = self.post(
             self.photos,
             self.copy,
-            data={
-                "project": self.website.pk,
-                "shown": self.website.pk,
-                "target": f"{self.internal.pk}:{self.soon.pk}",
-                "index": "end",
-            },
+            data=data
+            | {"confirmed": f"{self.website.pk}:{self.internal.pk}:{self.soon.pk}"},
             next="&next=/todos/",
             modal=True,
         )
@@ -450,22 +505,31 @@ class MovePageTest(Selection):
         self.copy.refresh_from_db()
         new = self.copy.parent
         self.assertEqual((new.project, new.title), (self.shop, "Launch"))
-        self.assertFalse(new.is_client_visible)
+        # Visible as the list they came from (decided 2026-11-23)
+        self.assertTrue(new.is_client_visible)
+        self.assertTrue(self.copy.is_client_visible)
         self.assertIn_([self.photos], new)
-        # From several lists: "Moved to-dos"
+        # From several lists: "Moved to-dos", internal unless all of them
+        # are visible, and it says so first
+        data = {
+            "project": self.website.pk,
+            "shown": self.website.pk,
+            "target": "new",
+            "index": "end",
+        }
+        response = self.post(self.copy, self.budget, data=data)
+        self.assertContains(
+            response, "Clients won&#x27;t see 1 to-do any more: the list is internal."
+        )
         self.post(
             self.copy,
             self.budget,
-            data={
-                "project": self.website.pk,
-                "shown": self.website.pk,
-                "target": "new",
-                "index": "end",
-            },
+            data=data | {"confirmed": f"{self.website.pk}:new"},
         )
         self.budget.refresh_from_db()
         self.assertEqual(self.budget.parent.title, "Moved to-dos")
         self.assertEqual(self.budget.project, self.website)
+        self.assertFalse(self.budget.parent.is_client_visible)
 
     def test_a_todo_gone_changes_nothing(self):
         self.client.force_login(self.ada)
@@ -598,6 +662,18 @@ class MoveAPITest(Selection):
         self.copy.refresh_from_db()
         self.assertEqual(self.copy.parent_id, self.internal.pk)
 
+    def test_repeated_ids_count_once(self):
+        """As todos/dates/ and todos/assign/ (review 2026-11-23)"""
+        self.client.force_login(self.ada)
+        response = self.post({
+            "ids": [self.photos.pk, self.copy.pk, self.photos.pk],
+            "list_id": self.internal.pk,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [t["id"] for t in response.json()], [self.photos.pk, self.copy.pk]
+        )
+
     def test_across_projects_confirm(self):
         ops.assign(self.copy, [self.bob], actor=self.ada)
         self.client.force_login(self.ada)
@@ -615,7 +691,6 @@ class MoveAPITest(Selection):
         self.client.force_login(self.ada)
         for data, status in [
             ({"ids": [], "list_id": self.orders.pk}, 400),
-            ({"ids": [self.copy.pk, self.copy.pk], "list_id": self.orders.pk}, 400),
             ({"ids": [self.copy.pk], "list_id": 999999}, 404),
         ]:
             with self.subTest(data=data):

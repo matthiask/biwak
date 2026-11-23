@@ -110,26 +110,70 @@ def send_due(now=None):
     notifications = pending()
     held = hold(notifications, now)
     groups = mails._groups(notifications.exclude(user__in=held))
-    users = User.objects.in_bulk({user_id for user_id, _what in groups})
+    due = [
+        (user_id, kind, group["pks"])
+        for (user_id, (kind, _key)), group in groups.items()
+        if group["newest"][0] <= now - mails.MERGE_AFTER
+        and not (group["more"] and group["newest"][0] > now - mails.BATCH_WAIT)
+    ]
+    if not due:
+        return 0
+    users = User.objects.in_bulk({user_id for user_id, _kind, _pks in due})
+    key = _parsed_key()
     count = 0
-    for (user_id, (kind, _key)), group in groups.items():
-        newest = group["newest"][0]
-        if newest > now - mails.MERGE_AFTER:
-            continue
-        if group["more"] and newest > now - mails.BATCH_WAIT:
-            continue
+    for user_id, kind, pks in due:
         try:
-            count += _push(users[user_id], group["pks"], kind, now)
+            count += _push(users[user_id], pks, kind, now, key)
         except Exception:
             logger.exception("Pushing a notification failed")
     return count
 
 
+def _parsed_key():
+    """The private key, parsed once per run; None (logged once) when it
+    doesn't parse, so the run's pushes fail and the ``TTL`` drops them
+    instead of them piling up until the key is fixed"""
+    try:
+        return _vapid_key()
+    except Exception:
+        logger.exception("WEBPUSH_VAPID_PRIVATE_KEY doesn't parse: nothing is pushed")
+        return None
+
+
+def _push(user, pks, kind, now, key):
+    """Claims the notifications (marks them pushed in a short transaction,
+    so no other run takes them), pushes them as one to the person's
+    devices outside it, so nothing waits for the push services, and gives
+    them back for the next run when no device took it and none is gone,
+    until ``TTL`` has passed. ``key``: the parsed private key, None when
+    it didn't parse (failing like every device)."""
+    claimed = _claim(pks, now)
+    if not claimed:
+        return 0
+    deliverable = mails._deliverable(claimed, user)
+    payload = None
+    if deliverable:
+        with (
+            translation.override(language_for(user)),
+            mentions.reading_as(user),
+        ):
+            payload = content(user, deliverable, batch=kind == "batch")
+    pushed = deliver(user, payload, key) if payload else False
+    newest = max(n.created_at for n in claimed)
+    if pushed is None and newest > now - TTL:
+        # Every device failed for now: the next run tries again (unless
+        # read meanwhile, which pending() leaves out anyway)
+        Notification.objects.filter(
+            pk__in=[n.pk for n in claimed], pushed_at=now
+        ).update(pushed_at=None)
+        return 0
+    return int(bool(pushed))
+
+
 @transaction.atomic
-def _push(user, pks, kind, now):
-    """Claims the notifications, pushes them as one to the person's
-    devices and marks them pushed; left for the next run when no device
-    took it and none is gone, until ``TTL`` has passed"""
+def _claim(pks, now):
+    """The notifications still to push among ``pks``, marked pushed at
+    ``now``; those another run holds are skipped"""
     claimed = list(
         Notification.objects
         .select_for_update(skip_locked=True, of=("self",))
@@ -146,23 +190,8 @@ def _push(user, pks, kind, now):
             "user",
         )
     )
-    if not claimed:
-        return 0
-    deliverable = mails._deliverable(claimed, user)
-    payload = None
-    if deliverable:
-        with (
-            translation.override(language_for(user)),
-            mentions.reading_as(user),
-        ):
-            payload = content(user, deliverable, batch=kind == "batch")
-    pushed = deliver(user, payload) if payload else False
-    newest = max(n.created_at for n in claimed)
-    if pushed is None and newest > now - TTL:
-        # Every device failed for now: the next run tries again
-        return 0
     Notification.objects.filter(pk__in=[n.pk for n in claimed]).update(pushed_at=now)
-    return int(bool(pushed))
+    return claimed
 
 
 def content(user, notifications, *, batch=False):
@@ -225,17 +254,18 @@ def _vapid_key():
     return Vapid.from_string(key)
 
 
-def deliver(user, payload):
+def deliver(user, payload, key):
     """Sends the payload to each of the person's devices: True when one
     took it, False when there's none left (a 404 or 410 deletes the
     subscription: the browser dropped it), None when all failed otherwise
-    (logged)"""
+    (logged) or ``key`` is None (the private key didn't parse)"""
     from pywebpush import WebPushException, webpush
 
     subscriptions = list(user.push_subscriptions.all())
     if not subscriptions:
         return False
-    key = _vapid_key()
+    if key is None:
+        return None
     data = json.dumps(payload)
     delivered = failed = False
     for subscription in subscriptions:

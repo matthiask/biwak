@@ -154,18 +154,22 @@ class ManageTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(titles(), [("B", 1), ("Visible", 2), ("C", 3)])
+        # A repeated ID counts once, as in todos/move/ (decided 2026-11-23)
         response = self.client.post(
             f"/api/v1/lists/{self.shared.pk}/todos/move/",
             {"todo_ids": [b.pk, b.pk], "index": 1},
             content_type="application/json",
             headers=h,
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([t["id"] for t in response.json()], [b.pk])
+        self.assertEqual(titles(), [("Visible", 1), ("B", 2), ("C", 3)])
         self.client.force_login(self.ada)
         response = self.client.post(
-            f"/lists/{self.shared.pk}/todos/move/", {"todos": [b.pk, b.pk]}
+            f"/lists/{self.shared.pk}/todos/move/",
+            {"todos": [b.pk, b.pk], "index": "0"},
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 204)
         self.assertEqual(titles(), [("B", 1), ("Visible", 2), ("C", 3)])
         with self.assertRaises(ValueError):
             ops.move_todos([b, b], todolist=self.shared, actor=self.ada)

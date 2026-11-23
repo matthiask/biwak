@@ -44,6 +44,18 @@ STAFF_ONLY = {Action.SHARED_PUBLICLY, Action.STOPPED_SHARING}
 EDIT_SESSION = dt.timedelta(minutes=10)
 
 
+def _mergeable(earlier, data):
+    """Whether an edit merges into the earlier edit event: always, unless
+    exactly one of them is part of a batch ("Due date…" of several
+    to-dos, told as "changed the dates of 3 to-dos"); then only when the
+    other one changed nothing but fields the batch changed too, so no
+    other change is hidden in the batch's line (decided 2026-11-23)."""
+    if ("batch" in earlier) == ("batch" in data):
+        return True
+    batch, other = (earlier, data) if "batch" in earlier else (data, earlier)
+    return set(other.get("fields", [])) <= set(batch.get("fields", []))
+
+
 # What an import switches (``importing()``): nobody is told, and events carry
 # the original time
 _quiet = ContextVar("events_quiet", default=False)
@@ -117,6 +129,8 @@ def record(*, actor, action, project, item=None, **data):
         if group_move:
             events = events.filter(data__has_key="group")
         event = events.order_by("-created_at", "-pk").first()
+        if event is not None and not _mergeable(event.data, data):
+            event = None
     if event is not None:
         event.created_at = now
         # Merged edits list everything they changed

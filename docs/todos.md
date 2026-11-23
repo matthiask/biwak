@@ -77,8 +77,10 @@ somebody leaves and their to-dos go to someone else:
 - **Move…** moves them, completed ones too, to a list or one of its
   groups, to the top or the end, next to each other. Staff first choose
   the project, also another one, then the list, or "New list" (named
-  after the list they come from, or "Moved to-dos"; rename it later).
-  Into another project, the form first says who will be added to it
+  after the list they come from, or "Moved to-dos"; rename it later),
+  visible to clients when the lists they come from are. Before to-dos
+  clients see go into an internal list, the form says clients won't
+  see them any more. Into another project, the form first says who will be added to it
   and who won't see the to-dos there (they're unassigned and
   unsubscribed); their comments and history come along, and the
   project they left shows one line in its activity ("moved 23 to-dos to

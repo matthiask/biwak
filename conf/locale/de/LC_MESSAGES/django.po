@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 07:19+0100\n"
+"POT-Creation-Date: 2026-11-23 07:25+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2963,10 +2963,6 @@ msgid "Send the due date."
 msgstr "Sende die Fälligkeit."
 
 #: biwak/items/api.py
-msgid "Send each to-do once."
-msgstr "Sende jedes To-do einmal."
-
-#: biwak/items/api.py
 msgid "Only staff move to-dos into other projects."
 msgstr "Nur Mitarbeitende verschieben To-dos in andere Projekte."
 
@@ -3046,6 +3042,13 @@ msgstr "Neue Liste"
 #: biwak/items/assigning.py
 msgid "Moved to-dos"
 msgstr "Verschobene To-dos"
+
+#: biwak/items/assigning.py
+#, python-format
+msgid "Clients won't see %(count)d to-do any more: the list is internal."
+msgid_plural "Clients won't see %(count)d to-dos any more: the list is internal."
+msgstr[0] "Kund:innen sehen %(count)d To-do nicht mehr: Die Liste ist intern."
+msgstr[1] "Kund:innen sehen %(count)d To-dos nicht mehr: Die Liste ist intern."
 
 #: biwak/items/assigning.py
 #, python-format

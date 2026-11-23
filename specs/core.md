@@ -84,8 +84,10 @@ own (`notifications.md`); checklists, the toolbar and pasting are
   to-dos' grips selects them, dragging one moves them together
   (`move_todos()`). Dragging across a heading sets the group; dragging to
   another list moves it there, ungrouped unless dropped into a group.
-  Lists of other projects are refused (web and API answer 400). "Move
-  to…" in the "More" menu is the keyboard's way.
+  Lists of other projects are refused (web and API answer 400); a
+  repeated to-do counts once (`/lists/ID/todos/move/` and its API, as
+  `todos/move/`; decided 2026-11-23). "Move to…" in the "More" menu is
+  the keyboard's way.
 - Moves are one request and safe against concurrent moves (the list's
   row is locked).
 - Deleting a group keeps its to-dos, ungrouped at the end.

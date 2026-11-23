@@ -12,6 +12,7 @@ import time_machine
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from django.core.management import call_command
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 from pywebpush import WebPushException
@@ -387,6 +388,39 @@ class FailuresTest(PushBase):
         self.assertIsNone(Notification.objects.get(user=self.bob).pushed_at)
         self.webpush.side_effect = None
         self.assertEqual(push.send_due(self.later(12)), 1)
+
+    def test_sent_outside_a_transaction(self):
+        """The notifications are claimed in a short transaction and pushed
+        outside it, so marking them read in the lantern doesn't wait for
+        the push services (review 2026-11-23); claimed, a second run
+        doesn't push them again"""
+        depth = len(connection.atomic_blocks)
+        during = []
+
+        def webpush(info, **kwargs):
+            during.append((len(connection.atomic_blocks), push.pending().count()))
+
+        self.webpush.side_effect = webpush
+        self.mention(self.bob)
+        self.assertEqual(push.send_due(self.later()), 1)
+        self.assertEqual(during, [(depth, 0)])
+        self.assertIsNotNone(Notification.objects.get(user=self.bob).pushed_at)
+
+    def test_a_bad_private_key(self):
+        """A key that doesn't parse: one error per run, the pushes count
+        as failed, so the TTL drops them (review 2026-11-23)"""
+        other = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
+        self.mention(self.bob)
+        self.mention(self.bob, item=other)
+        with override_settings(WEBPUSH_VAPID_PRIVATE_KEY="not a key"):
+            with self.assertLogs("biwak.activity.push", "ERROR") as logs:
+                self.assertEqual(push.send_due(self.later()), 0)
+            self.assertEqual(len(logs.records), 1)
+            self.assertEqual(push.pending().count(), 2)
+            with self.assertLogs("biwak.activity.push", "ERROR"):
+                self.assertEqual(push.send_due(self.later(13 * 60)), 0)
+            self.assertEqual(push.pending().count(), 0)
+        self.assertEqual(self.pushed(), [])
 
     def test_given_up_after_the_ttl(self):
         self.webpush.side_effect = ConnectionError("unreachable")
