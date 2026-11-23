@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 08:05+0100\n"
+"POT-Creation-Date: 2026-11-23 11:25+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1795,7 +1795,7 @@ msgstr "Alle"
 msgid "Person"
 msgstr "Person"
 
-#: biwak/activity/views.py biwak/templates/organizations/people.html
+#: biwak/activity/views.py
 msgid "Everybody"
 msgstr "Alle"
 
@@ -5505,8 +5505,7 @@ msgstr "Es gibt bereits ein Team namens „%(name)s“."
 msgid "Nobody with the ID %(ids)s."
 msgstr "Niemand mit der ID %(ids)s."
 
-#: biwak/teams/picking.py biwak/templates/organizations/people.html
-#: biwak/templates/organizations/person.html
+#: biwak/teams/picking.py biwak/templates/organizations/person.html
 #: biwak/templates/teams/team_detail.html
 msgid "inactive"
 msgstr "inaktiv"
@@ -7464,6 +7463,10 @@ msgstr[1] "%(counter)s Personen"
 #: biwak/templates/organizations/organization_list.html
 msgid "No organizations yet."
 msgstr "Noch keine Organisationen."
+
+#: biwak/templates/organizations/people.html
+msgid "Active"
+msgstr "Aktiv"
 
 #: biwak/templates/organizations/people.html
 msgid "Invited"

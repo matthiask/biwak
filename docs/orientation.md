@@ -246,8 +246,11 @@ externals; you can't deactivate yourself or the last active admin.
 `biwak people activate` and `deactivate` do the same for several people at
 once, all or nothing.
 
+The People page shows the active people ("Active"); staff find the
+others under "Inactive" and "People who left".
+
 **People who left** (deactivated, or no longer in Basecamp when
-imported) don't show on the People page; the filter "People who left"
+imported) don't show under "Active"; the filter "People who left"
 lists them with the day they left, as does their page. "Inactive" lists
 only people waiting to be activated; somebody who left is activated
 again from their page.

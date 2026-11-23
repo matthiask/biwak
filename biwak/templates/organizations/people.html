@@ -29,7 +29,7 @@
         href="{% url 'people' %}"
         class="btn btn-sm btn-quiet{% if invited is None and inactive is None and left is None %} active{% endif %}"
         {% if invited is None and inactive is None and left is None %}aria-current="page"{% endif %}
-      >{% translate "Everybody" %}</a>
+      >{% translate "Active" %}</a>
       <a
         href="{% url 'people' %}?invited=1"
         class="btn btn-sm btn-quiet{% if invited is not None %} active{% endif %}"
@@ -144,7 +144,7 @@
       <div class="list-group">
         {% for user in group.people %}
           <div
-            class="list-group-item d-flex justify-content-between align-items-center gap-2{% if not user.is_active %} text-body-secondary{% endif %}"
+            class="list-group-item d-flex justify-content-between align-items-center gap-2"
             data-kb-row
           >
             <div class="d-flex align-items-center gap-2">
@@ -156,9 +156,6 @@
                 {% else %}
                   <span class="badge wb-tone-neutral">{{ user.role }}</span>
                 {% endif %}
-                {% if not user.is_active %}<span
-                    class="badge wb-tone-neutral"
-                  >{% translate "inactive" %}</span>{% endif %}
                 {% if user.show_email %}<div class="small text-body-secondary">{{ user.email }}</div>{% endif %}
                 {% include "organizations/_invitation.html" with person=user next=request.get_full_path %}
               </div>

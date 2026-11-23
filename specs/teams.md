@@ -29,7 +29,7 @@ Named "team" because "group" is a list's heading (`core.md`).
   2026-11-22). Changing teams records no event: the audit log has it,
   nobody is told.
 - **Pages** (confirmed by the user 2026-11-22): "Teams" at the end of
-  the People page ("Everybody" only, `teams/_teams.html`), each team
+  the People page ("Active" only, `teams/_teams.html`), each team
   with its members; "New team" for own staff (also in the palette). A
   team's page (`/teams/<id>/`, `teams/team_detail.html`, for staff)
   lists its members; own staff get Edit (name and the people picker offering everybody,
