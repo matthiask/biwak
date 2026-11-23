@@ -70,7 +70,9 @@ def importing(*, at=None):
     uses replace ``at``; the quiet part stays. Inside, the operations also
     accept inactive people (assigning, subscribing, memberships): the
     importer creates people without an account inactive (decided
-    2026-11-21)."""
+    2026-11-21). The projects' activity times aren't touched per event:
+    the importer recomputes them once per project
+    (``projects.operations.recompute_activity()``, decided 2026-11-23)."""
     quiet = _quiet.set(True)
     importer = _importing.set(True)
     occurred = _occurred_at.set(at if at is not None else _occurred_at.get())
@@ -155,9 +157,9 @@ def record(*, actor, action, project, item=None, **data):
             is_client_visible=visible,
             created_at=now,
         )
-    if action != Action.REACTED:
+    if action != Action.REACTED and not is_importing():
         # A reaction isn't activity of the project (decided by the building
-        # agent, 2026-11-20)
+        # agent, 2026-11-20); an import recomputes them at the end
         _touch_project(event)
     # Before announcing the change (both after the commit, in this order):
     # a page losing access closes before it hears of the change, since the

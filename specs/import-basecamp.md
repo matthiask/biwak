@@ -3,7 +3,7 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21), the download cache 2026-11-22. Not built: `--lazy-files` (fetching
+**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23. Not built: `--lazy-files` (fetching
 old attachments when first opened), other people's bookmarks (the API
 only gives the token owner's).
 
@@ -114,6 +114,19 @@ goes into internal containers, archived recordings skipped.
   anyway. The report counts files downloaded and from the cache ("Files:
   3 downloaded, 12 from the cache"), and those answered without a
   redirect. A dry run downloads nothing.
+- **Few queries** (decided 2026-11-23: the import may run locally
+  against production through an SSH tunnel, ~6 ms per query): the
+  mappings of a listing's records (`ImportedObject`) are read with one
+  query per listing and kept for the project (`Importer._preload()`,
+  `_remember()` keeps them up to date), not per Basecamp type for the
+  whole account: what was moved to another project in Biwak is still
+  found. Everybody (by ID and address) and the people's mappings are
+  read once per run. The objects themselves are still read each time.
+  Events recorded inside `importing()` don't touch the projects'
+  activity times (an UPDATE each): `recompute_activity()` sets them
+  once per project, also when the import stops halfway (as far as it
+  got), the same times as before.
+  `QueriesTest` keeps the first run's count from creeping back.
 - **Rates:** at most 50 requests per 10 seconds, 429 waited out
   (`Retry-After`); one request per recording for its comments and its
   subscribers (on later runs only for changed ones), so big accounts take
