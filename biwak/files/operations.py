@@ -77,12 +77,12 @@ def update_message(
     editing.check_base(item, base, actor=actor)
     editing.stop(item, actor)
     previous = f"{item.title}\n\n{message.content}"
-    edited = False
+    edited = []
     if title is not _UNCHANGED and title != item.title:
         item.title = title
         item.updated_at = _now()
         item.save(update_fields=["title", "updated_at"])
-        edited = True
+        edited.append("title")
     fields = []
     if content is not _UNCHANGED and content != message.content:
         message.content = content
@@ -94,8 +94,13 @@ def update_message(
     if fields:
         message.save(update_fields=fields)
     if edited or fields:
+        # What changed, for the timeline (specs/timeline.md)
         event = record(
-            actor=actor, action=Action.EDITED, project=item.project, item=item
+            actor=actor,
+            action=Action.EDITED,
+            project=item.project,
+            item=item,
+            fields=[*edited, *fields],
         )
         mentions.update(
             item,
@@ -232,8 +237,20 @@ def _save(item, doc, *, actor=None, new_version=False):
             for author in authors
         ]
     else:
+        # What changed, for the timeline (specs/timeline.md): nothing for
+        # "Save as a version" alone
+        fields = [
+            *(["title"] if renamed else []),
+            *(["content"] if changed else []),
+        ]
         events = [
-            record(actor=author, action=Action.EDITED, project=item.project, item=item)
+            record(
+                actor=author,
+                action=Action.EDITED,
+                project=item.project,
+                item=item,
+                fields=fields,
+            )
             for author in authors
         ]
     # Mentions to who typed them, the rest (a title, an API edit) to the
@@ -549,6 +566,7 @@ def replace_upload(item, file, *, actor):
         project=item.project,
         item=item,
         version=version.name,
+        fields=["file"],
     )
     read_by_acting(actor, item)
     return version
@@ -560,20 +578,25 @@ def update_upload(item, *, actor, title=_UNCHANGED, description=_UNCHANGED, base
     editing.check_base(item, base, actor=actor)
     editing.stop(item, actor)
     previous = f"{item.title}\n\n{upload.description}"
-    edited = False
+    edited = []
     if title is not _UNCHANGED and title != item.title:
         item.title = title
         item.updated_at = _now()
         item.save(update_fields=["title", "updated_at"])
-        edited = True
+        edited.append("title")
     if description is not _UNCHANGED and description != upload.description:
         upload.description = description
         upload.save(update_fields=["description"])
         attachments.link(item, description, actor=actor)
-        edited = True
+        edited.append("description")
     if edited:
+        # What changed, for the timeline (specs/timeline.md)
         event = record(
-            actor=actor, action=Action.EDITED, project=item.project, item=item
+            actor=actor,
+            action=Action.EDITED,
+            project=item.project,
+            item=item,
+            fields=edited,
         )
         mentions.update(
             item,

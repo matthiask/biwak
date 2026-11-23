@@ -55,6 +55,14 @@ later); reactions to completing it built (2026-11-23).
 - **`EDITED`** carries `fields` (`title`, `due_on`, `notes`,
   `recurrence`), the new `title`, `due_on` when it changed, and
   `title_was` and `due_was` for merging; older edit events have no
-  `fields` and aren't shown.
+  `fields` and aren't shown. Of messages `title`, `content` and
+  `category`, of docs `title` and `content` (none for "Save as a
+  version" alone), of files `title`, `description` and `file` (a new
+  version) (2026-11-23).
+- **Moves between folders** (`move_item()`) carry `folder_id` and
+  `folder_was` (None: the top level); the folder's name is looked up
+  when shown, in one query (`add_target_folders()`), "another folder"
+  when the viewer can't see it. The API leaves both out, like
+  `to_was`.
 - **`UNASSIGNED`** is an action of its own (with `assignees`): "removed"
   in the feed, the API and mails, notifying nobody (`notify.SILENT`).

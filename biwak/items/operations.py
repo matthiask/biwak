@@ -1192,6 +1192,7 @@ def move_item(item, *, parent, actor):
         or Item.objects.descendants(item).filter(pk=parent.pk).exists()
     ):
         raise ValueError("A folder can't be moved into itself")
+    folder_was = item.parent_id
     item.parent = parent
     item.position = _next_position(
         Item.objects.filter(project=item.project, parent=parent, kind=item.kind)
@@ -1200,7 +1201,16 @@ def move_item(item, *, parent, actor):
         item.visible_to_clients = False
     item.save()
     visibility.recompute(item)
-    record(actor=actor, action=Action.MOVED, project=item.project, item=item)
+    # Where from and to by ID (None: the top level), for the timeline
+    # (specs/timeline.md): the names as the reader may see them now
+    record(
+        actor=actor,
+        action=Action.MOVED,
+        project=item.project,
+        item=item,
+        folder_id=parent.pk if parent else None,
+        folder_was=folder_was,
+    )
 
 
 @transaction.atomic
