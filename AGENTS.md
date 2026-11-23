@@ -70,7 +70,8 @@ endpoints (`<app>/api.py`, conventions in `biwak/api_conventions.py`) and
 CLI commands with its pages; bump `cli/pyproject.toml`'s version with new
 commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break.
 
-End-to-end tests (`biwak/test_e2e.py`, tagged `e2e`) run the real server and
+End-to-end tests (`biwak/test_e2e_<area>.py` on the shared base in
+`biwak/test_e2e.py`, tagged `e2e`) run the real server and
 Chromium through Playwright: `uv run playwright install chromium` once,
 without the browser they're skipped, `./runtests.sh --exclude-tag e2e`
 leaves them out.

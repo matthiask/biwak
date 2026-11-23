@@ -101,5 +101,5 @@ now and changing the team later doesn't change earlier picks.
 `biwak/teams/test_teams.py` (operations, pages, palette),
 `test_picking.py` (the picker's `data-teams`, the `@` list's JSON, as
 staff, external and client), `test_api.py` (API and CLI);
-`TeamsTest` in `biwak/test_e2e.py` (the picker, "Also tell…" following
+`TeamsTest` in `biwak/test_e2e_people.py` (the picker, "Also tell…" following
 the checkbox, the `@` list).

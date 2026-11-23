@@ -3,11 +3,19 @@ opening, saving, errors, Escape and the focus"""
 
 import re
 
+from django.urls import reverse
+
 from biwak.accounts.models import User
-from biwak.activity.models import Action, Event, Notification, Subscription
+from biwak.activity.models import (
+    Action,
+    Event,
+    LevelOverride,
+    Notification,
+    Subscription,
+)
 from biwak.activity.operations import unsubscribe
 from biwak.items import operations as ops
-from biwak.items.models import Item, Kind
+from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
 from biwak.test_e2e import E2ETestCase, expect
 from biwak.test_utils import person
@@ -396,3 +404,139 @@ class MemberNotificationsTest(E2ETestCase):
             page.get_by_label("Your notifications").select_option("tagged")
         self.assertEqual(project_ops.notify_choice(self.cleo, self.project), "tagged")
         self.assertEqual(self.errors, [])
+
+
+class MoreMenuModalTest(E2ETestCase):
+    """The "More" menu's forms in the dialog (frontend/modal.js)"""
+
+    def setUp(self):
+        super().setUp()
+        self.todolist = self.make_list("Launch", visible=True, todos=["Plan"])
+        self.make_list("Other")
+
+    def open_more(self, page, entry):
+        page.locator("details.wb-menu", has_text="More").first.locator(
+            "summary"
+        ).click()
+        page.get_by_role("link", name=entry).click()
+        dialog = page.locator("dialog#modal")
+        expect(dialog).to_be_visible()
+        return dialog
+
+    def test_notifications_open_save_and_focus_returns(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        expect(dialog.locator("h1")).to_have_text("Notifications for this list")
+        # No navigation: the page is still the list's
+        self.assertEqual(
+            page.url, f"{self.live_server_url}{self.todolist.get_absolute_url()}"
+        )
+        dialog.get_by_label("Only what concerns me").check()
+        dialog.get_by_role("button", name="Save").click()
+        expect(page.locator("dialog#modal[open]")).to_have_count(0)
+        self.assertEqual(
+            LevelOverride.objects.get(user=self.ada, item=self.todolist).level,
+            "concerns_me",
+        )
+
+    def test_escape_closes_an_unchanged_form_and_returns_the_focus(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Notifications…")
+        page.keyboard.press("Escape")
+        expect(dialog).not_to_be_visible()
+        expect(
+            page.locator("details.wb-menu", has_text="More").first.locator("summary")
+        ).to_be_focused()
+
+    def test_trashing_asks_first(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        dialog = self.open_more(page, "Move to trash")
+        expect(dialog.locator("h1")).to_have_text("Move to the trash?")
+        dialog.get_by_role("button", name="Cancel").click()
+        self.todolist.refresh_from_db()
+        self.assertEqual(self.todolist.status, Status.ACTIVE)
+        dialog = self.open_more(page, "Move to trash")
+        dialog.get_by_role("button", name="Move to the trash").click()
+        page.wait_for_url(f"**{self.project.get_absolute_url()}")
+        self.todolist.refresh_from_db()
+        self.assertEqual(self.todolist.status, Status.TRASHED)
+
+    def test_moving_a_todo(self):
+        todo = Item.objects.get(title="Plan")
+        other = Item.objects.get(title="Other")
+        page = self.page
+        self.goto(page, todo)
+        dialog = self.open_more(page, "Move to…")
+        dialog.locator("select").first.select_option(label="Other")
+        # The redirect loads the page again
+        with page.expect_navigation():
+            dialog.get_by_role("button", name="Move", exact=True).click()
+        todo.refresh_from_db()
+        self.assertEqual(todo.parent_id, other.pk)
+
+    def test_a_modifier_key_leaves_the_link_alone(self):
+        page = self.page
+        self.goto(page, self.todolist)
+        page.locator("details.wb-menu", has_text="More").first.locator(
+            "summary"
+        ).click()
+        self.assertFalse(self.modifier_click_is_prevented(page, "a[data-modal]"))
+        expect(page.locator("dialog#modal[open]")).to_have_count(0)
+
+    def modifier_click_is_prevented(self, page, selector):
+        """Whether the page's scripts took a Ctrl+click on ``selector``
+        (the browser would follow the link into a new tab otherwise)"""
+        return page.evaluate(
+            """(selector) => {
+                let prevented = null
+                window.addEventListener("click", (event) => {
+                    prevented = event.defaultPrevented
+                    event.preventDefault()
+                }, { once: true })
+                document.querySelector(selector).dispatchEvent(
+                    new MouseEvent("click", {
+                        bubbles: true, cancelable: true, ctrlKey: true, button: 0,
+                    })
+                )
+                return prevented
+            }""",
+            selector,
+        )
+
+    def test_new_list_from_the_palette_and_members(self):
+        page = self.page
+        self.goto(page, self.project)
+        page.keyboard.press("ControlOrMeta+k")
+        page.get_by_role("combobox").fill("New list")
+        page.keyboard.press("Enter")
+        dialog = page.locator("dialog#modal")
+        expect(dialog.locator("h1")).to_have_text("New list")
+        # Errors stay in the dialog (blanks pass the browser's check)
+        dialog.get_by_label("title").fill("   ")
+        dialog.get_by_role("button", name="Add list").click()
+        expect(dialog.locator(".invalid-feedback")).to_be_visible()
+        expect(dialog.locator("h1")).to_have_text("New list")
+        dialog.get_by_label("title").fill("Fresh")
+        dialog.get_by_role("button", name="Add list").click()
+        page.wait_for_url("**/lists/**")
+        self.assertTrue(Item.objects.filter(title="Fresh").exists())
+
+        self.goto(page, reverse("project_people", args=[self.project.pk]))
+        page.get_by_role("link", name="Invite by email").click()
+        dialog = page.locator("dialog#modal")
+        # The form inviting several people (specs/activation.md, "Inviting")
+        expect(dialog.locator("h1")).to_have_text("Invite people")
+        dialog.get_by_label("Email").first.fill("dora@example.org")
+        dialog.get_by_role("button", name="Invite").click()
+        # Listed: their mark links to their page, the email below the name
+        # (named by the address: no name was given)
+        expect(
+            page.locator("div.small", has_text="dora@example.org").first
+        ).to_be_visible()
+        dora = User.objects.get(email="dora@example.org")
+        expect(
+            page.locator(f"a.wb-person-link[href='/people/{dora.pk}/']")
+        ).to_be_visible()

@@ -123,7 +123,7 @@ for or removes somebody else.
   channel layer is in memory, enough for one process.
 - **Tests:** Channels' communicator (`biwak/collab/test_consumers.py`,
   transaction tests), `asgi.py` under uvicorn for the browser tests
-  (`CollabTest` in `biwak/test_e2e.py`).
+  (`CollabTest` in `biwak/test_e2e_collab.py`).
 - **Production** (decided 2026-11-20: everything under ASGI, one
   deployment): the `Containerfile` runs granian (`--interface asginl`,
   4 workers: sync views run one at a time per worker under ASGI).

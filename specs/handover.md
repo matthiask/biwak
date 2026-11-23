@@ -140,7 +140,7 @@ across projects, told once about dates, moving telling nobody.
   copying (`KEEP` is "Set a date" here: one date, "Move by N days",
   "Remove"), through `ops.update_todo()` per to-do inside one
   transaction. Tests next to `biwak/items/test_assign_several.py`, a browser
-  test only for the bar's new buttons (`test_e2e.py`, the selection
+  test only for the bar's new buttons (`test_e2e_handover.py`, the selection
   class).
 - Both one event per action like "Assign…" (one entry in the lantern),
   the API (`POST /api/v1/todos/move/`, `/todos/dates/` with the IDs) and
