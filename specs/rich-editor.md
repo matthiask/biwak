@@ -164,6 +164,17 @@ additions).
 
 ## Live docs
 
+**The title** (decided 2026-11-23 with the user): a doc's first line is
+its title. In the live editor the toolbar's heading makes the first line
+a level-1 heading (and back to a paragraph), every other line a level-2
+one as in the fields; a doc opened empty gets its first line made a
+level-1 heading, once synced (before, it would merge in as a line of its
+own), by those who may type, outside Undo (`ensureTitle()`); an empty
+first line shows "Title" as a placeholder (`emptyTitle()`). Not in the
+schema: requiring a first node needs a type of its own, which the fields
+and the server's document (`biwak/richtext/`) would have to share, and
+existing docs starting with a paragraph, a list or a table wouldn't fit.
+
 The shared Yjs document is ProseMirror's (`y-prosemirror`, a
 `Y.XmlFragment`), not the Markdown text. The browser:
 `frontend/editor/live.js` (`liveEditor()`), `frontend/collab.js` keeps

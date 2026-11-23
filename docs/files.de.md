@@ -94,6 +94,9 @@ Suche und Aktivität folgen. Ein leeres Dokument heisst „Unbenannt“.
 **Neues Dokument** öffnet sofort den Editor, der Cursor steht in der
 ersten Zeile, die „Titel“ zeigt, bis du tippst: Tippe zuerst den Titel,
 dann den Text. Jedes Dokument mit leerer erster Zeile zeigt das dort.
+Die erste Zeile ist der Titel des Dokuments: Die Überschrift der
+Werkzeugleiste macht sie dort zu einer grossen Überschrift, auf allen
+anderen Zeilen zu einer kleineren.
 Bis du etwas schreibst, gehört es nur dir: Niemand sonst sieht es, es
 ist nicht im Ordner, in der Aktivität oder der Suche, und ein leeres
 wird nach einem Tag gelöscht. Mit dem ersten Text ist es ein Dokument

@@ -3,6 +3,7 @@
 // the editor to the `Y.XmlFragment` the server reads and writes too
 // (biwak/richtext/ydoc.py), shows the others' cursors and names, and undoes
 // one's own changes only.
+import { setBlockType } from "prosemirror-commands"
 import { Plugin, Selection } from "prosemirror-state"
 import { Decoration, DecorationSet } from "prosemirror-view"
 import {
@@ -23,6 +24,20 @@ import { schema, setAttachmentUrl } from "./schema.js"
 import { tableBar } from "./tables.js"
 
 export { FRAGMENT }
+
+// The heading button in a doc's first line, its title, makes it a level-1
+// heading (decided 2026-11-23), elsewhere a level-2 one as in every field
+function heading(state, dispatch) {
+  const { $from } = state.selection
+  if ($from.depth !== 1 || $from.index(0) !== 0)
+    return ACTIONS.heading(state, dispatch)
+  if (
+    $from.parent.type === schema.nodes.heading &&
+    $from.parent.attrs.level === 1
+  )
+    return setBlockType(schema.nodes.paragraph)(state, dispatch)
+  return setBlockType(schema.nodes.heading, { level: 1 })(state, dispatch)
+}
 
 // The hint in an empty first line, a doc's title (any doc, decided
 // 2026-11-23), as the fields' placeholder (frontend/editor/fields.js): not
@@ -100,7 +115,8 @@ export function liveEditor(
     view,
     run(action) {
       if (action === "link") return askLink(view, place.parentElement)
-      ACTIONS[action]?.(view.state, view.dispatch)
+      const command = action === "heading" ? heading : ACTIONS[action]
+      command?.(view.state, view.dispatch)
       view.focus()
     },
     // The editable state changed
@@ -117,6 +133,24 @@ export function liveEditor(
       if (before && !/\s$/.test(before)) tr.insertText(" ")
       view.dispatch(
         tr.replaceSelection(markdownSlice(markdown)).scrollIntoView(),
+      )
+    },
+    // An empty doc's first line is its title, a level-1 heading (decided
+    // 2026-11-23); only once synced, or it would merge in as a line of its
+    // own, and not in Undo
+    ensureTitle() {
+      const { state } = view
+      const first = state.doc.firstChild
+      if (
+        state.doc.childCount !== 1 ||
+        first?.type !== schema.nodes.paragraph ||
+        first.content.size
+      )
+        return
+      view.dispatch(
+        state.tr
+          .setNodeMarkup(0, schema.nodes.heading, { level: 1 })
+          .setMeta("addToHistory", false),
       )
     },
     // The caret at the end, focused (a new doc's title)

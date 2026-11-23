@@ -81,7 +81,9 @@ empty doc is "Untitled".
 
 **New doc** opens the editor at once, the cursor in the first line,
 which says "Title" until you type: type the title first, then the text.
-Any doc whose first line is empty says so there. Until you
+Any doc whose first line is empty says so there. The first line is the
+doc's title: the toolbar's heading makes it a big heading there, and a
+smaller one on every other line. Until you
 write something it's only yours: nobody else sees it, it isn't in the
 folder, the activity or search, and an empty one is deleted after a day.
 With the first text it's a doc (the browser's address becomes the doc's)

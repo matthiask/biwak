@@ -110,7 +110,12 @@ function setUp(container) {
   // address replaces the draft's ("New doc") in the history
   let draft = container.dataset.collabDraft
   let started = false
+  let titled = false
   const startDraft = () => {
+    if (mayType && !titled) {
+      titled = true
+      editor.ensureTitle()
+    }
     if (!draft || started || !mayType) return
     started = true
     editor.focusEnd()

@@ -103,11 +103,29 @@ class CollabTest(E2ETestCase):
             project=self.project, title="Empty", content="", creator=self.ada
         )
         page = self.editor(self.ada, doc)
+        # Its first line becomes the title heading (decided 2026-11-23)
         first = self.content(page).locator("> *").first
         expect(first).to_have_attribute("data-placeholder", "Title")
+        expect(first).to_have_js_property("tagName", "H1")
         # This doc has a title: no hint
         page = self.editor(self.ada)
         expect(self.content(page).locator("[data-placeholder]")).to_have_count(0)
+        self.assertEqual(self.errors, [])
+
+    def test_the_heading_button_makes_the_title_a_level_1_heading(self):
+        """In a doc's first line the toolbar's heading is an H1, below an H2
+        as in every field (decided 2026-11-23)"""
+        page = self.editor(self.ada)
+        button = page.locator("[data-toolbar-action=heading]")
+        self.content(page).locator("p", has_text="Agenda").click()
+        button.click()
+        expect(self.content(page).locator("h1")).to_have_text("Agenda")
+        self.content(page).press("End")
+        self.content(page).press("Enter")
+        page.keyboard.type("Points")
+        button.click()
+        expect(self.content(page).locator("h2")).to_have_text("Points")
+        self.wait_for_text(page, "# Agenda\n\n## Points")
         self.assertEqual(self.errors, [])
 
     def test_the_toolbar_and_its_keys(self):
