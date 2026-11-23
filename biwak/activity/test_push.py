@@ -406,6 +406,22 @@ class FailuresTest(PushBase):
         self.assertEqual(during, [(depth, 0)])
         self.assertIsNotNone(Notification.objects.get(user=self.bob).pushed_at)
 
+    def test_a_bad_private_key(self):
+        """A key that doesn't parse: one error per run, the pushes count
+        as failed, so the TTL drops them (review 2026-11-23)"""
+        other = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
+        self.mention(self.bob)
+        self.mention(self.bob, item=other)
+        with override_settings(WEBPUSH_VAPID_PRIVATE_KEY="not a key"):
+            with self.assertLogs("biwak.activity.push", "ERROR") as logs:
+                self.assertEqual(push.send_due(self.later()), 0)
+            self.assertEqual(len(logs.records), 1)
+            self.assertEqual(push.pending().count(), 2)
+            with self.assertLogs("biwak.activity.push", "ERROR"):
+                self.assertEqual(push.send_due(self.later(13 * 60)), 0)
+            self.assertEqual(push.pending().count(), 0)
+        self.assertEqual(self.pushed(), [])
+
     def test_given_up_after_the_ttl(self):
         self.webpush.side_effect = ConnectionError("unreachable")
         self.mention(self.bob)

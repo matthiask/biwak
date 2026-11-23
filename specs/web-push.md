@@ -163,6 +163,12 @@ In this order, each step with its tests:
 - **The VAPID private key** may be the PEM or its lines between the
   markers joined into one (base64url DER or raw also work), for an
   environment variable.
+  It's parsed once per run with something due (`_parsed_key()`); one
+  that doesn't parse logs one error per run (no mail to the admins:
+  other configuration errors only log or stop the start) and the run's
+  pushes count as failed, so the `TTL` drops them instead of them
+  piling up and all arriving late once the key is fixed (decided
+  2026-11-23, from a review).
 - **Subscribing:** `add_device()` and `remove_device()` in
   `biwak/accounts/operations.py`; `POST`/`DELETE /accounts/push/`
   (`push_subscription`, JSON, the CSRF token in `X-CSRFToken`, 204, 400
