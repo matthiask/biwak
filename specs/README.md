@@ -57,7 +57,7 @@ confirm: `decisions-to-confirm.md`.
 | `cli-style.md` | built (0.60.0) | the CLI in the style of gov and wb: one plural group per thing, verbs as subcommands |
 | `web-push.md` | built | push notifications on phones and desktops: mentions and assignments |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
-| `agent-skills.md` | open | Claude Code skills in the CLI: triage, a mail into a to-do or message, weekly summary, handover |
+| `agent-skills.md` | built (0.63.0) | Claude Code skills in the CLI: triage, a mail into a to-do or message, weekly summary, handover |
 
 ## Writing a spec for a new part
 

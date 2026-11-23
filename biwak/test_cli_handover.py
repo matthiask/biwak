@@ -22,6 +22,26 @@ class HandoverCLITest(test_cli.CLITest):
         output = self.biwak("todos", "show", self.todo.pk).output
         self.assertIn("Gil (inactive)", output)
 
+    def test_todos_of_a_person(self):
+        """Somebody's open to-dos, also after they left (handing over)"""
+        ops.create_todo(
+            todolist=self.list, title="Print", creator=self.ada, assignees=[self.ada]
+        )
+        activation.deactivate([self.gil], actor=self.root)
+        output = self.biwak("todos", "--assignee", self.gil.pk).output
+        self.assertIn("Copy", output)
+        self.assertNotIn("Print", output)
+        data = json.loads(
+            self.biwak("todos", "--assignee", self.gil.pk, "--by-due", "--json").stdout
+        )
+        self.assertEqual([t["id"] for t in data], [self.todo.pk])
+        self.assertEqual(
+            self.biwak("todos", "--assignee", self.gil.pk, "--mine").exit_code, 1
+        )
+        self.assertEqual(
+            self.biwak("todos", "--list", self.list.pk, "--assignee", 1).exit_code, 1
+        )
+
     def test_assign_several(self):
         bob = person("Bob")
         other = ops.create_todo(todolist=self.list, title="Photos", creator=self.ada)

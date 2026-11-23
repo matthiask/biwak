@@ -204,8 +204,9 @@ see, `/projects/<pk>/todos/` per project; "To-dos" in the top bar.
   and the cursor; each to-do carries `due_group` (`overdue`, `today`,
   `this_week`, `next_week`, `later`, `none`; months are only headings),
   its project, list and group with positions, and each assignee's
-  `assigned_by`. **CLI:** `biwak todos --mine|--assigned-by-me|--project
-  ID|--due GROUP|--by-due|--completed`, by project unless `--by-due`,
+  `assigned_by`. **CLI:** `biwak todos --mine|--assignee
+  PERSON|--assigned-by-me|--project ID|--due GROUP|--by-due|--completed`
+  (`--assignee` since 0.63.0, for handing over, `agent-skills.md`), by project unless `--by-due`,
   the first 200.
 
 ## The calendar feed
