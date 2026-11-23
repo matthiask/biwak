@@ -278,7 +278,7 @@
                           data-modal
                           class="btn btn-sm btn-quiet"
                         >{% translate "Rename…" %}</a>
-                        <form method="post" action="{% url 'push_subscription_remove' device.pk %}">
+                        <form method="post" action="{% url 'push_subscription_remove' device.pk %}" data-push-remove>
                           {% csrf_token %}
                           <button type="submit" class="btn btn-sm btn-quiet">{% translate "Remove" %}</button>
                         </form>

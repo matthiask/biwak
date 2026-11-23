@@ -98,10 +98,12 @@ async function setUp() {
     )
   if (row) {
     row.querySelector("[data-push-this]").hidden = false
-    row.querySelector("form").addEventListener("submit", (event) => {
-      event.preventDefault()
-      remove(subscription)
-    })
+    row
+      .querySelector("[data-push-remove]")
+      .addEventListener("submit", (event) => {
+        event.preventDefault()
+        remove(subscription)
+      })
   } else if (Notification.permission === "denied") {
     show("blocked")
   } else {
