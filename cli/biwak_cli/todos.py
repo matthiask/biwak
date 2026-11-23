@@ -377,6 +377,16 @@ def show_todo(data):
     ]:
         if value:
             click.echo(f"{label}: {value}")
+    # Each completing, with its ID to react to it (``reactions create
+    # --event``); only ``todos show`` has them
+    for completion in data.get("completions", []):
+        reactions = show_reactions(completion["reactions"]) or "no reactions"
+        by = completion["completed_by"]
+        click.echo(
+            f"Completed by {names([by]) if by else 'somebody'},"
+            f" {completion['completed_at'][:16]} (event {completion['id']}):"
+            f" {reactions}"
+        )
     if data["notes"]:
         click.echo(f"\n{data['notes']}")
 
