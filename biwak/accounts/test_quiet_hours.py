@@ -301,6 +301,23 @@ class ShownTest(QuietBase):
         response = self.client.get(self.todo.get_absolute_url())
         self.assertNotContains(response, "is away until")
 
+    def test_the_rows(self):
+        """The list's and the due-date rows, while open (decided 2026-11-23)"""
+        detail = '<span class="wb-away-detail">(away until 3 Dec)</span>'
+        ops.update_todo(self.todo, due_on=dt.date(2026, 11, 20), actor=self.ada)
+        for user in [self.ada, self.cleo]:
+            with self.subTest(user=user):
+                self.client.force_login(user)
+                response = self.client.get(self.shared.get_absolute_url())
+                self.assertContains(response, detail, html=True)
+        # By due date (clients don't filter by somebody else)
+        self.client.force_login(self.ada)
+        response = self.client.get(f"{reverse('todos')}?assignee={self.bob.pk}")
+        self.assertContains(response, detail, html=True)
+        ops.complete(self.todo, actor=self.ada)
+        response = self.client.get(self.shared.get_absolute_url())
+        self.assertNotContains(response, "wb-away-detail")
+
     def test_not_after_the_return(self):
         self.client.force_login(self.ada)
         with time_machine.travel(dt.datetime(2026, 12, 4, 8, tzinfo=ZURICH)):

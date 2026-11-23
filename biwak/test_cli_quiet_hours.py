@@ -97,3 +97,26 @@ class QuietHoursCLITest(test_cli.CLITest):
         self.assertIn(
             "Ada Example (away until 2026-12-03)", self.biwak("people").output
         )
+
+    def test_away_assignees(self):
+        """``todos list``, ``show`` and ``assign`` say who is away, ``show``
+        and ``assign`` with the note; not on a completed to-do"""
+        from biwak.accounts.operations import set_away
+        from biwak.items import operations as ops
+        from biwak.projects.models import Membership
+
+        bob = person("Bob")
+        Membership.objects.create(project=self.project, user=bob)
+        set_away(bob, until=dt.date(2026, 12, 3), note="Ask Ada", actor=bob)
+        todo = ops.create_todo(
+            todolist=self.list, title="Order the tent", creator=self.ada
+        )
+        output = self.biwak("todos", "assign", todo.pk, "--to", bob.pk).output
+        self.assertIn("Bob (away until 2026-12-03: Ask Ada)", output)
+        output = self.biwak("todos", "--list", self.list.pk).output
+        self.assertIn("Bob (away until 2026-12-03)", output)
+        output = self.biwak("todos", "show", todo.pk).output
+        self.assertIn("Assignees: Bob (away until 2026-12-03: Ask Ada)", output)
+        ops.complete(todo, actor=self.ada)
+        output = self.biwak("todos", "show", todo.pk).output
+        self.assertIn("Assignees: Bob\n", output)
