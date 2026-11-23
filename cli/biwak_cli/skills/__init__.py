@@ -13,8 +13,7 @@ from pathlib import Path
 
 import click
 
-from biwak_cli.commands import console, json_option, table
-from biwak_cli.core import cli, echo_json
+from biwak_cli.core import cli, console, echo_json, json_option, table
 
 
 SKILLS = Path(__file__).parent

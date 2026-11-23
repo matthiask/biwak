@@ -197,7 +197,8 @@ What every part does the same way. Look at how the core does it
    `biwak/api.py`, following `biwak/api_conventions.py`
    (`visible_to_clients` on every item, Markdown plus `*_html`, cursor
    pagination for lists that grow). Same operations as the pages.
-7. **CLI.** Commands in `cli/biwak_cli/commands.py` with `--json`, named
+7. **CLI.** Commands in the area's module in `cli/biwak_cli/` (`todos.py`,
+   `projects.py`, ...; what they share in `core.py`) with `--json`, named
    by the rules in `specs/api-cli.md` (a plural group per thing that
    lists alone, verbs as subcommands); mark what clients can see with
    `[clients]`. Bump `cli/pyproject.toml`'s version.

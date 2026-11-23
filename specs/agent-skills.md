@@ -29,8 +29,9 @@ Confirmed 2026-11-23:
 **Depends on:** the CLI (`api-cli.md`, `cli-style.md`); handover's bulk
 commands (`handover.md`); the lantern (`lantern.md`).
 
-**Touches:** `cli/biwak_cli/skills/`, `cli/biwak_cli/commands.py` (a
-`skills` group), `cli/pyproject.toml` (package data, version),
+**Touches:** `cli/biwak_cli/skills/`, `cli/biwak_cli/core.py` (what the
+`skills` group shares with the other commands), `cli/pyproject.toml`
+(package data, version),
 `biwak/test_skills.py`, `AGENTS.md` (one line), this spec,
 `specs/api-cli.md` (the pointer), `specs/README.md`.
 

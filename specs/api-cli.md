@@ -41,8 +41,11 @@ API first: everything the web interface does is possible through the API
 
 A Python package in `cli/` (`biwak_cli`), the command is `biwak`:
 
-- Every part adds its commands (`cli/biwak_cli/commands.py`); human-
-  readable output by default, `--json` for scripts and agents, `[clients]`
+- Every part adds its commands to its area's module in `cli/biwak_cli/`
+  (`todos.py`, `projects.py`, ...; a new one is imported in
+  `__init__.py`), registered on `core.py`'s `cli`; what several areas
+  share is in `core.py` (split by area like Workbench's `wb`, decided
+  2026-11-23). Human-readable output by default, `--json` for scripts and agents, `[clients]`
   marking what clients can see.
 - Lists with cursor pagination are read page by page (`paginate()` in
   `cli/biwak_cli/core.py`): complete, or up to `--limit` where a command
