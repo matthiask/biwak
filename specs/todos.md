@@ -84,7 +84,7 @@ groupings and "assigned by" 2026-11-21).
   "Completed (142)" (a `COUNT` query, trashed ones not counted), the
   latest few in a card, newest first, and "Show more" adding the next
   (`COMPLETED_FIRST` and `COMPLETED_MORE` in `biwak/items/views.py`,
-  **5 and 25, Basecamp's look, to confirm with the user**) until none
+  5 and 25, confirmed by the user 2026-11-23) until none
   are left. "Show more" is a link to the list's page showing that many
   (`?completed=30`, the view kept; nonsense or fewer is the default),
   the way without JavaScript; htmx loads only the next ones
