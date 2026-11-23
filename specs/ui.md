@@ -79,7 +79,11 @@ feedback rounds (`ui-feedback.md`).
   column.
 - **Floating disclosures** (menus, the reaction picker, the people
   picker's list) close on a click elsewhere and Escape (`data-dismiss`;
-  elements other than `<details>` get a `dismiss` event).
+  elements other than `<details>` get a `dismiss` event). A menu stays
+  on the screen (`frontend/menus.js`); inside something scrolling, which
+  cuts off what sticks out (the board's columns), it's placed on the
+  screen below its button and closes when anything scrolls (2026-11-23:
+  the group menu of a board column was cut off).
 - **Shared pieces come from an include** (comments, subscribers, the
   "More" menu's entries, breadcrumbs, the to-do row), not a copy.
 
