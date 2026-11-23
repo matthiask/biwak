@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 14:38+0100\n"
+"POT-Creation-Date: 2026-11-23 14:47+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1886,7 +1886,8 @@ msgstr "Wähle mindestens eine Person."
 msgid "Add people…"
 msgstr "Personen hinzufügen…"
 
-#: biwak/activity/views.py biwak/templates/items/_subscribers.html
+#: biwak/activity/views.py biwak/files/common.py
+#: biwak/templates/items/_subscribers.html
 msgid "Subscribers"
 msgstr "Abonnent:innen"
 
@@ -2334,9 +2335,32 @@ msgstr "Kategorie"
 msgid "None"
 msgstr "Keine"
 
-#: biwak/files/common.py biwak/files/docs.py
-msgid "Also tell…"
-msgstr "Auch benachrichtigen…"
+#: biwak/files/common.py
+msgid "You are always subscribed to your own posts."
+msgstr "Was du selbst veröffentlichst, hast du immer abonniert."
+
+#: biwak/files/common.py
+msgid "Subscribed to this folder."
+msgstr "Hat diesen Ordner abonniert."
+
+#: biwak/files/common.py
+msgid "Wants to hear about everything in this project."
+msgstr "Will von allem in diesem Projekt hören."
+
+#: biwak/files/common.py
+#, python-format
+msgid "%(count)d other"
+msgid_plural "%(count)d others"
+msgstr[0] "%(count)d weitere Person"
+msgstr[1] "%(count)d weitere Personen"
+
+#: biwak/files/common.py
+msgid "They want to hear about it."
+msgstr "Wollen davon hören."
+
+#: biwak/files/common.py
+msgid "They hear about it and its comments."
+msgstr "Wer abonniert ist, hört davon und von den Kommentaren dazu."
 
 #: biwak/files/docs.py
 msgid "Saved as a version."
@@ -8161,6 +8185,9 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
+
+#~ msgid "Also tell…"
+#~ msgstr "Auch benachrichtigen…"
 
 #~ msgid "Rename the group"
 #~ msgstr "Gruppe umbenennen"

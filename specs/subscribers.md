@@ -47,15 +47,15 @@ not only to hear about its next comment. The rules of subscribing
 
 Decided with the user 2026-11-23 ("in projects with 20 people, I have to
 click 20 times or more"): the people picker of the subscribers modal and
-of "Also tell…" (posting a message, doc or file, and a doc's first
-"Done") offers the project's people in one go, **first in the list**,
+of "Subscribers" when posting (a message, doc or file, and a doc's
+first "Done") offers the project's people in one go, **first in the list**,
 before the people (unlike teams, which come last: the point is to be
 quick). Not for assigning and not for the people a check-in asks.
 
 - **"Staff on this project"**: the active members who aren't clients
   (own staff and externals). **"Everybody on this project"**: the
   clients too, offered only while clients can see the item (at the top
-  of "Also tell…", while "Visible to clients" is ticked).
+  of "Subscribers" when posting, while "Visible to clients" is ticked).
 - They work like teams (`teams.md`): picking one adds a pill per member
   who's offered and not in already, nothing is stored but the people;
   an entry adding nobody isn't offered, nor "Everybody" while it would

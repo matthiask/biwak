@@ -1,10 +1,12 @@
 """What the pages of messages, docs and files share"""
 
+import json
+
 from django.db.models.functions import Lower
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.utils.html import format_html_join
-from django.utils.translation import gettext_lazy as _
+from django.utils.html import format_html, format_html_join
+from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from biwak.accounts.models import User
 from biwak.activity.notify import people_who_see, told_by_default, told_line
@@ -14,16 +16,69 @@ from biwak.items import operations as ops
 from biwak.items.views import CommentForm
 
 
+def fixed_pills(people, project, viewer, folder=None):
+    """The picker's pills of those subscribed anyway, the poster first
+    (decided 2026-11-23, specs/notifications.md): ``[{id, name, avatar,
+    why}]`` by the names the viewer may know, the others as one "2 others"
+    pill; ``why`` says why they can't be taken out"""
+    from biwak.organizations.names import display_name
+
+    following = (
+        set(folder.subscriptions.values_list("user", flat=True)) if folder else set()
+    )
+
+    def why(user):
+        if user.pk == viewer.pk:
+            return gettext("You are always subscribed to your own posts.")
+        if user.pk in following:
+            return gettext("Subscribed to this folder.")
+        return gettext("Wants to hear about everything in this project.")
+
+    people = [viewer, *(u for u in people if u.pk != viewer.pk)]
+    known = {u.pk for u in project.people_known_to(viewer, people)} | {viewer.pk}
+    pills = [
+        {
+            "id": u.pk,
+            "name": display_name(u, viewer),
+            "avatar": u.avatar_data,
+            "why": why(u),
+        }
+        for u in people
+        if u.pk in known
+    ]
+    if others := len(people) - len(pills):
+        pills.append({
+            "id": None,
+            "name": ngettext("%(count)d other", "%(count)d others", others)
+            % {"count": others},
+            "avatar": None,
+            "why": gettext("They want to hear about it."),
+        })
+    return pills
+
+
+def show_subscribers(field, fixed, intro):
+    """The picker of a new post's subscribers (decided 2026-11-23): those
+    subscribed anyway as pills without ×, ``fixed`` ``{"all": pills}`` or,
+    following "Visible to clients", ``{"internal": …, "visible": …}``; the
+    line saying who will be told only without JavaScript"""
+    field.label = gettext("Subscribers")
+    field.help_text = gettext("They hear about it and its comments.")
+    field.intro = format_html('<span class="wb-nojs">{}</span>', intro)
+    field.widget.attrs["data-fixed"] = json.dumps(fixed)
+
+
 class NotifyForm(Form):
     """Who is told when posting (``notify_people()``, specs/notifications.md,
-    decided 2026-11-21: additive): a line saying whom the post tells by
-    default (``notify.told_by_default()``, ``told_line()``, the field's
-    ``intro``), and "Also tell…", the people picker of those who see it
-    and aren't told already, nothing preselected. The poster is neither
-    told nor offered."""
+    decided 2026-11-21: additive): "Subscribers", the people picker showing
+    the poster and those told by default (``notify.told_by_default()``) as
+    pills that stay (decided 2026-11-23), offering those who see it and
+    aren't subscribed anyway, nothing preselected. Without JavaScript a
+    line says whom the post tells by default (``told_line()``). The poster
+    is subscribed, but not told."""
 
     also = PeopleField(
-        label=_("Also tell…"),
+        label=_("Subscribers"),
         queryset=User.objects.none(),
         widget=PeopleSelect(attrs={"data-placeholder": _("Add people…")}),
     )
@@ -46,18 +101,25 @@ class NotifyForm(Form):
                 told_line(told[visible], project, user) for visible in (False, True)
             )
             current = self.is_bound and self["visible"].data
-            field.intro = format_html_join(
-                "",
-                '<span data-told="{}"{}>{}</span>',
-                [
-                    (name, "" if visible == current else " hidden", line)
-                    for name, visible, line in zip(
-                        ("internal", "visible"),
-                        (False, True),
-                        field.intro_lines,
-                        strict=True,
-                    )
-                ],
+            show_subscribers(
+                field,
+                {
+                    name: fixed_pills(told[visible], project, user)
+                    for name, visible in (("internal", False), ("visible", True))
+                },
+                format_html_join(
+                    "",
+                    '<span data-told="{}"{}>{}</span>',
+                    [
+                        (name, "" if visible == current else " hidden", line)
+                        for name, visible, line in zip(
+                            ("internal", "visible"),
+                            (False, True),
+                            field.intro_lines,
+                            strict=True,
+                        )
+                    ],
+                ),
             )
             field.widget.attrs["data-clients-follow"] = "#id_visible"
             field.widget.clients_shown = bool(current)
@@ -70,7 +132,11 @@ class NotifyForm(Form):
             visible = folder.is_client_visible if folder else user.is_client
             told = told_by_default(project, folder, visible=visible, actor=user)
             field.intro_lines = (told_line(told, project, user),)
-            field.intro = field.intro_lines[0]
+            show_subscribers(
+                field,
+                {"all": fixed_pills(told, project, user, folder)},
+                field.intro_lines[0],
+            )
             if not visible:
                 seeing = seeing.filter(is_client=False)
         already = {user.pk, *(person.pk for person in told)}

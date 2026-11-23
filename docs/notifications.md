@@ -19,7 +19,7 @@ You are subscribed to an item when you:
   level;
 - are in the project when somebody posts a message, doc or file, if
   your level is "Everything" or you're subscribed to its folder, or
-  when they add you by name ("Also tell…");
+  when they add you by name ("Subscribers");
 - press "Subscribe" on it, or somebody adds you ("Subscribers..." in
   its "More" menu; they may tell you right away).
 

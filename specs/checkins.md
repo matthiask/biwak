@@ -48,7 +48,7 @@ and answering, `mails.py`).
   externals and clients as `access.md` says), by name. "Visible to
   clients" comes before it in "New check-in", and clients are offered
   only while it's ticked (`data-clients-follow`, `frontend/told.js`,
-  like "Also tell…"; unticking takes them away). Editing offers clients
+  like "Subscribers" when posting; unticking takes them away). Editing offers clients
   only while the question is visible; on an internal one the clients
   asked before stay as pills, others aren't offered.
 - **Clients** are asked only on questions visible to clients; adding

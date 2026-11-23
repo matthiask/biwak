@@ -14,7 +14,12 @@ from biwak.activity.views import SubscribersForm
 from biwak.collab import live
 from biwak.collab.models import LiveUpdate
 from biwak.files import operations, queries
-from biwak.files.common import comments_context, sidebar_context
+from biwak.files.common import (
+    comments_context,
+    fixed_pills,
+    show_subscribers,
+    sidebar_context,
+)
 from biwak.files.library import (
     breadcrumbs,
     folder_choices,
@@ -120,18 +125,31 @@ def _editor(request, item):
 
 class TellForm(SubscribersForm):
     """ "Tell people about it?" (decided 2026-11-21, additive like posting,
-    ``files.common.NotifyForm``): a line saying who is told by default
-    (``default_told()``), "Also tell…" the subscribers' picker of the
-    other members, nothing preselected, and the note"""
+    ``files.common.NotifyForm``): "Subscribers", the picker showing the
+    creator and those told by default (``default_told()``) as pills that
+    stay (decided 2026-11-23), offering the other members, nothing
+    preselected, and the note"""
 
     def __init__(self, *args, item, user, **kwargs):
         super().__init__(*args, item=item, user=user, **kwargs)
         del self.fields["notify"]
         self.told = operations.default_told(item, user)
         field = self.fields["people"]
-        field.label = _("Also tell…")
         field.required = False
-        field.intro = told_line(self.told, item.project, user)
+        show_subscribers(
+            field,
+            {
+                "all": fixed_pills(
+                    self.told,
+                    item.project,
+                    user,
+                    item.parent
+                    if item.parent and item.parent.kind == "folder"
+                    else None,
+                )
+            },
+            told_line(self.told, item.project, user),
+        )
         # The project's members, as when posting (``NotifyForm``)
         field.queryset = field.queryset.filter(
             memberships__project=item.project

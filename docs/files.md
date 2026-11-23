@@ -12,13 +12,15 @@ number of comments.
   doesn't count) or "Newest posts", chosen by staff on the board for
   everybody and followed by the project page.
 - **New message:** title, text (Markdown), an optional category,
-  "Visible to clients" (staff). A line says who will be told: whoever
-  wants to hear about something new ("Everything new", or
-  subscribed to the folder; [Notifications](notifications.md)). You
-  can't leave them out, only add others under "Also tell…" (type a
-  name), for example people who hear only when tagged. Ticking "Visible
-  to clients" adds the clients who will be told to the line and lets
-  you add clients of the project; an internal message tells no client.
+  "Visible to clients" (staff), and "Subscribers": they hear about it
+  and its comments. You and whoever wants to hear about something new
+  ("Everything", or subscribed to the folder;
+  [Notifications](notifications.md)) are in it already, with a lock
+  instead of ×: you can't take them out (point at one to see why). Add
+  others by typing a name, for example people who hear only when
+  tagged. Ticking "Visible to clients" adds the clients who want to hear
+  and lets you add clients of the project; an internal message tells no
+  client.
 - Staff **pin** a message (its page or the row's menu) to keep it on
   top for everybody. The categories are set up by an administrator.
 - Messages have comments and reactions like to-dos. Clients can post
@@ -84,8 +86,9 @@ folder, the activity or search, and an empty one is deleted after a day.
 With the first text it's a doc (the browser's address becomes the doc's)
 and it's in the folder, telling nobody yet. When you click "Done" the
 first time, you're asked "Tell people about it?": those who want to
-hear about something new are told either way; add others under "Also
-tell…" (and a note) and "Tell them too", or "No one else" to add nobody.
+hear about something new are told either way (the pills with a lock
+under "Subscribers"); add others there (and a note) and "Tell them
+too", or "No one else" to add nobody.
 If you never click "Done", those who want to hear are told an hour after
 your last change (restoring the doc from the trash, also with its
 folder, starts the hour again). You're asked only once; later, add
@@ -111,7 +114,7 @@ folder's tile, "..", or a folder in the path above for that folder).
 Each file shows its name, which you can change (the extension stays),
 and its size; remove one with ×, or drop more. Below, once for all of
 them: "Visible to clients" (at the top level; in a folder they follow
-the folder) and whom to tell too ("Also tell…"). "Upload" sends them one after another;
+the folder) and "Subscribers", as for a new message. "Upload" sends them one after another;
 a file that can't be uploaded (too big) says so on its row while the
 others go on. The people notified get one notification and one mail for
 all of them ("Ada uploaded 5 files to Minutes"), not one per file; more

@@ -13,16 +13,17 @@ der Rest, jede mit Kategorie, Autor:in, Datum und Anzahl Kommentare.
   Mitteilungen“, von Mitarbeitenden in den Mitteilungen für alle gewählt,
   und die Seite des Projekts folgt.
 - **Neue Mitteilung:** Titel, Text (Markdown), eine Kategorie, wenn du
-  willst, „Für Kund:innen sichtbar“ (Mitarbeitende). Eine Zeile sagt,
-  wer benachrichtigt wird: alle, die von Neuem hören wollen („Alles Neue“
-  oder den Ordner abonniert;
-  [Benachrichtigungen](notifications.de.md)). Weglassen kannst du sie
-  nicht, nur weitere hinzufügen unter „Auch benachrichtigen…“ (tippe
-  einen Namen), zum Beispiel Personen, die nur hören, wenn sie markiert
-  werden. „Für Kund:innen sichtbar“ anzuhaken fügt die Kund:innen, die
-  benachrichtigt werden, der Zeile hinzu und lässt dich Kund:innen des
-  Projekts hinzufügen; eine interne Mitteilung benachrichtigt keine
-  Kund:innen.
+  willst, „Für Kund:innen sichtbar“ (Mitarbeitende) und
+  „Abonnent:innen“: Wer abonniert ist, hört davon und von den
+  Kommentaren dazu. Du und
+  alle, die von Neuem hören wollen („Alles“ oder den Ordner abonniert;
+  [Benachrichtigungen](notifications.de.md)), sind schon drin, mit
+  einem Schloss statt ×: Herausnehmen kannst du sie nicht (zeig auf
+  eine Pille, um zu sehen, warum). Füge weitere hinzu, indem du einen
+  Namen tippst, zum Beispiel Personen, die nur hören, wenn sie markiert
+  werden. „Für Kund:innen sichtbar“ anzuhaken fügt die Kund:innen hinzu,
+  die hören wollen, und lässt dich Kund:innen des Projekts hinzufügen;
+  eine interne Mitteilung benachrichtigt keine Kund:innen.
 - Mitarbeitende **heften** eine Mitteilung **an** (auf ihrer Seite oder
   im Menü der Zeile), damit sie für alle oben bleibt. Die Kategorien
   richtet ein Admin ein.
@@ -98,8 +99,9 @@ wird nach einem Tag gelöscht. Mit dem ersten Text ist es ein Dokument
 (die Adresse im Browser wird die des Dokuments) und steht im Ordner,
 ohne schon jemanden zu benachrichtigen. Klickst du zum ersten Mal auf
 „Fertig“, wirst du gefragt „Personen benachrichtigen?“: Wer von Neuem
-hören will, wird so oder so benachrichtigt; füge weitere unter „Auch
-benachrichtigen…“ hinzu (und eine Notiz) und „Auch benachrichtigen“,
+hören will, wird so oder so benachrichtigt (die Pillen mit Schloss unter
+„Abonnent:innen“); füge dort weitere hinzu (und eine Notiz) und „Auch
+benachrichtigen“,
 oder „Sonst niemand“, um niemanden hinzuzufügen. Klickst du nie auf
 „Fertig“, wird benachrichtigt, wer hören will, eine Stunde nach deiner
 letzten Änderung (das Dokument aus dem Papierkorb zu holen, auch mit
@@ -132,8 +134,8 @@ einen Ordner im Pfad darüber für diesen Ordner). Jede Datei zeigt ihren
 Namen, den du ändern kannst (die Endung bleibt), und ihre Grösse;
 entferne eine mit ×, oder ziehe weitere dazu. Darunter, einmal für alle:
 „Für Kund:innen sichtbar“ (auf der obersten Ebene; in einem Ordner
-folgen sie dem Ordner) und wer zusätzlich benachrichtigt wird („Auch
-benachrichtigen…“). „Hochladen“ schickt sie nacheinander; eine Datei,
+folgen sie dem Ordner) und „Abonnent:innen“ wie bei einer neuen
+Mitteilung. „Hochladen“ schickt sie nacheinander; eine Datei,
 die sich nicht hochladen lässt (zu gross), sagt es in ihrer Zeile,
 während die anderen weiterlaufen. Die Benachrichtigten bekommen eine
 Benachrichtigung und eine Mail für alle („Ada hat 5 Dateien in

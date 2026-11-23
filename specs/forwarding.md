@@ -112,5 +112,5 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
 - Filing deletes the forwarded mail (and its files, copied into the
   item's attachments); deleting asks first. Forwarded mails aren't in the
   audit log nor in the admin: the forwarder's only.
-- The message form has no "Also tell…": the project is chosen in the same
+- The message form has no "Subscribers": the project is chosen in the same
   form, so posting tells those told by default only.

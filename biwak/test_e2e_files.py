@@ -398,8 +398,9 @@ class UploadTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
     def test_also_tell(self):
-        """A line saying who will be told, "Also tell…" adds others, nothing
-        preselected (decided 2026-11-21: additive)"""
+        """ "Subscribers": the poster and who will be told as pills that
+        stay (decided 2026-11-23), adding others, nothing preselected
+        (decided 2026-11-21: additive)"""
         dan = person("Dan")
         dan.notification_level = "concerns_me"
         dan.save()
@@ -412,8 +413,12 @@ class UploadTest(E2ETestCase):
             {"name": "a.txt", "mimeType": "text/plain", "buffer": b"A"},
         ])
         # Cleo sees the visible folder and hears of everything; Ada posts
-        expect(dialog.get_by_text("Cleo will be told.")).to_be_visible()
-        pills = dialog.locator(".wb-pill")
+        fixed = dialog.locator(".wb-pill-fixed")
+        expect(fixed).to_have_text([re.compile("Ada"), re.compile("Cleo")])
+        expect(fixed.locator(".wb-pill-remove")).to_have_count(0)
+        # The line is for pages without JavaScript
+        expect(dialog.get_by_text("Cleo will be told.")).to_be_hidden()
+        pills = dialog.locator(".wb-pill:not(.wb-pill-fixed)")
         expect(pills).to_have_count(0)
         dialog.locator(".wb-picker-input").fill("da")
         dialog.locator(".wb-picker-input").press("Enter")
@@ -429,8 +434,9 @@ class UploadTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
     def test_who_is_told_follows_visible_to_clients(self):
-        """At the top the line and "Also tell…" follow "Visible to
-        clients" (decided 2026-11-22): clients only while it's ticked"""
+        """At the top the pills of those subscribed anyway and the people
+        offered follow "Visible to clients" (decided 2026-11-22): clients
+        only while it's ticked"""
         eve = person("Eve", client=True)
         eve.notification_level = "concerns_me"
         eve.save()
@@ -443,26 +449,23 @@ class UploadTest(E2ETestCase):
         dialog.get_by_label("Files").set_input_files([
             {"name": "a.txt", "mimeType": "text/plain", "buffer": b"A"},
         ])
-        internal = dialog.get_by_text("Nobody is told unless you add people.")
-        visible = dialog.get_by_text("Cleo will be told.")
-        expect(internal).to_be_visible()
-        expect(visible).to_be_hidden()
+        fixed = dialog.locator(".wb-pill-fixed")
+        expect(fixed).to_have_text([re.compile("Ada")])
         picker = dialog.locator(".wb-picker-input")
         picker.fill("ev")
         expect(dialog.get_by_text("Nobody found")).to_be_visible()
         picker.press("Escape")
         checkbox = dialog.get_by_label("Visible to clients")
         checkbox.check()
-        expect(visible).to_be_visible()
-        expect(internal).to_be_hidden()
-        pills = dialog.locator(".wb-pill")
+        expect(fixed).to_have_text([re.compile("Ada"), re.compile("Cleo")])
+        pills = dialog.locator(".wb-pill:not(.wb-pill-fixed)")
         picker.fill("ev")
         picker.press("Enter")
         expect(pills).to_have_text([re.compile("Eve")])
         # Unticked: Eve is taken away
         checkbox.uncheck()
         expect(pills).to_have_count(0)
-        expect(internal).to_be_visible()
+        expect(fixed).to_have_text([re.compile("Ada")])
         checkbox.check()
         picker.fill("ev")
         picker.press("Enter")
@@ -573,8 +576,11 @@ class NewDocTest(E2ETestCase):
         dialog = page.get_by_role("dialog", name="Tell people about it?")
         expect(dialog).to_be_visible()
         # Who wants to hear is told; nobody preselected to add
-        expect(dialog.get_by_text("Cleo will be told.")).to_be_visible()
-        expect(dialog.locator(".wb-pill")).to_have_count(0)
+        expect(dialog.locator(".wb-pill-fixed")).to_have_text([
+            re.compile("Ada"),
+            re.compile("Cleo"),
+        ])
+        expect(dialog.locator(".wb-pill:not(.wb-pill-fixed)")).to_have_count(0)
         dialog.get_by_label("Note").fill("Our plan")
         dialog.get_by_role("button", name="Tell them too").click()
         page.wait_for_url(f"**{draft.get_absolute_url()}")

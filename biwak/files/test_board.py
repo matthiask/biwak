@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 from unittest.mock import patch
 
 from django.core.exceptions import PermissionDenied
@@ -156,9 +157,10 @@ class MessageNewTest(Fixture, TestCase):
         return reverse("message_new", args=[self.project.pk])
 
     def test_who_is_told_and_also_tell(self):
-        """A line saying who is told by default, "Also tell…" with the
-        others who see it, nothing preselected, not the poster (decided
-        2026-11-21: additive)"""
+        """ "Subscribers" with the poster and those told by default as pills
+        that stay (decided 2026-11-23), the line saying so without
+        JavaScript, offering the others who see it, nothing preselected
+        (decided 2026-11-21: additive)"""
         dan = person("Dan")
         Membership.objects.create(project=self.project, user=dan)
         dan.notification_level = NotificationLevel.CONCERNS_ME
@@ -167,8 +169,23 @@ class MessageNewTest(Fixture, TestCase):
         response = self.client.get(self.url())
         # An internal message (the switch starts off): not Cleo
         self.assertContains(response, "Bob will be told.")
-        self.assertContains(response, "Also tell…")
+        self.assertContains(response, '<span class="wb-nojs">')
+        self.assertContains(response, ">Subscribers</label>")
         self.assertContains(response, "data-people-picker")
+        fixed = json.loads(
+            response.context["form"].fields["also"].widget.attrs["data-fixed"]
+        )
+        self.assertEqual(
+            {state: [pill["name"] for pill in pills] for state, pills in fixed.items()},
+            {"internal": ["Ada", "Bob"], "visible": ["Ada", "Bob", "Cleo"]},
+        )
+        self.assertEqual(
+            [pill["why"] for pill in fixed["internal"]],
+            [
+                "You are always subscribed to your own posts.",
+                "Wants to hear about everything in this project.",
+            ],
+        )
         self.assertNotContains(response, "data-shown-when")
         self.assertNotContains(response, 'name="notify"')
         form = response.context["form"]

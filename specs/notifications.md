@@ -75,21 +75,29 @@ outside changed nothing but fields the batch changed (decided
   separated); an older CLI's `notify` is accepted, its IDs count as
   `also`, `everybody` and `nobody` are ignored. CLI: `--also IDS`.
 - **The form** (`files.common.NotifyForm`, decided 2026-11-21): no
-  choice, a line saying who will be told ("Ada, Bob and 3 others will be
-  told.", `told_line()`: the names the poster may know, the others
-  counted; "Nobody is told unless you add people."), below it "Also
-  tell…", the people picker (`PeopleField`) of the members who see it
-  (in a folder as the folder says; what clients post is visible) and
-  aren't told already, nothing preselected. **At the top the line
-  follows "Visible to clients"** (decided 2026-11-22): staff's form
-  renders the line for both (`intro_lines`) and shows the one ticked,
-  and offers the clients of the project in "Also tell…" only while it's
+  choice, **"Subscribers"** (decided 2026-11-23 with the user, it was
+  "Also tell…" below a line saying who will be told, which went
+  unnoticed above the label): the people picker (`PeopleField`) shows
+  the poster and those told by default as pills with a lock instead of
+  × (`fixed_pills()`, the picker's `data-fixed`), all of them however
+  many, each saying why when pointed at ("You are always subscribed to
+  your own posts.", "Subscribed to this folder.", "Wants to hear about
+  everything in this project."; those the poster may not know as one
+  "2 others" pill), and offers the members who see it (in a folder as
+  the folder says; what clients post is visible) and aren't in already,
+  nothing preselected. The hint: "They hear about it and its comments."
+  (the poster is subscribed, but never told). Without JavaScript the
+  line saying who will be told stays ("Ada, Bob and 3 others will be
+  told.", `told_line()`, `.wb-nojs`). **At the top the pills follow
+  "Visible to clients"** (decided 2026-11-22): staff's form has them
+  (and the lines) for both and shows the ticked one's,
+  and offers the clients of the project only while it's
   ticked (`frontend/told.js`: unticking takes the clients picked away);
   the server tells exactly that (`notify_people()` with the item's
   visibility). Clients picked for an internal item are a form error,
   and a 400 in the API ("Clients can't see it."). A doc begun as a
   draft asks at its first "Done" ("Tell people about it?",
-  `docs.TellForm`): the same line and "Also tell…" (the project's
+  `docs.TellForm`): the same "Subscribers" (the project's
   members too, decided 2026-11-22) with a note; "Tell them too" records
   `shared` to those told by default
   (not subscribed yet) and those added, "No one else" to those told by

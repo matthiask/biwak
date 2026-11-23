@@ -1,5 +1,6 @@
 import html
 import io
+import json
 import re
 from unittest.mock import patch
 from urllib.parse import parse_qs, quote, urlsplit
@@ -926,6 +927,28 @@ class UploadPageTest(Fixture, TestCase):
         self.assertContains(response, "Cleo will be told.")
         self.assertEqual(
             set(response.context["form"].fields["also"].queryset), {self.bob}
+        )
+
+    def test_the_pills_say_why(self):
+        """Those subscribed anyway say why (decided 2026-11-23): the folder's
+        subscribers, those hearing about everything, oneself"""
+        from biwak.activity.operations import subscribe
+
+        self.bob.notification_level = NotificationLevel.CONCERNS_ME
+        self.bob.save()
+        subscribe(self.bob, self.public)
+        self.client.force_login(self.ada)
+        response = self.client.get(self.url(self.public), headers={"HX-Modal": "true"})
+        fixed = json.loads(
+            response.context["form"].fields["also"].widget.attrs["data-fixed"]
+        )["all"]
+        self.assertEqual(
+            {pill["name"]: pill["why"] for pill in fixed},
+            {
+                "Ada": "You are always subscribed to your own posts.",
+                "Bob": "Subscribed to this folder.",
+                "Cleo": "Wants to hear about everything in this project.",
+            },
         )
 
     def test_visible_at_the_top_tells_clients(self):

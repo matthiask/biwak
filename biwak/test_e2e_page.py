@@ -290,7 +290,7 @@ class KeyboardTest(E2ETestCase):
         expect(page.locator("main h1")).to_contain_text("Packing")
         self.assertEqual(Item.objects.filter(title="Packing").count(), 1)
         # The picker picks with the list open, then the form submits
-        # Bob hears only when tagged: offered in "Also tell…"
+        # Bob hears only when tagged: offered in "Subscribers"
         project_ops.add_member(self.project, self.bob, actor=self.ada, notify="tagged")
         page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
         page.get_by_label("Title").fill("Kickoff")
@@ -298,7 +298,7 @@ class KeyboardTest(E2ETestCase):
         picker.press_sequentially("bob")
         expect(page.locator(".wb-picker-list li").first).to_be_visible()
         picker.press("Enter")
-        expect(page.locator(".wb-pill")).to_have_count(1)
+        expect(page.locator(".wb-pill:not(.wb-pill-fixed)")).to_have_count(1)
         picker.press("ControlOrMeta+Enter")
         page.wait_for_url(re.compile(r"/messages/\d+/"))
         self.assertEqual(Item.objects.filter(title="Kickoff").count(), 1)

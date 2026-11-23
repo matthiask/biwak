@@ -315,14 +315,13 @@ Teams. Teams sind eine Abkürzung der Seiten: Über die CLI, die API und
 Antworten per Mail wird der Name eines Teams nicht aufgelöst.
 
 **Das ganze Projekt auf einmal:** Beim Hinzufügen von Abonnent:innen
-(„Abonnent:innen…“) oder von Personen, die benachrichtigt werden („Auch
-benachrichtigen…“), finden Mitarbeitende zuoberst in der Liste zwei
+(„Abonnent:innen…“) oder beim Veröffentlichen („Abonnent:innen“) finden
+Mitarbeitende zuoberst in der Liste zwei
 Einträge: **Mitarbeitende in diesem Projekt** (euer Team und die
 Externen) und, wenn Kund:innen den Eintrag sehen können, **Alle in
 diesem Projekt** (auch die Kund:innen). Einer davon fügt für jedes
-aktive Mitglied, das noch nicht abonniert hat oder benachrichtigt wird,
-eine Pille hinzu; nimm vor dem Speichern heraus, wer nicht dabei sein
-soll.
+aktive Mitglied, das noch nicht abonniert hat, eine Pille hinzu und sagt,
+wie viele; nimm vor dem Speichern heraus, wer nicht dabei sein soll.
 
 ## Dein Menü
 

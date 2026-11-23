@@ -19,8 +19,8 @@ Du abonnierst einen Eintrag, wenn du:
   mit welcher Stufe;
 - im Projekt bist, wenn jemand eine Mitteilung, ein Dokument oder eine
   Datei veröffentlicht, falls deine Stufe „Alles“ ist oder du ihren
-  Ordner abonniert hast, oder wenn sie dich mit Namen hinzufügen („Auch
-  benachrichtigen…“);
+  Ordner abonniert hast, oder wenn sie dich mit Namen hinzufügen
+  („Abonnent:innen“);
 - „Abonnieren“ darauf drückst oder jemand dich hinzufügt
   („Abonnent:innen…“ in seinem Menü „Mehr“; dabei kann man dich gleich
   benachrichtigen).

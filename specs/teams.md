@@ -73,7 +73,7 @@ for the picker's `data-teams` and the `@` list's entries;
   count as in, not as left out. In the picker a team with nobody left to
   add isn't offered (like people picked already); in the `@` list a
   team nobody of which can see the item is greyed out, like people.
-  "Also tell…" at the top leaves out clients while "Visible to clients"
+  "Subscribers" when posting at the top leaves out clients while "Visible to clients"
   is unticked, as the picker does for them one by one.
 - **Check-ins' "People asked"** is the picker too (decided 2026-11-22,
   `checkins.md`), its clients following "Visible to clients" like "Also
@@ -101,5 +101,5 @@ now and changing the team later doesn't change earlier picks.
 `biwak/teams/test_teams.py` (operations, pages, palette),
 `test_picking.py` (the picker's `data-teams`, the `@` list's JSON, as
 staff, external and client), `test_api.py` (API and CLI);
-`TeamsTest` in `biwak/test_e2e_people.py` (the picker, "Also tell…" following
+`TeamsTest` in `biwak/test_e2e_people.py` (the picker, "Subscribers" following
 the checkbox, the `@` list).

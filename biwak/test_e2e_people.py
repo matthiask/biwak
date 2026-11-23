@@ -153,7 +153,7 @@ class TeamsTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
     def test_the_picker_follows_visible_to_clients(self):
-        """ "Also tell…" when posting at the top: the client is added only
+        """ "Subscribers" when posting at the top: the client is added only
         while the message is visible to clients"""
         page = self.page
         page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
@@ -169,7 +169,7 @@ class TeamsTest(E2ETestCase):
         picker.press_sequentially("design")
         expect(team).to_contain_text("3 of 4: 1 not a member of this project")
         picker.press("Enter")
-        expect(page.locator(".wb-pill")).to_have_text([
+        expect(page.locator(".wb-pill:not(.wb-pill-fixed)")).to_have_text([
             re.compile("Cleo"),
             re.compile("Dan"),
         ])
@@ -177,7 +177,7 @@ class TeamsTest(E2ETestCase):
 
     def test_the_whole_project_comes_first(self):
         """ "Staff on this project" and "Everybody on this project" first
-        in "Also tell…" (decided 2026-11-23, specs/subscribers.md):
+        in "Subscribers" (decided 2026-11-23, specs/subscribers.md):
         everybody only while clients see it"""
         page = self.page
         page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
@@ -197,7 +197,7 @@ class TeamsTest(E2ETestCase):
         expect(group).to_contain_text("Everybody on this project")
         picker.press("Enter")
         # Ada posts (told already)
-        expect(page.locator(".wb-pill")).to_have_text([
+        expect(page.locator(".wb-pill:not(.wb-pill-fixed)")).to_have_text([
             re.compile("Cleo"),
             re.compile("Dan"),
         ])

@@ -27,6 +27,11 @@
 // and why the others are left out; picking one picks its members, as if
 // picked one by one. A team with nobody left to add isn't offered.
 //
+// Those subscribed in any case (data-fixed, specs/notifications.md, decided
+// 2026-11-23: the poster and those told by default) come first as pills
+// without ×, a lock instead: {"all": [...]} or, following "Visible to
+// clients" (data-clients-follow), {"internal": [...], "visible": [...]}.
+//
 // The project's people at once (specs/subscribers.md, decided 2026-11-23):
 // data-project-groups ("Staff on this project", "Everybody on this project") work
 // like teams but come first, before the people, and a group adding the
@@ -66,10 +71,23 @@ function attach(select) {
   }
   const teams = parse(select.dataset.teams)
   const groups = parse(select.dataset.projectGroups)
+  let fixed = {}
+  try {
+    fixed = JSON.parse(select.dataset.fixed || "{}")
+  } catch {}
+  const fixedNow = () => {
+    if (fixed.all) return fixed.all
+    const checkbox = select.dataset.clientsFollow
+      ? document.querySelector(select.dataset.clientsFollow)
+      : null
+    return (checkbox?.checked ? fixed.visible : fixed.internal) || []
+  }
 
   const root = document.createElement("div")
   root.className = "wb-picker"
   root.dataset.dismiss = ""
+  const fixedPills = document.createElement("span")
+  fixedPills.className = "wb-picker-pills"
   const pills = document.createElement("span")
   pills.className = "wb-picker-pills"
   const input = document.createElement("input")
@@ -89,7 +107,7 @@ function attach(select) {
   list.className = "wb-mentions list-group wb-picker-list"
   list.setAttribute("role", "listbox")
   list.hidden = true
-  root.append(pills, input, list)
+  root.append(fixedPills, pills, input, list)
   select.after(root)
   select.hidden = true
   select.dataset.pickerInput = inputId
@@ -108,6 +126,21 @@ function attach(select) {
   const chosen = () => options.filter((option) => option.selected)
 
   const renderPills = () => {
+    fixedPills.replaceChildren(
+      ...fixedNow().map((entry) => {
+        const pill = document.createElement("span")
+        pill.className = "wb-pill wb-pill-fixed"
+        // Why it can't be taken out
+        pill.title = entry.why || ""
+        const name = document.createElement("span")
+        name.textContent = entry.name
+        const lock = document.createElement("i")
+        lock.className = "bi bi-lock"
+        lock.setAttribute("aria-hidden", "true")
+        pill.append(avatar(entry.avatar), name, lock)
+        return pill
+      }),
+    )
     pills.replaceChildren(
       ...chosen().map((option) => {
         const pill = document.createElement("span")

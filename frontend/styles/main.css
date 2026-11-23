@@ -2900,6 +2900,19 @@ body:has(.wb-modal[open]) {
   outline-offset: 1px;
 }
 
+/* Subscribed in any case (frontend/people-picker.js, data-fixed): no ×,
+   a lock instead */
+.wb-pill-fixed {
+  padding-right: 0.5rem;
+  background: var(--bs-secondary-bg);
+  color: var(--bs-body-color);
+}
+
+/* Shown only without JavaScript (the inline script in base.html sets .js) */
+html.js .wb-nojs {
+  display: none;
+}
+
 .wb-pill-remove {
   display: inline-flex;
   align-items: center;

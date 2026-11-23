@@ -235,8 +235,8 @@ the counts of the top level's folders, docs and files.
   breadcrumb for that one (`frontend/upload.js`, the drop zone in
   `frontend/files.js`). It lists the files, each with an editable title
   (the extension kept), its size, removable; below, once for all:
-  visible to clients (staff, at the top level only), who is told and
-  "Also tell…" (as for one file, `notifications.md`). No description (set on the
+  visible to clients (staff, at the top level only) and "Subscribers"
+  (as for one file, `notifications.md`). No description (set on the
   file's page).
 - **Uploading:** one after another (`library.file_upload`, one file as
   JSON), a progress row each; an error stays on its row, the others go
@@ -321,7 +321,8 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   says.
 - **Telling people once** (decided 2026-11-21): the creator's first
   "Done" saves and asks "Tell people about it?" (`Doc.tell_pending`,
-  `docs.doc_tell`): who is told by default and "Also tell…" with a
+  `docs.doc_tell`): "Subscribers" (who is told by default as pills
+  with a lock, adding others) with a
   note (additive, `notifications.md`, decided 2026-11-21); "Tell them
   too" records `shared` to both, "No one else" to those told by default
   only (the buttons say that the others are told anyway, decided

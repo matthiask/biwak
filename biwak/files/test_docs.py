@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 
 import time_machine
 from django.core.files.base import ContentFile
@@ -486,12 +487,17 @@ class TellTest(Fixture, TestCase):
         self.assertFalse(Event.objects.filter(action=Action.SHARED).exists())
 
     def test_who_is_told_and_also_tell(self):
-        """A line saying who is told (not Cleo: internal; not Ada: its
-        creator), "Also tell…" with the others, nothing preselected"""
+        """Who is told (not Cleo: internal; not Ada: its creator, a pill
+        all the same), "Subscribers" offering the others, nothing
+        preselected"""
         self.write()
         response = self.client.get(self.tell, headers={"HX-Modal": "true"})
         self.assertContains(response, "Bob will be told.")
-        self.assertContains(response, "Also tell…")
+        self.assertContains(response, ">Subscribers</label>")
+        fixed = json.loads(
+            response.context["form"].fields["people"].widget.attrs["data-fixed"]
+        )
+        self.assertEqual([pill["name"] for pill in fixed["all"]], ["Ada", "Bob"])
         form = response.context["form"]
         self.assertEqual(form["people"].value(), None)
         self.assertNotIn(self.bob, form.fields["people"].queryset)
