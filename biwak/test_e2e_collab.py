@@ -95,6 +95,21 @@ class CollabTest(E2ETestCase):
             time.sleep(0.1)
         self.assertEqual(self.stored(doc).rstrip("\n"), expected.rstrip("\n"))
 
+    def test_a_doc_without_a_title_says_title(self):
+        """Any doc whose first line is empty (an empty one: Markdown drops
+        leading blank lines) shows "Title" there, a hint, not text (decided
+        2026-11-23)"""
+        doc = bare_doc(
+            project=self.project, title="Empty", content="", creator=self.ada
+        )
+        page = self.editor(self.ada, doc)
+        first = self.content(page).locator("> *").first
+        expect(first).to_have_attribute("data-placeholder", "Title")
+        # This doc has a title: no hint
+        page = self.editor(self.ada)
+        expect(self.content(page).locator("[data-placeholder]")).to_have_count(0)
+        self.assertEqual(self.errors, [])
+
     def test_the_toolbar_and_its_keys(self):
         """The same toolbar as above Markdown fields, working on the live
         editor's document, undone by its undo (Yjs')"""

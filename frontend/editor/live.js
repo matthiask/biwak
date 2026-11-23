@@ -3,7 +3,8 @@
 // the editor to the `Y.XmlFragment` the server reads and writes too
 // (biwak/richtext/ydoc.py), shows the others' cursors and names, and undoes
 // one's own changes only.
-import { Selection } from "prosemirror-state"
+import { Plugin, Selection } from "prosemirror-state"
+import { Decoration, DecorationSet } from "prosemirror-view"
 import {
   redo,
   undo,
@@ -23,12 +24,43 @@ import { tableBar } from "./tables.js"
 
 export { FRAGMENT }
 
+// The hint in an empty first line, a doc's title (any doc, decided
+// 2026-11-23), as the fields' placeholder (frontend/editor/fields.js): not
+// text, so typing replaces it and a new doc stays a draft until something
+// is written (specs/files.md, "Docs")
+function emptyTitle(text) {
+  return new Plugin({
+    props: {
+      decorations(state) {
+        const first = state.doc.firstChild
+        if (!first?.isTextblock || first.content.size) return null
+        return DecorationSet.create(state.doc, [
+          Decoration.node(0, first.nodeSize, {
+            class: "is-empty",
+            "data-placeholder": text,
+          }),
+        ])
+      },
+    },
+  })
+}
+
 // ``place``: where the editor goes; ``mayType()`` says whether it's
 // editable now; ``upload(files)`` attaches files; ``mentionsUrl`` the `@`
-// list's endpoint; ``label`` for screen readers
+// list's endpoint; ``label`` for screen readers; ``titlePlaceholder`` is
+// shown in an empty first line (the doc's title, decided 2026-11-23)
 export function liveEditor(
   place,
-  { ydoc, awareness, mayType, upload, mentionsUrl, label, attachmentUrl },
+  {
+    ydoc,
+    awareness,
+    mayType,
+    upload,
+    mentionsUrl,
+    label,
+    attachmentUrl,
+    titlePlaceholder,
+  },
 ) {
   setAttachmentUrl(attachmentUrl)
   const fragment = ydoc.getXmlFragment(FRAGMENT)
@@ -50,6 +82,7 @@ export function liveEditor(
               ?.undoManager.stopCapturing(),
         }),
         tableBar({ anchor: place }),
+        ...(titlePlaceholder ? [emptyTitle(titlePlaceholder)] : []),
       ],
       // Yjs' undo: one's own changes only
       undo: { undo, redo },

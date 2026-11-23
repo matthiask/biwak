@@ -44,6 +44,7 @@
     data-collab-watching="{% translate 'You are watching. You can’t change this doc.' %}"
     data-collab-gone="{% translate 'You can’t see this doc anymore.' %}"
     data-collab-here="{% translate 'Also here:' %}"
+    data-collab-title="{% translate 'Title' %}"
     {% if can_edit %}{% attachments_attrs project %} data-mentions="{% url 'mentionable' item.pk %}"{% endif %}
   >
     <div class="d-flex flex-wrap align-items-center gap-3 small text-body-secondary mb-2">

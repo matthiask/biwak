@@ -2445,6 +2445,15 @@ button.wb-signal:hover {
   pointer-events: none;
 }
 
+/* A live doc's empty title (frontend/editor/live.js) */
+.wb-live-editor .ProseMirror > .is-empty::before {
+  float: left;
+  height: 0;
+  content: attr(data-placeholder);
+  color: var(--bs-secondary-color);
+  pointer-events: none;
+}
+
 .wb-markdown li.task-list-item:has(> .wb-task-body) {
   display: flex;
   align-items: baseline;

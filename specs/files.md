@@ -302,8 +302,11 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   (`base_version`, 409 in the API; also within the other's ten-minute
   window).
 - **New docs are drafts** (decided 2026-11-21): "New doc" is a link
-  making a draft and opening the editor with `# ` and the cursor after
-  it (`items.operations.create_draft()`: no title yet, no event, no
+  making a draft and opening the editor with the cursor in its empty
+  heading (`# `), which says "Title" in grey: a placeholder, not text,
+  shown in the empty first line of any doc (decided 2026-11-23,
+  `frontend/editor/live.js`; real text would make the draft a doc at
+  once) (`items.operations.create_draft()`: no title yet, no event, no
   version, its creator subscribed). A draft (`Item.is_draft`) is
   nobody's business until written: `visible_to()` leaves it out, and
   `drafts=True` lets its creator's own in for the editor's pages and its

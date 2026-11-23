@@ -537,8 +537,12 @@ class NewDocTest(E2ETestCase):
             "data-collab-state", "connected"
         )
         draft = Item.objects.filter(is_draft=True).latest("pk")
-        # The cursor after "# ": the title is typed first
+        # The cursor in the empty heading saying "Title": the title is
+        # typed first (decided 2026-11-23: a hint, not text)
         expect(page.locator("[data-collab-editor] .ProseMirror")).to_be_focused()
+        title = page.locator("[data-collab-editor] .ProseMirror > h1")
+        expect(title).to_have_attribute("data-placeholder", "Title")
+        expect(title).to_have_text("")
         return page, draft
 
     def wait_for_doc(self, draft):
@@ -571,6 +575,10 @@ class NewDocTest(E2ETestCase):
     def test_telling_people_at_the_first_done(self):
         page, draft = self.new_doc()
         page.keyboard.type("Plan")
+        # Typing replaces the hint
+        title = page.locator("[data-collab-editor] .ProseMirror > h1")
+        expect(title).to_have_text("Plan")
+        expect(title).not_to_have_class("is-empty")
         page.wait_for_url(f"**{reverse('doc_edit', args=[draft.pk])}")
         page.get_by_role("link", name="Done").click()
         dialog = page.get_by_role("dialog", name="Tell people about it?")
