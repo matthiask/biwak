@@ -40,14 +40,8 @@
 .bi-arrow-counterclockwise::before {
   content: "\f117";
 }
-.bi-arrow-down::before {
-  content: "\f128";
-}
 .bi-arrow-right::before {
   content: "\f138";
-}
-.bi-arrow-up::before {
-  content: "\f148";
 }
 .bi-at::before {
   content: "\f152";

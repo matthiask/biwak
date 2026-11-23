@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 11:25+0100\n"
+"POT-Creation-Date: 2026-11-23 11:38+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1004,7 +1004,7 @@ msgstr "Push-Benachrichtigungen auf diesem Gerät sind aus."
 msgid "Rename the device"
 msgstr "Gerät umbenennen"
 
-#: biwak/accounts/views.py biwak/items/views.py
+#: biwak/accounts/views.py
 msgid "Rename"
 msgstr "Umbenennen"
 
@@ -2329,8 +2329,8 @@ msgid "Category"
 msgstr "Kategorie"
 
 #: biwak/files/board.py biwak/files/library.py biwak/forwarding/views.py
-#: biwak/organizations/views.py biwak/projects/template_views.py
-#: biwak/projects/views.py
+#: biwak/items/views.py biwak/organizations/views.py
+#: biwak/projects/template_views.py biwak/projects/views.py
 msgid "None"
 msgstr "Keine"
 
@@ -2354,7 +2354,8 @@ msgstr "Noch niemand hat von diesem Dokument erfahren. Du wirst einmal gefragt."
 msgid "Tell them too"
 msgstr "Auch benachrichtigen"
 
-#: biwak/files/library.py biwak/items/models.py biwak/projects/models.py
+#: biwak/files/library.py biwak/items/models.py biwak/items/views.py
+#: biwak/projects/models.py
 msgid "color"
 msgstr "Farbe"
 
@@ -3393,6 +3394,10 @@ msgid "to-do lists"
 msgstr "To-do-Listen"
 
 #: biwak/items/models.py
+msgid "Marks the group's card and heading."
+msgstr "Markiert die Karte und die Überschrift der Gruppe."
+
+#: biwak/items/models.py
 msgid "group"
 msgstr "Gruppe"
 
@@ -3615,8 +3620,8 @@ msgid "Add group"
 msgstr "Gruppe hinzufügen"
 
 #: biwak/items/views.py biwak/templates/items/todolist.html
-msgid "Rename the group"
-msgstr "Gruppe umbenennen"
+msgid "Edit the group"
+msgstr "Gruppe bearbeiten"
 
 #: biwak/items/views.py
 msgid "Position"
@@ -7299,16 +7304,16 @@ msgid "Drag to move the group"
 msgstr "Ziehen, um die Gruppe zu verschieben"
 
 #: biwak/templates/items/todolist.html
-msgid "Move the group up"
-msgstr "Gruppe nach oben verschieben"
+msgid "Edit, move or remove the group"
+msgstr "Gruppe bearbeiten, verschieben oder entfernen"
 
 #: biwak/templates/items/todolist.html
-msgid "Move the group down"
-msgstr "Gruppe nach unten verschieben"
+msgid "Move up"
+msgstr "Nach oben"
 
 #: biwak/templates/items/todolist.html
-msgid "Rename or remove the group"
-msgstr "Gruppe umbenennen oder entfernen"
+msgid "Move down"
+msgstr "Nach unten"
 
 #: biwak/templates/items/todolist.html
 msgid "Remove the group; its to-dos stay"
@@ -8133,6 +8138,15 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
+
+#~ msgid "Rename the group"
+#~ msgstr "Gruppe umbenennen"
+
+#~ msgid "Move the group up"
+#~ msgstr "Gruppe nach oben verschieben"
+
+#~ msgid "Move the group down"
+#~ msgstr "Gruppe nach unten verschieben"
 
 #~ msgid "Notified of everything new"
 #~ msgstr "Über alles Neue benachrichtigt"

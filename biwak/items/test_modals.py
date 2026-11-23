@@ -33,12 +33,12 @@ class GroupModalTest(ItemModalBase):
         super().setUp()
         self.group = ops.create_group(todolist=self.shared.todolist, title="Later")
         self.new = f"/lists/{self.shared.pk}/groups/"
-        self.rename = f"/groups/{self.group.pk}/rename/"
+        self.edit = f"/groups/{self.group.pk}/edit/"
 
     def test_the_list_has_buttons_not_forms(self):
         response = self.client.get(self.shared.get_absolute_url())
         self.assertContains(response, f'href="{self.new}"')
-        self.assertContains(response, f'href="{self.rename}"')
+        self.assertContains(response, f'href="{self.edit}"')
         self.assertNotContains(response, 'placeholder="New group"')
 
     def test_new_group_as_a_modal_and_a_page(self):
@@ -66,22 +66,22 @@ class GroupModalTest(ItemModalBase):
         self.assertContains(response, "This field is required.")
         self.assertEqual(self.shared.todolist.groups.count(), 1)
 
-    def test_rename(self):
-        response = self.client.get(self.rename, headers=MODAL)
-        assert_modal(self, response, title="Rename the group")
+    def test_edit(self):
+        response = self.client.get(self.edit, headers=MODAL)
+        assert_modal(self, response, title="Edit the group")
         self.assertContains(response, 'value="Later"')
-        assert_page(self, self.client.get(self.rename), title="Rename the group")
-        response = self.client.post(self.rename, {"title": "Maybe"}, headers=MODAL)
+        assert_page(self, self.client.get(self.edit), title="Edit the group")
+        response = self.client.post(self.edit, {"title": "Maybe"}, headers=MODAL)
         assert_modal_redirect(self, response, self.shared.get_absolute_url())
         self.group.refresh_from_db()
         self.assertEqual(self.group.title, "Maybe")
-        response = self.client.post(self.rename, {"title": ""}, headers=MODAL)
-        assert_modal(self, response, title="Rename the group")
+        response = self.client.post(self.edit, {"title": ""}, headers=MODAL)
+        assert_modal(self, response, title="Edit the group")
         self.assertContains(response, "This field is required.")
 
     def test_clients_dont_change_groups_of_lists_staff_created(self):
         self.client.force_login(self.cleo)
-        for url in [self.new, self.rename]:
+        for url in [self.new, self.edit]:
             for headers in [{}, MODAL]:
                 with self.subTest(url=url, headers=headers):
                     self.assertEqual(

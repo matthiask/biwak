@@ -111,14 +111,15 @@ class ImportEveryKindTest(ImportCase):
         self.assertEqual(
             list(
                 Group.objects.order_by("pk").values_list(
-                    "todolist__item__title", "title"
+                    "todolist__item__title", "title", "color"
                 )
             ),
             [
-                ("Kitchen plan", "Week 1"),
-                ("Planning board", "Triage"),
-                ("Planning board", "Cooking"),
-                ("Planning board", "Done"),
+                ("Kitchen plan", "Week 1", ""),
+                # The columns' colors, nearest in the palette; white is none
+                ("Planning board", "Triage", ""),
+                ("Planning board", "Cooking", "ember"),
+                ("Planning board", "Done", ""),
             ],
         )
         peel = self.item("Peel potatoes")
@@ -619,6 +620,13 @@ class SecondRunTest(ImportCase):
         self.assertEqual(
             assigned.order_by("created_at").first().created_at, food.created_at
         )
+
+    def test_a_columns_new_color(self):
+        self.run_import()
+        column = self.client_.data["/card_tables/600.json"]["lists"][1]
+        column |= {"color": "aqua", "updated_at": "2026-03-01T08:00:00.000Z"}
+        self.run_import()
+        self.assertEqual(Group.objects.get(title="Cooking").color, "glacier")
 
     def test_a_second_run_updates_what_changed(self):
         self.run_import()
@@ -1946,3 +1954,34 @@ class TooLargeTest(ImportCase):
     def test_a_dry_run_lists_them_too(self):
         report = self.run_import(dry_run=True)
         self.assertIn("plan.png", report.as_text())
+
+
+class GroupColorTest(TestCase):
+    def test_basecamps_colors_in_the_palette(self):
+        """specs/import-basecamp.md, decided 2026-11-23 by the user"""
+        for basecamp, color in [
+            ("red", "ember"),
+            ("yellow", "moss"),
+            ("aqua", "glacier"),
+            ("brown", "bark"),
+            ("white", ""),
+            (None, ""),
+            ("chartreuse", ""),
+        ]:
+            with self.subTest(basecamp=basecamp):
+                self.assertEqual(importer_module.group_color(basecamp), color)
+        self.assertEqual(
+            sorted(importer_module.BASECAMP_COLORS),
+            sorted([
+                "red",
+                "orange",
+                "yellow",
+                "green",
+                "blue",
+                "aqua",
+                "purple",
+                "gray",
+                "pink",
+                "brown",
+            ]),
+        )

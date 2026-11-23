@@ -140,6 +140,29 @@ FORWARDS_CATEGORY = ("Email forwards", "\N{INCOMING ENVELOPE}")
 SAMPLE = "DummyUser"
 
 
+# Basecamp's colors of card table columns (bc3-api, "Change color of a
+# column") and the nearest of the palette (specs/import-basecamp.md,
+# decided 2026-11-23 by the user); white, none and unknown ones: no color.
+# Yellow is the clients' amber's, which the palette leaves out.
+BASECAMP_COLORS = {
+    "red": "ember",
+    "orange": "ember",
+    "yellow": "moss",
+    "green": "forest",
+    "blue": "lake",
+    "aqua": "glacier",
+    "purple": "heather",
+    "gray": "slate",
+    "pink": "alpenglow",
+    "brown": "bark",
+}
+
+
+def group_color(basecamp_color):
+    """The palette name for a column's color, "" for none"""
+    return BASECAMP_COLORS.get(basecamp_color or "", "")
+
+
 class ImportRefused(Exception):
     """Something that must not be imported turned up; nothing more is
     written"""
@@ -1230,7 +1253,9 @@ class Importer(Resolver):
             return item, None
         found = item.todolist.groups.filter(title=group.title).first()
         if found is None:
-            found = ops.create_group(todolist=item.todolist, title=group.title)
+            found = ops.create_group(
+                todolist=item.todolist, title=group.title, color=group.color
+            )
         return item, found
 
     def _stamp(self, item, rec):
@@ -1395,12 +1420,13 @@ class Importer(Resolver):
     def _group(self, rec, item, visible, project, *, rec_type, cards=False):
         todolist = item.todolist if item is not None else None
 
+        color = group_color(rec.get("color"))
+
         def create():
-            return ops.create_group(todolist=todolist, title=rec["title"])
+            return ops.create_group(todolist=todolist, title=rec["title"], color=color)
 
         def update(group):
-            if group.title != rec["title"]:
-                ops.rename_group(group, title=rec["title"])
+            ops.update_group(group, title=rec["title"], color=color)
 
         group = self._upsert(rec_type, rec, create=create, update=update)
         if cards:

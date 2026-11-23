@@ -509,6 +509,7 @@ def make_data():
             parent=table,
             description=None,
             cards_count=1,
+            color=None,
         ),
         recording(
             6002,
@@ -519,6 +520,7 @@ def make_data():
             parent=table,
             description=None,
             cards_count=0,
+            color="orange",
         ),
         recording(
             6003,
@@ -529,6 +531,7 @@ def make_data():
             parent=table,
             description=None,
             cards_count=1,
+            color="white",
         ),
     ]
     d["/card_tables/600.json"] = recording(

@@ -25,9 +25,11 @@ auf der Seite des Projekts.
   erstellt haben.
 - **Gruppen** sind Karten in einer Liste, jede mit ihrem Namen als
   Überschrift („Neue Gruppe“); die To-dos ausserhalb von Gruppen kommen
-  zuerst, in einer eigenen Karte. Mit den Symbolen neben ihrem Namen
-  benennst du eine Gruppe um oder entfernst sie; beim Entfernen bleiben
-  ihre To-dos.
+  zuerst, in einer eigenen Karte. Das „…“ neben dem Namen einer Gruppe
+  bearbeitet sie (ihren Namen und eine Farbe, die ihre Karte und
+  Überschrift markiert), verschiebt sie nach oben oder unten (ohne Maus)
+  oder entfernt sie; beim Entfernen bleiben ihre To-dos. Ziehe eine
+  Gruppe an ihrem Griff, um sie mit ihren To-dos zu verschieben.
 - **Reihenfolge:** Ziehe ein To-do an seinem Griff, um es innerhalb der
   Liste, in eine andere Gruppe oder in eine andere Liste zu verschieben.
   Klicke mehrere Griffe an, um mehrere To-dos zu wählen und sie

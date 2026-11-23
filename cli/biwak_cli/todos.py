@@ -3,6 +3,7 @@
 import click
 
 from biwak_cli.core import (
+    PALETTE,
     attach_option,
     cli,
     clients,
@@ -41,6 +42,90 @@ def lists(ctx, project, archived, as_json):
         t.add_row(str(item["id"]), item["title"], clients(item))
     console.print(t)
     return None
+
+
+# Groups ---------------------------------------------------------------------
+
+
+COLOR_OPTION = click.option(
+    "--color",
+    type=click.Choice([*PALETTE, "none"]),
+    help="A name of the palette, or 'none'.",
+)
+
+
+def show_group(group):
+    color = group["color_name"] or "no color"
+    click.echo(f"#{group['id']} {group['title']} ({color})")
+
+
+@cli.group(invoke_without_command=True)
+@click.option("--list", "list_id", type=int, help="The list's ID.")
+@json_option
+@click.pass_context
+def groups(ctx, list_id, as_json):
+    """Groups of a list (headings, the board's columns); without a command
+    those of --list. Create, update and delete them like their list."""
+    if ctx.invoked_subcommand is not None:
+        return None
+    need(list_id, "--list")
+    data = request("GET", f"lists/{list_id}/")["groups"]
+    if as_json:
+        return echo_json(data)
+    t = table("ID", "Group", "Color")
+    for group in data:
+        t.add_row(str(group["id"]), group["title"], group["color_name"])
+    console.print(t)
+    return None
+
+
+@groups.command("create")
+@click.argument("list_id", metavar="LIST", type=int)
+@click.argument("title")
+@COLOR_OPTION
+@json_option
+def group_create(list_id, title, color, as_json):
+    """Add a group titled TITLE at the end of LIST"""
+    body = {"title": title}
+    if color not in (None, "none"):
+        body["color"] = color
+    data = request("POST", f"lists/{list_id}/groups/", json=body)
+    if as_json:
+        return echo_json(data)
+    show_group(data)
+    return None
+
+
+@groups.command("update")
+@click.argument("group_id", metavar="GROUP", type=int)
+@click.option("--title", help="The new name.")
+@COLOR_OPTION
+@click.option("--index", type=int, help="Move it there (0: first), with its to-dos.")
+@json_option
+def group_update(group_id, title, color, index, as_json):
+    """Rename GROUP, give it a color or move it"""
+    body = {}
+    if title is not None:
+        body["title"] = title
+    if color is not None:
+        body["color"] = "" if color == "none" else color
+    if index is not None:
+        body["index"] = index
+    if not body:
+        raise click.UsageError("Give --title, --color or --index.")
+    data = request("PATCH", f"groups/{group_id}/", json=body)
+    if as_json:
+        return echo_json(data)
+    show_group(data)
+    return None
+
+
+@groups.command("delete")
+@click.argument("group_id", metavar="GROUP", type=int)
+def group_delete(group_id):
+    """Remove GROUP; its to-dos stay, ungrouped at the end"""
+    request("DELETE", f"groups/{group_id}/")
+    click.echo(f"Removed group #{group_id}.")
 
 
 @lists.command("copy")

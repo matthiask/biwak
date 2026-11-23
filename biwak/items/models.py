@@ -329,6 +329,15 @@ class Group(models.Model):
     )
     title = models.CharField(_("title"), max_length=200)
     position = models.PositiveIntegerField(_("position"), default=0)
+    # Tells groups apart on the list and the board; none unless chosen
+    # (specs/core.md, "Group colors")
+    color = models.CharField(
+        _("color"),
+        max_length=10,
+        blank=True,
+        choices=Color,
+        help_text=_("Marks the group's card and heading."),
+    )
 
     class Meta:
         ordering = ["position", "pk"]
