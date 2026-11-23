@@ -15,12 +15,13 @@ import datetime as dt
 import re
 import time
 from collections import Counter, defaultdict
+from contextlib import contextmanager, suppress
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 
 from biwak import schedules
@@ -883,7 +884,7 @@ class Importer(Resolver):
                 " project, its people are made up"
             )
             return self.report
-        with importing():
+        with importing(), self._recomputing():
             project = self._project(rec)
             self.say(f"  {len(people)} people")
             for person in people:
@@ -903,6 +904,21 @@ class Importer(Resolver):
             self.report.archived_projects.append(rec["name"])
         self.say(f"  done: {self._items} items, {self._so_far()}")
         return self.report
+
+    @contextmanager
+    def _recomputing(self):
+        """Events recorded while importing don't touch the projects' activity
+        times (one UPDATE each); ``_finish()`` recomputes them, and so does
+        an import stopping halfway, so they are as far as it got (decided
+        2026-11-23)"""
+        try:
+            yield
+        except BaseException:
+            if not self.dry:
+                # Not hiding why it stopped (a connection gone, say)
+                with suppress(DatabaseError):
+                    project_ops.recompute_activity()
+            raise
 
     def _finish(self, bucket_id, project):
         """What follows a project's or template's tools"""
@@ -929,7 +945,7 @@ class Importer(Resolver):
             self._forget_mappings()
             self._project_name = rec["name"]
             self.say(f"Template [{number}/{len(templates)}] {rec['name']}")
-            with importing():
+            with importing(), self._recomputing():
                 template = self._template(rec)
                 self._dock(rec, template)
                 self._finish(rec["id"], template)
@@ -951,7 +967,7 @@ class Importer(Resolver):
             self._forget_mappings()
             self._project_name = rec["name"]
             self.say(f"The to-do list library ({len(library['todolists'])} lists)")
-            with importing():
+            with importing(), self._recomputing():
                 template = self._template(rec)
                 for list_rec in sorted(
                     library["todolists"], key=lambda r: r.get("position", 0)

@@ -8,6 +8,7 @@ from unittest import mock
 from django.core import mail
 from django.core.management import CommandError, call_command
 from django.db import connection
+from django.db.models import Max
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -489,15 +490,36 @@ class NotifyNobodyTest(ImportCase):
 class QueriesTest(ImportCase):
     """The import may run against production through a tunnel, where every
     query counts (decided 2026-11-23): mappings and people are looked up
-    once, not per object"""
+    once, not per object; the projects' activity is recomputed once per
+    project, not touched by every event"""
 
     def test_the_first_run_stays_cheap(self):
-        # 1,680 before the caches. At most what it takes now, so lookups
+        # 1,680 before the caches and recomputing the activity once. At most what it takes now, so lookups
         # per object don't creep back; not assertNumQueries, which every
         # change to the operations would break.
         with CaptureQueriesContext(connection) as queries:
             self.run_import()
-        self.assertLessEqual(len(queries.captured_queries), 1419)
+        self.assertLessEqual(len(queries.captured_queries), 1366)
+
+    def test_an_interrupted_run_leaves_the_activity_as_far_as_it_got(self):
+        def fail(path):
+            if path == "/vaults/400/vaults.json":
+                raise ConnectionError("down")
+
+        self.client_.on_request = fail
+        with self.assertRaises(ConnectionError):
+            self.run_import()
+        events = Event.objects.filter(project=self.project)
+        latest = lambda events: events.aggregate(Max("created_at"))["created_at__max"]  # noqa: E731
+        self.assertIsNotNone(self.project.last_activity_at)
+        self.assertEqual(self.project.last_activity_at, latest(events))
+        self.assertEqual(
+            self.project.last_client_activity_at,
+            latest(events.filter(item__is_client_visible=True)),
+        )
+        self.client_.on_request = None
+        self.run_import()
+        self.assertEqual(self.project.last_activity_at, latest(events))
 
 
 class SecondRunTest(ImportCase):
