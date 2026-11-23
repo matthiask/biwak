@@ -1,4 +1,5 @@
-"""Configuration, logging in and talking to the API"""
+"""Configuration, logging in, talking to the API and what the commands
+share"""
 
 import json
 import os
@@ -19,6 +20,8 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 import click
 import requests
 import tomli_w
+from rich.console import Console
+from rich.table import Table
 
 
 CONFIG = Path.home() / ".config" / "biwak.toml"
@@ -254,3 +257,107 @@ def cli():
 
     Items visible to clients are marked [clients]. Every command takes
     --json for scripts and agents."""
+
+
+# Shared by the commands -----------------------------------------------------
+
+
+console = Console(markup=False, highlight=False)
+
+
+json_option = click.option("--json", "as_json", is_flag=True, help="Output JSON.")
+
+
+def clients(item):
+    """The marker on everything clients can see (specs/access.md)"""
+    return "[clients]" if item.get("visible_to_clients") else ""
+
+
+def names(people):
+    """Short names, "(inactive)" after people who left"""
+    return ", ".join(
+        p["short_name"] + ("" if p.get("is_active", True) else " (inactive)")
+        for p in people
+    )
+
+
+def with_away(person):
+    """The name, "(away until 2026-12-03)" after people away"""
+    if person.get("away_until"):
+        return f"{person['name']} (away until {person['away_until']})"
+    return person["name"]
+
+
+attach_option = click.option(
+    "--attach",
+    "attach",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="A file to attach (at most 100 MB), repeatable; appended to the text.",
+)
+
+
+def need(value, option):
+    """An option a group needs for listing but its commands don't"""
+    if value is None:
+        raise click.UsageError(f"Missing option '{option}'.")
+
+
+def with_attachments(project_id, text, paths):
+    """Uploads the files to the project and appends their Markdown to the
+    text; saving the text links them to the item"""
+    if not paths:
+        return text
+    inserted = []
+    for path in paths:
+        with click.open_file(path, "rb") as file:
+            data = request(
+                "POST",
+                f"projects/{project_id}/attachments/",
+                files={"file": (os.path.basename(path), file)},
+            )
+        inserted.append(data["markdown"])
+    return "\n\n".join(part for part in [text.rstrip(), *inserted] if part)
+
+
+# The palette (biwak.accounts.models.Color; a test keeps both in step)
+PALETTE = [
+    "heather", "lake", "forest", "glacier", "ember",
+    "alpenglow", "moss", "slate", "bark", "berry",
+]  # fmt: skip
+
+
+def table(*columns):
+    t = Table(box=None, pad_edge=False, header_style="bold")
+    for column in columns:
+        t.add_column(column)
+    return t
+
+
+notify_option = click.option(
+    "--notify-about-everything",
+    is_flag=True,
+    help="Notify them of everything new (default: only when tagged).",
+)
+
+
+also_option = click.option(
+    "--also",
+    default="",
+    metavar="IDS",
+    help="People's IDs separated by commas to tell too, besides those who"
+    " want to hear (the folder's subscribers, people notified of everything).",
+)
+
+
+visible_option = click.option(
+    "--visible", is_flag=True, help="Visible to clients (staff; clients always are)."
+)
+
+
+def people_ids(value):
+    """The IDs of ``--also`` as a list"""
+    try:
+        return [int(part) for part in value.split(",") if part.strip()]
+    except ValueError:
+        terminate("--also is people's IDs separated by commas.")

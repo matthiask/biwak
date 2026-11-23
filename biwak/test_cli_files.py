@@ -410,7 +410,7 @@ class FilesCLITest(test_cli.CLITest):
             ("files", "--project", self.project.pk, "--folder", private.pk),
             ("messages", "show", hidden.pk),
         ]:
-            with patch.object(biwak_cli.commands.console, "_color_system", None):
+            with patch.object(biwak_cli.core.console, "_color_system", None):
                 result = test_cli.CliRunner().invoke(
                     biwak_cli.cli, [str(a) for a in args]
                 )
@@ -426,7 +426,7 @@ class FilesCLITest(test_cli.CLITest):
     def cli_as(self, user, *args):
         _token, token = APIToken.create_for(user=user, title="T", access="write")
         biwak_cli.core.write_config({"url": "http://testserver", "token": token})
-        with patch.object(biwak_cli.commands.console, "_color_system", None):
+        with patch.object(biwak_cli.core.console, "_color_system", None):
             return (
                 test_cli
                 .CliRunner()

@@ -92,7 +92,7 @@ class InstallTest(SimpleTestCase):
         for patcher in [
             patch.dict("os.environ", {"HOME": str(self.directory / "home")}),
             patch.object(biwak_cli.skills, "SKILLS", self.ours),
-            patch.object(biwak_cli.commands.console, "_width", 200),
+            patch.object(biwak_cli.core.console, "_width", 200),
         ]:
             patcher.start()
             self.addCleanup(patcher.stop)

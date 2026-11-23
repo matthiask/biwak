@@ -55,7 +55,7 @@ class CLITest(TestCase):
         for patcher in [
             patch.object(biwak_cli.core.requests, "request", self.request),
             patch.object(biwak_cli.core, "CONFIG", Path(directory.name) / "b.toml"),
-            patch.object(biwak_cli.commands.console, "_width", 200),
+            patch.object(biwak_cli.core.console, "_width", 200),
         ]:
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -106,7 +106,7 @@ class CLITest(TestCase):
     def biwak(self, *args, access="write", input=None):
         _token, token = APIToken.create_for(user=self.ada, title="T", access=access)
         biwak_cli.core.write_config({"url": "http://testserver", "token": token})
-        with patch.object(biwak_cli.commands.console, "_color_system", None):
+        with patch.object(biwak_cli.core.console, "_color_system", None):
             result = CliRunner().invoke(
                 biwak_cli.cli, [str(a) for a in args], input=input
             )
@@ -307,7 +307,7 @@ class CLICommandsTest(CLITest):
         from biwak.accounts.models import Color
 
         # The CLI has its own copy of the palette's names
-        self.assertEqual(biwak_cli.commands.PALETTE, Color.values)
+        self.assertEqual(biwak_cli.core.PALETTE, Color.values)
         output = self.biwak(
             "projects", "update", self.project.pk, "--color", "lake"
         ).output

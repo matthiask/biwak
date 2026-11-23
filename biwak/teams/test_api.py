@@ -149,7 +149,7 @@ class CLITest(test_cli.CLITest):
             "token": token,
         })
         with test_cli.patch.object(
-            test_cli.biwak_cli.commands.console, "_color_system", None
+            test_cli.biwak_cli.core.console, "_color_system", None
         ):
             result = test_cli.CliRunner().invoke(test_cli.biwak_cli.cli, ["teams"])
         self.assertEqual(result.exit_code, 1)
