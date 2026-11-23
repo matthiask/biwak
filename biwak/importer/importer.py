@@ -29,7 +29,7 @@ from biwak.accounts import operations as account_ops
 from biwak.accounts.languages import language_for
 from biwak.accounts.models import User
 from biwak.activity import mentions
-from biwak.activity.models import Subscription
+from biwak.activity.models import Action, Event, Subscription
 from biwak.activity.notify import who_can_see
 from biwak.activity.operations import importing, subscribe
 from biwak.bookmarks import operations as bookmark_ops
@@ -195,6 +195,9 @@ class Report:
         self.several = []
         # Tools switched off in Basecamp, not imported, with what's in them
         self.switched_off = []
+        # Repeating to-dos imported before their schedules were, unchanged
+        # since: the schedule added (or, dry, to add)
+        self.schedules = []
         # Files "downloaded", "cached" (from the cache), "not redirected"
         # (not cacheable): the client's counts
         self.files = Counter()
@@ -246,6 +249,12 @@ class Report:
                     " imports them):"
                 ),
                 self.switched_off,
+            ),
+            (
+                "Schedules to add to to-dos imported before:"
+                if self.dry_run
+                else "Schedules added to to-dos imported before:",
+                self.schedules,
             ),
             ("Archived in Basecamp, skipped:", self.archived),
             (
@@ -1511,6 +1520,8 @@ class Importer(Resolver):
                 )
 
         todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
+        if (bc_type, rec["id"]) in self._skipped:
+            self._fill_schedule(todo, repeat, rec)
         if todo is not None:
             # Basecamp doesn't say when somebody was assigned: a new to-do's
             # assignees at its creation, before its comments; those added
@@ -1542,6 +1553,30 @@ class Importer(Resolver):
             )
             return none
         return {"recurrence": rule, "recurrence_ends_on": ends_on}
+
+    def _fill_schedule(self, item, repeat, rec):
+        """An unchanged to-do imported before schedules were (2026-11-23)
+        gets its schedule, which the listing gives anyway: only an open one
+        without a rule which never had one in Biwak (no edit of its repeat,
+        by anybody or an import), so a rule removed on purpose stays
+        removed. Listed in the report."""
+        if not repeat["recurrence"] or item is None:
+            return
+        todo = Todo.objects.get(item=item)
+        if todo.recurrence or todo.is_completed:
+            return
+        if Event.objects.filter(
+            item=item, action=Action.EDITED, data__fields__contains=["recurrence"]
+        ).exists():
+            return
+        self.report.schedules.append(
+            f"{self._project_name}: {item.title!r} ({rec['id']}),"
+            f" {schedules.describe(repeat['recurrence'])}"
+        )
+        if self.dry:
+            return
+        with importing(at=parse_time(rec.get("updated_at"))):
+            ops.update_todo(item, actor=item.creator, **repeat)
 
     def _completion(self, todo, rec):
         """Archived to-dos come in completed (specs/archiving.md), at the

@@ -21,7 +21,7 @@ from biwak.files.models import Attachment
 from biwak.importer import client as client_api, importer as importer_module, support
 from biwak.importer.importer import Importer, ImportRefused
 from biwak.importer.models import ImportedObject
-from biwak.items import visibility
+from biwak.items import operations as ops, visibility
 from biwak.items.models import (
     Comment,
     Group,
@@ -2082,3 +2082,53 @@ class RepeatTest(ImportCase):
         self.assertEqual(
             Todo.objects.get(item__title="Buy giraffe food").recurrence, ""
         )
+
+
+class FillScheduleTest(ImportCase):
+    """To-dos imported before schedules were, unchanged since: a later run
+    adds the schedule the listing gives, where Biwak never had a rule"""
+
+    todos = RepeatTest.todos
+
+    def setUp(self):
+        super().setUp()
+        self.run_import()
+        # Unchanged in Basecamp (the same updated_at), now with a schedule
+        self.todos()[0]["repetition_schedule"] = repetition("every_week", [1])
+
+    @property
+    def food(self):
+        return Todo.objects.get(item__title="Buy giraffe food")
+
+    def test_added_and_listed(self):
+        report = self.run_import(dry_run=True)
+        line = "Camp kitchen: 'Buy giraffe food' (3011), every Monday"
+        self.assertEqual(report.schedules, [line])
+        self.assertIn(
+            f"Schedules to add to to-dos imported before:\n  {line}", report.as_text()
+        )
+        self.assertEqual(self.food.recurrence, "")
+        report = self.run_import()
+        self.assertEqual(report.counts["to-dos"]["unchanged"], 6)
+        self.assertEqual(report.schedules, [line])
+        self.assertEqual(self.food.recurrence, "FREQ=WEEKLY;BYDAY=MO")
+        # Once there, nothing more to add
+        self.assertEqual(self.run_import().schedules, [])
+
+    def test_a_rule_removed_in_biwak_stays_removed(self):
+        item = self.food.item
+        ops.update_todo(item, actor=self.ada, recurrence="FREQ=DAILY")
+        ops.update_todo(item, actor=self.ada, recurrence="")
+        report = self.run_import()
+        self.assertEqual(report.schedules, [])
+        self.assertEqual(self.food.recurrence, "")
+
+    def test_a_rule_set_in_biwak_stays(self):
+        ops.update_todo(self.food.item, actor=self.ada, recurrence="FREQ=DAILY")
+        self.assertEqual(self.run_import().schedules, [])
+        self.assertEqual(self.food.recurrence, "FREQ=DAILY")
+
+    def test_not_for_one_completed_in_biwak(self):
+        ops.complete(self.food.item, actor=self.ada)
+        self.assertEqual(self.run_import().schedules, [])
+        self.assertEqual(self.food.recurrence, "")
