@@ -10,12 +10,13 @@ links), `biwak/test_skills.py` checks them and installs into a
 temporary home. Added for handover: `biwak todos --assignee PERSON`
 (the API and the page had the filter).
 
+- **No `--project` for `biwak skills install`** (decided 2026-11-23:
+  not needed; Governance's links into `.claude/skills` of the current
+  directory, and `--project` is a project's ID everywhere else in the
+  CLI). `CLAUDE_CONFIG_DIR` is honoured, as in `gov`.
+
 Built on the way (2026-11-23), to confirm:
 
-- **No `--project` for `biwak skills install`** (Governance's links into
-  `.claude/skills` of the current directory): `--project` is a
-  project's ID everywhere else in the CLI, and the spec names only
-  `~/.claude/skills`. `CLAUDE_CONFIG_DIR` is honoured, as in `gov`.
 - **Triage's "wait"** uses `biwak todos --assigned-by-me` (to-dos I
   assigned to others), Home's "waiting on others" (`todos.md`), instead
   of "to-dos I created": the API has no creator filter, and assigning
