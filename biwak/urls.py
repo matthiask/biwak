@@ -15,7 +15,7 @@ from biwak import help as help_pages
 from biwak.accounts import signin
 from biwak.api import api
 from biwak.richtext import paste
-from biwak.schedules_forms import describe
+from biwak.schedules.forms import describe
 
 
 @login_not_required

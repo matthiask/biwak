@@ -30,7 +30,7 @@ from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
 from biwak.richtext import checklists
-from biwak.schedules_forms import (
+from biwak.schedules.forms import (
     KEEP,
     EndsCountInput,
     EndsOnInput,

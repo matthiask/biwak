@@ -5172,267 +5172,267 @@ msgstr "vor %(time)s"
 msgid "on %(date)s"
 msgstr "am %(date)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Monday"
 msgstr "Montag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Tuesday"
 msgstr "Dienstag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Wednesday"
 msgstr "Mittwoch"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Thursday"
 msgstr "Donnerstag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Friday"
 msgstr "Freitag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Saturday"
 msgstr "Samstag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Sunday"
 msgstr "Sonntag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "first"
 msgstr "ersten"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "second"
 msgstr "zweiten"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "third"
 msgstr "dritten"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "fourth"
 msgstr "vierten"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "last"
 msgstr "letzten"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "Not a valid schedule: %(rule)s"
 msgstr "Kein gültiger Zeitplan: %(rule)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "The interval is a number from 1 to %(max)s."
 msgstr "Das Intervall ist eine Zahl von 1 bis %(max)s."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "The schedule is empty."
 msgstr "Der Zeitplan ist leer."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "The schedule is too long."
 msgstr "Der Zeitplan ist zu lang."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "The schedule needs FREQ=DAILY, WEEKLY, MONTHLY or YEARLY."
 msgstr "Der Zeitplan braucht FREQ=DAILY, WEEKLY, MONTHLY oder YEARLY."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "Not supported in a schedule: %(parts)s. Ends are set separately."
 msgstr "In einem Zeitplan nicht unterstützt: %(parts)s. Das Ende wird separat festgelegt."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "The schedule never produces a date."
 msgstr "Der Zeitplan ergibt nie ein Datum."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Every weekday"
 msgstr "Jeden Werktag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Every week"
 msgstr "Jede Woche"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Every two weeks"
 msgstr "Alle zwei Wochen"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Every month"
 msgstr "Jeden Monat"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "The first weekday of every month"
 msgstr "Der erste Werktag jedes Monats"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "The last weekday of every month"
 msgstr "Der letzte Werktag jedes Monats"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Every three months"
 msgstr "Alle drei Monate"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Every year"
 msgstr "Jedes Jahr"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "Unknown schedule: %(key)s"
 msgstr "Unbekannter Zeitplan: %(key)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Choose at least one weekday."
 msgstr "Wähle mindestens einen Wochentag."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Choose first, second, third, fourth or last."
 msgstr "Wähle ersten, zweiten, dritten, vierten oder letzten."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Choose a weekday or working day."
 msgstr "Wähle einen Wochentag oder Werktag."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Enter a day from 1 to 31."
 msgstr "Gib einen Tag von 1 bis 31 ein."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Choose a day or a weekday."
 msgstr "Wähle einen Tag oder einen Wochentag."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "Choose a month."
 msgstr "Wähle einen Monat."
 
-#: biwak/schedules.py biwak/schedules_forms.py
+#: biwak/schedules/__init__.py biwak/schedules/forms.py
 msgid "Choose how often it repeats."
 msgstr "Wähle, wie oft es sich wiederholt."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "Enter a number from 1 to %(max)s."
 msgstr "Gib eine Zahl von 1 bis %(max)s ein."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "This date doesn't exist."
 msgstr "Dieses Datum gibt es nicht."
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "every day"
 msgid_plural "every %(n)s days"
 msgstr[0] "jeden Tag"
 msgstr[1] "alle %(n)s Tage"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "every week"
 msgid_plural "every %(n)s weeks"
 msgstr[0] "jede Woche"
 msgstr[1] "alle %(n)s Wochen"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "every month"
 msgid_plural "every %(n)s months"
 msgstr[0] "jeden Monat"
 msgstr[1] "alle %(n)s Monate"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "every year"
 msgid_plural "every %(n)s years"
 msgstr[0] "jedes Jahr"
 msgstr[1] "alle %(n)s Jahre"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 msgid "every weekday"
 msgstr "jeden Werktag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "%(every)s on weekdays"
 msgstr "%(every)s an Werktagen"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "every %(days)s"
 msgstr "jeden %(days)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "every other %(day)s"
 msgstr "jeden zweiten %(day)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "%(every)s on %(days)s"
 msgstr "%(every)s am %(days)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "the %(nth)s %(day)s of %(every)s"
 msgstr "%(every)s am %(nth)s %(day)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "the %(nth)s working day of %(every)s"
 msgstr "%(every)s am %(nth)s Werktag"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "the %(day)s of %(every)s"
 msgstr "%(every)s am %(day)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "the %(day)s (or the last day) of %(every)s"
 msgstr "%(every)s am %(day)s (oder am letzten Tag)"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "%(every)s on %(month)s %(day)s"
 msgstr "%(every)s am %(day)s. %(month)s"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "%(every)s on %(month)s 29 (or the last day)"
 msgstr "%(every)s am 29. %(month)s (oder am letzten Tag)"
 
-#: biwak/schedules.py
+#: biwak/schedules/__init__.py
 #, python-format
 msgid "custom schedule (%(rule)s)"
 msgstr "eigener Zeitplan (%(rule)s)"
 
-#: biwak/schedules_forms.py biwak/templates/items/_todo_view.html
+#: biwak/schedules/forms.py biwak/templates/items/_todo_view.html
 msgid "Doesn't repeat"
 msgstr "Wiederholt sich nicht"
 
-#: biwak/schedules_forms.py
+#: biwak/schedules/forms.py
 msgid "Daily"
 msgstr "Täglich"
 
-#: biwak/schedules_forms.py
+#: biwak/schedules/forms.py
 msgid "Weekly"
 msgstr "Wöchentlich"
 
-#: biwak/schedules_forms.py
+#: biwak/schedules/forms.py
 msgid "Monthly"
 msgstr "Monatlich"
 
-#: biwak/schedules_forms.py
+#: biwak/schedules/forms.py
 msgid "Yearly"
 msgstr "Jährlich"
 
-#: biwak/schedules_forms.py
+#: biwak/schedules/forms.py
 msgid "working day"
 msgstr "Werktag"
 

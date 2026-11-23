@@ -3,7 +3,7 @@ import datetime as dt
 from django import forms
 from django.test import SimpleTestCase, TestCase
 
-from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin, RuleWidget
+from biwak.schedules.forms import KEEP, RuleField, RuleFormMixin, RuleWidget
 from biwak.test_utils import person
 
 

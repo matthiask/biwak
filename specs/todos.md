@@ -103,7 +103,7 @@ groupings and "assigned by" 2026-11-21).
 
 ### Schedules
 
-`biwak/schedules.py`, also used by check-ins:
+`biwak/schedules/__init__.py`, also used by check-ins:
 
 - A rule is an RRULE string (`python-dateutil`), validated on save:
   `INTERVAL` 1 to 99, no day 0 in `BYMONTHDAY` or `BYSETPOS`, at least
