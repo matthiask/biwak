@@ -175,6 +175,8 @@ class Report:
         # Files "downloaded", "cached" (from the cache), "not redirected"
         # (not cacheable): the client's counts
         self.files = Counter()
+        # JSON answers "cached" (from the cache): the client's counts
+        self.answers = Counter()
 
     def as_text(self):
         lines = ["Dry run, nothing was written." if self.dry_run else "Imported."]
@@ -197,6 +199,8 @@ class Report:
                     " redirect, not cached)"
                 )
             lines.append(line)
+        if self.answers["cached"]:
+            lines.append(f"  Basecamp answers: {self.answers['cached']} from the cache")
         limit = file_models.MAX_SIZE // 2**20
         sections = [
             (
@@ -346,6 +350,7 @@ class Importer(Resolver):
         self._skipped = set()
         self.report = Report(dry_run=dry_run)
         self.report.files = client.file_counts
+        self.report.answers = client.answer_counts
         self._users = {}  # Basecamp person ID: User, or None
         # (Basecamp type, ID): ``ImportedObject``, None when not imported
         # (``_preload()``); for one project at a time, people's for the run
@@ -397,9 +402,11 @@ class Importer(Resolver):
 
     def _so_far(self):
         seconds = int(self._clock() - (self._started or self._clock()))
+        cached = self.client.answer_counts["cached"]
         return (
             f"{self.client.request_count} requests,"
-            f" {seconds // 60}m {seconds % 60:02d}s"
+            + (f" {cached} answers from the cache," if cached else "")
+            + f" {seconds // 60}m {seconds % 60:02d}s"
         )
 
     # The mapping -----------------------------------------------------------

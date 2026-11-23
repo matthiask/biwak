@@ -52,7 +52,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   (`specs/import-basecamp.md`); a second run updates, `--archive`
   archives it in Basecamp afterwards. Always dry-run first. Downloaded
   files are cached in `~/.cache/biwak/basecamp/` (`XDG_CACHE_HOME`),
-  `--cache-dir DIR` elsewhere, `--no-cache` off; never cleaned up.
+  `--cache-dir DIR` elsewhere, `--no-cache` off; never cleaned up. The
+  API's answers are reused from there for 6 hours (`--answers-max-age`),
+  so the dry run and the run after it ask Basecamp once.
   `fl manage-remote biwak-feinheit-app ~/projects/sites/biwak
   "import_basecamp …"` (in the argocd repository) runs it locally
   against production, so the cache survives pod restarts; the checkout

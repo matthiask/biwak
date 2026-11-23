@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+from pathlib import Path
 
 from django.core.management import BaseCommand, CommandError
 
@@ -9,10 +10,18 @@ from biwak.importer import client as api
 from biwak.importer.importer import Importer, ImportRefused
 
 
-def make_client(account, token, *, cache_dir=None):
-    """``cache_dir``: where downloads are cached, None for no cache"""
-    cache = api.FileCache(cache_dir) if cache_dir is not None else None
-    return api.BasecampClient(account, token, cache=cache)
+def make_client(account, token, *, cache_dir=None, answers_max_age=0):
+    """``cache_dir``: where downloads are cached, None for no cache; the
+    API's answers are cached in its ``answers/`` for ``answers_max_age``
+    seconds (0: not)"""
+    if cache_dir is None:
+        return api.BasecampClient(account, token)
+    answers = None
+    if answers_max_age > 0:
+        answers = api.AnswerCache(Path(cache_dir) / "answers", answers_max_age)
+    return api.BasecampClient(
+        account, token, cache=api.FileCache(cache_dir), answers=answers
+    )
 
 
 class Command(BaseCommand):
@@ -83,7 +92,21 @@ class Command(BaseCommand):
         parser.add_argument(
             "--no-cache",
             action="store_true",
-            help="Download every file, without reading or writing the cache",
+            help=(
+                "Download every file and ask Basecamp everything, without"
+                " reading or writing the cache"
+            ),
+        )
+        parser.add_argument(
+            "--answers-max-age",
+            type=float,
+            default=6,
+            metavar="HOURS",
+            help=(
+                "How long the API's answers are reused from the cache, so a"
+                " dry run and the run after it read Basecamp once (default:"
+                " 6; 0: always ask)"
+            ),
         )
         parser.add_argument(
             "--user",
@@ -107,6 +130,7 @@ class Command(BaseCommand):
         templates,
         cache_dir,
         no_cache,
+        answers_max_age,
         **options,
     ):
         if not project and not templates:
@@ -118,7 +142,12 @@ class Command(BaseCommand):
             raise CommandError("Give --cache-dir or --no-cache, not both.")
         if not no_cache:
             cache_dir = cache_dir or api.default_cache_dir()
-        client = make_client(account, token, cache_dir=None if no_cache else cache_dir)
+        client = make_client(
+            account,
+            token,
+            cache_dir=None if no_cache else cache_dir,
+            answers_max_age=answers_max_age * 3600,
+        )
         email = user or client.get("/my/profile.json").get("email_address")
         actor = User.objects.filter(email__iexact=email or "", is_active=True).first()
         if actor is None or actor.is_client:

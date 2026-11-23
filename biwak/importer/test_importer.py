@@ -1083,6 +1083,12 @@ class FileCountTest(ImportCase):
             report.as_text(),
         )
 
+    def test_the_report_counts_answers_from_the_cache(self):
+        report = self.run_import()
+        self.assertNotIn("Basecamp answers", report.as_text())
+        self.client_.answer_counts["cached"] = 7
+        self.assertIn("  Basecamp answers: 7 from the cache", report.as_text())
+
     def test_a_dry_run_counts_no_files(self):
         report = self.run_import(dry_run=True)
         self.assertNotIn("Files:", report.as_text())
@@ -1610,7 +1616,10 @@ class CommandTest(ImportCase):
         # The profile says Ada
         text, make = self.call("--account", "1000", "--project", str(support.PROJECT))
         make.assert_called_once_with(
-            "1000", "secret", cache_dir=client_api.default_cache_dir()
+            "1000",
+            "secret",
+            cache_dir=client_api.default_cache_dir(),
+            answers_max_age=6 * 3600,
         )
         self.assertIn("Imported.", text)
         self.assertIn("to-dos: 6 new", text)
@@ -1698,9 +1707,15 @@ class CommandTest(ImportCase):
         is a fake: nothing touches a real cache)"""
         args = ["--account", "1000", "--project", str(support.PROJECT)]
         _text, make = self.call(*args, "--cache-dir", "/srv/somewhere")
-        make.assert_called_once_with("1000", "secret", cache_dir="/srv/somewhere")
+        make.assert_called_once_with(
+            "1000", "secret", cache_dir="/srv/somewhere", answers_max_age=6 * 3600
+        )
         _text, make = self.call(*args, "--no-cache")
-        make.assert_called_once_with("1000", "secret", cache_dir=None)
+        make.assert_called_once_with(
+            "1000", "secret", cache_dir=None, answers_max_age=6 * 3600
+        )
+        _text, make = self.call(*args, "--answers-max-age", "0.5")
+        self.assertEqual(make.call_args.kwargs["answers_max_age"], 1800)
         with self.assertRaisesMessage(CommandError, "not both"):
             self.call(*args, "--no-cache", "--cache-dir", "/srv/somewhere")
 

@@ -903,6 +903,7 @@ class FakeClient:
         self.requests = []
         self.downloads = []
         self.file_counts = Counter()
+        self.answer_counts = Counter()
         self.archived_projects = []
         # Called with the path of each request, to fail in the middle
         self.on_request = None

@@ -3,7 +3,7 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23. Not built: `--lazy-files` (fetching
+**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23. Not built: `--lazy-files` (fetching
 old attachments when first opened), other people's bookmarks (the API
 only gives the token owner's).
 
@@ -16,7 +16,8 @@ the tests.
 
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
 [--project ID ...] [--templates] [--dry-run] [--since YYYY-MM-DD] [--full]
-[--include-disabled] [--user EMAIL] [--archive] [--cache-dir DIR | --no-cache]`.
+[--include-disabled] [--user EMAIL] [--archive] [--cache-dir DIR | --no-cache]
+[--answers-max-age HOURS]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
 
@@ -114,6 +115,21 @@ goes into internal containers, archived recordings skipped.
   anyway. The report counts files downloaded and from the cache ("Files:
   3 downloaded, 12 from the cache"), and those answered without a
   redirect. A dry run downloads nothing.
+- **Answer cache** (decided 2026-11-23: the time goes into Basecamp's
+  requests at 50 per 10 seconds, not into writing Biwak, so a dry run
+  followed by the run cost the requests twice): the API's JSON answers
+  (`get()`, `paginate()` with the `Link` header) are stored in the cache
+  directory's `answers/` (`AnswerCache` in `client.py`) and reused while
+  younger than `--answers-max-age` hours (default 6, 0 always asks;
+  `--no-cache` neither). Keyed by the SHA-256 of the token and the URL:
+  what an answer contains depends on who asks (addresses only for
+  administrators); the token itself isn't stored. Errors aren't cached,
+  an older answer is fetched and overwritten, none is deleted. What
+  changes in Basecamp within the hours is missed by that run, not lost:
+  the run stores the `updated_at` it saw, so the next run after the
+  answers expired takes it up. Downloads still ask the API for the
+  redirect (the signed location is short-lived). The report counts
+  "Basecamp answers: N from the cache".
 - **Few queries** (decided 2026-11-23: the import may run locally
   against production through an SSH tunnel, ~6 ms per query): the
   mappings of a listing's records (`ImportedObject`) are read with one

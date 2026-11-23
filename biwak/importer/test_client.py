@@ -270,3 +270,96 @@ class CacheTest(ClientCase):
             self.assertEqual(
                 api.default_cache_dir(), Path.home() / ".cache/biwak/basecamp"
             )
+
+
+class AnswerCacheTest(ClientCase):
+    """The API's JSON answers, reused while fresh"""
+
+    def setUp(self):
+        import tempfile
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.directory = tmp.name
+        self.wall = 1_000_000.0
+        self.answers = api.AnswerCache(tmp.name, 3600, clock=lambda: self.wall)
+
+    def make(self, *responses, token="secret"):
+        client = super().make(*responses)
+        client.token = token
+        client.answers = self.answers
+        return client
+
+    def test_a_second_client_reads_the_answers_from_the_cache(self):
+        """A dry run and the run after it: Basecamp is asked once"""
+        self.make(ok({"id": 1})).get("/projects/1.json")
+        client = self.make()
+        self.assertEqual(client.get("/projects/1.json"), {"id": 1})
+        self.assertEqual(self.transport.requests, [])
+        self.assertEqual(client.answer_counts, {"cached": 1})
+        self.assertEqual(client.request_count, 0)
+
+    def test_pages_keep_their_link(self):
+        next_url = "https://3.basecampapi.com/1000/x.json?page=2"
+        first = self.make(ok([1, 2], Link=f'<{next_url}>; rel="next"'), ok([3]))
+        self.assertEqual(list(first.paginate("/x.json")), [1, 2, 3])
+        client = self.make()
+        self.assertEqual(list(client.paginate("/x.json")), [1, 2, 3])
+        self.assertEqual(client.answer_counts, {"cached": 2})
+
+    def test_an_old_answer_is_fetched_again(self):
+        self.make(ok({"v": 1})).get("/x.json")
+        self.wall += 3601
+        client = self.make(ok({"v": 2}))
+        self.assertEqual(client.get("/x.json"), {"v": 2})
+        self.assertEqual(client.answer_counts, {})
+        # and stored again
+        self.assertEqual(self.make().get("/x.json"), {"v": 2})
+
+    def test_another_token_asks_again(self):
+        """Who asks decides what the answer contains (addresses)"""
+        self.make(ok({"email_address": None}), token="member").get("/people.json")
+        client = self.make(ok({"email_address": "a@example.org"}), token="admin")
+        self.assertEqual(client.get("/people.json"), {"email_address": "a@example.org"})
+        self.assertEqual(client.answer_counts, {})
+
+    def test_the_token_is_not_stored(self):
+        import os
+
+        self.make(ok({"id": 1})).get("/x.json")
+        for root, _dirs, names in os.walk(self.directory):
+            for name in names:
+                with open(os.path.join(root, name), "rb") as file:
+                    self.assertNotIn(b"secret", file.read())
+
+    def test_errors_are_not_cached(self):
+        client = self.make(Response(404, {}, b""), ok({"id": 1}))
+        with self.assertRaises(api.NotFound):
+            client.get("/x.json")
+        self.assertEqual(client.get("/x.json"), {"id": 1})
+
+    def test_a_broken_file_is_a_miss(self):
+        self.make(ok({"id": 1})).get("/x.json")
+        self.answers._path(
+            "secret", "https://3.basecampapi.com/1000/x.json"
+        ).write_text("{")
+        client = self.make(ok({"id": 2}))
+        self.assertEqual(client.get("/x.json"), {"id": 2})
+
+    def test_make_client(self):
+        import tempfile
+        from pathlib import Path
+
+        from biwak.importer.management.commands.import_basecamp import make_client
+
+        with tempfile.TemporaryDirectory() as directory:
+            client = make_client(
+                "1000", "secret", cache_dir=directory, answers_max_age=60
+            )
+            self.assertEqual(client.answers.directory, Path(directory) / "answers")
+            self.assertEqual(client.answers.max_age, 60)
+            client = make_client("1000", "secret", cache_dir=directory)
+            self.assertIsNone(client.answers)
+        client = make_client("1000", "secret", answers_max_age=60)
+        self.assertIsNone(client.answers)
+        self.assertIsNone(client.cache)
