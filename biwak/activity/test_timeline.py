@@ -13,9 +13,14 @@ from biwak.test_utils import person, project
 
 
 def region(response):
-    """The text of the timeline's lines, one string per line"""
+    """The text of the timeline's lines, one string per line (without the
+    reactions to completing it)"""
     html = response.content.decode()
-    lines = re.findall(r'<div class="wb-timeline-line".*?</div>', html, flags=re.DOTALL)
+    lines = re.findall(
+        r'<div class="wb-timeline-line".*?(?=</div>|<div\s+class="wb-reactions")',
+        html,
+        flags=re.DOTALL,
+    )
     return [" ".join(re.sub(r"<[^>]+>", " ", line).split()) for line in lines]
 
 

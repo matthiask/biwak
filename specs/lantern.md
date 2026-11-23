@@ -136,7 +136,7 @@ unread.**
   `update_list()`, `update_answer()`, `update_question()`; a doc's saved
   change reads for each of its authors in `_save()`); ticking a
   checklist item; commenting (pages, API, mail replies); adding a
-  reaction to the item or one of its comments; answering a check-in
+  reaction to the item, one of its comments or its completing; answering a check-in
   question (the question's and the person's own answer's notifications,
   not other people's answers). A direct mention among them is read too.
 - **Doesn't read:** having the item open, scrolling, a live update,

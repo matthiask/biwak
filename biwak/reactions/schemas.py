@@ -13,7 +13,7 @@ class ReactionOut(Schema):
     mine: bool
 
 
-def reactions_out(item, comment, user):
+def reactions_out(item, comment, user, event=None):
     return [
         {
             "content": entry["content"],
@@ -21,5 +21,5 @@ def reactions_out(item, comment, user):
             "people": [person_out(person) for person in entry["people"]],
             "mine": entry["mine"],
         }
-        for entry in operations.summary(item, comment, user)
+        for entry in operations.summary(item, comment, user, event)
     ]

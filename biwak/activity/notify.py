@@ -181,11 +181,16 @@ def wanting(people, event):
 
 
 def reacted_author(event):
-    """The ID of the author of the thing reacted to: of the comment, or the
+    """The ID of the author of the thing reacted to: of the comment, the
+    person who completed the to-do (a reaction to the completing), or the
     item's creator"""
     if comment := event.data.get("comment"):
         return (
             Comment.objects.filter(pk=comment).values_list("author", flat=True).first()
+        )
+    if completed := event.data.get("event"):
+        return (
+            Event.objects.filter(pk=completed).values_list("actor", flat=True).first()
         )
     return event.item.creator_id
 

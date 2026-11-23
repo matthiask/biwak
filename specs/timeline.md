@@ -4,7 +4,7 @@ The comments section of a to-do shows what happened between the
 comments, like a GitHub issue but simpler.
 
 **Status:** built (2026-11-21), to-dos only (other items with comments
-later).
+later); reactions to completing it built (2026-11-23).
 
 ## What
 
@@ -32,6 +32,10 @@ later).
   it's back in the column it started in, otherwise the line says the
   list. Older moves without them show as before. The API leaves these
   keys out.
+- **Reactions** (decided 2026-11-23): a line that completed the to-do
+  takes reactions to the completing, on its latest `completed` event;
+  none on other lines or where completing and reopening cancelled out
+  (`Line.completion`, `specs/reactions.md`).
 - **Live:** new lines arrive like new comments (a line is the live
   region `event-<first event's id>`, so a merge updates it and an undone
   completion removes it).

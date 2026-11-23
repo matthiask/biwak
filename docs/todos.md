@@ -164,6 +164,12 @@ time the to-do was visible to them, and "another list" where a list's
 name isn't theirs to know. Edits of the notes aren't listed; staff find
 them in the History, in the to-do's "More" menu.
 
+The line saying someone completed the to-do takes reactions of its own,
+apart from the to-do's: a "🎉" for getting it done says something other
+than a "👍" for the to-do. Only the person who completed it is told
+("Reactions to you completing it"). If the to-do is reopened later, the
+reactions stay on that line.
+
 ## Repeating
 
 Choose how often it repeats: daily, weekly, monthly or yearly, with an

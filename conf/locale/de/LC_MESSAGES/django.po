@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 16:51+0100\n"
+"POT-Creation-Date: 2026-11-23 17:47+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1389,6 +1389,10 @@ msgid "Reactions to your comment:"
 msgstr "Reaktionen auf deinen Kommentar:"
 
 #: biwak/activity/mails.py
+msgid "Reactions to you completing it:"
+msgstr "Reaktionen darauf, dass du es erledigt hast:"
+
+#: biwak/activity/mails.py
 msgid "Reactions:"
 msgstr "Reaktionen:"
 
@@ -1588,7 +1592,7 @@ msgstr "Daten"
 msgid "visible to clients"
 msgstr "für Kund:innen sichtbar"
 
-#: biwak/activity/models.py
+#: biwak/activity/models.py biwak/reactions/models.py
 msgid "event"
 msgstr "Ereignis"
 
@@ -5175,6 +5179,10 @@ msgstr "Reaktion"
 msgid "The comment belongs to another item."
 msgstr "Der Kommentar gehört zu einem anderen Eintrag."
 
+#: biwak/reactions/models.py
+msgid "The event belongs to another item."
+msgstr "Das Ereignis gehört zu einem anderen Eintrag."
+
 #: biwak/reactions/operations.py
 msgid "The reaction is empty."
 msgstr "Die Reaktion ist leer."
@@ -6285,6 +6293,11 @@ msgstr "hat %(subject)s kommentiert"
 #, python-format
 msgid "reacted to a comment on %(subject)s"
 msgstr "hat auf einen Kommentar zu %(subject)s reagiert"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "reacted to %(subject)s being completed"
+msgstr "hat darauf reagiert, dass %(subject)s erledigt wurde"
 
 #: biwak/templates/activity/_event.html
 #, python-format

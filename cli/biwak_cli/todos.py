@@ -688,7 +688,7 @@ def todo_comment(todo_id, text, attach, as_json):
 
 @cli.group()
 def reactions():
-    """Reactions on to-dos and comments"""
+    """Reactions on to-dos, comments and to-dos getting completed"""
 
 
 @reactions.command("create")
@@ -697,22 +697,32 @@ def reactions():
 @click.option(
     "--comment", "comment_id", type=int, help="React to this comment ID instead."
 )
+@click.option(
+    "--event",
+    "event_id",
+    type=int,
+    help=(
+        "React to the to-do getting completed instead: the ID of its"
+        " 'completed' event (biwak feed --action completed --json)."
+    ),
+)
 @json_option
-def reactions_create(todo_id, content, comment_id, as_json):
-    """React to TODO (or a comment) with CONTENT: an emoji or at most 40
-    characters. The same again removes your reaction."""
-    path = (
-        f"comments/{comment_id}/reactions/"
-        if comment_id
-        else f"items/{todo_id}/reactions/"
-    )
+def reactions_create(todo_id, content, comment_id, event_id, as_json):
+    """React to TODO (or a comment, or its completing) with CONTENT: an
+    emoji or at most 40 characters. The same again removes your reaction."""
+    if comment_id and event_id:
+        raise click.UsageError("--comment or --event, not both.")
+    if comment_id:
+        path, where = f"comments/{comment_id}/reactions/", f" on comment {comment_id}"
+    elif event_id:
+        path = f"events/{event_id}/reactions/"
+        where = f" on completing #{todo_id}"
+    else:
+        path, where = f"items/{todo_id}/reactions/", f" on #{todo_id}"
     mine = any(r["mine"] and r["content"] == content for r in request("GET", path))
     method = "DELETE" if mine else "POST"
     reactions = request(method, path, json={"content": content})
     if as_json:
         return echo_json(reactions)
-    click.echo(
-        f"{'Removed your' if mine else 'Reacted with'} {content}"
-        f"{' on comment ' + str(comment_id) if comment_id else f' on #{todo_id}'}."
-    )
+    click.echo(f"{'Removed your' if mine else 'Reacted with'} {content}{where}.")
     return None

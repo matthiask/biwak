@@ -4,6 +4,7 @@ CLI test case is the one of test_cli.py"""
 import json
 
 from biwak import test_cli
+from biwak.activity.models import Action, Event
 from biwak.items import operations as ops
 from biwak.reactions import operations
 from biwak.reactions.models import Reaction
@@ -63,3 +64,16 @@ class ReactionsCLITest(test_cli.CLITest):
         output = self.biwak("todos", "show", self.todo.pk, "--comments").output
         self.assertIn("Reactions: 👍 2* (Bob, Ada)", output)
         self.assertIn("Reactions: Nice 1* (Ada)", output)
+
+    def test_react_to_completing(self):
+        self.make()
+        ops.complete(self.todo, actor=self.bob)
+        event = Event.objects.get(action=Action.COMPLETED)
+        args = ["reactions", "create", self.todo.pk, "🎉", "--event", event.pk]
+        output = self.biwak(*args).output
+        self.assertIn(f"Reacted with 🎉 on completing #{self.todo.pk}", output)
+        self.assertEqual(Reaction.objects.get().event, event)
+        self.assertIn("Removed your 🎉", self.biwak(*args).output)
+        self.assertFalse(Reaction.objects.exists())
+        result = self.biwak(*args, "--comment", self.comment.pk)
+        self.assertNotEqual(result.exit_code, 0)

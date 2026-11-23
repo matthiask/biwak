@@ -20,4 +20,10 @@ urlpatterns = [
         views.comment_reactions,
         name="comment_reactions",
     ),
+    path("events/<int:pk>/reactions/", views.event_reactions, name="event_reactions"),
+    path(
+        "events/<int:pk>/reactions/remove/",
+        views.event_reaction_remove,
+        name="event_reaction_remove",
+    ),
 ]

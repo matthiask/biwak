@@ -220,17 +220,26 @@ def _other(event, actor):
 
 
 def _reactions(notifications, user):
-    """Reactions collected into one entry per thing reacted to (the item or
-    a comment), oldest first: "Bea: 👍 🎉, Carl: Thanks!" (specs/reactions.md)"""
+    """Reactions collected into one entry per thing reacted to (the item, a
+    comment or completing the to-do), oldest first: "Bea: 👍 🎉, Carl:
+    Thanks!" (specs/reactions.md)"""
     by_target = {}
     for notification in sorted(notifications, key=lambda n: n.event.created_at):
         event = notification.event
-        by_target.setdefault(event.data.get("comment"), []).append(event)
-    comments = Comment.objects.in_bulk([pk for pk in by_target if pk])
+        if comment_id := event.data.get("comment"):
+            target = ("comment", comment_id)
+        elif completed := event.data.get("event"):
+            target = ("event", completed)
+        else:
+            target = ("item", None)
+        by_target.setdefault(target, []).append(event)
+    comments = Comment.objects.in_bulk([
+        pk for kind, pk in by_target if kind == "comment"
+    ])
     entries = []
-    for comment_id, events in by_target.items():
-        comment = comments.get(comment_id)
-        if comment_id and comment is None:
+    for (kind, pk), events in by_target.items():
+        comment = comments.get(pk) if kind == "comment" else None
+        if kind == "comment" and comment is None:
             continue
         item = events[0].item
         people = {}
@@ -241,7 +250,10 @@ def _reactions(notifications, user):
         )
         entries.append({
             "event": events[-1],
-            "line": _("Reactions to your comment:") if comment else _("Reactions:"),
+            "line": {
+                "comment": _("Reactions to your comment:"),
+                "event": _("Reactions to you completing it:"),
+            }.get(kind, _("Reactions:")),
             "reactions": reactions,
             "comment": comment,
             "comment_text": plain_text(comment.content, item) if comment else "",

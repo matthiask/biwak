@@ -427,6 +427,15 @@ class Line:
     def text(self):
         return _text_list(phrases(self.events))
 
+    @property
+    def completion(self):
+        """The completing people react to (specs/reactions.md): the line's
+        last ``completed`` event if the line says it completed the to-do;
+        None when it doesn't (nothing completed, or reopened again)"""
+        if not any(e.key == "done" and e.value for e in combine(self.events)):
+            return None
+        return next(e for e in reversed(self.events) if e.action == Action.COMPLETED)
+
 
 def relevant(events, user):
     """The events the timeline tells: not edits of anything but the title
