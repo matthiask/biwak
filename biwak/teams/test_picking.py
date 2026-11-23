@@ -23,6 +23,16 @@ def picker_teams(response):
     return json.loads(html.unescape(match[1])) if match else None
 
 
+def picker_groups(response):
+    """The ``data-project-groups`` of the first picker on the page"""
+    match = re.search(r'data-project-groups="([^"]*)"', response.content.decode())
+    return json.loads(html.unescape(match[1])) if match else None
+
+
+def ids(group):
+    return [member["id"] for member in group["members"]]
+
+
 def reasons(team):
     return {member["id"]: member["reason"] for member in team["members"]}
 
@@ -234,6 +244,76 @@ class PickerTest(Base):
         self.client.force_login(self.ada)
         teams = picker_teams(self.client.get(self.internal.get_absolute_url()))
         self.assertEqual([team["name"] for team in teams], ["Design team"])
+
+
+class ProjectGroupsTest(Base):
+    """The whole project at once (specs/subscribers.md, decided 2026-11-23):
+    the project's staff, and everybody while clients see it; staff only,
+    in the subscribers modal and "Also tell…" """
+
+    def test_subscribers_of_an_internal_item(self):
+        """Staff only: Cleo can't see it; Ian is inactive"""
+        self.client.force_login(self.ada)
+        [staff] = picker_groups(
+            self.client.get(reverse("item_subscribers", args=[self.todo.pk]))
+        )
+        self.assertEqual(staff["name"], "Staff on this project")
+        self.assertEqual(ids(staff), [self.ada.pk, self.pia.pk])
+        self.assertEqual(
+            {m["id"] for m in staff["members"] if m["already"]}, {self.ada.pk}
+        )
+        self.assertEqual(reasons(staff)[self.pia.pk], "")
+
+    def test_subscribers_of_a_visible_item(self):
+        todo = ops.create_todo(todolist=self.shared, title="Review", creator=self.ada)
+        self.client.force_login(self.ada)
+        staff, everybody = picker_groups(
+            self.client.get(reverse("item_subscribers", args=[todo.pk]))
+        )
+        self.assertEqual(ids(staff), [self.ada.pk, self.pia.pk])
+        self.assertEqual(everybody["name"], "Everybody on this project")
+        self.assertEqual(ids(everybody), [self.ada.pk, self.cleo.pk, self.pia.pk])
+        self.assertEqual(reasons(everybody)[self.cleo.pk], "")
+
+    def test_also_tell_when_posting(self):
+        """At the top the clients follow "Visible to clients" in the
+        browser: both are offered"""
+        self.client.force_login(self.ada)
+        groups = picker_groups(
+            self.client.get(reverse("message_new", args=[self.project.pk]))
+        )
+        self.assertEqual([group["id"] for group in groups], ["staff", "everybody"])
+
+    def test_picking_posts_people(self):
+        """What's saved are the people picked, as one by one"""
+        self.client.force_login(self.ada)
+        self.client.post(
+            reverse("item_subscribers", args=[self.todo.pk]),
+            {"people": [self.pia.pk]},
+        )
+        self.assertTrue(
+            Subscription.objects.filter(item=self.todo, user=self.pia).exists()
+        )
+
+    def test_not_when_assigning(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.internal.get_absolute_url())
+        self.assertIsNotNone(picker_teams(response))
+        self.assertIsNone(picker_groups(response))
+
+    def test_not_for_clients(self):
+        todo = ops.create_todo(todolist=self.shared, title="Review", creator=self.ada)
+        self.client.force_login(self.cleo)
+        response = self.client.get(reverse("item_subscribers", args=[todo.pk]))
+        self.assertContains(response, "data-people-picker")
+        self.assertIsNone(picker_groups(response))
+
+    def test_externals(self):
+        self.client.force_login(self.pia)
+        [staff] = picker_groups(
+            self.client.get(reverse("item_subscribers", args=[self.todo.pk]))
+        )
+        self.assertEqual(ids(staff), [self.ada.pk, self.pia.pk])
 
 
 class OnlyPeopleTest(Base):

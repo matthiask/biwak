@@ -5,7 +5,8 @@ not only to hear about its next comment. The rules of subscribing
 (subscribing is the switch, assigned means subscribed) are in
 `notifications.md`.
 
-**Status:** built (2026-11-21).
+**Status:** built (2026-11-21); the whole project at once
+(2026-11-23).
 
 ## The modal
 
@@ -41,6 +42,28 @@ not only to hear about its next comment. The rules of subscribing
   item history (the audit log doesn't cover them).
 - Asking once after writing a new doc uses the same picker (`files.md`,
   "Docs").
+
+## The whole project at once
+
+Decided with the user 2026-11-23 ("in projects with 20 people, I have to
+click 20 times or more"): the people picker of the subscribers modal and
+of "Also tell…" (posting a message, doc or file, and a doc's first
+"Done") offers the project's people in one go, **first in the list**,
+before the people (unlike teams, which come last: the point is to be
+quick). Not for assigning and not for the people a check-in asks.
+
+- **"Staff on this project"**: the active members who aren't clients
+  (own staff and externals). **"Everybody on this project"**: the
+  clients too, offered only while clients can see the item (at the top
+  of "Also tell…", while "Visible to clients" is ticked).
+- They work like teams (`teams.md`): picking one adds a pill per member
+  who's offered and not in already, nothing is stored but the people;
+  an entry adding nobody isn't offered, nor "Everybody" while it would
+  add the same people as "Staff". Staff only (own staff and externals,
+  who get the members they may know), like teams.
+- `biwak/teams/picking.py` (`project_groups()`), the picker's
+  `data-project-groups` (`PeopleField.offer_teams(everybody=True)`,
+  `frontend/people-picker.js`). The API and CLI take IDs as before.
 
 ## API and CLI
 

@@ -78,7 +78,9 @@ class NotifyForm(Form):
             Lower("full_name"), "email"
         )
         # Teams add their members (specs/teams.md)
-        field.offer_teams(project=project, visible=visible, already=already)
+        field.offer_teams(
+            project=project, visible=visible, already=already, everybody=True
+        )
 
     def clean(self):
         data = super().clean()

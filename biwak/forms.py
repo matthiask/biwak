@@ -114,16 +114,24 @@ class PeopleSelect(forms.SelectMultiple):
         super().__init__({**people_picker_attrs(self.placeholder), **(attrs or {})})
         # A function returning the teams to offer (``PeopleField.offer_teams()``)
         self.teams = None
+        # And the project's people at once (``offer_teams(everybody=True)``)
+        self.groups = None
 
     def team_attrs(self):
         """``data-teams`` and its texts, for staff where teams are offered
         (specs/teams.md); nothing otherwise"""
         teams = self.teams() if self.teams is not None else None
-        if not teams:
+        groups = self.groups() if self.groups is not None else None
+        if not (teams or groups):
             return {}
         from biwak.teams.picking import picker_texts
 
-        return {"data-teams": json.dumps(teams), **picker_texts()}
+        attrs = picker_texts()
+        if teams:
+            attrs["data-teams"] = json.dumps(teams)
+        if groups:
+            attrs["data-project-groups"] = json.dumps(groups)
+        return attrs
 
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
@@ -160,12 +168,20 @@ class PeopleField(forms.ModelMultipleChoiceField):
         kwargs.setdefault("required", False)
         super().__init__(queryset, **kwargs)
 
-    def offer_teams(self, *, project, visible, already=()):
+    def offer_teams(self, *, project, visible, already=(), everybody=False):
         """Offers teams in the picker (specs/teams.md): picking one adds
         the members among the options (not those who aren't members yet:
         a team never adds anyone to a project). ``project`` and ``visible``
         say why the others are left out; ``already`` (IDs, or a function
-        returning them when rendering) are in already, like the subscribers."""
+        returning them when rendering) are in already, like the subscribers.
+        ``everybody`` also offers the project's staff and everybody on it,
+        first (subscribers and "Also tell…", specs/subscribers.md)."""
+
+        def offered():
+            queryset = self.queryset
+            if "is_member" in queryset.query.annotations:
+                return dict(queryset.values_list("pk", "is_member"))
+            return dict.fromkeys(queryset.values_list("pk", flat=True))
 
         def teams():
             from biwak.activity.mentions import reader
@@ -175,16 +191,21 @@ class PeopleField(forms.ModelMultipleChoiceField):
             viewer = reader()
             if not can_see(viewer):
                 return []
-            queryset = self.queryset
-            if "is_member" in queryset.query.annotations:
-                offered = dict(queryset.values_list("pk", "is_member"))
-            else:
-                offered = dict.fromkeys(queryset.values_list("pk", flat=True))
             return picker_teams(
-                viewer, offered, project=project, visible=visible, already=already
+                viewer, offered(), project=project, visible=visible, already=already
+            )
+
+        def groups():
+            from biwak.activity.mentions import reader
+            from biwak.teams.picking import project_groups
+
+            return project_groups(
+                reader(), offered(), project=project, visible=visible, already=already
             )
 
         self.widget.teams = teams
+        if everybody:
+            self.widget.groups = groups
 
     def label_from_instance(self, obj):
         # Who is looking: the request's user (biwak.activity.mentions)

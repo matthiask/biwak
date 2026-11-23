@@ -175,6 +175,50 @@ class TeamsTest(E2ETestCase):
         ])
         self.assertEqual(self.errors, [])
 
+    def test_the_whole_project_comes_first(self):
+        """ "Staff on this project" and "Everybody on this project" first
+        in "Also tell…" (decided 2026-11-23, specs/subscribers.md):
+        everybody only while clients see it"""
+        page = self.page
+        page.goto(self.live_server_url + reverse("message_new", args=[self.project.pk]))
+        picker = page.locator(".wb-picker-input")
+        picker.click()
+        options = page.locator(".wb-picker-list li")
+        expect(options.first).to_have_attribute("data-group", "staff")
+        expect(options.first).to_contain_text("Staff on this project")
+        # Everybody would add the same as staff while the message is internal
+        expect(page.locator(".wb-picker-list li[data-group]")).to_have_count(1)
+        picker.press("Escape")
+        page.get_by_label("Visible to clients").check()
+        picker.press_sequentially("every")
+        group = page.locator(".wb-picker-list li[data-group=everybody]")
+        expect(group).to_contain_text("Everybody on this project")
+        picker.press("Enter")
+        # Ada posts (told already)
+        expect(page.locator(".wb-pill")).to_have_text([
+            re.compile("Cleo"),
+            re.compile("Dan"),
+        ])
+        self.assertEqual(self.errors, [])
+
+    def test_subscribing_the_project_staff(self):
+        from biwak.items import operations as ops
+
+        todolist = self.make_list()
+
+        todo = ops.create_todo(todolist=todolist, title="Plan", creator=self.ada)
+        page = self.page
+        page.goto(self.live_server_url + reverse("item_subscribers", args=[todo.pk]))
+        picker = page.locator(".wb-picker-input")
+        picker.click()
+        page.locator(".wb-picker-list li[data-group=staff]").click()
+        # Ada is subscribed already, Cleo can't see the internal list
+        expect(page.locator(".wb-pill")).to_have_text([re.compile("Dan")])
+        page.get_by_role("button", name="Add").click()
+        page.wait_for_url(lambda url: "subscribers" not in url)
+        self.assertTrue(todo.subscriptions.filter(user=self.dan).exists())
+        self.assertEqual(self.errors, [])
+
     def test_check_ins_people_asked_follow_visible_to_clients(self):
         """A check-in's "People asked" is the picker with teams (decided
         2026-11-22); clients only while it's visible to clients"""

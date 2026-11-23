@@ -396,6 +396,7 @@ class SubscribersForm(Form):
                 user.pk,
                 *item.subscriptions.values_list("user", flat=True),
             },
+            everybody=True,
         )
         # The picker hides the select: the browser couldn't focus it to say
         # so, the server does

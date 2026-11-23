@@ -26,6 +26,12 @@
 // Matching teams come last, saying how many of their members they'd add
 // and why the others are left out; picking one picks its members, as if
 // picked one by one. A team with nobody left to add isn't offered.
+//
+// The project's people at once (specs/subscribers.md, decided 2026-11-23):
+// data-project-groups ("Staff on this project", "Everybody on this project") work
+// like teams but come first, before the people, and a group adding the
+// same people as the one before isn't offered (everybody while the
+// clients are left out).
 
 import { avatar, optionAvatar, teamMark } from "./avatar.js"
 import { awayNote } from "./away.js"
@@ -57,6 +63,7 @@ function attach(select) {
     teamInternal: select.dataset.teamInternal || "can't see internal items",
   }
   const teams = parse(select.dataset.teams)
+  const groups = parse(select.dataset.projectGroups)
 
   const root = document.createElement("div")
   root.className = "wb-picker"
@@ -221,16 +228,27 @@ function attach(select) {
       .replace("%(reasons)s", reasons)
   }
 
-  // The people (options), then the teams ({team, state}; decided
-  // 2026-11-22: teams are a special case)
+  // The project's groups ({team, state, group}), the people (options), then
+  // the teams ({team, state}; decided 2026-11-22: teams are a special case)
   const matches = () => {
     const query = input.value.trim().toLowerCase()
-    const found = options.filter(
+    const found = []
+    let previous = ""
+    for (const group of groups) {
+      if (!group.name.toLowerCase().includes(query)) continue
+      const state = teamState(group)
+      const adds = state.add.map((option) => option.value).join(",")
+      if (state.add.length && adds !== previous)
+        found.push({ team: group, state, group: true })
+      previous = adds
+    }
+    const people = options.filter(
       (option) =>
         !option.selected &&
         !option.disabled &&
         option.textContent.toLowerCase().includes(query),
     )
+    found.push(...people)
     for (const team of teams) {
       if (!team.name.toLowerCase().includes(query)) continue
       const state = teamState(team)
@@ -289,12 +307,15 @@ function attach(select) {
     item.className = `list-group-item list-group-item-action${index === active ? " active" : ""}`
     item.setAttribute("role", "option")
     item.setAttribute("aria-selected", index === active ? "true" : "false")
-    item.dataset.team = entry.team.id
+    if (entry.group) item.dataset.group = entry.team.id
+    else item.dataset.team = entry.team.id
     const name = document.createElement("span")
     name.textContent = entry.team.name
     const detail = document.createElement("small")
     detail.className = "wb-mentions-detail"
-    detail.textContent = `${texts.team} · ${teamDetail(entry.state)}`
+    detail.textContent = entry.group
+      ? teamDetail(entry.state)
+      : `${texts.team} · ${teamDetail(entry.state)}`
     item.append(teamMark(), " ", name, " ", detail)
     item.addEventListener("mousedown", (event) => {
       event.preventDefault()

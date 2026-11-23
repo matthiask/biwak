@@ -272,6 +272,14 @@ anyone, staff, externals and clients. Clients never see teams. Teams are
 a shortcut of the pages: through the CLI, the API and replies by mail
 a team's name isn't expanded.
 
+**The whole project at once:** when adding subscribers ("Subscribers…")
+or people to tell ("Also tell…"), staff find two entries at the top of
+the list: **Staff on this project** (your staff and the externals) and,
+when clients can see the item, **Everybody on this project** (the
+clients too). Picking one adds a pill for each active member not
+subscribed or told already; take out whoever shouldn't be there before
+saving.
+
 ## Your menu
 
 Your name in the bar opens: My activity, Settings (your name, the

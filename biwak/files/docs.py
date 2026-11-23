@@ -140,6 +140,7 @@ class TellForm(SubscribersForm):
             project=item.project,
             visible=item.is_client_visible,
             already={user.pk, *(u.pk for u in self.told)},
+            everybody=True,
         )
 
 

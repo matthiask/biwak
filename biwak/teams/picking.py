@@ -9,6 +9,7 @@ the People page."""
 
 from collections import Counter
 
+from django.contrib.auth import get_user_model
 from django.db.models.functions import Lower
 from django.utils.translation import gettext as _, ngettext
 
@@ -121,6 +122,56 @@ def picker_teams(viewer, offered, *, project, visible, already=()):
             entries.append(entry)
         result.append({"id": team.pk, "name": team.name, "members": entries})
     return result
+
+
+def project_groups(viewer, offered, *, project, visible, already=()):
+    """The project's people at once for the picker's ``data-project-groups``
+    (decided 2026-11-23, specs/subscribers.md): "Staff on this project"
+    (own staff and externals) and, while clients can see the item,
+    "Everybody on this project"; ``[{id, name, members: [{id, reason,
+    already}]}]`` like ``picker_teams()``, the active members only.
+    Nothing for clients; externals get the members they may know."""
+    if not can_see(viewer):
+        return []
+    people = (
+        get_user_model()
+        .objects.filter(memberships__project=project, is_active=True)
+        .order_by(Lower("full_name"), "email")
+    )
+    if not viewer.sees_all_access:
+        from biwak.organizations.people import known_people
+
+        people = people.filter(pk__in=known_people(viewer).values("pk"))
+    people = list(people)
+    already = set(already() if callable(already) else already)
+    members = {user.pk for user in people}
+
+    def entries(users):
+        return [
+            {
+                "id": user.pk,
+                "already": user.pk in already,
+                "reason": ""
+                if user.pk in already or user.pk in offered
+                else reason(user, project_members=members, visible=visible),
+            }
+            for user in users
+        ]
+
+    groups = [
+        {
+            "id": "staff",
+            "name": _("Staff on this project"),
+            "members": entries([user for user in people if not user.is_client]),
+        }
+    ]
+    if visible:
+        groups.append({
+            "id": "everybody",
+            "name": _("Everybody on this project"),
+            "members": entries(people),
+        })
+    return [group for group in groups if group["members"]]
 
 
 def picker_texts():
