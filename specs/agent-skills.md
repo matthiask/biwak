@@ -15,7 +15,7 @@ temporary home. Added for handover: `biwak todos --assignee PERSON`
   directory, and `--project` is a project's ID everywhere else in the
   CLI). `CLAUDE_CONFIG_DIR` is honoured, as in `gov`.
 
-Built on the way (2026-11-23), to confirm:
+Confirmed 2026-11-23:
 
 - **Triage's "wait"** uses `biwak todos --assigned-by-me` (to-dos I
   assigned to others), Home's "waiting on others" (`todos.md`), instead
