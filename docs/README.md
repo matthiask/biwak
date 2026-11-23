@@ -22,15 +22,5 @@ it.
   a second step, resets, single sign-on with Google or Microsoft,
   setting it up
 - [The CLI and the API](cli.md): tokens, the `biwak` command
-
-## What Biwak doesn't do
-
-- **Time tracking and invoices.** Use the tools you have for that; a
-  project can link to them (add a link on the project's page).
-- **Chat.** Discussion happens in comments on to-dos and messages.
-- **A project calendar.** To-dos have due dates and the to-dos page
-  lists them by date; your own to-dos can be subscribed to in a
-  calendar app ([to-dos](todos.md)).
-- **To-dos outside lists.** Every to-do belongs to a list.
-- **Comments on lists and folders.** Comment on the to-dos in them, or
-  post a message.
+- [Coming from Basecamp](basecamp.md): what's different and why, what
+  Biwak doesn't do

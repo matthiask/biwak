@@ -23,16 +23,5 @@ in der Reihenfolge, in der du es brauchst.
   als zweiter Schritt, Zurücksetzen, Single Sign-on mit Google oder
   Microsoft, das Einrichten
 - [Die CLI und die API](cli.de.md): Tokens, der Befehl `biwak`
-
-## Was Biwak nicht tut
-
-- **Zeiterfassung und Rechnungen.** Nutze dafür deine bisherigen
-  Werkzeuge; ein Projekt kann darauf verlinken (füge auf der Seite des
-  Projekts einen Link hinzu).
-- **Chat.** Diskutiert wird in Kommentaren zu To-dos und Mitteilungen.
-- **Ein Projektkalender.** To-dos haben Fälligkeiten, und die To-do-Seite
-  listet sie nach Datum; deine eigenen To-dos kannst du in einer
-  Kalender-App abonnieren ([To-dos](todos.de.md)).
-- **To-dos ausserhalb von Listen.** Jedes To-do gehört zu einer Liste.
-- **Kommentare zu Listen und Ordnern.** Kommentiere die To-dos darin,
-  oder schreibe eine Mitteilung.
+- [Von Basecamp her](basecamp.de.md): was anders ist und warum, was
+  Biwak nicht tut

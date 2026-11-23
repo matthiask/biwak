@@ -50,7 +50,7 @@ class HelpTest(TestCase):
         self.client.force_login(self.ada)
         response = self.client.get("/help/")
         self.assertContains(response, '<h1 class="wb-title">Help</h1>', html=True)
-        self.assertContains(response, "What Biwak doesn")
+        self.assertContains(response, 'href="/help/basecamp/"')
         self.assertContains(response, "<title>Help – Biwak</title>", html=True)
 
     def test_relative_links_lead_to_the_help_pages(self):
@@ -131,7 +131,7 @@ class LanguagesTest(TestCase):
             self.assertContains(response, '<div lang="en">')
             # The other pages stay German
             response = self.client.get("/help/")
-            self.assertContains(response, "Was Biwak nicht tut")
+            self.assertContains(response, "Von Basecamp her")
             self.assertNotContains(response, 'id="help-in-english"')
 
     def test_every_german_page_and_its_links(self):

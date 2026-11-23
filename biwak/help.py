@@ -33,6 +33,7 @@ _NAMES = {
     "keyboard": "keyboard",
     "sign-in": "sign-in",
     "cli": "cli",
+    "basecamp": "basecamp",
 }
 PAGES = {
     "en": {page: f"{name}.md" for page, name in _NAMES.items()},

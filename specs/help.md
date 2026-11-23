@@ -38,7 +38,10 @@ Decided 2026-11-21, one file each, in `help.py`'s table: Help
 (`README.md`: what Biwak is for and doesn't do), Finding your way
 (`orientation.md`), To-dos, Messages, docs and files (`files.md`),
 Check-ins, Notifications, Clients, Keyboard, Signing in (`sign-in.md`),
-The CLI and the API (`cli.md`).
+The CLI and the API (`cli.md`). Coming from Basecamp (`basecamp.md`,
+decided 2026-11-23): where Biwak differs from Basecamp and why, for
+people switching, not marketing; it holds "What Biwak doesn't do",
+which was on the start page, and the start page links to it.
 
 ## The shortcuts list
 
