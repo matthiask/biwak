@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 08:05+0100\n"
+"POT-Creation-Date: 2026-11-23 11:25+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4105,7 +4105,7 @@ msgstr "Entfernt %(removed)s und meldet die Person überall ab, etwa bei einem v
 msgid "They get a mail about it."
 msgstr "Die Person bekommt eine Mail dazu."
 
-#: biwak/organizations/people.py biwak/templates/accounts/settings.html
+#: biwak/organizations/people.py
 msgid "Reset"
 msgstr "Zurücksetzen"
 
@@ -5847,8 +5847,20 @@ msgid "If it wasn't you, tell an admin of your team right away."
 msgstr "Wenn du das nicht warst, sag es sofort einem Admin deines Teams."
 
 #: biwak/templates/accounts/settings.html
+msgid "Saved"
+msgstr "Gespeichert"
+
+#: biwak/templates/accounts/settings.html
 msgid "Appearance"
 msgstr "Darstellung"
+
+#: biwak/templates/accounts/settings.html
+msgid "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see."
+msgstr "Für die Navigation, Buttons, Links und den Fokusrahmen. Das Bernstein der Kund:innen bleibt dem vorbehalten, was Kund:innen sehen."
+
+#: biwak/templates/accounts/settings.html
+msgid "Profile"
+msgstr "Profil"
 
 #: biwak/templates/accounts/settings.html
 msgid "Profile image"
@@ -5869,10 +5881,6 @@ msgstr "Foto"
 #: biwak/templates/accounts/settings.html
 msgid "Cut to a square in the middle. Remove it to show your drawn mark again."
 msgstr "Wird in der Mitte quadratisch zugeschnitten. Entfernst du es, wird wieder deine Zeichnung angezeigt."
-
-#: biwak/templates/accounts/settings.html
-msgid "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see."
-msgstr "Für die Navigation, Buttons, Links und den Fokusrahmen. Das Bernstein der Kund:innen bleibt dem vorbehalten, was Kund:innen sehen."
 
 #: biwak/templates/accounts/settings.html
 msgid "For the pages and the mails. Automatic follows your browser; mails are in English then, or in the language you were invited in."

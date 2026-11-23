@@ -96,18 +96,21 @@ page (`frontend/shortcuts.js`): `data-kb-row`, `data-kb-open`,
 ## The settings page
 
 `/accounts/settings/`, "Settings" in the "Me" menu (decided 2026-11-21),
-one form per section, each posting to its own URL; the old
+one form per part, each posting to its own URL and saving itself
+(decided 2026-11-23, `ui.md`, "Saving on change"); the old
 `/accounts/notifications/` redirects (301). Sections:
 
 - **Appearance** first, so the navigation bar, which shows the accent
-  most, stays in view while choosing: the profile image, drawn or a
-  photo (`people.md`),
-  the theme (light, dark, as the system) and the accent color, stored on
-  the person (`User.theme`, `User.accent`) so they follow them to other
+  most, stays in view while choosing: a card of its own with the theme
+  (light, dark, as the system) and the accent color, stored on the
+  person (`User.theme`, `User.accent`) so they follow them to other
   devices; the navigation's theme toggle saves there too. Choosing
-  previews at once (`data-theme-mode`, `data-accent` on `<html>`,
-  `frontend/appearance-preview.js`); only saving stores it, "Reset"
-  shows the stored choice again.
+  applies at once (`data-theme-mode`, `data-accent` on `<html>`,
+  `frontend/appearance-preview.js`) and saves; a failed save shows the
+  stored choice again.
+- **Profile** (decided 2026-11-23 by the user: the theme first, the
+  name and image in a card of their own): the name and the profile
+  image, drawn or a photo (`people.md`).
 - **Language** (`languages.md`): Automatic, Deutsch, English.
 - **Notifications** (`notifications.md`).
 - **Keyboard:** `User.keyboard_shortcuts` and "All shortcuts" linking

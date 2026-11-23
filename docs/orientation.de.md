@@ -316,7 +316,9 @@ Antworten per Mail wird der Name eines Teams nicht aufgelöst.
 Dein Name in der Leiste öffnet: Meine Aktivität, Einstellungen (dein
 Name, die Sprache, Benachrichtigungen, die Tastatur, die Darstellung,
 das Profilbild, die Anmeldung: verbundene Konten, Passkeys, die
-Authenticator-App und Sitzungen), Kalender, Hilfe und Abmelden.
+Authenticator-App und Sitzungen; was du dort änderst, wird gleich
+gespeichert: eine Auswahl sofort, ein Text, sobald du das Feld
+verlässt), Kalender, Hilfe und Abmelden.
 Mitarbeitende finden dort auch Öffentliche Links, Admins nach Meine
 Aktivität Alle Projekte und den Link zur Administration.
 

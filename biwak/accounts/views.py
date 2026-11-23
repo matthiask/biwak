@@ -6,7 +6,7 @@ from django.conf import settings as django_settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
-from django.http import Http404, HttpResponse, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -282,6 +282,36 @@ def _overrides(user):
     )
 
 
+def _fragment(request):
+    """The page's script saving a form by itself (frontend/save-on-change.js)"""
+    return bool(request.headers.get("X-Biwak-Fragment"))
+
+
+def _saved(request, message, to):
+    """Saved: 204 for the script, which says so itself; else the message
+    and back to the page"""
+    if _fragment(request):
+        return HttpResponse(status=204)
+    messages.success(request, message)
+    return redirect(to)
+
+
+def _invalid(request, form, **page):
+    """Not valid: the errors for the script, which shows them at the
+    fields; else the page with the form"""
+    if _fragment(request):
+        return JsonResponse(
+            {
+                "errors": {
+                    name: [error["message"] for error in errors]
+                    for name, errors in form.errors.get_json_data().items()
+                }
+            },
+            status=400,
+        )
+    return _settings_page(request, **page)
+
+
 def _settings_page(request, *, notifications=None, name_form=None, away_form=None):
     user = request.user
     project_overrides, item_overrides = _overrides(user)
@@ -322,7 +352,7 @@ def settings(request):
 def settings_notifications(request):
     form = SettingsForm(request.POST, user=request.user)
     if not form.is_valid():
-        return _settings_page(request, notifications=form)
+        return _invalid(request, form, notifications=form)
     data = form.cleaned_data
     set_notification_settings(
         request.user,
@@ -334,8 +364,7 @@ def settings_notifications(request):
         working_from=data["working_from"],
         working_until=data["working_until"],
     )
-    messages.success(request, _("Your notification settings have been saved."))
-    return redirect("settings")
+    return _saved(request, _("Your notification settings have been saved."), "settings")
 
 
 class AwayForm(Form):
@@ -381,19 +410,19 @@ def settings_away(request):
     """Away until a day, with a note"""
     form = AwayForm(request.POST)
     if not form.is_valid():
-        return _settings_page(request, away_form=form)
+        return _invalid(request, form, away_form=form)
     operations.set_away(
         request.user,
         until=form.cleaned_data["away_until"],
         note=form.cleaned_data["away_note"],
         actor=request.user,
     )
-    messages.success(
+    return _saved(
         request,
         _("You're away until %(date)s.")
         % {"date": short_date(request.user.away_until)},
+        reverse("settings") + "#away",
     )
-    return redirect(reverse("settings") + "#away")
 
 
 @never_cache
@@ -411,10 +440,9 @@ def settings_name(request):
     """One's own name (specs/people.md, "Names")"""
     form = NameForm(request.POST)
     if not form.is_valid():
-        return _settings_page(request, name_form=form)
+        return _invalid(request, form, name_form=form)
     operations.set_name(request.user, **form.cleaned_data)
-    messages.success(request, _("Your name has been saved."))
-    return redirect("settings")
+    return _saved(request, _("Your name has been saved."), "settings")
 
 
 @never_cache
@@ -425,8 +453,7 @@ def settings_keyboard(request):
     operations.set_preferences(
         request.user, keyboard_shortcuts=form.cleaned_data["keyboard_shortcuts"]
     )
-    messages.success(request, _("Your keyboard settings have been saved."))
-    return redirect("settings")
+    return _saved(request, _("Your keyboard settings have been saved."), "settings")
 
 
 @never_cache
@@ -438,6 +465,9 @@ def settings_language(request):
         return HttpResponseBadRequest("Invalid language.")
     operations.set_preferences(request.user, language=form.cleaned_data["language"])
     # The message in the new language, the next page shows it
+    if _fragment(request):
+        # The script reloads the page, in the new language
+        return HttpResponse(status=204)
     with translation.override(
         request.user.language or translation.get_language_from_request(request)
     ):
@@ -457,10 +487,7 @@ def settings_appearance(request):
     operations.set_preferences(
         request.user, theme=data["theme"] or None, accent=data["accent"] or None
     )
-    if request.headers.get("X-Biwak-Fragment"):
-        return HttpResponse(status=204)
-    messages.success(request, _("Your appearance settings have been saved."))
-    return redirect("settings")
+    return _saved(request, _("Your appearance settings have been saved."), "settings")
 
 
 @never_cache

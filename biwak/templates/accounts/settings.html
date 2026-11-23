@@ -4,86 +4,16 @@
 
 {% block content %}
   <h1 class="mb-3">{% translate "Settings" %}</h1>
+  {# The forms save themselves (frontend/save-on-change.js): told here, and shown at the field #}
+  <div class="visually-hidden" role="status" aria-live="polite" data-save-status data-saved="{% translate 'Saved' %}">
+  </div>
+  <template data-saved-template><span class="wb-saved" aria-hidden="true">{% icon "check-lg" %}
+      {% translate "Saved" %}</span></template>
   <h2 class="h5" id="appearance">{% translate "Appearance" %}</h2>
+  {# The theme and accent color first, then the profile (decided 2026-11-23 by the user) #}
   <div class="card mb-4">
-    <div class="card-body border-bottom" id="name">
-      <h3 class="h6">{% translate "Name" %}</h3>
-      <form method="post" action="{% url 'settings_name' %}" class="row">
-        {% csrf_token %}
-        {# Two fields side by side on wide screens, not the page's whole width #}
-        <div class="col-lg-6">{{ name_form.full_name.as_field_group }}</div>
-        <div class="col-lg-6">{{ name_form.short_name.as_field_group }}</div>
-        <div class="col-12">
-          <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
-        </div>
-      </form>
-    </div>
-    <div class="card-body border-bottom" id="profile-image">
-      <h3 class="h6">{% translate "Profile image" %}</h3>
-      <div class="d-flex flex-wrap align-items-start gap-3">
-        {% avatar request.user "lg" %}
-        <div class="wb-profile-image-choices">
-          {# A click on a drawing saves it (specs/people.md) #}
-          <h4 class="h6 fw-normal mb-2">{% translate "Drawn" %}</h4>
-          <form method="post" action="{% url 'settings_mark' %}" class="wb-mark-choices">
-            {% csrf_token %}
-            {% for value, label in marks %}
-              <button
-                type="submit"
-                name="mark"
-                value="{{ value }}"
-                class="wb-mark-choice"
-                title="{{ label }}"
-                aria-pressed="{% if request.user.mark == value %}true{% else %}false{% endif %}"
-              >
-                <span
-                  class="wb-avatar wb-avatar-md wb-mark wb-mark-{{ value }}"
-                  data-avatar-color="{{ request.user.avatar_color }}"
-                  aria-hidden="true"
-                ></span>
-                <span class="visually-hidden">{{ label }}</span>
-              </button>
-            {% endfor %}
-          </form>
-          <div class="form-text mb-3">
-            {% translate "In white on your color, chosen for you. A photo is shown instead while you have one." %}
-          </div>
-          <h4 class="h6 fw-normal mb-2">{% translate "Photo" %}</h4>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <form
-              method="post"
-              action="{% url 'settings_image' %}"
-              enctype="multipart/form-data"
-              class="d-flex flex-wrap align-items-center gap-2"
-            >
-              {% csrf_token %}
-              <input
-                type="file"
-                name="image"
-                class="form-control form-control-sm w-auto"
-                accept="image/jpeg, image/png, image/webp"
-                aria-label="{% translate 'Profile image' %}"
-                required
-              >
-              <button type="submit" class="btn btn-sm btn-primary">{% translate "Upload" %}</button>
-            </form>
-            {% if request.user.image %}
-              <a
-                href="{% url 'person_image_remove' request.user.pk %}"
-                data-modal
-                class="btn btn-sm btn-quiet"
-              >{% translate "Remove" %}</a>
-            {% endif %}
-          </div>
-          <div class="form-text">
-            {{ image_help }}
-            {% translate "Cut to a square in the middle. Remove it to show your drawn mark again." %}
-          </div>
-        </div>
-      </div>
-    </div>
     <div class="card-body">
-      <form method="post" action="{% url 'settings_appearance' %}" data-appearance-preview>
+      <form method="post" action="{% url 'settings_appearance' %}" data-appearance-preview data-save-on-change>
         {% csrf_token %}
         <fieldset class="mb-3">
           <legend class="fs-6">{% translate "Theme" %}</legend>
@@ -121,15 +51,94 @@
             {% translate "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see." %}
           </div>
         </fieldset>
-        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
-        <button type="button" class="btn btn-link" data-appearance-reset hidden>{% translate "Reset" %}</button>
+        <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
       </form>
+    </div>
+  </div>
+  <h2 class="h5 mt-4" id="profile">{% translate "Profile" %}</h2>
+  <div class="card mb-4">
+    <div class="card-body border-bottom" id="name">
+      <h3 class="h6">{% translate "Name" %}</h3>
+      <form method="post" action="{% url 'settings_name' %}" class="row" data-save-on-change>
+        {% csrf_token %}
+        {# Two fields side by side on wide screens, not the page's whole width #}
+        <div class="col-lg-6">{{ name_form.full_name.as_field_group }}</div>
+        <div class="col-lg-6">{{ name_form.short_name.as_field_group }}</div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
+        </div>
+      </form>
+    </div>
+    <div class="card-body" id="profile-image">
+      <h3 class="h6">{% translate "Profile image" %}</h3>
+      <div class="d-flex flex-wrap align-items-start gap-3">
+        {% avatar request.user "lg" %}
+        <div class="wb-profile-image-choices">
+          {# A click on a drawing saves it (specs/people.md) #}
+          <h4 class="h6 fw-normal mb-2">{% translate "Drawn" %}</h4>
+          <form method="post" action="{% url 'settings_mark' %}" class="wb-mark-choices">
+            {% csrf_token %}
+            {% for value, label in marks %}
+              <button
+                type="submit"
+                name="mark"
+                value="{{ value }}"
+                class="wb-mark-choice"
+                title="{{ label }}"
+                aria-pressed="{% if request.user.mark == value %}true{% else %}false{% endif %}"
+              >
+                <span
+                  class="wb-avatar wb-avatar-md wb-mark wb-mark-{{ value }}"
+                  data-avatar-color="{{ request.user.avatar_color }}"
+                  aria-hidden="true"
+                ></span>
+                <span class="visually-hidden">{{ label }}</span>
+              </button>
+            {% endfor %}
+          </form>
+          <div class="form-text mb-3">
+            {% translate "In white on your color, chosen for you. A photo is shown instead while you have one." %}
+          </div>
+          <h4 class="h6 fw-normal mb-2">{% translate "Photo" %}</h4>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <form
+              method="post"
+              action="{% url 'settings_image' %}"
+              enctype="multipart/form-data"
+              class="d-flex flex-wrap align-items-center gap-2"
+              data-upload-on-choose
+            >
+              {% csrf_token %}
+              <input
+                type="file"
+                name="image"
+                class="form-control form-control-sm w-auto"
+                accept="image/jpeg, image/png, image/webp"
+                aria-label="{% translate 'Profile image' %}"
+                required
+              >
+              <button type="submit" class="btn btn-sm btn-primary" data-save-button>{% translate "Upload" %}</button>
+            </form>
+            {% if request.user.image %}
+              <a
+                href="{% url 'person_image_remove' request.user.pk %}"
+                data-modal
+                class="btn btn-sm btn-quiet"
+              >{% translate "Remove" %}</a>
+            {% endif %}
+          </div>
+          <div class="form-text">
+            {{ image_help }}
+            {% translate "Cut to a square in the middle. Remove it to show your drawn mark again." %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <h2 class="h5 mt-4" id="language">{% translate "Language" %}</h2>
   <div class="card mb-4">
     <div class="card-body">
-      <form method="post" action="{% url 'settings_language' %}">
+      <form method="post" action="{% url 'settings_language' %}" data-save-on-change data-save-reload>
         {% csrf_token %}
         <fieldset class="mb-3">
           <legend class="visually-hidden">{% translate "Language" %}</legend>
@@ -155,7 +164,7 @@
             {% translate "For the pages and the mails. Automatic follows your browser; mails are in English then, or in the language you were invited in." %}
           </div>
         </fieldset>
-        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
       </form>
     </div>
   </div>
@@ -168,7 +177,7 @@
           {% blocktranslate with since=request.user.mail_undeliverable_at|moment:"on" email=request.user.email %}Mail to your address {{ email }} bounced or was marked as spam {{ since }}, so you get no notification mails. Ask an admin to change the address or to clear this once it works again.{% endblocktranslate %}
         </div>
       {% endif %}
-      <form method="post" action="{% url 'settings_notifications' %}">
+      <form method="post" action="{% url 'settings_notifications' %}" data-save-on-change>
         {% csrf_token %}
         {{ form.notification_level.as_field_group }}
         {{ form.mail_delivery.as_field_group }}
@@ -199,7 +208,7 @@
             {% endblocktranslate %}
           </p>
         </div>
-        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
       </form>
       <p class="small mt-3 mb-0">
         <a href="{% url 'help' 'notifications' %}">{% translate "How notifications work" %}</a>
@@ -290,12 +299,12 @@
           </form>
         </div>
       {% endif %}
-      <form method="post" action="{% url 'settings_away' %}" class="row">
+      <form method="post" action="{% url 'settings_away' %}" class="row" data-save-on-change>
         {% csrf_token %}
         <div class="col-lg-4">{{ away_form.away_until.as_field_group }}</div>
         <div class="col-lg-8">{{ away_form.away_note.as_field_group }}</div>
         <div class="col-12">
-          <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+          <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
         </div>
       </form>
     </div>
@@ -332,10 +341,10 @@
   <h2 class="h5 mt-4" id="keyboard">{% translate "Keyboard" %}</h2>
   <div class="card mb-4">
     <div class="card-body">
-      <form method="post" action="{% url 'settings_keyboard' %}">
+      <form method="post" action="{% url 'settings_keyboard' %}" data-save-on-change data-save-reload>
         {% csrf_token %}
         {{ keyboard_form }}
-        <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+        <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
       </form>
       <p class="mt-3 mb-0">
         <a href="{% url 'help' 'keyboard' %}#shortcuts">{% translate "All shortcuts" %}</a>
