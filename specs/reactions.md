@@ -101,8 +101,12 @@ built (2026-11-23).
 
 ## API and CLI
 
-`GET`, `POST` and `DELETE /api/v1/items/{id}/reactions/` and
-`/comments/{id}/reactions/` with `{"content": …}`; to-dos, messages,
-docs, files, answers and comments carry `reactions` (`{content, count,
-people, mine}`, loaded with `reactions.operations.prefetch()`). `biwak
-reactions create TODO CONTENT [--comment ID]` toggles.
+`GET`, `POST` and `DELETE /api/v1/items/{id}/reactions/`,
+`/comments/{id}/reactions/` and `/events/{id}/reactions/` (a to-do's
+`completed` event, 404 for any other) with `{"content": …}`; to-dos,
+messages, docs, files, answers and comments carry `reactions`
+(`{content, count, people, mine}`, loaded with
+`reactions.operations.prefetch()`), a to-do's own only. `biwak
+reactions create TODO CONTENT [--comment ID | --event ID]` toggles
+(CLI 0.67.0). The API has no timeline of a to-do: the `completed`
+events' IDs are the feed's (`biwak feed --action completed --json`).

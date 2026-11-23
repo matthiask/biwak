@@ -3,6 +3,7 @@ line "Ada completed this" on the timeline (specs/reactions.md, decided
 2026-11-23)"""
 
 import datetime as dt
+import json
 from unittest import mock
 
 from django.core import mail
@@ -246,6 +247,45 @@ class TimelineTest(Base):
             f"/events/{event.pk}/reactions/", {"content": "🎉", "action": "remove"}
         )
         self.assertFalse(Reaction.objects.exists())
+
+
+class APITest(Base):
+    def setUp(self):
+        super().setUp()
+        self.event = self.complete()
+
+    def api(self, method, path, user, data=None):
+        self.client.force_login(user)
+        return getattr(self.client, method)(
+            f"/api/v1/{path}",
+            json.dumps(data) if data is not None else None,
+            content_type="application/json",
+        )
+
+    def test_add_list_remove(self):
+        path = f"events/{self.event.pk}/reactions/"
+        response = self.api("post", path, self.cleo, {"content": "🎉"})
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()[0]["content"], "🎉")
+        self.assertTrue(response.json()[0]["mine"])
+        listed = self.api("get", path, self.ada).json()
+        self.assertEqual((listed[0]["count"], listed[0]["mine"]), (1, False))
+        # Not the to-do's own
+        todo = self.api("get", f"todos/{self.todo.pk}/", self.ada).json()
+        self.assertEqual(todo["reactions"], [])
+        response = self.api("delete", path, self.cleo, {"content": "🎉"})
+        self.assertEqual(response.json(), [])
+
+    def test_404(self):
+        secret = self.complete(self.secret)
+        path = f"events/{secret.pk}/reactions/"
+        self.assertEqual(self.api("get", path, self.cleo).status_code, 404)
+        response = self.api("post", path, self.cleo, {"content": "🎉"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.api("get", path, self.ada).status_code, 200)
+        created = Event.objects.get(action=Action.CREATED, item=self.todo)
+        path = f"events/{created.pk}/reactions/"
+        self.assertEqual(self.api("get", path, self.ada).status_code, 404)
 
 
 @override_settings(
