@@ -191,11 +191,25 @@ def doc_tell(request, pk):
             item, actor=request.user, also=data["people"], note=data["note"]
         )
         return redirect(item)
+    intro = _("Nobody has heard of this doc yet. You're asked once.")
+    if (
+        not request.user.is_client
+        and item.parent_id is None
+        and not item.is_client_visible
+        and item.project.offers_client_switch()
+    ):
+        # Clients come in after it (decided 2026-11-23, specs/files.md)
+        how = _(
+            "Clients can’t see it yet: to tell them, choose “Show to"
+            " clients…” in “More” on its page, then add them with"
+            " “Subscribers…”."
+        )
+        intro = f"{intro} {how}"
     return form_response(
         request,
         form,
         title=_("Tell people about it?"),
-        intro=_("Nobody has heard of this doc yet. You're asked once."),
+        intro=intro,
         item=item,
         cancel_url=item.get_absolute_url(),
         submit_label=_("Tell them too"),

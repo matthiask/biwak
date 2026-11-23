@@ -102,7 +102,11 @@ ohne schon jemanden zu benachrichtigen. Klickst du zum ersten Mal auf
 hören will, wird so oder so benachrichtigt (die Pillen mit Schloss unter
 „Abonnent:innen“); füge dort weitere hinzu (und eine Notiz) und „Auch
 benachrichtigen“,
-oder „Sonst niemand“, um niemanden hinzuzufügen. Klickst du nie auf
+oder „Sonst niemand“, um niemanden hinzuzufügen. Ein neues Dokument
+auf der obersten Ebene ist intern: Um Kund:innen zu benachrichtigen,
+zeige es ihnen danach („Kund:innen zeigen…“ unter „Mehr“ auf seiner
+Seite) und füge sie mit „Abonnent:innen…“ und „Jetzt benachrichtigen“
+hinzu. Klickst du nie auf
 „Fertig“, wird benachrichtigt, wer hören will, eine Stunde nach deiner
 letzten Änderung (das Dokument aus dem Papierkorb zu holen, auch mit
 seinem Ordner, startet die Stunde neu). Du wirst nur einmal gefragt;

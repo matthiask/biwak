@@ -202,7 +202,11 @@ Like Basecamp's bright yellow:
   Hiding is one click there without a sentence about what it hides, as
   on the tiles (confirmed by the user 2026-11-22). Creating something
   visible right away ("Visible to clients" in "New list", "New folder",
-  a new message, doc, file or check-in) is still offered.
+  a new message, file or check-in) is still offered, in projects with
+  clients. Not for docs: a new doc starts as a draft only its creator
+  sees and follows its folder; at the top level it's internal until
+  shown (decided 2026-11-23 with the user: clients come in after the
+  first "Done", whose dialog says how).
 - Notification mails about visible items say so in the first line.
 - API and CLI output include the visibility (`visible_to_clients`); the
   agent skills, when they come, tell agents to check it before writing.

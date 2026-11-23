@@ -400,6 +400,23 @@ class TellTest(Fixture, TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             live.apply_text(self.doc.doc, "# Plan\n\nText", user=self.ada)
 
+    def test_how_to_tell_clients(self):
+        """An internal doc at the top level: clients come in after the first
+        "Done", and the dialog says how (decided 2026-11-23)"""
+        from biwak.items import operations as ops
+
+        how = "Clients can’t see it yet"
+        self.write()
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertContains(response, how)
+        ops.set_visibility(self.doc, visible=True, actor=self.ada)
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertNotContains(response, how)
+        ops.set_visibility(self.doc, visible=False, actor=self.ada)
+        self.project.memberships.filter(user__is_client=True).delete()
+        response = self.client.get(self.tell, headers={"HX-Modal": "true"})
+        self.assertNotContains(response, how)
+
     def test_done_on_an_empty_draft_goes_back(self):
         response = self.client.get(self.tell, headers={"HX-Modal": "true"})
         assert_modal_redirect(

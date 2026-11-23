@@ -88,7 +88,10 @@ and it's in the folder, telling nobody yet. When you click "Done" the
 first time, you're asked "Tell people about it?": those who want to
 hear about something new are told either way (the pills with a lock
 under "Subscribers"); add others there (and a note) and "Tell them
-too", or "No one else" to add nobody.
+too", or "No one else" to add nobody. A new doc at the top level is
+internal: to tell clients, show it to them afterwards ("Show to
+clients…" in "More" on its page) and add them with "Subscribers…" and
+"Tell them now".
 If you never click "Done", those who want to hear are told an hour after
 your last change (restoring the doc from the trash, also with its
 folder, starts the hour again). You're asked only once; later, add

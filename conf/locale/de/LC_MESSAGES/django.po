@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 14:47+0100\n"
+"POT-Creation-Date: 2026-11-23 15:08+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2367,12 +2367,16 @@ msgid "Saved as a version."
 msgstr "Als Version gespeichert."
 
 #: biwak/files/docs.py
-msgid "Tell people about it?"
-msgstr "Personen benachrichtigen?"
-
-#: biwak/files/docs.py
 msgid "Nobody has heard of this doc yet. You're asked once."
 msgstr "Noch niemand hat von diesem Dokument erfahren. Du wirst einmal gefragt."
+
+#: biwak/files/docs.py
+msgid "Clients can’t see it yet: to tell them, choose “Show to clients…” in “More” on its page, then add them with “Subscribers…”."
+msgstr "Kund:innen sehen es noch nicht: Um sie zu benachrichtigen, wähle auf seiner Seite unter „Mehr“ „Kund:innen zeigen…“ und füge sie dann mit „Abonnent:innen…“ hinzu."
+
+#: biwak/files/docs.py
+msgid "Tell people about it?"
+msgstr "Personen benachrichtigen?"
 
 #: biwak/files/docs.py
 msgid "Tell them too"

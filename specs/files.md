@@ -330,7 +330,13 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   (nothing when there's nobody), and either way it's never asked again
   (`operations.tell()`, the doc's row locked and checked). Escape or
   Cancel doesn't answer, the next "Done" asks again. Only the creator is
-  asked.
+  asked. An internal doc at the top level in a project with clients
+  (staff asked) adds "Clients can’t see it yet: to tell them, choose
+  “Show to clients…” in “More” on its page, then add them with
+  “Subscribers…”." to the intro (decided 2026-11-23 with the user,
+  instead of a switch in the dialog or a form before writing: the doc
+  exists from its first text, and telling waits for "Done" so the mail
+  carries what was written).
 - **No "Done" still tells** (decided 2026-11-21): a doc begun as a
   draft whose creator never answered tells those who want to hear once
   it had no change for an hour (`TELL_AFTER`), as "No one else" would
