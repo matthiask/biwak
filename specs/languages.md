@@ -43,7 +43,7 @@ a third language is a catalog, nothing else.
 | lantern | Laterne |
 | feed, activity | Aktivität |
 | bookmark | Lesezeichen |
-| profile image, drawn mark, photo | Profilbild, Zeichnung, Foto (proposed 2026-11-22) |
+| profile image, drawn mark, photo | Profilbild, Zeichnung, Foto (decided 2026-11-23) |
 | trash | Papierkorb |
 | archive, archived | archivieren, archiviert |
 | public link | öffentlicher Link |
