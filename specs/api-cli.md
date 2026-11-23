@@ -85,11 +85,8 @@ decided 2026-11-22 (`cli-style.md`):
 
 ## Agent skills
 
-Skills in the CLI package for common work (triaging what changed,
-turning a mail into a to-do or message, a weekly summary of a project),
-telling agents to check visibility before writing anything a client
-could see. **Postponed** (decided 2026-11-21): no skill is needed yet;
-one-off work like activating imported people is a script on top of the
-API and the CLI (`activation.md`). Specified before building.
-Templates are in the app, not a skill (`templates.md`, decided
-2026-11-22).
+In `agent-skills.md` (decided 2026-11-23, postponed before): triage,
+a mail into a to-do or message, a project's weekly summary, handover.
+One-off work like activating imported people stays a script on top of
+the API and the CLI (`activation.md`); templates are in the app, not a
+skill (`templates.md`).

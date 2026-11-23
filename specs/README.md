@@ -12,7 +12,7 @@ confirm: `decisions-to-confirm.md`.
 | `core.md` | built | projects, items, lists, groups, ordering |
 | `ui.md` | built | the rules every page follows: modals, quiet pages, filters, phones, motion |
 | `access.md` | built | client visibility (one function decides what clients see) and sign-in: the ways in, the sign-in page, sessions |
-| `api-cli.md` | built; agent skills postponed | the API's conventions, the CLI |
+| `api-cli.md` | built | the API's conventions, the CLI |
 | `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, mails and digests, replying by mail |
 | `files.md` | built | attachments, the message board, folders as tiles with ordering, drag and drop and uploading several, docs (title from the first line, versions, drafts), files |
 | `todos.md` | built | assignees, the board, the to-do's page, recurrence, the to-dos page, the calendar feed |
@@ -57,6 +57,7 @@ confirm: `decisions-to-confirm.md`.
 | `cli-style.md` | built (0.60.0) | the CLI in the style of gov and wb: one plural group per thing, verbs as subcommands |
 | `web-push.md` | built | push notifications on phones and desktops: mentions and assignments |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
+| `agent-skills.md` | open | Claude Code skills in the CLI: triage, a mail into a to-do or message, weekly summary, handover |
 
 ## Writing a spec for a new part
 
