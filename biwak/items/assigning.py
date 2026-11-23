@@ -336,7 +336,8 @@ def several_projects_message():
 
 class DatesForm(Form):
     """What "Due date…" does: the choices of copying a list, "Keep" being
-    one date for all here"""
+    one date for all here; each field shown only with its choice
+    (``shown_for``, frontend/shown-for.js)"""
 
     dates = forms.ChoiceField(
         label=_("Due dates"),
@@ -360,6 +361,11 @@ class DatesForm(Form):
         max_value=3650,
         help_text=_("For “Move by”: negative numbers move them earlier."),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["due_on"].shown_for = f"dates={ops.Dates.KEEP.value}"
+        self.fields["days"].shown_for = f"dates={ops.Dates.SHIFT.value}"
 
     def clean(self):
         data = super().clean()

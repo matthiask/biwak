@@ -122,6 +122,11 @@ across projects, told once about dates, moving telling nobody.
   isn't useful): one due
   date for all, or "Move by N days" (and start dates with them), or
   "Remove", like copying a list's dates (`lists-across-projects.md`).
+  The modal shows only the field of the choice (the date for "Set a
+  date", the days for "Move by", none for "Remove"), switching as the
+  choice changes (decided 2026-11-23 after a visual review; a form
+  field's `shown_for`, `frontend/shown-for.js`); without JavaScript
+  both stay visible.
 - **Building it** like "Assign…": `biwak/items/assigning.py`
   (`todos_for(user, ids)`, `AssignForm`, the view `todos_assign` at
   `/todos/assign/?items=…&next=…`, all or nothing with
