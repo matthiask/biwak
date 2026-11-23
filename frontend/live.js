@@ -313,8 +313,10 @@ function replace(current, fresh) {
   settle(node)
 }
 
+// A group's color is an attribute of its section (specs/core.md, "Group
+// colors"), a list whose children are synced one by one
 function syncAttributes(current, fresh) {
-  for (const name of ["hidden", "class"]) {
+  for (const name of ["hidden", "class", "data-group-color"]) {
     const value = fresh.getAttribute(name)
     if (value === null) current.removeAttribute(name)
     else if (name !== "class" || current.getAttribute(name) !== value)

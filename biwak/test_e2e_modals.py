@@ -184,7 +184,7 @@ class VisibilityModalTest(E2ETestCase):
 
 
 class GroupModalsTest(E2ETestCase):
-    def test_new_group_and_renaming_it(self):
+    def test_new_group_and_editing_it(self):
         todolist = self.make_list(groups=["Later"])
         page = self.page
         self.goto(page, todolist)
@@ -196,24 +196,28 @@ class GroupModalsTest(E2ETestCase):
         expect(page.locator(".wb-group-name", has_text="Soon")).to_be_visible()
         expect(dialog).to_be_hidden()
 
-        # The pencil's menu has the modal, which closes the menu
+        # The group's menu has the modal, which closes the menu
         menu = page.locator("details.wb-menu:has(.wb-group-menu)").first
         menu.locator("summary").click()
-        menu.get_by_role("link", name="Rename the group").click()
-        dialog = page.get_by_role("dialog", name="Rename the group")
+        menu.get_by_role("link", name="Edit the group").click()
+        dialog = page.get_by_role("dialog", name="Edit the group")
         expect(dialog.locator("[name=title]")).to_have_value("Later")
         self.assertFalse(menu.evaluate("el => el.open"))
         dialog.locator("[name=title]").fill("Next week")
-        dialog.get_by_role("button", name="Rename").click()
+        dialog.get_by_label("Forest").check()
+        dialog.get_by_role("button", name="Save").click()
         expect(page.locator(".wb-group-name", has_text="Next week")).to_be_visible()
+        expect(
+            page.locator("section.wb-group", has_text="Next week")
+        ).to_have_attribute("data-group-color", "forest")
         self.assertEqual(
-            list(todolist.todolist.groups.values_list("title", flat=True)),
-            ["Next week", "Soon"],
+            list(todolist.todolist.groups.values_list("title", "color")),
+            [("Next week", "forest"), ("Soon", "")],
         )
 
         # Escape: the focus goes back to the menu's button
         menu.locator("summary").click()
-        menu.get_by_role("link", name="Rename the group").click()
+        menu.get_by_role("link", name="Edit the group").click()
         expect(page.get_by_role("dialog")).to_be_visible()
         page.keyboard.press("Escape")
         expect(page.get_by_role("dialog")).to_be_hidden()

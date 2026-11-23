@@ -514,6 +514,25 @@ class LiveTest(E2ETestCase):
         self.wait_for_sortables(ada)
         self.assertFalse(self.errors)
 
+    def test_a_groups_color_appears(self):
+        """Its section's attribute, a list synced child by child"""
+        page = self.open(self.ada, self.todolist, page=self.page)
+        section = page.locator("section.wb-group[data-group-item]", has_text="Doing")
+        expect(section).not_to_have_attribute("data-group-color", re.compile("."))
+        group = self.todolist.todolist.groups.get()
+        bob = self.login(self.bob)
+        self.goto(bob, f"/groups/{group.pk}/edit/")
+        bob.get_by_label("Lake").check()
+        with bob.expect_navigation():
+            bob.get_by_role("button", name="Save").click()
+        expect(section).to_have_attribute("data-group-color", "lake")
+        self.goto(bob, f"/groups/{group.pk}/edit/")
+        bob.get_by_label("None").check()
+        with bob.expect_navigation():
+            bob.get_by_role("button", name="Save").click()
+        expect(section).not_to_have_attribute("data-group-color", re.compile("."))
+        self.assertFalse(self.errors)
+
     def test_a_form_being_edited_isnt_replaced(self):
         ada = self.open(self.ada, self.todo, page=self.page)
         bob = self.open(self.bob, self.todo)

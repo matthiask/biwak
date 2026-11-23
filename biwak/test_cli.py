@@ -272,6 +272,38 @@ class CLICommandsTest(CLITest):
         self.assertIsNone(biwak_cli.core.request("DELETE", f"groups/{group.pk}/"))
         self.assertFalse(self.list.todolist.groups.exists())
 
+    def test_groups(self):
+        """Groups with their colors (specs/core.md, "Group colors")"""
+        output = self.biwak(
+            "groups", "create", self.list.pk, "Later", "--color", "lake"
+        )
+        self.assertIn("Later (Lake)", output.output)
+        group = self.list.todolist.groups.get()
+        self.assertEqual(group.color, "lake")
+        self.biwak("groups", "create", self.list.pk, "Soon")
+        listed = self.biwak("groups", "--list", self.list.pk).output
+        self.assertIn("Later", listed)
+        self.assertIn("Lake", listed)
+        output = self.biwak("groups", "update", group.pk, "--color", "none").output
+        self.assertIn("Later (no color)", output)
+        data = json.loads(
+            self.biwak(
+                "groups", "update", group.pk, "--title", "Next", "--color", "berry",
+                "--index", "1", "--json",
+            ).stdout
+        )  # fmt: skip
+        self.assertEqual(
+            (data["title"], data["color"], data["position"]), ("Next", "berry", 2)
+        )
+        result = self.biwak("groups", "update", group.pk, "--color", "amber")
+        self.assertEqual(result.exit_code, 2)
+        self.assertEqual(self.biwak("groups", "update", group.pk).exit_code, 2)
+        self.assertEqual(self.biwak("groups").exit_code, 2)
+        self.biwak("groups", "delete", group.pk)
+        self.assertEqual(
+            list(self.list.todolist.groups.values_list("title", flat=True)), ["Soon"]
+        )
+
     def test_repeat(self):
         result = self.biwak(
             "todos", "create", self.list.pk, "Pay rent", "--due", "2026-11-20",

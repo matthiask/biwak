@@ -82,6 +82,7 @@
           id="group-{{ group.pk }}"
           data-live-list
           data-group-item="{{ group.pk }}"
+          {% if group.color %}data-group-color="{{ group.color }}"{% endif %}
           {% if can_change %}data-move-url="{% url 'group_move' group.pk %}"{% endif %}
         >
           <h2 class="h6 wb-group-title" id="group-{{ group.pk }}-title" data-live>
@@ -95,34 +96,31 @@
             <span class="wb-group-name">{{ group }}</span>
             {% if can_change %}
               <span class="wb-group-tools ms-auto">
-                {% if not forloop.first %}
-                  <form method="post" action="{% url 'group_move' group.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
-                    <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group up' %}">
-                      {% icon "arrow-up" %}
-                    </button>
-                  </form>
-                {% endif %}
-                {% if not forloop.last %}
-                  <form method="post" action="{% url 'group_move' group.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="index" value="{{ forloop.counter }}">
-                    <button type="submit" class="btn btn-sm btn-quiet" title="{% translate 'Move the group down' %}">
-                      {% icon "arrow-down" %}
-                    </button>
-                  </form>
-                {% endif %}
                 <details class="dropdown wb-menu">
-                  <summary class="btn btn-sm btn-quiet" title="{% translate 'Rename or remove the group' %}">
-                    {% icon "pencil" %}
+                  <summary class="btn btn-sm btn-quiet" title="{% translate 'Edit, move or remove the group' %}">
+                    {% icon "three-dots" %}
                   </summary>
                   <div class="dropdown-menu dropdown-menu-end wb-group-menu">
                     <a
                       class="dropdown-item"
-                      href="{% url 'group_rename' group.pk %}"
+                      href="{% url 'group_edit' group.pk %}"
                       data-modal
-                    >{% translate "Rename the group" %}</a>
+                    >{% translate "Edit the group" %}</a>
+                    {# Moving without dragging: the keyboard's way, and without JavaScript #}
+                    {% if not forloop.first %}
+                      <form method="post" action="{% url 'group_move' group.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="index" value="{{ forloop.counter0|add:-1 }}">
+                        <button type="submit" class="dropdown-item">{% translate "Move up" %}</button>
+                      </form>
+                    {% endif %}
+                    {% if not forloop.last %}
+                      <form method="post" action="{% url 'group_move' group.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="index" value="{{ forloop.counter }}">
+                        <button type="submit" class="dropdown-item">{% translate "Move down" %}</button>
+                      </form>
+                    {% endif %}
                     <form method="post" action="{% url 'group_delete' group.pk %}">
                       {% csrf_token %}
                       <button type="submit" class="dropdown-item">

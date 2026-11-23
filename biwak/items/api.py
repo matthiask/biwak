@@ -15,6 +15,7 @@ from ninja.errors import HttpError
 from pydantic import StringConstraints
 
 from biwak import schedules
+from biwak.accounts.models import Color
 from biwak.activity.mentions import resolve as resolve_mentions
 from biwak.activity.operations import (
     NOTE_LENGTH,
@@ -70,6 +71,20 @@ class GroupOut(Schema):
     id: int
     title: str
     position: int
+    # The color's name, "" for none, and its label (specs/core.md, "Group
+    # colors")
+    color: Color | Literal[""] = ""
+    color_name: str = ""
+
+
+def group_out(group):
+    return {
+        "id": group.pk,
+        "title": group.title,
+        "position": group.position,
+        "color": group.color,
+        "color_name": group.get_color_display() if group.color else "",
+    }
 
 
 class ListOut(ItemOut):
@@ -85,10 +100,7 @@ def list_out(item):
         "description": todolist.description,
         "description_html": html(todolist.description),
         "view": todolist.view,
-        "groups": [
-            {"id": g.pk, "title": g.title, "position": g.position}
-            for g in todolist.groups.all()
-        ],
+        "groups": [group_out(g) for g in todolist.groups.all()],
     }
 
 
@@ -228,34 +240,44 @@ GroupTitle = Annotated[
 
 class GroupIn(Schema):
     title: GroupTitle
+    # A palette name or "" for none (the default)
+    color: Color | Literal[""] = ""
 
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
     item = changeable_list(request, list_id)
-    group = ops.create_group(todolist=item.todolist, title=data.title)
-    return Status(
-        201, {"id": group.pk, "title": group.title, "position": group.position}
-    )
+    group = ops.create_group(todolist=item.todolist, title=data.title, color=data.color)
+    return Status(201, group_out(group))
 
 
 class GroupPatch(Schema):
     title: GroupTitle | None = None
+    # A palette name or "" for none
+    color: Color | Literal[""] | None = None
     index: int | None = None
 
 
 @router.patch("groups/{group_id}/", response=GroupOut)
 def group_update(request, group_id: int, data: GroupPatch):
-    """Renames the group and/or moves it (with its to-dos) to ``index``"""
+    """Renames the group, sets its color and/or moves it (with its to-dos)
+    to ``index``"""
     group = changeable_group(request, group_id)[0]
-    if "title" in data.model_fields_set:
-        if data.title is None:
+    for field in ["title", "color"]:
+        if field in data.model_fields_set and getattr(data, field) is None:
             bad_request(_("Leave out what doesn't change instead of sending null."))
-        ops.rename_group(group, title=data.title)
+    ops.update_group(
+        group,
+        **{
+            field: getattr(data, field)
+            for field in ["title", "color"]
+            if field in data.model_fields_set
+        },
+    )
     if data.index is not None:
         ops.move_group(group, index=max(0, data.index))
         group.refresh_from_db()
-    return {"id": group.pk, "title": group.title, "position": group.position}
+    return group_out(group)
 
 
 @router.delete("groups/{group_id}/", response={204: None})
@@ -313,8 +335,7 @@ def todo_out(item, user):
     group = todo.group
     return item_out(item) | {
         "list_id": item.parent_id,
-        "group": group
-        and {"id": group.pk, "title": group.title, "position": group.position},
+        "group": group and group_out(group),
         "position": item.position,
         "notes": todo.notes,
         "notes_html": html(todo.notes, item),

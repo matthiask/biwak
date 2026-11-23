@@ -19,7 +19,7 @@ from django.utils import timezone
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from biwak import schedules
-from biwak.accounts.models import User, own_staff
+from biwak.accounts.models import Color, User, own_staff
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event, Subscription
 from biwak.activity.notify import notify_people
@@ -122,11 +122,20 @@ def create_list(*, project, title, creator, description="", visible=False):
 
 
 @transaction.atomic
-def create_group(*, todolist, title):
+def _checked_color(color):
+    """A palette name or "" (specs/core.md, "Group colors"); ValueError for
+    anything else, the clients' amber included"""
+    if color:
+        Color(color)
+    return color
+
+
+def create_group(*, todolist, title, color=""):
     live.changed(todolist.item, action="grouped")
     return Group.objects.create(
         todolist=todolist,
         title=title,
+        color=_checked_color(color),
         position=_next_position(todolist.groups.all()),
     )
 
@@ -1330,10 +1339,19 @@ def unarchive(item, *, actor):
 
 
 @transaction.atomic
-def rename_group(group, *, title):
-    group.title = title
-    group.save(update_fields=["title"])
-    live.changed(group.todolist.item, action="grouped")
+def update_group(group, *, title=_UNCHANGED, color=_UNCHANGED):
+    """Renames a group or sets its color; neither is an event (groups have
+    none of their own, specs/core.md)"""
+    fields = []
+    if title is not _UNCHANGED and title != group.title:
+        group.title = title
+        fields.append("title")
+    if color is not _UNCHANGED and color != group.color:
+        group.color = _checked_color(color)
+        fields.append("color")
+    if fields:
+        group.save(update_fields=fields)
+        live.changed(group.todolist.item, action="grouped")
 
 
 def trashed_roots(items):
@@ -1570,7 +1588,10 @@ def copy_list(
     )
     groups = {
         group.pk: Group.objects.create(
-            todolist=copy.todolist, title=group.title, position=group.position
+            todolist=copy.todolist,
+            title=group.title,
+            color=group.color,
+            position=group.position,
         )
         for group in source.groups.all()
     }

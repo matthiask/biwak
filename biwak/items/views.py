@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_POST
 
 from biwak import cursors, schedules
-from biwak.accounts.models import User
+from biwak.accounts.models import Color, User
 from biwak.activity import timeline as timelines
 from biwak.activity.operations import (
     StillAssigned,
@@ -24,7 +24,7 @@ from biwak.activity.operations import (
     subscribe,
     unsubscribe,
 )
-from biwak.forms import Form, PeopleField, next_url
+from biwak.forms import ColorSwatches, Form, PeopleField, next_url
 from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
@@ -311,6 +311,14 @@ def changeable_group(request, pk):
 
 class GroupForm(Form):
     title = forms.CharField(label=_("title"), max_length=200)
+    # None by default, as for folders (specs/core.md, "Group colors")
+    color = forms.ChoiceField(
+        label=_("color"),
+        choices=[("", _("None")), *Color.choices],
+        required=False,
+        initial="",
+        widget=ColorSwatches,
+    )
 
 
 def group_create(request, pk):
@@ -318,7 +326,11 @@ def group_create(request, pk):
     item = changeable_list(request, pk)
     form = GroupForm(request.POST or None)
     if form.is_valid():
-        ops.create_group(todolist=item.todolist, title=form.cleaned_data["title"])
+        ops.create_group(
+            todolist=item.todolist,
+            title=form.cleaned_data["title"],
+            color=form.cleaned_data["color"],
+        )
         return redirect(item)
     return form_response(
         request,
@@ -338,21 +350,26 @@ def group_delete(request, pk):
     return redirect(item)
 
 
-def group_rename(request, pk):
-    """Renaming a group: a modal on the list's page, also a page"""
+def group_edit(request, pk):
+    """Editing a group (its title and color): a modal on the list's page,
+    also a page"""
     group, item = changeable_group(request, pk)
-    form = GroupForm(request.POST or None, initial={"title": group.title})
+    form = GroupForm(
+        request.POST or None, initial={"title": group.title, "color": group.color}
+    )
     if form.is_valid():
-        ops.rename_group(group, title=form.cleaned_data["title"])
+        ops.update_group(
+            group, title=form.cleaned_data["title"], color=form.cleaned_data["color"]
+        )
         return redirect(item)
     return form_response(
         request,
         form,
-        title=_("Rename the group"),
+        title=_("Edit the group"),
         item=item,
         parent=item,
         cancel_url=item.get_absolute_url(),
-        submit_label=_("Rename"),
+        submit_label=_("Save"),
     )
 
 

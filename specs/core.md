@@ -90,10 +90,33 @@ own (`notifications.md`); checklists, the toolbar and pasting are
   the keyboard's way.
 - Moves are one request and safe against concurrent moves (the list's
   row is locked).
+- **Moving a group without dragging** (decided 2026-11-23 by the user):
+  "Move up" and "Move down" in the group's menu ("…", "Edit, move or
+  remove the group"), plain forms posting to `group_move`, so the
+  keyboard and pages without JavaScript reorder groups; no arrow
+  buttons on the heading.
 - Deleting a group keeps its to-dos, ungrouped at the end.
 - Groups are changed like their list (`can_change()`): clients add,
   rename, move and remove groups only in lists they created, 403
   otherwise, and don't get the controls (decided 2026-11-20).
+- **Group colors** (decided 2026-11-23 by the user: "same as folders",
+  `files.md`, "Folders"): `Group.color`, a name of the palette or empty
+  (`Color`, never the clients' amber), none unless chosen, never
+  suggested. Set by whoever may change the group (`can_change()` on the
+  list: clients in lists they created) with `ColorSwatches` in "New
+  group" and "Edit the group" (the group's modal, title and color,
+  `group_edit`). Shown as a stripe at the top of the group's card in
+  the palette's fill and the heading in its text tone, in the list and
+  on the board (`data-group-color`, also updated live), always next to
+  the name; clients see it. Not on to-do rows, Home, the to-dos page,
+  mails or the feed. A color alone records no event (groups have none).
+  Copying lists and templates keeps it. API: `color` (a name or `""`)
+  on `POST lists/{id}/groups/` and `PATCH groups/{id}/`, `color` and
+  `color_name` on every group (`GroupOut`: lists, to-dos). CLI (0.64.0):
+  `biwak groups --list LIST`, `groups create LIST TITLE [--color NAME]`,
+  `groups update GROUP [--title] [--color NAME|none] [--index N]`,
+  `groups delete GROUP`. The importer maps Basecamp's colors
+  (`import-basecamp.md`).
 - Completed to-dos leave the sequence and show below the list, newest
   first, collapsed (`todos.md`).
 - A list has a description but no comments; lists are ordered on the

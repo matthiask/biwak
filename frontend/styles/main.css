@@ -1059,6 +1059,68 @@ body:has(.wb-client-tab) .wb-board-frame {
   padding: 0.5rem;
 }
 
+/* Group colors (specs/core.md, "Group colors"): a stripe at the top of the
+   group's card in the palette's fill and the heading in its text tone, in
+   the list and on the board; the name is always next to it */
+
+[data-group-color="heather"] {
+  --wb-group-fill: var(--wb-palette-heather-fill);
+  --wb-group-text: var(--wb-palette-heather-text);
+}
+
+[data-group-color="lake"] {
+  --wb-group-fill: var(--wb-palette-lake-fill);
+  --wb-group-text: var(--wb-palette-lake-text);
+}
+
+[data-group-color="forest"] {
+  --wb-group-fill: var(--wb-palette-forest-fill);
+  --wb-group-text: var(--wb-palette-forest-text);
+}
+
+[data-group-color="glacier"] {
+  --wb-group-fill: var(--wb-palette-glacier-fill);
+  --wb-group-text: var(--wb-palette-glacier-text);
+}
+
+[data-group-color="ember"] {
+  --wb-group-fill: var(--wb-palette-ember-fill);
+  --wb-group-text: var(--wb-palette-ember-text);
+}
+
+[data-group-color="alpenglow"] {
+  --wb-group-fill: var(--wb-palette-alpenglow-fill);
+  --wb-group-text: var(--wb-palette-alpenglow-text);
+}
+
+[data-group-color="moss"] {
+  --wb-group-fill: var(--wb-palette-moss-fill);
+  --wb-group-text: var(--wb-palette-moss-text);
+}
+
+[data-group-color="slate"] {
+  --wb-group-fill: var(--wb-palette-slate-fill);
+  --wb-group-text: var(--wb-palette-slate-text);
+}
+
+[data-group-color="bark"] {
+  --wb-group-fill: var(--wb-palette-bark-fill);
+  --wb-group-text: var(--wb-palette-bark-text);
+}
+
+[data-group-color="berry"] {
+  --wb-group-fill: var(--wb-palette-berry-fill);
+  --wb-group-text: var(--wb-palette-berry-text);
+}
+
+.wb-group[data-group-color] {
+  border-top: 0.25rem solid var(--wb-group-fill);
+}
+
+.wb-group[data-group-color] .wb-group-name {
+  color: var(--wb-group-text);
+}
+
 .wb-group-title {
   display: flex;
   align-items: center;

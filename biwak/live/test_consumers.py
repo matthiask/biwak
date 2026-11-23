@@ -203,7 +203,7 @@ class LiveConsumerTest(TransactionTestCase):
         group = await self.run_op(ops.create_group, todolist=todolist, title="Later")
         self.assertEqual((await self.receive(shared))["action"], "grouped")
         for change in [
-            lambda: ops.rename_group(group, title="Soon"),
+            lambda: ops.update_group(group, title="Soon"),
             lambda: ops.move_group(group, index=0),
             lambda: ops.delete_group(group),
         ]:

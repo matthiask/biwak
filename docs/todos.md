@@ -20,8 +20,10 @@ project. Staff create lists with "New list" on the project's page.
   Clients add new groups only in lists they created.
 - **Groups** are cards inside a list, each with its name as the heading
   ("New group"); the to-dos outside groups come first, in a card of
-  their own. Rename or remove a group with the icons next to its name;
-  removing it keeps its to-dos.
+  their own. The "…" next to a group's name edits it (its name and a
+  color, which marks its card and heading), moves it up or down
+  (without a mouse) or removes it; removing it keeps its to-dos. Drag a
+  group by its grip to move it with its to-dos.
 - **Order:** drag a to-do by its grip to move it within the list, into
   another group or into another list. Click several grips to select
   several to-dos and drag them together. Without a mouse, use "Move

@@ -182,7 +182,7 @@ class ManageTest(TestCase):
             list(self.shared.todolist.groups.values_list("title", flat=True)),
             ["Someday", "Later"],
         )
-        self.client.post(f"/groups/{second.pk}/rename/", {"title": "Maybe"})
+        self.client.post(f"/groups/{second.pk}/edit/", {"title": "Maybe"})
         second.refresh_from_db()
         self.assertEqual(second.title, "Maybe")
 
@@ -192,7 +192,7 @@ class ManageTest(TestCase):
         second = ops.create_group(todolist=self.shared.todolist, title="Someday")
         self.client.force_login(self.cleo)
         for url, data in [
-            (f"/groups/{second.pk}/rename/", {"title": "x"}),
+            (f"/groups/{second.pk}/edit/", {"title": "x"}),
             (f"/groups/{second.pk}/move/", {"index": 0}),
             (f"/groups/{second.pk}/delete/", {}),
             (f"/lists/{self.shared.pk}/groups/", {"title": "New"}),
@@ -233,7 +233,7 @@ class ManageTest(TestCase):
         )
         group = ops.create_group(todolist=own.todolist, title="Now")
         self.client.force_login(self.cleo)
-        self.client.post(f"/groups/{group.pk}/rename/", {"title": "Soon"})
+        self.client.post(f"/groups/{group.pk}/edit/", {"title": "Soon"})
         group.refresh_from_db()
         self.assertEqual(group.title, "Soon")
 
