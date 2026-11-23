@@ -659,6 +659,21 @@ def push_subscription_remove(request, pk):
 
 
 @never_cache
+@require_POST
+def push_subscription_test(request, pk):
+    """The settings' "Send a test" of a device: pushed at once, from the
+    request (specs/web-push.md), the outcome said on the settings"""
+    from biwak.activity import push
+
+    if not push.enabled():
+        raise Http404
+    device = get_object_or_404(request.user.push_subscriptions, pk=pk)
+    tested = push.send_test(device)
+    (messages.success if tested.sent else messages.error)(request, tested.message)
+    return redirect(reverse("settings") + "#devices")
+
+
+@never_cache
 def push_subscription_rename(request, pk):
     """The settings' "Rename…" of a device: a modal, also a page"""
     device = get_object_or_404(request.user.push_subscriptions, pk=pk)

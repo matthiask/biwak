@@ -47,6 +47,11 @@ urlpatterns = [
         name="push_subscription_remove",
     ),
     path(
+        "push/<int:pk>/test/",
+        views.push_subscription_test,
+        name="push_subscription_test",
+    ),
+    path(
         "push/<int:pk>/rename/",
         views.push_subscription_rename,
         name="push_subscription_rename",

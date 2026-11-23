@@ -1,14 +1,20 @@
 """Devices getting push notifications (specs/web-push.md): the settings'
 section, subscribing and removing, the service worker, the API"""
 
+import datetime as dt
 import json
+from unittest.mock import Mock, patch
 
 from django.core.exceptions import ValidationError
+from django.templatetags.static import static
 from django.test import Client, TestCase, override_settings
+from django.utils import timezone
+from pywebpush import WebPushException
 
 from biwak.accounts import operations
 from biwak.accounts.models import APIToken, PushSubscription
 from biwak.activity.test_push import KEYS, subscribe_device
+from biwak.api_conventions import absolute
 from biwak.audit.models import LoggedAction
 from biwak.test_utils import person
 
@@ -254,6 +260,123 @@ class DevicesTest(TestCase):
         self.assertEqual(change.row_data["endpoint"], SUBSCRIPTION["endpoint"])
         self.assertNotIn("auth", change.row_data)
         self.assertNotIn("p256dh", change.row_data)
+
+
+@override_settings(**KEYS)
+class TestPushTest(TestCase):
+    """The settings' "Send a test": pushed at once from the request
+    (decided 2026-11-23), whatever the quiet hours or away"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.cleo = person("Cleo", client=True, language="de")
+        self.device = subscribe_device(self.cleo)
+        self.url = f"/accounts/push/{self.device.pk}/test/"
+        self.webpush = patch("pywebpush.webpush").start()
+        self.addCleanup(patch.stopall)
+
+    def messages(self, response):
+        return [str(m) for m in response.context["messages"]]
+
+    def failing(self, status):
+        return WebPushException("failed", response=Mock(status_code=status))
+
+    def test_offered_in_the_list(self):
+        self.client.force_login(self.cleo)
+        response = self.client.get("/accounts/settings/")
+        self.assertContains(response, f'action="{self.url}"')
+        self.assertContains(response, "Test senden")
+        with override_settings(WEBPUSH_VAPID_PUBLIC_KEY=""):
+            response = self.client.get("/accounts/settings/")
+            self.assertNotContains(response, self.url)
+            self.assertEqual(self.client.post(self.url).status_code, 404)
+        self.webpush.assert_not_called()
+
+    def test_sending(self):
+        LoggedAction.objects.all().delete()
+        # Quiet hours and away don't hold it: it's on purpose
+        self.cleo.quiet_hours = True
+        self.cleo.working_days = []
+        self.cleo.away_until = timezone.localdate() + dt.timedelta(days=3)
+        self.cleo.save()
+        self.client.force_login(self.cleo)
+        response = self.client.post(self.url, follow=True)
+        self.assertRedirects(response, "/accounts/settings/#devices")
+        self.assertEqual(
+            self.messages(response),
+            ["Gesendet. Die Benachrichtigung sollte in ein paar Sekunden erscheinen."],
+        )
+        ((info,), kwargs) = self.webpush.call_args
+        self.assertEqual(info["endpoint"], self.device.endpoint)
+        self.assertEqual(
+            json.loads(kwargs["data"]),
+            {
+                "title": "Biwak",
+                "body": "Push-Benachrichtigungen funktionieren auf diesem Gerät.",
+                "tag": "biwak-test",
+                "url": absolute("/accounts/settings/#devices"),
+                "icon": absolute(static("biwak/icon-192.png")),
+                "actions": [{"action": "off", "title": "Auf diesem Gerät ausschalten"}],
+            },
+        )
+        self.device.refresh_from_db()
+        self.assertIsNotNone(self.device.last_success_at)
+        # Like a real push: nothing in the audit log
+        self.assertFalse(
+            LoggedAction.objects.filter(table_name="accounts_pushsubscription").exists()
+        )
+
+    def test_only_ones_own_and_posted(self):
+        self.client.force_login(self.ada)
+        self.assertEqual(self.client.post(self.url).status_code, 404)
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+        self.webpush.assert_not_called()
+
+    def test_failing(self):
+        self.webpush.side_effect = self.failing(500)
+        self.client.force_login(self.ada)
+        device = subscribe_device(self.ada)
+        url = f"/accounts/push/{device.pk}/test/"
+        with self.assertLogs("biwak.activity.push", "WARNING"):
+            response = self.client.post(url, follow=True)
+        self.assertEqual(
+            self.messages(response),
+            ["That didn't work: the push service answered 500."],
+        )
+        self.webpush.side_effect = ConnectionError("unreachable")
+        with self.assertLogs("biwak.activity.push", "ERROR"):
+            response = self.client.post(url, follow=True)
+        self.assertEqual(
+            self.messages(response), ["That didn't work: the push couldn't be sent."]
+        )
+        with (
+            override_settings(WEBPUSH_VAPID_PRIVATE_KEY="not a key"),
+            self.assertLogs("biwak.activity.push", "ERROR"),
+        ):
+            response = self.client.post(url, follow=True)
+        self.assertEqual(
+            self.messages(response),
+            ["That didn't work: the server's push key is broken."],
+        )
+        device.refresh_from_db()
+        self.assertIsNone(device.last_success_at)
+
+    def test_an_expired_subscription_is_removed(self):
+        self.webpush.side_effect = self.failing(410)
+        device = subscribe_device(self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.post(f"/accounts/push/{device.pk}/test/", follow=True)
+        self.assertEqual(
+            self.messages(response),
+            [
+                (
+                    "This device's subscription had expired and was removed."
+                    " Turn push notifications on again on it."
+                )
+            ],
+        )
+        self.assertEqual(list(PushSubscription.objects.all()), [self.device])
 
 
 @override_settings(**KEYS)

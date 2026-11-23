@@ -143,6 +143,10 @@ oder nur Push-Benachrichtigungen mit „Keine Mails“.
   Benachrichtigung; die Liste zeigt sie nach Browser und System, wann
   hinzugefügt und wann zuletzt verwendet. „Umbenennen…“ gibt einem Gerät
   einen Namen („Arbeitslaptop“), damit du die Geräte auseinanderhältst.
+- „Test senden“ schickt sofort eine Benachrichtigung an dieses Gerät,
+  auch in deinen Ruhezeiten oder während du abwesend bist; die Seite
+  sagt, ob sie rausging. Ist das Abonnement des Geräts abgelaufen, wird
+  es entfernt: Schalte die Benachrichtigungen auf dem Gerät wieder ein.
 - Abmelden auf einem Gerät beendet seine Benachrichtigungen
   („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
   nach dem Anmelden wieder ein.
