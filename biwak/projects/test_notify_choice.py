@@ -200,7 +200,7 @@ class PageTest(Fixture, TestCase):
         self.client.force_login(self.ada)
         response = self.client.get(self.people_url)
         self.assertContains(response, "Only when tagged")
-        self.assertContains(response, "Notified of everything new")
+        self.assertContains(response, "Everything new")
         self.assertContains(response, f"people/{self.dan.pk}/notify/")
         self.assertContains(response, f"people/{self.cleo.pk}/notify/")
 
@@ -230,7 +230,7 @@ class PageTest(Fixture, TestCase):
             f'<select name="notify" id="notify-{self.dan.pk}"'
             ' class="form-select form-select-sm">'
             '<option value="tagged" selected>Only when tagged</option>'
-            '<option value="default">Notified of everything new</option></select>',
+            '<option value="default">Everything new</option></select>',
             html,
         )
         self.assertInHTML(
@@ -443,7 +443,7 @@ class CLITest(Fixture, test_cli.CLITest):
         project_ops.add_member(self.project, self.dan, actor=self.ada, notify="tagged")
         output = self.biwak("members", "--project", self.project.pk).output
         self.assertIn("only when tagged", output)
-        self.assertIn("notified of everything new", output)
+        self.assertIn("everything new", output)
         data = json.loads(
             self.biwak("members", "--project", self.project.pk, "--json").stdout
         )
@@ -459,7 +459,7 @@ class CLITest(Fixture, test_cli.CLITest):
         result = self.biwak(
             "members", "add", self.project.pk, self.dan.pk, "--notify-about-everything"
         )
-        self.assertIn("notified of everything new", result.output)
+        self.assertIn("everything new", result.output)
         self.assertEqual(self.level(self.dan), NotificationLevel.EVERYTHING)
         with self.captureOnCommitCallbacks(execute=True):
             result = self.biwak(

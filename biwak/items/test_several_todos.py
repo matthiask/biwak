@@ -270,6 +270,9 @@ class DatesPageTest(Selection):
         self.assertContains(response, "2 to-dos")
         self.assertContains(response, "Set a date")
         self.assertContains(response, "Move by")
+        # Both fields are there; the script shows the one of the choice
+        self.assertContains(response, 'data-shown-for="dates=keep"')
+        self.assertContains(response, 'data-shown-for="dates=shift"')
         self.assertEqual(self.client.get(target).status_code, 200)
 
     def test_setting_moving_removing(self):

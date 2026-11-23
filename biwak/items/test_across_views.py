@@ -69,6 +69,8 @@ class CopyTest(Fixture, TestCase):
         self.assertContains(response, f'<option value="{self.website.pk}">')
         self.assertNotContains(response, "Secret")
         self.assertContains(response, 'value="Launch"')
+        # The days are there; the script shows them only with "Move by"
+        self.assertContains(response, 'data-shown-for="dates=shift"')
         assert_page(self, self.client.get(self.url()), title="Copy…")
 
     def test_within_the_project(self):

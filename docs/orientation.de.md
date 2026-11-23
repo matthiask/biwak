@@ -242,8 +242,8 @@ die sie kennen dürfen. Dich selbst abwesend melden:
 **Personen einladen:** „Personen einladen“ auf der Seite Personen oder
 „Per Mail einladen“ auf der Personenseite eines Projekts (mit diesem
 Projekt gewählt) öffnet ein Formular für mehrere Personen auf einmal.
-Wähle die Projekte, ob sie nur wenn markiert (der Standard) oder über
-alles Neue benachrichtigt werden, und fülle eine Zeile pro Person aus: Adresse, Name,
+Wähle die Projekte, ob sie „Nur wenn markiert“ (der Standard) oder über
+„Alles Neue“ benachrichtigt werden, und fülle eine Zeile pro Person aus: Adresse, Name,
 Organisation (leer: die der Domain der Adresse) und, für Admins,
 Mitarbeitende oder Kund:in. Verlässt du die Adresse, werden die
 Organisation ihrer Domain und, für Admins, Mitarbeitende für die eigene

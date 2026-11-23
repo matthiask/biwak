@@ -128,6 +128,10 @@ Templates copy lists the same way (`templates.md`).
   "Remove" and a "Days" field ("For “Move by”: negative numbers move
   them earlier."), "Gets “(copy)” if the project has a list of that
   name.", "Makes the copy and 3 to-dos visible to 2 clients."
+  The "Days" field shows only while "Move by" is chosen (decided
+  2026-11-23, like "Due date…" for several to-dos, `handover.md`: a
+  form field's `shown_for`, `frontend/shown-for.js`); without
+  JavaScript it stays visible.
 - **API:** `POST /lists/{id}/copy/` (`project_id`, `title`, `dates`
   keep|shift|remove, `days`, `visible_to_clients`; staff), and `POST
   /items/{id}/move/` with `project_id` (top-level items; a 400 with the

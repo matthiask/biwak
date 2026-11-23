@@ -251,7 +251,7 @@ dev = [
 
 [[package]]
 name = "biwak-cli"
-version = "0.62.0"
+version = "0.62.1"
 source = { editable = "cli" }
 dependencies = [
     { name = "click" },

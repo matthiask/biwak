@@ -336,7 +336,7 @@ def project_join(request, pk):
 
 NOTIFY_LABELS = {
     project_ops.NOTIFY_TAGGED: _("Only when tagged"),
-    project_ops.NOTIFY_DEFAULT: _("Notified of everything new"),
+    project_ops.NOTIFY_DEFAULT: _("Everything new"),
 }
 
 
@@ -348,8 +348,8 @@ def notify_field():
         initial=project_ops.NOTIFY_TAGGED,
         widget=forms.RadioSelect,
         help_text=_(
-            "Only when tagged: posts to everybody don't subscribe the person;"
-            " mentions and assignments still reach them."
+            "Everything new: every new message, doc or file tells the person"
+            " and subscribes them to its comments."
         ),
     )
 

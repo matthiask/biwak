@@ -181,8 +181,10 @@ mention is someone deliberately asking for you.
 **Notified by default or only when tagged** (decided 2026-11-20): how
 someone is in a project is the project's level, not a new setting.
 Whoever adds or invites someone chooses "Only when tagged" ("only what
-concerns me", the default since 2026-11-22) or "Notified of everything
-new" ("everything", called "Notified by default" before), stored as the person's `LevelOverride` for the project
+concerns me", the default since 2026-11-22) or "Everything new"
+("everything", called "Notified by default" and "Notified of everything
+new" before; shortened 2026-11-23 for phones, with the help under the
+choice explaining "Everything new" instead of the default), stored as the person's `LevelOverride` for the project
 (`add_member()`, `invite()`, `set_notify_choice()`,
 `notify_choice()` in `biwak/projects/operations.py`); adding someone
 again doesn't change it. The project's people page shows it under

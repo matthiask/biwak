@@ -136,7 +136,7 @@ activated by `biwak/accounts/middleware.py`.
   Gletscher, Glut, Alpenglühen, Moos, Schiefer, Rinde, Beere; the
   clients' amber is Bernstein.
 - "all-access" projects are "offene Projekte", limited ones
-  "eingeschränkt"; "Only when tagged" is "Nur wenn markiert"; Monday to
+  "eingeschränkt"; "Only when tagged" is "Nur wenn markiert", "Everything new" "Alles Neue"; Monday to
   Friday is "Werktag".
 - The rule widget's controls stay pieces around the fields ("alle [3]
   Tage", "am [März] [5]"); the description below them is a whole
