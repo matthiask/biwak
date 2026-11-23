@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 20:32+0100\n"
+"POT-Creation-Date: 2026-11-23 20:55+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1028,6 +1028,39 @@ msgstr "Gib einen Eintrag oder „alle“ an, nicht beides."
 msgid "activity"
 msgstr "Aktivität"
 
+#: biwak/activity/digest.py biwak/items/due.py
+#: biwak/templates/items/_due_badge.html
+msgid "Overdue"
+msgstr "Überfällig"
+
+#: biwak/activity/digest.py biwak/activity/feed.py biwak/items/due.py
+#: biwak/palette/queries.py biwak/templates/items/_due_badge.html
+msgid "Today"
+msgstr "Heute"
+
+#: biwak/activity/digest.py
+msgid "Starts today"
+msgstr "Beginnt heute"
+
+#: biwak/activity/digest.py biwak/activity/notify.py biwak/activity/timeline.py
+#: biwak/items/across.py biwak/projects/template_views.py
+msgid "and"
+msgstr "und"
+
+#: biwak/activity/digest.py
+#, python-format
+msgid "%(count)d comment by %(people)s."
+msgid_plural "%(count)d comments by %(people)s."
+msgstr[0] "%(count)d Kommentar von %(people)s."
+msgstr[1] "%(count)d Kommentare von %(people)s."
+
+#: biwak/activity/digest.py
+#, python-format
+msgid "%(count)d reaction by %(people)s."
+msgid_plural "%(count)d reactions by %(people)s."
+msgstr[0] "%(count)d Reaktion von %(people)s."
+msgstr[1] "%(count)d Reaktionen von %(people)s."
+
 #: biwak/activity/feed.py biwak/forms.py biwak/templatetags/biwak.py
 #, python-format
 msgid "%(name)s (inactive)"
@@ -1090,11 +1123,6 @@ msgid_plural "%(count)d items"
 msgstr[0] "%(count)d Eintrag"
 msgstr[1] "%(count)d Einträge"
 
-#: biwak/activity/feed.py biwak/items/due.py biwak/palette/queries.py
-#: biwak/templates/items/_due_badge.html
-msgid "Today"
-msgstr "Heute"
-
 #: biwak/activity/feed.py
 msgid "Yesterday"
 msgstr "Gestern"
@@ -1121,6 +1149,9 @@ msgstr "Liste"
 #: biwak/activity/history.py biwak/activity/views.py biwak/bookmarks/views.py
 #: biwak/checkins/views.py biwak/files/board.py biwak/files/library.py
 #: biwak/items/across.py biwak/items/by_due.py biwak/projects/views.py
+#: biwak/templates/mails/_digest_todos.html
+#: biwak/templates/mails/_digest_todos.txt biwak/templates/mails/digest.html
+#: biwak/templates/mails/digest.txt
 msgid "Visible to clients"
 msgstr "Für Kund:innen sichtbar"
 
@@ -1671,11 +1702,6 @@ msgid "%(people)s will be told."
 msgid_plural "%(people)s will be told."
 msgstr[0] "%(people)s wird benachrichtigt."
 msgstr[1] "%(people)s werden benachrichtigt."
-
-#: biwak/activity/notify.py biwak/activity/timeline.py biwak/items/across.py
-#: biwak/projects/template_views.py
-msgid "and"
-msgstr "und"
 
 #: biwak/activity/notify.py
 #, python-format
@@ -3272,10 +3298,6 @@ msgstr "Meine To-dos"
 #: biwak/templates/projects/home.html
 msgid "To-dos I assigned"
 msgstr "Von mir zugewiesene To-dos"
-
-#: biwak/items/due.py biwak/templates/items/_due_badge.html
-msgid "Overdue"
-msgstr "Überfällig"
 
 #: biwak/items/due.py
 msgid "This week"
@@ -6738,8 +6760,9 @@ msgstr "Abbrechen"
 #: biwak/templates/checkins/mails/summary.txt
 #: biwak/templates/items/_client_banner.html
 #: biwak/templates/items/_client_tab.html biwak/templates/mails/_batch.html
-#: biwak/templates/mails/_batch.txt biwak/templates/mails/digest.html
-#: biwak/templates/mails/digest.txt biwak/templates/mails/notification.html
+#: biwak/templates/mails/_batch.txt biwak/templates/mails/_digest_item.html
+#: biwak/templates/mails/_digest_item.txt
+#: biwak/templates/mails/notification.html
 #: biwak/templates/mails/notification.txt
 msgid "Clients can see this."
 msgstr "Kund:innen können das sehen."
@@ -6758,8 +6781,10 @@ msgstr "Antworte auf diese Mail, um zu antworten."
 #: biwak/templates/checkins/mails/question.html
 #: biwak/templates/checkins/mails/question.txt
 #: biwak/templates/checkins/mails/summary.html
-#: biwak/templates/checkins/mails/summary.txt biwak/templates/mails/digest.html
-#: biwak/templates/mails/digest.txt biwak/templates/mails/notification.html
+#: biwak/templates/checkins/mails/summary.txt
+#: biwak/templates/mails/_digest_item.html
+#: biwak/templates/mails/_digest_item.txt
+#: biwak/templates/mails/notification.html
 #: biwak/templates/mails/notification.txt
 msgid "Unsubscribe from this"
 msgstr "Nicht mehr abonnieren"
@@ -7509,6 +7534,19 @@ msgstr "Nichts zu tun."
 msgid "Completed."
 msgstr "Erledigt."
 
+#: biwak/templates/mails/digest.html biwak/templates/mails/digest.txt
+msgid "Needs you today"
+msgstr "Braucht dich heute"
+
+#: biwak/templates/mails/digest.html biwak/templates/mails/digest.txt
+#: biwak/templates/projects/home.html
+msgid "Waiting on others"
+msgstr "Warten auf andere"
+
+#: biwak/templates/mails/digest.html biwak/templates/mails/digest.txt
+msgid "For you"
+msgstr "Für dich"
+
 #: biwak/templates/mails/notification.html
 #: biwak/templates/mails/notification.txt
 msgid "Reply to this mail to comment."
@@ -7882,10 +7920,6 @@ msgstr "Alle %(n)s To-dos"
 #: biwak/templates/projects/home.html
 msgid "All my to-dos"
 msgstr "Alle meine To-dos"
-
-#: biwak/templates/projects/home.html
-msgid "Waiting on others"
-msgstr "Warten auf andere"
 
 #: biwak/templates/projects/home.html
 msgid "All to-dos I assigned"

@@ -95,7 +95,8 @@ Under Settings, "Mails":
 - **A mail for each change** (the default): one mail per item, sent
   about ten minutes after its last change, so quick edits and several
   comments arrive together;
-- **A daily digest** at 07:00, with what happened the day before;
+- **A daily digest** at 07:00, with what happened the day before (see
+  below);
 - **No mails:** the lantern only, also no check-in questions and
   summaries. Switching back to mails sends what is still unread then
   (except what you marked as unread) with the next mail or digest.
@@ -103,6 +104,18 @@ Under Settings, "Mails":
 What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. Mails carry the full text; the
 first line says when clients can see the item.
+
+**The daily digest** starts with your to-dos:
+
+- **Needs you today:** your open to-dos which are overdue, due today
+  or start today, each with its project and dates.
+- **Waiting on others:** the overdue to-dos you assigned to others,
+  with who has them, "(away until 3 Dec)" for those away.
+
+Then what happened: what mentions you or assigns you a to-do first,
+"For you", in full; the rest one line per item, by project ("Ada
+changed it. 3 comments by Ada and Bob."), linked to the item. Without
+notifications there's no digest.
 
 ## Push notifications
 

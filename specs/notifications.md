@@ -1,6 +1,7 @@
 # Notifications: events, subscriptions, mentions, mails, replies
 
-**Status:** built (2026-11-22).
+**Status:** built (2026-11-22); the daily digest's to-dos, "For you"
+and one line per item built 2026-11-23.
 
 `biwak/activity/` (`operations.record()`, `mentions.py`,
 `notify.py`, `mails.py`, `./manage.py send_mails`, the settings pages,
@@ -266,7 +267,8 @@ large).
   day before, grouped by project and item, a batch as one entry; nothing
   to say, no mail. Subject `[Biwak] What happened on 19. November 2026`
   (or "from … to …" for more than one day, the first and last day with
-  notifications), from `Biwak <DEFAULT_FROM_EMAIL>`.
+  notifications), from `Biwak <DEFAULT_FROM_EMAIL>`. What it holds:
+  "The daily digest" below (decided 2026-11-23).
 - **Content:** the full text (the comment, the to-do with its notes, the
   message), plain text and HTML (`templates/mails/`). Attachments are
   links (the download checks access). The first line says when the item
@@ -306,6 +308,59 @@ large).
   their mail into the outbox (`mail-sending.md`); a mail failing to be
   built is logged and its notifications stay unsent, the other mails,
   digests and check-ins go out anyway.
+
+## The daily digest (decided 2026-11-23)
+
+Decided with the user 2026-11-23 (no iCal feed, good digests instead,
+`SPEC.md`). `biwak/activity/digest.py`, `mails.digest_mail()`,
+`templates/mails/digest.*`, `_digest_todos.*`, `_digest_item.*`; plain
+text and HTML, in `language_for(recipient)`.
+
+1. **Needs you today**, at the top: the recipient's own open to-dos
+   which are overdue, due today or start today (`start-dates.md`),
+   each with its link, project, "Overdue", "Today" or "Starts today"
+   and its dates (the rows' range, "23–27 Nov"). From their to-dos, not
+   from notifications: `due.todos(user, assignee="me")`, Home's and the
+   to-dos page's query (`Item.objects.visible_to()`, no archived
+   projects or lists, no templates, nothing trashed), the most urgent
+   first.
+2. **Waiting on others:** open, overdue to-dos the recipient assigned to
+   others (`due.todos(user, assigned_by="me")` without those also
+   assigned to them, as Home's "Waiting on others"), with who has them
+   (the other assignees, by the names the reader may know,
+   `people_known_to()`) and "(away until 3 Dec)" for those away.
+3. **For you:** the notifications mentioning or assigning them
+   (`digest.for_you()`, push notifications' test), and the to-dos of
+   one "Assign…" assigning them, first and **in full**, as before: the
+   comment, the to-do with its notes (decided: assignments in full too,
+   like mentions, someone deliberately asking for them; the whole item's
+   notifications of the day come along, so the mention has its
+   context).
+4. **The rest, one line per item**, by project: the item linked and
+   what happened in the mails' words, each line once ("Ada changed it.
+   Ada completed it."), then "3 comments by Ada and Bob." and "2
+   reactions by Carl." (`digest.summary()`); a batch is its line ("Ada
+   uploaded 5 files to Minutes."). No unsubscribe link per line (the
+   settings link at the end; the item's page has the subscribers box);
+   the "For you" items keep theirs. Only the digest changes: mails per
+   change stay as they were, and so does **the mail after quiet hours or
+   being away of people getting a mail per change** (the digest's form,
+   `short=False`: they chose the full text), which has "For you" first
+   but no to-do sections.
+
+Sections 1 and 2 are in every daily digest (delivery "daily digest"),
+before the heading "What happened on …", on any day the digest goes
+(weekends included), with the held digest after being away too; the
+subject stays "What happened on …". Clients get them too: only to-dos
+visible to them (`visible_to()`), only names of people they may know.
+
+**No digest without notifications** (decided 2026-11-23 by the user:
+"no mails when the digest would be empty; just enrich the digest with
+additional useful info"): overdue to-dos alone send nothing. The
+choices above (digest people only, the "each change" mail after quiet
+hours or away in full without to-do sections, assignments in full, no
+unsubscribe link on the one-liners, "Waiting on others" without the
+to-dos also one's own, the wording) were confirmed the same day.
 
 ## API and CLI
 

@@ -1,0 +1,5 @@
+{% load i18n %}{% for todo in todos %}
+- {{ todo.title }} ({{ todo.project }}){% if todo.is_client_visible %} [{% translate "Visible to clients" %}]{% endif %}
+  {{ todo.label }}{% if todo.dates %} · {{ todo.dates }}{% endif %}{% if todo.assignees %} · {{ todo.assignees }}{% endif %}
+  {{ todo.url }}
+{% endfor %}

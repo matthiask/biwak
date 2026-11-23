@@ -139,8 +139,8 @@ class NotifyingTest(TestCase):
         self.assertEqual(self.send(minutes=(at - local).total_seconds() / 60), 1)
         body = mail.outbox[0].body
         self.assertIn("Order the tent", body)
-        self.assertIn("Bob Example: 👍", body)
-        self.assertIn("Carl Example: Thanks!", body)
+        # One line per item (specs/notifications.md, "Digest")
+        self.assertIn("2 reactions by Bob Example and Carl Example.", body)
 
     def test_client_isnt_mailed_about_internal(self):
         """A client who created something that became internal is told

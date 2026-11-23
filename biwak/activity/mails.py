@@ -22,7 +22,7 @@ from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery, User
-from biwak.activity import feed, mentions
+from biwak.activity import digest, feed, mentions
 from biwak.activity.models import Action, Notification
 from biwak.activity.operations import is_subscribed
 from biwak.api_conventions import absolute
@@ -518,10 +518,14 @@ def digest_heading(notifications):
     }
 
 
-def digest_mail(user, notifications):
-    """The notifications before today, grouped by project and item; None
-    when there's nothing left to say"""
-
+def digest_mail(user, notifications, *, todos=None, short=True):
+    """The digest (specs/notifications.md, "Digest"): with ``todos``
+    (``digest.todos()``, the daily digest's) the person's to-dos needing
+    them today and those they wait on first; then the notifications,
+    those mentioning or assigning them in full (``digest.for_you()``),
+    the rest one line per item (``short``; in full for the mail after
+    quiet hours or being away of people getting a mail per change),
+    grouped by project. None when there's nothing to say."""
     from biwak.activity.lantern import group_batches
 
     def key(notification):
@@ -538,25 +542,45 @@ def digest_mail(user, notifications):
             *key(n),
         ),
     )
+    for_you = []
     projects = []
     for project, by_project in groupby(notifications, lambda n: n.event.item.project):
         items = []
         for (batch, _item_id), by_key in groupby(by_project, key):
             group = list(by_key)
+            mine = any(digest.for_you(n) for n in group)
             if batch:
-                # Files uploaded together: one entry
-                items.append(_batch(group, user))
+                # Files uploaded or to-dos assigned together: one entry
+                entry = _batch(group, user) | {"short": short and not mine}
+                (for_you if mine else items).append(entry)
+                continue
+            item = group[0].event.item
+            if short and not mine:
+                if line := digest.summary(group, user):
+                    items.append({
+                        "short": True,
+                        "title": mentions.title(item.title, item),
+                        "url": absolute(item.get_absolute_url()),
+                        "line": line,
+                        "is_client_visible": item.is_client_visible,
+                    })
             elif entries := _entries(group, user):
-                items.append(_item(group[0].event.item, user) | {"entries": entries})
+                entry = _item(item, user) | {"entries": entries}
+                (for_you if mine else items).append(entry)
         if items:
             projects.append({"project": project, "items": items})
-    if not projects:
+    # The to-do sections only enrich a digest with notifications (decided
+    # 2026-11-23): nothing happened, no mail
+    if not (for_you or projects):
         return None
+    heading = digest_heading(notifications)
     context = {
         "user": user,
-        "heading": digest_heading(notifications),
+        "heading": heading,
+        "for_you": for_you,
         "projects": projects,
         "settings_url": absolute(reverse("settings")),
+        **(todos or {}),
     }
     return build_mail(
         user,
@@ -717,7 +741,9 @@ def _send_held(unsent, now):
                 user,
                 [pk for _what, group in groups for pk in group["pks"]],
                 now,
-                lambda notifications, user=user: digest_mail(user, notifications),
+                lambda notifications, user=user: digest_mail(
+                    user, notifications, short=False
+                ),
                 MailKind.DIGEST,
             )
     return count
@@ -773,6 +799,7 @@ def send_mails(*, now=None):
     for pk, user_id in waiting.values_list("pk", "user"):
         digests.setdefault(user_id, []).append(pk)
     users = User.objects.in_bulk(digests)
+    today = local.date()
     for user_id, pks in digests.items():
         user = users[user_id]
         if not _digest_due(user, local):
@@ -781,7 +808,9 @@ def send_mails(*, now=None):
             user,
             pks,
             now,
-            lambda notifications, user=user: digest_mail(user, notifications),
+            lambda notifications, user=user: digest_mail(
+                user, notifications, todos=digest.todos(user, today)
+            ),
             MailKind.DIGEST,
         )
     return count

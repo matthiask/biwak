@@ -1,18 +1,19 @@
-{% load i18n %}{% autoescape off %}{{ heading }}
-{% for group in projects %}
-== {{ group.project }} ==
-{% for item in group.items %}{% if item.batch %}
-{% with title=item.title url=item.url line=item.line files=item.files is_client_visible=item.is_client_visible %}{% include "mails/_batch.txt" %}{% endwith %}{% else %}{% with title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text_plain=item.text_plain url=item.url %}
-{% if item.item.is_client_visible %}{% translate "Clients can see this." %}
-
-{% endif %}{% for entry in item.entries %}{{ entry.line }}{% if entry.comment_text %}
-
-{{ entry.comment_text }}{% endif %}{% if entry.reactions %}
-{{ entry.reactions }}{% endif %}
-
-{% endfor %}{% include "mails/_item.txt" %}
-{% translate "Unsubscribe from this" %}: {{ item.unsubscribe_url }}
-{% endwith %}{% endif %}{% endfor %}{% endfor %}
+{% load i18n %}{% autoescape off %}{% if needs_you %}# {% translate "Needs you today" %}
+{% include "mails/_digest_todos.txt" with todos=needs_you %}
+{% endif %}{% if waiting %}# {% translate "Waiting on others" %}
+{% include "mails/_digest_todos.txt" with todos=waiting %}
+{% endif %}{% if heading %}# {{ heading }}
+{% endif %}{% if for_you %}
+## {% translate "For you" %}
+{% for item in for_you %}
+{{ item.project }}
+{% include "mails/_digest_item.txt" %}{% endfor %}{% endif %}{% for group in projects %}
+## {{ group.project }}
+{% for item in group.items %}
+{% if item.short %}- {{ item.title }}{% if item.is_client_visible %} [{% translate "Visible to clients" %}]{% endif %}
+  {{ item.line }}
+  {{ item.url }}
+{% else %}{% include "mails/_digest_item.txt" %}{% endif %}{% endfor %}{% endfor %}
 --
 {% translate "Your notification settings" %}: {{ settings_url }}
 {% endautoescape %}
