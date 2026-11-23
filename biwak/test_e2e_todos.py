@@ -838,14 +838,18 @@ class RuleWidgetTest(E2ETestCase):
         frequency.select_option("weekly")
         self.assertEqual(self.visible_parts(widget), {"weekly"})
         interval.fill("1")
-        # The anchor's weekday is on: today
+        # The anchor's weekday is on: today's, so clicking a chip may turn it
+        # off (on a Monday, "Mon" is on already); no weekday at all first
+        expect(widget.locator(".wb-chip input:checked")).to_have_count(1)
+        while widget.locator(".wb-chip input:checked").count():
+            widget.locator(".wb-chip:has(input:checked)").first.click()
+        # No weekday at all: the validation message
+        expect(description).to_have_text("Choose at least one weekday.")
         widget.locator(".wb-chip", has_text="Mon").click()
         widget.locator(".wb-chip", has_text="Wed").click()
         expect(description).to_contain_text("Monday, Wednesday")
-        # No weekday at all: the validation message
         while widget.locator(".wb-chip input:checked").count():
             widget.locator(".wb-chip:has(input:checked)").first.click()
-        expect(description).to_have_text("Choose at least one weekday.")
 
         frequency.select_option("monthly")
         self.assertEqual(self.visible_parts(widget), {"monthly"})
