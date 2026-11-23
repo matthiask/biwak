@@ -67,7 +67,8 @@ unless they choose otherwise.
 
 The lamp icon in the bar shows a dot while something is unread. Opening
 it lists the unread entries grouped by item, newest first, then the
-latest read ones. The page "All notifications" has the whole list with
+latest read ones. Each item is listed once: one with something unread
+shows what you've read already in the same entry, quieter. The page "All notifications" has the whole list with
 "Unread" and "Mentions only".
 
 - **Opening an entry reads it** (with the item's comments) and takes you

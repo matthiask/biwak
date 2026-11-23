@@ -32,7 +32,11 @@ and pages that update while they're open.
   `frontend/lantern.js` fetches the count on every page and when told):
   bookmarked items first, then the unread entries (at most 100, the page
   has all), then the latest 30 read ones, newest first, grouped by item
-  ("Mark all as read", a link to the page). No "Read" and "Unread"
+  ("Mark all as read", a link to the page). **One entry per item**
+  (decided 2026-11-23: an item read once and told about again showed
+  twice): an item with unread notifications has its read ones among
+  those 30 in its entry among the unread, quiet, not a second entry
+  among the read. No "Read" and "Unread"
   headings; one divider between groups (the items' borders, no `<hr>`).
   `min(34rem, 100vw - 2rem)` wide, placed by `menus.js`; on a phone it
   spans the screen below the bar. Without JavaScript the button links to

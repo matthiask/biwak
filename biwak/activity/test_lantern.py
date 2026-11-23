@@ -210,6 +210,20 @@ class ListingTest(LanternTestCase):
         self.assertEqual([item.title for item, _e in unread], ["Budget"])
         self.assertEqual([item.title for item, _e in read], ["Order the tent"])
 
+    def test_an_item_with_read_and_unread_notifications_is_one_entry(self):
+        # Followed after the comment; completed afterwards
+        self.comment(self.todo, "Packed it")
+        lantern.read(self.bob, item=self.todo)
+        self.act(lambda: ops.complete(self.todo, actor=self.ada))
+        _bookmarked, unread, read, _more = lantern.menu(self.bob)
+        self.assertEqual(read, [])
+        [(item, entries)] = unread
+        self.assertEqual(item, self.todo)
+        self.assertEqual(
+            [(n.event.action, n.read_at is None) for n in entries],
+            [("completed", True), ("commented", False)],
+        )
+
     def test_the_menu_has_the_latest_30_read(self):
         for index in range(lantern.MENU_READ + 5):
             self.comment(self.todo, f"Comment {index}")
