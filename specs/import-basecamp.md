@@ -209,7 +209,7 @@ neither `suspend` nor `resources` yet.
 | To-do set, to-do list | List |
 | To-do list group | Group of the list |
 | To-do | To-do (assignees, due and start dates, completion, notes) |
-| Card table | List with its columns as groups, shown as board |
+| Card table | List with its columns as groups, shown as board; the columns' colors as below |
 | Card | To-do in its column's group; steps as a checklist in the notes (confirmed 2026-11-21: the reason for checklists in Markdown) |
 | Message board, message | Message board, message (category by name, ignoring case, in the installation's one list; created when missing, with Basecamp's icon as its emoji; confirmed 2026-11-21) |
 | Vault (folder), document, upload | Folder, doc, file |
@@ -219,6 +219,29 @@ neither `suspend` nor `resources` yet.
 | Subscriptions, bookmarks | Subscriptions (who can see it), bookmarks |
 | Email forwards, forward | Message (see below) |
 | Schedule, chat, pings, wormholes | Not imported |
+
+### Column colors
+
+Decided 2026-11-23 by the user: a card table column's `color` (bc3-api,
+"Change color of a column": white, red, orange, yellow, green, blue,
+aqua, purple, gray, pink, brown, or `null`) becomes the group's color,
+the nearest of the palette (`BASECAMP_COLORS` in
+`biwak/importer/importer.py`); a second run takes over a changed color
+like a changed title. A to-do list group with a `color` is mapped the
+same way.
+
+| Basecamp | Biwak |
+| --- | --- |
+| white, `null`, anything else | none |
+| red, orange | Ember |
+| yellow | Moss (the clients' amber is reserved) |
+| green | Forest |
+| blue | Lake |
+| aqua | Glacier |
+| purple | Heather |
+| gray | Slate |
+| pink | Alpenglow |
+| brown | Bark |
 
 ## Rules
 
