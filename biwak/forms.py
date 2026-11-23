@@ -6,7 +6,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 
 from biwak.richtext.preserve import keep_source
-from biwak.text import line_breaks
+from biwak.richtext.text import line_breaks
 
 
 # Django 6.1's label of empty choices (``BLANK_CHOICE_LABEL``) has no German

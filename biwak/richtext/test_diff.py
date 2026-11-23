@@ -9,7 +9,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 from pycrdt import Doc, XmlFragment, XmlText
 
-from biwak.checklists import tick
+from biwak.richtext.checklists import tick
 from biwak.richtext.diff import document, edit
 from biwak.richtext.parse import parse
 from biwak.richtext.serialize import serialize

@@ -267,7 +267,7 @@ neither `suspend` nor `resources` yet.
   colors the most common covering at least 60 %). A dry run fetches
   nothing; people with an image are never fetched again.
 - **Rich text:** HTML to Markdown with `markdownify`
-  (`biwak/htmlmarkdown.py`, shared with pasting); mentions of the
+  (`biwak/richtext/htmlmarkdown.py`, shared with pasting); mentions of the
   project's people become `[@Name](person:ID)`, others stay `@Name`;
   files in texts are downloaded once and attached; links to imported
   recordings are rewritten.

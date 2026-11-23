@@ -6,7 +6,7 @@ from pathlib import Path
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from biwak.htmlmarkdown import from_clipboard
+from biwak.richtext.htmlmarkdown import from_clipboard
 from biwak.test_utils import person
 
 

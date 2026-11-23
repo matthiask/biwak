@@ -30,7 +30,7 @@ def _initial_state(content):
 
 
 def line_breaks(apps, schema_editor):
-    from biwak.text import line_breaks
+    from biwak.richtext.text import line_breaks
 
     Doc = apps.get_model("items", "Doc")
     LiveState = apps.get_model("collab", "LiveState")

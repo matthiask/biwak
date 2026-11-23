@@ -287,7 +287,7 @@ class Checklist(models.Model):
         abstract = True
 
     def save(self, *args, update_fields=None, **kwargs):
-        from biwak import checklists
+        from biwak.richtext import checklists
 
         if update_fields is None or self.checklist_text in update_fields:
             self.checklist_done, self.checklist_total = checklists.count(

@@ -11,7 +11,6 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from biwak import checklists
 from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import Color
 from biwak.activity import mentions
@@ -38,6 +37,7 @@ from biwak.items.models import (
     Upload,
 )
 from biwak.projects.models import FilesOrdering, MessagesOrder, Project
+from biwak.richtext import checklists
 
 
 _UNCHANGED = ops._UNCHANGED

@@ -12,9 +12,10 @@ the forwarder's mail is taken as it is.
 
 The text is the whole mail (the forwarder's lines above, the original
 below, quotes and signatures kept) without the header block: HTML through
-the paste converter (``biwak.htmlmarkdown``), else the plain text. Inline
-images stay where they were: as placeholders (``File.placeholder``)
-that ``biwak.forwarding.operations`` replaces with the stored files.
+the paste converter (``biwak.richtext.htmlmarkdown``), else the plain
+text. Inline images stay where they were: as placeholders
+(``File.placeholder``) that ``biwak.forwarding.operations`` replaces
+with the stored files.
 """
 
 import dataclasses
@@ -25,9 +26,9 @@ from email.utils import getaddresses, parseaddr, parsedate_to_datetime
 from bs4 import BeautifulSoup
 from django.utils import timezone
 
-from biwak.htmlmarkdown import from_clipboard
 from biwak.inbound.providers import MIN_INLINE_SIZE
 from biwak.inbound.strip import _Text
+from biwak.richtext.htmlmarkdown import from_clipboard
 
 
 @dataclasses.dataclass

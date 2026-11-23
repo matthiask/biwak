@@ -85,8 +85,9 @@ activated by `biwak/accounts/middleware.py`.
   English "22 Nov 2026", German "22. Nov. 2026" (decided 2026-11-22),
   24-hour times in both; relative times ("vor 13
   Stunden", one unit, `ui-feedback.md` round 8; `ago()` in
-  `biwak/text.py`, units of their own for German's dative); weekday and month
-  names in the rule widget and check-ins' schedules; file sizes.
+  `biwak/richtext/text.py`, units of their own for German's dative);
+  weekday and month names in the rule widget and check-ins' schedules;
+  file sizes.
 - **Mails** in the recipient's language: their choice, else for an
   invitation the inviter's language at the time, else English
   (`LANGUAGE_CODE`; `User.invitation_language` remembers the language

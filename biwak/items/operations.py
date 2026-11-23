@@ -18,7 +18,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
-from biwak import checklists, schedules
+from biwak import schedules
 from biwak.accounts.models import User, own_staff
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event, Subscription
@@ -58,7 +58,8 @@ from biwak.live import announce as live
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, knows_people_of
 from biwak.public_links.operations import end_links
-from biwak.text import line_breaks
+from biwak.richtext import checklists
+from biwak.richtext.text import line_breaks
 
 
 def _next_position(qs):
@@ -288,7 +289,8 @@ def create_doc(
         parent=parent,
         visible=visible and parent is None,
     )
-    # The live editor counts a line break as one character (biwak/text.py)
+    # The live editor counts a line break as one character
+    # (biwak/richtext/text.py)
     content = line_breaks(content)
     Doc.objects.create(item=item, content=content)
     DocVersion.objects.create(

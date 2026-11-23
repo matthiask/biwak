@@ -8,10 +8,10 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from biwak import checklists
 from biwak.checkins import operations as checkin_ops
 from biwak.items import editing, operations as ops
 from biwak.items.models import Editing, Kind
+from biwak.richtext import checklists
 from biwak.test_utils import bare_doc, check_in_answers, person, project
 
 

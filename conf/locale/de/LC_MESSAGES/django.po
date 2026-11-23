@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 07:54+0100\n"
+"POT-Creation-Date: 2026-11-23 07:55+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -5110,6 +5110,68 @@ msgstr "Eine Reaktion hat höchstens %(max)d Zeichen."
 msgid "You can't react to this."
 msgstr "Darauf kannst du nicht reagieren."
 
+#: biwak/richtext/text.py
+#, python-format
+msgctxt "ago"
+msgid "%(num)d year"
+msgid_plural "%(num)d years"
+msgstr[0] "%(num)d Jahr"
+msgstr[1] "%(num)d Jahren"
+
+#: biwak/richtext/text.py
+#, python-format
+msgctxt "ago"
+msgid "%(num)d month"
+msgid_plural "%(num)d months"
+msgstr[0] "%(num)d Monat"
+msgstr[1] "%(num)d Monaten"
+
+#: biwak/richtext/text.py
+#, python-format
+msgctxt "ago"
+msgid "%(num)d week"
+msgid_plural "%(num)d weeks"
+msgstr[0] "%(num)d Woche"
+msgstr[1] "%(num)d Wochen"
+
+#: biwak/richtext/text.py
+#, python-format
+msgctxt "ago"
+msgid "%(num)d day"
+msgid_plural "%(num)d days"
+msgstr[0] "%(num)d Tag"
+msgstr[1] "%(num)d Tagen"
+
+#: biwak/richtext/text.py
+#, python-format
+msgctxt "ago"
+msgid "%(num)d hour"
+msgid_plural "%(num)d hours"
+msgstr[0] "%(num)d Stunde"
+msgstr[1] "%(num)d Stunden"
+
+#: biwak/richtext/text.py
+#, python-format
+msgctxt "ago"
+msgid "%(num)d minute"
+msgid_plural "%(num)d minutes"
+msgstr[0] "%(num)d Minute"
+msgstr[1] "%(num)d Minuten"
+
+#: biwak/richtext/text.py
+msgid "just now"
+msgstr "gerade eben"
+
+#: biwak/richtext/text.py
+#, python-format
+msgid "%(time)s ago"
+msgstr "vor %(time)s"
+
+#: biwak/richtext/text.py
+#, python-format
+msgid "on %(date)s"
+msgstr "am %(date)s"
+
 #: biwak/schedules.py
 msgid "Monday"
 msgstr "Montag"
@@ -8039,68 +8101,6 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
-
-#: biwak/text.py
-#, python-format
-msgctxt "ago"
-msgid "%(num)d year"
-msgid_plural "%(num)d years"
-msgstr[0] "%(num)d Jahr"
-msgstr[1] "%(num)d Jahren"
-
-#: biwak/text.py
-#, python-format
-msgctxt "ago"
-msgid "%(num)d month"
-msgid_plural "%(num)d months"
-msgstr[0] "%(num)d Monat"
-msgstr[1] "%(num)d Monaten"
-
-#: biwak/text.py
-#, python-format
-msgctxt "ago"
-msgid "%(num)d week"
-msgid_plural "%(num)d weeks"
-msgstr[0] "%(num)d Woche"
-msgstr[1] "%(num)d Wochen"
-
-#: biwak/text.py
-#, python-format
-msgctxt "ago"
-msgid "%(num)d day"
-msgid_plural "%(num)d days"
-msgstr[0] "%(num)d Tag"
-msgstr[1] "%(num)d Tagen"
-
-#: biwak/text.py
-#, python-format
-msgctxt "ago"
-msgid "%(num)d hour"
-msgid_plural "%(num)d hours"
-msgstr[0] "%(num)d Stunde"
-msgstr[1] "%(num)d Stunden"
-
-#: biwak/text.py
-#, python-format
-msgctxt "ago"
-msgid "%(num)d minute"
-msgid_plural "%(num)d minutes"
-msgstr[0] "%(num)d Minute"
-msgstr[1] "%(num)d Minuten"
-
-#: biwak/text.py
-msgid "just now"
-msgstr "gerade eben"
-
-#: biwak/text.py
-#, python-format
-msgid "%(time)s ago"
-msgstr "vor %(time)s"
-
-#: biwak/text.py
-#, python-format
-msgid "on %(date)s"
-msgstr "am %(date)s"
 
 #~ msgid "Notified of everything new"
 #~ msgstr "Über alles Neue benachrichtigt"

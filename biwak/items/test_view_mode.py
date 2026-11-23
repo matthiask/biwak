@@ -11,11 +11,11 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.html import strip_tags
 
-from biwak import checklists
 from biwak.checkins.models import Answer
 from biwak.items import editing, operations as ops
 from biwak.items.models import Editing
 from biwak.projects import operations as project_ops
+from biwak.richtext import checklists
 from biwak.test_utils import check_in_answers, person, project, tags
 
 

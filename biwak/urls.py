@@ -11,9 +11,10 @@ from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import include, path, re_path
 
-from biwak import help as help_pages, paste
+from biwak import help as help_pages
 from biwak.accounts import signin
 from biwak.api import api
+from biwak.richtext import paste
 from biwak.schedules_forms import describe
 
 

@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-from biwak.checklists import count
+from biwak.richtext.checklists import count
 
 
 TEXTS = {

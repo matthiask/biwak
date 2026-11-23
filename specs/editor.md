@@ -12,7 +12,7 @@ toolbar on every Markdown field; pasting rich text keeps the structure.
 - **GitHub's task lists** (`- [ ] open`, `- [x] done`, `mdit-py-plugins`'
   `tasklists` in `render_markdown`), in pages, mails (☐ and ☑ in the
   plain text) and the API's `*_html` (disabled). Counting, ticking and
-  rendering use the same parser (`biwak/checklists.py`), so a box is
+  rendering use the same parser (`biwak/richtext/checklists.py`), so a box is
   what the page shows as one (not one in a code block); a box is named
   by its position in reading order.
 - **Counts** are stored when the text is saved (`Checklist.save()`:
@@ -96,7 +96,7 @@ attach.
 
 ## Pasting
 
-`frontend/paste.js`, `POST /paste/markdown/`, `biwak/htmlmarkdown.py`
+`frontend/paste.js`, `POST /paste/markdown/`, `biwak/richtext/htmlmarkdown.py`
 (the one converter, the importer's subclasses it; none in JavaScript):
 
 - **Rich text** (web pages, mails, Word, Google Docs) keeps bold,

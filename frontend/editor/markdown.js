@@ -543,7 +543,8 @@ export function serialize(doc) {
   return serializer.serialize(doc)
 }
 
-// The task list boxes in reading order (biwak/checklists.py names them so)
+// The task list boxes in reading order (biwak/richtext/checklists.py names
+// them so)
 export function boxes(doc) {
   const out = []
   doc.descendants((node) => {

@@ -98,7 +98,7 @@ for or removes somebody else.
   images and breaks; a merge by Yjs, so unsaved typing stays except in
   a block the edit deletes), sent to the open editors after the commit,
   saved at once.
-- **Line breaks are LF only** (`biwak/text.py`).
+- **Line breaks are LF only** (`biwak/richtext/text.py`).
 - **The page:** "Edit" opens the editor (`/docs/<id>/edit/`), "Watch
   live" for who can't edit. A status line (connecting, saved as you
   type, offline, watching, gone), who else is here, "Save as a
