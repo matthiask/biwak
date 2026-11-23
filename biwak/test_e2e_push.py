@@ -79,7 +79,9 @@ class SubscribingTest(E2ETestCase):
         )
         # The key as its 65 bytes
         self.assertEqual(page.evaluate("sessionStorage.getItem('key-bytes')"), "65")
-        page.locator("#push-devices").get_by_role("button", name="Remove").click()
+        devices = page.locator("#push-devices")
+        devices.locator("summary").click()
+        devices.get_by_role("button", name="Remove").click()
         expect(button).to_be_visible()
         expect(page.locator("#push-devices")).to_have_count(0)
         self.assertFalse(PushSubscription.objects.exists())
@@ -101,7 +103,7 @@ class SubscribingTest(E2ETestCase):
         expect(page.locator("[data-push-this]:visible")).to_have_count(1)
         page.context.clear_cookies(name="biwak_push_device")
         # The menu's sign-out
-        menu = page.locator("details", has=page.locator("button.dropdown-item"))
+        menu = page.locator("details", has=page.locator('form[action$="/logout/"]'))
         menu.locator("summary").click()
         menu.get_by_role("button", name="Sign out").click()
         expect(

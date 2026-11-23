@@ -206,7 +206,10 @@ In this order, each step with its tests:
   the page. The list: the device's name (`PushSubscription.label`: the
   name, or the browser and system, `describe_agent()`, like the
   sessions), when added, when last used (the last push its push service
-  took, "Never").
+  took, "Never"). A device's actions ("Send a test", "Rename…",
+  "Remove") are in a "…" menu at the end of its row, and phones leave
+  out "Added" (decided 2026-11-23: three buttons were cramped on phones
+  and scrolled the page sideways).
 - **Names** (decided 2026-11-23): `PushSubscription.name`, empty for the
   browser and system (so a browser updating its user agent shows the new
   one). "Rename…" in the list opens the modal form
