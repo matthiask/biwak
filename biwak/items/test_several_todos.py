@@ -659,6 +659,18 @@ class MoveAPITest(Selection):
         self.copy.refresh_from_db()
         self.assertEqual(self.copy.parent_id, self.internal.pk)
 
+    def test_repeated_ids_count_once(self):
+        """As todos/dates/ and todos/assign/ (review 2026-11-23)"""
+        self.client.force_login(self.ada)
+        response = self.post({
+            "ids": [self.photos.pk, self.copy.pk, self.photos.pk],
+            "list_id": self.internal.pk,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [t["id"] for t in response.json()], [self.photos.pk, self.copy.pk]
+        )
+
     def test_across_projects_confirm(self):
         ops.assign(self.copy, [self.bob], actor=self.ada)
         self.client.force_login(self.ada)
@@ -676,7 +688,6 @@ class MoveAPITest(Selection):
         self.client.force_login(self.ada)
         for data, status in [
             ({"ids": [], "list_id": self.orders.pk}, 400),
-            ({"ids": [self.copy.pk, self.copy.pk], "list_id": self.orders.pk}, 400),
             ({"ids": [self.copy.pk], "list_id": 999999}, 404),
         ]:
             with self.subTest(data=data):

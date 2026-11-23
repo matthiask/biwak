@@ -234,8 +234,9 @@ across projects, told once about dates, moving telling nobody.
   the to-dos; into another project a 400 with who's added and dropped
   ("… Send “confirm”: true to move them anyway.") unless `confirm`, a
   403 for clients ("Only staff move to-dos into other projects."); 400
-  for no to-dos or one twice, a to-do gone, archived projects or
-  templates. No new list through the API: create it first. **CLI**
+  for no to-dos, a to-do gone, archived projects or templates. A
+  repeated ID counts once, as in `/todos/dates/` and `/todos/assign/`
+  (decided 2026-11-23). No new list through the API: create it first. **CLI**
   (0.62.0): `biwak todos dates TODO… --due DATE|--shift DAYS|--remove`
   prints each to-do with its dates; `biwak todos move TODO… --list ID
   [--group ID] [--confirm]` goes through `/todos/move/`, across
