@@ -6,6 +6,7 @@ The command line interface of Biwak, for people and agents
 ```sh
 uv tool install 'git+https://github.com/matthiask/biwak#subdirectory=cli'
 biwak login https://biwak.example.org --write   # or --read
+echo 'eval "$(biwak completion bash)"' >> ~/.bashrc   # or zsh, fish: see biwak completion --help
 biwak projects
 biwak projects create "New project" --limited   # staff; you become a member
 biwak projects join ID                        # admins: biwak projects --joinable

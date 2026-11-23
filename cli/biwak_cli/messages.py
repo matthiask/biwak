@@ -9,7 +9,9 @@ from biwak_cli.core import (
     clients,
     console,
     echo_json,
+    echo_linked,
     json_option,
+    link,
     need,
     paginate,
     people_ids,
@@ -68,7 +70,7 @@ def messages(ctx, project, limit, order, as_json):
             str(message["id"]),
             "pinned" if message["pinned"] else "",
             f"{category['emoji']} {category['name']}".strip() if category else "",
-            message["title"],
+            link(message["title"], message.get("url")),
             message["creator"]["short_name"],
             message["created_at"][:10],
             str(message["comment_count"]),
@@ -81,7 +83,7 @@ def messages(ctx, project, limit, order, as_json):
 def show_message(data):
     marker = " [clients]" if data["visible_to_clients"] else ""
     pinned = " (pinned)" if data["pinned"] else ""
-    click.echo(f"#{data['id']} {data['title']}{pinned}{marker}")
+    echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), pinned, marker)
     category = data["category"]
     for label, value in [
         (

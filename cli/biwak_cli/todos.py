@@ -9,7 +9,9 @@ from biwak_cli.core import (
     clients,
     console,
     echo_json,
+    echo_linked,
     json_option,
+    link,
     names,
     need,
     paginate,
@@ -39,7 +41,7 @@ def lists(ctx, project, archived, as_json):
         return echo_json(data)
     t = table("ID", "List", "")
     for item in data:
-        t.add_row(str(item["id"]), item["title"], clients(item))
+        t.add_row(str(item["id"]), link(item["title"], item.get("url")), clients(item))
     console.print(t)
     return None
 
@@ -280,7 +282,7 @@ def todos(
     for todo in data:
         t.add_row(
             str(todo["id"]),
-            todo["title"],
+            link(todo["title"], todo.get("url")),
             f"{todo['project_name']} / {todo['list_title']}"
             if "project_name" in todo
             else (todo["group"] or {}).get("title", ""),
@@ -322,7 +324,7 @@ def show_todos_by_project(data):
             seen = heading
         t.add_row(
             str(todo["id"]),
-            todo["title"],
+            link(todo["title"], todo.get("url")),
             names(todo["assignees"]),
             dates(todo),
             clients(todo),
@@ -356,7 +358,7 @@ def show_reactions(reactions):
 def show_todo(data):
     marker = " [clients]" if data["visible_to_clients"] else ""
     done = " (completed)" if data["completed_at"] else ""
-    click.echo(f"#{data['id']} {data['title']}{done}{marker}")
+    echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), done, marker)
     for label, value in [
         ("Group", (data["group"] or {}).get("title")),
         ("Assignees", names(data["assignees"])),

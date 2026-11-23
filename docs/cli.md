@@ -28,6 +28,16 @@ biwak login https://biwak.example.org --write
 (`--read` for a read-only one). `BIWAK_URL` and `BIWAK_TOKEN` override
 the stored login, for scripts.
 
+Completing commands and options with Tab, once per shell:
+
+```sh
+echo 'eval "$(biwak completion bash)"' >> ~/.bashrc     # bash
+echo 'eval "$(biwak completion zsh)"' >> ~/.zshrc       # zsh
+biwak completion fish > ~/.config/fish/completions/biwak.fish   # fish
+```
+
+In a terminal, titles are links to their page in Biwak.
+
 ## A few examples
 
 ```sh

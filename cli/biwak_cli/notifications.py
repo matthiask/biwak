@@ -8,6 +8,7 @@ from biwak_cli.core import (
     console,
     echo_json,
     json_option,
+    link,
     need,
     paginate,
     request,
@@ -316,7 +317,7 @@ def lantern(unread, mentions, read_item, read_all, limit, as_json):
             event["actor"]["short_name"],
             event["action"].replace("_", " ") + more,
             str(item_id or ""),
-            item.get("title", ""),
+            link(item.get("title", ""), item.get("url")),
             clients(item),
         )
     console.print(t)

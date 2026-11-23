@@ -29,6 +29,16 @@ biwak login https://biwak.example.org --write
 speichert ein Token (`--read` für eines, das nur liest). `BIWAK_URL` und
 `BIWAK_TOKEN` gehen dem gespeicherten Login vor, für Skripte.
 
+Befehle und Optionen mit Tab vervollständigen, einmal pro Shell:
+
+```sh
+echo 'eval "$(biwak completion bash)"' >> ~/.bashrc     # bash
+echo 'eval "$(biwak completion zsh)"' >> ~/.zshrc       # zsh
+biwak completion fish > ~/.config/fish/completions/biwak.fish   # fish
+```
+
+Im Terminal sind Titel Links auf ihre Seite in Biwak.
+
 ## Ein paar Beispiele
 
 ```sh

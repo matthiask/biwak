@@ -6,7 +6,9 @@ from biwak_cli.core import (
     cli,
     console,
     echo_json,
+    echo_linked,
     json_option,
+    link,
     notify_option,
     request,
     table,
@@ -259,7 +261,7 @@ def orgs(ctx, as_json):
     for org in data:
         t.add_row(
             str(org["id"]),
-            org["name"],
+            link(org["name"], org.get("url")),
             str(org["people_count"]),
             ", ".join(org["domains"]),
             "own" if org["is_own"] else "",
@@ -280,7 +282,7 @@ SIGN_IN_PROVIDERS = {"google": "Google", "microsoft": "Microsoft"}
 
 def show_org(data):
     own = ", your own organization" if data["is_own"] else ""
-    click.echo(f"{data['name']} ({data['id']}{own})")
+    echo_linked(link(data["name"], data.get("url")), f" ({data['id']}{own})")
     if data["domains"]:
         click.echo(f"Domains: {', '.join(data['domains'])}")
     signin = data.get("signin")
@@ -415,7 +417,7 @@ def teams(ctx, as_json):
     for team in data:
         t.add_row(
             str(team["id"]),
-            team["name"],
+            link(team["name"], team.get("url")),
             ", ".join(f"{p['name']} ({p['id']})" for p in team["members"]),
         )
     console.print(t)
@@ -423,7 +425,7 @@ def teams(ctx, as_json):
 
 
 def show_team(data):
-    click.echo(f"{data['name']} ({data['id']})")
+    echo_linked(link(data["name"], data.get("url")), f" ({data['id']})")
     for person in data["members"]:
         kind = "client" if person["is_client"] else "staff"
         inactive = ", inactive" if not person["is_active"] else ""

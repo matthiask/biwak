@@ -8,7 +8,9 @@ from biwak_cli.core import (
     clients,
     console,
     echo_json,
+    echo_linked,
     json_option,
+    link,
     names,
     need,
     paginate,
@@ -36,7 +38,7 @@ def checkins(ctx, project, as_json):
         asked = f"{question['schedule_description']}, {question['time_of_day'][:5]}"
         t.add_row(
             str(question["id"]),
-            question["title"],
+            link(question["title"], question.get("url")),
             asked,
             "paused"
             if question["paused"]
@@ -69,7 +71,7 @@ def checkin_show(question_id, limit, as_json):
     if as_json:
         return echo_json(data | {"occurrences": occurrences})
     marker = " [clients]" if data["visible_to_clients"] else ""
-    click.echo(f"#{data['id']} {data['title']}{marker}")
+    echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), marker)
     for label, value in [
         ("Asked", f"{data['schedule_description']}, {data['time_of_day'][:5]}"),
         ("People", names(data["people"])),
@@ -126,7 +128,7 @@ def checkin_due(project, as_json):
     for due in data:
         t.add_row(
             str(due["question_id"]),
-            due["title"],
+            link(due["title"], due.get("url")),
             due["project_name"],
             due["date"],
             str(due["occurrence_id"]),
