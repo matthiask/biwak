@@ -371,6 +371,14 @@ same way.
   The 29th to 31st alone fall on the last day of shorter months. Seen in
   the API 2026-11-23: the first four. Unlike Basecamp, the next to-do
   only comes once the current one is completed.
+  **Imported before** (decided 2026-11-23 by the user): to-dos imported
+  before schedules were stay unchanged in Basecamp and are skipped by
+  later runs; the listing gives their schedule anyway, so a later run
+  adds it, without a request and without `--full`, to an open to-do
+  without a rule which never had one in Biwak (no edit event of its
+  repeat, by anybody or an import: a rule removed on purpose stays
+  removed). The report lists them ("Schedules added to to-dos imported
+  before", a dry run "to add").
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
   come in completed at the recording's `updated_at`, by the importing
   person unless Basecamp names who completed it, with their comments;
