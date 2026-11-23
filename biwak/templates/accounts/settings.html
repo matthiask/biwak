@@ -10,6 +10,52 @@
   <template data-saved-template><span class="wb-saved" aria-hidden="true">{% icon "check-lg" %}
       {% translate "Saved" %}</span></template>
   <h2 class="h5" id="appearance">{% translate "Appearance" %}</h2>
+  {# The theme and accent color first, then the profile (decided 2026-11-23 by the user) #}
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="post" action="{% url 'settings_appearance' %}" data-appearance-preview data-save-on-change>
+        {% csrf_token %}
+        <fieldset class="mb-3">
+          <legend class="fs-6">{% translate "Theme" %}</legend>
+          {% for value, label in themes %}
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="theme"
+                id="theme-{{ value }}"
+                value="{{ value }}"
+                {% if request.user.theme == value %}checked{% endif %}
+              >
+              <label class="form-check-label" for="theme-{{ value }}">{{ label }}</label>
+            </div>
+          {% endfor %}
+        </fieldset>
+        <fieldset class="mb-3">
+          <legend class="fs-6">{% translate "Accent color" %}</legend>
+          <div class="d-flex flex-wrap gap-2">
+            {% for value, label in accents %}
+              <label class="wb-accent-choice">
+                <input
+                  type="radio"
+                  name="accent"
+                  value="{{ value }}"
+                  {% if request.user.accent == value %}checked{% endif %}
+                >
+                <span class="wb-swatch" data-swatch="{{ value }}"></span>
+                <span>{{ label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <div class="form-text">
+            {% translate "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see." %}
+          </div>
+        </fieldset>
+        <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
+      </form>
+    </div>
+  </div>
+  <h2 class="h5 mt-4" id="profile">{% translate "Profile" %}</h2>
   <div class="card mb-4">
     <div class="card-body border-bottom" id="name">
       <h3 class="h6">{% translate "Name" %}</h3>
@@ -23,7 +69,7 @@
         </div>
       </form>
     </div>
-    <div class="card-body border-bottom" id="profile-image">
+    <div class="card-body" id="profile-image">
       <h3 class="h6">{% translate "Profile image" %}</h3>
       <div class="d-flex flex-wrap align-items-start gap-3">
         {% avatar request.user "lg" %}
@@ -87,48 +133,6 @@
           </div>
         </div>
       </div>
-    </div>
-    <div class="card-body">
-      <form method="post" action="{% url 'settings_appearance' %}" data-appearance-preview data-save-on-change>
-        {% csrf_token %}
-        <fieldset class="mb-3">
-          <legend class="fs-6">{% translate "Theme" %}</legend>
-          {% for value, label in themes %}
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="radio"
-                name="theme"
-                id="theme-{{ value }}"
-                value="{{ value }}"
-                {% if request.user.theme == value %}checked{% endif %}
-              >
-              <label class="form-check-label" for="theme-{{ value }}">{{ label }}</label>
-            </div>
-          {% endfor %}
-        </fieldset>
-        <fieldset class="mb-3">
-          <legend class="fs-6">{% translate "Accent color" %}</legend>
-          <div class="d-flex flex-wrap gap-2">
-            {% for value, label in accents %}
-              <label class="wb-accent-choice">
-                <input
-                  type="radio"
-                  name="accent"
-                  value="{{ value }}"
-                  {% if request.user.accent == value %}checked{% endif %}
-                >
-                <span class="wb-swatch" data-swatch="{{ value }}"></span>
-                <span>{{ label }}</span>
-              </label>
-            {% endfor %}
-          </div>
-          <div class="form-text">
-            {% translate "For the navigation, buttons, links and the focus ring. The clients' amber stays reserved for what clients see." %}
-          </div>
-        </fieldset>
-        <button type="submit" class="btn btn-primary" data-save-button>{% translate "Save" %}</button>
-      </form>
     </div>
   </div>
   <h2 class="h5 mt-4" id="language">{% translate "Language" %}</h2>

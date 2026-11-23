@@ -5859,6 +5859,10 @@ msgid "For the navigation, buttons, links and the focus ring. The clients' amber
 msgstr "Für die Navigation, Buttons, Links und den Fokusrahmen. Das Bernstein der Kund:innen bleibt dem vorbehalten, was Kund:innen sehen."
 
 #: biwak/templates/accounts/settings.html
+msgid "Profile"
+msgstr "Profil"
+
+#: biwak/templates/accounts/settings.html
 msgid "Profile image"
 msgstr "Profilbild"
 
