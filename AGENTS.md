@@ -69,6 +69,10 @@ through the test client (`biwak/test_cli.py`). Each part adds its API
 endpoints (`<app>/api.py`, conventions in `biwak/api_conventions.py`) and
 CLI commands with its pages; bump `cli/pyproject.toml`'s version with new
 commands and `MINIMUM` in `biwak/cli_version.py` when older CLIs break.
+The agent skills are `cli/biwak_cli/skills/<name>/SKILL.md`
+(`specs/agent-skills.md`), linked into Claude Code by `biwak skills
+install`: bump the CLI's version when a skill changes; `biwak/test_skills.py`
+checks the commands and options they show.
 
 End-to-end tests (`biwak/test_e2e.py`, tagged `e2e`) run the real server and
 Chromium through Playwright: `uv run playwright install chromium` once,

@@ -4,7 +4,26 @@ Claude Code skills in the CLI package for common work with `biwak`,
 like Governance's (`gov`) and Workbench's (`wb`). Decided 2026-11-23:
 the first four below.
 
-**Status:** open.
+**Status:** built (2026-11-23, CLI 0.63.0): `biwak skills` lists the
+four skills, `biwak skills install` links them (`uninstall` removes the
+links), `biwak/test_skills.py` checks them and installs into a
+temporary home. Added for handover: `biwak todos --assignee PERSON`
+(the API and the page had the filter).
+
+Built on the way (2026-11-23), to confirm:
+
+- **No `--project` for `biwak skills install`** (Governance's links into
+  `.claude/skills` of the current directory): `--project` is a
+  project's ID everywhere else in the CLI, and the spec names only
+  `~/.claude/skills`. `CLAUDE_CONFIG_DIR` is honoured, as in `gov`.
+- **Triage's "wait"** uses `biwak todos --assigned-by-me` (to-dos I
+  assigned to others), Home's "waiting on others" (`todos.md`), instead
+  of "to-dos I created": the API has no creator filter, and assigning
+  is what hands the ball to others. A to-do somebody else assigned
+  stays out even if I created it.
+- **Marking read** is `biwak lantern --read ITEM` and `--all` (the CLI
+  has no `lantern read` subcommand); listing with `--unread` marks
+  nothing read.
 
 **Depends on:** the CLI (`api-cli.md`, `cli-style.md`); handover's bulk
 commands (`handover.md`); the lantern (`lantern.md`).
@@ -61,7 +80,8 @@ Decided 2026-11-23: the unread lantern plus what's due soon.
   overdue), **wait** (the ball is with others: to-dos I created that
   are assigned to others and overdue or due within 7 days) and **keep
   an eye on** (the rest of the unread entries), each with its link.
-- Marks entries read only when the user asks (`biwak lantern read`).
+- Marks entries read only when the user asks (`biwak lantern --read
+  ITEM`, `--all`).
 
 ### `biwak-from-mail`: a mail into a to-do or a message
 
@@ -85,8 +105,9 @@ Decided 2026-11-23: the unread lantern plus what's due soon.
 
 ### `biwak-handover`: someone leaves or is away
 
-- Lists the person's open to-dos per project (`biwak todos`, assignee),
-  proposes new assignees and dates per project, then applies them with
+- Lists the person's open to-dos per project (`biwak todos
+  --assignee`), proposes new assignees and dates per project, then
+  applies them with
   the bulk commands (`biwak todos assign`, `biwak todos dates`, `biwak
   todos move` where a list changes), one project at a time, each
   confirmed.

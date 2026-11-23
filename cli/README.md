@@ -49,6 +49,7 @@ biwak files upload PROJECT plan.pdf --folder 12 --notify nobody
 biwak files download FILE
 biwak docs show DOC
 biwak docs update DOC                                   # in $EDITOR
+biwak skills install                      # the agent skills into ~/.claude/skills; biwak skills lists them
 ```
 
 Every command takes `--json` for scripts and agents. Items visible to

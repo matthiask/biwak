@@ -38,6 +38,7 @@ biwak todos --mine --started
 biwak todos create LIST "Zelt bestellen" --due 2026-12-01 --starts 2026-11-28 --assign 3
 biwak lists add-from-text LIST plan.md --preview
 biwak todos complete TODO
+biwak todos --assignee 7
 biwak todos assign 12 13 14 --to 7 --replace
 biwak todos comment TODO "Der Plan" --attach plan.pdf
 biwak checkins due
@@ -81,6 +82,32 @@ auflistet (`biwak lists --project 4`) und die Verben `show`, `create`,
 GROUP --help` zeigt die einer Gruppe. Das
 [README](https://github.com/matthiask/biwak/tree/main/cli) der CLI hat
 mehr Beispiele.
+
+## Agent-Skills
+
+Die CLI bringt Skills für [Claude Code](https://claude.com/claude-code)
+mit, die häufige Arbeiten über `biwak` erledigen. Verknüpfe sie einmal
+mit deinem Claude Code, und wieder, wenn `biwak` neue bringt:
+
+```sh
+biwak skills install
+biwak skills
+```
+
+- **biwak-triage:** was dich braucht: die ungelesenen Einträge der
+  Laterne und die To-dos, die in den nächsten 7 Tagen fällig sind,
+  gruppiert in handeln, warten und im Auge behalten. Als gelesen
+  markiert es nur, wenn du darum bittest.
+- **biwak-from-mail:** eine Mail (eingefügt oder als `.eml`-Datei) als
+  To-do oder Mitteilung, mit ihren Anhängen.
+- **biwak-weekly-summary:** die letzten 7 Tage eines Projekts; als
+  interne Mitteilung gepostet nur, wenn du darum bittest.
+- **biwak-handover:** die offenen To-dos von jemandem, der geht oder
+  abwesend ist, Projekt für Projekt übergeben.
+
+Sie schlagen vor und schreiben nur, was du bestätigt hast; Neues ist
+intern, ausser du bestätigst, dass Kund:innen es sehen dürfen. Ein
+Upgrade von `biwak` aktualisiert sie.
 
 ## Die API
 
