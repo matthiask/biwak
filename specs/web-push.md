@@ -84,7 +84,9 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
   keys, user agent, created, last success); a 404 or 410 deletes it.
   Not on requests or in threads, except the test push (below).
 - Audit log for the new table; API: list and delete one's own devices.
-  **No CLI support** (decided 2026-11-22): no commands for the devices.
+  **No CLI support** (decided 2026-11-22): no commands for the devices;
+  changed 2026-11-23 with the test push: `biwak devices` lists them and
+  `biwak devices test ID` sends one.
 
 ## Building it
 
@@ -241,7 +243,12 @@ In this order, each step with its tests:
   (the private key doesn't parse); a 404 or 410 removes the device like
   a real push and says "This device's subscription had expired and was
   removed. Turn push notifications on again on it." No rate limit (not
-  decided: it only reaches one's own devices).
+  decided: it only reaches one's own devices). API: `POST
+  /api/v1/me/push-subscriptions/{id}/test/` (write tokens; 404 for
+  others' devices and without the keys) answers `sent`, `removed` and
+  `detail` (the message), 200 whatever the push service said. CLI:
+  `biwak devices` (the list), `biwak devices test ID` (exits 1 when it
+  wasn't sent), in `cli/biwak_cli/notifications.py`.
 - **The service worker** is `frontend/sw.js` as it is, served by Django
   at `/sw.js` (public, `no-cache`), registered at the click. A push's
   JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap
@@ -263,11 +270,12 @@ In this order, each step with its tests:
   list's: the given one or the browser and system), `device` (the
   browser and system), `user_agent`, `created_at`, `last_success_at`; no
   endpoint or keys; renaming only in the settings),
-  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens).
+  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens),
+  `POST /api/v1/me/push-subscriptions/{id}/test/` (the test push).
 - **Tests:** `biwak/activity/test_push.py` (what pushes, quiet hours,
   away, visibility, failures; `pywebpush.webpush` stubbed),
   `biwak/accounts/test_push_devices.py` (the section, subscribing,
   several devices, signing out, the test push, the API, the audit log),
-  `biwak/test_e2e_push.py` (subscribing in
+  `biwak/test_cli_devices.py`, `biwak/test_e2e_push.py` (subscribing in
   Chromium with its `PushManager` stubbed; a push delivered to the
   worker through the DevTools protocol).

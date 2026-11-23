@@ -63,7 +63,8 @@ decided 2026-11-22 (`cli-style.md`):
   `biwak messages`, `biwak docs`, `biwak files`, `biwak folders`,
   `biwak checkins`, `biwak links`, `biwak members`, `biwak projects`,
   `biwak people`, `biwak teams`, `biwak bookmarks`, `biwak invitations`,
-  `biwak public-links`, `biwak forwarded`, `biwak orgs`.
+  `biwak public-links`, `biwak forwarded`, `biwak orgs`, `biwak devices`
+  (push notifications', `web-push.md`).
 - **The group alone lists** (`invoke_without_command`, as `gov
   proposals`); what it lists by is an option, needed only for listing:
   `biwak todos --mine --due overdue`, `biwak todos --list LIST`, `biwak
@@ -78,7 +79,7 @@ decided 2026-11-22 (`cli-style.md`):
   `checkins answer|due|pause|resume|mail`, `members add|invite|remove`,
   `projects join`, `orgs merge|move`, `people
   activate|deactivate|reset-sign-in`, `invitations resend|withdraw`,
-  `forwarded file`).
+  `forwarded file`, `devices test`).
 - **Actions on any item** go to the group of what they make:
   `subscriptions add|remove ITEM`, `public-links create|delete ITEM`,
   `reactions create ITEM`, `bookmarks create|delete`, `items move ITEM`.

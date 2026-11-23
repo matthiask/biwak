@@ -1,4 +1,4 @@
-"""Subscriptions, notifications, being away and the lantern"""
+"""Subscriptions, notifications, push devices, being away and the lantern"""
 
 import click
 
@@ -107,7 +107,52 @@ def subscriptions_remove(item, as_json):
     return None
 
 
+# Devices getting push notifications -----------------------------------------
+
+
+@cli.group(invoke_without_command=True)
+@json_option
+@click.pass_context
+def devices(ctx, as_json):
+    """Your devices getting push notifications (they subscribe in the
+    browser's settings)"""
+    if ctx.invoked_subcommand is not None:
+        return None
+    data = request("GET", "me/push-subscriptions/")
+    if as_json:
+        return echo_json(data)
+    if not data:
+        click.echo("No devices get push notifications.")
+        return None
+    t = table("ID", "Device", "Added", "Last used")
+    for device in data:
+        t.add_row(
+            str(device["id"]),
+            device["name"],
+            device["created_at"][:16].replace("T", " "),
+            (device["last_success_at"] or "never")[:16].replace("T", " "),
+        )
+    console.print(t)
+    return None
+
+
+@devices.command("test")
+@click.argument("device", type=int)
+@json_option
+def devices_test(device, as_json):
+    """Send a test push to DEVICE at once, also in quiet hours or while
+    you're away"""
+    data = request("POST", f"me/push-subscriptions/{device}/test/")
+    if as_json:
+        echo_json(data)
+    else:
+        click.echo(data["detail"], err=not data["sent"])
+    if not data["sent"]:
+        raise SystemExit(1)
+
+
 # Notifications --------------------------------------------------------------
+
 
 LEVELS = ["everything", "concerns_me"]
 

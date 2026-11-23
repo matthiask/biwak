@@ -497,3 +497,46 @@ class APITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["id"], mine.pk)
         self.assertEqual(list(PushSubscription.objects.all()), [theirs])
+
+    def test_sending_a_test(self):
+        mine = subscribe_device(self.cleo)
+        theirs = subscribe_device(self.ada)
+        headers = self.headers(self.cleo)
+        url = "/api/v1/me/push-subscriptions/{}/test/"
+        webpush = patch("pywebpush.webpush").start()
+        self.addCleanup(patch.stopall)
+        with override_settings(**KEYS):
+            response = self.client.post(url.format(theirs.pk), headers=headers)
+            self.assertEqual(response.status_code, 404)
+            read_only = self.headers(self.cleo, "read")
+            response = self.client.post(url.format(mine.pk), headers=read_only)
+            self.assertEqual(response.status_code, 403)
+            webpush.assert_not_called()
+            response = self.client.post(url.format(mine.pk), headers=headers)
+            self.assertEqual(
+                response.json(),
+                {
+                    "sent": True,
+                    "removed": False,
+                    "detail": "Sent. It should show up in a few seconds.",
+                },
+            )
+            self.assertEqual(webpush.call_count, 1)
+            webpush.side_effect = WebPushException(
+                "gone", response=Mock(status_code=410)
+            )
+            response = self.client.post(url.format(mine.pk), headers=headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                (response.json()["sent"], response.json()["removed"]), (False, True)
+            )
+            self.assertEqual(list(PushSubscription.objects.all()), [theirs])
+        # Without the keys
+        response = self.client.post(
+            url.format(theirs.pk), headers=self.headers(self.ada)
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Push notifications aren't set up on this server."},
+        )
