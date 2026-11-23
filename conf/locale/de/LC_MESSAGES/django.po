@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 17:47+0100\n"
+"POT-Creation-Date: 2026-11-23 18:06+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -207,6 +207,10 @@ msgstr "Diese Anfrage wurde nicht mit einem Token authentifiziert."
 #: biwak/accounts/api.py biwak/accounts/api_auth.py
 msgid "This API token only allows reading, not changes."
 msgstr "Dieser API-Token erlaubt nur Lesen, keine Änderungen."
+
+#: biwak/accounts/api.py
+msgid "Push notifications aren't set up on this server."
+msgstr "Push-Benachrichtigungen sind auf diesem Server nicht eingerichtet."
 
 #: biwak/accounts/apps.py
 msgid "accounts"
@@ -1715,6 +1719,31 @@ msgstr "Du wurdest erwähnt."
 #: biwak/activity/push.py
 msgid "Turn off on this device"
 msgstr "Auf diesem Gerät ausschalten"
+
+#: biwak/activity/push.py
+msgid "Push notifications work on this device."
+msgstr "Push-Benachrichtigungen funktionieren auf diesem Gerät."
+
+#: biwak/activity/push.py
+msgid "That didn't work: the server's push key is broken."
+msgstr "Das hat nicht geklappt: Der Push-Schlüssel des Servers ist fehlerhaft."
+
+#: biwak/activity/push.py
+msgid "Sent. It should show up in a few seconds."
+msgstr "Gesendet. Die Benachrichtigung sollte in ein paar Sekunden erscheinen."
+
+#: biwak/activity/push.py
+msgid "This device's subscription had expired and was removed. Turn push notifications on again on it."
+msgstr "Das Abonnement dieses Geräts war abgelaufen und wurde entfernt. Schalte Push-Benachrichtigungen auf dem Gerät wieder ein."
+
+#: biwak/activity/push.py
+#, python-format
+msgid "That didn't work: the push service answered %(status)s."
+msgstr "Das hat nicht geklappt: Der Push-Dienst antwortete mit %(status)s."
+
+#: biwak/activity/push.py
+msgid "That didn't work: the push couldn't be sent."
+msgstr "Das hat nicht geklappt: Die Push-Benachrichtigung konnte nicht gesendet werden."
 
 #: biwak/activity/timeline.py
 msgid "removed the due date"
@@ -6021,6 +6050,10 @@ msgstr "Diese"
 #: biwak/templates/accounts/settings.html
 msgid "Never"
 msgstr "Nie"
+
+#: biwak/templates/accounts/settings.html
+msgid "Send a test"
+msgstr "Test senden"
 
 #: biwak/templates/accounts/settings.html
 msgid "Rename…"

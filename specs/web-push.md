@@ -4,7 +4,7 @@ Notifications on the phone (and the desktop) while Biwak isn't open,
 through the browsers' Web Push. Asked by the user 2026-11-22: installed as
 an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 
-**Status:** built (2026-11-22).
+**Status:** built (2026-11-22); the test push built (2026-11-23).
 
 ## What pushes
 
@@ -45,6 +45,11 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
   browser and system looked the same): by default the browser and system
   ("Firefox on Linux"); people rename their own devices ("Rename…" in the
   list).
+- **A test push per device** (decided 2026-11-23 by the user: there was
+  no way to check that pushes arrive): "Send a test" in the list, only
+  for one's own devices, sends one push at once, whatever the quiet
+  hours or being away (it's on purpose), and the page says whether it
+  worked (below, "The test push").
 - **One browser, one person** (decided 2026-11-22): a browser never has
   subscriptions for several people; the last one to subscribe on it
   replaces the other person's subscription there (nothing of before
@@ -77,9 +82,11 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
   setting isn't offered. Sending with `pywebpush` from `send_mails`'
   run (every minute), through a `PushSubscription` (person, endpoint,
   keys, user agent, created, last success); a 404 or 410 deletes it.
-  Not on requests or in threads.
+  Not on requests or in threads, except the test push (below).
 - Audit log for the new table; API: list and delete one's own devices.
-  **No CLI support** (decided 2026-11-22): no commands for the devices.
+  **No CLI support** (decided 2026-11-22): no commands for the devices;
+  changed 2026-11-23 with the test push: `biwak devices` lists them and
+  `biwak devices test ID` sends one.
 
 ## Building it
 
@@ -212,6 +219,36 @@ In this order, each step with its tests:
   `last_success_at`). Wording: the column "Device", "Rename…", the
   heading "Rename the device", the button "Rename" (German "Gerät",
   "Umbenennen…", "Gerät umbenennen").
+- **The test push** (decided 2026-11-23 by the user): "Send a test" in
+  the list (a button posting to `/accounts/push/<id>/test/`, like
+  "Remove": works without JavaScript, no confirmation, nothing to fill
+  in; no "…" since it opens nothing), only one's own devices (others'
+  404), only with the keys. **Sent from the request** — an exception the
+  user made to "nothing runs on requests" (`AGENTS.md`) and to pushes
+  going out from `send_mails` only: a test must arrive at once and the
+  page must say whether it worked. Only the test; everything else stays
+  in `send_mails`. `push.send_test()` builds on `push.send()`, which
+  sends one payload to one device (also what `deliver()` loops over),
+  `TTL` and `TIMEOUT` as for every push. Content: title "Biwak", body
+  "Push notifications work on this device." (German
+  "Push-Benachrichtigungen funktionieren auf diesem Gerät."), `url` the
+  settings' devices section, `tag` `biwak-test` (never replacing an
+  item's push), the icon and the "Turn off on this device" button like
+  every push, in the device owner's language. Ignores quiet hours and
+  "away" (on purpose); a success updates `last_success_at` like a real
+  push (not in the audit log). Said with a message on the settings after
+  the redirect: "Sent. It should show up in a few seconds."; "That
+  didn't work: the push service answered 500." (its status), "… the push
+  couldn't be sent." (no answer), "… the server's push key is broken."
+  (the private key doesn't parse); a 404 or 410 removes the device like
+  a real push and says "This device's subscription had expired and was
+  removed. Turn push notifications on again on it." No rate limit (not
+  decided: it only reaches one's own devices). API: `POST
+  /api/v1/me/push-subscriptions/{id}/test/` (write tokens; 404 for
+  others' devices and without the keys) answers `sent`, `removed` and
+  `detail` (the message), 200 whatever the push service said. CLI:
+  `biwak devices` (the list), `biwak devices test ID` (exits 1 when it
+  wasn't sent), in `cli/biwak_cli/notifications.py`.
 - **The service worker** is `frontend/sw.js` as it is, served by Django
   at `/sw.js` (public, `no-cache`), registered at the click. A push's
   JSON: `title`, `body`, `tag`, `url`, `icon` (`push.content()`); a tap
@@ -233,10 +270,12 @@ In this order, each step with its tests:
   list's: the given one or the browser and system), `device` (the
   browser and system), `user_agent`, `created_at`, `last_success_at`; no
   endpoint or keys; renaming only in the settings),
-  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens).
+  `DELETE /api/v1/me/push-subscriptions/{id}/` (write tokens),
+  `POST /api/v1/me/push-subscriptions/{id}/test/` (the test push).
 - **Tests:** `biwak/activity/test_push.py` (what pushes, quiet hours,
   away, visibility, failures; `pywebpush.webpush` stubbed),
   `biwak/accounts/test_push_devices.py` (the section, subscribing,
-  several devices, signing out, the API, the audit log), `biwak/test_e2e_push.py` (subscribing in
+  several devices, signing out, the test push, the API, the audit log),
+  `biwak/test_cli_devices.py`, `biwak/test_e2e_push.py` (subscribing in
   Chromium with its `PushManager` stubbed; a push delivered to the
   worker through the DevTools protocol).

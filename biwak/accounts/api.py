@@ -258,3 +258,28 @@ def push_subscription_delete(request, subscription_id: int):
     result = push_subscription_out(subscription)
     operations.remove_device(request.user, pk=subscription.pk)
     return result
+
+
+class PushTestOut(Schema):
+    sent: bool = Field(description="Whether the device's push service took it.")
+    removed: bool = Field(
+        description="The push service said the subscription is gone: the"
+        " device was removed (turn push notifications on again on it)."
+    )
+    detail: str = Field(description="What happened, as the settings say it.")
+
+
+@router.post("me/push-subscriptions/{subscription_id}/test/", response=PushTestOut)
+def push_subscription_test(request, subscription_id: int):
+    """Send a test push to one of the person's devices at once, whatever
+    the quiet hours or being away (specs/web-push.md); 404 without push
+    notifications set up on the server"""
+    from biwak.activity import push
+
+    subscription = get_object_or_404(
+        request.user.push_subscriptions, pk=subscription_id
+    )
+    if not push.enabled():
+        raise HttpError(404, _("Push notifications aren't set up on this server."))
+    tested = push.send_test(subscription)
+    return {"sent": tested.sent, "removed": tested.removed, "detail": tested.message}

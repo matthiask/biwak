@@ -122,6 +122,10 @@ only with "No mails".
 - Every device you turned it on for gets each notification; the list
   shows them by browser and system, when added and when last used.
   "Rename…" gives a device a name ("Work laptop") to tell them apart.
+- "Send a test" sends a notification to that device at once, also in
+  your quiet hours or while you're away; the page says whether it went
+  out. If the device's subscription has expired, it's removed: turn
+  notifications on again on it.
 - Signing out on a device ends its notifications ("Push notifications on
   this device are off."); turn them on again after signing in.
 - To stop them on a device where you aren't signed in: "Turn off on this

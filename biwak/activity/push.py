@@ -1,7 +1,8 @@
 """Push notifications (specs/web-push.md): being mentioned and being
 assigned, pushed to the person's devices through the browsers' push
 services once the mails' merge window has passed. ``send_mails`` runs
-``send_due()`` every minute; nothing is pushed on requests or in threads.
+``send_due()`` every minute; nothing is pushed on requests or in threads,
+but the test push of the settings' "Send a test" (``send_test()``).
 
 Not pushed: what the person read in the lantern already, their own
 actions, anything outside their working time or while they're away (and
@@ -10,11 +11,13 @@ nothing later: the lantern has it)."""
 import datetime as dt
 import json
 import logging
+from typing import NamedTuple
 
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Exists, F, Func, JSONField, OuterRef, Q
 from django.templatetags.static import static
+from django.urls import reverse
 from django.utils import timezone, translation
 
 from biwak.accounts.languages import language_for
@@ -259,41 +262,112 @@ def deliver(user, payload, key):
     took it, False when there's none left (a 404 or 410 deletes the
     subscription: the browser dropped it), None when all failed otherwise
     (logged) or ``key`` is None (the private key didn't parse)"""
-    from pywebpush import WebPushException, webpush
-
     subscriptions = list(user.push_subscriptions.all())
     if not subscriptions:
         return False
     if key is None:
         return None
-    data = json.dumps(payload)
     delivered = failed = False
     for subscription in subscriptions:
-        try:
-            webpush(
-                subscription.info(),
-                data=data,
-                vapid_private_key=key,
-                # webpush() adds to the claims: a new dict each time
-                vapid_claims={"sub": settings.WEBPUSH_SUBJECT},
-                ttl=int(TTL.total_seconds()),
-                timeout=TIMEOUT,
-            )
-        except WebPushException as exc:
-            status = getattr(exc.response, "status_code", None)
-            if status in {404, 410}:
-                subscription.delete()
-                continue
-            logger.warning("Push to %s failed: %s", subscription.endpoint, exc)
-            failed = True
-        except Exception:
-            logger.exception("Push to %s failed", subscription.endpoint)
-            failed = True
-        else:
-            PushSubscription.objects.filter(pk=subscription.pk).update(
-                last_success_at=timezone.now()
-            )
-            delivered = True
+        outcome, _status = send(subscription, payload, key)
+        delivered |= outcome == SENT
+        failed |= outcome == FAILED
     if delivered:
         return True
     return None if failed else False
+
+
+# What ``send()`` reports
+SENT, GONE, FAILED = "sent", "gone", "failed"
+
+
+def send(subscription, payload, key):
+    """Sends the payload to one device; returns the outcome and the push
+    service's HTTP status (None when there's none): ``SENT`` (its
+    ``last_success_at`` updated), ``GONE`` (a 404 or 410: the browser
+    dropped the subscription, which is deleted) or ``FAILED`` (logged)"""
+    from pywebpush import WebPushException, webpush
+
+    try:
+        webpush(
+            subscription.info(),
+            data=json.dumps(payload),
+            vapid_private_key=key,
+            # webpush() adds to the claims: a new dict each time
+            vapid_claims={"sub": settings.WEBPUSH_SUBJECT},
+            ttl=int(TTL.total_seconds()),
+            timeout=TIMEOUT,
+        )
+    except WebPushException as exc:
+        status = getattr(exc.response, "status_code", None)
+        if status in {404, 410}:
+            subscription.delete()
+            return GONE, status
+        logger.warning("Push to %s failed: %s", subscription.endpoint, exc)
+        return FAILED, status
+    except Exception:
+        logger.exception("Push to %s failed", subscription.endpoint)
+        return FAILED, None
+    PushSubscription.objects.filter(pk=subscription.pk).update(
+        last_success_at=timezone.now()
+    )
+    return SENT, None
+
+
+# The test push (specs/web-push.md) ------------------------------------------
+
+
+def _test_payload():
+    """The test push: the usual shape (``content()``), a ``tag`` of its own
+    so it never replaces an item's push; a tap opens the settings' devices"""
+    return {
+        "title": "Biwak",
+        "body": translation.gettext("Push notifications work on this device."),
+        "tag": "biwak-test",
+        "url": absolute(reverse("settings") + "#devices"),
+        "icon": absolute(static("biwak/icon-192.png")),
+        "actions": actions(),
+    }
+
+
+class Tested(NamedTuple):
+    """What ``send_test()`` reports: whether the push service took it,
+    whether the device was removed (its subscription gone) and what to
+    tell the person"""
+
+    sent: bool
+    removed: bool
+    message: str
+
+
+def send_test(subscription):
+    """Sends the test push to the device at once, from the request (the
+    one exception to pushing only from ``send_mails``, decided 2026-11-23:
+    a test must arrive at once and say whether it worked), whatever the
+    quiet hours or being away. Returns ``Tested``, its message in the
+    active language (the push in the device owner's)."""
+    gettext = translation.gettext
+    key = _parsed_key()
+    if key is None:
+        return Tested(
+            sent=False,
+            removed=False,
+            message=gettext("That didn't work: the server's push key is broken."),
+        )
+    with translation.override(language_for(subscription.user)):
+        payload = _test_payload()
+    outcome, status = send(subscription, payload, key)
+    if outcome == SENT:
+        message = gettext("Sent. It should show up in a few seconds.")
+    elif outcome == GONE:
+        message = gettext(
+            "This device's subscription had expired and was removed."
+            " Turn push notifications on again on it."
+        )
+    elif status:
+        message = gettext("That didn't work: the push service answered %(status)s.") % {
+            "status": status
+        }
+    else:
+        message = gettext("That didn't work: the push couldn't be sent.")
+    return Tested(sent=outcome == SENT, removed=outcome == GONE, message=message)
