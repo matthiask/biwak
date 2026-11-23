@@ -315,11 +315,11 @@ def show_todos_by_project(data):
             if t is not None:
                 console.print(t)
             if seen is None or heading[0] != seen[0]:
-                console.print(f"[bold]{todo['project_name']}[/bold]")
+                console.print(todo["project_name"], style="bold")
             if seen is None or heading[:2] != seen[:2]:
                 console.print(f"  {todo['list_title']}")
             if todo["group"]:
-                console.print(f"    [dim]{todo['group']['title']}[/dim]")
+                console.print(f"    {todo['group']['title']}", style="dim")
             t = table("ID", "To-do", "Assignees", "Due", "")
             seen = heading
         t.add_row(
