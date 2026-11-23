@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 11:38+0100\n"
+"POT-Creation-Date: 2026-11-23 12:46+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -7369,6 +7369,11 @@ msgstr "App verloren? Melde dich mit einem Passkey an, oder bitte die Person, di
 msgid "The clients of this project can see this."
 msgstr "Die Kund:innen dieses Projekts können das sehen."
 
+#: biwak/templates/organizations/_change_organization.html
+#, python-format
+msgid "Change the organization of %(name)s"
+msgstr "Organisation von %(name)s ändern"
+
 #: biwak/templates/organizations/_invitation.html
 msgid "Invited, not signed in yet"
 msgstr "Eingeladen, noch nicht angemeldet"
@@ -7456,12 +7461,6 @@ msgstr "Ein zweiter Faktor ist nötig: ein Passkey, der Identity-Provider oder e
 msgid "External"
 msgstr "Extern"
 
-#: biwak/templates/organizations/organization_detail.html
-#: biwak/templates/organizations/people.html
-#: biwak/templates/organizations/person.html
-msgid "Change organization"
-msgstr "Organisation ändern"
-
 #: biwak/templates/organizations/organization_list.html
 msgid "The organizations people belong to: clients' companies, your own and those of externals. Staff of other organizations only see the projects they're members of."
 msgstr "Die Organisationen, zu denen Personen gehören: die Firmen der Kund:innen, die eigene und die der Externen. Mitarbeitende anderer Organisationen sehen nur die Projekte, in denen sie Mitglied sind."
@@ -7518,6 +7517,10 @@ msgstr "Abwesenheit eintragen…"
 #: biwak/templates/organizations/person.html
 msgid "End away"
 msgstr "Abwesenheit beenden"
+
+#: biwak/templates/organizations/person.html
+msgid "Change organization"
+msgstr "Organisation ändern"
 
 #: biwak/templates/organizations/person.html
 #, python-format

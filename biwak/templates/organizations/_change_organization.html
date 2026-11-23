@@ -1,0 +1,14 @@
+{% load biwak i18n %}
+{% comment %}
+  "Change organization" in a person's row (the People page, an organization's
+  page): a quiet icon button, the person's name in its label and title
+  (specs/organizations.md, decided 2026-11-23); a modal, also a page.
+{% endcomment %}
+{% blocktranslate asvar label with name=person.get_full_name %}Change the organization of {{ name }}{% endblocktranslate %}
+<a
+  class="btn btn-sm wb-row-action"
+  href="{% url 'person_organization' person.pk %}"
+  title="{{ label }}"
+  aria-label="{{ label }}"
+  data-modal
+>{% icon "building" %}</a>

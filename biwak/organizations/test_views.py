@@ -50,7 +50,9 @@ class PagesTest(TestCase):
         self.assertContains(response, "Ours")
         response = self.client.get(self.example.get_absolute_url())
         self.assertContains(response, "cleo@example.org")
-        self.assertContains(response, "Change organization")
+        self.assertContains(
+            response, 'aria-label="Change the organization of Cleo Example"'
+        )
         self.assertContains(response, "Merge…")
         self.assertNotContains(response, "/delete/")  # Cleo belongs to it
         # The own one: only admins move people or merge

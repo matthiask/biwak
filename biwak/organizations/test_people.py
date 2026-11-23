@@ -66,6 +66,11 @@ class PeoplePageTest(TestCase):
         self.assertContains(response, "cleo@example.org")
         self.assertContains(response, f'href="/people/{self.cleo.pk}/"')
         self.assertContains(response, f"/people/{self.cleo.pk}/organization/")
+        # A quiet icon in the row, named by the person (decided 2026-11-23)
+        self.assertContains(
+            response, 'title="Change the organization of Cleo Example"', count=1
+        )
+        self.assertNotContains(response, ">Change organization</a>")
         # Roles
         for word in ["admin", "staff", "external", "client"]:
             self.assertContains(response, f">{word}</span>")
