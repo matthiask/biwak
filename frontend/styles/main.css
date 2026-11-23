@@ -1017,11 +1017,24 @@ body:has(.wb-client-tab) .wb-main {
   overflow-x: auto;
 }
 
-.wb-todolist.is-board .wb-group {
-  flex: 0 0 18rem;
+/* Every group is a card, in the list as on the board (specs/ui.md,
+   "Cards"); the to-dos outside groups too, unless there are none: then
+   only their "Add a to-do" shows, without a card */
+.wb-group {
   background: var(--wb-surface);
   border: 1px solid var(--wb-surface-border);
   border-radius: var(--bs-border-radius);
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.wb-todolist:not(.is-board) #group-none:not(:has(.wb-todo)) {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.wb-todolist.is-board .wb-group {
+  flex: 0 0 18rem;
   padding: 0.5rem;
 }
 

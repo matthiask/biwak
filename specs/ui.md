@@ -56,7 +56,10 @@ feedback rounds (`ui-feedback.md`).
 - **Cards** (2026-11-21: pages looked unstructured): an item's page
   shows its content in one card (the to-do's facts and notes, the doc's
   and the message's text, a check-in answer, `todos.md`, `files.md`); collections are cards or tiles in a
-  grid (the projects page, folders), not a list in a card.
+  grid (the projects page, folders), not a list in a card. A to-do
+  list's groups are cards, in the list as on the board (decided
+  2026-11-23, the user: "the to do list view doesn't use any cards at
+  all"; `todos.md`).
 - **Empty lists say so** (2026-11-21): a `list-group-item` in a list
   group, else a `text-body-secondary` paragraph.
 - **Phones** (under 576 px, 2026-11-21: header buttons of varying

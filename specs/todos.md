@@ -59,6 +59,11 @@ groupings and "assigned by" 2026-11-21).
 
 ## Lists and the board
 
+- **Groups are cards** (decided 2026-11-23, `ui.md`, "Cards"): each
+  group a card with its heading inside, below each other in the list
+  view, side by side on the board; the to-dos outside groups a card
+  first, shown without the card (only "Add a to-do") while there are
+  none.
 - **Board view:** a list's groups as columns, ungrouped to-dos in a
   first column shown only when there are any; a per-list setting (list
   or board) with `?view=` to switch; dragging between columns is

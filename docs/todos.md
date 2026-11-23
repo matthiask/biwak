@@ -18,9 +18,10 @@ project. Staff create lists with "New list" on the project's page.
   preview shows what will be added before you press "Add 12 to-dos";
   you can pick another list there. Up to 500 to-dos and 200 KB at once.
   Clients add new groups only in lists they created.
-- **Groups** are headings inside a list ("New group"). Rename or remove
-  a group with the icons next to its name; removing it keeps its
-  to-dos.
+- **Groups** are cards inside a list, each with its name as the heading
+  ("New group"); the to-dos outside groups come first, in a card of
+  their own. Rename or remove a group with the icons next to its name;
+  removing it keeps its to-dos.
 - **Order:** drag a to-do by its grip to move it within the list, into
   another group or into another list. Click several grips to select
   several to-dos and drag them together. Without a mouse, use "Move

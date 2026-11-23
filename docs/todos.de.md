@@ -23,9 +23,11 @@ auf der Seite des Projekts.
   auch eine andere Liste wählen. Bis zu 500 To-dos und 200 KB auf
   einmal. Kund:innen fügen neue Gruppen nur in Listen hinzu, die sie
   erstellt haben.
-- **Gruppen** sind Überschriften in einer Liste („Neue Gruppe“). Mit
-  den Symbolen neben ihrem Namen benennst du eine Gruppe um oder
-  entfernst sie; beim Entfernen bleiben ihre To-dos.
+- **Gruppen** sind Karten in einer Liste, jede mit ihrem Namen als
+  Überschrift („Neue Gruppe“); die To-dos ausserhalb von Gruppen kommen
+  zuerst, in einer eigenen Karte. Mit den Symbolen neben ihrem Namen
+  benennst du eine Gruppe um oder entfernst sie; beim Entfernen bleiben
+  ihre To-dos.
 - **Reihenfolge:** Ziehe ein To-do an seinem Griff, um es innerhalb der
   Liste, in eine andere Gruppe oder in eine andere Liste zu verschieben.
   Klicke mehrere Griffe an, um mehrere To-dos zu wählen und sie
