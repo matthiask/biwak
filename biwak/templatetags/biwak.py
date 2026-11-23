@@ -520,6 +520,19 @@ def away_detail(person, *, parentheses=False):
     )
 
 
+@register.simple_tag(takes_context=True)
+def away_notice(context, person):
+    """ "Ada is away until 3 Dec: back on the 4th" on a line of its own,
+    under a to-do's assignees (specs/quiet-hours.md); nothing otherwise"""
+    from biwak.accounts.quiet import away_notice as notice
+
+    if not person.is_active:
+        return ""
+    if not (text := notice(person, short_name(context, person))):
+        return ""
+    return format_html('<div class="wb-away-line small">{}</div>', text)
+
+
 @register.simple_tag
 def away_attrs(person):
     """The people picker's ``data-away`` attributes of an option written by

@@ -14,6 +14,8 @@
           {% known_in item todo.assignees.all as assignees %}
           {% for person in assignees %}{% person_page person %}{% if not forloop.last %},
             {% endif %}{% empty %}<span class="text-body-secondary">{% translate "Nobody" %}</span>{% endfor %}
+          {# The note of who is away, while it's open (decided 2026-11-23) #}
+          {% if not todo.is_completed %}{% for person in assignees %}{% away_notice person %}{% endfor %}{% endif %}
         </dd>
       </div>
       {% if todo.starts_on %}

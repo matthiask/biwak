@@ -209,8 +209,8 @@ account and can't be chosen.
 hovering over it says until when, with their note ("Away until 3 Dec:
 back on the 4th"). Their page says so too, and picking them as an
 assignee, typing `@` or looking at a team says "away until 3 Dec".
-Assigning or mentioning them shows their note once below the field;
-they can still be assigned and mentioned. Clients see it for the people
+Assigning or mentioning them shows their note once below the field,
+and an open to-do's page shows it under "Assigned to"; they can still be assigned and mentioned. Clients see it for the people
 they may know. Setting yourself away: [Notifications](notifications.md).
 
 **Inviting people:** "Invite people" on the People page, or "Invite by
