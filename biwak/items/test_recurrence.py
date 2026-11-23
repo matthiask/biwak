@@ -82,7 +82,18 @@ class OperationsTest(RecurrenceTestCase):
         self.assertTrue(new.is_client_visible)
         # At the end of its group, the old one stays completed
         self.assertGreater(new.position, other.position)
-        self.assertEqual(Item.objects.filter(todo__recurrence__gt="").count(), 2)
+        # The rule moves (decided 2026-11-23): only the new one repeats, so
+        # changing the old one's due date can't touch the schedule
+        item.todo.refresh_from_db()
+        self.assertEqual(
+            (
+                item.todo.recurrence,
+                item.todo.recurrence_ends_on,
+                item.todo.recurrence_count,
+            ),
+            ("", None, None),
+        )
+        self.assertEqual(Item.objects.filter(todo__recurrence__gt="").count(), 1)
         self.assertEqual(set(new.todo.assignees.all()), {self.ada, self.cleo})
         self.assertEqual(
             set(Subscription.objects.filter(item=new).values_list("user", flat=True)),
@@ -195,6 +206,31 @@ class OperationsTest(RecurrenceTestCase):
         with at("2026-11-21 12:00"):
             ops.complete(second, actor=self.ada)
         self.assertIsNone(self.following(second))
+
+    def test_the_count_and_the_end_date_move_along(self):
+        item = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.update_todo(
+            item, actor=self.ada, recurrence_count=2, recurrence_ends_on=d("2026-12-31")
+        )
+        ops.complete(item, actor=self.ada)
+        new = self.following(item)
+        self.assertEqual(
+            (new.todo.recurrence_count, new.todo.recurrence_ends_on),
+            (1, d("2026-12-31")),
+        )
+        item.todo.refresh_from_db()
+        self.assertEqual(
+            (item.todo.recurrence_count, item.todo.recurrence_ends_on), (None, None)
+        )
+
+    def test_a_used_up_rule_stays_where_it_is(self):
+        # Nothing new: nothing to move to
+        item = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.update_todo(item, actor=self.ada, recurrence_count=0)
+        ops.complete(item, actor=self.ada)
+        self.assertFalse(Item.objects.filter(todo__previous=item).exists())
+        item.todo.refresh_from_db()
+        self.assertEqual(item.todo.recurrence, "FREQ=DAILY")
 
     def test_reopening_keeps_the_next_and_makes_no_second(self):
         item = self.todo("FREQ=DAILY", "2026-11-20")
@@ -604,7 +640,9 @@ class APITest(RecurrenceTestCase):
         with at("2026-11-20 12:00"):
             response = self.send("post", f"todos/{data['id']}/complete/", self.ada)
         new = self.following(Item.objects.get(pk=data["id"]))
-        self.assertEqual(response.json()["recurrence_count"], 2)
+        # The rule moved to the new one
+        self.assertEqual(response.json()["recurrence"], "")
+        self.assertIsNone(response.json()["recurrence_count"])
         response = self.send("get", f"todos/{new.pk}/", self.ada)
         self.assertEqual(response.json()["previous_id"], data["id"])
         self.assertEqual(response.json()["recurrence_count"], 1)
@@ -706,3 +744,45 @@ class APITest(RecurrenceTestCase):
         self.assertEqual(
             self.send("get", f"todos/{item.pk}/", self.cleo).status_code, 404
         )
+
+
+class RuleMovesMigrationTest(RecurrenceTestCase):
+    def test_done_ones_with_a_next_one_lose_their_rule(self):
+        """specs/todos.md: the rule moves; series from before had it on
+        every to-do"""
+        from importlib import import_module
+
+        from django.apps import apps
+
+        migration = import_module("biwak.items.migrations.0021_recurrence_moves")
+        old = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.complete(old, actor=self.ada)
+        new = self.following(old)
+        trashed_next = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.complete(trashed_next, actor=self.ada)
+        ops.trash(self.following(trashed_next), actor=self.ada)
+        alone = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.update_todo(alone, actor=self.ada, recurrence_count=0)
+        ops.complete(alone, actor=self.ada)
+        # As before the rule moved: on every to-do of the series
+        Todo.objects.filter(item__in=[old, trashed_next]).update(
+            recurrence="FREQ=DAILY", recurrence_count=3
+        )
+        migration.forwards(apps, None)
+        rules = dict(
+            Todo.objects.filter(item__in=[old, new, trashed_next, alone]).values_list(
+                "item", "recurrence"
+            )
+        )
+        self.assertEqual(
+            rules,
+            {
+                old.pk: "",
+                new.pk: "FREQ=DAILY",
+                # Its next one is in the trash: as when completing
+                trashed_next.pk: "FREQ=DAILY",
+                # Used up, no next one
+                alone.pk: "FREQ=DAILY",
+            },
+        )
+        self.assertIsNone(Todo.objects.get(item=old).recurrence_count)

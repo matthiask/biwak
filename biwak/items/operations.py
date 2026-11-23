@@ -952,11 +952,11 @@ def complete(item, *, actor):
 
 def _create_next(item, todo, *, actor):
     """The next to-do of a recurring one: same list and group, at the end,
-    same title, notes, assignees, subscribers and rule, due on the rule's
-    next date after today, or after the due date when completed early
-    (specs/todos.md). None when the count or the end
-    date is used up, or one was made from this to-do already (reopening
-    and completing again)."""
+    same title, notes, assignees and subscribers, the rule moved over to
+    it, due on the rule's next date after today, or after the due date when
+    completed early (specs/todos.md). None when the count or the end date
+    is used up, or one was made from this to-do already (reopening and
+    completing again)."""
     if todo.recurrence_count is not None and todo.recurrence_count <= 0:
         return None
     # After the due date when completed early: a weekly to-do due Friday
@@ -999,6 +999,12 @@ def _create_next(item, todo, *, actor):
         else todo.recurrence_count - 1,
         previous=item,
     )
+    # Moved, not copied (decided 2026-11-23): only the newest repeats, so
+    # changing a done one's due date can't touch the schedule
+    todo.recurrence = ""
+    todo.recurrence_ends_on = None
+    todo.recurrence_count = None
+    todo.save(update_fields=["recurrence", "recurrence_ends_on", "recurrence_count"])
     for subscription in item.subscriptions.select_related("user"):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
