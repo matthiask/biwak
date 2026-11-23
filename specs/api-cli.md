@@ -1,7 +1,7 @@
 # API, CLI and agent skills
 
 **Status:** API and CLI built (2026-11-20), each part adds its endpoints
-and commands; agent skills postponed (2026-11-21).
+and commands; agent skills in `agent-skills.md` (2026-11-23).
 
 API first: everything the web interface does is possible through the API
 (decided 2026-11-20). Conventions copied from Governance and Workbench.
