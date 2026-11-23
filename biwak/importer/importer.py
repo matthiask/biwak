@@ -22,10 +22,11 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.db import DatabaseError, transaction
-from django.utils import timezone
+from django.utils import timezone, translation
 
 from biwak import schedules
 from biwak.accounts import operations as account_ops
+from biwak.accounts.languages import language_for
 from biwak.accounts.models import User
 from biwak.activity import mentions
 from biwak.activity.models import Subscription
@@ -35,8 +36,10 @@ from biwak.bookmarks import operations as bookmark_ops
 from biwak.checkins import operations as checkin_ops
 from biwak.files import attachments, models as file_models, operations as file_ops
 from biwak.files.titles import with_heading
+from biwak.forwarding.models import ForwardedMail
+from biwak.forwarding.operations import forwarded_line
 from biwak.importer import client as api
-from biwak.importer.convert import Resolver, to_markdown
+from biwak.importer.convert import Resolver, plain_to_markdown, to_markdown
 from biwak.importer.images import looks_generated
 from biwak.importer.models import ImportedObject
 from biwak.items import operations as ops
@@ -76,6 +79,8 @@ KINDS = {
     "Kanban::Column": "columns",
     "Kanban::Card": "cards",
     "Message": "messages",
+    "Inbox::Forward": "email forwards",
+    "Inbox::Reply": "replies to email forwards",
     "Vault": "folders",
     "Vault::Internal": "internal folders",
     "Todolist::Internal": "internal lists",
@@ -104,7 +109,7 @@ WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
 LINK = re.compile(
     r"https://3\.basecamp\.com/\d+/buckets/\d+/"
     r"(todos|todolists|messages|documents|uploads|vaults|card_tables/cards"
-    r"|card_tables|questions)/(\d+)[^\s)\]\"']*"
+    r"|card_tables|questions|inbox_forwards)/(\d+)[^\s)\]\"']*"
 )
 LINK_TYPES = {
     "todos": "Todo",
@@ -116,6 +121,7 @@ LINK_TYPES = {
     "card_tables/cards": "Kanban::Card",
     "card_tables": "Kanban::Board",
     "questions": "Question",
+    "inbox_forwards": "Inbox::Forward",
 }
 
 
@@ -125,6 +131,10 @@ ACCOUNT_PEOPLE = {"User", "Client"}
 # Basecamp projects never imported, whoever asks (decided 2026-11-22 by
 # the user)
 EXCLUDED = {24268932}
+
+# Email forwards: messages in this category, created when missing (decided
+# 2026-11-23 by the user)
+FORWARDS_CATEGORY = ("Email forwards", "\N{INCOMING ENVELOPE}")
 
 # Basecamp's sample people (its demo project's, example.com): never imported
 SAMPLE = "DummyUser"
@@ -231,8 +241,11 @@ def parse_time(value):
 
 
 def comment_count(rec):
-    """Recordings say ``comments_count``, cards ``comment_count``"""
-    count = rec.get("comments_count", rec.get("comment_count"))
+    """Recordings say ``comments_count``, cards ``comment_count``, email
+    forwards ``replies_count`` (their replies are the comments)"""
+    count = rec.get(
+        "comments_count", rec.get("comment_count", rec.get("replies_count"))
+    )
     return int(count) if count is not None else None
 
 
@@ -243,6 +256,7 @@ TOOL_NAMES = {
     "message_board": "Message board",
     "vault": "Docs & files",
     "questionnaire": "Check-ins",
+    "inbox": "Email forwards",
 }
 # Where a tool is, for what's in it
 TOOL_PATHS = {
@@ -251,6 +265,7 @@ TOOL_PATHS = {
     "message_board": "/message_boards",
     "vault": "/vaults",
     "questionnaire": "/questionnaires",
+    "inbox": "/inboxes",
 }
 
 
@@ -286,6 +301,8 @@ def tool_contents(name, rec):
             amounts = [
                 (rec.get("questions_count") or 0, "question", "questions"),
             ]
+        case "inbox":
+            amounts = [(rec.get("forwards_count") or 0, "forward", "forwards")]
     return ", ".join(_amount(*amount) for amount in amounts if amount[0])
 
 
@@ -510,12 +527,17 @@ class Importer(Resolver):
             for name, value in state.items():
                 setattr(mapped, name, value)
 
-    def _follow(self, bc_type, rec, item, *, comments=True, subscriptions=True):
+    def _follow(
+        self, bc_type, rec, item, *, comments=True, subscriptions=True, replies=None
+    ):
         """The comments and subscribers of a recording (two requests), not
-        for one unchanged since the last run; then its state is stored"""
+        for one unchanged since the last run; then its state is stored.
+        ``replies``: where an email forward's replies are, its comments"""
         if (bc_type, rec["id"]) in self._skipped:
             return
-        if comments:
+        if replies:
+            self._comments(rec, item, path=replies, bc_type="Inbox::Reply")
+        elif comments:
             self._comments(rec, item)
         if subscriptions and item is not None:
             self._subscriptions(rec, item)
@@ -842,16 +864,17 @@ class Importer(Resolver):
                 return target.get_absolute_url()
         return href
 
-    def _md(self, html, rec_attachments, *, project, author):
+    def _md(self, html, rec_attachments, *, project, author, plain=False):
         """Markdown of a Basecamp text; files in it are downloaded and
-        uploaded as ``author``, who saves the text next"""
+        uploaded as ``author``, who saves the text next. ``plain``: a
+        forwarded mail's plain lines"""
         self._text = {
             "attachments": rec_attachments or [],
             "project": project,
             "author": author,
         }
         try:
-            text = to_markdown(html, self)
+            text = (plain_to_markdown if plain else to_markdown)(html, self)
         finally:
             self._text = None
         if LINK.search(text):
@@ -1057,8 +1080,7 @@ class Importer(Resolver):
         return project
 
     def _dock(self, rec, project):
-        """The tools we import (the schedule, chat, pings and forwards
-        aren't); switched-off ones only with ``include_disabled``, otherwise
+        """The tools we import (the schedule, chat and pings aren't); switched-off ones only with ``include_disabled``, otherwise
         the report tells what's in them"""
         tools = []
         for tool in rec.get("dock", []):
@@ -1084,6 +1106,8 @@ class Importer(Resolver):
                     )
                 case "questionnaire":
                     self._questionnaire(tool["id"], project)
+                case "inbox":
+                    self._inbox(rec["id"], tool["id"], project)
 
     def _several(self, tools):
         """Several tools of a kind are merged; the report names them"""
@@ -1226,18 +1250,19 @@ class Importer(Resolver):
             elif not archived and item.status == Status.ARCHIVED:
                 ops.unarchive(item, actor=item.creator)
 
-    def _comments(self, rec, item):
+    def _comments(self, rec, item, *, path=None, bc_type="Comment"):
+        """``path`` and ``bc_type``: an email forward's replies"""
         if self.since and self._skip(rec):
             return
         if comment_count(rec) == 0:
             return
         try:
             comments = list(
-                self.client.paginate(f"/recordings/{rec['id']}/comments.json")
+                self.client.paginate(path or f"/recordings/{rec['id']}/comments.json")
             )
         except api.NotFound:
             return
-        self._preload("Comment", comments)
+        self._preload(bc_type, comments)
         for comment in comments:
             if self._skip(comment):
                 continue
@@ -1259,7 +1284,7 @@ class Importer(Resolver):
                 )
                 return created
 
-            self._upsert("Comment", comment, create=create)
+            self._upsert(bc_type, comment, create=create)
 
     def _subscriptions(self, rec, item):
         """Subscribers as in Basecamp, who can see the item"""
@@ -1536,14 +1561,20 @@ class Importer(Resolver):
 
     def _category(self, rec):
         category = rec.get("category")
-        if not category or self.dry:
+        if not category:
             return None
-        found = MessageCategory.objects.filter(name__iexact=category["name"]).first()
+        return self._category_named(category["name"], category.get("icon") or "")
+
+    def _category_named(self, name, emoji):
+        """The category by name, ignoring case; created last when missing"""
+        if self.dry:
+            return None
+        found = MessageCategory.objects.filter(name__iexact=name).first()
         if found is None:
             last = MessageCategory.objects.order_by("-position").first()
             found = MessageCategory.objects.create(
-                name=category["name"],
-                emoji=category.get("icon") or "",
+                name=name,
+                emoji=emoji,
                 position=(last.position + 1) if last else 0,
             )
         return found
@@ -1599,6 +1630,86 @@ class Importer(Resolver):
         self._follow("Message", rec, item)
         if item is not None:
             # From the original times, for the board's order
+            ops.refresh_message_activity(item)
+
+    # Email forwards ---------------------------------------------------------------
+
+    def _inbox(self, bucket_id, inbox_id, project):
+        """Forwarded mails become internal messages (the API wants the
+        bucket in the path here)"""
+        try:
+            forwards = list(
+                self.client.paginate(
+                    f"/buckets/{bucket_id}/inboxes/{inbox_id}/forwards.json"
+                )
+            )
+        except api.NotFound:
+            return
+        self._preload("Inbox::Forward", forwards)
+        for rec in sorted(forwards, key=lambda r: r["created_at"]):
+            self._forward(bucket_id, rec, project)
+
+    def _forward(self, bucket_id, rec, project):
+        """By the forwarder, with the line about the original sender as
+        when filing a forwarded mail (specs/forwarding.md), internal, in
+        ``FORWARDS_CATEGORY``"""
+        if self._skip(rec):
+            return
+        creator = self._user(rec.get("creator"))
+        created = parse_time(rec["created_at"])
+        title = rec.get("subject") or rec.get("title") or ""
+
+        def content(author):
+            text = self._md(
+                rec.get("content"),
+                rec.get("content_attachments"),
+                project=project,
+                author=author,
+                plain=True,
+            )
+            mail = ForwardedMail(
+                sender_email=rec.get("from") or "",
+                sent_on=timezone.localdate(created),
+            )
+            with translation.override(language_for(author)):
+                line = forwarded_line(mail)
+            return "\n\n".join(part for part in [line, text] if part)
+
+        def create():
+            with importing(at=created):
+                return ops.create_message(
+                    project=project,
+                    title=title,
+                    creator=creator,
+                    content=content(creator),
+                    visible=False,
+                    category=self._category_named(*FORWARDS_CATEGORY),
+                )
+
+        def update(item):
+            with importing(at=parse_time(rec.get("updated_at"))):
+                file_ops.update_message(
+                    item,
+                    actor=item.creator,
+                    title=title,
+                    content=content(item.creator),
+                    category=self._category_named(*FORWARDS_CATEGORY),
+                )
+
+        item = self._upsert(
+            "Inbox::Forward", rec, create=create, update=update, follow=True
+        )
+        if item is not None:
+            # Internal also when a client forwarded it
+            self._top_visibility(item, visible=False, rec=rec)
+            self._stamp(item, rec)
+        self._follow(
+            "Inbox::Forward",
+            rec,
+            item,
+            replies=f"/buckets/{bucket_id}/inbox_forwards/{rec['id']}/replies.json",
+        )
+        if item is not None:
             ops.refresh_message_activity(item)
 
     # Docs & Files -------------------------------------------------------------------------------

@@ -203,6 +203,7 @@ def tool(name, tid, title, **counts):
         "vault": "Vault",
         "questionnaire": "Questionnaire",
         "kanban_board": "Kanban::Board",
+        "inbox": "Inbox",
     }[name]
     return recording(
         tid,
@@ -250,6 +251,7 @@ def tools():
             questions_count=2,
             questions_url=f"{BASE}/questionnaires/500/questions.json",
         ),
+        "/inboxes/900.json": tool("inbox", 900, "Email Forwards", forwards_count=1),
     }
 
 
@@ -274,7 +276,7 @@ def make_data():
             "name": "questionnaire",
             "enabled": True,
         },
-        {"id": 900, "title": "Email Forwards", "name": "inbox", "enabled": False},
+        {"id": 900, "title": "Email Forwards", "name": "inbox", "enabled": True},
     ]
     d[f"/projects/{PROJECT}.json"] = {
         "id": PROJECT,
@@ -641,6 +643,48 @@ def make_data():
         "subscribers": [ADA, BOB, CLEO],
     }
 
+    # Email forwards (sections/forwards.md; the content as Basecamp has
+    # it: the mail's plain lines with autolinks, files as bc-attachments)
+    inbox = {"id": 900, "title": "Email Forwards", "type": "Inbox"}
+    receipt = file_entry(7002, "receipt.png")
+    forward = recording(
+        9101,
+        "Inbox::Forward",
+        "Delivery on Monday",
+        BOB,
+        "2026-01-20T09:00:00.000Z",
+        parent=inbox,
+        subject="Delivery on Monday",
+        content=(
+            "Hello Bob\n\nWe deliver on Monday, see\n"
+            '<a href="https://example.org/delivery">https://example.org/delivery</a>'
+            "\n\n\n&gt; Can you deliver soon?\n"
+            f"{image(receipt)}"
+        ),
+        content_attachments=[receipt],
+        replies_count=1,
+        **{"from": "orders@example.org"},
+    )
+    del forward["comments_count"]
+    d[f"/buckets/{PROJECT}/inboxes/900/forwards.json"] = [forward]
+    d[f"/buckets/{PROJECT}/inbox_forwards/9101/replies.json"] = [
+        recording(
+            9111,
+            "Inbox::Reply",
+            "Re: Delivery on Monday",
+            ADA,
+            "2026-01-20T10:00:00.000Z",
+            parent={"id": 9101, "type": "Inbox::Forward"},
+            content="<div>Thanks, noted</div>",
+            content_attachments=[],
+        )
+    ]
+    d["/recordings/9101/subscription.json"] = {
+        "subscribed": True,
+        "count": 1,
+        "subscribers": [BOB],
+    }
+
     # Docs & Files ----------------------------------------------------------------
     def doc(did, title, parent, visible, creator=ADA, content="<div>Text</div>"):
         return recording(
@@ -823,6 +867,7 @@ def make_data():
         avatar_url(BOB["id"]): photo_image(),
         avatar_url(CLEO["id"]): detailed_image(),
         f"{BASE}/blobs/7001/download/menu.png": PNG,
+        f"{BASE}/blobs/7002/download/receipt.png": PNG + b"4",
         f"{BASE}/buckets/{PROJECT}/uploads/4003/download/plan.png": PNG + b"1",
         f"{BASE}/buckets/{PROJECT}/uploads/4102/download/map.png": PNG + b"2",
         f"{BASE}/buckets/{PROJECT}/uploads/4201/download/salaries.png": PNG + b"3",

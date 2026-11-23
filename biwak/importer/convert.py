@@ -7,6 +7,8 @@ stays readable text. Links to other Basecamp recordings are rewritten by
 ``Resolver.link()``.
 """
 
+import re
+
 from bs4 import BeautifulSoup
 
 from biwak.richtext.htmlmarkdown import Converter, tidy
@@ -67,3 +69,17 @@ def to_markdown(html, resolver=None):
     for div in soup.find_all("div"):
         div.name = "p"
     return tidy(_Converter(resolver or Resolver()).convert_soup(soup))
+
+
+def plain_to_markdown(html, resolver=None):
+    """Markdown from a forwarded mail's text: Basecamp keeps it as plain
+    lines with autolinks, so the lines stay as they are (the Markdown
+    renders single line breaks); embedded files as in ``to_markdown()``"""
+    if not html or not html.strip():
+        return ""
+    soup = BeautifulSoup(html, "html.parser")
+    converter = _Converter(resolver or Resolver())
+    for element in soup.find_all("bc-attachment"):
+        found = converter.convert_bc_attachment(element, "", set())
+        element.replace_with(f"\n{found}\n" if found else "")
+    return re.sub(r"\n{3,}", "\n\n", soup.get_text()).strip()

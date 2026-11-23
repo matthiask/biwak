@@ -159,7 +159,8 @@ class ImportEveryKindTest(ImportCase):
             announcement.message.content,
         )
         self.assertIn(f"](/todos/{food.pk}/)", announcement.message.content)
-        self.assertEqual(MessageCategory.objects.count(), 1)
+        # Announcement and the email forwards' category
+        self.assertEqual(MessageCategory.objects.count(), 2)
         # The board's order from the original times (specs/files.md)
         self.assertEqual(
             announcement.message.last_activity_at,
@@ -208,11 +209,43 @@ class ImportEveryKindTest(ImportCase):
         self.assertEqual(Answer.objects.filter(occurrence__question=q).count(), 3)
         self.assertEqual(self.names(q.people.all()), {"Ada Example", "Bob Example"})
 
+        # Email forwards: internal messages by the forwarder in their own
+        # category, the original sender in a line above the mail's lines,
+        # the replies as comments
+        delivery = self.item("Delivery on Monday")
+        bob = User.objects.get(email="bob@example.org")
+        self.assertEqual(delivery.kind, Kind.MESSAGE)
+        self.assertEqual(delivery.creator, bob)
+        self.assertFalse(delivery.visible_to_clients)
+        self.assertEqual(
+            (delivery.message.category.name, delivery.message.category.emoji),
+            ("Email forwards", "\N{INCOMING ENVELOPE}"),
+        )
+        receipt = Attachment.objects.get(name="receipt.png")
+        self.assertEqual(receipt.item, delivery)
+        self.assertEqual(
+            delivery.message.content,
+            "Forwarded from <orders@example.org>, 20 Jan 2026\n\n"
+            "Hello Bob\n\nWe deliver on Monday, see\n"
+            "https://example.org/delivery\n\n"
+            "> Can you deliver soon?\n\n"
+            f"![receipt.png](attachment:{receipt.key})",
+        )
+        self.assertEqual(delivery.created_at, at("2026-01-20T09:00:00+00:00"))
+        self.assertEqual(
+            list(delivery.comments.values_list("author__email", "content")),
+            [("ada@example.org", "Thanks, noted")],
+        )
+        self.assertEqual(
+            self.names(User.objects.filter(subscriptions__item=delivery)),
+            {"Bob Example"},
+        )
+
         # Comments, attachments
-        self.assertEqual(Comment.objects.count(), 4)
+        self.assertEqual(Comment.objects.count(), 5)
         self.assertEqual(Comment.objects.filter(item=food).count(), 2)
         negotiate = self.item("Negotiate the price")
-        attachment = Attachment.objects.get()
+        attachment = Attachment.objects.get(name="menu.png")
         self.assertEqual(attachment.item, negotiate)
         self.assertIn(f"![menu.png](attachment:{attachment.key})", negotiate.todo.notes)
 
@@ -349,6 +382,7 @@ INTERNAL = {
     "Mixed (internal)",  # the internal doc of a visible folder
     "Internal in a public folder",
     "Prices",  # posted by a client, internal in Basecamp
+    "Delivery on Monday",  # an email forward: always internal
     "Shopping list",
     "plan.png",
     "Private",
@@ -360,6 +394,17 @@ INTERNAL = {
 
 
 class VisibilityTest(ImportCase):
+    def test_an_email_forward_by_a_client_stays_internal(self):
+        forwards = self.client_.data[
+            f"/buckets/{support.PROJECT}/inboxes/900/forwards.json"
+        ]
+        forwards[0]["creator"] = support.CLEO
+        self.run_import()
+        delivery = self.item("Delivery on Monday")
+        self.assertTrue(delivery.creator.is_client)
+        self.assertFalse(delivery.visible_to_clients)
+        self.assertFalse(delivery.is_client_visible)
+
     def test_item_by_item_as_in_basecamp(self):
         report = self.run_import()
         for item in Item.objects.exclude(kind=Kind.ANSWER):
@@ -464,7 +509,7 @@ class NotifyNobodyTest(ImportCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.run_import()
         self.assertEqual(Notification.objects.count(), 0)
-        self.assertEqual(Comment.objects.count(), 5)
+        self.assertEqual(Comment.objects.count(), 6)
 
     def test_the_same_event_outside_an_import_does_notify(self):
         # The control: what would have happened without importing()
@@ -499,7 +544,7 @@ class QueriesTest(ImportCase):
         # change to the operations would break.
         with CaptureQueriesContext(connection) as queries:
             self.run_import()
-        self.assertLessEqual(len(queries.captured_queries), 1366)
+        self.assertLessEqual(len(queries.captured_queries), 1421)
 
     def test_an_interrupted_run_leaves_the_activity_as_far_as_it_got(self):
         def fail(path):
@@ -674,7 +719,7 @@ class SecondRunTest(ImportCase):
         self.assertEqual(Item.objects.filter(kind=Kind.LIST).count(), 5)
         self.assertEqual(Item.objects.filter(kind=Kind.FOLDER).count(), 5)
         self.assertEqual(Membership.objects.count(), 3)
-        self.assertEqual(Comment.objects.count(), 4)
+        self.assertEqual(Comment.objects.count(), 5)
 
     def test_a_deleted_object_is_imported_again(self):
         self.run_import()
@@ -696,7 +741,9 @@ class UnchangedTest(ImportCase):
     def following(self, paths):
         """The requests for comments and subscribers"""
         return sorted(
-            p for p in paths if p.endswith(("/comments.json", "/subscription.json"))
+            p
+            for p in paths
+            if p.endswith(("/comments.json", "/replies.json", "/subscription.json"))
         )
 
     def test_a_later_run_saves_the_requests(self):
@@ -878,7 +925,12 @@ class ToolsTest(ImportCase):
 
     def test_switched_off_ones_are_skipped_and_listed(self):
         self.switch_off(
-            "todoset", "kanban_board", "message_board", "vault", "questionnaire"
+            "todoset",
+            "kanban_board",
+            "message_board",
+            "vault",
+            "questionnaire",
+            "inbox",
         )
         report = self.run_import()
         self.assertFalse(Item.objects.exists())
@@ -890,6 +942,7 @@ class ToolsTest(ImportCase):
                 'Camp kitchen, Docs & files "Docs & Files": 3 folders, 2 docs, 1 file',
                 'Camp kitchen, Card table "Card Table": 2 cards',
                 'Camp kitchen, Check-ins "Automatic Check-ins": 2 questions',
+                'Camp kitchen, Email forwards "Email Forwards": 1 forward',
             ],
         )
         self.assertIn(
@@ -905,6 +958,7 @@ class ToolsTest(ImportCase):
             "/vaults/400.json",
             "/card_tables/600.json",
             "/questionnaires/500.json",
+            "/inboxes/900.json",
         ):
             self.assertEqual(paths.count(path), 1)
         self.assertFalse(
@@ -913,14 +967,16 @@ class ToolsTest(ImportCase):
                     "/todosets/300/",
                     "/message_boards/200/",
                     "/vaults/400/",
+                    f"/buckets/{support.PROJECT}/inboxes/",
                 ))
                 for path in paths
             )
         )
 
     def test_empty_ones_stay_silent(self):
-        self.switch_off("message_board", "kanban_board")
+        self.switch_off("message_board", "kanban_board", "inbox")
         self.client_.data["/message_boards/200.json"]["messages_count"] = 0
+        self.client_.data["/inboxes/900.json"]["forwards_count"] = 0
         for column in self.client_.data["/card_tables/600.json"]["lists"]:
             column["cards_count"] = 0
         report = self.run_import()
@@ -929,15 +985,13 @@ class ToolsTest(ImportCase):
         self.assertFalse(Item.objects.filter(kind=Kind.MESSAGE).exists())
 
     def test_tools_never_imported_are_ignored(self):
-        # The chat and the schedule, switched off or not; the inbox is off
+        # The chat and the schedule, switched off or not
         self.switch_off("chat", "schedule")
         report = self.run_import()
         self.assertEqual(report.switched_off, [])
         self.assertFalse([p for p in report.problems if "Switched-off" in p])
         paths = [path for path, _params in self.client_.requests]
-        self.assertFalse(
-            any(p.startswith(("/chats", "/schedules", "/inboxes")) for p in paths)
-        )
+        self.assertFalse(any(p.startswith(("/chats", "/schedules")) for p in paths))
 
     def test_a_dry_run_lists_them_too(self):
         self.switch_off("message_board")
