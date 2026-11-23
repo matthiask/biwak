@@ -69,6 +69,8 @@
   {% capture as subject %}{% include "activity/_subject.html" with what="" %}{% endcapture %}
   {% if event.data.comment %}
     {% blocktranslate %}reacted to a comment on {{ subject }}{% endblocktranslate %}
+  {% elif event.data.event %}
+    {% blocktranslate %}reacted to {{ subject }} being completed{% endblocktranslate %}
   {% else %}
     {% blocktranslate %}reacted to {{ subject }}{% endblocktranslate %}
   {% endif %}

@@ -101,18 +101,20 @@ def read_by_acting(actor, *items):
     lantern.read(actor, items=items)
 
 
-def record(*, actor, action, project, item=None, **data):
+def record(*, actor, action, project, item=None, internal=False, **data):
     """Writes the event; after the commit, ``notify()`` decides who's told
     (project events notify nobody). The event stores whether the item is
     visible to clients now (read from the database, not the instance);
     edits only merge into an event of the same visibility, so an event
     clients see never takes in what happened while the item was internal.
-    ``STAFF_ONLY`` events are internal whatever the item."""
+    ``STAFF_ONLY`` events are internal whatever the item, and so are
+    ``internal`` ones (a reaction to a completing clients didn't see)."""
     visible = False
     if item is not None:
         data.setdefault("title", item.title)
         visible = (
-            action not in STAFF_ONLY
+            not internal
+            and action not in STAFF_ONLY
             and Item.objects.filter(pk=item.pk, is_client_visible=True).exists()
         )
     now = _occurred_at.get() or timezone.now()

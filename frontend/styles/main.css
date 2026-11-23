@@ -2041,6 +2041,11 @@ button.wb-signal:hover {
   }
 }
 
+/* Reactions to completing it, close under the line (specs/reactions.md) */
+.wb-timeline-line .wb-reactions {
+  margin: 0.25rem 0 0;
+}
+
 /* The 32 quick reactions in full rows: 8 by 4, also on a phone (a change
    of reactions.emoji.QUICK's length wants these numbers too) */
 .wb-reaction-quick {

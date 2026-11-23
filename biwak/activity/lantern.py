@@ -453,10 +453,15 @@ def unbookmark(user, item):
 
 
 def anchor(notification):
-    """Where the entry opens the item: at the comment where it applies"""
+    """Where the entry opens the item: at the comment where it applies, at
+    the reactions to completing it"""
     url = notification.event.item.get_absolute_url()
     if comment := notification.event.data.get("comment"):
         return f"{url}#comment-{comment}"
+    if notification.event.action == Action.REACTED and (
+        completed := notification.event.data.get("event")
+    ):
+        return f"{url}#reactions-event-{completed}"
     return url
 
 

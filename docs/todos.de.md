@@ -198,6 +198,13 @@ sichtbar war, und „eine andere Liste“, wo sie den Namen einer Liste
 nicht kennen dürfen. Änderungen an den Notizen stehen nicht da;
 Mitarbeitende finden sie im Verlauf, im Menü „Mehr“ des To-dos.
 
+Die Zeile, die sagt, dass jemand das To-do erledigt hat, nimmt eigene
+Reaktionen an, getrennt von denen auf das To-do: Ein „🎉“ fürs
+Erledigen sagt etwas anderes als ein „👍“ zum To-do. Nur die Person, die
+es erledigt hat, wird benachrichtigt („Reaktionen darauf, dass du es
+erledigt hast“). Wird das To-do später wieder geöffnet, bleiben die
+Reaktionen auf dieser Zeile.
+
 ## Wiederholen
 
 Wähle, wie oft es sich wiederholt: täglich, wöchentlich, monatlich oder

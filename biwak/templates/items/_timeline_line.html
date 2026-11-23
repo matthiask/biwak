@@ -1,4 +1,4 @@
-{% load biwak %}
+{% load biwak reactions %}
 <div class="wb-timeline-line" id="event-{{ line.pk }}" data-live>
   <span class="wb-timeline-icon">
     {% with kind=line.kind %}
@@ -14,7 +14,14 @@
     {% endwith %}
   </span>
   {% avatar line.actor %}
-  <span><strong>{% person_link line.actor %}</strong> {{ line.text }}
+  <div>
+    <strong>{% person_link line.actor %}</strong>
+    {{ line.text }}
     <span class="text-body-secondary">·
-      {{ line.created_at|moment }}</span></span>
+      {{ line.created_at|moment }}</span>
+    {# Reactions to getting it done, not to the to-do (specs/reactions.md) #}
+    {% with completion=line.completion %}
+      {% if completion %}{% reactions item event=completion %}{% endif %}
+    {% endwith %}
+  </div>
 </div>

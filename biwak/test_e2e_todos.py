@@ -734,6 +734,36 @@ class TodoPageTest(E2ETestCase):
         self.assertEqual(Attachment.objects.count(), 0)
 
 
+class CompletionReactionsTest(E2ETestCase):
+    """Reacting to a to-do getting completed: the picker on the timeline's
+    completion line (specs/reactions.md, decided 2026-11-23)"""
+
+    def test_the_picker_on_the_completion_line(self):
+        self.make_list(todos=["Plan"])
+        todo = Item.objects.get(title="Plan")
+        ops.complete(todo, actor=self.ada)
+        page = self.page
+        self.goto(page, todo)
+        line = page.locator(".wb-timeline-line", has_text="completed this")
+        reactions = line.locator(".wb-reactions")
+        reactions.locator(".wb-reaction-add summary").click()
+        reactions.locator("button", has_text="🎉").click()
+        reactions.locator(".wb-reaction.is-mine", has_text="🎉").wait_for()
+        reaction = Reaction.objects.get()
+        self.assertEqual((reaction.event.action, reaction.item), ("completed", todo))
+        # The block swapped itself, inside the line; the to-do's own has none
+        expect(line.locator(".wb-reactions")).to_have_count(1)
+        expect(page.locator(f"#reactions-item-{todo.pk} .wb-reaction")).to_have_count(0)
+
+        # Removing asks first, like everywhere
+        own = reactions.locator(".wb-reaction-own", has_text="🎉")
+        own.locator("a.wb-reaction").click()
+        own.get_by_role("button", name="Remove your 🎉").click()
+        expect(reactions.locator(".wb-reaction")).to_have_count(0)
+        self.assertFalse(Reaction.objects.exists())
+        self.assertEqual(self.errors, [])
+
+
 class CompletedListTest(E2ETestCase):
     """The latest completed to-dos below a list, "Show more" loading the
     next with htmx (specs/todos.md, "Completed to-dos")"""
