@@ -41,7 +41,7 @@ coming in are `notifications.md`.
   recipients, subject, attempts, last error, a link to the admin)
   through the plain mailer, and logs an error (Sentry). That notice goes
   through Resend too, so it may fail while Resend is down (accepted
-  2026-11-21). Login codes past their ten minutes are given up quietly.
+  2026-11-21). Login codes past their ten minutes are given up quietly, the last error kept after "Not sent before the login code expired." (decided 2026-11-23: it was lost, and with it why the code never came).
 - **Only bookkeeping is kept** (decided 2026-11-21): once the transport
   accepted a mail its content is deleted; recipients, kind, Resend's ID,
   attempts and delivery state stay. Mails given up keep their content.

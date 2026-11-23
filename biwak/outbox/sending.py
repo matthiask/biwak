@@ -105,7 +105,13 @@ EXPIRED = "expired"
 def attempt(row, *, now):
     """One attempt at the locked row; saves it"""
     if row.expires_at and now >= row.expires_at:
-        _give_up(row, now, "Not sent before the login code expired.")
+        # The last error stays: why it wasn't sent
+        error = " ".join(
+            part
+            for part in ["Not sent before the login code expired.", row.last_error]
+            if part
+        )
+        _give_up(row, now, error[:2000])
         return EXPIRED
     if now >= row.created_at + GIVE_UP_AFTER:
         _give_up(row, now, row.last_error)

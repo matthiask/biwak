@@ -154,6 +154,11 @@ class OutboxTest(TestCase):
         row.refresh_from_db()
         self.assertIsNotNone(row.given_up_at)
         self.assertEqual(row.attempts, 2)
+        # Why it wasn't sent stays, for whoever looks
+        self.assertEqual(
+            row.last_error,
+            "Not sent before the login code expired. OSError: down",
+        )
         # Nothing sent, and nothing for the admins to do
         self.assertEqual(mail.outbox, [])
 
