@@ -1,17 +1,19 @@
-"""The to-do page's timeline (specs/timeline.md): the comments and what
-happened to the to-do between them, oldest first, one list.
+"""The timeline of to-dos, messages, docs and files (specs/timeline.md):
+the comments and what happened to the item between them, oldest first,
+one list.
 
 The events come from ``Event.objects.visible_to()``, so a client sees only
-those of the time the to-do was visible to them; the lists' names are
-resolved like the feed's (``feed.add_target_lists()``). Consecutive changes
-of the same person within ten minutes become one line.
+those of the time the item was visible to them; the lists' and folders'
+names are resolved like the feed's (``feed.add_target_lists()``).
+Consecutive changes of the same person within ten minutes become one line.
 """
 
 import dataclasses
 import datetime as dt
 
+from django.urls import reverse
 from django.utils.formats import date_format
-from django.utils.html import conditional_escape, escape
+from django.utils.html import conditional_escape, escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import get_text_list
 from django.utils.translation import gettext as _
@@ -19,14 +21,16 @@ from django.utils.translation import gettext as _
 from biwak.activity import feed, mentions
 from biwak.activity.models import Action, Event
 from biwak.formats import format_range
+from biwak.items.models import Item, Kind
 
 
 # Consecutive changes of one person within this time of each other are one
 # line (the editing session of ``record()``, the undo of completing)
 MERGE_WINDOW = dt.timedelta(minutes=10)
 
-# What the timeline tells; edits only when they changed the title or the
-# due date
+# What the timeline tells; edits of to-dos only when they changed the title
+# or the due date, of the other kinds when they changed the title or the
+# text (or replaced the file); the switch, which to-dos don't have
 ACTIONS = [
     Action.COMPLETED,
     Action.REOPENED,
@@ -36,20 +40,32 @@ ACTIONS = [
     Action.EDITED,
     Action.TRASHED,
     Action.RESTORED,
+    Action.VISIBILITY_CHANGED,
 ]
-# What an edit tells
+# What an edit of a to-do tells
 EDIT_FIELDS = ("title", "due_on", "starts_on")
 DATE_FIELDS = {"due_on", "starts_on"}
+# What an edit of a message, a doc or a file tells: "edited this" for the
+# title and the text (comments may refer to the old one, decided
+# 2026-11-23), "uploaded a new version" for a file replaced
+TEXT_FIELDS = ("title", "content", "description", "file")
+
+
+def _is_todo(event):
+    return event.item.kind == Kind.TODO
 
 
 def _edit_fields(event):
-    return [f for f in event.data.get("fields", []) if f in EDIT_FIELDS]
+    shown = EDIT_FIELDS if _is_todo(event) else TEXT_FIELDS
+    return [f for f in event.data.get("fields", []) if f in shown]
 
 
 def _kind(event):
     """What the line's icon shows (``_timeline_line.html`` has the icons)"""
     if event.action == Action.EDITED:
         fields = _edit_fields(event)
+        if not _is_todo(event):
+            return "edited"
         return "due" if fields and DATE_FIELDS.issuperset(fields) else "title"
     return str(event.action)
 
@@ -242,6 +258,24 @@ class Effect:
 
 def _move(event, it):
     data = event.data
+    if "folder_id" in data:
+        if data["folder_id"] is None:
+            return _("moved %(it)s out of its folder") % {"it": it}
+        # The folder's name only if the viewer may see it
+        to = mentions.plain(event.target_folder) or _("another folder")
+        return _("moved %(it)s to %(to)s") % {"it": it, "to": to}
+    if "to_project" in data and "to" not in data:
+        # From another project (specs/lists-across-projects.md), named only
+        # if the viewer may open it (feed.add_projects())
+        if event.source_project:
+            return _("moved %(it)s from %(project)s") % {
+                "it": it,
+                "project": event.source_project,
+            }
+        return _("moved %(it)s from another project") % {"it": it}
+    if not _is_todo(event):
+        # Older moves of docs and files didn't say where to
+        return _("moved %(it)s") % {"it": it}
     if "group" in data:
         if data["group"]:
             to = mentions.plain(data["group"])
@@ -250,6 +284,30 @@ def _move(event, it):
     # Another list's name only if the viewer may see it
     to = mentions.plain(event.target_list) or _("another list")
     return _("moved %(it)s to %(to)s") % {"it": it, "to": to}
+
+
+def _moved(event):
+    """What a move did: into another list, group or folder (each with where
+    from, for moving back), or for docs and files into this project or
+    somewhere older events don't say"""
+    data = event.data
+    if "folder_id" in data:
+        key, to, was = "folder", data["folder_id"], "folder_was"
+    elif "group" in data:
+        key, to, was = "group", data.get("group_id"), "group_was"
+    elif not _is_todo(event):
+        # Into another project, or an older move: no way back
+        key, to, was = "place", True, None
+    else:
+        key, to, was = "list", data.get("to_id"), "to_was"
+    effect = Effect(
+        "moved", key, to, lambda it: _move(event, it), data.get(was, UNKNOWN)
+    )
+    if key == "list":
+        effect.column = data.get("group_id", UNKNOWN)
+        effect.column_was = data.get("group_was", UNKNOWN)
+    # Dragged into a column and back (one event, record())
+    return [] if effect.was == to else [effect]
 
 
 def effects(event):
@@ -267,18 +325,7 @@ def effects(event):
         return [Effect(str(action), group, value, lambda it: word % {"it": it})]
     match action:
         case Action.MOVED:
-            if "group" in data:
-                key, to, was = "group", data.get("group_id"), "group_was"
-            else:
-                key, to, was = "list", data.get("to_id"), "to_was"
-            effect = Effect(
-                "moved", key, to, lambda it: _move(event, it), data.get(was, UNKNOWN)
-            )
-            if key == "list":
-                effect.column = data.get("group_id", UNKNOWN)
-                effect.column_was = data.get("group_was", UNKNOWN)
-            # Dragged into a column and back (one event, record())
-            return [] if effect.was == to else [effect]
+            return _moved(event)
         case Action.ASSIGNED | Action.UNASSIGNED:
             sign = action == Action.ASSIGNED
             ids = event.data.get("assignees", [])
@@ -290,6 +337,19 @@ def effects(event):
             return [
                 Effect(str(action), ("person", pk), sign, names[pk]) for pk in known
             ]
+        case Action.VISIBILITY_CHANGED:
+            shown = bool(data.get("visible"))
+            word = _("showed %(it)s to clients") if shown else _("made %(it)s internal")
+            return [
+                Effect(
+                    "shown" if shown else "hidden",
+                    "visibility",
+                    value=shown,
+                    make=lambda it: word % {"it": it},
+                )
+            ]
+        case Action.EDITED if not _is_todo(event):
+            return _text_edits(event)
         case Action.EDITED:
             result = []
             fields = _edit_fields(event)
@@ -323,6 +383,29 @@ def effects(event):
     return []
 
 
+def _text_edits(event):
+    """What an edit of a message, a doc or a file did: "edited this" (for
+    staff a link to the history, ``event.history_url``), "uploaded a new
+    version" """
+    fields = _edit_fields(event)
+    result = []
+    if set(fields) - {"file"}:
+        url = getattr(event, "history_url", None)
+
+        def edited(it):
+            text = _("edited %(it)s") % {"it": it}
+            return format_html('<a href="{}">{}</a>', url, text) if url else text
+
+        result.append(Effect("edited", "edited", value=True, make=edited))
+    if "file" in fields:
+        result.append(
+            Effect(
+                "file", "file", value=True, make=lambda it: _("uploaded a new version")
+            )
+        )
+    return result
+
+
 def combine(events):
     """The effects of several events one after the other, without what
     cancelled out (assigning then removing the
@@ -342,7 +425,7 @@ def combine(events):
             old = next((e for e in result if e.key == effect.key), None)
             if old is not None:
                 result.remove(old)
-                if effect.key in ("title", "due", "list", "group"):
+                if effect.key in ("title", "due", "list", "group", "folder"):
                     # Back to what it was before the first change?
                     effect.was = old.was
                     if effect.key == "list":
@@ -383,7 +466,8 @@ def phrases(events):
                 )
             )
         else:
-            said.append(lambda it, make=effect.make: escape(make(it)))
+            # The history's link is HTML already, the rest is text
+            said.append(lambda it, make=effect.make: conditional_escape(make(it)))
     return [make(_("it") if n else _("this")) for n, make in enumerate(said)]
 
 
@@ -437,14 +521,43 @@ class Line:
         return next(e for e in reversed(self.events) if e.action == Action.COMPLETED)
 
 
-def relevant(events, user):
+def relevant(events, user, comments=()):
     """The events the timeline tells: not edits of anything but the title
-    and the due date"""
+    and the due date of to-dos; edits of the title and the text of other
+    items only after their first comment (decided 2026-11-23: before it,
+    nobody can have referred to the old text; the writing of a new doc
+    isn't told either)"""
+    first = min((c.created_at for c in comments), default=None)
     return [
         event
         for event in events
         if not (event.action == Action.EDITED and not _edit_fields(event))
+        and not (
+            event.action == Action.EDITED
+            and not _is_todo(event)
+            and (first is None or event.created_at < first)
+        )
     ]
+
+
+def add_target_folders(events, user):
+    """``event.target_folder``: the name of the folder a doc, file or folder
+    moved to, or "" if the viewer may not see it; checked now, in one query
+    for all events (like ``feed.add_target_lists()``)"""
+    moves = [e for e in events if e.action == Action.MOVED and "folder_id" in e.data]
+    ids = {e.data["folder_id"] for e in moves} - {None}
+    folders = (
+        dict(
+            Item.objects
+            .visible_to(user)
+            .filter(pk__in=ids, kind=Kind.FOLDER)
+            .values_list("pk", "title")
+        )
+        if ids
+        else {}
+    )
+    for event in moves:
+        event.target_folder = folders.get(event.data["folder_id"], "")
 
 
 def merge(entries):
@@ -466,8 +579,10 @@ def merge(entries):
 
 
 def entries_for(item, user, comments):
-    """Comments and event lines of the to-do, oldest first: two queries and
-    what ``feed.attach()`` needs (the people's names, the lists' titles)"""
+    """Comments and event lines of the item, oldest first: two queries and
+    what ``feed.attach()`` needs (the people's names, the lists' titles),
+    one more for folders when something moved between them"""
+    comments = list(comments)
     events = list(
         Event.objects
         .visible_to(user)
@@ -475,8 +590,14 @@ def entries_for(item, user, comments):
         .select_related("actor", "project", "item")
         .order_by("created_at", "pk")
     )
-    events = relevant(events, user)
+    events = relevant(events, user, comments)
     feed.attach(events, user)
+    add_target_folders(events, user)
+    if not user.is_client:
+        # "edited this" links to the history, staff only (specs/feed.md)
+        url = reverse("item_history", args=[item.pk])
+        for event in events:
+            event.history_url = url
     entries = [Line([event]) for event in events]
     entries.extend(comments)
     # Comments before events at the same time

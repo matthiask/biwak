@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_GET, require_POST
 
 from biwak.accounts.models import Color
+from biwak.activity import timeline as timelines
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import folder_counts
@@ -681,7 +682,10 @@ def file(request, pk):
             "older_versions": versions[1:] if staff else [],
             "breadcrumbs": breadcrumbs(item),
             "comment_form": comment_form,
-            "comments": item.comments.select_related("author"),
+            # Comments and what happened between them (specs/timeline.md)
+            "timeline": timelines.entries_for(
+                item, request.user, item.comments.select_related("author")
+            ),
             "replace_form": UploadForm(),
             "move_choices": folder_choices(request.user, item.project, exclude=item),
         }

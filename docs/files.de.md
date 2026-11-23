@@ -160,6 +160,23 @@ sind für Mitarbeitende. Kund:innen können nur Dateien ersetzen oder
 umbenennen, die sie oder Kund:innen ihrer Organisation hochgeladen
 haben.
 
+## Zwischen den Kommentaren
+
+Mitteilungen, Dokumente und Dateien zeigen zwischen ihren Kommentaren
+leise Zeilen wie To-dos ([To-dos](todos.de.md)), aber nur, was für das
+Gespräch zählt: Jemand hat den Titel oder den Text nach dem ersten
+Kommentar **bearbeitet** („Ada hat das bearbeitet“, ein Kommentar kann
+also den Text von vorher meinen), eine neue Version einer Datei
+hochgeladen, es Kund:innen gezeigt oder intern gemacht, es in einen
+anderen Ordner verschoben, in den Papierkorb gelegt oder
+wiederhergestellt. Die Änderungen einer Person innerhalb von zehn
+Minuten sind eine Zeile, gemeinsames Bearbeiten eines Dokuments ist also
+eine Zeile pro Person, nicht eine pro Änderung; das Schreiben eines
+neuen Dokuments steht nicht da. Mitarbeitende öffnen den alten Text über
+„bearbeitet“, das zum Verlauf führt. Kund:innen sehen die Zeilen aus der
+Zeit, in der es für sie sichtbar war: wann es ihnen gezeigt wurde, nicht
+wann es intern gemacht wurde.
+
 ## Anhänge
 
 Ziehe Dateien in ein Textfeld oder füge sie ein, oder nimm „Dateien

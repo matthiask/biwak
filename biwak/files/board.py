@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from biwak import cursors
+from biwak.activity import timeline as timelines
 from biwak.files import operations
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import (
@@ -143,7 +144,10 @@ def message(request, pk):
             "item": item,
             "message": item.message,
             "comment_form": comment_form,
-            "comments": item.comments.select_related("author"),
+            # Comments and what happened between them (specs/timeline.md)
+            "timeline": timelines.entries_for(
+                item, request.user, item.comments.select_related("author")
+            ),
             "can_pin": not request.user.is_client,
         }
         | sidebar_context(request, item),

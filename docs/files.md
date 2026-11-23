@@ -133,6 +133,20 @@ new version in place: the link, the comments and the earlier versions
 stay. Earlier versions are for staff. Clients can only replace or
 rename files that they or clients of their organization uploaded.
 
+## Between the comments
+
+Messages, docs and files show quiet lines between their comments, as
+to-dos do ([To-dos](todos.md)), but only what matters for the
+conversation: someone **edited** the title or the text after the first
+comment ("Ada edited this", so a comment may be about the text before),
+uploaded a new version of a file, showed it to clients or made it
+internal, moved it to another folder, trashed or restored it. A
+person's changes within ten minutes are one line, so editing a doc
+together is one line per person, not one per change; writing a new
+doc isn't listed. Staff open the old text from "edited this", which
+leads to the History. Clients see the lines of the time it was visible
+to them: when it was shown to them, not when it was made internal.
+
 ## Attachments
 
 Drop or paste files into any text field, or use "Attach files": the

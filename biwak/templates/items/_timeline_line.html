@@ -8,7 +8,10 @@
       {% elif kind == "assigned" %}{% icon "person-plus" %}
       {% elif kind == "unassigned" %}{% icon "person-dash" %}
       {% elif kind == "due" %}{% icon "calendar-event" %}
-      {% elif kind == "title" %}{% icon "pencil" %}
+      {% elif kind == "title" or kind == "edited" %}{% icon "pencil" %}
+      {% elif kind == "file" %}{% icon "file-earmark-arrow-up" %}
+      {% elif kind == "shown" %}{% icon "eye" %}
+      {% elif kind == "hidden" %}{% icon "eye-slash" %}
       {% elif kind == "trashed" %}{% icon "trash" %}
       {% endif %}
     {% endwith %}

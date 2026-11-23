@@ -38,7 +38,7 @@ confirm: `decisions-to-confirm.md`.
 | `help.md` | built | the help pages from `docs/` |
 | `celebrations.md` | built | small celebrations and animations |
 | `handover.md` | built | when somebody leaves: assignments stay, assigning, moving and dating several to-dos, all projects for admins |
-| `timeline.md` | built | what happened between a to-do's comments |
+| `timeline.md` | built | what happened between the comments of to-dos, messages, docs and files |
 | `pwa.md` | built | installable as an app |
 | `mail-sending.md` | built | the outbox and sending through Resend, bounces |
 | `sso.md` | built | sign-in per organization, single sign-on allowed or required |
