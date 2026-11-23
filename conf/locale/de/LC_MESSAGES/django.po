@@ -1795,7 +1795,7 @@ msgstr "Alle"
 msgid "Person"
 msgstr "Person"
 
-#: biwak/activity/views.py biwak/templates/organizations/people.html
+#: biwak/activity/views.py
 msgid "Everybody"
 msgstr "Alle"
 
@@ -5505,8 +5505,7 @@ msgstr "Es gibt bereits ein Team namens „%(name)s“."
 msgid "Nobody with the ID %(ids)s."
 msgstr "Niemand mit der ID %(ids)s."
 
-#: biwak/teams/picking.py biwak/templates/organizations/people.html
-#: biwak/templates/organizations/person.html
+#: biwak/teams/picking.py biwak/templates/organizations/person.html
 #: biwak/templates/teams/team_detail.html
 msgid "inactive"
 msgstr "inaktiv"
@@ -7472,6 +7471,10 @@ msgstr[1] "%(counter)s Personen"
 #: biwak/templates/organizations/organization_list.html
 msgid "No organizations yet."
 msgstr "Noch keine Organisationen."
+
+#: biwak/templates/organizations/people.html
+msgid "Active"
+msgstr "Aktiv"
 
 #: biwak/templates/organizations/people.html
 msgid "Invited"

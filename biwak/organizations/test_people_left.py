@@ -91,11 +91,13 @@ class PageTest(Base):
         self.client.force_login(viewer)
         return self.client.get(f"/people/{query}")
 
-    def test_everybody_who_hasnt_left_by_default(self):
+    def test_the_active_people_by_default(self):
+        """Decided 2026-11-23 by the user: "Active" instead of "Everybody",
+        neither the people waiting nor those who left"""
         for viewer in [self.root, self.ada, self.pia, self.chris]:
             with self.subTest(viewer=viewer):
                 response = self.get(viewer)
-                self.assertContains(response, "Wade Example")
+                self.assertNotContains(response, "Wade Example")
                 self.assertContains(response, "Chris Example")
                 self.assertNotContains(response, "Lena Example")
                 self.assertNotContains(response, "Otto Example")
@@ -125,7 +127,7 @@ class PageTest(Base):
                 response = self.get(viewer, "?left=1")
                 self.assertNotContains(response, "?left=1")
                 self.assertNotContains(response, "Lena Example")
-                self.assertContains(response, "Wade Example")
+                self.assertNotContains(response, "Wade Example")
 
     def test_inactive_offers_only_people_waiting(self):
         response = self.get(self.ada, "?inactive=1")

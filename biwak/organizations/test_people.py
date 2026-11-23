@@ -39,15 +39,14 @@ class PeoplePageTest(TestCase):
             )
         ]
 
-    def test_own_staff_see_everybody_in_order(self):
+    def test_own_staff_see_the_active_people_in_order(self):
         response = self.page(self.ada)
         self.assertEqual(
             self.headings_and_names(response),
             [
                 "Example Team",
                 "Ada Example",
-                "Root Example",
-                "Zed Example",  # inactive: last in the group
+                "Root Example",  # not Zed, inactive
                 "Alpine Agency",
                 "Pia Example",
                 "Zebra Clients",
@@ -60,7 +59,9 @@ class PeoplePageTest(TestCase):
         )
         self.assertContains(response, "External organization")
         self.assertContains(response, "Client organization")
-        self.assertContains(response, "inactive")
+        self.assertNotContains(response, "Zed Example")
+        self.assertContains(response, 'aria-current="page"\n      >Active</a>')
+        self.assertNotContains(response, "Everybody")
         self.assertContains(response, f'href="{self.own.get_absolute_url()}"')
         self.assertContains(response, "cleo@example.org")
         self.assertContains(response, f'href="/people/{self.cleo.pk}/"')
@@ -79,7 +80,6 @@ class PeoplePageTest(TestCase):
                 "Example Team",
                 "Ada Example",
                 "Root Example",
-                "Zed Example",
                 "Alpine Agency",
                 "Pia Example",
                 "Zebra Clients",

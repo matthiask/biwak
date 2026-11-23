@@ -127,9 +127,10 @@ against a real account 2026-11-22) and whoever turns up in a project (creators, 
   assignees, subscribers) but isn't among them has left (the date: the
   run's). People still in the account who are inactive in Biwak aren't
   touched (they wait to be activated).
-- **The People page** shows everybody who hasn't left by default:
-  active, invited, and imported people waiting to be activated (marked
-  inactive). A filter "People who left" (a query parameter like
+- **The People page** shows the active people by default ("Active",
+  invited people included; decided 2026-11-23 by the user, before
+  that everybody who hadn't left), imported people waiting to be
+  activated under "Inactive". A filter "People who left" (a query parameter like
   the page's other filters) lists the others, marked "left on 3 Mar
   2025"; their pages stay reachable.
 - **Activating** doesn't offer people who left among the imported

@@ -233,8 +233,9 @@ class PagesTest(Base):
         # Activate… only for those staff may change
         self.assertContains(response, f"/people/{self.cleo.pk}/activate/")
         self.assertNotContains(response, f"/people/{self.staffer.pk}/activate/")
-        everybody = self.client.get("/people/")
-        self.assertContains(everybody, "?inactive=1")
+        active = self.client.get("/people/")
+        self.assertContains(active, "?inactive=1")
+        self.assertNotContains(active, self.cleo.email)
 
     def test_filter_is_for_staff(self):
         for user in [self.pia, person("Chris", client=True)]:

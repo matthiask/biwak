@@ -136,14 +136,16 @@ def own_label(viewer, organization):
 
 
 def groups_for(viewer):
-    """The groups in the page's order, each person with ``role``,
-    ``show_email`` and ``can_move`` (the existing "Change organization"
-    modal); people who left have their own filter (specs/activation.md)"""
+    """The groups in the page's order, the active people only (decided
+    2026-11-23 by the user), each with ``role``, ``show_email`` and
+    ``can_move`` (the existing "Change organization" modal); inactive
+    people and people who left have their own filters
+    (specs/activation.md)"""
     people = list(
         known_people(viewer)
-        .filter(left_at__isnull=True)
+        .filter(is_active=True, left_at__isnull=True)
         .select_related("invited_by")
-        .order_by("-is_active", Lower("full_name"), "email")
+        .order_by(Lower("full_name"), "email")
     )
     _note_externals(viewer, people)
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))

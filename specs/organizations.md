@@ -112,16 +112,20 @@ manage none (`access.md`).
   externals see it by its name alone, here and on a project's people page
   (decided 2026-11-22).
 - **Each person:** name, address, role (admin, staff, external, client),
-  their name linking to their page; inactive people
-  quietly, marked "inactive", last in their group. Own staff get "Change
+  their name linking to their page. Own staff get "Change
   organization" (the own organization for admins only) and links to the
   organizations.
 - **Clients and externals** see the people they share a project with
   (`known_people()`, `access.md`), grouped the same way. Externals see
   addresses as on a project's people page; clients only those of their
   own organization.
-- People who left aren't listed by default; invitations and the
-  "Invited", "Inactive" and "People who left" filters: `activation.md`.
+- **Active people only** by default (decided 2026-11-23 by the user:
+  "the default in the people list should be active people", the
+  "Everybody" filter became "Active"), for everybody; inactive people
+  and people who left are under the "Inactive" and "People who left"
+  filters for own staff (`activation.md`), for others only through
+  their pages and names. Like the API's people list and `biwak people`.
+  Invitations and the "Invited" filter: `activation.md`.
 - Teams, at the end for staff: `teams.md`.
 
 ## Projects and organizations
