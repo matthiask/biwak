@@ -21,7 +21,9 @@ import click
 import requests
 import tomli_w
 from rich.console import Console
+from rich.style import Style
 from rich.table import Table
+from rich.text import Text
 
 
 CONFIG = Path.home() / ".config" / "biwak.toml"
@@ -263,6 +265,17 @@ def cli():
 
 
 console = Console(markup=False, highlight=False)
+
+
+def link(text, url):
+    """Text linking to the URL in terminals which show links (OSC 8, as gov
+    and wb do); plain text elsewhere and without a URL"""
+    return Text(str(text), style=Style(link=url)) if url else str(text)
+
+
+def echo_linked(*parts):
+    """A line of strings and ``link()``s, through rich so the links stay"""
+    console.print(Text.assemble(*parts), soft_wrap=True)
 
 
 json_option = click.option("--json", "as_json", is_flag=True, help="Output JSON.")

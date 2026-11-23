@@ -7,7 +7,9 @@ from biwak_cli.core import (
     clients,
     console,
     echo_json,
+    echo_linked,
     json_option,
+    link as linked,
     need,
     request,
     table,
@@ -19,7 +21,12 @@ from biwak_cli.core import (
 
 def show_public_link(link):
     item = link["item"]
-    click.echo(f"#{item['id']} {item['title']} {clients(item)}".rstrip())
+    marker = clients(item)
+    echo_linked(
+        f"#{item['id']} ",
+        linked(item["title"], item.get("url")),
+        f" {marker}" if marker else "",
+    )
     click.echo(link["url"])
     click.echo(f"Expires {link['expires_at'][:16].replace('T', ' ')}")
 
@@ -41,7 +48,7 @@ def public_links(ctx, as_json):
         t.add_row(
             str(item["id"]),
             item["kind"],
-            item["title"],
+            linked(item["title"], item.get("url")),
             str(item["project_id"]),
             link["expires_at"][:16].replace("T", " "),
             link["created_by"]["short_name"],
@@ -104,14 +111,18 @@ def bookmarks(ctx, as_json):
             t.add_row(
                 str(item["id"]),
                 item["kind"],
-                item["title"],
+                linked(item["title"], item.get("url")),
                 str(item["project_id"]),
                 clients(item),
             )
         else:
             project = bookmark["project"]
             t.add_row(
-                str(project["id"]), "project", project["name"], str(project["id"]), ""
+                str(project["id"]),
+                "project",
+                linked(project["name"], project.get("url")),
+                str(project["id"]),
+                "",
             )
     console.print(t)
     return None

@@ -8,6 +8,7 @@ from biwak_cli.core import (
     console,
     echo_json,
     json_option,
+    link,
     need,
     notify_option,
     request,
@@ -83,7 +84,7 @@ def projects(
             return echo_json(data)
         t = table("ID", "Project")
         for p in data:
-            t.add_row(str(p["id"]), p["name"])
+            t.add_row(str(p["id"]), link(p["name"], p.get("url")))
         console.print(t)
         return None
     params = {"archived": archived}
@@ -99,7 +100,7 @@ def projects(
         t.add_row(
             "*" if p["is_bookmarked"] else "",
             str(p["id"]),
-            p["name"],
+            link(p["name"], p.get("url")),
             p["color_name"],
             (p["last_activity_at"] or "")[:16].replace("T", " "),
             "" if p["is_all_access"] else "limited",
@@ -127,7 +128,7 @@ def all_projects(as_json, filters):
         ]
         t.add_row(
             str(p["id"]),
-            p["name"],
+            link(p["name"], p.get("url")),
             " ".join(mark for mark in marks if mark),
             str(p["active_staff"]),
             ", ".join(p["client_organizations"]),

@@ -13,7 +13,9 @@ from biwak_cli.core import (
     console,
     download,
     echo_json,
+    echo_linked,
     json_option,
+    link,
     need,
     paginate,
     people_ids,
@@ -51,7 +53,7 @@ def files(ctx, project, folder, as_json):
         t.add_row(
             str(entry["id"]),
             entry["kind"],
-            entry["title"],
+            link(entry["title"], entry.get("url")),
             f"{entry['size']:,} B" if entry["size"] is not None else "",
             clients(entry),
         )
@@ -282,7 +284,7 @@ def doc_show(doc_id, comments, version, as_json):
     if as_json:
         return echo_json(data)
     marker = " [clients]" if data["visible_to_clients"] else ""
-    click.echo(f"#{data['id']} {data['title']}{marker}")
+    echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), marker)
     if data["read_only"]:
         click.echo("Read-only.")
     click.echo(f"URL: {data['url']}")

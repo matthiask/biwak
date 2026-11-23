@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
+from rich.color import ColorSystem
 
 from biwak import api_conventions, cli_version
 from biwak.accounts.models import APIToken
@@ -103,10 +104,12 @@ class CLITest(TestCase):
             )
         return Response(response)
 
-    def biwak(self, *args, access="write", input=None):
+    def biwak(self, *args, access="write", input=None, terminal=False):
+        """``terminal``: as in a terminal with colors and links"""
         _token, token = APIToken.create_for(user=self.ada, title="T", access=access)
         biwak_cli.core.write_config({"url": "http://testserver", "token": token})
-        with patch.object(biwak_cli.core.console, "_color_system", None):
+        system = ColorSystem.TRUECOLOR if terminal else None
+        with patch.object(biwak_cli.core.console, "_color_system", system):
             result = CliRunner().invoke(
                 biwak_cli.cli, [str(a) for a in args], input=input
             )
@@ -141,6 +144,25 @@ class CLICommandsTest(CLITest):
             result = self.biwak("me")
         self.assertIn(f"biwak {cli_version.LATEST} is available", result.output)
         self.assertIn(cli_version.UPGRADE, result.output)
+
+    def test_titles_link_to_the_page(self):
+        """In a terminal, titles are links (OSC 8) to the page, as in gov
+        and wb; piped or redirected, plain text"""
+        todo = ops.create_todo(
+            todolist=self.list, title="Order the tent", creator=self.ada
+        )
+        url = f"/todos/{todo.pk}/\x1b\\Order the tent"
+        for args in [
+            ("todos", "--list", self.list.pk),
+            ("todos", "show", todo.pk),
+            ("lists", "--project", self.project.pk),
+            ("projects",),
+        ]:
+            with self.subTest(args=args):
+                linked = self.biwak(*args, terminal=True).output
+                self.assertIn("\x1b]8;", linked)
+                self.assertNotIn("\x1b]8;", self.biwak(*args).output)
+        self.assertIn(url, self.biwak("todos", "show", todo.pk, terminal=True).output)
 
     def test_workflow(self):
         self.assertIn("Ada Example", self.biwak("me").output)

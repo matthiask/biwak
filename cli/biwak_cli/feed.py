@@ -8,6 +8,7 @@ from biwak_cli.core import (
     console,
     echo_json,
     json_option,
+    link,
     paginate,
     table,
 )
@@ -47,10 +48,13 @@ def feed(project, person, kind, action, since, limit, as_json):
             event["created_at"][:16].replace("T", " "),
             event["actor"]["short_name"],
             event["action"].replace("_", " "),
-            item.get("title")
-            or event["data"].get("title")
-            or event["data"].get("name")
-            or "",
+            link(
+                item.get("title")
+                or event["data"].get("title")
+                or event["data"].get("name")
+                or "",
+                item.get("url"),
+            ),
             str(event["project_id"]),
             clients(event),
         )
@@ -98,7 +102,7 @@ def search(terms, project, kind, mine, archived, limit, as_json):
         t.add_row(
             str(result["id"]),
             result["kind"],
-            result["title"],
+            link(result["title"], result.get("url")),
             result["project_name"] + (" (archived)" if result["archived"] else ""),
             found,
             clients(result),

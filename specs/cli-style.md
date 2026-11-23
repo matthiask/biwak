@@ -57,6 +57,11 @@ What was decided on the way (by the rules, 2026-11-22):
   `search`, `feed`, `lantern`, `away`, `settings`, `notifications`, as
   in gov and wb (`auth`, `tokens`, `completion` and `skills` there,
   when Biwak gets them).
+- **Titles link to their page** (2026-11-23, as in gov and wb): in a
+  terminal, the titles and names in tables and the heading of `show`
+  are OSC 8 hyperlinks to the item's `url` (`link()` and `echo_linked()`
+  in `core.py`, through rich); piped or redirected, plain text. CLI
+  0.65.0.
 - **No aliases for the old names:** nobody uses the CLI but its author
   (2026-11-22); `MINIMUM` in `biwak/cli_version.py` refuses older CLIs,
   the version goes to 0.60.0.
