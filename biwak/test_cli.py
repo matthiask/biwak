@@ -165,6 +165,22 @@ class CLICommandsTest(CLITest):
                 self.assertNotIn("\x1b]8;", self.biwak(*args).output)
         self.assertIn(url, self.biwak("todos", "show", todo.pk, terminal=True).output)
 
+    def test_headings_by_project_without_markup_tags(self):
+        """The console prints no markup (names may have brackets): the
+        headings are styled, not tagged"""
+        group = ops.create_group(todolist=self.list.todolist, title="[Week 1]")
+        ops.create_todo(
+            todolist=self.list,
+            title="Order the tent",
+            creator=self.ada,
+            group=group,
+            assignees=[self.ada],
+        )
+        output = self.biwak("todos", "--mine").output
+        self.assertNotIn("[bold]", output)
+        self.assertNotIn("[dim]", output)
+        self.assertIn(f"{self.project.name}\n  Launch\n    [Week 1]\n", output)
+
     def test_completion_scripts(self):
         for shell in ["bash", "zsh", "fish"]:
             with self.subTest(shell=shell):
