@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _, ngettext
 from django.views.decorators.http import require_POST
 
-from biwak import checklists, cursors, schedules
+from biwak import cursors, schedules
 from biwak.accounts.models import User
 from biwak.activity import timeline as timelines
 from biwak.activity.operations import (
@@ -29,7 +29,8 @@ from biwak.items import editing, glance, operations as ops, visibility
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
-from biwak.schedules_forms import (
+from biwak.richtext import checklists
+from biwak.schedules.forms import (
     KEEP,
     EndsCountInput,
     EndsOnInput,

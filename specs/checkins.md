@@ -65,7 +65,7 @@ and answering, `mails.py`).
 
 - **Kind `question`** (no parent), switchable, not commentable:
   `Question(Detail)`, the question as the item's title, `rule` (an RRULE,
-  `biwak/schedules.py`), `starts_on` (the first date the rule counts
+  `biwak/schedules/__init__.py`), `starts_on` (the first date the rule counts
   from, also the phase of "every two weeks"), `time_of_day`,
   `people` (who is asked), `paused_at`, `next_at` (stored, recomputed
   when one of them changes and after asking; empty while paused).

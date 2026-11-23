@@ -24,7 +24,7 @@ from biwak.items.views import CommentForm, item_for
 from biwak.projects.models import knows_people_of
 from biwak.projects.views import project_for
 from biwak.reactions.operations import prefetch
-from biwak.schedules_forms import KEEP, RuleField, RuleFormMixin
+from biwak.schedules.forms import KEEP, RuleField, RuleFormMixin
 
 
 # How many occurrences a page shows (older ones: "Show more")

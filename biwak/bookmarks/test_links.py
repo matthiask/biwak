@@ -1,10 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
-from biwak import links
 from biwak.accounts.models import APIToken
 from biwak.audit.models import LoggedAction
-from biwak.bookmarks import operations as ops
+from biwak.bookmarks import links, operations as ops
 from biwak.bookmarks.models import Link
 from biwak.bookmarks.test_bookmarks import BookmarkBase
 

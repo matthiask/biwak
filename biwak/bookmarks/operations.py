@@ -5,7 +5,7 @@ the building agent, 2026-11-20)."""
 from django.db import transaction
 from django.db.models import Max
 
-from biwak import links
+from biwak.bookmarks import links
 from biwak.bookmarks.models import Bookmark, Link
 
 

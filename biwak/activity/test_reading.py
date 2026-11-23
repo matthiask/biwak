@@ -102,7 +102,7 @@ class ActionsReadTest(ReadingTestCase):
 
     def test_tick_in_a_todo(self):
         self.act(lambda: ops.update_todo(self.todo, actor=self.dan, notes="- [ ] One"))
-        from biwak import checklists
+        from biwak.richtext import checklists
 
         self.check(
             self.todo,
@@ -113,7 +113,7 @@ class ActionsReadTest(ReadingTestCase):
 
     def test_tick_in_a_comment(self):
         comment = self.comment(self.todo, "- [ ] One", author=self.ada)
-        from biwak import checklists
+        from biwak.richtext import checklists
 
         self.check(
             self.todo,
@@ -127,7 +127,7 @@ class ActionsReadTest(ReadingTestCase):
         )
 
     def test_tick_in_a_doc(self):
-        from biwak import checklists
+        from biwak.richtext import checklists
 
         doc = bare_doc(
             project=self.project, title="Notes", creator=self.ada, content="- [ ] One"

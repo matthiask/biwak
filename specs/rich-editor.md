@@ -82,7 +82,7 @@ additions).
   both skip without Node. `prosemirror-markdown` and `markdown-it` are
   pinned exactly.
 - **Ticking** keeps working: a box is a task item in reading order,
-  the same index the server counts (`biwak/checklists.py`).
+  the same index the server counts (`biwak/richtext/checklists.py`).
 
 ## Everywhere
 

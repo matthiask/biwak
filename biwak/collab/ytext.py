@@ -10,8 +10,8 @@ from pycrdt import Decoder, Doc
 from biwak.richtext import diff
 from biwak.richtext.parse import parse
 from biwak.richtext.preserve import to_markdown
+from biwak.richtext.text import line_breaks
 from biwak.richtext.ydoc import FRAGMENT, to_ydoc
-from biwak.text import line_breaks
 
 
 __all__ = ["FRAGMENT"]

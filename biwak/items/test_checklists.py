@@ -9,12 +9,12 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.urls import reverse
 
-from biwak import checklists
 from biwak.activity.models import Action, Event
 from biwak.audit.models import LoggedAction
 from biwak.checkins import operations as checkin_ops
 from biwak.items import operations as ops
 from biwak.items.models import Doc, Kind, Message, Todo, Upload
+from biwak.richtext import checklists
 from biwak.test_utils import check_in_answers, person, project
 
 

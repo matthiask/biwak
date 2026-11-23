@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from biwak import checklists
+from biwak.richtext import checklists
 from biwak.templatetags.biwak import mail_markdown, render_markdown
 
 

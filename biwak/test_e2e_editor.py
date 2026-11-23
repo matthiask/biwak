@@ -1,14 +1,13 @@
 """Task lists, the toolbar and pasting in the browser (specs/editor.md)"""
 
 import time
-from pathlib import Path
 
 from django.urls import reverse
 
 from biwak.items import operations as ops
 from biwak.items.models import Editing, Message, Todo
+from biwak.richtext.test_paste import FIXTURES, GOOGLE_DOCS, MAIL
 from biwak.test_e2e import E2ETestCase, expect
-from biwak.test_paste import GOOGLE_DOCS, MAIL
 
 
 NOTES = "Packing\n\n- [ ] tent\n- [x] stove\n- [ ] rope"
@@ -499,9 +498,6 @@ class UnchangedTest(E2ETestCase):
         self.page.locator('[data-toolbar-action="italic"]').click()
         self.assertTrue(self.field.input_value().startswith("_Now_"))
         self.assertEqual(self.errors, [])
-
-
-FIXTURES = Path(__file__).parent / "test_fixtures"
 
 
 class PasteTest(E2ETestCase):

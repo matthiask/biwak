@@ -16,7 +16,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 from pycrdt import Doc
 
-from biwak import checklists
+from biwak.richtext import checklists
 from biwak.richtext.parse import parse
 from biwak.richtext.serialize import serialize
 from biwak.richtext.ydoc import from_ydoc, to_ydoc

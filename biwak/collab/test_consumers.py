@@ -671,7 +671,7 @@ class ConsumerTest(TransactionTestCase):
         self.assertEqual(await self.content(self.shared), "Live Agenda\n\n- one\n")
 
     async def test_a_tick_arrives_in_the_editors_and_keeps_what_was_typed(self):
-        from biwak import checklists
+        from biwak.richtext import checklists
 
         doc = await database_sync_to_async(bare_doc)(
             project=self.project,
@@ -712,7 +712,7 @@ class ConsumerTest(TransactionTestCase):
     async def test_a_tick_of_the_stored_text_while_more_was_typed(self):
         """The page shows the stored text, the editors have more: the same
         box is ticked and the typing stays"""
-        from biwak import checklists
+        from biwak.richtext import checklists
 
         doc = await database_sync_to_async(bare_doc)(
             project=self.project,

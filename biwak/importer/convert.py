@@ -9,7 +9,7 @@ stays readable text. Links to other Basecamp recordings are rewritten by
 
 from bs4 import BeautifulSoup
 
-from biwak.htmlmarkdown import Converter, tidy
+from biwak.richtext.htmlmarkdown import Converter, tidy
 
 
 MENTION = "application/vnd.basecamp.mention"

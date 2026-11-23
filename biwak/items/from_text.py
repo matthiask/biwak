@@ -17,8 +17,8 @@ from django.utils.text import Truncator
 from django.utils.translation import gettext, ngettext
 from markdown_it import MarkdownIt
 
-from biwak import checklists
-from biwak.text import line_breaks
+from biwak.richtext import checklists
+from biwak.richtext.text import line_breaks
 
 
 # Decided 2026-11-22

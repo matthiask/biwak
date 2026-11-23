@@ -13,10 +13,10 @@ import datetime as dt
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from biwak import checklists, text
 from biwak.activity.models import Action, Event
 from biwak.items.models import Editing, Item, Kind
 from biwak.organizations.names import display_name
+from biwak.richtext import checklists, text
 
 
 TTL = dt.timedelta(minutes=2)

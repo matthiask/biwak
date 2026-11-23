@@ -74,7 +74,8 @@ The agent skills are `cli/biwak_cli/skills/<name>/SKILL.md`
 install`: bump the CLI's version when a skill changes; `biwak/test_skills.py`
 checks the commands and options they show.
 
-End-to-end tests (`biwak/test_e2e.py`, tagged `e2e`) run the real server and
+End-to-end tests (`biwak/test_e2e_<area>.py` on the shared base in
+`biwak/test_e2e.py`, tagged `e2e`) run the real server and
 Chromium through Playwright: `uv run playwright install chromium` once,
 without the browser they're skipped, `./runtests.sh --exclude-tag e2e`
 leaves them out.

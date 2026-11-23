@@ -140,5 +140,5 @@ disabled and the preview says why.
   visibility, a client's group rule); the modal as staff and client,
   the API with `preview`, the CLI.
 - Browser tests for dropping a file onto a list and onto a list on the
-  project's lists, and the preview updating (`test_e2e.py`).
+  project's lists, and the preview updating (`test_e2e_from_text.py`).
 - The help's to-dos chapter says how.

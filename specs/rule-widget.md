@@ -11,8 +11,8 @@ RRULEs and preset names.
 ## What it looks like
 
 `rule_fields()`, `build_rule()` and `default_fields()` in
-`biwak/schedules.py` (the only place that knows RRULE syntax);
-`RuleField` and `RuleWidget` in `biwak/schedules_forms.py` with
+`biwak/schedules/__init__.py` (the only place that knows RRULE syntax);
+`RuleField` and `RuleWidget` in `biwak/schedules/forms.py` with
 `forms/rule_widget.html` and `{% rule_widget %}` for the inline forms;
 `GET /schedules/describe/`; `frontend/rule-widget.js`.
 

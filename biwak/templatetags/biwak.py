@@ -95,10 +95,10 @@ _markdown.core.ruler.push("external_links", _external_links)
 
 
 def _checkboxes(state):
-    """Checkboxes of task lists (``biwak/checklists.py``): numbered, in a
-    mail a glyph, disabled unless the page lets the viewer tick them
-    (``env["tickable"]``)"""
-    from biwak.checklists import is_checkbox
+    """Checkboxes of task lists (``biwak/richtext/checklists.py``):
+    numbered, in a mail a glyph, disabled unless the page lets the viewer
+    tick them (``env["tickable"]``)"""
+    from biwak.richtext.checklists import is_checkbox
 
     number = 0
     for block in state.tokens:
@@ -144,8 +144,8 @@ def checklist_markdown(context, text, item, comment=None, *, without_title=False
     ``item_tick``); the others see them disabled. ``comment``: the text is
     that comment's. ``without_title``: a doc's page, whose header shows
     the first line when it's a heading (``render_markdown()``)."""
-    from biwak.checklists import text_hash
     from biwak.items import operations as ops
+    from biwak.richtext.checklists import text_hash
 
     user = context["request"].user
     if comment is not None:
@@ -605,11 +605,12 @@ def due_badge(todo, date_format="MONTH_DAY_FORMAT", *, badge_only=False):
 
 @register.filter
 def moment(when, on=None):
-    """A past moment by the one rule (``biwak.text.moment``, specs/ui.md):
-    "3 hours ago" within seven days, then the date, the exact time on
-    hover. ``{{ x|moment:"on" }}`` for sentences: "on 12 Nov 2026"."""
-    from biwak import text
+    """A past moment by the one rule (``biwak.richtext.text.moment``,
+    specs/ui.md): "3 hours ago" within seven days, then the date, the exact
+    time on hover. ``{{ x|moment:"on" }}`` for sentences: "on 12 Nov
+    2026"."""
     from biwak.formats import format_date
+    from biwak.richtext import text
 
     if not when:
         return ""

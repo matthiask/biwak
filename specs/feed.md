@@ -185,7 +185,7 @@ there only duplicated it.
 - `Link(project, url, title, kind, position, visible_to_clients,
   created_by, created_at)`. Only `http` and `https`; the title defaults
   to the host.
-- **Kind** from the URL's host by a small table in `biwak/links.py`
+- **Kind** from the URL's host by a small table in `biwak/bookmarks/links.py`
   (figma.com, github.com, gitlab.com, docs.google.com and
   drive.google.com, everything else a plain link), each with an icon
   (Figma has none in Bootstrap Icons: the palette stands in; Google
