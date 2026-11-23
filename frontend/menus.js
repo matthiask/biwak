@@ -31,7 +31,9 @@ document.addEventListener("keydown", (event) => {
 // its button, which isn't enough when the button sits elsewhere (a header
 // wrapping on a phone puts it at the left): align it to the other edge of
 // the button if it overflows, and cap its width and shift it if it's
-// wider than the space on either side
+// wider than the space on either side. Inside something scrolling, which
+// cuts off what sticks out (the board's columns), it's placed on the
+// screen below its button instead, and closes when anything scrolls.
 
 const MARGIN = 8
 const POPUP = ":scope > .dropdown-menu, :scope > .wb-reaction-picker"
@@ -40,12 +42,32 @@ function place(details) {
   const popup = details.querySelector(POPUP)
   if (!popup) return
   const style = popup.style
-  for (const name of ["left", "right", "maxWidth", "minWidth", "translate"]) {
+  for (const name of [
+    "position",
+    "top",
+    "left",
+    "right",
+    "maxWidth",
+    "minWidth",
+    "translate",
+  ]) {
     style[name] = ""
   }
   if (getComputedStyle(popup).position !== "absolute") return
   const screen = document.documentElement.clientWidth
   const fits = (box) => box.left >= MARGIN && box.right <= screen - MARGIN
+
+  if (cutOff(details, popup)) {
+    const button = details.querySelector("summary").getBoundingClientRect()
+    style.position = "fixed"
+    style.maxWidth = `${screen - 2 * MARGIN}px`
+    style.top = `${button.bottom}px`
+    style.right = "auto"
+    const width = popup.getBoundingClientRect().width
+    const left = Math.min(button.right, screen - MARGIN) - width
+    style.left = `${Math.max(MARGIN, left)}px`
+    return
+  }
 
   if (fits(popup.getBoundingClientRect())) return
 
@@ -70,6 +92,41 @@ function place(details) {
   )
   style.translate = `${shift}px`
 }
+
+// The popup sticks out of an ancestor which cuts off what overflows
+function cutOff(details, popup) {
+  const box = popup.getBoundingClientRect()
+  for (
+    let el = details.parentElement;
+    el && el !== document.body;
+    el = el.parentElement
+  ) {
+    const { overflowX, overflowY } = getComputedStyle(el)
+    if (overflowX === "visible" && overflowY === "visible") continue
+    const clip = el.getBoundingClientRect()
+    if (
+      box.bottom > clip.bottom ||
+      box.top < clip.top ||
+      box.right > clip.right ||
+      box.left < clip.left
+    )
+      return true
+  }
+  return false
+}
+
+// Placed on the screen, it would stay behind while the page or the board
+// scrolls: closed instead
+document.addEventListener(
+  "scroll",
+  () => {
+    for (const details of document.querySelectorAll(OPEN)) {
+      const popup = details.querySelector(POPUP)
+      if (popup?.style.position === "fixed") details.open = false
+    }
+  },
+  true,
+)
 
 document.addEventListener(
   "toggle",

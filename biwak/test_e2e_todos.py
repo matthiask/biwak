@@ -274,6 +274,34 @@ class TodosTest(E2ETestCase):
             self.order(todolist), [("B", None), ("A", "Doing"), ("C", "Doing")]
         )
 
+    def test_a_group_menu_on_the_board_is_not_cut_off(self):
+        """The board's columns scroll sideways inside it, which cuts off
+        what sticks out; the menu shows whole all the same"""
+        groups = ["Design", "Build", "Ship", "Polish"]
+        todolist = self.make_list(groups=groups, todos=[("Task", g) for g in groups])
+        page = self.page
+        page.set_viewport_size({"width": 390, "height": 700})
+        self.goto(page, f"{todolist.get_absolute_url()}?view=board")
+        page.get_by_title("Edit, move or remove the group").first.click()
+        menu = page.locator("details.wb-menu[open] > .dropdown-menu")
+        expect(menu).to_be_visible()
+        # Every entry can be clicked: the topmost element at its middle
+        for item in menu.locator(".dropdown-item").all():
+            box = item.bounding_box()
+            hit = page.evaluate(
+                "([x, y]) => document.elementFromPoint(x, y)?.textContent.trim()",
+                [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
+            )
+            self.assertEqual(hit, item.text_content().strip())
+        # Clicking the last one works
+        with page.expect_navigation():
+            menu.get_by_role("button", name="Move down").click()
+        self.assertEqual(
+            list(todolist.todolist.groups.values_list("title", flat=True)),
+            ["Build", "Design", "Ship", "Polish"],
+        )
+        self.assertEqual(self.errors, [])
+
     def test_dragging_groups(self):
         todolist = self.make_list(groups=["One", "Two"], todos=[])
         page = self.page
