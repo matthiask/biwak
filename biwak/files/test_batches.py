@@ -241,4 +241,5 @@ class BatchTest(TestCase):
             message.body.count("Ada Example uploaded 2 files to Minutes."), 1
         )
         self.assertIn("Ada Example uploaded a file to Docs and files.", message.body)
-        self.assertIn("top.txt", message.body)
+        # One line per entry in the digest (specs/notifications.md)
+        self.assertNotIn("top.txt", message.body)

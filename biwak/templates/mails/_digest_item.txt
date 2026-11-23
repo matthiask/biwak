@@ -1,0 +1,11 @@
+{% load i18n %}{% if item.batch %}{% with title=item.title url=item.url line=item.line files=item.files is_client_visible=item.is_client_visible %}{% include "mails/_batch.txt" %}{% endwith %}
+{% else %}{% with title=item.title kind=item.kind list=item.list assignees=item.assignees todo=item.todo text_plain=item.text_plain url=item.url %}{% if item.item.is_client_visible %}{% translate "Clients can see this." %}
+
+{% endif %}{% for entry in item.entries %}{{ entry.line }}{% if entry.comment_text %}
+
+{{ entry.comment_text }}{% endif %}{% if entry.reactions %}
+{{ entry.reactions }}{% endif %}
+
+{% endfor %}{% include "mails/_item.txt" %}
+{% translate "Unsubscribe from this" %}: {{ item.unsubscribe_url }}
+{% endwith %}{% endif %}

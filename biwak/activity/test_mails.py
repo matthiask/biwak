@@ -258,11 +258,15 @@ class MailsTest(MailsBase):
         message = mail.outbox[0]
         self.assertEqual(message.subject, "[Biwak] What happened on 19 November 2026")
         self.assertEqual(message.from_email, "Biwak <biwak@example.org>")
-        self.assertIn("== Website ==", message.body)
-        self.assertIn("One", message.body)
-        self.assertIn("Two", message.body)
-        self.assertNotIn("Today", message.body)
-        self.assertEqual(message.body.count("Clients can see this."), 1)
+        self.assertIn("## Website", message.body)
+        # One line per item, today's comment tomorrow
+        self.assertIn(
+            "- Order the tent [Visible to clients]\n  1 comment by Ada Example.\n"
+            f"  https://biwak.example.org{self.todo.get_absolute_url()}\n",
+            message.body,
+        )
+        self.assertIn("- Pack\n  1 comment by Ada Example.\n", message.body)
+        self.assertNotIn("One", message.body)
         self.assertNotIn("List-Unsubscribe-Post", message.extra_headers)
         self.assertEqual(
             message.extra_headers["List-Unsubscribe"],
@@ -581,6 +585,6 @@ class BackAndForthTest(MailsBase):
         tomorrow = timezone.localtime() + dt.timedelta(days=1)
         self.assertEqual(self.send(tomorrow.replace(hour=8)), 1)
         (message,) = mail.outbox
-        self.assertIn("Oops", message.body)
+        self.assertIn("1 comment by Ada Example.", message.body)
         self.assertNotIn("completed", message.body)
         self.assertNotIn("reopened", message.body)

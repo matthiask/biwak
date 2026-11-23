@@ -112,7 +112,7 @@ In den Einstellungen unter „Mails“:
   etwa zehn Minuten nach seiner letzten Änderung gesendet, damit
   schnelle Änderungen und mehrere Kommentare zusammen ankommen;
 - **Eine tägliche Zusammenfassung** um 07:00, mit dem, was am Vortag
-  passiert ist;
+  passiert ist (siehe unten);
 - **Keine Mails:** nur die Laterne, auch keine Check-in-Fragen und
   -Zusammenfassungen. Wechselst du zurück zu Mails, wird gesendet, was
   dann noch ungelesen ist (ausser was du als ungelesen markiert hast),
@@ -122,6 +122,23 @@ Was du in der Laterne gelesen hast, bevor die Mail hinausgeht, wird
 nicht gemailt, und eine Mail, in der nichts übrig bleibt, wird nicht
 gesendet. Mails enthalten den ganzen Text; die erste Zeile sagt, wenn
 Kund:innen den Eintrag sehen können.
+
+**Die tägliche Zusammenfassung** beginnt mit deinen To-dos:
+
+- **Braucht dich heute:** deine offenen To-dos, die überfällig sind,
+  heute fällig sind oder heute beginnen, jedes mit Projekt und Daten.
+- **Warten auf andere:** die überfälligen To-dos, die du anderen
+  zugewiesen hast, mit wem sie zugewiesen sind, „(abwesend bis 3.
+  Dez.)“ bei Abwesenden.
+
+Dann, was passiert ist: was dich erwähnt oder dir ein To-do zuweist
+zuerst, „Für dich“, vollständig; der Rest eine Zeile pro Eintrag, nach
+Projekt („Ada hat es geändert. 3 Kommentare von Ada und Bob.“), mit
+einem Link zum Eintrag. An Tagen ohne Benachrichtigungen kommt die
+Zusammenfassung trotzdem, wenn du To-dos in den ersten beiden Teilen
+hast („Deine To-dos am 24. November 2026“), aber nur an deinen
+Arbeitstagen (Montag bis Freitag oder die Tage deiner Ruhezeiten) und
+nicht, während du abwesend bist.
 
 ## Push-Benachrichtigungen
 

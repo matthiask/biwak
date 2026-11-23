@@ -92,7 +92,7 @@ class QuietHoursTest(QuietBase):
         (message,) = self.to_bob()
         # The digest's form: everything, grouped by project
         self.assertEqual(message.subject, "[Biwak] What happened on 20 November 2026")
-        self.assertIn("== Website ==", message.body)
+        self.assertIn("## Website", message.body)
         self.assertIn("One", message.body)
         self.assertIn("Two", message.body)
         self.assertFalse(
@@ -264,7 +264,7 @@ class QuietDigestTest(QuietBase):
         self.send("2026-11-20 09:30")
         (message,) = self.to_bob()
         self.assertEqual(message.subject, "[Biwak] What happened on 19 November 2026")
-        self.assertIn("One", message.body)
+        self.assertIn("1 comment by Ada Example.", message.body)
 
     def test_not_on_other_days(self):
         """Not at the weekend: Monday's covers it"""
@@ -279,8 +279,7 @@ class QuietDigestTest(QuietBase):
             message.subject,
             "[Biwak] What happened from 20 November 2026 to 21 November 2026",
         )
-        self.assertIn("Friday", message.body)
-        self.assertIn("Saturday", message.body)
+        self.assertIn("2 comments by Ada Example.", message.body)
 
     def test_what_happened_in_the_quiet_time_today_comes_along(self):
         self.comment("2026-11-19 14:00", content="Yesterday")
@@ -290,9 +289,8 @@ class QuietDigestTest(QuietBase):
         self.send("2026-11-20 09:10")
         self.send("2026-11-20 09:30")
         (message,) = self.to_bob()
-        self.assertIn("Yesterday", message.body)
-        self.assertIn("Early", message.body)
-        self.assertIn("Before nine thirty", message.body)
+        # Yesterday's, early today's and before 09:30
+        self.assertIn("3 comments by Ada Example.", message.body)
         # What happens in the working time: tomorrow's
         self.comment("2026-11-20 10:00", content="Later")
         self.send("2026-11-20 10:30")
@@ -356,7 +354,7 @@ class AwayTest(QuietBase):
         self.assertEqual(self.to_bob(), [])
         self.send("2026-11-26 07:00")
         (message,) = self.to_bob()
-        self.assertIn("One", message.body)
+        self.assertIn("1 comment by Ada Example.", message.body)
 
     def test_back_early(self):
         """ "I'm back" ends it: what waited goes as one mail"""
