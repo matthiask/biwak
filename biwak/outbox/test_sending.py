@@ -154,6 +154,11 @@ class OutboxTest(TestCase):
         row.refresh_from_db()
         self.assertIsNotNone(row.given_up_at)
         self.assertEqual(row.attempts, 2)
+        # Why it wasn't sent stays, for whoever looks
+        self.assertEqual(
+            row.last_error,
+            "Not sent before the login code expired. OSError: down",
+        )
         # Nothing sent, and nothing for the admins to do
         self.assertEqual(mail.outbox, [])
 
@@ -272,6 +277,12 @@ class KindsTest(TestCase):
         self.assertEqual(mail.outbox, [])
 
 
+def expected_key(row):
+    """The host, the row's ID and its creation time"""
+    created = row.created_at.astimezone(dt.UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+    return f"biwak.example.org/outgoing-mail/{row.pk}/{created}"
+
+
 @override_settings(
     MAILERS={
         "default": {
@@ -306,7 +317,7 @@ class ResendTest(TestCase):
         self.assertEqual(params["timeout"], 10)
         self.assertEqual(
             params["headers"]["Idempotency-Key"],
-            f"biwak.example.org/outgoing-mail/{row.pk}",
+            expected_key(row),
         )
         self.assertEqual(params["headers"]["Authorization"], "Bearer re_test_key")
         data = json.loads(params["data"])
@@ -318,6 +329,27 @@ class ResendTest(TestCase):
         self.assertEqual(data["headers"]["Message-ID"], "<1@example.org>")
         row.refresh_from_db()
         self.assertEqual(row.provider_id, "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794")
+
+    def test_a_recreated_database_doesnt_repeat_keys(self):
+        # Resend refuses a key it saw in the last 24 hours with another
+        # body: a fresh database's rows start at the same IDs again
+        with self.captureOnCommitCallbacks(execute=True):
+            first = outbox.send(message(), Kind.DIGEST)
+        first_pk = first.pk
+        first.delete()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT setval(pg_get_serial_sequence(%s, 'id'), %s, false)",
+                [OutgoingMail._meta.db_table, first_pk],
+            )
+        with (
+            time_machine.travel(timezone.now() + dt.timedelta(hours=1)),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            second = outbox.send(message(), Kind.DIGEST)
+        self.assertEqual(second.pk, first_pk)
+        keys = [params["headers"]["Idempotency-Key"] for params in self.requests]
+        self.assertEqual(len(set(keys)), 2)
 
     def test_the_same_key_when_retried(self):
         with (
@@ -335,7 +367,7 @@ class ResendTest(TestCase):
         (params,) = self.requests
         self.assertEqual(
             params["headers"]["Idempotency-Key"],
-            f"biwak.example.org/outgoing-mail/{row.pk}",
+            expected_key(row),
         )
         row.refresh_from_db()
         self.assertEqual(row.attempts, 2)

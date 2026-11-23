@@ -69,11 +69,14 @@ def send(message, kind, *, now=None):
 
 
 def idempotency_key(row):
-    """The row's ID, with the installation's host: more than one
-    installation may share a Resend account"""
+    """The row's ID, with the installation's host (more than one
+    installation may share a Resend account) and the row's creation time
+    (a recreated database starts at the same IDs again, which Resend
+    refuses for 24 hours when the body differs)"""
     from biwak.activity.mails import host
 
-    return f"{host()}/outgoing-mail/{row.pk}"
+    created = row.created_at.astimezone(dt.UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+    return f"{host()}/outgoing-mail/{row.pk}/{created}"
 
 
 def deliver(pk, *, now=None):
@@ -102,7 +105,13 @@ EXPIRED = "expired"
 def attempt(row, *, now):
     """One attempt at the locked row; saves it"""
     if row.expires_at and now >= row.expires_at:
-        _give_up(row, now, "Not sent before the login code expired.")
+        # The last error stays: why it wasn't sent
+        error = " ".join(
+            part
+            for part in ["Not sent before the login code expired.", row.last_error]
+            if part
+        )
+        _give_up(row, now, error[:2000])
         return EXPIRED
     if now >= row.created_at + GIVE_UP_AFTER:
         _give_up(row, now, row.last_error)
