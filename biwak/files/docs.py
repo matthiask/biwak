@@ -33,6 +33,7 @@ from biwak.items.views import item_for
 from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 # Docs -------------------------------------------------------------------
@@ -82,6 +83,8 @@ def doc(request, pk):
     comment_form, done = comments_context(request, item)
     if done:
         return done
+    # The reactions of the item and its comments in one query
+    prefetch(item)
     return render(
         request,
         "files/doc.html",

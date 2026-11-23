@@ -270,7 +270,6 @@ class DocTest(ItemTimelineBase):
         self.assertNotContains(response, "/history/")
 
     def test_no_query_per_line(self):
-        # Lines only: the comments' reactions are the page's business
         self.comment(self.doc, minutes=200)
 
         def count():
@@ -286,6 +285,7 @@ class DocTest(ItemTimelineBase):
         for n, folder in enumerate([self.briefs, self.minutes] * 3):
             self.type(self.doc, f"# Brief\n\nVersion {n}")
             ops.move_item(self.doc, parent=folder, actor=self.bob)
+            ops.add_comment(self.doc, author=self.ada, content=f"Comment {n}")
             Event.objects.filter(created_at__gt=ago(1)).update(
                 created_at=ago(100 - n * 11)
             )

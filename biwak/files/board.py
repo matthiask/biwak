@@ -25,6 +25,7 @@ from biwak.items.models import Kind, MessageCategory
 from biwak.items.views import item_for
 from biwak.projects.models import MessagesOrder
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 # Messages per page of the board besides the pinned ones (not decided in
@@ -137,6 +138,8 @@ def message(request, pk):
     comment_form, done = comments_context(request, item)
     if done:
         return done
+    # The reactions of the item and its comments in one query
+    prefetch(item)
     return render(
         request,
         "files/message.html",

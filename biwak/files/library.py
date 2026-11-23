@@ -33,6 +33,7 @@ from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.models import FilesOrdering
 from biwak.projects.views import project_for
+from biwak.reactions.operations import prefetch
 
 
 CONTAINED = [Kind.FOLDER, Kind.DOC, Kind.FILE]
@@ -671,6 +672,8 @@ def file(request, pk):
     upload = item.upload
     versions = list(upload.versions.select_related("uploaded_by"))
     staff = not request.user.is_client
+    # The reactions of the item and its comments in one query
+    prefetch(item)
     return render(
         request,
         "files/file.html",

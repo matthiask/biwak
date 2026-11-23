@@ -60,7 +60,7 @@ that matter between comments, not a full list of events.
   out as on to-dos: showing and hiding again, or moving into another
   folder and back, within a line leave nothing.
 - **Edits only after the first comment** (decided 2026-11-23 by the
-  building agent, to confirm): the line is there because comments may
+  building agent, confirmed by the user): the line is there because comments may
   refer to the old text; before the first comment nobody can have, and
   writing a new doc (its first text up to "Done" and beyond) isn't told
   as edits of it. A live editing session is one line per person: the
@@ -73,7 +73,7 @@ that matter between comments, not a full list of events.
 - **Clients** see the lines through `Event.objects.visible_to()` as on
   to-dos: "showed this to clients" (the event is recorded visible), never
   "made this internal" or what happened while it was internal (decided
-  2026-11-23 by the building agent, to confirm: the line where it became
+  2026-11-23 by the building agent, confirmed by the user: the line where it became
   visible to them tells them the comments before it were written
   without them). Folders they can't see read "another folder".
 - **Older events:** edits of messages, docs and files recorded before
