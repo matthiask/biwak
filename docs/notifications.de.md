@@ -66,8 +66,7 @@ Ein Projekt kann eine eigene Stufe haben („Mehr“, dann
 („Benachrichtigungen…“ in ihrem Menü „Mehr“): Die nächstliegende gilt.
 Andere Einträge haben keine Stufe: abonnieren oder nicht mehr
 abonnieren. Auf der Personenseite eines Projekts sehen Mitarbeitende,
-wer „Nur wenn markiert“ benachrichtigt wird und wer „Über alles Neue
-benachrichtigt“,
+wer „Nur wenn markiert“ benachrichtigt wird und wer über „Alles Neue“,
 und ändern es direkt in der Zeile der Person (es wird sofort
 gespeichert; lässt es sich nicht speichern, wackelt es und zeigt die
 gespeicherte Einstellung); Kund:innen und Externe ändern nur ihre

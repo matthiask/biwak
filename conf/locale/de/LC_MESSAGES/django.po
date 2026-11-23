@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 22:29+0100\n"
+"POT-Creation-Date: 2026-11-23 07:19+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4958,8 +4958,8 @@ msgid "Only when tagged"
 msgstr "Nur wenn markiert"
 
 #: biwak/projects/views.py
-msgid "Notified of everything new"
-msgstr "Über alles Neue benachrichtigt"
+msgid "Everything new"
+msgstr "Alles Neue"
 
 #: biwak/projects/views.py biwak/templates/accounts/settings.html
 #: biwak/templates/projects/project_detail.html
@@ -4967,8 +4967,8 @@ msgid "Notifications"
 msgstr "Benachrichtigungen"
 
 #: biwak/projects/views.py
-msgid "Only when tagged: posts to everybody don't subscribe the person; mentions and assignments still reach them."
-msgstr "Nur wenn markiert: Beiträge an alle abonnieren die Person nicht; Erwähnungen und Zuweisungen erreichen sie trotzdem."
+msgid "Everything new: every new message, doc or file tells the person and subscribes them to its comments."
+msgstr "Alles Neue: Jede neue Mitteilung, jedes neue Dokument und jede neue Datei benachrichtigt die Person und abonniert sie für die Kommentare."
 
 #: biwak/projects/views.py
 msgid "The choice has been saved."
@@ -8098,6 +8098,12 @@ msgstr "vor %(time)s"
 #, python-format
 msgid "on %(date)s"
 msgstr "am %(date)s"
+
+#~ msgid "Notified of everything new"
+#~ msgstr "Über alles Neue benachrichtigt"
+
+#~ msgid "Only when tagged: posts to everybody don't subscribe the person; mentions and assignments still reach them."
+#~ msgstr "Nur wenn markiert: Beiträge an alle abonnieren die Person nicht; Erwähnungen und Zuweisungen erreichen sie trotzdem."
 
 #~ msgid "Notified by default"
 #~ msgstr "Standardmässig benachrichtigt"

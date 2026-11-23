@@ -13,7 +13,7 @@ number of comments.
   everybody and followed by the project page.
 - **New message:** title, text (Markdown), an optional category,
   "Visible to clients" (staff). A line says who will be told: whoever
-  wants to hear about something new (notified of everything new, or
+  wants to hear about something new ("Everything new", or
   subscribed to the folder; [Notifications](notifications.md)). You
   can't leave them out, only add others under "Also tell…" (type a
   name), for example people who hear only when tagged. Ticking "Visible

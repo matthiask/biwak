@@ -14,8 +14,8 @@ der Rest, jede mit Kategorie, Autor:in, Datum und Anzahl Kommentare.
   und die Seite des Projekts folgt.
 - **Neue Mitteilung:** Titel, Text (Markdown), eine Kategorie, wenn du
   willst, „Für Kund:innen sichtbar“ (Mitarbeitende). Eine Zeile sagt,
-  wer benachrichtigt wird: alle, die von Neuem hören wollen (über alles
-  benachrichtigt oder den Ordner abonniert;
+  wer benachrichtigt wird: alle, die von Neuem hören wollen („Alles Neue“
+  oder den Ordner abonniert;
   [Benachrichtigungen](notifications.de.md)). Weglassen kannst du sie
   nicht, nur weitere hinzufügen unter „Auch benachrichtigen…“ (tippe
   einen Namen), zum Beispiel Personen, die nur hören, wenn sie markiert

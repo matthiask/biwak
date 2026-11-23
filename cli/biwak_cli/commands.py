@@ -436,7 +436,7 @@ def project_join(project_id, as_json):
 
 
 NOTIFY_WORDS = {
-    "default": "notified of everything new",
+    "default": "everything new",
     "tagged": "only when tagged",
 }
 
@@ -461,7 +461,7 @@ def notify_word(person):
 @click.pass_context
 def members(ctx, project, as_json):
     """The people in projects; without a command those of --project: staff
-    see addresses and how each is notified (notified of everything new,
+    see addresses and how each is notified (everything new,
     only when tagged, no mails), clients only their own"""
     if ctx.invoked_subcommand is not None:
         return None

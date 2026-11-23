@@ -209,16 +209,17 @@ class FormTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="fay@example.net").exists())
 
-    def test_the_only_when_tagged_help_says_what_it_does(self):
-        """Not subscribed to posts to everybody (specs/notifications.md,
-        "Subscriptions"), in the invite and the add form"""
+    def test_the_everything_new_help_says_what_it_does(self):
+        """The default, "Only when tagged", needs no explaining; the other
+        choice does (specs/notifications.md, "Levels"), in the invite and
+        the add form"""
         self.client.force_login(self.ada)
         for url in [self.url, reverse("member_add", args=[self.website.pk])]:
             response = self.client.get(url)
             self.assertContains(
                 response,
-                "Only when tagged: posts to everybody don't subscribe the"
-                " person; mentions and assignments still reach them.",
+                "Everything new: every new message, doc or file tells the"
+                " person and subscribes them to its comments.",
             )
             self.assertNotContains(response, "held back")
 
