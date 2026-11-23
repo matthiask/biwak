@@ -3,9 +3,11 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23, organizations by domain 2026-11-23. Not built: `--lazy-files` (fetching
-old attachments when first opened), other people's bookmarks (the API
-only gives the token owner's).
+**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23, organizations by domain 2026-11-23. Not built: other people's bookmarks (the API
+only gives the token owner's). Dropped (decided 2026-11-23):
+`--lazy-files` (fetching old attachments when first opened: nothing to
+fetch once the Basecamp account is cancelled) and the import as a job in
+the cluster (the cache and `--archive` make running it locally enough).
 
 ## Running it
 
@@ -198,11 +200,7 @@ stop the rest; a rerun skips what's done). For now it runs locally
 against production (`fl manage-remote biwak-feinheit-app
 ~/projects/sites/biwak "import_basecamp …"`, in the argocd repository),
 so the download cache survives pod restarts; the checkout must match the
-deployed version. In the argocd chart, later: a
-suspended CronJob `biwak-import` with a memory limit of about 2 GiB and a
-long `activeDeadlineSeconds`, started by hand (`kubectl create job
---from=cronjob/biwak-import import-1`); the cronjob template supports
-neither `suspend` nor `resources` yet.
+deployed version. Not as a job in the cluster (decided 2026-11-23).
 
 ## Mapping
 

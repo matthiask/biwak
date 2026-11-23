@@ -68,7 +68,9 @@ Out of scope on purpose:
 
 - **Chat** and direct messages: teams have other tools for that.
 - **Schedule / calendar** per project: the chronological to-do list
-  covers due dates; an iCal feed of them is cheap.
+  covers due dates. No iCal feed either (decided 2026-11-23: people
+  fill their calendars with all sorts of things; good digest mails
+  instead).
 - **To-dos outside lists**: every to-do belongs to a list.
 - **Comments on lists, groups and folders**: they turn a list into a
   to-do of its own; discussion belongs on to-dos and messages.
