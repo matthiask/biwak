@@ -219,6 +219,7 @@ neither `suspend` nor `resources` yet.
 | Subscriptions, bookmarks | Subscriptions (who can see it), bookmarks |
 | Email forwards, forward | Message (see below) |
 | Schedule, chat, pings, wormholes | Not imported |
+| Boosts | Not imported (decided 2026-11-23 by the user), though Biwak has reactions |
 
 ### Column colors
 
