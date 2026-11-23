@@ -32,7 +32,7 @@ impossible to find afterwards.
   but stay in the to-do's assignees until someone takes them out.
 - **The to-dos page's "Assigned to"** offers inactive people too, after
   the active ones under "Inactive", so their open to-dos can be listed
-  and handed over (`/todos/?assignee=ID`): an `<optgroup>`, inactive
+  and handed over (`/todos/?assignee=ID`, `biwak todos --assignee ID`): an `<optgroup>`, inactive
   members of the projects the person can open. "Nobody active" stays: to-dos
   whose assignees are all inactive (or none) count as unowned.
 - Inactive people get no mails and no lantern entries.

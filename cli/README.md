@@ -15,6 +15,7 @@ biwak lists archive LIST                    # and unarchive: out of the way, sti
 biwak todos --list LIST
 biwak todos --mine --due overdue
 biwak todos --assigned-by-me             # what you assigned to others (or yourself with --mine)
+biwak todos --assignee PERSON --by-due    # somebody's open to-dos, also after they left
 biwak todos create LIST "Order the tent" --due 2026-12-01 --assign 3
 biwak todos comment TODO "The plan" --attach plan.pdf   # --attach is repeatable
 biwak reactions create TODO 👍                # again removes it; --comment ID for a comment
