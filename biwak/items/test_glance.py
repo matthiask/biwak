@@ -108,6 +108,21 @@ class RowsTest(Fixture):
         response = self.client.get(self.shared.get_absolute_url())
         self.assertContains(response, 'title="1 attachment"')
 
+    def test_repeat_indicator(self):
+        """How it repeats, on the list's rows and the to-dos page"""
+        ops.create_todo(
+            todolist=self.shared,
+            title="Water the plants",
+            creator=self.ada,
+            due_on=dt.date(2026, 1, 5),
+            recurrence="FREQ=WEEKLY;BYDAY=MO",
+        )
+        for url in [self.shared.get_absolute_url(), "/todos/?assignee=anybody"]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, 'title="Repeats: every Monday"', count=1)
+                self.assertContains(response, "bi-arrow-repeat", count=1)
+
     def count_queries(self, url):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
@@ -131,6 +146,7 @@ class RowsTest(Fixture):
                 creator=self.ada,
                 notes="Notes",
                 due_on=dt.date(2026, 1, 1),
+                recurrence="FREQ=WEEKLY;BYDAY=MO",
             )
             ops.add_comment(todo, author=self.ada, content="Hi")
         for url in urls:

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 12:46+0100\n"
+"POT-Creation-Date: 2026-11-23 13:48+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -7199,6 +7199,11 @@ msgstr "Kund:innen zeigen…"
 #, python-format
 msgid "The latest %(shown)s of %(total)s comments"
 msgstr "Die neuesten %(shown)s von %(total)s Kommentaren"
+
+#: biwak/templates/items/_signals.html
+#, python-format
+msgid "Repeats: %(rule)s"
+msgstr "Wiederholt sich: %(rule)s"
 
 #: biwak/templates/items/_signals.html
 #, python-format

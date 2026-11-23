@@ -203,7 +203,9 @@ Mitarbeitende finden sie im Verlauf, im Menü „Mehr“ des To-dos.
 Wähle, wie oft es sich wiederholt: täglich, wöchentlich, monatlich oder
 jährlich, mit einem Abstand, Wochentagen oder dem n-ten Wochentag im
 Monat. Wenn du willst, setze „Wiederholt sich bis“ oder „Verbleibende
-Wiederholungen“.
+Wiederholungen“. In Listen und auf der To-do-Seite zeigt ein
+wiederkehrendes To-do ein Wiederholungssymbol; zeigst du darauf, steht
+da, wie es sich wiederholt.
 
 Ein wiederkehrendes To-do zu erledigen erstellt das nächste am Ende
 derselben Liste und Gruppe, mit demselben Titel, denselben Notizen,

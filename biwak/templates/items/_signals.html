@@ -1,5 +1,11 @@
 {% load biwak i18n %}
 {% comment %}Quiet signals on a to-do row (specs/glance.md); the counts come from glance.with_signals(), a to-do just created has none{% endcomment %}
+{% if todo.todo.recurrence %}<span
+    class="wb-signal"
+    title="{% blocktranslate with rule=todo.todo.recurrence_description %}Repeats: {{ rule }}{% endblocktranslate %}"
+  >{% icon "arrow-repeat" %}<span
+      class="visually-hidden"
+    >{% blocktranslate with rule=todo.todo.recurrence_description %}Repeats: {{ rule }}{% endblocktranslate %}</span></span>{% endif %}
 {% if todo.todo.notes %}<button
     type="button"
     class="wb-signal"

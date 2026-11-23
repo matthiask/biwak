@@ -31,8 +31,9 @@ per page, not a query per row (good enough, 2026-11-20).
 ## To-do rows
 
 After the title, muted and small (`items/_signals.html`,
-`biwak/items/glance.py`): a notes icon (the notes' excerpt as
-`title`), a comments icon with the count, an attachment icon with the
+`biwak/items/glance.py`): a repeat icon for a repeating to-do ("Repeats:
+every Monday" as `title` and for screen readers; asked for by the user
+2026-11-23), a notes icon (the notes' excerpt as `title`), a comments icon with the count, an attachment icon with the
 count in its `title` (attachments of the notes and comments). Counted by
 annotating the page's query (list, board, to-dos page), never a query
 per row.
