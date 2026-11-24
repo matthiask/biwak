@@ -81,13 +81,13 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   by the user, after trying a row always there for a few hours: "the
   additional click to open it is slightly annoying", the row "much
   uglier"): resting the mouse on the button 50 ms opens it, leaving
-  closes it after 300 ms unless the select has the focus, a click right
+  closes it after 300 ms (confirmed 2026-11-24) unless the select has the focus, a click right
   after keeps it open; touch screens tap as before (`data-hover-open`,
   `frontend/menus.js`). A line below the header says what is set
   ("Assigned to: Ada") with "Reset filters", so to-dos left out aren't
   taken for gone; "No to-dos match the filter." when nothing does. Not
-  remembered (decided without asking: a plain link to a list shows all
-  of it). **Groups and columns stay** while filtered and **Completed
+  remembered (confirmed by the user 2026-11-24: a plain link to a list
+  shows all of it). **Groups and columns stay** while filtered and **Completed
   is filtered too**, its count, "Show more" and its fragment (decided
   2026-11-24 by the user). The view links, "Show more" and completing a
   to-do (`next`) keep the view and the filter. **Dragging places by the
@@ -96,7 +96,8 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   one below (`before`) besides the index, and `move_todos()` puts them
   right next to it when it's still there, else at the index; to-dos left
   out by the filter keep their places. Adding inline while filtered
-  shows the new to-do even when it doesn't match. API: `assignee` on
+  shows the new to-do even when it doesn't match, until the next reload
+  (confirmed by the user 2026-11-24). API: `assignee` on
   `lists/{id}/todos/` and `…/completed/`; CLI: `--mine` and `--assignee`
   with `--list` (0.73.0).
 - **Adding inline:** "Add a to-do" opens a form in place (title, notes,
