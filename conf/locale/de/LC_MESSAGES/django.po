@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 10:54+0100\n"
+"POT-Creation-Date: 2026-11-24 10:32+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -5818,7 +5818,7 @@ msgstr "Navigationspfad"
 msgid "Filter"
 msgstr "Filter"
 
-#: biwak/templates/_filter_buttons.html
+#: biwak/templates/_filter_buttons.html biwak/templates/items/todolist.html
 msgid "Reset filters"
 msgstr "Filter zurücksetzen"
 
@@ -7524,6 +7524,11 @@ msgid "Board"
 msgstr "Board"
 
 #: biwak/templates/items/todolist.html
+#, python-format
+msgid "%(label)s: %(value)s"
+msgstr "%(label)s: %(value)s"
+
+#: biwak/templates/items/todolist.html
 msgid "This list is archived. It stays readable."
 msgstr "Diese Liste ist archiviert und bleibt lesbar."
 
@@ -8387,10 +8392,6 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
-
-#, python-format
-#~ msgid "%(label)s: %(value)s"
-#~ msgstr "%(label)s: %(value)s"
 
 #~ msgid "Also tell…"
 #~ msgstr "Auch benachrichtigen…"

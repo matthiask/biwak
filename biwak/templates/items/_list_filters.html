@@ -1,25 +1,24 @@
 {% load biwak i18n %}
 {% comment %}
-  A list's and its board's filters (specs/todos.md, "Filters on a list"):
-  always there above the to-dos, applying themselves, keeping the view; on
-  phones behind "Filters", open while one is set (specs/ui.md, "Filters and
-  view choices").
+  A list's and its board's filters (specs/todos.md, "Filters on a list"): a
+  menu in the header, applying itself; the line below the header says what
+  is set. The view stays as it is.
 {% endcomment %}
-<details class="wb-filter-disclosure mb-3" {% if filtered or filter_form.errors %}open{% endif %}>
-  <summary class="btn btn-sm btn-quiet">
-    {% translate "Filters" %}
+<details class="dropdown wb-menu wb-list-filters">
+  <summary class="btn btn-sm btn-quiet" title="{% translate 'Filters' %}">
+    {% icon "funnel" %}<span class="wb-label">{% translate "Filters" %}</span>
     {% if filtered %}<span class="badge wb-tone-neutral">{{ filtered }}</span>{% endif %}
-    {% icon "chevron-down" %}
   </summary>
-  <form method="get" data-autosubmit class="wb-filters">
-    {% if "view" in request.GET %}<input type="hidden" name="view" value="{{ request.GET.view }}">{% endif %}
-    {% for field in filter_form %}
-      <div>
-        <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label|capfirst }}</label>
-        {{ field }}
-        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-      </div>
-    {% endfor %}
-    {% include "_filter_buttons.html" with reset_url=reset_url %}
-  </form>
+  <div class="dropdown-menu dropdown-menu-end">
+    <form method="get" data-autosubmit class="wb-filters">
+      {% if "view" in request.GET %}<input type="hidden" name="view" value="{{ request.GET.view }}">{% endif %}
+      {% for field in filter_form %}
+        <div>
+          <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label|capfirst }}</label>
+          {{ field }}
+        </div>
+      {% endfor %}
+      {% include "_filter_buttons.html" with reset_url=request.path %}
+    </form>
+  </div>
 </details>

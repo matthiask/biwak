@@ -22,6 +22,7 @@
           {% if view == "board" %}aria-current="page"{% endif %}
         >{% translate "Board" %}</a>
       </div>
+      {% include "items/_list_filters.html" %}
       {% if can_change %}
         <a
           class="btn btn-sm btn-quiet"
@@ -33,6 +34,21 @@
       {% include "items/_more.html" %}
     </div>
   </div>
+  {% if chosen_filters or filter_form.errors %}
+    {# Saying it's filtered, so to-dos left out aren't taken for gone (specs/todos.md, "Filters on a list") #}
+    <p class="wb-list-filtered small text-body-secondary" id="list-filtered">
+      {% for label, value in chosen_filters %}
+        {% blocktranslate with label=label|capfirst %}{{ label }}: {{ value }}{% endblocktranslate %}
+      {% endfor %}
+      {% for field in filter_form %}{% for error in field.errors %}<span
+            class="text-danger"
+          >{{ error }}</span>{% endfor %}{% endfor %}
+      <a
+        href="{{ request.path }}{% if 'view' in request.GET %}?view={{ request.GET.view|urlencode }}{% endif %}"
+        data-reset-filters
+      >{% translate "Reset filters" %}</a>
+    </p>
+  {% endif %}
   {% if item.status == "archived" %}
     <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
   {% endif %}
@@ -42,7 +58,6 @@
   {% endif %}
   {% include "items/_client_tab.html" %}
   {% if todolist.description %}<div class="wb-description mb-3">{{ todolist.description|markdown }}</div>{% endif %}
-  {% include "items/_list_filters.html" %}
   {% csrf_token %}
   {# The board widens beyond the page when its columns need it (specs/todos.md, "Lists and the board") #}
   <div class="{% if view == 'board' %}wb-board-frame{% endif %}">
