@@ -342,6 +342,24 @@ else:
 if DEBUG_TOOLBAR:  # pragma: no cover
     INTERNAL_IPS = ["127.0.0.1"]
 
+# Biwak's own log lines (specs/auditing.md, decided 2026-11-24): info and
+# up to the console, the pod's output; errors also reach Sentry through its
+# logging integration. Django's own loggers keep their defaults.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+    },
+    "loggers": {
+        # Tests print warnings only, as before
+        "biwak": {"handlers": ["console"], "level": "WARNING" if TESTING else "INFO"},
+    },
+}
+
 if SENTRY_DSN := env("SENTRY_DSN"):  # pragma: no cover
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration

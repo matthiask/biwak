@@ -17,6 +17,7 @@ confirm: `decisions-to-confirm.md`.
 | `files.md` | built | attachments, the message board, folders as tiles with ordering, drag and drop and uploading several, docs (title from the first line, versions, drafts), files |
 | `todos.md` | built | assignees, the board, the to-do's page, recurrence, the to-dos page, the calendar feed |
 | `rule-widget.md` | built | one control for repeat rules |
+| `auditing.md` | built | where to look: the audit log, events, notifications, the mail logs, sign-ins, Sentry and log lines |
 | `feed.md` | built | the activity feed, item history, bookmarks, project links |
 | `projects-overview.md` | built | the projects page: favorites, ordering by activity, cards |
 | `glance.md` | built | signals, excerpts and the peek instead of opening every page |

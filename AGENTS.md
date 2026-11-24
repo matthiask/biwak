@@ -62,6 +62,8 @@ them when a decision changes (dated: "decided 2026-11-20").
 - The audit log (`biwak/audit/`) is a trigger on the main tables.
   Requests, API tokens and `fairy_tasks` set who changes things
   (`set_user_name()`). Tests reading the audit log delete its rows first.
+  What is recorded where (audit log, events, mail logs, Sentry, log
+  lines): `specs/auditing.md`.
 - `.env` (not committed): `DATABASE_URL=postgres://localhost:5432/biwak`,
   `SECRET_KEY`, `DEBUG=True`.
 

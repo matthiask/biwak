@@ -38,8 +38,9 @@ BACKOFF = [dt.timedelta(minutes=minutes) for minutes in (1, 2, 5, 10, 30)] + [
 # Given up after a day (Resend keeps idempotency keys for 24 hours: a mail
 # tried later could go out twice)
 GIVE_UP_AFTER = dt.timedelta(hours=24)
-# Rows deleted after 30 days (decided 2026-11-21)
-RETENTION = dt.timedelta(days=30)
+# Rows deleted after 90 days, like incoming mails (decided 2026-11-24:
+# "did she get the invitation?" a few months later)
+RETENTION = dt.timedelta(days=90)
 # At most this many retries per run
 RETRY_BATCH = 200
 

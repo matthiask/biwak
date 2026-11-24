@@ -192,10 +192,10 @@ class OutboxTest(TestCase):
             call_command("send_mails")
         self.assertEqual(len(mail.outbox), 1)
 
-    def test_pruned_after_30_days(self):
+    def test_pruned_after_90_days(self):
         old = self.queue()
         OutgoingMail.objects.filter(pk=old.pk).update(
-            created_at=timezone.now() - dt.timedelta(days=30, minutes=1)
+            created_at=timezone.now() - dt.timedelta(days=90, minutes=1)
         )
         new = self.queue()
         self.assertEqual(outbox.prune(), 1)
@@ -203,7 +203,7 @@ class OutboxTest(TestCase):
 
     def test_fairy_tasks_prune(self):
         row = self.queue()
-        OutgoingMail.objects.update(created_at=timezone.now() - dt.timedelta(days=31))
+        OutgoingMail.objects.update(created_at=timezone.now() - dt.timedelta(days=91))
         call_command("fairy_tasks")
         self.assertFalse(OutgoingMail.objects.filter(pk=row.pk).exists())
 
