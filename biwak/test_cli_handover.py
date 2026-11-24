@@ -38,9 +38,13 @@ class HandoverCLITest(test_cli.CLITest):
         self.assertEqual(
             self.biwak("todos", "--assignee", self.gil.pk, "--mine").exit_code, 1
         )
-        self.assertEqual(
-            self.biwak("todos", "--list", self.list.pk, "--assignee", 1).exit_code, 1
+        # A list's to-dos of a person too (specs/todos.md, "Filters on a list")
+        data = json.loads(
+            self.biwak(
+                "todos", "--list", self.list.pk, "--assignee", self.gil.pk, "--json"
+            ).stdout
         )
+        self.assertEqual([t["id"] for t in data], [self.todo.pk])
 
     def test_assign_several(self):
         bob = person("Bob")

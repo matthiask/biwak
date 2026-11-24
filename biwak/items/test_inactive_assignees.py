@@ -65,9 +65,14 @@ class InactiveAssigneesTest(TestCase):
         self.assertContains(response, f'value="{self.gil.pk}" selected')
         self.assertContains(response, "Gil (inactive)")
         self.assertContains(response, "&quot;inactive&quot;: true")
-        # Not offered when adding a to-do
+        # Not offered when adding a to-do (the list's filter lists them, as
+        # the to-dos page does, specs/todos.md, "Filters on a list")
         response = self.client.get(self.todolist.get_absolute_url())
-        self.assertNotContains(response, f'<option value="{self.gil.pk}"')
+        picker = response.context["form"]["assignees"]
+        self.assertNotIn(f'<option value="{self.gil.pk}"', str(picker))
+        self.assertIn(
+            f'<option value="{self.gil.pk}"', str(response.context["filter_form"])
+        )
 
     def test_the_todos_page_lists_them(self):
         self.client.force_login(self.ada)
