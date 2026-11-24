@@ -4,7 +4,7 @@
   menu in the header, applying itself; the line below the header says what
   is set. The view stays as it is.
 {% endcomment %}
-<details class="dropdown wb-menu wb-list-filters">
+<details class="dropdown wb-menu wb-list-filters" data-hover-open>
   <summary class="btn btn-sm btn-quiet" title="{% translate 'Filters' %}">
     {% icon "funnel" %}<span class="wb-label">{% translate "Filters" %}</span>
     {% if filtered %}<span class="badge wb-tone-neutral">{{ filtered }}</span>{% endif %}

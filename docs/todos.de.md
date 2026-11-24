@@ -41,7 +41,8 @@ auf der Seite des Projekts.
   Spalten verschiebt das To-do in diese Gruppe. Haben die Spalten
   keinen Platz, nimmt das Board die Breite des Fensters und scrollt
   seitwärts.
-- **Filter:** „Filter“ oben in der Liste zeigt nur die To-dos, die
+- **Filter:** „Filter“ oben in der Liste (öffnet sich, wenn du darauf
+  zeigst) zeigt nur die To-dos, die
   jemandem, dir oder niemandem zugewiesen sind, in der Liste und auf dem
   Board. Eine Zeile unter dem Titel sagt, was gesetzt ist; „Filter
   zurücksetzen“ zeigt wieder alle. Die Gruppen bleiben, und „Erledigt“

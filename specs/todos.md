@@ -77,7 +77,13 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   `assignee_choices()` in `biwak/items/filters.py`, the query through
   `due.assigned_to()`). Unknown values show an error and no to-dos. A
   "Filters" menu in the header, applying itself, with the count set
-  (`items/_list_filters.html`); a line below the header says what is set
+  (`items/_list_filters.html`). **It opens on hover** (decided 2026-11-24
+  by the user, after trying a row always there for a few hours: "the
+  additional click to open it is slightly annoying", the row "much
+  uglier"): resting the mouse on the button 50 ms opens it, leaving
+  closes it after 300 ms unless the select has the focus, a click right
+  after keeps it open; touch screens tap as before (`data-hover-open`,
+  `frontend/menus.js`). A line below the header says what is set
   ("Assigned to: Ada") with "Reset filters", so to-dos left out aren't
   taken for gone; "No to-dos match the filter." when nothing does. Not
   remembered (decided without asking: a plain link to a list shows all

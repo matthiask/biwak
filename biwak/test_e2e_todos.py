@@ -261,6 +261,38 @@ class TodosTest(E2ETestCase):
         )
         self.assertEqual(self.errors, [])
 
+    def test_the_filters_open_on_hover(self):
+        """Resting the mouse on "Filters" opens the menu, leaving closes it;
+        a click after hovering keeps it open (specs/todos.md, "Filters on a
+        list")"""
+        todolist = self.make_list(todos=["Tent"])
+        page = self.page
+        self.goto(page, todolist)
+        menu = page.locator(".wb-list-filters")
+        menu.locator("summary").hover()
+        expect(menu).to_have_attribute("open", "")
+        # Into the menu and out again
+        menu.locator("[name=assignee]").hover()
+        expect(menu).to_have_attribute("open", "")
+        page.locator("h1").hover()
+        expect(menu).not_to_have_attribute("open", "")
+        # A click right after it opened doesn't close it, leaving doesn't
+        # either then; a click elsewhere does
+        menu.locator("summary").hover()
+        expect(menu).to_have_attribute("open", "")
+        menu.locator("summary").click()
+        page.locator("h1").hover()
+        page.wait_for_timeout(400)
+        expect(menu).to_have_attribute("open", "")
+        page.locator("h1").click()
+        expect(menu).not_to_have_attribute("open", "")
+        # Choosing applies the filter
+        menu.locator("summary").hover()
+        with page.expect_navigation():
+            menu.locator("[name=assignee]").select_option("me")
+        self.assertIn("assignee=me", page.url)
+        self.assertEqual(self.errors, [])
+
     def test_a_drag_the_server_doesnt_get_reloads_the_page(self):
         """Offline, the page shows what the server has again"""
         todolist = self.make_list(todos=["A", "B", "C"])
