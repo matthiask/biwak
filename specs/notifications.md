@@ -313,8 +313,8 @@ large).
 
 ## The daily digest (decided 2026-11-23)
 
-Decided with the user 2026-11-23 (no iCal feed, good digests instead,
-`SPEC.md`). `biwak/activity/digest.py`, `mails.digest_mail()`,
+Decided with the user 2026-11-23 (good digests rather than more
+calendar work, `SPEC.md`). `biwak/activity/digest.py`, `mails.digest_mail()`,
 `templates/mails/digest.*`, `_digest_todos.*`, `_digest_item.*`; plain
 text and HTML, in `language_for(recipient)`.
 
