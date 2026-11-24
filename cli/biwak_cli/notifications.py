@@ -201,6 +201,11 @@ def show_days(days):
     "--delivery", type=click.Choice(["each", "digest", "none"]), help="Mails."
 )
 @click.option(
+    "--weekly",
+    type=click.Choice(["on", "off"]),
+    help="A mail with your open to-dos on Monday morning.",
+)
+@click.option(
     "--quiet-hours",
     type=click.Choice(["on", "off"]),
     help="Mails and digests wait outside your working days and hours.",
@@ -228,6 +233,7 @@ def show_days(days):
 def notifications(
     level,
     delivery,
+    weekly,
     quiet_hours,
     working_days,
     working_from,
@@ -236,21 +242,24 @@ def notifications(
     item,
     as_json,
 ):
-    """Show and set your notification level, mail delivery and quiet hours.
+    """Show and set your notification level, mail delivery, the weekly
+    mail of your open to-dos and quiet hours.
     Levels decide what you're subscribed to automatically; subscribed, you
     hear about everything on the item."""
-    quiet = {
+    mails = {
         "quiet_hours": None if quiet_hours is None else quiet_hours == "on",
         "working_days": parse_days(working_days) if working_days else None,
         "working_from": working_from,
         "working_until": working_until,
+        "weekly_todos": None if weekly is None else weekly == "on",
     }
     if project and item:
         terminate("A project or an item, not both.")
     if project or item:
-        if delivery or any(value is not None for value in quiet.values()):
+        if delivery or any(value is not None for value in mails.values()):
             terminate(
-                "The delivery and quiet hours are the same everywhere; leave out"
+                "The delivery, the weekly mail and quiet hours are the same"
+                " everywhere; leave out"
                 " --project and --item."
             )
         path = (
@@ -270,7 +279,7 @@ def notifications(
         return None
     if level == "default":
         terminate("'default' is for --project and --item.")
-    changes = {"level": level, "delivery": delivery} | quiet
+    changes = {"level": level, "delivery": delivery} | mails
     changes = {k: v for k, v in changes.items() if v is not None}
     if changes:
         data = request("PUT", "me/notifications/", json=changes)
@@ -280,6 +289,8 @@ def notifications(
         return echo_json(data)
     click.echo(f"Level: {data['level']}")
     click.echo(f"Delivery: {data['delivery']}")
+    weekly_mail = "on, Monday morning" if data.get("weekly_todos") else "off"
+    click.echo(f"Weekly to-dos: {weekly_mail}")
     working = (
         f"{show_days(data['working_days'])}"
         f" {data['working_from'][:5]}-{data['working_until'][:5]}"

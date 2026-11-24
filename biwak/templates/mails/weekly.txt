@@ -1,0 +1,9 @@
+{% load i18n %}{% autoescape off %}# {{ heading }}
+
+{% for title, todos in sections %}## {{ title }}
+{% include "mails/_digest_todos.txt" with lists=True %}{% endfor %}{% if undated %}{{ undated }}: {{ undated_url }}
+
+{% endif %}{% if waiting %}## {% translate "Waiting on others" %}
+{% include "mails/_digest_todos.txt" with todos=waiting lists=True %}{% endif %}--
+{% translate "Your notification settings" %}: {{ settings_url }}
+{% endautoescape %}

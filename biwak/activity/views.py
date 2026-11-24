@@ -235,6 +235,17 @@ class SettingsForm(Form):
             " you read in the lantern before isn't mailed."
         ),
     )
+    # Whatever the delivery, except no mails (specs/notifications.md, "The
+    # weekly to-dos")
+    weekly_todos = forms.BooleanField(
+        label=_("A weekly mail with my open to-dos"),
+        required=False,
+        help_text=_(
+            "On Monday at 07:00, with quiet hours at the start of your first"
+            " working day: your open to-dos by due date and the overdue ones"
+            " you're waiting on."
+        ),
+    )
     lantern_in_favicon = forms.BooleanField(
         label=_("A dot on the tab's icon while there are unread notifications"),
         required=False,
@@ -296,6 +307,7 @@ class SettingsForm(Form):
             initial={
                 "notification_level": user.notification_level,
                 "mail_delivery": user.mail_delivery,
+                "weekly_todos": user.weekly_todos,
                 "lantern_in_favicon": user.lantern_in_favicon,
                 "quiet_hours": user.quiet_hours,
                 "working_days": user.working_days,

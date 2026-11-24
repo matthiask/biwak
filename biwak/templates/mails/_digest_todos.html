@@ -1,17 +1,19 @@
 {% load i18n %}
-{% comment %}The digest's to-dos (activity.digest): title, project, what's urgent, who has it.{% endcomment %}
+{% comment %}The digest's and the weekly mail's to-dos (activity.digest): title, project (with lists the list too), what's urgent, who has it.{% endcomment %}
 <ul style="padding-left: 20px">
   {% for todo in todos %}
     <li style="margin: 4px 0">
       <a href="{{ todo.url }}">{{ todo.title }}</a>
-      <span style="color: #666">· {{ todo.project }}</span>{% if todo.is_client_visible %}
+      <span style="color: #666">· {{ todo.project }}{% if lists %}
+          / {{ todo.list }}{% endif %}</span>{% if todo.is_client_visible %}
         <span
           style="background: #ffe14d; color: #222; padding: 0 4px; font-size: 13px; font-weight: 600"
         >{% translate "Visible to clients" %}</span>{% endif %}<br>
       <span
         style="color: {% if todo.overdue %}#b02a37{% else %}#666{% endif %}; font-size: 13px"
-      >{{ todo.label }}{% if todo.dates %}
-          · {{ todo.dates }}{% endif %}{% if todo.assignees %}
+      >{{ todo.label }}{% if todo.label and todo.dates %}
+          ·
+        {% endif %}{{ todo.dates }}{% if todo.assignees %}
           · {{ todo.assignees }}{% endif %}</span>
     </li>
   {% endfor %}

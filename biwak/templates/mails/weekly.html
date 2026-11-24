@@ -1,0 +1,26 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <title>Biwak</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #222">
+    {% comment %}The weekly mail of one's open to-dos (activity.weekly): by due date, the count of those without one, what's waiting on others.{% endcomment %}
+    <h1 style="font-size: 20px">{{ heading }}</h1>
+    {% for title, todos in sections %}
+      <h2 style="font-size: 18px; margin-top: 24px">{{ title }}</h2>
+      {% include "mails/_digest_todos.html" with lists=True %}
+    {% endfor %}
+    {% if undated %}
+      <p style="margin-top: 16px"><a href="{{ undated_url }}">{{ undated }}</a></p>
+    {% endif %}
+    {% if waiting %}
+      <h2 style="font-size: 18px; margin-top: 24px">{% translate "Waiting on others" %}</h2>
+      {% include "mails/_digest_todos.html" with todos=waiting lists=True %}
+    {% endif %}
+    <p style="color: #666; font-size: 13px; margin-top: 24px">
+      <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>
+    </p>
+  </body>
+</html>
