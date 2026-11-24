@@ -3,8 +3,9 @@ notification mails and digests wait, and how being away is shown. One time
 zone, the installation's (``TIME_ZONE``, decided 2026-11-22)."""
 
 from django.utils import timezone
-from django.utils.formats import date_format
 from django.utils.translation import gettext as _
+
+from biwak.formats import format_date
 
 
 NOTE_LENGTH = 200
@@ -35,12 +36,9 @@ def mails_held(user, now=None):
     return user.quiet_hours and not in_working_time(user, local)
 
 
-def short_date(day, today=None):
+def short_date(day):
     """ "3 Dec", with the year when it isn't this one"""
-    today = today or timezone.localdate()
-    return date_format(
-        day, "MONTH_DAY_FORMAT" if day.year == today.year else "SHORT_DATE_FORMAT"
-    )
+    return format_date(day, "MONTH_DAY_FORMAT")
 
 
 def away_text(user):

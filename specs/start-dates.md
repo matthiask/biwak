@@ -19,7 +19,8 @@ current work until it can. Decided with the user 2026-11-22.
   `frontend/start-date.js`). The to-do's page shows "Starts on" as a
   fact of its own when set, before "Due on", mails a "Starts on" line.
 - **Rows** show the range (`biwak.formats.format_range()`: "3–7 Dec";
-  across months "28 Nov – 3 Dec"; in German "3.–7. Dez.") where they show the due date, the overdue
+  across months "28 Nov – 3 Dec"; in German "3.–7. Dez."; with the
+  year when it isn't this one, on both ends across years) where they show the due date, the overdue
   badge too ("Overdue · 20–24 Nov"); overdue as now by the due date,
   "Today" alone on the due date.
 - **Hidden until they start** (decided 2026-11-22): before its start

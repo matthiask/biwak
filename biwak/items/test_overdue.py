@@ -72,6 +72,11 @@ class DueBadgeTest(Base):
         self.assertIn("Overdue · 19 Nov", html)
         self.assertIn("wb-tone-danger", html)
 
+    def test_overdue_since_another_year(self):
+        self.todo(dt.date(2024, 11, 17))
+        html = self.client.get(self.todolist.get_absolute_url()).content.decode()
+        self.assertIn("Overdue · 17 Nov 2024", html)
+
     def test_today(self):
         item = self.todo(self.today)
         self.assert_badge(item, "today")
@@ -121,6 +126,12 @@ class PaletteBadgeTest(Base):
         )
         self.assertIsNone(self.bookmarked(self.todo(self.today + DAY)))
         self.assertIsNone(self.bookmarked(self.todo(self.today - DAY, completed=True)))
+
+    def test_the_year_of_an_older_one(self):
+        self.assertEqual(
+            self.bookmarked(self.todo(dt.date(2024, 11, 17))),
+            {"state": "overdue", "label": "Overdue · 17 Nov 2024"},
+        )
 
     def test_other_kinds_have_none(self):
         from biwak.bookmarks import operations as link_ops

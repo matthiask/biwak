@@ -11,13 +11,13 @@ the label, never the current name."""
 
 from django.db.models import BooleanField, Case, Q, When
 from django.db.models.functions import Lower
-from django.template.defaultfilters import date as date_filter
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from biwak.activity.feed import people_visible_to
 from biwak.activity.mentions import title as plain_title
 from biwak.bookmarks.models import Bookmark
+from biwak.formats import format_date
 from biwak.items import due
 from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
@@ -135,7 +135,7 @@ def due_label(item):
     todo = getattr(item, "todo", None) if item.kind == Kind.TODO else None
     state = due.badge_state(todo) if todo else ""
     if state == due.OVERDUE:
-        day = date_filter(todo.due_on, "MONTH_DAY_FORMAT")
+        day = format_date(todo.due_on, "MONTH_DAY_FORMAT")
         return {"state": state, "label": _("Overdue · %(day)s") % {"day": day}}
     if state == due.TODAY:
         return {"state": state, "label": _("Today")}

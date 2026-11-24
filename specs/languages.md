@@ -83,7 +83,9 @@ activated by `biwak/accounts/middleware.py`.
 - **Dates, times, numbers:** formats per language (`biwak/formats/`,
   `FORMAT_MODULE_PATH`; templates name them, `|dateformat:"SHORT_DATE_FORMAT"`):
   English "22 Nov 2026", German "22. Nov. 2026" (decided 2026-11-22),
-  24-hour times in both; relative times ("vor 13
+  24-hour times in both; the short ones without the year ("17 Nov",
+  `MONTH_DAY_FORMAT`…) get it for a day in another year, "17 Nov 2024"
+  (`format_date()`, decided 2026-11-24); relative times ("vor 13
   Stunden", one unit, `ui-feedback.md` round 8; `ago()` in
   `biwak/richtext/text.py`, units of their own for German's dative);
   weekday and month names in the rule widget and check-ins' schedules;
