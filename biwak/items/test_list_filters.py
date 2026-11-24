@@ -78,6 +78,20 @@ class ListFilterTest(TestCase):
         self.assertContains(response, "Assigned to: Bob")
         self.assertEqual(response.context["filtered"], 1)
 
+    def test_the_ungrouped_column_stays(self):
+        """On the board, the column of to-dos outside groups shows while the
+        list has any, matching or not: a filter leaving none out made the
+        board narrower than the window"""
+        dora = person("Dora")
+        self.project.memberships.create(user=dora)
+        self.todo("Dora's grouped", [dora], group=self.group)
+        response = self.page(self.ada, view="board", assignee=dora.pk)
+        self.assertEqual(self.shown(response), {"Dora's grouped"})
+        column = re.search(
+            r'<section[^>]*id="group-none"[^>]*>', response.content.decode()
+        )
+        self.assertNotIn("hidden", column[0])
+
     def test_me_and_nobody(self):
         self.assertEqual(
             self.shown(self.page(self.bob, assignee="me")),

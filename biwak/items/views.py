@@ -364,6 +364,17 @@ def todolist(request, pk):
                 item, cursor=completed_cursor, shown=len(completed), keep=filtered.keep
             ),
             **filtered.context(),
+            # On the board, the column of to-dos outside groups shows while
+            # the list has any, matching the filter or not, so that
+            # filtering keeps the columns (and the board's width)
+            "hide_ungrouped": bool(groups)
+            and not by_group[None]
+            and not (
+                filtered.filters
+                and _todos(item)
+                .filter(todo__completed_at__isnull=True, todo__group=None)
+                .exists()
+            ),
             "all_done": bool(completed_count) and not any(by_group.values()),
             "nothing_matches": bool(filtered.filters)
             and not completed_count
