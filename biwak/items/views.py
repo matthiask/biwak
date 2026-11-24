@@ -274,7 +274,11 @@ class ListFilter:
             }
             todos = todos.none()
         self.todos = todos
-        self.keep = ({"view": query["view"]} if "view" in query else {}) | self.filters
+        view = {"view": query["view"]} if "view" in query else {}
+        self.keep = view | self.filters
+        self.reset_url = item.get_absolute_url() + (
+            f"?{urlencode(view)}" if view else ""
+        )
         self.back = (
             f"{item.get_absolute_url()}?{urlencode(self.keep)}" if self.keep else ""
         )
@@ -283,7 +287,8 @@ class ListFilter:
         return {
             "filter_form": self.form,
             "filtered": len(self.filters),
-            "chosen_filters": self.form.chosen() if self.valid else [],
+            # "Reset filters" keeps the view
+            "reset_url": self.reset_url,
             "filters_query": urlencode(self.filters),
             "back": self.back,
         }

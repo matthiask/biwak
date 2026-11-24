@@ -130,9 +130,6 @@
 .bi-folder-plus::before {
   content: "\f3d3";
 }
-.bi-funnel::before {
-  content: "\f3e1";
-}
 .bi-github::before {
   content: "\f3ed";
 }
