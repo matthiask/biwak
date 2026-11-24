@@ -114,7 +114,7 @@ class ListFilterTest(TestCase):
     def test_nothing_matches(self):
         other = person("Dora")
         self.project.memberships.create(user=other)
-        response = self.page(self.ada, assignee=other.pk)
+        response = self.page(other, assignee="me")
         self.assertContains(response, "No to-dos match the filter.")
         self.assertNotContains(self.page(self.ada), "No to-dos match the filter.")
 
@@ -127,12 +127,27 @@ class ListFilterTest(TestCase):
         response = self.page(self.cleo, assignee=self.bob.pk)
         self.assertEqual(self.shown(response), set())
 
-    def test_staff_choose_among_the_members(self):
-        outsider = person("Eve")
+    def test_staff_choose_among_the_people_with_todos_in_the_list(self):
+        """Open or completed ones, not trashed ones, not other lists'
+        (decided 2026-11-24)"""
+        dora, eve, fay = person("Dora"), person("Eve"), person("Fay")
+        for someone in (dora, eve, fay):
+            self.project.memberships.create(user=someone)
+        done = self.todo("Dora's done", [dora])
+        ops.complete(done, actor=self.ada)
+        ops.trash(self.todo("Eve's trashed", [eve]), actor=self.ada)
+        other = ops.create_list(project=self.project, title="Other", creator=self.ada)
+        ops.create_todo(
+            todolist=other, title="Fay's", creator=self.ada, assignees=[fay]
+        )
         response = self.page(self.ada)
         choices = dict(response.context["filter_form"].fields["assignee"].choices)
         self.assertIn(str(self.bob.pk), choices)
-        self.assertNotIn(str(outsider.pk), choices)
+        self.assertIn(str(dora.pk), choices)
+        self.assertNotIn(str(eve.pk), choices)
+        self.assertNotIn(str(fay.pk), choices)
+        self.assertNotIn(str(self.cleo.pk), choices)
+        self.assertEqual(list(choices)[:3], ["", "me", "nobody"])
 
     def test_links_keep_the_filter_and_the_view(self):
         response = self.page(self.ada, assignee=self.bob.pk, view="board")

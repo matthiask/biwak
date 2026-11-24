@@ -260,7 +260,7 @@ class ListFilter:
         # A link spelling the default out
         if query.get("assignee") == ANYBODY:
             del query["assignee"]
-        self.form = ListFilterForm(query, user=request.user, project=item.project)
+        self.form = ListFilterForm(query, user=request.user, todolist=item)
         self.valid = self.form.is_valid()
         todos = _todos(item)
         if self.valid:

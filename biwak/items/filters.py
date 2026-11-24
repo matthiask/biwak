@@ -1,12 +1,13 @@
 """What the to-dos page and a list's filters share (specs/todos.md)"""
 
 from django import forms
+from django.db.models import Exists, OuterRef
 from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts.models import User
 from biwak.forms import Form
+from biwak.items.models import Assignment, Status
 from biwak.organizations.names import display_name
-from biwak.projects.models import Project
 
 
 # The empty assignee's other meaning, spelled out
@@ -24,17 +25,16 @@ def without_empty(query):
     return query
 
 
-def assignee_choices(user, projects, *, mine=False):
+def assignee_choices(user, people, *, mine=False):
     """The choices of "assigned to", the empty one the default (decided
-    2026-11-21): "Me" with ``mine``, else "Anybody"; people of
-    ``projects`` only for staff"""
+    2026-11-21): "Me" with ``mine``, else "Anybody"; ``people`` (a
+    queryset of users) only for staff"""
     if mine:
         choices = [("", _("Me")), (ANYBODY, _("Anybody"))]
     else:
         choices = [("", _("Anybody")), ("me", _("Me"))]
     choices.append(("nobody", _("Nobody active")))
     if not user.is_client:
-        people = User.objects.filter(memberships__project__in=projects).distinct()
         choices += [
             (str(p.pk), display_name(p, user)) for p in people.filter(is_active=True)
         ]
@@ -54,10 +54,15 @@ class ListFilterForm(Form):
 
     assignee = forms.ChoiceField(label=_("assigned to"), required=False)
 
-    def __init__(self, data, *, user, project):
+    def __init__(self, data, *, user, todolist):
         super().__init__(data)
+        # Only people with to-dos in the list, open or completed (both are
+        # filtered; decided 2026-11-24 by the user)
+        assigned = Assignment.objects.filter(
+            user=OuterRef("pk"), todo__item__parent=todolist
+        ).exclude(todo__item__status=Status.TRASHED)
         self.fields["assignee"].choices = assignee_choices(
-            user, Project.objects.filter(pk=project.pk)
+            user, User.objects.filter(Exists(assigned))
         )
 
     def chosen(self):
