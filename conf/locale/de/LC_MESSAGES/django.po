@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 23:07+0100\n"
+"POT-Creation-Date: 2026-11-24 10:32+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3132,6 +3132,10 @@ msgid "Send the IDs of all active lists, each once."
 msgstr "Sende die IDs aller aktiven Listen, jede einmal."
 
 #: biwak/items/api.py
+msgid "assignee is me, nobody, anybody or a person's ID."
+msgstr "assignee ist me, nobody, anybody oder die ID einer Person."
+
+#: biwak/items/api.py
 msgid "Only people who can see the to-do can be assigned."
 msgstr "Nur Personen, die das To-do sehen, können zugewiesen werden."
 
@@ -3142,10 +3146,6 @@ msgstr "Die Zahl der verbleibenden Wiederholungen muss 1 oder mehr sein."
 #: biwak/items/api.py biwak/items/from_text_views.py biwak/items/operations.py
 msgid "No to-dos can be added to this list."
 msgstr "Zu dieser Liste können keine To-dos hinzugefügt werden."
-
-#: biwak/items/api.py
-msgid "assignee is me, nobody, anybody or a person's ID."
-msgstr "assignee ist me, nobody, anybody oder die ID einer Person."
 
 #: biwak/items/api.py
 msgid "assigned_by is me."
@@ -3288,7 +3288,7 @@ msgstr "Fälligkeit…"
 msgid "All projects"
 msgstr "Alle Projekte"
 
-#: biwak/items/by_due.py
+#: biwak/items/by_due.py biwak/items/filters.py
 msgid "assigned to"
 msgstr "zugewiesen an"
 
@@ -3296,11 +3296,11 @@ msgstr "zugewiesen an"
 msgid "assigned by"
 msgstr "zugewiesen von"
 
-#: biwak/items/by_due.py
+#: biwak/items/by_due.py biwak/items/filters.py
 msgid "Anybody"
 msgstr "Alle"
 
-#: biwak/items/by_due.py
+#: biwak/items/by_due.py biwak/items/filters.py
 msgid "Me"
 msgstr "Ich"
 
@@ -3319,15 +3319,6 @@ msgstr "Intern"
 #: biwak/items/by_due.py
 msgid "group by"
 msgstr "gruppieren nach"
-
-#: biwak/items/by_due.py
-msgid "Nobody active"
-msgstr "Niemand aktiv"
-
-#: biwak/items/by_due.py biwak/templates/organizations/organization_detail.html
-#: biwak/templates/organizations/people.html
-msgid "Inactive"
-msgstr "Inaktiv"
 
 #: biwak/items/by_due.py
 msgid "My to-dos"
@@ -3412,6 +3403,16 @@ msgstr "%(name)s hat das %(when)s geändert, während du es bearbeitet hast, des
 #: biwak/items/editing.py
 msgid "Someone"
 msgstr "Jemand"
+
+#: biwak/items/filters.py
+msgid "Nobody active"
+msgstr "Niemand aktiv"
+
+#: biwak/items/filters.py
+#: biwak/templates/organizations/organization_detail.html
+#: biwak/templates/organizations/people.html
+msgid "Inactive"
+msgstr "Inaktiv"
 
 #: biwak/items/from_text.py
 #, python-format
@@ -5817,7 +5818,7 @@ msgstr "Navigationspfad"
 msgid "Filter"
 msgstr "Filter"
 
-#: biwak/templates/_filter_buttons.html
+#: biwak/templates/_filter_buttons.html biwak/templates/items/todolist.html
 msgid "Reset filters"
 msgstr "Filter zurücksetzen"
 
@@ -6620,7 +6621,8 @@ msgstr "Nichts Neues."
 msgid "All notifications"
 msgstr "Alle Benachrichtigungen"
 
-#: biwak/templates/activity/feed.html biwak/templates/projects/all.html
+#: biwak/templates/activity/feed.html biwak/templates/items/_list_filters.html
+#: biwak/templates/projects/all.html
 msgid "Filters"
 msgstr "Filter"
 
@@ -7522,6 +7524,11 @@ msgid "Board"
 msgstr "Board"
 
 #: biwak/templates/items/todolist.html
+#, python-format
+msgid "%(label)s: %(value)s"
+msgstr "%(label)s: %(value)s"
+
+#: biwak/templates/items/todolist.html
 msgid "This list is archived. It stays readable."
 msgstr "Diese Liste ist archiviert und bleibt lesbar."
 
@@ -7548,6 +7555,10 @@ msgstr "Nach unten"
 #: biwak/templates/items/todolist.html
 msgid "Remove the group; its to-dos stay"
 msgstr "Gruppe entfernen; ihre To-dos bleiben"
+
+#: biwak/templates/items/todolist.html
+msgid "No to-dos match the filter."
+msgstr "Keine To-dos passen zum Filter."
 
 #: biwak/templates/items/todolist.html
 #, python-format

@@ -238,30 +238,25 @@ def todos(
     if ctx.invoked_subcommand is not None:
         return None
     if list_id and (
-        mine
-        or assignee
-        or assigned_by_me
-        or project_id
-        or due
-        or by_due
-        or started is not None
+        assigned_by_me or project_id or due or by_due or started is not None
     ):
         terminate(
-            "--mine, --assignee, --assigned-by-me, --project, --due, --by-due"
+            "--assigned-by-me, --project, --due, --by-due"
             " and --started/--not-started go without --list."
         )
     if mine and assignee:
         terminate("--mine or --assignee, not both.")
+    params = {}
+    if mine:
+        params["assignee"] = "me"
+    if assignee:
+        params["assignee"] = assignee
     if list_id and completed:
-        data = paginate(f"lists/{list_id}/todos/completed/")
+        data = paginate(f"lists/{list_id}/todos/completed/", params)
     elif list_id:
-        data = request("GET", f"lists/{list_id}/todos/")
+        data = request("GET", f"lists/{list_id}/todos/", params=params)
     else:
-        params = {"completed": completed, "grouping": "due" if by_due else "project"}
-        if mine:
-            params["assignee"] = "me"
-        if assignee:
-            params["assignee"] = assignee
+        params |= {"completed": completed, "grouping": "due" if by_due else "project"}
         if assigned_by_me:
             params["assigned_by"] = "me"
         if project_id:

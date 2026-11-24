@@ -41,6 +41,12 @@ auf der Seite des Projekts.
   Spalten verschiebt das To-do in diese Gruppe. Haben die Spalten
   keinen Platz, nimmt das Board die Breite des Fensters und scrollt
   seitwärts.
+- **Filter:** „Filter“ oben in der Liste zeigt nur die To-dos, die
+  jemandem, dir oder niemandem zugewiesen sind, in der Liste und auf dem
+  Board. Eine Zeile unter dem Titel sagt, was gesetzt ist; „Filter
+  zurücksetzen“ zeigt wieder alle. Die Gruppen bleiben, und „Erledigt“
+  zählt nur die passenden. Ziehen geht weiterhin: Ein To-do landet neben
+  dem, neben das du es ziehst.
 - **Erledigt:** Die zuletzt erledigten To-dos stehen unter der Liste,
   unter „Erledigt (N)“, die neuesten zuerst; „Mehr anzeigen“ fügt
   ältere hinzu.

@@ -13,15 +13,16 @@
       <div class="btn-group btn-group-sm" role="group" aria-label="{% translate 'View' %}">
         <a
           class="btn btn-sm {% if view == 'list' %}btn-primary{% else %}btn-quiet{% endif %}"
-          href="?view=list"
+          href="?view=list{% if filters_query %}&amp;{{ filters_query }}{% endif %}"
           {% if view == "list" %}aria-current="page"{% endif %}
         >{% translate "List" %}</a>
         <a
           class="btn btn-sm {% if view == 'board' %}btn-primary{% else %}btn-quiet{% endif %}"
-          href="?view=board"
+          href="?view=board{% if filters_query %}&amp;{{ filters_query }}{% endif %}"
           {% if view == "board" %}aria-current="page"{% endif %}
         >{% translate "Board" %}</a>
       </div>
+      {% include "items/_list_filters.html" %}
       {% if can_change %}
         <a
           class="btn btn-sm btn-quiet"
@@ -33,6 +34,21 @@
       {% include "items/_more.html" %}
     </div>
   </div>
+  {% if chosen_filters or filter_form.errors %}
+    {# Saying it's filtered, so to-dos left out aren't taken for gone (specs/todos.md, "Filters on a list") #}
+    <p class="wb-list-filtered small text-body-secondary" id="list-filtered">
+      {% for label, value in chosen_filters %}
+        {% blocktranslate with label=label|capfirst %}{{ label }}: {{ value }}{% endblocktranslate %}
+      {% endfor %}
+      {% for field in filter_form %}{% for error in field.errors %}<span
+            class="text-danger"
+          >{{ error }}</span>{% endfor %}{% endfor %}
+      <a
+        href="{{ request.path }}{% if 'view' in request.GET %}?view={{ request.GET.view|urlencode }}{% endif %}"
+        data-reset-filters
+      >{% translate "Reset filters" %}</a>
+    </p>
+  {% endif %}
   {% if item.status == "archived" %}
     <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
   {% endif %}
@@ -153,6 +169,7 @@
   </div>
   <div id="live-completed" data-live>
     {% if all_done %}<p class="text-body-secondary wb-all-done">{% translate "All done." %}</p>{% endif %}
+    {% if nothing_matches %}<p class="text-body-secondary">{% translate "No to-dos match the filter." %}</p>{% endif %}
     {% if completed_count %}
       {# The latest few, "Show more" for the next (decided 2026-11-23, specs/todos.md) #}
       <section class="mt-4 wb-completed" id="completed" aria-labelledby="completed-title">

@@ -1052,11 +1052,38 @@ def move_todo(item, *, todolist, group=None, index=None, actor):
     move_todos([item], todolist=todolist, group=group, index=index, actor=actor)
 
 
+def _index_among(siblings, index, *, after, before):
+    """Where in ``siblings`` to put to-dos: right after the one with the ID
+    ``after`` or before ``before`` when it's there, else at ``index``
+    (None or beyond: the end)"""
+    pks = [i.pk for i in siblings]
+    if after in pks:
+        return pks.index(after) + 1
+    if before in pks:
+        return pks.index(before)
+    if index is None or index > len(siblings):
+        return len(siblings)
+    return max(0, index)
+
+
 @transaction.atomic
-def move_todos(items, *, todolist, group=None, index=None, actor, _from=None):
+def move_todos(
+    items,
+    *,
+    todolist,
+    group=None,
+    index=None,
+    after=None,
+    before=None,
+    actor,
+    _from=None,
+):
     """Moves to-dos together (dragging several at once) into a list's group
     (or ungrouped), next to each other in the given order, starting at
-    ``index`` among the others there (0-based, None: at the end). Locks the
+    ``index`` among the others there (0-based, None: at the end), or right
+    after the to-do with the ID ``after`` or before ``before`` when it's
+    there (dragging in a filtered list, where the index among those shown
+    isn't the index among all, specs/todos.md). Locks the
     lists, so concurrent moves don't mix up positions. Moving into another
     list recomputes the visibility. Raises ``ValueError`` for a to-do given
     twice. The events of more than one share a ``batch``
@@ -1078,9 +1105,7 @@ def move_todos(items, *, todolist, group=None, index=None, actor, _from=None):
 
     moved = {i.pk for i in items}
     siblings = [i for i in _todos_in(todolist, group) if i.pk not in moved]
-    if index is None or index > len(siblings):
-        index = len(siblings)
-    index = max(0, index)
+    index = _index_among(siblings, index, after=after, before=before)
     siblings[index:index] = items
 
     for item in items:

@@ -27,7 +27,8 @@ from biwak.activity.operations import (
     unsubscribe,
 )
 from biwak.forms import ColorSwatches, Form, PeopleField, next_url
-from biwak.items import editing, glance, operations as ops, visibility
+from biwak.items import due, editing, glance, operations as ops, visibility
+from biwak.items.filters import ANYBODY, ListFilterForm, without_empty
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
@@ -230,13 +231,14 @@ def _shown(value, default):
         return default
 
 
-def _completed_more(item, *, cursor, shown, view):
+def _completed_more(item, *, cursor, shown, keep):
     """ "Show more": the list's page showing ``COMPLETED_MORE`` more (the
     way without JavaScript, and the address htmx puts in the bar, so that
-    reloading and live updates keep them) and the fragment htmx loads"""
+    reloading and live updates keep them) and the fragment htmx loads;
+    ``keep`` the view and the filters"""
     if cursor is None:
         return {}
-    page = {"view": view} if view else {}
+    page = dict(keep)
     fragment = {"before": cursor, "shown": shown, **page}
     page["completed"] = shown + COMPLETED_MORE
     return {
@@ -247,27 +249,67 @@ def _completed_more(item, *, cursor, shown, view):
     }
 
 
+class ListFilter:
+    """A list's filter from the query (specs/todos.md, "Filters on a
+    list"): ``todos`` filtered (none for unknown values, never a silent
+    "everything"), ``keep`` the view and the filters for the list's links,
+    ``back`` where completing a to-do returns to"""
+
+    def __init__(self, request, item):
+        query = without_empty(request.GET)
+        # A link spelling the default out
+        if query.get("assignee") == ANYBODY:
+            del query["assignee"]
+        self.form = ListFilterForm(query, user=request.user, project=item.project)
+        self.valid = self.form.is_valid()
+        todos = _todos(item)
+        if self.valid:
+            self.filters = {k: v for k, v in self.form.cleaned_data.items() if v}
+            todos = due.assigned_to(
+                todos, request.user, self.filters.get("assignee") or None
+            )
+        else:
+            self.filters = {
+                name: query[name] for name in self.form.fields if name in query
+            }
+            todos = todos.none()
+        self.todos = todos
+        self.keep = ({"view": query["view"]} if "view" in query else {}) | self.filters
+        self.back = (
+            f"{item.get_absolute_url()}?{urlencode(self.keep)}" if self.keep else ""
+        )
+
+    def context(self):
+        return {
+            "filter_form": self.form,
+            "filtered": len(self.filters),
+            "chosen_filters": self.form.chosen() if self.valid else [],
+            "filters_query": urlencode(self.filters),
+            "back": self.back,
+        }
+
+
 def completed_todos(request, pk):
     """The next page of a list's completed to-dos, for "Show more" (htmx)"""
     item = item_for(request, pk, Kind.LIST)
+    filtered = ListFilter(request, item)
     rows, cursor = _completed_page(
-        _todos(item), size=COMPLETED_MORE, before=request.GET.get("before")
+        filtered.todos, size=COMPLETED_MORE, before=request.GET.get("before")
     )
     shown = _shown(request.GET.get("shown"), 0) + len(rows)
     return render(
         request,
         "items/_completed.html",
-        {"item": item, "completed": rows}
-        | _completed_more(
-            item, cursor=cursor, shown=shown, view=request.GET.get("view", "")
-        ),
+        {"item": item, "completed": rows, "back": filtered.back}
+        | _completed_more(item, cursor=cursor, shown=shown, keep=filtered.keep),
     )
 
 
 def todolist(request, pk):
     item = item_for(request, pk, Kind.LIST)
     todolist = item.todolist
-    todos = _todos(item)
+    filtered = ListFilter(request, item)
+    todos = filtered.todos
     open_todos = todos.filter(todo__completed_at__isnull=True).order_by(
         "position", "pk"
     )
@@ -319,12 +361,13 @@ def todolist(request, pk):
             "completed": completed,
             "completed_count": completed_count,
             **_completed_more(
-                item,
-                cursor=completed_cursor,
-                shown=len(completed),
-                view=request.GET.get("view", ""),
+                item, cursor=completed_cursor, shown=len(completed), keep=filtered.keep
             ),
+            **filtered.context(),
             "all_done": bool(completed_count) and not any(by_group.values()),
+            "nothing_matches": bool(filtered.filters)
+            and not completed_count
+            and not any(by_group.values()),
             "form": form,
             "people": form.fields["assignees"].queryset,
             "people_teams": form.fields["assignees"].widget.team_attrs(),
@@ -556,7 +599,9 @@ def todos_to_move(request, target, ids):
 def todos_move(request, pk):
     """Dragging one or several to-dos (frontend/todos.js) into list ``pk``,
     a ``group`` (empty: ungrouped), next to each other at ``index`` among
-    the others there; ``todos`` in their new order"""
+    the others there, or after the to-do ``after`` (before ``before``)
+    shown next to them, which counts in a filtered list; ``todos`` in their
+    new order"""
     target = item_for(request, pk, Kind.LIST)
     # A repeated ID counts once, as in the API
     ids = list(dict.fromkeys(_number(value) for value in request.POST.getlist("todos")))
@@ -564,6 +609,11 @@ def todos_move(request, pk):
     group = None
     if group_id := request.POST.get("group"):
         group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
+    neighbours = {
+        name: _number(value)
+        for name in ("after", "before")
+        if (value := request.POST.get(name))
+    }
     try:
         ops.move_todos(
             [todos[pk] for pk in ids],
@@ -571,6 +621,7 @@ def todos_move(request, pk):
             group=group,
             index=_index(request.POST.get("index")),
             actor=request.user,
+            **neighbours,
         )
     except ValueError:
         return HttpResponse(status=400)

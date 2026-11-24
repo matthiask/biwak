@@ -15,12 +15,12 @@ from icalendar import Calendar, Event as CalendarEvent
 from biwak import schedules
 from biwak.accounts import sso
 from biwak.accounts.languages import language_for
-from biwak.accounts.models import CalendarToken, User
+from biwak.accounts.models import CalendarToken
 from biwak.activity import mentions
 from biwak.api_conventions import absolute
 from biwak.forms import Form
 from biwak.items import due, glance
-from biwak.organizations.names import display_name
+from biwak.items.filters import ANYBODY, assignee_choices, without_empty
 from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
@@ -74,33 +74,11 @@ class FilterForm(Form):
             projects = projects.filter(pk=project.pk)
         else:
             self.fields["project"].queryset = projects
-        # The empty choice is the page's default (decided 2026-11-21)
-        if default_assignee(project, data) == "me":
-            choices = [("", _("Me")), (ANYBODY, _("Anybody"))]
-        else:
-            choices = [("", _("Anybody")), ("me", _("Me"))]
-        choices.append(("nobody", _("Nobody active")))
-        if not user.is_client:
-            people = User.objects.filter(memberships__project__in=projects).distinct()
-            choices += [
-                (str(p.pk), display_name(p, user))
-                for p in people.filter(is_active=True)
-            ]
-            # Inactive people after the active ones, so their open to-dos
-            # can be listed and handed over (specs/handover.md)
-            inactive = [
-                (str(p.pk), display_name(p, user))
-                for p in people.filter(is_active=False)
-            ]
-            if inactive:
-                choices.append((_("Inactive"), inactive))
-        self.fields["assignee"].choices = choices
+        self.fields["assignee"].choices = assignee_choices(
+            user, projects, mine=default_assignee(project, data) == "me"
+        )
         if user.is_client:
             del self.fields["visible"]
-
-
-# The filters "Reset filters" resets
-ANYBODY = "anybody"
 
 
 def default_assignee(project, query):
@@ -111,17 +89,6 @@ def default_assignee(project, query):
     if project is None and query.get("assigned_by") != "me":
         return "me"
     return ANYBODY
-
-
-def without_empty(query):
-    """``query`` (a ``QueryDict``) without empty values, which stay out of
-    URLs (specs/ui.md)"""
-    query = query.copy()
-    for name, values in list(query.lists()):
-        query.setlist(name, [value for value in values if value])
-        if not query.getlist(name):
-            del query[name]
-    return query
 
 
 FILTERS = ["project", "assignee", "assigned_by", "state", "visible"]

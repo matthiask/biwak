@@ -1,7 +1,8 @@
 {% load biwak i18n %}
 {% comment %}
   The check of every to-do row. `keep_page`: coming back to this page after
-  toggling, not to the to-do's list.
+  toggling, not to the to-do's list; `back`: coming back there (the list
+  with its view and filters).
 {% endcomment %}
 <form
   method="post"
@@ -12,7 +13,11 @@
 >
   {% csrf_token %}
   <input type="hidden" name="done" value="{% if todo.todo.is_completed %}0{% else %}1{% endif %}">
-  {% if keep_page %}<input type="hidden" name="next" value="{{ request.get_full_path }}">{% endif %}
+  {% if keep_page %}<input type="hidden" name="next" value="{{ request.get_full_path }}">{% elif back %}<input
+      type="hidden"
+      name="next"
+      value="{{ back }}"
+    >{% endif %}
   <button
     type="submit"
     class="wb-check{% if todo.todo.is_completed %} is-done{% endif %}"

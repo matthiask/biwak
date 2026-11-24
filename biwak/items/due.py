@@ -152,22 +152,31 @@ def todos(
             # waiting on others
             assignments = assignments.exclude(user=user)
         qs = qs.filter(Exists(assignments))
-    elif assignee == "me":
-        qs = qs.filter(todo__assignees=user)
-    elif assignee == "nobody":
-        # Nobody active (decided 2026-11-21): assigned to nobody, or only to
-        # people deactivated since, it's nobody's job either way
-        qs = qs.exclude(
-            Exists(
-                Assignment.objects.filter(todo_id=OuterRef("pk"), user__is_active=True)
-            )
-        )
-    elif assignee is not None:
-        qs = qs.filter(todo__assignees=assignee)
+    else:
+        qs = assigned_to(qs, user, assignee)
     if visible_to_clients is not None and not user.is_client:
         qs = qs.filter(is_client_visible=visible_to_clients)
     if group is not None:
         qs = _in_group(qs, group, today or schedules.today())
+    return qs
+
+
+def assigned_to(qs, user, assignee):
+    """The to-dos of ``qs`` assigned to ``assignee``: ``"me"`` (``user``),
+    ``"nobody"`` (nobody active) or a person's ID; ``None``: anybody (the
+    to-dos page and a list's filter, specs/todos.md)"""
+    if assignee == "me":
+        return qs.filter(todo__assignees=user)
+    if assignee == "nobody":
+        # Nobody active (decided 2026-11-21): assigned to nobody, or only to
+        # people deactivated since, it's nobody's job either way
+        return qs.exclude(
+            Exists(
+                Assignment.objects.filter(todo_id=OuterRef("pk"), user__is_active=True)
+            )
+        )
+    if assignee is not None:
+        return qs.filter(todo__assignees=assignee)
     return qs
 
 
