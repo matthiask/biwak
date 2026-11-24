@@ -73,8 +73,10 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   assignee", copied from the to-dos page): the list and the board filter
   by "assigned to" only (`?assignee=`: anybody, the default, me, nobody
   active and, for staff, the people with to-dos in the list, open or
-  completed, not trashed (decided 2026-11-24 by the user: "only people
-  which actually have assignments"; first the project's members),
+  completed, not trashed, whom they may know (`mentions.known_to()`:
+  externals don't learn the names of people removed since; decided
+  2026-11-24 by the user: "only people which actually have
+  assignments"; first the project's members),
   inactive people last; `ListFilterForm` and
   `assignee_choices()` in `biwak/items/filters.py`, the query through
   `due.assigned_to()`). Unknown values show an error and no to-dos. A

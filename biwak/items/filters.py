@@ -5,6 +5,7 @@ from django.db.models import Exists, OuterRef
 from django.utils.translation import gettext_lazy as _
 
 from biwak.accounts.models import User
+from biwak.activity.mentions import known_to
 from biwak.forms import Form
 from biwak.items.models import Assignment, Status
 from biwak.organizations.names import display_name
@@ -57,13 +58,14 @@ class ListFilterForm(Form):
     def __init__(self, data, *, user, todolist):
         super().__init__(data)
         # Only people with to-dos in the list, open or completed (both are
-        # filtered; decided 2026-11-24 by the user)
+        # filtered; decided 2026-11-24 by the user), whom the person may know:
+        # people removed from the project stay on completed to-dos, and
+        # externals don't learn their names (specs/access.md)
         assigned = Assignment.objects.filter(
             user=OuterRef("pk"), todo__item__parent=todolist
         ).exclude(todo__item__status=Status.TRASHED)
-        self.fields["assignee"].choices = assignee_choices(
-            user, User.objects.filter(Exists(assigned))
-        )
+        people = known_to(User.objects.filter(Exists(assigned)), todolist.project, user)
+        self.fields["assignee"].choices = assignee_choices(user, people)
 
     def chosen(self):
         """The filters set, as (label, the choice's label), for the line
