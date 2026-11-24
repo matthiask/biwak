@@ -392,17 +392,38 @@ def _for_todo_out(qs):
     )
 
 
-def _todos(request, list_item):
+def _assignee(assignee):
+    """``assignee`` for ``due.assigned_to()``: ``me``, ``nobody``,
+    ``anybody`` (``None``, the default) or a person's ID, else 400"""
+    if assignee not in {None, "", "me", "nobody", "anybody"} and not (
+        assignee.isdecimal()
+    ):
+        bad_request(_("assignee is me, nobody, anybody or a person's ID."))
+    # "anybody" like the page's "Anybody" (specs/todos.md)
+    return None if assignee in {"", "anybody"} else assignee
+
+
+def _todos(request, list_item, assignee=None):
+    """The list's to-dos, those assigned to ``assignee`` (as on the list's
+    page, specs/todos.md, "Filters on a list")"""
     return _for_todo_out(
-        Item.objects.visible_to(request.user).filter(parent=list_item, kind=Kind.TODO)
+        due.assigned_to(
+            Item.objects.visible_to(request.user).filter(
+                parent=list_item, kind=Kind.TODO
+            ),
+            request.user,
+            _assignee(assignee),
+        )
     )
 
 
 @router.get("lists/{list_id}/todos/", response=list[TodoOut])
-def todo_list(request, list_id: int):
-    """The open to-dos in the list's order: ungrouped first, then by group"""
+def todo_list(request, list_id: int, assignee: str | None = None):
+    """The open to-dos in the list's order: ungrouped first, then by group;
+    ``assignee`` is ``me``, ``nobody``, ``anybody`` (the default) or a
+    person's ID"""
     item = item_for(request, list_id, Kind.LIST)
-    todos = _todos(request, item).filter(todo__completed_at__isnull=True)
+    todos = _todos(request, item, assignee).filter(todo__completed_at__isnull=True)
     groups = {g.pk: g.position for g in item.todolist.groups.all()}
     return [
         todo_out(todo, request.user)
@@ -420,13 +441,17 @@ def todo_list(request, list_id: int):
 
 @router.get("lists/{list_id}/todos/completed/", response=page_of(TodoOut))
 def todo_list_completed(
-    request, list_id: int, cursor: str | None = None, page_size: int | None = None
+    request,
+    list_id: int,
+    assignee: str | None = None,
+    cursor: str | None = None,
+    page_size: int | None = None,
 ):
-    """Completed to-dos, the latest first"""
+    """Completed to-dos, the latest first; ``assignee`` as for the open ones"""
     item = item_for(request, list_id, Kind.LIST)
     return paginated(
         request,
-        _todos(request, item)
+        _todos(request, item, assignee)
         .filter(todo__completed_at__isnull=False)
         .annotate(completed=F("todo__completed_at")),
         lambda item: todo_out(item, request.user),
@@ -626,13 +651,7 @@ def todo_overview(
     are left out.
     Clients only ever get what is visible to them."""
     project = project_for(request, project_id) if project_id is not None else None
-    if assignee not in {None, "", "me", "nobody", "anybody"} and not (
-        assignee.isdecimal()
-    ):
-        bad_request(_("assignee is me, nobody, anybody or a person's ID."))
-    if assignee == "anybody":
-        # Like the page's "Anybody" (specs/todos.md)
-        assignee = None
+    assignee = _assignee(assignee)
     if assigned_by not in {None, "", "me"}:
         bad_request(_("assigned_by is me."))
     qs = _for_todo_out(

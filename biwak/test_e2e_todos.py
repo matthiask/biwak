@@ -218,6 +218,49 @@ class TodosTest(E2ETestCase):
         )
         self.assertEqual(self.errors, [])
 
+    def test_dragging_in_a_filtered_list(self):
+        """The filter menu applies itself; a to-do dropped among those shown
+        lands next to its neighbour shown, not at the index among those
+        shown (specs/todos.md, "Filters on a list")"""
+        todolist = self.make_list(todos=["Map", "Tent", "Rope", "Stove", "Food"])
+        for title in ["Tent", "Stove", "Food"]:
+            ops.assign(Item.objects.get(title=title), [self.ada], actor=self.ada)
+        page = self.page
+        self.goto(page, todolist)
+        page.locator(".wb-list-filters summary").click()
+        with page.expect_navigation():
+            page.locator(".wb-list-filters [name=assignee]").select_option("me")
+        self.wait_for_sortables(page)
+        self.assertIn("assignee=me", page.url)
+        titles = page.locator("[data-todo] .wb-todo-title")
+        self.assertEqual(titles.all_inner_texts(), ["Tent", "Stove", "Food"])
+        expect(page.locator("#list-filtered")).to_contain_text("Assigned to: Me")
+
+        with page.expect_response("**/todos/move/"):
+            page.locator("[data-todo]", has_text="Food").locator(
+                "[data-handle]"
+            ).drag_to(
+                page.locator("[data-todo]", has_text="Stove"),
+                target_position={"x": 40, "y": 3},
+            )
+        self.assertEqual(
+            [t for t, _ in self.order(todolist)],
+            ["Map", "Tent", "Food", "Rope", "Stove"],
+        )
+        # At the top: before the first one shown
+        with page.expect_response("**/todos/move/"):
+            page.locator("[data-todo]", has_text="Stove").locator(
+                "[data-handle]"
+            ).drag_to(
+                page.locator("[data-todo]", has_text="Tent"),
+                target_position={"x": 40, "y": 3},
+            )
+        self.assertEqual(
+            [t for t, _ in self.order(todolist)],
+            ["Map", "Stove", "Tent", "Food", "Rope"],
+        )
+        self.assertEqual(self.errors, [])
+
     def test_a_drag_the_server_doesnt_get_reloads_the_page(self):
         """Offline, the page shows what the server has again"""
         todolist = self.make_list(todos=["A", "B", "C"])

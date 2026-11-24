@@ -44,15 +44,22 @@ function sortTodos(container) {
         return
       const rows = [...event.to.querySelectorAll("[data-todo]")]
       const ordered = rows.filter((row) => moved.includes(row))
-      const index = rows
+      const others = rows.filter((row) => !moved.includes(row))
+      const above = rows
         .slice(0, rows.indexOf(ordered[0]))
-        .filter((row) => !moved.includes(row)).length
+        .filter((row) => !moved.includes(row))
+      // The neighbour shown places them in a filtered list, where to-dos
+      // left out make the index among those shown a different one
+      const after = above.at(-1)
+      const before = after ? null : others[0]
       post(
         event.to.dataset.moveUrl,
         [
           ...ordered.map((row) => ["todos", row.dataset.todo]),
           ["group", event.to.dataset.group],
-          ["index", index],
+          ["index", above.length],
+          ...(after ? [["after", after.dataset.todo]] : []),
+          ...(before ? [["before", before.dataset.todo]] : []),
         ],
         undo,
       )

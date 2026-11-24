@@ -48,6 +48,7 @@ biwak todos create LIST "Order the tent" --due 2026-12-01 --starts 2026-11-28 --
 biwak lists add-from-text LIST plan.md --preview
 biwak todos complete TODO
 biwak todos --assignee 7
+biwak todos --list LIST --mine
 biwak todos assign 12 13 14 --to 7 --replace
 biwak todos comment TODO "The plan" --attach plan.pdf
 biwak checkins due

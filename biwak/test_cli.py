@@ -252,6 +252,39 @@ class CLICommandsTest(CLITest):
             self.biwak("todos", "--list", self.list.pk, "--completed").output,
         )
 
+    def test_a_list_by_assignee(self):
+        """``--mine`` and ``--assignee`` with ``--list``, as the list's
+        filter (specs/todos.md, "Filters on a list")"""
+        bob = person("Bob")
+        self.project.memberships.create(user=bob)
+        ops.create_todo(
+            todolist=self.list,
+            title="Ada's tent",
+            creator=self.ada,
+            assignees=[self.ada],
+        )
+        done = ops.create_todo(
+            todolist=self.list, title="Bob's map", creator=self.ada, assignees=[bob]
+        )
+        ops.complete(done, actor=self.ada)
+        ops.create_todo(
+            todolist=self.list, title="Bob's stove", creator=self.ada, assignees=[bob]
+        )
+        output = self.biwak("todos", "--list", self.list.pk, "--mine").output
+        self.assertIn("Ada's tent", output)
+        self.assertNotIn("Bob's stove", output)
+        output = self.biwak(
+            "todos", "--list", self.list.pk, "--assignee", bob.pk
+        ).output
+        self.assertIn("Bob's stove", output)
+        self.assertNotIn("Ada's tent", output)
+        output = self.biwak(
+            "todos", "--list", self.list.pk, "--assignee", bob.pk, "--completed"
+        ).output
+        self.assertIn("Bob's map", output)
+        result = self.biwak("todos", "--list", self.list.pk, "--assigned-by-me")
+        self.assertNotEqual(result.exit_code, 0)
+
     def test_settings_language(self):
         output = self.biwak("settings").output
         self.assertIn("Language: auto", output)
@@ -516,7 +549,7 @@ class CLICommandsTest(CLITest):
             self.assertEqual(result.exit_code, 0, group)
             self.assertEqual(json.loads(result.stdout), [])
         self.assertEqual(
-            self.biwak("todos", "--list", self.list.pk, "--mine").exit_code, 1
+            self.biwak("todos", "--list", self.list.pk, "--project", 1).exit_code, 1
         )
         self.assertEqual(
             self.biwak("todos", "--list", self.list.pk, "--by-due").exit_code, 1

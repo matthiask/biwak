@@ -1,7 +1,7 @@
 # To-dos: assignees, recurrence, board view, by due date
 
 **Status:** built (2026-11-20; the to-do's page, the picker, the
-groupings and "assigned by" 2026-11-21).
+groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
 
 ## Assignees
 
@@ -69,6 +69,30 @@ groupings and "assigned by" 2026-11-21).
   or board) with `?view=` to switch; dragging between columns is
   `move_todos()`. Columns that don't fit the page widen the board up
   to the window's width (`ui.md`, "Page width", decided 2026-11-23). The board never shows completed to-dos in its columns.
+- **Filters on a list** (decided 2026-11-24 by the user: "filter by
+  assignee", copied from the to-dos page): the list and the board filter
+  by "assigned to" only (`?assignee=`, the choices of a project's to-dos
+  page: anybody, the default, me, nobody active, the project's members
+  for staff, inactive people last; `ListFilterForm` and
+  `assignee_choices()` in `biwak/items/filters.py`, the query through
+  `due.assigned_to()`). Unknown values show an error and no to-dos. A
+  "Filters" menu in the header, applying itself, with the count set
+  (`items/_list_filters.html`); a line below the header says what is set
+  ("Assigned to: Ada") with "Reset filters", so to-dos left out aren't
+  taken for gone; "No to-dos match the filter." when nothing does. Not
+  remembered (decided without asking: a plain link to a list shows all
+  of it). **Groups and columns stay** while filtered and **Completed
+  is filtered too**, its count, "Show more" and its fragment (decided
+  2026-11-24 by the user). The view links, "Show more" and completing a
+  to-do (`next`) keep the view and the filter. **Dragging places by the
+  neighbour shown** (decided 2026-11-24 by the user): `todos.js` sends
+  the to-do shown above the dropped ones (`after`) or, at the top, the
+  one below (`before`) besides the index, and `move_todos()` puts them
+  right next to it when it's still there, else at the index; to-dos left
+  out by the filter keep their places. Adding inline while filtered
+  shows the new to-do even when it doesn't match. API: `assignee` on
+  `lists/{id}/todos/` and `…/completed/`; CLI: `--mine` and `--assignee`
+  with `--list` (0.73.0).
 - **Adding inline:** "Add a to-do" opens a form in place (title, notes,
   assignees, due date, repeat); Ctrl+Enter adds and starts the next one,
   Escape or a click elsewhere closes (`frontend/add-todo.js`). "Add a

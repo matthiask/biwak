@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "biwak-cli"
-version = "0.72.0"
+version = "0.73.0"
 description = "The command line interface of Biwak"
 readme = "README.md"
 license = "BSD-3-Clause"
