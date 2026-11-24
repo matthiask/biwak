@@ -139,3 +139,61 @@ document.addEventListener(
 window.addEventListener("resize", () => {
   for (const details of document.querySelectorAll(OPEN)) place(details)
 })
+
+// Menus with data-hover-open (a list's filters, specs/todos.md) open when
+// the mouse rests on them a moment, and close when it leaves unless
+// something inside has the focus (the select in use). A click on the
+// button after that keeps it open until a click elsewhere, instead of
+// closing it. Touch screens open them with a tap as before.
+const HOVER = "details[data-hover-open]"
+const OPEN_AFTER = 50
+const CLOSE_AFTER = 300
+const timers = new WeakMap()
+
+function later(menu, action, delay) {
+  clearTimeout(timers.get(menu))
+  timers.set(menu, setTimeout(action, delay))
+}
+
+document.addEventListener("pointerover", (event) => {
+  const menu = event.pointerType === "mouse" && event.target.closest?.(HOVER)
+  if (!menu || menu.contains(event.relatedTarget)) return
+  later(
+    menu,
+    () => {
+      if (menu.open) return
+      menu.dataset.hoverOpened = ""
+      menu.open = true
+    },
+    OPEN_AFTER,
+  )
+})
+
+document.addEventListener("pointerout", (event) => {
+  const menu = event.pointerType === "mouse" && event.target.closest?.(HOVER)
+  if (!menu || menu.contains(event.relatedTarget)) return
+  later(
+    menu,
+    () => {
+      if ("hoverOpened" in menu.dataset && !menu.matches(":focus-within"))
+        menu.open = false
+    },
+    CLOSE_AFTER,
+  )
+})
+
+document.addEventListener("click", (event) => {
+  const menu = event.target.closest?.(`${HOVER} > summary`)?.parentElement
+  if (!menu || !("hoverOpened" in menu.dataset)) return
+  event.preventDefault()
+  delete menu.dataset.hoverOpened
+})
+
+document.addEventListener(
+  "toggle",
+  (event) => {
+    if (event.target.matches?.(HOVER) && !event.target.open)
+      delete event.target.dataset.hoverOpened
+  },
+  true,
+)

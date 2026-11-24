@@ -66,10 +66,7 @@ class ListFilterTest(TestCase):
             },
         )
         self.assertEqual(response.context["filtered"], 0)
-        # Always there, closed only on phones while nothing is set
-        self.assertContains(response, 'name="assignee"')
-        self.assertContains(response, '<details class="wb-filter-disclosure mb-3" >')
-        self.assertNotContains(response, "Reset filters")
+        self.assertNotContains(response, 'id="list-filtered"')
 
     def test_a_person(self):
         response = self.page(self.ada, assignee=self.bob.pk)
@@ -77,11 +74,8 @@ class ListFilterTest(TestCase):
         self.assertEqual(response.context["completed_count"], 1)
         # The groups stay, so the board keeps its columns
         self.assertContains(response, f'id="group-{self.group.pk}"')
-        self.assertContains(
-            response, '<details class="wb-filter-disclosure mb-3" open>'
-        )
-        self.assertContains(response, f'<option value="{self.bob.pk}" selected>Bob')
-        self.assertContains(response, "Reset filters")
+        self.assertContains(response, 'id="list-filtered"')
+        self.assertContains(response, "Assigned to: Bob")
         self.assertEqual(response.context["filtered"], 1)
 
     def test_me_and_nobody(self):
@@ -101,7 +95,7 @@ class ListFilterTest(TestCase):
     def test_unknown_values_show_an_error_and_no_todos(self):
         response = self.page(self.ada, assignee="x")
         self.assertEqual(self.shown(response), set())
-        self.assertContains(response, 'class="invalid-feedback d-block"')
+        self.assertContains(response, 'class="text-danger"')
 
     def test_nothing_matches(self):
         other = person("Dora")
@@ -130,10 +124,6 @@ class ListFilterTest(TestCase):
         response = self.page(self.ada, assignee=self.bob.pk, view="board")
         self.assertContains(response, f'href="?view=list&amp;assignee={self.bob.pk}"')
         self.assertContains(response, '<input type="hidden" name="view" value="board">')
-        # "Reset filters" keeps the view
-        self.assertEqual(
-            response.context["reset_url"], f"{self.list.get_absolute_url()}?view=board"
-        )
         # Completing comes back to the filtered page
         self.assertContains(
             response,

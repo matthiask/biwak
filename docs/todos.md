@@ -33,9 +33,11 @@ project. Staff create lists with "New list" on the project's page.
   board). Dragging between columns moves the to-do to that group. When
   the columns don't fit, the board takes the window's width and scrolls
   sideways.
-- **Filters:** "Assigned to" above the to-dos shows only those assigned
-  to somebody, to you or to nobody, on the list and on the board (on a
-  phone behind "Filters"). "Reset filters" shows all again. The groups stay, and "Completed" counts only the
+- **Filters:** "Filters" in the list's header (it opens when you point
+  at it) shows only the to-dos
+  assigned to somebody, to you or to nobody, on the list and on the
+  board. A line below the header says what is set; "Reset filters"
+  shows all again. The groups stay, and "Completed" counts only the
   matching ones. Dragging still works: a to-do lands next to the one you
   drop it beside.
 - **Completed:** the latest finished to-dos show below the list, under

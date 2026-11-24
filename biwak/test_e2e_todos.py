@@ -219,7 +219,7 @@ class TodosTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
     def test_dragging_in_a_filtered_list(self):
-        """The filter applies itself; a to-do dropped among those shown
+        """The filter menu applies itself; a to-do dropped among those shown
         lands next to its neighbour shown, not at the index among those
         shown (specs/todos.md, "Filters on a list")"""
         todolist = self.make_list(todos=["Map", "Tent", "Rope", "Stove", "Food"])
@@ -227,13 +227,14 @@ class TodosTest(E2ETestCase):
             ops.assign(Item.objects.get(title=title), [self.ada], actor=self.ada)
         page = self.page
         self.goto(page, todolist)
+        page.locator(".wb-list-filters summary").click()
         with page.expect_navigation():
-            page.locator("[name=assignee]").select_option("me")
+            page.locator(".wb-list-filters [name=assignee]").select_option("me")
         self.wait_for_sortables(page)
         self.assertIn("assignee=me", page.url)
         titles = page.locator("[data-todo] .wb-todo-title")
         self.assertEqual(titles.all_inner_texts(), ["Tent", "Stove", "Food"])
-        expect(page.locator("[name=assignee]")).to_have_value("me")
+        expect(page.locator("#list-filtered")).to_contain_text("Assigned to: Me")
 
         with page.expect_response("**/todos/move/"):
             page.locator("[data-todo]", has_text="Food").locator(
@@ -258,6 +259,38 @@ class TodosTest(E2ETestCase):
             [t for t, _ in self.order(todolist)],
             ["Map", "Stove", "Tent", "Food", "Rope"],
         )
+        self.assertEqual(self.errors, [])
+
+    def test_the_filters_open_on_hover(self):
+        """Resting the mouse on "Filters" opens the menu, leaving closes it;
+        a click after hovering keeps it open (specs/todos.md, "Filters on a
+        list")"""
+        todolist = self.make_list(todos=["Tent"])
+        page = self.page
+        self.goto(page, todolist)
+        menu = page.locator(".wb-list-filters")
+        menu.locator("summary").hover()
+        expect(menu).to_have_attribute("open", "")
+        # Into the menu and out again
+        menu.locator("[name=assignee]").hover()
+        expect(menu).to_have_attribute("open", "")
+        page.locator("h1").hover()
+        expect(menu).not_to_have_attribute("open", "")
+        # A click right after it opened doesn't close it, leaving doesn't
+        # either then; a click elsewhere does
+        menu.locator("summary").hover()
+        expect(menu).to_have_attribute("open", "")
+        menu.locator("summary").click()
+        page.locator("h1").hover()
+        page.wait_for_timeout(400)
+        expect(menu).to_have_attribute("open", "")
+        page.locator("h1").click()
+        expect(menu).not_to_have_attribute("open", "")
+        # Choosing applies the filter
+        menu.locator("summary").hover()
+        with page.expect_navigation():
+            menu.locator("[name=assignee]").select_option("me")
+        self.assertIn("assignee=me", page.url)
         self.assertEqual(self.errors, [])
 
     def test_a_drag_the_server_doesnt_get_reloads_the_page(self):

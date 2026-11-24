@@ -59,3 +59,17 @@ class ListFilterForm(Form):
         self.fields["assignee"].choices = assignee_choices(
             user, Project.objects.filter(pk=project.pk)
         )
+
+    def chosen(self):
+        """The filters set, as (label, the choice's label), for the line
+        saying the list is filtered"""
+        result = []
+        for name, field in self.fields.items():
+            if value := self.cleaned_data.get(name):
+                labels = {}
+                for key, label in field.choices:
+                    labels |= (
+                        dict(label) if isinstance(label, list | tuple) else {key: label}
+                    )
+                result.append((field.label, labels[value]))
+        return result
