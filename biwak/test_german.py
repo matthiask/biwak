@@ -6,6 +6,7 @@ import datetime as dt
 import re
 from html.parser import HTMLParser
 
+import time_machine
 from django.core import mail
 from django.test import TestCase
 
@@ -258,6 +259,7 @@ class WordingTest(TestCase):
 class DateFormatsTest(TestCase):
     """English "22 Nov 2026", German "22. Nov. 2026" (biwak/formats/)"""
 
+    @time_machine.travel(dt.datetime(2026, 11, 24, 12, tzinfo=dt.UTC))
     def test_each_language(self):
         from django.template import Context, Template
         from django.utils import translation
@@ -304,6 +306,43 @@ class DateFormatsTest(TestCase):
                     ).render(Context({"d": march})),
                     {"en": "1 Mar 2027", "de": "1. März 2027"}[language],
                 )
+
+    @time_machine.travel(dt.datetime(2026, 11, 24, 12, tzinfo=dt.UTC))
+    def test_short_dates_of_other_years_have_the_year(self):
+        """ "17 Nov" this year, "17 Nov 2024" in another one"""
+        from django.template import Context, Template
+        from django.utils import translation
+
+        from biwak.formats import format_date
+
+        day = dt.datetime(2024, 11, 17, 14, 5)
+        expected = {
+            "en": {
+                "MONTH_DAY_FORMAT": "17 Nov 2024",
+                "MONTH_DAY_TIME_FORMAT": "17 Nov 2024, 14:05",
+                "SHORT_WEEKDAY_MONTH_DAY_FORMAT": "Sun, 17 Nov 2024",
+            },
+            "de": {
+                "MONTH_DAY_FORMAT": "17. Nov. 2024",
+                "MONTH_DAY_TIME_FORMAT": "17. Nov. 2024, 14:05",
+                "SHORT_WEEKDAY_MONTH_DAY_FORMAT": "So, 17. Nov. 2024",
+            },
+        }
+        for language, formats in expected.items():
+            with translation.override(language):
+                for name, text in formats.items():
+                    with self.subTest(language=language, name=name):
+                        self.assertEqual(format_date(day, name), text)
+                self.assertEqual(
+                    Template(
+                        '{% load biwak %}{{ d|dateformat:"MONTH_DAY_FORMAT" }}'
+                    ).render(Context({"d": day.date()})),
+                    {"en": "17 Nov 2024", "de": "17. Nov. 2024"}[language],
+                )
+        with translation.override("en"):
+            self.assertEqual(
+                format_date(dt.date(2026, 11, 17), "MONTH_DAY_FORMAT"), "17 Nov"
+            )
 
 
 class UntitledTest(TestCase):

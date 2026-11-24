@@ -163,12 +163,34 @@ class TimelineTest(StartDatesBase):
         self.assertIn("set the due date to 7 Dec 2026", line)
 
 
+@time_machine.travel(dt.datetime(2026, 11, 24, 12, tzinfo=ZoneInfo("Europe/Zurich")))
 class RangeTest(SimpleTestCase):
     def test_ranges(self):
         cases = [
             ("2026-12-03", "2026-12-07", "MONTH_DAY_FORMAT", "3–7 Dec"),
             ("2026-11-28", "2026-12-03", "MONTH_DAY_FORMAT", "28 Nov – 3 Dec"),
-            ("2026-12-28", "2027-01-03", "MONTH_DAY_FORMAT", "28 Dec – 3 Jan"),
+            # The year when it isn't this one, on both ends across years
+            ("2024-11-11", "2024-11-17", "MONTH_DAY_FORMAT", "11–17 Nov 2024"),
+            ("2024-10-28", "2024-11-17", "MONTH_DAY_FORMAT", "28 Oct – 17 Nov 2024"),
+            (
+                "2026-12-28",
+                "2027-01-03",
+                "MONTH_DAY_FORMAT",
+                "28 Dec 2026 – 3 Jan 2027",
+            ),
+            (
+                "2025-12-28",
+                "2026-01-03",
+                "MONTH_DAY_FORMAT",
+                "28 Dec 2025 – 3 Jan 2026",
+            ),
+            (None, "2024-11-17", "MONTH_DAY_FORMAT", "17 Nov 2024"),
+            (
+                "2024-11-12",
+                "2024-11-14",
+                "SHORT_WEEKDAY_DATE_FORMAT",
+                "Tue, 12 Nov – Thu, 14 Nov 2024",
+            ),
             ("2026-12-03", "2026-12-07", "SHORT_DATE_FORMAT", "3–7 Dec 2026"),
             (
                 "2026-12-28",
@@ -201,6 +223,10 @@ class RangeTest(SimpleTestCase):
             self.assertEqual(
                 format_range(d("2026-11-28"), d("2026-12-03"), "MONTH_DAY_FORMAT"),
                 "28. Nov. – 3. Dez.",
+            )
+            self.assertEqual(
+                format_range(None, d("2024-11-17"), "MONTH_DAY_FORMAT"),
+                "17. Nov. 2024",
             )
 
 
