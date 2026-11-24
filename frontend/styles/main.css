@@ -3217,24 +3217,6 @@ main:has([data-hide-title]) [data-edit-open] {
   margin: 0;
 }
 
-/* A list's filters (specs/todos.md, "Filters on a list"): a menu in the
-   header, and the line saying what is set */
-.wb-list-filters > .dropdown-menu {
-  min-width: 18rem;
-  padding: 0.75rem;
-}
-
-.wb-list-filters .form-select {
-  max-width: 100%;
-}
-
-.wb-list-filtered {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
-  align-items: baseline;
-}
-
 /* Home (specs/dashboard.md): one column on phones, the main column and a
    narrow one on wide screens */
 .wb-home {

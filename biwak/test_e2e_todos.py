@@ -219,7 +219,7 @@ class TodosTest(E2ETestCase):
         self.assertEqual(self.errors, [])
 
     def test_dragging_in_a_filtered_list(self):
-        """The filter menu applies itself; a to-do dropped among those shown
+        """The filter applies itself; a to-do dropped among those shown
         lands next to its neighbour shown, not at the index among those
         shown (specs/todos.md, "Filters on a list")"""
         todolist = self.make_list(todos=["Map", "Tent", "Rope", "Stove", "Food"])
@@ -227,14 +227,13 @@ class TodosTest(E2ETestCase):
             ops.assign(Item.objects.get(title=title), [self.ada], actor=self.ada)
         page = self.page
         self.goto(page, todolist)
-        page.locator(".wb-list-filters summary").click()
         with page.expect_navigation():
-            page.locator(".wb-list-filters [name=assignee]").select_option("me")
+            page.locator("[name=assignee]").select_option("me")
         self.wait_for_sortables(page)
         self.assertIn("assignee=me", page.url)
         titles = page.locator("[data-todo] .wb-todo-title")
         self.assertEqual(titles.all_inner_texts(), ["Tent", "Stove", "Food"])
-        expect(page.locator("#list-filtered")).to_contain_text("Assigned to: Me")
+        expect(page.locator("[name=assignee]")).to_have_value("me")
 
         with page.expect_response("**/todos/move/"):
             page.locator("[data-todo]", has_text="Food").locator(
