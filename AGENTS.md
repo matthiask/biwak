@@ -136,6 +136,8 @@ library; its own code is the user's, and adapting it is fine (decided
 
 - One part per branch and worktree (`specs/<part>.md`).
 - Small commits, each with tests, docs and spec changes together.
+- No attribution in commits, merges or pull requests: no
+  `Co-Authored-By:` lines, no "Generated with …" (decided 2026-11-24).
 - Keep it consistent: check what the existing code already does (the
   same action elsewhere, the other entry points) and do the same. No
   branches for special cases unless the special case makes sense
