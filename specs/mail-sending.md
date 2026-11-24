@@ -45,7 +45,8 @@ coming in are `notifications.md`.
 - **Only bookkeeping is kept** (decided 2026-11-21): once the transport
   accepted a mail its content is deleted; recipients, kind, Resend's ID,
   attempts and delivery state stay. Mails given up keep their content.
-  `fairy_tasks` deletes rows 30 days after they were queued.
+  `fairy_tasks` deletes rows 90 days after they were queued (decided
+  2026-11-24, 30 before; like incoming mails, `specs/auditing.md`).
 - **Kinds** (Resend's tag `kind`): `notification`, `digest`, `weekly`
   (the weekly to-dos, `notifications.md`), `checkin`,
   `login-code`, `invitation`, `reply-refused`, `account`, and `admin`
