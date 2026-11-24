@@ -1070,6 +1070,10 @@ body:has(.wb-client-tab) .wb-board-frame {
 
 .wb-todolist.is-board .wb-group {
   flex: 0 0 18rem;
+  /* The board's max-content width counts each column as at least this
+     wide in every browser, not as wide as its contents (a filtered list's
+     narrow columns left the board short of the window) */
+  min-width: 18rem;
   padding: 0.5rem;
 }
 
