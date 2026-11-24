@@ -15,7 +15,7 @@ from icalendar import Calendar, Event as CalendarEvent
 from biwak import schedules
 from biwak.accounts import sso
 from biwak.accounts.languages import language_for
-from biwak.accounts.models import CalendarToken
+from biwak.accounts.models import CalendarToken, User
 from biwak.activity import mentions
 from biwak.api_conventions import absolute
 from biwak.forms import Form
@@ -75,7 +75,9 @@ class FilterForm(Form):
         else:
             self.fields["project"].queryset = projects
         self.fields["assignee"].choices = assignee_choices(
-            user, projects, mine=default_assignee(project, data) == "me"
+            user,
+            User.objects.filter(memberships__project__in=projects).distinct(),
+            mine=default_assignee(project, data) == "me",
         )
         if user.is_client:
             del self.fields["visible"]

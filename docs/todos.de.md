@@ -43,7 +43,7 @@ auf der Seite des Projekts.
   seitwärts.
 - **Filter:** „Filter“ oben in der Liste (öffnet sich, wenn du darauf
   zeigst) zeigt nur die To-dos, die
-  jemandem, dir oder niemandem zugewiesen sind, in der Liste und auf dem
+  jemandem mit To-dos in der Liste, dir oder niemandem zugewiesen sind, in der Liste und auf dem
   Board. Eine Zeile unter dem Titel sagt, was gesetzt ist; „Filter
   zurücksetzen“ zeigt wieder alle. Die Gruppen bleiben, und „Erledigt“
   zählt nur die passenden. Ziehen geht weiterhin: Ein To-do landet neben

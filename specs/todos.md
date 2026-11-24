@@ -71,9 +71,11 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   to the window's width (`ui.md`, "Page width", decided 2026-11-23). The board never shows completed to-dos in its columns.
 - **Filters on a list** (decided 2026-11-24 by the user: "filter by
   assignee", copied from the to-dos page): the list and the board filter
-  by "assigned to" only (`?assignee=`, the choices of a project's to-dos
-  page: anybody, the default, me, nobody active, the project's members
-  for staff, inactive people last; `ListFilterForm` and
+  by "assigned to" only (`?assignee=`: anybody, the default, me, nobody
+  active and, for staff, the people with to-dos in the list, open or
+  completed, not trashed (decided 2026-11-24 by the user: "only people
+  which actually have assignments"; first the project's members),
+  inactive people last; `ListFilterForm` and
   `assignee_choices()` in `biwak/items/filters.py`, the query through
   `due.assigned_to()`). Unknown values show an error and no to-dos. A
   "Filters" menu in the header, applying itself, with the count set
