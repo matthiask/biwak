@@ -87,7 +87,9 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   ("Assigned to: Ada") with "Reset filters", so to-dos left out aren't
   taken for gone; "No to-dos match the filter." when nothing does. Not
   remembered (confirmed by the user 2026-11-24: a plain link to a list
-  shows all of it). **Groups and columns stay** while filtered and **Completed
+  shows all of it). **Groups and columns stay** while filtered (the board's column of
+  to-dos outside groups too while the list has any, matching or not,
+  else the board lost its window width, 2026-11-24) and **Completed
   is filtered too**, its count, "Show more" and its fragment (decided
   2026-11-24 by the user). The view links, "Show more" and completing a
   to-do (`next`) keep the view and the filter. **Dragging places by the
