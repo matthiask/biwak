@@ -1,7 +1,21 @@
+from allauth.account.admin import EmailAddressAdmin
+from allauth.account.models import EmailAddress
+from allauth.mfa.admin import AuthenticatorAdmin
+from allauth.mfa.models import Authenticator
+from allauth.socialaccount.admin import (
+    SocialAccountAdmin,
+    SocialAppAdmin,
+    SocialTokenAdmin,
+)
+from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+from allauth.usersessions.admin import UserSessionAdmin as BaseUserSessionAdmin
+from allauth.usersessions.models import UserSession
 from django import forms
-from django.contrib import admin
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.models import Group
 from django.utils.translation import gettext_lazy as _
 
+from biwak import admin
 from biwak.accounts.models import User
 
 
@@ -51,7 +65,9 @@ class UserAdminForm(forms.ModelForm):
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(admin.ReadWriteModelAdmin):
+    """Added and changed here; deactivated, never deleted (specs/activation.md)"""
+
     form = UserAdminForm
     list_display = [
         "email",
@@ -72,6 +88,9 @@ class UserAdmin(admin.ModelAdmin):
         (None, {"fields": ["mail_undeliverable_at"]}),
     ]
     actions = ["clear_undeliverable"]
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
@@ -104,3 +123,29 @@ class UserAdmin(admin.ModelAdmin):
         for user in queryset.filter(mail_undeliverable_at__isnull=False):
             user.mail_undeliverable_at = None
             user.save(update_fields=["mail_undeliverable_at"])
+
+
+# The admins of Django and allauth, read only too: groups aren't used,
+# addresses, passkeys and sign-ins change through the app (the settings, the
+# resetting of a sign-in, deactivating), social apps are in the settings
+for model, model_admin in [
+    (Group, GroupAdmin),
+    (EmailAddress, EmailAddressAdmin),
+    (Authenticator, AuthenticatorAdmin),
+    (SocialApp, SocialAppAdmin),
+    (SocialToken, SocialTokenAdmin),
+    (SocialAccount, SocialAccountAdmin),
+]:
+    admin.site.unregister(model)
+    admin.site.register(
+        model, type(model_admin.__name__, (admin.ReadOnlyMixin, model_admin), {})
+    )
+
+
+admin.site.unregister(UserSession)
+
+
+@admin.register(UserSession)
+class UserSessionAdmin(admin.ReadOnlyMixin, BaseUserSessionAdmin):
+    # People have no username
+    search_fields = ["user__email", "ip"]

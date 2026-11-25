@@ -1,9 +1,9 @@
 import json
 
-from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
+from biwak import admin
 from biwak.outbox.models import OutgoingMail
 
 
@@ -78,9 +78,3 @@ class OutgoingMailAdmin(admin.ModelAdmin):
         return format_html(
             "<pre>{}</pre>", json.dumps(obj.message, indent=2, ensure_ascii=False)
         )
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
