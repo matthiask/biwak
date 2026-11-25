@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 10:32+0100\n"
+"POT-Creation-Date: 2026-11-25 21:46+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -6272,10 +6272,6 @@ msgid "Browser"
 msgstr "Browser"
 
 #: biwak/templates/accounts/settings.html
-msgid "IP address"
-msgstr "IP-Adresse"
-
-#: biwak/templates/accounts/settings.html
 msgid "Signed in"
 msgstr "Angemeldet"
 
@@ -8392,6 +8388,9 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
+
+#~ msgid "IP address"
+#~ msgstr "IP-Adresse"
 
 #~ msgid "Also tell…"
 #~ msgstr "Auch benachrichtigen…"

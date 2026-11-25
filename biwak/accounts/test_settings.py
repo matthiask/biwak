@@ -225,7 +225,8 @@ class SignInSectionTest(TestCase):
         self.assertContains(response, "Safari on iPhone")
         self.assertContains(response, "This one", count=1)
         self.assertContains(response, "Sign out everywhere else")
-        self.assertContains(response, "10.0.0.2")
+        # No IP addresses: they say little to people (specs/access.md)
+        self.assertNotContains(response, "10.0.0.2")
         # Relative times with the ago filter (specs/ui.md)
         self.assertContains(response, "just now")
         self.assertEqual(
@@ -233,7 +234,7 @@ class SignInSectionTest(TestCase):
             ["Firefox on Linux", "Safari on iPhone"],
         )
         # Every column has a header, also the actions'
-        self.assertContains(response, "<th>", count=4)
+        self.assertContains(response, "<th>", count=3)
 
     def test_one_session_has_nothing_to_sign_out(self):
         response = self.client.get("/accounts/settings/")

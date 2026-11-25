@@ -66,7 +66,7 @@ them when a decision changes (dated: "decided 2026-11-20").
   lines): `specs/auditing.md`.
 - Behind a proxy, `ALLAUTH_TRUSTED_PROXY_COUNT=1` (deployed: behind the
   ingress) takes the client's IP from `X-Forwarded-For`; without it the
-  sessions list and allauth's rate limits see the proxy's address.
+  allauth's rate limits and the sessions' admin see the proxy's address.
 - `.env` (not committed): `DATABASE_URL=postgres://localhost:5432/biwak`,
   `SECRET_KEY`, `DEBUG=True`.
 
