@@ -275,7 +275,12 @@ The settings page's "Sign-in" section (`accounts/settings.html`,
   connected Google and Microsoft accounts (`sso.md`);
 - the sessions, this one first: browser and device from the User-Agent,
   IP and when it signed in (`USERSESSIONS_TRACK_ACTIVITY` is off, decided
-  2026-11-21: it writes the session's row on every request); "Sign out"
+  2026-11-21: it writes the session's row on every request). The IP is the
+  client's from `X-Forwarded-For` behind a proxy:
+  `ALLAUTH_TRUSTED_PROXY_COUNT` in the environment, 1 behind the ingress
+  (decided 2026-11-25; without it every session showed the ingress's
+  address, and allauth's per-IP rate limits counted everybody together);
+  "Sign out"
   on each other one (`session_end`, our view, since allauth only ends all
   others) and "Sign out everywhere else"; "Sign out" in the "Me" menu
   signs out of this browser;
