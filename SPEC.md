@@ -201,6 +201,11 @@ building it.
   through settings; the first deployment uses the bucket.
 - 2026-11-20: One list of message categories for the installation,
   edited by admins.
+- 2026-11-25: The Django admin is read only (`biwak/admin.py`, like
+  Workbench's): changes go through the operations. Only people and
+  organizations are added and changed there (never deleted), message
+  categories edited and reply tokens revoked; Django's and allauth's
+  admins are read only too.
 - 2026-11-20: Notification mails about 2 minutes after the last change
   to an item (merging quick edits), digests at 07:00.
 - 2026-11-20: Reply tokens valid 6 months; files up to 100 MB; a doc

@@ -1,8 +1,8 @@
 from django import forms
-from django.contrib import admin
 from django.db.models import Count
 from django.utils.translation import gettext as _
 
+from biwak import admin
 from biwak.accounts import sso
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization, SignIn
@@ -67,7 +67,7 @@ class OrganizationForm(forms.ModelForm):
 
 
 @admin.register(Organization)
-class OrganizationAdmin(admin.ModelAdmin):
+class OrganizationAdmin(admin.ReadWriteModelAdmin):
     """Marking the own organization is here (admins only,
     specs/organizations.md); the rest also on the pages for staff"""
 
@@ -76,6 +76,9 @@ class OrganizationAdmin(admin.ModelAdmin):
     search_fields = ["name", "domains"]
     fields = ["name", "domains", "is_own", "signin", "idp", "tenant_id"]
     form = OrganizationForm
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(people_count=Count("people"))

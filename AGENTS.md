@@ -209,26 +209,31 @@ What every part does the same way. Look at how the core does it
    by the rules in `specs/api-cli.md` (a plural group per thing that
    lists alone, verbs as subcommands); mark what clients can see with
    `[clients]`. Bump `cli/pyproject.toml`'s version.
-8. **Audit log.** New tables people change get `audit_tables()` in a
+8. **Admin.** Model admins use `biwak.admin` (`from biwak import
+   admin`): read only, unless it opts in (`ReadWriteModelAdmin`) because
+   the spec says the admin changes it; `raw_id_fields` (or autocomplete)
+   for foreign keys of editable admins. `biwak/test_admin.py` lists who
+   may change what.
+9. **Audit log.** New tables people change get `audit_tables()` in a
    migration (`biwak/audit/migrations/0002_audited_tables.py` shows how).
-9. **Daily or hourly work** goes into `fairy_tasks` (daily) or an
+10. **Daily or hourly work** goes into `fairy_tasks` (daily) or an
    `hourly_tasks` command; nothing runs in threads or on requests.
-10. **Mails** go through the outbox: `biwak.outbox.sending.send(message,
+11. **Mails** go through the outbox: `biwak.outbox.sending.send(message,
     kind)` in the transaction of the change, never `message.send()`; it
     sends after the commit and retries (`specs/mail-sending.md`).
     `mail_admins` alone goes around it.
-11. **Help.** The user documentation is in `docs/` (`/help/`,
+12. **Help.** The user documentation is in `docs/` (`/help/`,
     `biwak/help.py`, `specs/help.md`). A part that adds or changes what
     people see or do updates the chapter it belongs to (or adds one, in
     `help.py`'s table), in the same branch: what it does now, short,
     no plans, in both languages (`name.md` and `name.de.md`). Shortcuts stay in `palette/_shortcuts.html`, the one list.
-12. **Tests.** Django tests next to the code (`test_*.py`): the
+13. **Tests.** Django tests next to the code (`test_*.py`): the
     operations, every page and endpoint as staff and as a client
     (including a client getting 404 for internal items), the CLI
     commands (`biwak/test_cli.py`). Made-up data from
     `biwak/test_utils.py`. Browser tests only for JavaScript and htmx
     (above).
-13. **Done** means: the spec's "Done when" list is true, the help says
+14. **Done** means: the spec's "Done when" list is true, the help says
     what was built, the tests your change affects pass, `uvx prek run
     --all-files` is clean, and the spec says what was built (a "Status"
     line) and any decisions made on the way.

@@ -1,5 +1,4 @@
-from django.contrib import admin
-
+from biwak import admin
 from biwak.projects.models import Membership, Project
 
 
@@ -10,16 +9,6 @@ class MembershipInline(admin.TabularInline):
     model = Membership
     fields = readonly_fields = ["user", "created_at"]
     extra = 0
-    can_delete = False
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 @admin.register(Project)
