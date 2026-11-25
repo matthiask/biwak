@@ -274,8 +274,13 @@ The settings page's "Sign-in" section (`accounts/settings.html`,
   allauth's flow), the authenticator app (`two-factor.md`) and the
   connected Google and Microsoft accounts (`sso.md`);
 - the sessions, this one first: browser and device from the User-Agent,
-  IP and when it signed in (`USERSESSIONS_TRACK_ACTIVITY` is off, decided
-  2026-11-21: it writes the session's row on every request); "Sign out"
+  and when it signed in (`USERSESSIONS_TRACK_ACTIVITY` is off, decided
+  2026-11-21: it writes the session's row on every request); no IP, it
+  says little to people (decided 2026-11-25; the admin shows it). allauth
+  takes the client's IP from `X-Forwarded-For` behind a proxy, for its
+  rate limits and the admin: `ALLAUTH_TRUSTED_PROXY_COUNT` in the
+  environment, 1 behind the ingress (without it, it saw the ingress's
+  address and counted everybody together); "Sign out"
   on each other one (`session_end`, our view, since allauth only ends all
   others) and "Sign out everywhere else"; "Sign out" in the "Me" menu
   signs out of this browser;

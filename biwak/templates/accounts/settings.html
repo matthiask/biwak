@@ -487,7 +487,6 @@
         <thead>
           <tr>
             <th>{% translate "Browser" %}</th>
-            <th>{% translate "IP address" %}</th>
             <th>{% translate "Signed in" %}</th>
             <th><span class="visually-hidden">{% translate "Actions" %}</span></th>
           </tr>
@@ -501,7 +500,6 @@
                     class="badge wb-tone-neutral ms-1"
                   >{% translate "This one" %}</span>{% endif %}
               </td>
-              <td>{{ session.ip }}</td>
               <td>
                 {{ session.created_at|moment }}
               </td>

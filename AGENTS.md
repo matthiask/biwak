@@ -64,6 +64,9 @@ them when a decision changes (dated: "decided 2026-11-20").
   (`set_user_name()`). Tests reading the audit log delete its rows first.
   What is recorded where (audit log, events, mail logs, Sentry, log
   lines): `specs/auditing.md`.
+- Behind a proxy, `ALLAUTH_TRUSTED_PROXY_COUNT=1` (deployed: behind the
+  ingress) takes the client's IP from `X-Forwarded-For`; without it the
+  allauth's rate limits and the sessions' admin see the proxy's address.
 - `.env` (not committed): `DATABASE_URL=postgres://localhost:5432/biwak`,
   `SECRET_KEY`, `DEBUG=True`.
 

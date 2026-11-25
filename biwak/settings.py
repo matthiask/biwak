@@ -118,6 +118,10 @@ MFA_WEBAUTHN_USER_VERIFICATION = "required"
 # Off: tracking writes the session's row on every request (decided
 # 2026-11-21); the sessions list shows when each one signed in
 USERSESSIONS_TRACK_ACTIVITY = False
+# How many proxies in front of the app append to X-Forwarded-For (1 behind
+# the HAProxy ingress). allauth takes the client's IP from there for its
+# rate limits and the sessions' admin; 0 uses REMOTE_ADDR, the proxy's.
+ALLAUTH_TRUSTED_PROXY_COUNT = env("ALLAUTH_TRUSTED_PROXY_COUNT", default=0)
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG and not LIVE
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
