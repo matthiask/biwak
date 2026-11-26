@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 21:24+0100\n"
+"POT-Creation-Date: 2026-11-26 21:28+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1359,11 +1359,6 @@ msgstr "%(actor)s hat es erledigt."
 
 #: biwak/activity/mails.py
 #, python-format
-msgid "%(actor)s marked it as obsolete."
-msgstr "%(actor)s hat es als hinfällig markiert."
-
-#: biwak/activity/mails.py
-#, python-format
 msgid "%(actor)s reopened it."
 msgstr "%(actor)s hat es wieder geöffnet."
 
@@ -1421,6 +1416,11 @@ msgstr "%(actor)s hat es aus dem Archiv zurückgeholt."
 #, python-format
 msgid "%(actor)s restored it from the trash."
 msgstr "%(actor)s hat es aus dem Papierkorb wiederhergestellt."
+
+#: biwak/activity/mails.py
+#, python-format
+msgid "%(actor)s marked it as obsolete."
+msgstr "%(actor)s hat es als hinfällig markiert."
 
 #: biwak/activity/mails.py
 #, python-format
@@ -3101,6 +3101,15 @@ msgid "Copy"
 msgstr "Kopieren"
 
 #: biwak/items/api.py
+msgid "Only staff decide how long to-dos are kept."
+msgstr "Nur das Team entscheidet, wie lange To-dos bleiben."
+
+#: biwak/items/api.py
+#, python-format
+msgid "stale_after is %(short)s or %(long)s."
+msgstr "stale_after ist %(short)s oder %(long)s."
+
+#: biwak/items/api.py
 msgid "Only staff create lists."
 msgstr "Nur Mitarbeitende erstellen Listen."
 
@@ -3778,6 +3787,14 @@ msgstr "fällig"
 #: biwak/items/views.py
 msgid "You can only change lists you created."
 msgstr "Du kannst nur Listen ändern, die du erstellt hast."
+
+#: biwak/items/views.py
+msgid "Keep untouched to-dos for a year"
+msgstr "Unberührte To-dos ein Jahr behalten"
+
+#: biwak/items/views.py
+msgid "Untouched to-dos are marked as obsolete after 90 days, after a warning; for a backlog or ideas, after a year."
+msgstr "Unberührte To-dos werden nach 90 Tagen als hinfällig markiert, nach einer Warnung; für einen Backlog oder Ideen nach einem Jahr."
 
 #: biwak/items/views.py biwak/templates/items/_new_group.html
 msgid "New group"

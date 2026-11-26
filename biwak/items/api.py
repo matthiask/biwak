@@ -40,6 +40,8 @@ from biwak.api_conventions import (
 from biwak.items import due, operations as ops
 from biwak.items.filters import NO_GROUP, in_group
 from biwak.items.models import (
+    STALE_AFTER,
+    STALE_AFTER_LONG,
     SWITCH_MESSAGE,
     Assignment,
     Group,
@@ -77,6 +79,12 @@ class GroupOut(Schema):
     # colors")
     color: Color | Literal[""] = ""
     color_name: str = ""
+    stale_after: int = Field(
+        STALE_AFTER,
+        description="Days without activity before its to-dos are marked"
+        " obsolete after a warning: 90, or 365 for a backlog"
+        " (specs/stale-todos.md)",
+    )
 
 
 def group_out(group):
@@ -86,7 +94,22 @@ def group_out(group):
         "position": group.position,
         "color": group.color,
         "color_name": group.get_color_display() if group.color else "",
+        "stale_after": group.stale_after,
     }
+
+
+def _stale_after(request, days):
+    """``stale_after`` as sent: staff only, 90 or 365"""
+    if days is None:
+        return {}
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff decide how long to-dos are kept."))
+    if days not in (STALE_AFTER, STALE_AFTER_LONG):
+        bad_request(
+            _("stale_after is %(short)s or %(long)s.")
+            % {"short": STALE_AFTER, "long": STALE_AFTER_LONG}
+        )
+    return {"stale_after": days}
 
 
 class ListOut(ItemOut):
@@ -244,12 +267,19 @@ class GroupIn(Schema):
     title: GroupTitle
     # A palette name or "" for none (the default)
     color: Color | Literal[""] = ""
+    # 90 (the default) or 365, staff only
+    stale_after: int | None = None
 
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
     item = changeable_list(request, list_id)
-    group = ops.create_group(todolist=item.todolist, title=data.title, color=data.color)
+    group = ops.create_group(
+        todolist=item.todolist,
+        title=data.title,
+        color=data.color,
+        **_stale_after(request, data.stale_after),
+    )
     return Status(201, group_out(group))
 
 
@@ -257,6 +287,8 @@ class GroupPatch(Schema):
     title: GroupTitle | None = None
     # A palette name or "" for none
     color: Color | Literal[""] | None = None
+    # 90 or 365, staff only
+    stale_after: int | None = None
     index: int | None = None
 
 
@@ -275,6 +307,7 @@ def group_update(request, group_id: int, data: GroupPatch):
             for field in ["title", "color"]
             if field in data.model_fields_set
         },
+        **_stale_after(request, data.stale_after),
     )
     if data.index is not None:
         ops.move_group(group, index=max(0, data.index))

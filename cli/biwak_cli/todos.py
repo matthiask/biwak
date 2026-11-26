@@ -58,7 +58,20 @@ COLOR_OPTION = click.option(
 
 def show_group(group):
     color = group["color_name"] or "no color"
-    click.echo(f"#{group['id']} {group['title']} ({color})")
+    kept = (
+        ", untouched to-dos kept for a year" if group.get("stale_after") == 365 else ""
+    )
+    click.echo(f"#{group['id']} {group['title']} ({color}{kept})")
+
+
+# How long a group keeps its untouched to-dos (specs/stale-todos.md)
+KEEP_OPTION = click.option(
+    "--keep-for-a-year/--no-keep-for-a-year",
+    "keep",
+    default=None,
+    help="Untouched to-dos are marked obsolete after a year instead of 90"
+    " days, after a warning (staff only).",
+)
 
 
 @cli.group(invoke_without_command=True)
@@ -85,12 +98,15 @@ def groups(ctx, list_id, as_json):
 @click.argument("list_id", metavar="LIST", type=int)
 @click.argument("title")
 @COLOR_OPTION
+@KEEP_OPTION
 @json_option
-def group_create(list_id, title, color, as_json):
+def group_create(list_id, title, color, keep, as_json):
     """Add a group titled TITLE at the end of LIST"""
     body = {"title": title}
     if color not in (None, "none"):
         body["color"] = color
+    if keep is not None:
+        body["stale_after"] = 365 if keep else 90
     data = request("POST", f"lists/{list_id}/groups/", json=body)
     if as_json:
         return echo_json(data)
@@ -103,9 +119,11 @@ def group_create(list_id, title, color, as_json):
 @click.option("--title", help="The new name.")
 @COLOR_OPTION
 @click.option("--index", type=int, help="Move it there (0: first), with its to-dos.")
+@KEEP_OPTION
 @json_option
-def group_update(group_id, title, color, index, as_json):
-    """Rename GROUP, give it a color or move it"""
+def group_update(group_id, title, color, index, keep, as_json):
+    """Rename GROUP, give it a color, move it or keep its untouched to-dos
+    for a year"""
     body = {}
     if title is not None:
         body["title"] = title
@@ -113,8 +131,12 @@ def group_update(group_id, title, color, index, as_json):
         body["color"] = "" if color == "none" else color
     if index is not None:
         body["index"] = index
+    if keep is not None:
+        body["stale_after"] = 365 if keep else 90
     if not body:
-        raise click.UsageError("Give --title, --color or --index.")
+        raise click.UsageError(
+            "Give --title, --color, --index or --keep-for-a-year/--no-keep-for-a-year."
+        )
     data = request("PATCH", f"groups/{group_id}/", json=body)
     if as_json:
         return echo_json(data)

@@ -35,7 +35,16 @@ from biwak.items.filters import (
     in_group,
     without_empty,
 )
-from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
+from biwak.items.models import (
+    STALE_AFTER,
+    STALE_AFTER_LONG,
+    Comment,
+    Group,
+    Item,
+    Kind,
+    Status,
+    TodoList,
+)
 from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
 from biwak.richtext import checklists
@@ -433,18 +442,39 @@ class GroupForm(Form):
         initial="",
         widget=ColorSwatches,
     )
+    # A backlog's to-dos: 365 days instead of 90, staff only
+    # (specs/stale-todos.md)
+    keep_for_a_year = forms.BooleanField(
+        label=_("Keep untouched to-dos for a year"),
+        required=False,
+        help_text=_(
+            "Untouched to-dos are marked as obsolete after 90 days, after a"
+            " warning; for a backlog or ideas, after a year."
+        ),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user.is_client:
+            del self.fields["keep_for_a_year"]
+
+    def group_fields(self):
+        """The operations' arguments"""
+        data = self.cleaned_data
+        fields = {"title": data["title"], "color": data["color"]}
+        if "keep_for_a_year" in data:
+            fields["stale_after"] = (
+                STALE_AFTER_LONG if data["keep_for_a_year"] else STALE_AFTER
+            )
+        return fields
 
 
 def group_create(request, pk):
     """A new group: a modal on the list's page, also a page of its own"""
     item = changeable_list(request, pk)
-    form = GroupForm(request.POST or None)
+    form = GroupForm(request.POST or None, user=request.user)
     if form.is_valid():
-        ops.create_group(
-            todolist=item.todolist,
-            title=form.cleaned_data["title"],
-            color=form.cleaned_data["color"],
-        )
+        ops.create_group(todolist=item.todolist, **form.group_fields())
         return redirect(item)
     return form_response(
         request,
@@ -469,12 +499,16 @@ def group_edit(request, pk):
     also a page"""
     group, item = changeable_group(request, pk)
     form = GroupForm(
-        request.POST or None, initial={"title": group.title, "color": group.color}
+        request.POST or None,
+        user=request.user,
+        initial={
+            "title": group.title,
+            "color": group.color,
+            "keep_for_a_year": group.stale_after == STALE_AFTER_LONG,
+        },
     )
     if form.is_valid():
-        ops.update_group(
-            group, title=form.cleaned_data["title"], color=form.cleaned_data["color"]
-        )
+        ops.update_group(group, **form.group_fields())
         return redirect(item)
     return form_response(
         request,
