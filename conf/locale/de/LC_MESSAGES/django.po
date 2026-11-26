@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 07:38+0100\n"
+"POT-Creation-Date: 2026-11-26 07:57+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3136,6 +3136,10 @@ msgid "assignee is me, nobody, anybody or a person's ID."
 msgstr "assignee ist me, nobody, anybody oder die ID einer Person."
 
 #: biwak/items/api.py
+msgid "group is none or the ID of one of the list's groups."
+msgstr "group ist none oder die ID einer der Gruppen der Liste."
+
+#: biwak/items/api.py
 msgid "Only people who can see the to-do can be assigned."
 msgstr "Nur Personen, die das To-do sehen, können zugewiesen werden."
 
@@ -3414,6 +3418,18 @@ msgstr "Niemand aktiv"
 msgid "Inactive"
 msgstr "Inaktiv"
 
+#: biwak/items/filters.py biwak/items/models.py
+msgid "group"
+msgstr "Gruppe"
+
+#: biwak/items/filters.py
+msgid "All groups"
+msgstr "Alle Gruppen"
+
+#: biwak/items/filters.py
+msgid "No group"
+msgstr "Keine Gruppe"
+
 #: biwak/items/from_text.py
 #, python-format
 msgid "%(count)d paragraph isn’t a list item and is left out."
@@ -3559,10 +3575,6 @@ msgstr "To-do-Listen"
 #: biwak/items/models.py
 msgid "Marks the group's card and heading."
 msgstr "Markiert die Karte und die Überschrift der Gruppe."
-
-#: biwak/items/models.py
-msgid "group"
-msgstr "Gruppe"
 
 #: biwak/items/models.py
 msgid "groups"
@@ -7535,6 +7547,10 @@ msgstr "Alles erledigt."
 #: biwak/templates/items/todolist.html
 msgid "Drag to move the group"
 msgstr "Ziehen, um die Gruppe zu verschieben"
+
+#: biwak/templates/items/todolist.html
+msgid "Show only this group"
+msgstr "Nur diese Gruppe zeigen"
 
 #: biwak/templates/items/todolist.html
 msgid "Edit, move or remove the group"

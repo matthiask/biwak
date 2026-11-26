@@ -285,6 +285,23 @@ class CLICommandsTest(CLITest):
         result = self.biwak("todos", "--list", self.list.pk, "--assigned-by-me")
         self.assertNotEqual(result.exit_code, 0)
 
+    def test_a_list_by_group(self):
+        """``--group`` with ``--list``, as the list's filter (specs/todos.md,
+        "Filters on a list")"""
+        group = ops.create_group(todolist=self.list.todolist, title="Packing")
+        ops.create_todo(
+            todolist=self.list, title="Pack the stove", creator=self.ada, group=group
+        )
+        ops.create_todo(todolist=self.list, title="Book the hut", creator=self.ada)
+        output = self.biwak("todos", "--list", self.list.pk, "--group", group.pk).output
+        self.assertIn("Pack the stove", output)
+        self.assertNotIn("Book the hut", output)
+        output = self.biwak("todos", "--list", self.list.pk, "--group", "none").output
+        self.assertIn("Book the hut", output)
+        self.assertNotIn("Pack the stove", output)
+        result = self.biwak("todos", "--group", group.pk)
+        self.assertNotEqual(result.exit_code, 0)
+
     def test_settings_language(self):
         output = self.biwak("settings").output
         self.assertIn("Language: auto", output)

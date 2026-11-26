@@ -46,9 +46,12 @@ auf der Seite des Projekts.
 - **Filter:** „Filter“ oben in der Liste (öffnet sich, wenn du darauf
   zeigst) zeigt nur die To-dos, die
   jemandem mit To-dos in der Liste, dir oder niemandem zugewiesen sind, in der Liste und auf dem
-  Board. Eine Zeile unter dem Titel sagt, was gesetzt ist; „Filter
-  zurücksetzen“ zeigt wieder alle. Die Gruppen bleiben, und „Erledigt“
-  zählt nur die passenden. Ziehen geht weiterhin: Ein To-do landet neben
+  Board, und in einer Liste mit Gruppen nur eine Gruppe oder die To-dos
+  ausserhalb von Gruppen („Keine Gruppe“); ein Klick auf den Titel einer
+  Gruppe zeigt sie allein, und „To-do hinzufügen“ fügt dort in sie
+  hinzu. Eine Zeile unter dem Titel sagt, was gesetzt ist; „Filter
+  zurücksetzen“ zeigt wieder alle. Nach Zuweisung gefiltert bleiben die
+  Gruppen; „Erledigt“ zählt nur die passenden. Ziehen geht weiterhin: Ein To-do landet neben
   dem, neben das du es ziehst.
 - **Erledigt:** Die zuletzt erledigten To-dos stehen unter der Liste,
   unter „Erledigt (N)“, die neuesten zuerst; „Mehr anzeigen“ fügt

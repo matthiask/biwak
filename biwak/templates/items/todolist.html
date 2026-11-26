@@ -74,7 +74,7 @@
         class="wb-group"
         id="group-none"
         data-live-list
-        {% if view == "board" and hide_ungrouped %}hidden{% endif %}
+        {% if view == "board" and hide_ungrouped or one_group and one_group != "none" %}hidden{% endif %}
       >
         <div
           id="todos-none"
@@ -89,7 +89,7 @@
         </div>
         <div id="add-none" data-live class="wb-add-row">
           {% include "items/_add_todo.html" with group=None %}
-          {% if not groups and can_change %}{% include "items/_new_group.html" %}{% endif %}
+          {% if not groups and can_change and not one_group %}{% include "items/_new_group.html" %}{% endif %}
         </div>
       </section>
       {% for group, todos in groups %}
@@ -109,7 +109,16 @@
                 title="{% translate 'Drag to move the group' %}"
               >{% icon "grip-vertical" %}</span>
             {% endif %}
-            <span class="wb-group-name">{{ group }}</span>
+            {# Its heading shows it alone (?group=, specs/todos.md, "Filters on a list") #}
+            {% if one_group %}
+              <span class="wb-group-name">{{ group }}</span>
+            {% else %}
+              <a
+                class="wb-group-name wb-group-link"
+                href="?{% if keep_query %}{{ keep_query }}&amp;{% endif %}group={{ group.pk }}"
+                title="{% translate 'Show only this group' %}"
+              >{{ group }}</a>
+            {% endif %}
             {% if can_change %}
               <span class="wb-group-tools ms-auto">
                 <details class="dropdown wb-menu">
@@ -161,7 +170,7 @@
           </div>
           <div id="add-{{ group.pk }}" data-live class="wb-add-row">
             {% include "items/_add_todo.html" %}
-            {% if forloop.last and can_change %}{% include "items/_new_group.html" %}{% endif %}
+            {% if forloop.last and can_change and not one_group %}{% include "items/_new_group.html" %}{% endif %}
           </div>
         </section>
       {% endfor %}

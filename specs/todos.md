@@ -92,7 +92,15 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   ("Assigned to: Ada") with "Reset filters", so to-dos left out aren't
   taken for gone; "No to-dos match the filter." when nothing does. Not
   remembered (confirmed by the user 2026-11-24: a plain link to a list
-  shows all of it). **Groups and columns stay** while filtered (the board's column of
+  shows all of it). **One group** (decided 2026-11-26 by the user, a
+  filter rather than a page of its own): `?group=` a group's ID or
+  `none` (the to-dos outside groups, "No group"), offered only in lists
+  with groups, combinable with the assignee ("Group: Later" in the
+  line); only that group's card shows, in the list and on the board, so
+  its "Add a to-do" adds into it, and "New group" isn't offered (the new
+  group wouldn't show). A group's heading links to it alone (keeping
+  the view and the assignee). Another list's group is an unknown value.
+  **Groups and columns stay** while filtered by the assignee (the board's column of
   to-dos outside groups too while the list has any, matching or not,
   else the board lost its window width, 2026-11-24) and **Completed
   is filtered too**, its count, "Show more" and its fragment (decided
@@ -104,9 +112,10 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   right next to it when it's still there, else at the index; to-dos left
   out by the filter keep their places. Adding inline while filtered
   shows the new to-do even when it doesn't match, until the next reload
-  (confirmed by the user 2026-11-24). API: `assignee` on
-  `lists/{id}/todos/` and `…/completed/`; CLI: `--mine` and `--assignee`
-  with `--list` (0.73.0).
+  (confirmed by the user 2026-11-24). API: `assignee` and `group` on
+  `lists/{id}/todos/` and `…/completed/` (400 for another list's
+  group); CLI: `--mine`, `--assignee` (0.73.0) and `--group ID|none`
+  (0.74.0) with `--list`.
 - **Adding inline:** "Add a to-do" opens a form in place (title, notes,
   assignees, due date, repeat); Ctrl+Enter adds and starts the next one,
   Escape or a click elsewhere closes (`frontend/add-todo.js`). "Add a

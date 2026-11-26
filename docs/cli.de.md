@@ -50,6 +50,7 @@ biwak lists add-from-text LIST plan.md --preview
 biwak todos complete TODO
 biwak todos --assignee 7
 biwak todos --list LIST --mine
+biwak todos --list LIST --group none
 biwak todos assign 12 13 14 --to 7 --replace
 biwak todos comment TODO "Der Plan" --attach plan.pdf
 biwak checkins due

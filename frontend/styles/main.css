@@ -1139,6 +1139,18 @@ body:has(.wb-client-tab) .wb-board-frame {
   color: var(--wb-group-text);
 }
 
+/* A group's heading shows the group alone (specs/todos.md, "Filters on a
+   list"): quiet until hovered */
+.wb-group-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wb-group-link:hover,
+.wb-group-link:focus-visible {
+  text-decoration: underline;
+}
+
 .wb-group-title {
   display: flex;
   align-items: center;
