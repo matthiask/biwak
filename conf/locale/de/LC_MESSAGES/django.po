@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 07:57+0100\n"
+"POT-Creation-Date: 2026-11-26 21:15+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -534,14 +534,6 @@ msgstr "Benachrichtigungen"
 #: biwak/accounts/models.py
 msgid "mail delivery"
 msgstr "Mailzustellung"
-
-#: biwak/accounts/models.py
-msgid "weekly mail of my to-dos"
-msgstr "wöchentliche Mail meiner To-dos"
-
-#: biwak/accounts/models.py
-msgid "weekly to-dos mailed on"
-msgstr "wöchentliche To-dos gemailt am"
 
 #: biwak/accounts/models.py
 msgid "unread notifications on the tab's icon"
@@ -1465,7 +1457,7 @@ msgstr "Was am %(day)s passiert ist"
 msgid "What happened from %(first)s to %(last)s"
 msgstr "Was vom %(first)s bis %(last)s passiert ist"
 
-#: biwak/activity/mails.py biwak/activity/weekly.py
+#: biwak/activity/mails.py
 #, python-format
 msgid "[Biwak] %(heading)s"
 msgstr "[Biwak] %(heading)s"
@@ -1937,14 +1929,6 @@ msgid "A mail about an item comes ten minutes after its last change; the digest 
 msgstr "Eine Mail zu einem Eintrag kommt zehn Minuten nach seiner letzten Änderung, die Zusammenfassung um 07:00 mit dem, was am Vortag passiert ist. Was du vorher in der Laterne gelesen hast, wird nicht gemailt."
 
 #: biwak/activity/views.py
-msgid "A weekly mail with my open to-dos"
-msgstr "Eine wöchentliche Mail mit meinen offenen To-dos"
-
-#: biwak/activity/views.py
-msgid "On Monday at 07:00, with quiet hours at the start of your first working day: your open to-dos by due date and the overdue ones you're waiting on."
-msgstr "Am Montag um 07:00, mit Ruhezeiten zu Beginn deines ersten Arbeitstags: deine offenen To-dos nach Fälligkeit und die überfälligen, auf die du wartest."
-
-#: biwak/activity/views.py
 msgid "A dot on the tab's icon while there are unread notifications"
 msgstr "Ein Punkt auf dem Icon des Tabs, solange es ungelesene Benachrichtigungen gibt"
 
@@ -2022,29 +2006,6 @@ msgstr "Benachrichtigungen für diese Liste"
 #: biwak/activity/views.py
 msgid "Your own level for this list instead of the one of the project. On “Everything” you watch it: you're subscribed to it and to every new to-do in it, and hear when to-dos move between its groups. To-dos you're subscribed to tell you everything. The activity feed always shows everything."
 msgstr "Deine eigene Stufe für diese Liste statt der des Projekts. Bei „Alles“ beobachtest du sie: Du abonnierst sie und jedes neue To-do darin und erfährst, wenn To-dos zwischen ihren Gruppen verschoben werden. Bei To-dos, die du abonniert hast, erfährst du alles. Die Aktivität zeigt immer alles."
-
-#: biwak/activity/weekly.py
-msgid "Later"
-msgstr "Später"
-
-#: biwak/activity/weekly.py
-#, python-format
-msgid "And %(count)d to-do without a date"
-msgid_plural "And %(count)d to-dos without a date"
-msgstr[0] "Und %(count)d To-do ohne Datum"
-msgstr[1] "Und %(count)d To-dos ohne Datum"
-
-#: biwak/activity/weekly.py
-#, python-format
-msgid "%(count)d to-do without a date"
-msgid_plural "%(count)d to-dos without a date"
-msgstr[0] "%(count)d To-do ohne Datum"
-msgstr[1] "%(count)d To-dos ohne Datum"
-
-#: biwak/activity/weekly.py
-#, python-format
-msgid "Your open to-dos, week of %(day)s"
-msgstr "Deine offenen To-dos, Woche vom %(day)s"
 
 #: biwak/audit/apps.py
 msgid "audit log"
@@ -4477,10 +4438,6 @@ msgid "digest"
 msgstr "Zusammenfassung"
 
 #: biwak/outbox/models.py
-msgid "weekly to-dos"
-msgstr "wöchentliche To-dos"
-
-#: biwak/outbox/models.py
 msgid "check-in"
 msgstr "Check-in"
 
@@ -6848,8 +6805,7 @@ msgstr "Nicht mehr abonnieren"
 #: biwak/templates/checkins/mails/summary.txt biwak/templates/mails/batch.html
 #: biwak/templates/mails/batch.txt biwak/templates/mails/digest.html
 #: biwak/templates/mails/digest.txt biwak/templates/mails/notification.html
-#: biwak/templates/mails/notification.txt biwak/templates/mails/weekly.html
-#: biwak/templates/mails/weekly.txt
+#: biwak/templates/mails/notification.txt
 msgid "Your notification settings"
 msgstr "Deine Benachrichtigungseinstellungen"
 
@@ -7606,7 +7562,6 @@ msgid "Needs you today"
 msgstr "Braucht dich heute"
 
 #: biwak/templates/mails/digest.html biwak/templates/mails/digest.txt
-#: biwak/templates/mails/weekly.html biwak/templates/mails/weekly.txt
 #: biwak/templates/projects/home.html
 msgid "Waiting on others"
 msgstr "Warten auf andere"
@@ -8404,6 +8359,40 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
+
+#~ msgid "weekly mail of my to-dos"
+#~ msgstr "wöchentliche Mail meiner To-dos"
+
+#~ msgid "weekly to-dos mailed on"
+#~ msgstr "wöchentliche To-dos gemailt am"
+
+#~ msgid "A weekly mail with my open to-dos"
+#~ msgstr "Eine wöchentliche Mail mit meinen offenen To-dos"
+
+#~ msgid "On Monday at 07:00, with quiet hours at the start of your first working day: your open to-dos by due date and the overdue ones you're waiting on."
+#~ msgstr "Am Montag um 07:00, mit Ruhezeiten zu Beginn deines ersten Arbeitstags: deine offenen To-dos nach Fälligkeit und die überfälligen, auf die du wartest."
+
+#~ msgid "Later"
+#~ msgstr "Später"
+
+#, python-format
+#~ msgid "And %(count)d to-do without a date"
+#~ msgid_plural "And %(count)d to-dos without a date"
+#~ msgstr[0] "Und %(count)d To-do ohne Datum"
+#~ msgstr[1] "Und %(count)d To-dos ohne Datum"
+
+#, python-format
+#~ msgid "%(count)d to-do without a date"
+#~ msgid_plural "%(count)d to-dos without a date"
+#~ msgstr[0] "%(count)d To-do ohne Datum"
+#~ msgstr[1] "%(count)d To-dos ohne Datum"
+
+#, python-format
+#~ msgid "Your open to-dos, week of %(day)s"
+#~ msgstr "Deine offenen To-dos, Woche vom %(day)s"
+
+#~ msgid "weekly to-dos"
+#~ msgstr "wöchentliche To-dos"
 
 #~ msgid "IP address"
 #~ msgstr "IP-Adresse"

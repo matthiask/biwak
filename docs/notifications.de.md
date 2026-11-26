@@ -147,18 +147,6 @@ Projekt („Ada hat es geändert. 3 Kommentare von Ada und Bob.“), mit
 einem Link zum Eintrag. Ohne
 Benachrichtigungen gibt es keine Zusammenfassung.
 
-**Eine wöchentliche Mail mit meinen offenen To-dos** (unter „Mails“,
-aus, bis du sie einschaltest): am Montag um 07:00, mit Ruhezeiten zu
-Beginn deines ersten Arbeitstags der Woche, deine offenen To-dos nach
-Fälligkeit, „Überfällig“, „Diese Woche“, „Nächste Woche“ und „Später“,
-jedes mit Projekt, Liste und Daten, dann eine Zeile, wie viele kein
-Datum haben, mit einem Link zur To-do-Seite. Dann die überfälligen
-To-dos, auf die du wartest, wie in der Zusammenfassung. Sie kommt, was
-immer du oben gewählt hast, auch mit der täglichen Zusammenfassung,
-ausser mit „Keine Mails“; nicht, wenn du keine offenen To-dos hast und
-auf nichts wartest, und nicht, während du abwesend bist (diese Woche
-gibt es keine).
-
 ## Push-Benachrichtigungen
 
 Biwak kann dich auf deinem Telefon oder Computer benachrichtigen, auch

@@ -674,7 +674,6 @@ class CLICommandsTest(CLITest):
                 "level": "concerns_me",
                 "delivery": "digest",
                 "lantern_in_favicon": True,
-                "weekly_todos": False,
                 "quiet_hours": False,
                 "working_days": [0, 1, 2, 3, 4],
                 "working_from": "08:00:00",
@@ -686,15 +685,6 @@ class CLICommandsTest(CLITest):
         self.ada.refresh_from_db()
         self.assertEqual(self.ada.mail_delivery, "none")
         self.biwak("notifications", "--delivery", "digest")
-        # The weekly mail of one's open to-dos, off by default
-        self.assertIn("Weekly to-dos: off", self.biwak("notifications").output)
-        output = self.biwak("notifications", "--weekly", "on").output
-        self.assertIn("Weekly to-dos: on, Monday morning", output)
-        self.ada.refresh_from_db()
-        self.assertTrue(self.ada.weekly_todos)
-        self.biwak("notifications", "--weekly", "off")
-        self.ada.refresh_from_db()
-        self.assertFalse(self.ada.weekly_todos)
 
         # A project's and an item's own level
         project_id = self.project.pk
@@ -720,7 +710,7 @@ class CLICommandsTest(CLITest):
         for args in [
             ["--project", project_id, "--item", self.list.pk],
             ["--project", project_id, "--delivery", "each"],
-            ["--project", project_id, "--weekly", "on"],
+            ["--project", project_id, "--quiet-hours", "on"],
             ["--level", "default"],
         ]:
             self.assertEqual(self.biwak("notifications", *args).exit_code, 1)

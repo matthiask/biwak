@@ -269,7 +269,6 @@ class SettingsAPITest(SettingsBase):
                         "level": "everything",
                         "delivery": "each",
                         "lantern_in_favicon": True,
-                        "weekly_todos": False,
                         "quiet_hours": False,
                         "working_days": [0, 1, 2, 3, 4],
                         "working_from": "08:00:00",
@@ -289,7 +288,6 @@ class SettingsAPITest(SettingsBase):
                         "level": "everything",
                         "delivery": "digest",
                         "lantern_in_favicon": True,
-                        "weekly_todos": False,
                         "quiet_hours": False,
                         "working_days": [0, 1, 2, 3, 4],
                         "working_from": "08:00:00",
@@ -306,7 +304,6 @@ class SettingsAPITest(SettingsBase):
                         "level": "concerns_me",
                         "delivery": "digest",
                         "lantern_in_favicon": True,
-                        "weekly_todos": False,
                         "quiet_hours": False,
                         "working_days": [0, 1, 2, 3, 4],
                         "working_from": "08:00:00",
@@ -318,6 +315,13 @@ class SettingsAPITest(SettingsBase):
                     "put", user, "me/notifications/", {"delivery": "none"}
                 )
                 self.assertEqual(response.json()["delivery"], "none")
+                # The weekly to-dos are gone: accepted from older CLIs and
+                # ignored (specs/stale-todos.md)
+                response = self.call(
+                    "put", user, "me/notifications/", {"weekly_todos": True}
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("weekly_todos", response.json())
                 # "nothing" is gone (decided 2026-11-22)
                 for level in ["always", "nothing"]:
                     response = self.call(

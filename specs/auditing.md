@@ -28,7 +28,7 @@ forever.
   (incoming mail and delivery events), "Basecamp import". Mail replies,
   forwarded mails and live doc editing run as the person.
 - **Left out on purpose:** timestamps that change all the time
-  (`last_login`, `last_used_at`, `weekly_todos_on`, …), secrets (push
+  (`last_login`, `last_used_at`, …), secrets (push
   keys, the calendar token, passkey data), the live doc's working state
   (`collab_*`; the saved doc is audited), check-in occurrences,
   forwarded mails before they're filed (filing creates audited items),

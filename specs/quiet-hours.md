@@ -44,10 +44,7 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   installation's time zone). Quiet hours don't keep questions back.
 - **Delivery "daily digest"** sends the digest at the start of the
   first working time of the day instead of its fixed time when quiet
-  hours are on. "None" stays none. The weekly to-dos go at the start of
-  the first working day of the week instead of Monday 07:00, and are
-  skipped for the week when the person is away that day
-  (`notifications.md`, decided 2026-11-23).
+  hours are on. "None" stays none.
 - Where it's decided: in the sending loop (`send_mails`): a
   notification whose recipient is in quiet time is left unsent and
   looked at again on later runs; nothing is dropped.

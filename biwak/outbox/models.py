@@ -17,8 +17,6 @@ class Kind(models.TextChoices):
 
     NOTIFICATION = "notification", _("notification")
     DIGEST = "digest", _("digest")
-    # The weekly mail of one's open to-dos (specs/notifications.md)
-    WEEKLY = "weekly", _("weekly to-dos")
     CHECKIN = "checkin", _("check-in")
     LOGIN_CODE = "login-code", _("login code")
     # allauth's other mails (none are on today)

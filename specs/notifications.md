@@ -2,7 +2,7 @@
 
 **Status:** built (2026-11-22); the daily digest's to-dos, "For you"
 and one line per item built 2026-11-23; the weekly to-dos built
-2026-11-23; watching a list (new to-dos, moves between its groups)
+2026-11-23 and removed 2026-11-26 (`stale-todos.md`); watching a list (new to-dos, moves between its groups)
 built 2026-11-26.
 
 `biwak/activity/` (`operations.record()`, `mentions.py`,
@@ -279,8 +279,7 @@ large).
 ## Mails
 
 - **Delivery** per person (`User.mail_delivery`): each change (the
-  default), a daily digest, or none (`lantern.md`); the weekly to-dos
-  on top, when wanted (below). None means no mails
+  default), a daily digest, or none (`lantern.md`). None means no mails
   at all, check-in questions and summaries included (decided
   2026-11-21, `checkins.md`); digests leave check-in mails alone.
 - **Each change:** `send_mails`, every minute by cron, sends one mail
@@ -398,69 +397,20 @@ hours or away in full without to-do sections, assignments in full, no
 unsubscribe link on the one-liners, "Waiting on others" without the
 to-dos also one's own, the wording) were confirmed the same day.
 
-## The weekly to-dos (decided 2026-11-23)
+## The weekly to-dos (removed 2026-11-26)
 
-Decided with the user 2026-11-23: a mail of one's open to-dos on Monday
-morning, for those who want it. `biwak/activity/weekly.py`
-(`send_weekly()`, called by `send_mails()`), `templates/mails/weekly.*`
-(the digest's `_digest_todos.*` for the rows), kind `weekly` in the
-outbox; plain text and HTML, in `language_for(recipient)`.
-
-- **Off by default,** per person (`User.weekly_todos`, audited like the
-  other settings): Settings, "Notifications", below the mails' choice,
-  "A weekly mail with my open to-dos"; the to-dos page has no switch.
-  API: `weekly_todos` in `/api/v1/me/notifications/`; CLI: `biwak
-  notifications --weekly on|off`, shown by `biwak notifications`.
-- **When:** Monday from 07:00 (`DIGEST_AT`) in `TIME_ZONE`, or with
-  quiet hours during the working time of the first working day of the
-  week (Monday, or the first of `working_days` when Monday isn't one).
-  **Once a week:** `User.weekly_todos_on`, the day the week's mail went
-  or was skipped, left out of the audit log like `last_login`. Only on
-  that day: a mail missed isn't caught up later that week.
-- **Independent of the delivery:** "each change" and "daily digest"
-  both get it when they opted in; on Mondays digest people get both
-  mails. "No mails" gets none, nor do inactive people and bounced
-  addresses (`mail_undeliverable_at`, `mail-sending.md`).
-- **Skipped** while away on that day (the week has none, no catching up
-  once back) and with nothing to say: no open to-dos at all, dated or
-  not, and nothing waiting on others.
-- **Content:** subject "[Biwak] Your open to-dos, week of 23 November
-  2026" (the week's Monday, also when it goes later with quiet hours),
-  the same as the heading. The person's open to-dos
-  (`due.todos(user, assignee="me")`, the to-dos page's query, so
-  `visible_to()`, nothing trashed or archived, no templates) with a due
-  date, by due date in the to-dos page's groups (`due.group_of()`):
-  **Overdue**, **This week** (today included), **Next week**, **Later**
-  (one section, not one per month), each with its link, "project /
-  list", the badge ("Overdue", "Today", "Starts today") and the dates
-  as the rows show them ("25–27 Nov", `digest.todo_row()`). Not yet
-  started ones are in their due date's section, with their range. Then,
-  for those without a due date, one line "And 12 to-dos without a date"
-  ("12 to-dos without a date" when there's nothing dated), linked to the
-  to-dos page by due date at its "No date" section
-  (`/todos/?grouping=due#due-none`). Then **Waiting on others**, the
-  digest's section (`digest.waiting_on()`: overdue, assigned by them to
-  others, "(away until 3 Dec)"). The settings link at the end, also as
-  `List-Unsubscribe` (no one-click), like the digest.
-- **Clients** can opt in too and get only to-dos visible to them and
-  names they may know, as in the digest.
-
-Chosen while building, to confirm: "Later" one section (not a month
-each); due today under "This week" with its "Today" badge; to-dos not
-started yet in their due date's section; the undated line links to the
-to-dos page's "No date" section, no new filter; a Monday missed
-entirely (the cron down all day) isn't caught up; opting in during the
-week, the first mail comes the next Monday (opting in on Monday after
-07:00 sends it at the next run); weeks skipped (away, nothing to say)
-are marked done like those mailed.
+A Monday mail of one's open to-dos (decided 2026-11-23) was removed
+2026-11-26: it repeated the to-dos page. Old to-dos are marked obsolete
+after a warning instead (`stale-todos.md`).
 
 ## API and CLI
 
-`GET/PUT /api/v1/me/notifications/` (level, delivery, `weekly_todos`),
+`GET/PUT /api/v1/me/notifications/` (level, delivery; `weekly_todos`
+accepted and ignored since 2026-11-26),
 `GET/PUT/DELETE /api/v1/projects/{id}/notifications/` and
 `/api/v1/items/{id}/notifications/` (lists only), `GET
 /api/v1/items/{id}/mentionable/?q=`. `biwak notifications` shows and
-sets the level, delivery and the weekly to-dos (`--weekly on|off`), `--project` and `--item` the overrides
+sets the level and delivery, `--project` and `--item` the overrides
 (`--level default` removes one); `biwak subscriptions add ITEM`
 and `biwak subscriptions remove ITEM` for oneself.
 
