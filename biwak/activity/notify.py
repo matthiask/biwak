@@ -28,7 +28,8 @@ from biwak.live import announce as live
 # to-do (specs/timeline.md: the timeline and the feed say it), archiving a
 # list (specs/archiving.md), public links (specs/public-links.md), moving
 # (to-dos, files, lists and messages to another project; decided
-# 2026-11-22, specs/handover.md: the feed and the history say it)
+# 2026-11-22, specs/handover.md: the feed and the history say it), except
+# moving a to-do into another group of its list (``column_move()``)
 SILENT = {
     Action.MOVED,
     Action.PINNED,
@@ -39,6 +40,22 @@ SILENT = {
     Action.SHARED_PUBLICLY,
     Action.STOPPED_SHARING,
 }
+
+
+def column_move(event):
+    """Whether the event moved a to-do into another group of its list (a
+    board's column, ``move_todos()``): told, unlike other moves (decided
+    2026-11-26, specs/notifications.md, "Watching a list")"""
+    return event.action == Action.MOVED and "group" in event.data
+
+
+def watchers(todolist):
+    """The active people watching the list: subscribed to it, their level
+    for it "everything" (specs/notifications.md, "Watching a list"); who
+    of them sees what's in it is the caller's to check"""
+    people = list(User.objects.active().filter(subscriptions__item=todolist))
+    levels = effective_levels(people, todolist)
+    return [user for user in people if levels[user.pk] == NotificationLevel.EVERYTHING]
 
 
 def can_see(user, item):
@@ -222,6 +239,9 @@ def candidates(event):
     ids = set(
         Subscription.objects.filter(item__in=items).values_list("user", flat=True)
     )
+    if column_move(event):
+        # Its list's watchers, also of to-dos older than their watching
+        ids |= {user.pk for user in watchers(item.parent)}
     ids |= set(event.data.get("mentioned", ()))
     if event.action == Action.ASSIGNED:
         ids |= set(event.data.get("assignees", ()))
@@ -244,7 +264,9 @@ def notify(event_pk):
     forward, sent ones only get a new one for people mentioned since. The
     same number of queries for any number of people."""
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
-    if event is None or event.item is None or event.action in SILENT:
+    if event is None or event.item is None:
+        return []
+    if event.action in SILENT and not column_move(event):
         return []
     if event.project.is_template:
         # Nothing that happens inside a template tells anybody

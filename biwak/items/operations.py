@@ -22,7 +22,7 @@ from biwak import schedules
 from biwak.accounts.models import Color, User, own_staff
 from biwak.activity import mentions
 from biwak.activity.models import Action, Event, Subscription
-from biwak.activity.notify import notify_people
+from biwak.activity.notify import notify_people, watchers, who_can_see
 from biwak.activity.operations import (
     is_importing,
     read_by_acting,
@@ -218,6 +218,13 @@ def create_todo(
     )
     attachments.link(item, notes, actor=creator)
     event = created(item, creator)
+    if not is_importing():
+        # Watching the list: subscribed to every new to-do (decided
+        # 2026-11-26); an import brings the source's subscriptions
+        seeing = set(who_can_see(item).values_list("pk", flat=True))
+        for user in watchers(todolist):
+            if user.pk in seeing:
+                subscribe(user, item, explicit=False)
     mentioned = mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
     if assignees:
         assign(item, assignees, actor=creator, mentioned=(event, mentioned))

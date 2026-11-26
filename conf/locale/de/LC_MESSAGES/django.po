@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 21:46+0100\n"
+"POT-Creation-Date: 2026-11-26 07:38+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2020,8 +2020,8 @@ msgid "Notifications for this list"
 msgstr "Benachrichtigungen für diese Liste"
 
 #: biwak/activity/views.py
-msgid "Your own level for this list instead of the one of the project: whether you hear about new to-dos in it. To-dos you're subscribed to tell you everything. The activity feed always shows everything."
-msgstr "Deine eigene Stufe für diese Liste statt der des Projekts: ob du von neuen To-dos darin erfährst. Bei To-dos, die du abonniert hast, erfährst du alles. Die Aktivität zeigt immer alles."
+msgid "Your own level for this list instead of the one of the project. On “Everything” you watch it: you're subscribed to it and to every new to-do in it, and hear when to-dos move between its groups. To-dos you're subscribed to tell you everything. The activity feed always shows everything."
+msgstr "Deine eigene Stufe für diese Liste statt der des Projekts. Bei „Alles“ beobachtest du sie: Du abonnierst sie und jedes neue To-do darin und erfährst, wenn To-dos zwischen ihren Gruppen verschoben werden. Bei To-dos, die du abonniert hast, erfährst du alles. Die Aktivität zeigt immer alles."
 
 #: biwak/activity/weekly.py
 msgid "Later"

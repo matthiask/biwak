@@ -498,10 +498,11 @@ def item_notifications(request, pk):
         form,
         title=_("Notifications for this list"),
         intro=_(
-            "Your own level for this list instead of the one of the project:"
-            " whether you hear about new to-dos in it. To-dos you're"
-            " subscribed to tell you everything. The activity feed always"
-            " shows everything."
+            "Your own level for this list instead of the one of the project."
+            " On “Everything” you watch it: you're subscribed to it and"
+            " to every new to-do in it, and hear when to-dos move between its"
+            " groups. To-dos you're subscribed to tell you everything. The"
+            " activity feed always shows everything."
         ),
         item=item,
         parent=item.parent,

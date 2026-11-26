@@ -39,7 +39,8 @@ In scope:
 1. Projects with members: staff and clients. All-access projects (every
    staff member can see them) or limited ones (members only).
 2. To-do lists with groups, reorderable, to-dos with several assignees,
-   due dates, recurrence, comments. Lists can be subscribed to.
+   due dates, recurrence, comments. Lists can be subscribed to, and
+   watched: every new to-do and moves between groups (for Kanban).
 3. A board view: a list shown with its groups as columns.
 4. A chronological list of to-dos by due date, filterable, per project
    and across projects ("my to-dos").

@@ -67,7 +67,8 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
 - **Board view:** a list's groups as columns, ungrouped to-dos in a
   first column shown only when there are any; a per-list setting (list
   or board) with `?view=` to switch; dragging between columns is
-  `move_todos()`. Columns that don't fit the page widen the board up
+  `move_todos()`, telling the to-do's subscribers and the list's
+  watchers (`notifications.md`, "Watching a list"). Columns that don't fit the page widen the board up
   to the window's width (`ui.md`, "Page width", decided 2026-11-23). The board never shows completed to-dos in its columns.
 - **Filters on a list** (decided 2026-11-24 by the user: "filter by
   assignee", copied from the to-dos page): the list and the board filter

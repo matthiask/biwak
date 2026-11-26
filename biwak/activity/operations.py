@@ -352,7 +352,9 @@ def set_notification_settings(
 def set_level_override(user, level, *, project=None, item=None):
     """Overrides the person's level for a project or a list (and what's new
     in it); ``level`` None removes the override. Other items have no level:
-    subscribing is the switch (specs/notifications.md, "Subscriptions")."""
+    subscribing is the switch (specs/notifications.md, "Subscriptions").
+    "Everything" for a list subscribes to it too: watching it (decided
+    2026-11-26, "Watching a list"); other levels unsubscribe nobody."""
     if (project is None) == (item is None):
         raise ValueError("A project or an item, not both")
     if item is not None and item.kind != Kind.LIST:
@@ -364,4 +366,6 @@ def set_level_override(user, level, *, project=None, item=None):
     override, _created = LevelOverride.objects.update_or_create(
         user=user, **target, defaults={"level": NotificationLevel(level)}
     )
+    if item is not None and level == NotificationLevel.EVERYTHING:
+        subscribe(user, item)
     return override

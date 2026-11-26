@@ -64,6 +64,16 @@ alles). Die Aktivität zeigt immer alles.
 Ein Projekt kann eine eigene Stufe haben („Mehr“, dann
 „Benachrichtigungen“ auf der Seite des Projekts), eine Liste auch
 („Benachrichtigungen…“ in ihrem Menü „Mehr“): Die nächstliegende gilt.
+
+**Eine Liste beobachten:** Wähle „Alles“ unter „Benachrichtigungen…“
+einer Liste, und du abonnierst die Liste und jedes neue To-do darin, du
+hörst also auch von ihren Kommentaren und davon, dass sie erledigt
+werden, und du wirst benachrichtigt, wenn ein To-do in eine andere
+Gruppe kommt (eine Spalte des Boards): So taugt ein Board für Kanban.
+Ein To-do in eine andere Gruppe zu verschieben, benachrichtigt auch
+alle, die es abonniert haben; innerhalb seiner Gruppe, in eine andere
+Liste oder in ein anderes Projekt verschoben, benachrichtigt es
+niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten.
 Andere Einträge haben keine Stufe: abonnieren oder nicht mehr
 abonnieren. Auf der Personenseite eines Projekts sehen Mitarbeitende,
 wer „Nur wenn markiert“ benachrichtigt wird und wer über „Alles Neue“,
