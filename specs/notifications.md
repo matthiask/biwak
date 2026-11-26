@@ -199,7 +199,8 @@ subscribed to a list with "everything" as their level for it
   reopening).
 - The unsubscribe link of a new to-do's mail unsubscribes from the
   to-do, since they're subscribed to it (`unsubscribe_url()`), like a
-  post in a followed folder; the list stays subscribed.
+  post in a followed folder; the list stays subscribed (confirmed by
+  the user 2026-11-26).
 
 **Why "only what concerns me" is the default** (decided 2026-11-22, it
 was "everything"): being told about a new post subscribes, so on
