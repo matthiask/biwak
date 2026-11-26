@@ -154,8 +154,13 @@ obsolete but aren't told.
 
 `STALE_TODOS = True` in settings turns it on (off by default, also in
 tests but those of this part). `./manage.py stale_todos` lists what is
-stale now and what would be warned, counts per project, changing
-nothing; run it in production before turning it on.
+stale now, changing nothing; run it in production before turning it on.
+Per project the counts (stale, warned, to warn), then each stale to-do,
+the oldest first: its ID, title, list and group, why ("Nothing since 3
+May 2026", "Due 9 August 2026") and what happens to it: "warned, marked
+obsolete on …", "to warn" (by the next run) or "later (over 20 a day)".
+`--project ID` for one project, `--summary` for the counts only (decided
+2026-11-26 with the user: counts alone gave no insight).
 
 ## The weekly to-dos go
 

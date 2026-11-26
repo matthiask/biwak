@@ -72,20 +72,25 @@ def open_todos():
     in an archived list or project, annotated with ``touched_at`` (the
     latest of the last activity, the due date and the start date) and
     ``stale_days``"""
-    return Item.objects.filter(
-        kind=Kind.TODO,
-        status=Status.ACTIVE,
-        todo__completed_at__isnull=True,
-        parent__status=Status.ACTIVE,
-        project__archived_at__isnull=True,
-        project__is_template=False,
-    ).annotate(
-        touched_at=Greatest(
-            Coalesce(_last_activity(), F("created_at")),
-            Cast("todo__due_on", DateTimeField()),
-            Cast("todo__starts_on", DateTimeField()),
-        ),
-        stale_days=Coalesce("todo__group__stale_after", Value(STALE_AFTER)),
+    return (
+        Item.objects
+        .filter(
+            kind=Kind.TODO,
+            status=Status.ACTIVE,
+            todo__completed_at__isnull=True,
+            parent__status=Status.ACTIVE,
+            project__archived_at__isnull=True,
+            project__is_template=False,
+        )
+        .annotate(last_activity_at=Coalesce(_last_activity(), F("created_at")))
+        .annotate(
+            touched_at=Greatest(
+                F("last_activity_at"),
+                Cast("todo__due_on", DateTimeField()),
+                Cast("todo__starts_on", DateTimeField()),
+            ),
+            stale_days=Coalesce("todo__group__stale_after", Value(STALE_AFTER)),
+        )
     )
 
 
@@ -108,11 +113,15 @@ def touched(item):
     """``(when, reason)`` for one to-do as ``open_todos()`` sees it:
     ``reason`` is "due", "starts" or "activity" (also its creation)"""
     todo = item.todo
+    # Annotated by ``open_todos()``, else one query
     latest = (
-        Event.objects
-        .filter(item=item)
-        .exclude(action=Action.REACTED)
-        .aggregate(latest=Max("created_at"))["latest"]
+        getattr(item, "last_activity_at", None)
+        or (
+            Event.objects
+            .filter(item=item)
+            .exclude(action=Action.REACTED)
+            .aggregate(latest=Max("created_at"))["latest"]
+        )
     )
     activity = timezone.localdate(latest or item.created_at)
     candidates = [(activity, "activity")]
@@ -243,20 +252,30 @@ def recipients(item):
     ]
 
 
-def report(now=None):
-    """What ``./manage.py stale_todos`` shows: per project the stale
-    to-dos and how many would be warned now"""
+def report(now=None, *, project=None):
+    """What ``./manage.py stale_todos`` shows: per project the counts and
+    the stale to-dos, the oldest first, each with its ``state``: "warned"
+    (``obsolete_on``), "to_warn" (by the next run) or "later" (over the
+    day's limit)"""
     now = now or timezone.now()
+    todos = stale_todos(now).select_related("project", "parent", "todo__group")
+    if project is not None:
+        todos = todos.filter(project=project)
     projects = {}
-    for item in stale_todos(now).select_related("project"):
+    for item in todos:
         entry = projects.setdefault(
-            item.project, {"stale": 0, "warned": 0, "to_warn": 0}
+            item.project, {"stale": 0, "warned": 0, "to_warn": 0, "todos": []}
         )
         entry["stale"] += 1
         if item.todo.stale_warned_at is not None:
             entry["warned"] += 1
+            state = "warned"
         elif entry["to_warn"] < WARNINGS_PER_PROJECT:
             entry["to_warn"] += 1
+            state = "to_warn"
+        else:
+            state = "later"
+        entry["todos"].append({"item": item, "state": state})
     return projects
 
 
