@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 21:15+0100\n"
+"POT-Creation-Date: 2026-11-26 21:18+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1431,16 +1431,16 @@ msgstr "Reaktionen darauf, dass du es erledigt hast:"
 msgid "Reactions:"
 msgstr "Reaktionen:"
 
-#: biwak/activity/mails.py biwak/checkins/mails.py
-#, python-format
-msgid "[%(project)s] %(title)s"
-msgstr "[%(project)s] %(title)s"
-
 #: biwak/activity/mails.py biwak/organizations/activation.py
 #: biwak/projects/operations.py
 #, python-format
 msgid "%(name)s (Biwak)"
 msgstr "%(name)s (Biwak)"
+
+#: biwak/activity/mails.py biwak/checkins/mails.py
+#, python-format
+msgid "[%(project)s] %(title)s"
+msgstr "[%(project)s] %(title)s"
 
 #: biwak/activity/mails.py
 #, python-format
@@ -1634,6 +1634,10 @@ msgstr "Ereignis"
 #: biwak/activity/models.py
 msgid "events"
 msgstr "Ereignisse"
+
+#: biwak/activity/models.py biwak/templatetags/biwak.py
+msgid "Biwak"
+msgstr "Biwak"
 
 #: biwak/activity/models.py
 msgid "added by"

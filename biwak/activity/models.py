@@ -10,7 +10,7 @@ clients only see events of the time the item was visible to them
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _, pgettext_lazy
+from django.utils.translation import gettext, gettext_lazy as _, pgettext_lazy
 
 from biwak.accounts.models import NotificationLevel
 from biwak.items.models import Item
@@ -87,9 +87,13 @@ class Event(models.Model):
         related_name="events",
         verbose_name=_("item"),
     )
+    # None: Biwak itself did it, e.g. marking a stale to-do obsolete
+    # (specs/stale-todos.md); everywhere it's read, it says "Biwak"
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="+",
         verbose_name=_("actor"),
     )
@@ -114,7 +118,12 @@ class Event(models.Model):
         verbose_name_plural = _("events")
 
     def __str__(self):
-        return f"{self.actor} {self.action} {self.data.get('title', '')}"
+        return f"{self.actor_name} {self.action} {self.data.get('title', '')}"
+
+    @property
+    def actor_name(self):
+        """Who did it, as text: the person, or "Biwak" for none"""
+        return str(self.actor) if self.actor_id else gettext("Biwak")
 
 
 class Subscription(models.Model):

@@ -94,7 +94,7 @@ def for_you(notification):
 
 def _people(events):
     return get_text_list(
-        list(dict.fromkeys(str(event.actor) for event in events)), _("and")
+        list(dict.fromkeys(event.actor_name for event in events)), _("and")
     )
 
 

@@ -37,7 +37,9 @@ class EventItemOut(Schema):
 class EventOut(Schema):
     id: int
     action: str
-    actor: PersonOut
+    actor: PersonOut | None = Field(
+        description="None: Biwak itself, e.g. marking a stale to-do obsolete"
+    )
     project_id: int
     item: EventItemOut | None
     # What the event stored: the title at the time, assignees, where it moved

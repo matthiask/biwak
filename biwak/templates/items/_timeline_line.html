@@ -16,7 +16,7 @@
       {% endif %}
     {% endwith %}
   </span>
-  {% avatar line.actor %}
+  {% if line.actor %}{% avatar line.actor %}{% endif %}
   <div>
     <strong>{% person_link line.actor %}</strong>
     {{ line.text }}

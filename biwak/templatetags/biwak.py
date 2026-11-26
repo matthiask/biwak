@@ -399,6 +399,9 @@ def person_link(context, person, *, name=None):
     mark, for lists)"""
     from biwak.organizations.people import linked_name
 
+    if person is None:
+        # Events without an actor (specs/stale-todos.md)
+        return gettext("Biwak")
     label = name if name is not None else short_name(context, person)
     request = context.get("request")
     return linked_name(person, label, _known_people(request) if request else set())

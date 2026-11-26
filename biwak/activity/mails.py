@@ -149,7 +149,7 @@ def _moved(event, user):
 def describe(event, user):
     """The line saying what happened"""
     data = event.data
-    actor = str(event.actor)
+    actor = event.actor_name
     to = data.get("to", "")
     match event.action:
         case Action.CREATED if event.item.kind == Kind.ANSWER:
@@ -401,6 +401,14 @@ def _claim(pks, now):
     return claimed
 
 
+def sender_name(event):
+    """The mail's sender: "Ada Example (Biwak)", or "Biwak" for an event
+    without an actor"""
+    if event.actor_id is None:
+        return "Biwak"
+    return _("%(name)s (Biwak)") % {"name": event.actor}
+
+
 def build_mail(user, *, subject, template, context, from_name="Biwak", headers=None):
     """A mail to the person, plain text and HTML (``template`` plus ``.txt``
     and ``.html``), from ``"from_name" <DEFAULT_FROM_EMAIL>``, with a
@@ -450,7 +458,7 @@ def item_mail(user, item, notifications):
         subject=_("[%(project)s] %(title)s") % context,
         template="mails/notification",
         context=context,
-        from_name=_("%(name)s (Biwak)") % {"name": entries[-1]["event"].actor},
+        from_name=sender_name(entries[-1]["event"]),
         headers={"In-Reply-To": thread, "References": thread}
         | unsubscribe_headers(context["unsubscribe_url"])
         | (reply_to(user, item) if item.is_commentable else {}),
@@ -501,7 +509,7 @@ def batch_mail(user, notifications):
         subject=_("[%(project)s] %(subject)s") % context,
         template="mails/batch",
         context=context,
-        from_name=_("%(name)s (Biwak)") % {"name": notifications[0].event.actor},
+        from_name=sender_name(notifications[0].event),
         # No item to unsubscribe from: the settings
         headers=unsubscribe_headers(context["settings_url"], one_click=False),
     )
